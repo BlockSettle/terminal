@@ -59,6 +59,7 @@ private:
 
 public:
    AuthorizedPeers(const std::string&, const std::string&);
+   AuthorizedPeers(void);
 
    const std::map<std::string, btc_pubkey>& getPeerNameMap(void) const;
    const std::set<SecureBinaryData>& getPublicKeySet(void) const;

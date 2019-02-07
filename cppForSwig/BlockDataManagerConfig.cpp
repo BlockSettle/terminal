@@ -12,6 +12,7 @@
 #include "EncryptionUtils.h"
 #include "JSON_codec.h"
 #include "SocketObject.h"
+#include "BIP150_151.h"
 #ifndef _WIN32
 #include "sys/stat.h"
 #endif
@@ -77,6 +78,7 @@ const string BlockDataManagerConfig::defaultRegtestBlkFileLocation_ =
 #endif
 
 string BlockDataManagerConfig::dataDir_ = "";
+bool BlockDataManagerConfig::ephemeralPeers_ = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 BlockDataManagerConfig::BlockDataManagerConfig() :
@@ -234,7 +236,8 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
    Specifying another type will do nothing. Build a new db to change type.
 
    --cookie: create a cookie file holding a random authentication key to allow
-   local clients to make use of elevated commands, like shutdown.
+   local clients to make use of elevated commands, like shutdown. Client and 
+   server will make use of ephemeral peer keys, ignoring the on disk peer wallet
 
    --listen-port: sets the DB listening port.
 
@@ -243,6 +246,10 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
    --satoshirpc-port: set node rpc port
 
    --satoshi-port: set Bitcoin node port
+
+   --public: BIP150 auth will allow for anonymous requesters. While only clients
+   can be anon (servers/responders are always auth'ed), both sides need to enable
+   public channels for the handshake to succeed
 
    ***/
 
@@ -597,7 +604,17 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
    //cookie
    iter = args.find("cookie");
    if (iter != args.end())
+   {
       useCookie_ = true;
+      ephemeralPeers_ = true;
+   }
+
+   //public
+   iter = args.find("public");
+   if (iter != args.end())
+   {
+      startupBIP150CTX(4, true);
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

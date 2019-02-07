@@ -193,9 +193,16 @@ void WebSocketServer::start(BlockDataManagerThread* bdmT, bool async)
    auto instance = getInstance();
 
    //init auth peer object
-   string peerFilename(SERVER_AUTH_PEER_FILENAME);
-   instance->authorizedPeers_ = make_shared<AuthorizedPeers>(
-      BlockDataManagerConfig::getDataDir(), peerFilename);
+   if (!BlockDataManagerConfig::ephemeralPeers_)
+   {
+      string peerFilename(SERVER_AUTH_PEER_FILENAME);
+      instance->authorizedPeers_ = make_shared<AuthorizedPeers>(
+         BlockDataManagerConfig::getDataDir(), peerFilename);
+   }
+   else
+   {
+      instance->authorizedPeers_ = make_shared<AuthorizedPeers>();
+   }
 
    //init Clients object
    auto shutdownLbd = [](void)->void
@@ -296,6 +303,15 @@ void WebSocketServer::shutdown()
    }
    catch (future_error)
    {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+SecureBinaryData WebSocketServer::getPublicKey()
+{
+   auto instance = getInstance();
+   auto& pubkey = instance->authorizedPeers_->getOwnPublicKey();
+   SecureBinaryData keySbd(pubkey.pubkey, BIP151PUBKEYSIZE);
+   return keySbd;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

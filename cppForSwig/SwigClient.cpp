@@ -29,6 +29,12 @@ bool BlockDataViewer::connectToRemote()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::addPublicKey(const SecureBinaryData& pubkey)
+{
+   bdvAsync_.addPublicKey(pubkey);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 const BlockDataViewer& BlockDataViewer::operator=(const BlockDataViewer& rhs)
 {
    bdvAsync_ = rhs.bdvAsync_;
@@ -450,6 +456,12 @@ string SwigClient::BtcWallet::registerAddresses(
    const vector<BinaryData>& addrVec, bool isNew)
 {
    return asyncWallet_.registerAddresses(addrVec, isNew);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+string SwigClient::BtcWallet::setUnconfirmedTarget(unsigned confTarget)
+{
+   return asyncWallet_.setUnconfirmedTarget(confTarget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

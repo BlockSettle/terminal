@@ -155,6 +155,7 @@ public:
    void cleanUp(void);
    std::pair<unsigned, unsigned> 
       getRekeyCount(void) const { return std::make_pair(outerRekeyCount_, innerRekeyCount_); }
+   void addPublicKey(const SecureBinaryData&);
 
    //virtuals
    SocketType type(void) const { return SocketWS; }

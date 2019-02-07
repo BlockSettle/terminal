@@ -105,6 +105,27 @@ AuthorizedPeers::AuthorizedPeers(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+AuthorizedPeers::AuthorizedPeers()
+{
+   auto&& privateKey = CryptoPRNG::generateRandom(32);
+
+   //compute the public key
+   auto&& ownPubKey = CryptoECDSA().ComputePublicKey(privateKey);
+   auto&& ownPubKey_compressed = CryptoECDSA().CompressPoint(ownPubKey);
+
+   //add to private keys map
+   privateKeys_.emplace(make_pair(BinaryData(ownPubKey_compressed), privateKey));
+
+   //add to public key map as own
+   btc_pubkey btc_own;
+   btc_pubkey_init(&btc_own);
+   std::memcpy(btc_own.pubkey, ownPubKey_compressed.getPtr(), BIP151PUBKEYSIZE);
+   btc_own.compressed = true;
+
+   nameToKeyMap_.emplace(make_pair("own", btc_own));
+}
+
+////////////////////////////////////////////////////////////////////////////////
 void AuthorizedPeers::loadWallet(const string& path)
 {
    if (!DBUtils::fileExists(path, 6))

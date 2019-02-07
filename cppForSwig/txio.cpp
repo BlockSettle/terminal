@@ -249,7 +249,7 @@ bool TxIOPair::isSpendable(LMDBBlockDatabase *db, uint32_t currBlk) const
 
 //////////////////////////////////////////////////////////////////////////////
 bool TxIOPair::isMineButUnconfirmed(
-   LMDBBlockDatabase *db, uint32_t currBlk) const
+   LMDBBlockDatabase *db, uint32_t currBlk, unsigned confTarget) const
 {
    DBTxRef dbTxRef(txRefOfInput_, db);
    if (hasTxInZC() || (hasTxIn() && dbTxRef.isMainBranch()))
@@ -264,7 +264,7 @@ bool TxIOPair::isMineButUnconfirmed(
       if (isFromCoinbase_)
          return (nConf<COINBASE_MATURITY);
       else
-         return (nConf<MIN_CONFIRMATIONS);
+         return (nConf<confTarget);
    }
 
    return false;

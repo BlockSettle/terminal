@@ -174,6 +174,7 @@ public:
    static void start(BlockDataManagerThread* bdmT, bool async);
    static void shutdown(void);
    static void waitOnShutdown(void);
+   static SecureBinaryData getPublicKey(void);
 
    static void write(const uint64_t&, const uint32_t&, 
       std::shared_ptr<::google::protobuf::Message>);

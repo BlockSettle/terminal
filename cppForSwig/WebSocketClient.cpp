@@ -34,8 +34,15 @@ WebSocketClient::WebSocketClient(
    requestID_.store(0, std::memory_order_relaxed);
 
    std::string filename(CLIENT_AUTH_PEER_FILENAME);
-   authPeers_ = make_shared<AuthorizedPeers>(
-      BlockDataManagerConfig::getDataDir(), filename);
+   if (!BlockDataManagerConfig::ephemeralPeers_)
+   {
+      authPeers_ = make_shared<AuthorizedPeers>(
+         BlockDataManagerConfig::getDataDir(), filename);
+   }
+   else
+   {
+      authPeers_ = make_shared<AuthorizedPeers>();
+   }
 
    auto lbds = getAuthPeerLambda();
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
@@ -703,4 +710,13 @@ AuthPeersLambdas WebSocketClient::getAuthPeerLambda(void) const
    };
 
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WebSocketClient::addPublicKey(const SecureBinaryData& pubkey)
+{
+   stringstream ss;
+   ss << addr_ << ":" << port_;
+
+   authPeers_->addPeer(pubkey, ss.str());
 }

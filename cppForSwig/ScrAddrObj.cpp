@@ -40,13 +40,14 @@ uint64_t ScrAddrObj::getSpendableBalance(uint32_t currBlk) const
 
 
 ////////////////////////////////////////////////////////////////////////////////
-uint64_t ScrAddrObj::getUnconfirmedBalance(uint32_t currBlk) const
+uint64_t ScrAddrObj::getUnconfirmedBalance(
+   uint32_t currBlk, unsigned confTarget) const
 {
    uint64_t balance = 0;
    auto&& txios = getTxios();
    for (auto& txio : txios)
    {
-      if(txio.second.isMineButUnconfirmed(db_, currBlk))
+      if(txio.second.isMineButUnconfirmed(db_, currBlk, confTarget))
          balance += txio.second.getValue();
    }
    return balance;

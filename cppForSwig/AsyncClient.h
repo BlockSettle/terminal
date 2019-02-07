@@ -215,6 +215,8 @@ namespace AsyncClient
          const std::vector<BinaryData>& addrVec, bool isNew);
       void createAddressBook(
          std::function<void(ReturnMessage<std::vector<AddressBookEntry>>)>) const;
+
+      std::string setUnconfirmedTarget(unsigned);
    };
 
    /////////////////////////////////////////////////////////////////////////////
@@ -294,6 +296,7 @@ namespace AsyncClient
       ~BlockDataViewer(void);
 
       bool connectToRemote(void);
+      void addPublicKey(const SecureBinaryData&);
       BtcWallet instantiateWallet(const std::string& id);
       Lockbox instantiateLockbox(const std::string& id);
 

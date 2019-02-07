@@ -148,6 +148,15 @@ void BlockDataViewer::scanWallets(shared_ptr<BDV_Notification> action)
    {
       auto refreshNotif =
          dynamic_pointer_cast<BDV_Notification_Refresh>(action);
+
+      if (refreshNotif->refresh_ == BDV_refreshSkipRescan)
+      {
+         //only flagged the wallet to send a refresh notification, do not
+         //perform any other operations
+         ++updateID_;
+         return;
+      }
+
       scanData.saStruct_.zcMap_ =
          move(refreshNotif->zcPacket_.txioMap_);
 

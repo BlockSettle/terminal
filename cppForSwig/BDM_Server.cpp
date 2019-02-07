@@ -259,6 +259,38 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       return response;
    }
 
+   case Methods::setWalletConfTarget:
+   {
+      /*
+      in:
+         walletid
+         height
+      out: full, spendable and unconfirmed balance + transaction count
+         wrapped in Codec_CommonTypes::ManyUnsigned
+      */
+      if (!command->has_walletid() || !command->has_height() || !command->has_hash())
+         throw runtime_error("invalid command for setWalletConfTarget");
+
+      auto& walletId = command->walletid();
+      BinaryDataRef walletIdRef; walletIdRef.setRef(walletId);
+
+      shared_ptr<BtcWallet> wltPtr = nullptr;
+      for (auto& group : this->groups_)
+      {
+         auto wltIter = group.wallets_.find(walletIdRef);
+         if (wltIter != group.wallets_.end())
+            wltPtr = wltIter->second;
+      }
+
+      if (wltPtr == nullptr)
+         throw runtime_error("unknown wallet/lockbox ID");
+
+      uint32_t height = command->height();
+      auto hash = command->hash();
+      wltPtr->setConfTarget(height, hash);
+      break;
+   }
+
    case Methods::getSpendableTxOutListForValue:
    {
       /*

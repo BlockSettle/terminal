@@ -118,6 +118,7 @@ namespace SwigClient
 
       virtual std::string registerAddresses(
          const std::vector<BinaryData>& addrVec, bool isNew);
+      std::string setUnconfirmedTarget(unsigned);
    };
 
    ///////////////////////////////////////////////////////////////////////////////
@@ -175,6 +176,7 @@ namespace SwigClient
       ~BlockDataViewer(void);
       
       bool connectToRemote(void);
+      void addPublicKey(const SecureBinaryData&);
       BtcWallet instantiateWallet(const std::string& id);
       Lockbox instantiateLockbox(const std::string& id);
 

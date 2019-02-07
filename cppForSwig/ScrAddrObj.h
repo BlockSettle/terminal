@@ -203,7 +203,7 @@ public:
    // know what TxOuts are available to spend, you can pass in 0 for currBlk
    uint64_t getFullBalance(unsigned updateID = UINT32_MAX) const;
    uint64_t getSpendableBalance(uint32_t currBlk) const;
-   uint64_t getUnconfirmedBalance(uint32_t currBlk) const;
+   uint64_t getUnconfirmedBalance(uint32_t currBlk, unsigned confTarget) const;
 
    std::vector<UnspentTxOut> getFullTxOutList(uint32_t currBlk=UINT32_MAX, bool ignoreZC=true) const;
    std::vector<UnspentTxOut> getSpendableTxOutList(bool ignoreZC=true) const;

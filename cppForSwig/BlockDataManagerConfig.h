@@ -54,6 +54,8 @@ public:
 
    static std::string dataDir_;
 
+   static bool ephemeralPeers_;
+
    std::string blkFileLocation_;
    std::string dbDir_;
    std::string logFilePath_;

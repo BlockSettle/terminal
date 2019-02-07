@@ -58,6 +58,19 @@ bool BlockDataViewer::connectToRemote(void)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::addPublicKey(const SecureBinaryData& pubkey)
+{
+   auto wsSock = dynamic_pointer_cast<WebSocketClient>(sock_);
+   if (wsSock == nullptr)
+   {
+      LOGERR << "invalid socket type for auth peer management";
+      return;
+   }
+
+   wsSock->addPublicKey(pubkey);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 shared_ptr<BlockDataViewer> BlockDataViewer::getNewBDV(const string& addr,
    const string& port, shared_ptr<RemoteCallback> callbackPtr)
 {
@@ -527,6 +540,22 @@ string AsyncClient::BtcWallet::registerAddresses(
       command->add_bindata(addr.getPtr(), addr.getSize());
    sock_->pushPayload(move(payload), nullptr);
 
+   return registrationId;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+string AsyncClient::BtcWallet::setUnconfirmedTarget(unsigned confTarget)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::setWalletConfTarget, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+   command->set_walletid(walletID_);
+
+   auto&& registrationId = CryptoPRNG::generateRandom(5).toHexStr();
+   command->set_hash(registrationId);
+   command->set_height(confTarget);
+
+   sock_->pushPayload(move(payload), nullptr);
    return registrationId;
 }
 
