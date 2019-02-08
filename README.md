@@ -29,7 +29,9 @@
  5. Click the Start button and select the `x64 Native Tools Command Prompt for VS 2017` program. You may have to type the name until the option appears. It is *critical* that you type `x64` and *not* `x86`.
 
 ## Ubuntu
- 1. Execute the following commands.
+ 1. Open Software Updates -> Ubuntu Software -> set "Source Code" checkbox (required for qt5-default).
+
+ 2. Execute the following commands.
 
 		sudo apt install python-pip cmake libmysqlclient-dev autoconf libtool yasm nasm g++
 		sudo apt build-dep qt5-default
@@ -59,6 +61,12 @@
  5. Create a symbolic link for glibtoolize. This requires sudo access and is probably not strictly necessary. It makes Autotools much happier, though, and should be harmless otherwise.
 
 		sudo ln -s /usr/local/bin/glibtoolize /usr/local/bin/libtoolize
+		
+ 6. MPIR library may fail to build on latest CPU's like Intel 7xxx. It's possible to apply workaround in case of VMWare VM used. Add to virtual machine configuration (.vmx file) following strings:
+ 		
+		cpuid.1.edx = "10111111111010111111101111111011"
+		cpuid.1.eax = "00000000000000110100011010101001"
+Also try to set/unset "Virtualize Intel VT-X/EPT or AMD-V/RVI" checkbox in virtual machine configuration.
 
 # Build instructions for all platforms
  1. Use `pip` to install the `wget` and `requests` Python packages. Note that, on Linux and macOS, the `pip` binary might actually need to be the `pip2` binary as long as Python 2.7 is being used to run the build script.
