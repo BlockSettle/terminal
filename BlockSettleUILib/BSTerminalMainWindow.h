@@ -11,6 +11,7 @@
 #include "ArmoryConnection.h"
 #include "CelerClient.h"
 #include "TransactionsViewModel.h"
+#include "QWalletInfo.h"
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -94,9 +95,7 @@ private slots:
    void InitTransactionsView();
    void ArmoryIsOffline();
    void SignerReady();
-   void onPasswordRequested(std::string walletId, std::string prompt
-      , std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData> encKeys
-      , bs::wallet::KeyRank);
+   void onPasswordRequested(const bs::hd::WalletInfo &walletInfo, std::string prompt);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
    void onSignerConnError(const QString &);

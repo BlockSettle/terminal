@@ -118,12 +118,12 @@ void XBTSettlementTransactionWidget::populateDetails()
       }
       else {
          ui_->labelHintAuthPassword->setText(tr("Enter password for \"%1\" wallet to sign revoke Pay-Out")
-            .arg(QString::fromStdString(settlContainer_->authWalletName())));
+            .arg(settlContainer_->walletInfoAuth().name()));
       }
    }
    else {
       ui_->labelHintPassword->setText(tr("Enter password for \"%1\" wallet to sign Pay-Out")
-         .arg(QString::fromStdString(settlContainer_->authWalletName())));
+         .arg(settlContainer_->walletInfoAuth().name()));
       ui_->labelHintAuthPassword->hide();
       ui_->horizontalWidgetAuthPassword->hide();
       ui_->widgetSubmitKeysAuth->suspend();
@@ -136,15 +136,14 @@ void XBTSettlementTransactionWidget::onDealerVerificationStateChanged(AddressVer
    switch (state) {
    case AddressVerificationState::Verified: {
          text = sValid_;
-         ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletId()
-            , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys(), appSettings_);
+         ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
+            , WalletKeyWidget::UseType::RequestAuthInParent, appSettings_, logger_);
          ui_->widgetSubmitKeys->setFocus();
          // tr("%1 Settlement %2").arg(QString::fromStdString(rfq_.security)).arg(clientSells_ ? tr("Pay-In") : tr("Pay-Out"))
 
          if (settlContainer_->weSell() && !settlContainer_->isSellFromPrimary()) {
-            ui_->widgetSubmitKeysAuth->init(AutheIDClient::SettlementTransaction
-               , settlContainer_->authWalletId(), settlContainer_->authKeyRank(), settlContainer_->authEncTypes()
-               , settlContainer_->authEncKeys(), appSettings_);
+            ui_->widgetSubmitKeysAuth->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfoAuth()
+            , WalletKeyWidget::UseType::RequestAuthInParent, appSettings_, logger_);
          }
          QApplication::processEvents();
          adjustSize();

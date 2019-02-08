@@ -9,6 +9,7 @@
 
 #include "HDNode.h"
 #include "MetaData.h"
+#include "QWalletInfo.h"
 
 namespace spdlog {
    class logger;
@@ -112,15 +113,13 @@ signals:
    void Error(RequestId id, std::string error);
    void TXSigned(RequestId id, BinaryData signedTX, std::string error, bool cancelledByUser);
 
-   void PasswordRequested(std::string walletId, std::string prompt, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKey, bs::wallet::KeyRank);
+   void PasswordRequested(bs::hd::WalletInfo walletInfo, std::string prompt);
 
    void HDLeafCreated(RequestId id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
    void HDWalletCreated(RequestId id, std::shared_ptr<bs::hd::Wallet>);
    void DecryptedRootKey(RequestId id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
-   void HDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> &encKeys, bs::wallet::KeyRank);
+   void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void MissingWallets(const std::vector<std::string> &);
    void AddressSyncFailed(const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void AddressSyncComplete();

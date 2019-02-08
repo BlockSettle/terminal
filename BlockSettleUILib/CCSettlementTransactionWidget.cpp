@@ -97,7 +97,7 @@ void CCSettlementTransactionWidget::populateDetails()
    ui_->labelGenesisAddress->setText(tr("Verifying"));
 
    ui_->labelPasswordHint->setText(tr("Enter \"%1\" wallet password to accept")
-      .arg(QString::fromStdString(settlContainer_->walletName())));
+      .arg(settlContainer_->walletInfo().name()));
 
    updateAcceptButton();
 }
@@ -118,23 +118,14 @@ void CCSettlementTransactionWidget::onGenAddrVerified(bool result, QString error
 
 void CCSettlementTransactionWidget::initSigning()
 {
-   if (settlContainer_->encTypes().empty() || !settlContainer_->keyRank().first
+   if (settlContainer_->walletInfo().encTypes().empty() || !settlContainer_->walletInfo().keyRank().first
       || !settlContainer_->isAcceptable()) {
       return;
    }
-   ui_->widgetSubmitKeys->setFlags(WalletKeysSubmitWidget::NoFlag
-      | WalletKeysSubmitWidget::HideAuthConnectButton
-      | WalletKeysSubmitWidget::HideAuthCombobox
-      | WalletKeysSubmitWidget::HideGroupboxCaption
-      | WalletKeysSubmitWidget::AuthIdVisible
-      | WalletKeysSubmitWidget::HideAuthEmailLabel
-      | WalletKeysSubmitWidget::HidePubKeyFingerprint
-      | WalletKeysSubmitWidget::HideProgressBar
-      | WalletKeysSubmitWidget::HidePasswordWarning
-   );
-   ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletId()
-      , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys()
-      , appSettings_);
+
+   ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
+      , WalletKeyWidget::UseType::RequestAuthInParent, appSettings_, logger_);
+
    ui_->widgetSubmitKeys->setFocus();
    ui_->widgetSubmitKeys->resume();
 }

@@ -282,7 +282,7 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<WalletsManager> &wallet
    connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 
    if (signContainer_) {
-      connect(signContainer_.get(), &SignContainer::HDWalletInfo, this, &WalletsViewModel::onHDWalletInfo);
+      connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &WalletsViewModel::onWalletInfo);
       connect(signContainer_.get(), &SignContainer::Error, this, &WalletsViewModel::onHDWalletError);
       connect(signContainer_.get(), &SignContainer::MissingWallets, this, &WalletsViewModel::onMissingWallets);
       connect(signContainer_.get(), &SignContainer::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
@@ -454,8 +454,7 @@ static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::hd::Wallet> &h
    return WalletNode::Type::WalletRegular;
 }
 
-void WalletsViewModel::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>, std::vector<SecureBinaryData>
-   , bs::wallet::KeyRank)
+void WalletsViewModel::onWalletInfo(unsigned int id, bs::hd::WalletInfo)
 {
    if (hdInfoReqIds_.empty() || (hdInfoReqIds_.find(id) == hdInfoReqIds_.end())) {
       return;
