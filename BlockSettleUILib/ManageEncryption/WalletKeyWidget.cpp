@@ -101,6 +101,8 @@ WalletKeyWidget::WalletKeyWidget(AutheIDClient::RequestType requestType
    connect(&timer_, &QTimer::timeout, this, &WalletKeyWidget::onTimer);
 }
 
+WalletKeyWidget::~WalletKeyWidget() = default;
+
 void WalletKeyWidget::onTypeChanged()
 {
    if (ui_->radioButtonPassword->isChecked()) {
