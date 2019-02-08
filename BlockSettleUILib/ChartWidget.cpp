@@ -270,6 +270,7 @@ void ChartWidget::updateVolumeValueAxis(const QString &labelFormat
       volumeYAxis_ = nullptr;
    }
    volumeYAxis_ = createValueAxis(volumeSeries_, labelFormat, maxValue, minValue);
+   volumeYAxis_->setTickCount(2);
 }
 
 // Populates chart with data, right now it's just
@@ -312,8 +313,18 @@ void ChartWidget::buildCandleChart(int interval) {
    ui_->viewPrice->setZoomFactor(zoomFactor);
    ui_->viewVolume->setZoomFactor(zoomFactor);
 
-   updatePriceValueAxis(tr("%06.1f"), maxPrice, minPrice);
-   updateVolumeValueAxis(tr("%06.1f"), maxVolume);
+   QString width;
+   int w = qCeil(qMax(qMax(qAbs(maxPrice), qAbs(minPrice)), maxVolume));
+   int precise = 4;
+   if (w > 1) {
+      width = QString::number(QString::number(w).length() + precise + 2);
+   }
+   QString labelTemplate = QStringLiteral("%0%1.%2f")
+         .arg(QStringLiteral("%0"), width)
+         .arg(precise);
+
+   updatePriceValueAxis(labelTemplate, maxPrice, minPrice);
+   updateVolumeValueAxis(labelTemplate, maxVolume);
 
    ui_->viewPrice->repaint();
    ui_->viewVolume->repaint();
