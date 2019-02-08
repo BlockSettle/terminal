@@ -18,3 +18,5 @@ BinaryData mergeKeys(const BinaryData &a, const BinaryData &b)
    }
    return result;
 }
+
+#include "moc_WalletEncryption.cpp"
