@@ -614,7 +614,7 @@ struct AuthPeerAssetConversion
       const MetaDataAccount*);
 
    static int addAsset(MetaDataAccount*, const SecureBinaryData&,
-      const std::initializer_list<std::string>&);
+      const std::vector<std::string>&);
 };
 
 #endif

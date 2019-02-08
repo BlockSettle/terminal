@@ -209,6 +209,14 @@ const SecureBinaryData& AuthorizedPeers::getPrivateKey(
 void AuthorizedPeers::addPeer(const SecureBinaryData& pubkey, 
    const std::initializer_list<std::string>& names)
 {
+   vector<string> namesVec(names);
+   addPeer(pubkey, namesVec);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AuthorizedPeers::addPeer(const SecureBinaryData& pubkey, 
+   const std::vector<std::string>& names)
+{
    //convert sbd pubkey to libbtc pubkey
    SecureBinaryData pubkey_cmp;
    if (pubkey.getSize() == 65)
@@ -233,8 +241,8 @@ void AuthorizedPeers::addPeer(const SecureBinaryData& pubkey,
       return;
 
    auto peerAccount = wallet_->getMetaAccount(MetaAccount_AuthPeers);
-   auto index = 
-      AuthPeerAssetConversion::addAsset(peerAccount.get(), pubkey_cmp, names);
+   auto index = AuthPeerAssetConversion::addAsset(
+      peerAccount.get(), pubkey_cmp, names);
 
    auto iter = keyToAssetIndexMap_.find(pubkey_cmp);
    if (iter == keyToAssetIndexMap_.end())

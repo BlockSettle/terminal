@@ -1611,7 +1611,7 @@ map<SecureBinaryData, set<unsigned>>
 ////////////////////////////////////////////////////////////////////////////////
 int AuthPeerAssetConversion::addAsset(
    MetaDataAccount* account, const SecureBinaryData& pubkey,
-   const std::initializer_list<std::string>& names)
+   const std::vector<std::string>& names)
 {
    ReentrantLock lock(account);
 

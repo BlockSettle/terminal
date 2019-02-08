@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include "btc/ecc_key.h"
 #include "EncryptionUtils.h"
 #include "Wallets.h"
 #include "BlockDataManagerConfig.h"
@@ -52,6 +53,7 @@ private:
 private:
    void loadWallet(const std::string&);
    void createWallet(const std::string&, const std::string&);
+
    void addPeer(
       const SecureBinaryData&, const std::initializer_list<std::string>&);
    void addPeer(
@@ -87,6 +89,9 @@ public:
       std::initializer_list<std::string> names({ strings... });
       addPeer(pubkey, names);
    }
+
+   void addPeer(
+      const SecureBinaryData&, const std::vector<std::string>&);
 
    //
    void eraseName(const std::string&);
