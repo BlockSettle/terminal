@@ -636,8 +636,6 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
    const double prevBalance = transactionData_->GetTransactionSummary().availableBalance;
    const double spendBalance = transactionData_->GetTotalRecipientsAmount();
    const double totalFee = transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider;
-   logger_->debug("prevBalance: {}, spendBalance: {}, totalFee: {}, diff={}"
-      , prevBalance, spendBalance, totalFee, prevBalance - spendBalance - totalFee);
    CoinControlDialog dlg(transactionData_->GetSelectedInputs(), allowAutoSelInputs_, this);
    if (dlg.exec() == QDialog::Accepted) {
       SetInputs(dlg.selectedInputs());
