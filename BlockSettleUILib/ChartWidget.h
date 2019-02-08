@@ -42,7 +42,17 @@ protected:
    void setChartStyle();
    void createCandleChartAxis();
    void createVolumeChartAxis();
-   void setupTimeAxis(QDateTimeAxis* axis, bool labelsVisible, int interval = -1);
+   void setupTimeAxis(QDateTimeAxis *axis, bool labelsVisible, int interval = -1);
+   QValueAxis *createValueAxis(QCandlestickSeries *series
+                               , const QString &labelFormat
+                               , qreal maxValue = -1.0
+                               , qreal minValue = -1.0);
+   void updatePriceValueAxis(const QString &labelFormat
+                             , qreal maxValue = -1.0
+                             , qreal minValue = -1.0);
+   void updateVolumeValueAxis(const QString &labelFormat
+                              , qreal maxValue = -1.0
+                              , qreal minValue = -1.0);
    void buildCandleChart(int interval = -1);
    void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
    qreal getZoomFactor(int interval = -1);
@@ -56,6 +66,8 @@ private:
     QCandlestickSeries *volumeSeries_;
     QGraphicsTextItem *dataItemText_;
     std::shared_ptr<TradesClient> client_;
+    QValueAxis *priceYAxis_;
+    QValueAxis *volumeYAxis_;
 };
 
 #endif // CHARTWIDGET_H

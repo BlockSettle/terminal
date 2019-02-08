@@ -7,14 +7,17 @@
 #include "CustomCandlestickSet.h"
 #include "TradesClient.h"
 #include "DataPointsLocal.h"
-//#include "OHCLModel.h"
 
 const qreal BASE_FACTOR = 1.0;
 
 
 ChartWidget::ChartWidget(QWidget *parent)
    : QWidget(parent)
-   , ui_(new Ui::ChartWidget) {
+   , ui_(new Ui::ChartWidget)
+   , priceSeries_(nullptr)
+   , volumeSeries_(nullptr)
+   , priceYAxis_(nullptr)
+   , volumeYAxis_(nullptr) {
    ui_->setupUi(this);
 
    // setting up date range radio button group
@@ -26,7 +29,6 @@ ChartWidget::ChartWidget(QWidget *parent)
    dateRange_.addButton(ui_->btn1m, DataPointsLocal::Interval::OneMonth);
    dateRange_.addButton(ui_->btn6m, DataPointsLocal::Interval::SixMonths);
    dateRange_.addButton(ui_->btn1y, DataPointsLocal::Interval::OneYear);
-   ui_->btn1h->click();
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked), 
       this, &ChartWidget::onDateRangeChanged);
 
@@ -63,6 +65,9 @@ ChartWidget::ChartWidget(QWidget *parent)
    priceSeries_->setMaximumColumnWidth(10);
    priceSeries_->setMinimumColumnWidth(10);
    connect(priceSeries_, &QCandlestickSeries::hovered, this, &ChartWidget::onPriceHover);
+   connect(priceSeries_, &QCandlestickSeries::destroyed, [this]() {
+      qDebug() << "Price series destroyed";
+   });
 
    volumeSeries_ = new QCandlestickSeries(this);
    volumeSeries_->setIncreasingColor(QColor(32, 159, 223));
@@ -70,6 +75,9 @@ ChartWidget::ChartWidget(QWidget *parent)
    volumeSeries_->setBodyWidth(1.0);
    volumeSeries_->setMaximumColumnWidth(10);
    volumeSeries_->setMinimumColumnWidth(10);
+   connect(volumeSeries_, &QCandlestickSeries::destroyed, [this]() {
+      qDebug() << "Volume series destroyed";
+   });
 
    dataItemText_ = new QGraphicsTextItem(ui_->viewPrice->chart());
 }
@@ -94,10 +102,13 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
    // setup the chart axis
    createCandleChartAxis();
    createVolumeChartAxis();
+   ui_->btn1h->click();
 }
 
 ChartWidget::~ChartWidget() {
-    delete ui_;
+   delete ui_;
+   priceSeries_->deleteLater();
+   volumeSeries_->deleteLater();
 }
 
 // Populate combo box with existing instruments comeing from mdProvider
@@ -156,46 +167,21 @@ void ChartWidget::setChartStyle() {
 // Creates x and y axis for the candle stick chart.
 void ChartWidget::createCandleChartAxis() {
    auto chart = ui_->viewPrice->chart();
-
    auto dateAxisx = new QDateTimeAxis(this);
    chart->addAxis(dateAxisx, Qt::AlignBottom);
    priceSeries_->attachAxis(dateAxisx);
    setupTimeAxis(dateAxisx, false, dateRange_.checkedId());
-
-   // y axis
-   QValueAxis *axisY = new QValueAxis;
-   axisY->setLabelsColor(QColor(Qt::white));
-   axisY->setGridLineVisible(false);
-   axisY->setMinorGridLineVisible(false);
-   chart->addAxis(axisY, Qt::AlignRight);
-   axisY->setLabelFormat(tr("%06.1f"));
-   qDebug() << "chart localize" << chart->localizeNumbers();
-   priceSeries_->attachAxis(axisY);
-   // add space offset to the y axis
-   auto tmpAxis = qobject_cast<QValueAxis *>(chart->axes(Qt::Vertical).at(0));
-   tmpAxis->setMax(tmpAxis->max() * 1.05);
-   tmpAxis->setMin(tmpAxis->min() * 0.95);
-   tmpAxis->applyNiceNumbers();
+   updatePriceValueAxis(tr("%06.1f"));
 }
 
 // Creates x and y axis for the volume stick chart.
 void ChartWidget::createVolumeChartAxis() {
    auto chart = ui_->viewVolume->chart();
-
    auto dateAxisx = new QDateTimeAxis(this);
    chart->addAxis(dateAxisx, Qt::AlignBottom);
    volumeSeries_->attachAxis(dateAxisx);
    setupTimeAxis(dateAxisx, true, dateRange_.checkedId());
-
-   QValueAxis *axisY = new QValueAxis;
-   axisY->setLabelFormat(tr("%06.1f"));
-   axisY->setLabelsColor(QColor(Qt::white));
-   axisY->setGridLineVisible(false);
-   axisY->setMinorGridLineVisible(false);
-   axisY->setTickCount(2);
-   chart->addAxis(axisY, Qt::AlignRight);
-   volumeSeries_->attachAxis(axisY);
-   axisY->applyNiceNumbers();
+   updateVolumeValueAxis(tr("%06.1f"));
 }
 
 void ChartWidget::setupTimeAxis(QDateTimeAxis *axis, bool labelsVisible, int interval)
@@ -233,6 +219,59 @@ void ChartWidget::setupTimeAxis(QDateTimeAxis *axis, bool labelsVisible, int int
    dateAxisx->setMin(dateAxisx->min().addDays(-1));*/
 }
 
+QValueAxis *ChartWidget::createValueAxis(QCandlestickSeries *series
+                                          , const QString &labelFormat
+                                          , qreal maxValue
+                                          , qreal minValue)
+{
+   qDebug() << "Create axis for" << series << labelFormat << maxValue << minValue;
+   QValueAxis *axis = new QValueAxis;
+   axis->setLabelFormat(labelFormat);
+   axis->setLabelsColor(QColor(Qt::white));
+   axis->setGridLineVisible(false);
+   axis->setMinorGridLineVisible(false);
+   if (series && series->chart()) {
+      series->chart()->addAxis(axis, Qt::AlignRight);
+      qDebug() << "chart axes" << series->chart()->axes();
+      priceSeries_->attachAxis(axis);
+      qDebug() << "chart localize" << series->chart()->localizeNumbers();
+   }
+   if (maxValue > 0) {
+      axis->setMax(maxValue);
+   }
+   if (minValue >= 0) {
+      axis->setMin(minValue);
+   }
+   qDebug() << "before applyNiceNumbers";
+   axis->applyNiceNumbers();
+   qDebug() << "after applyNiceNumbers";
+   return axis;
+}
+
+void ChartWidget::updatePriceValueAxis(const QString &labelFormat
+                                       , qreal maxValue
+                                       , qreal minValue)
+{
+   if (priceYAxis_) {
+      priceSeries_->chart()->removeAxis(priceYAxis_);
+      priceYAxis_->deleteLater();
+      priceYAxis_ = nullptr;
+   }
+   priceYAxis_ = createValueAxis(priceSeries_, labelFormat, maxValue, minValue);
+}
+
+void ChartWidget::updateVolumeValueAxis(const QString &labelFormat
+                                        , qreal maxValue
+                                        , qreal minValue)
+{
+   if (volumeYAxis_) {
+      volumeSeries_->chart()->removeAxis(volumeYAxis_);
+      volumeYAxis_->deleteLater();
+      volumeYAxis_ = nullptr;
+   }
+   volumeYAxis_ = createValueAxis(volumeSeries_, labelFormat, maxValue, minValue);
+}
+
 // Populates chart with data, right now it's just
 // test dummy data.
 void ChartWidget::buildCandleChart(int interval) {
@@ -268,23 +307,16 @@ void ChartWidget::buildCandleChart(int interval) {
    maxPrice += margin;
 
    qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
-   auto priceAxisY = qobject_cast<QValueAxis*>(ui_->viewPrice->chart()->axisY());
-   if (priceAxisY) {
-//      priceAxisY->setRange(minPrice, maxPrice);
-      priceAxisY->setMin(minPrice);
-      priceAxisY->setMax(maxPrice);
-//      priceAxisY->applyNiceNumbers();
-   }
-   auto volumeAxisY = qobject_cast<QValueAxis*>(ui_->viewVolume->chart()->axisY());
-   if (volumeAxisY) {
-      volumeAxisY->setMax(maxVolume);
-//      volumeAxisY->applyNiceNumbers();
-   }
-
    qreal zoomFactor = getZoomFactor(interval);
    qDebug("Update zoom factor: %f", zoomFactor);
    ui_->viewPrice->setZoomFactor(zoomFactor);
    ui_->viewVolume->setZoomFactor(zoomFactor);
+
+   updatePriceValueAxis(tr("%06.1f"), maxPrice, minPrice);
+   updateVolumeValueAxis(tr("%06.1f"), maxVolume);
+
+   ui_->viewPrice->repaint();
+   ui_->viewVolume->repaint();
 }
 
 void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume) {
@@ -324,16 +356,6 @@ void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
    auto interval = static_cast<DataPointsLocal::Interval>(id);
 
-   /*auto priceChart = ui_->viewPrice->chart();
-   priceChart->removeSeries(priceSeries_);
-   priceChart->addSeries(priceSeries_);
-   ui_->addAxis(priceChart->axisY(), Qt::AlignRight);
-
-   auto volumeChart = ui_->viewVolume->chart();
-   volumeChart->removeSeries(volumeSeries_);
-   volumeChart->addSeries(volumeSeries_);
-   volumeChart->addAxis(volumeChart->axisY(), Qt::AlignRight);*/
-
    buildCandleChart(interval);
    auto priceAxis = qobject_cast<QDateTimeAxis *>(ui_->viewPrice->chart()->axisX());
    setupTimeAxis(priceAxis, false, dateRange_.checkedId());
@@ -361,11 +383,6 @@ void ChartWidget::onPriceHover(bool status, QCandlestickSet *set) {
 
 void ChartWidget::onInstrumentChanged(const QString &text) {
    ui_->viewPrice->chart()->setTitle(text);
-
-   /*ui_->viewPrice->chart()->removeSeries(priceSeries_);
-   ui_->viewVolume->chart()->removeSeries(volumeSeries_);
-   ui_->viewPrice->chart()->addSeries(priceSeries_);
-   ui_->viewVolume->chart()->addSeries(volumeSeries_);*/
 
    buildCandleChart(dateRange_.checkedId());
    auto priceAxis = qobject_cast<QDateTimeAxis *>(ui_->viewPrice->chart()->axisX());
