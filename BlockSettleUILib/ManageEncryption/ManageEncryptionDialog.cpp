@@ -119,11 +119,6 @@ void ManageEncryptionDialog::accept()
    onContinueClicked();
 }
 
-void ManageEncryptionDialog::reject()
-{
-   QDialog::reject();
-}
-
 void ManageEncryptionDialog::onContinueClicked()
 {
    // Is this accurate? Shouldn't we wait until the change is confirmed?

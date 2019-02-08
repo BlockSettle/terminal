@@ -53,7 +53,6 @@ private slots:
 
 protected:
    void accept() override;
-   void reject() override;
 
 private:
    void updateState();
