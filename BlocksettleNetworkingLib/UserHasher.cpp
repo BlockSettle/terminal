@@ -1,4 +1,5 @@
 #include "UserHasher.h"
+#include "EncryptUtilsZBase32.h"
 namespace {
    const std::string kdf_iv = "2b"                //total_length
                               "00c1"              //Romix_KDF
@@ -39,5 +40,7 @@ std::shared_ptr<KeyDerivationFunction> UserHasher::getKDF()
 
 std::string UserHasher::deriveKey(const std::string& rawData)
 {
-   return getKDF()->deriveKey(SecureBinaryData(rawData)).toHexStr();
+   SecureBinaryData key =getKDF()->deriveKey(SecureBinaryData(rawData));
+   std::vector<uint8_t> keyData(key.getPtr(), key.getPtr() + key.getSize());
+   return bs::zbase32Encode(keyData).substr(0, 12);
 }
