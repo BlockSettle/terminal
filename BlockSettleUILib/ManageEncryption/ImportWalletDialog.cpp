@@ -5,6 +5,7 @@
 #include "CreateWalletDialog.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
+#include "WalletDeleteDialog.h"
 #include "WalletImporter.h"
 #include "WalletPasswordVerifyDialog.h"
 #include "WalletKeysCreateWidget.h"
@@ -29,11 +30,12 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    : QDialog(parent)
    , ui_(new Ui::ImportWalletDialog)
    , walletsManager_(walletsManager)
+   , signContainer_(container)
    , appSettings_(appSettings)
    , logger_(logger)
    , armory_(armory)
    , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
-      , appSettings->get<NetworkType>(ApplicationSettings::netType)))
+   , appSettings->get<NetworkType>(ApplicationSettings::netType)))
 {
    walletInfo_.setRootId(bs::hd::Node(walletSeed_).getId());
 
@@ -93,6 +95,30 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    adjustSize();
    setMinimumSize(size());
+
+   if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletInfo_.rootId().toStdString())) {
+      const auto hdWallet = walletsManager_->GetHDWalletById(walletInfo_.rootId().toStdString());
+      if (hdWallet == nullptr) {
+         existingChecked_ = true;
+      }
+      else {
+         BSMessageBox delWoWallet(BSMessageBox::question, tr("WO wallet exists")
+            , tr("Watching-only wallet with the same id already exists in the terminal"
+               " - do you want to delete it first?"), this);
+         if (delWoWallet.exec() == QDialog::Accepted) {
+            WalletDeleteDialog delDlg(hdWallet, walletsManager_, signContainer_, appSettings_, logger, this, true);
+            if (delDlg.exec() == QDialog::Accepted) {
+               existingChecked_ = true;
+            }
+         }
+      }
+   }
+   else {
+      connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &ImportWalletDialog::onWalletInfo);
+      connect(signContainer_.get(), &SignContainer::Error, this, &ImportWalletDialog::onSignerError);
+      reqWalletInfoId_ = signContainer_->GetInfo(walletInfo_.rootId().toStdString());
+   }
+   updateAcceptButtonState();
 }
 
 ImportWalletDialog::~ImportWalletDialog() = default;
@@ -103,10 +129,57 @@ void ImportWalletDialog::onError(const QString &errMsg)
    reject();
 }
 
+void ImportWalletDialog::onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo)
+{
+   if (reqId != reqWalletInfoId_) {
+      return;
+   }
+   reqWalletInfoId_ = 0;
+
+   QMetaObject::invokeMethod(this, [this] { promptForSignWalletDelete(); });
+}
+
+void ImportWalletDialog::promptForSignWalletDelete()
+{
+   BSMessageBox delWallet(BSMessageBox::question, tr("Signing wallet exists")
+      , tr("Signing wallet with the same id already exists in the terminal"
+         " - do you want to delete it first?"), this);
+   if (delWallet.exec() == QDialog::Accepted) {
+      const auto hdWallet = walletsManager_->GetHDWalletById(walletInfo_.rootId().toStdString());
+      if (hdWallet == nullptr) {
+         BSMessageBox noWoWallet(BSMessageBox::question, tr("Missing WO wallet")
+            , tr("Watching-only wallet with id %1 is not loaded in the terminal, but still exists in Signer."
+               " Do you want to delete it anyway?").arg(walletInfo_.rootId()), this);
+         if (noWoWallet.exec() == QDialog::Accepted) {
+            signContainer_->DeleteHDRoot(walletInfo_.rootId().toStdString());
+            existingChecked_ = true;
+         }
+      } else {
+         WalletDeleteDialog delDlg(hdWallet, walletsManager_, signContainer_, appSettings_, logger_, this, true, true);
+         if (delDlg.exec() == QDialog::Accepted) {
+            existingChecked_ = true;
+         }
+      }
+      updateAcceptButtonState();
+   }
+}
+
+void ImportWalletDialog::onSignerError(unsigned int id, std::string error)
+{
+   if (id != reqWalletInfoId_) {
+      return;
+   }
+   reqWalletInfoId_ = 0;
+   existingChecked_ = true;
+   updateAcceptButtonState();
+}
+
 void ImportWalletDialog::updateAcceptButtonState()
 {
    ui_->pushButtonImport->setEnabled(ui_->widgetCreateKeys->isValid() &&
       !ui_->lineEditWalletName->text().isEmpty());
+   ui_->pushButtonImport->setEnabled(ui_->widgetCreateKeys->isValid()
+      && existingChecked_ && !ui_->lineEditWalletName->text().isEmpty());
 }
 
 void ImportWalletDialog::onKeyTypeChanged(bool password)

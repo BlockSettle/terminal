@@ -123,10 +123,6 @@ void CCSettlementTransactionWidget::initSigning()
       return;
    }
 
-//   ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletId()
-//      , settlContainer_->keyRank(), settlContainer_->encTypes(), settlContainer_->encKeys()
-//      , appSettings_);
-
    ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
       , WalletKeyWidget::UseType::RequestAuthInParent, appSettings_, logger_);
 

@@ -261,10 +261,6 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
    emit DealerVerificationStateChanged(state);
 }
 
-
-
-
-
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
                                            std::string errTxt, bool cancelledByUser)
 {
