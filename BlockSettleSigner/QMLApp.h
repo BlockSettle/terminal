@@ -7,7 +7,6 @@
 #include "MetaData.h"
 #include <QSystemTrayIcon>
 
-
 namespace bs {
 namespace wallet {
    class QPasswordData;

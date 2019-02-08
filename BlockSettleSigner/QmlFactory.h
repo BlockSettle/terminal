@@ -5,6 +5,8 @@
 #include <QQmlEngine>
 
 #include "QWalletInfo.h"
+#include "QSeed.h"
+#include "QPasswordData.h"
 #include "WalletsManager.h"
 #include "AuthProxy.h"
 
@@ -19,20 +21,20 @@ public:
       , logger_(logger)
       , QObject(parent) {}
 
-   // QSeed
    Q_INVOKABLE bs::wallet::QPasswordData *createPasswordData() {
       auto pd = new bs::wallet::QPasswordData();
       QQmlEngine::setObjectOwnership(pd, QQmlEngine::JavaScriptOwnership);
       return pd;
    }
 
+   // QSeed
    Q_INVOKABLE bs::wallet::QSeed *createSeed(bool isTestNet){
       auto seed = new bs::wallet::QSeed(isTestNet);
       QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
       return seed;
    }
 
-   Q_INVOKABLE bs::wallet::QSeed *createSeedFromPaperBackup(const QString &key, bs::wallet::QNetworkType netType) {
+   Q_INVOKABLE bs::wallet::QSeed *createSeedFromPaperBackup(const QString &key, bs::wallet::QSeed::QNetworkType netType) {
       auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromPaperKey(key, netType));
       QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
       return seed;
@@ -40,12 +42,12 @@ public:
 
    Q_INVOKABLE bs::wallet::QSeed *createSeedFromPaperBackupT(const QString &key, bool isTestNet) {
       auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromPaperKey(key
-                                        , isTestNet ? bs::wallet::QNetworkType::TestNet : bs::wallet::QNetworkType::MainNet));
+                                        , isTestNet ? bs::wallet::QSeed::QNetworkType::TestNet : bs::wallet::QSeed::QNetworkType::MainNet));
       QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
       return seed;
    }
 
-   Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackup(const QString &filename, bs::wallet::QNetworkType netType) {
+   Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackup(const QString &filename, bs::wallet::QSeed::QNetworkType netType) {
       auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromDigitalBackup(filename, netType));
       QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
       return seed;
@@ -53,7 +55,7 @@ public:
 
    Q_INVOKABLE bs::wallet::QSeed *createSeedFromDigitalBackupT(const QString &filename, bool isTestNet) {
       auto seed = new bs::wallet::QSeed(bs::wallet::QSeed::fromDigitalBackup(filename
-                                                                             , isTestNet ? bs::wallet::QNetworkType::TestNet : bs::wallet::QNetworkType::MainNet));
+                                                                             , isTestNet ? bs::wallet::QSeed::QNetworkType::TestNet : bs::wallet::QSeed::QNetworkType::MainNet));
       QQmlEngine::setObjectOwnership(seed, QQmlEngine::JavaScriptOwnership);
       return seed;
    }

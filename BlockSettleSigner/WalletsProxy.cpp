@@ -156,7 +156,7 @@ bool WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
    std::vector<bs::wallet::PasswordData> newPasswordData;
    for (int i = 0; i < wallet->encryptionKeys().size(); ++i) {
       if (removedIndex == i) continue;
-      bs::wallet::PasswordData pd;
+      bs::wallet::QPasswordData pd;
       pd.encType = bs::wallet::EncryptionType::Auth;
       pd.encKey = wallet->encryptionKeys()[i];
       newPasswordData.push_back(pd);
@@ -295,7 +295,7 @@ bool WalletsProxy::createWallet(bool isPrimary
                                 , bs::hd::WalletInfo *walletInfo
                                 , bs::wallet::QPasswordData *passwordData)
 {
-   if (seed->networkType() == bs::wallet::Invalid) {
+   if (seed->networkType() == bs::wallet::QSeed::Invalid) {
       emit walletError({}, tr("Failed to create wallet with invalid seed"));
       return false;
    }

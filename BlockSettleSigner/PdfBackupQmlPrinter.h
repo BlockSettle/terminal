@@ -6,7 +6,8 @@
 
 #include "PaperBackupWriter.h"
 #include "QWalletInfo.h"
-
+#include "QSeed.h"
+#include "QPasswordData.h"
 #include <memory>
 
 //
