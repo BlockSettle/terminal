@@ -39,7 +39,8 @@ public:
    };
    Q_ENUM(UseType)
 
-   ~WalletKeyWidget() override = default;
+   // Destructor must be instanciated in .cpp file otherwise it will cause build error on linux and osx
+   ~WalletKeyWidget() override;
 
    void cancel();
    void start();
