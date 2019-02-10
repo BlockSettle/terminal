@@ -56,8 +56,10 @@ BSMessageBox::~BSMessageBox() = default;
 
 void BSMessageBox::showEvent( QShowEvent* )
 {
-    QRect parentRect(parentWidget()->mapToGlobal(QPoint(0, 0)), parentWidget()->size());
-    move(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), parentRect).topLeft());
+   if (parentWidget()) {
+      QRect parentRect(parentWidget()->mapToGlobal(QPoint(0, 0)), parentWidget()->size());
+      move(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), parentRect).topLeft());
+   }
 }
 
 void BSMessageBox::onDetailsPressed() {

@@ -80,7 +80,7 @@ private:
    std::unique_ptr<Ui::WalletKeyWidget> ui_;
    int         keyIndex_;
    bool        authRunning_ = false;
-
+   bool        authNoticeWasShown_ = false;
    QTimer      timer_;
    float       timeLeft_;
 
@@ -91,6 +91,7 @@ private:
    bs::hd::WalletInfo walletInfo_;
    bs::wallet::PasswordData passwordData_;
    std::shared_ptr<spdlog::logger> logger_;
+   UseType useType_;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

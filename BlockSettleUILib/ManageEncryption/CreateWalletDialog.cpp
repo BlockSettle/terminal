@@ -58,8 +58,6 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    connect(ui_->lineEditWalletName, &QLineEdit::textChanged, this, &CreateWalletDialog::updateAcceptButtonState);
    //connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyCountChanged, [this] { adjustSize(); });
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged, [this] { updateAcceptButtonState(); });
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyTypeChanged,
-      this, &CreateWalletDialog::onKeyTypeChanged);
 
    ui_->widgetCreateKeys->setFlags(WalletKeysCreateWidget::HideWidgetContol | WalletKeysCreateWidget::HideAuthConnectButton);
 
@@ -166,15 +164,6 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
 
    info.exec();
    reject();
-}
-
-void CreateWalletDialog::onKeyTypeChanged(bool password)
-{
-   if (!password && !authNoticeWasShown_) {
-      if (MessageBoxAuthNotice(this).exec() == QDialog::Accepted) {
-         authNoticeWasShown_ = true;
-      }
-   }
 }
 
 void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet> wallet)

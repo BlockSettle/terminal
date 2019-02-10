@@ -10,6 +10,7 @@
 #include <spdlog/spdlog.h>
 #include "ApplicationSettings.h"
 #include "AutheIDClient.h"
+#include "BSMessageBox.h"
 
 using namespace bs::wallet;
 using namespace bs::hd;
@@ -116,6 +117,13 @@ void WalletKeyWidget::onTypeChanged()
       ui_->stackedWidget->setCurrentWidget(ui_->pageEid);
       ui_->pageEid->setMaximumHeight(SHRT_MAX);
       ui_->pagePassword->setMaximumHeight(0);
+
+      // optiopnally show eid info box
+      if ((useType_ == UseType::ChangeAuthForDialog || useType_ == UseType::ChangeAuthInParent ) && !authNoticeWasShown_) {
+         if (MessageBoxAuthNotice(this).exec() == QDialog::Accepted) {
+            authNoticeWasShown_ = true;
+         }
+      }
    }
    emit passwordDataChanged(keyIndex_, passwordData_);
 }
@@ -298,6 +306,8 @@ void WalletKeyWidget::setFocus()
 
 void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
 {
+   useType_ = useType;
+
    bool changeAuthType = (useType == UseType::ChangeAuthInParent || useType == UseType::ChangeAuthForDialog);
    bool requestAuthType = (useType == UseType::RequestAuthInParent
                            || useType == UseType::RequestAuthAsDialog
@@ -357,7 +367,8 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
    }
 
    if (useType == UseType::RequestAuthAsDialog && walletInfo_.isPasswordOnly()) {
-      ui_->labelPassword->setMaximumWidth(80);
+      ui_->labelPassword->setMaximumWidth(70);
+      ui_->labelPassword->setMinimumWidth(70);
    }
 
 

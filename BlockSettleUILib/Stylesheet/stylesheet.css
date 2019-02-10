@@ -282,9 +282,9 @@ QMenu::item:first {
 
 *[usernameButton="true"] {
   border: none;
-  text-transform: lowercase;
   text-align: right;
   background-color: transparent;
+  text-transform: none;
   padding: 0 5px 0 0;
   color: #247dac;
   height: 25px; }

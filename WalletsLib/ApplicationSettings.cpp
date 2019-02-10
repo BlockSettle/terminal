@@ -153,7 +153,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
       { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
       { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) },
-      { rememberLoginUserName,            SettingDef(QLatin1String("rememberLoginUserName"), true) }
+      { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) }
    };
 }
 

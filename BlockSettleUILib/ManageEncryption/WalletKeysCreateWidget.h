@@ -51,7 +51,7 @@ signals:
    void keyChanged();
    void keyCountChanged();
    void failed();
-   void keyTypeChanged(bool password);
+   //void keyTypeChanged(bool password);
    void returnPressed();
 
 private slots:
