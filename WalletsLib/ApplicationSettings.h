@@ -100,6 +100,7 @@ public:
       jwtUsername,
       zmqLocalSignerPubKeyFilePath,
       zmqRemoteSignerPubKey,
+      rememberLoginUserName,
       _last
    };
 

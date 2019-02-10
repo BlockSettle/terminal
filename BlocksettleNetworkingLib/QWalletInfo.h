@@ -81,6 +81,7 @@ public:
    void setKeyRank(const bs::wallet::KeyRank &keyRank);
 
    bool isEidAuthOnly() const;
+   bool isPasswordOnly() const;
 
 signals:
    void walletChanged();

@@ -40,6 +40,7 @@ public:
    void setCancelButtonText(const QString &text);
    void setLabelTextFormat(Qt::TextFormat tf);
 
+   void showEvent(QShowEvent *);
 protected slots:
    void onDetailsPressed();
 

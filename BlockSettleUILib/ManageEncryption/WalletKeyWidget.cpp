@@ -355,6 +355,12 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
       ui_->labelAuthIdEmailText->setMaximumWidth(SHRT_MAX);
       ui_->labelAuthId->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
    }
+
+   if (useType == UseType::RequestAuthAsDialog && walletInfo_.isPasswordOnly()) {
+      ui_->labelPassword->setMaximumWidth(80);
+   }
+
+
 }
 
 QPropertyAnimation* WalletKeyWidget::startAuthAnimation(bool success)
