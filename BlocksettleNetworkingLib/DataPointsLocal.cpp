@@ -299,10 +299,5 @@ DataPointsLocal::DataPoint *DataPointsLocal::createDataPoint(double open
                                                              , double volume
                                                              , const uint64_t &timestamp) const
 {
-   return new DataPoint { .open = open
-            , .high = high
-            , .low = low
-            , .close = close
-            , .volume = volume
-            , .timestamp = static_cast<qreal>(timestamp) };
+   return new DataPoint(open, high, low, close, volume, timestamp);
 }

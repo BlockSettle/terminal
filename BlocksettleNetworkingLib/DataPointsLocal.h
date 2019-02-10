@@ -22,6 +22,19 @@ public:
       OneHour
    };
    struct DataPoint {
+		DataPoint(const double open
+			, const double high
+			, const double low
+			, const double close
+			, const double volume
+			, const uint64_t &timestamp)
+			: open(open)
+			, high(high)
+			, low(low)
+			, close(close)
+			, volume(volume)
+			, timestamp(timestamp)
+		{ }
       qreal open = -1.0;
       qreal high = -1.0;
       qreal low = -1.0;

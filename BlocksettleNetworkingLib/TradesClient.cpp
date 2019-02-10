@@ -178,11 +178,5 @@ DataPointsLocal::DataPoint *TradesClient::generatePoint(
    }
    qreal close = qMax(minPrice, open - lower + QRandomGenerator::global()->generateDouble() * upper);
    qreal volume = QRandomGenerator::global()->generateDouble() * 100;
-   return new DataPointsLocal::DataPoint { .open = open,
-            .high = high,
-            .low = low,
-            .close = close,
-            .volume = volume,
-            .timestamp = timestamp
-   };
+   return new DataPointsLocal::DataPoint(open, high, low, close, volume, timestamp);
 }
