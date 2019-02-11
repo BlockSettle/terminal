@@ -188,7 +188,7 @@ bool TransactionData::UpdateTransactionData()
 
    PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
       ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
-      : PaymentStruct(recipientsMap, totalFee_, feePerByte_, 0);
+      : PaymentStruct(recipientsMap, totalFee_, 0, 0);
    summary_.balanceToSpend = UiUtils::amountToBtc(payment.spendVal_);
 
    if (payment.spendVal_ <= availableBalance) {

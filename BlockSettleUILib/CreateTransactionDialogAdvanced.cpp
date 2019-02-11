@@ -28,17 +28,17 @@ static const size_t kP2WPKHOutputSize = 35;
 
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<WalletsManager>& walletManager
-   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
-   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
- : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions
-    , logger, parent)
+      , const std::shared_ptr<WalletsManager>& walletManager
+      , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
+      , const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<TransactionData> &txData
+      , QWidget* parent)
+   : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions, logger, parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
-   ui_->setupUi(this);
-
+   transactionData_ = txData;
    selectedChangeAddress_ = bs::Address{};
 
+   ui_->setupUi(this);
    initUI();
 }
 
@@ -53,12 +53,8 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const std::shared_ptr<bs::Wallet>& wallet
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
-                                                                walletManager,
-                                                                container,
-                                                                false,
-                                                                logger,
-                                                                parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
+      , walletManager, container, false, logger, nullptr, parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -79,12 +75,8 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const Tx &tx
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
-                                                                walletManager,
-                                                                container,
-                                                                false,
-                                                                logger,
-                                                                parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
+      , walletManager, container, false, logger, nullptr, parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
@@ -701,8 +693,13 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
       return false;
    }
    const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
-   const double diffMax = transactionData_->GetTransactionSummary().availableBalance
+   double diffMax = transactionData_->GetTransactionSummary().availableBalance
       - transactionData_->GetTotalRecipientsAmount() - totalFee;
+   const double newTotalFee = diffMax + totalFee;
+
+   if (diffMax < 0) {
+      diffMax = 0;
+   }
    // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
    if ((diffMax > 0) && (diffMax < totalFee / 2)) {
       BSMessageBox question(BSMessageBox::question, tr("Change fee")
@@ -712,7 +709,7 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
          , tr("Would you like to remove the change output and put its amount towards the fees?")
          , this);
       if (question.exec() == QDialog::Accepted) {
-         transactionData_->setTotalFee((diffMax + totalFee) * BTCNumericTypes::BalanceDivider, false);
+         transactionData_->setTotalFee(newTotalFee * BTCNumericTypes::BalanceDivider, false);
          for (const auto &recipId : transactionData_->allRecipientIds()) {
             UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
          }
