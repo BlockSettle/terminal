@@ -29,7 +29,7 @@ ChartWidget::ChartWidget(QWidget *parent)
    dateRange_.addButton(ui_->btn1m, DataPointsLocal::Interval::OneMonth);
    dateRange_.addButton(ui_->btn6m, DataPointsLocal::Interval::SixMonths);
    dateRange_.addButton(ui_->btn1y, DataPointsLocal::Interval::OneYear);
-   connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked), 
+   connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked),
       this, &ChartWidget::onDateRangeChanged);
 
    // these signals are used to sync volume chart with price chart
@@ -118,7 +118,7 @@ void ChartWidget::onMDUpdated(bs::network::Asset::Type assetType, const QString 
       cboModel_->clear();
       return;
    }
-   
+
    if (cboModel_->findItems(security).isEmpty()) {
       cboModel_->appendRow(new QStandardItem(security));
    }
@@ -292,9 +292,7 @@ void ChartWidget::buildCandleChart(int interval) {
       minPrice = minPrice == -1.0 ? dp->low : qMin(minPrice, dp->low);
       maxVolume = qMax(maxVolume, dp->volume);
       addDataPoint(dp->open, dp->high, dp->low, dp->close, dp->timestamp, dp->volume);
-      categories.append(QDateTime::fromMSecsSinceEpoch(dp->timestamp)
-                        .toUTC()
-                        .toString(QStringLiteral("dd")));
+      categories.append(barLabel(dp->timestamp, interval));
       qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
              , QDateTime::fromMSecsSinceEpoch(dp->timestamp).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
              , dp->open
@@ -322,7 +320,7 @@ void ChartWidget::buildCandleChart(int interval) {
       volumeAxis->setCategories(categories);
    }
 
-   qreal zoomFactor = 10.0;
+   qreal zoomFactor = 2.0;
    setZoomFactor(zoomFactor);
 
    QString width;
@@ -379,6 +377,32 @@ void ChartWidget::setZoomFactor(qreal factor)
    qDebug("Update zoom factor: %f", factor);
    ui_->viewPrice->setZoomFactor(factor);
    ui_->viewVolume->setZoomFactor(factor);
+}
+
+QString ChartWidget::barLabel(qreal timestamp, int interval) const
+{
+   QDateTime time = QDateTime::fromMSecsSinceEpoch(timestamp).toUTC();
+//   return time.toString(Qt::ISODate);
+   switch (static_cast<DataPointsLocal::Interval>(interval)) {
+   case DataPointsLocal::OneYear:
+      return time.toString(QStringLiteral("yy"));
+   case DataPointsLocal::SixMonths:
+      return time.toString(QStringLiteral("M"));
+   case DataPointsLocal::OneMonth:
+      return time.toString(QStringLiteral("M"));
+   case DataPointsLocal::OneWeek:
+      return QString::number(time.date().weekNumber());
+   case DataPointsLocal::TwentyFourHours:
+      return time.toString(QStringLiteral("d"));
+   case DataPointsLocal::TwelveHours:
+      return time.toString(QStringLiteral("H"));
+   case DataPointsLocal::SixHours:
+      return time.toString(QStringLiteral("H"));
+   case DataPointsLocal::OneHour:
+      return time.toString(QStringLiteral("hh"));
+   default:
+      return time.toString(QStringLiteral("HH"));
+   }
 }
 
 // Handles changes of date range.

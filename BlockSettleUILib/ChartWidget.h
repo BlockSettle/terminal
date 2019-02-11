@@ -57,6 +57,7 @@ protected:
    void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
    qreal getZoomFactor(int interval = -1) const;
    void setZoomFactor(qreal factor);
+   QString barLabel(qreal timestamp, int interval = -1) const;
 
 private:
     Ui::ChartWidget *ui_;
