@@ -22,6 +22,10 @@ add_definitions(-DNOMINMAX)
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
 
+IF (PRODUCTION_BUILD)
+   add_compile_definitions(PRODUCTION_BUILD)
+ENDIF (PRODUCTION_BUILD)
+
 # Force 64-bit builds and min target for macOS. If the min target changes,
 # update generate.py too.
 if(APPLE)
