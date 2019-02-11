@@ -44,7 +44,7 @@ void ChatUserListTreeWidget::createCategories()
    ChatUserCategoryListView *listView = new ChatUserCategoryListView(this);
    listView->setViewMode(QListView::ListMode);
    listView->setModel(_friendUsersViewModel);
-   listView->setObjectName(QStringLiteral("ChatUserCategoryListView"));
+   listView->setObjectName(QStringLiteral("chatUserCategoryListView"));
    setItemWidget(embedItem, 0, listView);
 
    connect(listView, &QAbstractItemView::clicked,
@@ -62,7 +62,7 @@ void ChatUserListTreeWidget::createCategories()
    ChatUserCategoryListView *listViewAllUsers = new ChatUserCategoryListView(this);
    listViewAllUsers->setViewMode(QListView::ListMode);
    listViewAllUsers->setModel(_nonFriendUsersViewModel);
-   listViewAllUsers->setObjectName(QStringLiteral("ChatUserCategoryListView"));
+   listViewAllUsers->setObjectName(QStringLiteral("chatUserCategoryListView"));
    setItemWidget(embedAllUsers, 0, listViewAllUsers);
 
    connect(listViewAllUsers, &QAbstractItemView::clicked,

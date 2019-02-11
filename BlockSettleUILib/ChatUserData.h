@@ -4,6 +4,12 @@
 #include <QString>
 #include <QObject>
 
+namespace ChatUserColor {
+   static const QString COLOR_USER_ONLINE = QStringLiteral("#00c8f8");
+   static const QString COLOR_INCOMING_FRIEND_REQUEST = QStringLiteral("#ffa834");
+   static const QString COLOR_USER_DEFAULT = QStringLiteral("#c0c0c0");
+}
+
 class ChatUserData : public QObject
 {
    Q_OBJECT
@@ -60,5 +66,8 @@ private:
 
 typedef std::shared_ptr<ChatUserData> TChatUserDataPtr;
 typedef QList<TChatUserDataPtr> TChatUserDataListPtr;
+
+Q_DECLARE_METATYPE(ChatUserData::UserConnectionStatus)
+Q_DECLARE_METATYPE(ChatUserData::UserState);
 
 #endif // CHATUSER_H

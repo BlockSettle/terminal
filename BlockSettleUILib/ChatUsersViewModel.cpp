@@ -1,6 +1,7 @@
+#include <QColor>
+
 #include "ChatUsersViewModel.h"
 #include "ChatClient.h"
-
 
 ChatUsersViewModel::ChatUsersViewModel(QObject* parent)
    : QAbstractTableModel(parent)
