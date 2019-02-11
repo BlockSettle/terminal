@@ -980,8 +980,8 @@ void BSTerminalMainWindow::onReadyToLogin()
    LoginWindow loginDialog(applicationSettings_, logMgr_->logger("autheID"), this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
-      auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
       currentUserLogin_ = loginDialog.getUsername();
+      auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
       setLoginButtonText(currentUserLogin_ /*+ QString::fromStdString("( Chat user: " + id + " )")*/);
 
 //      if (loginDialog.isAutheID())
