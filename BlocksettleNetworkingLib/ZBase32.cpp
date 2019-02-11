@@ -3,6 +3,8 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <cassert>
+
 namespace {
    const std::vector<char> EncodingTable = std::vector<char>(
    {'y','b','n','d','r','f','g','8',
@@ -62,7 +64,43 @@ static size_t createIndex(const char* data, size_t data_length, size_t position,
    return position;
 }
 
-namespace bs { namespace utils {
+namespace bs {
+
+namespace zbase32_impl {
+   size_t zbase32_encode(char output[],
+                         const uint8_t input[],
+                         size_t input_length,
+                         size_t& input_consumed);
+   size_t zbase32_encode_estimate_size(size_t size);
+   size_t zbase32_decode(uint8_t output[],
+                         const char input[],
+                         size_t input_length);
+   size_t zbase32_decode_estimate_size(size_t size);
+} //zbase32_impl
+
+size_t zbase32Encode(const void * data, size_t dataSize, void *dst){
+      size_t consumed;
+      size_t result = bs::zbase32_impl::zbase32_encode(static_cast<char*>(dst)
+            , static_cast<const uint8_t*>(data), dataSize, consumed);
+      assert(consumed == result);
+   return result;
+}
+
+size_t zbase32EncodeEstimateSize(size_t size) {
+   return bs::zbase32_impl::zbase32_encode_estimate_size(size);
+}
+size_t zbase32DecodeEstimateSize(size_t size) {
+   return bs::zbase32_impl::zbase32_decode_estimate_size(size);
+}
+size_t zbase32Decode(const void * data, size_t dataSize, void *dst) {
+   try {
+      return bs::zbase32_impl::zbase32_decode(static_cast<uint8_t*>(dst), static_cast<const char*>(data), dataSize);
+   } catch (const std::exception &) {
+      return 0;
+   }
+}
+
+namespace zbase32_impl {
    size_t zbase32_encode(char output[],
                          const uint8_t input[],
                          size_t input_length,
@@ -141,4 +179,6 @@ namespace bs { namespace utils {
 
    }
 
-} }
+} //zbase32_impl
+
+} //bs
