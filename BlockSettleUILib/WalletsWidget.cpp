@@ -472,17 +472,18 @@ bool WalletsWidget::CreateNewWallet(bool report)
 
 bool WalletsWidget::ImportNewWallet(bool report)
 {
+   bool disablePrimaryImport = false;
+
    if (!walletsManager_->HasPrimaryWallet() && assetManager_->privateShares(true).empty()) {
-      BSMessageBox q(BSMessageBox::question, tr("Private Market Import"), tr("Private Market data is missing")
+      BSMessageBox q(BSMessageBox::warning, tr("Private Market Import"), tr("Private Market data is missing")
          , tr("You do not have Private Market data available in the BlockSettle Terminal. You must first log "
-            "into your Celer account from the main menu. A successful login will cause the proper data to be "
+            "into the BlockSettle trading network from the main menu. A successful login will cause the proper data to be "
             "automatically downloaded. Without this data, you will be unable to receive your Private Market "
             "balances. Are you absolutely certain that you wish to proceed an import that doesn't include "
             "Private Market data? (Upon receiving the data, you will have to re-import the wallet in order to "
             "use the data.)"), this);
-      if (q.exec() == QDialog::Accepted) {
-         return false;
-      }
+      q.exec();
+      disablePrimaryImport = true;
    }
 
    // if signer is not ready - import WO only
@@ -501,6 +502,7 @@ bool WalletsWidget::ImportNewWallet(bool report)
                                                     , username_
                                                     , importWalletDialog.GetName()
                                                     , importWalletDialog.GetDescription()
+                                                    , disablePrimaryImport
                                                     , this);
 
          if (createImportedWallet.exec() == QDialog::Accepted) {
