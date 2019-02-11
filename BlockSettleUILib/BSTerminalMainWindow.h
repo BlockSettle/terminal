@@ -133,7 +133,6 @@ private:
    std::shared_ptr<CCPortfolioModel>         portfolioModel_;
    std::shared_ptr<ConnectionManager>        connectionManager_;
    std::shared_ptr<CelerClient>              celerConnection_;
-   std::shared_ptr<AutheIDClient>            autheIDConnection_;
    std::shared_ptr<CelerMarketDataProvider>  mdProvider_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
@@ -186,9 +185,6 @@ private slots:
    void onZCreceived(const std::vector<bs::TXEntry>);
    void onArmoryStateChanged(ArmoryConnection::State);
 
-   void onAutheIDDone(const std::string& email);
-   void onAutheIDFailed();
-
    void onLogin();
    void onLogout();
 
@@ -221,7 +217,6 @@ private:
 
    void updateLoginActionState();
 
-   void loginWithAutheID(const std::string& email);
    void loginWithCeler(const std::string& username, const std::string& password);
    void loginToCeler(const std::string& username, const std::string& password);
 

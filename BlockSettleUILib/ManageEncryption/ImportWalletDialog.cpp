@@ -77,8 +77,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &ImportWalletDialog::importWallet);
    connect(ui_->pushButtonImport, &QPushButton::clicked, this, &ImportWalletDialog::importWallet);
 
-   connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyTypeChanged,
-      this, &ImportWalletDialog::onKeyTypeChanged);
+
    connect(ui_->lineEditWalletName, &QLineEdit::textChanged,
       this, &ImportWalletDialog::updateAcceptButtonState);
    connect(ui_->widgetCreateKeys, &WalletKeysCreateWidget::keyChanged,
@@ -180,17 +179,6 @@ void ImportWalletDialog::updateAcceptButtonState()
       !ui_->lineEditWalletName->text().isEmpty());
    ui_->pushButtonImport->setEnabled(ui_->widgetCreateKeys->isValid()
       && existingChecked_ && !ui_->lineEditWalletName->text().isEmpty());
-}
-
-void ImportWalletDialog::onKeyTypeChanged(bool password)
-{
-   if (!password && !authNoticeWasShown_) {
-      MessageBoxAuthNotice dlg(this);
-
-      if (dlg.exec() == QDialog::Accepted) {
-         authNoticeWasShown_ = true;
-      }
-   }
 }
 
 void ImportWalletDialog::onWalletCreated(const std::string &walletId)

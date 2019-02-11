@@ -203,14 +203,6 @@ void ManageEncryptionDialog::continueBasic()
    }
 
    if (isNewAuth) {
-      if (showAuthUsageInfo) {
-         MessageBoxAuthNotice authNotice(this);
-         int result = authNotice.exec();
-         if (result != QDialog::Accepted) {
-            return;
-         }
-      }
-
       EnterWalletPassword enterWalletPassword(AutheIDClient::ActivateWallet, this);
       // overwrite encKeys
       bs::hd::WalletInfo wi = walletInfo_;

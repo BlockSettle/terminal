@@ -48,7 +48,6 @@ private slots:
    void createWallet();
    void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
-   void onKeyTypeChanged(bool password);
 
 protected:
    void reject() override;

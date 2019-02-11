@@ -56,6 +56,7 @@ void EnterWalletPassword::init(const WalletInfo &walletInfo
 
       ui_->pushButtonOk->hide();
       ui_->spacerLeft->changeSize(1, 1, QSizePolicy::Expanding, QSizePolicy::Preferred);
+      ui_->groupBoxSubmitKeys->setTitle(QStringLiteral());
    }
 
    ui_->widgetSubmitKeys->init(requestType_, walletInfo_, useType, appSettings_, logger_, prompt);

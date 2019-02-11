@@ -186,6 +186,16 @@ bool WalletInfo::isEidAuthOnly() const
    return true;
 }
 
+bool WalletInfo::isPasswordOnly() const
+{
+   for (auto encType : encTypes()) {
+      if (encType != EncryptionType::Password) {
+         return false;
+      }
+   }
+   return true;
+}
+
 void WalletInfo::setEncKeys(const std::vector<SecureBinaryData> &encKeys)
 {
    encKeys_.clear();

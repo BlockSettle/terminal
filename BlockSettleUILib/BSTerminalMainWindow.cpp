@@ -69,7 +69,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    setupShortcuts();
 
-   loginButtonText_ = tr("user.name");
+   loginButtonText_ = tr("Login");
 
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
@@ -512,10 +512,6 @@ void BSTerminalMainWindow::InitConnections()
    connect(celerConnection_.get(), &CelerClient::OnConnectionClosed, this, &BSTerminalMainWindow::onCelerDisconnected);
    connect(celerConnection_.get(), &CelerClient::OnConnectionError, this, &BSTerminalMainWindow::onCelerConnectionError, Qt::QueuedConnection);
 
-   autheIDConnection_ = std::make_shared<AutheIDClient>(logMgr_->logger("autheID"), applicationSettings_->GetAuthKeys());
-   connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &BSTerminalMainWindow::onAutheIDDone);
-   connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &BSTerminalMainWindow::onAutheIDFailed);
-
    mdProvider_ = std::make_shared<CelerMarketDataProvider>(connectionManager_, logMgr_->logger("message"), true);
 
    connect(mdProvider_.get(), &MarketDataProvider::UserWantToConnectToMD, this, &BSTerminalMainWindow::acceptMDAgreement);
@@ -596,7 +592,7 @@ void BSTerminalMainWindow::InitChatView()
 {
    ui->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
 
-   connect(ui->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
+   //connect(ui->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
 }
 
 // Initialize widgets related to transactions.
@@ -941,19 +937,6 @@ void BSTerminalMainWindow::openCCTokenDialog()
    }
 }
 
-void BSTerminalMainWindow::loginWithAutheID(const std::string& email)
-{
-   if (autheIDConnection_->authenticate(email, applicationSettings_))
-   {
-      currentUserLogin_ = QString::fromStdString(email);
-      setLoginButtonText(tr("Logging in..."));
-   }
-   else
-   {
-      onAutheIDFailed();
-   }
-}
-
 void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::string& password)
 {
    const std::string host = applicationSettings_->get<std::string>(ApplicationSettings::celerHost);
@@ -981,20 +964,6 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
    }
 }
 
-void BSTerminalMainWindow::onAutheIDDone(const std::string& jwt)
-{
-   auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), jwt);
-   setLoginButtonText(currentUserLogin_ /*+ QString::fromStdString("( Chat user: " + id + " )")*/);
-}
-
-void BSTerminalMainWindow::onAutheIDFailed()
-{
-   BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr("Auth eID username was rejected"), this);
-   loginErrorBox.exec();
-
-   setLoginButtonText(loginButtonText_);
-}
-
 void BSTerminalMainWindow::onLogin()
 {
    // disable login and set tooltip
@@ -1008,19 +977,23 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onReadyToLogin()
 {
-   LoginWindow loginDialog(applicationSettings_, this);
+   LoginWindow loginDialog(applicationSettings_, logMgr_->logger("autheID"), this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
-      if (loginDialog.isAutheID())
-      {
-         loginWithAutheID(loginDialog.getUsername().toStdString());
-      }
-      else
-      {
-         // password login depricated
-         // loginToCeler(loginDialog.getUsername().toStdString()
-         //              , loginDialog.getPassword().toStdString());
-      }
+      currentUserLogin_ = loginDialog.getUsername();
+      auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
+      setLoginButtonText(currentUserLogin_ /*+ QString::fromStdString("( Chat user: " + id + " )")*/);
+
+//      if (loginDialog.isAutheID())
+//      {
+//         loginWithAutheID(loginDialog.getUsername().toStdString());
+//      }
+//      else
+//      {
+//         // password login depricated
+//         // loginToCeler(loginDialog.getUsername().toStdString()
+//         //              , loginDialog.getPassword().toStdString());
+//      }
    }
 }
 

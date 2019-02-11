@@ -53,7 +53,6 @@ private slots:
    void importWallet();
    void onWalletCreated(const std::string &walletId);
    void onError(const QString &errMsg);
-   void onKeyTypeChanged(bool password);
    void updateAcceptButtonState();
    void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo);
    void onSignerError(unsigned int id, std::string error);
