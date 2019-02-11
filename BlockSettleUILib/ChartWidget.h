@@ -42,7 +42,7 @@ protected:
    void setChartStyle();
    void createCandleChartAxis();
    void createVolumeChartAxis();
-   void setupTimeAxis(QDateTimeAxis *axis, bool labelsVisible, int interval = -1);
+   void setupTimeAxis(QBarCategoryAxis *axis, bool labelsVisible, int interval = -1);
    QValueAxis *createValueAxis(QCandlestickSeries *series
                                , const QString &labelFormat
                                , qreal maxValue = -1.0
@@ -55,7 +55,8 @@ protected:
                               , qreal minValue = -1.0);
    void buildCandleChart(int interval = -1);
    void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
-   qreal getZoomFactor(int interval = -1);
+   qreal getZoomFactor(int interval = -1) const;
+   void setZoomFactor(qreal factor);
 
 private:
     Ui::ChartWidget *ui_;
