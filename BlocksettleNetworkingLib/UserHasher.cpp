@@ -1,5 +1,5 @@
 #include "UserHasher.h"
-#include "EncryptUtilsZBase32.h"
+#include "ZBase32.h"
 namespace {
    const std::string kdf_iv = "2b"                //total_length
                               "00c1"              //Romix_KDF
