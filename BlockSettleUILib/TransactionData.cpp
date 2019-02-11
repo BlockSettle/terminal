@@ -486,6 +486,9 @@ uint64_t TransactionData::totalFee() const
    if (totalFee_) {
       return totalFee_;
    }
+   if (summary_.totalFee) {
+      return summary_.totalFee;
+   }
    if (summary_.txVirtSize) {
       return feePerByte_ * summary_.txVirtSize;
    }

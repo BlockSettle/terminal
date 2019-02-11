@@ -701,7 +701,7 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
       diffMax = 0;
    }
    // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
-   if ((diffMax > 0) && (diffMax < totalFee / 2)) {
+   if ((diffMax >= 0.00000001) && (diffMax < totalFee / 2)) {
       BSMessageBox question(BSMessageBox::question, tr("Change fee")
          , tr("Your projected change amount %1 is too small as compared to the projected fee."
             " Attempting to keep the change will prevent the transaction from being propagated through"
@@ -715,6 +715,12 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
          }
          return true;
       }
+   }
+   else if (diffMax < 0.00000001) {   // if diff is less than 1 satoshi (which can be caused by maxAmount calc tolerance)
+      for (const auto &recipId : transactionData_->allRecipientIds()) {
+         UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
+      }
+      return true;
    }
    return false;
 }
@@ -788,7 +794,7 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    CreateTransactionDialog::onFeeSuggestionsLoaded(feeValues);
 
    AddManualFeeEntries((minFeePerByte_ > 0) ? minFeePerByte_ : feeValues.begin()->second
-      , (minTotalFee_ > 0) ? minTotalFee_ : 0);
+      , (minTotalFee_ > 0) ? minTotalFee_ : transactionData_->totalFee());
 
    if (minFeePerByte_ > 0) {
       const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
@@ -809,8 +815,8 @@ void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePer
 // currentIndex isn't being used. We should use it or lose it.
 void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
 {
-   setTxFees();
    updateManualFeeControls();
+   setTxFees();
 }
 
 bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
@@ -1083,7 +1089,12 @@ void CreateTransactionDialogAdvanced::updateManualFeeControls()
    int itemCount = ui_->comboBoxFeeSuggestions->count();
 
    ui_->doubleSpinBoxFeesManualPerByte->setVisible(itemCount > 2 && itemIndex == itemCount - 2);
-   ui_->spinBoxFeesManualTotal->setVisible(itemCount > 2 && itemIndex == itemCount - 1);
+
+   const bool totalFeeSelected = (itemCount > 2) && (itemIndex == itemCount - 1);
+   ui_->spinBoxFeesManualTotal->setVisible(totalFeeSelected);
+   if (totalFeeSelected) {
+      ui_->spinBoxFeesManualTotal->setValue((int)transactionData_->totalFee());
+   }
 }
 
 void CreateTransactionDialogAdvanced::setTxFees()
@@ -1102,6 +1113,7 @@ void CreateTransactionDialogAdvanced::setTxFees()
    if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
       ui_->spinBoxFeesManualTotal->setValue(transactionData_->totalFee());
+      enableFeeChanging(false);
    }
 }
 
