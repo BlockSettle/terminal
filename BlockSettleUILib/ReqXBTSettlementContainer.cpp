@@ -38,7 +38,7 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
-   connect(signContainer_.get(), &SignContainer::HDWalletInfo, this, &ReqXBTSettlementContainer::onHDWalletInfo);
+   connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &ReqXBTSettlementContainer::onWalletInfo);
    connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
 
    connect(this, &ReqXBTSettlementContainer::timerExpired, this, &ReqXBTSettlementContainer::onTimerExpired);
@@ -156,23 +156,25 @@ void ReqXBTSettlementContainer::activate()
 
    const auto &authWallet = walletsMgr_->GetAuthWallet();
    auto rootAuthWallet = walletsMgr_->GetHDRootForLeaf(authWallet->GetWalletId());
-   authWalletName_ = rootAuthWallet->getName();
-   authWalletId_ = rootAuthWallet->getWalletId();
-   walletId_ = walletsMgr_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId())->getWalletId();
+
+   walletInfoAuth_.setName(rootAuthWallet->getName());
+   walletInfoAuth_.setRootId(rootAuthWallet->getWalletId());
+
+   walletInfo_.setRootId(walletsMgr_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId())->getWalletId());
 
    if (clientSells_) {
-      sellFromPrimary_ = (authWalletId_ == walletId_);
+      sellFromPrimary_ = (walletInfoAuth_.rootId() == walletInfo_.rootId());
 
       emit info(tr("Enter password for \"%1\" wallet to sign Pay-In")
          .arg(QString::fromStdString(walletsMgr_->GetHDRootForLeaf(
             transactionData_->GetWallet()->GetWalletId())->getName())));
 
       if (!sellFromPrimary_) {
-         infoReqIdAuth_ = signContainer_->GetInfo(rootAuthWallet);
+         infoReqIdAuth_ = signContainer_->GetInfo(rootAuthWallet->getWalletId());
       }
    }
 
-   infoReqId_ = signContainer_->GetInfo(walletsMgr_->GetHDRootForLeaf(transactionData_->GetWallet()->GetWalletId()));
+   infoReqId_ = signContainer_->GetInfo(walletInfo_.rootId().toStdString());
 
    addrVerificator_ = std::make_shared<AddressVerificator>(logger_, armory_, quote_.settlementId
       , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
@@ -260,7 +262,7 @@ void ReqXBTSettlementContainer::dealerVerifStateChanged(AddressVerificationState
 }
 
 void ReqXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
-   std::string errTxt, bool cancelledByUser)
+                                           std::string errTxt, bool cancelledByUser)
 {
    if (payinSignId_ && (payinSignId_ == id)) {
       payinSignId_ = 0;
@@ -384,20 +386,19 @@ void ReqXBTSettlementContainer::OrderReceived()
    }
 }
 
-void ReqXBTSettlementContainer::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
-   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
+void ReqXBTSettlementContainer::onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo)
 {
-   if (infoReqId_ && (id == infoReqId_)) {
+   if (infoReqId_ && (reqId == infoReqId_)) {
       infoReqId_ = 0;
-      encTypes_ = encTypes;
-      encKeys_ = encKeys;
-      keyRank_ = keyRank;
+      walletInfo_.setEncKeys(walletInfo.encKeys());
+      walletInfo_.setEncTypes(walletInfo.encTypes());
+      walletInfo_.setKeyRank(walletInfo.keyRank());
    }
-   if (infoReqIdAuth_ && (id == infoReqIdAuth_)) {
+   if (infoReqIdAuth_ && (reqId == infoReqIdAuth_)) {
       infoReqIdAuth_ = 0;
-      encTypesAuth_ = encTypes;
-      encKeysAuth_ = encKeys;
-      keyRankAuth_ = keyRank;
+      walletInfoAuth_.setEncKeys(walletInfo.encKeys());
+      walletInfoAuth_.setEncTypes(walletInfo.encTypes());
+      walletInfoAuth_.setKeyRank(walletInfo.keyRank());
       emit authWalletInfoReceived();
    }
 }

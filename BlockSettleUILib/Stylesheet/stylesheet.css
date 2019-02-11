@@ -282,9 +282,9 @@ QMenu::item:first {
 
 *[usernameButton="true"] {
   border: none;
-  text-transform: lowercase;
   text-align: right;
   background-color: transparent;
+  text-transform: none;
   padding: 0 5px 0 0;
   color: #247dac;
   height: 25px; }
@@ -604,7 +604,7 @@ QScrollBar::up-arrow:vertical {
 
 QScrollBar::down-arrow:vertical {
   background-image: url(":/resources/down-arrow.png"); }
-
+/*
 QProgressBar {
   border: 1px solid #1c2835;
   border-width: 0 0 20px 0;
@@ -618,13 +618,13 @@ QProgressBar {
 QProgressBar::chunk {
   background-image: url(":resources/progress-bar-pattern.png");
   border-radius: 4px; }
-
+*/
 *[quoteLabel="true"] {
   color: #ffffff;
   font-size: 12px;
   font-weight: 400; }
 
-*[simpleProgressBar="true"] QProgressBar {
+QProgressBar {
   border: 1px solid #1c2835;
   border-radius: 0px;
   background-color: rgba(0, 0, 0, 0.3);
@@ -633,7 +633,7 @@ QProgressBar::chunk {
   font-weight: bold;
   text-align: right; }
 
-*[simpleProgressBar="true"] QProgressBar::chunk {
+QProgressBar::chunk {
   background-color: #22C064;
   border-radius: 2px; }
 
@@ -850,7 +850,7 @@ QToolButton[right_button=true],
     color: #3f4c50; }
 
 QWidget#signDialogMainPage {
-  background-color: #0a1a2a; }
+background-color: #1c2835; }
 
 QPushButton#signWithEidButton {
   background-color: #20709a;

@@ -2,6 +2,7 @@
 #include "ui_BSMessageBox.h"
 #include <QDebug>
 #include <QShowEvent>
+#include <QStyle>
 #include <QTimer>
 
 // Basic constructor, sets message box type, title and text
@@ -44,39 +45,22 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &BSMessageBox::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &BSMessageBox::reject);
 
-   // set fixed width first to make sure the width of the message box will not change
-   setFixedWidth(400);
+   setWindowFlags(Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint);
+   layout()->setSizeConstraint(QLayout::SetFixedSize);
+
    // hide the details part of the message box
    hideDetails();
-   adjustSize();
-   // not sure why but this helps size the messagebox 
-   // correctly based how much text it contains
-   // putting it in a timer makes sure all resizing has been
-   // finished by adjustSize()
-   QTimer::singleShot(80, [=] {
-      showDetails();
-      hideDetails();
-
-      // now that we had resized the dialog it
-      // might not be perfectly centerred anymore
-      // so center it again
-      QTimer::singleShot(5, [=] {
-         auto p = this->parent();
-         // only resize if the message box is larger than 300px in height
-         if (p && this->height() > 300) {
-            auto w = qobject_cast<QWidget *>(p);
-            auto parentRect = w->geometry();
-            auto parentCenter = parentRect.center();
-            auto myCenter = mapToGlobal(rect().center());
-            auto movePoint = parentCenter - myCenter;
-            //qDebug() << parentRect << pos() << parentCenter << myCenter << movePoint;
-             move(pos() + movePoint);
-         }
-      });
-   });
 }
 
 BSMessageBox::~BSMessageBox() = default;
+
+void BSMessageBox::showEvent( QShowEvent* )
+{
+   if (parentWidget()) {
+      QRect parentRect(parentWidget()->mapToGlobal(QPoint(0, 0)), parentWidget()->size());
+      move(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), parentRect).topLeft());
+   }
+}
 
 void BSMessageBox::onDetailsPressed() {
    if (detailsVisible()) {
@@ -94,14 +78,10 @@ bool BSMessageBox::detailsVisible() const {
 
 void BSMessageBox::hideDetails() {
    ui_->verticalWidgetDetails->hide();
-
-   this->setFixedHeight(this->height() - 100); // hardcoding the details height makes show/hide work more consistently
 }
 
 void BSMessageBox::showDetails() {
    ui_->verticalWidgetDetails->show();
-
-   this->setFixedHeight(this->height() + 100); // hardcoding the details height makes show/hide work more consistently
 }
 
 void BSMessageBox::setLabelTextFormat(Qt::TextFormat tf) {

@@ -295,7 +295,12 @@ bool ZmqServerConnection::SendDataCommand()
 
    {
       FastLock locker{controlSocketLockFlag_};
-      result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+      result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), ZMQ_DONTWAIT);
+   }
+
+   if (result == -1) {
+      logger_->error("[ZmqServerConnection::SendDataCommand] failed to send data comamnd for {} : {}"
+         , connectionName_, zmq_strerror(zmq_errno()));
    }
 
    return result != -1;

@@ -5,6 +5,8 @@
 #include "CheckRecipSigner.h"
 #include "MetaData.h"
 #include "SettlementContainer.h"
+#include "CommonTypes.h"
+#include "QWalletInfo.h"
 
 namespace spdlog {
    class logger;
@@ -49,13 +51,7 @@ public:
    double price() const override { return quote_.price; }
    double amount() const override { return quantity() * price(); }
 
-   std::string walletName() const { return walletName_; }
-   std::string walletId() const { return walletId_; }
-
-   std::vector<bs::wallet::EncryptionType> encTypes() const { return encTypes_; }
-   std::vector<SecureBinaryData> encKeys() const { return encKeys_; }
-   bs::wallet::KeyRank keyRank() const { return keyRank_; }
-
+   bs::hd::WalletInfo walletInfo() const { return walletInfo_; }
    std::string txData() const;
    std::string txSignedData() const { return ccTxSigned_; }
 
@@ -68,9 +64,8 @@ signals:
    void walletInfoReceived();
 
 private slots:
-   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo& walletInfo);
+   void onTXSigned(unsigned int reqId, BinaryData signedTX, std::string error, bool cancelledByUser);
 
 private:
    bool createCCUnsignedTXdata();
@@ -88,8 +83,6 @@ private:
    const std::string          dealerAddress_;
    bs::CheckRecipSigner       signer_;
 
-   std::string    walletName_;
-   std::string    walletId_;
    uint64_t       lotSize_;
    unsigned int   ccSignId_ = 0;
    unsigned int   infoReqId_ = 0;
@@ -101,10 +94,7 @@ private:
    std::string                ccTxSigned_;
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
-
-   std::vector<bs::wallet::EncryptionType>   encTypes_;
-   std::vector<SecureBinaryData>             encKeys_;
-   bs::wallet::KeyRank                       keyRank_;
+   bs::hd::WalletInfo walletInfo_;
 };
 
 #endif // __REQ_CC_SETTLEMENT_CONTAINER_H__

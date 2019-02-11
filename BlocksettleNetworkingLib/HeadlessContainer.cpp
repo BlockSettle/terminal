@@ -227,15 +227,7 @@ void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
       logger_->error("[HeadlessContainer] Failed to parse PasswordRequest");
       return;
    }
-   std::vector<bs::wallet::EncryptionType> encTypes;
-   for (int i = 0; i < request.enctypes_size(); ++i) {
-      encTypes.push_back(static_cast<bs::wallet::EncryptionType>(request.enctypes(i)));
-   }
-   std::vector<SecureBinaryData> encKeys;
-   for (int i = 0; i < request.enckeys_size(); ++i) {
-      encKeys.push_back(request.enckeys(i));
-   }
-   emit PasswordRequested(request.walletid(), request.prompt(), encTypes, encKeys, { request.rankm(), 0 });
+   emit PasswordRequested(bs::hd::WalletInfo(request), request.prompt());
 }
 
 void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std::string &data)
@@ -317,16 +309,7 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
       return;
    }
    if (response.error().empty()) {
-      std::vector<bs::wallet::EncryptionType> encTypes;
-      for (int i = 0; i < response.enctypes_size(); ++i) {
-         encTypes.push_back(static_cast<bs::wallet::EncryptionType>(response.enctypes(i)));
-      }
-      std::vector<SecureBinaryData> encKeys;
-      for (int i = 0; i < response.enckeys_size(); ++i) {
-         encKeys.push_back(response.enckeys(i));
-      }
-      bs::wallet::KeyRank keyRank = { response.rankm(), response.rankn() };
-      emit HDWalletInfo(id, encTypes, encKeys, keyRank);
+      emit QWalletInfo(id, bs::hd::WalletInfo(response));
    }
    else {
       missingWallets_.insert(response.rootwalletid());
@@ -678,19 +661,20 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(const std::string
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::DeleteHD(const std::shared_ptr<bs::hd::Wallet> &wlt)
+HeadlessContainer::RequestId HeadlessContainer::DeleteHDRoot(const std::string &rootWalletId)
 {
-   if (!wlt) {
+   if (rootWalletId.empty()) {
       return 0;
    }
-   return SendDeleteHDRequest(wlt->getWalletId(), {});
+   return SendDeleteHDRequest(rootWalletId, {});
 }
-HeadlessContainer::RequestId HeadlessContainer::DeleteHD(const std::shared_ptr<bs::Wallet> &leaf)
+
+HeadlessContainer::RequestId HeadlessContainer::DeleteHDLeaf(const std::string &leafWalletId)
 {
-   if (!leaf) {
+   if (leafWalletId.empty()) {
       return 0;
    }
-   return SendDeleteHDRequest({}, leaf->GetWalletId());
+   return SendDeleteHDRequest({}, leafWalletId);
 }
 
 HeadlessContainer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId)
@@ -783,13 +767,13 @@ HeadlessContainer::RequestId HeadlessContainer::GetDecryptedRootKey(const std::s
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::GetInfo(const std::shared_ptr<bs::hd::Wallet> &wallet)
+HeadlessContainer::RequestId HeadlessContainer::GetInfo(const std::string &rootWalletId)
 {
-   if (!wallet) {
+   if (rootWalletId.empty()) {
       return 0;
    }
    headless::GetHDWalletInfoRequest request;
-   request.set_rootwalletid(wallet->getWalletId());
+   request.set_rootwalletid(rootWalletId);
 
    headless::RequestPacket packet;
    packet.set_type(headless::GetHDWalletInfoRequestType);

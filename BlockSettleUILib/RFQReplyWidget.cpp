@@ -15,6 +15,7 @@
 #include "DealerXBTSettlementContainer.h"
 #include "DealerXBTSettlementDialog.h"
 #include "DialogManager.h"
+#include "HDWallet.h"
 #include "MarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "OrderListModel.h"
@@ -47,7 +48,10 @@ void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &wa
       ui_->pageRFQReply->setWalletsManager(walletsManager_);
 
       if (signingContainer_) {
-         signingContainer_->GetInfo(walletsManager_->GetPrimaryWallet());
+         auto primaryWallet = walletsManager_->GetPrimaryWallet();
+         if (primaryWallet != nullptr) {
+            signingContainer_->GetInfo(primaryWallet->getWalletId());
+         }
       }
    }
 }

@@ -66,6 +66,14 @@ static const int ArmoryDefaultLocalTestPort = 19001;
 static const int ArmoryDefaultRemoteMainPort = 80;
 static const int ArmoryDefaultRemoteTestPort = 81;
 
+#ifdef _DEBUG
+static const QString chatServerIPName = QLatin1String("chatserver-ip");
+static const QString chatServerIPHelp = QLatin1String("Chat servcer host ip");
+static const QString chatServerPortName = QLatin1String("chatserver-port");
+static const QString chatServerPortHelp = QLatin1String("Chat server port");
+#endif // _DEBUG
+
+
 
 ApplicationSettings::ApplicationSettings(const QString &appName
    , const QString& rootDir)
@@ -144,7 +152,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
       { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
-      { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) }
+      { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) },
+      { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) }
    };
 }
 
@@ -307,6 +316,13 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    parser.addOption({ armoryDBPortName, armoryDBPortHelp, QLatin1String("dbport") });
    parser.addOption({ nonSpendZeroConfName, nonSpendZeroConfHelp });
 
+#ifdef _DEBUG
+   parser.addOption({ chatServerIPName, chatServerIPHelp,  QLatin1String("chatip") });
+   parser.addOption({ chatServerPortName, chatServerPortHelp, QLatin1String("chatport") });
+#endif // _DEBUG
+
+   
+
    if (!parser.parse(argList)) {
       errorText_ = parser.errorText();
       return false;
@@ -345,6 +361,18 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    if (parser.isSet(armoryDBPortName)) {
       set(armoryDbPort, parser.value(armoryDBPortName).toInt());
    }
+
+#ifdef _DEBUG
+   if (parser.isSet(chatServerIPName)) {
+	   QString vcip = parser.value(chatServerIPName);
+	   set(chatServerHost, vcip);
+   }
+   if (parser.isSet(chatServerPortName)) {
+	   int vcp = parser.value(chatServerPortName).toInt();
+	   set(chatServerPort, vcp);
+   }
+#endif // _DEBUG
+
 
    settings_.sync();
 

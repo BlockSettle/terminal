@@ -30,15 +30,14 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
-   connect(signingContainer_.get(), &SignContainer::HDWalletInfo, this, &ReqCCSettlementContainer::onHDWalletInfo);
+   connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &ReqCCSettlementContainer::onTXSigned);
 
    const auto &signingWallet = transactionData_->GetSigningWallet();
    if (signingWallet) {
       const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(signingWallet->GetWalletId());
-      infoReqId_ = signingContainer_->GetInfo(rootWallet);
-      walletName_ = rootWallet->getName();
-      walletId_ = rootWallet->getWalletId();
+      walletInfo_ = bs::hd::WalletInfo(rootWallet);
+      infoReqId_ = signingContainer_->GetInfo(walletInfo_.rootId().toStdString());
    }
    else {
       throw std::runtime_error("missing signing wallet");
@@ -200,23 +199,24 @@ bool ReqCCSettlementContainer::createCCSignedTXdata(const SecureBinaryData &pass
    return (ccSignId_ > 0);
 }
 
-void ReqCCSettlementContainer::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
-   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
+void ReqCCSettlementContainer::onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo)
 {
-   if (!infoReqId_ || (id != infoReqId_)) {
+   if (!infoReqId_ || (reqId != infoReqId_)) {
       return;
    }
-   encTypes_ = encTypes;
-   encKeys_ = encKeys;
-   keyRank_ = keyRank;
+
+   // just update walletInfo_  to save walletName and id
+   walletInfo_.setEncKeys(walletInfo.encKeys());
+   walletInfo_.setEncTypes(walletInfo.encTypes());
+   walletInfo_.setKeyRank(walletInfo.keyRank());
 
    emit walletInfoReceived();
 }
 
-void ReqCCSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX, std::string errTxt,
+void ReqCCSettlementContainer::onTXSigned(unsigned int reqId, BinaryData signedTX, std::string errTxt,
    bool cancelledByUser)
 {
-   if (ccSignId_ && (ccSignId_ == id)) {
+   if (ccSignId_ && (ccSignId_ == reqId)) {
       ccSignId_ = 0;
       if (!errTxt.empty()) {
          logger_->warn("[CCSettlementTransactionWidget::onTXSigned] CC TX sign failure: {}", errTxt);

@@ -19,6 +19,9 @@ struct PaymentStruct;
 namespace bs {
    class Wallet;
 }
+namespace spdlog {
+   class logger;
+}
 
 class TransactionData
 {
@@ -52,13 +55,13 @@ public:
    using onTransactionChanged = std::function<void()>;
 
 public:
-   TransactionData(onTransactionChanged changedCallback = onTransactionChanged()
+   TransactionData(const onTransactionChanged &changedCallback = nullptr
+      , const std::shared_ptr<spdlog::logger> &logger = nullptr
       , bool SWOnly = false, bool confirmedOnly = false);
    ~TransactionData() noexcept;
 
    TransactionData(const TransactionData&) = delete;
    TransactionData& operator = (const TransactionData&) = delete;
-
    TransactionData(TransactionData&&) = delete;
    TransactionData& operator = (TransactionData&&) = delete;
 
@@ -148,8 +151,10 @@ private:
    std::vector<std::shared_ptr<ScriptRecipient>> GetRecipientList() const;
 
 private:
-   std::shared_ptr<bs::Wallet>   wallet_, signWallet_;
+   onTransactionChanged             changedCallback_;
+   std::shared_ptr<spdlog::logger>  logger_;
 
+   std::shared_ptr<bs::Wallet>   wallet_, signWallet_;
    std::shared_ptr<SelectedTransactionInputs> selectedInputs_;
 
    float       feePerByte_;
@@ -169,8 +174,6 @@ private:
 
    const bool  swTransactionsOnly_;
    const bool  confirmedInputs_;
-
-   onTransactionChanged changedCallback_;
 
    std::vector<UTXO>    reservedUTXO_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;

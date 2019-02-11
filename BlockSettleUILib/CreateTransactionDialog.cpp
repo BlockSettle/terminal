@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -70,7 +71,7 @@ void CreateTransactionDialog::init()
       QMetaObject::invokeMethod(this, [this] {
          onTransactionUpdated();
       });
-   });
+   }, logger_);
 
    xbtValidator_ = new XbtAmountValidator(this);
    lineEditAmount()->setValidator(xbtValidator_);
@@ -289,11 +290,18 @@ void CreateTransactionDialog::onTransactionUpdated()
 
 void CreateTransactionDialog::onMaxPressed()
 {
-   auto maxValue = transactionData_->CalculateMaxAmount(lineEditAddress()->text().toStdString())
+   pushButtonMax()->setEnabled(false);
+   lineEditAmount()->setEnabled(false);
+   QCoreApplication::processEvents();
+
+   const bs::Address outputAddr(lineEditAddress()->text().trimmed());
+   const auto maxValue = transactionData_->CalculateMaxAmount(outputAddr)
       - transactionData_->GetTotalRecipientsAmount();
    if (maxValue > 0) {
       lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
    }
+   pushButtonMax()->setEnabled(true);
+   lineEditAmount()->setEnabled(true);
 }
 
 void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,

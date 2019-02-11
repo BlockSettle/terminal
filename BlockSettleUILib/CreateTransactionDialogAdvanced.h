@@ -136,8 +136,8 @@ private:
 private:
    std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;
 
-   bool     currentAddressValid_ = false;
-   double   currentValue_ = 0;
+   bs::Address currentAddress_;
+   double      currentValue_ = 0;
    bool     isRBF_ = false;
    bool     allowAutoSelInputs_ = true;
 

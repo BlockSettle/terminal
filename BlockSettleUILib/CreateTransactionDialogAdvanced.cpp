@@ -371,7 +371,7 @@ void CreateTransactionDialogAdvanced::initUI()
       onOutputRemoved();
    });
 
-   currentAddressValid_ = false;
+   currentAddress_.clear();
    currentValue_ = 0;
 
    ui_->pushButtonAddOutput->setEnabled(false);
@@ -425,10 +425,10 @@ bool CreateTransactionDialogAdvanced::eventFilter(QObject *watched, QEvent *evt)
    if (evt->type() == QEvent::KeyPress) {
       auto keyID = static_cast<QKeyEvent *>(evt)->key();
       if ((keyID == Qt::Key_Return) || (keyID == Qt::Key_Enter)) {
-         if ((watched == ui_->lineEditAddress) && currentAddressValid_ && qFuzzyIsNull(currentValue_)) {
+         if ((watched == ui_->lineEditAddress) && currentAddress_.isValid() && qFuzzyIsNull(currentValue_)) {
             ui_->lineEditAmount->setFocus();
          }
-         if ((watched == ui_->lineEditAmount) && !qFuzzyIsNull(currentValue_) && !currentAddressValid_) {
+         if ((watched == ui_->lineEditAmount) && !qFuzzyIsNull(currentValue_) && !currentAddress_.isValid()) {
             ui_->lineEditAddress->setFocus();
          }
          else if (ui_->pushButtonAddOutput->isEnabled()) {
@@ -615,16 +615,12 @@ void CreateTransactionDialogAdvanced::preSetValue(const double value)
 void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addressString)
 {
    try {
-      bs::Address address{addressString.trimmed()};
-      currentAddressValid_ = address.isValid();
+      currentAddress_ = bs::Address(addressString.trimmed());
    } catch (...) {
-      currentAddressValid_ = false;
+      currentAddress_.clear();
    }
 
-   if (currentAddressValid_)
-      UiUtils::setWrongState(ui_->lineEditAddress, false);
-   else
-      UiUtils::setWrongState(ui_->lineEditAddress, true);
+   UiUtils::setWrongState(ui_->lineEditAddress, !currentAddress_.isValid());
 
    validateAddOutputButton();
 }
@@ -637,9 +633,33 @@ void CreateTransactionDialogAdvanced::onXBTAmountChanged(const QString &text)
 
 void CreateTransactionDialogAdvanced::onSelectInputs()
 {
+   const double prevBalance = transactionData_->GetTransactionSummary().availableBalance;
+   const double spendBalance = transactionData_->GetTotalRecipientsAmount();
+   const double totalFee = transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider;
+   logger_->debug("prevBalance: {}, spendBalance: {}, totalFee: {}, diff={}"
+      , prevBalance, spendBalance, totalFee, prevBalance - spendBalance - totalFee);
    CoinControlDialog dlg(transactionData_->GetSelectedInputs(), allowAutoSelInputs_, this);
    if (dlg.exec() == QDialog::Accepted) {
       SetInputs(dlg.selectedInputs());
+   }
+
+   const double curBalance = transactionData_->GetTransactionSummary().availableBalance;
+   if (curBalance < (spendBalance + totalFee)) {
+      BSMessageBox lowInputs(BSMessageBox::question, tr("Not enough inputs balance")
+         , tr("Currently your inputs don't allow to spend the balance added to output[s]. Delete [some of] them?"));
+      if (lowInputs.exec() == QDialog::Accepted) {
+         while (outputsModel_->rowCount({})) {
+            RemoveOutputByRow(0);
+            if (curBalance >= (transactionData_->GetTotalRecipientsAmount()
+               + transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider)) {
+               break;
+            }
+         }
+         onOutputRemoved();
+      }
+   }
+   else if (curBalance > prevBalance) {
+      enableFeeChanging();
    }
 }
 
@@ -715,8 +735,8 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
    if (qFuzzyIsNull(currentValue_)) {
       return false;
    }
-   if ((transactionData_->CalculateMaxAmount()
-      - transactionData_->GetTotalRecipientsAmount()- currentValue_)
+   const double maxAmount = transactionData_->CalculateMaxAmount(currentAddress_);
+   if ((maxAmount - transactionData_->GetTotalRecipientsAmount() - currentValue_)
       < -0.00000001) {  // 1 satoshi difference is allowed due to rounding error
       UiUtils::setWrongState(ui_->lineEditAmount, true);
       return false;
@@ -727,8 +747,8 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
 
 void CreateTransactionDialogAdvanced::validateAddOutputButton()
 {
-   ui_->pushButtonMax->setEnabled(currentAddressValid_);
-   ui_->pushButtonAddOutput->setEnabled(currentAddressValid_ && isCurrentAmountValid());
+   ui_->pushButtonMax->setEnabled(currentAddress_.isValid());
+   ui_->pushButtonAddOutput->setEnabled(currentAddress_.isValid() && isCurrentAmountValid());
 }
 
 void CreateTransactionDialogAdvanced::validateCreateButton()

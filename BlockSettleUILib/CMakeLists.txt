@@ -4,9 +4,19 @@ PROJECT( ${BLOCKSETTLE_UI_LIBRARY_NAME} )
 
 configure_file(TerminalVersion.h.in TerminalVersion.h)
 
-FILE(GLOB SOURCES *.cpp)
-FILE(GLOB HEADERS *.h)
-FILE(GLOB UI_FILES *.ui )
+FILE(GLOB SOURCES
+   *.cpp
+   ManageEncryption/*.cpp
+)
+FILE(GLOB HEADERS
+   *.h
+   ManageEncryption/*.h
+)
+FILE(GLOB UI_FILES
+   *.ui
+   ManageEncryption/*.ui
+)
+
 FILE(GLOB RESOURCE_FILES *.qrc)
 
 INCLUDE_DIRECTORIES( ${WALLET_LIB_INCLUDE_DIR} )

@@ -36,6 +36,7 @@ namespace bs {
 
       AddressEntryType getType() const { return aet_; }
       bool isValid() const;
+      void clear();
       template<typename TRetVal = QString> TRetVal display(Format format = Auto) const;
       BinaryData prefixed() const;
       BinaryData unprefixed() const;

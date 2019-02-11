@@ -49,7 +49,8 @@ void WalletImporter::onWalletScanComplete(bs::hd::Group *grp, bs::hd::Path::Elem
    }
    else {
       if (!((grp->getIndex() == rootWallet_->getXBTGroupType()) && (wallet == 0))) {
-         signingContainer_->DeleteHD(grp->getLeaf(wallet));
+         const auto leaf = grp->getLeaf(wallet);
+         signingContainer_->DeleteHDLeaf(leaf ? leaf->GetWalletId() : std::string{});
          grp->deleteLeaf(wallet);
       }
    }

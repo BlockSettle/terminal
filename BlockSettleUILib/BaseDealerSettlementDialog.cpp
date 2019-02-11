@@ -3,7 +3,7 @@
 #include "HDWallet.h"
 #include "SettlementContainer.h"
 #include "SignContainer.h"
-#include "WalletKeysSubmitWidget.h"
+#include "ManageEncryption/WalletKeysSubmitWidget.h"
 #include <spdlog/spdlog.h>
 
 
@@ -26,7 +26,7 @@ BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spd
    connect(settlContainer_.get(), &bs::SettlementContainer::error, [this](QString msg) { setCriticalHintMessage(msg); });
    connect(settlContainer_.get(), &bs::SettlementContainer::info, [this](QString msg) { setHintText(msg); });
 
-   connect(signContainer_.get(), &SignContainer::HDWalletInfo, this, &BaseDealerSettlementDialog::onHDWalletInfo);
+   connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &BaseDealerSettlementDialog::onWalletInfo);
 }
 
 void BaseDealerSettlementDialog::connectToProgressBar(QProgressBar *progressBar)
@@ -92,17 +92,19 @@ void BaseDealerSettlementDialog::reject()
    QDialog::reject();
 }
 
-void BaseDealerSettlementDialog::onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType> encTypes
-   , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank keyRank)
+void BaseDealerSettlementDialog::onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo)
 {
-   if (!infoReqId_ || (id != infoReqId_)) {
+   if (!infoReqId_ || (reqId != infoReqId_)) {
       return;
    }
    infoReqId_ = 0;
    walletInfoReceived_ = true;
-   encTypes_ = encTypes;
-   encKeys_ = encKeys;
-   keyRank_ = keyRank;
+
+   // just update walletInfo_  to save walletName and id
+   walletInfo_.setEncKeys(walletInfo.encKeys());
+   walletInfo_.setEncTypes(walletInfo.encTypes());
+   walletInfo_.setKeyRank(walletInfo.keyRank());
+
    if (accepting_) {
       startAccepting();
    }
@@ -115,8 +117,9 @@ void BaseDealerSettlementDialog::setWallet(const std::shared_ptr<bs::hd::Wallet>
 
    rootWallet_ = wallet;
    if (signContainer_ && !signContainer_->isOffline()) {
-      infoReqId_ = signContainer_->GetInfo(wallet);
+      infoReqId_ = signContainer_->GetInfo(rootWallet_->getWalletId());
    }
+   walletInfo_ = bs::hd::WalletInfo(rootWallet_);
 }
 
 void BaseDealerSettlementDialog::readyToAccept()
@@ -133,8 +136,8 @@ void BaseDealerSettlementDialog::startAccepting()
       logger_->error("[BaseDealerSettlementDialog::startAccepting] no root wallet");
       return;
    }
-   widgetWalletKeys()->init(AutheIDClient::SettlementTransaction, rootWallet_->getWalletId()
-      , keyRank_, encTypes_, encKeys_, appSettings_);
+   widgetWalletKeys()->init(AutheIDClient::SettlementTransaction, walletInfo_
+                            , WalletKeyWidget::UseType::RequestAuthInParent, appSettings_, logger_);
    widgetPassword()->show();
    widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();

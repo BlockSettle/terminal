@@ -11,6 +11,7 @@
 #include "SettlementWallet.h"
 #include "UtxoReservation.h"
 #include "TransactionData.h"
+#include "QWalletInfo.h"
 
 namespace spdlog {
    class logger;
@@ -56,21 +57,14 @@ public:
    double amount() const override { return amount_; }
 
    std::string fxProduct() const { return fxProd_; }
-   std::string authWalletName() const { return authWalletName_; }
-   std::string authWalletId() const { return authWalletId_; }
-   std::string walletId() const { return walletId_; }
    uint64_t fee() const { return fee_; }
    bool weSell() const { return clientSells_; }
    bool isSellFromPrimary() const { return sellFromPrimary_; }
    bool userKeyOk() const { return userKeyOk_; }
    bool payinReceived() const { return !payinData_.isNull(); }
 
-   std::vector<bs::wallet::EncryptionType> encTypes() const { return encTypes_; }
-   std::vector<bs::wallet::EncryptionType> authEncTypes() const { return encTypesAuth_; }
-   std::vector<SecureBinaryData> encKeys() const { return encKeys_; }
-   std::vector<SecureBinaryData> authEncKeys() const { return encKeysAuth_; }
-   bs::wallet::KeyRank keyRank() const { return keyRank_; }
-   bs::wallet::KeyRank authKeyRank() const { return keyRankAuth_; }
+   bs::hd::WalletInfo walletInfo() const { return walletInfo_; }
+   bs::hd::WalletInfo walletInfoAuth() const { return walletInfoAuth_; }
 
 signals:
    void settlementCancelled();
@@ -82,8 +76,7 @@ signals:
    void authWalletInfoReceived();
 
 private slots:
-   void onHDWalletInfo(unsigned int id, std::vector<bs::wallet::EncryptionType>
-      , std::vector<SecureBinaryData> encKeys, bs::wallet::KeyRank);
+   void onWalletInfo(unsigned int reqId, const bs::hd::WalletInfo &walletInfo);
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
    void onTimerExpired();
    void onPayInZCDetected();
@@ -118,15 +111,11 @@ private:
 
    AddressVerificationState   dealerVerifState_ = AddressVerificationState::InProgress;
 
-   std::vector<bs::wallet::EncryptionType>   encTypes_, encTypesAuth_;
-   std::vector<SecureBinaryData>             encKeys_, encKeysAuth_;
-   bs::wallet::KeyRank                       keyRank_, keyRankAuth_;
+   bs::hd::WalletInfo walletInfo_, walletInfoAuth_;
+
 
    double            amount_;
    std::string       fxProd_;
-   std::string       authWalletName_;
-   std::string       authWalletId_;
-   std::string       walletId_;
    uint64_t          fee_;
    SecureBinaryData  payoutPassword_;
    BinaryData        settlementId_;
