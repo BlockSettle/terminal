@@ -66,12 +66,12 @@ static const int ArmoryDefaultLocalTestPort = 19001;
 static const int ArmoryDefaultRemoteMainPort = 80;
 static const int ArmoryDefaultRemoteTestPort = 81;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 static const QString chatServerIPName = QLatin1String("chatserver-ip");
 static const QString chatServerIPHelp = QLatin1String("Chat servcer host ip");
 static const QString chatServerPortName = QLatin1String("chatserver-port");
 static const QString chatServerPortHelp = QLatin1String("Chat server port");
-#endif // _DEBUG
+#endif // NDEBUG
 
 
 
@@ -316,10 +316,10 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    parser.addOption({ armoryDBPortName, armoryDBPortHelp, QLatin1String("dbport") });
    parser.addOption({ nonSpendZeroConfName, nonSpendZeroConfHelp });
 
-#ifdef _DEBUG
+#ifndef NDEBUG
    parser.addOption({ chatServerIPName, chatServerIPHelp,  QLatin1String("chatip") });
    parser.addOption({ chatServerPortName, chatServerPortHelp, QLatin1String("chatport") });
-#endif // _DEBUG
+#endif // NDEBUG
 
    
 
@@ -362,7 +362,7 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       set(armoryDbPort, parser.value(armoryDBPortName).toInt());
    }
 
-#ifdef _DEBUG
+#ifndef NDEBUG
    if (parser.isSet(chatServerIPName)) {
 	   QString vcip = parser.value(chatServerIPName);
 	   set(chatServerHost, vcip);
@@ -371,7 +371,7 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 	   int vcp = parser.value(chatServerPortName).toInt();
 	   set(chatServerPort, vcp);
    }
-#endif // _DEBUG
+#endif // NDEBUG
 
 
    settings_.sync();

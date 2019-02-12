@@ -193,7 +193,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
          applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
          applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
       }
-#ifdef _DEBUG
+#ifndef NDEBUG
 	  QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
 	  QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
 	  if (!settings.chat.host.empty()) {
@@ -207,7 +207,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 		  applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
 		  applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
 	  }
-#endif // _DEBUG
+#endif // NDEBUG
 
      
    };
