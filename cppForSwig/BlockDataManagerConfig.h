@@ -25,12 +25,6 @@
 #include "BinaryData.h"
 #include "NetworkConfig.h"
 
-#ifdef _WIN32
-#include <ShlObj.h>
-#else
-#include <wordexp.h>
-#endif
-
 #define DEFAULT_ZCTHREAD_COUNT 100
 #define WEBSOCKET_PORT 7681
 
@@ -95,9 +89,6 @@ public:
    void createCookie(void) const;
    void printHelp(void);
    static std::string portToString(unsigned);
-
-   static void appendPath(std::string& base, const std::string& add);
-   static void expandPath(std::string& path);
 
    static std::vector<std::string> getLines(const std::string& path);
    static std::map<std::string, std::string> getKeyValsFromLines(

@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "nodeRPC.h"
+#include "DBUtils.h"
 #include "BlockDataManagerConfig.h"
 
 #ifdef _WIN32
@@ -151,11 +152,11 @@ string NodeRPC::getAuthString()
    auto&& datadir = getDatadir();
 
    auto confPath = datadir;
-   BlockDataManagerConfig::appendPath(confPath, "bitcoin.conf");
+   DBUtils::appendPath(confPath, "bitcoin.conf");
 
    auto getAuthStringFromCookieFile = [&datadir](void)->string
    {
-      BlockDataManagerConfig::appendPath(datadir, ".cookie");
+      DBUtils::appendPath(datadir, ".cookie");
       auto&& lines = BlockDataManagerConfig::getLines(datadir);
       if (lines.size() != 1)
       {

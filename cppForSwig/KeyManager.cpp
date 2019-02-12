@@ -199,6 +199,9 @@ int processArgs(map<string, string> args)
 
       return 0;
    }
+
+   cout << "no known command, aborting" << endl;
+   return -1;
 }
 
 int main(int argc, char* argv[])

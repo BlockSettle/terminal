@@ -392,10 +392,16 @@ shared_ptr<ScriptRecipient> CoinSelectionInstance::createRecipient(
       rec = make_shared<Recipient_P2SH>(
          hash.getSliceRef(1, hash.getSize() - 1), value);
    }
-   else if(scrType == SCRIPT_PREFIX_P2WPKH || scrType == SCRIPT_PREFIX_P2WSH)
+   else if(scrType == SCRIPT_PREFIX_P2WPKH)
    {
       auto&& hashVal = hash.getSliceCopy(1, hash.getSize() - 1);
-      rec = make_shared<Recipient_Bech32>(
+      rec = make_shared<Recipient_P2WPKH>(
+         hashVal, value);
+   }
+   else if (scrType == SCRIPT_PREFIX_P2WSH)
+   {
+      auto&& hashVal = hash.getSliceCopy(1, hash.getSize() - 1);
+      rec = make_shared<Recipient_P2WSH>(
          hashVal, value);
    }
    else

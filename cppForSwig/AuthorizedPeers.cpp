@@ -21,7 +21,7 @@ AuthorizedPeers::AuthorizedPeers(
    const string& datadir, const string& filename)
 {
    auto path = datadir;
-   BlockDataManagerConfig::appendPath(path, filename);
+   DBUtils::appendPath(path, filename);
 
    try
    {
@@ -169,7 +169,7 @@ void AuthorizedPeers::createWallet(const string& baseDir, const string& filename
 
    //create desired full path filename
    auto path = baseDir;
-   BlockDataManagerConfig::appendPath(path, filename);
+   DBUtils::appendPath(path, filename);
 
    //rename peers wallet to desired name
    if (rename(currentname.c_str(), path.c_str()) != 0)

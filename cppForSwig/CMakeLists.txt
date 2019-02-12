@@ -29,6 +29,7 @@ SET (SOURCES
    NetworkConfig.cpp
    ReentrantLock.cpp
    Script.cpp
+   ScriptRecipient.cpp
    SecureBinaryData.cpp
    Signer.cpp
    SocketObject.cpp

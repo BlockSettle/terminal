@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2016, goatpig                                               //
+//  Copyright (C) 2016-19, goatpig                                            //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -8,6 +8,7 @@
 
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
+#include "DBUtils.h"
 #include "DbHeader.h"
 #include "EncryptionUtils.h"
 #include "JSON_codec.h"
@@ -311,11 +312,11 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
          }
       }
 
-      expandPath(dataDir_);
+      DBUtils::expandPath(dataDir_);
 
       //get config file
       auto configPath = dataDir_;
-      appendPath(configPath, "armorydb.conf");
+      DBUtils::appendPath(configPath, "armorydb.conf");
 
       if (fileExists(configPath, 2))
       {
@@ -334,7 +335,7 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
       if (dbDir_.size() == 0)
       {
          dbDir_ = dataDir_;
-         appendPath(dbDir_, dbDirExtention_);
+         DBUtils::appendPath(dbDir_, dbDirExtention_);
          autoDbDir = true;
       }
 
@@ -354,17 +355,17 @@ void BlockDataManagerConfig::parseArgs(int argc, char* argv[])
       }
 
       //expand paths if necessary
-      expandPath(dbDir_);
-      expandPath(blkFileLocation_);
+      DBUtils::expandPath(dbDir_);
+      DBUtils::expandPath(blkFileLocation_);
 
       if (blkFileLocation_.size() < 6 ||
          blkFileLocation_.substr(blkFileLocation_.length() - 6, 6) != "blocks")
       {
-         appendPath(blkFileLocation_, "blocks");
+         DBUtils::appendPath(blkFileLocation_, "blocks");
       }
 
       logFilePath_ = dataDir_;
-      appendPath(logFilePath_, "dbLog.txt");
+      DBUtils::appendPath(logFilePath_, "dbLog.txt");
 
       //test all paths
       auto testPath = [](const string& path, int mode)
@@ -618,58 +619,6 @@ void BlockDataManagerConfig::processArgs(const map<string, string>& args,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BlockDataManagerConfig::appendPath(string& base, const string& add)
-{
-   if (add.size() == 0)
-      return;
-
-   auto firstChar = add.c_str()[0];
-   auto lastChar = base.c_str()[base.size() - 1];
-   if (firstChar != '\\' && firstChar != '/')
-      if (lastChar != '\\' && lastChar != '/')
-         base.append("/");
-
-   base.append(add);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void BlockDataManagerConfig::expandPath(string& path)
-{
-   if (path.c_str()[0] != '~')
-      return;
-
-   //resolve ~
-#ifdef _WIN32
-   char* pathPtr = new char[MAX_PATH + 1];
-   if (SHGetFolderPath(0, CSIDL_APPDATA, 0, 0, pathPtr) != S_OK)
-   {
-      delete[] pathPtr;
-      throw runtime_error("failed to resolve appdata path");
-   }
-
-   string userPath(pathPtr);
-   delete[] pathPtr;
-#else
-   wordexp_t wexp;
-   wordexp("~", &wexp, 0);
-
-   for (unsigned i = 0; i < wexp.we_wordc; i++)
-   {
-      cout << wexp.we_wordv[i] << endl;
-   }
-
-   if (wexp.we_wordc == 0)
-      throw runtime_error("failed to resolve home path");
-
-   string userPath(wexp.we_wordv[0]);
-   wordfree(&wexp);
-#endif
-
-   appendPath(userPath, path.substr(1));
-   path = move(userPath);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 vector<string> BlockDataManagerConfig::getLines(const string& path)
 {
    vector<string> output;
@@ -743,7 +692,7 @@ void BlockDataManagerConfig::createCookie() const
       return;
 
    auto cookiePath = dataDir_;
-   appendPath(cookiePath, ".cookie_");
+   DBUtils::appendPath(cookiePath, ".cookie_");
    fstream fs(cookiePath, ios_base::out | ios_base::trunc);
    fs << cookie_ << endl;
    fs << listenPort_;
@@ -785,7 +734,7 @@ string BlockDataManagerConfig::getPortFromCookie(const string& datadir)
 {
    //check for cookie file
    string cookie_path = datadir;
-   appendPath(cookie_path, ".cookie_");
+   DBUtils::appendPath(cookie_path, ".cookie_");
    auto&& lines = getLines(cookie_path);
    if (lines.size() != 2)
       return string();
@@ -797,7 +746,7 @@ string BlockDataManagerConfig::getPortFromCookie(const string& datadir)
 string BlockDataManagerConfig::getCookie(const string& datadir)
 {
    string cookie_path = datadir;
-   appendPath(cookie_path, ".cookie_");
+   DBUtils::appendPath(cookie_path, ".cookie_");
    auto&& lines = getLines(cookie_path);
    if (lines.size() != 2)
       return string();
@@ -882,8 +831,8 @@ vector<BinaryData> ConfigFile::fleshOutArgs(
    if (datadir_iter != keyValMap.end() && datadir_iter->second.size() > 0)
       configFile_path = datadir_iter->second;
 
-   BlockDataManagerConfig::appendPath(configFile_path, path);
-   BlockDataManagerConfig::expandPath(configFile_path);
+   DBUtils::appendPath(configFile_path, path);
+   DBUtils::expandPath(configFile_path);
 
    //process config file
    ConfigFile cfile(configFile_path);

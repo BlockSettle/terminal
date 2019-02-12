@@ -15,6 +15,7 @@
 #include "btc/ecc_key.h"
 #include "EncryptionUtils.h"
 #include "Wallets.h"
+#include "DBUtils.h"
 #include "BlockDataManagerConfig.h"
 
 #define PEERS_WALLET_PASSWORD "password"

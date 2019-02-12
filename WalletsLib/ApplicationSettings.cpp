@@ -330,7 +330,7 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 
    // Set up Armory as needed. Network type, Armory's BIP 150 "public mode", and
    // setting the data dir to be in the same dir as BS (i.e., not Armory dir).
-/*   BlockDataManagerConfig config;
+   BlockDataManagerConfig config;
 
    if (parser.isSet(testnetName)) {
       set(netType, (int)NetworkType::TestNet);
@@ -352,11 +352,6 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    default:
       break;
    }
-
-   std::map<std::string, std::string> armoryArgs;
-   armoryArgs["--public"] = "";
-   armoryArgs["--datadir"] = parser.value(dataDirName).toStdString();
-   config.parseArgs();*/
 
    SetHomeDir(parser.value(dataDirName));
    SetBitcoinsDir(parser.value(satoshiDataDirName));

@@ -385,9 +385,10 @@ public:
          recipient = std::make_shared<Recipient_P2SH>(txOutRef.scriptRef_, value);
       else if (txOutRef.type_ == SCRIPT_PREFIX_OPRETURN)
          recipient = std::make_shared<Recipient_OPRETURN>(txOutRef.scriptRef_);
-      else if (txOutRef.type_ == SCRIPT_PREFIX_P2WSH ||
-         txOutRef.type_ == SCRIPT_PREFIX_P2WPKH)
-         recipient = std::make_shared<Recipient_Bech32>(txOutRef.scriptRef_, value);
+      else if (txOutRef.type_ == SCRIPT_PREFIX_P2WSH)
+         recipient = std::make_shared<Recipient_P2WSH>(txOutRef.scriptRef_, value);
+      else if (txOutRef.type_ == SCRIPT_PREFIX_P2WPKH)
+         recipient = std::make_shared<Recipient_P2WPKH>(txOutRef.scriptRef_, value);
       else
          throw WalletException("unexpected output type");
 

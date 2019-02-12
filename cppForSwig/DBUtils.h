@@ -14,6 +14,7 @@
 #ifndef _H_DBUTILS
 #define _H_DBUTILS
 
+#include <string>
 #include "BinaryData.h"
 
 enum BLKDATA_TYPE
@@ -156,6 +157,9 @@ public:
    static size_t getFileSize(const std::string& path);
    static bool isFile(const std::string& path);
    static bool isDir(const std::string& path);
+
+   static void appendPath(std::string& base, const std::string& add);
+   static void expandPath(std::string& path);
 
    static BinaryDataRef getDataRefForPacket(const BinaryDataRef& packet);
 };
