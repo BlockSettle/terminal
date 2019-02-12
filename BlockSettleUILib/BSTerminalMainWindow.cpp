@@ -980,20 +980,14 @@ void BSTerminalMainWindow::onReadyToLogin()
    LoginWindow loginDialog(applicationSettings_, logMgr_->logger("autheID"), this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
+#ifdef PRODUCTION_BUILD
       currentUserLogin_ = loginDialog.getUsername();
       auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
       setLoginButtonText(currentUserLogin_ /*+ QString::fromStdString("( Chat user: " + id + " )")*/);
-
-//      if (loginDialog.isAutheID())
-//      {
-//         loginWithAutheID(loginDialog.getUsername().toStdString());
-//      }
-//      else
-//      {
-//         // password login depricated
-//         // loginToCeler(loginDialog.getUsername().toStdString()
-//         //              , loginDialog.getPassword().toStdString());
-//      }
+#else
+     loginToCeler(loginDialog.getUsername().toStdString()
+            , "Welcome1234");
+#endif
    }
 }
 
