@@ -29,13 +29,8 @@ public slots:
    void onRunArmoryLocallyChecked(bool checked);
    void onNetworkClicked(bool checked);
 
-   void onEnvSettingsChanged();
-   void onEnvSelected(int index);
-
 private:
    void DisplayRunArmorySettings(bool runLocally, bool displayDefault);
-
-   void DetectEnvironmentSettings();
 
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;

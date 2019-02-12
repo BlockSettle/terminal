@@ -22,7 +22,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings
    , ui_(new Ui::LoginWindow())
    , settings_(settings)
    , logger_(logger)
-   , autheID_(false)
 {
    ui_->setupUi(this);
    ui_->progressBar->setMaximum(kAuthTimeout * 2); // update every 0.5 sec
@@ -52,7 +51,11 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings
    connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &LoginWindow::onAutheIDDone);
    connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &LoginWindow::onAutheIDFailed);
 
+#ifdef PRODUCTION_BUILD
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::onAuthPressed);
+#else
+   connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
+#endif
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &LoginWindow::onTimer);
@@ -103,7 +106,6 @@ QString LoginWindow::getUsername() const
 
 void LoginWindow::onAuthPressed()
 {
-   autheID_ = true;
    if (state_ == Login) {
       if (autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString(), settings_)) {
          setupLoginPage();

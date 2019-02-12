@@ -40,6 +40,7 @@ public:
       , const QString& username
       , const std::string &walletName = {}
       , const std::string &walletDesc = {}
+      , bool disableImportPrimary = false
       , QWidget *parent = nullptr);
    ~ImportWalletDialog() override;
 
@@ -75,6 +76,7 @@ private:
    bool authNoticeWasShown_ = false;
    bool existingChecked_ = false;
    unsigned int reqWalletInfoId_ = 0;
+   bool disableImportPrimary_;
 };
 
 #endif // __IMPORT_WALLET_DIALOG_H__
