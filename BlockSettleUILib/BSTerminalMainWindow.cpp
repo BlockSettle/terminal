@@ -19,27 +19,28 @@
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
-#include "AuthSignManager.h"
 #include "AutheIDClient.h"
+#include "AuthSignManager.h"
 #include "BSMarketDataProvider.h"
+#include "BSMessageBox.h"
 #include "BSTerminalSplashScreen.h"
 #include "CCFileManager.h"
 #include "CCPortfolioModel.h"
 #include "CCTokenEntryDialog.h"
 #include "CelerAccountInfoDialog.h"
 #include "CelerMarketDataProvider.h"
+#include "ChatWidget.h"
 #include "ConfigDialog.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
-#include "ManageEncryption/EnterWalletPassword.h"
 #include "HDWallet.h"
 #include "HeadlessContainer.h"
 #include "LoginWindow.h"
+#include "ManageEncryption/EnterWalletPassword.h"
 #include "MarketDataProvider.h"
 #include "MDAgreementDialog.h"
-#include "BSMessageBox.h"
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
@@ -51,7 +52,7 @@
 #include "TabWithShortcut.h"
 #include "UiUtils.h"
 #include "WalletsManager.h"
-#include "ChatWidget.h"
+#include "ZMQHelperFunctions.h"
 #include "ZmqSecuredDataConnection.h"
 
 #include <spdlog/spdlog.h>
@@ -428,12 +429,12 @@ bool BSTerminalMainWindow::InitSigningContainer()
    auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
 
-   QString pubKeyPath;
+   SecureBinaryData signerPubKey;
 
    if (runMode == SignContainer::OpMode::Remote) {
-      pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
+      auto pubKeyString = applicationSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
 
-      if (pubKeyPath.isEmpty()) {
+      if (pubKeyString.isEmpty()) {
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Remote Connection")
             , tr("Public key is not imported for signer.")
@@ -441,8 +442,6 @@ bool BSTerminalMainWindow::InitSigningContainer()
             , this).exec();
          return false;
       }
-   } else if (runMode == SignContainer::OpMode::Local) {
-      pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
    }
 
    if ((runMode == SignContainer::OpMode::Local)
@@ -455,8 +454,21 @@ bool BSTerminalMainWindow::InitSigningContainer()
       }
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
+
+      const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
+
+      if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
+         logMgr_->logger()->debug("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
+         BSMessageBox(BSMessageBox::messageBoxType::warning
+            , tr("Signer Local Connection")
+            , tr("Could not load local signer key.")
+            , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
+            , this).exec();
+         return false;
+      }
    }
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, pubKeyPath
+
+   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey
       , runMode, signerHost, connectionManager_);
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));

@@ -135,7 +135,7 @@ protected:
 
 std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger> &
    , const std::shared_ptr<ApplicationSettings> &
-   , const QString& pubKeyPath
+   , const SecureBinaryData& pubKey
    , SignContainer::OpMode
    , const QString &host
    , const std::shared_ptr<ConnectionManager> & connectionManager);
