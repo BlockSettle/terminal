@@ -1,7 +1,7 @@
 #ifndef CHAT_SEARCH_LINE_EDIT_H
 #define CHAT_SEARCH_LINE_EDIT_H
-#include <qlineedit.h>
 
+#include <QLineEdit>
 
 class ChatSearchLineEdit :
    public QLineEdit

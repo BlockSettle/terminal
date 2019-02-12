@@ -64,7 +64,7 @@ public:
    // Called when we asked for a public key of peer, and got result.
    void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
 
-   bool getContacts(TContactUserDataList &contactList);
+   bool getContacts(ContactUserDataList &contactList);
    bool addOrUpdateContact(const QString &userId,
                            const QString &userName = QStringLiteral(""),
                            const bool &isIncomingFriendRequest = false);

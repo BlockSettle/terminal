@@ -4,6 +4,8 @@
 #include <QString>
 #include <QObject>
 
+#include <memory>
+
 namespace ChatUserColor {
    static const QString COLOR_USER_ONLINE = QStringLiteral("#00c8f8");
    static const QString COLOR_INCOMING_FRIEND_REQUEST = QStringLiteral("#ffa834");
@@ -15,29 +17,29 @@ class ChatUserData : public QObject
    Q_OBJECT
 public:
 
-   typedef enum
+   enum class ConnectionStatus
    {
       Offline = 0,
       Online = 1
-   } UserConnectionStatus;
+   };
 
-   typedef enum
+   enum class State
    {
       Unknown = 0,
       Friend = 1,
       IncomingFriendRequest = 2
-   } UserState;
+   };
 
    ChatUserData(QObject *parent = nullptr);
 
    QString userName() const;
    void setUserName(const QString &userName);
 
-   ChatUserData::UserConnectionStatus userConnectionStatus() const;
-   void setUserConnectionStatus(const ChatUserData::UserConnectionStatus &userConnectionStatus);
+   ConnectionStatus userConnectionStatus() const;
+   void setUserConnectionStatus(const ConnectionStatus &userConnectionStatus);
 
-   ChatUserData::UserState userState() const;
-   void setUserState(const ChatUserData::UserState &userState);
+   State userState() const;
+   void setUserState(const State &userState);
 
    QString userEmail() const;
    void setUserEmail(const QString &userEmail);
@@ -56,18 +58,18 @@ signals:
    void userIdChanged();
 
 private:
-   ChatUserData::UserConnectionStatus _userConnectionStatus;
+   ConnectionStatus _userConnectionStatus;
    QString _userName;
    QString _userEmail;
    QString _userId;
-   ChatUserData::UserState _userState;
+   State _userState;
    bool _haveNewMessage;
 };
 
-typedef std::shared_ptr<ChatUserData> TChatUserDataPtr;
-typedef QList<TChatUserDataPtr> TChatUserDataListPtr;
+using ChatUserDataPtr = std::shared_ptr<ChatUserData>;
+using ChatUserDataListPtr = QList<ChatUserDataPtr>;
 
-Q_DECLARE_METATYPE(ChatUserData::UserConnectionStatus)
-Q_DECLARE_METATYPE(ChatUserData::UserState);
+Q_DECLARE_METATYPE(ChatUserData::ConnectionStatus)
+Q_DECLARE_METATYPE(ChatUserData::State);
 
 #endif // CHATUSER_H

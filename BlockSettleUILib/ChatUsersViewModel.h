@@ -42,10 +42,10 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 public slots:
-   void onUserDataListChanged(const TChatUserDataListPtr &chatUserDataListPtr);
+   void onUserDataListChanged(const ChatUserDataListPtr &chatUserDataListPtr);
 
 private:
-   TChatUserDataListPtr _users;
+   ChatUserDataListPtr _users;
 };
 
 

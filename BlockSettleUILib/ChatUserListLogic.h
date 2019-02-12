@@ -24,7 +24,7 @@ public:
 
    void readUsersFromDB();
 
-   TChatUserModelPtr chatUserModelPtr() const;
+   ChatUserModelPtr chatUserModelPtr() const;
 
 signals:
 
@@ -35,11 +35,11 @@ public slots:
    void onIcomingFriendRequest(const TUserIdList &userIdList);
 
 private:
-   TChatUserModelPtr _chatUserModelPtr;
+   ChatUserModelPtr _chatUserModelPtr;
    std::shared_ptr<ChatClient>      _client;
    std::shared_ptr<spdlog::logger>  _logger;
 };
 
-typedef std::shared_ptr<ChatUserListLogic> TChatUserListLogicPtr;
+using ChatUserListLogicPtr = std::shared_ptr<ChatUserListLogic>;
 
 #endif // CHATUSERLISTLOGIC_H

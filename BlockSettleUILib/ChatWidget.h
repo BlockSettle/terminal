@@ -9,6 +9,7 @@
 #include "ChatMessagesViewModel.h"
 #include "ChatUserListLogic.h"
 
+#include <memory>
 
 namespace Ui {
    class ChatWidget;
@@ -53,7 +54,7 @@ private slots:
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
    void onSearchUserReturnPressed();
-   void onChatUserRemoved(const TChatUserDataPtr &);
+   void onChatUserRemoved(const ChatUserDataPtr &);
    void onAddUserToContacts(const QString &userId);
 
 signals:
@@ -74,7 +75,7 @@ private:
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
-   TChatUserListLogicPtr _chatUserListLogicPtr;
+   ChatUserListLogicPtr _chatUserListLogicPtr;
 
 private:
    void changeState(ChatWidget::State state);

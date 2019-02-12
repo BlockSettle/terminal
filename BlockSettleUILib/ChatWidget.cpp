@@ -10,7 +10,6 @@
 #include <QMouseEvent>
 #include <QApplication>
 #include <QObject>
-#include <QtDebug>
 
 #include <thread>
 #include <spdlog/spdlog.h>
@@ -81,7 +80,7 @@ public:
    ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedIn) {}
 
     void onStateEnter() override {}
-    
+
     void onStateExit() override {
        chat_->onUserClicked({});
     }
@@ -193,7 +192,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    changeState(State::LoggedOut); //Initial state is LoggedOut
 }
 
-void ChatWidget::onChatUserRemoved(const TChatUserDataPtr &chatUserDataPtr)
+void ChatWidget::onChatUserRemoved(const ChatUserDataPtr &chatUserDataPtr)
 {
    if (currentChat_ == chatUserDataPtr->userId())
    {
@@ -204,13 +203,11 @@ void ChatWidget::onChatUserRemoved(const TChatUserDataPtr &chatUserDataPtr)
 void ChatWidget::onUserClicked(const QString& userId)
 {
    stateCurrent_->onUserClicked(userId);
-
-   return;
 }
 
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
-   return stateCurrent_->onUsersDeleted(users);
+   stateCurrent_->onUsersDeleted(users);
 }
 
 void ChatWidget::changeState(ChatWidget::State state)
@@ -329,13 +326,13 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
 void ChatWidget::onAddUserToContacts(const QString &userId)
 {
    // check if user isn't already in contacts
-   TChatUserModelPtr chatUserModelPtr = _chatUserListLogicPtr->chatUserModelPtr();
+   ChatUserModelPtr chatUserModelPtr = _chatUserListLogicPtr->chatUserModelPtr();
 
    if (chatUserModelPtr && !chatUserModelPtr->isChatUserInContacts(userId))
    {
       // add user to contacts as friend
-      chatUserModelPtr->setUserState(userId, ChatUserData::Friend);
-      TChatUserDataPtr chatUserDataPtr = chatUserModelPtr->getUserByUserId(userId);
+      chatUserModelPtr->setUserState(userId, ChatUserData::State::Friend);
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr->getUserByUserId(userId);
       // save user in DB
       client_->addOrUpdateContact(chatUserDataPtr->userId(), chatUserDataPtr->userName());
       // and send friend request to ChatClient

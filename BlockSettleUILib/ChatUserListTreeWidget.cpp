@@ -2,7 +2,6 @@
 #include "ChatUserCategoryListView.h"
 
 #include <QHeaderView>
-#include <QtDebug>
 #include <QAbstractItemView>
 
 const QString contactsListDescription = QObject::tr("Contacts");
@@ -10,20 +9,6 @@ const QString allUsersListDescription = QObject::tr("All users");
 
 ChatUserListTreeWidget::ChatUserListTreeWidget(QWidget *parent) : QTreeWidget(parent)
 {
-   setFocusPolicy(Qt::NoFocus);
-   setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-   setUniformRowHeights(false);
-   setItemsExpandable(true);
-   setSortingEnabled(false);
-   setAnimated(true);
-   setAllColumnsShowFocus(false);
-   setWordWrap(false);
-   setHeaderHidden(true);
-   setExpandsOnDoubleClick(true);
-   setColumnCount(1);
-   setTextElideMode(Qt::ElideMiddle);
-   setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
-
    _friendUsersViewModel = new ChatUsersViewModel(this);
    _nonFriendUsersViewModel = new ChatUsersViewModel(this);
 
@@ -71,14 +56,14 @@ void ChatUserListTreeWidget::createCategories()
    adjustListViewSize();
 }
 
-void ChatUserListTreeWidget::onChatUserDataListChanged(const TChatUserDataListPtr &chatUserDataList)
+void ChatUserListTreeWidget::onChatUserDataListChanged(const ChatUserDataListPtr &chatUserDataList)
 {
-   TChatUserDataListPtr friendList;
-   TChatUserDataListPtr nonFriendList;
+   ChatUserDataListPtr friendList;
+   ChatUserDataListPtr nonFriendList;
 
-   std::for_each(std::begin(chatUserDataList), std::end(chatUserDataList), [&friendList, &nonFriendList](const TChatUserDataPtr &userDataPtr)
+   for (const ChatUserDataPtr &userDataPtr : chatUserDataList)
    {
-      if (userDataPtr->userState() == ChatUserData::Unknown)
+      if (userDataPtr->userState() == ChatUserData::State::Unknown)
       {
          nonFriendList.push_back(userDataPtr);
       }
@@ -86,7 +71,7 @@ void ChatUserListTreeWidget::onChatUserDataListChanged(const TChatUserDataListPt
       {
          friendList.push_back(userDataPtr);
       }
-   });
+   }
 
    _friendUsersViewModel->onUserDataListChanged(friendList);
    _nonFriendUsersViewModel->onUserDataListChanged(nonFriendList);
@@ -108,7 +93,7 @@ void ChatUserListTreeWidget::adjustListViewSize()
       listWidget->doItemsLayout();
       const int height = qMax(listWidget->contentsSize().height(), 0);
       listWidget->setFixedHeight(height);
-      if(listWidget->model()->rowCount())
+      if (listWidget->model()->rowCount())
       {
          item->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
          setItemExpanded(item, true);

@@ -31,21 +31,21 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    itemOption.palette.setColor(QPalette::Text, QColor(ChatUserColor::COLOR_USER_DEFAULT));
    itemOption.palette.setColor(QPalette::HighlightedText, QColor(ChatUserColor::COLOR_USER_DEFAULT));
 
-   ChatUserData::UserState userState =
-         qvariant_cast<ChatUserData::UserState>(index.data(ChatUsersViewModel::UserStateRole));
+   ChatUserData::State userState =
+         qvariant_cast<ChatUserData::State>(index.data(ChatUsersViewModel::UserStateRole));
 
    // text color for friend request
-   if (userState == ChatUserData::IncomingFriendRequest)
+   if (userState == ChatUserData::State::IncomingFriendRequest)
    {
       itemOption.palette.setColor(QPalette::HighlightedText, QColor(ChatUserColor::COLOR_INCOMING_FRIEND_REQUEST));
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
 
-   ChatUserData::UserConnectionStatus userStatus =
-         qvariant_cast<ChatUserData::UserConnectionStatus>(index.data(ChatUsersViewModel::UserConnectionStatusRole));
+   ChatUserData::ConnectionStatus userStatus =
+         qvariant_cast<ChatUserData::ConnectionStatus>(index.data(ChatUsersViewModel::UserConnectionStatusRole));
 
    // text color for user online status
-   if (userStatus == ChatUserData::Online)
+   if (userStatus == ChatUserData::ConnectionStatus::Online)
    {
       itemOption.palette.setColor(QPalette::HighlightedText, QColor(ChatUserColor::COLOR_USER_ONLINE));
       QStyledItemDelegate::paint(painter, itemOption, index);

@@ -2,6 +2,7 @@
 #define CHATUSERLISTTREEWIDGET_H
 
 #include <QTreeWidget>
+
 #include "ChatUserData.h"
 #include "ChatUsersViewModel.h"
 #include "ChatUserCategoryListView.h"
@@ -16,7 +17,7 @@ signals:
    void userClicked(const QString &userId);
 
 public slots:
-   void onChatUserDataListChanged(const TChatUserDataListPtr &chatUserDataList);
+   void onChatUserDataListChanged(const ChatUserDataListPtr &chatUserDataList);
 
 private slots:
    void onUserListItemClicked(const QModelIndex &index);

@@ -179,11 +179,17 @@
           </item>
           <item>
            <widget class="ChatUserListTreeWidget" name="treeWidgetUsers">
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
             <property name="horizontalScrollBarPolicy">
              <enum>Qt::ScrollBarAlwaysOff</enum>
             </property>
             <property name="editTriggers">
              <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+            </property>
+            <property name="textElideMode">
+             <enum>Qt::ElideMiddle</enum>
             </property>
             <property name="verticalScrollMode">
              <enum>QAbstractItemView::ScrollPerPixel</enum>
@@ -198,6 +204,9 @@
              <bool>false</bool>
             </property>
             <property name="itemsExpandable">
+             <bool>true</bool>
+            </property>
+            <property name="animated">
              <bool>true</bool>
             </property>
             <property name="headerHidden">
@@ -498,7 +507,7 @@
   <customwidget>
    <class>ChatUserListTreeWidget</class>
    <extends>QTreeWidget</extends>
-   <header>chatuserlisttreewidget.h</header>
+   <header>ChatUserListTreeWidget.h</header>
   </customwidget>
   <customwidget>
    <class>ChatSearchLineEdit</class>

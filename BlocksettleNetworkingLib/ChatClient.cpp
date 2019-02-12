@@ -281,7 +281,7 @@ void ChatClient::retrieveUserMessages(const QString &userId)
    }
 }
 
-bool ChatClient::getContacts(TContactUserDataList &contactList)
+bool ChatClient::getContacts(ContactUserDataList &contactList)
 {
    return chatDb_->getContacts(contactList);
 }
@@ -306,7 +306,7 @@ bool ChatClient::addOrUpdateContact(const QString &userId, const QString &userNa
    return chatDb_->addContact(contact);
 }
 
-void ChatClient::sendFriendRequest(const QString &friendUserId)
+void ChatClient::sendFriendRequest(const QString &/*friendUserId*/)
 {
    // TODO
 }

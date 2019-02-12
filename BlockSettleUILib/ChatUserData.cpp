@@ -2,8 +2,8 @@
 
 ChatUserData::ChatUserData(QObject *parent)  : QObject(parent)
 {
-   setUserConnectionStatus(ChatUserData::Offline);
-   setUserState(ChatUserData::Unknown);
+   setUserConnectionStatus(ConnectionStatus::Offline);
+   setUserState(State::Unknown);
 }
 
 QString ChatUserData::userName() const
@@ -17,23 +17,23 @@ void ChatUserData::setUserName(const QString &userName)
    emit userNameChanged();
 }
 
-ChatUserData::UserConnectionStatus ChatUserData::userConnectionStatus() const
+ChatUserData::ConnectionStatus ChatUserData::userConnectionStatus() const
 {
    return _userConnectionStatus;
 }
 
-void ChatUserData::setUserConnectionStatus(const ChatUserData::UserConnectionStatus &userStatus)
+void ChatUserData::setUserConnectionStatus(const ChatUserData::ConnectionStatus &userStatus)
 {
    _userConnectionStatus = userStatus;
    emit userStatusChanged();
 }
 
-ChatUserData::UserState ChatUserData::userState() const
+ChatUserData::State ChatUserData::userState() const
 {
    return _userState;
 }
 
-void ChatUserData::setUserState(const ChatUserData::UserState &userState)
+void ChatUserData::setUserState(const ChatUserData::State &userState)
 {
    _userState = userState;
    emit userStateChanged();

@@ -262,7 +262,7 @@ bool ChatDB::removeContact(const ContactUserData &contact)
    return true;
 }
 
-bool ChatDB::getContacts(TContactUserDataList &contactList)
+bool ChatDB::getContacts(ContactUserDataList &contactList)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String("SELECT user_id, user_name, incoming_friend_request FROM contacts;"))) {

@@ -5,7 +5,7 @@ ChatUserModel::ChatUserModel(QObject *parent) : QObject(parent)
 
 }
 
-void ChatUserModel::addUser(const TChatUserDataPtr &chatUserDataPtr)
+void ChatUserModel::addUser(const ChatUserDataPtr &chatUserDataPtr)
 {
    if (isChatUserExist(chatUserDataPtr->userId()))
       return;
@@ -16,22 +16,22 @@ void ChatUserModel::addUser(const TChatUserDataPtr &chatUserDataPtr)
    emit chatUserDataListChanged(_chatUserDataListPtr);
 }
 
-void ChatUserModel::removeUser(const TChatUserDataPtr &chatUserDataPtr)
+void ChatUserModel::removeUser(const ChatUserDataPtr &chatUserDataPtr)
 {
    removeByUserId(chatUserDataPtr->userId());
 }
 
 void ChatUserModel::removeByUserId(const QString &userId)
 {
-   TChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
+   ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
    if (!chatUserDataPtr)
    {
       return;
    }
 
    _chatUserDataListPtr.erase(
-      std::remove_if(std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr),
-      [chatUserDataPtr](const TChatUserDataPtr cudPtr)
+      std::remove_if (std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr),
+      [chatUserDataPtr](const ChatUserDataPtr cudPtr)
    {
       return cudPtr && (cudPtr == chatUserDataPtr);
    }));
@@ -42,7 +42,7 @@ void ChatUserModel::removeByUserId(const QString &userId)
 
 bool ChatUserModel::isChatUserExist(const QString &userId) const
 {
-   TChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
+   ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
 
    if (chatUserDataPtr)
    {
@@ -52,9 +52,9 @@ bool ChatUserModel::isChatUserExist(const QString &userId) const
    return false;
 }
 
-void ChatUserModel::setUserStatus(const QString &userId, const ChatUserData::UserConnectionStatus &userStatus)
+void ChatUserModel::setUserStatus(const QString &userId, const ChatUserData::ConnectionStatus &userStatus)
 {
-   TChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
+   ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
 
    if (!chatUserDataPtr)
    {
@@ -67,9 +67,9 @@ void ChatUserModel::setUserStatus(const QString &userId, const ChatUserData::Use
    emit chatUserDataListChanged(_chatUserDataListPtr);
 }
 
-void ChatUserModel::setUserState(const QString &userId, const ChatUserData::UserState &userState)
+void ChatUserModel::setUserState(const QString &userId, const ChatUserData::State &userState)
 {
-   TChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
+   ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
 
    if (!chatUserDataPtr)
    {
@@ -82,19 +82,19 @@ void ChatUserModel::setUserState(const QString &userId, const ChatUserData::User
    emit chatUserDataListChanged(_chatUserDataListPtr);
 }
 
-TChatUserDataPtr ChatUserModel::getUserByUserId(const QString &userId) const
+ChatUserDataPtr ChatUserModel::getUserByUserId(const QString &userId) const
 {
-   auto chatUserIt = std::find_if(std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr), [userId](const TChatUserDataPtr &chatUserDataPtr)->bool
+   auto chatUserIt = std::find_if (std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr), [userId](const ChatUserDataPtr &chatUserDataPtr)->bool
    {
       return (0 == chatUserDataPtr->userId().compare(userId));
    });
 
    if (chatUserIt == std::end(_chatUserDataListPtr))
    {
-      return TChatUserDataPtr();
+      return ChatUserDataPtr();
    }
 
-   TChatUserDataPtr chatUserDataPtr((*chatUserIt));
+   ChatUserDataPtr chatUserDataPtr((*chatUserIt));
 
    return chatUserDataPtr;
 }
@@ -103,7 +103,7 @@ void ChatUserModel::resetModel()
 {
    while(!_chatUserDataListPtr.empty())
    {
-      TChatUserDataPtr chatUserDataPtr = _chatUserDataListPtr.back();
+      ChatUserDataPtr chatUserDataPtr = _chatUserDataListPtr.back();
       _chatUserDataListPtr.pop_back();
       emit chatUserRemoved(chatUserDataPtr);
    }
@@ -111,14 +111,14 @@ void ChatUserModel::resetModel()
    emit chatUserDataListChanged(_chatUserDataListPtr);
 }
 
-TChatUserDataListPtr ChatUserModel::chatUserDataList() const
+ChatUserDataListPtr ChatUserModel::chatUserDataList() const
 {
    return _chatUserDataListPtr;
 }
 
 bool ChatUserModel::isChatUserInContacts(const QString &userId) const
 {
-   TChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
+   ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
 
    if (!chatUserDataPtr)
    {
@@ -126,5 +126,5 @@ bool ChatUserModel::isChatUserInContacts(const QString &userId) const
    }
 
    // any state exept unknown belongs to contacts
-   return (ChatUserData::Unknown != chatUserDataPtr->userState());
+   return (ChatUserData::State::Unknown != chatUserDataPtr->userState());
 }

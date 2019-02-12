@@ -32,7 +32,7 @@ private:
    bool _incomingFriendRequest;
 };
 
-typedef std::vector<ContactUserData> TContactUserDataList;
+using ContactUserDataList = std::vector<ContactUserData>;
 
 
 class ChatDB : public QObject
@@ -63,7 +63,7 @@ public:
    bool isContactExist(const QString &userId);
    bool addContact(const ContactUserData &contact);
    bool removeContact(const ContactUserData &contact);
-   bool getContacts(TContactUserDataList &contactList);
+   bool getContacts(ContactUserDataList &contactList);
    bool updateContact(const ContactUserData &contact);
 
 private:

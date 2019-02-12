@@ -42,10 +42,10 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
          return resolveUser(index);
 
       case UserConnectionStatusRole:
-         return _users[index.row()]->userConnectionStatus();
+         return QVariant::fromValue(_users[index.row()]->userConnectionStatus());
 
       case UserStateRole:
-         return _users[index.row()]->userState();
+         return QVariant::fromValue(_users[index.row()]->userState());
 
       case UserNameRole:
          return _users[index.row()]->userName();
@@ -57,7 +57,7 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
    return QVariant();
 }
 
-void ChatUsersViewModel::onUserDataListChanged(const TChatUserDataListPtr &chatUserDataListPtr)
+void ChatUsersViewModel::onUserDataListChanged(const ChatUserDataListPtr &chatUserDataListPtr)
 {
    beginResetModel();
    _users.clear();
