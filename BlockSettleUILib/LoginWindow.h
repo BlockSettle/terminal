@@ -32,7 +32,6 @@ public:
    };
 
    QString getUsername() const;
-   bool isAutheID() const { return autheID_; }
 
    std::string getJwt() const {return jwt_; }
 
@@ -49,14 +48,14 @@ private slots:
    void setupLoginPage();
    void setupCancelPage();
 private:
-   std::unique_ptr<Ui::LoginWindow> ui_;
-   std::shared_ptr<ApplicationSettings> settings_;
-   std::shared_ptr<spdlog::logger> logger_;
-   bool autheID_;
-   std::shared_ptr<AutheIDClient>            autheIDConnection_ {};
+   std::unique_ptr<Ui::LoginWindow>       ui_;
+   std::shared_ptr<ApplicationSettings>   settings_;
+   std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<AutheIDClient>         autheIDConnection_ {};
+
    std::string jwt_;
-   State state_ = State::Login;
-   QTimer timer_;
+   State       state_ = State::Login;
+   QTimer      timer_;
    float       timeLeft_;
 };
 
