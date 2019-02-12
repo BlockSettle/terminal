@@ -226,12 +226,18 @@
        <number>0</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="8,2">
+       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="8,0,2">
         <property name="spacing">
          <number>0</number>
         </property>
         <item>
          <widget class="CustomChartView" name="viewPrice">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="visible">
+             <bool>false</bool>
+          </property>
           <property name="cursor" stdset="0">
            <cursorShape>CrossCursor</cursorShape>
           </property>
@@ -250,7 +256,16 @@
          </widget>
         </item>
         <item>
+         <widget class="QCustomPlot" name="customPlot" native="true"/>
+        </item>
+        <item>
          <widget class="CustomChartView" name="viewVolume">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="visible">
+             <bool>false</bool>
+          </property>
           <property name="cursor" stdset="0">
            <cursorShape>UpArrowCursor</cursorShape>
           </property>
@@ -280,6 +295,12 @@
    <class>CustomChartView</class>
    <extends>QGraphicsView</extends>
    <header>CustomChartView.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header>qcustomplot.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

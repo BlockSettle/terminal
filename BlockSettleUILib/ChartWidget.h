@@ -39,6 +39,7 @@ protected slots:
    void onInstrumentChanged(const QString &text);
 
 protected:
+   void initializeCustomPlot();
    void setChartStyle();
    void createCandleChartAxis();
    void createVolumeChartAxis();
