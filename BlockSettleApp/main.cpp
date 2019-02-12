@@ -19,6 +19,8 @@
 #include "BSMessageBox.h"
 #include "ZMQHelperFunctions.h"
 
+#include "btc/ecc.h"
+
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
@@ -140,6 +142,13 @@ static int GuiApp(int argc, char** argv)
 #else
    QApplication app(argc, argv);
 #endif
+
+   // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
+   // Armory setting designed to allow the ArmoryDB server to not have to verify
+   // clients. Prevents us from having to import tons of keys into the server.
+   btc_ecc_start();
+   startupBIP151CTX();
+   startupBIP150CTX(4, true);
 
    app.setQuitOnLastWindowClosed(false);
    app.setAttribute(Qt::AA_DontShowIconsInMenus);
