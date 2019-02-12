@@ -12,6 +12,10 @@ class ChartWidget;
 namespace spdlog {
    class logger;
 }
+class QCPTextElement;
+class QCPFinancial;
+class QCPBars;
+class QCPAxisRect;
 QT_END_NAMESPACE
 
 using namespace QtCharts;
@@ -55,10 +59,13 @@ protected:
                               , qreal maxValue = -1.0
                               , qreal minValue = -1.0);
    void buildCandleChart(int interval = -1);
+   void updateChart(int interval = -1);
    void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
    qreal getZoomFactor(int interval = -1) const;
+   qreal getPlotScale(int interval = -1) const;
    void setZoomFactor(qreal factor);
    QString barLabel(qreal timestamp, int interval = -1) const;
+   qreal intervalLength(int interval = -1) const;
 
 private:
     Ui::ChartWidget *ui_;
@@ -71,6 +78,11 @@ private:
     std::shared_ptr<TradesClient> client_;
     QValueAxis *priceYAxis_;
     QValueAxis *volumeYAxis_;
+
+    QCPTextElement *title;
+    QCPFinancial *candlesticksChart;
+    QCPBars *volumeChart;
+    QCPAxisRect *volumeAxisRect;
 };
 
 #endif // CHARTWIDGET_H
