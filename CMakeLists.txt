@@ -22,12 +22,26 @@ add_definitions(-DNOMINMAX)
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
 
+IF (PRODUCTION_BUILD)
+   add_compile_definitions(PRODUCTION_BUILD)
+ENDIF (PRODUCTION_BUILD)
+
 # Force 64-bit builds and min target for macOS. If the min target changes,
 # update generate.py too.
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE STRING "" FORCE)
 	set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "macOS architecture to build; 64-bit is expected" FORCE)
 endif(APPLE)
+
+# Enforce Windows 7 minimum target and MSVS 2017 compiler minimum.
+IF(WIN32)
+	SET(_WIN32_WINNT 0x0601 CACHE INTERNAL "Setting _WIN32_WINNT to 0x0601 for Windows 7 minimum APIs.")
+	SET(WINVER 0x0601 CACHE INTERNAL "Setting WINVER to 0x0601 for Windows 7 minimum APIs.")
+
+	IF(MSVC_VERSION LESS 1910)
+		MESSAGE(FATAL_ERROR "MSVC 141 or higher is required to build the BlockSettle Terminal.")
+	ENDIF()
+ENDIF()
 
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
@@ -42,7 +56,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 12 )
-SET(BS_VERSION_PATCH 8 )
+SET(BS_VERSION_PATCH 9 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)

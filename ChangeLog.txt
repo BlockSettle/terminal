@@ -1,3 +1,10 @@
+0.12.9
+Improvements:
+   - Refactored Auth eID signing GUI
+Bug fixes:
+   - Various Create Transaction UI fixes
+   - Ask to delete existing wallet at import
+
 0.12.8
 Bug fixes:
    - RBF and CPFP fixes

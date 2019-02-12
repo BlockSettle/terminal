@@ -225,7 +225,9 @@ static int GuiApp(int argc, char** argv)
    splashScreen.show();
    app.processEvents();
 
+#ifndef _DEBUG
    try {
+#endif
       BSTerminalMainWindow mainWindow(settings, splashScreen);
 
 #if defined (Q_OS_MAC)
@@ -239,6 +241,7 @@ static int GuiApp(int argc, char** argv)
       mainWindow.postSplashscreenActions();
 
       return app.exec();
+#ifndef _DEBUG
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
@@ -246,6 +249,7 @@ static int GuiApp(int argc, char** argv)
       return 1;
    }
    return 0;
+#endif // _DEBUG
 }
 
 int main(int argc, char** argv)

@@ -126,7 +126,7 @@ CustomTitleDialogWindow {
                     line2LabelTxt: qsTr("Root Key Line 2")
                     onEntryComplete: {
                         seed = qmlFactory.createSeedFromPaperBackupT(rootKeyInput.privateRootKey, signerSettings.testNet)
-                        if (seed.networkType === NsWallet.Invalid) {
+                        if (seed.networkType === WalletInfo.Invalid) {
                             JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse paper backup key."), "")
                         }
                     }
@@ -460,7 +460,7 @@ CustomTitleDialogWindow {
                 seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)
                 walletInfo = qmlFactory.createWalletInfoFromDigitalBackup(lblDBFile.text)
 
-                if (seed.networkType === NsWallet.Invalid) {
+                if (seed.networkType === WalletInfo.Invalid) {
                     digitalBackupAcceptable = false
                     JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse digital backup."), qsTr("Path: '%1'").arg(lblDBFile.text))
                 }
