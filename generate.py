@@ -27,17 +27,14 @@ from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
 
-def generate_project(build_mode, build_server, build_test_tools):
+def generate_project(build_mode, build_production):
    project_settings = Settings(build_mode)
-   if build_server:
-      project_settings.set_server_build_settings()
 
-   print('Checking 3rd party components')
+   print('Build mode        : {} ( {} )'.format(project_settings.get_build_mode(), ('Production' if build_production else 'Development')))
    print('Build mode        : ' + project_settings.get_build_mode())
    print('CMake generator   : ' + project_settings.get_cmake_generator())
    print('Download path     : ' + project_settings.get_downloads_dir())
    print('Install dir       : ' + project_settings.get_common_build_dir())
-   print('Build test tools : ' + str(build_test_tools))
 
    required_3rdparty = []
    if project_settings._is_windows:
@@ -56,9 +53,6 @@ def generate_project(build_mode, build_server, build_test_tools):
       WebsocketsSettings(project_settings),
       BotanSettings(project_settings),
       ]
-
-   if build_test_tools:
-      required_3rdparty.append(GtestSettings(project_settings))
 
    for component in required_3rdparty:
       if not component.config_component():
@@ -103,8 +97,8 @@ def generate_project(build_mode, build_server, build_test_tools):
          command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /DNDEBUG')
          command.append('-DCMAKE_CONFIGURATION_TYPES=Release')
 
-   if build_test_tools:
-      command.append('-DBUILD_TEST_TOOLS=1')
+   if build_production:
+      command.append('-DPRODUCTION_BUILD=1')
 
    # to remove cmake 3.10 dev warnings
    command.append('-Wno-dev')
@@ -126,11 +120,11 @@ if __name__ == '__main__':
                              action='store',
                              default='release',
                              choices=['debug', 'release'])
-   input_parser.add_argument('-btt',
-                             '-build-test-tools',
-                             help='Build the test tools when generating',
+   input_parser.add_argument('-production',
+                             help='Make production build',
                              action='store_true',
-                             dest='build_test_tools')
+                             dest='build_production',
+                             default=False)
    args = input_parser.parse_args()
 
-   sys.exit(generate_project(args.build_mode, False, args.build_test_tools))
+   sys.exit(generate_project(args.build_mode, args.build_production))
