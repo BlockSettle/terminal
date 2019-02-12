@@ -106,7 +106,7 @@ public:
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const QString& pubKeyPath
+      , const SecureBinaryData& pubKey
       , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
@@ -139,7 +139,6 @@ protected:
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
-   const QString        pubKeyPath_;
    mutable std::mutex   mutex_;
 };
 
@@ -151,7 +150,7 @@ public:
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const QString& pubKeyPath
+      , const SecureBinaryData& pubKey
       , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 

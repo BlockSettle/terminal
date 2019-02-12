@@ -80,7 +80,11 @@ class ChatWidgetStateLoggedIn : public ChatWidgetState {
 public:
    ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedIn) {}
 
-   void onStateEnter() override {}
+    void onStateEnter() override {}
+    
+    void onStateExit() override {
+       chat_->onUserClicked({});
+    }
 
    std::string login(const std::string& /*email*/, const std::string& /*jwt*/) override {
       chat_->logger_->info("Already logged in! You should first logout!");
@@ -223,9 +227,6 @@ void ChatWidget::changeState(ChatWidget::State state)
             stateCurrent_ = std::make_shared<ChatWidgetStateLoggedIn>(this);
 
             _chatUserListLogicPtr->readUsersFromDB();
-
-//            std::vector<std::string> testUsers = {"alpha", "bravo", "echo"};
-//            _chatUserListLogicPtr->onAddChatUsers(testUsers);
          }
          break;
       case State::LoggedOut:

@@ -67,11 +67,21 @@ CreateTransactionDialog::~CreateTransactionDialog() noexcept
 
 void CreateTransactionDialog::init()
 {
-   transactionData_ = std::make_shared<TransactionData>([this]() {
-      QMetaObject::invokeMethod(this, [this] {
-         onTransactionUpdated();
-      });
-   }, logger_);
+   if (!transactionData_) {
+      transactionData_ = std::make_shared<TransactionData>([this]() {
+         QMetaObject::invokeMethod(this, [this] {
+            onTransactionUpdated();
+         });
+      }, logger_);
+   }
+   else {
+      const auto recipients = transactionData_->allRecipientIds();
+      for (const auto &recipId : recipients) {
+         transactionData_->RemoveRecipient(recipId);
+      }
+      onTransactionUpdated();
+      transactionData_->SetCallback([this] { onTransactionUpdated(); });
+   }
 
    xbtValidator_ = new XbtAmountValidator(this);
    lineEditAmount()->setValidator(xbtValidator_);
