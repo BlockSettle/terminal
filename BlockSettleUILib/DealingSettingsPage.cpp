@@ -7,7 +7,7 @@
 
 
 DealingSettingsPage::DealingSettingsPage(QWidget* parent)
-   : QWidget{parent}
+   : SettingsPage{parent}
    , ui_{new Ui::DealingSettingsPage{}}
 {
    ui_->setupUi(this);
@@ -16,11 +16,6 @@ DealingSettingsPage::DealingSettingsPage(QWidget* parent)
 }
 
 DealingSettingsPage::~DealingSettingsPage() = default;
-
-void DealingSettingsPage::setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings)
-{
-   appSettings_ = appSettings;
-}
 
 static inline int limitIndex(int limit)
 {
@@ -101,26 +96,31 @@ static inline int priceUpdateTimeout(int index)
    }
 }
 
-void DealingSettingsPage::displaySettings(const std::shared_ptr<AssetManager> &assetMgr
-   , bool displayDefault)
+void DealingSettingsPage::display()
 {
-   ui_->checkBoxDrop->setChecked(appSettings_->get<bool>(ApplicationSettings::dropQN,
-      displayDefault));
-   ui_->showQuoted->setChecked(appSettings_->get<bool>(ApplicationSettings::ShowQuoted,
-      displayDefault));
-   ui_->fx->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::FxRfqLimit,
-      displayDefault)));
-   ui_->xbt->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::XbtRfqLimit,
-      displayDefault)));
-   ui_->pm->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::PmRfqLimit,
-      displayDefault)));
+   ui_->checkBoxDrop->setChecked(appSettings_->get<bool>(ApplicationSettings::dropQN));
+   ui_->showQuoted->setChecked(appSettings_->get<bool>(ApplicationSettings::ShowQuoted));
+   ui_->fx->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::FxRfqLimit)));
+   ui_->xbt->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::XbtRfqLimit)));
+   ui_->pm->setCurrentIndex(limitIndex(appSettings_->get<int>(ApplicationSettings::PmRfqLimit)));
    ui_->disableBlueDot->setChecked(appSettings_->get<bool>(
-      ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter, displayDefault));
+      ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter));
    ui_->priceUpdateTimeout->setCurrentIndex(priceUpdateIndex(appSettings_->get<int>(
-      ApplicationSettings::PriceUpdateInterval, displayDefault)));
+      ApplicationSettings::PriceUpdateInterval)));
 }
 
-void DealingSettingsPage::applyChanges()
+void DealingSettingsPage::reset()
+{
+   for (const auto &setting : {ApplicationSettings::dropQN, ApplicationSettings::ShowQuoted
+      , ApplicationSettings::FxRfqLimit, ApplicationSettings::XbtRfqLimit
+      , ApplicationSettings::PmRfqLimit, ApplicationSettings::DisableBlueDotOnTabOfRfqBlotter
+      , ApplicationSettings::PriceUpdateInterval}) {
+      appSettings_->reset(setting, false);
+   }
+   display();
+}
+
+void DealingSettingsPage::apply()
 {
    appSettings_->set(ApplicationSettings::dropQN, ui_->checkBoxDrop->isChecked());
    appSettings_->set(ApplicationSettings::ShowQuoted, ui_->showQuoted->isChecked());

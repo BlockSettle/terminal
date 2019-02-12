@@ -34,7 +34,7 @@ static const EnvSettings PRODEnvSettings{
    QLatin1String("185.213.153.36"), 9091 };
 
 NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
-   : QWidget{parent}
+   : SettingsPage{parent}
    , ui_{new Ui::NetworkSettingsPage}
 {
    ui_->setupUi(this);
@@ -57,35 +57,53 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    connect(ui_->spinBoxPublicBridgePort, SIGNAL(valueChanged(int)), this, SLOT(onEnvSettingsChanged()));
 
    connect(ui_->comboBoxEnv, SIGNAL(currentIndexChanged(int)), this, SLOT(onEnvSelected(int)));
+
+   connect(ui_->armoryDBHostLineEdit, &QLineEdit::editingFinished, this, &NetworkSettingsPage::onArmoryHostChanged);
+   connect(ui_->armoryDBPortLineEdit, &QLineEdit::editingFinished, this, &NetworkSettingsPage::onArmoryPortChanged);
 }
 
 NetworkSettingsPage::~NetworkSettingsPage() = default;
 
-void NetworkSettingsPage::setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings)
+void NetworkSettingsPage::display()
 {
-   appSettings_ = appSettings;
-}
+   ui_->checkBoxTestnet->setChecked(appSettings_->get<NetworkType>(ApplicationSettings::netType) == NetworkType::TestNet);
 
-void NetworkSettingsPage::displaySettings(bool displayDefault)
-{
-   ui_->checkBoxTestnet->setChecked(appSettings_->get<NetworkType>(ApplicationSettings::netType, displayDefault) == NetworkType::TestNet);
-
-   if (appSettings_->get<bool>(ApplicationSettings::runArmoryLocally, displayDefault)) {
+   if (appSettings_->get<bool>(ApplicationSettings::runArmoryLocally)) {
       ui_->runArmoryDBLocallyCheckBox->setChecked(true);
-      DisplayRunArmorySettings(true, displayDefault);
+      DisplayRunArmorySettings(true);
    } else {
       ui_->runArmoryDBLocallyCheckBox->setChecked(false);
-      DisplayRunArmorySettings(false, displayDefault);
+      DisplayRunArmorySettings(false);
    }
 
-   ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost, displayDefault));
-   ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort, displayDefault));
+   ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
+   ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
 
    ui_->comboBoxEnv->setEnabled(true);
    DetectEnvironmentSettings();
 }
 
-void NetworkSettingsPage::DisplayRunArmorySettings(bool runLocally, bool displayDefault)
+void NetworkSettingsPage::reset()
+{
+   for (const auto &setting : { ApplicationSettings::runArmoryLocally, ApplicationSettings::netType
+      , ApplicationSettings::pubBridgeHost, ApplicationSettings::pubBridgePort
+      , ApplicationSettings::armoryDbIp, ApplicationSettings::armoryDbPort}) {
+      appSettings_->reset(setting, false);
+   }
+   display();
+}
+
+void NetworkSettingsPage::onArmoryHostChanged()
+{
+   appSettings_->set(ApplicationSettings::armoryDbIp, ui_->armoryDBHostLineEdit->text(), false);
+}
+
+void NetworkSettingsPage::onArmoryPortChanged()
+{
+   appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortLineEdit->text(), false);
+}
+
+void NetworkSettingsPage::DisplayRunArmorySettings(bool runLocally)
 {
    auto networkType = ui_->checkBoxTestnet->isChecked()
       ? NetworkType::TestNet
@@ -100,8 +118,8 @@ void NetworkSettingsPage::DisplayRunArmorySettings(bool runLocally, bool display
    } else {
       ui_->armoryDBHostLineEdit->setEnabled(true);
       ui_->armoryDBPortLineEdit->setEnabled(true);
-      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp, displayDefault));
-      ui_->armoryDBPortLineEdit->setText(appSettings_->GetArmoryRemotePort(displayDefault, networkType));
+      ui_->armoryDBHostLineEdit->setText(appSettings_->get<QString>(ApplicationSettings::armoryDbIp));
+      ui_->armoryDBPortLineEdit->setText(appSettings_->GetArmoryRemotePort(networkType));
    }
 }
 
@@ -125,7 +143,7 @@ void NetworkSettingsPage::DetectEnvironmentSettings()
    ui_->comboBoxEnv->setCurrentIndex(index);
 }
 
-void NetworkSettingsPage::applyChanges()
+void NetworkSettingsPage::apply()
 {
    appSettings_->set(ApplicationSettings::netType, ui_->checkBoxTestnet->isChecked()
       ? (int)NetworkType::TestNet : (int)NetworkType::MainNet);
@@ -144,12 +162,12 @@ void NetworkSettingsPage::applyChanges()
 
 void NetworkSettingsPage::onRunArmoryLocallyChecked(bool checked)
 {
-   DisplayRunArmorySettings(checked, false);
+   DisplayRunArmorySettings(checked);
 }
 
 void NetworkSettingsPage::onNetworkClicked(bool)
 {
-   DisplayRunArmorySettings(ui_->runArmoryDBLocallyCheckBox->isChecked(), false);
+   DisplayRunArmorySettings(ui_->runArmoryDBLocallyCheckBox->isChecked());
 }
 
 void NetworkSettingsPage::onEnvSettingsChanged()

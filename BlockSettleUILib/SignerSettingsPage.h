@@ -2,7 +2,7 @@
 #define __SIGNER_SETTINGS_PAGE_H__
 
 #include <memory>
-#include <QWidget>
+#include "ConfigDialog.h"
 
 
 namespace Ui {
@@ -12,17 +12,15 @@ namespace Ui {
 class ApplicationSettings;
 
 
-class SignerSettingsPage : public QWidget
+class SignerSettingsPage : public SettingsPage
 {
-Q_OBJECT
-
 public:
    SignerSettingsPage(QWidget* parent = nullptr);
    ~SignerSettingsPage() override;
 
-   void setAppSettings(const std::shared_ptr<ApplicationSettings> &);
-   void displaySettings(bool displayDefault = false);
-   void applyChanges();
+   void display() override;
+   void reset() override;
+   void apply() override;
 
 private slots:
    void runModeChanged(int index);
@@ -31,7 +29,7 @@ private slots:
    void onAsSpendLimitChanged(double);
 
 private:
-   void onModeChanged(int index, bool displayDefault);
+   void onModeChanged(int index);
    void saveZmqRemotePubKey();
    void showHost(bool);
    void showPort(bool);
@@ -41,7 +39,6 @@ private:
 
 private:
    std::unique_ptr<Ui::SignerSettingsPage> ui_;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
 };
 
 #endif // __SIGNER_SETTINGS_PAGE_H__

@@ -917,8 +917,7 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 
 void BSTerminalMainWindow::openConfigDialog()
 {
-   ConfigDialog configDialog(applicationSettings_, walletsManager_, assetManager_, this);
-   configDialog.exec();
+   ConfigDialog(applicationSettings_, this).exec();
 
    UpdateMainWindowAppearence();
 }
