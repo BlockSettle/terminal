@@ -141,12 +141,12 @@ private:
    void InvalidateTransactionData();
    bool UpdateTransactionData();
    bool RecipientsReady() const;
-   std::vector<UTXO> decorateUTXOs() const;
+   std::vector<UTXO> decorateUTXOs(const std::vector<UTXO> &inUTXOs = {}) const;
    UtxoSelection computeSizeAndFee(const std::vector<UTXO>& inUTXOs
-      , const PaymentStruct& inPS);
+      , const PaymentStruct& inPS) const;
 
    // Temporary function until some Armory changes are accepted upstream.
-   size_t getVirtSize(const UtxoSelection& inUTXOSel);
+   size_t getVirtSize(const UtxoSelection& inUTXOSel) const;
 
    std::vector<std::shared_ptr<ScriptRecipient>> GetRecipientList() const;
 
@@ -166,7 +166,7 @@ private:
    mutable bs::Address              fallbackRecvAddress_;
    std::shared_ptr<CoinSelection>   coinSelection_;
 
-   std::vector<UTXO>    usedUTXO_;
+   mutable std::vector<UTXO>  usedUTXO_;
    TransactionSummary   summary_;
    bool     maxSpendAmount_ = false;
 

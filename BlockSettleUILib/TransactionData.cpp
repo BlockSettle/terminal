@@ -188,7 +188,7 @@ bool TransactionData::UpdateTransactionData()
 
    PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
       ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
-      : PaymentStruct(recipientsMap, totalFee_, feePerByte_, 0);
+      : PaymentStruct(recipientsMap, totalFee_, 0, 0);
    summary_.balanceToSpend = UiUtils::amountToBtc(payment.spendVal_);
 
    if (payment.spendVal_ <= availableBalance) {
@@ -278,49 +278,64 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
    }
 
    maxAmount_ = 0;
-   std::vector<UTXO> transactions = decorateUTXOs();
 
-   if (transactions.size() == 0) {
-      if (logger_) {
-         logger_->debug("[TransactionData::CalculateMaxAmount] empty input list");
-      }
-      return 0;
-   }
-
-   std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
-   for (const auto &recip : recipients_) {
-      const auto recipPtr = recip.second->GetScriptRecipient();
-      if (!recipPtr || !recipPtr->getValue()) {
-         continue;
-      }
-      recipientsMap[recip.first] = recipPtr;
-   }
-   if (!recipient.isNull()) {
-      const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
-      if (recipPtr) {
-         recipientsMap[recipients_.size()] = recipPtr;
+   if ((feePerByte_ == 0) && totalFee_) {
+      const double availableBalance = GetTransactionSummary().availableBalance - \
+         GetTransactionSummary().balanceToSpend;
+      const double totalFee = totalFee_ / BTCNumericTypes::BalanceDivider;
+      if (availableBalance > totalFee) {
+         maxAmount_ = availableBalance - totalFee;
       }
    }
-   if (recipientsMap.empty()) {
-      if (logger_) {
-         logger_->debug("[TransactionData::CalculateMaxAmount] empty recipients list");
+   else {
+      std::vector<UTXO> transactions = decorateUTXOs();
+
+      if (transactions.size() == 0) {
+         if (logger_) {
+            logger_->debug("[TransactionData::CalculateMaxAmount] empty input list");
+         }
+         return 0;
       }
-      return 0;
-   }
-   const PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
-      ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
-      : PaymentStruct(recipientsMap, totalFee_, feePerByte_, 0);
 
-   // Accept the fee returned by Armory. The fee returned may be a few
-   // satoshis higher than is strictly required by Core but that's okay.
-   // If truly required, the fee can be tweaked later.
-   const double fee = coinSelection_->getFeeForMaxVal(payment.size_, feePerByte()
-      , transactions) / BTCNumericTypes::BalanceDivider;
+      std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      for (const auto &recip : recipients_) {
+         const auto recipPtr = recip.second->GetScriptRecipient();
+         if (!recipPtr || !recipPtr->getValue()) {
+            continue;
+         }
+         recipientsMap[recip.first] = recipPtr;
+      }
+      if (!recipient.isNull()) {
+         const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
+         if (recipPtr) {
+            recipientsMap[recipients_.size()] = recipPtr;
+         }
+      }
+      if (recipientsMap.empty()) {
+         return 0;
+      }
 
-   auto availableBalance = GetTransactionSummary().availableBalance - \
-      GetTransactionSummary().balanceToSpend;
-   if (availableBalance >= fee) {
-      maxAmount_ = availableBalance - fee;
+      const PaymentStruct payment = (!totalFee_ && !qFuzzyIsNull(feePerByte_))
+         ? PaymentStruct(recipientsMap, 0, feePerByte_, 0)
+         : PaymentStruct(recipientsMap, totalFee_, feePerByte_, 0);
+
+      // Accept the fee returned by Armory. The fee returned may be a few
+      // satoshis higher than is strictly required by Core but that's okay.
+      // If truly required, the fee can be tweaked later.
+      try {
+         const double fee = coinSelection_->getFeeForMaxVal(payment.size_, feePerByte_
+            , transactions) / BTCNumericTypes::BalanceDivider;
+
+         const double availableBalance = GetTransactionSummary().availableBalance - \
+            GetTransactionSummary().balanceToSpend;
+         if (availableBalance >= fee) {
+            maxAmount_ = availableBalance - fee;
+         }
+      } catch (const std::exception &e) {
+         if (logger_) {
+            logger_->error("[TransactionData::CalculateMaxAmount] failed to get fee for max val: {}", e.what());
+         }
+      }
    }
    return maxAmount_;
 }
@@ -347,14 +362,14 @@ bool TransactionData::RecipientsReady() const
 // OUT: None
 // RET: A vector of fully initialized UTXO objects, one for each selected (and
 //      non-filtered) input.
-std::vector<UTXO> TransactionData::decorateUTXOs() const
+std::vector<UTXO> TransactionData::decorateUTXOs(const std::vector<UTXO> &inUTXOs) const
 {
    std::vector<UTXO> inputUTXOs;
-   if (selectedInputs_ == nullptr || wallet_ == nullptr) {
+   if ((selectedInputs_ == nullptr || wallet_ == nullptr) && inUTXOs.empty()) {
       return inputUTXOs;
    }
 
-   inputUTXOs = selectedInputs_->GetSelectedTransactions();
+   inputUTXOs = inUTXOs.empty() ? selectedInputs_->GetSelectedTransactions() : inUTXOs;
 
    if (utxoAdapter_ && reservedUTXO_.empty()) {
       utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId()
@@ -401,7 +416,7 @@ std::vector<UTXO> TransactionData::decorateUTXOs() const
 // OUT: None
 // RET: A fully initialized UtxoSelection object, with size and fee data.
 UtxoSelection TransactionData::computeSizeAndFee(const std::vector<UTXO>& inUTXOs
-   , const PaymentStruct& inPS)
+   , const PaymentStruct& inPS) const
 {
    // When creating UtxoSelection object, initialize it with a copy of the
    // UTXO vector. Armory will "move" the data behind-the-scenes, and we
@@ -433,10 +448,10 @@ UtxoSelection TransactionData::computeSizeAndFee(const std::vector<UTXO>& inUTXO
 // (https://github.com/goatpig/BitcoinArmory/pull/538) is accepted upstream.
 // Note that this function assumes SegWit will be used. It's fine for our
 // purposes but it's a bad assumption in general.
-size_t TransactionData::getVirtSize(const UtxoSelection& inUTXOSel)
+size_t TransactionData::getVirtSize(const UtxoSelection& inUTXOSel) const
 {
    size_t nonWitSize = inUTXOSel.size_ - inUTXOSel.witnessSize_;
-   return std::ceil(static_cast<float>(3*nonWitSize + inUTXOSel.size_) / 4.0f);
+   return std::ceil(static_cast<float>(3 * nonWitSize + inUTXOSel.size_) / 4.0f);
 }
 
 void TransactionData::setFeePerByte(float feePerByte)
@@ -470,6 +485,9 @@ uint64_t TransactionData::totalFee() const
 {
    if (totalFee_) {
       return totalFee_;
+   }
+   if (summary_.totalFee) {
+      return summary_.totalFee;
    }
    if (summary_.txVirtSize) {
       return feePerByte_ * summary_.txVirtSize;

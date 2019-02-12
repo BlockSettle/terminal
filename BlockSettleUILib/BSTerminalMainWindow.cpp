@@ -825,7 +825,7 @@ void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWal
 {
    CreateTransactionDialogAdvanced advancedDialog{armory_, walletsManager_,
                                                   signContainer_, true,
-                                                  logMgr_->logger("ui"), this};
+                                                  logMgr_->logger("ui"), nullptr, this};
    advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    if (!selectedWalletId.empty()) {
