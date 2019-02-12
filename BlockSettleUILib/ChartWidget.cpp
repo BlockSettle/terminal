@@ -359,7 +359,6 @@ void ChartWidget::updateChart(int interval)
        product = QStringLiteral("EUR/GBP");
    }
    if (title) {
-      qDebug() << "FIll title" << product;
       title->setText(product);
    }
    if (!candlesticksChart || !volumeChart) {
@@ -367,7 +366,6 @@ void ChartWidget::updateChart(int interval)
    }
    candlesticksChart->data()->clear();
    volumeChart->data()->clear();
-   qDebug() << "FIll data for" << product;
    candlesticksChart->setWidth(0.9 * intervalLength(interval));
    volumeChart->setWidth(0.9 * intervalLength(interval));
 
@@ -584,37 +582,17 @@ void ChartWidget::initializeCustomPlot()
    ui_->customPlot->setBackground(bgBrush);
 
    //add title
-   /*auto*/ title = new QCPTextElement(ui_->customPlot);
+   title = new QCPTextElement(ui_->customPlot);
    title->setTextColor(FOREGROUND_COLOR);
-   title->setFont(QFont(QStringLiteral("sans"), 12/*, QFont::Bold*/));
+   title->setFont(QFont(QStringLiteral("sans"), 12));
    title->setText(QStringLiteral("EUR/SEK"));
    ui_->customPlot->plotLayout()->insertRow(0);
    ui_->customPlot->plotLayout()->addElement(0, 0, title);
 
-   // generate two sets of random walk data (one for candlestick and one for ohlc chart):
-   int n = 500;
-   QVector<double> time(n), prices(n), volumes(n);
-   QDateTime start = QDateTime(QDate(2014, 6, 11));
-   start.setTimeSpec(Qt::UTC);
-   double startTime = start.toTime_t();
-   double intervalSecs = 3600*24; // bin data in 1 day intervals
-   time[0] = startTime;
-   prices[0] = 60;
-   volumes[0] = 10;
-   for (int i = 1; i < n; ++i)
-   {
-     time[i] = startTime + 3600 * i;
-     prices[i] = prices[i - 1] + QRandomGenerator::global()->bounded(10.0) - 5.0;
-     volumes[i] = volumes[i - 1] + QRandomGenerator::global()->bounded(10.0) - 5.0;
-   }
-   double width = intervalSecs * 0.9;
-
    // create candlestick chart:
-   /*QCPFinancial **/candlesticksChart = new QCPFinancial(ui_->customPlot->xAxis, ui_->customPlot->yAxis2);
+   candlesticksChart = new QCPFinancial(ui_->customPlot->xAxis, ui_->customPlot->yAxis2);
    candlesticksChart->setName(tr("Candlestick"));
    candlesticksChart->setChartStyle(QCPFinancial::csCandlestick);
-   candlesticksChart->data()->set(QCPFinancial::timeSeriesToOhlc(time, prices, intervalSecs, startTime));
-   candlesticksChart->setWidth(width);
    candlesticksChart->setTwoColored(true);
    candlesticksChart->setBrushPositive(INCREASING_COLOR);
    candlesticksChart->setBrushNegative(DECREASING_COLOR);
@@ -632,7 +610,7 @@ void ChartWidget::initializeCustomPlot()
    ui_->customPlot->axisRect()->axis(QCPAxis::atBottom)->grid()->setPen(Qt::NoPen);
 
    // create bottom axis rect for volume bar chart:
-   /*QCPAxisRect **/volumeAxisRect = new QCPAxisRect(ui_->customPlot);
+   volumeAxisRect = new QCPAxisRect(ui_->customPlot);
    ui_->customPlot->plotLayout()->addElement(2, 0, volumeAxisRect);
    volumeAxisRect->setMaximumSize(QSize(QWIDGETSIZE_MAX, 100));
    volumeAxisRect->axis(QCPAxis::atBottom)->setLayer(QStringLiteral("axes"));
@@ -644,12 +622,7 @@ void ChartWidget::initializeCustomPlot()
    // create two bar plottables, for positive (green) and negative (red) volume bars:
    ui_->customPlot->setAutoAddPlottableToLegend(false);
 
-   /*QCPBars **/volumeChart = new QCPBars(volumeAxisRect->axis(QCPAxis::atBottom), volumeAxisRect->axis(QCPAxis::atRight));
-   for (int i = 0; i < n; i += 5)
-   {
-     volumeChart->addData(time.at(i), qAbs(volumes.at(i))); // add data to either volumeNeg or volumePos, depending on sign of v
-   }
-   volumeChart->setWidth(width / 6);
+   volumeChart = new QCPBars(volumeAxisRect->axis(QCPAxis::atBottom), volumeAxisRect->axis(QCPAxis::atRight));
    volumeChart->setPen(QPen(VOLUME_COLOR));
    volumeChart->setBrush(VOLUME_COLOR);
 
@@ -679,7 +652,7 @@ void ChartWidget::initializeCustomPlot()
    // configure axes of both main and bottom axis rect:
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker(new QCPAxisTickerDateTime);
    dateTimeTicker->setDateTimeSpec(Qt::UTC);
-   dateTimeTicker->setDateTimeFormat(QStringLiteral("dd/MM/yy HH:mm"));
+   dateTimeTicker->setDateTimeFormat(QStringLiteral("dd/MM/yy\nHH:mm"));
    dateTimeTicker->setTickCount(20);
    volumeAxisRect->axis(QCPAxis::atBottom)->setTicker(dateTimeTicker);
    volumeAxisRect->axis(QCPAxis::atBottom)->setTickLabelRotation(15);
