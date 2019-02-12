@@ -437,8 +437,11 @@ bool BSTerminalMainWindow::InitSigningContainer()
       if (pubKeyString.isEmpty()) {
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Remote Connection")
-            , tr("Public key is not imported for signer.")
-            , tr("Please import public key for remote signer on Signer settings page to connect.")
+            , tr("Remote signer public key is unavailable.")
+            , tr("Remote signer public key is unavailable."
+               " Transaction signing is not available."
+               " Please import the signer's public key (Settings -> Signer) "
+               "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
             , this).exec();
          return false;
       }
