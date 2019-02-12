@@ -24,6 +24,13 @@
 class ArmoryConnection;
 class QProcess;
 
+// Define the BIP 150 public keys used by servers controlled by BS. For dev
+// purposes, they'll be hard-coded for now. THESE MUST BE REPLACED EVENTUALLY
+// WITH THE KEY ROTATION ALGORITHM. HARD-CODED KEYS WILL KILL ANY TERMINAL ONCE
+// THE KEYS ROTATE.
+// Key 1: IP address - 37 server
+#define BIP150_KEY_1 "03a8649b32b9459961e143c5c111b9a47ffa494116791c1cb35945a8b9bc8254ab"
+
 // The class is used as a callback that processes asynchronous Armory events.
 class ArmoryCallback : public RemoteCallback
 {
@@ -153,6 +160,8 @@ private:
    TxCacheFile    txCache_;
    const bool     cbInMainThread_;
    std::shared_ptr<BlockHeader> getTxBlockHeader_;
+
+   std::vector<SecureBinaryData> bsBIP150PubKeys;
 
    std::atomic_bool  regThreadRunning_;
    std::atomic_bool  connThreadRunning_;

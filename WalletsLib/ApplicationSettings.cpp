@@ -321,15 +321,16 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    parser.addOption({ chatServerPortName, chatServerPortHelp, QLatin1String("chatport") });
 #endif // NDEBUG
 
-   
+
 
    if (!parser.parse(argList)) {
       errorText_ = parser.errorText();
       return false;
    }
 
-   // Sets the testnet prefix byte used in Armory C++ code
-   BlockDataManagerConfig config;
+   // Set up Armory as needed. Network type, Armory's BIP 150 "public mode", and
+   // setting the data dir to be in the same dir as BS (i.e., not Armory dir).
+/*   BlockDataManagerConfig config;
 
    if (parser.isSet(testnetName)) {
       set(netType, (int)NetworkType::TestNet);
@@ -348,8 +349,14 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       config.selectNetwork(NETWORK_MODE_REGTEST);
       break;
 
-   default:    break;
+   default:
+      break;
    }
+
+   std::map<std::string, std::string> armoryArgs;
+   armoryArgs["--public"] = "";
+   armoryArgs["--datadir"] = parser.value(dataDirName).toStdString();
+   config.parseArgs();*/
 
    SetHomeDir(parser.value(dataDirName));
    SetBitcoinsDir(parser.value(satoshiDataDirName));
@@ -557,6 +564,7 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    settings.armoryExecutablePath = QDir::cleanPath(get<QString>(ApplicationSettings::armoryPathName));
    settings.dbDir = GetDBDir();
    settings.bitcoinBlocksDir = GetBitcoinBlocksDir();
+   settings.dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
    return settings;
 }

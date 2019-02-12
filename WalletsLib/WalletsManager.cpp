@@ -21,8 +21,6 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
    , armory_(armory)
    , preferWatchingOnly_(preferWatchinOnly)
 {
-   btc_ecc_start();
-
    nbBackupFilesToKeep_ = appSettings_->get<unsigned int>(ApplicationSettings::nbBackupFilesKeep);
    if (armory_) {
       connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
@@ -36,11 +34,19 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), logger_(logger), preferWatchingOnly_(false)
 {
+   // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
+   // Armory setting designed to allow the ArmoryDB server to not have to verify
+   // clients. Prevents us from having to import tons of keys into the server.
    btc_ecc_start();
+   startupBIP151CTX();
+   startupBIP150CTX(4, true);
 }
 
 WalletsManager::~WalletsManager() noexcept
 {
+   // These really ought to be called elsewhere, when the appropriate binaries
+   // shut down.
+   shutdownBIP151CTX();
    btc_ecc_stop();
 }
 

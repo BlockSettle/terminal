@@ -41,6 +41,13 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    qRegisterMetaType<NodeStatus>();
    qRegisterMetaType<bs::TXEntry>();
    qRegisterMetaType<std::vector<bs::TXEntry>>();
+
+   // Add BIP 150 server keys
+   BinaryData curKeyBin;
+   std::string curKey = BIP150_KEY_1;
+   curKeyBin = READHEX(curKey);
+   bsBIP150PubKeys.push_back(curKeyBin);
+
 }
 
 ArmoryConnection::~ArmoryConnection() noexcept
@@ -79,6 +86,7 @@ bool ArmoryConnection::startLocalArmoryProcess(const ArmorySettings &settings)
 
       args.append(QLatin1String("--satoshi-datadir=\"") + settings.bitcoinBlocksDir + QLatin1String("\""));
       args.append(QLatin1String("--dbdir=\"") + settings.dbDir + QLatin1String("\""));
+      args.append(QLatin1String("--public"));
 
       armoryProcess_->start(settings.armoryExecutablePath, args);
       if (armoryProcess_->waitForStarted(DefaultArmoryDBStartTimeoutMsec)) {
@@ -152,13 +160,24 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
          logger_->debug("[ArmoryConnection::setupConnection] connecting to Armory {}:{}"
                         , settings.armoryDBIp, settings.armoryDBPort);
-         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp, settings.armoryDBPort, cbRemote_);
+
+         // Get Armory BDV (gateway to the remote ArmoryDB instance). Must set
+         // up BIP 150 keys before connecting. BIP 150/151 is transparent to us
+         // otherwise. If it fails, the connection will fail.
+         bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp
+            , settings.armoryDBPort, settings.dataDir.toStdString(), true
+            , cbRemote_);
          if (!bdv_) {
             logger_->error("[setupConnection (connectRoutine)] failed to "
                "create BDV");
             std::this_thread::sleep_for(std::chrono::seconds(10));
             continue;
          }
+
+         std::for_each(bsBIP150PubKeys.begin(), bsBIP150PubKeys.end(), [&](auto&& x) {
+            bdv_->addPublicKey(x);
+         });
+
          connected = bdv_->connectToRemote();
          if (!connected) {
             logger_->warn("[ArmoryConnection::setupConnection] BDV connection failed");

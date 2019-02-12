@@ -168,18 +168,20 @@ public:
    WebSocketServer(void);
 
    static int callback(
-      struct lws *wsi, enum lws_callback_reasons reason, 
+      struct lws *wsi, enum lws_callback_reasons reason,
       void *user, void *in, size_t len);
 
-   static void start(BlockDataManagerThread* bdmT, bool async);
+   static void start(BlockDataManagerThread* bdmT,
+      const std::string& datadir, const bool& ephemeralPeers,
+      const bool& async);
    static void shutdown(void);
    static void waitOnShutdown(void);
    static SecureBinaryData getPublicKey(void);
 
-   static void write(const uint64_t&, const uint32_t&, 
+   static void write(const uint64_t&, const uint32_t&,
       std::shared_ptr<::google::protobuf::Message>);
-   
-   std::shared_ptr<std::map<uint64_t, ClientConnection>> 
+
+   std::shared_ptr<std::map<uint64_t, ClientConnection>>
       getConnectionStateMap(void) const;
    void addId(const uint64_t&, struct lws* ptr);
    void eraseId(const uint64_t&);

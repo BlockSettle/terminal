@@ -186,18 +186,19 @@ int WebSocketServer::callback(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void WebSocketServer::start(BlockDataManagerThread* bdmT, bool async)
+void WebSocketServer::start(BlockDataManagerThread* bdmT,
+   const string& datadir, const bool& ephemeralPeers, const bool& async)
 {
    shutdownPromise_ = promise<bool>();
    shutdownFuture_ = shutdownPromise_.get_future();
    auto instance = getInstance();
 
    //init auth peer object
-   if (!BlockDataManagerConfig::ephemeralPeers_)
+   if (!ephemeralPeers)
    {
       string peerFilename(SERVER_AUTH_PEER_FILENAME);
       instance->authorizedPeers_ = make_shared<AuthorizedPeers>(
-         BlockDataManagerConfig::getDataDir(), peerFilename);
+         datadir, peerFilename);
    }
    else
    {
