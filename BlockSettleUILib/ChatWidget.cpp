@@ -79,6 +79,10 @@ public:
     ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedIn) {}
 
     void onStateEnter() override {}
+    
+    void onStateExit() override {
+       chat_->onUserClicked({});
+    }
 
     std::string login(const std::string& /*email*/, const std::string& /*jwt*/) override {
       chat_->logger_->info("Already logged in! You should first logout!");
