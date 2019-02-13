@@ -213,7 +213,7 @@ namespace bs {
          std::map<bs::Address, AddrPoolKey>           poolByAddr_;
 
       private:
-         shared_ptr<LMDBEnv> dbEnv_ = nullptr;
+         std::shared_ptr<LMDBEnv> dbEnv_ = nullptr;
          LMDB* db_ = nullptr;
          using AddressTuple = std::tuple<bs::Address, std::shared_ptr<Node>, Path>;
          std::unordered_map<Path::Elem, AddressTuple> addressMap_;

@@ -42,6 +42,7 @@ enum Methods
 	getAddrBalances = 52;
 	getAddressFullBalance = 53;
 	getAddressTxioCount = 54;
+	setWalletConfTarget = 55;
 
 	getSpendableTxOutListForValue = 60;
 	getSpendableZCList = 61;
@@ -92,6 +93,7 @@ enum NotificationType
 	newblock = 3;
 	zc = 4;
 	error = 5;
+	invalidated_zc = 6;
 
 	progress = 20;
 	nodestatus = 21;

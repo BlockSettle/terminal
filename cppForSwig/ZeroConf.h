@@ -180,7 +180,7 @@ struct ZeroConfInvPacket
 struct ParsedZCData
 {
    std::set<BinaryData> txioKeys_;
-   std::set<BinaryData> invalidatedKeys_;
+   std::map<BinaryData, BinaryData> invalidatedKeys_;
 
    void mergeTxios(ParsedZCData& pzd)
    {
@@ -191,7 +191,7 @@ struct ParsedZCData
 ////////////////////////////////////////////////////////////////////////////////
 struct ZcPurgePacket
 {
-   std::set<BinaryData> invalidatedZcKeys_;
+   std::map<BinaryData, BinaryData> invalidatedZcKeys_;
    std::map<BinaryData, BinaryData> minedTxioKeys_;
 };
 

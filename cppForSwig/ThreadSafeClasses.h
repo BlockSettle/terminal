@@ -732,7 +732,7 @@ public:
 
       std::unique_lock<std::mutex> lock(mu_);
 		newMap->insert(map_->begin(), map_->end());
-		newMap->insert(move(mv));
+		newMap->insert(std::move(mv));
 
 		atomic_store(&map_, newMap);
 

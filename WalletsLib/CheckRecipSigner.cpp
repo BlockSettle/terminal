@@ -81,7 +81,7 @@ struct recip_compare {
 };
 void CheckRecipSigner::removeDupRecipients()
 {  // can be implemented later in a better way without temporary std::set
-   vector<shared_ptr<ScriptRecipient>> uniqueRecepients;
+   std::vector<std::shared_ptr<ScriptRecipient>> uniqueRecepients;
 
    std::set<std::shared_ptr<ScriptRecipient>, recip_compare> recipSet;
    for (const auto r : recipients_) {

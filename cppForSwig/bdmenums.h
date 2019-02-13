@@ -43,6 +43,7 @@ enum BDMAction
    BDMAction_Ready=1,
    BDMAction_NewBlock,
    BDMAction_ZC,
+   BDMAction_InvalidatedZC,
    BDMAction_Refresh,
    BDMAction_Exited,
    BDMAction_ErrorMsg,

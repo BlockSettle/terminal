@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2016, goatpig                                               //
+//  Copyright (C) 2016-18, goatpig                                            //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -15,74 +15,6 @@ using namespace std;
 
 StackItem::~StackItem()
 {}
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-//// ScriptSpender
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-ScriptRecipient::~ScriptRecipient() 
-{}
-
-////////////////////////////////////////////////////////////////////////////////
-shared_ptr<ScriptRecipient> ScriptRecipient::deserialize(
-   const BinaryDataRef& dataPtr)
-{
-   shared_ptr<ScriptRecipient> result_ptr;
-
-   BinaryRefReader brr(dataPtr);
-
-   auto value = brr.get_uint64_t();
-   auto script = brr.get_BinaryDataRef(brr.getSizeRemaining());
-
-   BinaryRefReader brr_script(script);
-
-   auto byte0 = brr_script.get_uint8_t();
-   auto byte1 = brr_script.get_uint8_t();
-   auto byte2 = brr_script.get_uint8_t();
-
-   if (byte0 == 25 && byte1 == OP_DUP && byte2 == OP_HASH160)
-   {
-      auto byte3 = brr_script.get_uint8_t();
-      if (byte3 == 20)
-      {
-         auto&& hash160 = brr_script.get_BinaryData(20);
-         result_ptr = make_shared<Recipient_P2PKH>(hash160, value);
-      }
-   }
-   else if (byte0 == 22 && byte1 == 0 && byte2 == 20)
-   {
-      auto&& hash160 = brr_script.get_BinaryData(20);
-      result_ptr = make_shared<Recipient_P2WPKH>(hash160, value);
-   }
-   else if (byte0 == 23 && byte1 == OP_HASH160 && byte2 == 20)
-   {
-      auto&& hash160 = brr_script.get_BinaryData(20);
-      result_ptr = make_shared<Recipient_P2SH>(hash160, value);
-   }
-   else if (byte0 == 34 && byte1 == 0 && byte2 == 32)
-   {
-      auto&& hash256 = brr_script.get_BinaryData(32);
-      result_ptr = make_shared<Recipient_P2WSH>(hash256, value);
-   }
-   else
-   {
-      //is this an OP_RETURN?
-      if (byte0 == script.getSize() - 1 && byte1 == OP_RETURN)
-      {
-         if(byte2 == OP_PUSHDATA1)
-            byte2 = brr_script.get_uint8_t();
-
-         auto&& opReturnMessage = brr_script.get_BinaryData(byte2);
-         result_ptr = make_shared<Recipient_OPRETURN>(opReturnMessage);
-      }
-   }
-
-   if (result_ptr == nullptr)
-      throw runtime_error("unexpected recipient script");
-
-   return result_ptr;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////

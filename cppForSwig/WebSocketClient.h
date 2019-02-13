@@ -23,17 +23,20 @@
 #include "ClientClasses.h"
 #include "AsyncClient.h"
 
-using namespace std;
+#include "BIP150_151.h"
+#include "AuthorizedPeers.h"
+
+#define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
 ////////////////////////////////////////////////////////////////////////////////
 struct WriteAndReadPacket
 {
    const unsigned id_;
-   vector<BinaryData> packets_;
-   unique_ptr<WebSocketMessagePartial> partialMessage_ = nullptr;
-   shared_ptr<Socket_ReadPayload> payload_;
+   std::vector<BinaryData> packets_;
+   std::unique_ptr<WebSocketMessagePartial> partialMessage_ = nullptr;
+   std::shared_ptr<Socket_ReadPayload> payload_;
 
-   WriteAndReadPacket(unsigned id, shared_ptr<Socket_ReadPayload> payload) :
+   WriteAndReadPacket(unsigned id, std::shared_ptr<Socket_ReadPayload> payload) :
       id_(id), payload_(payload)
    {}
 
@@ -65,7 +68,7 @@ private:
    int counter_ = 0;
 
 public:
-   map<int, BinaryData> packets_;
+   std::map<int, BinaryData> packets_;
    WebSocketMessagePartial message_;
 
    void reset(void) 
@@ -76,8 +79,8 @@ public:
 
    BinaryDataRef insertDataAndGetRef(BinaryData& data)
    {
-      auto&& data_pair = make_pair(counter_++, move(data));
-      auto iter = packets_.insert(move(data_pair));
+      auto&& data_pair = std::make_pair(counter_++, std::move(data));
+      auto iter = packets_.insert(std::move(data_pair));
       return iter.first->second.getRef();
    }
 
@@ -94,40 +97,51 @@ public:
 class WebSocketClient : public SocketPrototype
 {
 private:
-   atomic<void*> wsiPtr_;
+   std::atomic<void*> wsiPtr_;
 
-   atomic<unsigned> requestID_;
-   atomic<bool> connected_ = { false };
+   std::atomic<unsigned> requestID_;
+   std::atomic<bool> connected_ = { false };
 
-   Queue<WebSocketMessage> writeQueue_;
-   WebSocketMessage currentWriteMessage_;
+   Queue<SerializedMessage> writeQueue_;
+   SerializedMessage currentWriteMessage_;
+
+   //AEAD requires messages to be sent in order of encryption, since the 
+   //sequence number is the IV. Push all messages to a queue for serialization,
+   //to guarantee payloads are queued for writing in the order they were encrypted
+   BlockingQueue<std::unique_ptr<Socket_WritePayload>> writeSerializationQueue_;
 
    BlockingQueue<BinaryData> readQueue_;
-   atomic<unsigned> run_ = { 1 };
-   thread serviceThr_, readThr_;
-   TransactionalMap<uint64_t, shared_ptr<WriteAndReadPacket>> readPackets_;
-   shared_ptr<RemoteCallback> callbackPtr_ = nullptr;
+   std::atomic<unsigned> run_ = { 1 };
+   std::thread serviceThr_, readThr_, writeThr_;
+   TransactionalMap<uint64_t, std::shared_ptr<WriteAndReadPacket>> readPackets_;
+   std::shared_ptr<RemoteCallback> callbackPtr_ = nullptr;
    
    ClientPartialMessage currentReadMessage_;
-   promise<bool> connectedProm_;
+   std::promise<bool> connectionReadyProm_;
+
+   std::shared_ptr<BIP151Connection> bip151Connection_;
+   std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
+   unsigned outerRekeyCount_ = 0;
+   unsigned innerRekeyCount_ = 0;
+
+   std::shared_ptr<AuthorizedPeers> authPeers_;
+   BinaryData leftOverData_;
 
 public:
-   atomic<int> count_;
+   std::atomic<int> count_;
 
 private:
    struct lws_context* init();
    void readService(void);
+   void writeService(void);
    void service(lws_context*);
-
+   bool processAEADHandshake(const WebSocketMessagePartial&);
+   AuthPeersLambdas getAuthPeerLambda(void) const;
 
 public:
-   WebSocketClient(const string& addr, const string& port,
-      shared_ptr<RemoteCallback> cbPtr) :
-      SocketPrototype(addr, port, false), callbackPtr_(cbPtr)
-   {
-      count_.store(0, memory_order_relaxed);
-      requestID_.store(0, memory_order_relaxed);
-   }
+   WebSocketClient(const std::string& addr, const std::string& port,
+      const std::string& datadir, const bool& ephemeralPeers,
+      std::shared_ptr<RemoteCallback> cbPtr);
 
    ~WebSocketClient()
    {
@@ -140,12 +154,15 @@ public:
    //locals
    void shutdown(void);   
    void cleanUp(void);
+   std::pair<unsigned, unsigned> 
+      getRekeyCount(void) const { return std::make_pair(outerRekeyCount_, innerRekeyCount_); }
+   void addPublicKey(const SecureBinaryData&);
 
    //virtuals
    SocketType type(void) const { return SocketWS; }
    void pushPayload(
-      unique_ptr<Socket_WritePayload>,
-      shared_ptr<Socket_ReadPayload>);
+      std::unique_ptr<Socket_WritePayload>,
+      std::shared_ptr<Socket_ReadPayload>);
    bool connectToRemote(void);
 
    static int callback(

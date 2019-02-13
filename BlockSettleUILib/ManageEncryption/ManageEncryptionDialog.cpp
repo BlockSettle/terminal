@@ -312,7 +312,7 @@ void ManageEncryptionDialog::resetKeys()
 
 
 
-void ManageEncryptionDialog::onPasswordChanged(const string &walletId, bool ok)
+void ManageEncryptionDialog::onPasswordChanged(const std::string &walletId, bool ok)
 {
    if (walletId != wallet_->getWalletId()) {
       logger_->error("ManageEncryptionDialog::onPasswordChanged: unknown walletId {}, expected: {}"
@@ -351,7 +351,7 @@ void ManageEncryptionDialog::onPasswordChanged(const string &walletId, bool ok)
    QDialog::accept();
 }
 
-void ManageEncryptionDialog::deleteDevice(const string &deviceId)
+void ManageEncryptionDialog::deleteDevice(const std::string &deviceId)
 {
 //   newPasswordData_.clear();
 //   for (const auto &passwordData : oldPasswordData_) {

@@ -22,6 +22,7 @@ struct ArmorySettings
    QString armoryExecutablePath;
    QString dbDir;
    QString bitcoinBlocksDir;
+   QString dataDir;
 };
 
 #endif // __ARMORY_SETTINGS_H__
