@@ -575,6 +575,24 @@ void ChartWidget::onInstrumentChanged(const QString &text) {
    updateChart(dateRange_.checkedId());
 }
 
+void ChartWidget::onPlotMouseMove(QMouseEvent *event)
+{
+   auto plottable = ui_->customPlot->plottableAt(event->localPos());
+   if (plottable) {
+      auto priceChart = qobject_cast<QCPFinancial *>(plottable);
+      if (priceChart) {
+         double timestamp = ui_->customPlot->xAxis->pixelToCoord(event->localPos().x());
+         auto date = QDateTime::fromMSecsSinceEpoch(timestamp * 1000).toUTC();
+         auto ohlcValue = *candlesticksChart->data()->findBegin(timestamp);
+         auto volumeValue = *volumeChart->data()->findBegin(timestamp);
+         qDebug() << "Position:" << event->pos() << event->localPos()
+                  << "Item at:"  << QString::number(timestamp, 'f') << date
+                  << ohlcValue.key << ohlcValue.open << ohlcValue.high
+                  << ohlcValue.low << ohlcValue.close << volumeValue.value;
+      }
+   }
+}
+
 void ChartWidget::initializeCustomPlot()
 {
    QBrush bgBrush(BACKGROUND_COLOR);
@@ -671,4 +689,6 @@ void ChartWidget::initializeCustomPlot()
    ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
    ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal);
    volumeAxisRect->setRangeDrag(Qt::Horizontal);
+
+   connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::onPlotMouseMove);
 }

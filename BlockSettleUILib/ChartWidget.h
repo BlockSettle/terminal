@@ -41,6 +41,7 @@ protected slots:
    void onMDUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void onPriceHover(bool status, QCandlestickSet *set);
    void onInstrumentChanged(const QString &text);
+   void onPlotMouseMove(QMouseEvent* event);
 
 protected:
    void initializeCustomPlot();
