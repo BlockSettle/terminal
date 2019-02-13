@@ -81,6 +81,7 @@ private:
     QValueAxis *volumeYAxis_;
 
     QCPTextElement *title;
+    QCPTextElement *info;
     QCPFinancial *candlesticksChart;
     QCPBars *volumeChart;
     QCPAxisRect *volumeAxisRect;

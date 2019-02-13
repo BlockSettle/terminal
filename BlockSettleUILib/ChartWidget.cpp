@@ -23,6 +23,7 @@ ChartWidget::ChartWidget(QWidget *parent)
    , priceYAxis_(nullptr)
    , volumeYAxis_(nullptr)
    , title(nullptr)
+   , info(nullptr)
    , candlesticksChart(nullptr)
    , volumeChart(nullptr)
    , volumeAxisRect(nullptr) {
@@ -577,6 +578,9 @@ void ChartWidget::onInstrumentChanged(const QString &text) {
 
 void ChartWidget::onPlotMouseMove(QMouseEvent *event)
 {
+   if (!info) {
+      return;
+   }
    auto plottable = ui_->customPlot->plottableAt(event->localPos());
    if (plottable) {
       auto priceChart = qobject_cast<QCPFinancial *>(plottable);
@@ -589,8 +593,18 @@ void ChartWidget::onPlotMouseMove(QMouseEvent *event)
                   << "Item at:"  << QString::number(timestamp, 'f') << date
                   << ohlcValue.key << ohlcValue.open << ohlcValue.high
                   << ohlcValue.low << ohlcValue.close << volumeValue.value;
+         info->setText(tr("O: %1   H: %2   L: %3   C: %4   Volume: %5")
+                       .arg(ohlcValue.open, 0, 'g', -1)
+                       .arg(ohlcValue.high, 0, 'g', -1)
+                       .arg(ohlcValue.low, 0, 'g', -1)
+                       .arg(ohlcValue.close, 0, 'g', -1)
+                       .arg( volumeValue.value, 0, 'g', -1));
+         ui_->customPlot->replot();
+         return;
       }
    }
+   info->setText({});
+   ui_->customPlot->replot();
 }
 
 void ChartWidget::initializeCustomPlot()
@@ -604,6 +618,13 @@ void ChartWidget::initializeCustomPlot()
    title->setFont(QFont(QStringLiteral("sans"), 12));
    ui_->customPlot->plotLayout()->insertRow(0);
    ui_->customPlot->plotLayout()->addElement(0, 0, title);
+   //add info
+   info = new QCPTextElement(ui_->customPlot);
+   info->setTextColor(FOREGROUND_COLOR);
+   info->setFont(QFont(QStringLiteral("sans"), 10));
+   info->setTextFlags(Qt::AlignLeft | Qt::AlignVCenter);
+   ui_->customPlot->plotLayout()->insertRow(1);
+   ui_->customPlot->plotLayout()->addElement(1, 0, info);
 
    // create candlestick chart:
    candlesticksChart = new QCPFinancial(ui_->customPlot->xAxis, ui_->customPlot->yAxis2);
@@ -627,7 +648,7 @@ void ChartWidget::initializeCustomPlot()
 
    // create bottom axis rect for volume bar chart:
    volumeAxisRect = new QCPAxisRect(ui_->customPlot);
-   ui_->customPlot->plotLayout()->addElement(2, 0, volumeAxisRect);
+   ui_->customPlot->plotLayout()->addElement(3, 0, volumeAxisRect);
    volumeAxisRect->setMaximumSize(QSize(QWIDGETSIZE_MAX, 100));
    volumeAxisRect->axis(QCPAxis::atBottom)->setLayer(QStringLiteral("axes"));
    volumeAxisRect->axis(QCPAxis::atBottom)->grid()->setLayer(QStringLiteral("grid"));
