@@ -328,8 +328,8 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       return false;
    }
 
-   // Set up Armory as needed. Network type, Armory's BIP 150 "public mode", and
-   // setting the data dir to be in the same dir as BS (i.e., not Armory dir).
+   // Set up Armory as needed. Even though the BDMC object isn't used, it sets
+   // global values that are used later.
    BlockDataManagerConfig config;
 
    if (parser.isSet(testnetName)) {

@@ -43,9 +43,7 @@ ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    qRegisterMetaType<std::vector<bs::TXEntry>>();
 
    // Add BIP 150 server keys
-   BinaryData curKeyBin;
-   std::string curKey = BIP150_KEY_1;
-   curKeyBin = READHEX(curKey);
+   const BinaryData curKeyBin = READHEX(BIP150_KEY_1);
    bsBIP150PubKeys.push_back(curKeyBin);
 
 }
@@ -174,9 +172,9 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
             continue;
          }
 
-         std::for_each(bsBIP150PubKeys.begin(), bsBIP150PubKeys.end(), [&](auto&& x) {
+         for (const auto &x : bsBIP150PubKeys) {
             bdv_->addPublicKey(x);
-         });
+         }
 
          connected = bdv_->connectToRemote();
          if (!connected) {
