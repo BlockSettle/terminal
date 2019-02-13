@@ -525,7 +525,6 @@ void CreateTransactionDialogAdvanced::onOutputsInserted(const QModelIndex &, int
          });
       }
    }
-
 }
 
 void CreateTransactionDialogAdvanced::showContextMenu(const QPoint &point)
