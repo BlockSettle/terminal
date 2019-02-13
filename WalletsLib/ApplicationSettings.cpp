@@ -119,7 +119,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { closeToTray,             SettingDef(QLatin1String("CloseToTray"), false) },
       { notifyOnTX,              SettingDef(QLatin1String("ShowTxNotification"), true) },
       { defaultAuthAddr,         SettingDef(QLatin1String("DefaultAuthAddress")) },
-      { bsPublicKey,             SettingDef(QString(), QLatin1String("042aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fafa1270ccdc2cd285b5d90ddd3ef6f39c4c43efea52d75adadd16c6132e3ef880")) },
+      { bsPublicKey,             SettingDef(QString(), QLatin1String("022aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fa")) },
       { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String("trace")) },
       { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QString()) },
       { ccFileName,              SettingDef(QString(), AppendToWritableDir(CCFileName))},
