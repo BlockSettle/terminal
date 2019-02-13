@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2017, goatpig                                               //
+//  Copyright (C) 2017-2019, goatpig                                          //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -493,4 +493,153 @@ shared_ptr<Asset_EncryptedData> Asset_EncryptedData::deserialize(
    }
 
    return assetPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// MetaData
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+MetaData::~MetaData()
+{}
+
+shared_ptr<MetaData> MetaData::deserialize(
+   const BinaryDataRef& key, const BinaryDataRef& data)
+{
+   if (key.getSize() != 9)
+      throw AssetException("invalid metadata key size");
+
+   //deser key
+   BinaryRefReader brrKey(key);
+   auto keyPrefix = brrKey.get_uint8_t();
+   auto&& accountID = brrKey.get_BinaryData(4);
+   auto index = brrKey.get_uint32_t(BE);
+
+   //construct object and deser data
+   shared_ptr<MetaData> resultPtr;
+   switch (keyPrefix)
+   {
+   case METADATA_COMMENTS_PREFIX:
+   {
+      throw AssetException("comments metadata not implemented yet");
+   }
+
+   case METADATA_AUTHPEER_PREFIX:
+   {
+      resultPtr = make_shared<PeerPublicData>(accountID, index);
+      resultPtr->deserializeDBValue(data);
+      break;
+   }
+
+   default:
+      throw AssetException("unexpected metadata prefix");
+   }
+
+   return resultPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// AuthorizedPeer
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+BinaryData PeerPublicData::getDbKey() const
+{
+   if (accountID_.getSize() != 4)
+      throw AssetException("invalid accountID");
+
+   BinaryWriter bw;
+   bw.put_uint8_t(METADATA_AUTHPEER_PREFIX);
+   bw.put_BinaryData(accountID_);
+   bw.put_uint32_t(index_, BE);
+
+   return bw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData PeerPublicData::serialize() const
+{
+   //returning an empty serialized string will cause the key to be deleted
+   if (names_.size() == 0)
+      return BinaryData();
+
+   BinaryWriter bw;
+
+   bw.put_var_int(publicKey_.getSize());
+   bw.put_BinaryData(publicKey_);
+
+   bw.put_var_int(names_.size());
+   for (auto& name : names_)
+   {
+      bw.put_var_int(name.size());
+
+      BinaryDataRef bdrName;
+      bdrName.setRef(name);
+      bw.put_BinaryDataRef(bdrName);
+   }
+
+   BinaryWriter bwWithSize;
+   bwWithSize.put_var_int(bw.getSize());
+   bwWithSize.put_BinaryDataRef(bw.getDataRef());
+
+   return bwWithSize.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerPublicData::deserializeDBValue(const BinaryDataRef& data)
+{
+   BinaryRefReader brrData(data);
+   auto len = brrData.get_var_int();
+   if (len != brrData.getSizeRemaining())
+      throw AssetException("size mismatch in metadata entry");
+
+   auto keyLen = brrData.get_var_int();
+   publicKey_ = brrData.get_BinaryData(keyLen);
+   
+   //check pubket is valid
+   if(!CryptoECDSA().VerifyPublicKeyValid(publicKey_))
+      throw AssetException("invalid pubkey in peer metadata");
+
+   auto count = brrData.get_var_int();
+   for (unsigned i = 0; i < count; i++)
+   {
+      auto nameLen = brrData.get_var_int();
+      auto bdrName = brrData.get_BinaryDataRef(nameLen);
+
+      string name((char*)bdrName.getPtr(), nameLen);
+      names_.emplace(name);
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerPublicData::setPublicKey(const SecureBinaryData& key)
+{
+   publicKey_ = key;
+   flagForCommit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerPublicData::addName(const string& name)
+{
+   names_.insert(name);
+   flagForCommit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool PeerPublicData::eraseName(const string& name)
+{
+   auto iter = names_.find(name);
+   if (iter == names_.end())
+      return false;
+
+   names_.erase(iter);
+   flagForCommit();
+   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerPublicData::clear()
+{
+   names_.clear();
+   flagForCommit();
 }

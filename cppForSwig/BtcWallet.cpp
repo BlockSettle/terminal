@@ -66,7 +66,7 @@ uint64_t BtcWallet::getUnconfirmedBalance(uint32_t currBlk) const
 
    uint64_t balance = 0;
    for (const auto scrAddr : *addrMap)
-      balance += scrAddr.second->getUnconfirmedBalance(currBlk);
+      balance += scrAddr.second->getUnconfirmedBalance(currBlk, confTarget_);
    
    return balance;
 }
@@ -127,7 +127,7 @@ map<BinaryData, tuple<uint64_t, uint64_t, uint64_t>>
 
       auto full = sa.second->getFullBalance(UINT32_MAX);
       auto spendable = sa.second->getSpendableBalance(blockHeight);
-      auto unconf = sa.second->getUnconfirmedBalance(blockHeight);
+      auto unconf = sa.second->getUnconfirmedBalance(blockHeight, confTarget_);
 
       if (lastPulledBalancesID_ <= 0)
       {
@@ -479,7 +479,8 @@ bool BtcWallet::scanWallet(ScanWalletStruct& scanInfo, int32_t updateID)
    }
   
    if (scanInfo.saStruct_.zcMap_.size() != 0 ||
-      scanInfo.saStruct_.invalidatedZcKeys_.size() != 0)
+      (scanInfo.saStruct_.invalidatedZcKeys_ != nullptr && 
+       scanInfo.saStruct_.invalidatedZcKeys_->size() != 0))
    {
       //top block didnt change, only have to check for new ZC
       if (bdvPtr_->isZcEnabled())
@@ -790,4 +791,14 @@ uint64_t BtcWallet::getWltTotalTxnCount(void) const
       ntxn += scrAddrPair.second->getTxioCountFromSSH();
 
    return ntxn;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BtcWallet::setConfTarget(unsigned confTarget, const string& hash)
+{
+   if(confTarget != confTarget_)
+      confTarget_ = confTarget;
+
+   if(hash.size() != 0)
+      bdvPtr_->flagRefresh(BDV_refreshSkipRescan, hash, nullptr);
 }

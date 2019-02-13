@@ -58,7 +58,8 @@ BinaryDataRef PlainWallet::getDataRefForKey(const std::shared_ptr<LMDB> &db, con
    BinaryRefReader brr((const uint8_t*)ref.data, ref.len);
    auto len = brr.get_var_int();
    if (len != brr.getSizeRemaining()) {
-      throw WalletException("on disk data length mismatch: " + to_string(len) + ", " + to_string(brr.getSizeRemaining()));
+      throw WalletException("on disk data length mismatch: "
+         + std::to_string(len) + ", " + std::to_string(brr.getSizeRemaining()));
    }
    return brr.get_BinaryDataRef((uint32_t)brr.getSizeRemaining());
 }
@@ -187,7 +188,7 @@ void PlainWallet::openDB()
             walletId_ = masterID.toBinStr();
          }
          catch (NoEntryInWalletException&) {
-            throw runtime_error("missing masterID entry");
+            throw std::runtime_error("missing masterID entry");
          }
       }
 
@@ -398,7 +399,7 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
    if (itAsset == assetByAddr_.end()) {
       return nullptr;
    }
-   const auto plainAsset = dynamic_pointer_cast<PlainAsset>(itAsset->second);
+   const auto plainAsset = std::dynamic_pointer_cast<PlainAsset>(itAsset->second);
    if (!plainAsset) {
       return nullptr;
    }
@@ -485,7 +486,7 @@ SecureBinaryData PlainWallet::GetPublicKeyFor(const bs::Address &addr)
    if (itAsset == assetByAddr_.end()) {
       return {};
    }
-   const auto plainAsset = dynamic_pointer_cast<PlainAsset>(itAsset->second);
+   const auto plainAsset = std::dynamic_pointer_cast<PlainAsset>(itAsset->second);
    if (!plainAsset) {
       return {};
    }
@@ -498,7 +499,7 @@ KeyPair PlainWallet::GetKeyPairFor(const bs::Address &addr, const SecureBinaryDa
    if (itAsset == assetByAddr_.end()) {
       return {};
    }
-   const auto plainAsset = dynamic_pointer_cast<PlainAsset>(itAsset->second);
+   const auto plainAsset = std::dynamic_pointer_cast<PlainAsset>(itAsset->second);
    if (!plainAsset) {
       return {};
    }
@@ -531,7 +532,7 @@ class PlainResolver : public ResolverFeed
 public:
    PlainResolver(const std::map<bs::Address, std::shared_ptr<GenericAsset>> &map) {
       for (const auto &addrPair : map) {
-         const auto plainAsset = dynamic_pointer_cast<PlainAsset>(addrPair.second);
+         const auto plainAsset = std::dynamic_pointer_cast<PlainAsset>(addrPair.second);
          if (!plainAsset) {
             continue;
          }
@@ -562,7 +563,7 @@ public:
    PlainSigningResolver(const std::map<bs::Address, std::shared_ptr<GenericAsset>> &map)
       : PlainResolver(map) {
       for (const auto &addrPair : map) {
-         const auto plainAsset = dynamic_pointer_cast<PlainAsset>(addrPair.second);
+         const auto plainAsset = std::dynamic_pointer_cast<PlainAsset>(addrPair.second);
          if (!plainAsset || plainAsset->privKey().isNull()) {
             continue;
          }

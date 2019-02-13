@@ -1,7 +1,15 @@
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+//  Copyright (C) 2016, goatpig.                                              //
+//  Distributed under the MIT license                                         //
+//  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //                                      
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
+
 #include <string>
 #include <iostream>
 #include <sstream>
-
+#include "btc/ecc.h"
 
 using namespace std;
 
@@ -11,6 +19,10 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
+   btc_ecc_start();
+   startupBIP151CTX();
+   startupBIP150CTX(4, false);
+
    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 #ifdef _WIN32
@@ -72,6 +84,9 @@ int main(int argc, char* argv[])
    //stop all threads and clean up
    server.shutdown();
    google::protobuf::ShutdownProtobufLibrary();
+
+   shutdownBIP151CTX();
+   btc_ecc_stop();
 
    return 0;
 }

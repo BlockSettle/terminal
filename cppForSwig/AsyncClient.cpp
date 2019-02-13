@@ -13,6 +13,7 @@
 #include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 #include "google/protobuf/text_format.h"
 
+using namespace std;
 using namespace AsyncClient;
 using namespace ::Codec_BDVCommand;
 
@@ -57,11 +58,26 @@ bool BlockDataViewer::connectToRemote(void)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::addPublicKey(const SecureBinaryData& pubkey)
+{
+   auto wsSock = dynamic_pointer_cast<WebSocketClient>(sock_);
+   if (wsSock == nullptr)
+   {
+      LOGERR << "invalid socket type for auth peer management";
+      return;
+   }
+
+   wsSock->addPublicKey(pubkey);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 shared_ptr<BlockDataViewer> BlockDataViewer::getNewBDV(const string& addr,
-   const string& port, shared_ptr<RemoteCallback> callbackPtr)
+   const string& port, const string& datadir, const bool& ephemeralPeers,
+   shared_ptr<RemoteCallback> callbackPtr)
 {
    //create socket object
-   auto sockptr = make_shared<WebSocketClient>(addr, port, callbackPtr);
+   auto sockptr = make_shared<WebSocketClient>(addr, port, datadir,
+      ephemeralPeers, callbackPtr);
 
    //instantiate bdv object
    BlockDataViewer* bdvPtr = new BlockDataViewer(sockptr);
@@ -530,6 +546,22 @@ string AsyncClient::BtcWallet::registerAddresses(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+string AsyncClient::BtcWallet::setUnconfirmedTarget(unsigned confTarget)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::setWalletConfTarget, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+   command->set_walletid(walletID_);
+
+   auto&& registrationId = CryptoPRNG::generateRandom(5).toHexStr();
+   command->set_hash(registrationId);
+   command->set_height(confTarget);
+
+   sock_->pushPayload(move(payload), nullptr);
+   return registrationId;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void AsyncClient::BtcWallet::getBalancesAndCount(uint32_t blockheight, 
    function<void(ReturnMessage<vector<uint64_t>>)> callback)
 {
@@ -797,6 +829,16 @@ void AsyncClient::Blockchain::getHeaderByHeight(unsigned height,
    read_payload->callbackReturn_ =
       make_unique<CallbackReturn_BlockHeader>(height, callback);
    sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+pair<unsigned, unsigned> AsyncClient::BlockDataViewer::getRekeyCount() const
+{
+   auto wsSocket = dynamic_pointer_cast<WebSocketClient>(sock_);
+   if (wsSocket == nullptr)
+      return make_pair(0, 0);
+
+   return wsSocket->getRekeyCount();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

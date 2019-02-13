@@ -25,12 +25,6 @@
 #include "BinaryData.h"
 #include "NetworkConfig.h"
 
-#ifdef _WIN32
-#include <ShlObj.h>
-#else
-#include <wordexp.h>
-#endif
-
 #define DEFAULT_ZCTHREAD_COUNT 100
 #define WEBSOCKET_PORT 7681
 
@@ -52,7 +46,10 @@ public:
    static const std::string defaultRegtestDataDir_;
    static const std::string defaultRegtestBlkFileLocation_;
 
-   std::string dataDir_;
+   static std::string dataDir_;
+
+   static bool ephemeralPeers_;
+
    std::string blkFileLocation_;
    std::string dbDir_;
    std::string logFilePath_;
@@ -93,9 +90,6 @@ public:
    void printHelp(void);
    static std::string portToString(unsigned);
 
-   static void appendPath(std::string& base, const std::string& add);
-   static void expandPath(std::string& path);
-
    static std::vector<std::string> getLines(const std::string& path);
    static std::map<std::string, std::string> getKeyValsFromLines(
       const std::vector<std::string>&, char delim);
@@ -107,6 +101,7 @@ public:
    static std::string hasLocalDB(const std::string& datadir, const std::string& port);
    static std::string getPortFromCookie(const std::string& datadir);
    static std::string getCookie(const std::string& datadir);
+   static std::string getDataDir(void) { return dataDir_; }
 
    static void setDbType(ARMORY_DB_TYPE dbType)
    {

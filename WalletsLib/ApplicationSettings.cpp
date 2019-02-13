@@ -321,14 +321,15 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    parser.addOption({ chatServerPortName, chatServerPortHelp, QLatin1String("chatport") });
 #endif // NDEBUG
 
-   
+
 
    if (!parser.parse(argList)) {
       errorText_ = parser.errorText();
       return false;
    }
 
-   // Sets the testnet prefix byte used in Armory C++ code
+   // Set up Armory as needed. Even though the BDMC object isn't used, it sets
+   // global values that are used later.
    BlockDataManagerConfig config;
 
    if (parser.isSet(testnetName)) {
@@ -348,7 +349,8 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       config.selectNetwork(NETWORK_MODE_REGTEST);
       break;
 
-   default:    break;
+   default:
+      break;
    }
 
    SetHomeDir(parser.value(dataDirName));
@@ -557,6 +559,7 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    settings.armoryExecutablePath = QDir::cleanPath(get<QString>(ApplicationSettings::armoryPathName));
    settings.dbDir = GetDBDir();
    settings.bitcoinBlocksDir = GetBitcoinBlocksDir();
+   settings.dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
    return settings;
 }

@@ -441,7 +441,7 @@ void hd::Wallet::openDB()
             walletId_ = masterID.toBinStr();
          }
          catch (NoEntryInWalletException&) {
-            throw runtime_error("missing masterID entry");
+            throw std::runtime_error("missing masterID entry");
          }
       }
       {  //mainWalletID
@@ -670,7 +670,8 @@ BinaryDataRef hd::Wallet::getDataRefForKey(LMDB* db, const BinaryData& key) cons
    BinaryRefReader brr((const uint8_t*)ref.data, ref.len);
    auto len = brr.get_var_int();
    if (len != brr.getSizeRemaining()) {
-      throw WalletException("on disk data length mismatch: " + to_string(len) + ", " + to_string(brr.getSizeRemaining()));
+      throw WalletException("on disk data length mismatch: "
+         + std::to_string(len) + ", " + std::to_string(brr.getSizeRemaining()));
    }
    return brr.get_BinaryDataRef((uint32_t)brr.getSizeRemaining());
 }

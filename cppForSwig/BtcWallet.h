@@ -110,6 +110,8 @@ public:
       doneRegisteringCallback_ = lbd;
    }
 
+   void setConfTarget(unsigned, const std::string&);
+
 private:   
    
    //returns true on bootstrap and new block, false on ZC
@@ -171,6 +173,7 @@ private:
    mutable int lastPulledCountsID_ = -1;
    mutable int lastPulledBalancesID_ = -1;
    int32_t updateID_ = 0;
+   unsigned confTarget_ = MIN_CONFIRMATIONS;
 };
 
 #endif

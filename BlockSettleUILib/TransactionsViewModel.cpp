@@ -661,7 +661,7 @@ void TransactionsViewModel::loadLedgerEntries()
                  rawData_[pageId] = bs::TXEntry::fromLedgerEntries(le);
                  emit updateProgress((int)pageId);
                }
-               catch (exception& e) {
+               catch (std::exception& e) {
                   logger_->error("[TransactionsViewModel::loadLedgerEntries] " \
                      "Return data error (getPageCount) - {}", e.what());
                }

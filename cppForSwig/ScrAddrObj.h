@@ -41,8 +41,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 struct ScanAddressStruct
 {
-   std::set<BinaryData> invalidatedZcKeys_;
-   std::map<BinaryData, BinaryData> minedTxioKeys_;
+   std::map<BinaryData, BinaryData>* invalidatedZcKeys_ = nullptr;
+   std::map<BinaryData, BinaryData>* minedTxioKeys_ = nullptr;
    std::shared_ptr< ZeroConfSharedStateSnapshot> zcState_;
 
    std::map<BinaryData, std::shared_ptr<std::map<BinaryData, std::shared_ptr<TxIOPair>>>> zcMap_;
@@ -203,7 +203,7 @@ public:
    // know what TxOuts are available to spend, you can pass in 0 for currBlk
    uint64_t getFullBalance(unsigned updateID = UINT32_MAX) const;
    uint64_t getSpendableBalance(uint32_t currBlk) const;
-   uint64_t getUnconfirmedBalance(uint32_t currBlk) const;
+   uint64_t getUnconfirmedBalance(uint32_t currBlk, unsigned confTarget) const;
 
    std::vector<UnspentTxOut> getFullTxOutList(uint32_t currBlk=UINT32_MAX, bool ignoreZC=true) const;
    std::vector<UnspentTxOut> getSpendableTxOutList(bool ignoreZC=true) const;

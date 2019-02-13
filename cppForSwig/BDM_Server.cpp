@@ -8,6 +8,7 @@
 
 #include "BDM_Server.h"
 
+using namespace std;
 using namespace ::google::protobuf;
 using namespace ::Codec_BDVCommand;
 
@@ -137,7 +138,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       in: 
          walletid
          flag: set to true if the wallet is new
-         hash: registration id. The callback notifying the registation 
+         hash: registration id. The callback notifying the registration 
                completion will carry this id. If the registration
                id is empty, no callback will be triggered on completion.
          bindata[]: addresses
@@ -256,6 +257,40 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       response->add_value(wltPtr->getUnconfirmedBalance(height));
       response->add_value(wltPtr->getWltTotalTxnCount());
       return response;
+   }
+
+   case Methods::setWalletConfTarget:
+   {
+      /*
+      in:
+         walletid
+         height: conf target
+         hash: event id. The callback notifying the change in conf target
+               completion will carry this id. If the event id is empty, no 
+               callback will be triggered on completion.
+      out: N/A
+      */
+      if (!command->has_walletid() || !command->has_height() || !command->has_hash())
+         throw runtime_error("invalid command for setWalletConfTarget");
+
+      auto& walletId = command->walletid();
+      BinaryDataRef walletIdRef; walletIdRef.setRef(walletId);
+
+      shared_ptr<BtcWallet> wltPtr = nullptr;
+      for (auto& group : this->groups_)
+      {
+         auto wltIter = group.wallets_.find(walletIdRef);
+         if (wltIter != group.wallets_.end())
+            wltPtr = wltIter->second;
+      }
+
+      if (wltPtr == nullptr)
+         throw runtime_error("unknown wallet/lockbox ID");
+
+      uint32_t height = command->height();
+      auto hash = command->hash();
+      wltPtr->setConfTarget(height, hash);
+      break;
    }
 
    case Methods::getSpendableTxOutListForValue:
@@ -1061,16 +1096,31 @@ void BDV_Server_Object::processNotification(
    scanWallets(notifPtr);
 
    auto callbackPtr = make_shared<BDVCallback>();
-   auto notif = callbackPtr->add_notification();
 
    switch (action)
    {
    case BDV_NewBlock:
    {
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::newblock);
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_NewBlock>(notifPtr);
       notif->set_height(payload->reorgState_.newTop_->getBlockHeight());
+
+      if (payload->zcPurgePacket_ != nullptr && 
+          payload->zcPurgePacket_->invalidatedZcKeys_.size() != 0)
+      {
+         auto notif = callbackPtr->add_notification();
+         notif->set_type(NotificationType::invalidated_zc);
+
+
+         auto ids = notif->mutable_ids();
+         for (auto& id : payload->zcPurgePacket_->invalidatedZcKeys_)
+         {
+            auto idPtr = ids->add_value();
+            idPtr->set_data(id.second.getPtr(), id.second.getSize());
+         }
+      }
 
       break;
    }
@@ -1082,6 +1132,7 @@ void BDV_Server_Object::processNotification(
 
       auto& bdId = payload->refreshID_;
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::refresh);
       auto refresh = notif->mutable_refresh();
       refresh->set_refreshtype(payload->refresh_);
@@ -1095,13 +1146,32 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_ZC>(notifPtr);
 
-      notif->set_type(NotificationType::zc);
-      auto ledgers = notif->mutable_ledgers();
-
-      for (auto& le : payload->leVec_)
+      if (payload->leVec_.size() > 0)
       {
-         auto ledger_entry = ledgers->add_values();
-         le.fillMessage(ledger_entry);
+         auto notif = callbackPtr->add_notification();
+         notif->set_type(NotificationType::zc);
+         auto ledgers = notif->mutable_ledgers();
+
+         for (auto& le : payload->leVec_)
+         {
+            auto ledger_entry = ledgers->add_values();
+            le.fillMessage(ledger_entry);
+         }
+      }
+
+      if (payload->packet_.purgePacket_ != nullptr &&
+         payload->packet_.purgePacket_->invalidatedZcKeys_.size() != 0)
+      {
+         auto notif = callbackPtr->add_notification();
+         notif->set_type(NotificationType::invalidated_zc);
+
+
+         auto ids = notif->mutable_ids();
+         for (auto& id : payload->packet_.purgePacket_->invalidatedZcKeys_)
+         {
+            auto idPtr = ids->add_value();
+            idPtr->set_data(id.second.getPtr(), id.second.getSize());
+         }
       }
 
       break;
@@ -1112,6 +1182,7 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_Progress>(notifPtr);
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::progress);
       auto pd = notif->mutable_progress();
 
@@ -1130,6 +1201,7 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_NodeStatus>(notifPtr);
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::nodestatus);
       auto status = notif->mutable_nodestatus();
 
@@ -1155,6 +1227,7 @@ void BDV_Server_Object::processNotification(
       auto&& payload =
          dynamic_pointer_cast<BDV_Notification_Error>(notifPtr);
 
+      auto notif = callbackPtr->add_notification();
       notif->set_type(NotificationType::error);
       auto error = notif->mutable_error();
 
@@ -1169,7 +1242,8 @@ void BDV_Server_Object::processNotification(
       return;
    }
 
-   cb_->callback(callbackPtr);
+   if(callbackPtr->notification_size() > 0)
+      cb_->callback(callbackPtr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1296,42 +1370,20 @@ bool BDV_Server_Object::processPayload(shared_ptr<BDV_Payload>& packet,
       return false;
 
    shared_ptr<BDV_Payload> currentPacket = packet;
-   do //loop over packetMap to feed unparsed messages back in
-   {  
-      auto parsed = currentMessage_.parsePacket(currentPacket);
-      if (!parsed)
-      {
-         //packet did not extend current message, save for later
-         packetMap_.insert(make_pair(packet->packetID_, currentPacket));
-         return true;
-      }
+   auto parsed = currentMessage_.parsePacket(currentPacket);
+   if (!parsed)
+   {
+      packetToReinject_ = packet;
+      return true;
+   }
 
-      if (currentMessage_.isReady())
-      {
-         //message is complete, time to process it
-         break;
-      }
+   if (!currentMessage_.isReady())
+      return true;
 
-      if (packetMap_.size() == 0)
-      {
-         //out of packets to feed the current message, return
-         return true;
-      }
-
-      //look for the next consecutive id following current message's 
-      //top id
-      auto nextId = currentMessage_.topId() + 1;
-      auto iter = packetMap_.find(nextId);
-      if (iter == packetMap_.end())
-      {
-         //no such packet, return
-         return true;
-      }
-
-      //have the next packet, iterate over it
-      currentPacket = iter->second;
-      packetMap_.erase(iter);
-   } while (1);
+   auto msgId = currentMessage_.partialMessage_.getId();
+   if(msgId != lastValidMessageId_ + 1)
+      LOGWARN << "skipped msg id!";
+   lastValidMessageId_ = msgId;
 
    packet->messageID_ = currentMessage_.partialMessage_.getId();
    auto message = make_shared<BDVCommand>();
@@ -1373,19 +1425,7 @@ bool BDV_Server_Object::processPayload(shared_ptr<BDV_Payload>& packet,
 ///////////////////////////////////////////////////////////////////////////////
 void BDV_Server_Object::resetCurrentMessage()
 {
-   //remove packet ids current message is using from packetMap
-   auto& messagePacketMap = currentMessage_.partialMessage_.getPacketMap();
-
-   for (auto& packetPair : messagePacketMap)
-      packetMap_.erase(packetPair.first);
-
    currentMessage_.reset();
-   if (packetMap_.size() != 0)
-   {
-      auto iter = packetMap_.begin();
-      packetToReinject_ = iter->second;
-      packetMap_.erase(iter);
-   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1701,6 +1741,12 @@ void Clients::unregisterBDV(const string& bdvId)
       BDVs_.erase(bdvId);
    }
 
+   if (bdvPtr == nullptr)
+   {
+      LOGERR << "empty bdv ptr before unregistration";
+      return;
+   }
+
    bdvPtr->haltThreads();
 
    //we are done
@@ -1812,7 +1858,7 @@ void Clients::messageParserThread(void)
       //write return value if any
       if (result != nullptr)
          WebSocketServer::write(
-            payloadPtr->packet_->bdvID_, payloadPtr->messageID_, result);
+            payloadPtr->bdvID_, payloadPtr->messageID_, result);
    }
 }
 
@@ -1833,7 +1879,7 @@ shared_ptr<Message> Clients::processCommand(shared_ptr<BDV_Payload>
          return nullptr;
 
       result = processUnregisteredCommand(
-         payloadPtr->packet_->bdvID_, staticCommand);
+         payloadPtr->bdvID_, staticCommand);
    }
 
    return result;
@@ -1975,8 +2021,8 @@ void ZeroConfCallbacks_BDV::errorCallback(
 ///////////////////////////////////////////////////////////////////////////////
 bool BDV_PartialMessage::parsePacket(shared_ptr<BDV_Payload> packet)
 {
-   auto&& bdr = packet->packet_->data_.getRef();
-   auto result = partialMessage_.parsePacket(packet->packetID_, bdr);
+   auto&& bdr = packet->packetData_.getRef();
+   auto result = partialMessage_.parsePacket(bdr);
    if (!result)
       return false;
 

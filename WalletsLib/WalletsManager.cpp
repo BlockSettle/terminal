@@ -21,8 +21,6 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
    , armory_(armory)
    , preferWatchingOnly_(preferWatchinOnly)
 {
-   btc_ecc_start();
-
    nbBackupFilesToKeep_ = appSettings_->get<unsigned int>(ApplicationSettings::nbBackupFilesKeep);
    if (armory_) {
       connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
@@ -35,12 +33,13 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
 
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), logger_(logger), preferWatchingOnly_(false)
-{
-   btc_ecc_start();
-}
+{}
 
 WalletsManager::~WalletsManager() noexcept
 {
+   // These really ought to be called elsewhere, when the appropriate binaries
+   // shut down.
+   shutdownBIP151CTX();
    btc_ecc_stop();
 }
 
@@ -804,7 +803,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
          }
          if (txOuts.size() == 1) {
             const auto addr = txOuts[0].getScrAddressStr();
-            const auto settlAE = dynamic_pointer_cast<bs::SettlementAddressEntry>(GetSettlementWallet()->getAddressEntryForAddr(addr));
+            const auto settlAE = std::dynamic_pointer_cast<bs::SettlementAddressEntry>(GetSettlementWallet()->getAddressEntryForAddr(addr));
             if (settlAE) {
                const auto &cbPayout = [this, cb, txKey, inAddrs](bs::PayoutSigner::Type poType) {
                   if (poType == bs::PayoutSigner::SignedBySeller) {
@@ -1016,7 +1015,7 @@ void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned l
       }
       if (wallet.second->GetShortName() == cc) {
          wallet.second->SetDescription(ccDesc.toStdString());
-         const auto ccWallet = dynamic_pointer_cast<bs::hd::Leaf>(wallet.second);
+         const auto ccWallet = std::dynamic_pointer_cast<bs::hd::Leaf>(wallet.second);
          if (ccWallet) {
             ccWallet->setData(genesisAddr.toStdString());
             ccWallet->setData(nbSatoshis);

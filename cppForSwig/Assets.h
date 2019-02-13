@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2017, goatpig                                               //
+//  Copyright (C) 2017-2019, goatpig                                          //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -8,6 +8,9 @@
 
 #ifndef _H_ASSETS
 #define _H_ASSETS
+
+#include <set>
+#include <string>
 
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
@@ -29,6 +32,9 @@ public:
 #define PRIVKEY_BYTE             0x82
 #define ENCRYPTIONKEY_BYTE       0x83
 
+#define METADATA_COMMENTS_PREFIX  0x90
+#define METADATA_AUTHPEER_PREFIX  0x91
+
 #define ROOT_ASSETENTRY_ID       0xFFFFFFFF
 
 
@@ -38,7 +44,12 @@ enum AssetType
    AssetType_EncryptedData,
    AssetType_PublicKey,
    AssetType_PrivateKey,
-   AssetType_MetaData
+};
+
+enum MetaType
+{
+   MetaType_Comment,
+   MetaType_AuthorizedPeer
 };
 
 ////
@@ -282,7 +293,7 @@ protected:
    AssetEntryType type_;
    const int index_;
    const BinaryData accountID_;
-   BinaryData ID_;
+   BinaryData ID_; //accountID | index
 
    bool needsCommit_ = true;
 
@@ -410,6 +421,68 @@ public:
 
    bool hasPrivateKey(void) const;
    const BinaryData& getPrivateEncryptionKeyId(void) const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct MetaData
+{
+   friend class MetaDataAccount;
+
+private:
+   bool needsCommit_ = false;
+
+protected:
+   const MetaType type_;
+   const BinaryData accountID_;
+   const unsigned index_;
+
+public:
+   MetaData(MetaType type, const BinaryData& accountID, unsigned index) :
+      type_(type), accountID_(accountID), index_(index)
+   {}
+
+   //virtuals
+   virtual ~MetaData(void) = 0;
+   virtual BinaryData serialize(void) const = 0;
+   virtual BinaryData getDbKey(void) const = 0;
+   virtual void deserializeDBValue(const BinaryDataRef&) = 0;
+   virtual void clear(void) = 0;
+
+   //locals
+   bool needsCommit(void) { return needsCommit_; }
+   void flagForCommit(void) { needsCommit_ = true; }
+
+   //static
+   static std::shared_ptr<MetaData> deserialize(
+      const BinaryDataRef& key, const BinaryDataRef& data);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class PeerPublicData : public MetaData
+{
+private:
+   std::set<std::string> names_; //IPs, domain names
+   SecureBinaryData publicKey_;
+
+public:
+   PeerPublicData(const BinaryData& accountID, unsigned index) :
+      MetaData(MetaType_AuthorizedPeer, accountID, index)
+   {}
+
+   //virtuals
+   BinaryData serialize(void) const;
+   BinaryData getDbKey(void) const;
+   void deserializeDBValue(const BinaryDataRef&);
+   void clear(void);
+
+   //locals
+   void addName(const std::string&);
+   bool eraseName(const std::string&);
+   void setPublicKey(const SecureBinaryData&);
+
+   //
+   const std::set<std::string> getNames(void) const { return names_; }
+   const SecureBinaryData& getPublicKey(void) const { return publicKey_; }
 };
 
 #endif

@@ -338,7 +338,7 @@ void AssetManager::onCelerDisconnected()
    emit totalChanged();
 }
 
-bool AssetManager::onAccountBalanceUpdatedEvent(const string &data)
+bool AssetManager::onAccountBalanceUpdatedEvent(const std::string &data)
 {
    com::celertech::piggybank::api::subledger::SubLedgerSnapshotDownstreamEvent snapshot;
    if (!snapshot.ParseFromString(data)) {

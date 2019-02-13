@@ -8,6 +8,7 @@ SET (SOURCES
    Assets.cpp
    AssetEncryption.cpp
    AsyncClient.cpp
+   AuthorizedPeers.cpp
    BinaryData.cpp
    BIP150_151.cpp
    BIP32_Node.cpp
@@ -28,6 +29,7 @@ SET (SOURCES
    NetworkConfig.cpp
    ReentrantLock.cpp
    Script.cpp
+   ScriptRecipient.cpp
    SecureBinaryData.cpp
    Signer.cpp
    SocketObject.cpp
@@ -63,6 +65,7 @@ SET (HEADERS
    Assets.h
    AssetEncryption.h
    AsyncClient.h
+   AuthorizedPeers.h
    BDVCodec.h
    BinaryData.h
    BIP150_151.h

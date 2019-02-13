@@ -49,7 +49,7 @@ namespace bs {
       static std::string fileNamePrefix() { return "settlement_"; }
       std::string getFileName(const std::string &dir) const override;
 
-      bool GetInputFor(const shared_ptr<SettlementAddressEntry> &, std::function<void(UTXO)>, bool allowZC = true);
+      bool GetInputFor(const std::shared_ptr<SettlementAddressEntry> &, std::function<void(UTXO)>, bool allowZC = true);
       uint64_t GetEstimatedFeeFor(UTXO input, const bs::Address &recvAddr, float feePerByte);
 
       bs::wallet::TXSignRequest CreatePayoutTXRequest(const UTXO &, const bs::Address &recvAddr, float feePerByte);
@@ -74,19 +74,19 @@ namespace bs {
       void RefreshWallets(const std::vector<BinaryData>& ids);
 
       // return monitor that send QT signals and subscribed to zc/new block notification via qt
-      bool createMonitorQtSignals(const shared_ptr<SettlementAddressEntry> &addr
+      bool createMonitorQtSignals(const std::shared_ptr<SettlementAddressEntry> &addr
          , const std::shared_ptr<spdlog::logger>& logger
          , const std::function<void (const std::shared_ptr<SettlementMonitorQtSignals>&)>& userCB);
 
       // pure callback monitor. you should manually ask to update and set
       // callbacks to get notifications
-      bool createMonitorCb(const shared_ptr<SettlementAddressEntry> &addr
+      bool createMonitorCb(const std::shared_ptr<SettlementAddressEntry> &addr
          , const std::shared_ptr<spdlog::logger>& logger
          , const std::function<void (const std::shared_ptr<SettlementMonitorCb>&)>& userCB);
 
    private:
       using CreateMonitorCallback = std::function<void(const std::shared_ptr<AsyncClient::BtcWallet>&)>;
-      bool createMonitorCommon(const shared_ptr<SettlementAddressEntry> &addr
+      bool createMonitorCommon(const std::shared_ptr<SettlementAddressEntry> &addr
          , const std::shared_ptr<spdlog::logger>& logger
          , const CreateMonitorCallback& internalCB);
 

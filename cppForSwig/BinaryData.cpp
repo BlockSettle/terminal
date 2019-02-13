@@ -236,7 +236,22 @@ void BinaryData::createFromHex(BinaryDataRef const & bdr)
    }
 }
 
+/////////////////////////////////////////////////////////////////////////////
+bool BinaryData::isZero() const
+{
+   bool isZero = true;
+   auto ptr = getPtr();
+   for (size_t i = 0; i < getSize(); i++)
+   {
+      if (ptr[i] != 0)
+      {
+         isZero = false;
+         break;
+      }
+   }
 
+   return isZero;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 uint64_t BinaryReader::get_var_int(uint8_t* nRead)

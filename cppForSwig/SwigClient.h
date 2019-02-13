@@ -29,14 +29,14 @@ class WalletContainer;
 namespace SwigClient
 {
 
-   inline void StartCppLogging(string fname, int lvl) { STARTLOGGING(fname, (LogLevel)lvl); }
+   inline void StartCppLogging(std::string fname, int lvl) { STARTLOGGING(fname, (LogLevel)lvl); }
    inline void ChangeCppLogLevel(int lvl) { SETLOGLEVEL((LogLevel)lvl); }
    inline void DisableCppLogging() { SETLOGLEVEL(LogLvlDisabled); }
    inline void EnableCppLogStdOut() { LOGENABLESTDOUT(); }
    inline void DisableCppLogStdOut() { LOGDISABLESTDOUT(); }
-   inline void EnableBIP150(const uint32_t& ipVer, const string& dataDir)
+   inline void EnableBIP150(const uint32_t& ipVer)
    {
-      startupBIP150CTX(ipVer, dataDir);
+      startupBIP150CTX(ipVer, false);
    }
    inline void EnableBIP151() { startupBIP151CTX(); }
    inline void DisableBIP151() { shutdownBIP151CTX(); }
@@ -56,7 +56,7 @@ namespace SwigClient
       {}
 
       LedgerDelegate(AsyncClient::LedgerDelegate&);
-      vector<::ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
+      std::vector<::ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
       uint64_t getPageCount(void) const;
    };
 
@@ -77,12 +77,12 @@ namespace SwigClient
 
       uint64_t getTxioCount(void) const;
 
-      vector<UTXO> getSpendableTxOutList(bool);
+      std::vector<UTXO> getSpendableTxOutList(bool);
       const BinaryData& getScrAddr(void) const;
       const BinaryData& getAddrHash(void) const;
 
-      void setComment(const string& comment);
-      const string& getComment(void) const;
+      void setComment(const std::string& comment);
+      const std::string& getComment(void) const;
       int getIndex(void) const;
    };
 
@@ -97,27 +97,28 @@ namespace SwigClient
 
    public:
       BtcWallet(AsyncClient::BtcWallet& wlt);
-      vector<uint64_t> getBalancesAndCount(
+      std::vector<uint64_t> getBalancesAndCount(
          uint32_t topBlockHeight);
 
-      vector<UTXO> getSpendableTxOutListForValue(uint64_t val);
-      vector<UTXO> getSpendableZCList();
-      vector<UTXO> getRBFTxOutList();
+      std::vector<UTXO> getSpendableTxOutListForValue(uint64_t val);
+      std::vector<UTXO> getSpendableZCList();
+      std::vector<UTXO> getRBFTxOutList();
 
-      map<BinaryData, uint32_t> getAddrTxnCountsFromDB(void);
-      map<BinaryData, vector<uint64_t> > getAddrBalancesFromDB(void);
+      std::map<BinaryData, uint32_t> getAddrTxnCountsFromDB(void);
+      std::map<BinaryData, std::vector<uint64_t> > getAddrBalancesFromDB(void);
 
-      vector<::ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
-      shared_ptr<::ClientClasses::LedgerEntry> getLedgerEntryForTxHash(
+      std::vector<::ClientClasses::LedgerEntry> getHistoryPage(uint32_t id);
+      std::shared_ptr<::ClientClasses::LedgerEntry> getLedgerEntryForTxHash(
          const BinaryData& txhash);
 
       ScrAddrObj getScrAddrObjByKey(const BinaryData&,
          uint64_t, uint64_t, uint64_t, uint32_t);
 
-      vector<AddressBookEntry> createAddressBook(void) const;
+      std::vector<AddressBookEntry> createAddressBook(void) const;
 
-      virtual string registerAddresses(
-         const vector<BinaryData>& addrVec, bool isNew);
+      virtual std::string registerAddresses(
+         const std::vector<BinaryData>& addrVec, bool isNew);
+      std::string setUnconfirmedTarget(unsigned);
    };
 
    ///////////////////////////////////////////////////////////////////////////////
@@ -136,8 +137,8 @@ namespace SwigClient
       uint64_t getUnconfirmedBalance(void) const;
       uint64_t getWltTotalTxnCount(void) const;
 
-      string registerAddresses(
-         const vector<BinaryData>& addrVec, bool isNew);
+      std::string registerAddresses(
+         const std::vector<BinaryData>& addrVec, bool isNew);
    };
 
    ///////////////////////////////////////////////////////////////////////////////
@@ -175,66 +176,73 @@ namespace SwigClient
       ~BlockDataViewer(void);
       
       bool connectToRemote(void);
-      BtcWallet instantiateWallet(const string& id);
-      Lockbox instantiateLockbox(const string& id);
+      void addPublicKey(const SecureBinaryData&);
+      BtcWallet instantiateWallet(const std::string& id);
+      Lockbox instantiateLockbox(const std::string& id);
 
-      const string& getID(void) const;
+      const std::string& getID(void) const;
 
-      static shared_ptr<BlockDataViewer> getNewBDV(
-         const string& addr, const string& port, shared_ptr<RemoteCallback>);
+      static std::shared_ptr<BlockDataViewer> getNewBDV(
+         const std::string& addr, const std::string& port,
+         const std::string& datadir, const bool& ephemeralPeers,
+         std::shared_ptr<RemoteCallback> callbackPtr);
 
       LedgerDelegate getLedgerDelegateForWallets(void);
       LedgerDelegate getLedgerDelegateForLockboxes(void);
       LedgerDelegate getLedgerDelegateForScrAddr(
-         const string&, const BinaryData&);
+         const std::string&, const BinaryData&);
       Blockchain blockchain(void);
 
       void goOnline(void);
       void registerWithDB(BinaryData magic_word);
       void unregisterFromDB(void);
-      void shutdown(const string&);
-      void shutdownNode(const string&);
+      void shutdown(const std::string&);
+      void shutdownNode(const std::string&);
 
       void broadcastZC(const BinaryData& rawTx);
       Tx getTxByHash(const BinaryData& txHash);
       BinaryData getRawHeaderForTxHash(const BinaryData& txHash);
 
-      void updateWalletsLedgerFilter(const vector<BinaryData>& wltIdVec);
+      void updateWalletsLedgerFilter(const std::vector<BinaryData>& wltIdVec);
       bool hasRemoteDB(void);
 
-      shared_ptr<::ClientClasses::NodeStatusStruct> getNodeStatus(void);
-      ClientClasses::FeeEstimateStruct estimateFee(unsigned, const string&);
+      std::shared_ptr<::ClientClasses::NodeStatusStruct> getNodeStatus(void);
+      ClientClasses::FeeEstimateStruct estimateFee(unsigned, const std::string&);
 
-      vector<::ClientClasses::LedgerEntry> getHistoryForWalletSelection(
-         const vector<string>& wldIDs, const string& orderingStr);
+      std::vector<::ClientClasses::LedgerEntry> getHistoryForWalletSelection(
+         const std::vector<std::string>& wldIDs, const std::string& orderingStr);
 
-      string broadcastThroughRPC(const BinaryData& rawTx);
+      std::string broadcastThroughRPC(const BinaryData& rawTx);
 
-      vector<UTXO> getUtxosForAddrVec(const vector<BinaryData>&);
+      std::vector<UTXO> getUtxosForAddrVec(const std::vector<BinaryData>&);
+
+      std::pair<unsigned, unsigned> getRekeyCount(void) const {
+         return bdvAsync_.getRekeyCount();
+      }
    };
 
    ///////////////////////////////////////////////////////////////////////////////
    class ProcessMutex
    {
    private:
-      string addr_;
-      string port_;
-      thread holdThr_;
+      std::string addr_;
+      std::string port_;
+      std::thread holdThr_;
 
    private:
 
       void hodl();
 
    public:
-      ProcessMutex(const string& addr, const string& port) :
+      ProcessMutex(const std::string& addr, const std::string& port) :
          addr_(addr), port_(port)
       {}
 
-      bool test(const string& uriStr);      
+      bool test(const std::string& uriStr);
       bool acquire();
       
       virtual ~ProcessMutex(void) = 0;
-      virtual void mutexCallback(const string&) = 0;
+      virtual void mutexCallback(const std::string&) = 0;
    };
 };
 
