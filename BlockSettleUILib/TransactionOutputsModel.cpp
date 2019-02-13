@@ -1,5 +1,5 @@
+#include <QColor>
 #include "TransactionOutputsModel.h"
-
 #include "UiUtils.h"
 
 TransactionOutputsModel::TransactionOutputsModel(QObject* parent)
@@ -27,6 +27,22 @@ void TransactionOutputsModel::clear()
    endResetModel();
 }
 
+void TransactionOutputsModel::enableRows(bool flag)
+{
+   if (rowsEnabled_ != flag) {
+      rowsEnabled_ = flag;
+      emit dataChanged(index(0, 0), index(rowCount({}) - 1, columnCount({}) - 1));
+   }
+}
+
+Qt::ItemFlags TransactionOutputsModel::flags(const QModelIndex &index) const
+{
+   if (rowsEnabled_) {
+      return QAbstractTableModel::flags(index);
+   }
+   return Qt::ItemNeverHasChildren;
+}
+
 QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) const
 {
    switch (role) {
@@ -34,6 +50,8 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
       return Qt::AlignLeft;
    case Qt::DisplayRole:
       return getRowData(index.column(), outputs_[index.row()]);
+   case Qt::TextColorRole:
+      return rowsEnabled_ ? QVariant{} : QColor(Qt::gray);
    }
    return QVariant{};
 }
@@ -84,7 +102,7 @@ int TransactionOutputsModel::GetRowById(unsigned int id)
 
 QVariant TransactionOutputsModel::getRowData(int column, const OutputRow& outputRow) const
 {
-   switch(column){
+   switch (column) {
    case ColumnAddress:
       return outputRow.address;
    case ColumnAmount:
