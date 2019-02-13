@@ -15,7 +15,7 @@ class ChatUserListLogic : public QObject
 {
    Q_OBJECT
 public:
-   typedef std::vector<std::string> TUserIdList;
+   using UserIdList = std::vector<std::string>;
 
    explicit ChatUserListLogic(QObject *parent = nullptr);
 
@@ -29,10 +29,10 @@ public:
 signals:
 
 public slots:
-   void onAddChatUsers(const TUserIdList &userIdList);
-   void onRemoveChatUsers(const TUserIdList &userIdList);
-   void onReplaceChatUsers(const TUserIdList &userIdList);
-   void onIcomingFriendRequest(const TUserIdList &userIdList);
+   void onAddChatUsers(const UserIdList &userIdList);
+   void onRemoveChatUsers(const UserIdList &userIdList);
+   void onReplaceChatUsers(const UserIdList &userIdList);
+   void onIcomingFriendRequest(const UserIdList &userIdList);
 
 private:
    ChatUserModelPtr _chatUserModelPtr;

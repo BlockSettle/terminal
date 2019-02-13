@@ -30,7 +30,7 @@ void ChatUserModel::removeByUserId(const QString &userId)
    }
 
    _chatUserDataListPtr.erase(
-      std::remove_if (std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr),
+      std::remove_if(std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr),
       [chatUserDataPtr](const ChatUserDataPtr cudPtr)
    {
       return cudPtr && (cudPtr == chatUserDataPtr);

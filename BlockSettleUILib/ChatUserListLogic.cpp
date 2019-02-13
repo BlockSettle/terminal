@@ -21,7 +21,7 @@ ChatUserListLogic::ChatUserListLogic(QObject *parent) : QObject(parent)
    _chatUserModelPtr = std::make_shared<ChatUserModel>(this);
 }
 
-void ChatUserListLogic::onAddChatUsers(const TUserIdList &userIdList)
+void ChatUserListLogic::onAddChatUsers(const UserIdList &userIdList)
 {
    for (const std::string &userId : userIdList)
    {
@@ -45,7 +45,7 @@ void ChatUserListLogic::onAddChatUsers(const TUserIdList &userIdList)
    }
 }
 
-void ChatUserListLogic::onRemoveChatUsers(const TUserIdList &userIdList)
+void ChatUserListLogic::onRemoveChatUsers(const UserIdList &userIdList)
 {
    for (const std::string &userId : userIdList)
    {
@@ -66,13 +66,13 @@ void ChatUserListLogic::onRemoveChatUsers(const TUserIdList &userIdList)
    }
 }
 
-void ChatUserListLogic::onReplaceChatUsers(const TUserIdList &userIdList)
+void ChatUserListLogic::onReplaceChatUsers(const UserIdList &userIdList)
 {
    onRemoveChatUsers(userIdList);
    onAddChatUsers(userIdList);
 }
 
-void ChatUserListLogic::onIcomingFriendRequest(const TUserIdList &userIdList)
+void ChatUserListLogic::onIcomingFriendRequest(const UserIdList &userIdList)
 {
    for (const std::string &userId : userIdList)
    {

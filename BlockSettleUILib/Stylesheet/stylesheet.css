@@ -1484,3 +1484,8 @@ QListView#chatUserCategoryListView:item {
     
 QListView#chatUserCategoryListView:item:selected {
     background-color: #3a8ab4; }
+
+ChatUserCategoryListViewStyle {
+    qproperty-color_user_online: #00c8f8;
+    qproperty-color_incoming_friend_request: #ffa834;
+    qproperty-color_user_default: #c0c0c0; }

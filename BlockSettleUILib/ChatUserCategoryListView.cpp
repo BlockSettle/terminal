@@ -15,8 +15,9 @@ namespace {
    static const int DOT_SHIFT = 8 + DOT_RADIUS;
 }
 
-ChatUserCategoryListViewDelegate::ChatUserCategoryListViewDelegate(QObject *parent)
-   : QStyledItemDelegate (parent)
+ChatUserCategoryListViewDelegate::ChatUserCategoryListViewDelegate
+   (const ChatUserCategoryListViewStyle &style, QObject *parent)
+   : QStyledItemDelegate (parent), _internalStyle(style)
 {
 
 }
@@ -28,8 +29,8 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    QStyleOptionViewItem itemOption(option);
 
    // set default text color
-   itemOption.palette.setColor(QPalette::Text, QColor(ChatUserColor::COLOR_USER_DEFAULT));
-   itemOption.palette.setColor(QPalette::HighlightedText, QColor(ChatUserColor::COLOR_USER_DEFAULT));
+   itemOption.palette.setColor(QPalette::Text, _internalStyle.colorUserDefault());
+   itemOption.palette.setColor(QPalette::HighlightedText, _internalStyle.colorUserDefault());
 
    ChatUserData::State userState =
          qvariant_cast<ChatUserData::State>(index.data(ChatUsersViewModel::UserStateRole));
@@ -37,7 +38,7 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    // text color for friend request
    if (userState == ChatUserData::State::IncomingFriendRequest)
    {
-      itemOption.palette.setColor(QPalette::HighlightedText, QColor(ChatUserColor::COLOR_INCOMING_FRIEND_REQUEST));
+      itemOption.palette.setColor(QPalette::HighlightedText, _internalStyle.colorIncomingFriendRequest());
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
 
@@ -47,7 +48,7 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    // text color for user online status
    if (userStatus == ChatUserData::ConnectionStatus::Online)
    {
-      itemOption.palette.setColor(QPalette::HighlightedText, QColor(ChatUserColor::COLOR_USER_ONLINE));
+      itemOption.palette.setColor(QPalette::HighlightedText, _internalStyle.colorUserOnline());
       QStyledItemDelegate::paint(painter, itemOption, index);
 
       // draw dot
@@ -61,7 +62,7 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
          auto textWidth = textRect.width();
          QPoint dotPoint(textWidth + DOT_SHIFT, textRect.height()/2 + (itemOption.rect.height() * index.row()));
          painter->save();
-         painter->setBrush(QBrush(QColor(ChatUserColor::COLOR_USER_ONLINE), Qt::SolidPattern));
+         painter->setBrush(QBrush(_internalStyle.colorUserOnline(), Qt::SolidPattern));
          painter->drawEllipse(dotPoint, DOT_RADIUS, DOT_RADIUS);
          painter->restore();
       }
@@ -72,7 +73,7 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    return QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
-ChatUserCategoryListView::ChatUserCategoryListView(QWidget *parent) : QListView(parent)
+ChatUserCategoryListView::ChatUserCategoryListView(QWidget *parent) : QListView(parent), _internalStyle(this)
 {
-   setItemDelegate(new ChatUserCategoryListViewDelegate(this));
+   setItemDelegate(new ChatUserCategoryListViewDelegate(_internalStyle, this));
 }
