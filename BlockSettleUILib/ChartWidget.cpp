@@ -7,13 +7,12 @@
 #include "CustomCandlestickSet.h"
 #include "TradesClient.h"
 #include "DataPointsLocal.h"
+#include "Colors.h"
 
 const qreal BASE_FACTOR = 1.0;
 
 const QColor BACKGROUND_COLOR = QColor(28, 40, 53);
 const QColor FOREGROUND_COLOR = QColor(Qt::white);
-const QColor INCREASING_COLOR = QColor(34, 192, 100);
-const QColor DECREASING_COLOR = QColor(207, 41, 46);
 const QColor VOLUME_COLOR     = QColor(32, 159, 223);
 
 ChartWidget::ChartWidget(QWidget *parent)
@@ -585,7 +584,6 @@ void ChartWidget::initializeCustomPlot()
    title = new QCPTextElement(ui_->customPlot);
    title->setTextColor(FOREGROUND_COLOR);
    title->setFont(QFont(QStringLiteral("sans"), 12));
-   title->setText(QStringLiteral("EUR/SEK"));
    ui_->customPlot->plotLayout()->insertRow(0);
    ui_->customPlot->plotLayout()->addElement(0, 0, title);
 
@@ -594,10 +592,10 @@ void ChartWidget::initializeCustomPlot()
    candlesticksChart->setName(tr("Candlestick"));
    candlesticksChart->setChartStyle(QCPFinancial::csCandlestick);
    candlesticksChart->setTwoColored(true);
-   candlesticksChart->setBrushPositive(INCREASING_COLOR);
-   candlesticksChart->setBrushNegative(DECREASING_COLOR);
-   candlesticksChart->setPenPositive(QPen(INCREASING_COLOR));
-   candlesticksChart->setPenNegative(QPen(DECREASING_COLOR));
+   candlesticksChart->setBrushPositive(c_greenColor);
+   candlesticksChart->setBrushNegative(c_redColor);
+   candlesticksChart->setPenPositive(QPen(c_greenColor));
+   candlesticksChart->setPenNegative(QPen(c_redColor));
 
    ui_->customPlot->axisRect()->axis(QCPAxis::atLeft)->setVisible(false);
    ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->setVisible(true);
