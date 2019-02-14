@@ -294,11 +294,25 @@ QString ChartWidget::barLabel(qreal timestamp, int interval) const
    }
 }
 
+int ChartWidget::fractionSizeForProduct(const QString &product) const
+{
+   auto productType = client_->getProductType(product);
+   switch (productType) {
+   case TradesClient::ProductTypeFX:
+      return 4;
+   case TradesClient::ProductTypeXBT:
+      return 2;
+   case TradesClient::ProductTypePrivateMarket:
+      return 6;
+   default:
+      return -1;
+   }
+}
+
 // Handles changes of date range.
 void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
    auto interval = static_cast<DataPointsLocal::Interval>(id);
-
    updateChart(interval);
 }
 

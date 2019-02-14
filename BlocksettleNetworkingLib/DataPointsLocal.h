@@ -8,45 +8,47 @@
 
 class DataPointsLocal : public QObject
 {
-    Q_OBJECT
+   Q_OBJECT
 public:
-    enum Interval {
-        Unknown = -1,
-        OneYear,
-        SixMonths,
-        OneMonth,
-        OneWeek,
-        TwentyFourHours,
-        TwelveHours,
-        SixHours,
-        OneHour
-    };
-    struct DataPoint {
-        qreal open = -1.0;
-        qreal high = -1.0;
-        qreal low = -1.0;
-        qreal close = -1.0;
-        qreal volume = -1.0;
-        qreal timestamp = -1.0;
-        bool isValid() {
-            return timestamp != -1.0;
-        }
-    };
-    explicit DataPointsLocal(
-            const std::string &databaseHost
-            , const std::string &databasePort
-            , const std::string &databaseName
-            , const std::string &databaseUser
-            , const std::string &databasePassword
-            , const std::shared_ptr<spdlog::logger> &logger
-            , QObject *parent = nullptr);
+   enum Interval {
+      Unknown = -1,
+      OneYear,
+      SixMonths,
+      OneMonth,
+      OneWeek,
+      TwentyFourHours,
+      TwelveHours,
+      SixHours,
+      OneHour
+   };
+   struct DataPoint {
+      qreal open = -1.0;
+      qreal high = -1.0;
+      qreal low = -1.0;
+      qreal close = -1.0;
+      qreal volume = -1.0;
+      qreal timestamp = -1.0;
+      bool isValid() {
+         return timestamp != -1.0;
+      }
+   };
+   typedef std::vector<DataPoint *> DataPointVector;
+   explicit DataPointsLocal(
+         const std::string &databaseHost
+         , const std::string &databasePort
+         , const std::string &databaseName
+         , const std::string &databaseUser
+         , const std::string &databasePassword
+         , const std::shared_ptr<spdlog::logger> &logger
+         , QObject *parent = nullptr);
 
-    const uint64_t getLatestTimestamp(const std::string &product
-                                      , const Interval &interval = OneHour) const;
+   const uint64_t getLatestTimestamp(const std::string &product
+                                     , const Interval &interval = OneHour) const;
 
-    const std::vector<DataPoint *> getDataPoints(const std::string &product
-                                                 , Interval interval = Interval::Unknown
-                                                 , qint64 maxCount = 100);
+   const DataPointVector getDataPoints(
+         const std::string &product
+         , Interval interval = Interval::Unknown
+         , qint64 maxCount = 100);
 
 private:
    static const QStringList getAllTableNames();

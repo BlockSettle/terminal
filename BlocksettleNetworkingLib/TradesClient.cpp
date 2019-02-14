@@ -8,6 +8,46 @@
 
 #include "ApplicationSettings.h"
 
+// Private Market
+const std::string ANT_XBT = "ANT/XBT";
+const std::string BLK_XBT = "BLK/XBT";
+const std::string BSP_XBT = "BSP/XBT";
+const std::string JAN_XBT = "JAN/XBT";
+const std::string SCO_XBT = "SCO/XBT";
+// Spot XBT
+const std::string XBT_EUR = "XBT/EUR";
+const std::string XBT_GBP = "XBT/GBP";
+const std::string XBT_JPY = "XBT/JPY";
+const std::string XBT_SEK = "XBT/SEK";
+// Spot FX
+const std::string EUR_GBP = "EUR/GBP";
+const std::string EUR_JPY = "EUR/JPY";
+const std::string EUR_SEK = "EUR/SEK";
+const std::string GPB_JPY = "GPB/JPY";
+const std::string GBP_SEK = "GBP/SEK";
+const std::string JPY_SEK = "JPY/SEK";
+
+static const std::map<std::string, TradesClient::ProductType> PRODUCT_TYPES = {
+   // Private Market
+   { ANT_XBT, TradesClient::ProductTypePrivateMarket },
+   { BLK_XBT, TradesClient::ProductTypePrivateMarket },
+   { BSP_XBT, TradesClient::ProductTypePrivateMarket },
+   { JAN_XBT, TradesClient::ProductTypePrivateMarket },
+   { SCO_XBT, TradesClient::ProductTypePrivateMarket },
+   // Spot XBT
+   { XBT_EUR, TradesClient::ProductTypeXBT },
+   { XBT_GBP, TradesClient::ProductTypeXBT },
+   { XBT_JPY, TradesClient::ProductTypeXBT },
+   { XBT_SEK, TradesClient::ProductTypeXBT },
+   // Spot FX
+   { EUR_GBP, TradesClient::ProductTypeFX },
+   { EUR_JPY, TradesClient::ProductTypeFX },
+   { EUR_SEK, TradesClient::ProductTypeFX },
+   { GPB_JPY, TradesClient::ProductTypeFX },
+   { GBP_SEK, TradesClient::ProductTypeFX },
+   { JPY_SEK, TradesClient::ProductTypeFX }
+};
+
 
 TradesClient::TradesClient(const std::shared_ptr<ApplicationSettings>& appSettings
                            , const std::shared_ptr<spdlog::logger>& logger
@@ -43,7 +83,22 @@ const std::vector<DataPointsLocal::DataPoint *> TradesClient::getRawPointDataArr
         , DataPointsLocal::Interval interval
         , qint64 maxCount)
 {
-    return tradesDb_->getDataPoints(product.toStdString(), interval, maxCount);
+   return tradesDb_->getDataPoints(product.toStdString(), interval, maxCount);
+}
+
+TradesClient::ProductType TradesClient::getProductType(const QString &product) const
+{
+   auto found = std::find(PRODUCT_TYPES.begin()
+                          , PRODUCT_TYPES.end()
+                          , [key = product.toStdString()]
+                          (const std::pair<std::string, TradesClient::ProductType> &item) {
+      item.first == key;
+   });
+   if (found != PRODUCT_TYPES.end()) {
+      return found->second;
+   } else {
+      return ProductTypeUnknown;
+   }
 }
 
 void TradesClient::onMDUpdated(bs::network::Asset::Type assetType

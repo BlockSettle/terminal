@@ -56,6 +56,7 @@ protected:
    qreal getPlotScale(int interval = -1) const;
    qreal intervalWidth(int interval = -1, int count = 1) const;
    QString barLabel(qreal timestamp, int interval = -1) const;
+   int fractionSizeForProduct(const QString &product) const;
 
 private:
     Ui::ChartWidget *ui_;
