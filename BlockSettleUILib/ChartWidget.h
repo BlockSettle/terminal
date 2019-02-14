@@ -2,7 +2,7 @@
 #define CHARTWIDGET_H
 
 #include <QWidget>
-#include <QtCharts>
+#include <QButtonGroup>
 #include "CommonTypes.h"
 
 QT_BEGIN_NAMESPACE
@@ -12,13 +12,13 @@ class ChartWidget;
 namespace spdlog {
    class logger;
 }
+class QStandardItemModel;
 class QCPTextElement;
 class QCPFinancial;
 class QCPBars;
 class QCPAxisRect;
 QT_END_NAMESPACE
 
-using namespace QtCharts;
 class MarketDataProvider;
 class ApplicationSettings;
 class ArmoryConnection;
@@ -55,7 +55,6 @@ protected:
    qreal getZoomFactor(int interval = -1) const;
    qreal getPlotScale(int interval = -1) const;
    qreal intervalWidth(int interval = -1, int count = 1) const;
-   void setZoomFactor(qreal factor);
    QString barLabel(qreal timestamp, int interval = -1) const;
 
 private:
@@ -63,13 +62,7 @@ private:
     QButtonGroup dateRange_;
     std::shared_ptr<MarketDataProvider> mdProvider_;
     QStandardItemModel *cboModel_;
-    QCandlestickSeries *priceSeries_;
-    QCandlestickSeries *volumeSeries_;
-    QGraphicsTextItem *dataItemText_;
     std::shared_ptr<TradesClient> client_;
-    QValueAxis *priceYAxis_;
-    QValueAxis *volumeYAxis_;
-
     QCPTextElement *title_;
     QCPTextElement *info_;
     QCPFinancial *candlesticksChart_;

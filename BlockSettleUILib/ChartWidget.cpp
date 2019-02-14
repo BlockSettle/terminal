@@ -18,10 +18,6 @@ const QColor VOLUME_COLOR     = QColor(32, 159, 223);
 ChartWidget::ChartWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChartWidget)
-   , priceSeries_(nullptr)
-   , volumeSeries_(nullptr)
-   , priceYAxis_(nullptr)
-   , volumeYAxis_(nullptr)
    , title_(nullptr)
    , info_(nullptr)
    , candlesticksChart_(nullptr)
@@ -50,32 +46,6 @@ ChartWidget::ChartWidget(QWidget *parent)
    proxy->setSourceModel(cboModel_);
    proxy->sort(0);
    ui_->cboInstruments->setModel(proxy);
-
-   priceSeries_ = new QCandlestickSeries(this);
-   priceSeries_->setIncreasingColor(QColor(34, 192, 100));
-   priceSeries_->setDecreasingColor(QColor(207, 41, 46));
-   QPen pen(QRgb(0xffffff));
-   pen.setWidth(1);
-   priceSeries_->setPen(pen);
-   priceSeries_->setBodyOutlineVisible(/*false*/true);
-   priceSeries_->setBodyWidth(1.0);
-   priceSeries_->setMaximumColumnWidth(15);
-   priceSeries_->setMinimumColumnWidth(15);
-   connect(priceSeries_, &QCandlestickSeries::destroyed, [this]() {
-      qDebug() << "Price series destroyed";
-   });
-
-   volumeSeries_ = new QCandlestickSeries(this);
-   volumeSeries_->setIncreasingColor(QColor(32, 159, 223));
-   volumeSeries_->setBodyOutlineVisible(false);
-   volumeSeries_->setBodyWidth(1.0);
-   volumeSeries_->setMaximumColumnWidth(15);
-   volumeSeries_->setMinimumColumnWidth(15);
-   connect(volumeSeries_, &QCandlestickSeries::destroyed, [this]() {
-      qDebug() << "Volume series destroyed";
-   });
-
-   dataItemText_ = new QGraphicsTextItem(ui_->viewPrice->chart());
 }
 
 void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
@@ -89,19 +59,15 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::onMDUpdated);
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, client_.get(), &TradesClient::onMDUpdated);
 
-   // populate charts with data
-   ui_->viewPrice->chart()->addSeries(priceSeries_);
-   ui_->viewVolume->chart()->addSeries(volumeSeries_);
-
+   // initialize charts
    initializeCustomPlot();
-   updateChart();
+
+   // initial select interval
    ui_->btn1h->click();
 }
 
 ChartWidget::~ChartWidget() {
    delete ui_;
-   priceSeries_->deleteLater();
-   volumeSeries_->deleteLater();
 }
 
 // Populate combo box with existing instruments comeing from mdProvider
@@ -121,25 +87,25 @@ void ChartWidget::updatePriceValueAxis(const QString &labelFormat
                                        , qreal maxValue
                                        , qreal minValue)
 {
-   if (priceYAxis_) {
+   /*if (priceYAxis_) {
       priceSeries_->chart()->removeAxis(priceYAxis_);
       priceYAxis_->deleteLater();
       priceYAxis_ = nullptr;
    }
-//   priceYAxis_ = createValueAxis(priceSeries_, labelFormat, maxValue, minValue);
+   priceYAxis_ = createValueAxis(priceSeries_, labelFormat, maxValue, minValue);*/
 }
 
 void ChartWidget::updateVolumeValueAxis(const QString &labelFormat
                                         , qreal maxValue
                                         , qreal minValue)
 {
-   if (volumeYAxis_) {
+   /*if (volumeYAxis_) {
       volumeSeries_->chart()->removeAxis(volumeYAxis_);
       volumeYAxis_->deleteLater();
       volumeYAxis_ = nullptr;
    }
-//   volumeYAxis_ = createValueAxis(volumeSeries_, labelFormat, maxValue, minValue);
-   volumeYAxis_->setTickCount(2);
+   volumeYAxis_ = createValueAxis(volumeSeries_, labelFormat, maxValue, minValue);
+   volumeYAxis_->setTickCount(2);*/
 }
 
 void ChartWidget::updateChart(int interval)
@@ -302,13 +268,6 @@ qreal ChartWidget::intervalWidth(int interval, int count) const
    }
 }
 
-void ChartWidget::setZoomFactor(qreal factor)
-{
-   qDebug("Update zoom factor: %f", factor);
-   ui_->viewPrice->setZoomFactor(factor);
-   ui_->viewVolume->setZoomFactor(factor);
-}
-
 QString ChartWidget::barLabel(qreal timestamp, int interval) const
 {
    QDateTime time = QDateTime::fromMSecsSinceEpoch(timestamp).toUTC();
@@ -340,13 +299,10 @@ void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
    auto interval = static_cast<DataPointsLocal::Interval>(id);
 
-   //   buildCandleChart(interval);
    updateChart(interval);
 }
 
 void ChartWidget::onInstrumentChanged(const QString &text) {
-   ui_->viewPrice->chart()->setTitle(text);
-
    updateChart(dateRange_.checkedId());
 }
 

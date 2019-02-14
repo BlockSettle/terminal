@@ -226,62 +226,12 @@
        <number>0</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="8,0,2">
+       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0">
         <property name="spacing">
          <number>0</number>
         </property>
         <item>
-         <widget class="CustomChartView" name="viewPrice">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="visible">
-             <bool>false</bool>
-          </property>
-          <property name="cursor" stdset="0">
-           <cursorShape>CrossCursor</cursorShape>
-          </property>
-          <property name="backgroundBrush">
-           <brush brushstyle="SolidPattern">
-            <color alpha="255">
-             <red>10</red>
-             <green>22</green>
-             <blue>25</blue>
-            </color>
-           </brush>
-          </property>
-          <property name="renderHints">
-           <set>QPainter::HighQualityAntialiasing|QPainter::TextAntialiasing</set>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QCustomPlot" name="customPlot" native="true"/>
-        </item>
-        <item>
-         <widget class="CustomChartView" name="viewVolume">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="visible">
-             <bool>false</bool>
-          </property>
-          <property name="cursor" stdset="0">
-           <cursorShape>UpArrowCursor</cursorShape>
-          </property>
-          <property name="backgroundBrush">
-           <brush brushstyle="SolidPattern">
-            <color alpha="255">
-             <red>10</red>
-             <green>22</green>
-             <blue>25</blue>
-            </color>
-           </brush>
-          </property>
-          <property name="renderHints">
-           <set>QPainter::HighQualityAntialiasing|QPainter::TextAntialiasing</set>
-          </property>
-         </widget>
         </item>
        </layout>
       </item>
@@ -291,11 +241,6 @@
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>CustomChartView</class>
-   <extends>QGraphicsView</extends>
-   <header>CustomChartView.h</header>
-  </customwidget>
   <customwidget>
    <class>QCustomPlot</class>
    <extends>QWidget</extends>
