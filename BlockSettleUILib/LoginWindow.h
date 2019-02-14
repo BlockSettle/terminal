@@ -47,6 +47,10 @@ private slots:
 
    void setupLoginPage();
    void setupCancelPage();
+
+protected:
+   void accept() override;
+
 private:
    std::unique_ptr<Ui::LoginWindow>       ui_;
    std::shared_ptr<ApplicationSettings>   settings_;
