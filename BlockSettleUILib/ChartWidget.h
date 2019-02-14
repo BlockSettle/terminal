@@ -44,18 +44,9 @@ protected slots:
 
 protected:
    void initializeCustomPlot();
-   void updatePriceValueAxis(const QString &labelFormat
-                             , qreal maxValue = -1.0
-                             , qreal minValue = -1.0);
-   void updateVolumeValueAxis(const QString &labelFormat
-                              , qreal maxValue = -1.0
-                              , qreal minValue = -1.0);
    void updateChart(int interval = -1);
    void addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume);
-   qreal getZoomFactor(int interval = -1) const;
-   qreal getPlotScale(int interval = -1) const;
    qreal intervalWidth(int interval = -1, int count = 1) const;
-   QString barLabel(qreal timestamp, int interval = -1) const;
    int fractionSizeForProduct(const QString &product) const;
 
 private:

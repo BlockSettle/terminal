@@ -3,8 +3,6 @@
 #include "ApplicationSettings.h"
 #include "MarketDataProvider.h"
 #include "ArmoryConnection.h"
-#include <qrandom.h>
-#include "CustomCandlestickSet.h"
 #include "TradesClient.h"
 #include "DataPointsLocal.h"
 #include "Colors.h"
@@ -83,31 +81,6 @@ void ChartWidget::onMDUpdated(bs::network::Asset::Type assetType, const QString 
    }
 }
 
-void ChartWidget::updatePriceValueAxis(const QString &labelFormat
-                                       , qreal maxValue
-                                       , qreal minValue)
-{
-   /*if (priceYAxis_) {
-      priceSeries_->chart()->removeAxis(priceYAxis_);
-      priceYAxis_->deleteLater();
-      priceYAxis_ = nullptr;
-   }
-   priceYAxis_ = createValueAxis(priceSeries_, labelFormat, maxValue, minValue);*/
-}
-
-void ChartWidget::updateVolumeValueAxis(const QString &labelFormat
-                                        , qreal maxValue
-                                        , qreal minValue)
-{
-   /*if (volumeYAxis_) {
-      volumeSeries_->chart()->removeAxis(volumeYAxis_);
-      volumeYAxis_->deleteLater();
-      volumeYAxis_ = nullptr;
-   }
-   volumeYAxis_ = createValueAxis(volumeSeries_, labelFormat, maxValue, minValue);
-   volumeYAxis_->setTickCount(2);*/
-}
-
 void ChartWidget::updateChart(int interval)
 {
    auto product = ui_->cboInstruments->currentText();
@@ -174,60 +147,6 @@ void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, q
    }
 }
 
-qreal ChartWidget::getZoomFactor(int interval) const
-{
-   if (interval == -1) {
-      return 1.0;
-   }
-   switch (static_cast<DataPointsLocal::Interval>(interval)) {
-   case DataPointsLocal::OneYear:
-      return BASE_FACTOR * 8760;
-   case DataPointsLocal::SixMonths:
-      return BASE_FACTOR * 4320;
-   case DataPointsLocal::OneMonth:
-      return BASE_FACTOR * 720;
-   case DataPointsLocal::OneWeek:
-      return BASE_FACTOR * 168;
-   case DataPointsLocal::TwentyFourHours:
-      return BASE_FACTOR * 24;
-   case DataPointsLocal::TwelveHours:
-      return BASE_FACTOR * 12;
-   case DataPointsLocal::SixHours:
-      return BASE_FACTOR * 6;
-   case DataPointsLocal::OneHour:
-      return BASE_FACTOR;
-   default:
-      return BASE_FACTOR;
-   }
-}
-
-qreal ChartWidget::getPlotScale(int interval) const
-{
-   if (interval == -1) {
-      return 1.0;
-   }
-   switch (static_cast<DataPointsLocal::Interval>(interval)) {
-   case DataPointsLocal::OneYear:
-      return BASE_FACTOR * 8760 / 96;
-   case DataPointsLocal::SixMonths:
-      return BASE_FACTOR * 4320 / 48;
-   case DataPointsLocal::OneMonth:
-      return BASE_FACTOR * 720 / 8;
-   case DataPointsLocal::OneWeek:
-      return BASE_FACTOR * 168 / 2;
-   case DataPointsLocal::TwentyFourHours:
-      return BASE_FACTOR * 24 / 2;
-   case DataPointsLocal::TwelveHours:
-      return BASE_FACTOR * 12 / 2;
-   case DataPointsLocal::SixHours:
-      return BASE_FACTOR * 6 / 2;
-   case DataPointsLocal::OneHour:
-      return BASE_FACTOR;
-   default:
-      return BASE_FACTOR;
-   }
-}
-
 qreal ChartWidget::intervalWidth(int interval, int count) const
 {
    if (interval == -1) {
@@ -253,32 +172,6 @@ qreal ChartWidget::intervalWidth(int interval, int count) const
       return hour * count;
    default:
       return hour * count;
-   }
-}
-
-QString ChartWidget::barLabel(qreal timestamp, int interval) const
-{
-   QDateTime time = QDateTime::fromMSecsSinceEpoch(timestamp).toUTC();
-   //   return time.toString(Qt::ISODate);
-   switch (static_cast<DataPointsLocal::Interval>(interval)) {
-   case DataPointsLocal::OneYear:
-      return time.toString(QStringLiteral("yy"));
-   case DataPointsLocal::SixMonths:
-      return time.toString(QStringLiteral("M"));
-   case DataPointsLocal::OneMonth:
-      return time.toString(QStringLiteral("M"));
-   case DataPointsLocal::OneWeek:
-      return QString::number(time.date().weekNumber());
-   case DataPointsLocal::TwentyFourHours:
-      return time.toString(QStringLiteral("d"));
-   case DataPointsLocal::TwelveHours:
-      return time.toString(QStringLiteral("H"));
-   case DataPointsLocal::SixHours:
-      return time.toString(QStringLiteral("H"));
-   case DataPointsLocal::OneHour:
-      return time.toString(QStringLiteral("hh"));
-   default:
-      return time.toString(QStringLiteral("HH"));
    }
 }
 
