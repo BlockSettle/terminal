@@ -416,7 +416,8 @@ void ChartWidget::updateChart(int interval)
 
    ui_->customPlot->rescaleAxes();
    ui_->customPlot->xAxis->scaleRange(getPlotScale(interval), ui_->customPlot->xAxis->range().center());
-   ui_->customPlot->yAxis->scaleRange(1.0, ui_->customPlot->yAxis->range().center());
+   volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
+   ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
    ui_->customPlot->replot();
 }
 
