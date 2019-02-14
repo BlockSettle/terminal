@@ -202,6 +202,7 @@ void ManageEncryptionDialog::continueBasic()
       oldKey_ = ui_->widgetSubmitKeys->key();
    }
 
+   // currently we support only 1 of m, on wallet creation 1-of-1 used
    if (isNewAuth) {
       EnterWalletPassword enterWalletPassword(AutheIDClient::ActivateWallet, this);
       // overwrite encKeys
@@ -353,52 +354,51 @@ void ManageEncryptionDialog::onPasswordChanged(const std::string &walletId, bool
 
 void ManageEncryptionDialog::deleteDevice(const std::string &deviceId)
 {
-//   newPasswordData_.clear();
-//   for (const auto &passwordData : oldPasswordData_) {
-//      auto deviceInfo = AutheIDClient::getDeviceInfo(passwordData.encKey.toBinStr());
-//      if (deviceInfo.deviceId != deviceId) {
-//         newPasswordData_.push_back(passwordData);
-//      }
-//   }
-//   newKeyRank_ = oldKeyRank_;
-//   newKeyRank_.second -= 1;
+   newPasswordData_.clear();
+   for (const auto &passwordData : oldPasswordData_) {
+      auto deviceInfo = AutheIDClient::getDeviceInfo(passwordData.encKey.toBinStr());
+      if (deviceInfo.deviceId != deviceId) {
+         newPasswordData_.push_back(passwordData);
+      }
+   }
+   newKeyRank_ = walletInfo_.keyRank();
+   newKeyRank_.second -= 1;
 
-//   if (newKeyRank_.first != 1) {
-//      // Something went wrong. Only 1-on-N scheme is supported
-//      logger_->critical("ManageEncryptionDialog: newKeyRank.first != 1");
-//      return;
-//   }
+   if (newKeyRank_.first != 1) {
+      // Something went wrong. Only 1-on-N scheme is supported
+      logger_->critical("ManageEncryptionDialog: newKeyRank.first != 1");
+      return;
+   }
 
-//   if (newKeyRank_.second != newPasswordData_.size()) {
-//      // Something went wrong
-//      logger_->critical("internal error: oldKeyRank_.second != newPasswordData.size()");
-//      return;
-//   }
+   if (newKeyRank_.second != newPasswordData_.size()) {
+      // Something went wrong
+      logger_->critical("internal error: oldKeyRank_.second != newPasswordData.size()");
+      return;
+   }
 
-//   if (newPasswordData_.size() == oldPasswordData_.size()) {
-//      // Something went wrong
-//      logger_->critical("internal error: newPasswordData.size() == oldPasswordData_.size()");
-//      return;
-//   }
+   if (newPasswordData_.size() == oldPasswordData_.size()) {
+      // Something went wrong
+      logger_->critical("internal error: newPasswordData.size() == oldPasswordData_.size()");
+      return;
+   }
 
-//   if (newKeyRank_.second == 0) {
-//      BSMessageBox(BSMessageBox::critical, tr("Error")
-//         , tr("Cannot remove last device. Please switch to password encryption instead."), this).exec();
-//      return;
-//   }
+   if (newKeyRank_.second == 0) {
+      BSMessageBox(BSMessageBox::critical, tr("Error")
+         , tr("Cannot remove last device. Please switch to password encryption instead."), this).exec();
+      return;
+   }
 
-//   EnterWalletPassword enterWalletPassword(AutheIDClient::DeactivateWalletDevice, this);
-//   enterWalletPassword.init(wallet_->getWalletId(), newKeyRank_
-//      , newPasswordData_, appSettings_, tr("Deactivate device"));
-//   int result = enterWalletPassword.exec();
-//   if (result != QDialog::Accepted) {
-//      return;
-//   }
+   EnterWalletPassword enterWalletPassword(AutheIDClient::DeactivateWalletDevice, this);
+   enterWalletPassword.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog,tr("Deactivate device"), logger_);
+   int result = enterWalletPassword.exec();
+   if (result != QDialog::Accepted) {
+      return;
+   }
 
-//   oldKey_ = enterWalletPassword.getPassword();
-//   removeOld_ = true;
+   oldKey_ = enterWalletPassword.resultingKey();
+   removeOld_ = true;
 
-//   changePassword();
+   changePassword();
 }
 
 void ManageEncryptionDialog::onTabChanged(int index)
