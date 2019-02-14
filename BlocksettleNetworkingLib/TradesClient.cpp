@@ -88,16 +88,11 @@ const std::vector<DataPointsLocal::DataPoint *> TradesClient::getRawPointDataArr
 
 TradesClient::ProductType TradesClient::getProductType(const QString &product) const
 {
-   auto found = std::find(PRODUCT_TYPES.begin()
-                          , PRODUCT_TYPES.end()
-                          , [key = product.toStdString()]
-                          (const std::pair<std::string, TradesClient::ProductType> &item) {
-      item.first == key;
-   });
-   if (found != PRODUCT_TYPES.end()) {
-      return found->second;
+   auto found = PRODUCT_TYPES.find(product.toStdString());
+   if (found == PRODUCT_TYPES.end()) {
+      return TradesClient::ProductTypeUnknown;
    } else {
-      return ProductTypeUnknown;
+      return found->second;
    }
 }
 

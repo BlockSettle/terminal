@@ -155,25 +155,13 @@ void ChartWidget::updateChart(int interval)
    maxPrice += margin;
    minPrice = qMax(minPrice, 0.0);
 
-   /*qreal zoomFactor = 2.0;
-   setZoomFactor(zoomFactor);*/
-
-   /*QString width;
-   int w = qCeil(qMax(qMax(qAbs(maxPrice), qAbs(minPrice)), maxVolume));
-   int precise = 4;
-   if (w > 1) {
-      width = QString::number(QString::number(w).length() + precise + 2);
-   }
-   QString labelTemplate = QStringLiteral("%0") + QStringLiteral("%1.%2f")
-         .arg(width)
-         .arg(precise);*/
-
    ui_->customPlot->rescaleAxes();
    qreal size = intervalWidth(interval, 100);
    qreal upper = maxTimestamp + 0.8 * intervalWidth(interval) / 2;
    ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
    volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
    ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
+   ui_->customPlot->yAxis2->setNumberPrecision(fractionSizeForProduct(product));
    ui_->customPlot->replot();
 }
 
@@ -312,8 +300,7 @@ int ChartWidget::fractionSizeForProduct(const QString &product) const
 // Handles changes of date range.
 void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
-   auto interval = static_cast<DataPointsLocal::Interval>(id);
-   updateChart(interval);
+   updateChart(id);
 }
 
 void ChartWidget::onInstrumentChanged(const QString &text) {
@@ -386,6 +373,7 @@ void ChartWidget::initializeCustomPlot()
    ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->setTickLabelColor(FOREGROUND_COLOR);
    ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->setTickLength(0, 8);
    ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->setSubTickLength(0, 4);
+   ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->setNumberFormat(QStringLiteral("f"));
    ui_->customPlot->axisRect()->axis(QCPAxis::atBottom)->grid()->setPen(Qt::NoPen);
 
    // create bottom axis rect for volume bar chart:
@@ -414,6 +402,7 @@ void ChartWidget::initializeCustomPlot()
    volumeAxisRect_->axis(QCPAxis::atRight)->setTickLength(0, 8);
    volumeAxisRect_->axis(QCPAxis::atRight)->setSubTickLength(0, 4);
    volumeAxisRect_->axis(QCPAxis::atRight)->ticker()->setTickCount(1);
+   volumeAxisRect_->axis(QCPAxis::atRight)->setTickLabelFont(ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->labelFont());
 
    volumeAxisRect_->axis(QCPAxis::atBottom)->setBasePen(QPen(FOREGROUND_COLOR));
    volumeAxisRect_->axis(QCPAxis::atBottom)->setTickPen(QPen(FOREGROUND_COLOR));
