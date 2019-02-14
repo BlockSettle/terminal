@@ -18,7 +18,10 @@ class ChatUserCategoryListViewStyle : public QWidget
 public:
    inline explicit ChatUserCategoryListViewStyle(QWidget *parent)
       : QWidget(parent), _colorUserOnline(Qt::white), _colorIncomingFriendRequest(Qt::white),
-        _colorUserDefault(Qt::white) {}
+        _colorUserDefault(Qt::white) 
+   {
+      setVisible(false);
+   }
 
    QColor colorUserOnline() const { return _colorUserOnline; }
    void setColorUserOnline(const QColor &colorUserOnline) {
