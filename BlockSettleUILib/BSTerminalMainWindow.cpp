@@ -994,12 +994,12 @@ void BSTerminalMainWindow::onReadyToLogin()
    LoginWindow loginDialog(applicationSettings_, logMgr_->logger("autheID"), this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
-#ifdef PRODUCTION_BUILD
       currentUserLogin_ = loginDialog.getUsername();
       auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
-      setLoginButtonText(currentUserLogin_ /*+ QString::fromStdString("( Chat user: " + id + " )")*/);
-#else
-     loginToCeler(loginDialog.getUsername().toStdString()
+      setLoginButtonText(currentUserLogin_);
+
+#ifndef PRODUCTION_BUILD
+      loginToCeler(loginDialog.getUsername().toStdString()
             , "Welcome1234");
 #endif
    }
@@ -1010,12 +1010,10 @@ void BSTerminalMainWindow::onLogout()
    ui->widgetWallets->setUsername(QString());
    ui->widgetChat->logout();
 
-   if (celerConnection_->IsConnected())
-   {
+   if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();
    }
-   else
-   {
+   else {
        setLoginButtonText(loginButtonText_);
    }
 }
