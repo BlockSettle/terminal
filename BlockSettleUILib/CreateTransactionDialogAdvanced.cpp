@@ -336,30 +336,8 @@ void CreateTransactionDialogAdvanced::initUI()
    ui_->treeViewOutputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
    // QModelIndex isn't used. We should use it or lose it.
-   connect(outputsModel_, &TransactionOutputsModel::rowsInserted, [this](const QModelIndex &parent, int first, int last)
-   {
-      for (int i = first; i <= last; i++) {
-         auto index = outputsModel_->index(i, 2);
-         auto outputId = outputsModel_->GetOutputId(i);
-
-         auto button = new QPushButton();
-         button->setFixedSize(30, 16);
-         button->setContentsMargins(0, 0, 0, 0);
-
-         button->setIcon(UiUtils::icon(0xeaf1, QVariantMap{
-            { QLatin1String{ "color" }, QColor{ Qt::white } }
-         }));
-
-         ui_->treeViewOutputs->setIndexWidget(index, button);
-
-         connect(button, &QPushButton::clicked, [this, outputId]()
-            {
-               RemoveOutputByRow(outputsModel_->GetRowById(outputId));
-            });
-      }
-   });
-   connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last)
-   {
+   connect(outputsModel_, &TransactionOutputsModel::rowsInserted, this, &CreateTransactionDialogAdvanced::onOutputsInserted);
+   connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last) {
       onOutputRemoved();
    });
 
@@ -519,6 +497,34 @@ QLabel* CreateTransactionDialogAdvanced::feePerByteLabel() const
 QLabel* CreateTransactionDialogAdvanced::changeLabel() const
 {
    return ui_->labelReturnAmount;
+}
+
+void CreateTransactionDialogAdvanced::onOutputsInserted(const QModelIndex &, int first, int last)
+{
+   for (int i = first; i <= last; i++) {
+      auto index = outputsModel_->index(i, 2);
+      auto outputId = outputsModel_->GetOutputId(i);
+
+      QPushButton *button = nullptr;
+      if (removeOutputEnabled_) {
+         button = new QPushButton();
+         button->setFixedSize(30, 16);
+         button->setContentsMargins(0, 0, 0, 0);
+
+         button->setIcon(UiUtils::icon(0xeaf1, QVariantMap{
+            { QLatin1String{ "color" }, QColor{ Qt::white } }
+            }));
+      }
+
+      ui_->treeViewOutputs->setIndexWidget(index, button);
+
+      if (removeOutputEnabled_) {
+         connect(button, &QPushButton::clicked, [this, outputId]()
+         {
+            RemoveOutputByRow(outputsModel_->GetRowById(outputId));
+         });
+      }
+   }
 }
 
 void CreateTransactionDialogAdvanced::showContextMenu(const QPoint &point)
@@ -1018,9 +1024,10 @@ void CreateTransactionDialogAdvanced::disableOutputsEditing()
    ui_->lineEditAmount->setEnabled(false);
    ui_->pushButtonMax->setEnabled(false);
    ui_->pushButtonAddOutput->setEnabled(false);
-   ui_->treeViewOutputs->setEnabled(false);
+   outputsModel_->enableRows(false);
 
    removeOutputEnabled_ = false;
+   onOutputsInserted({}, 0, outputsModel_->rowCount({}) - 1);
 }
 
 void CreateTransactionDialogAdvanced::disableInputSelection()

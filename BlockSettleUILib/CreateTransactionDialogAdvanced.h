@@ -98,6 +98,7 @@ protected slots:
 private slots:
    void updateManualFeeControls();
    void setTxFees();
+   void onOutputsInserted(const QModelIndex &parent, int first, int last);
 
 private:
    void clear() override;
