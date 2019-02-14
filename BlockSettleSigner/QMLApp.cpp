@@ -26,7 +26,6 @@
 #include "QSeed.h"
 #include "QPasswordData.h"
 #include "ZMQHelperFunctions.h"
-#include "btc/ecc.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -133,7 +132,6 @@ void QMLAppObj::walletsLoad()
 
 void QMLAppObj::Start()
 {
-   btc_ecc_start(); // Initialize libbtc.
    initZmqKeys();
 
    trayIcon_->show();

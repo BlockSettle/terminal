@@ -12,6 +12,7 @@
 #include <QDir>
 #include <memory>
 #include <iostream>
+#include <btc/ecc.h>
 #include <spdlog/spdlog.h>
 #include "ArmoryConnection.h"
 #include "HeadlessApp.h"
@@ -329,6 +330,8 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::string>();
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
+
+   btc_ecc_start(); // Initialize libbtc.
 
    if (isHeadlessMode(argc, argv)) {
       return HeadlessApp(argc, argv);
