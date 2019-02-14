@@ -98,7 +98,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QFrame" name="roomsFrame">
+        <widget class="QFrame" name="usersFrame">
          <property name="headerPanel" stdset="0">
           <bool>false</bool>
          </property>
@@ -178,25 +178,48 @@
            </spacer>
           </item>
           <item>
-           <widget class="QTreeView" name="treeViewUsers">
+           <widget class="ChatUserListTreeWidget" name="treeWidgetUsers">
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
+            <property name="horizontalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOff</enum>
+            </property>
             <property name="editTriggers">
              <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+            </property>
+            <property name="textElideMode">
+             <enum>Qt::ElideMiddle</enum>
+            </property>
+            <property name="verticalScrollMode">
+             <enum>QAbstractItemView::ScrollPerPixel</enum>
             </property>
             <property name="indentation">
              <number>10</number>
             </property>
             <property name="rootIsDecorated">
-             <bool>false</bool>
-            </property>
-            <property name="uniformRowHeights">
              <bool>true</bool>
             </property>
-            <property name="itemsExpandable">
+            <property name="uniformRowHeights">
              <bool>false</bool>
+            </property>
+            <property name="itemsExpandable">
+             <bool>true</bool>
+            </property>
+            <property name="animated">
+             <bool>true</bool>
+            </property>
+            <property name="headerHidden">
+             <bool>true</bool>
             </property>
             <property name="expandsOnDoubleClick">
              <bool>true</bool>
             </property>
+            <column>
+             <property name="text">
+              <string notr="true">1</string>
+             </property>
+            </column>
            </widget>
           </item>
           <item>
@@ -306,7 +329,7 @@
                <bool>false</bool>
               </property>
               <attribute name="horizontalHeaderVisible">
-               <bool>true</bool>
+               <bool>false</bool>
               </attribute>
               <attribute name="horizontalHeaderMinimumSectionSize">
                <number>0</number>
@@ -362,12 +385,6 @@
                  <height>84</height>
                 </size>
                </property>
-               <property name="horizontalScrollBarPolicy">
-                <enum>Qt::ScrollBarAlwaysOff</enum>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QAbstractScrollArea::AdjustToContents</enum>
-               </property>
                <property name="placeholderText">
                 <string>TYPE MESSAGE AND SEND</string>
                </property>
@@ -399,7 +416,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QFrame" name="usersFrame">
+        <widget class="QFrame" name="roomsFrame">
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
@@ -470,10 +487,10 @@
              <bool>true</bool>
             </property>
             <property name="headerHidden">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <attribute name="headerVisible">
-             <bool>true</bool>
+             <bool>false</bool>
             </attribute>
            </widget>
           </item>
@@ -487,6 +504,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>ChatUserListTreeWidget</class>
+   <extends>QTreeWidget</extends>
+   <header>ChatUserListTreeWidget.h</header>
+  </customwidget>
   <customwidget>
    <class>ChatSearchLineEdit</class>
    <extends>QLineEdit</extends>

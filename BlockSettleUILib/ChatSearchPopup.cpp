@@ -4,7 +4,6 @@
 #include <QLabel>
 #include <QMenu>
 #include <QAction>
-#include <QtDebug>
 
 ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
    QWidget(parent),
