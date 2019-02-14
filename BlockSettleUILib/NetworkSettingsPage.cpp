@@ -70,12 +70,12 @@ void NetworkSettingsPage::reset()
 
 void NetworkSettingsPage::onArmoryHostChanged()
 {
-   appSettings_->set(ApplicationSettings::armoryDbIp, ui_->armoryDBHostLineEdit->text(), false);
+   appSettings_->set(ApplicationSettings::armoryDbIp, ui_->armoryDBHostLineEdit->text());
 }
 
 void NetworkSettingsPage::onArmoryPortChanged()
 {
-   appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortLineEdit->text(), false);
+   appSettings_->set(ApplicationSettings::armoryDbPort, ui_->armoryDBPortLineEdit->text());
 }
 
 void NetworkSettingsPage::DisplayRunArmorySettings(bool runLocally)
