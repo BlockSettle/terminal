@@ -298,6 +298,21 @@ template<> NetworkType ApplicationSettings::get<NetworkType>(Setting set, bool g
    return static_cast<NetworkType>(result);
 }
 
+ApplicationSettings::State ApplicationSettings::getState() const
+{
+   State result;
+   for (const auto &settingDef : settingDefs_) {
+      result[settingDef.first] = get(settingDef.first);
+   }
+   return result;
+}
+
+void ApplicationSettings::setState(const State &state)
+{
+   for (const auto &setting : state) {
+      set(setting.first, setting.second, false);
+   }
+}
 
 QString ApplicationSettings::GetSettingsPath() const
 {
@@ -504,12 +519,10 @@ int ApplicationSettings::GetDefaultArmoryRemotePort(NetworkType networkType)
    }
 }
 
-QString ApplicationSettings::GetArmoryRemotePort(bool getDefault, NetworkType networkType) const
+QString ApplicationSettings::GetArmoryRemotePort(NetworkType networkType) const
 {
    QString port;
-   if (!getDefault) {
-      port = get<QString>(ApplicationSettings::armoryDbPort);
-   }
+   port = get<QString>(ApplicationSettings::armoryDbPort);
    if (port.isEmpty()) {
       port = QString::number(GetDefaultArmoryRemotePort(
          (networkType == NetworkType::Invalid) ? get<NetworkType>(netType) : networkType));
@@ -598,13 +611,11 @@ std::vector<std::pair<std::string, unsigned int>>  ApplicationSettings::Unfinish
    return result;
 }
 
-std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig(bool getDefaultValue) const
+std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig() const
 {
    std::vector<bs::LogConfig> result;
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault,
-      getDefaultValue)));
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages,
-      getDefaultValue)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages)));
    return result;
 }
 

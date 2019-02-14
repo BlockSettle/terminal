@@ -16,7 +16,7 @@ enum RunModeIndex {
 
 
 SignerSettingsPage::SignerSettingsPage(QWidget* parent)
-   : QWidget{parent}
+   : SettingsPage{parent}
    , ui_{new Ui::SignerSettingsPage{}}
 {
    ui_->setupUi(this);
@@ -38,7 +38,7 @@ SignerSettingsPage::~SignerSettingsPage() = default;
 
 void SignerSettingsPage::runModeChanged(int index)
 {
-   onModeChanged(index, false);
+   onModeChanged(index);
 }
 
 void SignerSettingsPage::onOfflineDirSel()
@@ -73,24 +73,24 @@ void SignerSettingsPage::onZmqPubKeySel()
    ui_->lineEditZmqKeyPath->setText(file);
 }
 
-void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
+void SignerSettingsPage::onModeChanged(int index)
 {
    switch (static_cast<RunModeIndex>(index)) {
    case Local:
       showHost(false);
       showPort(true);
-      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort, displayDefault));
+      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
       showZmqPubKey(false);
       showOfflineDir(false);
       showLimits(true);
-      ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit, displayDefault));
+      ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
       break;
 
    case Remote:
       showHost(true);
-      ui_->lineEditHost->setText(appSettings_->get<QString>(ApplicationSettings::signerHost, displayDefault));
+      ui_->lineEditHost->setText(appSettings_->get<QString>(ApplicationSettings::signerHost));
       showPort(true);
-      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort, displayDefault));
+      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
       showZmqPubKey(true);
       ui_->lineEditRemoteZmqPubKey->setText(appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey));
       showOfflineDir(false);
@@ -102,7 +102,7 @@ void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
       showPort(false);
       showZmqPubKey(false);
       showOfflineDir(true);
-      ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir, displayDefault));
+      ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
       showLimits(false);
       break;
 
@@ -110,16 +110,21 @@ void SignerSettingsPage::onModeChanged(int index, bool displayDefault)
    }
 }
 
-void SignerSettingsPage::setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings)
+void SignerSettingsPage::display()
 {
-   appSettings_ = appSettings;
+   const auto modeIndex = appSettings_->get<int>(ApplicationSettings::signerRunMode) - 1;
+   onModeChanged(modeIndex);
+   ui_->comboBoxRunMode->setCurrentIndex(modeIndex);
 }
 
-void SignerSettingsPage::displaySettings(bool displayDefault)
+void SignerSettingsPage::reset()
 {
-   const auto modeIndex = appSettings_->get<int>(ApplicationSettings::signerRunMode, displayDefault) - 1;
-   onModeChanged(modeIndex, displayDefault);
-   ui_->comboBoxRunMode->setCurrentIndex(modeIndex);
+   for (const auto &setting : {ApplicationSettings::signerRunMode, ApplicationSettings::signerHost
+      , ApplicationSettings::signerPort, ApplicationSettings::signerOfflineDir
+      , ApplicationSettings::zmqRemoteSignerPubKey, ApplicationSettings::autoSignSpendLimit}) {
+      appSettings_->reset(setting, false);
+   }
+   display();
 }
 
 void SignerSettingsPage::showHost(bool show)
@@ -165,7 +170,7 @@ void SignerSettingsPage::onAsSpendLimitChanged(double value)
    }
 }
 
-void SignerSettingsPage::applyChanges()
+void SignerSettingsPage::apply()
 {
    switch (static_cast<RunModeIndex>(ui_->comboBoxRunMode->currentIndex())) {
    case Local:

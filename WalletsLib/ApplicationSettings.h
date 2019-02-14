@@ -12,6 +12,7 @@
 #include "EncryptUtils.h"
 #include "LogManager.h"
 
+
 class ApplicationSettings : public QObject
 {
    Q_OBJECT
@@ -120,12 +121,15 @@ public:
    void set(Setting s, const QVariant &val, bool toFile=true);
    void reset(Setting s, bool toFile=true);     // Reset setting to default value
 
+   using State = std::unordered_map<Setting, QVariant>;
+   State getState() const;
+   void setState(const State &);
+
    void SetDefaultSettings(bool toFile=false);                   // reset all settings to default
 
    static int GetDefaultArmoryLocalPort(NetworkType networkType);
    static int GetDefaultArmoryRemotePort(NetworkType networkType);
-   QString GetArmoryRemotePort(bool getDefaultValue = false
-      , NetworkType networkType = NetworkType::Invalid) const;
+   QString GetArmoryRemotePort(NetworkType networkType = NetworkType::Invalid) const;
 
    QString GetSettingsPath() const;
 
@@ -134,7 +138,7 @@ public:
 
    ArmorySettings GetArmorySettings() const;
 
-   std::vector<bs::LogConfig> GetLogsConfig(bool getDefaultValue = false) const;
+   std::vector<bs::LogConfig> GetLogsConfig() const;
 
    unsigned int GetWalletScanIndex(const std::string &id) const;
    void SetWalletScanIndex(const std::string &id, unsigned int index);
