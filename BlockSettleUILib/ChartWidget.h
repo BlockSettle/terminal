@@ -80,11 +80,11 @@ private:
     QValueAxis *priceYAxis_;
     QValueAxis *volumeYAxis_;
 
-    QCPTextElement *title;
-    QCPTextElement *info;
-    QCPFinancial *candlesticksChart;
-    QCPBars *volumeChart;
-    QCPAxisRect *volumeAxisRect;
+    QCPTextElement *title_;
+    QCPTextElement *info_;
+    QCPFinancial *candlesticksChart_;
+    QCPBars *volumeChart_;
+    QCPAxisRect *volumeAxisRect_;
 };
 
 #endif // CHARTWIDGET_H

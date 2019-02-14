@@ -22,11 +22,11 @@ ChartWidget::ChartWidget(QWidget *parent)
    , volumeSeries_(nullptr)
    , priceYAxis_(nullptr)
    , volumeYAxis_(nullptr)
-   , title(nullptr)
-   , info(nullptr)
-   , candlesticksChart(nullptr)
-   , volumeChart(nullptr)
-   , volumeAxisRect(nullptr) {
+   , title_(nullptr)
+   , info_(nullptr)
+   , candlesticksChart_(nullptr)
+   , volumeChart_(nullptr)
+   , volumeAxisRect_(nullptr) {
    ui_->setupUi(this);
 
    // setting up date range radio button group
@@ -39,22 +39,22 @@ ChartWidget::ChartWidget(QWidget *parent)
    dateRange_.addButton(ui_->btn6m, DataPointsLocal::Interval::SixMonths);
    dateRange_.addButton(ui_->btn1y, DataPointsLocal::Interval::OneYear);
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked),
-      this, &ChartWidget::onDateRangeChanged);
+           this, &ChartWidget::onDateRangeChanged);
 
    // these signals are used to sync volume chart with price chart
    // when scrolling and zooming
    /*connect(ui_->viewPrice, &CustomChartView::chartZoomed,
       ui_->viewVolume, &CustomChartView::onChartZoomed);*/
    connect(ui_->viewPrice, &CustomChartView::chartScrolled,
-      ui_->viewVolume, &CustomChartView::onChartScrolled);
+           ui_->viewVolume, &CustomChartView::onChartScrolled);
    connect(ui_->viewPrice, &CustomChartView::chartZoomReset,
-      ui_->viewVolume, &CustomChartView::onChartZoomReset);
+           ui_->viewVolume, &CustomChartView::onChartZoomReset);
    // drag and zoom is enabled only for the price chart
    ui_->viewPrice->enableDrag(true);
-//   ui_->viewPrice->enableZoom(true);
+   //   ui_->viewPrice->enableZoom(true);
 
    connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
-      this, &ChartWidget::onInstrumentChanged);
+           this, &ChartWidget::onInstrumentChanged);
 
    // sort model for instruments combo box
    cboModel_ = new QStandardItemModel(this);
@@ -103,7 +103,7 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, client_.get(), &TradesClient::onMDUpdated);
 
    // populate charts with data
-//   buildCandleChart();
+   //   buildCandleChart();
    ui_->viewPrice->chart()->addSeries(priceSeries_);
    ui_->viewVolume->chart()->addSeries(volumeSeries_);
    // style the charts
@@ -207,12 +207,12 @@ void ChartWidget::setupTimeAxis(QBarCategoryAxis *axis, bool labelsVisible, int 
    case DataPointsLocal::Interval::OneMonth:
    case DataPointsLocal::Interval::OneWeek:
    case DataPointsLocal::Interval::TwentyFourHours:
-//      axis->setFormat(tr("d-M-yy"));
+      //      axis->setFormat(tr("d-M-yy"));
       break;
    case DataPointsLocal::Interval::TwelveHours:
    case DataPointsLocal::Interval::SixHours:
    case DataPointsLocal::Interval::OneHour:
-//      axis->setFormat(tr("d-M-yy H:m"));
+      //      axis->setFormat(tr("d-M-yy H:m"));
       break;
    default:
       break;
@@ -222,7 +222,7 @@ void ChartWidget::setupTimeAxis(QBarCategoryAxis *axis, bool labelsVisible, int 
    axis->setGridLineVisible(false);
    axis->setMinorGridLineVisible(false);
    axis->setLabelsColor(QColor(Qt::white));
-//   axis->setTickCount(10);
+   //   axis->setTickCount(10);
    axis->setLabelsVisible(labelsVisible);
    // add space offset to the x axis
    // this code will eventually have to be moved to data range handler function
@@ -232,9 +232,9 @@ void ChartWidget::setupTimeAxis(QBarCategoryAxis *axis, bool labelsVisible, int 
 }
 
 QValueAxis *ChartWidget::createValueAxis(QCandlestickSeries *series
-                                          , const QString &labelFormat
-                                          , qreal maxValue
-                                          , qreal minValue)
+                                         , const QString &labelFormat
+                                         , qreal maxValue
+                                         , qreal minValue)
 {
    qDebug() << "Create axis for" << series << labelFormat << maxValue << minValue;
    QValueAxis *axis = new QValueAxis;
@@ -291,7 +291,7 @@ void ChartWidget::buildCandleChart(int interval) {
 
    auto product = ui_->cboInstruments->currentText();
    if (product.isEmpty()) {
-       product = QStringLiteral("EUR/GBP");
+      product = QStringLiteral("EUR/GBP");
    }
    auto rawData = client_->getRawPointDataArray(product
                                                 , static_cast<DataPointsLocal::Interval>(interval));
@@ -356,18 +356,19 @@ void ChartWidget::updateChart(int interval)
 {
    auto product = ui_->cboInstruments->currentText();
    if (product.isEmpty()) {
-       product = QStringLiteral("EUR/GBP");
+      product = QStringLiteral("EUR/GBP");
    }
-   if (title) {
-      title->setText(product);
+   if (title_) {
+      title_->setText(product);
    }
-   if (!candlesticksChart || !volumeChart) {
+   if (!candlesticksChart_ || !volumeChart_) {
       return;
    }
-   candlesticksChart->data()->clear();
-   volumeChart->data()->clear();
-   candlesticksChart->setWidth(0.9 * intervalLength(interval));
-   volumeChart->setWidth(0.9 * intervalLength(interval));
+   candlesticksChart_->data()->clear();
+   volumeChart_->data()->clear();
+   qreal width = 0.9 * intervalLength(interval);
+   candlesticksChart_->setWidth(width);
+   volumeChart_->setWidth(width);
 
    auto rawData = client_->getRawPointDataArray(product
                                                 , static_cast<DataPointsLocal::Interval>(interval));
@@ -408,8 +409,8 @@ void ChartWidget::updateChart(int interval)
          .arg(width)
          .arg(precise);*/
 
-//   ui_->customPlot->axisRect()->axis(QCPAxis::atRight)
-//   volumeAxisRect->axis(QCPAxis::atRight)
+   //   ui_->customPlot->axisRect()->axis(QCPAxis::atRight)
+   //   volumeAxisRect->axis(QCPAxis::atRight)
    /*updatePriceValueAxis(labelTemplate, maxPrice, minPrice);
    updateVolumeValueAxis(labelTemplate, maxVolume);*/
 
@@ -422,11 +423,11 @@ void ChartWidget::updateChart(int interval)
 void ChartWidget::addDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume) {
    priceSeries_->append(new CustomCandlestickSet(open, high, low, close, volume, timestamp, priceSeries_));
    volumeSeries_->append(new QCandlestickSet(0.0, volume, 0.0, volume, timestamp, volumeSeries_));
-   if (candlesticksChart) {
-      candlesticksChart->data()->add(QCPFinancialData(timestamp / 1000, open, high, low, close));
+   if (candlesticksChart_) {
+      candlesticksChart_->data()->add(QCPFinancialData(timestamp / 1000, open, high, low, close));
    }
-   if (volumeChart) {
-      volumeChart->data()->add(QCPBarsData(timestamp / 1000, volume));
+   if (volumeChart_) {
+      volumeChart_->data()->add(QCPBarsData(timestamp / 1000, volume));
    }
 }
 
@@ -494,7 +495,7 @@ void ChartWidget::setZoomFactor(qreal factor)
 QString ChartWidget::barLabel(qreal timestamp, int interval) const
 {
    QDateTime time = QDateTime::fromMSecsSinceEpoch(timestamp).toUTC();
-//   return time.toString(Qt::ISODate);
+   //   return time.toString(Qt::ISODate);
    switch (static_cast<DataPointsLocal::Interval>(interval)) {
    case DataPointsLocal::OneYear:
       return time.toString(QStringLiteral("yy"));
@@ -547,7 +548,7 @@ void ChartWidget::onDateRangeChanged(int id) {
    qDebug() << "clicked" << id;
    auto interval = static_cast<DataPointsLocal::Interval>(id);
 
-//   buildCandleChart(interval);
+   //   buildCandleChart(interval);
    updateChart(interval);
 }
 
@@ -557,11 +558,11 @@ void ChartWidget::onPriceHover(bool status, QCandlestickSet *set) {
       if (set) {
          auto customSet = qobject_cast<CustomCandlestickSet *>(set);
          dataItemText_->setPlainText(QString(tr("O: %1   H: %2   L: %3   C: %4   Volume: %5")
-            .arg(customSet->open(), 0, 'g', -1)
-            .arg(customSet->high(), 0, 'g', -1)
-            .arg(customSet->low(), 0, 'g', -1)
-            .arg(customSet->close(), 0, 'g', -1)
-            .arg(customSet->volume(), 0, 'g', -1)));
+                                             .arg(customSet->open(), 0, 'g', -1)
+                                             .arg(customSet->high(), 0, 'g', -1)
+                                             .arg(customSet->low(), 0, 'g', -1)
+                                             .arg(customSet->close(), 0, 'g', -1)
+                                             .arg(customSet->volume(), 0, 'g', -1)));
       }
    }
    else {
@@ -572,38 +573,36 @@ void ChartWidget::onPriceHover(bool status, QCandlestickSet *set) {
 void ChartWidget::onInstrumentChanged(const QString &text) {
    ui_->viewPrice->chart()->setTitle(text);
 
-//   buildCandleChart(dateRange_.checkedId());
+   //   buildCandleChart(dateRange_.checkedId());
    updateChart(dateRange_.checkedId());
 }
 
 void ChartWidget::onPlotMouseMove(QMouseEvent *event)
 {
-   if (!info) {
+   if (!info_) {
       return;
    }
    auto plottable = ui_->customPlot->plottableAt(event->localPos());
    if (plottable) {
-      auto priceChart = qobject_cast<QCPFinancial *>(plottable);
-      if (priceChart) {
-         double timestamp = ui_->customPlot->xAxis->pixelToCoord(event->localPos().x());
-         auto date = QDateTime::fromMSecsSinceEpoch(timestamp * 1000).toUTC();
-         auto ohlcValue = *candlesticksChart->data()->findBegin(timestamp);
-         auto volumeValue = *volumeChart->data()->findBegin(timestamp);
-         qDebug() << "Position:" << event->pos() << event->localPos()
-                  << "Item at:"  << QString::number(timestamp, 'f') << date
-                  << ohlcValue.key << ohlcValue.open << ohlcValue.high
-                  << ohlcValue.low << ohlcValue.close << volumeValue.value;
-         info->setText(tr("O: %1   H: %2   L: %3   C: %4   Volume: %5")
-                       .arg(ohlcValue.open, 0, 'g', -1)
-                       .arg(ohlcValue.high, 0, 'g', -1)
-                       .arg(ohlcValue.low, 0, 'g', -1)
-                       .arg(ohlcValue.close, 0, 'g', -1)
-                       .arg( volumeValue.value, 0, 'g', -1));
-         ui_->customPlot->replot();
-         return;
-      }
+      double x = event->localPos().x();
+      double width = 0.9 * intervalLength(dateRange_.checkedId());
+      double timestamp = ui_->customPlot->xAxis->pixelToCoord(x) + width / 2;
+      auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp);
+      auto volumeValue = *volumeChart_->data()->findBegin(timestamp);
+      /*auto date = QDateTime::fromMSecsSinceEpoch(timestamp * 1000).toUTC();
+      qDebug() << "Position:" << event->pos() << event->localPos()
+               << "Item at:"  << QString::number(timestamp, 'f') << date
+               << ohlcValue.key << ohlcValue.open << ohlcValue.high
+               << ohlcValue.low << ohlcValue.close << volumeValue.value;*/
+      info_->setText(tr("O: %1   H: %2   L: %3   C: %4   Volume: %5")
+                     .arg(ohlcValue.open, 0, 'g', -1)
+                     .arg(ohlcValue.high, 0, 'g', -1)
+                     .arg(ohlcValue.low, 0, 'g', -1)
+                     .arg(ohlcValue.close, 0, 'g', -1)
+                     .arg( volumeValue.value, 0, 'g', -1));
+   } else {
+      info_->setText({});
    }
-   info->setText({});
    ui_->customPlot->replot();
 }
 
@@ -613,28 +612,28 @@ void ChartWidget::initializeCustomPlot()
    ui_->customPlot->setBackground(bgBrush);
 
    //add title
-   title = new QCPTextElement(ui_->customPlot);
-   title->setTextColor(FOREGROUND_COLOR);
-   title->setFont(QFont(QStringLiteral("sans"), 12));
+   title_ = new QCPTextElement(ui_->customPlot);
+   title_->setTextColor(FOREGROUND_COLOR);
+   title_->setFont(QFont(QStringLiteral("sans"), 12));
    ui_->customPlot->plotLayout()->insertRow(0);
-   ui_->customPlot->plotLayout()->addElement(0, 0, title);
+   ui_->customPlot->plotLayout()->addElement(0, 0, title_);
    //add info
-   info = new QCPTextElement(ui_->customPlot);
-   info->setTextColor(FOREGROUND_COLOR);
-   info->setFont(QFont(QStringLiteral("sans"), 10));
-   info->setTextFlags(Qt::AlignLeft | Qt::AlignVCenter);
+   info_ = new QCPTextElement(ui_->customPlot);
+   info_->setTextColor(FOREGROUND_COLOR);
+   info_->setFont(QFont(QStringLiteral("sans"), 10));
+   info_->setTextFlags(Qt::AlignLeft | Qt::AlignVCenter);
    ui_->customPlot->plotLayout()->insertRow(1);
-   ui_->customPlot->plotLayout()->addElement(1, 0, info);
+   ui_->customPlot->plotLayout()->addElement(1, 0, info_);
 
    // create candlestick chart:
-   candlesticksChart = new QCPFinancial(ui_->customPlot->xAxis, ui_->customPlot->yAxis2);
-   candlesticksChart->setName(tr("Candlestick"));
-   candlesticksChart->setChartStyle(QCPFinancial::csCandlestick);
-   candlesticksChart->setTwoColored(true);
-   candlesticksChart->setBrushPositive(c_greenColor);
-   candlesticksChart->setBrushNegative(c_redColor);
-   candlesticksChart->setPenPositive(QPen(c_greenColor));
-   candlesticksChart->setPenNegative(QPen(c_redColor));
+   candlesticksChart_ = new QCPFinancial(ui_->customPlot->xAxis, ui_->customPlot->yAxis2);
+   candlesticksChart_->setName(tr("Candlestick"));
+   candlesticksChart_->setChartStyle(QCPFinancial::csCandlestick);
+   candlesticksChart_->setTwoColored(true);
+   candlesticksChart_->setBrushPositive(c_greenColor);
+   candlesticksChart_->setBrushNegative(c_redColor);
+   candlesticksChart_->setPenPositive(QPen(c_greenColor));
+   candlesticksChart_->setPenNegative(QPen(c_redColor));
 
    ui_->customPlot->axisRect()->axis(QCPAxis::atLeft)->setVisible(false);
    ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->setVisible(true);
@@ -647,52 +646,52 @@ void ChartWidget::initializeCustomPlot()
    ui_->customPlot->axisRect()->axis(QCPAxis::atBottom)->grid()->setPen(Qt::NoPen);
 
    // create bottom axis rect for volume bar chart:
-   volumeAxisRect = new QCPAxisRect(ui_->customPlot);
-   ui_->customPlot->plotLayout()->addElement(3, 0, volumeAxisRect);
-   volumeAxisRect->setMaximumSize(QSize(QWIDGETSIZE_MAX, 100));
-   volumeAxisRect->axis(QCPAxis::atBottom)->setLayer(QStringLiteral("axes"));
-   volumeAxisRect->axis(QCPAxis::atBottom)->grid()->setLayer(QStringLiteral("grid"));
+   volumeAxisRect_ = new QCPAxisRect(ui_->customPlot);
+   ui_->customPlot->plotLayout()->addElement(3, 0, volumeAxisRect_);
+   volumeAxisRect_->setMaximumSize(QSize(QWIDGETSIZE_MAX, 100));
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setLayer(QStringLiteral("axes"));
+   volumeAxisRect_->axis(QCPAxis::atBottom)->grid()->setLayer(QStringLiteral("grid"));
    // bring bottom and main axis rect closer together:
    ui_->customPlot->plotLayout()->setRowSpacing(0);
-   volumeAxisRect->setAutoMargins(QCP::msLeft|QCP::msRight|QCP::msBottom);
-   volumeAxisRect->setMargins(QMargins(0, 0, 0, 0));
+   volumeAxisRect_->setAutoMargins(QCP::msLeft|QCP::msRight|QCP::msBottom);
+   volumeAxisRect_->setMargins(QMargins(0, 0, 0, 0));
    // create two bar plottables, for positive (green) and negative (red) volume bars:
    ui_->customPlot->setAutoAddPlottableToLegend(false);
 
-   volumeChart = new QCPBars(volumeAxisRect->axis(QCPAxis::atBottom), volumeAxisRect->axis(QCPAxis::atRight));
-   volumeChart->setPen(QPen(VOLUME_COLOR));
-   volumeChart->setBrush(VOLUME_COLOR);
+   volumeChart_ = new QCPBars(volumeAxisRect_->axis(QCPAxis::atBottom), volumeAxisRect_->axis(QCPAxis::atRight));
+   volumeChart_->setPen(QPen(VOLUME_COLOR));
+   volumeChart_->setBrush(VOLUME_COLOR);
 
-   volumeAxisRect->axis(QCPAxis::atLeft)->setVisible(false);
-   volumeAxisRect->axis(QCPAxis::atRight)->setVisible(true);
-   volumeAxisRect->axis(QCPAxis::atRight)->setBasePen(QPen(FOREGROUND_COLOR));
-   volumeAxisRect->axis(QCPAxis::atRight)->setTickPen(QPen(FOREGROUND_COLOR));
-   volumeAxisRect->axis(QCPAxis::atRight)->setSubTickPen(QPen(FOREGROUND_COLOR));
-   volumeAxisRect->axis(QCPAxis::atRight)->setTickLabelColor(FOREGROUND_COLOR);
-   volumeAxisRect->axis(QCPAxis::atRight)->setTickLength(0, 8);
-   volumeAxisRect->axis(QCPAxis::atRight)->setSubTickLength(0, 4);
-   volumeAxisRect->axis(QCPAxis::atRight)->ticker()->setTickCount(1);
+   volumeAxisRect_->axis(QCPAxis::atLeft)->setVisible(false);
+   volumeAxisRect_->axis(QCPAxis::atRight)->setVisible(true);
+   volumeAxisRect_->axis(QCPAxis::atRight)->setBasePen(QPen(FOREGROUND_COLOR));
+   volumeAxisRect_->axis(QCPAxis::atRight)->setTickPen(QPen(FOREGROUND_COLOR));
+   volumeAxisRect_->axis(QCPAxis::atRight)->setSubTickPen(QPen(FOREGROUND_COLOR));
+   volumeAxisRect_->axis(QCPAxis::atRight)->setTickLabelColor(FOREGROUND_COLOR);
+   volumeAxisRect_->axis(QCPAxis::atRight)->setTickLength(0, 8);
+   volumeAxisRect_->axis(QCPAxis::atRight)->setSubTickLength(0, 4);
+   volumeAxisRect_->axis(QCPAxis::atRight)->ticker()->setTickCount(1);
 
-   volumeAxisRect->axis(QCPAxis::atBottom)->setBasePen(QPen(FOREGROUND_COLOR));
-   volumeAxisRect->axis(QCPAxis::atBottom)->setTickPen(QPen(FOREGROUND_COLOR));
-   volumeAxisRect->axis(QCPAxis::atBottom)->setSubTickPen(QPen(FOREGROUND_COLOR));
-   volumeAxisRect->axis(QCPAxis::atBottom)->setTickLength(0, 8);
-   volumeAxisRect->axis(QCPAxis::atBottom)->setSubTickLength(0, 4);
-   volumeAxisRect->axis(QCPAxis::atBottom)->setTickLabelColor(FOREGROUND_COLOR);
-   volumeAxisRect->axis(QCPAxis::atBottom)->grid()->setPen(Qt::NoPen);
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setBasePen(QPen(FOREGROUND_COLOR));
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setTickPen(QPen(FOREGROUND_COLOR));
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setSubTickPen(QPen(FOREGROUND_COLOR));
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setTickLength(0, 8);
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setSubTickLength(0, 4);
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setTickLabelColor(FOREGROUND_COLOR);
+   volumeAxisRect_->axis(QCPAxis::atBottom)->grid()->setPen(Qt::NoPen);
 
    // interconnect x axis ranges of main and bottom axis rects:
    connect(ui_->customPlot->xAxis, SIGNAL(rangeChanged(QCPRange))
-           , volumeAxisRect->axis(QCPAxis::atBottom), SLOT(setRange(QCPRange)));
-   connect(volumeAxisRect->axis(QCPAxis::atBottom), SIGNAL(rangeChanged(QCPRange))
+           , volumeAxisRect_->axis(QCPAxis::atBottom), SLOT(setRange(QCPRange)));
+   connect(volumeAxisRect_->axis(QCPAxis::atBottom), SIGNAL(rangeChanged(QCPRange))
            , ui_->customPlot->xAxis, SLOT(setRange(QCPRange)));
    // configure axes of both main and bottom axis rect:
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker(new QCPAxisTickerDateTime);
    dateTimeTicker->setDateTimeSpec(Qt::UTC);
    dateTimeTicker->setDateTimeFormat(QStringLiteral("dd/MM/yy\nHH:mm"));
    dateTimeTicker->setTickCount(20);
-   volumeAxisRect->axis(QCPAxis::atBottom)->setTicker(dateTimeTicker);
-   volumeAxisRect->axis(QCPAxis::atBottom)->setTickLabelRotation(15);
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setTicker(dateTimeTicker);
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setTickLabelRotation(15);
    ui_->customPlot->xAxis->setBasePen(Qt::NoPen);
    ui_->customPlot->xAxis->setTickLabels(false);
    ui_->customPlot->xAxis->setTicks(false); // only want vertical grid in main axis rect, so hide xAxis backbone, ticks, and labels
@@ -704,12 +703,12 @@ void ChartWidget::initializeCustomPlot()
    // make axis rects' left side line up:
    QCPMarginGroup *group = new QCPMarginGroup(ui_->customPlot);
    ui_->customPlot->axisRect()->setMarginGroup(QCP::msLeft|QCP::msRight, group);
-   volumeAxisRect->setMarginGroup(QCP::msLeft|QCP::msRight, group);
+   volumeAxisRect_->setMarginGroup(QCP::msLeft|QCP::msRight, group);
 
    //make draggable horizontally
    ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
    ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal);
-   volumeAxisRect->setRangeDrag(Qt::Horizontal);
+   volumeAxisRect_->setRangeDrag(Qt::Horizontal);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::onPlotMouseMove);
 }
