@@ -81,6 +81,8 @@ public:
    // index: is encKeys index which should be deleted
    Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
                                                              , bs::hd::WalletInfo *walletInfo);
+
+   Q_INVOKABLE void setClipboard(const QString &text);
 private:
    std::shared_ptr<WalletsManager> walletsMgr_;
    std::shared_ptr<spdlog::logger> logger_;
