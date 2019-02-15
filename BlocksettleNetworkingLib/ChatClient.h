@@ -21,6 +21,7 @@ namespace Chat {
 class ConnectionManager;
 class ZmqSecuredDataConnection;
 class ApplicationSettings;
+class UserHasher;
 
 
 class ChatClient : public QObject
@@ -96,6 +97,7 @@ private:
    std::unique_ptr<ChatDB>                   chatDb_;
    std::map<QString, autheid::PublicKey>     pubKeys_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
+   std::shared_ptr<UserHasher> hasher_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
    std::map<QString, std::queue<QString>>    enqueued_messages_;

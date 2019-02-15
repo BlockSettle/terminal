@@ -26,7 +26,7 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
    createTable_ = {
       {QLatin1String("user_keys"), [db = db_] {
          const QLatin1String query("CREATE TABLE IF NOT EXISTS user_keys ("\
-            "user_id CHAR(8) PRIMARY KEY,"\
+            "user_id CHAR(16) PRIMARY KEY,"\
             "user_name CHAR(64),"\
             "key TEXT"\
             ");");
@@ -38,7 +38,7 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
 
       {QLatin1String("contacts"), [db = db_] {
          const QLatin1String query("CREATE TABLE IF NOT EXISTS contacts ("\
-            "user_id CHAR(8) PRIMARY KEY,"\
+            "user_id CHAR(16) PRIMARY KEY,"\
             "user_name CHAR(64),"\
             "incoming_friend_request BOOLEAN);");
            if (!QSqlQuery(db).exec(query)) {
@@ -72,7 +72,7 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
          const QLatin1String query("CREATE TABLE IF NOT EXISTS messages ("\
             "id CHAR(16) NOT NULL,"\
             "timestamp INTEGER NOT NULL,"\
-            "sender CHAR(8) NOT NULL,"\
+            "sender CHAR(16) NOT NULL,"\
             "receiver CHAR(32),"\
             "enctext TEXT,"\
             "state INTEGER,"\

@@ -9,6 +9,7 @@
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
 #include "EncryptUtils.h"
+#include "UserHasher.h"
 
 #include <QDateTime>
 
@@ -32,6 +33,8 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
       throw std::runtime_error("failed to load chat public keys");
    }
 
+   hasher_ = std::make_shared<UserHasher>();
+
    heartbeatTimer_.setInterval(30 * 1000);
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
@@ -52,8 +55,9 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
       return std::string();
    }
 
-   auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
-   currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
+   //auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
+   //currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
+   currentUserId_ = hasher_->deriveKey(email);
 
    connection_ = connectionManager_->CreateSecuredDataConnection();
    BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
