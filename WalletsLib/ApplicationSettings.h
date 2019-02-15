@@ -12,6 +12,16 @@
 #include "EncryptUtils.h"
 #include "LogManager.h"
 
+// hasher to allow compile std::unordered_map with enum as key
+struct EnumClassHash
+{
+    template <typename T>
+    std::size_t operator()(T t) const
+    {
+        return static_cast<std::size_t>(t);
+    }
+};
+
 
 class ApplicationSettings : public QObject
 {
@@ -122,7 +132,7 @@ public:
    void set(Setting s, const QVariant &val, bool toFile=true);
    void reset(Setting s, bool toFile=true);     // Reset setting to default value
 
-   using State = std::unordered_map<Setting, QVariant>;
+   using State = std::unordered_map<Setting, QVariant, EnumClassHash>;
    State getState() const;
    void setState(const State &);
 
