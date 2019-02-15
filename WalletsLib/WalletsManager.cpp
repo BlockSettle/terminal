@@ -24,6 +24,7 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger, co
    nbBackupFilesToKeep_ = appSettings_->get<unsigned int>(ApplicationSettings::nbBackupFilesKeep);
    if (armory_) {
       connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryConnection::zeroConfInvalidated, this, &WalletsManager::onZeroConfInvalidated, Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::txBroadcastError, this, &WalletsManager::onBroadcastZCError, Qt::QueuedConnection);
       connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::newBlock, this, &WalletsManager::onNewBlock, Qt::QueuedConnection);
@@ -1072,6 +1073,13 @@ void WalletsManager::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
    emit blockchainEvent();
    if (!ourZCentries.empty()) {
       emit newTransactions(ourZCentries);
+   }
+}
+
+void WalletsManager::onZeroConfInvalidated(const std::vector<bs::TXEntry> entries)
+{
+   if (!entries.empty()) {
+      emit invalidatedZCs(entries);
    }
 }
 

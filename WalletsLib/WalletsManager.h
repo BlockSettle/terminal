@@ -121,6 +121,7 @@ signals:
    void walletImportStarted(const std::string &walletId);
    void walletImportFinished(const std::string &walletId);
    void newTransactions(std::vector<bs::TXEntry>) const;
+   void invalidatedZCs(std::vector<bs::TXEntry>) const;
 
 public slots:
    void onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
@@ -128,6 +129,7 @@ public slots:
 
 private slots:
    void onZeroConfReceived(const std::vector<bs::TXEntry>);
+   void onZeroConfInvalidated(const std::vector<bs::TXEntry>);
    void onBroadcastZCError(const QString &txHash, const QString &errMsg);
    void onWalletReady(const QString &walletId);
    void onHDLeafAdded(QString id);
