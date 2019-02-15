@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <QDateTime>
+#include <QRandomGenerator>
 
 #include "spdlog/logger.h"
 
@@ -56,7 +57,7 @@ TradesClient::TradesClient(const std::shared_ptr<ApplicationSettings>& appSettin
     , appSettings_(appSettings)
     , logger_(logger)
 {
-   const std::string databaseHost = "127.0.0.1";
+   /*const std::string databaseHost = "127.0.0.1";
    const std::string databasePort = "3306";
    const std::string databaseName = "mdhs";
    const std::string databaseUser = "mdhs";
@@ -66,7 +67,7 @@ TradesClient::TradesClient(const std::shared_ptr<ApplicationSettings>& appSettin
                                                  , databaseName
                                                  , databaseUser
                                                  , databasePassword
-                                                 , logger);
+                                                 , logger);*/
 }
 
 TradesClient::~TradesClient() noexcept
@@ -83,7 +84,43 @@ const std::vector<DataPointsLocal::DataPoint *> TradesClient::getRawPointDataArr
         , DataPointsLocal::Interval interval
         , qint64 maxCount)
 {
-   return tradesDb_->getDataPoints(product.toStdString(), interval, maxCount);
+//   return tradesDb_->getDataPoints(product.toStdString(), interval, maxCount);
+   std::vector<DataPointsLocal::DataPoint *> result;
+   auto timestamp = QDateTime::currentDateTimeUtc();
+   for (int i = 0; i < maxCount; ++i) {
+      auto last = i == 0 ? 0 : result.at(i - 1);
+      result.push_back(generatePoint(timestamp.toMSecsSinceEpoch(), last));
+      switch (interval) {
+      case DataPointsLocal::OneYear:
+         timestamp = timestamp.addYears(-1);
+         break;
+      case DataPointsLocal::SixMonths:
+         timestamp = timestamp.addMonths(-6);
+         break;
+      case DataPointsLocal::OneMonth:
+         timestamp = timestamp.addMonths(-1);
+         break;
+      case DataPointsLocal::OneWeek:
+         timestamp = timestamp.addDays(-timestamp.date().dayOfWeek());
+         break;
+      case DataPointsLocal::TwentyFourHours:
+         timestamp = timestamp.addDays(-1);
+         break;
+      case DataPointsLocal::TwelveHours:
+         timestamp = timestamp.addSecs(-3600*12);
+         break;
+      case DataPointsLocal::SixHours:
+         timestamp = timestamp.addSecs(-3600*6);
+         break;
+      case DataPointsLocal::OneHour:
+         timestamp = timestamp.addSecs(-3600);
+         break;
+      default:
+         timestamp = timestamp.addSecs(-3600);
+         break;
+      }
+   }
+   return result;
 }
 
 TradesClient::ProductType TradesClient::getProductType(const QString &product) const
@@ -124,4 +161,28 @@ void TradesClient::onMDUpdated(bs::network::Asset::Type assetType
         return;
     }
     tradesDb_->add(product, time, price, volume);*/
+}
+
+DataPointsLocal::DataPoint *TradesClient::generatePoint(
+      qreal timestamp
+      , DataPointsLocal::DataPoint *prev)
+{
+   static qreal minPrice = 0.0;
+   qreal lower = 0.5;
+   qreal upper = 1.0;
+   qreal open = prev ? prev->close : minPrice;
+   qreal high = qMax(minPrice, open - lower + QRandomGenerator::global()->generateDouble() * upper);
+   qreal low = qMax(minPrice, open - lower + QRandomGenerator::global()->generateDouble() * upper);
+   if (low > high) {
+      std::swap(high, low);
+   }
+   qreal close = qMax(minPrice, open - lower + QRandomGenerator::global()->generateDouble() * upper);
+   qreal volume = QRandomGenerator::global()->generateDouble() * 100;
+   return new DataPointsLocal::DataPoint { .open = open,
+            .high = high,
+            .low = low,
+            .close = close,
+            .volume = volume,
+            .timestamp = timestamp
+   };
 }

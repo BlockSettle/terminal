@@ -49,6 +49,8 @@ public slots:
    void onMDUpdated(bs::network::Asset::Type assetType
                     , const QString &security
                     , bs::network::MDFields fields);
+      DataPointsLocal::DataPoint *generatePoint(qreal timestamp
+                                                , DataPointsLocal::DataPoint *prev = nullptr);
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
