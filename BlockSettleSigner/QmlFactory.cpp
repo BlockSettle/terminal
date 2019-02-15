@@ -2,6 +2,9 @@
 #include "AuthProxy.h"
 #include "WalletsManager.h"
 
+#include <QApplication>
+#include <QClipboard>
+
 using namespace bs::hd;
 using namespace bs::wallet;
 
@@ -77,4 +80,9 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
    authObject->removeDevice(index, walletInfo);
    QQmlEngine::setObjectOwnership(authObject, QQmlEngine::JavaScriptOwnership);
    return authObject;
+}
+
+void QmlFactory::setClipboard(const QString &text)
+{
+   QApplication::clipboard()->setText(text);
 }

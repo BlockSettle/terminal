@@ -216,7 +216,20 @@ Item {
                     color: BSStyle.textColor
 
                 }
-
+                CustomButton {
+                    id: btnZmqKeyCopy
+                    text: qsTr("Copy")
+                    Layout.minimumWidth: 80
+                    Layout.preferredWidth: 80
+                    Layout.maximumWidth: 80
+                    Layout.maximumHeight: 26
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.zmqPubKeyFile)
+                        qmlFactory.setClipboard(zmqPubKey)
+                        btnZmqKeyCopy.text = qsTr("Copied")
+                    }
+                }
                 CustomButton {
                     text: qsTr("Export")
                     Layout.minimumWidth: 80
