@@ -29,6 +29,8 @@ private:
 
    ChatUsersViewModel *_friendUsersViewModel;
    ChatUsersViewModel *_nonFriendUsersViewModel;
+   ChatUserCategoryListView *_friendUsersListView;
+   ChatUserCategoryListView *_nonFriendUsersListView;
 };
 
 #endif // CHATUSERLISTTREEWIDGET_H

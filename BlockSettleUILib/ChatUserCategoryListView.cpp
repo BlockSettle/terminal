@@ -38,6 +38,7 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    // text color for friend request
    if (userState == ChatUserData::State::IncomingFriendRequest)
    {
+      itemOption.palette.setColor(QPalette::Text, _internalStyle.colorIncomingFriendRequest());
       itemOption.palette.setColor(QPalette::HighlightedText, _internalStyle.colorIncomingFriendRequest());
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
@@ -48,6 +49,7 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    // text color for user online status
    if (userStatus == ChatUserData::ConnectionStatus::Online)
    {
+      itemOption.palette.setColor(QPalette::Text, _internalStyle.colorUserOnline());
       itemOption.palette.setColor(QPalette::HighlightedText, _internalStyle.colorUserOnline());
       QStyledItemDelegate::paint(painter, itemOption, index);
 

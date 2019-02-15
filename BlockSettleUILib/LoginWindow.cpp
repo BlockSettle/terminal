@@ -51,11 +51,17 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings
    connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &LoginWindow::onAutheIDDone);
    connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &LoginWindow::onAutheIDFailed);
 
-#ifdef PRODUCTION_BUILD
-   connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::onAuthPressed);
-#else
+   const BinaryData serverPubKey = settings->get<std::string>(ApplicationSettings::authServerPubKey);
+   const auto serverHost = settings->get<std::string>(ApplicationSettings::authServerHost);
+   const auto serverPort = settings->get<std::string>(ApplicationSettings::authServerPort);
+   try {
+      autheIDConnection_->connect(serverPubKey, serverHost, serverPort);
+   }
+   catch (const std::exception &e) {
+      logger_->error("[LoginWindow] Failed to establish Auth eID connection: {}", e.what());
+   }
+
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
-#endif
 
    timer_.setInterval(500);
    connect(&timer_, &QTimer::timeout, this, &LoginWindow::onTimer);
@@ -104,6 +110,12 @@ QString LoginWindow::getUsername() const
    return ui_->lineEditUsername->text().toLower();
 }
 
+void LoginWindow::accept()
+{
+   onAuthPressed();
+   ui_->signWithEidButton->setEnabled(false);
+}
+
 void LoginWindow::onAuthPressed()
 {
    if (state_ == Login) {
@@ -139,9 +151,7 @@ void LoginWindow::onAuthStatusUpdated(const QString &userId, const QString &stat
 void LoginWindow::onAutheIDDone(const std::string& jwt)
 {
    jwt_= jwt;
-//   BSMessageBox loginSuccessBox(BSMessageBox::success, tr("Login success"), tr("Login success"), tr("Login success for ") + ui_->lineEditUsername->text(), this);
-//   loginSuccessBox.exec();
-   accept();
+   QDialog::accept();
 }
 
 void LoginWindow::onAutheIDFailed(const QString &text)
@@ -150,5 +160,3 @@ void LoginWindow::onAutheIDFailed(const QString &text)
    BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), text, this);
    loginErrorBox.exec();
 }
-
-
