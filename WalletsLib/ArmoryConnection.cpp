@@ -251,7 +251,8 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
 }
 
 std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
-   , const std::string &walletId, const std::vector<BinaryData> &addrVec, std::function<void()> cb
+   , const std::string &walletId, const std::vector<BinaryData> &addrVec
+   , std::function<void(const std::string &regId)> cb
    , bool asNew)
 {
    if (!bdv_ || ((state_ != State::Ready) && (state_ != State::Connected))) {
@@ -268,10 +269,10 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
    else {
       if (cb) {
          if (cbInMainThread_) {
-            QMetaObject::invokeMethod(this, [cb] { cb(); });
+            QMetaObject::invokeMethod(this, [cb, regId] { cb(regId); });
          }
          else {
-            cb();
+            cb(regId);
          }
       }
    }
@@ -693,11 +694,13 @@ void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
          if (regIdIt != preOnlineRegIds_.end()) {
             logger_->debug("[{}] found preOnline registration id: {}", __func__
                            , id.toBinStr());
+            const auto regId = regIdIt->first;
+            const auto cb = regIdIt->second;
             if (cbInMainThread_) {
-               QMetaObject::invokeMethod(this, [cb = regIdIt->second]{ cb(); });
+               QMetaObject::invokeMethod(this, [cb, regId]{ cb(regId); });
             }
             else {
-               regIdIt->second();
+               cb(regId);
             }
             preOnlineRegIds_.erase(regIdIt);
          }

@@ -85,6 +85,7 @@ namespace bs {
       }
 
       virtual int addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset = nullptr);
+      void addAddresses(const std::vector<bs::Address> &) override;
       bool containsAddress(const bs::Address &addr) override;
 
       std::string GetWalletId() const override { return walletId_; }
@@ -130,13 +131,14 @@ namespace bs {
       BinaryDataRef getDataRefForKey(const std::shared_ptr<LMDB> &db, const BinaryData& key) const;
       BinaryDataRef getDataRefForKey(uint32_t key) const;
 
-      std::set<BinaryData> getAddrHashSet() override;
+      std::vector<BinaryData> getAddrHashes() const override;
       AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
 
    protected:
       std::map<bs::Address, std::shared_ptr<GenericAsset>>  assetByAddr_;
       std::unordered_map<int, std::shared_ptr<GenericAsset>>   assets_;
       std::atomic_int   lastAssetIndex_ = { 0 };
+      mutable std::set<BinaryData>  addrPrefixedHashes_;
 
    private:
       int getAddressIndex(const bs::Address &) const;

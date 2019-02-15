@@ -884,16 +884,19 @@ void bs::Wallet::UpdateBalances(const std::function<void(std::vector<uint64_t>)>
 
          if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
             || (unconfirmedBalance_ != unconfirmedBalance)) {
-            updateAddrBalance_ = true;
-            updateAddrTxN_ = true;
-            QMutexLocker lock(&addrMapsMtx_);
-            addrCount_ = count;
+            {
+               QMutexLocker lock(&addrMapsMtx_);
+               updateAddrBalance_ = true;
+               updateAddrTxN_ = true;
+               addrCount_ = count;
+            }
+            totalBalance_ = totalBalance;
+            spendableBalance_ = spendableBalance;
+            unconfirmedBalance_ = unconfirmedBalance;
 
-            // Armory's concept of spendable balances doesn't always align with
-            // ours. Adjust the balances, including accounting for internal and
-            // external address differences.
-            processNewBalances(bv);
+            emit balanceChanged(GetWalletId(), bv);
          }
+         emit balanceUpdated(GetWalletId(), bv);
 
          if (cb) {
             cb(bv);
@@ -1010,7 +1013,7 @@ void bs::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-std::string bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::vector<std::string> bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    SetArmory(armory);
 
@@ -1022,14 +1025,11 @@ std::string bs::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &
    }
 
    if (armory_) {
-      const auto &addrSet = getAddrHashSet();
-      std::vector<BinaryData> addrVec;
-      addrVec.insert(addrVec.end(), addrSet.begin(), addrSet.end());
-      const auto &cbRegister = [this] {
+      const auto &cbRegister = [this](const std::string &) {
          emit walletReady(QString::fromStdString(GetWalletId()));
       };
-      walletRegId_ = armory_->registerWallet(btcWallet_, GetWalletId(), addrVec, cbRegister, asNew);
-      return walletRegId_;
+      const auto regId = armory_->registerWallet(btcWallet_, GetWalletId(), getAddrHashes(), cbRegister, asNew);
+      return { regId };
    }
    return {};
 }
@@ -1314,12 +1314,14 @@ bs::wallet::TXSignRequest bs::Wallet::CreatePartialTXRequest(uint64_t spendVal
    return request;
 }
 
-void bs::Wallet::addAddresses(const std::vector<bs::Address> &addresses)
+bool bs::Wallet::getLedgerDelegateForAddress(const bs::Address &addr
+   , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb
+   , QObject *context)
 {
-   usedAddresses_.insert(usedAddresses_.end(), addresses.begin(), addresses.end());
-   for (const auto &addr : addresses) {
-      addrPrefixedHashes_.insert(addr.prefixed());
+   if (armory_) {
+      return armory_->getLedgerDelegateForAddress(GetWalletId(), addr, cb, context);
    }
+   return false;
 }
 
 
@@ -1376,147 +1378,6 @@ BinaryData bs::wallet::computeID(const BinaryData &input)
    return result;
 }
 
-// Private function that is used to process UTXOs after Armory has been
-// consulted to update the wallet balances.
-// IN:  A vector with balance data. (vector<uint64_t>)
-//      A callback to call when everything's done. (function<void()>)
-// OUT: None
-// RET: None
-void bs::Wallet::processNewBalances(const std::vector<uint64_t> inBV
-   , const std::function<void()> &cbComplete)
-{
-   if(logger_ != nullptr) {
-      logger_->debug("[{}}] Process new UTXOs", __func__);
-   }
-   auto curHeight = armory_->topBlock();
-   std::map<std::string, UTXO>::const_iterator itUTXOs;
-
-   for (itUTXOs = youngIntUTXOs_.cbegin(); itUTXOs != youngIntUTXOs_.cend();) {
-      uint32_t numConfs = itUTXOs->second.getNumConfirm(curHeight);
-      if (numConfs >= SAFE_NUM_CONFS) {
-         itUTXOs = youngIntUTXOs_.erase(itUTXOs);
-      }
-      else {
-         ++itUTXOs;
-      }
-   }
-
-   // External addresses, once mature enough, need to be unreserved and made
-   // available for spending.
-   for (itUTXOs = youngExtUTXOs_.cbegin(); itUTXOs != youngExtUTXOs_.cend();) {
-      uint32_t numConfs = itUTXOs->second.getNumConfirm(curHeight);
-      if (numConfs >= SAFE_NUM_CONFS) {
-         utxoAdapter_->unreserve(itUTXOs->first);
-         itUTXOs = youngExtUTXOs_.erase(itUTXOs);
-      }
-      else {
-         ++itUTXOs;
-      }
-   }
-
-   // Process the incoming UTXOs.
-   const auto &cbTxOutList = [this, cbComplete, curHeight, inBV]
-      (std::vector<UTXO> txOutListObj) {
-      // We can't make assumptions regarding # of confs. We could hit a 0-conf,
-      // or we could see a missed TX once it shows up in a block, or we could
-      // see everything new on startup. So, we have to be mindful of that.
-      std::vector<UTXO> utxosToReserve;
-      std::map<std::string, UTXO>::const_iterator youngUTXOs;
-
-      for (UTXO& inUTXO : txOutListObj) {
-         uint32_t numConfs = inUTXO.getNumConfirm(curHeight);
-
-         // We only care if < 6 confs. External addresses will have the UTXO
-         // reserved so that they won't be spendable. (We don't add on 0-conf
-         // because they could be subject to RBF or CPFP.)
-         if (numConfs < SAFE_NUM_CONFS) {
-            if (IsExternalAddress(bs::Address::fromUTXO(inUTXO)) == true) {
-               youngUTXOs = youngExtUTXOs_.find(inUTXO.script_.toHexStr());
-               if (youngUTXOs == youngExtUTXOs_.end()) {
-                  youngExtUTXOs_[inUTXO.script_.toHexStr()] = inUTXO;
-                  utxosToReserve.push_back(inUTXO);
-               }
-            }
-            else {
-               youngUTXOs = youngIntUTXOs_.find(inUTXO.script_.toHexStr());
-               if (youngUTXOs == youngIntUTXOs_.end()) {
-                  youngIntUTXOs_[inUTXO.script_.toHexStr()] = inUTXO;
-               }
-            }
-         }
-      }
-
-      // Once done going through the UTXOs, make the UTXO reservations.
-      for (UTXO u : utxosToReserve) {
-         utxoAdapter_->reserve(GetWalletId(), u.script_.toHexStr(), utxosToReserve);
-      }
-
-      // Set the unconfirmed balance delta, which leans on internal addresses.
-      BTCNumericTypes::balance_type uDelta = 0;
-      for (youngUTXOs = youngIntUTXOs_.cbegin();
-         youngUTXOs != youngIntUTXOs_.cend(); ++youngUTXOs) {
-         if (youngUTXOs->second.getNumConfirm(curHeight) > 0) {
-            uDelta += static_cast<BTCNumericTypes::balance_type>(youngUTXOs->second.value_);
-         }
-      }
-      uDelta = uDelta / BTCNumericTypes::BalanceDivider;
-
-      // Set the spendable balance delta, which leans on external addresses.
-      BTCNumericTypes::balance_type sDelta = 0;
-      for (youngUTXOs = youngExtUTXOs_.cbegin();
-         youngUTXOs != youngExtUTXOs_.cend(); ++youngUTXOs) {
-         if (youngUTXOs->second.getNumConfirm(curHeight) > 0) {
-            sDelta += static_cast<BTCNumericTypes::balance_type>(youngUTXOs->second.value_);
-         }
-      }
-      sDelta = sDelta / BTCNumericTypes::BalanceDivider;
-
-      // Set the wallet balances, and emit the relevant signals.
-      auto prevTotalBalance = totalBalance_;
-      auto prevSpendableBalance = spendableBalance_;
-      auto prevUnconfirmedBalance = unconfirmedBalance_;
-      totalBalance_ =
-         static_cast<BTCNumericTypes::balance_type>(inBV[0]) / BTCNumericTypes::BalanceDivider;
-      spendableBalance_ =
-         (static_cast<BTCNumericTypes::balance_type>(inBV[1]) / BTCNumericTypes::BalanceDivider)
-         - sDelta;
-      unconfirmedBalance_ =
-         (static_cast<BTCNumericTypes::balance_type>(inBV[2]) / BTCNumericTypes::BalanceDivider)
-         - uDelta;
-
-      if ((prevTotalBalance != totalBalance_)
-         || (prevSpendableBalance != spendableBalance_)
-         || (prevUnconfirmedBalance != unconfirmedBalance_)) {
-         emit balanceChanged(GetWalletId(), inBV);
-      }
-      emit balanceUpdated(GetWalletId(), inBV);
-
-      if (cbComplete) {
-         cbComplete();
-      }
-   }; // callback
-
-   QPointer<QObject> thisSmartPtr = this;
-   const auto &cbWrap = [this, thisSmartPtr, cbTxOutList] (ReturnMessage<std::vector<UTXO>> txOutList) {
-      if (!thisSmartPtr) {
-         return;
-      }
-      try {
-         const auto txOutListObj = txOutList.get();
-         QMetaObject::invokeMethod(thisSmartPtr, [cbTxOutList, txOutListObj] { cbTxOutList(txOutListObj); });
-      }
-      catch (const std::exception &e) {
-         if (logger_ != nullptr) {
-            logger_->error("[bs::Wallet::onNewBlock] Return data " \
-               "error {}", e.what());
-         }
-      }
-   };
-   if (btcWallet_) {
-      // Get all the UTXOs and process them.
-      btcWallet_->getSpendableTxOutListForValue(UINT64_MAX, cbWrap);
-   }
-}
 
 bool operator ==(const bs::Wallet &a, const bs::Wallet &b)
 {

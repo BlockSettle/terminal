@@ -48,8 +48,10 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    // registering the wallet, and getting the required data.
    const auto dummyWallet = std::make_shared<bs::PlainWallet>(logger_);
    dummyWallet->addAddress(inAddrVal);
-   const auto regId = dummyWallet->RegisterWallet(armory_, true);
-   dummyWallets_[regId] = dummyWallet;
+   const auto regIds = dummyWallet->RegisterWallet(armory_, true);
+   for (const auto &regId : regIds) {
+      dummyWallets_[regId] = dummyWallet;
+   }
 
    ui_->addressId->setText(inAddrVal.display());
 }
@@ -282,8 +284,7 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::PlainWallet> &walle
       getTxData(delegate);
    };
    const auto addr = wallet->GetUsedAddressList()[0];
-   if(!armory_->getLedgerDelegateForAddress(wallet->GetWalletId(), addr
-      , cbLedgerDelegate)) {
+   if (!wallet->getLedgerDelegateForAddress(addr, cbLedgerDelegate)) {
       logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
                      "get ledger delegate for wallet ID {} - address {}"
                      , wallet->GetWalletId(), addr.display<std::string>());

@@ -135,6 +135,11 @@ namespace bs {
          std::string GetAddressIndex(const bs::Address &) override;
          bool AddressIndexExists(const std::string &index) const override;
          bs::Address CreateAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true) override;
+         bool getLedgerDelegateForAddress(const bs::Address &
+            , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
+            , QObject *context = nullptr) override;
+
+         void UpdateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
 
          std::shared_ptr<ResolverFeed> GetResolver(const SecureBinaryData &password) override;
          std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override;
@@ -149,13 +154,17 @@ namespace bs {
          void setDB(const std::shared_ptr<LMDBEnv> &env, LMDB *db);
 
          void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
+         std::vector<std::string> RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+            , bool asNew = false) override;
          void UnregisterWallet() override;
 
          std::shared_ptr<LMDBEnv> getDBEnv() override { return dbEnv_; }
          LMDB *getDB() override { return db_; }
 
          AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
-         std::set<BinaryData> getAddrHashSet() override;
+         std::vector<BinaryData> getAddrHashes() const override;
+         std::vector<BinaryData> getAddrHashesExt() const;
+         std::vector<BinaryData> getAddrHashesInt() const;
          void addAddress(const bs::Address &, const BinaryData &pubChainedKey, const Path &path);
 
          void setScanCompleteCb(const cb_complete_notify &cb) { cbScanNotify_ = cb; }
@@ -198,6 +207,8 @@ namespace bs {
          std::string suffix_;
          bool        isExtOnly_ = false;
 
+         std::shared_ptr<AsyncClient::BtcWallet>   btcWalletInt_;
+
          Path::Elem  lastIntIdx_ = 0;
          Path::Elem  lastExtIdx_ = 0;
 
@@ -222,6 +233,17 @@ namespace bs {
          std::map<BinaryData, Path::Elem>             addrToIndex_;
          cb_complete_notify                           cbScanNotify_ = nullptr;
          volatile bool activateAddressesInvoked_ = false;
+
+         struct AddrPrefixedHashes {
+            std::set<BinaryData> external;
+            std::set<BinaryData> internal;
+
+            void clear() {
+               external.clear();
+               internal.clear();
+            }
+         };
+         mutable AddrPrefixedHashes addrPrefixedHashes_;
 
       private:
          bs::Address createAddress(AddressEntryType aet, bool isInternal = false);

@@ -99,7 +99,7 @@ public:
    unsigned int topBlock() const { return topBlock_; }
 
    std::string registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &, const std::string &walletId
-      , const std::vector<BinaryData> &addrVec, std::function<void()>, bool asNew = false);
+      , const std::vector<BinaryData> &addrVec, std::function<void(const std::string &)>, bool asNew = false);
    bool getWalletsHistory(const std::vector<std::string> &walletIDs
       , std::function<void (std::vector<ClientClasses::LedgerEntry>)>);
 
@@ -170,7 +170,7 @@ private:
    std::shared_ptr<QProcess>  armoryProcess_;
 
    std::atomic_bool              isOnline_;
-   std::unordered_map<std::string, std::function<void()>>   preOnlineRegIds_;
+   std::unordered_map<std::string, std::function<void(const std::string &)>>  preOnlineRegIds_;
 
    mutable std::atomic_flag      txCbLock_ = ATOMIC_FLAG_INIT;
    std::map<BinaryData, std::vector<std::function<void(Tx)>>>   txCallbacks_;
