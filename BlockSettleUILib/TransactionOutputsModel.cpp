@@ -1,4 +1,5 @@
 #include <QColor>
+#include <QSize>
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 
@@ -45,9 +46,16 @@ Qt::ItemFlags TransactionOutputsModel::flags(const QModelIndex &index) const
 
 QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) const
 {
+   // workaround dont working here
+   // TODO:move "Delete output button"
+   // from CreateTransactionDialogAdvanced::onOutputsInserted to model delegate
+//   if (role == Qt::SizeHintRole && index.column() == 2) {
+//      return QSize(50, 16);
+//   }
+
    switch (role) {
    case Qt::TextAlignmentRole:
-      return Qt::AlignLeft;
+      return Qt::AlignLeft | Qt::AlignVCenter;
    case Qt::DisplayRole:
       return getRowData(index.column(), outputs_[index.row()]);
    case Qt::TextColorRole:

@@ -508,11 +508,12 @@ void CreateTransactionDialogAdvanced::onOutputsInserted(const QModelIndex &, int
       QPushButton *button = nullptr;
       if (removeOutputEnabled_) {
          button = new QPushButton();
-         button->setFixedSize(30, 16);
+         //button->setFixedSize(30, 16);  // has no effect
          button->setContentsMargins(0, 0, 0, 0);
 
          button->setIcon(UiUtils::icon(0xeaf1, QVariantMap{
             { QLatin1String{ "color" }, QColor{ Qt::white } }
+            // , { QLatin1String{ "scale-factor" }, 0.75 }
             }));
       }
 
