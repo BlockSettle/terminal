@@ -55,7 +55,7 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
 
    switch (role) {
    case Qt::TextAlignmentRole:
-      return Qt::AlignLeft | Qt::AlignVCenter;
+      return int (Qt::AlignLeft | Qt::AlignVCenter);
    case Qt::DisplayRole:
       return getRowData(index.column(), outputs_[index.row()]);
    case Qt::TextColorRole:
