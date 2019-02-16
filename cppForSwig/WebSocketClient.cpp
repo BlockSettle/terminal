@@ -544,6 +544,31 @@ bool WebSocketClient::processAEADHandshake(const WebSocketMessagePartial& msgObj
    auto msgbdr = msgObj.getSingleBinaryMessage();
    switch (msgObj.getType())
    {
+   case WS_MSGTYPE_AEAD_PRESENT_PUBKEY:
+   {
+      /*packet is server's pubkey, do we have it?*/
+      
+      //init server promise
+      serverPubkeyProm_ = make_shared<promise<bool>>();
+
+      //compute server name
+      stringstream ss;
+      ss << addr_ << ":" << port_;
+
+      if (!bip151Connection_->havePublicKey(msgbdr, ss.str()))
+      {
+         //we don't have this key, call user prompt lambda
+         promptUser(msgbdr, ss.str());
+      }
+      else
+      {
+         //set server key promise
+         serverPubkeyProm_->set_value(true);
+      }
+
+      break;
+   }
+
    case WS_MSGTYPE_AEAD_ENCINIT:
    {
       if (bip151Connection_->processEncinit(
@@ -578,6 +603,16 @@ bool WebSocketClient::processAEADHandshake(const WebSocketMessagePartial& msgObj
       if (bip151Connection_->processEncack(
          msgbdr.getPtr(), msgbdr.getSize(), true) == -1)
          return false;
+
+      //have we seen the server's pubkey?
+      if (serverPubkeyProm_ != nullptr)
+      {
+         //if so, wait on the promise
+         auto serverProm = serverPubkeyProm_;
+         auto fut = serverProm->get_future();
+         fut.wait();
+         serverPubkeyProm_.reset();
+      }
 
       //bip151 handshake completed, time for bip150
       stringstream ss;
@@ -719,4 +754,47 @@ void WebSocketClient::addPublicKey(const SecureBinaryData& pubkey)
    ss << addr_ << ":" << port_;
 
    authPeers_->addPeer(pubkey, ss.str());
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WebSocketClient::setPubkeyPromptLambda(
+   std::function<bool(const BinaryData&, const std::string&)> lbd)
+{
+   userPromptLambda_ = lbd;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void WebSocketClient::promptUser(
+   const BinaryDataRef& keyRef, const string& name)
+{
+   //is prompt lambda set?
+   if (!userPromptLambda_)
+   {
+      serverPubkeyProm_->set_value(false);
+      return;
+   }
+
+   BinaryData key_copy(keyRef);
+
+   //create lambda to handle user prompt
+   auto promptLbd = [this, key_copy, name](void)->void
+   {
+      if (this->userPromptLambda_(key_copy, name))
+      {
+         //the lambda returns true, the user accepted the key, add it to peers
+         this->authPeers_->addPeer(key_copy, name);
+         serverPubkeyProm_->set_value(true);
+      }
+      else
+      {
+         //otherwise, we still have to set the promise so that the auth 
+         //challenge leg can progress
+         serverPubkeyProm_->set_value(false);
+      }
+   };
+
+   //run prompt in new thread
+   thread thr(promptLbd);
+   if (thr.joinable())
+      thr.detach();
 }

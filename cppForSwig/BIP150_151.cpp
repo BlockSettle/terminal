@@ -1116,12 +1116,25 @@ const int BIP151Connection::getRekeyBuf(uint8_t* encackBuf,
 }
 
 // Rekey bip151 channels after a succesful bip150 handshake
+//
 // IN:  None
 // OUT: None
 // RET: -1 if failure, 0 if successful
 void BIP151Connection::bip150HandshakeRekey()
 {
    bip150SM_.rekey();
+}
+
+// Check if this peer name exists and that it matches this public key
+//
+// IN:  pubkey - the public key
+//      name - the ip:port or domain name
+// OUT: None
+// RET: true if the key/name pair matches, otherwise false
+bool BIP151Connection::havePublicKey(
+   const BinaryDataRef& pubkey, const std::string& name) const
+{
+   return bip150SM_.havePublicKey(pubkey, name);
 }
 
 // Default BIP 151 "payload" constructor.
@@ -1913,6 +1926,7 @@ const int BIP150StateMachine::errorSM(const int& outVal)
 }
 
 // Rekey bip151 channels after a succesful bip150 handshake
+//
 // IN:  None
 // OUT: None
 // RET: -1 if failure, 0 if successful
@@ -1935,6 +1949,39 @@ void BIP150StateMachine::rekey()
       outSesOldKey.data(), 64);
    
    curState_ = BIP150State::SUCCESS;
+}
+
+// Get own BIP150 public key
+//
+// IN : None
+// OUT: None
+// RET: BinaryDataRef to compressed secp256k1 public key
+BinaryDataRef BIP150StateMachine::getOwnPubKey(void) const
+{
+   auto& ownKey = authKeys_.getPubKey("own");
+   BinaryDataRef bdr(ownKey.pubkey, 33);
+   return bdr;
+}
+
+// Check if this peer name exists and that it matches this public key
+//
+// IN:  pubkey - the public key
+//      name - the ip:port or domain name
+// OUT: None
+// RET: true if the key/name pair matches, otherwise false
+bool BIP150StateMachine::havePublicKey(
+   const BinaryDataRef& pubkey, const std::string& name) const
+{
+   try
+   {
+      auto& peerKey = authKeys_.getPubKey(name);
+      if (std::memcmp(peerKey.pubkey, pubkey.getPtr(), BIP151PUBKEYSIZE) == 0)
+         return true;
+   }
+   catch (std::exception&)
+   {}
+
+   return false;
 }
 
 //AuthPeersLambdsa methods
