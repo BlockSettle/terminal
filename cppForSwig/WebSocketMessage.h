@@ -31,9 +31,11 @@
 
 #define WS_MSGTYPE_AEAD_THESHOLD             10
 #define WS_MSGTYPE_AEAD_SETUP                11
-#define WS_MSGTYPE_AEAD_ENCINIT              12
-#define WS_MSGTYPE_AEAD_ENCACK               13
-#define WS_MSGTYPE_AEAD_REKEY                14
+#define WS_MSGTYPE_AEAD_PRESENT_PUBKEY       12
+#define WS_MSGTYPE_AEAD_PRESENT_PUBKEY_CHILD 13
+#define WS_MSGTYPE_AEAD_ENCINIT              14
+#define WS_MSGTYPE_AEAD_ENCACK               15
+#define WS_MSGTYPE_AEAD_REKEY                16
 
 #define WS_MSGTYPE_AUTH_THESHOLD             20
 #define WS_MSGTYPE_AUTH_CHALLENGE            21
@@ -80,6 +82,8 @@ public:
    {}
 
    void construct(const std::vector<uint8_t>& data, BIP151Connection*,
+      uint8_t, uint32_t id = 0);
+   void construct(const BinaryDataRef& data, BIP151Connection*,
       uint8_t, uint32_t id = 0);
 
    bool isDone(void) const { return index_ >= packets_.size(); }

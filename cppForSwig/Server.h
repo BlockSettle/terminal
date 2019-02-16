@@ -141,7 +141,7 @@ private:
    static std::mutex mu_;
    static std::promise<bool> shutdownPromise_;
    static std::shared_future<bool> shutdownFuture_;
-   static BinaryData encInitPacket_;
+   BinaryData encInitPacket_;
    
    std::shared_ptr<Clients> clients_;
    std::atomic<unsigned> run_;

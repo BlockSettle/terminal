@@ -23,7 +23,6 @@ atomic<WebSocketServer*> WebSocketServer::instance_;
 mutex WebSocketServer::mu_;
 promise<bool> WebSocketServer::shutdownPromise_;
 shared_future<bool> WebSocketServer::shutdownFuture_;
-BinaryData WebSocketServer::encInitPacket_ = READHEX("010000000B");
 
 ///////////////////////////////////////////////////////////////////////////////
 WebSocketServer::WebSocketServer()
@@ -85,7 +84,7 @@ int WebSocketServer::callback(
       instance->addId(session_data->id_, wsi);
 
       auto packetPtr = make_shared<BDV_packet>(session_data->id_);
-      packetPtr->data_ = encInitPacket_;
+      packetPtr->data_ = instance->encInitPacket_;
       instance->packetQueue_.push_back(move(packetPtr));
 
       break;
@@ -204,6 +203,9 @@ void WebSocketServer::start(BlockDataManagerThread* bdmT,
    {
       instance->authorizedPeers_ = make_shared<AuthorizedPeers>();
    }
+
+   //setup encinit and pubkey present packet
+   instance->encInitPacket_ = READHEX("010000000B");
 
    //init Clients object
    auto shutdownLbd = [](void)->void
@@ -810,7 +812,7 @@ void ClientConnection::processReadQueue(shared_ptr<Clients> clients)
 void ClientConnection::processAEADHandshake(BinaryData msg)
 {
    auto writeToClient = [this](uint8_t type,
-      const vector<uint8_t>& msg, bool encrypt)->void
+      const BinaryDataRef& msg, bool encrypt)->void
    {
       BIP151Connection* connPtr = nullptr;
       if (encrypt)
@@ -839,17 +841,23 @@ void ClientConnection::processAEADHandshake(BinaryData msg)
       {
       case WS_MSGTYPE_AEAD_SETUP:
       {
+         //send pubkey message
+         writeToClient(
+            WS_MSGTYPE_AEAD_PRESENT_PUBKEY, 
+            bip151Connection_->getOwnPubKey(), 
+            false);
+
          //init bip151 handshake
-         vector<uint8_t> encinitData(ENCINITMSGSIZE);
+         BinaryData encinitData(ENCINITMSGSIZE);
          if (bip151Connection_->getEncinitData(
-            &encinitData[0], ENCINITMSGSIZE,
+            encinitData.getPtr(), ENCINITMSGSIZE,
             BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0)
          {
             //failed to init handshake, kill connection
             return false;
          }
 
-         writeToClient(WS_MSGTYPE_AEAD_ENCINIT, encinitData, false);
+         writeToClient(WS_MSGTYPE_AEAD_ENCINIT, encinitData.getRef(), false);
          break;
       }
 
@@ -898,15 +906,15 @@ void ClientConnection::processAEADHandshake(BinaryData msg)
          }
 
          //return encack
-         vector<uint8_t> encackData(BIP151PUBKEYSIZE);
+         BinaryData encackData(BIP151PUBKEYSIZE);
          if (bip151Connection_->getEncackData(
-            &encackData[0], BIP151PUBKEYSIZE) != 0)
+            encackData.getPtr(), BIP151PUBKEYSIZE) != 0)
          {
             //failed to init handshake, kill connection
             return false;
          }
 
-         writeToClient(WS_MSGTYPE_AEAD_ENCACK, encackData, false);
+         writeToClient(WS_MSGTYPE_AEAD_ENCACK, encackData.getRef(), false);
 
          break;
       }
@@ -942,7 +950,7 @@ void ClientConnection::processAEADHandshake(BinaryData msg)
          }
 
          writeToClient(WS_MSGTYPE_AUTH_REPLY,
-            authreplyBuf.getDataVector(), true);
+            authreplyBuf.getRef(), true);
 
          break;
       }
@@ -982,7 +990,7 @@ void ClientConnection::processAEADHandshake(BinaryData msg)
          }
 
          writeToClient(WS_MSGTYPE_AUTH_CHALLENGE,
-            authchallengeBuf.getDataVector(), true);
+            authchallengeBuf.getRef(), true);
 
          break;
       }

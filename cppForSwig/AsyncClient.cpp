@@ -476,6 +476,17 @@ void BlockDataViewer::getUtxosForAddrVec(const vector<BinaryData>& addrVec,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::setCheckServerKeyPromptLambda(
+   function<bool(const BinaryData&, const string&)> lbd)
+{
+   auto wsSock = dynamic_pointer_cast<WebSocketClient>(sock_);
+   if (wsSock == nullptr)
+      return;
+
+   wsSock->setPubkeyPromptLambda(lbd);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // LedgerDelegate
 //
