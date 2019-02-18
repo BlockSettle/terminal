@@ -273,7 +273,6 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
       return {};
    }
    if (!wallet) {
-      logger_->debug("Instantianting new BtcWallet with id {}", walletId);
       wallet = std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
    }
    const auto &regId = wallet->registerAddresses(addrVec, asNew);
