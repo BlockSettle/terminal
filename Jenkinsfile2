@@ -1,8 +1,8 @@
 pipeline {
     agent any
-    lock('terminal_lock') {
 
     stages {
+    lock('terminal_lock') {
         stage('Build apps') {
             parallel {
                 stage('Build Linux app') {
