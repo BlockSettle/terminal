@@ -9,6 +9,7 @@
 #include "nodeRPC.h"
 #include "DBUtils.h"
 #include "BlockDataManagerConfig.h"
+#include "SocketWritePayload.h"
 
 #ifdef _WIN32
 #include "leveldb_windows_port\win32_posix\dirent_win32.h"
