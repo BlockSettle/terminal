@@ -1,8 +1,10 @@
 pipeline {
     agent any
+    options {
+        lock resource: 'terminal_lock'
+    }
 
     stages {
-        lock('terminal_lock') {
         stage('Build apps') {
             parallel {
                 stage('Build Linux app') {
@@ -49,6 +51,5 @@ pipeline {
                 sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/Windows/bsterminal_installer_${TAG}.exe /var/www/downloads/bsterminal_installer.exe"
             }
         }
-    }
     }
 }
