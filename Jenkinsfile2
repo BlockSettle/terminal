@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    options { disableConcurrentBuilds() }
+    lock(label: 'terminal_lock')
 
     stages {
         stage('Build apps') {
