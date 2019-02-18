@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    lock(label: 'terminal_lock')
+    lock(label: 'terminal_lock') {
 
     stages {
         stage('Build apps') {
@@ -39,6 +39,7 @@ pipeline {
             }
         }
         
+        
         stage('Transfer') {
             steps {
                 sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal.deb genoa@10.0.1.36:/var/www/terminal/Linux/bsterminal_${TAG}.deb"
@@ -49,5 +50,6 @@ pipeline {
                 sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/Windows/bsterminal_installer_${TAG}.exe /var/www/downloads/bsterminal_installer.exe"
             }
         }
+    }
     }
 }
