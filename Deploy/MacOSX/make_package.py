@@ -7,12 +7,15 @@ import shutil
 import subprocess
 import sys
 
-def generate_project(sourcesRoot):
+def generate_project(sourcesRoot, productionBuild):
    command = []
 
    command.append('python')
    command.append('generate.py')
    command.append('release')
+
+   if productionBuild:
+      command.append('-production')
 
    result = subprocess.call(command, cwd=sourcesRoot)
    return result == 0
@@ -116,10 +119,10 @@ def sign_package(packagePath):
 
    return True
 
-def main(sourcesRoot):
+def main(sourcesRoot, productionBuild):
    outputDir = os.getcwd()
 
-   if generate_project(sourcesRoot):
+   if generate_project(sourcesRoot, productionBuild):
       if make_project(sourcesRoot) and sign_apps(sourcesRoot):
          packagePath = os.path.join(outputDir, 'BlockSettle.dmg')
          if make_package(sourcesRoot, packagePath) and sign_package(packagePath):
@@ -132,7 +135,10 @@ def main(sourcesRoot):
       print('Failed to generate project')
 
 if __name__ == '__main__':
-   if len(sys.argv) != 2:
+   if len(sys.argv) < 2:
       print('Pass sources root')
    else:
-      main(sys.argv[1])
+      if (len(sys.argv) == 3) and (sys.argv[2] == '-production'):
+         main(sys.argv[1], True)
+      else:
+         main(sys.argv[1], False)
