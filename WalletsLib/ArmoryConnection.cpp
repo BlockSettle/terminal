@@ -25,6 +25,18 @@ Q_DECLARE_METATYPE(NodeStatus)
 Q_DECLARE_METATYPE(bs::TXEntry)
 Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
 
+// The point where the user will be notified that the server has a new key that
+// has never been encountered. (If the key has ever been seen in the past, this
+// funct won't be called.) We can reject or accept the connection as needed.
+// The derivation proof will be added later, and can be used for actual
+// verification.
+bool bip150PromptUser(const BinaryData& srvPubKey
+   , const std::string& srvIPPort) {
+   std::cout << "Simple proof of concept for now. Srv pub key = "
+      << srvPubKey.toHexStr() << " - Srv IP:Port = " << srvIPPort << std::endl;
+   return true;
+}
+
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger
    , const std::string &txCacheFN, bool cbInMainThread)
    : QObject(nullptr)
@@ -175,6 +187,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings)
          for (const auto &x : bsBIP150PubKeys) {
             bdv_->addPublicKey(x);
          }
+         bdv_->setCheckServerKeyPromptLambda(bip150PromptUser);
 
          connected = bdv_->connectToRemote();
          if (!connected) {

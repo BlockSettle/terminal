@@ -310,6 +310,14 @@ void SerializedMessage::construct(const vector<uint8_t>& data,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void SerializedMessage::construct(const BinaryDataRef& data,
+   BIP151Connection* connPtr, uint8_t type, uint32_t id)
+{
+   packets_ = move(
+      WebSocketMessageCodec::serialize(data, connPtr, type, id));
+}
+
+///////////////////////////////////////////////////////////////////////////////
 const BinaryData& SerializedMessage::getNextPacket() const
 {
    auto& val = packets_[index_++];
@@ -366,6 +374,8 @@ bool WebSocketMessagePartial::parsePacket(const BinaryDataRef& dataRef)
    }
 
    case WS_MSGTYPE_AEAD_SETUP:
+   case WS_MSGTYPE_AEAD_PRESENT_PUBKEY:
+   case WS_MSGTYPE_AEAD_PRESENT_PUBKEY_CHILD:
    case WS_MSGTYPE_AEAD_ENCINIT:
    case WS_MSGTYPE_AEAD_ENCACK:
    case WS_MSGTYPE_AEAD_REKEY:

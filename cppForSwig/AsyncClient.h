@@ -359,6 +359,8 @@ namespace AsyncClient
          ::Codec_BDVCommand::StaticMethods);
 
       std::pair<unsigned, unsigned> getRekeyCount(void) const;
+      void setCheckServerKeyPromptLambda(
+         std::function<bool(const BinaryData&, const std::string&)>);
    };
 
    ////////////////////////////////////////////////////////////////////////////

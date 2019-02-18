@@ -127,6 +127,9 @@ private:
    std::shared_ptr<AuthorizedPeers> authPeers_;
    BinaryData leftOverData_;
 
+   std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
+   std::function<bool(const BinaryData&, const std::string&)> userPromptLambda_;
+
 public:
    std::atomic<int> count_;
 
@@ -137,6 +140,7 @@ private:
    void service(lws_context*);
    bool processAEADHandshake(const WebSocketMessagePartial&);
    AuthPeersLambdas getAuthPeerLambda(void) const;
+   void promptUser(const BinaryDataRef&, const std::string&);
 
 public:
    WebSocketClient(const std::string& addr, const std::string& port,
@@ -157,6 +161,7 @@ public:
    std::pair<unsigned, unsigned> 
       getRekeyCount(void) const { return std::make_pair(outerRekeyCount_, innerRekeyCount_); }
    void addPublicKey(const SecureBinaryData&);
+   void setPubkeyPromptLambda(std::function<bool(const BinaryData&, const std::string&)>);
 
    //virtuals
    SocketType type(void) const { return SocketWS; }

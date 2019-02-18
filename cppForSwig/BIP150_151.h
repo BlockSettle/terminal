@@ -230,6 +230,8 @@ public:
    const int errorSM(const int& outVal);
    void rekey(void);
 //   const void clearErrorState() { curState_ = BIP150State::INACTIVE; }
+   BinaryDataRef getOwnPubKey(void) const;
+   bool havePublicKey(const BinaryDataRef&, const std::string&) const;
 };
 
 class BIP151Connection
@@ -291,6 +293,8 @@ public:
    void bip150HandshakeRekey(void);
    void setGoodPropose(void) { goodPropose_ = true; }
    bool getProposeFlag(void) const { return goodPropose_; }
+   BinaryDataRef getOwnPubKey(void) const { return bip150SM_.getOwnPubKey(); }
+   bool havePublicKey(const BinaryDataRef&, const std::string&) const;
 };
 
 // Class to use on BIP 151 encrypted messages. Contains the plaintext contents

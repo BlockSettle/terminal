@@ -219,6 +219,11 @@ namespace SwigClient
       std::pair<unsigned, unsigned> getRekeyCount(void) const {
          return bdvAsync_.getRekeyCount();
       }
+
+      void setCheckServerKeyPromptLambda(
+         std::function<bool(const BinaryData&, const std::string&)> lbd) {
+         bdvAsync_.setCheckServerKeyPromptLambda(lbd);
+      }
    };
 
    ///////////////////////////////////////////////////////////////////////////////
