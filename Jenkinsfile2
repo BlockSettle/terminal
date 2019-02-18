@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    lock(label: 'terminal_lock')
+    lock('terminal_lock') {
 
     stages {
         stage('Build apps') {
@@ -46,5 +46,6 @@ pipeline {
                 sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe genoa@10.0.1.36:/var/www/terminal/Windows/bsterminal_installer_${BRANCH}.exe"
             }
         }
+    }
     }
 }
