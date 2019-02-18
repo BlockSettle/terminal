@@ -358,16 +358,9 @@ void PlainWallet::saveToDir(const std::string &targetDir)
    saveToFile(getFileName(targetDir));
 }
 
-void PlainWallet::addAddresses(const std::vector<bs::Address> &addresses)
+int PlainWallet::addAddress(const bs::Address &addr, const std::shared_ptr<GenericAsset> &inAsset)
 {
-   usedAddresses_.insert(usedAddresses_.end(), addresses.begin(), addresses.end());
-   for (const auto &addr : addresses) {
-      addrPrefixedHashes_.insert(addr.prefixed());
-   }
-}
-
-int PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAsset> asset)
-{
+   auto asset = inAsset;
    int id = 0;
    if (asset) {
       if (asset->id() < 0) {

@@ -209,6 +209,23 @@ namespace bs {
    };
 
 
+   class GenericAsset : public AssetEntry
+   {
+   public:
+      GenericAsset(AssetEntryType type, int id = -1) :
+         AssetEntry(type, id, {}), id_(id) {}
+
+      void setId(int id) {
+         id_ = id;
+         ID_ = WRITE_UINT32_BE(id);
+      }
+      int id() const { return id_; }
+
+   protected:
+      int id_;
+   };
+
+
    class Wallet : public QObject, protected wallet::MetaData   // Abstract parent for terminal wallet classes
    {
       Q_OBJECT
@@ -291,12 +308,13 @@ namespace bs {
       virtual bs::Address GetNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return GetNewExtAddress(aet); }
       virtual bs::Address GetRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default);
       virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
-      virtual void addAddresses(const std::vector<bs::Address> &) {}
       virtual std::string GetAddressIndex(const bs::Address &) = 0;
       virtual bool AddressIndexExists(const std::string &index) const = 0;
       virtual bs::Address CreateAddressWithIndex(const std::string &index
          , AddressEntryType aet = AddressEntryType_Default
          , bool signal = true) = 0;
+      virtual int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) = 0;
+
       virtual bool getLedgerDelegateForAddress(const bs::Address &
          , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
          , QObject *context = nullptr);
@@ -352,6 +370,24 @@ namespace bs {
       virtual AddressEntryType getAddrTypeForAddr(const BinaryData &) = 0;
       virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
+      template <typename MapT> void updateMap(const MapT &src, MapT &dst) const;
+      template <typename ArgT> void invokeCb(const std::map<BinaryData, ArgT> &data
+         , std::map<bs::Address, std::vector<std::function<void(ArgT)>>> &cbMap
+         , const ArgT &defVal) const;
+
+      bool getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &
+         , const std::string &walletId, std::function<void(std::vector<UTXO>)>
+         , QObject *obj, uint64_t val);
+      bool getSpendableZCList(const std::shared_ptr<AsyncClient::BtcWallet> &
+         , std::function<void(std::vector<UTXO>)>, QObject *obj);
+      bool getUTXOsToSpend(const std::shared_ptr<AsyncClient::BtcWallet> &
+         , uint64_t val, std::function<void(std::vector<UTXO>)>) const;
+      bool getRBFTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &
+         , std::function<void(std::vector<UTXO>)>) const;
+      bool getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &
+         , uint32_t id, std::function<void(const bs::Wallet *wallet
+         , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
+
    private:
       bool isSegWitScript(const BinaryData &script);
       Signer getSigner(const wallet::TXSignRequest &, const SecureBinaryData &password,
@@ -389,7 +425,7 @@ namespace bs {
       std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
 
    private:
-      std::map<QPointer<QObject>, std::vector<std::function<void(std::vector<UTXO>)>>>   spendableCallbacks_;
+      std::map<std::string, std::vector<std::pair<QPointer<QObject>, std::function<void(std::vector<UTXO>)>>>>   spendableCallbacks_;
       std::map<QPointer<QObject>, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
 
       mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;

@@ -95,14 +95,16 @@ int  bs::SettlementWallet::addAddress(const std::shared_ptr<SettlementAddressEnt
    return id;
 }
 
-int bs::SettlementWallet::addAddress(const bs::Address &addr, std::shared_ptr<bs::GenericAsset> asset)
+int bs::SettlementWallet::addAddress(const bs::Address &addr, const std::shared_ptr<bs::GenericAsset> &asset)
 {
    const int id = bs::PlainWallet::addAddress(addr, asset);
-   const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(asset);
-   const auto &addrHashes = settlAsset->supportedAddrHashes();
-   addrPrefixedHashes_.insert(addrHashes.begin(), addrHashes.end());
-   for (const auto &hash : addrHashes) {
-      assetByAddr_[hash] = asset;
+   if (asset) {
+      const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(asset);
+      const auto &addrHashes = settlAsset->supportedAddrHashes();
+      addrPrefixedHashes_.insert(addrHashes.begin(), addrHashes.end());
+      for (const auto &hash : addrHashes) {
+         assetByAddr_[hash] = asset;
+      }
    }
    return id;
 }

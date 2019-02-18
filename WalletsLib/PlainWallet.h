@@ -16,22 +16,6 @@ namespace spdlog {
 };
 
 namespace bs {
-   class GenericAsset : public AssetEntry
-   {
-   public:
-      GenericAsset(AssetEntryType type, int id = -1) :
-         AssetEntry(type, id, {}), id_(id) {}
-
-      void setId(int id) {
-         id_ = id;
-         ID_ = WRITE_UINT32_BE(id);
-      }
-      int id() const { return id_; }
-
-   protected:
-      int id_;
-   };
-
    class PlainAsset : public GenericAsset
    {
    public:
@@ -84,8 +68,7 @@ namespace bs {
          logger_ = logger;
       }
 
-      virtual int addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset = nullptr);
-      void addAddresses(const std::vector<bs::Address> &) override;
+      int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
       bool containsAddress(const bs::Address &addr) override;
 
       std::string GetWalletId() const override { return walletId_; }

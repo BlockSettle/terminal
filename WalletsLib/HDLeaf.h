@@ -115,6 +115,12 @@ namespace bs {
 
          bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
             , QObject *obj, uint64_t val = UINT64_MAX) override;
+         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
+            , QObject *obj) override;
+         bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const override;
+         bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const override;
+         bool getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
+            , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -139,7 +145,12 @@ namespace bs {
             , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
             , QObject *context = nullptr) override;
 
+         int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
+
          void UpdateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
+         bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
+         bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const override;
+         bool GetActiveAddressCount(const std::function<void(size_t)> &) const override;
 
          std::shared_ptr<ResolverFeed> GetResolver(const SecureBinaryData &password) override;
          std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override;
@@ -260,6 +271,8 @@ namespace bs {
          static void serializeAddr(BinaryWriter &bw, Path::Elem index
                                    , AddressEntryType, const Path &);
          bool deserialize(const BinaryData &ser, Nodes rootNodes);
+
+         std::string getWalletIdInt() const;
       };
 
 
