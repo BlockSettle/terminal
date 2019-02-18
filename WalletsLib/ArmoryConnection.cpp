@@ -729,20 +729,20 @@ void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntr
 
 void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
 {
-   std::vector<bs::TXEntry> zcEntries;
+   std::vector<bs::TXEntry> zcInvEntries;
    for (const auto &id : ids) {
       const auto &itEntry = zcEntries_.find(id);
       if (itEntry != zcEntries_.end()) {
-         zcEntries.emplace_back(std::move(itEntry->second));
+         zcInvEntries.emplace_back(std::move(itEntry->second));
          zcEntries_.erase(itEntry);
       }
    }
 
    if (cbInMainThread_) {
-      QMetaObject::invokeMethod(this, [this, zcEntries] { emit zeroConfInvalidated(zcEntries); });
+      QMetaObject::invokeMethod(this, [this, zcInvEntries] { emit zeroConfInvalidated(zcInvEntries); });
    }
    else {
-      emit zeroConfInvalidated(zcEntries);
+      emit zeroConfInvalidated(zcInvEntries);
    }
 }
 
