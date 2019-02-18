@@ -23,7 +23,7 @@ add_definitions(-DNOMINMAX)
 add_definitions(-DLIBBTC_ONLY)
 
 IF (PRODUCTION_BUILD)
-   add_compile_definitions(PRODUCTION_BUILD)
+   add_definitions(-DPRODUCTION_BUILD)
 ENDIF (PRODUCTION_BUILD)
 
 # Force 64-bit builds and min target for macOS. If the min target changes,
