@@ -11,6 +11,7 @@
 #include <ctime>
 #include <string.h>
 #include "BitcoinP2p.h"
+#include "SocketWritePayload.h"
 
 using namespace std;
 
