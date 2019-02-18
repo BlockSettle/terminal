@@ -658,26 +658,26 @@ bool bs::Wallet::GetActiveAddressCount(const std::function<void(size_t)> &cb) co
 }
 
 bool bs::Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
-   , const std::string &walletId, std::function<void(std::vector<UTXO>)> cb, QObject *obj, uint64_t val)
+   , std::function<void(std::vector<UTXO>)> cb, QObject *obj, uint64_t val)
 {
    if (!isBalanceAvailable()) {
       return false;
    }
 
-   auto &callbacks = spendableCallbacks_[walletId];
+   auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
    callbacks.push_back({ obj, cb });
    if (callbacks.size() > 1) {
       return true;
    }
 
-   const auto &cbTxOutList = [this, val, walletId]
+   const auto &cbTxOutList = [this, val, btcWallet]
                              (ReturnMessage<std::vector<UTXO>> txOutList) {
       try {
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
          auto txOutListObj = txOutList.get();
-         const auto &cbProcess = [this, val, walletId, txOutListObj] {
+         const auto &cbProcess = [this, val, btcWallet, txOutListObj] {
             std::vector<UTXO> txOutListCopy = txOutListObj;
             if (utxoAdapter_) {
                utxoAdapter_->filter(txOutListCopy);
@@ -697,14 +697,14 @@ bool bs::Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWal
                   txOutListCopy.resize(cutOffIdx + 1);
                }
             }
-            QMetaObject::invokeMethod(this, [this, walletId, txOutListCopy] {
-               auto &callbacks = spendableCallbacks_[walletId];
+            QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
+               auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
                for (const auto &cbPairs : callbacks) {
                   if (cbPairs.first) {
                         cbPairs.second(txOutListCopy);
                   }
                }
-               spendableCallbacks_.erase(walletId);
+               spendableCallbacks_.erase(btcWallet->walletID());
             });
          };
 
@@ -724,7 +724,7 @@ bool bs::Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWal
 bool bs::Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
    , QObject *obj, uint64_t val)
 {
-   return getSpendableTxOutList(btcWallet_, GetWalletId(), cb, obj, val);
+   return getSpendableTxOutList(btcWallet_, cb, obj, val);
 }
 
 bool bs::Wallet::getUTXOsToSpend(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet

@@ -545,12 +545,12 @@ bool WalletsManager::IsArmoryReady() const
 
 WalletsManager::wallet_gen_type WalletsManager::GetWalletById(const std::string& walletId) const
 {
-   {
-      auto it = wallets_.find(walletId);
-      if (it != wallets_.end()) {
-         return it->second;
+   for (const auto &wallet : wallets_) {
+      if (wallet.second->hasId(walletId)) {
+         return wallet.second;
       }
    }
+
    if (settlementWallet_ && (settlementWallet_->GetWalletId() == walletId)) {
       return settlementWallet_;
    }

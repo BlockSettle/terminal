@@ -241,6 +241,7 @@ namespace bs {
       virtual std::string GetWalletDescription() const = 0;
       virtual void SetDescription(const std::string &) = 0;
       virtual wallet::Type GetType() const { return wallet::Type::Bitcoin; }
+      virtual bool hasId(const std::string &id) const { return (GetWalletId() == id); }
 
       virtual void setData(const std::string &) {}
       virtual void setData(uint64_t) {}
@@ -376,8 +377,7 @@ namespace bs {
          , const ArgT &defVal) const;
 
       bool getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &
-         , const std::string &walletId, std::function<void(std::vector<UTXO>)>
-         , QObject *obj, uint64_t val);
+         , std::function<void(std::vector<UTXO>)>, QObject *obj, uint64_t val);
       bool getSpendableZCList(const std::shared_ptr<AsyncClient::BtcWallet> &
          , std::function<void(std::vector<UTXO>)>, QObject *obj);
       bool getUTXOsToSpend(const std::shared_ptr<AsyncClient::BtcWallet> &

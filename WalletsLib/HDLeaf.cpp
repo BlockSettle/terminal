@@ -652,14 +652,6 @@ std::vector<std::string> hd::Leaf::RegisterWallet(const std::shared_ptr<ArmoryCo
 
       if (!isExtOnly_) {
          const auto addrsInt = getAddrHashesInt();
-         std::set<BinaryData> extAddrs;
-         extAddrs.insert(addrsExt.cbegin(), addrsExt.cend());
-         size_t cnt = 0;
-         for (const auto &intAddr : addrsInt) {
-            if (extAddrs.find(intAddr) != extAddrs.end()) {
-               cnt++;
-            }
-         }
          const auto regIdInt = armory_->registerWallet(btcWalletInt_
             , getWalletIdInt(), addrsInt, cbRegisterInt, asNew);
          regIdSet->insert(regIdInt);
@@ -874,19 +866,23 @@ bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
 
 std::string hd::Leaf::getWalletIdInt() const
 {
-   std::string result;
-   for (const auto &c : GetWalletId()) {
-      if (isupper(c)) {
-         result.push_back(tolower(c));
-      }
-      else if (islower(c)) {
-         result.push_back(toupper(c));
-      }
-      else {
-         result.push_back(c);
+   if (walletIdInt_.empty()) {
+      for (const auto &c : GetWalletId()) {
+         if (isupper(c)) {
+            walletIdInt_.push_back(tolower(c));
+         } else if (islower(c)) {
+            walletIdInt_.push_back(toupper(c));
+         } else {
+            walletIdInt_.push_back(c);
+         }
       }
    }
-   return result;
+   return walletIdInt_;
+}
+
+bool hd::Leaf::hasId(const std::string &id) const
+{
+   return ((GetWalletId() == id) || (getWalletIdInt() == id));
 }
 
 int hd::Leaf::addAddress(const bs::Address &addr, const std::shared_ptr<GenericAsset> &)
@@ -987,7 +983,7 @@ bool hd::Leaf::getAddrBalance(const bs::Address &addr, std::function<void(std::v
          try {
             const auto bm = balanceMap.get();
             updateMap<std::map<BinaryData, std::vector<uint64_t>>>(bm, addressBalanceMap_);
-            if (cbCnt->fetch_add(1) == 1) {  // comparing with prev value
+            if (isExtOnly_ || (cbCnt->fetch_add(1) >= 1)) {  // comparing with prev value
                updateAddrBalance_ = false;
             }
          } catch (std::exception& e) {
@@ -1004,7 +1000,9 @@ bool hd::Leaf::getAddrBalance(const bs::Address &addr, std::function<void(std::v
       cbBal_[addr].push_back(cb);
       if (cbBal_.size() == 1) {
          btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
-         btcWalletInt_->getAddrBalancesFromDB(cbAddrBalance);
+         if (!isExtOnly_) {
+            btcWalletInt_->getAddrBalancesFromDB(cbAddrBalance);
+         }
       }
    } else {
       const auto itBal = addressBalanceMap_.find(addr.id());
@@ -1029,7 +1027,7 @@ bool hd::Leaf::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>
          try {
             const auto inTxnMap = txnMap.get();
             updateMap<std::map<BinaryData, uint32_t>>(inTxnMap, addressTxNMap_);
-            if (cbCnt->fetch_add(1) == 1) {  // comparing with prev value
+            if (isExtOnly_ || (cbCnt->fetch_add(1) >= 1)) {  // comparing with prev value
                updateAddrTxN_ = false;
             }
          } catch (const std::exception &e) {
@@ -1046,7 +1044,9 @@ bool hd::Leaf::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>
       cbTxN_[addr].push_back(cb);
       if (cbTxN_.size() == 1) {
          btcWallet_->getAddrTxnCountsFromDB(cbTxN);
-         btcWalletInt_->getAddrTxnCountsFromDB(cbTxN);
+         if (!isExtOnly_) {
+            btcWalletInt_->getAddrTxnCountsFromDB(cbTxN);
+         }
       }
    } else {
       const auto itTxN = addressTxNMap_.find(addr.id());
@@ -1121,9 +1121,9 @@ bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
    const auto &cbTxOutListExt = [this, cbTxOutList](std::vector<UTXO> txOutList) {
       cbTxOutList(txOutList, kExtConfCount);
    };
-   bool rc = bs::Wallet::getSpendableTxOutList(btcWallet_, GetWalletId(), cbTxOutListExt, obj, val);
+   bool rc = bs::Wallet::getSpendableTxOutList(btcWallet_, cbTxOutListExt, obj, val);
    if (!isExtOnly_) {
-      rc &= bs::Wallet::getSpendableTxOutList(btcWalletInt_, getWalletIdInt(), cbTxOutListInt, obj, val);
+      rc &= bs::Wallet::getSpendableTxOutList(btcWalletInt_, cbTxOutListInt, obj, val);
    }
    return rc;
 }

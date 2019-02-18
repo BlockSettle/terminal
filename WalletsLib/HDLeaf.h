@@ -112,6 +112,7 @@ namespace bs {
          std::vector<SecureBinaryData> encryptionKeys() const override { return rootNodes_.encryptionKeys(); }
          std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
+         bool hasId(const std::string &) const override;
 
          bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
             , QObject *obj, uint64_t val = UINT64_MAX) override;
@@ -209,7 +210,7 @@ namespace bs {
          const Path::Elem  addrTypeInternal = 1u;
          const AddressEntryType defaultAET_ = AddressEntryType_P2WPKH;
 
-         mutable std::string     walletId_;
+         mutable std::string     walletId_, walletIdInt_;
          bs::wallet::Type        type_;
          std::shared_ptr<Node>   node_;
          Nodes                   rootNodes_;
