@@ -244,6 +244,7 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    connect(walletsManager_.get(), &WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &WalletsManager::invalidatedZCs, this, &TransactionsViewModel::onDelTransactions, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel()
@@ -441,9 +442,40 @@ bool TransactionsViewModel::txKeyExists(const std::string &key)
    return (currentItems_.find(key) != currentItems_.end());
 }
 
-void TransactionsViewModel::onNewTransactions(std::vector<bs::TXEntry> page)
+void TransactionsViewModel::onNewTransactions(const std::vector<bs::TXEntry> &entries)
 {
-   updateTransactionsPage(page);
+   updateTransactionsPage(entries);
+}
+
+void TransactionsViewModel::onDelTransactions(const std::vector<bs::TXEntry> &entries)
+{
+   std::vector<int> delRows;
+   std::vector<bs::TXEntry> children;
+   {
+      QMutexLocker locker(&updateMutex_);
+      for (const auto &entry : entries) {
+         const auto key = mkTxKey(entry);
+         const auto node = rootNode_->find(key);
+         if (node && (node->parent() == rootNode_) && !node->item()->confirmations) {
+            delRows.push_back(node->row());
+            currentItems_.erase(key);
+            if (node->hasChildren()) { // handle race condition when node being deleted has confirmed children
+               for (const auto &child : node->children()) {
+                  currentItems_.erase(mkTxKey(child->item()->txEntry));
+                  if (child->item()->confirmations) {
+                     children.push_back(child->item()->txEntry);
+                  }
+               }
+            }
+         }
+      }
+   }
+   if (!delRows.empty()) {
+      onDelRows(delRows);
+   }
+   if (!children.empty()) {
+      updateTransactionsPage(children);
+   }
 }
 
 static bool isChildOf(TransactionPtr child, TransactionPtr parent)
@@ -479,13 +511,13 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
    auto newTxKeys = std::make_shared<std::unordered_set<std::string>>();
    auto keysMutex = std::make_shared<QMutex>();
 
-   for (const auto &entry : page) {
-      const auto item = itemFromTransaction(entry);
-      if (!item->wallet) {
-         continue;
-      }
-      {
-         QMutexLocker locker(&updateMutex_);
+   {
+      QMutexLocker locker(&updateMutex_);
+      for (const auto &entry : page) {
+         const auto item = itemFromTransaction(entry);
+         if (!item->wallet) {
+            continue;
+         }
          if (txKeyExists(item->id())) {
             updatedItems->push_back(item);
             continue;
@@ -494,9 +526,13 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          if (!oldestItem_.isSet() || (oldestItem_.txEntry.txTime >= item->txEntry.txTime)) {
             oldestItem_ = *item;
          }
+         newTxKeys->insert(item->id());
+         newItems->insert({ item->id(), { item, new TXNode(item) } });
       }
-      newTxKeys->insert(item->id());
-      newItems->insert({ item->id(), { item, new TXNode(item) } });
+
+      if (!updatedItems->empty()) {
+         updateBlockHeight(*updatedItems);
+      }
    }
 
    const auto &cbInited = [this, newItems, newTxKeys, keysMutex, updatedItems]
@@ -586,9 +622,6 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
       emit dataLoaded(0);
    }
 
-   if (!updatedItems->empty()) {
-      updateBlockHeight(*updatedItems);
-   }
    return { newItemsCopy.size(), updatedItems->size() };
 }
 

@@ -729,11 +729,33 @@ void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
 void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
 {
    const auto txEntries = bs::TXEntry::fromLedgerEntries(entries);
+   for (const auto &entry : txEntries) {
+      zcEntries_[entry.txHash] = entry;
+   }
    if (cbInMainThread_) {
       QMetaObject::invokeMethod(this, [this, txEntries] {emit zeroConfReceived(txEntries); });
    }
    else {
       emit zeroConfReceived(txEntries);
+   }
+}
+
+void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
+{
+   std::vector<bs::TXEntry> zcInvEntries;
+   for (const auto &id : ids) {
+      const auto &itEntry = zcEntries_.find(id);
+      if (itEntry != zcEntries_.end()) {
+         zcInvEntries.emplace_back(std::move(itEntry->second));
+         zcEntries_.erase(itEntry);
+      }
+   }
+
+   if (cbInMainThread_) {
+      QMetaObject::invokeMethod(this, [this, zcInvEntries] { emit zeroConfInvalidated(zcInvEntries); });
+   }
+   else {
+      emit zeroConfInvalidated(zcInvEntries);
    }
 }
 
@@ -765,11 +787,15 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
       emit connection_->newBlock((unsigned int)block);
       break;
 
-   case BDMAction_ZC: {
+   case BDMAction_ZC:
       logger_->debug("[{}] BDMAction_ZC", __func__);
       connection_->onZCsReceived(*reinterpret_cast<std::vector<ClientClasses::LedgerEntry>*>(ptr));
       break;
-   }
+
+   case BDMAction_InvalidatedZC:
+      logger_->debug("[{}] BDMAction_InvalidateZC", __func__);
+      connection_->onZCsInvalidated(*reinterpret_cast<std::set<BinaryData> *>(ptr));
+      break;
 
    case BDMAction_Refresh:
       logger_->debug("[{}] BDMAction_Refresh", __func__);

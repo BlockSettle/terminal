@@ -134,6 +134,7 @@ signals:
    void progress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress) const;
    void newBlock(unsigned int height) const;
    void zeroConfReceived(const std::vector<bs::TXEntry>) const;
+   void zeroConfInvalidated(const std::vector<bs::TXEntry>) const;
    void refresh(std::vector<BinaryData> ids) const;
    void nodeStatus(NodeStatus, bool segWitEnabled, RpcStatus) const;
    void txBroadcastError(QString txHash, QString error) const;
@@ -145,6 +146,7 @@ private:
    void setTopBlock(unsigned int topBlock) { topBlock_ = topBlock; }
    void onRefresh(std::vector<BinaryData>);
    void onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &);
+   void onZCsInvalidated(const std::set<BinaryData> &);
 
    void stopServiceThreads();
    bool startLocalArmoryProcess(const ArmorySettings &settings);
@@ -174,6 +176,8 @@ private:
 
    mutable std::atomic_flag      txCbLock_ = ATOMIC_FLAG_INIT;
    std::map<BinaryData, std::vector<std::function<void(Tx)>>>   txCallbacks_;
+
+   std::map<BinaryData, bs::TXEntry>   zcEntries_;
 };
 
 #endif // __ARMORY_CONNECTION_H__
