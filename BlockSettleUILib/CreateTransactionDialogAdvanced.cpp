@@ -830,7 +830,10 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
 {
    bs::Address result;
    if (transactionData_->GetTransactionSummary().hasChange) {
-      if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
+      if (changeAddressFixed_) {
+         result = selectedChangeAddress_;
+      }
+      else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
          result = transactionData_->GetWallet()->GetNewChangeAddress(
             ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
          transactionData_->createAddress(result);
@@ -1049,7 +1052,6 @@ void CreateTransactionDialogAdvanced::enableFeeChanging(bool enable)
 void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& changeAddress)
 {
    ui_->radioButtonExistingAddress->setChecked(true);
-
    ui_->radioButtonNewAddrNative->setEnabled(false);
    ui_->radioButtonNewAddrNested->setEnabled(false);
 
