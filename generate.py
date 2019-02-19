@@ -33,8 +33,8 @@ def generate_project(build_mode, build_production):
    print('Build mode        : {} ( {} )'.format(project_settings.get_build_mode(), ('Production' if build_production else 'Development')))
    print('Build mode        : ' + project_settings.get_build_mode())
    print('CMake generator   : ' + project_settings.get_cmake_generator())
-   print('Download path     : ' + project_settings.get_downloads_dir())
-   print('Install dir       : ' + project_settings.get_common_build_dir())
+   print('Download path     : ' + os.path.abspath(project_settings.get_downloads_dir()))
+   print('Install dir       : ' + os.path.abspath(project_settings.get_common_build_dir()))
 
    required_3rdparty = []
    if project_settings._is_windows:
