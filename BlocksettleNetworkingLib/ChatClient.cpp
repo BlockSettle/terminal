@@ -84,6 +84,12 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
    }
 }
 
+void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response)
+{
+   QJsonDocument json(response.toJson());
+      logger_->debug("[ChatClient::OnSendMessageResponse]: received: {}", json.toJson(QJsonDocument::Indented).toStdString());
+}
+
 void ChatClient::logout()
 {
    loggedIn_ = false;
