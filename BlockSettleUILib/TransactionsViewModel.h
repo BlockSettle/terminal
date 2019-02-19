@@ -152,7 +152,8 @@ private slots:
    void onDelRows(std::vector<int> rows);
 
    void onArmoryStateChanged(ArmoryConnection::State);
-   void onNewTransactions(std::vector<bs::TXEntry>);
+   void onNewTransactions(const std::vector<bs::TXEntry> &);
+   void onDelTransactions(const std::vector<bs::TXEntry> &);
    void onItemConfirmed(const TransactionPtr);
 
 private:

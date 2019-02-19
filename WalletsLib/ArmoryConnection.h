@@ -24,6 +24,13 @@
 class ArmoryConnection;
 class QProcess;
 
+// Define the BIP 150 public keys used by servers controlled by BS. For dev
+// purposes, they'll be hard-coded for now. THESE MUST BE REPLACED EVENTUALLY
+// WITH THE KEY ROTATION ALGORITHM. HARD-CODED KEYS WILL KILL ANY TERMINAL ONCE
+// THE KEYS ROTATE.
+// Key 1: IP address - 37 server
+#define BIP150_KEY_1 "03a8649b32b9459961e143c5c111b9a47ffa494116791c1cb35945a8b9bc8254ab"
+
 // The class is used as a callback that processes asynchronous Armory events.
 class ArmoryCallback : public RemoteCallback
 {
@@ -34,7 +41,7 @@ public:
 
    void run(BDMAction action, void* ptr, int block = 0) override;
    void progress(BDMPhase phase,
-      const vector<string> &walletIdVec,
+      const std::vector<std::string> &walletIdVec,
       float progress, unsigned secondsRem,
       unsigned progressNumeric) override;
 
@@ -110,7 +117,7 @@ public:
                           std::function<void(BinaryData)> callback);
 
    bool estimateFee(unsigned int nbBlocks, std::function<void(float)>);
-   bool getFeeSchedule(std::function<void(map<unsigned int, float>)> cb);
+   bool getFeeSchedule(std::function<void(std::map<unsigned int, float>)> cb);
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
    bool isTransactionVerified(uint32_t blockNum) const;
@@ -127,6 +134,7 @@ signals:
    void progress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress) const;
    void newBlock(unsigned int height) const;
    void zeroConfReceived(const std::vector<bs::TXEntry>) const;
+   void zeroConfInvalidated(const std::vector<bs::TXEntry>) const;
    void refresh(std::vector<BinaryData> ids) const;
    void nodeStatus(NodeStatus, bool segWitEnabled, RpcStatus) const;
    void txBroadcastError(QString txHash, QString error) const;
@@ -138,6 +146,7 @@ private:
    void setTopBlock(unsigned int topBlock) { topBlock_ = topBlock; }
    void onRefresh(std::vector<BinaryData>);
    void onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &);
+   void onZCsInvalidated(const std::set<BinaryData> &);
 
    void stopServiceThreads();
    bool startLocalArmoryProcess(const ArmorySettings &settings);
@@ -154,6 +163,8 @@ private:
    const bool     cbInMainThread_;
    std::shared_ptr<BlockHeader> getTxBlockHeader_;
 
+   std::vector<SecureBinaryData> bsBIP150PubKeys;
+
    std::atomic_bool  regThreadRunning_;
    std::atomic_bool  connThreadRunning_;
    std::atomic_bool  maintThreadRunning_;
@@ -165,6 +176,8 @@ private:
 
    mutable std::atomic_flag      txCbLock_ = ATOMIC_FLAG_INIT;
    std::map<BinaryData, std::vector<std::function<void(Tx)>>>   txCallbacks_;
+
+   std::map<BinaryData, bs::TXEntry>   zcEntries_;
 };
 
 #endif // __ARMORY_CONNECTION_H__

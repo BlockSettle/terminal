@@ -108,6 +108,7 @@ void WalletKeyWidget::onTypeChanged()
 {
    if (ui_->radioButtonPassword->isChecked()) {
       passwordData_.encType = EncryptionType::Password;
+      passwordData_.encKey.clear();
       ui_->stackedWidget->setCurrentWidget(ui_->pagePassword);
       ui_->pageEid->setMaximumHeight(0);
       ui_->pagePassword->setMaximumHeight(SHRT_MAX);
@@ -370,8 +371,6 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
       ui_->labelPassword->setMaximumWidth(70);
       ui_->labelPassword->setMinimumWidth(70);
    }
-
-
 }
 
 QPropertyAnimation* WalletKeyWidget::startAuthAnimation(bool success)

@@ -797,13 +797,13 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
                            , NetworkType netType
                            , const std::shared_ptr<ConnectionManager>& connectionManager
                            , const std::shared_ptr<ApplicationSettings>& appSettings
-                           , const QString& pubKeyPath
+                           , const SecureBinaryData& pubKey
                            , OpMode opMode)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
    , appSettings_{appSettings}
-   , pubKeyPath_{pubKeyPath}
+   , zmqSignerPubKey_{pubKey}
 {}
 
 // Establish the remote connection to the signer.
@@ -816,12 +816,8 @@ bool RemoteSigner::Start()
    // Load remote singer zmq pub key.
    // If the server pub key exists, proceed (it was initialized in LocalSigner::Start()).
    if (!zmqSignerPubKey_.getSize()){
-      if (!bs::network::readZmqKeyString(pubKeyPath_.toLatin1(), zmqSignerPubKey_, true
-         , logger_)) {
-         logger_->error("[RemoteSigner::{}] failed to read ZMQ server public "
-            "key.", __func__);
-         return false;
-      }
+      logger_->error("[RemoteSigner::Start] missing server public key.");
+      return false;
    }
 
    connection_ = connectionManager_->CreateSecuredDataConnection(true);
@@ -1029,10 +1025,10 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
                          , const QString &homeDir, NetworkType netType, const QString &port
                          , const std::shared_ptr<ConnectionManager>& connectionManager
                          , const std::shared_ptr<ApplicationSettings> &appSettings
-                         , const QString& pubKeyPath
+                         , const SecureBinaryData& pubKey
                          , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-                  , connectionManager, appSettings, pubKeyPath, OpMode::Local)
+                  , connectionManager, appSettings, pubKey, OpMode::Local)
 
 {
    auto walletsCopyDir = homeDir + QLatin1String("/copy");

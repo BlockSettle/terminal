@@ -52,7 +52,7 @@ bool bs::wallet::AssetEntryComment::deserialize(BinaryRefReader brr)
 }
 
 
-void bs::wallet::MetaData::set(const shared_ptr<AssetEntryMeta> &value)
+void bs::wallet::MetaData::set(const std::shared_ptr<AssetEntryMeta> &value)
 {
    data_[value->key()] = value;
 }
@@ -350,7 +350,8 @@ SecureBinaryData bs::wallet::Seed::decodeEasyCodeChecksum(const EasyCoDec::Data 
    return (privKeyHalf1 + privKeyHalf2);
 }
 
-BinaryData bs::wallet::Seed::decodeEasyCodeLineChecksum(const string& easyCodeHalf, size_t ckSumSize, size_t keyValueSize)
+BinaryData bs::wallet::Seed::decodeEasyCodeLineChecksum(
+   const std::string& easyCodeHalf, size_t ckSumSize, size_t keyValueSize)
 {
     const auto& hexStr = EasyCoDec().toHex(easyCodeHalf);
     const auto keyHalfWithChecksum = BinaryData::CreateFromHex(hexStr);
@@ -412,7 +413,7 @@ std::string bs::Wallet::GetAddressComment(const bs::Address &address) const
    if ((aeMeta == nullptr) || (aeMeta->type() != bs::wallet::AssetEntryMeta::Comment)) {
       return "";
    }
-   const auto aeComment = dynamic_pointer_cast<bs::wallet::AssetEntryComment>(aeMeta);
+   const auto aeComment = std::dynamic_pointer_cast<bs::wallet::AssetEntryComment>(aeMeta);
    if (aeComment == nullptr) {
       return "";
    }
@@ -436,7 +437,7 @@ std::string bs::Wallet::GetTransactionComment(const BinaryData &txHash)
    if ((aeMeta == nullptr) || (aeMeta->type() != bs::wallet::AssetEntryMeta::Comment)) {
       return {};
    }
-   const auto aeComment = dynamic_pointer_cast<bs::wallet::AssetEntryComment>(aeMeta);
+   const auto aeComment = std::dynamic_pointer_cast<bs::wallet::AssetEntryComment>(aeMeta);
    return aeComment ? aeComment->comment() : std::string{};
 }
 

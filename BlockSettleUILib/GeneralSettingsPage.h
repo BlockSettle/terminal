@@ -1,9 +1,8 @@
 #ifndef __GENERAL_SETTINGS_PAGE_H__
 #define __GENERAL_SETTINGS_PAGE_H__
 
-#include <QWidget>
-
 #include <memory>
+#include "ConfigDialog.h"
 
 namespace Ui {
    class GeneralSettingsPage;
@@ -12,23 +11,15 @@ namespace Ui {
 class ApplicationSettings;
 class WalletsManager;
 
-class GeneralSettingsPage : public QWidget
+class GeneralSettingsPage : public SettingsPage
 {
-   Q_OBJECT
-
-signals:
-   void illformedSettings(bool illformed);
-
 public:
    GeneralSettingsPage(QWidget* parent = nullptr);
    ~GeneralSettingsPage() override;
 
-   void displaySettings(const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<WalletsManager>& walletsMgr
-      , bool displayDefault = false);
-
-   void applyChanges(const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<WalletsManager>& walletsMgr);
+   void display() override;
+   void reset() override;
+   void apply() override;
 
 private slots:
    void onSelectLogFile();

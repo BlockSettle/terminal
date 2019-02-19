@@ -1,9 +1,8 @@
 #ifndef __NETWORK_SETTINGS_PAGE_H__
 #define __NETWORK_SETTINGS_PAGE_H__
 
-#include <QWidget>
-
 #include <memory>
+#include "ConfigDialog.h"
 
 namespace Ui {
    class NetworkSettingsPage;
@@ -11,36 +10,28 @@ namespace Ui {
 
 class ApplicationSettings;
 
-class NetworkSettingsPage : public QWidget
+class NetworkSettingsPage : public SettingsPage
 {
-Q_OBJECT
-
 public:
    NetworkSettingsPage(QWidget* parent = nullptr);
    ~NetworkSettingsPage() override;
 
-   void setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings);
+   void display() override;
+   void reset() override;
+   void apply() override;
 
-   void displaySettings(bool displayDefault = false);
-
-   void applyChanges();
-
-public slots:
+private slots:
    void onRunArmoryLocallyChecked(bool checked);
    void onNetworkClicked(bool checked);
 
-   void onEnvSettingsChanged();
-   void onEnvSelected(int index);
+   void onArmoryHostChanged();
+   void onArmoryPortChanged();
 
 private:
-   void DisplayRunArmorySettings(bool runLocally, bool displayDefault);
-
-   void DetectEnvironmentSettings();
+   void DisplayRunArmorySettings(bool runLocally);
 
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
-
-   std::shared_ptr<ApplicationSettings> appSettings_;
 };
 
 #endif // __NETWORK_SETTINGS_PAGE_H__

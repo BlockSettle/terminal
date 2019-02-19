@@ -66,12 +66,12 @@ static const int ArmoryDefaultLocalTestPort = 19001;
 static const int ArmoryDefaultRemoteMainPort = 80;
 static const int ArmoryDefaultRemoteTestPort = 81;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 static const QString chatServerIPName = QLatin1String("chatserver-ip");
 static const QString chatServerIPHelp = QLatin1String("Chat servcer host ip");
 static const QString chatServerPortName = QLatin1String("chatserver-port");
 static const QString chatServerPortHelp = QLatin1String("Chat server port");
-#endif // _DEBUG
+#endif // NDEBUG
 
 
 
@@ -119,7 +119,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { closeToTray,             SettingDef(QLatin1String("CloseToTray"), false) },
       { notifyOnTX,              SettingDef(QLatin1String("ShowTxNotification"), true) },
       { defaultAuthAddr,         SettingDef(QLatin1String("DefaultAuthAddress")) },
-      { bsPublicKey,             SettingDef(QString(), QLatin1String("042aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fafa1270ccdc2cd285b5d90ddd3ef6f39c4c43efea52d75adadd16c6132e3ef880")) },
+      { bsPublicKey,             SettingDef(QString(), QLatin1String("022aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fa")) },
       { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String("trace")) },
       { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QString()) },
       { ccFileName,              SettingDef(QString(), AppendToWritableDir(CCFileName))},
@@ -298,6 +298,21 @@ template<> NetworkType ApplicationSettings::get<NetworkType>(Setting set, bool g
    return static_cast<NetworkType>(result);
 }
 
+ApplicationSettings::State ApplicationSettings::getState() const
+{
+   State result;
+   for (const auto &settingDef : settingDefs_) {
+      result[settingDef.first] = get(settingDef.first);
+   }
+   return result;
+}
+
+void ApplicationSettings::setState(const State &state)
+{
+   for (const auto &setting : state) {
+      set(setting.first, setting.second, false);
+   }
+}
 
 QString ApplicationSettings::GetSettingsPath() const
 {
@@ -316,19 +331,20 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
    parser.addOption({ armoryDBPortName, armoryDBPortHelp, QLatin1String("dbport") });
    parser.addOption({ nonSpendZeroConfName, nonSpendZeroConfHelp });
 
-#ifdef _DEBUG
+#ifndef NDEBUG
    parser.addOption({ chatServerIPName, chatServerIPHelp,  QLatin1String("chatip") });
    parser.addOption({ chatServerPortName, chatServerPortHelp, QLatin1String("chatport") });
-#endif // _DEBUG
+#endif // NDEBUG
 
-   
+
 
    if (!parser.parse(argList)) {
       errorText_ = parser.errorText();
       return false;
    }
 
-   // Sets the testnet prefix byte used in Armory C++ code
+   // Set up Armory as needed. Even though the BDMC object isn't used, it sets
+   // global values that are used later.
    BlockDataManagerConfig config;
 
    if (parser.isSet(testnetName)) {
@@ -348,7 +364,8 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       config.selectNetwork(NETWORK_MODE_REGTEST);
       break;
 
-   default:    break;
+   default:
+      break;
    }
 
    SetHomeDir(parser.value(dataDirName));
@@ -362,7 +379,7 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
       set(armoryDbPort, parser.value(armoryDBPortName).toInt());
    }
 
-#ifdef _DEBUG
+#ifndef NDEBUG
    if (parser.isSet(chatServerIPName)) {
 	   QString vcip = parser.value(chatServerIPName);
 	   set(chatServerHost, vcip);
@@ -371,7 +388,7 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 	   int vcp = parser.value(chatServerPortName).toInt();
 	   set(chatServerPort, vcp);
    }
-#endif // _DEBUG
+#endif // NDEBUG
 
 
    settings_.sync();
@@ -502,12 +519,10 @@ int ApplicationSettings::GetDefaultArmoryRemotePort(NetworkType networkType)
    }
 }
 
-QString ApplicationSettings::GetArmoryRemotePort(bool getDefault, NetworkType networkType) const
+QString ApplicationSettings::GetArmoryRemotePort(NetworkType networkType) const
 {
    QString port;
-   if (!getDefault) {
-      port = get<QString>(ApplicationSettings::armoryDbPort);
-   }
+   port = get<QString>(ApplicationSettings::armoryDbPort);
    if (port.isEmpty()) {
       port = QString::number(GetDefaultArmoryRemotePort(
          (networkType == NetworkType::Invalid) ? get<NetworkType>(netType) : networkType));
@@ -557,6 +572,7 @@ ArmorySettings ApplicationSettings::GetArmorySettings() const
    settings.armoryExecutablePath = QDir::cleanPath(get<QString>(ApplicationSettings::armoryPathName));
    settings.dbDir = GetDBDir();
    settings.bitcoinBlocksDir = GetBitcoinBlocksDir();
+   settings.dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
    return settings;
 }
@@ -595,13 +611,11 @@ std::vector<std::pair<std::string, unsigned int>>  ApplicationSettings::Unfinish
    return result;
 }
 
-std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig(bool getDefaultValue) const
+std::vector<bs::LogConfig> ApplicationSettings::GetLogsConfig() const
 {
    std::vector<bs::LogConfig> result;
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault,
-      getDefaultValue)));
-   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages,
-      getDefaultValue)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logDefault)));
+   result.push_back(parseLogConfig(get<QStringList>(ApplicationSettings::logMessages)));
    return result;
 }
 

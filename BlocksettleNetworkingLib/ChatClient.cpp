@@ -9,6 +9,7 @@
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
 #include "EncryptUtils.h"
+#include "UserHasher.h"
 
 #include <QDateTime>
 
@@ -32,6 +33,8 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
       throw std::runtime_error("failed to load chat public keys");
    }
 
+   hasher_ = std::make_shared<UserHasher>();
+
    heartbeatTimer_.setInterval(30 * 1000);
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
@@ -52,8 +55,9 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
       return std::string();
    }
 
-   auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
-   currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
+   //auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
+   //currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
+   currentUserId_ = hasher_->deriveKey(email);
 
    connection_ = connectionManager_->CreateSecuredDataConnection();
    BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
@@ -240,14 +244,14 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
    const auto &itPub = pubKeys_.find(receiver);
    if (itPub == pubKeys_.end()) {
-      // Ask for public key from peer. Enqueue the message to be sent, once we receive the 
+      // Ask for public key from peer. Enqueue the message to be sent, once we receive the
       // necessary public key.
       enqueued_messages_[receiver].push(message);
-      
+
       // Send our key to the peer.
       auto request = std::make_shared<Chat::AskForPublicKeyRequest>(
          "", // clientId
-         currentUserId_, 
+         currentUserId_,
          receiver.toStdString());
       sendRequest(request);
       return result;
@@ -285,4 +289,34 @@ void ChatClient::retrieveUserMessages(const QString &userId)
       }
       emit MessagesUpdate(messages);
    }
+}
+
+bool ChatClient::getContacts(ContactUserDataList &contactList)
+{
+   return chatDb_->getContacts(contactList);
+}
+
+bool ChatClient::addOrUpdateContact(const QString &userId, const QString &userName, const bool &isIncomingFriendRequest)
+{
+   ContactUserData contact;
+   QString newUserName = userName;
+   if (newUserName.isEmpty())
+   {
+      newUserName = userId;
+   }
+   contact.setUserId(userId);
+   contact.setUserName(newUserName);
+   contact.setIncomingFriendRequest(isIncomingFriendRequest);
+
+   if (chatDb_->isContactExist(userId))
+   {
+      return chatDb_->updateContact(contact);
+   }
+
+   return chatDb_->addContact(contact);
+}
+
+void ChatClient::sendFriendRequest(const QString &/*friendUserId*/)
+{
+   // TODO
 }

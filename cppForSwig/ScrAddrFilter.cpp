@@ -14,7 +14,10 @@
 #include "ScrAddrFilter.h"
 #include "BlockUtils.h"
 #include "txio.h"
+
 #include <thread>
+#include <google/protobuf/message.h>
+
 
 using namespace std;
 

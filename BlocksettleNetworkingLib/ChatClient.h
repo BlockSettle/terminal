@@ -1,11 +1,12 @@
-#ifndef __CHAT_CLIENT_H__
-#define __CHAT_CLIENT_H__
+#ifndef CHAT_CLIENT_H
+#define CHAT_CLIENT_H
 
 
 #include <QObject>
 #include <QTimer>
 
 #include "ChatProtocol.h"
+#include "ChatDB.h"
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
 #include <queue>
@@ -17,10 +18,10 @@ namespace Chat {
    class Request;
 }
 
-class ChatDB;
 class ConnectionManager;
 class ZmqSecuredDataConnection;
 class ApplicationSettings;
+class UserHasher;
 
 
 class ChatClient : public QObject
@@ -65,6 +66,12 @@ public:
    // Called when we asked for a public key of peer, and got result.
    void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
 
+   bool getContacts(ContactUserDataList &contactList);
+   bool addOrUpdateContact(const QString &userId,
+                           const QString &userName = QStringLiteral(""),
+                           const bool &isIncomingFriendRequest = false);
+   void sendFriendRequest(const QString &friendUserId);
+
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
 
@@ -77,6 +84,7 @@ signals:
    void UsersReplace(const std::vector<std::string>& users);
    void UsersAdd(const std::vector<std::string>& users);
    void UsersDel(const std::vector<std::string>& users);
+   void IncomingFriendRequest(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
 
 private slots:
@@ -90,6 +98,7 @@ private:
    std::unique_ptr<ChatDB>                   chatDb_;
    std::map<QString, autheid::PublicKey>     pubKeys_;
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
+   std::shared_ptr<UserHasher> hasher_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
    std::map<QString, std::queue<QString>>    enqueued_messages_;
@@ -102,4 +111,4 @@ private:
    autheid::PrivateKey  ownPrivKey_;
 };
 
-#endif   // __CHAT_CLIENT_H__
+#endif   // CHAT_CLIENT_H

@@ -302,8 +302,17 @@ QVariant AddressListModel::dataForRow(const AddressListModel::AddressRow &row, i
       case AddressListModel::ColumnAddress:
          return row.getAddress();
       case AddressListModel::ColumnBalance:
-         return (row.wltType == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(row.balance)
-            : UiUtils::displayAmount(row.balance);
+         if (row.wltType == bs::wallet::Type::ColorCoin) {
+            if (wallets_.size() == 1) {
+               return UiUtils::displayCCAmount(row.balance);
+            }
+            else {
+               return {};
+            }
+         }
+         else {
+            return UiUtils::displayAmount(row.balance);
+         }
       case AddressListModel::ColumnTxCount:
          return row.transactionCount;
       case AddressListModel::ColumnComment:

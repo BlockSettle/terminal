@@ -28,17 +28,17 @@ static const size_t kP2WPKHOutputSize = 35;
 
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<WalletsManager>& walletManager
-   , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
-   , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
- : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions
-    , logger, parent)
+      , const std::shared_ptr<WalletsManager>& walletManager
+      , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
+      , const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<TransactionData> &txData
+      , QWidget* parent)
+   : CreateTransactionDialog(armory, walletManager, container, loadFeeSuggestions, logger, parent)
  , ui_(new Ui::CreateTransactionDialogAdvanced)
 {
-   ui_->setupUi(this);
-
+   transactionData_ = txData;
    selectedChangeAddress_ = bs::Address{};
 
+   ui_->setupUi(this);
    initUI();
 }
 
@@ -53,12 +53,8 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const std::shared_ptr<bs::Wallet>& wallet
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
-                                                                walletManager,
-                                                                container,
-                                                                false,
-                                                                logger,
-                                                                parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
+      , walletManager, container, false, logger, nullptr, parent);
 
    dlg->setWindowTitle(tr("Replace-By-Fee"));
 
@@ -79,12 +75,8 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
       , const Tx &tx
       , QWidget* parent)
 {
-   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory,
-                                                                walletManager,
-                                                                container,
-                                                                false,
-                                                                logger,
-                                                                parent);
+   auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
+      , walletManager, container, false, logger, nullptr, parent);
 
    dlg->setWindowTitle(tr("Child-Pays-For-Parent"));
    dlg->ui_->pushButtonImport->setEnabled(false);
@@ -344,30 +336,8 @@ void CreateTransactionDialogAdvanced::initUI()
    ui_->treeViewOutputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
    // QModelIndex isn't used. We should use it or lose it.
-   connect(outputsModel_, &TransactionOutputsModel::rowsInserted, [this](const QModelIndex &parent, int first, int last)
-   {
-      for (int i = first; i <= last; i++) {
-         auto index = outputsModel_->index(i, 2);
-         auto outputId = outputsModel_->GetOutputId(i);
-
-         auto button = new QPushButton();
-         button->setFixedSize(30, 16);
-         button->setContentsMargins(0, 0, 0, 0);
-
-         button->setIcon(UiUtils::icon(0xeaf1, QVariantMap{
-            { QLatin1String{ "color" }, QColor{ Qt::white } }
-         }));
-
-         ui_->treeViewOutputs->setIndexWidget(index, button);
-
-         connect(button, &QPushButton::clicked, [this, outputId]()
-            {
-               RemoveOutputByRow(outputsModel_->GetRowById(outputId));
-            });
-      }
-   });
-   connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last)
-   {
+   connect(outputsModel_, &TransactionOutputsModel::rowsInserted, this, &CreateTransactionDialogAdvanced::onOutputsInserted);
+   connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last) {
       onOutputRemoved();
    });
 
@@ -529,6 +499,35 @@ QLabel* CreateTransactionDialogAdvanced::changeLabel() const
    return ui_->labelReturnAmount;
 }
 
+void CreateTransactionDialogAdvanced::onOutputsInserted(const QModelIndex &, int first, int last)
+{
+   for (int i = first; i <= last; i++) {
+      auto index = outputsModel_->index(i, 2);
+      auto outputId = outputsModel_->GetOutputId(i);
+
+      QPushButton *button = nullptr;
+      if (removeOutputEnabled_) {
+         button = new QPushButton();
+         //button->setFixedSize(30, 16);  // has no effect
+         button->setContentsMargins(0, 0, 0, 0);
+
+         button->setIcon(UiUtils::icon(0xeaf1, QVariantMap{
+            { QLatin1String{ "color" }, QColor{ Qt::white } }
+            // , { QLatin1String{ "scale-factor" }, 0.75 }
+            }));
+      }
+
+      ui_->treeViewOutputs->setIndexWidget(index, button);
+
+      if (removeOutputEnabled_) {
+         connect(button, &QPushButton::clicked, [this, outputId]()
+         {
+            RemoveOutputByRow(outputsModel_->GetRowById(outputId));
+         });
+      }
+   }
+}
+
 void CreateTransactionDialogAdvanced::showContextMenu(const QPoint &point)
 {
    if (!removeOutputEnabled_) {
@@ -636,8 +635,6 @@ void CreateTransactionDialogAdvanced::onSelectInputs()
    const double prevBalance = transactionData_->GetTransactionSummary().availableBalance;
    const double spendBalance = transactionData_->GetTotalRecipientsAmount();
    const double totalFee = transactionData_->GetTransactionSummary().totalFee / BTCNumericTypes::BalanceDivider;
-   logger_->debug("prevBalance: {}, spendBalance: {}, totalFee: {}, diff={}"
-      , prevBalance, spendBalance, totalFee, prevBalance - spendBalance - totalFee);
    CoinControlDialog dlg(transactionData_->GetSelectedInputs(), allowAutoSelInputs_, this);
    if (dlg.exec() == QDialog::Accepted) {
       SetInputs(dlg.selectedInputs());
@@ -703,10 +700,15 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
       return false;
    }
    const double totalFee = UiUtils::amountToBtc(transactionData_->totalFee());
-   const double diffMax = transactionData_->GetTransactionSummary().availableBalance
+   double diffMax = transactionData_->GetTransactionSummary().availableBalance
       - transactionData_->GetTotalRecipientsAmount() - totalFee;
+   const double newTotalFee = diffMax + totalFee;
+
+   if (diffMax < 0) {
+      diffMax = 0;
+   }
    // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
-   if ((diffMax > 0) && (diffMax < totalFee / 2)) {
+   if ((diffMax >= 0.00000001) && (diffMax < totalFee / 2)) {
       BSMessageBox question(BSMessageBox::question, tr("Change fee")
          , tr("Your projected change amount %1 is too small as compared to the projected fee."
             " Attempting to keep the change will prevent the transaction from being propagated through"
@@ -714,12 +716,18 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
          , tr("Would you like to remove the change output and put its amount towards the fees?")
          , this);
       if (question.exec() == QDialog::Accepted) {
-         transactionData_->setTotalFee((diffMax + totalFee) * BTCNumericTypes::BalanceDivider, false);
+         transactionData_->setTotalFee(newTotalFee * BTCNumericTypes::BalanceDivider, false);
          for (const auto &recipId : transactionData_->allRecipientIds()) {
             UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
          }
          return true;
       }
+   }
+   else if (diffMax < 0.00000001) {   // if diff is less than 1 satoshi (which can be caused by maxAmount calc tolerance)
+      for (const auto &recipId : transactionData_->allRecipientIds()) {
+         UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), true);
+      }
+      return true;
    }
    return false;
 }
@@ -793,7 +801,7 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    CreateTransactionDialog::onFeeSuggestionsLoaded(feeValues);
 
    AddManualFeeEntries((minFeePerByte_ > 0) ? minFeePerByte_ : feeValues.begin()->second
-      , (minTotalFee_ > 0) ? minTotalFee_ : 0);
+      , (minTotalFee_ > 0) ? minTotalFee_ : transactionData_->totalFee());
 
    if (minFeePerByte_ > 0) {
       const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
@@ -814,15 +822,18 @@ void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePer
 // currentIndex isn't being used. We should use it or lose it.
 void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
 {
-   setTxFees();
    updateManualFeeControls();
+   setTxFees();
 }
 
 bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
 {
    bs::Address result;
    if (transactionData_->GetTransactionSummary().hasChange) {
-      if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
+      if (changeAddressFixed_) {
+         result = selectedChangeAddress_;
+      }
+      else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
          result = transactionData_->GetWallet()->GetNewChangeAddress(
             ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
          transactionData_->createAddress(result);
@@ -1017,9 +1028,10 @@ void CreateTransactionDialogAdvanced::disableOutputsEditing()
    ui_->lineEditAmount->setEnabled(false);
    ui_->pushButtonMax->setEnabled(false);
    ui_->pushButtonAddOutput->setEnabled(false);
-   ui_->treeViewOutputs->setEnabled(false);
+   outputsModel_->enableRows(false);
 
    removeOutputEnabled_ = false;
+   onOutputsInserted({}, 0, outputsModel_->rowCount({}) - 1);
 }
 
 void CreateTransactionDialogAdvanced::disableInputSelection()
@@ -1040,7 +1052,6 @@ void CreateTransactionDialogAdvanced::enableFeeChanging(bool enable)
 void CreateTransactionDialogAdvanced::SetFixedChangeAddress(const QString& changeAddress)
 {
    ui_->radioButtonExistingAddress->setChecked(true);
-
    ui_->radioButtonNewAddrNative->setEnabled(false);
    ui_->radioButtonNewAddrNested->setEnabled(false);
 
@@ -1088,7 +1099,12 @@ void CreateTransactionDialogAdvanced::updateManualFeeControls()
    int itemCount = ui_->comboBoxFeeSuggestions->count();
 
    ui_->doubleSpinBoxFeesManualPerByte->setVisible(itemCount > 2 && itemIndex == itemCount - 2);
-   ui_->spinBoxFeesManualTotal->setVisible(itemCount > 2 && itemIndex == itemCount - 1);
+
+   const bool totalFeeSelected = (itemCount > 2) && (itemIndex == itemCount - 1);
+   ui_->spinBoxFeesManualTotal->setVisible(totalFeeSelected);
+   if (totalFeeSelected) {
+      ui_->spinBoxFeesManualTotal->setValue((int)transactionData_->totalFee());
+   }
 }
 
 void CreateTransactionDialogAdvanced::setTxFees()
@@ -1107,6 +1123,7 @@ void CreateTransactionDialogAdvanced::setTxFees()
    if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
       ui_->spinBoxFeesManualTotal->setValue(transactionData_->totalFee());
+      enableFeeChanging(false);
    }
 }
 

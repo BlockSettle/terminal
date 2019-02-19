@@ -80,7 +80,7 @@ namespace bs {
          Path        path_;
          std::string walletName_, name_, desc_;
          LMDB  *     db_ = nullptr;
-         shared_ptr<LMDBEnv>     dbEnv_ = nullptr;
+         std::shared_ptr<LMDBEnv>     dbEnv_ = nullptr;
          bool        extOnlyAddresses_;
          bool        needsCommit_ = true;
          std::unordered_map<Path::Elem, std::shared_ptr<hd::Leaf>>  leaves_;

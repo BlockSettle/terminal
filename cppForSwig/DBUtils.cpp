@@ -17,6 +17,7 @@
 #include <io.h>
 #include <fcntl.h>
 #include <dirent_win32.h>
+#include <ShlObj.h>
 
 #define unlink _unlink
 #define access _access
@@ -26,6 +27,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <wordexp.h>
 #endif
 
 using namespace std;
@@ -573,4 +575,51 @@ size_t DBUtils::getFileSize(const string& path)
 {
    auto stat_struct = getPathStat(path);
    return stat_struct.st_size;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DBUtils::appendPath(string& base, const string& add)
+{
+   if (add.size() == 0)
+      return;
+
+   auto firstChar = add.c_str()[0];
+   auto lastChar = base.c_str()[base.size() - 1];
+   if (firstChar != '\\' && firstChar != '/')
+      if (lastChar != '\\' && lastChar != '/')
+         base.append("/");
+
+   base.append(add);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DBUtils::expandPath(string& path)
+{
+   if (path.c_str()[0] != '~')
+      return;
+
+   //resolve ~
+#ifdef _WIN32
+   char* pathPtr = new char[MAX_PATH + 1];
+   if (SHGetFolderPath(0, CSIDL_APPDATA, 0, 0, pathPtr) != S_OK)
+   {
+      delete[] pathPtr;
+      throw runtime_error("failed to resolve appdata path");
+   }
+
+   string userPath(pathPtr);
+   delete[] pathPtr;
+#else
+   wordexp_t wexp;
+   wordexp("~", &wexp, 0);
+
+   if (wexp.we_wordc == 0)
+      throw runtime_error("failed to resolve home path");
+
+   string userPath(wexp.we_wordv[0]);
+   wordfree(&wexp);
+#endif
+
+   appendPath(userPath, path.substr(1));
+   path = move(userPath);
 }

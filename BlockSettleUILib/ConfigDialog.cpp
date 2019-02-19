@@ -1,9 +1,9 @@
 #include "ConfigDialog.h"
 
-#include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "WalletsManager.h"
 #include "GeneralSettingsPage.h"
+#include "NetworkSettingsPage.h"
 
 #include "ui_ConfigDialog.h"
 
@@ -11,14 +11,10 @@
 
 
 ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<WalletsManager>& walletsMgr
-      , const std::shared_ptr<AssetManager> &assetMgr
       , QWidget* parent)
  : QDialog{parent}
  , ui_{new Ui::ConfigDialog{}}
  , applicationSettings_{appSettings}
- , walletsMgr_{walletsMgr}
- , assetMgr_{assetMgr}
 {
    ui_->setupUi(this);
 
@@ -26,16 +22,14 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
       applicationSettings_->SetDefaultSettings(true);
       ui_->pushButtonCancel->setEnabled(false);
    }
+   prevState_ = applicationSettings_->getState();
 
-   ui_->pageGeneral->displaySettings(applicationSettings_, walletsMgr_, false);
-   ui_->pageNetwork->setAppSettings(applicationSettings_);
-   ui_->pageNetwork->displaySettings(false);
+   pages_ = {ui_->pageGeneral, ui_->pageNetwork, ui_->pageSigner, ui_->pageDealing };
 
-   ui_->pageSigner->setAppSettings(applicationSettings_);
-   ui_->pageSigner->displaySettings();
-
-   ui_->pageDealing->setAppSettings(applicationSettings_);
-   ui_->pageDealing->displaySettings(assetMgr, false);
+   for (const auto &page : pages_) {
+      page->init(applicationSettings_);
+      connect(page, &SettingsPage::illformedSettings, this, &ConfigDialog::illformedSettings);
+   }
 
    ui_->listWidget->setCurrentRow(0);
    ui_->stackedWidget->setCurrentIndex(0);
@@ -44,29 +38,22 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
    connect(ui_->pushButtonSetDefault, &QPushButton::clicked, this, &ConfigDialog::onDisplayDefault);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &ConfigDialog::reject);
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &ConfigDialog::onAcceptSettings);
-   connect(ui_->pageGeneral, &GeneralSettingsPage::illformedSettings,
-      this, &ConfigDialog::illformedSettings);
 }
 
 ConfigDialog::~ConfigDialog() = default;
 
 void ConfigDialog::onDisplayDefault()
-{
-   ui_->pageGeneral->displaySettings(applicationSettings_, walletsMgr_, true);
-   ui_->pageNetwork->displaySettings(true);
-   ui_->pageDealing->displaySettings(assetMgr_, true);
-   ui_->pageSigner->displaySettings(true);
+{  // reset only currently selected page - maybe a subject to change
+   pages_[ui_->stackedWidget->currentIndex()]->reset();
 }
 
 void ConfigDialog::onAcceptSettings()
 {
-   ui_->pageGeneral->applyChanges(applicationSettings_, walletsMgr_);
-   ui_->pageNetwork->applyChanges();
-   ui_->pageDealing->applyChanges();
-   ui_->pageSigner->applyChanges();
+   for (const auto &page : pages_) {
+      page->apply();
+   }
 
    applicationSettings_->SaveSettings();
-
    accept();
 }
 
@@ -78,4 +65,10 @@ void ConfigDialog::onSelectionChanged(int currentRow)
 void ConfigDialog::illformedSettings(bool illformed)
 {
    ui_->pushButtonOk->setEnabled(!illformed);
+}
+
+void ConfigDialog::reject()
+{
+   applicationSettings_->setState(prevState_);
+   QDialog::reject();
 }

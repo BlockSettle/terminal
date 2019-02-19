@@ -9,6 +9,7 @@
 
 #include "SwigClient.h"
 
+using namespace std;
 using namespace SwigClient;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -28,6 +29,12 @@ bool BlockDataViewer::connectToRemote()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void BlockDataViewer::addPublicKey(const SecureBinaryData& pubkey)
+{
+   bdvAsync_.addPublicKey(pubkey);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 const BlockDataViewer& BlockDataViewer::operator=(const BlockDataViewer& rhs)
 {
    bdvAsync_ = rhs.bdvAsync_;
@@ -37,10 +44,11 @@ const BlockDataViewer& BlockDataViewer::operator=(const BlockDataViewer& rhs)
 
 ///////////////////////////////////////////////////////////////////////////////
 shared_ptr<BlockDataViewer> BlockDataViewer::getNewBDV(const string& addr,
-   const string& port, shared_ptr<RemoteCallback> callbackPtr)
+   const string& port, const string& datadir, const bool& ephemeralPeers,
+   shared_ptr<RemoteCallback> callbackPtr)
 {
-   auto&& bdvAsync = 
-      AsyncClient::BlockDataViewer::getNewBDV(addr, port, callbackPtr);
+   auto&& bdvAsync = AsyncClient::BlockDataViewer::getNewBDV(addr, port,
+      datadir, ephemeralPeers, callbackPtr);
    auto bdvPtr = new BlockDataViewer(*bdvAsync);
    shared_ptr<BlockDataViewer> bdvSharedPtr;
    bdvSharedPtr.reset(bdvPtr);
@@ -449,6 +457,12 @@ string SwigClient::BtcWallet::registerAddresses(
    const vector<BinaryData>& addrVec, bool isNew)
 {
    return asyncWallet_.registerAddresses(addrVec, isNew);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+string SwigClient::BtcWallet::setUnconfirmedTarget(unsigned confTarget)
+{
+   return asyncWallet_.setUnconfirmedTarget(confTarget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -26,6 +26,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       , const std::shared_ptr<spdlog::logger> &logger
       , const QString& username
       , const std::string &walletName, const std::string &walletDesc
+      , bool disableImportPrimary
       , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::ImportWalletDialog)
@@ -36,23 +37,24 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    , armory_(armory)
    , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
    , appSettings->get<NetworkType>(ApplicationSettings::netType)))
+   , disableImportPrimary_{disableImportPrimary}
 {
    walletInfo_.setRootId(bs::hd::Node(walletSeed_).getId());
 
    ui_->setupUi(this);
 
    ui_->lineEditDescription->setValidator(new UiUtils::WalletDescriptionValidator(this));
-   
+
    ui_->labelWalletId->setText(walletInfo_.rootId());
 
-   ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
-
-   if (!walletsManager->HasPrimaryWallet()) {
+   if (!walletsManager->HasPrimaryWallet() && !disableImportPrimary_) {
       setWindowTitle(tr("Import Primary Wallet"));
       ui_->checkBoxPrimaryWallet->setChecked(true);
+      ui_->checkBoxPrimaryWallet->setEnabled(true);
       ui_->lineEditWalletName->setText(tr("Primary wallet"));
    } else {
       setWindowTitle(tr("Import Wallet"));
+      ui_->checkBoxPrimaryWallet->setEnabled(false);
       ui_->checkBoxPrimaryWallet->setChecked(false);
       ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->GetWalletsCount() + 1));
    }

@@ -44,7 +44,7 @@ class SettlementMonitor
 public:
    SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
       , const std::shared_ptr<ArmoryConnection> &
-      , const shared_ptr<bs::SettlementAddressEntry> &
+      , const std::shared_ptr<bs::SettlementAddressEntry> &
       , const std::shared_ptr<spdlog::logger> &);
 
    virtual ~SettlementMonitor() noexcept;
@@ -72,7 +72,7 @@ private:
    std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
    std::set<BinaryData>                      ownAddresses_;
 
-   shared_ptr<bs::SettlementAddressEntry>    addressEntry_;
+   std::shared_ptr<bs::SettlementAddressEntry>    addressEntry_;
 
    int payinConfirmations_ = -1;
    int payoutConfirmations_ = -1;
@@ -103,7 +103,7 @@ Q_OBJECT;
 public:
    SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
       , const std::shared_ptr<ArmoryConnection> &
-      , const shared_ptr<bs::SettlementAddressEntry> &
+      , const std::shared_ptr<bs::SettlementAddressEntry> &
       , const std::shared_ptr<spdlog::logger> &);
    ~SettlementMonitorQtSignals() noexcept override;
 
@@ -141,7 +141,7 @@ public:
 public:
    SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
       , const std::shared_ptr<ArmoryConnection> &
-      , const shared_ptr<bs::SettlementAddressEntry> &
+      , const std::shared_ptr<bs::SettlementAddressEntry> &
       , const std::shared_ptr<spdlog::logger> &);
    ~SettlementMonitorCb() noexcept override;
 

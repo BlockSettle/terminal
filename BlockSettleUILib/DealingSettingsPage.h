@@ -1,9 +1,8 @@
 #ifndef DEALING_SETTINGS_PAGE_H
 #define DEALING_SETTINGS_PAGE_H
 
-#include <QWidget>
-
 #include <memory>
+#include "ConfigDialog.h"
 
 namespace Ui {
    class DealingSettingsPage;
@@ -13,27 +12,21 @@ class ApplicationSettings;
 class AssetManager;
 class SecuritiesModel;
 
-class DealingSettingsPage : public QWidget
+class DealingSettingsPage : public SettingsPage
 {
-Q_OBJECT
-
 public:
    DealingSettingsPage(QWidget* parent = nullptr);
    ~DealingSettingsPage() override;
 
-   void setAppSettings(const std::shared_ptr<ApplicationSettings>& appSettings);
+   void display() override;
+   void reset() override;
+   void apply() override;
 
-   void displaySettings(const std::shared_ptr<AssetManager> &assetMgr
-      , bool displayDefault = false);
-
-   void applyChanges();
-
-protected slots:
+private slots:
    void onResetCountes();
 
 private:
    std::unique_ptr<Ui::DealingSettingsPage> ui_;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
 };
 
 #endif // DEALING_SETTINGS_PAGE_H

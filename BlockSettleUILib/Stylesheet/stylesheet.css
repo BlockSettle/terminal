@@ -1448,7 +1448,7 @@ QLineEdit#chatSearchLineEdit:focus {
 QLineEdit#chatSearchLineEdit:disabled {
     color: #586266; }
 
-QFrame#roomsFrame {
+QFrame#usersFrame {
     background-color: #1c2835; }
     
 QFrame#chatSearchPopupFrame {
@@ -1469,3 +1469,23 @@ QSpacerItem#chatUsersVerticalSpacer {
     margin-right: 5px;
     margin-top: 4px;
     margin-bottom: 4px; }
+
+QTreeView#treeWidgetUsers {
+    font-size: 11px;
+    background-color: #1c2835;
+    color: #81888f;
+    border: 1px solid transparent; }
+
+QListView#chatUserCategoryListView:item {
+    font-size: 11px;
+    background-color: #1c2835;
+    selection-background-color: #3a8ab4;
+    border: 1px solid transparent;}
+    
+QListView#chatUserCategoryListView:item:selected {
+    background-color: #3a8ab4; }
+
+ChatUserCategoryListViewStyle {
+    qproperty-color_user_online: #00c8f8;
+    qproperty-color_incoming_friend_request: #ffa834;
+    qproperty-color_user_default: #c0c0c0; }

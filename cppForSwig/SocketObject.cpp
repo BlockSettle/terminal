@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "SocketObject.h"
+#include "SocketWritePayload.h"
 #include <cstring>
 #include <stdexcept>
 

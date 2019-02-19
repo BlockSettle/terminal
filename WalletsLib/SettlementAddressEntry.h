@@ -21,7 +21,7 @@ namespace bs {
       {}
       ~SettlementAssetEntry() override = default;
 
-      static std::shared_ptr<SettlementAddressEntry> getAddressEntry(const shared_ptr<SettlementAssetEntry> &);
+      static std::shared_ptr<SettlementAddressEntry> getAddressEntry(const std::shared_ptr<SettlementAssetEntry> &);
       static std::pair<bs::Address, std::shared_ptr<GenericAsset>> deserialize(BinaryDataRef value);
       BinaryData serialize(void) const override;
 
@@ -78,7 +78,7 @@ namespace bs {
       const BinaryData &getPreimage(void) const override { return ae_->script(); }
       const BinaryData &getPrefixedHash() const override { return ae_->prefixedHash(); }
       const BinaryData &getHash() const override { return ae_->hash(); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return bs::Address(getPrefixedHash()).getRecipient(val); }
+      std::shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return bs::Address(getPrefixedHash()).getRecipient(val); }
       size_t getInputSize(void) const override { return getAddress().getSize() + 2 + 73 * 1/*m*/ + 40; }
 
       const BinaryData& getID(void) const override { return ae_->getID(); }
@@ -97,7 +97,7 @@ namespace bs {
 
       const BinaryData &getPrefixedHash(void) const override { return ae_->prefixedP2SHash(); }
       const BinaryData &getHash() const override { return ae_->p2wsHash(); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_P2SH>(ae_->p2wsHash(), val); }
+      std::shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_P2SH>(ae_->p2wsHash(), val); }
       size_t getInputSize(void) const override { return 75; }
    };
 
@@ -111,7 +111,7 @@ namespace bs {
       const BinaryData &getPrefixedHash(void) const override;
       const BinaryData &getHash() const override;
       const BinaryData &getAddress() const override { return BtcUtils::scrAddrToSegWitAddress(getHash()); }
-      shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_P2WSH>(getHash(), val); }
+      std::shared_ptr<ScriptRecipient> getRecipient(uint64_t val) const override { return std::make_shared<Recipient_P2WSH>(getHash(), val); }
       size_t getInputSize(void) const override { return 41; }
 
    private:

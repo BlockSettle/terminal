@@ -35,7 +35,8 @@ public:
    CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
       , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
-      , QWidget* parent);
+      , const std::shared_ptr<TransactionData> &
+      , QWidget* parent = nullptr);
    ~CreateTransactionDialogAdvanced() override;
 
    void preSetAddress(const QString& address);
@@ -97,6 +98,7 @@ protected slots:
 private slots:
    void updateManualFeeControls();
    void setTxFees();
+   void onOutputsInserted(const QModelIndex &parent, int first, int last);
 
 private:
    void clear() override;

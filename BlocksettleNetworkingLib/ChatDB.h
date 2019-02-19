@@ -14,6 +14,26 @@ namespace spdlog {
    class logger;
 }
 
+class ContactUserData
+{
+public:
+   QString userName() const { return _userName; }
+   void setUserName(const QString &userName) { _userName = userName; }
+
+   QString userId() const { return _userId; }
+   void setUserId(const QString &userId) { _userId = userId; }
+
+   bool incomingFriendRequest() const { return _incomingFriendRequest; }
+   void setIncomingFriendRequest(bool incomingFriendRequest) { _incomingFriendRequest = incomingFriendRequest; }
+
+private:
+   QString _userName;
+   QString _userId;
+   bool _incomingFriendRequest;
+};
+
+using ContactUserDataList = std::vector<ContactUserData>;
+
 
 class ChatDB : public QObject
 {
@@ -40,9 +60,11 @@ public:
 
    bool loadKeys(std::map<QString, autheid::PublicKey>& peer_public_keys_out);
 
-   bool isContactExist(const QString &user_name);
-   bool addContact(const QString &user_name);
-   bool removeContact(const QString &user_name);
+   bool isContactExist(const QString &userId);
+   bool addContact(const ContactUserData &contact);
+   bool removeContact(const ContactUserData &contact);
+   bool getContacts(ContactUserDataList &contactList);
+   bool updateContact(const ContactUserData &contact);
 
 private:
    bool createMissingTables();

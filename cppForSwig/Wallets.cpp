@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //                                                                            //
-//  Copyright (C) 2016, goatpig                                               //
+//  Copyright (C) 2016-2019, goatpig                                          //
 //  Distributed under the MIT license                                         //
 //  See LICENSE-MIT or https://opensource.org/licenses/MIT                    //
 //                                                                            //
@@ -1251,6 +1251,8 @@ void AssetWallet_Single::readFromFile()
 
          ++dbIter;
       }
+
+      loadMetaAccounts();
    }
 }
 
@@ -1312,6 +1314,8 @@ void AssetWallet_Multisig::readFromFile()
          walletPtrs[subwalletPtr->getID()] = subwalletPtr;
 
       }
+
+      loadMetaAccounts();
    }
 }
 
@@ -1649,8 +1653,7 @@ void AssetWallet::extendPrivateChainToIndex(
 const SecureBinaryData& AssetWallet_Single::getDecryptedValue(
    shared_ptr<Asset_PrivateKey> assetPtr)
 {
-   //have to lock the decryptedData object before calling this method or it 
-   //will throw
+   //have to lock the decryptedData object before calling this method
    return decryptedData_->getDecryptedPrivateKey(assetPtr);
 }
 
@@ -1716,7 +1719,6 @@ unsigned AssetWallet_Single::getMainAccountAssetCount(void) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 shared_ptr<AssetEntry> AssetWallet_Single::getAccountRoot(
    const BinaryData& id) const
 {
@@ -1725,4 +1727,68 @@ shared_ptr<AssetEntry> AssetWallet_Single::getAccountRoot(
       throw WalletException("failed to grab main account");
 
    return account->getOutterAssetRoot();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet::addMetaAccount(MetaAccountType type)
+{
+   auto account_ptr = make_shared<MetaDataAccount>(dbEnv_, db_);
+   account_ptr->make_new(type);
+
+   //do not overwrite existing account of the same type
+   if (metaDataAccounts_.insert(account_ptr).second == false)
+      return;
+
+   account_ptr->commit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AssetWallet::loadMetaAccounts()
+{
+   //accounts
+   BinaryWriter bwPrefix;
+   bwPrefix.put_uint8_t(META_ACCOUNT_PREFIX);
+   CharacterArrayRef account_prefix(
+      bwPrefix.getSize(), bwPrefix.getData().getCharPtr());
+
+   auto dbIter = db_->begin();
+   dbIter.seek(account_prefix, LMDB::Iterator::Seek_GE);
+
+   while (dbIter.isValid())
+   {
+      //iterate through account keys
+      auto& key = dbIter.key();
+      BinaryData key_bd((uint8_t*)key.mv_data, key.mv_size);
+
+      try
+      {
+         //instantiate account object and read data on disk
+         auto metaAccount = make_shared<MetaDataAccount>(dbEnv_, db_);
+         metaAccount->readFromDisk(key_bd);
+
+         //insert
+         metaDataAccounts_.insert(metaAccount);
+      }
+      catch (exception&)
+      {
+         //in case of exception, the value for this key is not for an
+         //account. Assume we ran out of accounts and break out.
+         break;
+      }
+
+      ++dbIter;
+   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<MetaDataAccount> AssetWallet::getMetaAccount(MetaAccountType type)
+{
+   auto iter = find_if(
+      metaDataAccounts_.begin(), metaDataAccounts_.end(),
+      MetaDataAccount::find_by_id(type));
+
+   if (iter == metaDataAccounts_.end())
+      throw WalletException("no meta account for this type");
+   return *iter;
 }
