@@ -33,6 +33,8 @@ static const QString DataKey      = QStringLiteral("data");
 static const QString PublicKeyKey = QStringLiteral("public_key");
 static const QString CommandKey = QStringLiteral("cmd");
 static const QString MessageIdKey = QStringLiteral("message_id");
+static const QString ClientMessageIdKey = QStringLiteral("client_message_id");
+static const QString MessageResultKey = QStringLiteral("message_result");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
@@ -72,6 +74,7 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseAskForPublicKey"  ,   ResponseType::ResponseAskForPublicKey }
    ,   { "ResponseSendOwnPublicKey" ,   ResponseType::ResponseSendOwnPublicKey}
    ,   { "ResponsePendingMessage"   ,   ResponseType::ResponsePendingMessage  }
+   ,   { "ResponseSendMessage"      ,   ResponseType::ResponseSendMessage     }
 };
 
 
@@ -86,6 +89,7 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseAskForPublicKey  ,  "ResponseAskForPublicKey"  }
    ,   { ResponseType::ResponseSendOwnPublicKey ,  "ResponseSendOwnPublicKey" }
    ,   { ResponseType::ResponsePendingMessage   ,  "ResponsePendingMessage"   }
+   ,   { ResponseType::ResponseSendMessage      ,  "ResponseSendMessage"      }
 };
 
 
@@ -214,6 +218,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       
      case ResponseType::ResponsePendingMessage:
         return PendingMessagesResponse::fromJSON(jsonData);
+        
+      case ResponseType::ResponseSendMessage:
+         return SendMessageResponse::fromJSON(jsonData);
 
       default:
          break;
@@ -374,6 +381,7 @@ QJsonObject MessageData::toJson() const
    data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
    data[MessageKey] = messageData_;
    data[StatusKey] = state_;
+   data[MessageIdKey] = id_;
 
    return data;
 }
@@ -391,7 +399,7 @@ std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
    QString receiverId = data[ReceiverIdKey].toString();
    QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
    QString messageData = data[MessageKey].toString();
-   QString id = QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr());   //temporary solution
+   QString id =  data[MessageIdKey].toString();
    const int state = data[StatusKey].toInt();
 
    return std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
@@ -426,6 +434,13 @@ bool MessageData::encrypt(const autheid::PublicKey& pubKey)
    messageData_ = QString::fromStdString(encryptedData);
    state_ |= (int)State::Encrypted;
    return true;
+}
+
+QString MessageData::setId(const QString& id)
+{
+   QString oldId = id_;
+   id_ = id;
+   return oldId;
 }
 
 
@@ -765,4 +780,34 @@ std::shared_ptr<Response> Chat::PendingMessagesResponse::fromJSON(const std::str
 void Chat::PendingMessagesResponse::handle(ResponseHandler &)
 {
    return;
+}
+
+Chat::SendMessageResponse::SendMessageResponse(const std::string& clientId, const std::string& serverId, SendMessageResponse::Result result)
+   : Response(ResponseType::ResponseSendMessage)
+   , clientId_(clientId), serverId_(serverId), result_(result)
+{
+   
+}
+
+QJsonObject Chat::SendMessageResponse::toJson() const
+{
+   QJsonObject data = Response::toJson();
+   data[ClientMessageIdKey] = QString::fromStdString(clientId_);
+   data[MessageIdKey] = QString::fromStdString(serverId_);
+   data[MessageResultKey] = static_cast<int>(result_);
+   return data;
+}
+
+std::shared_ptr<Response> Chat::SendMessageResponse::fromJSON(const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QString clientId = data[ClientMessageIdKey].toString();
+   QString serverId = data[MessageIdKey].toString();
+   Result result    = static_cast<Result>(data[MessageResultKey].toInt());
+   return std::make_shared<SendMessageResponse>(clientId.toStdString(), serverId.toStdString(), result);
+}
+
+void SendMessageResponse::handle(ResponseHandler& handler)
+{
+   handler.OnSendMessageResponse(*this);
 }

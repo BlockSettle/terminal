@@ -47,6 +47,7 @@ namespace Chat
    ,   ResponseAskForPublicKey
    ,   ResponseSendOwnPublicKey
    ,   ResponsePendingMessage
+   ,   ResponseSendMessage
    };
 
 
@@ -185,6 +186,9 @@ namespace Chat
       void setFlag(const State);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
+      
+      //Set ID for message, returns old ID that was replaced
+      QString setId(const QString& id);
 
    private:
       QString id_;
@@ -291,7 +295,29 @@ namespace Chat
       std::string receiverId_;
    };
 
-
+   class SendMessageResponse : public Response
+   {
+   public:
+      
+      enum class Result {
+           Accepted
+         , Rejected
+      };
+      SendMessageResponse(const std::string& clientId, const std::string& serverId, Result result);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      void handle(ResponseHandler &) override;
+      
+      std::string clientId() const { return clientId_;}
+      std::string serverId() const { return serverId_;}
+      Result getResult() const {return result_;}
+      
+   private:
+      std::string clientId_;
+      std::string serverId_;
+      Result result_;
+   };
+   
    class HeartbeatPongResponse : public Response
    {
    public:
@@ -458,6 +484,8 @@ namespace Chat
       virtual void OnSendOwnPublicKey(const SendOwnPublicKeyResponse &) = 0;
 
       virtual void OnLoginReturned(const LoginResponse &) = 0;
+      
+      virtual void OnSendMessageResponse(const SendMessageResponse&) = 0;
    };
 
 }
