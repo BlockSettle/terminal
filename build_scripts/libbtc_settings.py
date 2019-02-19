@@ -38,22 +38,31 @@ class LibBTC(Configurator):
                    '-G',
                    self._project_settings.get_cmake_generator()]
 
+        # only static version
         if self._project_settings.on_windows():
-            command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
-            command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+            if self._project_settings.get_build_mode() == 'release':
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+            else:
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
 
         result = subprocess.call(command)
 
         return result == 0
 
     def make_windows(self):
+        command = ['msbuild',
+                   self.get_solution_file(),
+                   '/t:' + self._package_name,
+                   '/p:Configuration=' + self.get_win_build_configuration(),
+                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
+        """        
         command = ['devenv',
                    self.get_solution_file(),
                    '/build',
                    self.get_win_build_configuration(),
                    '/project',
                    self._package_name]
-
+        """
         print(' '.join(command))
 
         result = subprocess.call(command)

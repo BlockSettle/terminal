@@ -89,12 +89,19 @@ class ZeroMQSettings(Configurator):
         return os.path.join('ZeroMQ.sln')
 
     def make_windows(self):
+        command = ['msbuild',
+                   self.get_solution_file(),
+                   '/t:libzmq',
+                   '/p:Configuration=' + self.get_win_configuration(),
+                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
+        """
         command = ['devenv',
                    self.get_solution_file(),
                    '/build',
                    self.get_win_configuration(),
                    '/project',
                    'libzmq']
+        """
 
         result = subprocess.call(command)
 

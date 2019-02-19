@@ -33,17 +33,27 @@ class BotanSettings(Configurator):
         command = ['python',
                    self.get_unpacked_sources_dir() + '/configure.py',
                    '--disable-modules=pkcs11',
-                   '--without-documentation',
-                   '--disable-shared-library',
-                   '--prefix=' + self.get_install_dir(),
-        ]
+                   '--without-documentation']
+
+        if self._project_settings.get_link_mode() == 'static':
+            command.append('--disable-shared-library')
+        else:
+            command.append('--enable-shared-library')
+
+        command.append('--prefix=' + self.get_install_dir())
 
         if self._project_settings.on_windows():
             self._build_tool = [os.path.join(self._project_settings.get_common_build_dir(), 'Jom/bin/jom.exe')]
-            if self._project_settings.get_build_mode() == 'release':
-                command.append('--msvc-runtime=MT')
+            if self._project_settings.get_link_mode() == 'static':
+                if self._project_settings.get_build_mode() == 'release':
+                    command.append('--msvc-runtime=MT')
+                else:
+                    command.append('--msvc-runtime=MTd')
             else:
-                command.append('--msvc-runtime=MTd')
+                if self._project_settings.get_build_mode() == 'release':
+                    command.append('--msvc-runtime=MD')
+                else:
+                    command.append('--msvc-runtime=MDd')
         else:
             self._build_tool = ['make', '-j', str(multiprocessing.cpu_count())]
             if self._project_settings.get_build_mode() == 'release':

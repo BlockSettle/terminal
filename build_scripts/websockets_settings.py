@@ -33,14 +33,19 @@ class WebsocketsSettings(Configurator):
     def config(self):
         command = ['cmake',
                    os.path.join(self._project_settings.get_sources_dir(), self._package_name + '-' + self._version),
-                   '-DLWS_WITH_SHARED=OFF',
                    '-DLWS_WITHOUT_SERVER=ON',
                    '-DLWS_WITHOUT_TESTAPPS=ON',
                    '-DLWS_WITHOUT_TEST_SERVER=ON',
                    '-DLWS_WITHOUT_TEST_PING=ON',
-                   '-DLWS_WITHOUT_TEST_CLIENT=ON',
-                   '-G',
-                   self._project_settings.get_cmake_generator()]
+                   '-DLWS_WITHOUT_TEST_CLIENT=ON']
+
+        if self._project_settings.get_link_mode() == 'shared':
+            command.append('-DLWS_WITH_STATIC=OFF')
+        else:
+            command.append('-DLWS_WITH_SHARED=OFF')
+
+        command.append('-G')
+        command.append(self._project_settings.get_cmake_generator())
 
         env_vars = os.environ.copy()
         env_vars['OPENSSL_ROOT_DIR'] = self._ssl_settings.get_install_dir()
@@ -50,10 +55,21 @@ class WebsocketsSettings(Configurator):
         return result == 0
 
     def make_windows(self):
+        project_name = 'websockets'
+        if self._project_settings.get_link_mode() == 'shared':
+            project_name = 'websockets_shared'
+
+        command = ['msbuild',
+                   self.get_solution_file(),
+                   '/t:' + project_name,
+                   '/p:Configuration=' + self.get_win_build_configuration(),
+                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
+        """
         command = ['devenv',
                    self.get_solution_file(),
                    '/build',
                    self.get_win_build_configuration()]
+        """
 
         print('Start building libwebsockets')
         print(' '.join(command))

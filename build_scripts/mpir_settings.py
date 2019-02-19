@@ -59,16 +59,27 @@ class MPIRSettings(Configurator):
         print('Making MPIR')
         buildcfg = self.get_win_build_mode() + '|' + self.get_win_platform()
 
+        # Can't use msbuild here to speedup compilation because 
+        # someone forgot to set projects in solution for build
         command = ['devenv',
                    self.get_solution_file(),
                    '/build',
                    buildcfg,
                    '/project',
                    'lib_mpir_gc']	# lib_mpir_core2 doesn't build with VS2017 now
+
+        if self._project_settings.get_link_mode() == 'shared':
+            command = ['devenv',
+                self.get_solution_file(),
+                '/build',
+                buildcfg,
+                '/project',
+                'dll_mpir_gc']
+
         print('Running ' + ' '.join(command))
 
         result = subprocess.call(command)
-        return result == 0
+        return result == 1
 
     def get_win_build_mode(self):
         if self._project_settings.get_build_mode() == 'release':
@@ -88,7 +99,12 @@ class MPIRSettings(Configurator):
     def install_win(self):
         output_dir = os.path.join(self.get_build_dir(), 'lib', self.get_win_platform(), self.get_win_build_mode())
         # copy libs
-        self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib')
+        if self._project_settings.get_link_mode() == 'shared':
+            output_dir = os.path.join(self.get_build_dir(), 'dll', self.get_win_platform(), self.get_win_build_mode())
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.dll')
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib', False)
+        else:
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib')
 
         # copy headers
         self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'include'), '.h')

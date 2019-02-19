@@ -36,19 +36,19 @@ class LibQREncode(Configurator):
                    '-G',
                    self._project_settings.get_cmake_generator()]
 
+        if self._project_settings.get_link_mode() == "shared":
+            command.append('-DBUILD_SHARED_LIBS=YES')
+
         result = subprocess.call(command)
 
         return result == 0
 
     def make_windows(self):
-        command = ['devenv',
+        command = ['msbuild',
                    self.get_solution_file(),
-                   '/build',
-                   self.get_win_build_configuration(),
-                   '/project',
-                   'qrencode',
-                   '/out',
-                   'build.log']
+                   '/t:qrencode',
+                   '/p:Configuration=' + self.get_win_build_configuration(),
+                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         print(' '.join(command))
 

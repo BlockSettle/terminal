@@ -19,9 +19,12 @@ class Configurator:
                 if self.is_archive():
                     self.unpack_package()
                 build_dir = self.get_build_dir()
-                self.remove_fs_object(build_dir)
+                #self.remove_fs_object(build_dir)
 
-                os.makedirs(build_dir)
+                try:
+                    os.makedirs(build_dir)
+                except:
+                    pass
 
                 os.chdir(build_dir)
 
@@ -176,10 +179,13 @@ class Configurator:
             src_name = os.path.join(src, name)
             dst_name = os.path.join(dst, name)
 
-            if os.path.isdir(src_name):
-                shutil.copytree(src_name, dst_name)
-            else:
-                shutil.copy(src_name, dst_name)
+            try:
+                if os.path.isdir(src_name):
+                    shutil.copytree(src_name, dst_name)
+                else:
+                    shutil.copy(src_name, dst_name)
+            except:
+                pass
 
     def remove_fs_object(self, name):
         if os.path.isfile(name):
