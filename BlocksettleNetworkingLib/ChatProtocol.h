@@ -294,29 +294,6 @@ namespace Chat
       std::string senderId_;
       std::string receiverId_;
    };
-
-   class SendMessageResponse : public Response
-   {
-   public:
-      
-      enum class Result {
-           Accepted
-         , Rejected
-      };
-      SendMessageResponse(const std::string& clientId, const std::string& serverId, Result result);
-      QJsonObject toJson() const override;
-      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
-      void handle(ResponseHandler &) override;
-      
-      std::string clientId() const { return clientId_;}
-      std::string serverId() const { return serverId_;}
-      Result getResult() const {return result_;}
-      
-   private:
-      std::string clientId_;
-      std::string serverId_;
-      Result result_;
-   };
    
    class HeartbeatPongResponse : public Response
    {
@@ -433,20 +410,52 @@ namespace Chat
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       void handle(ResponseHandler &) override;
    };
+   
+   class PendingResponse : public Response
+   {
+   public:
+      PendingResponse(ResponseType type, const QString &id = QString());
+      QJsonObject toJson() const override;
+      QString getId() const;
+      void setId(const QString& id);
+      void handle(ResponseHandler &) override;
+   private:
+      QString id_;
+      
+   };
 
-   class PendingMessagesResponse : public Response
+   class PendingMessagesResponse : public PendingResponse
    {
    public: 
       PendingMessagesResponse(const QString& message_id, const QString& id = QString());
       QString getMessageId();
-      QString getId() const;
-      void setId(QString& id);
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
-      void handle(ResponseHandler &);
    protected:
-      QString id_;
       QString message_id_;
+   };
+   
+   class SendMessageResponse : public PendingResponse
+   {
+   public:
+      
+      enum class Result {
+           Accepted
+         , Rejected
+      };
+      SendMessageResponse(const std::string& clientId, const std::string& serverId, Result result);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      
+      std::string clientId() const { return clientId_;}
+      std::string serverId() const { return serverId_;}
+      Result getResult() const {return result_;}
+      void handle(ResponseHandler&) override;
+      
+   private:
+      std::string clientId_;
+      std::string serverId_;
+      Result result_;
    };
 
 

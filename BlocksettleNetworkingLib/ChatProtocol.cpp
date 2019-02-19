@@ -743,29 +743,48 @@ const autheid::PublicKey& SendOwnPublicKeyResponse::getSendingNodePublicKey() co
    return sendingNodePublicKey_;
 }
 
+PendingResponse::PendingResponse(ResponseType type, const QString& id)
+   : Response(type), id_(id)
+{
+   
+}
+
+QJsonObject PendingResponse::toJson() const
+{
+   QJsonObject data = Response::toJson();
+   return data;
+}
+
+QString Chat::PendingResponse::getId() const
+{
+   return id_;
+}
+
+void Chat::PendingResponse::setId(const QString& id)
+{
+   id_ = id;
+}
+
+void Chat::PendingResponse::handle(ResponseHandler &)
+{
+   return;
+}
+
+
 Chat::PendingMessagesResponse::PendingMessagesResponse(const QString & message_id, const QString &id)
-   : Response(ResponseType::ResponsePendingMessage),   id_(id), message_id_(message_id)
+   : PendingResponse(ResponseType::ResponsePendingMessage, id), message_id_(message_id)
 {
 
 }
 
 QString Chat::PendingMessagesResponse::getMessageId()
 {
-   return message_id_; 
-}
-
-QString Chat::PendingMessagesResponse::getId() const
-{
-   return id_;
-}
-void Chat::PendingMessagesResponse::setId(QString& id)
-{
-   id_ = id;
+   return message_id_;
 }
 
 QJsonObject Chat::PendingMessagesResponse::toJson() const
 {
-   QJsonObject data = Response::toJson();
+   QJsonObject data = PendingResponse::toJson();
    data[MessageIdKey] = message_id_;
    return data;
 }
@@ -777,13 +796,8 @@ std::shared_ptr<Response> Chat::PendingMessagesResponse::fromJSON(const std::str
    return std::make_shared<PendingMessagesResponse>(messageId);
 }
 
-void Chat::PendingMessagesResponse::handle(ResponseHandler &)
-{
-   return;
-}
-
 Chat::SendMessageResponse::SendMessageResponse(const std::string& clientId, const std::string& serverId, SendMessageResponse::Result result)
-   : Response(ResponseType::ResponseSendMessage)
+   : PendingResponse(ResponseType::ResponseSendMessage)
    , clientId_(clientId), serverId_(serverId), result_(result)
 {
    
