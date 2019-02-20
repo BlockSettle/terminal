@@ -443,18 +443,20 @@ namespace Chat
            Accepted
          , Rejected
       };
-      SendMessageResponse(const std::string& clientId, const std::string& serverId, Result result);
+      SendMessageResponse(const std::string& clientId, const std::string& serverId, const std::string& receiverId, Result result);
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       
       std::string clientId() const { return clientId_;}
       std::string serverId() const { return serverId_;}
+      std::string receiverId() const { return receiverId_;}
       Result getResult() const {return result_;}
       void handle(ResponseHandler&) override;
       
    private:
       std::string clientId_;
       std::string serverId_;
+      std::string receiverId_;
       Result result_;
    };
 

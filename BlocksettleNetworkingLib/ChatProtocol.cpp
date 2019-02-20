@@ -796,9 +796,9 @@ std::shared_ptr<Response> Chat::PendingMessagesResponse::fromJSON(const std::str
    return std::make_shared<PendingMessagesResponse>(messageId);
 }
 
-Chat::SendMessageResponse::SendMessageResponse(const std::string& clientId, const std::string& serverId, SendMessageResponse::Result result)
+Chat::SendMessageResponse::SendMessageResponse(const std::string& clientId, const std::string& serverId, const std::string& receiverId, SendMessageResponse::Result result)
    : PendingResponse(ResponseType::ResponseSendMessage)
-   , clientId_(clientId), serverId_(serverId), result_(result)
+   , clientId_(clientId), serverId_(serverId), receiverId_(receiverId), result_(result)
 {
    
 }
@@ -808,6 +808,7 @@ QJsonObject Chat::SendMessageResponse::toJson() const
    QJsonObject data = Response::toJson();
    data[ClientMessageIdKey] = QString::fromStdString(clientId_);
    data[MessageIdKey] = QString::fromStdString(serverId_);
+   data[ReceiverIdKey] = QString::fromStdString(receiverId_);
    data[MessageResultKey] = static_cast<int>(result_);
    return data;
 }
@@ -817,8 +818,10 @@ std::shared_ptr<Response> Chat::SendMessageResponse::fromJSON(const std::string&
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
    QString clientId = data[ClientMessageIdKey].toString();
    QString serverId = data[MessageIdKey].toString();
+   QString receiverId = data[ReceiverIdKey].toString();
    Result result    = static_cast<Result>(data[MessageResultKey].toInt());
-   return std::make_shared<SendMessageResponse>(clientId.toStdString(), serverId.toStdString(), result);
+   
+   return std::make_shared<SendMessageResponse>(clientId.toStdString(), serverId.toStdString(), receiverId.toStdString(), result);
 }
 
 void SendMessageResponse::handle(ResponseHandler& handler)
