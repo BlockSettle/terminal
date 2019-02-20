@@ -91,7 +91,17 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response)
 {
    QJsonDocument json(response.toJson());
-      logger_->debug("[ChatClient::OnSendMessageResponse]: received: {}", json.toJson(QJsonDocument::Indented).toStdString());
+   logger_->debug("[ChatClient::OnSendMessageResponse]: received: {}", json.toJson(QJsonDocument::Indented).toStdString());
+   if (response.getResult() == Chat::SendMessageResponse::Result::Accepted) {
+      QString localId = QString::fromStdString(response.clientId());
+      QString serverId = QString::fromStdString(response.serverId());
+      QString receiverId = QString::fromStdString(response.receiverId());
+      bool res = chatDb_->syncMessageId(localId, serverId);
+      
+      logger_->debug("[ChatClient::OnSendMessageResponse]: message id sync: {}", res?"Success":"Failed");
+      
+      emit MessageIdUpdated(localId, serverId, receiverId);
+   }
 }
 
 void ChatClient::logout()

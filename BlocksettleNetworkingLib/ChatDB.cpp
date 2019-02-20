@@ -143,6 +143,25 @@ bool ChatDB::add(const Chat::MessageData &msg)
    return true;
 }
 
+bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
+{
+   const QString cmd = QLatin1String("UPDATE messages SET id = :server_mid, state = state | :set_flags WHERE (id = :local_mid);");
+   QSqlQuery query(db_);
+
+   query.prepare(cmd);
+   query.bindValue(QLatin1String(":server_mid"), serverId);
+   query.bindValue(QLatin1String(":local_mid"), localId);
+   query.bindValue(QLatin1String(":set_flags"), static_cast<int>(Chat::MessageData::State::Acknowledged));
+   
+   if (!query.exec()) {
+      logger_->error("[ChatDB::syncMessageId] failed to synchronize local message id with server message id; Error: {}",
+                     query.lastError().text().toStdString()
+                     );
+      return false;
+   }
+   return true;
+}
+
 std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &userId)
 {
    QSqlQuery query(db_);

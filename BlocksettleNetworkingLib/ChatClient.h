@@ -86,6 +86,7 @@ signals:
    void UsersDel(const std::vector<std::string>& users);
    void IncomingFriendRequest(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
+   void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
 
 private slots:
    void sendHeartbeat();

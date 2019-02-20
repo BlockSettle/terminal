@@ -32,6 +32,7 @@ protected:
    enum class Column {
       Time,
       User,
+      Status,
       Message,
       last
    };
@@ -46,6 +47,7 @@ public slots:
    void onSwitchToChat(const QString& chatId);
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
+   void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
 
 private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;

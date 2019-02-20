@@ -27,24 +27,27 @@ QVariant ChatMessagesViewModel::headerData(int section, Qt::Orientation orientat
 
 
    if (role == Qt::DisplayRole) {
-	   //You should always check what role is requested
-	   //beacause if it will be for example count role
-	   //your code without checks could return 0 count
-	   //and as result display role will have no effect
-	   //and you will not see your headers
-	   switch (static_cast<Column>(section)) {
-	   case Column::Time:
-		   return tr("Time");
+      //You should always check what role is requested
+      //beacause if it will be for example count role
+      //your code without checks could return 0 count
+      //and as result display role will have no effect
+      //and you will not see your headers
+      switch (static_cast<Column>(section)) {
+      case Column::Time:
+         return tr("Time");
 
-	   case Column::User:
-		   return tr("User");
+      case Column::User:
+         return tr("User");
+         
+      case Column::Status:
+         return tr("Status");
 
-	   case Column::Message:
-		   return tr("Message");
+      case Column::Message:
+         return tr("Message");
 
-	   default:
-		   break;
-	   }
+      default:
+      break;
+      }
    }
    return {};
 }
@@ -56,6 +59,20 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
       switch (column) {
       case Column::User:
          return QColor(Qt::gray);
+         
+      case Column::Status:{
+         std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
+         
+         QColor color(Qt::yellow);
+         int state = message->getState();
+         if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
+            color = QColor(Qt::green);
+         }
+         if (state & static_cast<int>(Chat::MessageData::State::Read)){
+            color = QColor(Qt::blue);
+         }
+         return color;
+      }
       default: break;
       }
    }
@@ -86,14 +103,35 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
             }
             return sender;
          }
-
+         
+         case Column::Status:{
+            std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
+            int state = message->getState();
+            QString status = QString::fromUtf8("\u25FB");
+            
+            if (state & (int)Chat::MessageData::State::Acknowledged){
+               status = QString::fromUtf8("\u25FC");
+            }
+            if (state & (int)Chat::MessageData::State::Read){
+               status = QString::fromUtf8("\u25FC");
+            }
+            return status;
+         }
+            
          case Column::Message:
-            return messages_[currentChatId_][index.row()]->getMessageData();
+            return QString(QLatin1String("[%1] %2")).arg(messages_[currentChatId_][index.row()]->getId(), messages_[currentChatId_][index.row()]->getMessageData());
 
          default:
             break;
       }
+   } else if (role == Qt::BackgroundRole) {
+      switch (column) {
+      case Column::Status:
+         return QColor(Qt::gray);
+      default: break;
+      }
    }
+   
    return QVariant();
 }
 
@@ -111,6 +149,21 @@ void ChatMessagesViewModel::onSingleMessageUpdate(const std::shared_ptr<Chat::Me
    beginInsertRows(QModelIndex(), rowIdx, rowIdx);
    messages_[currentChatId_].push_back(msg);
    endInsertRows();
+}
+
+void ChatMessagesViewModel::onMessageIdUpdate(const QString& oldId, const QString& newId, const QString& chatId)
+{
+  
+   auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [oldId](std::shared_ptr<Chat::MessageData> data){
+      return data->getId() == oldId;
+   });
+   
+   if (it != messages_[chatId].end()){
+      (*it)->setId(newId);
+      (*it)->setFlag(Chat::MessageData::State::Acknowledged);
+      int distance = static_cast<int>(std::distance(messages_[chatId].begin(), it));
+      emit dataChanged(index(distance, static_cast<int>(Column::Status)), index(distance, static_cast<int>(Column::Message)), { Qt::DisplayRole });
+   }
 }
 
 void ChatMessagesViewModel::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages)
