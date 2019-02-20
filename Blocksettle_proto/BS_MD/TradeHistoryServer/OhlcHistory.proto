@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package Blocksettle.BS_MD.TradeHistoryServer;
+
+enum Interval
+{
+	OneYear = 0;
+	SixMonths = 1;
+	OneMonth = 2;
+	OneWeek = 3;
+	TwentyFourHours = 4;
+	TwelveHours = 5;
+	SixHours = 6;
+	OneHour = 7;
+};
+
+message OhlcRequest
+{
+	string market = 1;
+	Interval interval = 2;
+	uint32 limit = 3;
+};
+
+message OhlcCandle
+{
+	uint64 timestamp = 1;
+	double open = 2;
+	double high = 3;
+	double low = 4;
+	double close = 5;
+	double volume = 6;
+};
+
+message OhlcResponse
+{
+	repeated OhlcCandle candles = 1;
+};
