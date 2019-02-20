@@ -59,20 +59,6 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
       switch (column) {
       case Column::User:
          return QColor(Qt::gray);
-         
-      case Column::Status:{
-         std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
-         
-         QColor color(Qt::yellow);
-         int state = message->getState();
-         if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
-            color = QColor(Qt::green);
-         }
-         if (state & static_cast<int>(Chat::MessageData::State::Read)){
-            color = QColor(Qt::blue);
-         }
-         return color;
-      }
       default: break;
       }
    }
@@ -103,20 +89,6 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
             }
             return sender;
          }
-         
-         case Column::Status:{
-            std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
-            int state = message->getState();
-            QString status = QString::fromUtf8("\u25FB");
-            
-            if (state & (int)Chat::MessageData::State::Acknowledged){
-               status = QString::fromUtf8("\u25FC");
-            }
-            if (state & (int)Chat::MessageData::State::Read){
-               status = QString::fromUtf8("\u25FC");
-            }
-            return status;
-         }
             
          case Column::Message:
             return QString(QLatin1String("[%1] %2")).arg(messages_[currentChatId_][index.row()]->getId(), messages_[currentChatId_][index.row()]->getMessageData());
@@ -124,10 +96,22 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
          default:
             break;
       }
-   } else if (role == Qt::BackgroundRole) {
+   } else if (role == Qt::DecorationRole) {
       switch (column) {
-      case Column::Status:
-         return QColor(Qt::gray);
+      case Column::Status:{
+         std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
+         int state = message->getState();
+         //QString status = QString::fromUtf8("\u25FB");
+         QIcon status(QLatin1Literal(":/ICON_STATUS_OFFLINE"));
+
+         if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
+            status = QIcon(QLatin1Literal(":/ICON_STATUS_CONNECTING"));
+         }
+         if (state & static_cast<int>(Chat::MessageData::State::Read)){
+            status = QIcon(QLatin1Literal(":/ICON_DOT"));
+         }
+         return status;
+      }
       default: break;
       }
    }
