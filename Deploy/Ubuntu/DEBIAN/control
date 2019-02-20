@@ -1,0 +1,23 @@
+Package: bsterminal
+Version: 0.12.0
+Section: x11
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.3.5-1), libstdc++6 (>= 6.3.0), libx11-xcb1 (>= 2:1.6.0),
+         zlib1g (>= 1:1.2.1), libxcb-xinerama0 (>= 1.10), python,
+         xdg-utils, libx11-6, libxcb-xkb1, libxcb-render-util0, libxcb-xfixes0,
+         libxcb-randr0, libxcb-image0, libxcb-keysyms1, libxcb-icccm4,
+         libxkbcommon-x11-0, libdouble-conversion1, libcups2, libfontconfig1,
+         libxi6, libsm6, libxrender1, libxcb-sync1, libxcb-shape0
+Replaces: bsterminal (<< 0.7.0)
+Installed-Size: 125000
+Maintainer: BlockSettle <info@blocksettle.com>
+Source: blocksettle
+Description: BlockSettle bitcoin terminal and wallet manager
+ This application is as terminal for BlockSettle's real-time
+ settlement network, but can also act as a comprehensive Bitcoin
+ wallet software.
+ .
+ More description here
+ .
+  Homepage: http://blocksettle.com

@@ -1,9 +1,11 @@
 CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
 
-SET (CMAKE_CXX_STANDARD 11)
+SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+SET(CMAKE_CXX_EXTENSIONS OFF)
 
-SET( PROJECT_NAME_STR BlockSettle )
-PROJECT( ${PROJECT_NAME_STR} )
+SET(PROJECT_NAME_STR BS_Terminal)
+PROJECT(${PROJECT_NAME_STR})
 
 IF (NOT CMAKE_BUILD_TYPE)
    SET(CMAKE_BUILD_TYPE "Debug")
@@ -17,6 +19,30 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 add_definitions(-DNOMINMAX)
 
+# Force Armory to ignore Crypto++ and use libbtc instead.
+add_definitions(-DLIBBTC_ONLY)
+
+IF (PRODUCTION_BUILD)
+   add_definitions(-DPRODUCTION_BUILD)
+ENDIF (PRODUCTION_BUILD)
+
+# Force 64-bit builds and min target for macOS. If the min target changes,
+# update generate.py too.
+if(APPLE)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE STRING "" FORCE)
+	set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "macOS architecture to build; 64-bit is expected" FORCE)
+endif(APPLE)
+
+# Enforce Windows 7 minimum target and MSVS 2017 compiler minimum.
+IF(WIN32)
+	SET(_WIN32_WINNT 0x0601 CACHE INTERNAL "Setting _WIN32_WINNT to 0x0601 for Windows 7 minimum APIs.")
+	SET(WINVER 0x0601 CACHE INTERNAL "Setting WINVER to 0x0601 for Windows 7 minimum APIs.")
+
+	IF(MSVC_VERSION LESS 1910)
+		MESSAGE(FATAL_ERROR "MSVC 141 or higher is required to build the BlockSettle Terminal.")
+	ENDIF()
+ENDIF()
+
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
 SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
@@ -29,13 +55,12 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
-SET(BS_VERSION_MINOR 11 )
-SET(BS_VERSION_PATCH 0 )
+SET(BS_VERSION_MINOR 12 )
+SET(BS_VERSION_PATCH 10 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
-STRING(REPLACE "refs/heads/" "" GIT_BRANCH ${GIT_REFSPEC})
 
 IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
   MESSAGE( FATAL_ERROR "THis is not a Git repository, but it should be.")
@@ -61,6 +86,7 @@ IF( WIN32 )
    # output libs to same path as binaries on windows just to make life easier
    SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
    SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+   add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
    SET( LIBRARY_OUTPUT_PATH ${EXECUTABLE_OUTPUT_PATH} )
 ELSE()
    SET( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/libs )
@@ -90,6 +116,8 @@ FIND_PACKAGE(Qt5Qml REQUIRED)
 FIND_PACKAGE(Qt5Quick REQUIRED)
 FIND_PACKAGE(Qt5QuickControls2 REQUIRED)
 FIND_PACKAGE(Qt5Charts REQUIRED)
+FIND_PACKAGE(Qt5Sql REQUIRED)
+FIND_PACKAGE(Qt5Svg REQUIRED)
 
 IF ( UNIX AND NOT APPLE )
    FIND_PACKAGE(Qt5DBus REQUIRED)
@@ -122,9 +150,9 @@ INCLUDE_DIRECTORIES( ${ZEROMQ_INCLUDE_DIR} )
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${ZEROMQ_ROOT}/lib)
 IF( WIN32 )
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_2_5" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-gd-4_3_1" )
    ELSE()
-      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_2_5" )
+      SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_3_1" )
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE ()
    SET( ZMQ_LIB_NAME "libzmq.a" "zmq" )
@@ -134,9 +162,9 @@ FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO
 IF( NOT ZMQ_LIB )
    IF( WIN32 )
       IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_2_5" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-gd-4_3_1" )
       ELSE()
-         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_2_5" )
+         SET( ZMQ_LIB_NAME "libzmq-v141-mt-4_3_1" )
       ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    ENDIF( WIN32 )
    FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
@@ -145,11 +173,15 @@ IF( NOT ZMQ_LIB )
    ENDIF( NOT ZMQ_LIB)
 ENDIF( NOT ZMQ_LIB)
 
+
+
 IF( WIN32 )
+   STRING(REPLACE ".lib" ".dll" ZMQ_LIB_DLL ${ZMQ_LIB})
+
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-#      FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Debug)
+     FILE(COPY ${ZMQ_LIB_DLL} DESTINATION ${LIBRARY_OUTPUT_PATH}/Debug)
    ELSE()
-#      FILE(COPY ${ZEROMQ_ROOT}/lib/${ZMQ_LIB_NAME}.dll DESTINATION ${LIBRARY_OUTPUT_PATH}/Release)
+     FILE(COPY ${ZMQ_LIB_DLL} DESTINATION ${LIBRARY_OUTPUT_PATH}/Release)
    ENDIF()
 ENDIF()
 
@@ -183,25 +215,6 @@ INCLUDE_DIRECTORIES( ${OPENSSL_INCLUDE_DIR} )
 
 # SET(OPENSSL_ROOT_DIR ${OPENSSL_ROOT})
 # SET(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_ROOT}/lib)
-
-# setup cryptopp
-SET(CRYPTOPP_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/cryptopp)
-SET(CRYPTOPP_LIB_DIR ${CRYPTOPP_PACKAGE_ROOT}/lib)
-SET(CRYPTOPP_INCLUDE_DIR ${CRYPTOPP_PACKAGE_ROOT}/include)
-
-IF (WIN32)
-   SET(CRYPTOPP_LIB_NAME cryptopp-static)
-ELSE(WIN32)
-   SET(CRYPTOPP_LIB_NAME libcryptopp.a)
-ENDIF(WIN32)
-
-FIND_LIBRARY( CRYPTOPP_LIB NAMES ${CRYPTOPP_LIB_NAME} PATHS ${CRYPTOPP_LIB_DIR} NO_DEFAULT_PATH )
-IF( NOT CRYPTOPP_LIB)
-   MESSAGE( FATAL_ERROR "Could not find cryptopp lib in ${CRYPTOPP_LIB_DIR}")
-ENDIF()
-INCLUDE_DIRECTORIES( ${CRYPTOPP_INCLUDE_DIR} )
-INCLUDE_DIRECTORIES( ${CRYPTOPP_INCLUDE_DIR}/cryptopp )
-
 
 # setup botan
 SET(BOTAN_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/botan)
@@ -337,8 +350,7 @@ SET( BS_NETWORK_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/BlocksettleNetworkingLib
 SET( COMMON_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonLib )
 SET( COMMON_UI_LIB_INCLUDE_DIR ${BLOCK_SETTLE_ROOT}/common/CommonUI )
 
-SET(CRYPTOPP_EXTRA_DIR ${CRYPTO_LIB_DIR}/cryptopp)
-SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb)
+SET(MDB_DIR ${CRYPTO_LIB_DIR}/lmdb/libraries/liblmdb)
 
 INCLUDE_DIRECTORIES( ${CRYPTOPP_EXTRA_DIR} )
 INCLUDE_DIRECTORIES( ${MDB_DIR} )
@@ -357,6 +369,7 @@ IF(WIN32)
 IF(WIN32)
    SET(OS_SPECIFIC_LIBS
       Ws2_32
+      Wtsapi32
       Iphlpapi
       imm32
       winmm
@@ -381,7 +394,10 @@ IF(WIN32)
          Qt5WindowsUIAutomationSupportd.lib
          Qt5AccessibilitySupportd.lib
          Qt5Chartsd.lib )
-      LIST(APPEND OS_SPECIFIC_LIBS msvcrtd)
+      LIST(APPEND OS_SPECIFIC_LIBS
+         msvcrtd
+         ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
+      )
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quickd.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgetsd.lib
@@ -408,9 +424,12 @@ IF(WIN32)
          Qt5EventDispatcherSupport.lib
          Qt5ThemeSupport.lib
          Qt5WindowsUIAutomationSupport.lib
-         Qt5AccessibilitySupport.lib 
+         Qt5AccessibilitySupport.lib
          Qt5Charts.lib)
-      LIST(APPEND OS_SPECIFIC_LIBS msvcrt)
+      LIST(APPEND OS_SPECIFIC_LIBS
+         msvcrt
+         ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
+      )
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quick.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgets.lib
@@ -453,6 +472,7 @@ ELSE(WIN32)
          "-framework Security"
          "-framework SystemConfiguration"
          "-framework QuartzCore"
+         "-framework Metal"
          Qt5::QCocoaIntegrationPlugin
          Qt5::PrintSupport
          Qt5::QICOPlugin
@@ -474,6 +494,9 @@ ELSE(WIN32)
             libQt5EdidSupport_debug.a
             libQt5Charts_debug.a
             )
+         LIST (APPEND OS_SPECIFIC_LIBS
+            ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite_debug.a
+         )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin_debug.a
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin_debug.a
@@ -505,6 +528,9 @@ ELSE(WIN32)
             libQt5EdidSupport.a
             libQt5Charts.a
             )
+         LIST (APPEND OS_SPECIFIC_LIBS
+            ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
+         )
          SET(QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
             ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
@@ -543,7 +569,10 @@ ELSE(WIN32)
          libQt5AccessibilitySupport.a
          libQt5EdidSupport.a )
 
-      LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+      LIST(APPEND QT_LINUX_LIBS
+         ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
+         ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
+      )
 
       IF(NOT EXISTS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
          MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a")
@@ -620,7 +649,7 @@ FOREACH(lib_name ${QT_LIBS})
    LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
 
-ADD_SUBDIRECTORY(AuthCommon)
+ADD_SUBDIRECTORY( AuthCommon )
 ADD_SUBDIRECTORY( Celer )
 ADD_SUBDIRECTORY( common/Blocksettle_proto )
 

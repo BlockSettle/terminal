@@ -7,11 +7,15 @@
 #include "MetaData.h"
 #include <QSystemTrayIcon>
 
+namespace bs {
+namespace wallet {
+   class QPasswordData;
+}
+}
 
 namespace spdlog {
    class logger;
 }
-class AuthProxy;
 class HeadlessContainerListener;
 class OfflineProcessor;
 class QmlWalletsViewModel;
@@ -23,7 +27,7 @@ class WalletsManager;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
 class DBusNotification;
-
+class QmlFactory;
 
 class QMLAppObj : public QObject
 {
@@ -40,7 +44,9 @@ signals:
    void cancelSignTx(const QString &txId);
 
 private slots:
-   void onPasswordAccepted(const QString &walletId, const QString &password, bool cancelledByUser);
+   void onPasswordAccepted(const QString &walletId
+                           , bs::wallet::QPasswordData *passwordData
+                           , bool cancelledByUser);
    void onOfflinePassword(const bs::wallet::TXSignRequest &);
    void onPasswordRequested(const bs::wallet::TXSignRequest &, const QString &prompt);
    void onAutoSignPwdRequested(const std::string &walletId);
@@ -59,9 +65,11 @@ private:
    void requestPassword(const bs::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
    void disconnect();
 
-private:
+   void initZmqKeys();
+   void registerQtTypes();
+
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<SignerSettings>  params_;
+   std::shared_ptr<SignerSettings>  settings_;
    QQmlContext                *     ctxt_;
    std::shared_ptr<WalletsManager>  walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
@@ -69,10 +77,12 @@ private:
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
-   std::shared_ptr<AuthProxy>                   authProxy_;
+   std::shared_ptr<QmlFactory>                  qmlFactory_;
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
+   SecureBinaryData                             zmqPubKey_;
+   SecureBinaryData                             zmqPrvKey_;
 
    enum NotificationMode {
       QSystemTray,

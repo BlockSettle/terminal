@@ -64,24 +64,24 @@ private slots:
    void onPeerDisconnected(const QString &ip);
 
 private:
-   bool offline() const { return params_->offline(); }
+   bool offline() const { return settings_->offline(); }
    int connections() const { return connectedClients_.size(); }
    QStringList connectedClients() const;
-   bool autoSignUnlimited() const { return params_->autoSignUnlimited(); }
-   bool manualSignUnlimited() const { return params_->manualSignUnlimited(); }
-   double autoSignLimit() const { return params_->limitAutoSignXbt(); }
-   double manualSignLimit() const { return params_->limitManualXbt(); }
-   QString autoSignTimeLimit() const { return params_->limitAutoSignTimeStr(); }
+   bool autoSignUnlimited() const { return settings_->autoSignUnlimited(); }
+   bool manualSignUnlimited() const { return settings_->manualSignUnlimited(); }
+   double autoSignLimit() const { return settings_->limitAutoSignXbt(); }
+   double manualSignLimit() const { return settings_->limitManualXbt(); }
+   QString autoSignTimeLimit() const { return settings_->limitAutoSignTimeStr(); }
    QString autoSignTimeSpent() const { return SignerSettings::secondsToIntervalStr(autoSignTimeSpent_); }
    int txSignedCount() const { return txSignedCount_; }
    double autoSignSpent() const { return autoSignSpent_ / BTCNumericTypes::BalanceDivider; }
    double manualSignSpent() const { return manualSignSpent_ / BTCNumericTypes::BalanceDivider; }
-   QString listenSocket() const { return params_->listenAddress() + QLatin1String(" : ") + params_->port(); }
+   QString listenSocket() const { return settings_->listenAddress() + QLatin1String(" : ") + settings_->port(); }
    bool autoSignActive() const { return autoSignActive_; }
    bool socketOk() const { return socketOk_; }
 
 private:
-   std::shared_ptr<SignerSettings>  params_;
+   std::shared_ptr<SignerSettings>  settings_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    QTimer   asTimer_;
    int      txSignedCount_ = 0;

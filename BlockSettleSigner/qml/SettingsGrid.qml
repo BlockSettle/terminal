@@ -1,13 +1,12 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
-import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.3
 
 GridLayout {
     id: grid
-    columns:    2
-    columnSpacing:  5
-    rowSpacing:     5
+    columns: 2
+    columnSpacing: 5
+    rowSpacing: 5
     Layout.fillWidth: true
     Layout.fillHeight: true
     Layout.minimumHeight: 25
@@ -23,13 +22,13 @@ GridLayout {
 
     states: [
         State {
-            name:   "normal"
+            name: "normal"
             PropertyChanges { target: grid; scale: 1.0 }
             PropertyChanges { target: grid; implicitHeight: originalHeight }
             PropertyChanges { target: grid; enabled: true }
         },
         State {
-            name:   "hidden"
+            name: "hidden"
             PropertyChanges { target: grid; scale: 0.00 }
             PropertyChanges { target: grid; implicitHeight: 0.00 * originalHeight }
             PropertyChanges { target: grid; enabled: false }
@@ -37,21 +36,21 @@ GridLayout {
     ]
     transitions: [
         Transition {
-            to:     "hidden"
+            to: "hidden"
             NumberAnimation {
-                target:     grid
+                target: grid
                 properties: "scale,implicitHeight"
-                duration:   400
-                easing.type:    Easing.InQuad
+                duration: 400
+                easing.type: Easing.InQuad
             }
         },
         Transition {
-            to:     "normal"
+            to: "normal"
             NumberAnimation {
-                target:     grid
+                target: grid
                 properties: "scale,implicitHeight"
-                duration:   400
-                easing.type:    Easing.InQuad
+                duration: 400
+                easing.type: Easing.InQuad
             }
         }
     ]

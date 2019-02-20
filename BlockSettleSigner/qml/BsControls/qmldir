@@ -1,0 +1,10 @@
+module BlockSettleControls
+
+BSMessageBox 1.0 BSMessageBox.qml
+BSPasswordInput 1.0 BSPasswordInput.qml
+BSConfirmedPasswordInput 1.0 BSConfirmedPasswordInput.qml
+BSEasyCodeInput 1.0 BSEasyCodeInput.qml
+BSEidNoticeBox 1.0 BSEidNoticeBox.qml
+BSEidProgressBox 1.0 BSEidProgressBox.qml
+BSAbortBox 1.0 BSAbortBox.qml
+BSWalletDetailsFrame 1.0 BSWalletDetailsFrame.qml

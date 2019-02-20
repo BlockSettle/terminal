@@ -11,17 +11,15 @@
 
 #include <memory>
 
-#include <spdlog/spdlog.h>
-
 #include "ApplicationSettings.h"
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
 #include "EncryptionUtils.h"
 #include "StartupDialog.h"
-#include "MessageBoxCritical.h"
-#include "MessageBoxInfo.h"
-#include "WalletsManager.h"
+#include "BSMessageBox.h"
+#include "ZMQHelperFunctions.h"
 
+#include "btc/ecc.h"
 
 #if defined (Q_OS_WIN)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
@@ -34,14 +32,13 @@ Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #endif
 
+Q_IMPORT_PLUGIN(QSQLiteDriverPlugin)
 Q_IMPORT_PLUGIN(QICOPlugin)
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(BinaryData)
 Q_DECLARE_METATYPE(SecureBinaryData)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
-Q_DECLARE_METATYPE(bs::TXEntry)
-Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
 Q_DECLARE_METATYPE(UTXO)
 Q_DECLARE_METATYPE(std::vector<UTXO>)
 Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
@@ -82,7 +79,8 @@ private:
    bool activationRequired_ = false;
 };
 
-static void checkFirstStart(ApplicationSettings *applicationSettings) {
+static void checkFirstStart(ApplicationSettings *applicationSettings)
+{
   bool wasInitialized = applicationSettings->get<bool>(ApplicationSettings::initialized);
   if (wasInitialized) {
     return;
@@ -103,17 +101,18 @@ static void checkFirstStart(ApplicationSettings *applicationSettings) {
     std::exit(EXIT_FAILURE);
   }
 
-  const bool runArmoryLocally = startupDialog.isRunArmoryLocally();
+  const bool runArmoryLocally = (startupDialog.runMode() == StartupDialog::RunMode::Local);
   applicationSettings->set(ApplicationSettings::runArmoryLocally, runArmoryLocally);
   applicationSettings->set(ApplicationSettings::netType, int(startupDialog.networkType()));
 
-  if (runArmoryLocally) {
+  if (startupDialog.runMode() == StartupDialog::RunMode::Custom) {
     applicationSettings->set(ApplicationSettings::armoryDbIp, startupDialog.armoryDbIp());
     applicationSettings->set(ApplicationSettings::armoryDbPort, startupDialog.armoryDbPort());
   }
 }
 
-static void checkStyleSheet(QApplication &app) {
+static void checkStyleSheet(QApplication &app)
+{
    QLatin1String styleSheetFileName = QLatin1String("stylesheet.css");
 
    QFileInfo info = QFileInfo(QLatin1String(styleSheetFileName));
@@ -144,8 +143,16 @@ static int GuiApp(int argc, char** argv)
    QApplication app(argc, argv);
 #endif
 
+   // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
+   // Armory setting designed to allow the ArmoryDB server to not have to verify
+   // clients. Prevents us from having to import tons of keys into the server.
+   btc_ecc_start();
+   startupBIP151CTX();
+   startupBIP150CTX(4, true);
+
    app.setQuitOnLastWindowClosed(false);
    app.setAttribute(Qt::AA_DontShowIconsInMenus);
+   app.setAttribute(Qt::AA_EnableHighDpiScaling);
 
    QFileInfo localStyleSheetFile(QLatin1String("stylesheet.css"));
 
@@ -185,9 +192,10 @@ static int GuiApp(int argc, char** argv)
    lockFile.setStaleLockTime(0);
 
    if (!lockFile.tryLock()) {
-      MessageBoxInfo box(app.tr("BlockSettle Terminal")
+      BSMessageBox box(BSMessageBox::info, app.tr("BlockSettle Terminal")
          , app.tr("BlockSettle Terminal is already running")
-         , app.tr("Another instance of BlockSettle Terminal is running. It may be running in the background, look for the BlockSettle icon in the system tray"));
+         , app.tr("Stop the other BlockSettle Terminal instance. If no other " \
+         "instance is running, delete the lockfile (%1).").arg(lockFilePath));
       return box.exec();
    }
 
@@ -196,8 +204,6 @@ static int GuiApp(int argc, char** argv)
    qRegisterMetaType<BinaryData>();
    qRegisterMetaType<SecureBinaryData>();
    qRegisterMetaType<std::vector<BinaryData>>();
-   qRegisterMetaType<bs::TXEntry>();
-   qRegisterMetaType<std::vector<bs::TXEntry>>();
    qRegisterMetaType<UTXO>();
    qRegisterMetaType<std::vector<UTXO>>();
    qRegisterMetaType<AsyncClient::LedgerDelegate>();
@@ -205,7 +211,7 @@ static int GuiApp(int argc, char** argv)
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
    if (!settings->LoadApplicationSettings(app.arguments())) {
-      MessageBoxCritical errorMessage(app.tr("Error")
+      BSMessageBox errorMessage(BSMessageBox::critical, app.tr("Error")
          , app.tr("Failed to parse command line arguments")
          , settings->ErrorText());
       errorMessage.exec();
@@ -228,30 +234,31 @@ static int GuiApp(int argc, char** argv)
    splashScreen.show();
    app.processEvents();
 
+#ifndef _DEBUG
    try {
+#endif
       BSTerminalMainWindow mainWindow(settings, splashScreen);
 
 #if defined (Q_OS_MAC)
       QObject::connect(&app, &MacOsApp::reactivateTerminal, &mainWindow, &BSTerminalMainWindow::onReactivate);
 #endif
 
-      if (settings->get<bool>(ApplicationSettings::launchToTray)) {
-         splashScreen.close();
-      } else {
+      if (!settings->get<bool>(ApplicationSettings::launchToTray)) {
          mainWindow.show();
-         splashScreen.finish(&mainWindow);
       }
 
       mainWindow.postSplashscreenActions();
 
       return app.exec();
+#ifndef _DEBUG
    }
    catch (const std::exception &e) {
       std::cerr << "Failed to start BlockSettle Terminal: " << e.what() << std::endl;
-      MessageBoxCritical(app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
+      BSMessageBox(BSMessageBox::critical, app.tr("BlockSettle Terminal"), QLatin1String(e.what())).exec();
       return 1;
    }
    return 0;
+#endif // _DEBUG
 }
 
 int main(int argc, char** argv)

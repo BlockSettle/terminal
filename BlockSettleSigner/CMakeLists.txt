@@ -23,6 +23,7 @@ INCLUDE_DIRECTORIES( ${Qt5DBus_INCLUDE_DIRS} )
 INCLUDE_DIRECTORIES( ${BOTAN_INCLUDE_DIR} )
 
 qt5_add_resources( GENERATED_RESOURCES ${RESOURCE_FILES})
+qt5_add_resources( GENERATED_RESOURCES ${BLOCKSETTLE_UI_INCLUDE_DIR}/armory.qrc)
 
 IF ( APPLE )
     SET( BUNDLE_NAME "Blocksettle Signer" )
@@ -62,6 +63,7 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    Qt5::Gui
    Qt5::DBus
    Qt5::Network
+   Qt5::PrintSupport
    Qt5::Core
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
