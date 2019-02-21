@@ -93,8 +93,8 @@ void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response
    QJsonDocument json(response.toJson());
    logger_->debug("[ChatClient::OnSendMessageResponse]: received: {}", json.toJson(QJsonDocument::Indented).toStdString());
    if (response.getResult() == Chat::SendMessageResponse::Result::Accepted) {
-      QString localId = QString::fromStdString(response.clientId());
-      QString serverId = QString::fromStdString(response.serverId());
+      QString localId = QString::fromStdString(response.clientMessageId());
+      QString serverId = QString::fromStdString(response.serverMessageId());
       QString receiverId = QString::fromStdString(response.receiverId());
       bool res = chatDb_->syncMessageId(localId, serverId);
       

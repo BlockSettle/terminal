@@ -33,6 +33,7 @@ namespace Chat
    ,   RequestOnlineUsers
    ,   RequestAskForPublicKey
    ,   RequestSendOwnPublicKey
+   ,   RequestChangeMessageStatus
    };
 
 
@@ -48,6 +49,7 @@ namespace Chat
    ,   ResponseSendOwnPublicKey
    ,   ResponsePendingMessage
    ,   ResponseSendMessage
+   ,   ResponseChangeMessageStatus
    };
 
 
@@ -214,6 +216,25 @@ namespace Chat
 
    private:
       std::string messageData_;
+   };
+   
+   class MessageChangeStatusRequest : public Request
+   {
+   public:
+      MessageChangeStatusRequest(const std::string& clientId, const std::string& messageId, int mask, int state);
+      
+      const std::string getMessageId() const {return messageId_; }
+      int getStateDeltaMask() const {return messageStateDeltaMask_; }
+      int getMessageState() const {return messageState_; }
+      
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Request> fromJSON(const std::string& clientId
+                                     , const std::string& jsonData);
+      void handle(RequestHandler &) override;
+   private:
+      const std::string messageId_;
+      int messageStateDeltaMask_;
+      int messageState_;
    };
 
    // Request for asking the peer to send us their public key.
@@ -444,21 +465,38 @@ namespace Chat
            Accepted
          , Rejected
       };
-      SendMessageResponse(const std::string& clientId, const std::string& serverId, const std::string& receiverId, Result result);
+      SendMessageResponse(const std::string& clientMessageId, const std::string& serverMessageId, const std::string& receiverId, Result result);
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       
-      std::string clientId() const { return clientId_;}
-      std::string serverId() const { return serverId_;}
+      std::string clientMessageId() const { return clientMessageId_;}
+      std::string serverMessageId() const { return serverMessageId_;}
       std::string receiverId() const { return receiverId_;}
       Result getResult() const {return result_;}
       void handle(ResponseHandler&) override;
       
    private:
-      std::string clientId_;
-      std::string serverId_;
+      std::string clientMessageId_;
+      std::string serverMessageId_;
       std::string receiverId_;
       Result result_;
+   };
+   
+   class MessageChangeStatusResponse : public PendingResponse
+   {
+   public:
+      MessageChangeStatusResponse(const std::string& messageId, const std::string& senderId,const std::string& receiverId, int status);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      std::string messageId() const {return messageId_;}
+      std::string messageSenderId() {return messageSenderId_;}
+      std::string messageReceiverId() {return messageReceiverId_;}
+      int getUpdatedStatus() {return status_; }
+   private:
+      std::string messageId_;
+      std::string messageSenderId_;
+      std::string messageReceiverId_;
+      int status_;
    };
 
 
@@ -479,6 +517,8 @@ namespace Chat
 
       virtual void OnOnlineUsers(const OnlineUsersRequest &) = 0;
       virtual void OnRequestMessages(const MessagesRequest &) = 0;
+      
+      virtual void OnRequestChangeMessageStatus(const MessageChangeStatusRequest &) = 0;
    };
 
    class ResponseHandler

@@ -35,61 +35,67 @@ static const QString CommandKey = QStringLiteral("cmd");
 static const QString MessageIdKey = QStringLiteral("message_id");
 static const QString ClientMessageIdKey = QStringLiteral("client_message_id");
 static const QString MessageResultKey = QStringLiteral("message_result");
+static const QString MessageStateDeltaMaskKey = QStringLiteral("message_state_delta_mask");
+static const QString MessageStateKey = QStringLiteral("message_state");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-       { "RequestHeartbeatPing"     ,   RequestType::RequestHeartbeatPing     }
-   ,   { "RequestLogin"             ,   RequestType::RequestLogin             }
-   ,   { "RequestLogout"            ,   RequestType::RequestLogout            }
-   ,   { "RequestMessages"          ,   RequestType::RequestMessages          }
-   ,   { "RequestSendMessage"       ,   RequestType::RequestSendMessage       }
-   ,   { "RequestOnlineUsers"       ,   RequestType::RequestOnlineUsers       }
-   ,   { "RequestAskForPublicKey"   ,   RequestType::RequestAskForPublicKey   }
-   ,   { "RequestSendOwnPublicKey"  ,   RequestType::RequestSendOwnPublicKey  }
+       { "RequestHeartbeatPing"     ,   RequestType::RequestHeartbeatPing      }
+   ,   { "RequestLogin"             ,   RequestType::RequestLogin              }
+   ,   { "RequestLogout"            ,   RequestType::RequestLogout             }
+   ,   { "RequestMessages"          ,   RequestType::RequestMessages           }
+   ,   { "RequestSendMessage"       ,   RequestType::RequestSendMessage        }
+   ,   { "RequestOnlineUsers"       ,   RequestType::RequestOnlineUsers        }
+   ,   { "RequestAskForPublicKey"   ,   RequestType::RequestAskForPublicKey    }
+   ,   { "RequestSendOwnPublicKey"  ,   RequestType::RequestSendOwnPublicKey   }
+   ,   { "RequestChangeMessageStatus",  RequestType::RequestChangeMessageStatus}
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-       { RequestType::RequestHeartbeatPing   ,  "RequestHeartbeatPing"     }
-   ,   { RequestType::RequestLogin           ,  "RequestLogin"             }
-   ,   { RequestType::RequestLogout          ,  "RequestLogout"            }
-   ,   { RequestType::RequestMessages        ,  "RequestMessages"          }
-   ,   { RequestType::RequestSendMessage     ,  "RequestSendMessage"       }
-   ,   { RequestType::RequestOnlineUsers     ,  "RequestOnlineUsers"       }
-   ,   { RequestType::RequestAskForPublicKey ,  "RequestAskForPublicKey"   }
-   ,   { RequestType::RequestSendOwnPublicKey,  "RequestSendOwnPublicKey"  }
+       { RequestType::RequestHeartbeatPing   ,  "RequestHeartbeatPing"       }
+   ,   { RequestType::RequestLogin           ,  "RequestLogin"               }
+   ,   { RequestType::RequestLogout          ,  "RequestLogout"              }
+   ,   { RequestType::RequestMessages        ,  "RequestMessages"            }
+   ,   { RequestType::RequestSendMessage     ,  "RequestSendMessage"         }
+   ,   { RequestType::RequestOnlineUsers     ,  "RequestOnlineUsers"         }
+   ,   { RequestType::RequestAskForPublicKey ,  "RequestAskForPublicKey"     }
+   ,   { RequestType::RequestSendOwnPublicKey,  "RequestSendOwnPublicKey"    }
+   ,   { RequestType::RequestChangeMessageStatus,"RequestChangeMessageStatus"}
 };
 
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-       { "ResponseError"            ,   ResponseType::ResponseError           }
-   ,   { "ResponseHeartbeatPong"    ,   ResponseType::ResponseHeartbeatPong   }
-   ,   { "ResponseLogin"            ,   ResponseType::ResponseLogin           }
-   ,   { "ResponseMessages"         ,   ResponseType::ResponseMessages        }
-   ,   { "ResponseSuccess"          ,   ResponseType::ResponseSuccess         }
-   ,   { "ResponseUsersList"        ,   ResponseType::ResponseUsersList       }
-   ,   { "ResponseAskForPublicKey"  ,   ResponseType::ResponseAskForPublicKey }
-   ,   { "ResponseSendOwnPublicKey" ,   ResponseType::ResponseSendOwnPublicKey}
-   ,   { "ResponsePendingMessage"   ,   ResponseType::ResponsePendingMessage  }
-   ,   { "ResponseSendMessage"      ,   ResponseType::ResponseSendMessage     }
+       { "ResponseError"              ,   ResponseType::ResponseError              }
+   ,   { "ResponseHeartbeatPong"      ,   ResponseType::ResponseHeartbeatPong      }
+   ,   { "ResponseLogin"              ,   ResponseType::ResponseLogin              }
+   ,   { "ResponseMessages"           ,   ResponseType::ResponseMessages           }
+   ,   { "ResponseSuccess"            ,   ResponseType::ResponseSuccess            }
+   ,   { "ResponseUsersList"          ,   ResponseType::ResponseUsersList          }
+   ,   { "ResponseAskForPublicKey"    ,   ResponseType::ResponseAskForPublicKey    }
+   ,   { "ResponseSendOwnPublicKey"   ,   ResponseType::ResponseSendOwnPublicKey   }
+   ,   { "ResponsePendingMessage"     ,   ResponseType::ResponsePendingMessage     }
+   ,   { "ResponseSendMessage"        ,   ResponseType::ResponseSendMessage        }
+   ,   { "ResponseChangeMessageStatus",   ResponseType::ResponseChangeMessageStatus}
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-       { ResponseType::ResponseError            ,  "ResponseError"            }
-   ,   { ResponseType::ResponseHeartbeatPong    ,  "ResponseHeartbeatPong"    }
-   ,   { ResponseType::ResponseLogin            ,  "ResponseLogin"            }
-   ,   { ResponseType::ResponseMessages         ,  "ResponseMessages"         }
-   ,   { ResponseType::ResponseSuccess          ,  "ResponseSuccess"          }
-   ,   { ResponseType::ResponseUsersList        ,  "ResponseUsersList"        }
-   ,   { ResponseType::ResponseAskForPublicKey  ,  "ResponseAskForPublicKey"  }
-   ,   { ResponseType::ResponseSendOwnPublicKey ,  "ResponseSendOwnPublicKey" }
-   ,   { ResponseType::ResponsePendingMessage   ,  "ResponsePendingMessage"   }
-   ,   { ResponseType::ResponseSendMessage      ,  "ResponseSendMessage"      }
+       { ResponseType::ResponseError              ,  "ResponseError"              }
+   ,   { ResponseType::ResponseHeartbeatPong      ,  "ResponseHeartbeatPong"      }
+   ,   { ResponseType::ResponseLogin              ,  "ResponseLogin"              }
+   ,   { ResponseType::ResponseMessages           ,  "ResponseMessages"           }
+   ,   { ResponseType::ResponseSuccess            ,  "ResponseSuccess"            }
+   ,   { ResponseType::ResponseUsersList          ,  "ResponseUsersList"          }
+   ,   { ResponseType::ResponseAskForPublicKey    ,  "ResponseAskForPublicKey"    }
+   ,   { ResponseType::ResponseSendOwnPublicKey   ,  "ResponseSendOwnPublicKey"   }
+   ,   { ResponseType::ResponsePendingMessage     ,  "ResponsePendingMessage"     }
+   ,   { ResponseType::ResponseSendMessage        ,  "ResponseSendMessage"        }
+   ,   { ResponseType::ResponseChangeMessageStatus,  "ResponseChangeMessageStatus"}
 };
 
 
@@ -798,7 +804,7 @@ std::shared_ptr<Response> Chat::PendingMessagesResponse::fromJSON(const std::str
 
 Chat::SendMessageResponse::SendMessageResponse(const std::string& clientId, const std::string& serverId, const std::string& receiverId, SendMessageResponse::Result result)
    : PendingResponse(ResponseType::ResponseSendMessage)
-   , clientId_(clientId), serverId_(serverId), receiverId_(receiverId), result_(result)
+   , clientMessageId_(clientId), serverMessageId_(serverId), receiverId_(receiverId), result_(result)
 {
    
 }
@@ -806,8 +812,8 @@ Chat::SendMessageResponse::SendMessageResponse(const std::string& clientId, cons
 QJsonObject Chat::SendMessageResponse::toJson() const
 {
    QJsonObject data = Response::toJson();
-   data[ClientMessageIdKey] = QString::fromStdString(clientId_);
-   data[MessageIdKey] = QString::fromStdString(serverId_);
+   data[ClientMessageIdKey] = QString::fromStdString(clientMessageId_);
+   data[MessageIdKey] = QString::fromStdString(serverMessageId_);
    data[ReceiverIdKey] = QString::fromStdString(receiverId_);
    data[MessageResultKey] = static_cast<int>(result_);
    return data;
@@ -827,4 +833,74 @@ std::shared_ptr<Response> Chat::SendMessageResponse::fromJSON(const std::string&
 void SendMessageResponse::handle(ResponseHandler& handler)
 {
    handler.OnSendMessageResponse(*this);
+}
+
+MessageChangeStatusRequest::MessageChangeStatusRequest(const std::string& clientId, const std::string& messageId, int mask, int state)
+   : Request(RequestType::RequestChangeMessageStatus, clientId)
+   , messageId_(messageId)
+   , messageStateDeltaMask_(mask)
+   , messageState_(state)
+{
+}
+
+
+QJsonObject MessageChangeStatusRequest::toJson() const
+{
+   QJsonObject data = Request::toJson();
+
+   data[MessageIdKey] = QString::fromStdString(messageId_);
+   data[MessageStateDeltaMaskKey] = QString::fromStdString(messageId_);
+   data[MessageStateKey] = QString::fromStdString(messageId_);
+
+   return data;
+}
+
+std::shared_ptr<Request> MessageChangeStatusRequest::fromJSON(const std::string& clientId, const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<MessageChangeStatusRequest>(
+                     clientId
+                    , data[MessageIdKey].toString().toStdString()
+                    , data[MessageStateDeltaMaskKey].toInt()
+                    , data[MessageStateKey].toInt());
+}
+
+void MessageChangeStatusRequest::handle(RequestHandler& handler)
+{
+   handler.OnRequestChangeMessageStatus(*this);
+}
+
+MessageChangeStatusResponse::MessageChangeStatusResponse(const std::string& messageId, const std::string& senderId, const std::string& receiverId, int status)
+   :PendingResponse(ResponseType::ResponseChangeMessageStatus)
+   , messageId_(messageId)
+   , messageSenderId_(senderId)
+   , messageReceiverId_(receiverId)
+   , status_(status)
+{
+   
+}
+
+QJsonObject MessageChangeStatusResponse::toJson() const
+{
+   QJsonObject data = PendingResponse::toJson();
+   data[MessageIdKey] = QString::fromStdString(messageId_);
+   data[SenderIdKey] = QString::fromStdString(messageSenderId_);
+   data[ReceiverIdKey] = QString::fromStdString(messageReceiverId_);
+   data[MessageStateKey] = static_cast<int>(status_);
+   return data;
+}
+
+std::shared_ptr<Response> MessageChangeStatusResponse::fromJSON(const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QString messageId = data[MessageIdKey].toString();
+   QString messageSenderId = data[SenderIdKey].toString();
+   QString messageReceiverId = data[ReceiverIdKey].toString();
+   int status = data[MessageStateKey].toInt();
+   
+   return std::make_shared<MessageChangeStatusResponse>(
+              messageId.toStdString()
+            , messageSenderId.toStdString()
+            , messageReceiverId.toStdString()
+            , status);
 }
