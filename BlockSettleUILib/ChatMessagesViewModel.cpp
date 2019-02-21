@@ -89,6 +89,24 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
             }
             return sender;
          }
+         case Column::Status:{
+            std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
+            int state = message->getState();
+            QString status = QLatin1String("Sending");
+   
+            if (state & static_cast<int>(Chat::MessageData::State::Sent)){
+               status = QLatin1String("Sent");
+            }
+            
+            if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
+               status = QLatin1String("Delivered");
+            }
+            
+            if (state & static_cast<int>(Chat::MessageData::State::Read)){
+               status = QLatin1String("Read");
+            }
+            return status;
+         }
             
          case Column::Message:
             return QString(QLatin1String("[%1] %2")).arg(messages_[currentChatId_][index.row()]->getId(), messages_[currentChatId_][index.row()]->getMessageData());
@@ -101,15 +119,20 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
       case Column::Status:{
          std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
          int state = message->getState();
-         //QString status = QString::fromUtf8("\u25FB");
          QIcon status(QLatin1Literal(":/ICON_STATUS_OFFLINE"));
-
-         if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
+         
+         if (state & static_cast<int>(Chat::MessageData::State::Sent)){
             status = QIcon(QLatin1Literal(":/ICON_STATUS_CONNECTING"));
          }
+         
+         if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
+            status = QIcon(QLatin1Literal(":/ICON_STATUS_ONLINE"));
+         }
+         
          if (state & static_cast<int>(Chat::MessageData::State::Read)){
             status = QIcon(QLatin1Literal(":/ICON_DOT"));
          }
+         
          return status;
       }
       default: break;
@@ -137,16 +160,46 @@ void ChatMessagesViewModel::onSingleMessageUpdate(const std::shared_ptr<Chat::Me
 
 void ChatMessagesViewModel::onMessageIdUpdate(const QString& oldId, const QString& newId, const QString& chatId)
 {
-  
-   auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [oldId](std::shared_ptr<Chat::MessageData> data){
-      return data->getId() == oldId;
-   });
+   std::shared_ptr<Chat::MessageData> message = findMessage(chatId, oldId);
    
-   if (it != messages_[chatId].end()){
-      (*it)->setId(newId);
-      (*it)->setFlag(Chat::MessageData::State::Acknowledged);
-      int distance = static_cast<int>(std::distance(messages_[chatId].begin(), it));
-      emit dataChanged(index(distance, static_cast<int>(Column::Status)), index(distance, static_cast<int>(Column::Message)), { Qt::DisplayRole });
+   if (message != nullptr){
+      message->setId(newId);
+      message->setFlag(Chat::MessageData::State::Sent);
+      notifyMassageChanged(message);
+   }
+}
+
+std::shared_ptr<Chat::MessageData> ChatMessagesViewModel::findMessage(const QString& chatId, const QString& messageId)
+{
+   std::shared_ptr<Chat::MessageData> found = nullptr;
+   if (messages_.contains(chatId)) {
+      auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [messageId](std::shared_ptr<Chat::MessageData> data){
+         return data->getId() == messageId;
+      });
+      
+      if (it != messages_[chatId].end()) {
+         found = *it;
+      }
+   }
+   return found;
+}
+
+void ChatMessagesViewModel::notifyMassageChanged(std::shared_ptr<Chat::MessageData> message)
+{
+   const QString chatId = message->getSenderId() == ownUserId_
+                          ? message->getReceiverId()
+                          : message->getSenderId();
+   
+   if (messages_.contains(chatId)) {
+      QString id = message->getId();
+      auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [id](std::shared_ptr<Chat::MessageData> data){
+         return data->getId() == id;
+      });
+      
+      if (it != messages_[chatId].end()) {
+         int distance = static_cast<int>(std::distance(messages_[chatId].begin(), it));
+         emit dataChanged(index(distance, static_cast<int>(Column::Status)), index(distance, static_cast<int>(Column::Message)), { Qt::DisplayRole });
+      }
    }
 }
 

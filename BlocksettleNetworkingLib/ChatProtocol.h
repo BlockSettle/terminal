@@ -167,7 +167,8 @@ namespace Chat
          Invalid = 1,
          Encrypted = 2,
          Acknowledged = 4,
-         Read = 8
+         Read = 8,
+         Sent = 16
       };
 
       MessageData(const QString &sender, const QString &receiver

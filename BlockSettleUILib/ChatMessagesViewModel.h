@@ -54,6 +54,10 @@ private:
    QMap<QString, MessagesHistory> messages_;
    QString   currentChatId_;
    QString   ownUserId_;
+   
+private:
+   std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
+   void notifyMassageChanged(std::shared_ptr<Chat::MessageData> message);
 };
 
 #endif

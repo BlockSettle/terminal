@@ -151,7 +151,7 @@ bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
    query.prepare(cmd);
    query.bindValue(QLatin1String(":server_mid"), serverId);
    query.bindValue(QLatin1String(":local_mid"), localId);
-   query.bindValue(QLatin1String(":set_flags"), static_cast<int>(Chat::MessageData::State::Acknowledged));
+   query.bindValue(QLatin1String(":set_flags"), static_cast<int>(Chat::MessageData::State::Sent));
    
    if (!query.exec()) {
       logger_->error("[ChatDB::syncMessageId] failed to synchronize local message id with server message id; Error: {}",
