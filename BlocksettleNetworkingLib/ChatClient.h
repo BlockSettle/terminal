@@ -49,6 +49,7 @@ public:
    void OnMessages(const Chat::MessagesResponse &) override;
    void OnLoginReturned(const Chat::LoginResponse &) override;
    void OnSendMessageResponse(const Chat::SendMessageResponse& ) override;
+   void OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse&) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;

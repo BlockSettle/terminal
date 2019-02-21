@@ -104,6 +104,12 @@ void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response
    }
 }
 
+void ChatClient::OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse& response)
+{
+   //TODO: Implement me!
+   return;
+}
+
 void ChatClient::logout()
 {
    loggedIn_ = false;

@@ -904,3 +904,8 @@ std::shared_ptr<Response> MessageChangeStatusResponse::fromJSON(const std::strin
             , messageReceiverId.toStdString()
             , status);
 }
+
+void MessageChangeStatusResponse::handle(ResponseHandler& handler)
+{
+   handler.OnMessageChangeStatusResponse(*this);
+}

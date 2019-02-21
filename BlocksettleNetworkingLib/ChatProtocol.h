@@ -492,6 +492,7 @@ namespace Chat
       std::string messageSenderId() {return messageSenderId_;}
       std::string messageReceiverId() {return messageReceiverId_;}
       int getUpdatedStatus() {return status_; }
+      void handle(ResponseHandler&) override;
    private:
       std::string messageId_;
       std::string messageSenderId_;
@@ -538,6 +539,7 @@ namespace Chat
       virtual void OnLoginReturned(const LoginResponse &) = 0;
       
       virtual void OnSendMessageResponse(const SendMessageResponse&) = 0;
+      virtual void OnMessageChangeStatusResponse(const MessageChangeStatusResponse&) = 0;
    };
 
 }
