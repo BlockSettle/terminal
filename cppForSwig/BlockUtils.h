@@ -255,8 +255,6 @@ class BlockDataManagerThread
 
    BlockDataManagerThreadImpl *pimpl = nullptr;
 
-   BlockHeader* topBH_ = nullptr;
-
 public:
    BlockDataManagerThread(const BlockDataManagerConfig &config);
    ~BlockDataManagerThread();
@@ -270,7 +268,6 @@ public:
    bool shutdown();
    void join();
 
-   BlockHeader* topBH(void) const { return topBH_; }
    void cleanUp(void)
    {
       if (pimpl == nullptr)

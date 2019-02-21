@@ -1108,7 +1108,7 @@ void AddressAccount::updateAddressHashMap()
       {
          for (auto& hash : assetHash.second)
          {
-            auto&& inner_pair = make_pair(hash.second, hash.first);
+            auto&& inner_pair = make_pair(assetHash.first, hash.first);
             auto&& outer_pair = make_pair(hash.second, move(inner_pair));
             addressHashes_.emplace(outer_pair);
          }
