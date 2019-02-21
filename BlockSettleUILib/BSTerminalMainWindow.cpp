@@ -653,7 +653,8 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       transactionsModel_->loadAllWallets();
    }
    updateControlEnabledState();
-   updateLoginActionState();
+   // XXX: disabled until armory connection is stable in terminal
+   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -723,7 +724,8 @@ void BSTerminalMainWindow::ArmoryIsOffline()
    walletsManager_->UnregisterSavedWallets();
    connectArmory();
    updateControlEnabledState();
-   updateLoginActionState();
+   // XXX: disabled until armory connection is stable in terminal
+   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -1063,7 +1065,8 @@ void BSTerminalMainWindow::onUserLoggedOut()
    authManager_->OnDisconnectedFromCeler();
    setLoginButtonText(loginButtonText_);
 
-   updateLoginActionState();
+   // XXX: disabled until armory connection is stable in terminal
+   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::onCelerConnected()
