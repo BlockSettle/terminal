@@ -230,6 +230,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
         
       case ResponseType::ResponseSendMessage:
          return SendMessageResponse::fromJSON(jsonData);
+         
+      case ResponseType::ResponseChangeMessageStatus:
+         return MessageChangeStatusResponse::fromJSON(jsonData);
 
       default:
          break;
