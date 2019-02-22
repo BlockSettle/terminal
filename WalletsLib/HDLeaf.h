@@ -53,7 +53,7 @@ namespace bs {
          std::vector<PooledAddress> generateAddresses(hd::Path::Elem prefix, hd::Path::Elem start
             , size_t nb, AddressEntryType aet);
          void scanAddresses(unsigned int startIdx, unsigned int portionSize = 100, const cb_write_last &cbw = nullptr);
-         void onRefresh(const std::vector<BinaryData> &ids);
+         void onRefresh(const std::vector<BinaryData> &ids, bool online);
 
       private:
          struct Portion {
@@ -190,7 +190,7 @@ namespace bs {
 
       protected slots:
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
-         virtual void onRefresh(std::vector<BinaryData> ids);
+         virtual void onRefresh(std::vector<BinaryData> ids, bool online);
 
       protected:
          virtual bs::Address createAddress(const Path &path, Path::Elem index, AddressEntryType aet
@@ -256,6 +256,8 @@ namespace bs {
             }
          };
          mutable AddrPrefixedHashes addrPrefixedHashes_;
+
+         std::string regIdExt_, regIdInt_;
 
       private:
          bs::Address createAddress(AddressEntryType aet, bool isInternal = false);

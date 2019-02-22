@@ -293,8 +293,11 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::PlainWallet> &walle
 
 // Called when Armory has finished registering a wallet. Kicks off the function
 // that grabs the address's TX data.
-void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids)
+void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids, bool online)
 {
+   if (!online) {
+      return;
+   }
    // Make sure Armory is telling us about our wallet. Refreshes occur for
    // multiple item types.
    for (const auto &id : ids) {

@@ -135,7 +135,7 @@ signals:
    void newBlock(unsigned int height) const;
    void zeroConfReceived(const std::vector<bs::TXEntry>) const;
    void zeroConfInvalidated(const std::vector<bs::TXEntry>) const;
-   void refresh(std::vector<BinaryData> ids) const;
+   void refresh(std::vector<BinaryData> ids, bool online) const;
    void nodeStatus(NodeStatus, bool segWitEnabled, RpcStatus) const;
    void txBroadcastError(QString txHash, QString error) const;
    void error(QString errorStr, QString extraMsg) const;

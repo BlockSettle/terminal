@@ -719,14 +719,15 @@ void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
          }
       }
    }
-   if (state_ == ArmoryConnection::State::Ready) {
+   const bool online = (state_ == ArmoryConnection::State::Ready);
+   if (logger_->level() <= spdlog::level::debug) {
       std::string idString;
       for (const auto &id : ids) {
          idString += id.toBinStr() + " ";
       }
-      logger_->debug("[{}] {}", __func__, idString);
-      emit refresh(ids);
+      logger_->debug("[{}] online={} {}", __func__, online, idString);
    }
+   emit refresh(ids, online);
 }
 
 void ArmoryConnection::onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &entries)
