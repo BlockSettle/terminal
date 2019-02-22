@@ -91,6 +91,7 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
          }
          case Column::Status:{
             std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
+            
             int state = message->getState();
             QString status = QLatin1String("Sending");
    
@@ -104,6 +105,8 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
             
             if (state & static_cast<int>(Chat::MessageData::State::Read)){
                status = QLatin1String("Read");
+            } else {
+               emit MessageRead(message);
             }
             return status;
          }
