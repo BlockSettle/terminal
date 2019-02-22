@@ -102,6 +102,7 @@ namespace bs {
          virtual bool copyTo(std::shared_ptr<hd::Leaf> &) const;
 
          void firstInit(bool force = false) override;
+
          std::string GetWalletId() const override;
          std::string GetWalletDescription() const override;
          void SetDescription(const std::string &desc) override { desc_ = desc; }
@@ -276,6 +277,8 @@ namespace bs {
          bool deserialize(const BinaryData &ser, Nodes rootNodes);
 
          std::string getWalletIdInt() const;
+
+         void postOnline();
       };
 
 
