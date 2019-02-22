@@ -278,18 +278,23 @@ void hd::Leaf::onZeroConfReceived(const std::vector<bs::TXEntry>)
 
 void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 {
-   const auto &cbRegisterExt = [this] {
-      btcWallet_->setUnconfirmedTarget(kExtConfCount);
+   const auto &cbRegisterExt = [this, online] {
       if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
          emit walletReady(QString::fromStdString(GetWalletId()));
+         if (online) {
+            postOnline();
+         }
       }
    };
-   const auto &cbRegisterInt = [this] {
-      btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
+   const auto &cbRegisterInt = [this, online] {
       if (regIdExt_.empty() && regIdInt_.empty()) {
          emit walletReady(QString::fromStdString(GetWalletId()));
+         if (online) {
+            postOnline();
+         }
       }
    };
+
    if (!regIdExt_.empty() || !regIdInt_.empty()) {
       for (const auto &id : ids) {
          if (id.isNull()) {
@@ -308,8 +313,20 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
    hd::BlockchainScanner::onRefresh(ids, online);
 }
 
+void hd::Leaf::postOnline()
+{
+   if (btcWallet_) {
+      btcWallet_->setUnconfirmedTarget(kExtConfCount);
+   }
+   if (btcWalletInt_) {
+      btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
+   }
+}
+
 void hd::Leaf::firstInit(bool force)
 {
+   postOnline();
+
    bs::Wallet::firstInit();
 
    if (activateAddressesInvoked_ || !armory_) {

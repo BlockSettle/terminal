@@ -495,7 +495,6 @@ void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
       return;
    }
    logger_->debug("[WalletsManager] Armory refresh");
-   UpdateSavedWallets();
 
    if (settlementWallet_) {
       settlementWallet_->RefreshWallets(ids);
