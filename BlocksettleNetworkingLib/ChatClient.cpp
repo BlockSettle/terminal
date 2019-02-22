@@ -107,6 +107,17 @@ void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response
 void ChatClient::OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse& response)
 {
    //TODO: Implement me!
+   std::string messtageId = response.messageId();
+   std::string senderId = response.messageSenderId();
+   std::string receiverId = response.messageReceiverId();
+         logger_->debug("[ChatClient::OnMessageChangeStatusResponse]: Updated message status:"
+                        " messageId :{}"
+                        " senderId :{}"
+                        " receiverId :{}",
+                  messtageId,
+                  senderId,
+                  receiverId
+                  );
    return;
 }
 
@@ -171,6 +182,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
    std::vector<std::shared_ptr<Chat::MessageData>> messages;
    for (const auto &msgStr : response.getDataList()) {
       const auto msg = Chat::MessageData::fromJSON(msgStr);
+      msg->setFlag(Chat::MessageData::State::Acknowledged);
       chatDb_->add(*msg);
 
       if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
@@ -180,6 +192,8 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
          }
       }
       messages.push_back(msg);
+      auto request = std::make_shared<Chat::MessageChangeStatusRequest>(currentUserId_, msg->getId().toStdString(), (int)Chat::MessageData::State::Acknowledged, msg->getState());
+      sendRequest(request);
    }
 
    emit MessagesUpdate(messages);

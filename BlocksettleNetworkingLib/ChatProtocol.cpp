@@ -849,8 +849,8 @@ QJsonObject MessageChangeStatusRequest::toJson() const
    QJsonObject data = Request::toJson();
 
    data[MessageIdKey] = QString::fromStdString(messageId_);
-   data[MessageStateDeltaMaskKey] = QString::fromStdString(messageId_);
-   data[MessageStateKey] = QString::fromStdString(messageId_);
+   data[MessageStateDeltaMaskKey] = static_cast<int>(messageStateDeltaMask_);
+   data[MessageStateKey] = static_cast<int>(messageState_);
 
    return data;
 }
