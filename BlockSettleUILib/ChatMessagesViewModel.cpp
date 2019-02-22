@@ -169,6 +169,16 @@ void ChatMessagesViewModel::onMessageIdUpdate(const QString& oldId, const QStrin
    }
 }
 
+void ChatMessagesViewModel::onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus)
+{
+   std::shared_ptr<Chat::MessageData> message = findMessage(chatId, messageId);
+   
+   if (message != nullptr){
+      message->setFlag((Chat::MessageData::State)newStatus);
+      notifyMassageChanged(message);
+   }
+}
+
 std::shared_ptr<Chat::MessageData> ChatMessagesViewModel::findMessage(const QString& chatId, const QString& messageId)
 {
    std::shared_ptr<Chat::MessageData> found = nullptr;

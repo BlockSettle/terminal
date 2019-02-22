@@ -491,7 +491,7 @@ namespace Chat
       std::string messageId() const {return messageId_;} 
       std::string messageSenderId() const {return messageSenderId_;}
       std::string messageReceiverId() const {return messageReceiverId_;}
-      int getUpdatedStatus() {return status_; }
+      int getUpdatedStatus() const {return status_; }
       void handle(ResponseHandler&) override;
    private:
       std::string messageId_;

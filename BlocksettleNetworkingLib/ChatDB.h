@@ -49,6 +49,7 @@ public:
 
    bool add(const Chat::MessageData &);
    bool syncMessageId(const QString& localId, const QString& serverId);
+   bool updateMessageStatus(const QString& messageId, int status);
 
    std::vector<std::shared_ptr<Chat::MessageData>> getUserMessages(const QString &userId);
 

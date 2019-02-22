@@ -187,6 +187,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    
    connect(client_.get(), &ChatClient::MessageIdUpdated, messagesViewModel_.get()
                         , &ChatMessagesViewModel::onMessageIdUpdate);
+   connect(client_.get(), &ChatClient::MessageStatusUpdated, messagesViewModel_.get()
+                        , &ChatMessagesViewModel::onMessageStatusChanged);
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
    connect(_chatUserListLogicPtr->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
