@@ -160,6 +160,9 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
             , data[ReceiverIdKey].toString().toStdString()
             , data[SenderIdKey].toString().toStdString()
             , autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+         
+      case RequestType::RequestChangeMessageStatus:
+         return MessageChangeStatusRequest::fromJSON(clientId, jsonData);
 
       default:
          break;
