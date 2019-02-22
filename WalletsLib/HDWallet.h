@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <lmdbpp.h>
+#include "CoreWallet.h"
 #include "HDGroup.h"
 #include "HDLeaf.h"
 #include "HDNode.h"
@@ -20,7 +21,7 @@ namespace bs {
          using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
          Wallet(const std::string &name, const std::string &desc
-                , const bs::wallet::Seed &
+                , const bs::core::wallet::Seed &
                 , const std::shared_ptr<spdlog::logger> &logger = nullptr
                 , bool extOnlyAddresses = false);
          Wallet(const std::string &filename
@@ -107,7 +108,7 @@ namespace bs {
          BinaryData        userId_;
          std::shared_ptr<spdlog::logger>     logger_;
 
-         void initNew(const bs::wallet::Seed &);
+         void initNew(const bs::core::wallet::Seed &);
          void loadFromFile(const std::string &filename);
          std::string getFileName(const std::string &dir) const;
          void openDBEnv(const std::string &filename);
@@ -131,7 +132,7 @@ namespace bs {
          DummyWallet(NetworkType netType
                      , const std::shared_ptr<spdlog::logger> &logger)
          : hd::Wallet(tr("Armory Wallets").toStdString(), ""
-                      , wallet::Seed(netType), logger) {}
+                      , core::wallet::Seed(netType), logger) {}
 
          size_t getNumLeaves() const override { return leaves_.size(); }
          void add(const std::shared_ptr<bs::Wallet> wallet) { leaves_[wallet->GetWalletId()] = wallet; }

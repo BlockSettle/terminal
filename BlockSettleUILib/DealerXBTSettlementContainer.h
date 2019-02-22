@@ -82,7 +82,7 @@ private:
    std::shared_ptr<spdlog::logger>              logger_;
    std::shared_ptr<TransactionData>             transactionData_;
    std::shared_ptr<bs::SettlementWallet>        settlWallet_;
-   std::shared_ptr<bs::SettlementAddressEntry>  settlAddr_;
+   std::shared_ptr<bs::core::SettlementAddressEntry> settlAddr_;
    std::shared_ptr<bs::SettlementMonitorCb>     settlMonitor_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signingContainer_;

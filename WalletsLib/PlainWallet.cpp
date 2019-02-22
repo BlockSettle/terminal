@@ -358,7 +358,7 @@ void PlainWallet::saveToDir(const std::string &targetDir)
    saveToFile(getFileName(targetDir));
 }
 
-int PlainWallet::addAddress(const bs::Address &addr, const std::shared_ptr<GenericAsset> &inAsset)
+int PlainWallet::addAddress(const bs::Address &addr, const std::shared_ptr<core::GenericAsset> &inAsset)
 {
    auto asset = inAsset;
    int id = 0;
@@ -533,7 +533,7 @@ bool PlainWallet::EraseFile()
 class PlainResolver : public ResolverFeed
 {
 public:
-   PlainResolver(const std::map<bs::Address, std::shared_ptr<GenericAsset>> &map) {
+   PlainResolver(const std::map<bs::Address, std::shared_ptr<core::GenericAsset>> &map) {
       for (const auto &addrPair : map) {
          const auto plainAsset = std::dynamic_pointer_cast<PlainAsset>(addrPair.second);
          if (!plainAsset) {
@@ -563,7 +563,7 @@ private:
 class PlainSigningResolver : public PlainResolver
 {
 public:
-   PlainSigningResolver(const std::map<bs::Address, std::shared_ptr<GenericAsset>> &map)
+   PlainSigningResolver(const std::map<bs::Address, std::shared_ptr<core::GenericAsset>> &map)
       : PlainResolver(map) {
       for (const auto &addrPair : map) {
          const auto plainAsset = std::dynamic_pointer_cast<PlainAsset>(addrPair.second);

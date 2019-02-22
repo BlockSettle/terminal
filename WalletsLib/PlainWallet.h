@@ -9,14 +9,15 @@
 #include "BlockDataManagerConfig.h"
 #include "BtcDefinitions.h"
 #include "MetaData.h"
-
+#include "CoreWallet.h"
 
 namespace spdlog {
    class logger;
 };
 
 namespace bs {
-   class PlainAsset : public GenericAsset
+
+   class PlainAsset : public core::GenericAsset
    {
    public:
       PlainAsset(int id, const bs::Address &addr, const SecureBinaryData &privKey = {})
@@ -68,7 +69,7 @@ namespace bs {
          logger_ = logger;
       }
 
-      int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
+      int addAddress(const bs::Address &, const std::shared_ptr<core::GenericAsset> &asset = nullptr) override;
       bool containsAddress(const bs::Address &addr) override;
 
       std::string GetWalletId() const override { return walletId_; }
@@ -106,7 +107,7 @@ namespace bs {
       void readFromDB();
       virtual std::string getFileName(const std::string &dir) const;
 
-      virtual std::pair<bs::Address, std::shared_ptr<GenericAsset>> deserializeAsset(BinaryDataRef ref) {
+      virtual std::pair<bs::Address, std::shared_ptr<core::GenericAsset>> deserializeAsset(BinaryDataRef ref) {
          return PlainAsset::deserialize(ref);
       }
 
@@ -118,8 +119,8 @@ namespace bs {
       AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
 
    protected:
-      std::map<bs::Address, std::shared_ptr<GenericAsset>>  assetByAddr_;
-      std::unordered_map<int, std::shared_ptr<GenericAsset>>   assets_;
+      std::map<bs::Address, std::shared_ptr<core::GenericAsset>>  assetByAddr_;
+      std::unordered_map<int, std::shared_ptr<core::GenericAsset>>   assets_;
       std::atomic_int   lastAssetIndex_ = { 0 };
       mutable std::set<BinaryData>  addrPrefixedHashes_;
 

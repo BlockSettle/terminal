@@ -932,8 +932,8 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    }
    std::shared_ptr<bs::hd::Wallet> wallet;
    try {
-      auto seed = request.privatekey().empty() ? bs::wallet::Seed(request.seed(), netType)
-         : bs::wallet::Seed(netType, request.privatekey(), request.chaincode());
+      auto seed = request.privatekey().empty() ? bs::core::wallet::Seed(request.seed(), netType)
+         : bs::core::wallet::Seed(netType, request.privatekey(), request.chaincode());
       wallet = walletsMgr_->CreateWallet(request.name(), request.description()
          , seed, QString::fromStdString(walletsPath_), request.primary(), pwdData, keyRank);
    }

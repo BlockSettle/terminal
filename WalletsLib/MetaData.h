@@ -29,6 +29,9 @@
 
 namespace bs {
    class Wallet;
+   namespace core {
+      class GenericAsset;
+   }
 
    namespace wallet {
       class AssetEntryMeta : public AssetEntry
@@ -155,38 +158,6 @@ namespace bs {
       };
 
 
-      class Seed
-      {
-      public:
-         Seed(NetworkType netType) : netType_(netType) {}
-         Seed(const std::string &seed, NetworkType netType);
-         Seed(NetworkType netType, const SecureBinaryData &privKey, const BinaryData &chainCode = {})
-            : privKey_(privKey), chainCode_(chainCode), netType_(netType) {}
-
-         bool empty() const { return (privKey_.isNull() && seed_.isNull()); }
-         bool hasPrivateKey() const { return (!privKey_.isNull()); }
-         const SecureBinaryData &privateKey() const { return privKey_; }
-         void setPrivateKey(const SecureBinaryData &privKey) { privKey_ = privKey; }
-         const BinaryData &chainCode() const { return chainCode_; }
-         const BinaryData &seed() const { return seed_; }
-         void setSeed(const BinaryData &seed) { seed_ = seed; }
-         NetworkType networkType() const { return netType_; }
-         void setNetworkType(NetworkType netType) { netType_ = netType; }
-
-         EasyCoDec::Data toEasyCodeChecksum(size_t ckSumSize = 2) const;
-         static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
-         static BinaryData decodeEasyCodeLineChecksum(const std::string&easyCodeHalf, size_t ckSumSize = 2, size_t keyValueSize = 16);
-         static Seed fromEasyCodeChecksum(const EasyCoDec::Data &, NetworkType, size_t ckSumSize = 2);
-         static Seed fromEasyCodeChecksum(const EasyCoDec::Data &privKey, const EasyCoDec::Data &chainCode
-            , NetworkType, size_t ckSumSize = 2);
-
-      private:
-         SecureBinaryData  privKey_;
-         BinaryData        chainCode_;
-         BinaryData        seed_;
-         NetworkType       netType_ = NetworkType::Invalid;
-      };
-
       enum class Type {
          Unknown,
          Bitcoin,
@@ -206,23 +177,6 @@ namespace bs {
    {
       SecureBinaryData  privKey;
       BinaryData        pubKey;
-   };
-
-
-   class GenericAsset : public AssetEntry
-   {
-   public:
-      GenericAsset(AssetEntryType type, int id = -1) :
-         AssetEntry(type, id, {}), id_(id) {}
-
-      void setId(int id) {
-         id_ = id;
-         ID_ = WRITE_UINT32_BE(id);
-      }
-      int id() const { return id_; }
-
-   protected:
-      int id_;
    };
 
 
@@ -314,7 +268,7 @@ namespace bs {
       virtual bs::Address CreateAddressWithIndex(const std::string &index
          , AddressEntryType aet = AddressEntryType_Default
          , bool signal = true) = 0;
-      virtual int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) = 0;
+      virtual int addAddress(const bs::Address &, const std::shared_ptr<core::GenericAsset> &asset = nullptr) = 0;
 
       virtual bool getLedgerDelegateForAddress(const bs::Address &
          , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &

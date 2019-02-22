@@ -48,7 +48,7 @@ public:
    { return 0; }
 
    RequestId SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::shared_ptr<bs::SettlementAddressEntry> &
+      , const std::shared_ptr<bs::core::SettlementAddressEntry> &
       , bool autoSign = false, const PasswordType& password = {}) override
    { return 0; }
 
@@ -65,7 +65,7 @@ public:
    RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override { return 0; }
    RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &, const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
    RequestId CreateHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override { return 0; }
+      , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override { return 0; }
    RequestId DeleteHDRoot(const std::string &) override { return 0; }
    RequestId DeleteHDLeaf(const std::string &) override { return 0; }
    RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) override { return 0; }

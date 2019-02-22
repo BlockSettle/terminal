@@ -6,6 +6,7 @@
 #include <string>
 #include <QObject>
 #include <QStringList>
+#include "CoreWallet.h"
 #include "HDWallet.h"
 #include "WalletEncryption.h"
 
@@ -28,7 +29,7 @@ public:
       , const bs::hd::Wallet::cb_scan_read_last &, const bs::hd::Wallet::cb_scan_write_last &);
 
    void Import(const std::string& name, const std::string& description
-      , bs::wallet::Seed seed, bool primary = false
+      , bs::core::wallet::Seed seed, bool primary = false
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
 
 signals:

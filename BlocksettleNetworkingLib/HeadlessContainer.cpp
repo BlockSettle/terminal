@@ -439,8 +439,9 @@ unsigned int HeadlessContainer::SignPartialTXRequest(const bs::wallet::TXSignReq
    return SignTXRequest(req, autoSign, TXSignMode::Partial, password);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::SignPayoutTXRequest(const bs::wallet::TXSignRequest &txSignReq, const bs::Address &authAddr
-   , const std::shared_ptr<bs::SettlementAddressEntry> &settlAddr
+HeadlessContainer::RequestId HeadlessContainer::SignPayoutTXRequest(const bs::wallet::TXSignRequest &txSignReq
+   , const bs::Address &authAddr
+   , const std::shared_ptr<bs::core::SettlementAddressEntry> &settlAddr
    , bool autoSign, const PasswordType& password)
 {
    if ((txSignReq.inputs.size() != 1) || (txSignReq.recipients.size() != 1) || !settlAddr) {
@@ -624,7 +625,7 @@ HeadlessContainer::RequestId HeadlessContainer::CreateHDLeaf(const std::shared_p
 }
 
 HeadlessContainer::RequestId HeadlessContainer::CreateHDWallet(const std::string &name
-   , const std::string &desc, bool primary, const bs::wallet::Seed &seed
+   , const std::string &desc, bool primary, const bs::core::wallet::Seed &seed
    , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
    headless::CreateHDWalletRequest request;

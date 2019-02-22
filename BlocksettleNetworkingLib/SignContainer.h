@@ -7,18 +7,72 @@
 #include <QObject>
 #include <QStringList>
 
-#include "HDNode.h"
+#include "HDPath.h"
 #include "MetaData.h"
+#include "CoreWallet.h"
 #include "QWalletInfo.h"
 
 namespace spdlog {
    class logger;
 }
 namespace bs {
-   class SettlementAddressEntry;
+   namespace core {
+      class SettlementAddressEntry;
+   }
    namespace hd {
       class Wallet;
    }
+
+   namespace sync {
+      enum class WalletFormat {
+         Unknown = 0,
+         HD,
+         Plain,
+         Settlement
+      };
+
+      struct WalletInfo
+      {
+         WalletFormat   format;
+         std::string id;
+         std::string name;
+         std::string description;
+         NetworkType netType;
+      };
+
+      struct HDWalletData
+      {
+         struct Leaf {
+            std::string          id;
+            bs::hd::Path::Elem   index;
+         };
+         struct Group {
+            bs::hd::CoinType  type;
+            std::vector<Leaf> leaves;
+         };
+         std::vector<Group>   groups;
+      };
+
+      struct AddressData
+      {
+         std::string index;
+         AddressEntryType  aet;
+         bs::Address address;
+      };
+
+      struct WalletData
+      {
+         bool  isWatchingOnly = true;
+         std::vector<bs::wallet::EncryptionType>   encryptionTypes;
+         std::vector<SecureBinaryData>          encryptionKeys;
+         std::pair<unsigned int, unsigned int>  encryptionRank{ 0,0 };
+         NetworkType netType = NetworkType::Invalid;
+
+         std::vector<AddressData>   addresses;
+         std::vector<AddressData>   addrPool;
+      };
+
+   }  //namespace sync
 }
 
 class ApplicationSettings;
@@ -34,7 +88,8 @@ public:
       Offline,
       // RemoteInproc - should be used for testing only, when you need to have signer and listener
       // running in same process and could not use TCP for any reason
-      RemoteInproc
+      RemoteInproc,
+      LocalInproc
    };
    enum class TXSignMode {
       Full,
@@ -73,7 +128,7 @@ public:
    virtual RequestId SignPartialTXRequest(const bs::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) = 0;
    virtual RequestId SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::shared_ptr<bs::SettlementAddressEntry> &
+      , const std::shared_ptr<bs::core::SettlementAddressEntry> &
       , bool autoSign = false, const PasswordType& password = {}) = 0;
 
    virtual RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) = 0;
@@ -87,7 +142,7 @@ public:
    virtual RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) = 0;
    virtual RequestId CreateHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::wallet::Seed &
+      , bool primary, const bs::core::wallet::Seed &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) = 0;
    virtual RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
    virtual RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
@@ -97,6 +152,10 @@ public:
    virtual RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
       , bool addNew, bool removeOld, bool dryRun) = 0;
+
+   virtual void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) {}
+   virtual void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) {}
+   virtual void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) {}
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }

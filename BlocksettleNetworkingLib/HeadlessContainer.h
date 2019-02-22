@@ -49,7 +49,7 @@ public:
    RequestId SignPartialTXRequest(const bs::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) override;
    RequestId SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::shared_ptr<bs::SettlementAddressEntry> &
+      , const std::shared_ptr<bs::core::SettlementAddressEntry> &
       , bool autoSign = false, const PasswordType& password = {}) override;
 
    RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) override;
@@ -64,7 +64,7 @@ public:
    RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override;
    RequestId CreateHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::wallet::Seed &seed
+      , bool primary, const bs::core::wallet::Seed &seed
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
    RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    RequestId DeleteHDLeaf(const std::string &leafWalletId) override;

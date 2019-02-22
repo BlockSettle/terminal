@@ -10,7 +10,9 @@
 #include <btc/chainparams.h>
 #include "BinaryData.h"
 #include "BtcDefinitions.h"
+#include "CoreWallet.h"
 #include "EncryptionUtils.h"
+#include "HDPath.h"
 #include "MetaData.h"
 #include "WalletEncryption.h"
 
@@ -19,58 +21,11 @@ struct KeyDerivationFunction;
 namespace bs {
    namespace hd {
 
-      class Path
-      {
-      public:
-         using Elem = uint32_t;
-
-         Path() {}
-         Path(const std::vector<Elem> &elems);
-
-         bool operator==(const Path &other) const {
-            return (path_ == other.path_);
-         }
-         bool operator!=(const Path &other) const {
-            return (path_ != other.path_);
-         }
-
-         void append(Elem elem, bool hardened = false);
-         void append(const std::string &key, bool hardened = false);
-         size_t length() const { return path_.size(); }
-         Elem get(int index) const;   // negative index is an offset from end
-         void clear();
-         bool isAbolute() const { return isAbsolute_; }
-
-         std::string toString(bool alwaysAbsolute = true) const;
-
-         void setHardened(size_t index);
-         bool isHardened(size_t index) const;
-
-         static Path fromString(const std::string &);
-         static Elem keyToElem(const std::string &key);
-
-      private:
-         std::vector<Elem> path_;
-         std::set<size_t>  hardenedIdx_;
-         bool isAbsolute_ = false;
-      };
-
-
-      static const Path::Elem purpose = 44;  // BIP44-compatible
-
-      enum CoinType : Path::Elem {
-         Bitcoin_main = 0,
-         Bitcoin_test = 1,
-         BlockSettle_CC = 0x4253,            // "BS" in hex
-         BlockSettle_Auth = 0x41757468       // "Auth" in hex
-      };
-
-
       class Node
       {
       public:
          Node(NetworkType netType);
-         Node(const bs::wallet::Seed &);
+         Node(const bs::core::wallet::Seed &);
          Node(const std::string &privKey);
          Node(const btc_hdnode &, NetworkType);
          Node(const Node &node);
@@ -86,7 +41,7 @@ namespace bs {
          virtual BinaryData pubChainedKey() const { return pubCompressedKey(); }
          BinaryData chainCode() const;
          std::shared_ptr<AssetEntry_Single> getAsset(int id) const;
-         bs::wallet::Seed seed() const;
+         bs::core::wallet::Seed seed() const;
          std::string getId() const;
 
          const BinaryData &getSeed() const { return seed_; }
@@ -128,7 +83,7 @@ namespace bs {
          void generateRandomSeed();
          void initFromSeed();
          void initFromPrivateKey(const std::string &privKey);
-         void initFrom(const bs::wallet::Seed &);
+         void initFrom(const bs::core::wallet::Seed &);
          std::shared_ptr<KeyDerivationFunction> getKDF();
       };
 
@@ -177,7 +132,5 @@ namespace bs {
 
    }  //namespace hd
 }  //namespace bs
-
-bool operator < (const bs::hd::Path &l, const bs::hd::Path &r);
 
 #endif //__BS_HD_NODE_H__

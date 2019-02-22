@@ -31,7 +31,7 @@ private:
    };
 
 public:
-   SettlementResolverFeed(const std::shared_ptr<bs::SettlementAddressEntry> &addr, const bs::KeyPair &keys) {
+   SettlementResolverFeed(const std::shared_ptr<bs::core::SettlementAddressEntry> &addr, const bs::KeyPair &keys) {
       CryptoECDSA crypto;
       const auto chainCode = addr->getAsset()->settlementId();
       const auto chainedPrivKey = crypto.ComputeChainedPrivateKey(keys.privKey, chainCode);
@@ -83,8 +83,8 @@ std::string bs::SettlementWallet::getFileName(const std::string &dir) const
    return dir + "/" + fileNamePrefix() + "wallet.lmdb";
 }
 
-int  bs::SettlementWallet::addAddress(const std::shared_ptr<SettlementAddressEntry> &addrEntry
-   , const std::shared_ptr<SettlementAssetEntry> &asset)
+int  bs::SettlementWallet::addAddress(const std::shared_ptr<bs::core::SettlementAddressEntry> &addrEntry
+   , const std::shared_ptr<bs::core::SettlementAssetEntry> &asset)
 {
    const int id = addAddress(addrEntry->getPrefixedHash(), asset);
 
@@ -95,11 +95,11 @@ int  bs::SettlementWallet::addAddress(const std::shared_ptr<SettlementAddressEnt
    return id;
 }
 
-int bs::SettlementWallet::addAddress(const bs::Address &addr, const std::shared_ptr<bs::GenericAsset> &asset)
+int bs::SettlementWallet::addAddress(const bs::Address &addr, const std::shared_ptr<bs::core::GenericAsset> &asset)
 {
    const int id = bs::PlainWallet::addAddress(addr, asset);
    if (asset) {
-      const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(asset);
+      const auto settlAsset = std::dynamic_pointer_cast<bs::core::SettlementAssetEntry>(asset);
       const auto &addrHashes = settlAsset->supportedAddrHashes();
       addrPrefixedHashes_.insert(addrHashes.begin(), addrHashes.end());
       for (const auto &hash : addrHashes) {
@@ -116,7 +116,7 @@ AddressEntryType bs::SettlementWallet::getAddrTypeForAddr(const BinaryData &addr
    prefixed.append(addr);
    const auto itAsset = assetByAddr_.find(prefixed);
    if (itAsset != assetByAddr_.end()) {
-      const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(itAsset->second);
+      const auto settlAsset = std::dynamic_pointer_cast<bs::core::SettlementAssetEntry>(itAsset->second);
       if (settlAsset) {
          return settlAsset->addressType();
       }
@@ -124,7 +124,7 @@ AddressEntryType bs::SettlementWallet::getAddrTypeForAddr(const BinaryData &addr
    return AddressEntryType_Default;
 }
 
-std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::getExistingAddress(const BinaryData &settlementId)
+std::shared_ptr<bs::core::SettlementAddressEntry> bs::SettlementWallet::getExistingAddress(const BinaryData &settlementId)
 {
    auto address = getAddressBySettlementId(settlementId);
    if (address != nullptr) {
@@ -134,7 +134,7 @@ std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::getExistingAdd
    return address;
 }
 
-std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::getAddressBySettlementId(const BinaryData &settlementId) const
+std::shared_ptr<bs::core::SettlementAddressEntry> bs::SettlementWallet::getAddressBySettlementId(const BinaryData &settlementId) const
 {
    FastLock locker(lockAddressMap_);
    auto it = addressBySettlementId_.find(settlementId);
@@ -197,7 +197,7 @@ void bs::SettlementWallet::CompleteMonitorCreations(int addressIndex
    createMonitorCB(addressWallet);
 }
 
-bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset)
+bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<bs::core::SettlementAssetEntry>& asset)
 {
    auto index = asset->id();
    const auto walletId = BtcUtils::scrAddrToBase58(asset->prefixedHash()).toBinStr();
@@ -236,11 +236,11 @@ bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
    return true;
 }
 
-std::shared_ptr<bs::SettlementAddressEntry> bs::SettlementWallet::newAddress(const BinaryData &settlementId, const BinaryData &buyAuthPubKey
+std::shared_ptr<bs::core::SettlementAddressEntry> bs::SettlementWallet::newAddress(const BinaryData &settlementId, const BinaryData &buyAuthPubKey
    , const BinaryData &sellAuthPubKey, const std::string &comment)
 {
-   auto asset = std::make_shared<SettlementAssetEntry>(settlementId, buyAuthPubKey, sellAuthPubKey);
-   auto aePtr = SettlementAssetEntry::getAddressEntry(asset);
+   auto asset = std::make_shared<bs::core::SettlementAssetEntry>(settlementId, buyAuthPubKey, sellAuthPubKey);
+   auto aePtr = bs::core::SettlementAssetEntry::getAddressEntry(asset);
 
    int id = addAddress(aePtr, asset);
    writeDB();
@@ -265,7 +265,7 @@ std::string bs::SettlementWallet::GetAddressIndex(const bs::Address &addr)
    if (assetIt == assetByAddr_.end()) {
       return {};
    }
-   const auto asset = std::dynamic_pointer_cast<SettlementAssetEntry>(assetIt->second);
+   const auto asset = std::dynamic_pointer_cast<bs::core::SettlementAssetEntry>(assetIt->second);
    if (!asset) {
       return {};
    }
@@ -322,7 +322,7 @@ bool bs::SettlementWallet::containsAddress(const bs::Address &addr)
    return false;
 }
 
-bool bs::SettlementWallet::GetInputFor(const std::shared_ptr<SettlementAddressEntry> &addr, std::function<void(UTXO)> cb
+bool bs::SettlementWallet::GetInputFor(const std::shared_ptr<bs::core::SettlementAddressEntry> &addr, std::function<void(UTXO)> cb
    , bool allowZC)
 {
    const auto addressWallet = GetSettlementAddressWallet(addr->getIndex());
@@ -385,7 +385,8 @@ uint64_t bs::SettlementWallet::GetEstimatedFeeFor(UTXO input, const bs::Address 
    return coinSelection.getFeeForMaxVal(scriptRecipient->getSize(), feePerByte, { input });
 }
 
-UTXO bs::SettlementWallet::GetInputFromTX(const std::shared_ptr<SettlementAddressEntry> &addr, const BinaryData &payinHash, const double amount) const
+UTXO bs::SettlementWallet::GetInputFromTX(const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
+   , const BinaryData &payinHash, const double amount) const
 {
    const uint64_t value = amount * BTCNumericTypes::BalanceDivider;
    const uint32_t txHeight = UINT32_MAX;
@@ -473,7 +474,7 @@ SecureBinaryData bs::SettlementWallet::GetPublicKeyFor(const bs::Address &addr)
    if (itAsset == assetByAddr_.end()) {
       return {};
    }
-   const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(itAsset->second);
+   const auto settlAsset = std::dynamic_pointer_cast<bs::core::SettlementAssetEntry>(itAsset->second);
    return settlAsset ? settlAsset->settlementId() : SecureBinaryData{};
 }
 
@@ -482,7 +483,7 @@ bs::KeyPair bs::SettlementWallet::GetKeyPairFor(const bs::Address &addr, const S
    return {};
 }
 
-bool bs::SettlementWallet::createMonitorQtSignals(const std::shared_ptr<SettlementAddressEntry> &addr
+bool bs::SettlementWallet::createMonitorQtSignals(const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::function<void (const std::shared_ptr<SettlementMonitorQtSignals>&)>& userCB)
 {
@@ -494,7 +495,7 @@ bool bs::SettlementWallet::createMonitorQtSignals(const std::shared_ptr<Settleme
    return createMonitorCommon(addr, logger, createMonitorCB);
 }
 
-bool bs::SettlementWallet::createMonitorCb(const std::shared_ptr<SettlementAddressEntry> &addr
+bool bs::SettlementWallet::createMonitorCb(const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger
    , const std::function<void (const std::shared_ptr<SettlementMonitorCb>&)>& userCB)
 {
@@ -506,7 +507,7 @@ bool bs::SettlementWallet::createMonitorCb(const std::shared_ptr<SettlementAddre
    return createMonitorCommon(addr, logger, createMonitorCB);
 }
 
-bool bs::SettlementWallet::createMonitorCommon(const std::shared_ptr<SettlementAddressEntry> &addr
+bool bs::SettlementWallet::createMonitorCommon(const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger
    , const CreateMonitorCallback& createMonitorCB)
 {

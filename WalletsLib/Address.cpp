@@ -427,3 +427,14 @@ std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(double amount) const
 {
    return getRecipient((uint64_t)(amount * BTCNumericTypes::BalanceDivider));
 }
+
+size_t bs::Address::getInputSize() const
+{  //borrowed from Armory
+   switch (getType()) {
+   case AddressEntryType_P2PKH:     return 114 + 33;
+   case AddressEntryType_P2WSH:     return 41;
+   case AddressEntryType_P2SH:      return 114 + 73 + 40;   //FIXME
+   case AddressEntryType_P2WPKH:    return 40;
+   default:       return 0;
+   }
+}

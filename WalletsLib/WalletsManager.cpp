@@ -804,7 +804,8 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
          }
          if (txOuts.size() == 1) {
             const auto addr = txOuts[0].getScrAddressStr();
-            const auto settlAE = std::dynamic_pointer_cast<bs::SettlementAddressEntry>(GetSettlementWallet()->getAddressEntryForAddr(addr));
+            const auto settlAE = std::dynamic_pointer_cast<bs::core::SettlementAddressEntry>(
+               GetSettlementWallet()->getAddressEntryForAddr(addr));
             if (settlAE) {
                const auto &cbPayout = [this, cb, txKey, inAddrs](bs::PayoutSigner::Type poType) {
                   if (poType == bs::PayoutSigner::SignedBySeller) {
@@ -814,7 +815,7 @@ bool WalletsManager::GetTransactionDirection(Tx tx, const std::shared_ptr<bs::Wa
                      updateTxDirCache(txKey, bs::Transaction::PayOut, inAddrs, cb);
                   }
                };
-               bs::PayoutSigner::WhichSignature(tx, 0, settlAE, logger_, armory_, cbPayout);
+               bs::PayoutSigner::WhichSignature(tx, 0, bs::entryToAddress(settlAE), logger_, armory_, cbPayout);
                return;
             }
             logger_->warn("[WalletsManager::GetTransactionDirection] failed to get settlement AE");
@@ -958,7 +959,7 @@ void WalletsManager::updateTxDescCache(const std::string &txKey, const QString &
 }
 
 WalletsManager::hd_wallet_type WalletsManager::CreateWallet(const std::string& name, const std::string& description
-   , bs::wallet::Seed seed, const QString &walletsPath, bool primary
+   , bs::core::wallet::Seed seed, const QString &walletsPath, bool primary
    , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
    if (preferWatchingOnly_) {

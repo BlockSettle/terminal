@@ -145,7 +145,7 @@ void WalletImporter::onHDWalletError(unsigned int id, std::string errMsg)
 }
 
 void WalletImporter::Import(const std::string &name, const std::string &description
-   , bs::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
+   , bs::core::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
    , bs::wallet::KeyRank keyRank)
 {
    if (!signingContainer_ || signingContainer_->isOffline()) {

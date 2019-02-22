@@ -18,9 +18,9 @@ namespace bs {
          friend class bs::hd::Wallet;
 
       public:
-         Group(Nodes rootNodes, const Path &path, const std::string &walletName
-               , const std::string &name, const std::string &desc
-               , bool extOnlyAddresses = false)
+         Group(Nodes rootNodes, const Path &path
+            , const std::string &walletName, const std::string &name
+            , const std::string &desc, bool extOnlyAddresses = false)
             : QObject(nullptr), rootNodes_(rootNodes), path_(path)
                , walletName_(walletName), name_(name), desc_(desc)
                , extOnlyAddresses_(extOnlyAddresses) {}

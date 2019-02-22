@@ -146,7 +146,7 @@ namespace bs {
             , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
             , QObject *context = nullptr) override;
 
-         int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
+         int addAddress(const bs::Address &, const std::shared_ptr<core::GenericAsset> &asset = nullptr) override;
 
          void UpdateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
          bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;

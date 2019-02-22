@@ -35,7 +35,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    , appSettings_(appSettings)
    , logger_(logger)
    , armory_(armory)
-   , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
+   , walletSeed_(bs::core::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
    , appSettings->get<NetworkType>(ApplicationSettings::netType)))
    , disableImportPrimary_{disableImportPrimary}
 {

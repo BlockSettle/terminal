@@ -17,7 +17,7 @@
 CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
    , const std::shared_ptr<SignContainer> &container
    , const QString &walletsPath
-   , const bs::wallet::Seed& walletSeed
+   , const bs::core::wallet::Seed& walletSeed
    , const std::string& walletId
    , const QString& username
    , const std::shared_ptr<ApplicationSettings> &appSettings

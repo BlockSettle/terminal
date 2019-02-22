@@ -43,7 +43,7 @@ void VerifyWalletBackupDialog::onPrivKeyChanged()
    easyData.part1 = ui_->lineEditPrivKey1->text().toStdString();
    easyData.part2 = ui_->lineEditPrivKey2->text().toStdString();
    try {
-      const auto seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, netType_);
+      const auto seed = bs::core::wallet::Seed::fromEasyCodeChecksum(easyData, netType_);
       bs::hd::Wallet newWallet(wallet_->getName(), wallet_->getDesc(), seed
                                , logger_);
       if (newWallet.getWalletId() == wallet_->getWalletId()) {

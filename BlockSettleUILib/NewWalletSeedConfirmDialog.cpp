@@ -90,7 +90,7 @@ void NewWalletSeedConfirmDialog::onKeyChanged(const QString &)
       EasyCoDec::Data ecData;
       ecData.part1 = inputLine1.toStdString();
       ecData.part2 = inputLine2.toStdString();
-      const auto &seed = bs::wallet::Seed::fromEasyCodeChecksum(ecData, netType_);
+      const auto &seed = bs::core::wallet::Seed::fromEasyCodeChecksum(ecData, netType_);
       keysAreCorrect_ = (bs::hd::Node(seed).getId() == walletId_);
    }
 

@@ -104,7 +104,7 @@ private:
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
 
-   std::shared_ptr<bs::SettlementAddressEntry>     settlAddr_;
+   std::shared_ptr<bs::core::SettlementAddressEntry> settlAddr_;
    std::shared_ptr<AddressVerificator>       addrVerificator_;
    std::shared_ptr<bs::SettlementMonitorCb>        monitor_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;

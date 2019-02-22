@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <QObject>
+#include "CoreWallet.h"
 #include "HDWallet.h"
 #include "MetaData.h"
 #include "WalletEncryption.h"
@@ -12,7 +13,7 @@ namespace wallet {
 
 /// wrapper on bs::wallet::Seed enables using this type in QML
 /// Seed class may operate with plain seed key (seed_) and secured data(privKey_)
-class QSeed : public QObject, public Seed
+class QSeed : public QObject, public bs::core::wallet::Seed
 {
    Q_OBJECT
 

@@ -421,7 +421,7 @@ bool WalletsWidget::CreateNewWallet(bool report)
 {
    NetworkType netType = appSettings_->get<NetworkType>(ApplicationSettings::netType);
 
-   bs::wallet::Seed walletSeed(netType, CryptoPRNG::generateRandom(32));
+   bs::core::wallet::Seed walletSeed(netType, CryptoPRNG::generateRandom(32));
 
    EasyCoDec::Data easyData = walletSeed.toEasyCodeChecksum();
 
@@ -661,7 +661,7 @@ void WalletsWidget::onRevokeSettlement()
       BSMessageBox(BSMessageBox::critical, title, tr("Unknown settlement address")).exec();
       return;
    }
-   const auto &ae = settlWallet->getExistingAddress(settlId);
+   const auto ae = settlWallet->getExistingAddress(settlId);
    if (!ae) {
       BSMessageBox(BSMessageBox::critical, title, tr("Invalid settlement address")).exec();
       return;

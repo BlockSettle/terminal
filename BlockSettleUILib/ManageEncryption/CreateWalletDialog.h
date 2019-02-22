@@ -32,7 +32,7 @@ public:
    CreateWalletDialog(const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , const QString &walletsPath
-      , const bs::wallet::Seed& walletSeed
+      , const bs::core::wallet::Seed& walletSeed
       , const std::string& walletId
       , const QString& username
       , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -61,7 +61,7 @@ private:
    const std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<spdlog::logger> logger_;
    const QString     walletsPath_;
-   const bs::wallet::Seed walletSeed_;
+   const bs::core::wallet::Seed walletSeed_;
    bs::hd::WalletInfo walletInfo_;
    unsigned int      createReqId_ = 0;
    bool              walletCreated_ = false;

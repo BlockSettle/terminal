@@ -14,6 +14,7 @@
 #include "BtcDefinitions.h"
 #include "PlainWallet.h"
 #include "SettlementAddressEntry.h"
+#include "CoreWallet.h"
 
 namespace spdlog {
    class logger;
@@ -38,9 +39,9 @@ namespace bs {
       SettlementWallet& operator = (const SettlementWallet&) = delete;
       SettlementWallet& operator = (SettlementWallet&&) = delete;
 
-      std::shared_ptr<bs::SettlementAddressEntry> getExistingAddress(const BinaryData &settlementId);
+      std::shared_ptr<core::SettlementAddressEntry> getExistingAddress(const BinaryData &settlementId);
 
-      std::shared_ptr<SettlementAddressEntry> newAddress(const BinaryData &settlementId
+      std::shared_ptr<core::SettlementAddressEntry> newAddress(const BinaryData &settlementId
          , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment = {});
       bool containsAddress(const bs::Address &addr) override;
 
@@ -49,11 +50,12 @@ namespace bs {
       static std::string fileNamePrefix() { return "settlement_"; }
       std::string getFileName(const std::string &dir) const override;
 
-      bool GetInputFor(const std::shared_ptr<SettlementAddressEntry> &, std::function<void(UTXO)>, bool allowZC = true);
+      bool GetInputFor(const std::shared_ptr<core::SettlementAddressEntry> &, std::function<void(UTXO)>, bool allowZC = true);
       uint64_t GetEstimatedFeeFor(UTXO input, const bs::Address &recvAddr, float feePerByte);
 
       bs::wallet::TXSignRequest CreatePayoutTXRequest(const UTXO &, const bs::Address &recvAddr, float feePerByte);
-      UTXO GetInputFromTX(const std::shared_ptr<SettlementAddressEntry> &, const BinaryData &payinHash, const double amount) const;
+      UTXO GetInputFromTX(const std::shared_ptr<core::SettlementAddressEntry> &
+         , const BinaryData &payinHash, const double amount) const;
       BinaryData SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const KeyPair &, const BinaryData &settlementId
          , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
 
@@ -74,34 +76,34 @@ namespace bs {
       void RefreshWallets(const std::vector<BinaryData>& ids);
 
       // return monitor that send QT signals and subscribed to zc/new block notification via qt
-      bool createMonitorQtSignals(const std::shared_ptr<SettlementAddressEntry> &addr
+      bool createMonitorQtSignals(const std::shared_ptr<core::SettlementAddressEntry> &addr
          , const std::shared_ptr<spdlog::logger>& logger
          , const std::function<void (const std::shared_ptr<SettlementMonitorQtSignals>&)>& userCB);
 
       // pure callback monitor. you should manually ask to update and set
       // callbacks to get notifications
-      bool createMonitorCb(const std::shared_ptr<SettlementAddressEntry> &addr
+      bool createMonitorCb(const std::shared_ptr<core::SettlementAddressEntry> &addr
          , const std::shared_ptr<spdlog::logger>& logger
          , const std::function<void (const std::shared_ptr<SettlementMonitorCb>&)>& userCB);
 
    private:
       using CreateMonitorCallback = std::function<void(const std::shared_ptr<AsyncClient::BtcWallet>&)>;
-      bool createMonitorCommon(const std::shared_ptr<SettlementAddressEntry> &addr
+      bool createMonitorCommon(const std::shared_ptr<core::SettlementAddressEntry> &addr
          , const std::shared_ptr<spdlog::logger>& logger
          , const CreateMonitorCallback& internalCB);
 
    protected:
-      int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
-      int addAddress(const std::shared_ptr<SettlementAddressEntry> &, const std::shared_ptr<SettlementAssetEntry> &);
-      std::pair<bs::Address, std::shared_ptr<GenericAsset>> deserializeAsset(BinaryDataRef ref) override {
-         return SettlementAssetEntry::deserialize(ref);
+      int addAddress(const bs::Address &, const std::shared_ptr<core::GenericAsset> &asset = nullptr) override;
+      int addAddress(const std::shared_ptr<core::SettlementAddressEntry> &, const std::shared_ptr<bs::core::SettlementAssetEntry> &);
+      std::pair<bs::Address, std::shared_ptr<core::GenericAsset>> deserializeAsset(BinaryDataRef ref) override {
+         return core::SettlementAssetEntry::deserialize(ref);
       }
 
       AddressEntryType getAddrTypeForAddr(const BinaryData &addr) override;
 
    private:
-      std::shared_ptr<bs::SettlementAddressEntry> getAddressBySettlementId(const BinaryData &settlementId) const;
-      bool createTempWalletForAsset(const std::shared_ptr<SettlementAssetEntry>& asset);
+      std::shared_ptr<core::SettlementAddressEntry> getAddressBySettlementId(const BinaryData &settlementId) const;
+      bool createTempWalletForAsset(const std::shared_ptr<core::SettlementAssetEntry> &);
 
       std::shared_ptr<AsyncClient::BtcWallet> GetSettlementAddressWallet(const int addressIndex) const;
 
@@ -109,8 +111,8 @@ namespace bs {
 
    private:
       mutable std::atomic_flag                           lockAddressMap_ = ATOMIC_FLAG_INIT;
-      std::map<bs::Address, std::shared_ptr<SettlementAddressEntry>>    addrEntryByAddr_;
-      std::map<BinaryData, std::shared_ptr<bs::SettlementAddressEntry>> addressBySettlementId_;
+      std::map<bs::Address, std::shared_ptr<core::SettlementAddressEntry>> addrEntryByAddr_;
+      std::map<BinaryData, std::shared_ptr<core::SettlementAddressEntry>>  addressBySettlementId_;
 
       // all 3 collections guarded by same lock
       mutable std::atomic_flag                                 lockWalletsMap_ = ATOMIC_FLAG_INIT;

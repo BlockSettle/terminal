@@ -10,6 +10,7 @@
 #include <QDateTime>
 #include "ArmoryConnection.h"
 #include "BTCNumericTypes.h"
+#include "CoreWallet.h"
 #include "EncryptionUtils.h"
 #include "SettlementWallet.h"
 #include "WalletEncryption.h"
@@ -93,7 +94,7 @@ public:
       , bool isReceiving, std::function<void(QString, int)>);
 
    hd_wallet_type CreateWallet(const std::string& name, const std::string& description
-      , bs::wallet::Seed, const QString &walletsPath, bool primary = false
+      , bs::core::wallet::Seed, const QString &walletsPath, bool primary = false
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    void AdoptNewWallet(const hd_wallet_type &, const QString &walletsPath);
    void AddWallet(const hd_wallet_type &, const QString &walletsPath);

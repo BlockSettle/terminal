@@ -885,7 +885,7 @@ bool hd::Leaf::hasId(const std::string &id) const
    return ((GetWalletId() == id) || (getWalletIdInt() == id));
 }
 
-int hd::Leaf::addAddress(const bs::Address &addr, const std::shared_ptr<GenericAsset> &)
+int hd::Leaf::addAddress(const bs::Address &addr, const std::shared_ptr<core::GenericAsset> &)
 {  // only for registration purposes
    usedAddresses_.push_back(addr);
    addrPrefixedHashes_.external.insert(addr.id());

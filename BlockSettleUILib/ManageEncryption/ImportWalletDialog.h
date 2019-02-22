@@ -6,6 +6,7 @@
 
 #include "BtcDefinitions.h"
 #include "EasyCoDec.h"
+#include "CoreWallet.h"
 #include "MetaData.h"
 #include "QWalletInfo.h"
 
@@ -69,7 +70,7 @@ private:
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<WalletImporter>  walletImporter_;
    std::shared_ptr<spdlog::logger> logger_;
-   bs::wallet::Seed  walletSeed_;
+   bs::core::wallet::Seed  walletSeed_;
    bs::hd::WalletInfo walletInfo_;
 
    bool importedAsPrimary_ = false;

@@ -75,9 +75,9 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    privKeyReqId_ = 0;
    EasyCoDec::Data easyData, edChainCode;
    try {
-      easyData = bs::wallet::Seed(NetworkType::Invalid, privKey).toEasyCodeChecksum();
+      easyData = bs::core::wallet::Seed(NetworkType::Invalid, privKey).toEasyCodeChecksum();
       if (!chainCode.isNull()) {
-         edChainCode = bs::wallet::Seed(NetworkType::Invalid, chainCode).toEasyCodeChecksum();
+         edChainCode = bs::core::wallet::Seed(NetworkType::Invalid, chainCode).toEasyCodeChecksum();
       }
    }
    catch (const std::exception &e) {

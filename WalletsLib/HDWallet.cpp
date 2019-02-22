@@ -16,7 +16,7 @@ if ((logger)) { \
 using namespace bs;
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
-                   , const bs::wallet::Seed &seed
+                   , const bs::core::wallet::Seed &seed
                    , const std::shared_ptr<spdlog::logger> &logger
                    , bool extOnlyAddresses)
    : QObject(nullptr), name_(name), desc_(desc)
@@ -44,7 +44,7 @@ hd::Wallet::Wallet(const std::string &walletId, NetworkType netType
 { }
 
 
-void hd::Wallet::initNew(const bs::wallet::Seed &seed)
+void hd::Wallet::initNew(const bs::core::wallet::Seed &seed)
 {
    const auto &rootNode = std::make_shared<hd::Node>(seed);
    walletId_ = rootNode->getId();
