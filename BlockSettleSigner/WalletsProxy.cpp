@@ -230,9 +230,9 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
 
    EasyCoDec::Data easyData, edChainCode;
    try {
-      easyData = bs::wallet::Seed(NetworkType::Invalid, decrypted->privateKey()).toEasyCodeChecksum();
+      easyData = bs::core::wallet::Seed(NetworkType::Invalid, decrypted->privateKey()).toEasyCodeChecksum();
       if (!decrypted->chainCode().isNull()) {
-         edChainCode = bs::wallet::Seed(NetworkType::Invalid, decrypted->chainCode()).toEasyCodeChecksum();
+         edChainCode = bs::core::wallet::Seed(NetworkType::Invalid, decrypted->chainCode()).toEasyCodeChecksum();
       }
    }
    catch (const std::exception &e) {
