@@ -101,9 +101,9 @@ void hd::BlockchainScanner::scanAddresses(unsigned int startIdx, unsigned int po
       , getRegAddresses(currentPortion_.addresses), nullptr, true);
 }
 
-void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids)
+void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids, bool online)
 {
-   if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
+   if (!online || !currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
       return;
    }
    const auto &it = std::find(ids.begin(), ids.end(), rescanRegId_);
@@ -276,9 +276,36 @@ void hd::Leaf::onZeroConfReceived(const std::vector<bs::TXEntry>)
 //!   activateAddressesFromLedger(armory_->getZCentries(reqId));
 }  // if ZC is received, then likely wallet already contains the participating address
 
-void hd::Leaf::onRefresh(std::vector<BinaryData> ids)
+void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 {
-   hd::BlockchainScanner::onRefresh(ids);
+   const auto &cbRegisterExt = [this] {
+      btcWallet_->setUnconfirmedTarget(kExtConfCount);
+      if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
+         emit walletReady(QString::fromStdString(GetWalletId()));
+      }
+   };
+   const auto &cbRegisterInt = [this] {
+      btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
+      if (regIdExt_.empty() && regIdInt_.empty()) {
+         emit walletReady(QString::fromStdString(GetWalletId()));
+      }
+   };
+   if (!regIdExt_.empty() || !regIdInt_.empty()) {
+      for (const auto &id : ids) {
+         if (id.isNull()) {
+            continue;
+         }
+         if (id == regIdExt_) {
+            regIdExt_.clear();
+            cbRegisterExt();
+         } else if (id == regIdInt_) {
+            regIdInt_.clear();
+            cbRegisterInt();
+         }
+      }
+   }
+
+   hd::BlockchainScanner::onRefresh(ids, online);
 }
 
 void hd::Leaf::firstInit(bool force)
@@ -627,35 +654,17 @@ std::vector<std::string> hd::Leaf::RegisterWallet(const std::shared_ptr<ArmoryCo
 
    if (armory_) {
       const auto addrsExt = getAddrHashesExt();
-      std::vector<std::string> regIds;;
-      const auto regIdSet = std::make_shared<std::set<std::string>>();
+      std::vector<std::string> regIds;
+      const auto &cbEmpty = [](const std::string &) {};
 
-      const auto &cbRegisterExt = [this, regIdSet](const std::string &regId) {
-         btcWallet_->setUnconfirmedTarget(kExtConfCount);
-         regIdSet->erase(regId);
-         if (isExtOnly_ || regIdSet->empty()) {
-            emit walletReady(QString::fromStdString(GetWalletId()));
-         }
-      };
-      const auto &cbRegisterInt = [this, regIdSet](const std::string &regId) {
-         btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
-         regIdSet->erase(regId);
-         if (regIdSet->empty()) {
-            emit walletReady(QString::fromStdString(GetWalletId()));
-         }
-      };
-
-      const auto regIdExt = armory_->registerWallet(btcWallet_, GetWalletId()
-         , addrsExt, cbRegisterExt, asNew);
-      regIdSet->insert(regIdExt);
-      regIds.push_back(regIdExt);
+      regIdExt_ = armory_->registerWallet(btcWallet_, GetWalletId(), addrsExt, cbEmpty, asNew);
+      regIds.push_back(regIdExt_);
 
       if (!isExtOnly_) {
          const auto addrsInt = getAddrHashesInt();
-         const auto regIdInt = armory_->registerWallet(btcWalletInt_
-            , getWalletIdInt(), addrsInt, cbRegisterInt, asNew);
-         regIdSet->insert(regIdInt);
-         regIds.push_back(regIdInt);
+         regIdInt_ = armory_->registerWallet(btcWalletInt_
+            , getWalletIdInt(), addrsInt, cbEmpty, asNew);
+         regIds.push_back(regIdInt_);
       }
       return regIds;
    }

@@ -202,8 +202,18 @@ CoinSelectionInstance::CoinSelectionInstance(
    const vector<AddressBookEntry>& addrBook, unsigned topHeight) :
    cs_(getFetchLambdaFromWalletContainer(walletContainer), addrBook,
       walletContainer->spendableBalance_, topHeight),
-   walletContainer_(walletContainer),
+   walletPtr_(walletContainer->wallet_),
    spendableBalance_(walletContainer->spendableBalance_)
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+CoinSelectionInstance::CoinSelectionInstance(
+   std::shared_ptr<AssetWallet> const walletPtr,
+   std::function<std::vector<UTXO>(uint64_t)> getUtxoLbd,
+   const vector<AddressBookEntry>& addrBook, 
+   uint64_t spendableBalance, unsigned topHeight) :
+   cs_(getFetchLambdaFromWallet(walletPtr, getUtxoLbd), addrBook, spendableBalance, topHeight),
+   walletPtr_(walletPtr), spendableBalance_(spendableBalance)
 {}
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -212,7 +222,7 @@ CoinSelectionInstance::CoinSelectionInstance(
    unsigned M, unsigned N, uint64_t balance, unsigned topHeight) :
    cs_(getFetchLambdaFromLockbox(lockbox, M, N), 
       vector<AddressBookEntry>(), balance, topHeight),
-   walletContainer_(nullptr),      
+   walletPtr_(nullptr),
    spendableBalance_(balance)
 {}
 
@@ -227,6 +237,25 @@ function<vector<UTXO>(uint64_t)> CoinSelectionInstance
    {
       auto&& vecUtxo = walletContainer->getSpendableTxOutListForValue(val);
       decorateUTXOs(walletContainer->wallet_, vecUtxo);
+
+      return vecUtxo;
+   };
+
+   return fetchLbd;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+function<vector<UTXO>(uint64_t)> CoinSelectionInstance
+::getFetchLambdaFromWallet(shared_ptr<AssetWallet> const walletPtr,
+   function<vector<UTXO>(uint64_t)> lbd)
+{
+   if (walletPtr == nullptr)
+      throw runtime_error("null wallet ptr");
+
+   auto fetchLbd = [walletPtr, lbd](uint64_t val)->vector<UTXO>
+   {
+      auto&& vecUtxo = lbd(val);
+      decorateUTXOs(walletPtr, vecUtxo);
 
       return vecUtxo;
    };
@@ -316,7 +345,7 @@ void CoinSelectionInstance::selectUTXOs(vector<UTXO>& vecUtxo,
    checkSpendVal(spendableVal);
 
    //decorate coin control selection
-   decorateUTXOs(walletContainer_->wallet_, vecUtxo);
+   decorateUTXOs(walletPtr_, vecUtxo);
 
    state_utxoVec_ = vecUtxo;
 
@@ -503,7 +532,7 @@ uint64_t CoinSelectionInstance::getFeeForMaxValUtxoVector(
       }
 
       //decorate coin control selection
-      decorateUTXOs(walletContainer_->wallet_, utxoVec);
+      decorateUTXOs(walletPtr_, utxoVec);
    }
 
    return cs_.getFeeForMaxVal(txoutsize, fee_byte, utxoVec);

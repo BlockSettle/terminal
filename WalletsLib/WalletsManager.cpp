@@ -489,8 +489,11 @@ void WalletsManager::onNewBlock()
    emit blockchainEvent();
 }
 
-void WalletsManager::onRefresh(std::vector<BinaryData> ids)
+void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
 {
+   if (!online) {
+      return;
+   }
    logger_->debug("[WalletsManager] Armory refresh");
    UpdateSavedWallets();
 

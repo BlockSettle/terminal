@@ -41,7 +41,7 @@ private:
 
    std::map<unsigned, std::shared_ptr<ScriptRecipient> > recipients_;
    UtxoSelection selection_;
-   WalletContainer* const walletContainer_;
+   std::shared_ptr<AssetWallet> const walletPtr_;
 
    std::vector<UTXO> state_utxoVec_;
    uint64_t spendableBalance_;
@@ -50,6 +50,9 @@ private:
    static void decorateUTXOs(std::shared_ptr<AssetWallet> const, std::vector<UTXO>&);
    static std::function<std::vector<UTXO>(uint64_t)> getFetchLambdaFromWalletContainer(
       WalletContainer* const walletContainer);
+   static std::function<std::vector<UTXO>(uint64_t)> getFetchLambdaFromWallet(
+      std::shared_ptr<AssetWallet> const, std::function<std::vector<UTXO>(uint64_t)>);
+
 
    static std::function<std::vector<UTXO>(uint64_t)> getFetchLambdaFromLockbox(
       SwigClient::Lockbox* const, unsigned M, unsigned N);
@@ -64,7 +67,11 @@ private:
 public:
    CoinSelectionInstance(WalletContainer* const walletContainer,
       const std::vector<AddressBookEntry>& addrBook, unsigned topHeight);
-   CoinSelectionInstance(SwigClient::Lockbox* const, 
+   CoinSelectionInstance(std::shared_ptr<AssetWallet>, 
+      std::function<std::vector<UTXO>(uint64_t)>,
+      const std::vector<AddressBookEntry>& addrBook, 
+      uint64_t spendableBalance, unsigned topHeight);
+   CoinSelectionInstance(SwigClient::Lockbox* const,
       unsigned M, unsigned N, uint64_t balance, unsigned topHeight);
 
    unsigned addRecipient(const BinaryData&, uint64_t);
@@ -72,6 +79,9 @@ public:
    void updateOpReturnRecipient(unsigned, const BinaryData&);
    void removeRecipient(unsigned);
    void resetRecipients(void);
+   const std::map<unsigned, std::shared_ptr<ScriptRecipient> >& getRecipients(void) const {
+      return recipients_;
+   }
 
    void selectUTXOs(uint64_t fee, float fee_byte, unsigned flags);
    void processCustomUtxoList(

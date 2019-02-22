@@ -1524,9 +1524,20 @@ shared_ptr<AddressEntry> AssetWallet::getAddressEntryForID(
    auto addrIter = addresses_.find(ID);
    if (addrIter != addresses_.end())
    {
-      if (aeType != AddressEntryType_Default && 
-          aeType == addrIter->second->getType())
-      return addrIter->second;
+      auto addrType = addrIter->second->getType();
+
+      if (aeType != AddressEntryType_Default)
+      {
+         if(aeType == addrType)
+         {
+            return addrIter->second;
+         }
+         else if (aeType | ADDRESS_NESTED_MASK && 
+            aeType | ADDRESS_NESTED_MASK == addrType | ADDRESS_NESTED_MASK)
+         {
+            return addrIter->second;
+         }
+      }
    }
 
    if (aeType == AddressEntryType_Default)
