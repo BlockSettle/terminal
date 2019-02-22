@@ -88,6 +88,9 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
    connect(settings_.get(), &SignerSettings::zmqPrvKeyFileChanged, [this](){
       initZmqKeys();
    });
+   connect(settings_.get(), &SignerSettings::zmqPubKeyFileChanged, [this](){
+      initLocalTermZMQKeys();
+   });
 
 #ifdef BS_USE_DBUS
    if (dbus_->isValid()) {
@@ -177,13 +180,9 @@ void QMLAppObj::initZmqKeys()
    SecureBinaryData tempPrvKey;
 
    bool isZmqPubKeyOk = bs::network::readZmqKeyFile(settings_->zmqPubKeyFile()
-                                                    , zmqPubKey_
-                                                    , true
-                                                    , logger_);
+      , zmqPubKey_, true, logger_);
    bool isZmqPrvKeyOk = bs::network::readZmqKeyFile(settings_->zmqPrvKeyFile()
-                                                    , zmqPrvKey_
-                                                    , true
-                                                    , logger_);
+      , zmqPrvKey_, false, logger_);
    QString errorString;
    if (!isZmqPubKeyOk)  {
       errorString.append(QStringLiteral("Failed to read ZMQ server public key\n"));
@@ -194,18 +193,54 @@ void QMLAppObj::initZmqKeys()
 
    QString detailsString;
    if (!isZmqPubKeyOk)  {
-      detailsString.append(QStringLiteral("Public key: ") + settings_->zmqPubKeyFile() + QStringLiteral("\n\n"));
+      detailsString.append(QStringLiteral("Public key file: ")
+         + settings_->zmqPubKeyFile() + QStringLiteral("\n\n"));
    }
    if (!isZmqPrvKeyOk)  {
-      detailsString.append(QStringLiteral("Private key: ") + settings_->zmqPrvKeyFile());
+      detailsString.append(QStringLiteral("Private key file: ")
+         + settings_->zmqPrvKeyFile() + QStringLiteral("\n\n"));
    }
 
    if (!isZmqPubKeyOk || !isZmqPrvKeyOk) {
       QMetaObject::invokeMethod(this, [this, errorString, detailsString](){
          QMetaObject::invokeMethod(rootObj_, "messageBoxCritical"
-                                   , Q_ARG(QVariant, QStringLiteral("Error"))
-                                   , Q_ARG(QVariant, QVariant::fromValue(errorString))
-                                   , Q_ARG(QVariant, QVariant::fromValue(detailsString)));
+            , Q_ARG(QVariant, QStringLiteral("Error"))
+            , Q_ARG(QVariant, QVariant::fromValue(errorString))
+            , Q_ARG(QVariant, QVariant::fromValue(detailsString)));
+      },
+      Qt::QueuedConnection);
+   }
+
+   // reset connection
+   disconnect();
+   onOfflineChanged();
+}
+
+// Function that loads the headless terminal's ZMQ public key file. Used only
+// for local connections. If remote headless is supported later, the model will
+// have to shift.
+void QMLAppObj::initLocalTermZMQKeys()
+{
+   // Get the local terminal's ZMQ public key.
+   SecureBinaryData tempPubKey;
+
+   bool isLocalTermZMQPubKeyOK = bs::network::readZmqKeyFile(
+      settings_->localTermZMQPubKeyFile(), localTermZMQPubKey_, true, logger_);
+
+   if (!isLocalTermZMQPubKeyOK)  {
+      QString errorString;
+      QString detailsString;
+
+      errorString.append(QStringLiteral("Failed to read local terminal ZMQ "
+         "public key\n"));
+      detailsString.append(QStringLiteral("Public key file: ")
+         + settings_->localTermZMQPubKeyFile() + QStringLiteral("\n\n"));
+
+      QMetaObject::invokeMethod(this, [this, errorString, detailsString]() {
+         QMetaObject::invokeMethod(rootObj_, "messageBoxCritical"
+            , Q_ARG(QVariant, QStringLiteral("Error"))
+            , Q_ARG(QVariant, QVariant::fromValue(errorString))
+            , Q_ARG(QVariant, QVariant::fromValue(detailsString)));
       },
       Qt::QueuedConnection);
    }

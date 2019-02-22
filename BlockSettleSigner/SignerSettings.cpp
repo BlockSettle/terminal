@@ -14,6 +14,9 @@ static const QString zmqPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for
 static const QString zmqPrvKeyName = QString::fromStdString("zmqprvkey");
 static const QString zmqPrvKeyHelp = QObject::tr("Private key file (CurveZMQ) for ZMQ connections");
 
+static const QString localTerminalPubKeyFileName = QString::fromStdString("local_term_pk");
+static const QString localTerminalPubKeyFileHelp = QObject::tr("Terminal CurveZMQ public key (local headless mode only)");
+
 static const QString listenName = QString::fromStdString("listen");
 static const QString listenHelp = QObject::tr("IP address to listen on");
 
@@ -41,7 +44,6 @@ static const QString headlessHelp = QObject::tr("Run without UI");
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
-
 SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
    : QObject(nullptr)
 {
@@ -52,20 +54,21 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
    backend_ = std::make_shared<QSettings>(QString::fromStdString(writableDir_ + "/") + fileName, QSettings::IniFormat);
 
    settingDefs_ = {
-      { OfflineMode,       SettingDef(QStringLiteral("Offline"), false)},
-      { TestNet,           SettingDef(QStringLiteral("TestNet"), false) },
-      { WalletsDir,        SettingDef(QStringLiteral("WalletsDir")) },
-      { AutoSignWallet,    SettingDef(QStringLiteral("AutoSignWallet")) },
-      { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_signer.log")) },
-      { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
-      { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
-      { ZMQPubKey,         SettingDef(QStringLiteral("ZMQPubKey"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.pub")) },
-      { ZMQPrvKey,         SettingDef(QStringLiteral("ZMQPrvKey"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.prv")) },
-      { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
-      { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
-      { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
-      { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
-      { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) }
+      { OfflineMode,            SettingDef(QStringLiteral("Offline"), false)},
+      { TestNet,                SettingDef(QStringLiteral("TestNet"), false) },
+      { WalletsDir,             SettingDef(QStringLiteral("WalletsDir")) },
+      { AutoSignWallet,         SettingDef(QStringLiteral("AutoSignWallet")) },
+      { LogFileName,            SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_signer.log")) },
+      { ListenAddress,          SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
+      { ListenPort,             SettingDef(QStringLiteral("ListenPort"), 23456) },
+      { ZMQPubKeyFile,          SettingDef(QStringLiteral("ZMQPubKeyFile"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.pub")) },
+      { ZMQPrvKeyFile,          SettingDef(QStringLiteral("ZMQPrvKeyFile"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.prv")) },
+      { LocalTermZMQPubKeyFile, SettingDef(QStringLiteral("LocalTermZMQPubKeyFile")) },
+      { LimitManualXBT,         SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
+      { LimitAutoSignXBT,       SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
+      { LimitAutoSignTime,      SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
+      { LimitManualPwKeep,      SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
+      { HideEidInfoBox,         SettingDef(QStringLiteral("HideEidInfoBox"), 0) }
    };
    parseArguments(args);
 }
@@ -197,11 +200,14 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    case ListenPort:
       emit listenSocketChanged();
       break;
-   case ZMQPubKey:
+   case ZMQPubKeyFile:
       emit zmqPubKeyFileChanged();
       break;
-   case ZMQPrvKey:
+   case ZMQPrvKeyFile:
       emit zmqPrvKeyFileChanged();
+      break;
+   case LocalTermZMQPubKeyFile:
+      emit localTermZMQPubKeyFileChanged();
       break;
    case LimitManualXBT:
       emit limitManualXbtChanged();
@@ -231,6 +237,8 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addOption({ portName, portHelp, QObject::tr("port") });
    parser.addOption({ zmqPubKeyName, zmqPubKeyHelp, QObject::tr("key") });
    parser.addOption({ zmqPrvKeyName, zmqPrvKeyHelp, QObject::tr("key") });
+   parser.addOption({ localTerminalPubKeyFileName, localTerminalPubKeyFileHelp,
+      QObject::tr("key") });
    parser.addOption({ logName, logHelp, QObject::tr("log") });
    parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
@@ -253,14 +261,25 @@ void SignerSettings::parseArguments(const QStringList &args)
       if (parser.value(zmqPubKeyName).length() != 40) {
          throw std::runtime_error("invalid ZMQ connection pub key size");
       }
-      set(ZMQPubKey, parser.value(zmqPubKeyName), false);
+      set(ZMQPubKeyFile, parser.value(zmqPubKeyName), false);
    }
 
    if (parser.isSet(zmqPrvKeyName)) {
       if (parser.value(zmqPrvKeyName).length() != 40) {
          throw std::runtime_error("invalid ZMQ connection prv key size");
       }
-      set(ZMQPrvKey, parser.value(zmqPrvKeyName), false);
+      set(ZMQPrvKeyFile, parser.value(zmqPrvKeyName), false);
+   }
+
+   if (parser.isSet(localTerminalPubKeyFileName)) {
+      if (!parser.isSet(headlessName)) {
+         throw std::logic_error("Local terminal ZMQ pub key is set only in headless connection mode");
+      }
+      if (parser.value(localTerminalPubKeyFileName).length() != 40) {
+         throw std::runtime_error("Invalid local terminal ZMQ connection pub key size");
+      }
+
+      set(LocalTermZMQPubKeyFile, parser.value(localTerminalPubKeyFileName), false);
    }
 
    if (parser.isSet(logName)) {
@@ -319,18 +338,28 @@ QString SignerSettings::dirDocuments() const
 
 void SignerSettings::setZmqPubKeyFile(const QString &file)
 {
-   if (file == get(ZMQPubKey).toString()) {
+   if (file == get(ZMQPubKeyFile).toString()) {
       return;
    }
-   set(ZMQPubKey, file);
+   set(ZMQPubKeyFile, file);
 }
 
 void SignerSettings::setZmqPrvKeyFile(const QString &file)
 {
-   if (file == get(ZMQPrvKey).toString()) {
+   if (file == get(ZMQPrvKeyFile).toString()) {
       return;
    }
-   set(ZMQPrvKey, file);
+   set(ZMQPrvKeyFile, file);
+}
+
+// File with the local terminal's CurveZMQ public key (40 byte Z85-encoded
+// string). Used only in headless mode.
+void SignerSettings::setLocalTermZMQPubKeyFile(const QString &file)
+{
+   if (file == get(LocalTermZMQPubKeyFile).toString()) {
+      return;
+   }
+   set(LocalTermZMQPubKeyFile, file);
 }
 
 void SignerSettings::setWalletsDir(const QString &val)

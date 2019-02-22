@@ -19,6 +19,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
    Q_PROPERTY(QString zmqPubKeyFile READ zmqPubKeyFile WRITE setZmqPubKeyFile NOTIFY zmqPubKeyFileChanged)
    Q_PROPERTY(QString zmqPrvKeyFile READ zmqPrvKeyFile WRITE setZmqPrvKeyFile NOTIFY zmqPrvKeyFileChanged)
+   Q_PROPERTY(QString localTermZMQPubKeyFile READ localTermZMQPubKeyFile WRITE setLocalTermZMQPubKeyFile NOTIFY localTermZMQPubKeyFileChanged)
    Q_PROPERTY(bool autoSignUnlimited READ autoSignUnlimited NOTIFY limitAutoSignXbtChanged)
    Q_PROPERTY(bool manualSignUnlimited READ manualSignUnlimited NOTIFY limitManualXbtChanged)
    Q_PROPERTY(double limitManualXbt READ limitManualXbt WRITE setLimitManualXbt NOTIFY limitManualXbtChanged)
@@ -46,8 +47,9 @@ public:
       LogFileName,
       ListenAddress,
       ListenPort,
-      ZMQPubKey,
-      ZMQPrvKey,
+      ZMQPubKeyFile,
+      ZMQPrvKeyFile,
+      LocalTermZMQPubKeyFile,
       LimitManualXBT,
       LimitAutoSignXBT,
       LimitAutoSignTime,
@@ -55,8 +57,9 @@ public:
       HideEidInfoBox
    };
 
-   QString zmqPubKeyFile() const { return get(ZMQPubKey).toString(); }
-   QString zmqPrvKeyFile() const { return get(ZMQPrvKey).toString(); }
+   QString zmqPubKeyFile() const { return get(ZMQPubKeyFile).toString(); }
+   QString zmqPrvKeyFile() const { return get(ZMQPrvKeyFile).toString(); }
+   QString localTermZMQPubKeyFile() const { return get(LocalTermZMQPubKeyFile).toString(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
    QString logFileName() const { return get(LogFileName).toString(); }
@@ -89,6 +92,7 @@ public:
    void setPort(const QString &val) { set(ListenPort, val); }
    void setZmqPubKeyFile(const QString &file);
    void setZmqPrvKeyFile(const QString &file);
+   void setLocalTermZMQPubKeyFile(const QString &file);
    void setLimitManualXbt(const double val) { setXbtLimit(val, LimitManualXBT); }
    void setLimitAutoSignXbt(const double val) { setXbtLimit(val, LimitAutoSignXBT); }
    void setLimitAutoSignTimeStr(const QString &val) { set(LimitAutoSignTime, intervalStrToSeconds(val)); }
@@ -113,8 +117,9 @@ signals:
    void dirDocumentsChanged();
    void autoSignWalletChanged();
    void hideEidInfoBoxChanged();
-   void zmqPrvKeyFileChanged();
    void zmqPubKeyFileChanged();
+   void zmqPrvKeyFileChanged();
+   void localTermZMQPubKeyFileChanged();
 
 private:
    QVariant get(Setting s) const;

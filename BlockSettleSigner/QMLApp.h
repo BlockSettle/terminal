@@ -66,6 +66,7 @@ private:
    void disconnect();
 
    void initZmqKeys();
+   void initLocalTermZMQKeys();
    void registerQtTypes();
 
    std::shared_ptr<spdlog::logger>  logger_;
@@ -83,6 +84,7 @@ private:
    QSystemTrayIcon      *  trayIcon_ = nullptr;
    SecureBinaryData                             zmqPubKey_;
    SecureBinaryData                             zmqPrvKey_;
+   SecureBinaryData                             localTermZMQPubKey_;
 
    enum NotificationMode {
       QSystemTray,
