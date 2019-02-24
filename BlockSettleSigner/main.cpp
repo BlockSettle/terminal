@@ -155,6 +155,7 @@ bool buildZMQConnFiles(std::shared_ptr<SignerSettings> inSettings
    return true;
 }
 
+// Startup code for the headless (command line) version.
 static int HeadlessApp(int argc, char **argv)
 {
    QCoreApplication app(argc, argv);
@@ -170,18 +171,8 @@ static int HeadlessApp(int argc, char **argv)
    logger->set_level(spdlog::level::debug);
    logger->flush_on(spdlog::level::debug);
 
-   logger->info("Starting BS Signer...");
+   logger->info("Starting BlockSettle Signer (Headless)");
    try {
-      // Go ahead and build the ZMQ connection encryption files, even if
-      // they're not used.
-      if (!buildZMQConnFiles(settings, logger)) {
-         if (logger) {
-            logger->info("[{}] ZMQ connection keypair files could not be "
-               "generated. The ZMQ connection can not be created."
-               , __func__);
-         }
-      }
-
       HeadlessAppObj appObj(logger, settings);
       QObject::connect(&appObj, &HeadlessAppObj::finished, &app
                        , &QCoreApplication::quit);
@@ -245,6 +236,7 @@ public:
    }
 };*/
 
+// Startup code for the GUI.
 static int QMLApp(int argc, char **argv)
 {
    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -285,7 +277,7 @@ static int QMLApp(int argc, char **argv)
 
    // Go ahead and build the headless connection encryption files, even if we
    // don't use them. If they already exist, we'll leave them alone.
-   logger->info("Starting BS Signer...");
+   logger->info("Starting BlockSettle Signer (GUI)");
    if (!buildZMQConnFiles(settings, logger)) {
       if (logger) {
          logger->info("[{}] ZMQ connection keypair files could not be "

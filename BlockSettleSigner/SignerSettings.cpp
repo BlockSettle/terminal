@@ -275,9 +275,6 @@ void SignerSettings::parseArguments(const QStringList &args)
       if (!parser.isSet(headlessName)) {
          throw std::logic_error("Local terminal ZMQ pub key is set only in headless connection mode");
       }
-      if (parser.value(localTerminalPubKeyFileName).length() != 40) {
-         throw std::runtime_error("Invalid local terminal ZMQ connection pub key size");
-      }
 
       set(LocalTermZMQPubKeyFile, parser.value(localTerminalPubKeyFileName), false);
    }

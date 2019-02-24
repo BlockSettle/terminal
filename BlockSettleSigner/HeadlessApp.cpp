@@ -9,36 +9,26 @@
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
 #include "HeadlessApp.h"
-#include "HeadlessContainerListener.h"
+#include "HeadlessContainer.h"
 #include "OfflineProcessor.h"
 #include "SignerSettings.h"
 #include "WalletsManager.h"
-#include "ZmqSecuredServerConnection.h"
+#include "ZmqSecuredDataConnection.h"
 #include "ZMQHelperFunctions.h"
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignerSettings> &params)
    : logger_(logger), settings_(params)
 {
-   // Get the ZMQ server public key.
-   if (!bs::network::readZmqKeyFile(params->zmqPubKeyFile(), zmqPubKey_
-      , true, logger)) {
-      throw std::runtime_error("failed to read ZMQ server public key");
-   }
-
-   // Get the ZMQ server private key.
-   if (!bs::network::readZmqKeyFile(params->zmqPrvKeyFile(), zmqPrvKey_
-      , false, logger)) {
-      throw std::runtime_error("failed to read ZMQ server private key");
-   }
-
    walletsMgr_ = std::make_shared<WalletsManager>(logger);
-   logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
+   logger_->info("[{}] BlockSettle Signer {} started", __func__
+      , SIGNER_VERSION_STRING);
 }
 
 void HeadlessAppObj::Start()
 {
-   logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
+   logger_->debug("Loading wallets from dir <{}>"
+      , settings_->getWalletsDir().toStdString());
    walletsMgr_->LoadWallets(settings_->netType(), settings_->getWalletsDir());
    if (!walletsMgr_->GetSettlementWallet()) {
       if (!walletsMgr_->CreateSettlementWallet(QString())) {
@@ -63,28 +53,44 @@ void HeadlessAppObj::Start()
 
 void HeadlessAppObj::OnlineProcessing()
 {
-   logger_->debug("Using command socket {}:{}, network {}"
+   logger_->debug("[{}] Using listening socket {}:{}, network {}", __func__
       , settings_->listenAddress().toStdString()
       , settings_->port().toStdString()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
-   const ConnectionManager connMgr(logger_);
-   connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(zmqPubKey_, zmqPrvKey_)) {
-      logger_->error("Failed to establish secure connection");
-      throw std::runtime_error("secure connection problem");
+   SecureBinaryData termZMQPubKey;
+   if (!bs::network::readZmqKeyFile(settings_->localTermZMQPubKeyFile()
+      , termZMQPubKey, true, logger_)) {
+      logger_->error("[{}] Failed to read terminal ZMQ public key"
+         , __func__);
+      throw std::runtime_error("Failed to read terminal ZMQ public key");
    }
 
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
-      , walletsMgr_, settings_->getWalletsDir().toStdString()
-      , settings_->netType());
-   listener_->SetLimits(settings_->limits());
-   if (!connection_->BindConnection(settings_->listenAddress().toStdString()
-      , settings_->port().toStdString(), listener_.get())) {
-      logger_->error("Failed to bind to {}:{}"
-         , settings_->listenAddress().toStdString()
-         , settings_->port().toStdString());
-      throw std::runtime_error("failed to bind listening socket");
+   const ConnectionManager connMgr(logger_);
+   connection_->SetServerPublicKey(termZMQPubKey);
+   if (!connection_->SetServerPublicKey(termZMQPubKey)) {
+      logger_->error("[{}] Failed to set ZMQ server public key", __func__);
+      throw std::runtime_error("Failed to set ZMQ server public key");
+      connection_ = nullptr;
+      return;
+   }
+
+/*   if (opMode() == OpMode::RemoteInproc) {
+      connection_->SetZMQTransport(ZMQTransport::InprocTransport);
+   }*/
+
+   {
+      /////// TO DO: Connect everything. There are some architecture questions
+      /////// to unwind first.
+//      std::lock_guard<std::mutex> lock(mutex_);
+      listener_ = std::make_shared<HeadlessListener>(logger_, connection_
+         , settings_->netType());
+/*      connect(listener_.get(), &HeadlessListener::connected, this, &RemoteSigner::onConnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authenticated, this, &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authFailed, [this] { authPending_ = false; });
+      connect(listener_.get(), &HeadlessListener::disconnected, this, &RemoteSigner::onDisconnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::error, this, &RemoteSigner::onConnError, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::PacketReceived, this, &RemoteSigner::onPacketReceived, Qt::QueuedConnection);*/
    }
 }
 

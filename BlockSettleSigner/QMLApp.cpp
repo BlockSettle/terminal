@@ -101,6 +101,8 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
       connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    }
 #endif // BS_USE_DBUS
+
+/////// TO DO: Generate keys here.
 }
 
 void QMLAppObj::settingsConnections()
