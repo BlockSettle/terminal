@@ -10,6 +10,7 @@
 #define _H_ASSET_ENCRYPTION
 
 #include <memory>
+
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
 

@@ -57,6 +57,10 @@ class ZeroMQSettings(Configurator):
         command.append('cmake')
         command.append(self.get_unpacked_sources_dir())
         command.append('-DZMQ_BUILD_TESTS=OFF')
+
+        if self._project_settings.get_link_mode() == 'shared':
+            command.append('-DBUILD_STATIC=OFF')
+
         command.append('-G')
         command.append(self._project_settings.get_cmake_generator())
 

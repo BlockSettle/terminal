@@ -59,6 +59,7 @@ class WebsocketsSettings(Configurator):
         if self._project_settings.get_link_mode() == 'shared':
             project_name = 'websockets_shared'
 
+        
         command = ['msbuild',
                    self.get_solution_file(),
                    '/t:' + project_name,
@@ -87,14 +88,18 @@ class WebsocketsSettings(Configurator):
             return 'Debug'
 
     def install_win(self):
-        lib_dir = os.path.join(self.get_build_dir(), 'lib', self.get_win_build_configuration())
-        include_dir = os.path.join(self.get_build_dir(), 'include')
-
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-        self.filter_copy(lib_dir, install_lib_dir, '.lib')
+        lib_dir = os.path.join(self.get_build_dir(), 'lib', self.get_win_build_configuration())
+        # get includes from unpacked dir because cmake have bug during copying includes to build dir
+        include_dir = os.path.join(self.get_unpacked_sources_dir(), 'include')
         self.filter_copy(include_dir, install_include_dir)
+        # set once more build dir to copy generated includes
+        include_dir = os.path.join(self.get_build_dir(), 'include')
+
+        self.filter_copy(lib_dir, install_lib_dir, '.lib')
+        self.filter_copy(include_dir, install_include_dir, False)
 
         return True
 

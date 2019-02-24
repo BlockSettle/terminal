@@ -89,7 +89,7 @@ class OpenSslSettings(Configurator):
         else:
             command.append('make')
 
-        command.append('install')
+        command.append('install_sw')
         result = subprocess.call(command)
         if result != 0:
             print('OpenSSL install failed')

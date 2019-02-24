@@ -42,7 +42,7 @@ class ProtobufSettings(Configurator):
                    self._project_settings.get_cmake_generator(),
                    '-Dprotobuf_BUILD_TESTS=OFF',
                    '-Dprotobuf_MSVC_STATIC_RUNTIME=ON']
-        # TODO are you sure?
+
         if self._project_settings.get_link_mode() == 'shared':
             command.append('-Dprotobuf_BUILD_SHARED_LIBS=ON')
 
@@ -70,12 +70,20 @@ class ProtobufSettings(Configurator):
 
     def make_windows(self):
         print('Making protobuf: might take a while')
+
+        command = ['msbuild',
+                   self.get_solution_file(),
+                   '/t:protoc',
+                   '/p:Configuration=' + self.get_win_build_mode(),
+                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
+        """
         command = ['devenv',
                    self.get_solution_file(),
                    '/build',
                    self.get_win_build_mode(),
                    '/project',
                    'protoc']
+        """
 
         result = subprocess.call(command)
         return result == 0

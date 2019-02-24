@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include <BSNetwork_export.h>
 
 namespace spdlog
 {
@@ -11,7 +12,7 @@ namespace spdlog
 
 class ZmqStreamServerConnection;
 
-class ActiveStreamClient
+class BSNetwork_EXPORT ActiveStreamClient
 {
 public:
    ActiveStreamClient(const std::shared_ptr<spdlog::logger>& logger);

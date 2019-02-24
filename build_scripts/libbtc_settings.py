@@ -37,13 +37,21 @@ class LibBTC(Configurator):
                    '-DGMP_INSTALL_DIR=' + self.mpir.get_install_dir(),
                    '-G',
                    self._project_settings.get_cmake_generator()]
-
+ 
+        # make shared
+        """
+        if self._project_settings.on_windows():
+            if self._project_settings.get_link_mode() == 'shared':
+                command.append('-DLIBBTC_SHARED=ON')
         # only static version
+        """
+        """
         if self._project_settings.on_windows():
             if self._project_settings.get_build_mode() == 'release':
                 command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
             else:
                 command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
+        """
 
         result = subprocess.call(command)
 

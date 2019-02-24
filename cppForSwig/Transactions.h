@@ -11,6 +11,7 @@
 
 #include <map>
 #include <vector>
+#include <ArmoryCryptoLib_export.h>
 
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
@@ -35,7 +36,7 @@ struct TxInData
 };
  
 ////////////////////////////////////////////////////////////////////////////////
-class TransactionStub
+class ArmoryCryptoLib_EXPORT TransactionStub
 {
 protected:
    unsigned flags_ = 0;
@@ -140,7 +141,7 @@ private:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class TransactionVerifier : public TransactionStub
+class ArmoryCryptoLib_EXPORT TransactionVerifier : public TransactionStub
 {
 public:
    typedef std::map<BinaryData, std::map<unsigned, UTXO>> utxoMap;

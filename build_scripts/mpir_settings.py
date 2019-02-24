@@ -60,7 +60,7 @@ class MPIRSettings(Configurator):
         buildcfg = self.get_win_build_mode() + '|' + self.get_win_platform()
 
         # Can't use msbuild here to speedup compilation because 
-        # someone forgot to set projects in solution for build
+        # someone forgot in solution to set project dll_mpir_gc properties for build
         command = ['devenv',
                    self.get_solution_file(),
                    '/build',

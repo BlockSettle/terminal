@@ -23,6 +23,7 @@
 #include <cassert>
 #include <functional>
 
+
 #include "BinaryData.h"
 #include "BtcUtils.h"
 #include "TxClasses.h"

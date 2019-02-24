@@ -10,6 +10,7 @@
 #define _H_SIGNER
 
 #include <set>
+#include <ArmoryCryptoLib_export.h>
 
 #include "EncryptionUtils.h"
 #include "TxClasses.h"
@@ -242,7 +243,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class Signer : public TransactionStub
+class ArmoryCryptoLib_EXPORT Signer : public TransactionStub
 {
    friend class SignerProxyFromSigner;
 

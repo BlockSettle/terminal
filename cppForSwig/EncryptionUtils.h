@@ -58,6 +58,7 @@
 #include <map>
 #include <cmath>
 #include <algorithm>
+#include <ArmoryCryptoLib_export.h>
 
 #include "BinaryData.h"
 #include "UniversalTimer.h"
@@ -239,7 +240,7 @@ public:
 //
 // These methods might as well just be static methods, but SWIG doesn't like
 // static methods.  So we will invoke these via CryptoECDSA().Function()
-class CryptoECDSA
+class ArmoryCryptoLib_EXPORT CryptoECDSA
 {
 public:
    CryptoECDSA(void) {}

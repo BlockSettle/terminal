@@ -10,6 +10,7 @@
 #define _H_TXEVALSTATE
 
 #include <map>
+#include <ArmoryCryptoLib_export.h>
 #include "BinaryData.h"
 
 enum PubKeyType
@@ -22,7 +23,7 @@ enum PubKeyType
 
 
 ////////////////////////////////////////////////////////////////////////////////
-class TxInEvalState
+class ArmoryCryptoLib_EXPORT TxInEvalState
 {
    friend class StackInterpreter;
 
@@ -47,7 +48,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class TxEvalState
+class ArmoryCryptoLib_EXPORT TxEvalState
 {
 private:
    std::map<unsigned, TxInEvalState> evalMap_;

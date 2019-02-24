@@ -16,12 +16,17 @@
 
 #include <list>
 #include <vector>
+
+
 #include "log.h"
 #include "BinaryData.h"
 #include "BtcUtils.h"
 #include "DbHeader.h"
 #include "BlockObj.h"
 #include "StoredBlockObj.h"
+#include "txio.h"
+#include "BlockDataMap.h"
+#include "Blockchain.h"
 
 #include "lmdbpp.h"
 #include "ThreadSafeClasses.h"
@@ -40,8 +45,6 @@
 #define SHARD_FILTER_SCRADDR_STEP   2
 #define SHARD_FILTER_SPENTNESS_STEP 2
 #endif
-
-class Blockchain;
 
 ////////////////////////////////////////////////////////////////////////////////
 struct InvalidShardException

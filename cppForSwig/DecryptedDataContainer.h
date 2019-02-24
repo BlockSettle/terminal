@@ -10,6 +10,7 @@
 #define _H_DECRYPTED_DATA_CONTAINER
 
 #include <functional>
+
 #include "Assets.h"
 #include "ReentrantLock.h"
 #include "BinaryData.h"

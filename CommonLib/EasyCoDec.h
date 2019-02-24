@@ -4,8 +4,9 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <CommonLib_export.h>
 
-class EasyCoDec
+class CommonLib_EXPORT EasyCoDec
 {
 public:
    EasyCoDec();

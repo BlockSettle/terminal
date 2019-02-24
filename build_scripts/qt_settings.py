@@ -44,7 +44,7 @@ class QtSettings(Configurator):
         modules_to_skip = ['doc', 'webchannel', 'webview', 'sensors', 'serialport',
                            'script', 'multimedia', 'wayland', 'location', 'webglplugin', 'gamepad',
                            'purchasing', 'canvas3d', 'speech', '3d', 'androidextras', 'canvas3d',
-                           'charts', 'connectivity', 'virtualkeyboard']
+                           'connectivity', 'virtualkeyboard']
         if self._project_settings.get_link_mode() == 'static':
             modules_to_skip.append('imageformats')
 
