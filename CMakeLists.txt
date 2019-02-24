@@ -11,11 +11,27 @@ IF (NOT CMAKE_BUILD_TYPE)
    SET(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+option(BSTERMINAL_SHARED_LIBS "Build shared libraries" OFF)
+
+IF(BSTERMINAL_SHARED_LIBS)
+   message("BUILDING SHARED LIBS")
+   set(BUILD_SHARED_LIBS ON)
+   add_definitions(-DPROTOBUF_USE_DLLS)
+ENDIF()
+
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-   SET(THIRD_PARTY_BUILD_MODE "debug")
-ELSE(CMAKE_BUILD_TYPE STREQUAL "Debug")
-   SET(THIRD_PARTY_BUILD_MODE "release")
-ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET(THIRD_PARTY_BUILD_MODE "debug-shared")
+   ELSE()
+      SET(THIRD_PARTY_BUILD_MODE "debug")
+   ENDIF()
+ELSE()
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET(THIRD_PARTY_BUILD_MODE "release-shared")
+   ELSE()
+      SET(THIRD_PARTY_BUILD_MODE "release")
+   ENDIF()
+ENDIF()
 
 add_definitions(-DNOMINMAX)
 
@@ -64,10 +80,10 @@ get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 
 IF( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
   MESSAGE( FATAL_ERROR "THis is not a Git repository, but it should be.")
-ELSE ( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
+ELSE ()
    # we only take the 8 first characters
   string(SUBSTRING ${GIT_SHA1} 0 8 BS_REVISIOIN_SHA1)
-ENDIF ( GIT_SHA1 STREQUAL GITDIR-NOTFOUND )
+ENDIF ()
 
 # set DEV_3RD_ROOT env variable to your custom location of 3rd party components
 IF (DEFINED ENV{DEV_3RD_ROOT})
@@ -84,8 +100,17 @@ SET( PROJECT_BINARY_DIR ${BLOCK_SETTLE_ROOT}/build_terminal/${CMAKE_BUILD_TYPE} 
 SET( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
 IF( WIN32 )
    # output libs to same path as binaries on windows just to make life easier
-   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-   SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+      SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${EXECUTABLE_OUTPUT_PATH})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${EXECUTABLE_OUTPUT_PATH})
+   ELSE()
+      SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+      SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+   ENDIF()
    add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
    SET( LIBRARY_OUTPUT_PATH ${EXECUTABLE_OUTPUT_PATH} )
 ELSE()
@@ -239,7 +264,11 @@ SET(WS_LIB_DIR ${WS_PACKAGE_ROOT}/lib)
 SET(WS_INCLUDE_DIR ${WS_PACKAGE_ROOT}/include)
 
 IF (WIN32)
-   SET(WS_LIB_NAME websockets_static)
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET(WS_LIB_NAME websockets)
+   ELSE()
+      SET(WS_LIB_NAME websockets_static)
+   ENDIF()
 ELSE(WIN32)
    SET(WS_LIB_NAME libwebsockets.a)
 ENDIF(WIN32)
@@ -379,46 +408,65 @@ IF(WIN32)
       userenv
       version
       UxTheme
-      Qt5::QWindowsIntegrationPlugin
-      Qt5::QICOPlugin
-      Qt5::QWindowsPrinterSupportPlugin)
+   )
+      
+   IF(NOT BSTERMINAL_SHARED_LIBS)
+      LIST(APPEND OS_SPECIFIC_LIBS
+         Qt5::QWindowsIntegrationPlugin
+         Qt5::QICOPlugin
+         Qt5::QWindowsPrinterSupportPlugin
+      )
+   ENDIF()
 
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
       SET(QT_LIBS
-         qtharfbuzzd.lib
-         qtpcre2d.lib
          qtlibpngd.lib
          Qt5FontDatabaseSupportd.lib
          Qt5EventDispatcherSupportd.lib
          Qt5ThemeSupportd.lib
          Qt5WindowsUIAutomationSupportd.lib
          Qt5AccessibilitySupportd.lib
-         Qt5Chartsd.lib )
-      LIST(APPEND OS_SPECIFIC_LIBS
-         msvcrtd
-         ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
+         Qt5Chartsd.lib
       )
+         
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quickd.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgetsd.lib
          ${QT5_LIB_ROOT}/Qt5QuickControls2d.lib
          ${QT5_LIB_ROOT}/Qt5QuickTemplates2d.lib
-         ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugind.lib
-         ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
-         ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
-         ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
-         ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
-         ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugind.lib
-         ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
-         ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
-         ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
-         ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
-         ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
       )
+      
+      LIST(APPEND OS_SPECIFIC_LIBS
+         msvcrtd
+      )
+
+      IF(NOT BSTERMINAL_SHARED_LIBS)
+         LIST(APPEND OS_SPECIFIC_LIBS
+            ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
+         )
+         
+         LIST(APPEND QT_LIBS
+            qtharfbuzzd.lib
+            qtpcre2d.lib
+         )
+         
+         LIST(APPEND QT_QUICK_LIBS
+            ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugind.lib
+            ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
+            ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
+            ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
+            ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
+         )
+      ENDIF()
+      
    ELSE()
       SET(QT_LIBS
-         qtharfbuzz.lib
-         qtpcre2.lib
          qtlibpng.lib
          Qt5FontDatabaseSupport.lib
          Qt5EventDispatcherSupport.lib
@@ -426,27 +474,41 @@ IF(WIN32)
          Qt5WindowsUIAutomationSupport.lib
          Qt5AccessibilitySupport.lib
          Qt5Charts.lib)
-      LIST(APPEND OS_SPECIFIC_LIBS
-         msvcrt
-         ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
-      )
+
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quick.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgets.lib
          ${QT5_LIB_ROOT}/Qt5QuickControls2.lib
          ${QT5_LIB_ROOT}/Qt5QuickTemplates2.lib
-         ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugin.lib
-         ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
-         ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
-         ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
-         ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
-         ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugin.lib
-         ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
-         ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
-         ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
-         ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
-         ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
       )
+      
+      IF(NOT BSTERMINAL_SHARED_LIBS)
+         LIST(APPEND QT_LIBS
+            qtharfbuzz.lib
+            qtpcre2.lib
+         )
+
+         LIST(APPEND OS_SPECIFIC_LIBS
+         # Should be LIBCMT.LIB, LIBCPMT.LIB ?
+            msvcrt
+            ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
+         )
+         
+         LIST(APPEND QT_QUICK_LIBS
+            ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugin.lib
+            ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
+            ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
+            ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
+            ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
+         )
+      ENDIF()
+      
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE(WIN32)
    FIND_PACKAGE( ZLIB )
