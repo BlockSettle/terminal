@@ -17,6 +17,7 @@
 #include "BtcUtils.h"
 #include "DBUtils.h"
 
+//PayStruct flags
 #define USE_FULL_CUSTOM_LIST  1
 #define ADJUST_FEE            2
 #define SHUFFLE_ENTRIES       4

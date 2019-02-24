@@ -138,16 +138,16 @@ UtxoSelection CoinSelection::getUtxoSelection(
          //1 uncompressed p2pkh input + txoutSizeByte + 1 change output
          compiledFee_oneOutput = float(215 + payStruct.size_) * payStruct.fee_byte_;
 
-         //figure out median txin count
+         //figure out average txin count
          float valPct = float(payStruct.spendVal_) / float(utxoVecVal);
          if (valPct > 1.0f)
             valPct = 1.0f;
 
-         auto medianTxInCount = unsigned(valPct * float(utxoVec.size()));
+         auto averageTxInCount = unsigned(valPct * float(utxoVec.size()));
 
          //medianTxInCount p2pkh inputs + txoutSizeByte + 1 change output
          compiledFee_manyOutputs = 10 + 
-            float(medianTxInCount * 180 + 35 + payStruct.size_) * payStruct.fee_byte_;
+            float(averageTxInCount * 180 + 35 + payStruct.size_) * payStruct.fee_byte_;
       }
 
       //create deterministic selections
