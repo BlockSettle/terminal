@@ -59,6 +59,8 @@ public:
       celerPort,
       mdServerHost,
       mdServerPort,
+      mdhsHost,
+      mdhsPort,
       chatServerHost,
       chatServerPort,
       chatServerPubKey,

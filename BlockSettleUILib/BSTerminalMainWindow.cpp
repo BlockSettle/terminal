@@ -195,6 +195,10 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
          applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
          applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
       }
+	  if (!settings.mdhs.host.empty()) {
+		  applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
+		  applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
+	  }
 #ifndef NDEBUG
 	  QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
 	  QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
@@ -615,8 +619,7 @@ void BSTerminalMainWindow::InitChatView()
 
 void BSTerminalMainWindow::InitChartsView()
 {
-    ui->widgetChart->init(applicationSettings_, mdProvider_, armory_
-                          , logMgr_->logger("ui"));
+    ui->widgetChart->init(applicationSettings_, mdProvider_, connectionManager_, logMgr_->logger("ui"));
 }
 
 // Initialize widgets related to transactions.
