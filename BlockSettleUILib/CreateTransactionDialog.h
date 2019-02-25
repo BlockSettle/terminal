@@ -9,6 +9,7 @@
 #include <QMenu>
 #include <QPoint>
 #include <QString>
+#include "CoreWallet.h"
 #include "MetaData.h"
 
 class ArmoryConnection;
@@ -76,7 +77,7 @@ protected:
 
    virtual bool HaveSignedImportedTransaction() const { return false; }
 
-   std::vector<bs::wallet::TXSignRequest> ImportTransactions();
+   std::vector<bs::core::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
    bool CreateTransaction();
 

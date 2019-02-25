@@ -2,6 +2,7 @@
 #define __CREATE_TRANSACTION_DIALOG_ADVANCED_H__
 
 #include "CreateTransactionDialog.h"
+#include "CoreWallet.h"
 
 namespace Ui {
     class CreateTransactionDialogAdvanced;
@@ -42,7 +43,7 @@ public:
    void preSetAddress(const QString& address);
    void preSetValue(const double value);
 
-   void SetImportedTransactions(const std::vector<bs::wallet::TXSignRequest>& transactions);
+   void SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions);
 
 protected:
    bool eventFilter(QObject *watched, QEvent *) override;

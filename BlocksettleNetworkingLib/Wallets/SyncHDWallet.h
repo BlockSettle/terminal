@@ -101,6 +101,9 @@ namespace bs {
             BinaryData        userId_;
             std::shared_ptr<SignContainer>      signContainer_;
             std::shared_ptr<spdlog::logger>     logger_;
+            std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
+            std::vector<SecureBinaryData>          encryptionKeys_;
+            std::pair<unsigned int, unsigned int>  encryptionRank_{ 0,0 };
 
             void rescanBlockchain(const cb_scan_notify &, const cb_scan_read_last &, const cb_scan_write_last &);
 

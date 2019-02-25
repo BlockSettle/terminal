@@ -211,7 +211,6 @@ message HDLeafWO
 message HDGroupWO
 {
    string   path = 1;
-   string   name = 2;
 }
 
 message HDWalletWO

@@ -67,7 +67,7 @@ namespace bs {
          }
 
          virtual int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr);
-//         bool containsAddress(const bs::Address &addr) override;
+         bool containsAddress(const bs::Address &addr) override;
 
          std::string walletId() const override { return walletId_; }
          std::string description() const override { return desc_; }

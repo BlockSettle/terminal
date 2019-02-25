@@ -39,15 +39,15 @@ namespace bs {
 
          std::shared_ptr<SettlementAddressEntry> newAddress(const BinaryData &settlementId
             , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment = {});
-//         bool containsAddress(const bs::Address &addr) override;
+         bool containsAddress(const bs::Address &addr) override;
 
          wallet::Type type() const override { return wallet::Type::Settlement; }
 
          static std::string fileNamePrefix() { return "settlement_"; }
          std::string getFileName(const std::string &dir) const override;
 
-         BinaryData signPayoutTXRequest(const bs::wallet::TXSignRequest &, const KeyPair &, const BinaryData &settlementId
-            , const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
+         BinaryData signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const KeyPair &
+            , const BinaryData &settlementId, const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
 
          std::shared_ptr<ResolverFeed> getResolver(const SecureBinaryData &) override { return nullptr; }   // can't resolve without external data
          std::shared_ptr<ResolverFeed> getPublicKeyResolver() override { return nullptr; }   // no public keys are stored

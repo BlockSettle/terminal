@@ -449,24 +449,11 @@ bool PlainWallet::addressIndexExists(const std::string &index) const
    return (assets_.find(id) != assets_.end());
 }
 
-/*AddressEntryType PlainWallet::getAddrTypeForAddr(const BinaryData &data)
-{
-   const std::vector<AddressEntryType> addrTypes = {AddressEntryType_P2WPKH
-      , AddressEntryType_P2PKH, AddressEntryType_P2SH, AddressEntryType_P2WSH };
-   for (const auto &aet : addrTypes) {
-      const bs::Address addr(data, aet);
-      if (containsAddress(addr)) {
-         return aet;
-      }
-   }
-   return AddressEntryType_Default;
-}*/
-
-/*bool PlainWallet::containsAddress(const bs::Address &addr)
+bool PlainWallet::containsAddress(const bs::Address &addr)
 {
    const auto itAsset = assetByAddr_.find(addr);
    return (itAsset != assetByAddr_.end());
-}*/
+}
 
 SecureBinaryData PlainWallet::getPublicKeyFor(const bs::Address &addr)
 {

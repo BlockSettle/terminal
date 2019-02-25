@@ -46,6 +46,11 @@ void hd::Wallet::synchronize()
       }
       for (const auto &leaf : getLeaves()) {
          leaf->synchronize();
+         if (encryptionTypes_.empty()) {  //FIXME: pass this directly for HD wallet at sync
+            encryptionTypes_ = leaf->encryptionTypes();
+            encryptionKeys_ = leaf->encryptionKeys();
+            encryptionRank_ = leaf->encryptionRank();
+         }
       }
    };
    signContainer_->syncHDWallet(walletId(), cbProcess);
@@ -266,4 +271,19 @@ bool hd::Wallet::isPrimary() const
       return true;
    }
    return false;
+}
+
+std::vector<bs::wallet::EncryptionType> hd::Wallet::encryptionTypes() const
+{
+   return encryptionTypes_;
+}
+
+std::vector<SecureBinaryData> hd::Wallet::encryptionKeys() const
+{
+   return encryptionKeys_;
+}
+
+bs::wallet::KeyRank hd::Wallet::encryptionRank() const
+{
+   return encryptionRank_;
 }

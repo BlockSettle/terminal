@@ -158,31 +158,4 @@ private:
 };
 
 
-class QmlWalletsViewModel : public WalletsViewModel
-{
-   Q_OBJECT
-public:
-   QmlWalletsViewModel(const std::shared_ptr<WalletsManager>& walletsMgr
-                       , QObject *parent = nullptr
-                       , bool showOnlyRegular = false)
-      : WalletsViewModel(walletsMgr, "", nullptr, parent, showOnlyRegular) {}
-   ~QmlWalletsViewModel() override = default;
-
-   enum Roles {
-      firstRole = Qt::UserRole + 1,
-      NameRole = firstRole,
-      DescRole,
-      StateRole,
-      WalletIdRole,
-      IsHDRootRole,
-      RootWalletIdRole,
-      IsEncryptedRole,
-      EncKeyRole
-   };
-   Q_ENUM(Roles)
-
-   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-   QHash<int, QByteArray> roleNames() const Q_DECL_OVERRIDE;
-};
-
 #endif // __WALLETS_VIEW_MODEL_H__

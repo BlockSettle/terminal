@@ -102,16 +102,16 @@ SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRe
 }
 
 
-std::vector<bs::wallet::TXSignRequest> ParseOfflineTXFile(const std::string &data)
+std::vector<bs::core::wallet::TXSignRequest> ParseOfflineTXFile(const std::string &data)
 {
    Storage::Signer::File fileContainer;
    if (!fileContainer.ParseFromString(data)) {
       return {};
    }
-   std::vector<bs::wallet::TXSignRequest> result;
+   std::vector<bs::core::wallet::TXSignRequest> result;
    for (int i = 0; i < fileContainer.payload_size(); i++) {
       const auto container = fileContainer.payload(i);
-      bs::wallet::TXSignRequest txReq;
+      bs::core::wallet::TXSignRequest txReq;
       if (container.type() == Storage::Signer::RequestFileType) {
          Storage::Signer::TXRequest tx;
          if (!tx.ParseFromString(container.data())) {

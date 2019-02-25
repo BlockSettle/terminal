@@ -40,19 +40,21 @@ namespace bs {
          void loadWallets(NetworkType, const std::string &walletsPath, const CbProgress &cb = nullptr);
          void backupWallet(const HDWalletPtr &, const std::string &targetDir) const;
 
+         bool empty() const { return wallets_.empty(); }
 //         size_t getWalletsCount() const { return wallets_.size(); }
-//         hd_wallet_type getPrimaryWallet() const;
 //         wallet_gen_type getWallet(const unsigned int index) const;
          WalletPtr getWalletById(const std::string& walletId) const;
-//         wallet_gen_type getWalletByAddress(const bs::Address &addr) const;
+         WalletPtr getWalletByAddress(const bs::Address &addr) const;
 
          bool createSettlementWallet(NetworkType, const std::string &walletsPath);
-         const std::shared_ptr<SettlementWallet> getSettlementWallet() const { return settlementWallet_; }
+         std::shared_ptr<SettlementWallet> getSettlementWallet() const { return settlementWallet_; }
+         WalletPtr getAuthWallet() const;
+         HDWalletPtr getPrimaryWallet() const;
 
          size_t getHDWalletsCount() const { return hdWalletsId_.size(); }
          const HDWalletPtr getHDWallet(const unsigned int index) const;
          const HDWalletPtr getHDWalletById(const std::string &walletId) const;
-//         const hd_wallet_type getHDRootForLeaf(const std::string &walletId) const;
+         const HDWalletPtr getHDRootForLeaf(const std::string &walletId) const;
 
          bool deleteWalletFile(const WalletPtr &);
          bool deleteWalletFile(const HDWalletPtr &);
@@ -65,8 +67,6 @@ namespace bs {
          void addWallet(const HDWalletPtr &, const std::string &walletsPath);
 
       private:
-//         bool empty() const { return (wallets_.empty() && !settlementWallet_); }
-
          void addWallet(const WalletPtr &);
 
          bool isWalletFile(const std::string &fileName) const;

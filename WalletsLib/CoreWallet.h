@@ -232,16 +232,11 @@ namespace bs {
 
          virtual void setChainCode(const BinaryData &) {}
 
-         /*         virtual void setLogger(const std::shared_ptr<spdlog::logger> &logger) {
-                     logger_ = logger;
-                  }
-                  virtual std::shared_ptr<spdlog::logger> getLogger() const { return logger_; }*/
-
          bool operator ==(const Wallet &w) const { return (w.walletId() == walletId()); }
          bool operator !=(const Wallet &w) const { return (w.walletId() != walletId()); }
 
-         //         virtual bool containsAddress(const bs::Address &addr) = 0;
-         //         virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
+         virtual bool containsAddress(const bs::Address &addr) = 0;
+         virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
          virtual BinaryData getRootId() const = 0;
 
          //         virtual bool isInitialized() const { return inited_; }
@@ -295,8 +290,6 @@ namespace bs {
       protected:
          virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;
          virtual LMDB *getDB() = 0;
-
-         //         virtual AddressEntryType getAddrTypeForAddr(const BinaryData &) = 0;
 
       private:
          bool isSegWitScript(const BinaryData &script);

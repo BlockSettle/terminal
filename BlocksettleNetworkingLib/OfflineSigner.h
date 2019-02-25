@@ -83,6 +83,6 @@ private:
 };
 
 
-std::vector<bs::wallet::TXSignRequest> ParseOfflineTXFile(const std::string &data);
+std::vector<bs::core::wallet::TXSignRequest> ParseOfflineTXFile(const std::string &data);
 
 #endif // __OFFLINE_SIGNER_H__

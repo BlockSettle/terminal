@@ -196,21 +196,12 @@ bs::Address SettlementWallet::createAddressWithIndex(const std::string &index, A
       , BinaryData::CreateFromHex(sellAuthKey))->getPrefixedHash();
 }
 
-/*bool SettlementWallet::containsAddress(const bs::Address &addr)
+bool SettlementWallet::containsAddress(const bs::Address &addr)
 {
-   if (addrPrefixedHashes_.find(addr.prefixed()) != addrPrefixedHashes_.end()) {
-      return true;
-   }
-   if (addressHashes_.find(addr.unprefixed()) != addressHashes_.end()) {
-      return true;
-   }
-   if (!getAddressIndex(addr).empty()) {
-      return true;
-   }
-   return false;
-}*/
+   return !getAddressIndex(addr).empty();
+}
 
-BinaryData SettlementWallet::signPayoutTXRequest(const bs::wallet::TXSignRequest &req, const KeyPair &keys
+BinaryData SettlementWallet::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &req, const KeyPair &keys
    , const BinaryData &settlementId, const BinaryData &buyAuthKey, const BinaryData &sellAuthKey)
 {
    auto addr = getAddressBySettlementId(settlementId);

@@ -41,8 +41,8 @@ namespace bs {
             std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
             bool hasExtOnlyAddresses() const override { return isExtOnly_; }
 
-/*            bool containsAddress(const bs::Address &addr) override;
-            bool containsHiddenAddress(const bs::Address &addr) const override;*/
+            bool containsAddress(const bs::Address &addr) override;
+            bool containsHiddenAddress(const bs::Address &addr) const override;
             BinaryData getRootId() const override;
             BinaryData getPubKey() const { return node_ ? node_->pubCompressedKey() : BinaryData(); }
             BinaryData getChainCode() const { return node_ ? node_->chainCode() : BinaryData(); }
@@ -76,7 +76,6 @@ namespace bs {
             std::shared_ptr<LMDBEnv> getDBEnv() override { return dbEnv_; }
             LMDB *getDB() override { return db_; }
 
-//            AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
             void addAddress(const bs::Address &, const BinaryData &pubChainedKey, const bs::hd::Path &path);
 
          protected:

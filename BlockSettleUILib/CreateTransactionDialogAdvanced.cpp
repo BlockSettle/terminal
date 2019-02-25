@@ -868,7 +868,7 @@ bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const
    return !importedSignedTX_.isNull();
 }
 
-void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::wallet::TXSignRequest>& transactions)
+void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions)
 {
    ui_->pushButtonCreate->setEnabled(false);
    ui_->pushButtonCreate->setText(tr("Broadcast"));

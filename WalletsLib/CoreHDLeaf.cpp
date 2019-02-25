@@ -101,7 +101,7 @@ std::string hd::Leaf::description() const
    return desc_;
 }
 
-/*bool hd::Leaf::containsAddress(const bs::Address &addr)
+bool hd::Leaf::containsAddress(const bs::Address &addr)
 {
    return (getAddressIndexForAddr(addr) != UINT32_MAX);
 }
@@ -109,7 +109,7 @@ std::string hd::Leaf::description() const
 bool hd::Leaf::containsHiddenAddress(const bs::Address &addr) const
 {
    return (poolByAddr_.find(addr) != poolByAddr_.end());
-}*/
+}
 
 BinaryData hd::Leaf::getRootId() const
 {
@@ -254,15 +254,6 @@ void hd::Leaf::setDB(const std::shared_ptr<LMDBEnv> &dbEnv, LMDB *db)
    dbEnv_ = dbEnv;
    db_ = db;
 }
-
-/*AddressEntryType hd::Leaf::getAddrTypeForAddr(const BinaryData &addr)
-{
-   const auto addrEntry = getAddressEntryForAddr(addr);
-   if (addrEntry == nullptr) {
-      return AddressEntryType_Default;
-   }
-   return addrEntry->getType();
-}*/
 
 bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
 {

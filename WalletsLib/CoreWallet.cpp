@@ -469,7 +469,7 @@ BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request, co
 }
 
 
-BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &txMultiReq, const KeyMap &keys
+BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest &txMultiReq, const KeyMap &keys
    , const WalletMap &wallets)
 {
    Signer signer;

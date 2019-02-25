@@ -462,7 +462,7 @@ bool CreateTransactionDialog::CreateTransaction()
    return false;
 }
 
-std::vector<bs::wallet::TXSignRequest> CreateTransactionDialog::ImportTransactions()
+std::vector<bs::core::wallet::TXSignRequest> CreateTransactionDialog::ImportTransactions()
 {
    const auto reqFile = QFileDialog::getOpenFileName(this, tr("Select Transaction file"), offlineDir_
       , tr("TX files (*.bin)"));

@@ -148,6 +148,29 @@ bool WalletsManager::createSettlementWallet(NetworkType netType, const std::stri
    return (settlementWallet_ != nullptr);
 }
 
+WalletsManager::WalletPtr WalletsManager::getAuthWallet() const
+{
+   const auto priWallet = getPrimaryWallet();
+   if (!priWallet) {
+      return nullptr;
+   }
+   const auto group = priWallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
+   if (!group) {
+      return nullptr;
+   }
+   return group->getLeaf(0u);
+}
+
+WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
+{
+   for (const auto &hdWallet : hdWallets_) {
+      if (hdWallet.second->isPrimary()) {
+         return hdWallet.second;
+      }
+   }
+   return nullptr;
+}
+
 void WalletsManager::saveWallet(const WalletPtr &newWallet, NetworkType netType)
 {
    addWallet(newWallet);
@@ -197,7 +220,7 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDWalletById(const std::str
    return nullptr;
 }
 
-/*const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::string& walletId) const
+const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::string& walletId) const
 {
    for (const auto &hdWallet : hdWallets_) {
       if (hdWallet.second->getLeaf(walletId)) {
@@ -207,7 +230,7 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDWalletById(const std::str
    return nullptr;
 }
 
-WalletsManager::WalletPtr WalletsManager::getWallet(const unsigned int index) const
+/*WalletsManager::WalletPtr WalletsManager::getWallet(const unsigned int index) const
 {
    if (index > wallets_.size()) {
       return nullptr;
@@ -231,7 +254,7 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
    return nullptr;
 }
 
-/*WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &addr) const
+WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &addr) const
 {
    const auto &address = addr.unprefixed();
    {
@@ -246,7 +269,7 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
       return settlementWallet_;
    }
    return nullptr;
-}*/
+}
 
 void WalletsManager::eraseWallet(const WalletPtr &wallet)
 {
