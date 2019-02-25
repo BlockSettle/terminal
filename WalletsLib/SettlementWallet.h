@@ -91,7 +91,7 @@ namespace bs {
          , const CreateMonitorCallback& internalCB);
 
    protected:
-      int addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset) override;
+      int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
       int addAddress(const std::shared_ptr<SettlementAddressEntry> &, const std::shared_ptr<SettlementAssetEntry> &);
       std::pair<bs::Address, std::shared_ptr<GenericAsset>> deserializeAsset(BinaryDataRef ref) override {
          return SettlementAssetEntry::deserialize(ref);

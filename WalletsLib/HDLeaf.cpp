@@ -8,6 +8,8 @@
 #include "Wallets.h"
 
 #define ADDR_KEY     0x00002002
+const uint32_t kExtConfCount = 6;
+const uint32_t kIntConfCount = 1;
 
 using namespace bs;
 
@@ -99,9 +101,9 @@ void hd::BlockchainScanner::scanAddresses(unsigned int startIdx, unsigned int po
       , getRegAddresses(currentPortion_.addresses), nullptr, true);
 }
 
-void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids)
+void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids, bool online)
 {
-   if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
+   if (!online || !currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
       return;
    }
    const auto &it = std::find(ids.begin(), ids.end(), rescanRegId_);
@@ -204,28 +206,6 @@ void hd::BlockchainScanner::processPortion()
       }
    };
    armoryConn_->getWalletsHistory({ rescanWalletId_ }, cbHistory);
-
-#if 0    // keep the code below for reference for a while - after some time remove it
-   auto addressesToProcess = std::make_shared<std::set<Address>>();
-   for (const auto &addr : currentPortion_.addresses) {
-      addressesToProcess->insert(addr.second);
-   }
-   for (const auto &addr : currentPortion_.addresses) {
-      const auto &cbDelegate = [this, addr, addressesToProcess, cbProcess](AsyncClient::LedgerDelegate ledger) {
-         const auto &cbLedger = [this, addr, addressesToProcess, cbProcess] (std::vector<ClientClasses::LedgerEntry> entries) {
-            addressesToProcess->erase(addr.second);
-            if (!entries.empty()) {
-               currentPortion_.activeAddresses.push_back(addr);
-            }
-            if (addressesToProcess->empty()) {
-               cbProcess();
-            }
-         };
-         ledger.getHistoryPage(0, cbLedger);
-      };
-      armoryConn_->getLedgerDelegateForAddress(rescanWalletId_, addr.second, cbDelegate);
-   }
-#endif   //0
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -296,13 +276,57 @@ void hd::Leaf::onZeroConfReceived(const std::vector<bs::TXEntry>)
 //!   activateAddressesFromLedger(armory_->getZCentries(reqId));
 }  // if ZC is received, then likely wallet already contains the participating address
 
-void hd::Leaf::onRefresh(std::vector<BinaryData> ids)
+void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 {
-   hd::BlockchainScanner::onRefresh(ids);
+   const auto &cbRegisterExt = [this, online] {
+      if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
+         emit walletReady(QString::fromStdString(GetWalletId()));
+         if (online) {
+            postOnline();
+         }
+      }
+   };
+   const auto &cbRegisterInt = [this, online] {
+      if (regIdExt_.empty() && regIdInt_.empty()) {
+         emit walletReady(QString::fromStdString(GetWalletId()));
+         if (online) {
+            postOnline();
+         }
+      }
+   };
+
+   if (!regIdExt_.empty() || !regIdInt_.empty()) {
+      for (const auto &id : ids) {
+         if (id.isNull()) {
+            continue;
+         }
+         if (id == regIdExt_) {
+            regIdExt_.clear();
+            cbRegisterExt();
+         } else if (id == regIdInt_) {
+            regIdInt_.clear();
+            cbRegisterInt();
+         }
+      }
+   }
+
+   hd::BlockchainScanner::onRefresh(ids, online);
+}
+
+void hd::Leaf::postOnline()
+{
+   if (btcWallet_) {
+      btcWallet_->setUnconfirmedTarget(kExtConfCount);
+   }
+   if (btcWalletInt_) {
+      btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
+   }
 }
 
 void hd::Leaf::firstInit(bool force)
 {
+   postOnline();
+
    bs::Wallet::firstInit();
 
    if (activateAddressesInvoked_ || !armory_) {
@@ -595,13 +619,73 @@ AddressEntryType hd::Leaf::getAddrTypeForAddr(const BinaryData &addr)
    return addrEntry->getType();
 }
 
-std::set<BinaryData> hd::Leaf::getAddrHashSet()
+std::vector<BinaryData> hd::Leaf::getAddrHashes() const
 {
-   std::set<BinaryData> result = addrPrefixedHashes_;
+   std::vector<BinaryData> result;
+
+   const auto addrsExt = getAddrHashesExt();
+   const auto addrsInt = getAddrHashesInt();
+
+   result.insert(result.end(), addrsExt.cbegin(), addrsExt.cend());
+   result.insert(result.end(), addrsInt.cbegin(), addrsInt.cend());
+
+   return result;
+}
+
+std::vector<BinaryData> hd::Leaf::getAddrHashesExt() const
+{
+   std::vector<BinaryData> result;
+   result.insert(result.end(), addrPrefixedHashes_.external.cbegin(), addrPrefixedHashes_.external.cend());
    for (const auto &addr : addressPool_) {
-      result.insert(addr.second.id());
+      const auto path = addr.first.path;
+      if (path.get(-2) == addrTypeExternal) {
+         result.push_back(addr.second.id());
+      }
    }
    return result;
+}
+
+std::vector<BinaryData> hd::Leaf::getAddrHashesInt() const
+{
+   std::vector<BinaryData> result;
+   result.insert(result.end(), addrPrefixedHashes_.internal.cbegin(), addrPrefixedHashes_.internal.cend());
+   for (const auto &addr : addressPool_) {
+      const auto path = addr.first.path;
+      if (path.get(-2) == addrTypeInternal) {
+         result.push_back(addr.second.id());
+      }
+   }
+   return result;
+}
+
+std::vector<std::string> hd::Leaf::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+{
+   SetArmory(armory);
+
+   if (!utxoAdapter_) {
+      utxoAdapter_ = std::make_shared<UtxoFilterAdapter>(GetWalletId());
+      if (!UtxoReservation::addAdapter(utxoAdapter_)) {
+         utxoAdapter_ = nullptr;
+      }
+   }
+
+   if (armory_) {
+      const auto addrsExt = getAddrHashesExt();
+      std::vector<std::string> regIds;
+      const auto &cbEmpty = [](const std::string &) {};
+
+      regIdExt_ = armory_->registerWallet(btcWallet_, GetWalletId(), addrsExt, cbEmpty, asNew);
+      regIds.push_back(regIdExt_);
+
+      if (!isExtOnly_) {
+         const auto addrsInt = getAddrHashesInt();
+         regIdInt_ = armory_->registerWallet(btcWalletInt_
+            , getWalletIdInt(), addrsInt, cbEmpty, asNew);
+         regIds.push_back(regIdInt_);
+      }
+      return regIds;
+   }
+   return {};
 }
 
 void hd::Leaf::UnregisterWallet()
@@ -609,6 +693,7 @@ void hd::Leaf::UnregisterWallet()
    addrPrefixedHashes_.clear();
    addressPool_.clear();
    Wallet::UnregisterWallet();
+   btcWalletInt_.reset();
 }
 
 bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
@@ -664,16 +749,18 @@ bs::Address hd::Leaf::createAddress(const Path &path, Path::Elem index, AddressE
 
    if (isInternal) {
       intAddresses_.push_back(result);
+      addrPrefixedHashes_.internal.insert(result.id());
+      addrPrefixedHashes_.internal.insert(complementaryAddr.id());
    }
    else {
       extAddresses_.push_back(result);
+      addrPrefixedHashes_.external.insert(result.id());
+      addrPrefixedHashes_.external.insert(complementaryAddr.id());
    }
    usedAddresses_.push_back(result);
    addressMap_[index] = AddressTuple(result, addrNode, path);
    addrToIndex_[result.unprefixed()] = index;
    addrToIndex_[complementaryAddr.unprefixed()] = index;
-   addrPrefixedHashes_.insert(result.id());
-   addrPrefixedHashes_.insert(complementaryAddr.id());
    addressHashes_.insert(result.unprefixed());
    addressHashes_.insert(complementaryAddr.unprefixed());
    addAddress(result, addrNode->pubChainedKey(), path);
@@ -786,11 +873,259 @@ hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
    return path;
 }
 
+bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
+   , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb
+   , QObject *context)
+{
+   if (armory_) {
+      const auto path = getPathForAddress(addr);
+      if (path.get(-2) == addrTypeInternal) {
+         return armory_->getLedgerDelegateForAddress(getWalletIdInt()
+            , addr, cb, context);
+      }
+      else {
+         return armory_->getLedgerDelegateForAddress(GetWalletId(), addr, cb, context);
+      }
+   }
+   return false;
+}
+
+std::string hd::Leaf::getWalletIdInt() const
+{
+   if (walletIdInt_.empty()) {
+      for (const auto &c : GetWalletId()) {
+         if (isupper(c)) {
+            walletIdInt_.push_back(tolower(c));
+         } else if (islower(c)) {
+            walletIdInt_.push_back(toupper(c));
+         } else {
+            walletIdInt_.push_back(c);
+         }
+      }
+   }
+   return walletIdInt_;
+}
+
+bool hd::Leaf::hasId(const std::string &id) const
+{
+   return ((GetWalletId() == id) || (getWalletIdInt() == id));
+}
+
+int hd::Leaf::addAddress(const bs::Address &addr, const std::shared_ptr<GenericAsset> &)
+{  // only for registration purposes
+   usedAddresses_.push_back(addr);
+   addrPrefixedHashes_.external.insert(addr.id());
+   return usedAddresses_.size() - 1;
+}
+
+void hd::Leaf::UpdateBalances(const std::function<void(std::vector<uint64_t>)> &cb)
+{
+   if (!isBalanceAvailable()) {
+      return;
+   }
+   auto prevBalances = std::make_shared<std::vector<uint64_t>>();
+
+   const auto &cbBalances = [this, cb, prevBalances]
+   (ReturnMessage<std::vector<uint64_t>> balanceVector)->void {
+      try {
+         auto bv = balanceVector.get();
+         if (bv.size() < 4) {
+            return;
+         }
+         if (prevBalances->size() == 4) {
+            for (size_t i = 0; i < 4; ++i) {
+               bv[i] += (*prevBalances)[i];
+            }
+         }
+         const auto totalBalance =
+            static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
+         const auto spendableBalance =
+            static_cast<BTCNumericTypes::balance_type>(bv[1]) / BTCNumericTypes::BalanceDivider;
+         const auto unconfirmedBalance =
+            static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
+         const auto count = bv[3];
+
+         if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
+            || (unconfirmedBalance_ != unconfirmedBalance)) {
+            {
+               QMutexLocker lock(&addrMapsMtx_);
+               updateAddrBalance_ = true;
+               updateAddrTxN_ = true;
+               addrCount_ = count;
+            }
+            totalBalance_ = totalBalance;
+            spendableBalance_ = spendableBalance;
+            unconfirmedBalance_ = unconfirmedBalance;
+
+            emit balanceChanged(GetWalletId(), bv);
+         }
+         emit balanceUpdated(GetWalletId(), bv);
+
+         if (cb) {
+            cb(bv);
+         }
+      } catch (const std::exception &e) {
+         if (logger_) {
+            logger_->error("[hd::Leaf::UpdateBalances] Return data error " \
+               "- {}", e.what());
+         }
+      }
+   };
+
+   const auto &cbBalancesExt = [this, cbBalances, prevBalances]
+      (ReturnMessage<std::vector<uint64_t>> balanceVector)->void {
+      try {
+         auto bv = balanceVector.get();
+         prevBalances->insert(prevBalances->end(), bv.cbegin(), bv.cend());
+         btcWalletInt_->getBalancesAndCount(armory_->topBlock(), cbBalances);
+      }
+      catch (const std::exception &e) {
+         if (logger_) {
+            logger_->error("[hd::Leaf::UpdateBalances] Return data error " \
+               "- {}", e.what());
+         }
+      }
+   };
+
+   if (isExtOnly_) {
+      btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
+   }
+   else {
+      btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalancesExt);
+   }
+}
+
+bool hd::Leaf::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   static const std::vector<uint64_t> defVal = { 0, 0, 0 };
+
+   if (updateAddrBalance_) {
+      auto cbCnt = std::make_shared<std::atomic_uint>(0);
+      const auto &cbAddrBalance = [this, cbCnt]
+         (ReturnMessage<std::map<BinaryData, std::vector<uint64_t>>> balanceMap) {
+         try {
+            const auto bm = balanceMap.get();
+            updateMap<std::map<BinaryData, std::vector<uint64_t>>>(bm, addressBalanceMap_);
+            if (isExtOnly_ || (cbCnt->fetch_add(1) >= 1)) {  // comparing with prev value
+               updateAddrBalance_ = false;
+            }
+         } catch (std::exception& e) {
+            if (logger_ != nullptr) {
+               logger_->error("[hd::Leaf::getAddrBalance] Return data " \
+                  "error - {}", e.what());
+            }
+         }
+         if (!updateAddrBalance_) {
+            invokeCb<std::vector<uint64_t>>(addressBalanceMap_, cbBal_, defVal);
+         }
+      };
+
+      cbBal_[addr].push_back(cb);
+      if (cbBal_.size() == 1) {
+         btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
+         if (!isExtOnly_) {
+            btcWalletInt_->getAddrBalancesFromDB(cbAddrBalance);
+         }
+      }
+   } else {
+      const auto itBal = addressBalanceMap_.find(addr.id());
+      if (itBal == addressBalanceMap_.end()) {
+         cb(defVal);
+         return true;
+      }
+      cb(itBal->second);
+   }
+   return true;
+}
+
+bool hd::Leaf::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> cb) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   if (updateAddrTxN_) {
+      auto cbCnt = std::make_shared<std::atomic_uint>(0);
+      const auto &cbTxN = [this, addr, cbCnt]
+      (ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
+         try {
+            const auto inTxnMap = txnMap.get();
+            updateMap<std::map<BinaryData, uint32_t>>(inTxnMap, addressTxNMap_);
+            if (isExtOnly_ || (cbCnt->fetch_add(1) >= 1)) {  // comparing with prev value
+               updateAddrTxN_ = false;
+            }
+         } catch (const std::exception &e) {
+            if (logger_ != nullptr) {
+               logger_->error("[hd::Leaf::getAddrTxN] Return data error - {} ", \
+                  "- Address {}", e.what(), addr.display().toStdString());
+            }
+         }
+         if (!updateAddrTxN_) {
+            invokeCb<uint32_t>(addressTxNMap_, cbTxN_, 0);
+         }
+      };
+
+      cbTxN_[addr].push_back(cb);
+      if (cbTxN_.size() == 1) {
+         btcWallet_->getAddrTxnCountsFromDB(cbTxN);
+         if (!isExtOnly_) {
+            btcWalletInt_->getAddrTxnCountsFromDB(cbTxN);
+         }
+      }
+   } else {
+      const auto itTxN = addressTxNMap_.find(addr.id());
+      if (itTxN == addressTxNMap_.end()) {
+         cb(0);
+         return true;
+      }
+      cb(itTxN->second);
+   }
+   return true;
+}
+
+bool hd::Leaf::GetActiveAddressCount(const std::function<void(size_t)> &cb) const
+{
+   if (!isBalanceAvailable()) {
+      return false;
+   }
+   if (addressTxNMap_.empty() || updateAddrTxN_) {
+      auto cbCnt = std::make_shared<std::atomic_uint>(0);
+      const auto &cbTxN = [this, cb, cbCnt](ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
+         try {
+            auto inTxnMap = txnMap.get();
+            updateMap<std::map<BinaryData, uint32_t>>(inTxnMap, addressTxNMap_);
+            if (isExtOnly_ || (cbCnt->fetch_add(1) == 1)) {  // comparing with prev value
+               updateAddrTxN_ = false;
+            }
+         } catch (std::exception& e) {
+            if (logger_ != nullptr) {
+               logger_->error("[bs::Wallet::GetActiveAddressCount] Return data error - {} ", e.what());
+            }
+         }
+         if (!updateAddrTxN_) {
+            cb(addressTxNMap_.size());
+         }
+      };
+
+      btcWallet_->getAddrTxnCountsFromDB(cbTxN);
+      if (!isExtOnly_) {
+         btcWalletInt_->getAddrTxnCountsFromDB(cbTxN);
+      }
+   } else {
+      cb(addressTxNMap_.size());
+   }
+   return true;
+}
+
 bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
    , QObject *obj, uint64_t val)
 {
-   const auto &cbTxOutList = [this, cb](std::vector<UTXO> txOutList) {
-      std::vector<UTXO> result;
+   auto cbCnt = std::make_shared<std::atomic_uint>(0);
+   auto result = std::make_shared<std::vector<UTXO>>();
+
+   const auto &cbTxOutList = [this, cb, cbCnt, result](std::vector<UTXO> txOutList, uint32_t nbConf) {
       const auto curHeight = armory_ ? armory_->topBlock() : 0;
       for (const auto &utxo : txOutList) {
          const auto &addr = bs::Address::fromUTXO(utxo);
@@ -798,14 +1133,96 @@ bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
          if (path.length() < 2) {
             continue;
          }
-         const uint32_t nbConf = (path.get(-2) == addrTypeExternal) ? 6 : 1;
          if (utxo.getNumConfirm(curHeight) >= nbConf) {
-            result.emplace_back(utxo);
+            result->emplace_back(utxo);
          }
       }
-      cb(result);
+      if (isExtOnly_ || cbCnt->fetch_add(1) > 0) {  // comparing with prev value
+         cb(*result);
+      }
    };
-   return bs::Wallet::getSpendableTxOutList(cbTxOutList, obj, val);
+   const auto &cbTxOutListInt = [this, cbTxOutList](std::vector<UTXO> txOutList) {
+      cbTxOutList(txOutList, kIntConfCount);
+   };
+   const auto &cbTxOutListExt = [this, cbTxOutList](std::vector<UTXO> txOutList) {
+      cbTxOutList(txOutList, kExtConfCount);
+   };
+   bool rc = bs::Wallet::getSpendableTxOutList(btcWallet_, cbTxOutListExt, obj, val);
+   if (!isExtOnly_) {
+      rc &= bs::Wallet::getSpendableTxOutList(btcWalletInt_, cbTxOutListInt, obj, val);
+   }
+   return rc;
+}
+
+bool hd::Leaf::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
+   , QObject *obj)
+{
+   auto cbCnt = std::make_shared<std::atomic_uint>(0);
+   auto result = std::make_shared<std::vector<UTXO>>();
+   const auto &cbWrap = [this, cb, cbCnt, result](std::vector<UTXO> utxos) {
+      result->insert(result->end(), utxos.begin(), utxos.end());
+      if (isExtOnly_ || (cbCnt->fetch_add(1) > 0)) {
+         cb(*result);
+      }
+   };
+   bool rc = bs::Wallet::getSpendableZCList(btcWallet_, cbWrap, obj);
+   if (!isExtOnly_) {
+      rc &= bs::Wallet::getSpendableZCList(btcWalletInt_, cbWrap, obj);
+   }
+   return rc;
+}
+
+bool hd::Leaf::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)> cb) const
+{
+   auto cbCnt = std::make_shared<std::atomic_uint>(0);
+   auto result = std::make_shared<std::vector<UTXO>>();
+   const auto &cbWrap = [this, cb, cbCnt, result](std::vector<UTXO> utxos) {
+      result->insert(result->end(), utxos.begin(), utxos.end());
+      if (isExtOnly_ || (cbCnt->fetch_add(1) > 0)) {
+         cb(*result);
+      }
+   };
+   bool rc = bs::Wallet::getUTXOsToSpend(btcWallet_, val, cbWrap);
+   if (!isExtOnly_) {
+      rc &= bs::Wallet::getUTXOsToSpend(btcWalletInt_, val, cbWrap);
+   }
+   return rc;
+}
+
+bool hd::Leaf::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
+{
+   auto cbCnt = std::make_shared<std::atomic_uint>(0);
+   auto result = std::make_shared<std::vector<UTXO>>();
+   const auto &cbWrap = [this, cb, cbCnt, result](std::vector<UTXO> utxos) {
+      result->insert(result->end(), utxos.begin(), utxos.end());
+      if (isExtOnly_ || (cbCnt->fetch_add(1) > 0)) {
+         cb(*result);
+      }
+   };
+   bool rc = bs::Wallet::getRBFTxOutList(btcWallet_, cbWrap);
+   if (!isExtOnly_) {
+      rc &= bs::Wallet::getRBFTxOutList(btcWalletInt_, cbWrap);
+   }
+   return rc;
+}
+
+bool hd::Leaf::getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
+   , std::vector<ClientClasses::LedgerEntry>)> cb, bool onlyNew) const
+{
+   auto cbCnt = std::make_shared<std::atomic_uint>(0);
+   auto result = std::make_shared<std::vector<ClientClasses::LedgerEntry>>();
+   const auto &cbWrap = [this, cb, cbCnt, result](const bs::Wallet *wallet
+      , std::vector<ClientClasses::LedgerEntry> entries) {
+      result->insert(result->end(), entries.begin(), entries.end());
+      if (isExtOnly_ || (cbCnt->fetch_add(1) > 0)) {
+         cb(wallet, *result);
+      }
+   };
+   bool rc = bs::Wallet::getHistoryPage(btcWallet_, id, cbWrap, onlyNew);
+   if (!isExtOnly_) {
+      rc &= bs::Wallet::getHistoryPage(btcWalletInt_, id, cbWrap, onlyNew);
+   }
+   return rc;
 }
 
 std::string hd::Leaf::GetAddressIndex(const bs::Address &addr)
@@ -1331,7 +1748,7 @@ void hd::CCLeaf::validationProc()
          };
          ledger->getPageCount(cbPages);
       };
-      armory_->getLedgerDelegateForAddress(GetWalletId(), addr, cbLedger, this);
+      getLedgerDelegateForAddress(addr, cbLedger, this);
    }
 }
 

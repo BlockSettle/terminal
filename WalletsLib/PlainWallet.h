@@ -16,22 +16,6 @@ namespace spdlog {
 };
 
 namespace bs {
-   class GenericAsset : public AssetEntry
-   {
-   public:
-      GenericAsset(AssetEntryType type, int id = -1) :
-         AssetEntry(type, id, {}), id_(id) {}
-
-      void setId(int id) {
-         id_ = id;
-         ID_ = WRITE_UINT32_BE(id);
-      }
-      int id() const { return id_; }
-
-   protected:
-      int id_;
-   };
-
    class PlainAsset : public GenericAsset
    {
    public:
@@ -84,7 +68,7 @@ namespace bs {
          logger_ = logger;
       }
 
-      virtual int addAddress(const bs::Address &, std::shared_ptr<GenericAsset> asset = nullptr);
+      int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
       bool containsAddress(const bs::Address &addr) override;
 
       std::string GetWalletId() const override { return walletId_; }
@@ -130,13 +114,14 @@ namespace bs {
       BinaryDataRef getDataRefForKey(const std::shared_ptr<LMDB> &db, const BinaryData& key) const;
       BinaryDataRef getDataRefForKey(uint32_t key) const;
 
-      std::set<BinaryData> getAddrHashSet() override;
+      std::vector<BinaryData> getAddrHashes() const override;
       AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
 
    protected:
       std::map<bs::Address, std::shared_ptr<GenericAsset>>  assetByAddr_;
       std::unordered_map<int, std::shared_ptr<GenericAsset>>   assets_;
       std::atomic_int   lastAssetIndex_ = { 0 };
+      mutable std::set<BinaryData>  addrPrefixedHashes_;
 
    private:
       int getAddressIndex(const bs::Address &) const;

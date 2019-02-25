@@ -146,7 +146,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
          initModels(delegate);
       };
-      if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate, this)) {
+      if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate, this)) {
          ui_->labelError->setText(tr("Error loading address info"));
          onError();
       }
