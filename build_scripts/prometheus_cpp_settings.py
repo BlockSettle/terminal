@@ -9,7 +9,7 @@ from component_configurator import Configurator
 class PrometheusCpp(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = 'b7e56dda2860b1005c21d0fec83601cfc840ba14'
+        self._version = '83e329c5512aa8dc4850a03d70621188d6fb92be'
         self._package_name = 'PrometheusCpp'
         self._package_dir_name = 'PrometheusCpp'
 
