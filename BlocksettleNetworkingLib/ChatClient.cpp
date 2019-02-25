@@ -386,6 +386,6 @@ void ChatClient::sendFriendRequest(const QString &/*friendUserId*/)
 
 void ChatClient::sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message)
 {
-   auto request = std::make_shared<Chat::MessageChangeStatusRequest>(currentUserId_, message->getId().toStdString(), message->getState(), message->getState());
+   auto request = std::make_shared<Chat::MessageChangeStatusRequest>(currentUserId_, message->getId().toStdString(), message->getState());
    sendRequest(request);
 }
