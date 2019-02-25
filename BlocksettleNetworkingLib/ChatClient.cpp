@@ -101,23 +101,37 @@ void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response
       logger_->debug("[ChatClient::OnSendMessageResponse]: message id sync: {}", res?"Success":"Failed");
       
       emit MessageIdUpdated(localId, serverId, receiverId);
+      
+      
    }
 }
 
 void ChatClient::OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse& response)
 {
    //TODO: Implement me!
-   std::string messtageId = response.messageId();
+   std::string messageId = response.messageId();
    std::string senderId = response.messageSenderId();
    std::string receiverId = response.messageReceiverId();
+   int newStatus = response.getUpdatedStatus();
          logger_->debug("[ChatClient::OnMessageChangeStatusResponse]: Updated message status:"
-                        " messageId :{}"
-                        " senderId :{}"
-                        " receiverId :{}",
-                  messtageId,
+                        " messageId {}"
+                        " senderId {}"
+                        " receiverId {}"
+                        " status {}",
+                  messageId,
                   senderId,
-                  receiverId
+                  receiverId,
+                  newStatus
                   );
+   
+   if (chatDb_->updateMessageStatus(QString::fromStdString(messageId), newStatus))
+      {
+         QString chatId = QString::fromStdString(response.messageSenderId() == currentUserId_
+                       ? response.messageReceiverId()
+                       : response.messageSenderId());
+         
+         emit MessageStatusUpdated(QString::fromStdString(messageId), chatId, newStatus);
+      }
    return;
 }
 
@@ -152,6 +166,25 @@ void ChatClient::sendHeartbeat()
 {
    if (loggedIn_ && connection_->isActive()) {
       sendRequest(std::make_shared<Chat::HeartbeatPingRequest>(currentUserId_));
+   }
+}
+
+void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message)
+{
+   addMessageState(message, Chat::MessageData::State::Read);
+}
+
+void ChatClient::addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state)
+{
+   if (chatDb_->updateMessageStatus(message->getId(), (int)state))
+   {
+      message->setFlag(state);
+      QString chatId = message->getSenderId() == QString::fromStdString(currentUserId_)
+                    ? message->getReceiverId()
+                    : message->getSenderId();
+      sendUpdateMessageState(message);
+      emit MessageStatusUpdated(message->getId(), chatId, message->getState());
+      
    }
 }
 
@@ -192,8 +225,8 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
          }
       }
       messages.push_back(msg);
-      auto request = std::make_shared<Chat::MessageChangeStatusRequest>(currentUserId_, msg->getId().toStdString(), (int)Chat::MessageData::State::Acknowledged, msg->getState());
-      sendRequest(request);
+      //int mask = old_state ^ msg->getState();
+      sendUpdateMessageState(msg);
    }
 
    emit MessagesUpdate(messages);
@@ -349,4 +382,10 @@ bool ChatClient::addOrUpdateContact(const QString &userId, const QString &userNa
 void ChatClient::sendFriendRequest(const QString &/*friendUserId*/)
 {
    // TODO
+}
+
+void ChatClient::sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message)
+{
+   auto request = std::make_shared<Chat::MessageChangeStatusRequest>(currentUserId_, message->getId().toStdString(), message->getState(), message->getState());
+   sendRequest(request);
 }

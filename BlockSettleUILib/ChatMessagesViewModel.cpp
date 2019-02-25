@@ -91,6 +91,13 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
          }
          case Column::Status:{
             std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
+            if (message->getSenderId() != ownUserId_){
+               if (!(message->getState() & static_cast<int>(Chat::MessageData::State::Read))){
+                  emit MessageRead(message);
+               }
+               return QVariant();
+               
+            }
             int state = message->getState();
             QString status = QLatin1String("Sending");
    
@@ -118,6 +125,9 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
       switch (column) {
       case Column::Status:{
          std::shared_ptr<Chat::MessageData> message = messages_[currentChatId_][index.row()];
+         if (message->getSenderId() != ownUserId_){
+            return QVariant();
+         }
          int state = message->getState();
          QIcon status(QLatin1Literal(":/ICON_STATUS_OFFLINE"));
          
@@ -165,6 +175,16 @@ void ChatMessagesViewModel::onMessageIdUpdate(const QString& oldId, const QStrin
    if (message != nullptr){
       message->setId(newId);
       message->setFlag(Chat::MessageData::State::Sent);
+      notifyMassageChanged(message);
+   }
+}
+
+void ChatMessagesViewModel::onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus)
+{
+   std::shared_ptr<Chat::MessageData> message = findMessage(chatId, messageId);
+   
+   if (message != nullptr){
+      message->setFlag((Chat::MessageData::State)newStatus);
       notifyMassageChanged(message);
    }
 }

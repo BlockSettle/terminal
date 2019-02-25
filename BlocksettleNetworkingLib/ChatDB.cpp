@@ -162,6 +162,24 @@ bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
    return true;
 }
 
+bool ChatDB::updateMessageStatus(const QString& messageId, int status)
+{
+   const QString cmd = QLatin1String("UPDATE messages SET state = state | :set_flags WHERE (id = :mid);");
+   QSqlQuery query(db_);
+
+   query.prepare(cmd);
+   query.bindValue(QLatin1String(":mid"), messageId);
+   query.bindValue(QLatin1String(":set_flags"), status);
+   
+   if (!query.exec()) {
+      logger_->error("[ChatDB::updateMessageStatus] failed to update message status with server message id; Error: {}",
+                     query.lastError().text().toStdString()
+                     );
+      return false;
+   }
+   return true;
+}
+
 std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &userId)
 {
    QSqlQuery query(db_);
