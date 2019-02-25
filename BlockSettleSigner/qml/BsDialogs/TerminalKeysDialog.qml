@@ -21,7 +21,7 @@ CustomDialog {
     property int inputsWidth_: 250
 
     title: qsTr("Manage Terminal Keys")
-    width: 520
+    width: 620
     height: 500
     rejectable: true
 
@@ -107,7 +107,7 @@ CustomDialog {
                 CustomLabel {
                     // key
                     text: modelData.split(':')[1]
-                    Layout.preferredWidth: 300
+                    Layout.preferredWidth: 400
                     wrapMode: Text.WrapAnywhere
                 }
 
