@@ -9,11 +9,11 @@ from component_configurator import Configurator
 class PrometheusCpp(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = 'v0.6.0'
+        self._version = 'b7e56dda2860b1005c21d0fec83601cfc840ba14'
         self._package_name = 'PrometheusCpp'
         self._package_dir_name = 'PrometheusCpp'
 
-        self._git_url = 'https://github.com/jupp0r/prometheus-cpp.git'
+        self._git_url = 'https://github.com/Ation/prometheus-cpp.git'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
