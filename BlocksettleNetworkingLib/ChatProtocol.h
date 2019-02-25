@@ -221,10 +221,9 @@ namespace Chat
    class MessageChangeStatusRequest : public Request
    {
    public:
-      MessageChangeStatusRequest(const std::string& clientId, const std::string& messageId, int mask, int state);
+      MessageChangeStatusRequest(const std::string& clientId, const std::string& messageId, int state);
       
       const std::string getMessageId() const {return messageId_; }
-      int getStateDeltaMask() const {return messageStateDeltaMask_; }
       int getMessageState() const {return messageState_; }
       
       QJsonObject toJson() const override;
@@ -233,7 +232,6 @@ namespace Chat
       void handle(RequestHandler &) override;
    private:
       const std::string messageId_;
-      int messageStateDeltaMask_;
       int messageState_;
    };
 

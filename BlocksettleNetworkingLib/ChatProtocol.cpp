@@ -841,10 +841,9 @@ void SendMessageResponse::handle(ResponseHandler& handler)
    handler.OnSendMessageResponse(*this);
 }
 
-MessageChangeStatusRequest::MessageChangeStatusRequest(const std::string& clientId, const std::string& messageId, int mask, int state)
+MessageChangeStatusRequest::MessageChangeStatusRequest(const std::string& clientId, const std::string& messageId, int state)
    : Request(RequestType::RequestChangeMessageStatus, clientId)
    , messageId_(messageId)
-   , messageStateDeltaMask_(mask)
    , messageState_(state)
 {
 }
@@ -855,7 +854,6 @@ QJsonObject MessageChangeStatusRequest::toJson() const
    QJsonObject data = Request::toJson();
 
    data[MessageIdKey] = QString::fromStdString(messageId_);
-   data[MessageStateDeltaMaskKey] = static_cast<int>(messageStateDeltaMask_);
    data[MessageStateKey] = static_cast<int>(messageState_);
 
    return data;
@@ -867,7 +865,6 @@ std::shared_ptr<Request> MessageChangeStatusRequest::fromJSON(const std::string&
    return std::make_shared<MessageChangeStatusRequest>(
                      clientId
                     , data[MessageIdKey].toString().toStdString()
-                    , data[MessageStateDeltaMaskKey].toInt()
                     , data[MessageStateKey].toInt());
 }
 
