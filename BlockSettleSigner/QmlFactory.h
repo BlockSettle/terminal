@@ -7,14 +7,14 @@
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
-#include "WalletsManager.h"
+#include "CoreWalletsManager.h"
 #include "AuthProxy.h"
 
 class QmlFactory : public QObject
 {
    Q_OBJECT
 public:
-   QmlFactory(std::shared_ptr<WalletsManager> walletsMgr
+   QmlFactory(std::shared_ptr<bs::core::WalletsManager> walletsMgr
               , const std::shared_ptr<spdlog::logger> &logger
               , QObject *parent = nullptr)
       : walletsMgr_(walletsMgr)
@@ -84,7 +84,7 @@ public:
 
    Q_INVOKABLE void setClipboard(const QString &text);
 private:
-   std::shared_ptr<WalletsManager> walletsMgr_;
+   std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<spdlog::logger> logger_;
 };
 

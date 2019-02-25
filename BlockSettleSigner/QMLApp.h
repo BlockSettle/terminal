@@ -8,9 +8,12 @@
 #include <QSystemTrayIcon>
 
 namespace bs {
-namespace wallet {
-   class QPasswordData;
-}
+   namespace wallet {
+      class QPasswordData;
+   }
+   namespace core {
+      class WalletsManager;
+   }
 }
 
 namespace spdlog {
@@ -23,7 +26,6 @@ class QQmlContext;
 class QMLStatusUpdater;
 class QSystemTrayIcon;
 class SignerSettings;
-class WalletsManager;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
 class DBusNotification;
@@ -47,8 +49,8 @@ private slots:
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
                            , bool cancelledByUser);
-   void onOfflinePassword(const bs::wallet::TXSignRequest &);
-   void onPasswordRequested(const bs::wallet::TXSignRequest &, const QString &prompt);
+   void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
+   void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void onAutoSignPwdRequested(const std::string &walletId);
    void onOfflineChanged();
    void onWalletsDirChanged();
@@ -62,7 +64,7 @@ private:
    void OnlineProcessing();
    void walletsLoad();
    void settingsConnections();
-   void requestPassword(const bs::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
+   void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
    void disconnect();
 
    void initZmqKeys();
@@ -71,7 +73,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<SignerSettings>  settings_;
    QQmlContext                *     ctxt_;
-   std::shared_ptr<WalletsManager>  walletsMgr_;
+   std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;

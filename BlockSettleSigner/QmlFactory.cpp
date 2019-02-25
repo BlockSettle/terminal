@@ -22,13 +22,13 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) {
    // ? move logic to WalletsManager ?
    bs::hd::WalletInfo *wi = nullptr;
 
-   const auto &wallet = walletsMgr_->GetWalletById(walletId.toStdString());
+   const auto &wallet = walletsMgr_->getWalletById(walletId.toStdString());
    if (wallet) {
-      const std::shared_ptr<bs::hd::Wallet> &rootWallet = walletsMgr_->GetHDRootForLeaf(wallet->GetWalletId());
+      const std::shared_ptr<bs::core::hd::Wallet> &rootWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
       wi = new bs::hd::WalletInfo(wallet, rootWallet);
    }
    else {
-      const auto &hdWallet = walletsMgr_->GetHDWalletById(walletId.toStdString());
+      const auto &hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
       if (!hdWallet) {
          // wallet not found
          wi = new bs::hd::WalletInfo();
