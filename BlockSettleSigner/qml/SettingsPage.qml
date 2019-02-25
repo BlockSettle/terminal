@@ -141,11 +141,11 @@ Item {
                 Layout.leftMargin: 10
                 Layout.rightMargin: 10
                 Layout.topMargin: 10
-                onClicked: {
-                    gridNetwork.state = checked ? "normal" : "hidden"
-                    highlighted = !checked
-                    down = checked
-                }
+//                onClicked: {
+//                    gridNetwork.state = checked ? "normal" : "hidden"
+//                    highlighted = !checked
+//                    down = checked
+//                }
             }
 
             RowLayout {
@@ -279,7 +279,6 @@ Item {
                 }
             }
 
-
             SettingsGrid {
                 id: gridNetwork
 
@@ -323,6 +322,48 @@ Item {
                     }
                     onEditingFinished: {
                         signerSettings.listenPort = text
+                    }
+                }
+            }
+
+            CustomHeader {
+                id: terminalKeys
+                text: qsTr("Terminal Settings")
+                checkable: true
+                checked: true
+                down: true
+                Layout.preferredHeight: 25
+                Layout.fillWidth: true
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.topMargin: 10
+            }
+
+            RowLayout {
+                id: rowManageKeys
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    text: qsTr("Terminals keys")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
+                }
+
+
+                CustomButton {
+                    text: qsTr("Manage")
+                    Layout.minimumWidth: 80
+                    Layout.preferredWidth: 80
+                    Layout.maximumWidth: 80
+                    Layout.maximumHeight: 26
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        var dlgTerminals = Qt.createComponent("BsDialogs/TerminalKeysDialog.qml").createObject(mainWindow)
+                        dlgTerminals.open()
                     }
                 }
             }

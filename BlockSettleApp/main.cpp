@@ -42,6 +42,7 @@ Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(UTXO)
 Q_DECLARE_METATYPE(std::vector<UTXO>)
 Q_DECLARE_METATYPE(AsyncClient::LedgerDelegate)
+Q_DECLARE_METATYPE(std::shared_ptr<std::promise<bool>>)
 
 #include <QEvent>
 #include <QApplicationStateChangeEvent>
@@ -207,6 +208,7 @@ static int GuiApp(int argc, char** argv)
    qRegisterMetaType<UTXO>();
    qRegisterMetaType<std::vector<UTXO>>();
    qRegisterMetaType<AsyncClient::LedgerDelegate>();
+   qRegisterMetaType<std::shared_ptr<std::promise<bool>>>();
 
    // load settings
    auto settings = std::make_shared<ApplicationSettings>();
