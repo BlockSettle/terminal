@@ -984,8 +984,13 @@ void BSTerminalMainWindow::onReadyToLogin()
       setLoginButtonText(currentUserLogin_);
 
 #ifndef PRODUCTION_BUILD
-      loginToCeler(loginDialog.getUsername().toStdString()
+      // TODO: uncomment this section once we have armory connection
+      // if (isArmoryConnected()) {
+         loginToCeler(loginDialog.getUsername().toStdString()
             , "Welcome1234");
+      // } else {
+         // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
+      // }
 #endif
    }
 }
@@ -1072,8 +1077,7 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    switch(errorCode)
    {
    case CelerClient::LoginError:
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr("Invalid username/password pair"), this);
-      loginErrorBox.exec();
+      logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
    }
 }
