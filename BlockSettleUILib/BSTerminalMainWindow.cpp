@@ -653,8 +653,6 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       transactionsModel_->loadAllWallets();
    }
    updateControlEnabledState();
-   // XXX: disabled until armory connection is stable in terminal
-   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -701,21 +699,6 @@ bool BSTerminalMainWindow::isUserLoggedIn() const
 bool BSTerminalMainWindow::isArmoryConnected() const
 {
    return armory_->state() == ArmoryConnection::State::Ready;
-}
-
-void BSTerminalMainWindow::updateLoginActionState()
-{
-   if (!isUserLoggedIn()) {
-      if (!isArmoryConnected()) {
-         action_login_->setEnabled(false);
-         ui->pushButtonUser->setEnabled(false);
-         ui->pushButtonUser->setToolTip(tr("Armory connection required to login"));
-      } else {
-         action_login_->setEnabled(true);
-         ui->pushButtonUser->setEnabled(true);
-         ui->pushButtonUser->setToolTip(QString{});
-      }
-   }
 }
 
 void BSTerminalMainWindow::ArmoryIsOffline()
@@ -1064,9 +1047,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    walletsManager_->SetUserId(BinaryData{});
    authManager_->OnDisconnectedFromCeler();
    setLoginButtonText(loginButtonText_);
-
-   // XXX: disabled until armory connection is stable in terminal
-   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::onCelerConnected()
