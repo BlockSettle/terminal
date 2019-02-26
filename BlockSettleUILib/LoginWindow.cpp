@@ -113,7 +113,6 @@ QString LoginWindow::getUsername() const
 void LoginWindow::accept()
 {
    onAuthPressed();
-   ui_->signWithEidButton->setEnabled(false);
 }
 
 void LoginWindow::onAuthPressed()
