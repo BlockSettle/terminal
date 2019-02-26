@@ -95,14 +95,16 @@ int  bs::SettlementWallet::addAddress(const std::shared_ptr<SettlementAddressEnt
    return id;
 }
 
-int bs::SettlementWallet::addAddress(const bs::Address &addr, std::shared_ptr<bs::GenericAsset> asset)
+int bs::SettlementWallet::addAddress(const bs::Address &addr, const std::shared_ptr<bs::GenericAsset> &asset)
 {
    const int id = bs::PlainWallet::addAddress(addr, asset);
-   const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(asset);
-   const auto &addrHashes = settlAsset->supportedAddrHashes();
-   addrPrefixedHashes_.insert(addrHashes.begin(), addrHashes.end());
-   for (const auto &hash : addrHashes) {
-      assetByAddr_[hash] = asset;
+   if (asset) {
+      const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(asset);
+      const auto &addrHashes = settlAsset->supportedAddrHashes();
+      addrPrefixedHashes_.insert(addrHashes.begin(), addrHashes.end());
+      for (const auto &hash : addrHashes) {
+         assetByAddr_[hash] = asset;
+      }
    }
    return id;
 }
@@ -203,7 +205,8 @@ bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
    std::shared_ptr<AsyncClient::BtcWallet> addressWallet;
 
    FastLock locker{lockWalletsMap_};
-   auto reqId = armory_->registerWallet(addressWallet, walletId, asset->supportedAddrHashes(), [] {}, true);
+   const auto regId = armory_->registerWallet(addressWallet, walletId, asset->supportedAddrHashes()
+      , [](const std::string &) {}, true);
 
    auto completeWalletRegistration = [this, index, addressWallet]() {
       if (logger_) {
@@ -221,14 +224,14 @@ bool bs::SettlementWallet::createTempWalletForAsset(const std::shared_ptr<Settle
       CompleteMonitorCreations(index, addressWallet);
    };
 
-   if (reqId.empty()) {
+   if (regId.empty()) {
       if (logger_ != nullptr) {
          logger_->error("[SettlementWallet::createTempWalletForAsset] failed to start wallet registration in armory");
       }
       return false;
    }
 
-   pendingWalletRegistrations_.emplace(reqId, completeWalletRegistration);
+   pendingWalletRegistrations_.emplace(regId, completeWalletRegistration);
 
    return true;
 }

@@ -46,7 +46,7 @@ signals:
 
 private slots:
    void onTxClicked(QTreeWidgetItem *item, int column);
-   void OnRefresh(std::vector<BinaryData> ids);
+   void OnRefresh(std::vector<BinaryData> ids, bool online);
 
 private:
    void setConfirmationColor(QTreeWidgetItem *item);
