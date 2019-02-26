@@ -87,6 +87,7 @@ namespace bs {
             void set(const std::shared_ptr<AssetEntryMeta> &value);
             void write(const std::shared_ptr<LMDBEnv> env, LMDB *db);
             void readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db);
+            std::map<BinaryData, std::shared_ptr<AssetEntryMeta>> fetchAll() const { return data_; }
          };
 
          struct Comment
@@ -249,9 +250,11 @@ namespace bs {
          virtual std::string getAddressComment(const bs::Address& address) const;
          virtual bool setAddressComment(const bs::Address &addr, const std::string &comment);
          virtual std::string getTransactionComment(const BinaryData &txHash);
-         virtual bool setTransactionComment(const BinaryData &txOrHash, const std::string &comment);
+         virtual bool setTransactionComment(const BinaryData &txHash, const std::string &comment);
+         virtual std::vector<std::pair<BinaryData, std::string>> getAllTxComments() const;
 
          virtual std::vector<bs::Address> getUsedAddressList() const { return usedAddresses_; }
+         virtual std::vector<bs::Address> getPooledAddressList() const { return {}; }
          virtual std::vector<bs::Address> getExtAddressList() const { return usedAddresses_; }
          virtual std::vector<bs::Address> getIntAddressList() const { return usedAddresses_; }
          virtual bool isExternalAddress(const Address &) const { return true; }

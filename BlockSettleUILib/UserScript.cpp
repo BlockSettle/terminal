@@ -6,7 +6,7 @@
 #include "CurrencyPair.h"
 #include "MarketDataProvider.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include <algorithm>
 
@@ -63,7 +63,7 @@ QObject *UserScript::instantiate()
    return rv;
 }
 
-void UserScript::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+void UserScript::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager)
 {
    const_->setWalletsManager(walletsManager);
 }
@@ -191,7 +191,7 @@ QString Constants::xbtProductName() const
    return UiUtils::XbtCurrency;
 }
 
-void Constants::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+void Constants::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager)
 {
    walletsManager_ = walletsManager;
    walletsManager_->estimatedFeePerByte(2, [this](float fee) { feePerByte_ = fee; }, this);
@@ -244,7 +244,7 @@ void AutoQuoter::destroy(QObject *o)
    delete o;
 }
 
-void AutoQuoter::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+void AutoQuoter::setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager)
 {
    script_.setWalletsManager(walletsManager);
 }

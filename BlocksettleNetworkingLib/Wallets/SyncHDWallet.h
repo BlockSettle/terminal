@@ -38,7 +38,6 @@ namespace bs {
 
             void synchronize();
 
-            bool isWatchingOnly() const;
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
             std::vector<SecureBinaryData> encryptionKeys() const;
             bs::wallet::KeyRank encryptionRank() const;
@@ -91,10 +90,7 @@ namespace bs {
             const std::string walletId_;
             const std::string name_, desc_;
             NetworkType    netType_ = NetworkType::MainNet;
-            bool           extOnlyAddresses_;
-            std::string    dbFilename_;
-            LMDB  *        db_ = nullptr;
-            std::shared_ptr<LMDBEnv>     dbEnv_ = nullptr;
+            bool           extOnlyAddresses_ = false;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
             mutable QMutex    mtxGroups_;

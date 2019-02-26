@@ -2,11 +2,16 @@
 #define __NEW_ADDRESS_DIALOG_H__
 
 #include <QDialog>
-#include "MetaData.h"
 #include <memory>
+#include "Address.h"
 
 namespace Ui {
    class NewAddressDialog;
+}
+namespace bs {
+   namespace sync {
+      class Wallet;
+   }
 }
 class SignContainer;
 
@@ -16,7 +21,7 @@ class NewAddressDialog : public QDialog
 Q_OBJECT
 
 public:
-   NewAddressDialog(const std::shared_ptr<bs::Wallet>& wallet, const std::shared_ptr<SignContainer> &
+   NewAddressDialog(const std::shared_ptr<bs::sync::Wallet>& wallet, const std::shared_ptr<SignContainer> &
       , bool isNested = false, QWidget* parent = nullptr);
    ~NewAddressDialog() override;
 
@@ -31,8 +36,8 @@ private:
    void UpdateSizeToAddress();
 
 private:
-   std::unique_ptr<Ui::NewAddressDialog> ui_;
-   std::shared_ptr<bs::Wallet> wallet_;
+   std::unique_ptr<Ui::NewAddressDialog>  ui_;
+   std::shared_ptr<bs::sync::Wallet>      wallet_;
    bs::Address    address_;
 };
 

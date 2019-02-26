@@ -16,20 +16,25 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 class ApplicationSettings;
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class SignContainer;
 class WalletImporter;
-class WalletsManager;
+
 
 class ImportWalletDialog : public QDialog
 {
 Q_OBJECT
 
 public:
-   ImportWalletDialog(const std::shared_ptr<WalletsManager> &
+   ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<AuthAddressManager> &
@@ -63,8 +68,8 @@ protected:
    void reject() override;
 
 private:
-   std::unique_ptr<Ui::ImportWalletDialog> ui_;
-   std::shared_ptr<WalletsManager>  walletsManager_;
+   std::unique_ptr<Ui::ImportWalletDialog>   ui_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryConnection>      armory_;

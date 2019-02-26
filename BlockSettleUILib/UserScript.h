@@ -10,10 +10,14 @@
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 class QQmlComponent;
 class AssetManager;
 class MarketDataProvider;
-class WalletsManager;
 
 
 //
@@ -88,10 +92,10 @@ public:
    float feePerByte();
    QString xbtProductName() const;
 
-   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+   void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager);
 
 private:
-   std::shared_ptr<WalletsManager> walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    mutable float feePerByte_ = 0.0;
 }; // class Constants
 
@@ -109,7 +113,7 @@ public:
    void load(const QString &filename);
    QObject *instantiate();
 
-   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+   void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager);
 
 signals:
    void loaded();
@@ -139,7 +143,7 @@ public:
    QObject *instantiate(const bs::network::QuoteReqNotification &qrn);
    void destroy(QObject *);
 
-   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+   void setWalletsManager(std::shared_ptr<bs::sync::WalletsManager> walletsManager);
 
 signals:
    void loaded();

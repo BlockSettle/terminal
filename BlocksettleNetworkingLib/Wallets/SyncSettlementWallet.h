@@ -24,7 +24,8 @@ namespace bs {
          Q_OBJECT
 
       public:
-         SettlementWallet(const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger);
+         SettlementWallet(const std::string &walletId, const std::string &name, const std::string &desc
+            , const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger);
          ~SettlementWallet() override = default;
 
          SettlementWallet(const SettlementWallet&) = delete;
@@ -34,7 +35,7 @@ namespace bs {
 
          bs::Address getExistingAddress(const BinaryData &settlementId);
 
-         void newAddress(const std::function<void(const bs::Address &)> &, const BinaryData &settlementId
+         void newAddress(const CbAddress &, const BinaryData &settlementId
             , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment = {});
          bool containsAddress(const bs::Address &addr) override;
 
@@ -46,7 +47,6 @@ namespace bs {
          bs::core::wallet::TXSignRequest createPayoutTXRequest(const UTXO &, const bs::Address &recvAddr, float feePerByte);
          UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash, const double amount) const;
 
-         int addAddress(const bs::Address &, const std::string &, AddressEntryType) override;
          bs::Address getNewExtAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
          bs::Address getNewIntAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
 
@@ -93,7 +93,6 @@ namespace bs {
          std::map<std::string, std::function<void()>>   pendingWalletRegistrations_;
          // pending requests to create monitor on wallet that is not completely registered on armory
          std::map<bs::Address, CreateMonitorCallback>   pendingMonitorCreations_;
-         std::map<bs::Address, std::string>  comments_;
       };
 
    }  //namespace sync

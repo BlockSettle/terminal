@@ -227,9 +227,6 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::SetUserIdRequestType:
       return onSetUserId(clientId, packet);
 
-   case headless::SyncAddressRequestType:
-      return onSyncAddress(clientId, packet);
-
    case headless::CreateHDWalletRequestType:
       return onCreateHDWallet(clientId, packet);
 
@@ -389,7 +386,7 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
       return false;
    }
 
-   const auto &settlWallet = walletsMgr_->getSettlementWallet();
+   const auto settlWallet = std::dynamic_pointer_cast<bs::core::SettlementWallet>(walletsMgr_->getSettlementWallet());
    if (!settlWallet) {
       logger_->error("[HeadlessContainerListener] Settlement wallet is missing");
       SignTXResponse(clientId, packet.id(), reqType, "no settlement wallet");
@@ -417,13 +414,11 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
 
    const bs::Address authAddr(request.authaddress());
    const BinaryData settlementId = request.settlementid();
-   const BinaryData buyAuthKey = request.buyauthkey();
-   const BinaryData sellAuthKey = request.sellauthkey();
 
    const auto rootWalletId = walletsMgr_->getHDRootForLeaf(authWallet->walletId())->walletId();
 
    const auto onAuthPassword = [this, clientId, id = packet.id(), txSignReq, authWallet, authAddr
-      , settlWallet, settlementId, buyAuthKey, sellAuthKey, reqType, rootWalletId](const SecureBinaryData &pass,
+      , settlWallet, settlementId, reqType, rootWalletId](const SecureBinaryData &pass,
             bool cancelledByUser) {
       if (!authWallet->encryptionTypes().empty() && pass.isNull()) {
          logger_->error("[HeadlessContainerListener] no password for encrypted auth wallet");
@@ -441,9 +436,9 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
       }
 
       const auto onSettlPassword = [this, clientId, id, txSignReq, authKeys, settlWallet, settlementId
-         , buyAuthKey, sellAuthKey, reqType](const std::string &pass, bool cancelledByUser) {
+         , reqType](const std::string &pass, bool cancelledByUser) {
          try {
-            const auto tx = settlWallet->signPayoutTXRequest(txSignReq, authKeys, settlementId, buyAuthKey, sellAuthKey);
+            const auto tx = settlWallet->signPayoutTXRequest(txSignReq, authKeys, settlementId);
             SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
          }
          catch (const std::exception &e) {
@@ -460,12 +455,9 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
    }
 
    const QString prompt = tr("Signing pay-out transaction for %1 XBT:\n"
-      "  Settlement ID: %2\n"
-      "  Buyer's authentication key: %3\n"
-      "  Seller's authentication key: %4"
+      "  Settlement ID: %2"
    ).arg(QString::number(utxo.getValue() / BTCNumericTypes::BalanceDivider, 'f', 8))
-      .arg(QString::fromStdString(settlementId.toHexStr()))
-      .arg(QString::fromStdString(buyAuthKey.toHexStr())).arg(QString::fromStdString(sellAuthKey.toHexStr()));
+      .arg(QString::fromStdString(settlementId.toHexStr()));
 
    return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onAuthPassword, request.applyautosignrules());
 }
@@ -736,103 +728,6 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
    return true;
 }
 
-static AddressEntryType mapAddressType(headless::AddressType addrType) {
-   switch (addrType) {
-   case headless::LegacyAddressType:   return AddressEntryType_P2PKH;
-   case headless::NestedSWAddressType: return AddressEntryType_P2SH;
-   case headless::NativeSWAddressType:
-   default:                            return AddressEntryType_P2WPKH;
-   }
-}
-
-bool HeadlessContainerListener::onSyncAddress(const std::string &clientId, headless::RequestPacket &packet)
-{  //FIXME: this method will be obsoleted soon
-   headless::SyncAddressRequest request;
-   if (!request.ParseFromString(packet.data())) {
-      logger_->error("[HeadlessContainerListener] failed to parse SyncAddressRequest");
-      return false;
-   }
-
-   std::set<std::shared_ptr<bs::core::hd::Wallet>> walletsForBackup;
-   std::vector<std::tuple<std::shared_ptr<bs::core::Wallet>, std::string, headless::AddressType>> newAddresses;
-   std::set<std::string> failedWallets;
-   bool rc = true;
-
-   for (int i = 0; i < request.address_size(); i++) {
-      const auto &walletId = request.address(i).walletid();
-      const auto &wallet = walletsMgr_->getWalletById(walletId);
-      if (!wallet) {
-         logger_->warn("[HeadlessContainerListener] failed to get wallet for id {}", walletId);
-         failedWallets.insert(walletId);
-         rc = false;
-         continue;
-      }
-      const auto &index = request.address(i).index();
-      if (index.empty()) {
-         continue;
-      }
-      if (!wallet->addressIndexExists(index)) {
-         walletsForBackup.insert(walletsMgr_->getHDRootForLeaf(walletId));
-         newAddresses.push_back(std::tuple<std::shared_ptr<bs::core::Wallet>, std::string, headless::AddressType>
-            { wallet, index, request.address(i).addrtype() });
-      }
-   }
-
-   if (backupEnabled_) {
-      for (const auto &hdWallet : walletsForBackup) {
-         if (hdWallet) {
-            walletsMgr_->backupWallet(hdWallet, backupPath_);
-         }
-      }
-   }
-
-   logger_->debug("[HeadlessContainerListener] creating {} new addresses", newAddresses.size());
-   std::vector<std::pair<std::string, std::string>> failedAddresses;
-   for (const auto &tuple : newAddresses) {
-      const auto &wallet = std::get<0>(tuple);
-      const auto &index = std::get<1>(tuple);
-      if (index.empty()) {    // just checking for wallet existence
-         continue;
-      }
-      const auto addr = wallet->createAddressWithIndex(index, mapAddressType(std::get<2>(tuple)));
-      if (addr.isNull()) {
-         logger_->warn("[HeadlessContainerListener] failed to create address for index {}", index);
-         rc = false;
-         failedAddresses.push_back({wallet->walletId(), index});
-      }
-      else {
-         logger_->debug("[HeadlessContainerListener] created address {} for index {}"
-            , addr.display<std::string>(), index);
-      }
-   }
-   SyncAddrResponse(clientId, packet.id(), failedWallets, failedAddresses);
-   return rc;
-}
-
-void HeadlessContainerListener::SyncAddrResponse(const std::string &clientId, unsigned int id
-   , const std::set<std::string> &failedWallets, const std::vector<std::pair<std::string, std::string>> &failedAddresses)
-{
-   headless::SyncAddressResponse response;
-   for (const auto &walletId : failedWallets) {
-      response.add_missingwalletid(walletId);
-   }
-   for (const auto &addr : failedAddresses) {
-      auto failedAddr = response.add_failedaddress();
-      failedAddr->set_walletid(addr.first);
-      failedAddr->set_index(addr.second);
-   }
-
-   headless::RequestPacket packet;
-   packet.set_id(id);
-   packet.set_authticket(authTicket(clientId).toBinStr());
-   packet.set_type(headless::SyncAddressRequestType);
-   packet.set_data(response.SerializeAsString());
-
-   if (!sendData(packet.SerializeAsString(), clientId)) {
-      logger_->error("[HeadlessContainerListener] failed to send response SyncAddress packet");
-   }
-}
-
 bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsigned int id, const headless::NewHDLeaf &request
    , const std::vector<bs::wallet::PasswordData> &pwdData)
 {
@@ -992,8 +887,6 @@ void HeadlessContainerListener::CreateHDWalletResponse(const std::string &client
    headless::CreateHDWalletResponse response;
    if (!pubKey.isNull() && !chainCode.isNull()) {
       auto leaf = response.mutable_leaf();
-      leaf->set_pubkey(pubKey.toBinStr());
-      leaf->set_chaincode(chainCode.toBinStr());
       leaf->set_walletid(errorOrWalletId);
    }
    else if (wallet) {
@@ -1009,8 +902,6 @@ void HeadlessContainerListener::CreateHDWalletResponse(const std::string &client
             auto wLeaf = wlt->add_leaves();
             wLeaf->set_path(leaf->path().toString());
             wLeaf->set_walletid(leaf->walletId());
-            wLeaf->set_pubkey(leaf->getPubKey().toBinStr());
-            wLeaf->set_chaincode(leaf->getChainCode().toBinStr());
          }
       }
    }

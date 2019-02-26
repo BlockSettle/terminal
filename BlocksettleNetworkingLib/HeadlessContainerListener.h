@@ -91,7 +91,6 @@ private:
    bool onSignMultiTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onPasswordReceived(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
-   bool onSyncAddress(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCreateHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onDeleteHDWallet(Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSetLimits(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
@@ -111,8 +110,6 @@ private:
       , const std::string &errorOrId);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
-   void SyncAddrResponse(const std::string &clientId, unsigned int id, const std::set<std::string> &failedWallets
-      , const std::vector<std::pair<std::string, std::string>> &failedAddresses);
    void ChangePasswordResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bool ok);
    void AutoSignActiveResponse(const std::string &clientId, const std::string &walletId, bool active
       , const std::string &error = {}, unsigned int id = 0);

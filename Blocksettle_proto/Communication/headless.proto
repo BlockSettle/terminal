@@ -12,7 +12,6 @@ enum RequestType
    SignPayoutTXRequestType     = 4;
    PasswordRequestType         = 5;
    SetUserIdRequestType        = 6;
-   SyncAddressRequestType      = 7;
    CreateHDWalletRequestType   = 8;
    DeleteHDWalletRequestType   = 9;
    GetRootKeyRequestType       = 10;
@@ -110,8 +109,6 @@ message SignPayoutTXRequest
    bytes    recipient = 2;
    string   authAddress = 3;
    bytes    settlementId = 4;
-   bytes    buyAuthKey = 5;
-   bytes    sellAuthKey = 6;
    bool     applyAutoSignRules = 7;
    string   password = 8;
 }
@@ -136,32 +133,6 @@ message PasswordReply
 message SetUserIdRequest
 {
    bytes userId = 1;
-}
-
-
-enum AddressType
-{
-   LegacyAddressType = 0;
-   NestedSWAddressType  = 1;
-   NativeSWAddressType  = 2;
-}
-
-message AddressIndex
-{
-   string   walletId = 1;
-   string   index = 2;
-   AddressType addrType = 3;
-}
-
-message SyncAddressRequest
-{
-   repeated AddressIndex address = 1;
-}
-
-message SyncAddressResponse
-{
-   repeated string    missingWalletId = 1;
-   repeated AddressIndex failedAddress = 2;
 }
 
 
@@ -202,10 +173,11 @@ message CreateHDWalletRequest
 
 message HDLeafWO
 {
-   bytes pubKey = 1;
-   bytes chainCode = 2;
+   string   name = 1;
+   string   desc = 2;
    string   walletId = 3;
    string   path = 4;
+   bool     extOnly = 5;
 }
 
 message HDGroupWO

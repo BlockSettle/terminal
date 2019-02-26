@@ -119,6 +119,15 @@ BinaryData hd::Leaf::getRootId() const
    return node_->pubCompressedKey();
 }
 
+std::vector<bs::Address> hd::Leaf::getPooledAddressList() const
+{
+   std::vector<bs::Address> result;
+   for (const auto &addr : poolByAddr_) {
+      result.push_back(addr.first);
+   }
+   return result;
+}
+
 // Return an external-facing address.
 bs::Address hd::Leaf::getNewExtAddress(AddressEntryType aet)
 {

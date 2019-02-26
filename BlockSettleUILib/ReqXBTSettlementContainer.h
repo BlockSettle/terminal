@@ -5,7 +5,6 @@
 #include <unordered_set>
 #include "AddressVerificator.h"
 #include "AuthAddress.h"
-#include "MetaData.h"
 #include "SettlementContainer.h"
 #include "SettlementMonitor.h"
 #include "SettlementWallet.h"
@@ -16,6 +15,11 @@
 namespace spdlog {
    class logger;
 }
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 class AddressVerificator;
 class ArmoryConnection;
 class AssetManager;
@@ -23,7 +27,6 @@ class AuthAddressManager;
 class SignContainer;
 class QuoteProvider;
 class TransactionData;
-class WalletsManager;
 
 
 class ReqXBTSettlementContainer : public bs::SettlementContainer
@@ -33,7 +36,7 @@ public:
    ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<AuthAddressManager> &, const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<WalletsManager> &, const bs::network::RFQ &
+      , const std::shared_ptr<bs::sync::WalletsManager> &, const bs::network::RFQ &
       , const bs::network::Quote &, const std::shared_ptr<TransactionData> &);
    ~ReqXBTSettlementContainer() override;
 
@@ -97,14 +100,14 @@ private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<AuthAddressManager>    authAddrMgr_;
    std::shared_ptr<AssetManager>          assetMgr_;
-   std::shared_ptr<WalletsManager>        walletsMgr_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<SignContainer>         signContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<TransactionData>       transactionData_;
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
+   bs::Address                settlAddr_;
 
-   std::shared_ptr<bs::core::SettlementAddressEntry> settlAddr_;
    std::shared_ptr<AddressVerificator>       addrVerificator_;
    std::shared_ptr<bs::SettlementMonitorCb>        monitor_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;

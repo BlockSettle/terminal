@@ -6,7 +6,6 @@
 #include <QFileInfo>
 #include <QStandardPaths>
 
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "PaperBackupWriter.h"
 #include "SignContainer.h"
@@ -15,9 +14,11 @@
 #include "WalletWarningDialog.h"
 #include "VerifyWalletBackupDialog.h"
 #include "WalletKeysSubmitWidget.h"
+#include "Wallets/SyncHDWallet.h"
 #include "EnterWalletPassword.h"
 
-WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
+
+WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<spdlog::logger> &logger
@@ -42,14 +43,14 @@ WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wa
    connect(ui_->radioButtonPDF, &QRadioButton::clicked, this, &WalletBackupDialog::pdfFileClicked);
 
    if (signingContainer_ && !signingContainer_->isOffline()) {
-      connect(signingContainer_.get(), &SignContainer::DecryptedRootKey, this, &WalletBackupDialog::onRootKeyReceived);
+//      connect(signingContainer_.get(), &SignContainer::DecryptedRootKey, this, &WalletBackupDialog::onRootKeyReceived);
       connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &WalletBackupDialog::onWalletInfo);
       connect(signingContainer_.get(), &SignContainer::Error, this, &WalletBackupDialog::onContainerError);
 
-      infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
+      infoReqId_ = signingContainer_->GetInfo(wallet_->walletId());
    }
 
-   outputFile_ = outputDir_ + "/backup_wallet_" + wallet->getName() + "_" + wallet->getWalletId();
+   outputFile_ = outputDir_ + "/backup_wallet_" + wallet->name() + "_" + wallet->walletId();
    textFileClicked();
 }
 
@@ -66,6 +67,7 @@ QString WalletBackupDialog::filePath() const
    return selectedFile_.isEmpty() ? QString::fromStdString(outputFile_ + ext) : selectedFile_;
 }
 
+#if 0    // Wallet backup should take place in signer only
 void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryData &privKey
    , const SecureBinaryData &chainCode, std::string walletId)
 {
@@ -108,7 +110,7 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    }
    else {
       try {
-         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet_->getWalletId()),
+         WalletBackupPdfWriter pdfWriter(QString::fromStdString(wallet_->walletId()),
             QString::fromStdString(easyData.part1),
             QString::fromStdString(easyData.part2),
             QPixmap(QLatin1String(":/resources/logo_print-250px-300ppi.png")),
@@ -126,6 +128,7 @@ void WalletBackupDialog::onRootKeyReceived(unsigned int id, const SecureBinaryDa
    }
    QDialog::accept();
 }
+#endif   //0
 
 void WalletBackupDialog::onWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo)
 {
@@ -198,10 +201,10 @@ void WalletBackupDialog::onBackupClicked()
          return;
       }
 
-      privKeyReqId_ = signingContainer_->GetDecryptedRootKey(wallet_, enterWalletOldPassword.resultingKey());
+      privKeyReqId_ = signingContainer_->getDecryptedRootKey(wallet_->walletId(), enterWalletOldPassword.resultingKey());
    }
    else {
-      privKeyReqId_ = signingContainer_->GetDecryptedRootKey(wallet_, ui_->widgetSubmitKeys->key());
+      privKeyReqId_ = signingContainer_->getDecryptedRootKey(wallet_->walletId(), ui_->widgetSubmitKeys->key());
    }
 }
 
@@ -234,7 +237,7 @@ void WalletBackupDialog::reject()
 }
 
 
-bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &wallet
+bool WalletBackupAndVerify(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<spdlog::logger> &logger

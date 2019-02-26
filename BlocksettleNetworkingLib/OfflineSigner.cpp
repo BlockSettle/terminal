@@ -24,7 +24,7 @@ bool OfflineSigner::Start()
    return true;
 }
 
-SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRequest &txSignReq,
+SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
    bool, TXSignMode, const PasswordType&, bool)
 {
    if (!txSignReq.isValid()) {
@@ -40,9 +40,9 @@ SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRe
       input->set_utxo(utxo.serialize().toBinStr());
       const auto addr = bs::Address::fromUTXO(utxo);
       input->mutable_address()->set_address(addr.display<std::string>());
-      if (txSignReq.wallet) {
+/*      if (txSignReq.wallet) {
          input->mutable_address()->set_index(txSignReq.wallet->GetAddressIndex(addr));
-      }
+      }*/
    }
 
    for (const auto &recip : txSignReq.recipients) {

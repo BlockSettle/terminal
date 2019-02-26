@@ -16,6 +16,16 @@
 namespace Ui {
     class RFQReplyWidget;
 }
+namespace spdlog {
+   class logger;
+}
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+   class SettlementAddressEntry;
+   class SecurityStatsCollector;
+}
 class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
@@ -24,17 +34,8 @@ class DialogManager;
 class MarketDataProvider;
 class QuoteProvider;
 class SignContainer;
-class WalletsManager;
 class ApplicationSettings;
 
-namespace spdlog
-{
-   class logger;
-}
-namespace bs {
-   class SettlementAddressEntry;
-   class SecurityStatsCollector;
-}
 
 class RFQReplyWidget : public TabWithShortcut
 {
@@ -54,7 +55,7 @@ public:
       , const std::shared_ptr<DialogManager> &dialogManager
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &);
-   void SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
 
@@ -90,7 +91,7 @@ private:
    std::shared_ptr<QuoteProvider>         quoteProvider_;
    std::shared_ptr<AuthAddressManager>    authAddressManager_;
    std::shared_ptr<AssetManager>          assetManager_;
-   std::shared_ptr<WalletsManager>        walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<DialogManager>         dialogManager_;
    std::shared_ptr<SignContainer>         signingContainer_;
    std::shared_ptr<ArmoryConnection>      armory_;

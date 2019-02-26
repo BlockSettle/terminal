@@ -16,7 +16,7 @@ Q_OBJECT
 
 public:
    CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<spdlog::logger>&, QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override;

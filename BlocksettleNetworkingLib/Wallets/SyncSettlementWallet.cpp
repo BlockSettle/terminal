@@ -1,9 +1,8 @@
 #include "SyncSettlementWallet.h"
-
 #include <stdexcept>
-
 #include <QDir>
 #include <QThread>
+#include <spdlog/spdlog.h>
 
 #include "ArmoryConnection.h"
 #include "BTCNumericTypes.h"
@@ -11,15 +10,14 @@
 #include "FastLock.h"
 #include "ScriptRecipient.h"
 #include "SettlementMonitor.h"
-
-#include <spdlog/spdlog.h>
-
+#include "SignContainer.h"
 
 using namespace bs::sync;
 
 
-SettlementWallet::SettlementWallet(const std::shared_ptr<SignContainer> &container,const std::shared_ptr<spdlog::logger> &logger)
-   : PlainWallet(container, logger)
+SettlementWallet::SettlementWallet(const std::string &walletId, const std::string &name, const std::string &desc
+   , const std::shared_ptr<SignContainer> &container,const std::shared_ptr<spdlog::logger> &logger)
+   : PlainWallet(walletId, name, desc, container, logger)
 {}
 
 bs::Address SettlementWallet::getExistingAddress(const BinaryData &settlementId)
@@ -136,34 +134,32 @@ bool SettlementWallet::createTempWalletForAddress(const bs::Address& addr)
    return true;
 }
 
-int SettlementWallet::addAddress(const bs::Address &, const std::string &, AddressEntryType)
+void SettlementWallet::newAddress(const CbAddress &cb, const BinaryData &settlementId
+   , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment)
 {
-   return -1;  //stub
-}
-
-void SettlementWallet::newAddress(const std::function<void(const bs::Address &)> &cb
-   , const BinaryData &settlementId, const BinaryData &buyAuthPubKey
-   , const BinaryData &sellAuthPubKey, const std::string &comment)
-{
-// TODO: signContainer_->newSettlementAddress(settlementId, buyAuthPubKey, sellAuthPubKey, comment);
-   bs::Address result;
-
-   {
-      FastLock locker(lockAddressMap_);
-      if (!comment.empty()) {
-         comments_[result] = comment;
+   if (!signContainer_) {
+      cb({});
+      return;
+   }
+   const auto &cbSettlAddr = [this, cb, settlementId, comment](const bs::Address &addr) {
+      setAddressComment(addr, comment);
+      {
+         FastLock locker{ lockAddressMap_ };
+         addrBySettlementId_[settlementId] = addr;
+         settlementIdByAddr_[addr] = settlementId;
       }
-      addrBySettlementId_[settlementId] = result;
-      settlementIdByAddr_[result] = settlementId;
-   }
 
-   if (armory_) {
-      createTempWalletForAddress(result);
-      registerWallet(armory_);
-   }
+      if (armory_) {
+         createTempWalletForAddress(addr);
+         registerWallet(armory_);
+      }
 
-   emit addressAdded();
-   cb(result);
+      cb(addr);
+      emit addressAdded();
+   };
+   const auto index = settlementId.toHexStr() + "." + buyAuthPubKey.toHexStr() + "."
+      + sellAuthPubKey.toHexStr();
+   signContainer_->syncNewAddress(walletId(), index, AddressEntryType_Default, cbSettlAddr);
 }
 
 std::string SettlementWallet::getAddressIndex(const bs::Address &addr)

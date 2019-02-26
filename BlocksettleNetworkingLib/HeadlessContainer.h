@@ -38,21 +38,15 @@ public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
    ~HeadlessContainer() noexcept = default;
 
-   HeadlessContainer(const HeadlessContainer&) = delete;
-   HeadlessContainer& operator = (const HeadlessContainer&) = delete;
-   HeadlessContainer(HeadlessContainer&&) = delete;
-   HeadlessContainer& operator = (HeadlessContainer&&) = delete;
-
-   RequestId SignTXRequest(const bs::wallet::TXSignRequest &, bool autoSign = false
+   RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) override;
-   RequestId SignPartialTXRequest(const bs::wallet::TXSignRequest &
+   RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) override;
-   RequestId SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::shared_ptr<bs::core::SettlementAddressEntry> &
-      , bool autoSign = false, const PasswordType& password = {}) override;
+   RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
+      , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override;
 
-   RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) override;
+   RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
    void SendPassword(const std::string &walletId, const PasswordType &password,
       bool cancelledByUser) override;
@@ -60,18 +54,18 @@ public:
    RequestId CancelSignTx(const BinaryData &txId) override;
 
    RequestId SetUserId(const BinaryData &) override;
-   RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) override;
-   RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &
+   RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override;
-   RequestId CreateHDWallet(const std::string &name, const std::string &desc
+   RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &seed
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
+   RequestId createSetttlementWallet() override { return 0; }
    RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
-   RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) override;
+   RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override;
    RequestId GetInfo(const std::string &rootWalletId) override;
-   void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) override;
-   RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
+   void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override;
+   RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
       , bool addNew, bool removeOld, bool dryRun) override;
 
@@ -86,7 +80,6 @@ protected:
    RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
    void ProcessGetRootKeyResponse(unsigned int id, const std::string &data);
    void ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data);
-   void ProcessSyncAddrResponse(const std::string &data);
    void ProcessChangePasswordResponse(unsigned int id, const std::string &data);
    void ProcessSetLimitsResponse(unsigned int id, const std::string &data);
 
@@ -160,25 +153,6 @@ public:
 private:
    QStringList                args_;
    std::shared_ptr<QProcess>  headlessProcess_;
-};
-
-
-class HeadlessAddressSyncer : public QObject
-{
-   Q_OBJECT
-public:
-   HeadlessAddressSyncer(const std::shared_ptr<SignContainer> &, const std::shared_ptr<WalletsManager> &);
-
-   void SyncWallet(const std::shared_ptr<bs::Wallet> &);
-
-private slots:
-   void onWalletsUpdated();
-   void onSignerReady();
-
-private:
-   std::shared_ptr<SignContainer>   signingContainer_;
-   std::shared_ptr<WalletsManager>  walletsMgr_;
-   bool     wasOffline_ = false;
 };
 
 #endif // __HEADLESS_CONTAINER_H__

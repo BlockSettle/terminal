@@ -3,6 +3,8 @@
 #include "Address.h"
 #include "CoreWalletsManager.h"
 #include "CoreHDWallet.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncSettlementWallet.h"
 
 InprocSigner::InprocSigner(const std::shared_ptr<bs::core::WalletsManager> &mgr
    , const std::shared_ptr<spdlog::logger> &logger, const std::string &walletsPath
@@ -21,7 +23,7 @@ bool InprocSigner::Start()
    return true;
 }
 
-SignContainer::RequestId InprocSigner::SignTXRequest(const bs::wallet::TXSignRequest &txSignReq,
+SignContainer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
    bool, TXSignMode mode, const PasswordType &password, bool)
 {
    if (!txSignReq.isValid()) {
@@ -60,16 +62,36 @@ SignContainer::RequestId InprocSigner::SignTXRequest(const bs::wallet::TXSignReq
    return reqId;  //stub
 }
 
-SignContainer::RequestId InprocSigner::CreateHDWallet(const std::string &name, const std::string &desc
+SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
+   , const std::vector<bs::wallet::PasswordData> &pwdData)
+{
+   const RequestId reqId = seqId_++;
+   return reqId;  //stub
+}
+
+SignContainer::RequestId InprocSigner::createHDWallet(const std::string &name, const std::string &desc
    , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData
    , bs::wallet::KeyRank keyRank)
 {
    const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, primary, pwdData, keyRank);
    const RequestId reqId = seqId_++;
-   const auto hdWallet = std::make_shared<bs::hd::Wallet>(wallet->walletId(), seed.networkType(), false
-      , wallet->name(), logger_, wallet->description());
+   const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->walletId(), wallet->name()
+      , wallet->description(), std::shared_ptr<InprocSigner>(this), logger_);
    QTimer::singleShot(1, [this, reqId, hdWallet] { emit HDWalletCreated(reqId, hdWallet); });
-   return reqId;  //stub
+   return reqId;
+}
+
+SignContainer::RequestId InprocSigner::createSetttlementWallet()
+{
+   const RequestId reqId = seqId_++;
+   auto wallet = walletsMgr_->getSettlementWallet();
+   if (!wallet) {
+      wallet = walletsMgr_->createSettlementWallet(netType_, walletsPath_);
+   }
+   const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(wallet->walletId(), wallet->name()
+      , wallet->description(), std::shared_ptr<InprocSigner>(this), logger_);
+   QTimer::singleShot(1, [this, reqId, settlWallet] { emit SettlementWalletCreated(reqId, settlWallet); });
+   return reqId;
 }
 
 void InprocSigner::syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb)
@@ -114,7 +136,6 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
    bs::sync::WalletData result;
    const auto wallet = walletsMgr_->getWalletById(id);
    if (wallet) {
-      result.isWatchingOnly = wallet->isWatchingOnly();
       result.encryptionTypes = wallet->encryptionTypes();
       result.encryptionKeys = wallet->encryptionKeys();
       result.encryptionRank = wallet->encryptionRank();
@@ -122,9 +143,61 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
 
       for (const auto &addr : wallet->getUsedAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
-         result.addresses.push_back({index, addr.getType(), addr});
+         const auto comment = wallet->getAddressComment(addr);
+         result.addresses.push_back({index, addr.getType(), addr, comment});
       }
-      //TODO: same for pooled addresses
+      for (const auto &addr : wallet->getPooledAddressList()) {
+         const auto index = wallet->getAddressIndex(addr);
+         result.addrPool.push_back({ index, addr.getType(), addr });
+      }
+      for (const auto &txComment : wallet->getAllTxComments()) {
+         result.txComments.push_back({txComment.first, txComment.second});
+      }
+   }
+   cb(result);
+}
+
+void InprocSigner::syncAddressComment(const std::string &walletId, const bs::Address &addr, const std::string &comment)
+{
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (wallet) {
+      wallet->setAddressComment(addr, comment);
+   }
+}
+
+void InprocSigner::syncTxComment(const std::string &walletId, const BinaryData &txHash, const std::string &comment)
+{
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (wallet) {
+      wallet->setTransactionComment(txHash, comment);
+   }
+}
+
+void InprocSigner::syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType aet
+   , const std::function<void(const bs::Address &)> &cb)
+{
+   const auto &cbAddrs = [cb](const std::vector<std::pair<bs::Address, std::string>> &outAddrs) {
+      if (outAddrs.size() == 1) {
+         cb(outAddrs[0].first);
+      }
+      else {
+         cb({});
+      }
+   };
+   syncNewAddresses(walletId, { {index, aet} }, cbAddrs);
+}
+
+void InprocSigner::syncNewAddresses(const std::string &walletId
+   , const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
+{
+   std::vector<std::pair<bs::Address, std::string>> result;
+   result.reserve(inData.size());
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (wallet) {
+      for (const auto &in : inData) {
+         result.push_back({ wallet->createAddressWithIndex(in.first, in.second), in.first });
+      }
    }
    cb(result);
 }

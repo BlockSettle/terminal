@@ -47,6 +47,7 @@ namespace bs {
             BinaryData getPubKey() const { return node_ ? node_->pubCompressedKey() : BinaryData(); }
             BinaryData getChainCode() const { return node_ ? node_->chainCode() : BinaryData(); }
 
+            std::vector<bs::Address> getPooledAddressList() const override;
             std::vector<bs::Address> getExtAddressList() const override { return extAddresses_; }
             std::vector<bs::Address> getIntAddressList() const override { return intAddresses_; }
             size_t getExtAddressCount() const override { return extAddresses_.size(); }

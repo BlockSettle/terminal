@@ -58,8 +58,13 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          case bs::sync::WalletFormat::HD: {
             const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name, info.description
                , signContainer_, logger_);
-            hdWallet->synchronize();
-            saveWallet(hdWallet);
+            if (hdWallet) {
+               hdWallet->synchronize();
+               saveWallet(hdWallet);
+            }
+            else {
+               logger_->error("[SyncWalletsManager::syncWallets] failed to create HD wallet {}", info.id);
+            }
             break;
          }
          case bs::sync::WalletFormat::Settlement: {
@@ -67,8 +72,10 @@ void WalletsManager::syncWallets(const CbProgress &cb)
                logger_->error("[SyncWalletsManager::syncWallets] more than one settlement wallet is not supported");
             }
             else {
-               settlementWallet_ = std::make_shared<SettlementWallet>(signContainer_, logger_);
-               settlementWallet_->synchronize();
+               const auto settlWallet = std::make_shared<SettlementWallet>(info.id, info.name, info.description
+                  , signContainer_, logger_);
+               settlWallet->synchronize();
+               setSettlementWallet(settlWallet);
             }
             break;
          }
@@ -110,7 +117,7 @@ void WalletsManager::saveWallet(const WalletPtr &newWallet)
 
 void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
 {
-   if (!isHDLeaf) {
+   if (!isHDLeaf && hdDummyWallet_) {
       hdDummyWallet_->add(wallet);
    }
    {
@@ -139,8 +146,20 @@ void WalletsManager::saveWallet(const HDWalletPtr &wallet)
    hdWallets_[wallet->walletId()] = wallet;
    walletNames_.insert(wallet->name());
    for (const auto &leaf : wallet->getLeaves()) {
-      addWallet(leaf);
+      addWallet(leaf, true);
    }
+}
+
+void WalletsManager::setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &wallet)
+{
+   settlementWallet_ = wallet;
+   connect(wallet.get(), &Wallet::walletReady, this, &WalletsManager::onWalletReady);
+   connect(wallet.get(), &Wallet::addressAdded, [this] { emit walletChanged(); });
+   connect(wallet.get(), &Wallet::walletReset, [this] { emit walletChanged(); });
+   connect(wallet.get(), &Wallet::balanceUpdated, [this](std::string walletId, std::vector<uint64_t>) {
+      emit walletBalanceUpdated(walletId); });
+   connect(wallet.get(), &Wallet::balanceChanged, [this](std::string walletId, std::vector<uint64_t>) {
+      emit walletBalanceChanged(walletId); });
 }
 
 bool WalletsManager::setAuthWalletFrom(const HDWalletPtr &wallet)
@@ -268,15 +287,13 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::st
    return nullptr;
 }
 
-WalletsManager::WalletPtr WalletsManager::getWallet(const unsigned int index) const
+std::vector<WalletsManager::WalletPtr> WalletsManager::getAllWallets() const
 {
-   if (index > wallets_.size()) {
-      return nullptr;
-   } else if (index == wallets_.size()) {
-      return settlementWallet_;
+   std::vector<WalletPtr> result;
+   for (const auto &wallet : wallets_) {
+      result.push_back(wallet.second);
    }
-
-   return getWalletById(walletsId_[index].toBinStr());
+   return result;
 }
 
 WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walletId) const
@@ -367,11 +384,11 @@ void WalletsManager::onNewBlock()
    emit blockchainEvent();
 }
 
-void WalletsManager::onRefresh(std::vector<BinaryData> ids)
+void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
 {
-   logger_->debug("[WalletsManager] Armory refresh");
-   updateWallets();  //TODO: update only refreshed wallets
-
+   if (!online) {
+      return;
+   }
    if (settlementWallet_) {   //TODO: check for refresh id
       settlementWallet_->refreshWallets(ids);
    }
@@ -403,6 +420,7 @@ void WalletsManager::onWalletReady(const QString &walletId)
    if (settlementWallet_ != nullptr) {
       nbWallets++;
    }
+   logger_->debug("onWalletReady {}, ready size={}, nbWallets = {}", walletId.toStdString(), readyWallets_.size(), nbWallets);
    if (readyWallets_.size() >= nbWallets) {
       logger_->debug("All wallets are ready - going online");
       armory_->goOnline();
@@ -804,21 +822,19 @@ void WalletsManager::createWallet(const std::string& name, const std::string& de
    , bs::core::wallet::Seed seed, bool primary
    , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
-   createHdReqId_ = signContainer_->CreateHDWallet(name, description, primary
+   createHdReqId_ = signContainer_->createHDWallet(name, description, primary
       , seed, pwdData, keyRank);
 }
 
-void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet> newWallet)
+void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet> newWallet)
 {
    if (id != createHdReqId_) {
       return;
    }
    createHdReqId_ = 0;
-   auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(newWallet->getWalletId(), newWallet->getName()
-      , newWallet->getDesc(), signContainer_, logger_);
-   hdWallet->synchronize();
-   adoptNewWallet(hdWallet);
-   emit walletCreated(hdWallet);
+   newWallet->synchronize();
+   adoptNewWallet(newWallet);
+   emit walletCreated(newWallet);
 }
 
 void WalletsManager::adoptNewWallet(const HDWalletPtr &wallet)
@@ -852,7 +868,7 @@ void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned l
       }
       if (wallet.second->shortName() == cc) {
          wallet.second->setDescription(ccDesc.toStdString());
-         const auto ccWallet = std::dynamic_pointer_cast<bs::hd::Leaf>(wallet.second);
+         const auto ccWallet = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(wallet.second);
          if (ccWallet) {
             ccWallet->setData(genesisAddr.toStdString());
             ccWallet->setData(nbSatoshis);
@@ -999,16 +1015,6 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
    return true;
 }
 
-/*QString WalletsManager::OfflineTxDir() const
-{
-   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
-}
-
-void WalletsManager::SetOfflineTxDir(const QString &dir)
-{
-   appSettings_->set(ApplicationSettings::signerOfflineDir, dir);
-}
-*/
 void WalletsManager::resumeRescan()
 {
    std::unordered_map<std::string, std::shared_ptr<bs::sync::hd::Wallet>> rootWallets;

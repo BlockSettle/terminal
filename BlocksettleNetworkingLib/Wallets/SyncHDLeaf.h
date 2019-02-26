@@ -22,79 +22,7 @@ namespace bs {
       namespace hd {
          class Group;
 
-         class BlockchainScanner
-         {
-         protected:
-            struct AddrPoolKey {
-               bs::hd::Path  path;
-               AddressEntryType  aet;
-
-               bool empty() const { return (path.length() == 0); }
-               bool operator < (const AddrPoolKey &other) const {
-                  if (path == other.path) {
-                     return aet < other.aet;
-                  }
-                  return (path < other.path);
-               }
-               bool operator==(const AddrPoolKey &other) const {
-                  return ((path == other.path) && (aet == other.aet));
-               }
-            };
-            struct AddrPoolHasher {
-               std::size_t operator()(const AddrPoolKey &key) const {
-                  return (std::hash<std::string>()(key.path.toString()) ^ std::hash<int>()((int)key.aet));
-               }
-            };
-
-            using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
-            using cb_completed = std::function<void()>;
-            using cb_save_to_wallet = std::function<void(const std::vector<PooledAddress> &)>;
-            using cb_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
-
-         protected:
-            BlockchainScanner(const std::string &walletId, const cb_save_to_wallet &, const cb_completed &);
-            ~BlockchainScanner() noexcept = default;
-
-            void setArmory(const std::shared_ptr<ArmoryConnection> &armory) { armoryConn_ = armory; }
-
-            std::vector<PooledAddress> generateAddresses(bs::hd::Path::Elem prefix, bs::hd::Path::Elem start
-               , size_t nb, AddressEntryType aet);
-            void scanAddresses(unsigned int startIdx, unsigned int portionSize = 100, const cb_write_last &cbw = nullptr);
-            void onRefresh(const std::vector<BinaryData> &ids);
-
-            std::vector<PooledAddress> newAddresses(const std::vector<AddrPoolKey> &);
-
-         private:
-            struct Portion {
-               std::vector<PooledAddress>  addresses;
-               std::map<bs::Address, AddrPoolKey>  poolKeyByAddr;
-               bs::hd::Path::Elem   start;
-               bs::hd::Path::Elem   end;
-               std::atomic_bool  registered;
-               std::vector<PooledAddress> activeAddresses;
-               Portion() : start(0), end(0), registered(false) {}
-            };
-
-            std::shared_ptr<ArmoryConnection>   armoryConn_;
-            std::shared_ptr<AsyncClient::BtcWallet>   rescanWallet_;
-            const std::string       walletId_;
-            const std::string       rescanWalletId_;
-            std::string             rescanRegId_;
-            unsigned int            portionSize_ = 100;
-            const cb_save_to_wallet cbSaveToWallet_;
-            const cb_completed      cbCompleted_;
-            cb_write_last           cbWriteLast_ = nullptr;
-            Portion                 currentPortion_;
-            std::atomic_int         processing_;
-
-         private:
-            static std::vector<BinaryData> getRegAddresses(const std::vector<PooledAddress> &src);
-            void fillPortion(bs::hd::Path::Elem start, unsigned int size = 100);
-            void processPortion();
-         };
-
-
-         class Leaf : public bs::sync::Wallet, protected BlockchainScanner
+         class Leaf : public bs::sync::Wallet
          {
             Q_OBJECT
                friend class Group;
@@ -110,7 +38,6 @@ namespace bs {
 
             virtual void init(const bs::hd::Path &);
             void synchronize() override;
-//            virtual bool copyTo(std::shared_ptr<hd::Leaf> &) const;
 
             void firstInit(bool force = false) override;
             std::string walletId() const override;
@@ -152,16 +79,12 @@ namespace bs {
                , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
                , QObject *context = nullptr) override;
 
-            int addAddress(const bs::Address &, const std::string &index, AddressEntryType) override;
+            int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
 
             void updateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
             bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
             bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const override;
             bool getActiveAddressCount(const std::function<void(size_t)> &) const override;
-
-/*            SecureBinaryData GetPublicKeyFor(const bs::Address &) override;
-            SecureBinaryData GetPubChainedKeyFor(const bs::Address &) override;
-            KeyPair GetKeyPairFor(const bs::Address &, const SecureBinaryData &password) override;*/
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
@@ -171,33 +94,56 @@ namespace bs {
                , bool asNew = false) override;
             void unregisterWallet() override;
 
-//            AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
             std::vector<BinaryData> getAddrHashes() const override;
             std::vector<BinaryData> getAddrHashesExt() const;
             std::vector<BinaryData> getAddrHashesInt() const;
-//            void addAddress(const bs::Address &, const BinaryData &pubChainedKey, const Path &path);
 
             void setScanCompleteCb(const cb_complete_notify &cb) { cbScanNotify_ = cb; }
             void scanAddresses(unsigned int startIdx = 0, unsigned int portionSize = 100
-               , const BlockchainScanner::cb_write_last &cbw = nullptr) {
-               BlockchainScanner::scanAddresses(startIdx, portionSize, cbw);
-            }
+               , const std::function<void(const std::string &walletId, unsigned int idx)> &cbw = nullptr);
 
          signals:
             void scanComplete(const std::string &walletId);
 
          protected slots:
             virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
-            virtual void onRefresh(std::vector<BinaryData> ids);
+            virtual void onRefresh(std::vector<BinaryData> ids, bool online);
 
          protected:
-            virtual bs::Address createAddress(const AddrPoolKey &, bool signal = true);
+            struct AddrPoolKey {
+               bs::hd::Path  path;
+               AddressEntryType  aet;
+
+               bool empty() const { return (path.length() == 0); }
+               bool operator < (const AddrPoolKey &other) const {
+                  if (path == other.path) {
+                     return aet < other.aet;
+                  }
+                  return (path < other.path);
+               }
+               bool operator==(const AddrPoolKey &other) const {
+                  return ((path == other.path) && (aet == other.aet));
+               }
+            };
+            struct AddrPoolHasher {
+               std::size_t operator()(const AddrPoolKey &key) const {
+                  return (std::hash<std::string>()(key.path.toString()) ^ std::hash<int>()((int)key.aet));
+               }
+            };
+
+            using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
+
+         protected:
+            virtual bs::Address createAddress(const AddrPoolKey &, const CbAddress &, bool signal = true);
             void reset();
             bs::hd::Path getPathForAddress(const bs::Address &) const;
             void activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &);
             void activateHiddenAddress(const bs::Address &);
             bs::Address createAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true);
             bs::Address createAddressWithPath(const AddrPoolKey &, bool signal = true);
+            virtual void topUpAddressPool(const std::function<void()> &cb = nullptr
+               , size_t intAddresses = 0, size_t extAddresses = 0);
+            void postOnline();
 
          protected:
             const bs::hd::Path::Elem   addrTypeExternal = 0u;
@@ -222,7 +168,7 @@ namespace bs {
 
             size_t intAddressPoolSize_ = 100;
             size_t extAddressPoolSize_ = 100;
-            const std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
+            std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
 
             std::set<AddrPoolKey>   tempAddresses_;
             std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressPool_;
@@ -234,6 +180,7 @@ namespace bs {
             std::vector<bs::Address>                     extAddresses_;
             std::map<BinaryData, AddrPoolKey>            addrToIndex_;
             cb_complete_notify                           cbScanNotify_ = nullptr;
+            std::function<void(const std::string &walletId, unsigned int idx)> cbWriteLast_ = nullptr;
             volatile bool activateAddressesInvoked_ = false;
 
             struct AddrPrefixedHashes {
@@ -247,19 +194,38 @@ namespace bs {
             };
             mutable AddrPrefixedHashes addrPrefixedHashes_;
 
+            std::string regIdExt_, regIdInt_;
+
+            struct Portion {
+               std::vector<PooledAddress>  addresses;
+               std::map<bs::Address, AddrPoolKey>  poolKeyByAddr;
+               bs::hd::Path::Elem   start;
+               bs::hd::Path::Elem   end;
+               std::atomic_bool  registered;
+               std::vector<PooledAddress> activeAddresses;
+               Portion() : start(0), end(0), registered(false) {}
+            };
+
+            std::shared_ptr<AsyncClient::BtcWallet>   rescanWallet_;
+            const std::string       rescanWalletId_;
+            std::string             rescanRegId_;
+            unsigned int            portionSize_ = 100;
+            Portion                 currentPortion_;
+            std::atomic_int         processing_;
+
          private:
             bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
-//            std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
-//               , AddressEntryType ae_type = AddressEntryType_Default);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey getAddressIndex(const bs::Address &) const;
             void onScanComplete();
             void onSaveToWallet(const std::vector<PooledAddress> &);
-            void topUpAddressPool(size_t intAddresses = 0
-               , size_t extAddresses = 0);
             bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;
 
             std::string getWalletIdInt() const;
+
+            static std::vector<BinaryData> getRegAddresses(const std::vector<PooledAddress> &src);
+            void fillPortion(bs::hd::Path::Elem start, const std::function<void()> &cb, unsigned int size = 100);
+            void processPortion();
          };
 
 
@@ -272,7 +238,10 @@ namespace bs {
             void setUserId(const BinaryData &) override;
 
          protected:
-            bs::Address createAddress(const AddrPoolKey &, bool signal = true) override;
+            bs::Address createAddress(const AddrPoolKey &, const CbAddress &
+               , bool signal = true) override;
+            void topUpAddressPool(const std::function<void()> &cb = nullptr
+               , size_t intAddresses = 0, size_t extAddresses = 0) override;
 
          private:
             BinaryData              userId_;

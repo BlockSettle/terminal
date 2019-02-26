@@ -18,7 +18,6 @@ namespace bs {
       }
    }
 namespace hd {
-   class Wallet;  //TODO: remove this after migration is done
 
 class WalletInfo : public QObject
 {
@@ -46,7 +45,6 @@ public:
    // used in signer
    WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *parent = nullptr);
    WalletInfo(std::shared_ptr<bs::sync::hd::Wallet> hdWallet, QObject *parent = nullptr);
-   WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent = nullptr); //TODO: remove this after migration is done
    WalletInfo(std::shared_ptr<bs::core::Wallet> wallet
       , std::shared_ptr<bs::core::hd::Wallet> rootHdWallet, QObject *parent = nullptr);
 

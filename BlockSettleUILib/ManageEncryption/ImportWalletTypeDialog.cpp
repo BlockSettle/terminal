@@ -8,7 +8,6 @@
 #include "EasyEncValidator.h"
 #include "BSMessageBox.h"
 #include "CoreWallet.h"
-#include "MetaData.h"
 #include "UiUtils.h"
 #include "make_unique.h"
 

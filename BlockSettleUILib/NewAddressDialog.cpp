@@ -1,23 +1,23 @@
-#include "NewAddressDialog.h"
 #include "ui_NewAddressDialog.h"
-#include "SignContainer.h"
-#include "UiUtils.h"
+#include "NewAddressDialog.h"
 #include <QClipboard>
 #include <QDialogButtonBox>
+#include "SignContainer.h"
+#include "UiUtils.h"
+#include "Wallets/SyncWallet.h"
 
 
-NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::Wallet>& wallet
+NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container, bool isNested, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::NewAddressDialog())
    , wallet_(wallet)
-   , address_(wallet_->GetNewExtAddress(isNested ? AddressEntryType_P2SH : AddressEntryType_P2WPKH))
+   , address_(wallet_->getNewExtAddress(isNested ? AddressEntryType_P2SH : AddressEntryType_P2WPKH))
 {
-   container->SyncAddresses({ {wallet_, address_} });
-   wallet_->RegisterWallet();
+//   wallet_->registerWallet();  //TODO: only when address callback is invoked
 
    ui_->setupUi(this);
-   ui_->labelWallet->setText(QString::fromStdString(wallet->GetWalletName()));
+   ui_->labelWallet->setText(QString::fromStdString(wallet->name()));
 
    QString displayAddress = address_.display();
    ui_->lineEditNewAddress->setText(displayAddress);
@@ -45,7 +45,7 @@ void NewAddressDialog::onClose()
 {
    const auto comment = ui_->textEditDescription->toPlainText();
    if (!comment.isEmpty()) {
-      wallet_->SetAddressComment(address_, comment.toStdString());
+      wallet_->setAddressComment(address_, comment.toStdString());
    }
 }
 

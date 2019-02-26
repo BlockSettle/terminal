@@ -46,8 +46,8 @@ namespace bs {
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
 
-         bool createSettlementWallet(NetworkType, const std::string &walletsPath);
-         std::shared_ptr<SettlementWallet> getSettlementWallet() const { return settlementWallet_; }
+         WalletPtr createSettlementWallet(NetworkType, const std::string &walletsPath);
+         WalletPtr getSettlementWallet() const { return settlementWallet_; }
          WalletPtr getAuthWallet() const;
          HDWalletPtr getPrimaryWallet() const;
 

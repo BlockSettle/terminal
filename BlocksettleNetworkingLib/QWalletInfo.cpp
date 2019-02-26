@@ -1,6 +1,5 @@
 #include <QFile>
 #include "CoreHDWallet.h"
-#include "HDWallet.h"
 #include "Wallets/SyncHDWallet.h"
 #include "WalletEncryption.h"
 #include "QWalletInfo.h"
@@ -60,21 +59,6 @@ WalletInfo::WalletInfo(std::shared_ptr<bs::sync::hd::Wallet> hdWallet, QObject *
       initEncKeys(hdWallet);
    });
 }
-
-WalletInfo::WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent)   //TODO: remove this after migration is finished
-{
-   const auto wallet = std::make_shared<bs::sync::hd::Wallet>(hdWallet->getWalletId()
-      , hdWallet->getName(), hdWallet->getDesc());
-
-   initFromRootWallet(wallet);
-   initEncKeys(wallet);
-
-   connect(wallet.get(), &bs::sync::hd::Wallet::metaDataChanged, this, [this, wallet]() {
-      initFromRootWallet(wallet);
-      initEncKeys(wallet);
-   });
-}
-
 
 WalletInfo::WalletInfo(std::shared_ptr<bs::core::Wallet> wallet, std::shared_ptr<bs::core::hd::Wallet> rootHdWallet, QObject *parent)
 {

@@ -10,7 +10,6 @@
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
 #include "CelerClient.h"
-#include "TransactionsViewModel.h"
 #include "QWalletInfo.h"
 
 namespace Ui {
@@ -18,9 +17,11 @@ namespace Ui {
 }
 namespace bs {
    class LogManager;
+   namespace sync {
+      class Wallet;
+      class WalletsManager;
+   }
 }
-
-class ChatServer;
 
 class AboutDialog;
 class AssetManager;
@@ -34,14 +35,13 @@ class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
 class CelerMarketDataProvider;
-class HeadlessAddressSyncer;
 class QSystemTrayIcon;
 class RequestReplyCommand;
 class SignContainer;
 class StatusBarView;
 class StatusViewBlockListener;
+class TransactionsViewModel;
 class WalletManagementWizard;
-class WalletsManager;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -120,7 +120,7 @@ private:
 
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
-   std::shared_ptr<WalletsManager>        walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
@@ -139,7 +139,6 @@ private:
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
-   std::shared_ptr<HeadlessAddressSyncer>    addrSyncer_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
@@ -160,17 +159,11 @@ private:
    void GetNetworkSettingsFromPuB(const std::function<void()> &);
    void OnNetworkSettingsLoaded();
 
-   struct TxInfo {
-      Tx       tx;
-      uint32_t txTime;
-      int64_t  value;
-      std::shared_ptr<bs::Wallet>   wallet;
-      bs::Transaction::Direction    direction;
-      QString  mainAddress;
-   };
-
 public slots:
    void onReactivate();
+
+private:
+   struct TxInfo;
 
 private slots:
    void onSend();
@@ -181,9 +174,10 @@ private slots:
    void openConfigDialog();
    void openAccountInfoDialog();
    void openCCTokenDialog();
-   void showZcNotification(const TxInfo &);
    void onZCreceived(const std::vector<bs::TXEntry>);
    void onArmoryStateChanged(ArmoryConnection::State);
+
+   void showZcNotification(const TxInfo *);
 
    void onLogin();
    void onLogout();

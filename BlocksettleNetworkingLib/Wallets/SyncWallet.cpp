@@ -26,7 +26,13 @@ void Wallet::synchronize()
 {
    const auto &cbProcess = [this] (bs::sync::WalletData data) {
       netType_ = data.netType;
-      //stub
+      for (const auto &addr : data.addresses) {
+         addAddress(addr.address, addr.index, addr.aet, false);
+         setAddressComment(addr.address, addr.comment, false);
+      }
+      for (const auto &txComment : data.txComments) {
+         setTransactionComment(txComment.txHash, txComment.comment, false);
+      }
       emit synchronized();
    };
    signContainer_->syncWallet(walletId(), cbProcess);
@@ -34,24 +40,53 @@ void Wallet::synchronize()
 
 std::string Wallet::getAddressComment(const bs::Address &address) const
 {
-   return {};  //stub
+   const auto &itComment = addrComments_.find(address);
+   if (itComment != addrComments_.end()) {
+      return itComment->second;
+   }
+   return {};
 }
 
-bool Wallet::setAddressComment(const bs::Address &address, const std::string &comment)
+bool Wallet::setAddressComment(const bs::Address &address, const std::string &comment, bool sync)
 {
-   if (address.isNull()) {
+   if (address.isNull() || comment.empty()) {
       return false;
    }
-   return true;   //stub
+   addrComments_[address] = comment;
+   if (sync && signContainer_) {
+      signContainer_->syncAddressComment(walletId(), address, comment);
+   }
+   return true;
 }
 
 std::string Wallet::getTransactionComment(const BinaryData &txHash)
 {
-   return {};  //stub
+   const auto &itComment = txComments_.find(txHash);
+   if (itComment != txComments_.end()) {
+      return itComment->second;
+   }
+   return {};
 }
 
-bool Wallet::setTransactionComment(const BinaryData &txOrHash, const std::string &comment)
+bool Wallet::setTransactionComment(const BinaryData &txOrHash, const std::string &comment, bool sync)
 {
+   if (txOrHash.isNull() || comment.empty()) {
+      return false;
+   }
+   BinaryData txHash;
+   if (txOrHash.getSize() == 32) {
+      txHash = txOrHash;
+   } else {   // raw transaction then
+      Tx tx(txOrHash);
+      if (!tx.isInitialized()) {
+         return false;
+      }
+      txHash = tx.getThisHash();
+   }
+   txComments_[txHash] = comment;
+   if (sync && signContainer_) {
+      signContainer_->syncTxComment(walletId(), txHash, comment);
+   }
    return true;   //stub
 }
 
@@ -551,12 +586,7 @@ bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
    return addresses[qrand() % addresses.size()];
 }
 
-/*bool Wallet::isSegWitInput(const UTXO& input)
-{
-   return input.isSegWit() || isSegWitScript(input.getScript());
-}
-
-bool Wallet::isSegWitScript(const BinaryData &script)
+/*bool Wallet::isSegWitScript(const BinaryData &script)
 {
 //   const auto scrType = BtcUtils::getTxOutScriptType(script);
    switch (getAddrTypeForAddr(BtcUtils::getTxOutRecipientAddr(script))) {
@@ -595,8 +625,10 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
 
    if (armory_) {
       const auto &cbRegister = [this](const std::string &) {
+         logger_->debug("Wallet ready: {}", walletId());
          emit walletReady(QString::fromStdString(walletId()));
       };
+      logger_->debug("register wallet {}, {} addresses", walletId(), getAddrHashes().size());
       const auto regId = armory_->registerWallet(btcWallet_, walletId(), getAddrHashes(), cbRegister, asNew);
       return { regId };
    }
@@ -813,40 +845,20 @@ bool Wallet::getLedgerDelegateForAddress(const bs::Address &addr
    return false;
 }
 
-int Wallet::addAddress(const bs::Address &addr, const std::string &, AddressEntryType)
+int Wallet::addAddress(const bs::Address &addr, const std::string &index, AddressEntryType aet, bool sync)
 {
-   usedAddresses_.push_back(addr);
+   if (!addr.isNull()) {
+      usedAddresses_.push_back(addr);
+   }
+   if (sync && signContainer_) {
+      signContainer_->syncNewAddress(walletId(), index, aet, [](const bs::Address &) {});
+   }
    return (usedAddresses_.size() - 1);
 }
 
-/*size_t wallet::getInputScrSize(const std::shared_ptr<AddressEntry> &addrEntry)
+void Wallet::newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData, const CbAddresses &cb)
 {
-   if (addrEntry) {
-      switch (addrEntry->getType()) {
-      case AddressEntryType_P2SH:   return 64;
-      default:    return addrEntry->getInputSize();
-      }
+   if (signContainer_) {
+      signContainer_->syncNewAddresses(walletId(), inData, cb);
    }
-   return 65;
 }
-
-BinaryData wallet::computeID(const BinaryData &input)
-{
-   auto result = BtcUtils::computeID(input);
-   const auto outSz = result.getSize();
-   if (result.getPtr()[outSz - 1] == 0) {
-      result.resize(outSz - 1);
-   }
-   return result;
-}
-
-
-bool operator ==(const Wallet &a, const Wallet &b)
-{
-   return (a.GetWalletId() == b.GetWalletId());
-}
-
-bool operator !=(const Wallet &a, const Wallet &b)
-{
-   return (a.GetWalletId() != b.GetWalletId());
-}*/

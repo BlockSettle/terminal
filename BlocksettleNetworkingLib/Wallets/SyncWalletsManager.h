@@ -43,7 +43,6 @@ namespace bs {
 
          WalletsManager(const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
             , const std::shared_ptr<ArmoryConnection> &);
-//         WalletsManager(const std::shared_ptr<spdlog::logger> &);
          ~WalletsManager() noexcept;
 
          WalletsManager(const WalletsManager&) = delete;
@@ -60,7 +59,7 @@ namespace bs {
          bool hasSettlementWallet() const { return (settlementWallet_ != nullptr); }
          HDWalletPtr getPrimaryWallet() const;
          std::shared_ptr<hd::DummyWallet> getDummyWallet() const { return hdDummyWallet_; }
-         WalletPtr getWallet(const unsigned int index) const;
+         std::vector<WalletPtr> getAllWallets() const;
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
          WalletPtr getDefaultWallet() const;
@@ -98,12 +97,10 @@ namespace bs {
          void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
             , bool primary = false, const std::vector<bs::wallet::PasswordData> &pwdData = {}
             , bs::wallet::KeyRank keyRank = { 0, 0 });
+         bool createSettlementWallet() { return true; }
          void adoptNewWallet(const HDWalletPtr &);
 
          bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
-
-/*         QString OfflineTxDir() const;
-         void SetOfflineTxDir(const QString &);*/
 
       signals:
          void walletChanged();
@@ -136,11 +133,11 @@ namespace bs {
          void onHDLeafAdded(QString id);
          void onHDLeafDeleted(QString id);
          void onNewBlock();
-         void onRefresh(std::vector<BinaryData> ids);
+         void onRefresh(std::vector<BinaryData> ids, bool online);
          void onStateChanged(ArmoryConnection::State);
 //         void onFeeObjDestroyed();
          void onWalletImported(const std::string &walletId);
-         void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
+         void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
 
       private:
          bool empty() const { return (wallets_.empty() && !settlementWallet_); }
@@ -156,6 +153,7 @@ namespace bs {
          void saveWallet(const HDWalletPtr &);
          void eraseWallet(const WalletPtr &);
          bool setAuthWalletFrom(const HDWalletPtr &);
+         void setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &);
 
          void updateTxDirCache(const std::string &txKey, Transaction::Direction
             , const std::vector<bs::Address> &inAddrs

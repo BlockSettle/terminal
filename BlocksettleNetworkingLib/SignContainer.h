@@ -8,7 +8,6 @@
 #include <QStringList>
 
 #include "HDPath.h"
-#include "MetaData.h"
 #include "CoreWallet.h"
 #include "QWalletInfo.h"
 
@@ -16,14 +15,14 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   namespace core {
-      class SettlementAddressEntry;
-   }
-   namespace hd {
-      class Wallet;
-   }
-
    namespace sync {
+      namespace hd {
+         class Leaf;
+         class Wallet;
+      }
+      class SettlementWallet;
+      class Wallet;
+
       enum class WalletFormat {
          Unknown = 0,
          HD,
@@ -58,11 +57,17 @@ namespace bs {
          std::string index;
          AddressEntryType  aet;
          bs::Address address;
+         std::string comment;
+      };
+
+      struct TxCommentData
+      {
+         BinaryData  txHash;
+         std::string comment;
       };
 
       struct WalletData
       {
-         bool  isWatchingOnly = true;
          std::vector<bs::wallet::EncryptionType>   encryptionTypes;
          std::vector<SecureBinaryData>          encryptionKeys;
          std::pair<unsigned int, unsigned int>  encryptionRank{ 0,0 };
@@ -70,6 +75,7 @@ namespace bs {
 
          std::vector<AddressData>   addresses;
          std::vector<AddressData>   addrPool;
+         std::vector<TxCommentData> txComments;
       };
 
    }  //namespace sync
@@ -112,56 +118,55 @@ public:
    SignContainer(const std::shared_ptr<spdlog::logger> &, OpMode opMode);
    ~SignContainer() noexcept = default;
 
-   SignContainer(const SignContainer&) = delete;
-   SignContainer& operator = (const SignContainer&) = delete;
-   SignContainer(SignContainer&&) = delete;
-   SignContainer& operator = (SignContainer&&) = delete;
+   virtual bool Start() { return true; }
+   virtual bool Stop() { return true; }
+   virtual bool Connect() { return true; }
+   virtual bool Disconnect() { return true; }
 
-   virtual bool Start() = 0;
-   virtual bool Stop() = 0;
-   virtual bool Connect() = 0;
-   virtual bool Disconnect() = 0;
-
-   virtual RequestId SignTXRequest(const bs::wallet::TXSignRequest &, bool autoSign = false
+   virtual RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) = 0;
-   virtual RequestId SignPartialTXRequest(const bs::wallet::TXSignRequest &
+   virtual RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) = 0;
-   virtual RequestId SignPayoutTXRequest(const bs::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::shared_ptr<bs::core::SettlementAddressEntry> &
-      , bool autoSign = false, const PasswordType& password = {}) = 0;
+   virtual RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
+      , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) = 0;
 
-   virtual RequestId SignMultiTXRequest(const bs::wallet::TXMultiSignRequest &) = 0;
+   virtual RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
 
    virtual void SendPassword(const std::string &walletId, const PasswordType &password,
       bool cancelledByUser) = 0;
    virtual RequestId CancelSignTx(const BinaryData &txId) = 0;
 
    virtual RequestId SetUserId(const BinaryData &) = 0;
-   virtual RequestId SyncAddresses(const std::vector<std::pair<std::shared_ptr<bs::Wallet>, bs::Address>> &) = 0;
-   virtual RequestId CreateHDLeaf(const std::shared_ptr<bs::hd::Wallet> &, const bs::hd::Path &
+   virtual RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) = 0;
-   virtual RequestId CreateHDWallet(const std::string &name, const std::string &desc
+   virtual RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) = 0;
+   virtual RequestId createSetttlementWallet() { return 0; }
    virtual RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
    virtual RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
-   virtual RequestId GetDecryptedRootKey(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password = {}) = 0;
+   virtual RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) = 0;
    virtual RequestId GetInfo(const std::string &rootWalletId) = 0;
-   virtual void SetLimits(const std::shared_ptr<bs::hd::Wallet> &, const SecureBinaryData &password, bool autoSign) = 0;
-   virtual RequestId ChangePassword(const std::shared_ptr<bs::hd::Wallet> &, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank, const SecureBinaryData &oldPass
-      , bool addNew, bool removeOld, bool dryRun) = 0;
+   virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
+   virtual RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
+      , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) = 0;
 
    virtual void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) {}
    virtual void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) {}
    virtual void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) {}
+   virtual void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) {}
+   virtual void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) {}
+   virtual void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
+      , const std::function<void(const bs::Address &)> &) {}
+   virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) {}
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }
-   virtual bool isReady() const = 0;
-   virtual bool isOffline() const = 0;
-   virtual bool isWalletOffline(const std::string &walletId) const = 0;
+   virtual bool isReady() const { return true; }
+   virtual bool isOffline() const { return true; }
+   virtual bool isWalletOffline(const std::string &walletId) const { return true; }
 
 signals:
    void connected();
@@ -174,10 +179,11 @@ signals:
 
    void PasswordRequested(bs::hd::WalletInfo walletInfo, std::string prompt);
 
-   void HDLeafCreated(RequestId id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
-   void HDWalletCreated(RequestId id, std::shared_ptr<bs::hd::Wallet>);
+   void HDLeafCreated(RequestId id, const std::shared_ptr<bs::sync::hd::Leaf> &);
+   void HDWalletCreated(RequestId id, std::shared_ptr<bs::sync::hd::Wallet>);
    void DecryptedRootKey(RequestId id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
+   void SettlementWalletCreated(RequestId id, const std::shared_ptr<bs::sync::SettlementWallet> &);
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void MissingWallets(const std::vector<std::string> &);
    void AddressSyncFailed(const std::vector<std::pair<std::string, std::string>> &failedAddresses);

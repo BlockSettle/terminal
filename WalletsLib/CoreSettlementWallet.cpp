@@ -99,21 +99,6 @@ int SettlementWallet::addAddress(const bs::Address &addr, const std::shared_ptr<
    return id;
 }
 
-/*AddressEntryType SettlementWallet::getAddrTypeForAddr(const BinaryData &addr)
-{
-   BinaryData prefixed;
-   prefixed.append(NetworkConfig::getScriptHashPrefix());
-   prefixed.append(addr);
-   const auto itAsset = assetByAddr_.find(prefixed);
-   if (itAsset != assetByAddr_.end()) {
-      const auto settlAsset = std::dynamic_pointer_cast<SettlementAssetEntry>(itAsset->second);
-      if (settlAsset) {
-         return settlAsset->addressType();
-      }
-   }
-   return AddressEntryType_Default;
-}*/
-
 std::shared_ptr<SettlementAddressEntry> SettlementWallet::getExistingAddress(const BinaryData &settlementId)
 {
    return getAddressBySettlementId(settlementId);
@@ -202,11 +187,11 @@ bool SettlementWallet::containsAddress(const bs::Address &addr)
 }
 
 BinaryData SettlementWallet::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &req, const KeyPair &keys
-   , const BinaryData &settlementId, const BinaryData &buyAuthKey, const BinaryData &sellAuthKey)
+   , const BinaryData &settlementId)
 {
-   auto addr = getAddressBySettlementId(settlementId);
+   const auto addr = getAddressBySettlementId(settlementId);
    if (!addr) {
-      addr = newAddress(settlementId, buyAuthKey, sellAuthKey);
+      throw std::runtime_error("failed to find address for settlementId " + settlementId.toHexStr());
    }
    auto resolverFeed = std::make_shared<SettlementResolverFeed>(addr, keys);
 

@@ -1,24 +1,23 @@
 #include "SyncPlainWallet.h"
 #include <spdlog/spdlog.h>
+#include "SignContainer.h"
 
 using namespace bs::sync;
 
-PlainWallet::PlainWallet(const std::shared_ptr<SignContainer> &container
+PlainWallet::PlainWallet(const std::string &walletId, const std::string &name, const std::string &desc,
+   const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(container, logger)
+   : Wallet(container, logger), walletId_(walletId), desc_(desc)
 {
+   walletName_ = name;
 }
 
 PlainWallet::~PlainWallet() = default;
 
-void PlainWallet::synchronize()
+int PlainWallet::addAddress(const bs::Address &addr, const std::string &index
+   , AddressEntryType aet, bool sync)
 {
-   //stub
-}
-
-int PlainWallet::addAddress(const bs::Address &addr, const std::string &index, AddressEntryType aet)
-{
-   const int id = Wallet::addAddress(addr, index, aet);
+   const int id = Wallet::addAddress(addr, index, aet, sync);
    addrPrefixedHashes_.insert(addr.id());
    return id;
 }

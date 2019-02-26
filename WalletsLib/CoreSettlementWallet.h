@@ -47,7 +47,7 @@ namespace bs {
          std::string getFileName(const std::string &dir) const override;
 
          BinaryData signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const KeyPair &
-            , const BinaryData &settlementId, const BinaryData &buyAuthKey, const BinaryData &sellAuthKey);
+            , const BinaryData &settlementId);
 
          std::shared_ptr<ResolverFeed> getResolver(const SecureBinaryData &) override { return nullptr; }   // can't resolve without external data
          std::shared_ptr<ResolverFeed> getPublicKeyResolver() override { return nullptr; }   // no public keys are stored

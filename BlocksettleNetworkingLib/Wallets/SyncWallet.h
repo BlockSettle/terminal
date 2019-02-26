@@ -61,6 +61,9 @@ namespace bs {
          Wallet(const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger = nullptr);
          ~Wallet() override;
 
+         using CbAddress = std::function<void(const bs::Address &)>;
+         using CbAddresses = std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>;
+
          virtual void synchronize();
 
          virtual std::string walletId() const { return "defaultWalletID"; }
@@ -115,9 +118,9 @@ namespace bs {
          virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
          virtual bool hasExtOnlyAddresses() const { return false; }
          virtual std::string getAddressComment(const bs::Address& address) const;
-         virtual bool setAddressComment(const bs::Address &addr, const std::string &comment);
+         virtual bool setAddressComment(const bs::Address &addr, const std::string &comment, bool sync = true);
          virtual std::string getTransactionComment(const BinaryData &txHash);
-         virtual bool setTransactionComment(const BinaryData &txOrHash, const std::string &comment);
+         virtual bool setTransactionComment(const BinaryData &txOrHash, const std::string &comment, bool sync = true);
 
          virtual std::vector<bs::Address> getUsedAddressList() const { return usedAddresses_; }
          virtual std::vector<bs::Address> getExtAddressList() const { return usedAddresses_; }
@@ -133,13 +136,14 @@ namespace bs {
          virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return getNewExtAddress(aet); }
          virtual bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default);
-//         virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
-/*         virtual bs::Address createAddressWithIndex(const std::string &index
-            , AddressEntryType aet = AddressEntryType_Default
-            , bool signal = true) = 0;*/
-         virtual int addAddress(const bs::Address &, const std::string &index, AddressEntryType);
+
+         //Adds an arbitrary address identified by index
+         virtual int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true);
+
+         //Request a bunch of addresses identified by index and aet - returns a vector of address-index pairs
+         virtual void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &, const CbAddresses &);
 
          virtual bool getLedgerDelegateForAddress(const bs::Address &
             , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
@@ -160,10 +164,7 @@ namespace bs {
             , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}
             , const BinaryData prevPart = {});
 
-/*         virtual bool isSegWitInput(const UTXO& input);
-         virtual SecureBinaryData GetPublicKeyFor(const bs::Address &) = 0;
-         virtual SecureBinaryData GetPubChainedKeyFor(const bs::Address &addr) { return GetPublicKeyFor(addr); }
-         virtual KeyPair GetKeyPairFor(const bs::Address &, const SecureBinaryData &password) = 0;*/
+         static bool isSegWitInput(const UTXO& input);
 
          virtual bool deleteRemotely() { return false; } //stub
 
@@ -209,6 +210,9 @@ namespace bs {
          NetworkType netType_ = NetworkType::Invalid;
          mutable QMutex    addrMapsMtx_;
          size_t            addrCount_ = 0;
+
+         std::map<bs::Address, std::string>  addrComments_;
+         std::map<BinaryData, std::string>   txComments_;
 
          mutable std::map<BinaryData, std::vector<uint64_t> >  addressBalanceMap_;
          mutable std::map<BinaryData, uint32_t>                addressTxNMap_;

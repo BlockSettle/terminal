@@ -25,8 +25,8 @@ namespace bs {
          Q_OBJECT
 
       public:
-         PlainWallet(const std::shared_ptr<SignContainer> &
-            , const std::shared_ptr<spdlog::logger> &logger);
+         PlainWallet(const std::string &walletId, const std::string &name, const std::string &desc
+            , const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger);
          ~PlainWallet() override;
 
          PlainWallet(const PlainWallet&) = delete;
@@ -34,17 +34,14 @@ namespace bs {
          PlainWallet& operator = (const PlainWallet&) = delete;
          PlainWallet& operator = (PlainWallet&&) = delete;
 
-         void synchronize() override;
-
-         int addAddress(const bs::Address &, const std::string &index, AddressEntryType) override;
+         int addAddress(const bs::Address &, const std::string &index, AddressEntryType
+            , bool sync = true) override;
          bool containsAddress(const bs::Address &addr) override;
 
          std::string walletId() const override { return walletId_; }
          std::string description() const override { return desc_; }
          void setDescription(const std::string &desc) override { desc_ = desc; }
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Bitcoin; }
-
-//         BinaryData getRootId() const override { return BinaryData(); }
 
          bs::Address getNewExtAddress(AddressEntryType) override { return {}; }
          bs::Address getNewIntAddress(AddressEntryType) override { return {}; }

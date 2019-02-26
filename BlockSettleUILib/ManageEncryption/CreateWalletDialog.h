@@ -7,21 +7,22 @@
 #include <QValidator>
 #include "BtcDefinitions.h"
 #include "EncryptionUtils.h"
-#include "MetaData.h"
 #include "QWalletInfo.h"
 
 namespace Ui {
    class CreateWalletDialog;
 }
 namespace bs {
-   namespace hd {
-      class Wallet;
+   namespace sync {
+      namespace hd {
+         class Wallet;
+      }
+      class WalletsManager;
    }
 }
-class SignContainer;
-class WalletsManager;
-class WalletKeysCreateWidget;
 class ApplicationSettings;
+class SignContainer;
+class WalletKeysCreateWidget;
 
 class CreateWalletDialog : public QDialog
 {
@@ -29,12 +30,11 @@ class CreateWalletDialog : public QDialog
 
 public:
    // Username is used to init Auth ID when available
-   CreateWalletDialog(const std::shared_ptr<WalletsManager> &
+   CreateWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
-      , const QString &walletsPath
       , const bs::core::wallet::Seed& walletSeed
-      , const std::string& walletId
-      , const QString& username
+      , const std::string &walletId
+      , const QString &username
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
@@ -46,7 +46,7 @@ public:
 private slots:
    void updateAcceptButtonState();
    void createWallet();
-   void onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
+   void onWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
    void onWalletCreateError(unsigned int id, std::string errMsg);
 
 protected:
@@ -56,11 +56,10 @@ private:
    std::unique_ptr<Ui::CreateWalletDialog> ui_;
 
 private:
-   std::shared_ptr<WalletsManager>  walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<spdlog::logger> logger_;
-   const QString     walletsPath_;
    const bs::core::wallet::Seed walletSeed_;
    bs::hd::WalletInfo walletInfo_;
    unsigned int      createReqId_ = 0;

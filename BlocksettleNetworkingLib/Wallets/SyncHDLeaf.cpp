@@ -12,31 +12,74 @@ const uint32_t kIntConfCount = 1;
 using namespace bs::sync;
 
 
-hd::BlockchainScanner::BlockchainScanner(const std::string &walletId, const cb_save_to_wallet &cbSave
-   , const cb_completed &cbComplete)
-   : walletId_(walletId), rescanWalletId_("rescan_" + walletId)
-   , cbSaveToWallet_(cbSave), cbCompleted_(cbComplete), processing_(-1)
-{}
+hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::string &desc
+   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger
+   , bs::core::wallet::Type type, bool extOnlyAddresses)
+   : bs::sync::Wallet(container, logger)
+   , walletId_(walletId), rescanWalletId_(walletId + "_rescan"), type_(type)
+   , name_(name), desc_(desc), isExtOnly_(extOnlyAddresses)
+{ }
 
-std::vector<hd::BlockchainScanner::PooledAddress> hd::BlockchainScanner::newAddresses(
-   const std::vector<AddrPoolKey> &)
+hd::Leaf::~Leaf() = default;
+
+void hd::Leaf::synchronize()
 {
-   return {};  //stub
+   const auto &cbProcess = [this](bs::sync::WalletData data) {
+      encryptionTypes_ = data.encryptionTypes;
+      encryptionKeys_ = data.encryptionKeys;
+      encryptionRank_ = data.encryptionRank;
+      netType_ = data.netType;
+
+      for (const auto &addr : data.addresses) {
+         addAddress(addr.address, addr.index, addr.aet, false);
+         setAddressComment(addr.address, addr.comment, false);
+      }
+      for (const auto &addr : data.addrPool) {  //addPool normally won't contain comments
+         const auto path = bs::hd::Path::fromString(addr.index);
+         addressPool_[{ path, addr.aet }] = addr.address;
+         poolByAddr_[addr.address] = { path, addr.aet };
+      }
+      for (const auto &txComment : data.txComments) {
+         setTransactionComment(txComment.txHash, txComment.comment, false);
+      }
+      emit synchronized();
+   };
+   signContainer_->syncWallet(walletId(), cbProcess);
 }
 
-std::vector<hd::BlockchainScanner::PooledAddress> hd::BlockchainScanner::generateAddresses(
-   bs::hd::Path::Elem prefix, bs::hd::Path::Elem start, size_t nb, AddressEntryType aet)
+void hd::Leaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
-   std::vector<AddrPoolKey> request;
-   request.reserve(nb);
-   for (bs::hd::Path::Elem i = start; i < start + nb; i++) {
-      bs::hd::Path addrPath({ prefix, i });
-      request.push_back({ addrPath, aet });
+   bs::sync::Wallet::setArmory(armory);
+   if (armory_) {
+      connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &hd::Leaf::onZeroConfReceived, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryConnection::refresh, this, &hd::Leaf::onRefresh, Qt::QueuedConnection);
    }
-   return newAddresses(request);
 }
 
-std::vector<BinaryData> hd::BlockchainScanner::getRegAddresses(const std::vector<hd::BlockchainScanner::PooledAddress> &src)
+void hd::Leaf::init(const bs::hd::Path &path)
+{
+   if (path != path_) {
+      path_ = path;
+      suffix_.clear();
+      const auto idx = index();
+      for (size_t i = 4; i > 0; i--) {
+         unsigned char c = (idx >> (8 * (i - 1))) & 0xff;
+         if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'))) {
+            suffix_.append(1, c);
+         }
+      }
+      if (suffix_.empty()) {
+         suffix_ = std::to_string(idx);
+      }
+      walletName_ = name_ + "/" + suffix_;
+   }
+
+   if (!path.length()) {
+      reset();
+   }
+}
+
+std::vector<BinaryData> hd::Leaf::getRegAddresses(const std::vector<PooledAddress> &src)
 {
    std::vector<BinaryData> result;
    for (const auto &addr : src) {
@@ -45,7 +88,7 @@ std::vector<BinaryData> hd::BlockchainScanner::getRegAddresses(const std::vector
    return result;
 }
 
-void hd::BlockchainScanner::fillPortion(bs::hd::Path::Elem start, unsigned int size)
+void hd::Leaf::fillPortion(bs::hd::Path::Elem start, const std::function<void()> &cb, unsigned int size)
 {
    currentPortion_.activeAddresses.clear();
    currentPortion_.addresses.clear();
@@ -54,50 +97,51 @@ void hd::BlockchainScanner::fillPortion(bs::hd::Path::Elem start, unsigned int s
    currentPortion_.start = start;
    currentPortion_.end = start + size - 1;
 
+   std::vector<std::pair<std::string, AddressEntryType>> request;
    for (bs::hd::Path::Elem addrType : {0, 1}) {
       for (const auto aet : { AddressEntryType_P2SH, AddressEntryType_P2WPKH }) {
-         const auto addrs = generateAddresses(addrType, start, size, aet);
-         currentPortion_.addresses.insert(currentPortion_.addresses.end(), addrs.begin(), addrs.end());
-         for (const auto &addr : addrs) {
-            currentPortion_.poolKeyByAddr[addr.second] = addr.first;
+         for (bs::hd::Path::Elem i = start; i < start + size; i++) {
+            bs::hd::Path addrPath({ addrType, i });
+            request.push_back({ addrPath.toString(), aet });
          }
       }
    }
+   const auto &cbAddrs = [this, cb](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
+      for (const auto &addr : addrs) {
+         const auto path = bs::hd::Path::fromString(addr.second);
+         currentPortion_.addresses.push_back({ {path, addr.first.getType()}, addr.first });
+         currentPortion_.poolKeyByAddr[addr.first] = { path, addr.first.getType() };
+      }
+      if (cb) {
+         cb();
+      }
+   };
+   newAddresses(request, cbAddrs);
 }
 
-void hd::BlockchainScanner::scanAddresses(unsigned int startIdx, unsigned int portionSize, const cb_write_last &cbw)
+void hd::Leaf::scanAddresses(unsigned int startIdx, unsigned int portionSize
+   , const std::function<void(const std::string &walletId, unsigned int idx)> &cbw)
 {
    if (startIdx == UINT32_MAX) {    // special index to skip rescan for particular wallet
-      if (cbCompleted_) {
-         cbCompleted_();
-      }
+      onScanComplete();
       return;
    }
+   const auto &cbPortion = [this]() {
+      currentPortion_.registered = true;
+
+      rescanRegId_ = armory_->registerWallet(rescanWallet_, rescanWalletId_
+         , getRegAddresses(currentPortion_.addresses), nullptr, true);
+   };
+
    portionSize_ = portionSize;
    cbWriteLast_ = cbw;
-   fillPortion(startIdx, portionSize);
+   fillPortion(startIdx, cbPortion, portionSize);
    if (cbWriteLast_) {
       cbWriteLast_(walletId_, startIdx);
    }
-   currentPortion_.registered = true;
-
-   rescanRegId_ = armoryConn_->registerWallet(rescanWallet_, rescanWalletId_
-      , getRegAddresses(currentPortion_.addresses), nullptr, true);
 }
 
-void hd::BlockchainScanner::onRefresh(const std::vector<BinaryData> &ids)
-{
-   if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
-      return;
-   }
-   const auto &it = std::find(ids.begin(), ids.end(), rescanRegId_);
-   if (it == ids.end()) {
-      return;
-   }
-   processPortion();
-}
-
-void hd::BlockchainScanner::processPortion()
+void hd::Leaf::processPortion()
 {
    if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
       return;
@@ -108,19 +152,21 @@ void hd::BlockchainScanner::processPortion()
 
    const auto &cbProcess = [this] {
       if (!currentPortion_.activeAddresses.empty()) {
-         if (cbSaveToWallet_) {
-            std::sort(currentPortion_.activeAddresses.begin(), currentPortion_.activeAddresses.end()
-               , [](const PooledAddress &a, const PooledAddress &b)
-            { return (a.first.path < b.first.path) && (a.first.aet < b.first.aet); });
-            cbSaveToWallet_(currentPortion_.activeAddresses);
-         }
+         std::sort(currentPortion_.activeAddresses.begin(), currentPortion_.activeAddresses.end()
+            , [](const PooledAddress &a, const PooledAddress &b)
+         { return (a.first.path < b.first.path) && (a.first.aet < b.first.aet); });
+         onSaveToWallet(currentPortion_.activeAddresses);
+
          if (cbWriteLast_) {
             cbWriteLast_(walletId_, currentPortion_.end + 1);
          }
-         fillPortion(currentPortion_.end + 1, portionSize_);
-         currentPortion_.registered = true;
-         rescanRegId_ = armoryConn_->registerWallet(rescanWallet_
-            , rescanWalletId_, getRegAddresses(currentPortion_.addresses), {});
+
+         const auto &cbPortion = [this]() {
+            currentPortion_.registered = true;
+            rescanRegId_ = armory_->registerWallet(rescanWallet_
+               , rescanWalletId_, getRegAddresses(currentPortion_.addresses), {});
+         };
+         fillPortion(currentPortion_.end + 1, cbPortion, portionSize_);
       }
       else {
          currentPortion_.start = currentPortion_.end = 0;
@@ -131,9 +177,7 @@ void hd::BlockchainScanner::processPortion()
          if (cbWriteLast_) {
             cbWriteLast_(walletId_, UINT32_MAX);
          }
-         if (cbCompleted_) {
-            cbCompleted_();
-         }
+         onScanComplete();
       }
    };
 
@@ -174,7 +218,7 @@ void hd::BlockchainScanner::processPortion()
          }
          cbProcess();
       };
-      armoryConn_->getTXsByHash(opTxHashes, cbInputs);
+      armory_->getTXsByHash(opTxHashes, cbInputs);
    };
 
    const auto &cbHistory = [this, cbTXs, cbProcess](std::vector<ClientClasses::LedgerEntry> entries) {
@@ -186,72 +230,10 @@ void hd::BlockchainScanner::processPortion()
          for (const auto &entry : entries) {
             txHashes.insert(entry.getTxHash());
          }
-         armoryConn_->getTXsByHash(txHashes, cbTXs);
+         armory_->getTXsByHash(txHashes, cbTXs);
       }
    };
-   armoryConn_->getWalletsHistory({ rescanWalletId_ }, cbHistory);
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::string &desc
-   ,const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger
-   , bs::core::wallet::Type type, bool extOnlyAddresses)
-   : bs::sync::Wallet(container, logger)
-   , hd::BlockchainScanner(walletId
-      , [this](const std::vector<PooledAddress> &addrs) { onSaveToWallet(addrs); }
-      , [this] { onScanComplete(); })
-   , walletId_(walletId), type_(type), name_(name), desc_(desc), isExtOnly_(extOnlyAddresses)
-{ }
-
-hd::Leaf::~Leaf() = default;
-
-void hd::Leaf::synchronize()
-{
-   const auto &cbProcess = [this](bs::sync::WalletData data) {
-      isWatchingOnly_ = data.isWatchingOnly;
-      encryptionTypes_ = data.encryptionTypes;
-      encryptionKeys_ = data.encryptionKeys;
-      encryptionRank_ = data.encryptionRank;
-      netType_ = data.netType;
-      //stub
-      emit synchronized();
-   };
-   signContainer_->syncWallet(walletId(), cbProcess);
-}
-
-void hd::Leaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
-{
-   bs::sync::Wallet::setArmory(armory);
-   hd::BlockchainScanner::setArmory(armory);
-   if (armory_) {
-      connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &hd::Leaf::onZeroConfReceived, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::refresh, this, &hd::Leaf::onRefresh, Qt::QueuedConnection);
-   }
-}
-
-void hd::Leaf::init(const bs::hd::Path &path)
-{
-   if (path != path_) {
-      path_ = path;
-      suffix_.clear();
-      const auto idx = index();
-      for (size_t i = 4; i > 0; i--) {
-         unsigned char c = (idx >> (8 * (i - 1))) & 0xff;
-         if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'))) {
-            suffix_.append(1, c);
-         }
-      }
-      if (suffix_.empty()) {
-         suffix_ = std::to_string(idx);
-      }
-      walletName_ = name_ + "/" + suffix_;
-   }
-
-   if (!path.length()) {
-      reset();
-   }
+   armory_->getWalletsHistory({ rescanWalletId_ }, cbHistory);
 }
 
 void hd::Leaf::onZeroConfReceived(const std::vector<bs::TXEntry>)
@@ -259,13 +241,69 @@ void hd::Leaf::onZeroConfReceived(const std::vector<bs::TXEntry>)
 //!   activateAddressesFromLedger(armory_->getZCentries(reqId));
 }  // if ZC is received, then likely wallet already contains the participating address
 
-void hd::Leaf::onRefresh(std::vector<BinaryData> ids)
+void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 {
-   hd::BlockchainScanner::onRefresh(ids);
+   const auto &cbRegisterExt = [this, online] {
+      if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
+         logger_->debug("{} ready (ext)", walletId());
+         emit walletReady(QString::fromStdString(walletId()));
+         if (online) {
+            postOnline();
+         }
+      }
+   };
+   const auto &cbRegisterInt = [this, online] {
+      if (regIdExt_.empty() && regIdInt_.empty()) {
+         logger_->debug("{} ready (int)", walletId());
+         emit walletReady(QString::fromStdString(walletId()));
+         if (online) {
+            postOnline();
+         }
+      }
+   };
+
+   if (!regIdExt_.empty() || !regIdInt_.empty()) {
+      for (const auto &id : ids) {
+         if (id.isNull()) {
+            continue;
+         }
+         if (id == regIdExt_) {
+            regIdExt_.clear();
+            cbRegisterExt();
+         } else if (id == regIdInt_) {
+            regIdInt_.clear();
+            cbRegisterInt();
+         }
+      }
+   }
+
+   if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
+      return;
+   }
+   const auto &it = std::find(ids.begin(), ids.end(), rescanRegId_);
+   if (it == ids.end()) {
+      return;
+   }
+   processPortion();
+}
+
+void hd::Leaf::postOnline()
+{
+   if (btcWallet_) {
+      btcWallet_->setUnconfirmedTarget(kExtConfCount);
+   }
+   if (btcWalletInt_) {
+      btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
+   }
 }
 
 void hd::Leaf::firstInit(bool force)
 {
+   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
+      return;
+   }
+   postOnline();
+
    bs::sync::Wallet::firstInit();
 
    if (activateAddressesInvoked_ || !armory_) {
@@ -340,26 +378,6 @@ void hd::Leaf::activateHiddenAddress(const bs::Address &addr)
    }
    createAddressWithPath(itAddr->second, false);
 }
-
-/*bool hd::Leaf::copyTo(std::shared_ptr<hd::Leaf> &leaf) const
-{
-   for (const auto &addr : addressMap_) {
-      const auto &address = addr.second;
-      const auto newAddr = leaf->createAddress(addr.first, false);
-      const auto comment = getAddressComment(address);
-      if (!comment.empty()) {
-         if (!leaf->setAddressComment(newAddr, comment)) {
-         }
-      }
-   }
-   for (const auto &addr : tempAddresses_) {
-      leaf->createAddress(addr, false);
-   }
-   leaf->path_ = path_;
-   leaf->lastExtIdx_ = lastExtIdx_;
-   leaf->lastIntIdx_ = lastIntIdx_;
-   return true;
-}*/
 
 void hd::Leaf::reset()
 {
@@ -436,15 +454,6 @@ bs::Address hd::Leaf::getRandomChangeAddress(AddressEntryType aet)
    }
 }
 
-/*AddressEntryType hd::Leaf::getAddrTypeForAddr(const BinaryData &addr)
-{
-   const auto addrEntry = getAddressEntryForAddr(addr);
-   if (addrEntry == nullptr) {
-      return AddressEntryType_Default;
-   }
-   return addrEntry->getType();
-}*/
-
 std::vector<BinaryData> hd::Leaf::getAddrHashes() const
 {
    std::vector<BinaryData> result;
@@ -490,35 +499,20 @@ std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryCo
 
    if (armory_) {
       const auto addrsExt = getAddrHashesExt();
-      std::vector<std::string> regIds;;
-      const auto regIdSet = std::make_shared<std::set<std::string>>();
+      std::vector<std::string> regIds;
+      const auto &cbEmpty = [](const std::string &) {};
 
-      const auto &cbRegisterExt = [this, regIdSet](const std::string &regId) {
-         btcWallet_->setUnconfirmedTarget(kExtConfCount);
-         regIdSet->erase(regId);
-         if (isExtOnly_ || regIdSet->empty()) {
-            emit walletReady(QString::fromStdString(walletId()));
-         }
-      };
-      const auto &cbRegisterInt = [this, regIdSet](const std::string &regId) {
-         btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
-         regIdSet->erase(regId);
-         if (regIdSet->empty()) {
-            emit walletReady(QString::fromStdString(walletId()));
-         }
-      };
-
-      const auto regIdExt = armory_->registerWallet(btcWallet_, walletId()
-         , addrsExt, cbRegisterExt, asNew);
-      regIdSet->insert(regIdExt);
-      regIds.push_back(regIdExt);
+      regIdExt_ = armory_->registerWallet(btcWallet_, walletId()
+         , addrsExt, cbEmpty, asNew);
+      regIds.push_back(regIdExt_);
+      logger_->debug("{} ext regId = {}", walletId(), regIdExt_);
 
       if (!isExtOnly_) {
          const auto addrsInt = getAddrHashesInt();
-         const auto regIdInt = armory_->registerWallet(btcWalletInt_
-            , getWalletIdInt(), addrsInt, cbRegisterInt, asNew);
-         regIdSet->insert(regIdInt);
-         regIds.push_back(regIdInt);
+         regIdInt_ = armory_->registerWallet(btcWalletInt_
+            , getWalletIdInt(), addrsInt, cbEmpty, asNew);
+         regIds.push_back(regIdInt_);
+         logger_->debug("{} int regId = {}", walletId(), regIdInt_);
       }
       return regIds;
    }
@@ -535,7 +529,6 @@ void hd::Leaf::unregisterWallet()
 
 bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
 {
-   topUpAddressPool();
    bs::hd::Path addrPath;
    if (isInternal) {
       if (isExtOnly_) {
@@ -548,10 +541,10 @@ bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
       addrPath.append(addrTypeExternal);
       addrPath.append(lastExtIdx_++);
    }
-   return createAddress({ addrPath, aet });
+   return createAddress({ addrPath, aet }, [](const bs::Address &) {});
 }
 
-bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, bool signal)
+bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb, bool signal)
 {
    const bool isInternal = (key.path.get(-2) == addrTypeInternal);
    if (isInternal && isExtOnly_) {
@@ -570,11 +563,18 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, bool signal)
       poolByAddr_.erase(result);
    }
    else {
-      const auto newAddrs = newAddresses({ keyCopy });
-      if (newAddrs.empty()) {
-         return {};
-      }
-      result = newAddrs[0].second;
+      const auto &cbPool = [this, cb, keyCopy] {
+         const auto addrPoolIt = addressPool_.find(keyCopy);
+         if (addrPoolIt != addressPool_.end()) {
+            const auto addr = addrPoolIt->second;
+            addressPool_.erase(addrPoolIt->first);
+            poolByAddr_.erase(addr);
+            if (cb) {
+               cb(addr);
+            }
+         }
+      };
+      topUpAddressPool(cbPool);
    }
 
    if (addrToIndex_.find(result.unprefixed()) != addrToIndex_.end()) {
@@ -589,69 +589,47 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, bool signal)
    return result;
 }
 
-void hd::Leaf::topUpAddressPool(size_t nbIntAddresses, size_t nbExtAddresses)
+void hd::Leaf::topUpAddressPool(const std::function<void()> &cb, size_t nbIntAddresses, size_t nbExtAddresses)
 {
    const size_t nbPoolInt = nbIntAddresses ? 0 : getLastAddrPoolIndex(addrTypeInternal) - lastIntIdx_ + 1;
    const size_t nbPoolExt = nbExtAddresses ? 0 : getLastAddrPoolIndex(addrTypeExternal) - lastExtIdx_ + 1;
    nbIntAddresses = qMax(nbIntAddresses, intAddressPoolSize_);
    nbExtAddresses = qMax(nbExtAddresses, extAddressPoolSize_);
 
+   std::vector<std::pair<std::string, AddressEntryType>> request;
    for (const auto aet : poolAET_) {
-      if (nbPoolInt < (intAddressPoolSize_ / 4)) {
-         const auto intAddresses = generateAddresses(addrTypeInternal, lastIntIdx_, nbIntAddresses, aet);
-         for (const auto &addr : intAddresses) {
-            addressPool_[addr.first] = addr.second;
-            poolByAddr_[addr.second] = addr.first;
+      if (!isExtOnly_ && (nbPoolInt < (intAddressPoolSize_ / 2))) {
+         for (bs::hd::Path::Elem i = lastIntIdx_; i < lastIntIdx_ + nbIntAddresses; i++) {
+            bs::hd::Path addrPath({ addrTypeExternal, i });
+            request.push_back({ addrPath.toString(), aet });
          }
       }
-
-      if (nbPoolExt < (extAddressPoolSize_ / 4)) {
-         const auto extAddresses = generateAddresses(addrTypeExternal, lastExtIdx_, nbExtAddresses, aet);
-         for (const auto &addr : extAddresses) {
-            addressPool_[addr.first] = addr.second;
-            poolByAddr_[addr.second] = addr.first;
+      if (nbPoolExt < (extAddressPoolSize_ / 2)) {
+         for (bs::hd::Path::Elem i = lastExtIdx_; i < lastExtIdx_ + nbExtAddresses; i++) {
+            bs::hd::Path addrPath({ addrTypeExternal, i });
+            request.push_back({ addrPath.toString(), aet });
          }
       }
    }
+
+   const auto &cbAddrs = [this, cb](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
+      for (const auto &addr : addrs) {
+         const auto path = bs::hd::Path::fromString(addr.second);
+         addressPool_[{path, addr.first.getType()}] = addr.first;
+         poolByAddr_[addr.first] = { path, addr.first.getType() };
+      }
+      if (cb) {
+         cb();
+      }
+   };
+   newAddresses(request, cbAddrs);
 }
 
-/*std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
-   , AddressEntryType ae_type)
-{
-   if (ae_type == AddressEntryType_Default) {
-      ae_type = defaultAET_;
-   }
-
-   std::shared_ptr<AddressEntry> aePtr = nullptr;
-   switch (ae_type)
-   {
-   case AddressEntryType_P2PKH:
-      aePtr = std::make_shared<AddressEntry_P2PKH>(assetPtr, true);
-      break;
-
-   case AddressEntryType_P2SH:
-      {
-         const auto nested = std::make_shared<AddressEntry_P2WPKH>(assetPtr);
-         aePtr = std::make_shared<AddressEntry_P2SH>(nested);
-      }
-      break;
-
-   case AddressEntryType_P2WPKH:
-      aePtr = std::make_shared<AddressEntry_P2WPKH>(assetPtr);
-      break;
-
-   default:
-      throw WalletException("unsupported address entry type");
-   }
-
-   return aePtr;
-}*/
-
-hd::BlockchainScanner::AddrPoolKey hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) const
+hd::Leaf::AddrPoolKey hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) const
 {
    bs::Address p2pk(addr, AddressEntryType_P2PKH);
    bs::Address p2sh(addr, AddressEntryType_P2SH);
-   hd::BlockchainScanner::AddrPoolKey index;
+   AddrPoolKey index;
    for (const auto &bd : { p2pk.unprefixed(), p2sh.unprefixed() }) {
       const auto itIndex = addrToIndex_.find(bd);
       if (itIndex != addrToIndex_.end()) {
@@ -662,7 +640,7 @@ hd::BlockchainScanner::AddrPoolKey hd::Leaf::getAddressIndexForAddr(const Binary
    return index;
 }
 
-hd::BlockchainScanner::AddrPoolKey hd::Leaf::getAddressIndex(const bs::Address &addr) const
+hd::Leaf::AddrPoolKey hd::Leaf::getAddressIndex(const bs::Address &addr) const
 {
    auto itIndex = addrToIndex_.find(addr.prefixed());
    if (itIndex == addrToIndex_.end()) {
@@ -724,11 +702,11 @@ bool hd::Leaf::hasId(const std::string &id) const
    return ((walletId() == id) || (getWalletIdInt() == id));
 }
 
-int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, AddressEntryType aet)
+int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, AddressEntryType aet, bool sync)
 {
    const auto path = bs::hd::Path::fromString(index);
    const bool isInternal = (path.get(-2) == addrTypeInternal);
-   const int id = bs::sync::Wallet::addAddress(addr, index, aet);
+   const int id = bs::sync::Wallet::addAddress(addr, index, aet, sync);
    if (isInternal) {
       intAddresses_.push_back(addr);
       addrPrefixedHashes_.internal.insert(addr.id());
@@ -1101,13 +1079,21 @@ bs::Address hd::Leaf::createAddressWithPath(const AddrPoolKey &key, bool signal)
    const auto addrIndex = key.path.get(-1);
    const int nbAddresses = addrIndex - lastIndex;
    if (nbAddresses > 0) {
-      for (const auto &addr : generateAddresses(key.path.get(-2), lastIndex, nbAddresses, key.aet)) {
-         lastIndex++;
-         createAddress(addr.first, signal);
+      std::vector<std::pair<std::string, AddressEntryType>> request;
+      for (bs::hd::Path::Elem i = lastIndex; i < lastIndex + nbAddresses; i++) {
+         bs::hd::Path addrPath({ key.path.get(-2), i });
+         request.push_back({ addrPath.toString(), key.aet });
       }
+      const auto &cbNewAddrs = [this](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
+         for (const auto &addr : addrs) {
+            addAddress(addr.first, addr.second, addr.first.getType(), false);
+         }
+      };
+      newAddresses(request, cbNewAddrs);
+      lastIndex += nbAddresses;
    }
    lastIndex++;
-   return createAddress({ addrPath, key.aet }, signal);
+   return createAddress({ addrPath, key.aet }, [](const bs::Address &) {}, signal);
 }
 
 void hd::Leaf::onSaveToWallet(const std::vector<PooledAddress> &addresses)
@@ -1153,19 +1139,28 @@ bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex(bs::hd::Path::Elem addrType) c
 
 hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
    , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger)
-   : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Authentication)
+   : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Authentication, true)
 {
    intAddressPoolSize_ = 0;
-   extAddressPoolSize_ = 0;
+   extAddressPoolSize_ = 5;
+   poolAET_ = { AddressEntryType_P2WPKH };
 }
 
-bs::Address hd::AuthLeaf::createAddress(const AddrPoolKey &key, bool signal)
+bs::Address hd::AuthLeaf::createAddress(const AddrPoolKey &key, const CbAddress &cb, bool signal)
 {
    if (userId_.isNull()) {
       tempAddresses_.insert(key);
       return {};
    }
-   return hd::Leaf::createAddress(key, signal);
+   return hd::Leaf::createAddress(key, cb, signal);
+}
+
+void hd::AuthLeaf::topUpAddressPool(const std::function<void()> &cb, size_t intAddresses, size_t extAddresses)
+{
+   if (userId_.isNull()) {
+      return;
+   }
+   hd::Leaf::topUpAddressPool(cb, intAddresses, extAddresses);
 }
 
 void hd::AuthLeaf::setUserId(const BinaryData &userId)
@@ -1180,11 +1175,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
       createAddress(addr, false);
       lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
    }
-   const auto poolAddresses = generateAddresses(addrTypeExternal, lastExtIdx_, 5, AddressEntryType_P2WPKH);
-   for (const auto &addr : poolAddresses) {
-      addressPool_[addr.first] = addr.second;
-      poolByAddr_[addr.second] = addr.first;
-   }
+   topUpAddressPool();
 }
 
 

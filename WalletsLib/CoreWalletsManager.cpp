@@ -133,7 +133,7 @@ bool WalletsManager::isWalletFile(const std::string &fileName) const
    return true;
 }
 
-bool WalletsManager::createSettlementWallet(NetworkType netType, const std::string &walletsPath)
+WalletsManager::WalletPtr WalletsManager::createSettlementWallet(NetworkType netType, const std::string &walletsPath)
 {
    logger_->debug("Creating settlement wallet");
    try {
@@ -145,7 +145,7 @@ bool WalletsManager::createSettlementWallet(NetworkType netType, const std::stri
    catch (const std::exception &e) {
       logger_->error("Failed to create Settlement wallet: {}", e.what());
    }
-   return (settlementWallet_ != nullptr);
+   return settlementWallet_;
 }
 
 WalletsManager::WalletPtr WalletsManager::getAuthWallet() const

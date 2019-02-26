@@ -342,26 +342,28 @@ std::string Wallet::getTransactionComment(const BinaryData &txHash)
    return aeComment ? aeComment->comment() : std::string{};
 }
 
-bool Wallet::setTransactionComment(const BinaryData &txOrHash, const std::string &comment)
+bool Wallet::setTransactionComment(const BinaryData &txHash, const std::string &comment)
 {
-   if (txOrHash.isNull()) {
+   if (txHash.isNull() || comment.empty()) {
       return false;
-   }
-
-   BinaryData txHash;
-   if (txOrHash.getSize() == 32) {
-      txHash = txOrHash;
-   }
-   else {   // raw transaction then
-      Tx tx(txOrHash);
-      if (!tx.isInitialized()) {
-         return false;
-      }
-      txHash = tx.getThisHash();
    }
    set(std::make_shared<wallet::AssetEntryComment>(nbMetaData_++, txHash, comment));
    write(getDBEnv(), getDB());
    return true;
+}
+
+std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const
+{
+   std::vector<std::pair<BinaryData, std::string>> result;
+   for (const auto &data : MetaData::fetchAll()) {
+      if (data.first.getSize() == 32) {   //Detect TX hash by size unless other suitable solution is found
+         const auto aeComment = std::dynamic_pointer_cast<wallet::AssetEntryComment>(data.second);
+         if (aeComment) {
+            result.push_back({ data.first, aeComment->comment() });
+         }
+      }
+   }
+   return result;
 }
 
 bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
