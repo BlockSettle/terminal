@@ -510,32 +510,6 @@ BTCNumericTypes::balance_type bs::Wallet::GetTotalBalance() const
    return totalBalance_;
 }
 
-template <typename MapT> void bs::Wallet::updateMap(const MapT &src, MapT &dst) const
-{
-   QMutexLocker lock(&addrMapsMtx_);
-   for (const auto &elem : src) {     // std::map::insert doesn't replace elements
-      dst[elem.first] = std::move(elem.second);
-   }
-}
-
-template <typename ArgT> void bs::Wallet::invokeCb(const std::map<BinaryData, ArgT> &data
-   , std::map<bs::Address, std::vector<std::function<void(ArgT)>>> &cbMap, const ArgT &defVal) const
-{
-   for (const auto &queuedCb : cbMap) {
-      const auto &it = data.find(queuedCb.first.id());
-      if (it != data.end()) {
-         for (const auto &cb : queuedCb.second) {
-            cb(it->second);
-         }
-      } else {
-         for (const auto &cb : queuedCb.second) {
-            cb(defVal);
-         }
-      }
-   }
-   cbMap.clear();
-}
-
 bool bs::Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
 {
    if (!isBalanceAvailable()) {

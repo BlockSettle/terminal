@@ -371,10 +371,30 @@ namespace bs {
       virtual AddressEntryType getAddrTypeForAddr(const BinaryData &) = 0;
       virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
-      template <typename MapT> void updateMap(const MapT &src, MapT &dst) const;
+      template <typename MapT> void updateMap(const MapT &src, MapT &dst) const {
+         QMutexLocker lock(&addrMapsMtx_);
+         for (const auto &elem : src) {     // std::map::insert doesn't replace elements
+            dst[elem.first] = std::move(elem.second);
+         }
+      }
+
       template <typename ArgT> void invokeCb(const std::map<BinaryData, ArgT> &data
          , std::map<bs::Address, std::vector<std::function<void(ArgT)>>> &cbMap
-         , const ArgT &defVal) const;
+         , const ArgT &defVal) const {
+         for (const auto &queuedCb : cbMap) {
+            const auto &it = data.find(queuedCb.first.id());
+            if (it != data.end()) {
+               for (const auto &cb : queuedCb.second) {
+                  cb(it->second);
+               }
+            } else {
+               for (const auto &cb : queuedCb.second) {
+                  cb(defVal);
+               }
+            }
+         }
+         cbMap.clear();
+      }
 
       bool getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &
          , std::function<void(std::vector<UTXO>)>, QObject *obj, uint64_t val);
