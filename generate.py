@@ -82,13 +82,13 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings):
    generated_dir = os.path.join(os.getcwd(), 'generated_proto')
    build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode + '-' + link_mode)
 
+   # TODO: uncomment
+   """
    if os.path.isfile(generated_dir):
       os.remove(generated_dir)
    elif os.path.isdir(generated_dir):
       shutil.rmtree(generated_dir)
 
-   # TODO: uncomment
-   """
    if os.path.isfile(build_dir):
       os.remove(build_dir)
    elif os.path.isdir(build_dir):
