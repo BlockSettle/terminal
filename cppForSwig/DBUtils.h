@@ -15,7 +15,6 @@
 #define _H_DBUTILS
 
 #include <string>
-
 #include "BinaryData.h"
 
 enum BLKDATA_TYPE

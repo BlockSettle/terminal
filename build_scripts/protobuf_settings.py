@@ -41,10 +41,12 @@ class ProtobufSettings(Configurator):
                    '-G',
                    self._project_settings.get_cmake_generator(),
                    '-Dprotobuf_BUILD_TESTS=OFF',
-                   '-Dprotobuf_MSVC_STATIC_RUNTIME=ON']
+                   '-Dprotobuf_WITH_ZLIB=OFF']
 
         if self._project_settings.get_link_mode() == 'shared':
-            command.append('-Dprotobuf_BUILD_SHARED_LIBS=ON')
+            command.append('-Dprotobuf_MSVC_STATIC_RUNTIME=OFF')
+        else:
+            command.append('-Dprotobuf_MSVC_STATIC_RUNTIME=ON')
 
         result = subprocess.call(command)
         return result == 0

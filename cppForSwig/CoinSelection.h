@@ -15,7 +15,6 @@
 #include <vector>
 #include <string>
 #include <set>
-#include <ArmoryCryptoLib_export.h>
 
 #include "TxClasses.h"
 #include "ScriptRecipient.h"
@@ -163,7 +162,7 @@ struct UtxoSelection
 
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT CoinSelection
+class CoinSelection
 {
 private:
    std::vector<UTXO> utxoVec_;

@@ -21,7 +21,6 @@
 #include <tuple>
 #include <list>
 
-
 #include "bdmenums.h"
 #include "BinaryData.h"
 #include "NetworkConfig.h"

@@ -38,7 +38,6 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <functional>
-#include <ArmoryCryptoLib_export.h>
 
 #include "secp256k1.h"
 #include "btc/ecc_key.h"
@@ -85,7 +84,7 @@ enum class BIP150State : uint8_t {INACTIVE = 0x00,
 // ECDH stuff. (Also, try to upstream a libbtc patch so that we can piggyback
 // off of their context.) Call these alongside any startup and shutdown code.
 void startupBIP151CTX();
-ArmoryCryptoLib_EXPORT void shutdownBIP151CTX();
+void shutdownBIP151CTX();
 
 // Global function used to load up the key DBs. CALL AFTER BIP 151 IS INITIALIZED.
 void startupBIP150CTX(const uint32_t& ipVer, bool publicRequester);

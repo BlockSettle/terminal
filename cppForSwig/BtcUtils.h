@@ -27,8 +27,6 @@
 #include <time.h>
 #include <algorithm>
 #include <stdexcept>
-#include <ArmoryCryptoLib_export.h>
-
 
 #include "BinaryData.h"
 #include "UniversalTimer.h"
@@ -277,7 +275,7 @@ public:
 // This class holds only static methods.  
 // NOTE:  added default ctor and a few non-static, to support SWIG
 //        (-classic SWIG doesn't support static methods)
-class ArmoryCryptoLib_EXPORT BtcUtils
+class BtcUtils
 {
    static const BinaryData        BadAddress_;
    static const std::string base64Chars_;

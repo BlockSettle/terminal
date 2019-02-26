@@ -12,8 +12,6 @@
 #include <memory>
 #include <string>
 #include <map>
-
-
 #include "btc/ecc_key.h"
 #include "EncryptionUtils.h"
 #include "Wallets.h"

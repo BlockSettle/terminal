@@ -1,12 +1,6 @@
 CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
 
-include (GenerateExportHeader)
-
 PROJECT(${CRYPTO_LIB_NAME})
-
-set(CRYPTO_LIB_EXPORT_NAME ${CRYPTO_LIB_NAME}_EXPORT)
-set(CRYPTO_LIB_STATIC_DEFINE ${CRYPTO_LIB_NAME}_BUILT_AS_STATIC)
-set(CRYPTO_LIB_FILE_NAME ${CRYPTO_LIB_NAME}_export.h)
 
 SET (SOURCES
    Accounts.cpp
@@ -19,9 +13,6 @@ SET (SOURCES
    BIP150_151.cpp
    BIP32_Node.cpp
    BlockDataManagerConfig.cpp
-   BlockDataMap.cpp
-   Blockchain.cpp
-   BlockObj.cpp
    BtcUtils.cpp
    ClientClasses.cpp
    CoinSelection.cpp
@@ -44,11 +35,9 @@ SET (SOURCES
    SocketObject.cpp
    SwigClient.cpp
    StringSockets.cpp
-   StoredBlockObj.cpp
    Transactions.cpp
    TxClasses.cpp
    TxEvalState.cpp
-   txio.cpp
    UniversalTimer.cpp
    Wallets.cpp
    WalletManager.cpp
@@ -71,7 +60,6 @@ ELSE (WIN32)
 ENDIF (WIN32)
 
 SET (HEADERS
-   ${CRYPTO_LIB_FILE_NAME}   
    Accounts.h
    Addresses.h
    Assets.h
@@ -83,9 +71,6 @@ SET (HEADERS
    BIP150_151.h
    BIP32_Node.h
    BlockDataManagerConfig.h
-   BlockDataMap.h
-   Blockchain.h
-   BlockObj.h
    BtcUtils.h
    ClientClasses.h
    CoinSelection.h
@@ -105,12 +90,10 @@ SET (HEADERS
    SocketObject.h
    SocketService.h
    StringSockets.h
-   StoredBlockObj.h
    SwigClient.h
    Transactions.h
    TxClasses.h
    TxEvalState.h
-   txio.h
    Wallets.h
    WalletManager.h
    WebSocketClient.h
@@ -169,46 +152,15 @@ IF(WIN32)
    SET(OS_SPECIFIC_HEADERS ${LEVELDB_WINDOWS_PORT_HEADERS})
 ENDIF(WIN32)
 
-IF(BSTERMINAL_SHARED_LIBS)
-   ADD_LIBRARY(${CRYPTO_LIB_NAME} SHARED
-      ${SOURCES} ${HEADERS} ${PROTO_SOURCES}
-      ${CRYPTOPP_EXTRA_SOURCES} ${CRYPTOPP_EXTRA_HEADERS}
-      ${OS_SPECIFIC_SOURCES} ${OS_SPECIFIC_HEADERS})
-ELSE()
-   ADD_LIBRARY(${CRYPTO_LIB_NAME}
-      ${SOURCES} ${HEADERS} ${PROTO_SOURCES}
-      ${CRYPTOPP_EXTRA_SOURCES} ${CRYPTOPP_EXTRA_HEADERS}
-      ${OS_SPECIFIC_SOURCES} ${OS_SPECIFIC_HEADERS})
-ENDIF()
+ADD_LIBRARY(${CRYPTO_LIB_NAME}
+   ${SOURCES} ${HEADERS} ${PROTO_SOURCES}
+   ${CRYPTOPP_EXTRA_SOURCES} ${CRYPTOPP_EXTRA_HEADERS}
+   ${OS_SPECIFIC_SOURCES} ${OS_SPECIFIC_HEADERS})
 
-GENERATE_EXPORT_HEADER( ${CRYPTO_LIB_NAME}
-             BASE_NAME ${CRYPTO_LIB_NAME}
-             EXPORT_MACRO_NAME ${CRYPTO_LIB_EXPORT_NAME}
-             EXPORT_FILE_NAME ${CRYPTO_LIB_FILE_NAME}
-             STATIC_DEFINE ${CRYPTO_LIB_STATIC_DEFINE}
-)
-
-target_include_directories(
-    ${CRYPTO_LIB_NAME} PUBLIC
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>"
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
-)
-
-IF(BSTERMINAL_SHARED_LIBS)
-   TARGET_LINK_LIBRARIES(${CRYPTO_LIB_NAME}
-      ${OS_SPECIFIC_LIBS}
-      ${OPENSSL_LIBS}
-      ${PROTO_LIB}
-      ${WS_LIB}
-      ${CRYPTOPP_LIB}
-      ${LIBBTC_LIB}
-      )
-ELSE()
-   TARGET_LINK_LIBRARIES(${CRYPTO_LIB_NAME}
-      ${WS_LIB}
-      ${CRYPTOPP_LIB}
-      )
-ENDIF()
+TARGET_LINK_LIBRARIES(${CRYPTO_LIB_NAME}
+   ${WS_LIB}
+   ${CRYPTOPP_LIB}
+   )
 
 IF(NOT WIN32)
    SET(ARMORYDB_SOURCES)

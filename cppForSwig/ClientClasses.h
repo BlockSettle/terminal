@@ -13,7 +13,6 @@
 #include <string>
 #include <functional>
 
-
 #include "BinaryData.h"
 #include "SocketObject.h"
 #include "BDVCodec.h"

@@ -2,9 +2,8 @@
 #define __CURRENCY_PAIR_H__
 
 #include <string>
-#include <CommonLib_export.h>
 
-class CommonLib_EXPORT CurrencyPair
+class CurrencyPair
 {
 public:
    CurrencyPair(const std::string& pairString);

@@ -13,7 +13,6 @@
 #include <set>
 #include <memory>
 
-
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
 #include "Assets.h"

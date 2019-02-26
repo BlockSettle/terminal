@@ -16,7 +16,6 @@
 #include <map>
 #include <sstream>
 
-
 #define FEE_STRAT_CONSERVATIVE   "CONSERVATIVE"
 #define FEE_STRAT_ECONOMICAL     "ECONOMICAL"
 

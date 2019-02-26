@@ -10,14 +10,13 @@
 #define _H_ADDRESSES
 
 #include <memory>
-#include <ArmoryCryptoLib_export.h>
 
 #include "BinaryData.h"
 #include "ScriptRecipient.h"
 #include "Assets.h"
 #include "BlockDataManagerConfig.h"
 
-class ArmoryCryptoLib_EXPORT AddressException : public std::runtime_error
+class AddressException : public std::runtime_error
 {
 public:
    AddressException(const std::string& err) : std::runtime_error(err)
@@ -44,7 +43,7 @@ enum AddressEntryType
 #define ADDRESS_TYPE_MASK        0x0FFFFFFF
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry
+class AddressEntry
 {
 protected:
    const AddressEntryType type_;
@@ -92,7 +91,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_WithAsset
+class AddressEntry_WithAsset
 {
 private:
    const std::shared_ptr<AssetEntry> asset_;
@@ -110,7 +109,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_P2PKH : public AddressEntry, public AddressEntry_WithAsset
+class AddressEntry_P2PKH : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
@@ -139,7 +138,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_P2PK : public AddressEntry, public AddressEntry_WithAsset
+class AddressEntry_P2PK : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
@@ -168,7 +167,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_P2WPKH : public AddressEntry, public AddressEntry_WithAsset
+class AddressEntry_P2WPKH : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
@@ -198,7 +197,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_Multisig : public AddressEntry, public AddressEntry_WithAsset
+class AddressEntry_Multisig : public AddressEntry, public AddressEntry_WithAsset
 {
 public:
    //tors
@@ -227,7 +226,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_Nested
+class AddressEntry_Nested
 {
 private:
    std::shared_ptr<AddressEntry> addrPtr_;
@@ -246,7 +245,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_P2SH : public AddressEntry, public AddressEntry_Nested
+class AddressEntry_P2SH : public AddressEntry, public AddressEntry_Nested
 {
 public:
    //tors
@@ -275,7 +274,7 @@ public:
 
 
 ////////////////////////////////////////////////////////////////////////////////
-class ArmoryCryptoLib_EXPORT AddressEntry_P2WSH : public AddressEntry, public AddressEntry_Nested
+class AddressEntry_P2WSH : public AddressEntry, public AddressEntry_Nested
 {
 public:
    //tors

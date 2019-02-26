@@ -15,7 +15,6 @@ Handle codec and socketing for armory client
 
 #include <thread>
 
-
 #include "StringSockets.h"
 #include "bdmenums.h"
 #include "log.h"
