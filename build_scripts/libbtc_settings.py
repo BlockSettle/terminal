@@ -38,21 +38,6 @@ class LibBTC(Configurator):
                    '-G',
                    self._project_settings.get_cmake_generator()]
  
-        # make shared
-        """
-        if self._project_settings.on_windows():
-            if self._project_settings.get_link_mode() == 'shared':
-                command.append('-DLIBBTC_SHARED=ON')
-        # only static version
-        """
-        """
-        if self._project_settings.on_windows():
-            if self._project_settings.get_build_mode() == 'release':
-                command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
-            else:
-                command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
-        """
-
         result = subprocess.call(command)
 
         return result == 0
@@ -62,15 +47,8 @@ class LibBTC(Configurator):
                    self.get_solution_file(),
                    '/t:' + self._package_name,
                    '/p:Configuration=' + self.get_win_build_configuration(),
-                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
-        """        
-        command = ['devenv',
-                   self.get_solution_file(),
-                   '/build',
-                   self.get_win_build_configuration(),
-                   '/project',
-                   self._package_name]
-        """
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
+
         print(' '.join(command))
 
         result = subprocess.call(command)

@@ -97,15 +97,7 @@ class ZeroMQSettings(Configurator):
                    self.get_solution_file(),
                    '/t:libzmq',
                    '/p:Configuration=' + self.get_win_configuration(),
-                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
-        """
-        command = ['devenv',
-                   self.get_solution_file(),
-                   '/build',
-                   self.get_win_configuration(),
-                   '/project',
-                   'libzmq']
-        """
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         result = subprocess.call(command)
 

@@ -53,15 +53,7 @@ class LibChaCha20Poly1305Settings(Configurator):
                    self.get_solution_file(),
                    '/t:lib' + self._package_name,
                    '/p:Configuration=' + self.get_win_build_configuration(),
-                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
-        """
-        command = ['devenv',
-                   self.get_solution_file(),
-                   '/build',
-                   self.get_win_build_configuration(),
-                   '/project',
-                   'lib' + self._package_name]
-        """
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         print(' '.join(command))
 

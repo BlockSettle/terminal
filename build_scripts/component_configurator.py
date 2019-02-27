@@ -196,10 +196,11 @@ class Configurator:
 
     def filter_copy(self, src, dst, file_extension=None, cleanupDst=True):
         if cleanupDst:
+            pass
             # TODO: uncomment
             #self.remove_fs_object(dst)
-            # Don't rise error if directory exist!
-            os.makedirs(dst, exist_ok=True)
+        # Don't rise error if directory exist!
+        os.makedirs(dst, exist_ok=True)
 
         for name in os.listdir(src):
             src_name = os.path.join(src, name)

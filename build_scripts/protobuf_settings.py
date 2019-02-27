@@ -77,15 +77,7 @@ class ProtobufSettings(Configurator):
                    self.get_solution_file(),
                    '/t:protoc',
                    '/p:Configuration=' + self.get_win_build_mode(),
-                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
-        """
-        command = ['devenv',
-                   self.get_solution_file(),
-                   '/build',
-                   self.get_win_build_mode(),
-                   '/project',
-                   'protoc']
-        """
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         result = subprocess.call(command)
         return result == 0

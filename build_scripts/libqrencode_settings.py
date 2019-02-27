@@ -48,7 +48,7 @@ class LibQREncode(Configurator):
                    self.get_solution_file(),
                    '/t:qrencode',
                    '/p:Configuration=' + self.get_win_build_configuration(),
-                   '/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         print(' '.join(command))
 
@@ -71,7 +71,14 @@ class LibQREncode(Configurator):
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-        self.filter_copy(lib_dir, install_lib_dir, '.lib')
+        # copy libs
+        if self._project_settings.get_link_mode() == 'shared':
+            output_dir = os.path.join(self.get_build_dir(),  self.get_win_build_configuration())
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.dll')
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib', False)
+        else:
+            self.filter_copy(lib_dir, install_lib_dir, '.lib')
+
         self.filter_copy(include_dir, install_include_dir, '.h')
 
         return True

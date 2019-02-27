@@ -34,8 +34,12 @@ class MPIRSettings(Configurator):
         return True
 
     def get_solution_file(self):
-        return os.path.join(self.get_build_dir(), 'build.vc'
-           + self._project_settings.get_vs_version_number(), 'mpir.sln')
+        if self._project_settings.get_link_mode() == 'shared':
+            return os.path.join(self.get_build_dir(), 'build.vc'
+               + self._project_settings.get_vs_version_number(), 'dll_mpir_gc\\dll_mpir_gc.vcxproj')
+        else:
+            return os.path.join(self.get_build_dir(), 'build.vc'
+               + self._project_settings.get_vs_version_number(), 'lib_mpir_gc\\lib_mpir_gc.vcxproj')
 
     def config_x(self):
         os.chmod(os.path.join(self.get_unpacked_sources_dir(), 'configure'),
@@ -57,29 +61,24 @@ class MPIRSettings(Configurator):
 
     def make_windows(self):
         print('Making MPIR')
-        buildcfg = self.get_win_build_mode() + '|' + self.get_win_platform()
 
-        # Can't use msbuild here to speedup compilation because 
-        # someone forgot in solution to set project dll_mpir_gc properties for build
-        command = ['devenv',
+        command = ['msbuild',
                    self.get_solution_file(),
-                   '/build',
-                   buildcfg,
-                   '/project',
-                   'lib_mpir_gc']	# lib_mpir_core2 doesn't build with VS2017 now
+                   '/p:Configuration=' + self.get_win_build_mode(),
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         if self._project_settings.get_link_mode() == 'shared':
-            command = ['devenv',
-                self.get_solution_file(),
-                '/build',
-                buildcfg,
-                '/project',
-                'dll_mpir_gc']
+            command = ['msbuild',
+                   self.get_solution_file(),
+                   '/p:Configuration=' + self.get_win_build_mode(),
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
+                   #'/M:' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         print('Running ' + ' '.join(command))
 
         result = subprocess.call(command)
-        return result == 1
+
+        return result == 0
 
     def get_win_build_mode(self):
         if self._project_settings.get_build_mode() == 'release':
