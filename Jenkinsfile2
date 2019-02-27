@@ -1,5 +1,12 @@
 pipeline {
     agent any
+    parameters {
+        choice(
+            choices: ['All' , 'Linux', 'MacOS', 'Windows'],
+            description: 'Choose OS to build',
+            name: 'OS')
+    }
+
     options {
         lock resource: 'terminal_lock'
     }
@@ -8,6 +15,9 @@ pipeline {
         stage('Build apps') {
             parallel {
                 stage('Build Linux app') {
+                    when {
+                        expression { params.OS == 'Linux' }
+                    }
                     agent {
                         docker {
                             image 'terminal:latest'
