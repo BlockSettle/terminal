@@ -1,14 +1,10 @@
 #include "ChartWidget.h"
+#include "spdlog/logger.h"
 #include "ui_ChartWidget.h"
-#include "FastLock.h"
-#include "MarketDataProvider.h"
-#include "TradesClient.h"
-#include "DataPointsLocal.h"
 #include "Colors.h"
-#include "DataConnection.h"
+#include "MarketDataProvider.h"
+#include "MdhsClient.h"
 #include "OhlcHistory.pb.h"
-
-using namespace Blocksettle::BS_MD::TradeHistoryServer;
 
 const qreal BASE_FACTOR = 1.0;
 
@@ -16,8 +12,8 @@ const QColor BACKGROUND_COLOR = QColor(28, 40, 53);
 const QColor FOREGROUND_COLOR = QColor(Qt::white);
 const QColor VOLUME_COLOR     = QColor(32, 159, 223);
 
-ChartWidget::ChartWidget(QWidget *parent)
-   : QWidget(parent)
+ChartWidget::ChartWidget(QWidget* pParent)
+   : QWidget(pParent)
    , ui_(new Ui::ChartWidget)
    , title_(nullptr)
    , info_(nullptr)
@@ -27,19 +23,19 @@ ChartWidget::ChartWidget(QWidget *parent)
    ui_->setupUi(this);
 
    // setting up date range radio button group
-   dateRange_.addButton(ui_->btn1h, DataPointsLocal::Interval::OneHour);
-   dateRange_.addButton(ui_->btn6h, DataPointsLocal::Interval::SixHours);
-   dateRange_.addButton(ui_->btn12h, DataPointsLocal::Interval::TwelveHours);
-   dateRange_.addButton(ui_->btn24h, DataPointsLocal::Interval::TwentyFourHours);
-   dateRange_.addButton(ui_->btn1w, DataPointsLocal::Interval::OneWeek);
-   dateRange_.addButton(ui_->btn1m, DataPointsLocal::Interval::OneMonth);
-   dateRange_.addButton(ui_->btn6m, DataPointsLocal::Interval::SixMonths);
-   dateRange_.addButton(ui_->btn1y, DataPointsLocal::Interval::OneYear);
+   dateRange_.addButton(ui_->btn1h, Interval::OneHour);
+   dateRange_.addButton(ui_->btn6h, Interval::SixHours);
+   dateRange_.addButton(ui_->btn12h, Interval::TwelveHours);
+   dateRange_.addButton(ui_->btn24h, Interval::TwentyFourHours);
+   dateRange_.addButton(ui_->btn1w, Interval::OneWeek);
+   dateRange_.addButton(ui_->btn1m, Interval::OneMonth);
+   dateRange_.addButton(ui_->btn6m, Interval::SixMonths);
+   dateRange_.addButton(ui_->btn1y, Interval::OneYear);
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked),
-           this, &ChartWidget::onDateRangeChanged);
+           this, &ChartWidget::OnDateRangeChanged);
 
    connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
-           this, &ChartWidget::onInstrumentChanged);
+           this, &ChartWidget::OnInstrumentChanged);
 
    // sort model for instruments combo box
    cboModel_ = new QStandardItemModel(this);
@@ -49,22 +45,21 @@ ChartWidget::ChartWidget(QWidget *parent)
    ui_->cboInstruments->setModel(proxy);
 }
 
-void ChartWidget::init(const std::shared_ptr<ApplicationSettings> &appSettings
-                       , const std::shared_ptr<MarketDataProvider> &mdProvider
-                       , const std::shared_ptr<ConnectionManager> &connectionManager
+void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
+                       , const std::shared_ptr<MarketDataProvider>& mdProvider
+                       , const std::shared_ptr<ConnectionManager>& connectionManager
                        , const std::shared_ptr<spdlog::logger>& logger)
 {
 	appSettings_ = appSettings;
 	mdProvider_ = mdProvider;
-	connectionManager_ = connectionManager;
+	mdhsClient_ = std::make_shared<MdhsClient>(appSettings, connectionManager, logger);
 	logger_ = logger;
 
-	connect(this, &ChartWidget::AddDataPoint, this, &ChartWidget::OnAddDataPoint);
-	connect(this, &ChartWidget::UpdateChart, this, &ChartWidget::OnUpdateChart);
-	connect(mdProvider.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::onMDUpdated);
+	connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
+	connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
 
    // initialize charts
-   initializeCustomPlot();
+   InitializeCustomPlot();
 
    // initial select interval
    ui_->btn1h->click();
@@ -75,30 +70,57 @@ ChartWidget::~ChartWidget() {
 }
 
 // Populate combo box with existing instruments comeing from mdProvider
-void ChartWidget::onMDUpdated(bs::network::Asset::Type assetType, const QString &security, bs::network::MDFields mdFields) {
+void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString &security, bs::network::MDFields mdFields) {
    auto cbo = ui_->cboInstruments;
-   if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) {  // Celer disconnected
+   if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) // Celer disconnected
+   {
       cboModel_->clear();
       return;
    }
 
-   if (cboModel_->findItems(security).isEmpty()) {
+   if (cboModel_->findItems(security).isEmpty())
+   {
       cboModel_->appendRow(new QStandardItem(security));
    }
 }
 
-void ChartWidget::OnDataReceived(const std::string& data, const int& interval, const QString& product)
+void ChartWidget::UpdateChart(const int& interval) const
+{
+	auto product = ui_->cboInstruments->currentText();
+	if (product.isEmpty()) {
+		product = QStringLiteral("EUR/GBP");
+	}
+	if (title_) {
+		title_->setText(product);
+	}
+	if (!candlesticksChart_ || !volumeChart_) {
+		return;
+	}
+	candlesticksChart_->data()->clear();
+	volumeChart_->data()->clear();
+	qreal width = 0.8 * IntervalWidth(interval) / 1000;
+	candlesticksChart_->setWidth(width);
+	volumeChart_->setWidth(width);
+
+	OhlcRequest request;
+	request.set_market(product.toStdString());
+	request.set_interval(static_cast<Interval>(interval));
+	request.set_limit(100);
+	mdhsClient_->SendRequest(request);
+}
+
+void ChartWidget::OnDataReceived(const std::string& data)
 {
 	if (data.empty())
 	{
-		qDebug("Empty data received from mdhs.");
+		logger_->error("Empty data received from mdhs.");
 		return;
 	}
 
 	OhlcResponse response;
 	if (!response.ParseFromString(data))
 	{
-		qDebug("can't parse response from mdhs.");
+		logger_->error("can't parse response from mdhs: {}", data);
 		return;
 	}
 
@@ -113,7 +135,7 @@ void ChartWidget::OnDataReceived(const std::string& data, const int& interval, c
 		minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
 		maxVolume = qMax(maxVolume, candle.volume());
 		maxTimestamp = qMax(maxTimestamp, static_cast<qreal>(candle.timestamp()));
-		//emit AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
+		AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
 		qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
 			, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
 			, candle.open()
@@ -130,22 +152,21 @@ void ChartWidget::OnDataReceived(const std::string& data, const int& interval, c
 	maxPrice += margin;
 	minPrice = qMax(minPrice, 0.0);
 
-	//emit UpdateChart(interval, product, maxPrice, minPrice, maxVolume, maxTimestamp);
-}
-
-void ChartWidget::OnUpdateChart(int interval, QString product, qreal maxPrice, qreal minPrice, qreal maxVolume, qreal maxTimestamp)
-{
+	//TODO: Add product and interval to response
+	auto product = ui_->cboInstruments->currentText();
+	auto interval = dateRange_.checkedId();
+	
 	ui_->customPlot->rescaleAxes();
-	qreal size = intervalWidth(interval, 100);
-	qreal upper = maxTimestamp + 0.8 * intervalWidth(interval) / 2;
+	qreal size = IntervalWidth(interval, 100);
+	qreal upper = maxTimestamp + 0.8 * IntervalWidth(interval) / 2;
 	ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
 	volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
 	ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
-	ui_->customPlot->yAxis2->setNumberPrecision(fractionSizeForProduct(product));
+	ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(product));
 	ui_->customPlot->replot();
 }
 
-void ChartWidget::OnAddDataPoint(qreal open, qreal high, qreal low, qreal close, qreal timestamp, qreal volume)
+void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const
 {
    if (candlesticksChart_) {
       candlesticksChart_->data()->add(QCPFinancialData(timestamp / 1000, open, high, low, close));
@@ -155,117 +176,61 @@ void ChartWidget::OnAddDataPoint(qreal open, qreal high, qreal low, qreal close,
    }
 }
 
-qreal ChartWidget::intervalWidth(int interval, int count) const
+qreal ChartWidget::IntervalWidth(int interval, int count) const
 {
    if (interval == -1) {
       return 1.0;
    }
    qreal hour = 3600000;
-   switch (static_cast<DataPointsLocal::Interval>(interval)) {
-   case DataPointsLocal::OneYear:
+   switch (static_cast<Interval>(interval)) {
+   case Interval::OneYear:
       return hour * 8760 * count;
-   case DataPointsLocal::SixMonths:
+   case Interval::SixMonths:
       return hour * 4320 * count;
-   case DataPointsLocal::OneMonth:
+   case Interval::OneMonth:
       return hour * 720 * count;
-   case DataPointsLocal::OneWeek:
+   case Interval::OneWeek:
       return hour * 168 * count;
-   case DataPointsLocal::TwentyFourHours:
+   case Interval::TwentyFourHours:
       return hour * 24 * count;
-   case DataPointsLocal::TwelveHours:
+   case Interval::TwelveHours:
       return hour * 12 * count;
-   case DataPointsLocal::SixHours:
+   case Interval::SixHours:
       return hour * 6 * count;
-   case DataPointsLocal::OneHour:
+   case Interval::OneHour:
       return hour * count;
    default:
       return hour * count;
    }
 }
 
-int ChartWidget::fractionSizeForProduct(const QString &product) const
+int ChartWidget::FractionSizeForProduct(const QString &product) const
 {
-	auto productType = TradesClient::ProductTypeUnknown;//client_->getProductType(product);
-   switch (productType) {
-   case TradesClient::ProductTypeFX:
-      return 4;
-   case TradesClient::ProductTypeXBT:
-      return 2;
-   case TradesClient::ProductTypePrivateMarket:
-      return 6;
-   default:
-      return -1;
-   }
+	auto productType = mdhsClient_->GetProductType(product);
+	switch (productType)
+	{
+	case MdhsClient::ProductTypeFX:
+		return 4;
+	case MdhsClient::ProductTypeXBT:
+		return 2;
+	case MdhsClient::ProductTypePrivateMarket:
+		return 6;
+	default:
+		return -1;
+	}
 }
 
 // Handles changes of date range.
-void ChartWidget::onDateRangeChanged(int interval) {
+void ChartWidget::OnDateRangeChanged(int interval) {
    qDebug() << "clicked" << interval;
-
-   auto product = ui_->cboInstruments->currentText();
-   if (product.isEmpty()) {
-	   product = QStringLiteral("EUR/GBP");
-   }
-   if (title_) {
-	   title_->setText(product);
-   }
-   if (!candlesticksChart_ || !volumeChart_) {
-	   return;
-   }
-   candlesticksChart_->data()->clear();
-   volumeChart_->data()->clear();
-   qreal width = 0.8 * intervalWidth(interval) / 1000;
-   candlesticksChart_->setWidth(width);
-   volumeChart_->setWidth(width);
-
-   const auto apiConnection = connectionManager_->CreateGenoaClientConnection();
-   command_ = std::make_shared<RequestReplyCommand>("MDHS_Client", apiConnection, logger_);
-
-   command_->SetReplyCallback([this, &interval, &product](const std::string &data) -> bool
-   {
-	   OnDataReceived(data, interval, product);
-	   command_->CleanupCallbacks();
-	   //FastLock locker(lockCommands_);
-	   //activeCommands_.erase(command);
-	   return true;
-   });
-
-   command_->SetErrorCallback([this](const std::string& message)
-   {
-	   qDebug("Failed to get history data from mdhs.");
-	   qDebug(message.c_str());
-	   command_->CleanupCallbacks();
-	   //FastLock locker(lockCommands_);
-	   //activeCommands_.erase(command);
-   });
-
-   OhlcRequest request;
-   request.set_market(product.toStdString());
-   request.set_interval(static_cast<Interval>(interval));
-   request.set_limit(100);
-
-   //FastLock locker(lockCommands_);
-   //activeCommands_.insert(command);
-
-   if (!command_->ExecuteRequest(
-	   //appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
-	   //appSettings_->get<std::string>(ApplicationSettings::mdhsPort),
-	   "localhost",
-	   "5000",
-	   request.SerializeAsString()))
-   {
-	   qDebug("Failed to send request for mdhs.");
-	   command_->CleanupCallbacks();
-	   //FastLock locker(lockCommands_);
-	   //activeCommands_.erase(command);
-   }
+   UpdateChart(interval);
 }
 
-void ChartWidget::onInstrumentChanged(const QString &text) {
-   //updateChart(dateRange_.checkedId());
+void ChartWidget::OnInstrumentChanged(const QString &text) {
+   UpdateChart(dateRange_.checkedId());
 }
 
-void ChartWidget::onPlotMouseMove(QMouseEvent *event)
+void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 {
    if (!info_) {
       return;
@@ -273,7 +238,7 @@ void ChartWidget::onPlotMouseMove(QMouseEvent *event)
    auto plottable = ui_->customPlot->plottableAt(event->localPos());
    if (plottable) {
       double x = event->localPos().x();
-      double width = 0.8 * intervalWidth(dateRange_.checkedId()) / 1000;
+      double width = 0.8 * IntervalWidth(dateRange_.checkedId()) / 1000;
       double timestamp = ui_->customPlot->xAxis->pixelToCoord(x) + width / 2;
       auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp);
       auto volumeValue = *volumeChart_->data()->findBegin(timestamp);
@@ -294,7 +259,7 @@ void ChartWidget::onPlotMouseMove(QMouseEvent *event)
    ui_->customPlot->replot();
 }
 
-void ChartWidget::initializeCustomPlot()
+void ChartWidget::InitializeCustomPlot()
 {
    QBrush bgBrush(BACKGROUND_COLOR);
    ui_->customPlot->setBackground(bgBrush);
@@ -400,5 +365,5 @@ void ChartWidget::initializeCustomPlot()
    ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal);
    volumeAxisRect_->setRangeDrag(Qt::Horizontal);
 
-   connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::onPlotMouseMove);
+   connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
 }
