@@ -16,6 +16,16 @@
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
 
+//We have current flags
+//We have upladed flags
+//We need to put flags to updated flags
+//But only in places that allowed by mask
+static int syncFlagsByMask(int flags, int uflags, int mask){
+   int set_mask = mask & uflags;
+   int unset_mask = (mask & uflags) ^ mask;
+   return (flags & ~unset_mask) | set_mask;
+}
+
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                   , const std::shared_ptr<ApplicationSettings> &appSettings
                   , const std::shared_ptr<spdlog::logger>& logger)
@@ -113,25 +123,23 @@ void ChatClient::OnMessageChangeStatusResponse(const Chat::MessageChangeStatusRe
    std::string senderId = response.messageSenderId();
    std::string receiverId = response.messageReceiverId();
    int newStatus = response.getUpdatedStatus();
-         logger_->debug("[ChatClient::OnMessageChangeStatusResponse]: Updated message status:"
-                        " messageId {}"
-                        " senderId {}"
-                        " receiverId {}"
-                        " status {}",
+   logger_->debug("[ChatClient::OnMessageChangeStatusResponse]: Updated message status:"
+                  " messageId {}"
+                  " senderId {}"
+                  " receiverId {}"
+                  " status {}",
                   messageId,
                   senderId,
                   receiverId,
-                  newStatus
-                  );
+                  newStatus);
    
-   if (chatDb_->updateMessageStatus(QString::fromStdString(messageId), newStatus))
-      {
-         QString chatId = QString::fromStdString(response.messageSenderId() == currentUserId_
-                       ? response.messageReceiverId()
-                       : response.messageSenderId());
-         
-         emit MessageStatusUpdated(QString::fromStdString(messageId), chatId, newStatus);
-      }
+   if (chatDb_->updateMessageStatus(QString::fromStdString(messageId), newStatus)) {
+      QString chatId = QString::fromStdString(response.messageSenderId() == currentUserId_
+                    ? response.messageReceiverId()
+                    : response.messageSenderId());
+      
+      emit MessageStatusUpdated(QString::fromStdString(messageId), chatId, newStatus);
+   }
    return;
 }
 
@@ -176,7 +184,12 @@ void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message
 
 void ChatClient::addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state)
 {
-   if (chatDb_->updateMessageStatus(message->getId(), (int)state))
+   int currentState = message->getState();
+   int ustate = static_cast<int>(state);
+   int mask = ~static_cast<int>(Chat::MessageData::State::Encrypted); // Mask its allowed for change flags
+   int newState = syncFlagsByMask(currentState, ustate, mask);
+   
+   if (chatDb_->updateMessageStatus(message->getId(), newState))
    {
       message->setFlag(state);
       QString chatId = message->getSenderId() == QString::fromStdString(currentUserId_)
