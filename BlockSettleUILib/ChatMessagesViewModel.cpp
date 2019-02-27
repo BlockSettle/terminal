@@ -175,7 +175,7 @@ void ChatMessagesViewModel::onMessageIdUpdate(const QString& oldId, const QStrin
    if (message != nullptr){
       message->setId(newId);
       message->setFlag(Chat::MessageData::State::Sent);
-      notifyMassageChanged(message);
+      notifyMessageChanged(message);
    }
 }
 
@@ -185,7 +185,7 @@ void ChatMessagesViewModel::onMessageStatusChanged(const QString& messageId, con
    
    if (message != nullptr){
       message->setFlag((Chat::MessageData::State)newStatus);
-      notifyMassageChanged(message);
+      notifyMessageChanged(message);
    }
 }
 
@@ -204,7 +204,7 @@ std::shared_ptr<Chat::MessageData> ChatMessagesViewModel::findMessage(const QStr
    return found;
 }
 
-void ChatMessagesViewModel::notifyMassageChanged(std::shared_ptr<Chat::MessageData> message)
+void ChatMessagesViewModel::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
 {
    const QString chatId = message->getSenderId() == ownUserId_
                           ? message->getReceiverId()
