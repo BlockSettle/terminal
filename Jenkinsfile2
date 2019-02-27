@@ -16,7 +16,7 @@ pipeline {
             parallel {
                 stage('Build Linux app') {
                     when {
-                        expression { params.OS == 'Linux' }
+                        expression { params.OS == 'Linux' || params.OS == 'All' }
                     }
                     agent {
                         docker {
@@ -34,7 +34,7 @@ pipeline {
                 }
                 stage('Build MacOSX app') {
                     when {
-                        expression { params.OS == 'MacOS' }
+                        expression { params.OS == 'MacOS' || params.OS == 'All' }
                     }
                     steps {
                         sh 'ssh admin@10.1.60.206 "rm -rf ~/Workspace/terminal"'
@@ -45,7 +45,7 @@ pipeline {
                 }
                 stage('Build Windows app') {
                     when {
-                        expression { params.OS == 'Windows' }
+                        expression { params.OS == 'Windows' || params.OS == 'All' }
                     }
                     steps {
                         sh 'ssh admin@172.17.0.1 -p2222 "rd /s /q Workspace\\terminal"'
