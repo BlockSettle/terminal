@@ -27,11 +27,15 @@ public:
 
 public:
    void setOwnUserId(const std::string &userId) { ownUserId_ = QString::fromStdString(userId); }
+   
+signals:
+   void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
 
 protected:
    enum class Column {
       Time,
       User,
+      Status,
       Message,
       last
    };
@@ -42,16 +46,25 @@ protected:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
+   
 public slots:
    void onSwitchToChat(const QString& chatId);
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
+   void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
+   void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
+   
+
 
 private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
    QMap<QString, MessagesHistory> messages_;
    QString   currentChatId_;
    QString   ownUserId_;
+   
+private:
+   std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
+   void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
 };
 
 #endif

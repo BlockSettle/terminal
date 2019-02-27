@@ -143,6 +143,71 @@ bool ChatDB::add(const Chat::MessageData &msg)
    return true;
 }
 
+bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
+{
+   const QString cmd = QLatin1String("UPDATE messages SET id = :server_mid, state = state | :set_flags WHERE (id = :local_mid);");
+   QSqlQuery query(db_);
+
+   query.prepare(cmd);
+   query.bindValue(QLatin1String(":server_mid"), serverId);
+   query.bindValue(QLatin1String(":local_mid"), localId);
+   query.bindValue(QLatin1String(":set_flags"), static_cast<int>(Chat::MessageData::State::Sent));
+   
+   if (!query.exec()) {
+      logger_->error("[ChatDB::syncMessageId] failed to synchronize local message id with server message id; Error: {}",
+                     query.lastError().text().toStdString()
+                     );
+      return false;
+   }
+   return true;
+}
+
+bool ChatDB::updateMessageStatus(const QString& messageId, int ustatus)
+{
+   const QString cmd = QLatin1String("UPDATE messages SET"
+                                     " state = state & :unset | :set"
+                                     " WHERE (id = :mid);");
+   /*
+    * Logic is next:
+    * We have new message status that should be updated
+    * but this message status is for message in the memory
+    * and this message in the memory have unset Encrypted flag
+    * But we can't change this flag in DB, we want to store messages in encrypted state
+    * 
+    * So we have mask that show what flags allowed to be changed
+    * using this mask we extracting flags that should be set (mask & ustatus)
+    * and flags that should be unset (~(set ^ mask))
+    * 
+    * Then we use this flags set and unset for change status in the DB without
+    * pulling status itself from DB
+    * 
+    * So just update status in the message in memory and use this method with updated status
+    * And it will set all flags in DB to updated state except Encrypted
+   */
+   
+    // Mask its allowed for change flags
+   int mask = ~static_cast<int>(Chat::MessageData::State::Encrypted);
+   int set = mask & ustatus;
+   int unset = ~(set ^ mask);
+   
+   QSqlQuery query(db_);
+
+   query.prepare(cmd);
+   query.bindValue(QLatin1String(":mid"), messageId);
+   query.bindValue(QLatin1String(":set"), set);
+   query.bindValue(QLatin1String(":unset"), unset);
+   
+   if (!query.exec()) {
+      logger_->error("[ChatDB::updateMessageStatus] failed to update message status with server message id: {}; Error: {}\nQuery: {}",
+                     messageId.toStdString(),
+                     query.lastError().text().toStdString(),
+                     query.executedQuery().toStdString()
+                     );
+      return false;
+   }
+   return true;
+}
+
 std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &userId)
 {
    QSqlQuery query(db_);
