@@ -13,12 +13,7 @@ endif()
 
 option(BSTERMINAL_SHARED_LIBS "Build shared libraries" OFF)
 
-IF(NOT BSTERMINAL_SHARED_LIBS)
-   add_definitions(-DSTATIC_BUILD)
-ELSE()
-    set(COPY_SHARED_LIBS_NAME CopySharedLibs)
-    add_custom_target(${COPY_SHARED_LIBS_NAME} ALL)
-ENDIF()
+add_definitions(-DSTATIC_BUILD)
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    IF(BSTERMINAL_SHARED_LIBS)
@@ -32,21 +27,6 @@ ELSE()
    ELSE()
       SET(THIRD_PARTY_BUILD_MODE "release")
    ENDIF()
-ENDIF()
-
-IF(CMake_QT_STATIC_QWindowsIntegrationPlugin_LIBRARIES)
-   list(APPEND OS_SPECIFIC_LIBS ${CMake_QT_STATIC_QWindowsIntegrationPlugin_LIBRARIES})
-   add_definitions(-DUSE_QWindowsIntegrationPlugin)
-ENDIF()
-
-IF(CMake_QT_STATIC_QXcbIntegrationPlugin_LIBRARIES)
-   list(APPEND OS_SPECIFIC_LIBS ${CMake_QT_STATIC_QXcbIntegrationPlugin_LIBRARIES})
-   add_definitions(-DUSE_QXcbIntegrationPlugin)
-ENDIF()
-
-IF(CMake_QT_STATIC_QCocoaIntegrationPlugin_LIBRARIES)
-   list(APPEND OS_SPECIFIC_LIBS ${CMake_QT_STATIC_QCocoaIntegrationPlugin_LIBRARIES})
-   add_definitions(-DUSE_QCocoaIntegrationPlugin)
 ENDIF()
 
 add_definitions(-DNOMINMAX)
@@ -122,6 +102,7 @@ IF( WIN32 )
       SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
       SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
    ENDIF()
+   # Speedup compilation
    add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
    SET( LIBRARY_OUTPUT_PATH ${EXECUTABLE_OUTPUT_PATH} )
 ELSE()
@@ -209,56 +190,21 @@ IF( NOT ZMQ_LIB )
    ENDIF( NOT ZMQ_LIB)
 ENDIF( NOT ZMQ_LIB)
 
-
-
-IF(WIN32)
-   STRING(REPLACE ".lib" ".dll" ZMQ_LIB_DLL ${ZMQ_LIB})
-
-   add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${ZMQ_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${ZMQ_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-ENDIF()
-
 # OpenSSL libs
 SET(OPENSSL_ROOT_DIR        ${THIRD_PARTY_COMMON_DIR}/OpenSSL)
 SET(CMAKE_LIBRARY_PATH      ${CMAKE_LIBRARY_PATH} ${OPENSSL_ROOT_DIR}/lib)
-#SET(OPENSSL_INCLUDE_DIR     ${OPENSSL_ROOT_DIR}/include)
-
-if(NOT BSTERMINAL_SHARED_LIBS)
-    set(OPENSSL_USE_STATIC_LIBS TRUE)
-endif()
+set(OPENSSL_USE_STATIC_LIBS TRUE)
 
 find_package(OpenSSL REQUIRED)
 
 include(InstallRequiredSystemLibraries)
 INSTALL(FILES ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION bin COMPONENT Libraries)
-#IF( WIN32 )
-#   SET(OPENSSL_LIB_NAME "libssl")
-#   SET(OPENSSL_CRYPTO_LIB_NAME "libcrypto")
-#ELSE()
-#   SET(OPENSSL_LIB_NAME "libssl.a" "libssl" "ssl")
-#   SET(OPENSSL_CRYPTO_LIB_NAME "libcrypto.a" "libcrypto" "crypto")
-#ENDIF( WIN32 )
-
-#FIND_LIBRARY(OPENSSL_LIB NAMES ${OPENSSL_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
-#IF ( NOT OPENSSL_LIB )
-#      MESSAGE(FATAL_ERROR "Could not find OpenSSL lib")
-#ENDIF( NOT OPENSSL_LIB)
-
-#FIND_LIBRARY(OPENSSL_CRYPTO_LIB NAMES ${OPENSSL_CRYPTO_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
-#IF ( NOT OPENSSL_CRYPTO_LIB )
-#      MESSAGE(FATAL_ERROR "Could not find OpenSSL crypto lib")
-#ENDIF( NOT OPENSSL_CRYPTO_LIB)
 
 SET(OPENSSL_LIBS
     OpenSSL::SSL
     OpenSSL::Crypto
-#   ${OPENSSL_LIB}
-#   ${OPENSSL_CRYPTO_LIB}
 )
 INCLUDE_DIRECTORIES( ${OPENSSL_INCLUDE_DIR} )
-
-# SET(OPENSSL_ROOT_DIR ${OPENSSL_ROOT})
-# SET(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_ROOT}/lib)
 
 # setup botan
 SET(BOTAN_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/botan)
@@ -435,6 +381,7 @@ IF(WIN32)
          Qt5::QICOPlugin
          Qt5::QWindowsPrinterSupportPlugin
       )
+      add_definitions(-DUSE_QWindowsIntegrationPlugin)
    ENDIF()
 
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -455,12 +402,10 @@ IF(WIN32)
          ${QT5_LIB_ROOT}/Qt5QuickTemplates2d.lib
       )
       
-      LIST(APPEND OS_SPECIFIC_LIBS
-         msvcrtd
-      )
-
       IF(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS
+            libcmtd.lib
+            libcpmtd.lib
             ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
          )
          
@@ -481,6 +426,11 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
             ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
             ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
+         )
+      ELSE()
+         LIST(APPEND OS_SPECIFIC_LIBS
+            msvcrtd
+            msvcprtd.lib
          )
       ENDIF()
       
@@ -508,8 +458,8 @@ IF(WIN32)
          )
 
          LIST(APPEND OS_SPECIFIC_LIBS
-         # Should be LIBCMT.LIB, LIBCPMT.LIB ?
-            msvcrt
+            libcmt.lib
+            libcpmt.lib
             ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
          )
          
@@ -525,6 +475,11 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
             ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
             ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
+         )
+      ELSE()
+         LIST(APPEND OS_SPECIFIC_LIBS
+            msvcrt
+            msvcprt.lib
          )
       ENDIF()
       
@@ -560,6 +515,8 @@ ELSE(WIN32)
          Qt5::QCocoaPrinterSupportPlugin
          ${ZLIB_LIBRARIES}
          ${CUPS_LIBRARIES})
+
+      add_definitions(-DUSE_QCocoaIntegrationPlugin)
 
       IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
          SET(QT_LIBS
@@ -703,6 +660,8 @@ ELSE(WIN32)
          cups
          ${CMAKE_THREAD_LIBS_INIT} )
 
+      add_definitions(-DUSE_QXcbIntegrationPlugin)
+
       SET(QT_QUICK_LIBS
          ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
          ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
@@ -730,6 +689,68 @@ FOREACH(lib_name ${QT_LIBS})
    LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
 
+IF(BSTERMINAL_SHARED_LIBS)
+   unset(OPENSSL_USE_STATIC_LIBS)
+   remove_definitions(-DSTATIC_BUILD)
+
+   IF(WIN32)
+      # Add new project only for copying libraries 
+      set(COPY_SHARED_LIBS_NAME CopySharedLibs)
+      add_custom_target(${COPY_SHARED_LIBS_NAME} ALL)
+
+      # Copy dll's
+      # Qt
+      get_target_property(QT5_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
+      get_filename_component(QT5_WINDEPLOYQT_EXECUTABLE ${QT5_QMAKE_EXECUTABLE} PATH)
+      set(QT5_WINDEPLOYQT_EXECUTABLE "${QT5_WINDEPLOYQT_EXECUTABLE}/windeployqt.exe")
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${QT5_WINDEPLOYQT_EXECUTABLE} --no-opengl-sw --compiler-runtime --no-angle --qmldir ${CMAKE_SOURCE_DIR} ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+      add_dependencies(${COPY_SHARED_LIBS_NAME} ${SIGNER_APP_NAME} ${BLOCKSETTLE_APP_NAME})
+
+      # libzmq
+      STRING(REPLACE ".lib" ".dll" ZMQ_LIB_DLL ${ZMQ_LIB})
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${ZMQ_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${ZMQ_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+
+      # botan
+      STRING(REPLACE ".lib" ".dll" BOTAN_LIB_DLL ${BOTAN_LIB})
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${BOTAN_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${BOTAN_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+
+      # qrencode
+      STRING(REPLACE ".lib" ".dll" QRENCODE_LIB_DLL ${QRENCODE_LIB})
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${QRENCODE_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${QRENCODE_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+         
+      # websockets
+      STRING(REPLACE ".lib" ".dll" WS_LIB_DLL ${WS_LIB})
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${WS_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${WS_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+         
+      string(REGEX REPLACE "([0-9])\.([0-9])\.([0-9]\.*)" "\\1;\\2" VERSION_MATCHES ${OPENSSL_VERSION})
+      list(GET VERSION_MATCHES 0 version_major)
+      list(GET VERSION_MATCHES 1 version_minor)
+      string(REPLACE ".lib" "" CRYPTO_LIB_DLL ${OPENSSL_CRYPTO_LIBRARY})
+      string(REPLACE "OpenSSL/lib/" "OpenSSL/bin/" CRYPTO_LIB_DLL ${CRYPTO_LIB_DLL})
+      string(APPEND CRYPTO_LIB_DLL "-${version_major}_${version_minor}-x64.dll" )
+      string(REPLACE ".lib" "" SSL_LIB_DLL ${OPENSSL_SSL_LIBRARY})
+      string(REPLACE "OpenSSL/lib/" "OpenSSL/bin/" SSL_LIB_DLL ${SSL_LIB_DLL})
+      string(APPEND SSL_LIB_DLL "-${version_major}_${version_minor}-x64.dll" )
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${CRYPTO_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${CRYPTO_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${SSL_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${SSL_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+   ENDIF()
+
+   IF(UNIX AND NOT APPLE)
+   ENDIF()
+
+   IF(APPLE AND NOT UNIX)
+   ENDIF()
+ 
+ENDIF()
+
+
 ADD_SUBDIRECTORY( AuthCommon )
 ADD_SUBDIRECTORY( Celer )
 ADD_SUBDIRECTORY( common/Blocksettle_proto )
@@ -743,18 +764,6 @@ ADD_SUBDIRECTORY(common/WalletsLib)
 ADD_SUBDIRECTORY(common/cppForSwig)
 ADD_SUBDIRECTORY(common/CommonLib)
 ADD_SUBDIRECTORY(common/CommonUI)
-
-IF(BSTERMINAL_SHARED_LIBS)
-    message("Copying Qt libraries to project output directory")
-    IF(WIN32)
-        get_target_property(QT5_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
-        get_filename_component(QT5_WINDEPLOYQT_EXECUTABLE ${QT5_QMAKE_EXECUTABLE} PATH)
-        set(QT5_WINDEPLOYQT_EXECUTABLE "${QT5_WINDEPLOYQT_EXECUTABLE}/windeployqt.exe")
-        add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
-            COMMAND ${QT5_WINDEPLOYQT_EXECUTABLE} --no-opengl-sw --compiler-runtime --no-angle --qmldir ${CMAKE_SOURCE_DIR} ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-        add_dependencies(${COPY_SHARED_LIBS_NAME} ${SIGNER_APP_NAME} ${BLOCKSETTLE_APP_NAME})
-    ENDIF()
-ENDIF()
 
 MESSAGE("3rd party root   : ${THIRD_PARTY_COMMON_DIR}")
 MESSAGE("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
