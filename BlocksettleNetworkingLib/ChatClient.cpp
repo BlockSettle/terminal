@@ -185,7 +185,7 @@ void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message
 void ChatClient::addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state)
 {
    int currentState = message->getState();
-   int ustate = static_cast<int>(state);
+   int ustate = currentState | static_cast<int>(state);
    int mask = ~static_cast<int>(Chat::MessageData::State::Encrypted); // Mask its allowed for change flags
    int newState = syncFlagsByMask(currentState, ustate, mask);
    
