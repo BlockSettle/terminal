@@ -27,8 +27,11 @@ private slots:
    void onArmoryHostChanged();
    void onArmoryPortChanged();
 
+   void onEnvSelected(int);
+
 private:
    void DisplayRunArmorySettings(bool runLocally);
+   void DetectEnvironmentSettings();
 
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
