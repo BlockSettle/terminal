@@ -53,7 +53,7 @@ namespace bs {
          std::vector<PooledAddress> generateAddresses(hd::Path::Elem prefix, hd::Path::Elem start
             , size_t nb, AddressEntryType aet);
          void scanAddresses(unsigned int startIdx, unsigned int portionSize = 100, const cb_write_last &cbw = nullptr);
-         void onRefresh(const std::vector<BinaryData> &ids);
+         void onRefresh(const std::vector<BinaryData> &ids, bool online);
 
       private:
          struct Portion {
@@ -102,6 +102,7 @@ namespace bs {
          virtual bool copyTo(std::shared_ptr<hd::Leaf> &) const;
 
          void firstInit(bool force = false) override;
+
          std::string GetWalletId() const override;
          std::string GetWalletDescription() const override;
          void SetDescription(const std::string &desc) override { desc_ = desc; }
@@ -112,9 +113,16 @@ namespace bs {
          std::vector<SecureBinaryData> encryptionKeys() const override { return rootNodes_.encryptionKeys(); }
          std::pair<unsigned int, unsigned int> encryptionRank() const override { return rootNodes_.rank(); }
          bool hasExtOnlyAddresses() const override { return isExtOnly_; }
+         bool hasId(const std::string &) const override;
 
          bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
             , QObject *obj, uint64_t val = UINT64_MAX) override;
+         bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
+            , QObject *obj) override;
+         bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const override;
+         bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const override;
+         bool getHistoryPage(uint32_t id, std::function<void(const bs::Wallet *wallet
+            , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const override;
 
          bool containsAddress(const bs::Address &addr) override;
          bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -135,6 +143,16 @@ namespace bs {
          std::string GetAddressIndex(const bs::Address &) override;
          bool AddressIndexExists(const std::string &index) const override;
          bs::Address CreateAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true) override;
+         bool getLedgerDelegateForAddress(const bs::Address &
+            , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
+            , QObject *context = nullptr) override;
+
+         int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
+
+         void UpdateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
+         bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
+         bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const override;
+         bool GetActiveAddressCount(const std::function<void(size_t)> &) const override;
 
          std::shared_ptr<ResolverFeed> GetResolver(const SecureBinaryData &password) override;
          std::shared_ptr<ResolverFeed> GetPublicKeyResolver() override;
@@ -149,13 +167,17 @@ namespace bs {
          void setDB(const std::shared_ptr<LMDBEnv> &env, LMDB *db);
 
          void SetArmory(const std::shared_ptr<ArmoryConnection> &) override;
+         std::vector<std::string> RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+            , bool asNew = false) override;
          void UnregisterWallet() override;
 
          std::shared_ptr<LMDBEnv> getDBEnv() override { return dbEnv_; }
          LMDB *getDB() override { return db_; }
 
          AddressEntryType getAddrTypeForAddr(const BinaryData &) override;
-         std::set<BinaryData> getAddrHashSet() override;
+         std::vector<BinaryData> getAddrHashes() const override;
+         std::vector<BinaryData> getAddrHashesExt() const;
+         std::vector<BinaryData> getAddrHashesInt() const;
          void addAddress(const bs::Address &, const BinaryData &pubChainedKey, const Path &path);
 
          void setScanCompleteCb(const cb_complete_notify &cb) { cbScanNotify_ = cb; }
@@ -169,7 +191,7 @@ namespace bs {
 
       protected slots:
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
-         virtual void onRefresh(std::vector<BinaryData> ids);
+         virtual void onRefresh(std::vector<BinaryData> ids, bool online);
 
       protected:
          virtual bs::Address createAddress(const Path &path, Path::Elem index, AddressEntryType aet
@@ -189,7 +211,7 @@ namespace bs {
          const Path::Elem  addrTypeInternal = 1u;
          const AddressEntryType defaultAET_ = AddressEntryType_P2WPKH;
 
-         mutable std::string     walletId_;
+         mutable std::string     walletId_, walletIdInt_;
          bs::wallet::Type        type_;
          std::shared_ptr<Node>   node_;
          Nodes                   rootNodes_;
@@ -197,6 +219,8 @@ namespace bs {
          std::string name_, desc_;
          std::string suffix_;
          bool        isExtOnly_ = false;
+
+         std::shared_ptr<AsyncClient::BtcWallet>   btcWalletInt_;
 
          Path::Elem  lastIntIdx_ = 0;
          Path::Elem  lastExtIdx_ = 0;
@@ -223,6 +247,19 @@ namespace bs {
          cb_complete_notify                           cbScanNotify_ = nullptr;
          volatile bool activateAddressesInvoked_ = false;
 
+         struct AddrPrefixedHashes {
+            std::set<BinaryData> external;
+            std::set<BinaryData> internal;
+
+            void clear() {
+               external.clear();
+               internal.clear();
+            }
+         };
+         mutable AddrPrefixedHashes addrPrefixedHashes_;
+
+         std::string regIdExt_, regIdInt_;
+
       private:
          bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
          std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
@@ -238,6 +275,10 @@ namespace bs {
          static void serializeAddr(BinaryWriter &bw, Path::Elem index
                                    , AddressEntryType, const Path &);
          bool deserialize(const BinaryData &ser, Nodes rootNodes);
+
+         std::string getWalletIdInt() const;
+
+         void postOnline();
       };
 
 

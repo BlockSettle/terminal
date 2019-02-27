@@ -665,7 +665,6 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       transactionsModel_->loadAllWallets();
    }
    updateControlEnabledState();
-   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -714,28 +713,14 @@ bool BSTerminalMainWindow::isArmoryConnected() const
    return armory_->state() == ArmoryConnection::State::Ready;
 }
 
-void BSTerminalMainWindow::updateLoginActionState()
-{
-   if (!isUserLoggedIn()) {
-      if (!isArmoryConnected()) {
-         action_login_->setEnabled(false);
-         ui->pushButtonUser->setEnabled(false);
-         ui->pushButtonUser->setToolTip(tr("Armory connection required to login"));
-      } else {
-         action_login_->setEnabled(true);
-         ui->pushButtonUser->setEnabled(true);
-         ui->pushButtonUser->setToolTip(QString{});
-      }
-   }
-}
-
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    walletsManager_->UnregisterSavedWallets();
    connectArmory();
    updateControlEnabledState();
-   updateLoginActionState();
+   // XXX: disabled until armory connection is stable in terminal
+   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -1011,8 +996,13 @@ void BSTerminalMainWindow::onReadyToLogin()
       setLoginButtonText(currentUserLogin_);
 
 #ifndef PRODUCTION_BUILD
-      loginToCeler(loginDialog.getUsername().toStdString()
+      // TODO: uncomment this section once we have armory connection
+      // if (isArmoryConnected()) {
+         loginToCeler(loginDialog.getUsername().toStdString()
             , "Welcome1234");
+      // } else {
+         // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
+      // }
 #endif
    }
 }
@@ -1074,8 +1064,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    walletsManager_->SetUserId(BinaryData{});
    authManager_->OnDisconnectedFromCeler();
    setLoginButtonText(loginButtonText_);
-
-   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::onCelerConnected()
@@ -1101,9 +1089,12 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    switch(errorCode)
    {
    case CelerClient::LoginError:
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr("Invalid username/password pair"), this);
-      loginErrorBox.exec();
+      logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
+   }
+
+   if (!mdProvider_->IsConnectionActive()) {
+      mdProvider_->SubscribeToMD();
    }
 }
 

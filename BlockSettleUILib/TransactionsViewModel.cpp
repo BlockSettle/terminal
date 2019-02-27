@@ -434,7 +434,12 @@ static std::string mkTxKey(const BinaryData &txHash, const std::string &id)
 }
 static std::string mkTxKey(const bs::TXEntry &item)
 {
-   return mkTxKey(item.txHash, item.id);
+   std::string id;
+   id.reserve(item.id.size());
+   for (const auto &c : item.id) {
+      id.push_back(tolower(c));
+   }
+   return mkTxKey(item.txHash, id);
 }
 
 bool TransactionsViewModel::txKeyExists(const std::string &key)

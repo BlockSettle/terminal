@@ -358,8 +358,9 @@ void PlainWallet::saveToDir(const std::string &targetDir)
    saveToFile(getFileName(targetDir));
 }
 
-int PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAsset> asset)
+int PlainWallet::addAddress(const bs::Address &addr, const std::shared_ptr<GenericAsset> &inAsset)
 {
+   auto asset = inAsset;
    int id = 0;
    if (asset) {
       if (asset->id() < 0) {
@@ -382,7 +383,7 @@ int PlainWallet::addAddress(const bs::Address &addr, std::shared_ptr<GenericAsse
    return id;
 }
 
-std::set<BinaryData> PlainWallet::getAddrHashSet()
+std::vector<BinaryData> PlainWallet::getAddrHashes() const
 {
    if (addrPrefixedHashes_.empty() || addressHashes_.empty()) {
       for (const auto &addr : usedAddresses_) {
@@ -390,7 +391,9 @@ std::set<BinaryData> PlainWallet::getAddrHashSet()
          addressHashes_.insert(addr.unprefixed());
       }
    }
-   return addrPrefixedHashes_;
+   std::vector<BinaryData> result;
+   result.insert(result.end(), addrPrefixedHashes_.cbegin(), addrPrefixedHashes_.cend());
+   return result;
 }
 
 std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryData &addr)
