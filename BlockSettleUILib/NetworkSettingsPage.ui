@@ -286,6 +286,61 @@
        <number>0</number>
       </property>
       <item>
+       <widget class="QWidget" name="horizontalWidgetEnv" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_7">
+         <property name="spacing">
+          <number>5</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="labelEnv">
+           <property name="minimumSize">
+            <size>
+             <width>130</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>130</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Environment</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="comboBoxEnvironment"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
        <widget class="QWidget" name="horizontalWidget6" native="true">
         <property name="minimumSize">
          <size>
@@ -570,22 +625,6 @@
     <hint type="destinationlabel">
      <x>693</x>
      <y>43</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>armoryDBPortLineEdit</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>restartNotificationFrame</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>177</x>
-     <y>166</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>600</x>
-     <y>40</y>
     </hint>
    </hints>
   </connection>
