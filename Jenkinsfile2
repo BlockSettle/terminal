@@ -1,11 +1,11 @@
 pipeline {
     agent any
-#    parameters {
-#        choice(
-#            choices: ['All' , 'Linux', 'MacOS', 'Windows'],
-#            description: 'Choose OS to build',
-#            name: 'OS')
-#    }
+    parameters {
+        choice(
+            choices: ['All' , 'Linux', 'MacOS', 'Windows'],
+            description: 'Choose OS to build',
+            name: 'OS')
+    }
 
     options {
         lock resource: 'terminal_lock'
