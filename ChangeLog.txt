@@ -1,3 +1,7 @@
+0.12.11
+Improvements:
+   - login updates
+
 0.12.10
 Improvements:
  - BIP150/151
