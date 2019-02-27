@@ -628,21 +628,5 @@
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>armoryDBPortLineEdit</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>restartNotificationFrame</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>177</x>
-     <y>166</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>600</x>
-     <y>40</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
 </ui>
