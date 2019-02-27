@@ -187,6 +187,7 @@ namespace Chat
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
 
       void setFlag(const State);
+      void unsetFlag(const State);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
       

@@ -164,16 +164,25 @@ bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
 
 bool ChatDB::updateMessageStatus(const QString& messageId, int status)
 {
-   const QString cmd = QLatin1String("UPDATE messages SET state = :new_state WHERE (id = :mid);");
+   const QString cmd = QLatin1String("UPDATE messages SET"
+                                     " state = (state & ~((:mask & :new_state) ^ :mask) | (:mask & :new_state))"
+                                     " WHERE (id = :mid);");
+   /*
+    * Logic is next:
+    * Decsription
+   */
    QSqlQuery query(db_);
 
    query.prepare(cmd);
    query.bindValue(QLatin1String(":mid"), messageId);
+    // Mask its allowed for change flags
+   query.bindValue(QLatin1String(":mask"), ~static_cast<int>(Chat::MessageData::State::Encrypted));
    query.bindValue(QLatin1String(":new_state"), status);
    
    if (!query.exec()) {
-      logger_->error("[ChatDB::updateMessageStatus] failed to update message status with server message id; Error: {}",
-                     query.lastError().text().toStdString()
+      logger_->error("[ChatDB::updateMessageStatus] failed to update message status with server message id; Error: {}\nQuery: {}",
+                     query.lastError().text().toStdString(),
+                     query.executedQuery().toStdString()
                      );
       return false;
    }

@@ -422,6 +422,11 @@ void MessageData::setFlag(const State state)
    state_ |= (int)state;
 }
 
+void MessageData::unsetFlag(const MessageData::State state)
+{
+   state_ &= ~(int)state;
+}
+
 bool MessageData::decrypt(const autheid::PrivateKey& privKey)
 {
    if (!(state_ & (int)State::Encrypted)) {
