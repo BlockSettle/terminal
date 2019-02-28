@@ -42,6 +42,7 @@ class StatusBarView;
 class StatusViewBlockListener;
 class WalletManagementWizard;
 class WalletsManager;
+class ArmoryServersProvider;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -88,6 +89,7 @@ private:
 
 signals:
    void readyToLogin();
+   void armoryServerPromptResultReady();
 
 private slots:
    // display login dialog once network settings loaded
@@ -109,7 +111,9 @@ private slots:
    void acceptMDAgreement();
    void updateControlEnabledState();
    void onButtonUserClicked();
+   void showArmoryServerPrompt(const BinaryData& srvPubKey, const std::string& srvIPPort, std::shared_ptr<std::promise<bool> > promiseObj);
 
+   void onArmoryNeedsReconnect();
 private:
    QAction *action_send_;
    QAction *action_receive_;
@@ -121,6 +125,7 @@ private:
 
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
+   std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<WalletsManager>        walletsManager_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
@@ -141,6 +146,7 @@ private:
    std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<HeadlessAddressSyncer>    addrSyncer_;
+   BSTerminalSplashScreen                   &splashScreen_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
