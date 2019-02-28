@@ -143,6 +143,26 @@ void ChatClient::OnMessageChangeStatusResponse(const Chat::MessageChangeStatusRe
    return;
 }
 
+void ChatClient::OnContactsActionResponse(const Chat::ContactsActionResponse& response)
+{
+   std::string actionString = "<unknown>";
+   switch (response.getAction()) {
+      case Chat::ContactsAction::Accept:
+         actionString = "ContactsAction::Accept";
+      break;
+      case Chat::ContactsAction::Reject:
+         actionString = "ContactsAction::Reject";
+      break;
+      case Chat::ContactsAction::Request:
+         actionString = "ContactsAction::Request";
+      break;
+   }
+   logger_->debug("[ChatClient::OnContactsActionResponse]: Incoming contact action from {}: {}",
+                  response.senderId(),
+                  actionString
+                  );
+}
+
 void ChatClient::logout()
 {
    loggedIn_ = false;

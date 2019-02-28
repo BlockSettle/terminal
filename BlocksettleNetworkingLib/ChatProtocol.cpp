@@ -37,33 +37,36 @@ static const QString ClientMessageIdKey = QStringLiteral("client_message_id");
 static const QString MessageResultKey = QStringLiteral("message_result");
 static const QString MessageStateDeltaMaskKey = QStringLiteral("message_state_delta_mask");
 static const QString MessageStateKey = QStringLiteral("message_state");
+static const QString ContactActionKey = QStringLiteral("contacts_action");
 
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-       { "RequestHeartbeatPing"     ,   RequestType::RequestHeartbeatPing      }
-   ,   { "RequestLogin"             ,   RequestType::RequestLogin              }
-   ,   { "RequestLogout"            ,   RequestType::RequestLogout             }
-   ,   { "RequestMessages"          ,   RequestType::RequestMessages           }
-   ,   { "RequestSendMessage"       ,   RequestType::RequestSendMessage        }
-   ,   { "RequestOnlineUsers"       ,   RequestType::RequestOnlineUsers        }
-   ,   { "RequestAskForPublicKey"   ,   RequestType::RequestAskForPublicKey    }
-   ,   { "RequestSendOwnPublicKey"  ,   RequestType::RequestSendOwnPublicKey   }
-   ,   { "RequestChangeMessageStatus",  RequestType::RequestChangeMessageStatus}
+       { "RequestHeartbeatPing"      ,   RequestType::RequestHeartbeatPing      }
+   ,   { "RequestLogin"              ,   RequestType::RequestLogin              }
+   ,   { "RequestLogout"             ,   RequestType::RequestLogout             }
+   ,   { "RequestMessages"           ,   RequestType::RequestMessages           }
+   ,   { "RequestSendMessage"        ,   RequestType::RequestSendMessage        }
+   ,   { "RequestOnlineUsers"        ,   RequestType::RequestOnlineUsers        }
+   ,   { "RequestAskForPublicKey"    ,   RequestType::RequestAskForPublicKey    }
+   ,   { "RequestSendOwnPublicKey"   ,   RequestType::RequestSendOwnPublicKey   }
+   ,   { "RequestChangeMessageStatus",   RequestType::RequestChangeMessageStatus}
+   ,   { "RequestContactsAction"     ,   RequestType::RequestContactsAction     }
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-       { RequestType::RequestHeartbeatPing   ,  "RequestHeartbeatPing"       }
-   ,   { RequestType::RequestLogin           ,  "RequestLogin"               }
-   ,   { RequestType::RequestLogout          ,  "RequestLogout"              }
-   ,   { RequestType::RequestMessages        ,  "RequestMessages"            }
-   ,   { RequestType::RequestSendMessage     ,  "RequestSendMessage"         }
-   ,   { RequestType::RequestOnlineUsers     ,  "RequestOnlineUsers"         }
-   ,   { RequestType::RequestAskForPublicKey ,  "RequestAskForPublicKey"     }
-   ,   { RequestType::RequestSendOwnPublicKey,  "RequestSendOwnPublicKey"    }
-   ,   { RequestType::RequestChangeMessageStatus,"RequestChangeMessageStatus"}
+       { RequestType::RequestHeartbeatPing      ,   "RequestHeartbeatPing"      }
+   ,   { RequestType::RequestLogin              ,   "RequestLogin"              }
+   ,   { RequestType::RequestLogout             ,   "RequestLogout"             }
+   ,   { RequestType::RequestMessages           ,   "RequestMessages"           }
+   ,   { RequestType::RequestSendMessage        ,   "RequestSendMessage"        }
+   ,   { RequestType::RequestOnlineUsers        ,   "RequestOnlineUsers"        }
+   ,   { RequestType::RequestAskForPublicKey    ,   "RequestAskForPublicKey"    }
+   ,   { RequestType::RequestSendOwnPublicKey   ,   "RequestSendOwnPublicKey"   }
+   ,   { RequestType::RequestChangeMessageStatus,   "RequestChangeMessageStatus"}
+   ,   { RequestType::RequestContactsAction     ,   "RequestChangeMessageStatus"}
 };
 
 
@@ -80,6 +83,7 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponsePendingMessage"     ,   ResponseType::ResponsePendingMessage     }
    ,   { "ResponseSendMessage"        ,   ResponseType::ResponseSendMessage        }
    ,   { "ResponseChangeMessageStatus",   ResponseType::ResponseChangeMessageStatus}
+   ,   { "ResponseContactsAction"     ,   ResponseType::ResponseContactsAction     }
 };
 
 
@@ -96,6 +100,7 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponsePendingMessage     ,  "ResponsePendingMessage"     }
    ,   { ResponseType::ResponseSendMessage        ,  "ResponseSendMessage"        }
    ,   { ResponseType::ResponseChangeMessageStatus,  "ResponseChangeMessageStatus"}
+   ,   { ResponseType::ResponseContactsAction     ,  "ResponseContactsAction"     }
 };
 
 
@@ -163,6 +168,9 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          
       case RequestType::RequestChangeMessageStatus:
          return MessageChangeStatusRequest::fromJSON(clientId, jsonData);
+      
+      case RequestType::RequestContactsAction:
+         return ContactActionRequest::fromJSON(clientId, jsonData);
 
       default:
          break;
@@ -233,6 +241,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
          
       case ResponseType::ResponseChangeMessageStatus:
          return MessageChangeStatusResponse::fromJSON(jsonData);
+      
+      case ResponseType::ResponseContactsAction:
+         return ContactsActionResponse::fromJSON(jsonData);
 
       default:
          break;
@@ -916,4 +927,58 @@ std::shared_ptr<Response> MessageChangeStatusResponse::fromJSON(const std::strin
 void MessageChangeStatusResponse::handle(ResponseHandler& handler)
 {
    handler.OnMessageChangeStatusResponse(*this);
+}
+
+ContactsActionResponse::ContactsActionResponse(const std::string& senderId, const std::string& receiverId, ContactsAction action)
+   : PendingResponse (ResponseType::ResponseContactsAction)
+   , senderId_(senderId)
+   , receiverId_(receiverId)
+   , action_(action)
+{
+   
+}
+
+QJsonObject ContactsActionResponse::toJson() const
+{
+   QJsonObject data = PendingResponse::toJson();
+   data[SenderIdKey] = QString::fromStdString(senderId_);
+   data[ReceiverIdKey] = QString::fromStdString(receiverId_);
+   data[ContactActionKey] = static_cast<int>(action_);
+   return data;
+}
+
+std::shared_ptr<Response> ContactsActionResponse::fromJSON(const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QString senderId = data[SenderIdKey].toString();
+   QString receiverId = data[ReceiverIdKey].toString();
+   ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
+   return std::make_shared<ContactsActionResponse>(senderId.toStdString(), receiverId.toStdString(), action);
+}
+
+void ContactsActionResponse::handle(ResponseHandler& handler)
+{
+   return handler.OnContactsActionResponse(*this);
+}
+
+ContactActionRequest::ContactActionRequest(const std::string& clientId, ContactsAction action)
+   : Request (RequestType::RequestContactsAction, clientId)
+   , action_(action)
+{
+   
+}
+
+QJsonObject ContactActionRequest::toJson() const
+{
+   QJsonObject data = Request::toJson();
+   
+   data[ContactActionKey] = static_cast<int>(action_);
+   return data;
+}
+
+std::shared_ptr<Request> ContactActionRequest::fromJSON(const std::string& clientId, const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
+   return std::make_shared<ContactActionRequest>(clientId, action);
 }

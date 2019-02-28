@@ -34,6 +34,7 @@ namespace Chat
    ,   RequestAskForPublicKey
    ,   RequestSendOwnPublicKey
    ,   RequestChangeMessageStatus
+   ,   RequestContactsAction
    };
 
 
@@ -50,6 +51,13 @@ namespace Chat
    ,   ResponsePendingMessage
    ,   ResponseSendMessage
    ,   ResponseChangeMessageStatus
+   ,   ResponseContactsAction
+   };
+   
+   enum class ContactsAction {
+      Accept,
+      Reject,
+      Request
    };
 
 
@@ -234,6 +242,17 @@ namespace Chat
    private:
       const std::string messageId_;
       int messageState_;
+   };
+   
+   class ContactActionRequest : public Request
+   {
+   public:
+      ContactActionRequest(const std::string& clientId, ContactsAction action);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Request> fromJSON(const std::string& clientId, const std::string& jsonData);
+      ContactsAction getAction() const {return action_;}
+   private:
+      ContactsAction action_;
    };
 
    // Request for asking the peer to send us their public key.
@@ -498,8 +517,26 @@ namespace Chat
       std::string messageReceiverId_;
       int status_;
    };
-
-
+   
+   class ContactsActionResponse : public PendingResponse
+   {
+   public:
+      
+      ContactsActionResponse(const std::string& senderId, const std::string& receiverId, ContactsAction action);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      void handle(ResponseHandler&) override;
+      std::string senderId() const {return senderId_;} 
+      std::string receiverId() const {return receiverId_;} 
+      ContactsAction getAction() const {return action_;} 
+   private:
+      std::string senderId_;
+      std::string receiverId_;
+      ContactsAction action_;
+      
+   };
+   
+   
    class RequestHandler
    {
    public:
@@ -539,6 +576,7 @@ namespace Chat
       
       virtual void OnSendMessageResponse(const SendMessageResponse&) = 0;
       virtual void OnMessageChangeStatusResponse(const MessageChangeStatusResponse&) = 0;
+      virtual void OnContactsActionResponse(const ContactsActionResponse&) = 0;
    };
 
 }
