@@ -3,38 +3,44 @@
 
 #include <memory>
 #include "ConfigDialog.h"
+#include "ArmoryServersViewModel.h"
 
 namespace Ui {
    class NetworkSettingsPage;
-};
+}
 
 class ApplicationSettings;
 
 class NetworkSettingsPage : public SettingsPage
 {
+   Q_OBJECT
+
 public:
    NetworkSettingsPage(QWidget* parent = nullptr);
    ~NetworkSettingsPage() override;
+
+   void initSettings() override;
 
    void display() override;
    void reset() override;
    void apply() override;
 
-private slots:
-   void onRunArmoryLocallyChecked(bool checked);
-   void onNetworkClicked(bool checked);
+   void applyArmoryServers();
 
+signals:
+   void reconnectArmory();
    void onArmoryHostChanged();
    void onArmoryPortChanged();
 
+private slots:
    void onEnvSelected(int);
 
 private:
-   void DisplayRunArmorySettings(bool runLocally);
    void DetectEnvironmentSettings();
 
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
+   ArmoryServersViewModel *armoryServerModel_;
 };
 
 #endif // __NETWORK_SETTINGS_PAGE_H__

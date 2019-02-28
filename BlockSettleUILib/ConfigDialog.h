@@ -4,7 +4,7 @@
 #include <memory>
 #include <QDialog>
 #include "ApplicationSettings.h"
-
+#include "ArmoryServersProvider.h"
 
 namespace Ui {
    class ConfigDialog;
@@ -17,10 +17,15 @@ class SettingsPage : public QWidget
 public:
    SettingsPage(QWidget *parent) : QWidget(parent) {}
 
-   virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings) {
+   virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings
+                     , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider) {
       appSettings_ = appSettings;
+      armoryServersProvider_ = armoryServersProvider;
+      initSettings();
       display();
    }
+   virtual void initSettings() {}
+
    virtual void display() = 0;
    virtual void reset() = 0;
    virtual void apply() = 0;
@@ -30,6 +35,7 @@ signals:
 
 protected:
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
 };
 
 
@@ -39,7 +45,8 @@ Q_OBJECT
 
 public:
    ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
-      , QWidget* parent = nullptr);
+     , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+     , QWidget* parent = nullptr);
    ~ConfigDialog() override;
 
 protected:
@@ -51,9 +58,13 @@ private slots:
    void onSelectionChanged(int currentRow);
    void illformedSettings(bool illformed);
 
+signals:
+   void reconnectArmory();
+
 private:
    std::unique_ptr<Ui::ConfigDialog> ui_;
-   std::shared_ptr<ApplicationSettings>   applicationSettings_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::vector<SettingsPage *>            pages_;
    ApplicationSettings::State             prevState_;
 };

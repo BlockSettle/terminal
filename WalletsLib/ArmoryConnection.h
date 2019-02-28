@@ -28,8 +28,16 @@ class QProcess;
 // purposes, they'll be hard-coded for now. THESE MUST BE REPLACED EVENTUALLY
 // WITH THE KEY ROTATION ALGORITHM. HARD-CODED KEYS WILL KILL ANY TERMINAL ONCE
 // THE KEYS ROTATE.
-// Key 1: IP address - 37 server
-#define BIP150_KEY_1 "03a8649b32b9459961e143c5c111b9a47ffa494116791c1cb35945a8b9bc8254ab"
+// armory.blocksettle.com - 185.213.153.37 server
+//#define TESTNET_ARMORY_BLOCKSETTLE_NAME "BlockSettle TestNet Server"
+//#define TESTNET_ARMORY_BLOCKSETTLE_KEY "03a8649b32b9459961e143c5c111b9a47ffa494116791c1cb35945a8b9bc8254ab"
+//#define TESTNET_ARMORY_BLOCKSETTLE_ADDRESS "armory.blocksettle.com"
+//#define TESTNET_ARMORY_BLOCKSETTLE_PORT 81 //7681
+
+#define MAINNET_ARMORY_BLOCKSETTLE_NAME "BlockSettle MainNet Server"
+//#define MAINNET_ARMORY_BLOCKSETTLE_KEY "03a8649b32b9459961e143c5c111b9a47ffa494116791c1cb35945a8b9bc8254ab"
+#define MAINNET_ARMORY_BLOCKSETTLE_ADDRESS "armory.blocksettle.com"
+#define MAINNET_ARMORY_BLOCKSETTLE_PORT 80
 
 // The class is used as a callback that processes asynchronous Armory events.
 class ArmoryCallback : public RemoteCallback
@@ -76,8 +84,9 @@ class ArmoryConnection : public QObject
    Q_OBJECT
 public:
    enum class State : uint8_t {
-      Unknown,
       Offline,
+      Connecting,
+      Canceled,
       Connected,
       Scanning,
       Error,
@@ -91,7 +100,9 @@ public:
 
    State state() const { return state_; }
 
-   void setupConnection(const ArmorySettings &);
+   void setupConnection(const ArmorySettings &
+                        , std::function<bool (const BinaryData&, const std::string&)> bip150PromptUserRoutine
+                        = [](const BinaryData&, const std::string&){return true;});
    bool goOnline();
 
    bool broadcastZC(const BinaryData& rawTx);
@@ -127,10 +138,15 @@ public:
 
    bool isOnline() const { return isOnline_; }
 
+   auto bip150PromptUser(const BinaryData& srvPubKey
+                         , const std::string& srvIPPort) -> bool;
+
+   void setState(State);
+   std::atomic_bool  needsBreakConnectionLoop_ {false};
 signals:
    void stateChanged(ArmoryConnection::State) const;
    void connectionError(QString) const;
-   void prepareConnection(NetworkType, std::string host, std::string port) const;
+   void prepareConnection(ArmorySettings server) const;
    void progress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress) const;
    void newBlock(unsigned int height) const;
    void zeroConfReceived(const std::vector<bs::TXEntry>) const;
@@ -142,7 +158,6 @@ signals:
 
 private:
    void registerBDV(NetworkType);
-   void setState(State);
    void setTopBlock(unsigned int topBlock) { topBlock_ = topBlock; }
    void onRefresh(std::vector<BinaryData>);
    void onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &);
@@ -157,13 +172,13 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AsyncClient::BlockDataViewer>   bdv_;
    std::shared_ptr<ArmoryCallback>  cbRemote_;
-   std::atomic<State>   state_ = { State::Unknown };
+   std::atomic<State>   state_ = { State::Offline };
    std::atomic_uint     topBlock_ = { 0 };
    TxCacheFile    txCache_;
    const bool     cbInMainThread_;
    std::shared_ptr<BlockHeader> getTxBlockHeader_;
 
-   std::vector<SecureBinaryData> bsBIP150PubKeys;
+   std::vector<SecureBinaryData> bsBIP150PubKeys_;
 
    std::atomic_bool  regThreadRunning_;
    std::atomic_bool  connThreadRunning_;
