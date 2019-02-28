@@ -79,9 +79,6 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
          file.write(ui_->labelArmoryTerminalKey->text().toLatin1());
       }
    });
-
-
-   ui_->PublicBridgeSettingsGroup->hide();
 }
 
 void NetworkSettingsPage::initSettings()
@@ -112,15 +109,17 @@ void NetworkSettingsPage::display()
    ui_->spinBoxPublicBridgePort->setEnabled(false);
 
    int serverIndex = armoryServersProvider_->indexOf(appSettings_->get<QString>(ApplicationSettings::armoryDbName));
-   ArmoryServer server = armoryServersProvider_->servers().at(serverIndex);
+   if (serverIndex >= 0) {
+      ArmoryServer server = armoryServersProvider_->servers().at(serverIndex);
 
-   int port = appSettings_->GetArmoryRemotePort(server.netType);
-   ui_->comboBoxArmoryServer->setCurrentIndex(serverIndex);
+      int port = appSettings_->GetArmoryRemotePort(server.netType);
+      ui_->comboBoxArmoryServer->setCurrentIndex(serverIndex);
+      ui_->labelArmoryServerNetwork->setText(server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
+      ui_->labelArmoryServerAddress->setText(server.armoryDBIp);
+      ui_->labelArmoryServerPort->setText(QString::number(port));
+      ui_->labelArmoryServerKey->setText(server.armoryDBKey);
+   }
 
-   ui_->labelArmoryServerNetwork->setText(server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
-   ui_->labelArmoryServerAddress->setText(server.armoryDBIp);
-   ui_->labelArmoryServerPort->setText(QString::number(port));
-   ui_->labelArmoryServerKey->setText(server.armoryDBKey);
 
    ui_->comboBoxEnvironment->addItem(tr("Custom"));
    ui_->comboBoxEnvironment->addItem(tr("Staging"));

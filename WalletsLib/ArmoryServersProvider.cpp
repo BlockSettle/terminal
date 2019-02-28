@@ -1,4 +1,5 @@
 #include "ArmoryServersProvider.h"
+#include "ArmoryConnection.h"
 
 #include <QDir>
 #include <QStandardPaths>
@@ -19,14 +20,14 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
    QStringList defaultServersKeys = appSettings_->get<QStringList>(ApplicationSettings::defaultArmoryServersKeys);
 
    // #1 add MainNet blocksettle server
-   ArmoryServer bsMainNet = ArmoryServer::fromTextSettings(QStringLiteral("BlockSettle MainNet:0:armory.blocksettle.com:80:"));
+   ArmoryServer bsMainNet = ArmoryServer::fromTextSettings(QStringLiteral(MAINNET_ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:"));
    if (defaultServersKeys.size() >= 1) {
       bsMainNet.armoryDBKey = defaultServersKeys.at(0);
    }
    servers.append(bsMainNet);
 
    // #2 add TestNet blocksettle server
-   ArmoryServer bsTestNet = ArmoryServer::fromTextSettings(QStringLiteral("BlockSettle TestNet:1:armory.blocksettle.com:81:"));
+   ArmoryServer bsTestNet = ArmoryServer::fromTextSettings(QStringLiteral(TESTNET_ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:"));
    if (defaultServersKeys.size() >= 2) {
       bsTestNet.armoryDBKey = defaultServersKeys.at(1);
    }
@@ -114,9 +115,23 @@ int ArmoryServersProvider::indexOfIpPort(const std::string &srvIPPort) const
 
 void ArmoryServersProvider::add(const ArmoryServer &server)
 {
-   QStringList servers = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
-   servers.append(server.toTextSettings());
-   appSettings_->set(ApplicationSettings::armoryServers, servers);
+   QList<ArmoryServer> serversData = servers();
+   // check if server with already exist
+   for (const ArmoryServer &s : serversData) {
+      if (s.name == server.name) {
+         return;
+      }
+      if (s.armoryDBIp == server.armoryDBIp
+          && s.armoryDBPort == server.armoryDBPort
+          && s.netType == server.netType) {
+         return;
+      }
+   }
+
+   QStringList serversTxt = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
+
+   serversTxt.append(server.toTextSettings());
+   appSettings_->set(ApplicationSettings::armoryServers, serversTxt);
    emit dataChanged();
 }
 
@@ -128,7 +143,7 @@ void ArmoryServersProvider::remove(int index)
 
    QStringList servers = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
    int indexToRemove = index - defaultServersCount;
-   if (indexToRemove > 0 && indexToRemove < servers.size()){
+   if (indexToRemove >= 0 && indexToRemove < servers.size()){
       servers.removeAt(indexToRemove);
       appSettings_->set(ApplicationSettings::armoryServers, servers);
       emit dataChanged();

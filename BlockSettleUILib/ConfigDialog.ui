@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
-    <height>560</height>
+    <width>514</width>
+    <height>618</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -18,8 +18,8 @@
   </property>
   <property name="maximumSize">
    <size>
-    <width>500</width>
-    <height>560</height>
+    <width>16777215</width>
+    <height>16777215</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -386,6 +386,7 @@
   </customwidget>
  </customwidgets>
  <resources>
+  <include location="armory.qrc"/>
   <include location="armory.qrc"/>
  </resources>
  <connections/>
