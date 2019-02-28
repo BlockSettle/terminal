@@ -408,9 +408,11 @@ bool ChatClient::addOrUpdateContact(const QString &userId, const QString &userNa
    return chatDb_->addContact(contact);
 }
 
-void ChatClient::sendFriendRequest(const QString &/*friendUserId*/)
+void ChatClient::sendFriendRequest(const QString &friendUserId)
 {
    // TODO
+   auto request = std::make_shared<Chat::ContactActionRequest>(currentUserId_, friendUserId.toStdString(), Chat::ContactsAction::Request);
+   sendRequest(request);
 }
 
 void ChatClient::sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message)
