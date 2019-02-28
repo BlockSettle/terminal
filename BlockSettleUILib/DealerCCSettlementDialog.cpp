@@ -4,7 +4,6 @@
 #include "ArmoryConnection.h"
 #include "CommonTypes.h"
 #include "DealerCCSettlementContainer.h"
-#include "MetaData.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"

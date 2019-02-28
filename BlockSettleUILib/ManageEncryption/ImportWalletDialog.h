@@ -7,7 +7,6 @@
 #include "BtcDefinitions.h"
 #include "EasyCoDec.h"
 #include "CoreWallet.h"
-#include "MetaData.h"
 #include "QWalletInfo.h"
 
 namespace Ui {

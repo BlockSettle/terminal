@@ -22,27 +22,29 @@ hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::
 
 hd::Leaf::~Leaf() = default;
 
-void hd::Leaf::synchronize()
+void hd::Leaf::synchronize(const std::function<void()> &cbDone)
 {
-   const auto &cbProcess = [this](bs::sync::WalletData data) {
+   const auto &cbProcess = [this, cbDone](bs::sync::WalletData data) {
       encryptionTypes_ = data.encryptionTypes;
       encryptionKeys_ = data.encryptionKeys;
       encryptionRank_ = data.encryptionRank;
       netType_ = data.netType;
 
       for (const auto &addr : data.addresses) {
-         addAddress(addr.address, addr.index, addr.aet, false);
+         addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
       }
       for (const auto &addr : data.addrPool) {  //addPool normally won't contain comments
          const auto path = bs::hd::Path::fromString(addr.index);
-         addressPool_[{ path, addr.aet }] = addr.address;
-         poolByAddr_[addr.address] = { path, addr.aet };
+         addressPool_[{ path, addr.address.getType() }] = addr.address;
+         poolByAddr_[addr.address] = { path, addr.address.getType() };
       }
       for (const auto &txComment : data.txComments) {
          setTransactionComment(txComment.txHash, txComment.comment, false);
       }
-      emit synchronized();
+      if (cbDone) {
+         cbDone();
+      }
    };
    signContainer_->syncWallet(walletId(), cbProcess);
 }
@@ -505,14 +507,14 @@ std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryCo
       regIdExt_ = armory_->registerWallet(btcWallet_, walletId()
          , addrsExt, cbEmpty, asNew);
       regIds.push_back(regIdExt_);
-      logger_->debug("{} ext regId = {}", walletId(), regIdExt_);
+      logger_->debug("{} ext {} regId = {}", walletId(), addrsExt.size(), regIdExt_);
 
       if (!isExtOnly_) {
          const auto addrsInt = getAddrHashesInt();
          regIdInt_ = armory_->registerWallet(btcWalletInt_
             , getWalletIdInt(), addrsInt, cbEmpty, asNew);
          regIds.push_back(regIdInt_);
-         logger_->debug("{} int regId = {}", walletId(), regIdInt_);
+         logger_->debug("{} int {} regId = {}", walletId(), addrsInt.size(), regIdInt_);
       }
       return regIds;
    }

@@ -4,7 +4,6 @@
 #include <QTimer>
 #include <spdlog/spdlog.h>
 #include "Address.h"
-#include "MetaData.h"
 #include "signer.pb.h"
 
 using namespace Blocksettle;

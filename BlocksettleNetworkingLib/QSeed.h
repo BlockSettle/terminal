@@ -4,8 +4,6 @@
 #include <memory>
 #include <QObject>
 #include "CoreWallet.h"
-#include "HDWallet.h"
-#include "MetaData.h"
 #include "WalletEncryption.h"
 
 namespace bs {
@@ -19,7 +17,7 @@ class QSeed : public QObject, public bs::core::wallet::Seed
 
    Q_PROPERTY(QString part1 READ part1)
    Q_PROPERTY(QString part2 READ part2)
-   Q_PROPERTY(QString walletId READ walletId)
+   Q_PROPERTY(QString walletId READ walletId) //see below
    Q_PROPERTY(int networkType READ networkType)
 public:
    enum QNetworkType {
@@ -58,7 +56,7 @@ public:
 
    QString part1() const { return QString::fromStdString(toEasyCodeChecksum().part1); }
    QString part2() const { return QString::fromStdString(toEasyCodeChecksum().part2); }
-   QString walletId() { return QString::fromStdString(bs::hd::Node(*this).getId()); }
+   QString walletId() const { return QString::fromStdString(getWalletId()); }
 
    QString lastError() const;
 

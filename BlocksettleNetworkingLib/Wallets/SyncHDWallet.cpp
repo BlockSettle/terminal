@@ -23,12 +23,12 @@ hd::Wallet::Wallet(const std::string &walletId, const std::string &name, const s
 
 hd::Wallet::~Wallet() = default;
 
-void hd::Wallet::synchronize()
+void hd::Wallet::synchronize(const std::function<void()> &cbDone)
 {
    if (!signContainer_) {
       return;
    }
-   const auto &cbProcess = [this](HDWalletData data) {
+   const auto &cbProcess = [this, cbDone](HDWalletData data) {
       for (const auto &grpData : data.groups) {
          auto group = createGroup(grpData.type);
          if (!group) {
@@ -44,8 +44,19 @@ void hd::Wallet::synchronize()
             }
          }
       }
-      for (const auto &leaf : getLeaves()) {
-         leaf->synchronize();
+      const auto leaves = getLeaves();
+      auto leafIds = std::make_shared<std::set<std::string>>();
+      for (const auto &leaf : leaves) {
+         leafIds->insert(leaf->walletId());
+      }
+      for (const auto &leaf : leaves) {
+         const auto &cbLeafDone = [leafIds, cbDone, id=leaf->walletId()] {
+            leafIds->erase(id);
+            if (leafIds->empty() && cbDone) {
+               cbDone();
+            }
+         };
+         leaf->synchronize(cbLeafDone);
          if (encryptionTypes_.empty()) {  //FIXME: pass this directly for HD wallet at sync
             encryptionTypes_ = leaf->encryptionTypes();
             encryptionKeys_ = leaf->encryptionKeys();

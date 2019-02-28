@@ -94,6 +94,9 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
    connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
 
+   onArmoryStateChanged(armory_->state());
+   onConnectionClosed();
+   onContainerConnected();
    setBalances();
 }
 

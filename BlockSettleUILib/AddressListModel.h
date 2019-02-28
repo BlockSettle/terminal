@@ -1,7 +1,6 @@
 #ifndef ADDRESSLISTMODEL_H
 #define ADDRESSLISTMODEL_H
 
-#include "MetaData.h"
 #include <map>
 #include <memory>
 #include <QAbstractTableModel>

@@ -119,7 +119,6 @@ private slots:
    void onNewWalletAdded(const std::string &walletId);
    void onWalletInfo(unsigned int id, bs::hd::WalletInfo);
    void onHDWalletError(unsigned int id, std::string err);
-   void onMissingWallets(const std::vector<std::string> &);
    void onSignerAuthenticated();
 
 public:
@@ -154,7 +153,6 @@ private:
    std::string       defaultWalletId_;
    bool              showRegularWallets_;
    std::unordered_map<int, std::string>   hdInfoReqIds_;
-   std::unordered_set<std::string>        failedLeaves_;
    std::unordered_map<std::string, WalletNode::State> signerStates_;
 };
 

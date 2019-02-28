@@ -2,7 +2,6 @@
 #define __ASSET__MANAGER_H__
 
 #include "CommonTypes.h"
-#include "MetaData.h"
 
 #include <memory>
 #include <unordered_map>

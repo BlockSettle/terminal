@@ -5,7 +5,6 @@
 #include <memory>
 #include <QObject>
 #include <QStringList>
-#include "MetaData.h"
 #include "SignContainer.h"
 #include "ApplicationSettings.h"
 
@@ -69,6 +68,16 @@ public:
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
       , bool addNew, bool removeOld, bool dryRun) override;
 
+   void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
+   void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;
+   void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) override;
+   void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) override;
+   void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) override;
+   void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
+      , const std::function<void(const bs::Address &)> &) override;
+   void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
+
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;
 
@@ -82,10 +91,18 @@ protected:
    void ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data);
    void ProcessChangePasswordResponse(unsigned int id, const std::string &data);
    void ProcessSetLimitsResponse(unsigned int id, const std::string &data);
+   void ProcessSyncWalletInfo(unsigned int id, const std::string &data);
+   void ProcessSyncHDWallet(unsigned int id, const std::string &data);
+   void ProcessSyncWallet(unsigned int id, const std::string &data);
+   void ProcessSyncAddresses(unsigned int id, const std::string &data);
 
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
    std::set<RequestId>                 signRequests_;
+   std::map<SignContainer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfoMap_;
+   std::map<SignContainer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
+   std::map<SignContainer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
+   std::map<SignContainer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
 };
 
 bool KillHeadlessProcess();

@@ -69,7 +69,7 @@ private:
 
    void setTabStyle();
 
-   void LoadWallets(BSTerminalSplashScreen& splashScreen);
+   void LoadWallets();
    void InitAuthManager();
    bool InitSigningContainer();
    void InitAssets();
@@ -217,6 +217,7 @@ private:
 private:
    QString           loginButtonText_;
    NetworkSettings   networkSettings_;
+   bool  readyToRegisterWallets_ = false;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

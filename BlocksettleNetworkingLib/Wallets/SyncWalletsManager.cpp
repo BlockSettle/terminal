@@ -51,40 +51,67 @@ void WalletsManager::reset()
 
 void WalletsManager::syncWallets(const CbProgress &cb)
 {
-   const auto &cbWalletInfo = [this](std::vector<bs::sync::WalletInfo> wi) {
+   const auto &cbWalletInfo = [this, cb](std::vector<bs::sync::WalletInfo> wi) {
+      auto walletIds = std::make_shared<std::unordered_set<std::string>>();
       for (const auto &info : wi) {
+         walletIds->insert(info.id);
+      }
+      for (const auto &info : wi) {
+         const auto &cbDone = [this, walletIds, id=info.id, total=wi.size(), cb] {
+            walletIds->erase(id);
+            if (cb) {
+               cb(total - walletIds->size(), total);
+            }
+            if (walletIds->empty()) {
+               logger_->debug("[WalletsManager::syncWallets] all wallets synchronized");
+               emit walletsSynchronized();
+               emit walletChanged();
+            }
+         };
+
          logger_->debug("[SyncWalletsManager::syncWallets] syncing wallet {} ({} {})", info.id, info.name, (int)info.format);
          switch (info.format) {
          case bs::sync::WalletFormat::HD: {
-            const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name, info.description
-               , signContainer_, logger_);
-            if (hdWallet) {
-               hdWallet->synchronize();
-               saveWallet(hdWallet);
+            try {
+               const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name, info.description
+                  , signContainer_, logger_);
+               if (hdWallet) {
+                  const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
+                     saveWallet(hdWallet);
+                     cbDone();
+                  };
+                  hdWallet->synchronize(cbHDWalletDone);
+               }
             }
-            else {
-               logger_->error("[SyncWalletsManager::syncWallets] failed to create HD wallet {}", info.id);
+            catch (const std::exception &e) {
+               logger_->error("[SyncWalletsManager::syncWallets] failed to create HD wallet {}: {}", info.id, e.what());
+               cbDone();
             }
             break;
          }
          case bs::sync::WalletFormat::Settlement: {
             if (settlementWallet_) {
                logger_->error("[SyncWalletsManager::syncWallets] more than one settlement wallet is not supported");
+               cbDone();
             }
             else {
                const auto settlWallet = std::make_shared<SettlementWallet>(info.id, info.name, info.description
                   , signContainer_, logger_);
-               settlWallet->synchronize();
-               setSettlementWallet(settlWallet);
+               const auto &cbSettlementDone = [this, settlWallet, cbDone] {
+                  setSettlementWallet(settlWallet);
+                  cbDone();
+               };
+               settlWallet->synchronize(cbSettlementDone);
             }
             break;
          }
          default:
+            cbDone();
             logger_->info("[SyncWalletsManager::syncWallets] wallet format {} is not supported, yet", (int)info.format);
             break;
          }
       }
-      emit walletsSynchronized();
+      logger_->debug("[WalletsManager::syncWallets] initial wallets synchronized");
    };
    signContainer_->syncWalletInfo(cbWalletInfo);
 }
@@ -139,15 +166,15 @@ void WalletsManager::saveWallet(const HDWalletPtr &wallet)
    if (!userId_.isNull()) {
       wallet->setUserId(userId_);
    }
-   connect(wallet.get(), &hd::Wallet::leafAdded, this, &WalletsManager::onHDLeafAdded);
-   connect(wallet.get(), &hd::Wallet::leafDeleted, this, &WalletsManager::onHDLeafDeleted);
-   connect(wallet.get(), &hd::Wallet::scanComplete, this, &WalletsManager::onWalletImported, Qt::QueuedConnection);
    hdWalletsId_.emplace_back(wallet->walletId());
    hdWallets_[wallet->walletId()] = wallet;
    walletNames_.insert(wallet->name());
    for (const auto &leaf : wallet->getLeaves()) {
       addWallet(leaf, true);
    }
+   connect(wallet.get(), &hd::Wallet::leafAdded, this, &WalletsManager::onHDLeafAdded);
+   connect(wallet.get(), &hd::Wallet::leafDeleted, this, &WalletsManager::onHDLeafDeleted);
+   connect(wallet.get(), &hd::Wallet::scanComplete, this, &WalletsManager::onWalletImported, Qt::QueuedConnection);
 }
 
 void WalletsManager::setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &wallet)
@@ -832,7 +859,7 @@ void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
       return;
    }
    createHdReqId_ = 0;
-   newWallet->synchronize();
+   newWallet->synchronize([] {});
    adoptNewWallet(newWallet);
    emit walletCreated(newWallet);
 }

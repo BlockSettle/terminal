@@ -64,7 +64,7 @@ namespace bs {
          using CbAddress = std::function<void(const bs::Address &)>;
          using CbAddresses = std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>;
 
-         virtual void synchronize();
+         virtual void synchronize(const std::function<void()> &cbDone);
 
          virtual std::string walletId() const { return "defaultWalletID"; }
          virtual std::string name() const { return walletName_; }
@@ -108,10 +108,6 @@ namespace bs {
          virtual BTCNumericTypes::balance_type getTotalBalance() const;
          virtual void firstInit(bool force = false);
 
-/*         virtual void addUnconfirmedBalance(const BTCNumericTypes::balance_type& delta
-            , const BTCNumericTypes::balance_type& inFees
-            , const BTCNumericTypes::balance_type& inChgAmt);*/
-//         virtual bool isInitialized() const { return inited_; }
          virtual bool isWatchingOnly() const { return false; }
          virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
          virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
@@ -169,7 +165,6 @@ namespace bs {
          virtual bool deleteRemotely() { return false; } //stub
 
       signals:
-         void synchronized();
          void addressAdded();
          void walletReset();
          void walletReady(const QString &id);

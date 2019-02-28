@@ -55,7 +55,6 @@ namespace bs {
       struct AddressData
       {
          std::string index;
-         AddressEntryType  aet;
          bs::Address address;
          std::string comment;
       };
@@ -185,9 +184,6 @@ signals:
       , std::string walletId);
    void SettlementWalletCreated(RequestId id, const std::shared_ptr<bs::sync::SettlementWallet> &);
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
-   void MissingWallets(const std::vector<std::string> &);
-   void AddressSyncFailed(const std::vector<std::pair<std::string, std::string>> &failedAddresses);
-   void AddressSyncComplete();
    void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);
    void AutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);

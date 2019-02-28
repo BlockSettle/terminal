@@ -413,6 +413,7 @@ std::vector<UTXO> TransactionData::decorateUTXOs(const std::vector<UTXO> &inUTXO
    for (auto &utxo : inputUTXOs) {  // some kind of decoration code to replace the code above
       const bs::Address recipAddr(utxo.getRecipientScrAddr());
       utxo.txinRedeemSizeBytes_ = recipAddr.getInputSize();
+      utxo.witnessDataSizeBytes_ = recipAddr.getWitnessDataSize();
       utxo.isInputSW_ = ((recipAddr.getType() == AddressEntryType_P2WPKH)
          || (recipAddr.getType() == AddressEntryType_P2WSH)) ? true : false;
    }

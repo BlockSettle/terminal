@@ -99,24 +99,12 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
 
-   LoadWallets(splashScreen);
+   InitSigningContainer();
 
    splashScreen.SetProgress(100);
    splashScreen.close();
-
    QApplication::processEvents();
 
-   InitSigningContainer();
-   InitAuthManager();
-   InitAssets();
-
-   authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
-      , assetManager_, applicationSettings_, this);
-
-   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
-      , signContainer_, ui->statusbar);
-
-   InitWalletsView();
    setupToolbar();
    setupMenu();
 
@@ -124,10 +112,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    connectSigner();
    connectArmory();
-
-   InitPortfolioView();
-
-   ui->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
 
    aboutDlg_ = std::make_shared<AboutDialog>(applicationSettings_->get<QString>(ApplicationSettings::ChangeLog_Base_Url), this);
    auto aboutDlgCb = [this] (int tab) {
@@ -140,12 +124,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connect(ui->actionAboutTerminal, &QAction::triggered, aboutDlgCb(1));
    connect(ui->actionContactBlockSettle, &QAction::triggered, aboutDlgCb(2));
    connect(ui->actionVersion, &QAction::triggered, aboutDlgCb(3));
-
-   // Enable/disable send action when first wallet created/last wallet removed
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
-      , &BSTerminalMainWindow::updateControlEnabledState);
 
    ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
@@ -345,8 +323,6 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addSeparator();
    trayMenu->addAction(ui->actionQuit);
    sysTrayIcon_->setContextMenu(trayMenu);
-
-   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::setupIcon()
@@ -380,35 +356,41 @@ void BSTerminalMainWindow::setupIcon()
    connect(qApp, SIGNAL(lastWindowClosed()), sysTrayIcon_.get(), SLOT(hide()));
 }
 
-#include "CoreWalletsManager.h"
-#include "InprocSigner.h"
-void BSTerminalMainWindow::LoadWallets(BSTerminalSplashScreen& splashScreen)
+void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
-   splashScreen.SetTipText(tr("Loading wallets"));
-   splashScreen.SetProgress(5);
 
    bs::UtxoReservation::init();
 
-   //FIXME: temporary inproc signer and core wallets mgr just for testing
-   const auto coreWalletsMgr = std::make_shared<bs::core::WalletsManager>(logMgr_->logger());
-   const auto inprocSigner = std::make_shared<InprocSigner>(coreWalletsMgr, logMgr_->logger()
-      , applicationSettings_->GetHomeDir().toStdString()
-      , applicationSettings_->get<NetworkType>(ApplicationSettings::netType));
-   inprocSigner->Start();
-
-   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(inprocSigner, logMgr_->logger(), applicationSettings_, armory_);
+   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(signContainer_, logMgr_->logger(), applicationSettings_, armory_);
 
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
       ui->widgetRFQ->setWalletsManager(walletsMgr_);
       ui->widgetRFQReply->setWalletsManager(walletsMgr_);
    });
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
+      updateControlEnabledState();
+      if (walletsMgr_->hdWalletsCount() == 0) {
+         createWallet(!walletsMgr_->hasPrimaryWallet());
+      }
+      if (readyToRegisterWallets_) {
+         readyToRegisterWallets_ = false;
+         walletsMgr_->registerWallets();
+      }
+   });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
 
-   const auto &progressDelegate = [&splashScreen](int cur, int total) {
-      const int progress = cur * (100 / total);
-      splashScreen.SetProgress(progress);
+   // Enable/disable send action when first wallet created/last wallet removed
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
+      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
+      , &BSTerminalMainWindow::updateControlEnabledState);
+
+   const auto &progressDelegate = [this](int cur, int total) {
+//      const int progress = cur * (100 / total);
+//      splashScreen.SetProgress(progress);
+      logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
    };
    walletsMgr_->syncWallets(progressDelegate);
 }
@@ -484,8 +466,8 @@ bool BSTerminalMainWindow::InitSigningContainer()
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
       return false;
    }
-   connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady);
-   connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError);
+   connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
+   connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
 
    return true;
 }
@@ -499,7 +481,23 @@ void BSTerminalMainWindow::SignerReady()
       connect(signContainer_.get(), &SignContainer::PasswordRequested, this, &BSTerminalMainWindow::onPasswordRequested);
    }
 
+   LoadWallets();
+
    if (!widgetsInited_) {
+      InitAuthManager();
+      InitAssets();
+
+      statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
+         , signContainer_, ui->statusbar);
+
+      authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
+         , assetManager_, applicationSettings_, this);
+
+      InitWalletsView();
+      InitPortfolioView();
+
+      ui->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
+
       auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
       quoteProvider->ConnectToCelerClient(celerConnection_);
 
@@ -510,9 +508,6 @@ void BSTerminalMainWindow::SignerReady()
       ui->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
          , applicationSettings_, dialogManager, signContainer_, armory_);
 
-      if (walletsMgr_->hdWalletsCount() == 0) {
-         createWallet(!walletsMgr_->hasPrimaryWallet());
-      }
       widgetsInited_ = true;
    }
    else {
@@ -660,7 +655,10 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 void BSTerminalMainWindow::CompleteDBConnection()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::CompleteDBConnection");
-   walletsMgr_->registerWallets();
+   if (walletsMgr_ && walletsMgr_->hdWalletsCount()) {
+      walletsMgr_->registerWallets();
+   }
+   readyToRegisterWallets_ = true;
 }
 
 void BSTerminalMainWindow::onReactivate()
@@ -695,7 +693,7 @@ void BSTerminalMainWindow::UpdateMainWindowAppearence()
 
 bool BSTerminalMainWindow::isUserLoggedIn() const
 {
-   return celerConnection_->IsConnected();
+   return (celerConnection_ && celerConnection_->IsConnected());
 }
 
 bool BSTerminalMainWindow::isArmoryConnected() const
@@ -1060,8 +1058,13 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (signContainer_) {
       signContainer_->SetUserId(BinaryData{});
    }
-   walletsMgr_->setUserId(BinaryData{});
-   authManager_->OnDisconnectedFromCeler();
+   if (walletsMgr_) {
+      walletsMgr_->setUserId(BinaryData{});
+   }
+   if (authManager_) {
+      authManager_->OnDisconnectedFromCeler();
+   }
+
    setLoginButtonText(loginButtonText_);
 
    updateLoginActionState();
@@ -1177,7 +1180,7 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
          };
          const auto &cbMainAddr = [this, txInfo] (QString mainAddr, int addrCount) {
             txInfo->mainAddress = mainAddr;
-            if ((txInfo->direction != bs::Transaction::Direction::Unknown) && txInfo->wallet) {
+            if ((txInfo->direction != bs::sync::Transaction::Direction::Unknown) && txInfo->wallet) {
                showZcNotification(txInfo);
                delete txInfo;
             }

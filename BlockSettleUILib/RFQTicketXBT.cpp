@@ -167,7 +167,6 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQTicketXBT::onCreateHDWalletError);
-      connect(signingContainer_.get(), &SignContainer::AddressSyncComplete, this, &RFQTicketXBT::walletsLoaded);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
 
@@ -343,12 +342,13 @@ bool RFQTicketXBT::isXBTProduct() const
 void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    walletsManager_ = walletsManager;
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
    QMetaObject::invokeMethod(this, "walletsLoaded");
 }
 
 void RFQTicketXBT::walletsLoaded()
 {
-   if (!signingContainer_) {
+   if (!signingContainer_ || !walletsManager_ || !walletsManager_->hdWalletsCount()) {
       return;
    }
    ui_->comboBoxXBTWallets->clear();

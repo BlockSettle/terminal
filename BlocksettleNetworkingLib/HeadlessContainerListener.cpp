@@ -148,7 +148,10 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
       AuthResponse(clientId, packet);
    }
    else {
-      onRequestPacket(clientId, packet);
+      if (!onRequestPacket(clientId, packet)) {
+         packet.set_data({});
+         sendData(packet.SerializeAsString(), clientId);
+      }
    }
 }
 
@@ -248,6 +251,21 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::DisconnectionRequestType:
       emit OnClientDisconnected(clientId);
       break;
+
+   case headless::SyncWalletInfoType:
+      return onSyncWalletInfo(clientId, packet);
+
+   case headless::SyncHDWalletType:
+      return onSyncHDWallet(clientId, packet);
+
+   case headless::SyncWalletType:
+      return onSyncWallet(clientId, packet);
+
+   case headless::SyncCommentType:
+      return onSyncComment(clientId, packet);
+
+   case headless::SyncAddressesType:
+      return onSyncAddresses(clientId, packet);
 
    default:
       logger_->error("[HeadlessContainerListener] unknown request type {}", packet.type());
@@ -778,8 +796,10 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
          }
          const auto leafIndex = path.get(2);
          auto leaf = group->createLeaf(leafIndex, leafNode);
-         if (!leaf && !(leaf = group->getLeaf(leafIndex))) {
+         if (!leaf || (leaf != group->getLeaf(leafIndex))) {
             logger_->error("[HeadlessContainerListener] failed to create/get leaf {}", path.toString());
+            CreateHDWalletResponse(clientId, id, "failed to create leaf");
+            return;
          }
 
          CreateHDWalletResponse(clientId, id, leaf->walletId()
@@ -1275,4 +1295,199 @@ void HeadlessContainerListener::addPendingAutoSignReq(const std::string &walletI
    else {
       autoSignPwdReqs_.insert(walletId);
    }
+}
+
+static headless::NetworkType mapFrom(NetworkType netType)
+{
+   switch (netType) {
+   case NetworkType::MainNet: return headless::MainNetType;
+   case NetworkType::TestNet:
+   default:    return headless::TestNetType;
+   }
+}
+
+bool HeadlessContainerListener::onSyncWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet)
+{
+   headless::SyncWalletInfoResponse response;
+
+   for (size_t i = 0; i < walletsMgr_->getHDWalletsCount(); ++i) {
+      const auto hdWallet = walletsMgr_->getHDWallet(i);
+      auto walletData = response.add_wallets();
+      walletData->set_format(headless::WalletFormatHD);
+      walletData->set_id(hdWallet->walletId());
+      walletData->set_name(hdWallet->name());
+      walletData->set_description(hdWallet->description());
+      walletData->set_nettype(mapFrom(hdWallet->networkType()));
+   }
+   const auto settlWallet = walletsMgr_->getSettlementWallet();
+   if (settlWallet) {
+      auto walletData = response.add_wallets();
+      walletData->set_format(headless::WalletFormatSettlement);
+      walletData->set_id(settlWallet->walletId());
+      walletData->set_name(settlWallet->name());
+      walletData->set_nettype(mapFrom(settlWallet->networkType()));
+   }
+
+   packet.set_data(response.SerializeAsString());
+   return sendData(packet.SerializeAsString(), clientId);
+}
+
+bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet)
+{
+   headless::SyncWalletRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+
+   headless::SyncHDWalletResponse response;
+   const auto hdWallet = walletsMgr_->getHDWalletById(request.walletid());
+   if (hdWallet) {
+      for (const auto &group : hdWallet->getGroups()) {
+         auto groupData = response.add_groups();
+         groupData->set_type(group->index());
+
+         for (const auto &leaf : group->getLeaves()) {
+            auto leafData = groupData->add_leaves();
+            leafData->set_id(leaf->walletId());
+            leafData->set_index(leaf->index());
+         }
+      }
+   } else {
+      logger_->error("[{}] failed to find HD wallet with id {}", __func__, request.walletid());
+      return false;
+   }
+
+   packet.set_data(response.SerializeAsString());
+   return sendData(packet.SerializeAsString(), clientId);
+}
+
+static headless::EncryptionType mapFrom(bs::wallet::EncryptionType encType)
+{
+   switch (encType) {
+   case bs::wallet::EncryptionType::Password:   return headless::EncryptionTypePassword;
+   case bs::wallet::EncryptionType::Auth:       return headless::EncryptionTypeAutheID;
+   case bs::wallet::EncryptionType::Unencrypted:
+   default:       return headless::EncryptionTypeUnencrypted;
+   }
+}
+
+bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet)
+{
+   headless::SyncWalletRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+
+   headless::SyncWalletResponse response;
+
+   const auto wallet = walletsMgr_->getWalletById(request.walletid());
+   if (wallet) {
+      response.set_walletid(wallet->walletId());
+      for (const auto &encType : wallet->encryptionTypes()) {
+         response.add_encryptiontypes(mapFrom(encType));
+      }
+      for (const auto &encKey : wallet->encryptionKeys()) {
+         response.add_encryptionkeys(encKey.toBinStr());
+      }
+      auto keyrank = response.mutable_keyrank();
+      keyrank->set_m(wallet->encryptionRank().first);
+      keyrank->set_n(wallet->encryptionRank().second);
+
+      response.set_nettype(mapFrom(wallet->networkType()));
+
+      for (const auto &addr : wallet->getUsedAddressList()) {
+         const auto index = wallet->getAddressIndex(addr);
+         const auto comment = wallet->getAddressComment(addr);
+         auto addrData = response.add_addresses();
+         addrData->set_address(addr.display<std::string>());
+         addrData->set_index(index);
+         if (!comment.empty()) {
+            addrData->set_comment(comment);
+         }
+      }
+      for (const auto &addr : wallet->getPooledAddressList()) {
+         const auto index = wallet->getAddressIndex(addr);
+         auto addrData = response.add_addrpool();
+         addrData->set_address(addr.display<std::string>());
+         addrData->set_index(index);
+      }
+      for (const auto &txComment : wallet->getAllTxComments()) {
+         auto txCommData = response.add_txcomments();
+         txCommData->set_txhash(txComment.first.toBinStr());
+         txCommData->set_comment(txComment.second);
+      }
+   }
+   else {
+      logger_->error("[{}] failed to find wallet with id {}", __func__, request.walletid());
+      return false;
+   }
+
+   packet.set_data(response.SerializeAsString());
+   return sendData(packet.SerializeAsString(), clientId);
+}
+
+bool HeadlessContainerListener::onSyncComment(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet)
+{
+   headless::SyncCommentRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+   const auto wallet = walletsMgr_->getWalletById(request.walletid());
+   if (!wallet) {
+      logger_->error("[{}] failed to find wallet with id {}", __func__, request.walletid());
+      return false;
+   }
+   bool rc = false;
+   if (!request.address().empty()) {
+      rc = wallet->setAddressComment(request.address(), request.comment());
+   }
+   else {
+      rc = wallet->setTransactionComment(request.txhash(), request.comment());
+   }
+   return rc;
+}
+
+static AddressEntryType mapFrom(headless::AddressType at)
+{
+   switch (at) {
+   case headless::AddressType_P2PKH:      return AddressEntryType_P2PKH;
+   case headless::AddressType_P2PK:       return AddressEntryType_P2PK;
+   case headless::AddressType_P2WPKH:     return AddressEntryType_P2WPKH;
+   case headless::AddressType_Multisig:   return AddressEntryType_Multisig;
+   case headless::AddressType_P2SH:       return AddressEntryType_P2SH;
+   case headless::AddressType_P2WSH:      return AddressEntryType_P2WSH;
+   case headless::AddressType_Default:
+   default:    return AddressEntryType_Default;
+   }
+}
+
+bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet)
+{
+   headless::SyncAddressesRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+   const auto wallet = walletsMgr_->getWalletById(request.walletid());
+   if (!wallet) {
+      logger_->error("[{}] failed to find wallet with id {}", __func__, request.walletid());
+      return false;
+   }
+
+   headless::SyncAddressesResponse response;
+   response.set_walletid(wallet->walletId());
+   for (int i = 0; i < request.indices_size(); ++i) {
+      const auto indexData = request.indices(i);
+      const auto addr = wallet->createAddressWithIndex(indexData.index()
+         , mapFrom(indexData.addrtype()));
+      auto addrData = response.add_addresses();
+      addrData->set_address(addr.display<std::string>());
+      addrData->set_index(indexData.index());
+   }
+
+   packet.set_data(response.SerializeAsString());
+   return sendData(packet.SerializeAsString(), clientId);
 }

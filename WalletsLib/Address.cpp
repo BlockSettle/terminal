@@ -429,12 +429,21 @@ std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(double amount) const
 }
 
 size_t bs::Address::getInputSize() const
-{  //borrowed from Armory
+{  //borrowed from Armory's Addresses mainly
    switch (getType()) {
    case AddressEntryType_P2PKH:     return 114 + 33;
    case AddressEntryType_P2WSH:     return 41;
-   case AddressEntryType_P2SH:      return 114 + 73 + 40;   //FIXME
+   case AddressEntryType_P2SH:      return 114 + 73 + 40;   //FIXME if it's not true (luckily we normally don't use P2SH)
    case AddressEntryType_P2WPKH:    return 40;
    default:       return 0;
+   }
+}
+
+size_t bs::Address::getWitnessDataSize() const
+{
+   switch (getType()) {
+   case AddressEntryType_P2WSH:     return 34;  //based on getP2WSHOutputScript()
+   case AddressEntryType_P2WPKH:    return 108; // Armory's AddressEntry_P2WPKH
+   default:       return UINT32_MAX;
    }
 }

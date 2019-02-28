@@ -98,6 +98,11 @@ private:
    bool onGetHDWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onChangePassword(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCancelSignTx(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncComment(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncAddresses(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
    void AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet
       , const std::string &errMsg = {});

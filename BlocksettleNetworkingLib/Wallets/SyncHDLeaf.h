@@ -37,7 +37,7 @@ namespace bs {
             ~Leaf() override;
 
             virtual void init(const bs::hd::Path &);
-            void synchronize() override;
+            void synchronize(const std::function<void()> &cbDone) override;
 
             void firstInit(bool force = false) override;
             std::string walletId() const override;

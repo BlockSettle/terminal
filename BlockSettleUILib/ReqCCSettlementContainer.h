@@ -3,11 +3,11 @@
 
 #include <memory>
 #include "CheckRecipSigner.h"
-#include "MetaData.h"
 #include "SettlementContainer.h"
 #include "CommonTypes.h"
 #include "CoreWallet.h"
 #include "QWalletInfo.h"
+#include "UtxoReservation.h"
 
 namespace spdlog {
    class logger;
@@ -16,7 +16,6 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
-   class UtxoReservation;
 }
 class ArmoryConnection;
 class AssetManager;

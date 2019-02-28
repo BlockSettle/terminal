@@ -36,7 +36,7 @@ namespace bs {
             Wallet(Wallet&&) = delete;
             Wallet& operator = (Wallet&&) = delete;
 
-            void synchronize();
+            void synchronize(const std::function<void()> &cbDone);
 
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
             std::vector<SecureBinaryData> encryptionKeys() const;

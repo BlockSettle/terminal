@@ -291,7 +291,6 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManage
    if (signContainer_) {
       connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &WalletsViewModel::onWalletInfo);
       connect(signContainer_.get(), &SignContainer::Error, this, &WalletsViewModel::onHDWalletError);
-      connect(signContainer_.get(), &SignContainer::MissingWallets, this, &WalletsViewModel::onMissingWallets);
       connect(signContainer_.get(), &SignContainer::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
       connect(signContainer_.get(), &SignContainer::ready, this, &WalletsViewModel::onWalletChanged);
    }
@@ -496,17 +495,6 @@ void WalletsViewModel::onHDWalletError(unsigned int id, std::string)
    }
 }
 
-void WalletsViewModel::onMissingWallets(const std::vector<std::string> &ids)
-{
-   for (const auto &id : ids) {
-      auto node = rootNode_->findByWalletId(id);
-      if (node) {
-         node->setState(WalletNode::State::Offline);
-      }
-      failedLeaves_.insert(id);
-   }
-}
-
 void WalletsViewModel::onSignerAuthenticated()
 {
    for (unsigned int i = 0; i < walletsManager_->hdWalletsCount(); i++) {
@@ -570,12 +558,6 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
                hdNode->setState(stateIt->second);
             }
          }
-      }
-   }
-   for (const auto &failedLeaf : failedLeaves_) {
-      auto leaf = rootNode_->findByWalletId(failedLeaf);
-      if (leaf) {
-         leaf->setState(WalletNode::State::Offline);
       }
    }
 

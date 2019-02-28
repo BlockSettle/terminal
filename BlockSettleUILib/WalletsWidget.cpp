@@ -426,7 +426,7 @@ bool WalletsWidget::CreateNewWallet(bool report)
 
    EasyCoDec::Data easyData = walletSeed.toEasyCodeChecksum();
 
-   std::string walletId = bs::hd::Node(walletSeed).getId();
+   const auto walletId = walletSeed.getWalletId();
 
    NewWalletSeedDialog newWalletSeedDialog(QString::fromStdString(walletId)
       , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);

@@ -4,7 +4,6 @@
 #include <memory>
 #include <QDialog>
 #include "EncryptionUtils.h"
-#include "MetaData.h"
 #include "AutheIDClient.h"
 #include "QWalletInfo.h"
 

@@ -1,7 +1,7 @@
 #include <bech32/ref/c++/segwit_addr.h>
 #include "CheckRecipSigner.h"
 #include "Wallets.h"
-
+#include "CoreHDNode.h"    // only for calculating walletId in Seed
 #include "CoreWallet.h"
 
 #define SAFE_NUM_CONFS        6
@@ -237,6 +237,14 @@ wallet::Seed::Seed(const std::string &seed, NetworkType netType)
          seed_ = seed;
       }
    }
+}
+
+std::string wallet::Seed::getWalletId() const
+{
+   if (walletId_.empty()) {
+      walletId_ = bs::core::hd::Node(*this).getId();
+   }
+   return walletId_;
 }
 
 EasyCoDec::Data wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const

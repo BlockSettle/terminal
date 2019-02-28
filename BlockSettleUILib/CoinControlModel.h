@@ -1,15 +1,17 @@
 #ifndef __COIN_CONTROL_MODEL_H__
 #define __COIN_CONTROL_MODEL_H__
 
-#include <QAbstractItemModel>
-
-#include "WalletsManager.h"
-
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <QAbstractItemModel>
 
+namespace bs {
+   namespace sync {
+      class Wallet;
+   }
+}
 class CoinControlNode;
 class SelectedTransactionInputs;
 
@@ -66,8 +68,8 @@ private:
    void loadInputs(const std::shared_ptr<SelectedTransactionInputs> &selectedInputs);
 
 private:
-   std::shared_ptr<CoinControlNode> root_, cpfp_;
-   WalletsManager::wallet_gen_type  wallet_;
+   std::shared_ptr<CoinControlNode>    root_, cpfp_;
+   std::shared_ptr<bs::sync::Wallet>   wallet_;
    std::unordered_map<std::string, CoinControlNode*> addressNodes_, cpfpNodes_;
 };
 

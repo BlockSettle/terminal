@@ -120,12 +120,13 @@ namespace bs {
             bool empty() const { return (privKey_.isNull() && seed_.isNull()); }
             bool hasPrivateKey() const { return (!privKey_.isNull()); }
             const SecureBinaryData &privateKey() const { return privKey_; }
-            void setPrivateKey(const SecureBinaryData &privKey) { privKey_ = privKey; }
-            const BinaryData &chainCode() const { return chainCode_; }
+            void setPrivateKey(const SecureBinaryData &privKey) { privKey_ = privKey; walletId_.clear(); }
+            const BinaryData &chainCode() const { return chainCode_; walletId_.clear(); }
             const BinaryData &seed() const { return seed_; }
-            void setSeed(const BinaryData &seed) { seed_ = seed; }
+            void setSeed(const BinaryData &seed) { seed_ = seed; walletId_.clear(); }
             NetworkType networkType() const { return netType_; }
-            void setNetworkType(NetworkType netType) { netType_ = netType; }
+            void setNetworkType(NetworkType netType) { netType_ = netType; walletId_.clear(); }
+            std::string getWalletId() const;
 
             EasyCoDec::Data toEasyCodeChecksum(size_t ckSumSize = 2) const;
             static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
@@ -139,6 +140,7 @@ namespace bs {
             BinaryData        chainCode_;
             BinaryData        seed_;
             NetworkType       netType_ = NetworkType::Invalid;
+            mutable std::string  walletId_;
          };
 
          enum class Type {

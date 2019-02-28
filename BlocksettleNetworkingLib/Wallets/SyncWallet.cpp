@@ -22,18 +22,20 @@ Wallet::~Wallet()
    UtxoReservation::delAdapter(utxoAdapter_);
 }
 
-void Wallet::synchronize()
+void Wallet::synchronize(const std::function<void()> &cbDone)
 {
-   const auto &cbProcess = [this] (bs::sync::WalletData data) {
+   const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data) {
       netType_ = data.netType;
       for (const auto &addr : data.addresses) {
-         addAddress(addr.address, addr.index, addr.aet, false);
+         addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
       }
       for (const auto &txComment : data.txComments) {
          setTransactionComment(txComment.txHash, txComment.comment, false);
       }
-      emit synchronized();
+      if (cbDone) {
+         cbDone();
+      }
    };
    signContainer_->syncWallet(walletId(), cbProcess);
 }
@@ -628,8 +630,8 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
          logger_->debug("Wallet ready: {}", walletId());
          emit walletReady(QString::fromStdString(walletId()));
       };
-      logger_->debug("register wallet {}, {} addresses", walletId(), getAddrHashes().size());
       const auto regId = armory_->registerWallet(btcWallet_, walletId(), getAddrHashes(), cbRegister, asNew);
+      logger_->debug("register wallet {}, {} addresses = {}", walletId(), getAddrHashes().size(), regId);
       return { regId };
    }
    return {};

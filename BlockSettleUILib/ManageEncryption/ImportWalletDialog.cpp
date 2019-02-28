@@ -40,7 +40,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    , appSettings->get<NetworkType>(ApplicationSettings::netType)))
    , disableImportPrimary_{disableImportPrimary}
 {
-   walletInfo_.setRootId(bs::hd::Node(walletSeed_).getId());
+   walletInfo_.setRootId(QString::fromStdString(walletSeed_.getWalletId()));
 
    ui_->setupUi(this);
 
@@ -98,7 +98,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    adjustSize();
    setMinimumSize(size());
 
-   if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletInfo_.rootId().toStdString())) {
+   if (signContainer_->isOffline()) {
       const auto hdWallet = walletsManager_->getHDWalletById(walletInfo_.rootId().toStdString());
       if (hdWallet == nullptr) {
          existingChecked_ = true;
