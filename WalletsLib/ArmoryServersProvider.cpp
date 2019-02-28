@@ -137,9 +137,9 @@ void ArmoryServersProvider::remove(int index)
 
 void ArmoryServersProvider::setupServer(int index)
 {
-   QList<ArmoryServer> srv = servers();
-   if (index > 0 && index <= srv.size()) {
-      ArmoryServer server = srv.at(index);
+   QList<ArmoryServer> srvList = servers();
+   if (index >= 0 && index < srvList.size()) {
+      ArmoryServer server = srvList.at(index);
       appSettings_->set(ApplicationSettings::armoryDbName, server.name);
       appSettings_->set(ApplicationSettings::armoryDbIp, server.armoryDBIp);
       appSettings_->set(ApplicationSettings::armoryDbPort, server.armoryDBPort);
@@ -176,10 +176,10 @@ void ArmoryServersProvider::addKey(const QString &address, int port, const QStri
    }
    else {
       QStringList servers = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
-      QString serverTxt = servers.at(index);
+      QString serverTxt = servers.at(index - ArmoryServersProvider::defaultServersCount);
       ArmoryServer server = ArmoryServer::fromTextSettings(serverTxt);
       server.armoryDBKey = key;
-      servers[index] = server.toTextSettings();
+      servers[index - ArmoryServersProvider::defaultServersCount] = server.toTextSettings();
 
       appSettings_->set(ApplicationSettings::armoryServers, servers);
    }
