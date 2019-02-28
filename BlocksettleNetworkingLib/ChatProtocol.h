@@ -247,12 +247,14 @@ namespace Chat
    class ContactActionRequest : public Request
    {
    public:
-      ContactActionRequest(const std::string& clientId, ContactsAction action);
+      ContactActionRequest(const std::string& clientId, const std::string& receiverId, ContactsAction action);
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId, const std::string& jsonData);
       void handle(RequestHandler &) override;
+      std::string receiverId() const {return receiverId_;}
       ContactsAction getAction() const {return action_;}
    private:
+      std::string receiverId_;
       ContactsAction action_;
    };
 

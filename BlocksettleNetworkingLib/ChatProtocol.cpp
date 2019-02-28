@@ -961,8 +961,9 @@ void ContactsActionResponse::handle(ResponseHandler& handler)
    return handler.OnContactsActionResponse(*this);
 }
 
-ContactActionRequest::ContactActionRequest(const std::string& clientId, ContactsAction action)
+ContactActionRequest::ContactActionRequest(const std::string& clientId, const std::string& receiverId, ContactsAction action)
    : Request (RequestType::RequestContactsAction, clientId)
+   , receiverId_(receiverId)
    , action_(action)
 {
    
@@ -971,7 +972,7 @@ ContactActionRequest::ContactActionRequest(const std::string& clientId, Contacts
 QJsonObject ContactActionRequest::toJson() const
 {
    QJsonObject data = Request::toJson();
-   
+   data[ReceiverIdKey] = QString::fromStdString(receiverId_);
    data[ContactActionKey] = static_cast<int>(action_);
    return data;
 }
@@ -979,8 +980,9 @@ QJsonObject ContactActionRequest::toJson() const
 std::shared_ptr<Request> ContactActionRequest::fromJSON(const std::string& clientId, const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   std::string receiverId = data[ReceiverIdKey].toString().toStdString();
    ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
-   return std::make_shared<ContactActionRequest>(clientId, action);
+   return std::make_shared<ContactActionRequest>(clientId, receiverId, action);
 }
 
 void ContactActionRequest::handle(RequestHandler& handler)
