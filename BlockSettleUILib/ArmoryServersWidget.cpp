@@ -37,9 +37,6 @@ void ArmoryServersWidget::onAddServer()
    if (ui_->lineEditName->text().isEmpty() || ui_->lineEditAddress->text().isEmpty())
       return;
 
-   if (ui_->lineEditKey->text().isEmpty() && ui_->comboBoxNetworkType->currentIndex() == 1)
-      return;
-
    ArmoryServer server;
    server.name = ui_->lineEditName->text();
    server.netType = static_cast<NetworkType>(ui_->comboBoxNetworkType->currentIndex());
