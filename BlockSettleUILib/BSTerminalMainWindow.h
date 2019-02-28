@@ -42,6 +42,7 @@ class StatusBarView;
 class StatusViewBlockListener;
 class TransactionsViewModel;
 class WalletManagementWizard;
+class ArmoryServersProvider;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -87,6 +88,7 @@ private:
 
 signals:
    void readyToLogin();
+   void armoryServerPromptResultReady();
 
 private slots:
    // display login dialog once network settings loaded
@@ -108,7 +110,9 @@ private slots:
    void acceptMDAgreement();
    void updateControlEnabledState();
    void onButtonUserClicked();
+   void showArmoryServerPrompt(const BinaryData& srvPubKey, const std::string& srvIPPort, std::shared_ptr<std::promise<bool> > promiseObj);
 
+   void onArmoryNeedsReconnect();
 private:
    QAction *action_send_;
    QAction *action_receive_;
@@ -121,6 +125,7 @@ private:
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
@@ -139,6 +144,7 @@ private:
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
+   BSTerminalSplashScreen                   &splashScreen_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
@@ -208,8 +214,6 @@ private:
 
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
-
-   void updateLoginActionState();
 
    void loginWithCeler(const std::string& username, const std::string& password);
    void loginToCeler(const std::string& username, const std::string& password);

@@ -55,6 +55,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "ZMQHelperFunctions.h"
 #include "ZmqSecuredDataConnection.h"
+#include "ArmoryServersProvider.h"
 
 #include <spdlog/spdlog.h>
 
@@ -63,6 +64,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    : QMainWindow(parent)
    , ui(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
+   , splashScreen_(splashScreen)
 {
    UiUtils::SetupLocale();
 
@@ -75,6 +77,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
    }
+
+   armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
 
    auto geom = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
    if (!geom.isEmpty()) {
@@ -649,7 +653,6 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
       transactionsModel_->loadAllWallets();
    }
    updateControlEnabledState();
-   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
@@ -701,28 +704,14 @@ bool BSTerminalMainWindow::isArmoryConnected() const
    return armory_->state() == ArmoryConnection::State::Ready;
 }
 
-void BSTerminalMainWindow::updateLoginActionState()
-{
-   if (!isUserLoggedIn()) {
-      if (!isArmoryConnected()) {
-         action_login_->setEnabled(false);
-         ui->pushButtonUser->setEnabled(false);
-         ui->pushButtonUser->setToolTip(tr("Armory connection required to login"));
-      } else {
-         action_login_->setEnabled(true);
-         ui->pushButtonUser->setEnabled(true);
-         ui->pushButtonUser->setToolTip(QString{});
-      }
-   }
-}
-
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
    walletsMgr_->unregisterWallets();
    connectArmory();
    updateControlEnabledState();
-   updateLoginActionState();
+   // XXX: disabled until armory connection is stable in terminal
+   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -738,7 +727,20 @@ void BSTerminalMainWindow::initArmory()
 
 void BSTerminalMainWindow::connectArmory()
 {
-   armory_->setupConnection(applicationSettings_->GetArmorySettings());
+   armory_->setupConnection(armoryServersProvider_->getArmorySettings(), [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
+      std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
+      std::future<bool> futureObj = promiseObj->get_future();
+      QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
+                                , Q_ARG(BinaryData, srvPubKey)
+                                , Q_ARG(std::string, srvIPPort)
+                                , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
+      bool result = futureObj.get();
+
+      // stop armory connection loop if server key was rejected
+      armory_->needsBreakConnectionLoop_.store(!result);
+      armory_->setState(ArmoryConnection::State::Canceled);
+      return result;
+   });
 }
 
 void BSTerminalMainWindow::connectSigner()
@@ -931,7 +933,9 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 
 void BSTerminalMainWindow::openConfigDialog()
 {
-   ConfigDialog(applicationSettings_, this).exec();
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, this);
+   connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
+   configDialog.exec();
 
    UpdateMainWindowAppearence();
 }
@@ -998,8 +1002,13 @@ void BSTerminalMainWindow::onReadyToLogin()
       setLoginButtonText(currentUserLogin_);
 
 #ifndef PRODUCTION_BUILD
-      loginToCeler(loginDialog.getUsername().toStdString()
+      // TODO: uncomment this section once we have armory connection
+      // if (isArmoryConnected()) {
+         loginToCeler(loginDialog.getUsername().toStdString()
             , "Welcome1234");
+      // } else {
+         // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
+      // }
 #endif
    }
 }
@@ -1066,8 +1075,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    }
 
    setLoginButtonText(loginButtonText_);
-
-   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::onCelerConnected()
@@ -1093,9 +1100,12 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    switch(errorCode)
    {
    case CelerClient::LoginError:
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr("Invalid username/password pair"), this);
-      loginErrorBox.exec();
+      logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
+   }
+
+   if (!mdProvider_->IsConnectionActive()) {
+      mdProvider_->SubscribeToMD();
    }
 }
 
@@ -1408,4 +1418,91 @@ void BSTerminalMainWindow::onButtonUserClicked() {
          , tr("Do you want to continue?")).exec() == QDialog::Accepted)
       onLogout();
    }
+}
+
+void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, const std::string &srvIPPort, std::shared_ptr<std::promise<bool>> promiseObj)
+{
+
+   QList<ArmoryServer> servers = armoryServersProvider_->servers();
+   ArmoryServer server = servers.at(armoryServersProvider_->indexOfIpPort(srvIPPort));
+
+   if (server.armoryDBKey.isEmpty()) {
+      BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+                       , tr("ArmoryDB Key Import")
+                       , tr("Do you wish to import the following ArmoryDB Key?")
+                       , tr("Address: %1\n"
+                            "Port: %2\n"
+                            "Key: %3")
+                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                 .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                       , this);
+      box->setMinimumSize(600, 150);
+      box->setMaximumSize(600, 150);
+
+      bool answer = (box->exec() == QDialog::Accepted);
+      box->deleteLater();
+
+      if (answer) {
+         armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+      }
+
+      promiseObj->set_value(true);
+   }
+   else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
+      BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
+                       , tr("ArmoryDB Key")
+                       , tr("ArmoryDB Key was changed.\n"
+                            "Do you want to proceed connection and save new key?")
+                       , tr("Address: %1\n"
+                            "Port: %2\n"
+                            "Old Key: %3\n"
+                            "New Key: %4")
+                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                 .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                                 .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                       , this);
+      box->setMinimumSize(600, 150);
+      box->setMaximumSize(600, 150);
+      box->setCancelVisible(true);
+
+      bool answer = (box->exec() == QDialog::Accepted);
+      box->deleteLater();
+
+      if (answer) {
+         armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+      }
+
+      promiseObj->set_value(answer);
+   }
+   else {
+      promiseObj->set_value(true);
+   }
+}
+
+void BSTerminalMainWindow::onArmoryNeedsReconnect()
+{
+   disconnect(statusBarView_.get(), 0, 0, 0);
+   statusBarView_->deleteLater();
+   QApplication::processEvents();
+
+   initArmory();
+   LoadWallets(splashScreen_);
+
+   QApplication::processEvents();
+
+   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsManager_, assetManager_, celerConnection_
+      , signContainer_, ui->statusbar);
+
+   InitWalletsView();
+
+
+   widgetsInited_ = false;
+   InitSigningContainer();
+   InitAuthManager();
+
+   connectSigner();
+   connectArmory();
+
 }

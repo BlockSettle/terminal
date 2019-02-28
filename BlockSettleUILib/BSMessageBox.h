@@ -41,6 +41,9 @@ public:
    void setLabelTextFormat(Qt::TextFormat tf);
 
    void showEvent(QShowEvent *) override;
+
+   void setOkVisible(bool visible);
+   void setCancelVisible(bool visible);
 protected slots:
    void onDetailsPressed();
 
