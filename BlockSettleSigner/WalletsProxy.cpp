@@ -176,7 +176,7 @@ bool WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
 
 QString WalletsProxy::getWoWalletFile(const QString &walletId) const
 {
-   return (QString::fromStdString(bs::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
+   return (QString::fromStdString(bs::core::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
 }
 
 bool WalletsProxy::exportWatchingOnly(const QString &walletId, QString path, bs::wallet::QPasswordData *passwordData) const

@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QBitmap>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDirIterator>
 #include <QFile>
 #include <QFontDatabase>
