@@ -7,6 +7,7 @@ TextField {
     font.pixelSize: 12
     color: BSStyle.inputsFontColor
     padding: 0
+    selectByMouse: true
 
     background: Rectangle {
         implicitWidth: 200

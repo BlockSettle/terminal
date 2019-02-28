@@ -100,8 +100,8 @@ ApplicationWindow {
         height: 50
         spacing: 2;
         background: Rectangle {
-                color: "transparent"
-            }
+            color: "transparent"
+        }
 
         CustomTabButton {
             id: btnStatus
