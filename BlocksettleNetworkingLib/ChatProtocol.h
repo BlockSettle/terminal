@@ -250,6 +250,7 @@ namespace Chat
       ContactActionRequest(const std::string& clientId, ContactsAction action);
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId, const std::string& jsonData);
+      void handle(RequestHandler &) override;
       ContactsAction getAction() const {return action_;}
    private:
       ContactsAction action_;
@@ -556,6 +557,8 @@ namespace Chat
       virtual void OnRequestMessages(const MessagesRequest &) = 0;
       
       virtual void OnRequestChangeMessageStatus(const MessageChangeStatusRequest &) = 0;
+      
+      virtual void OnRequestContactsAction(const ContactActionRequest &) = 0;
    };
 
    class ResponseHandler

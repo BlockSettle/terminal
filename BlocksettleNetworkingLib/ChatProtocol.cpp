@@ -982,3 +982,8 @@ std::shared_ptr<Request> ContactActionRequest::fromJSON(const std::string& clien
    ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
    return std::make_shared<ContactActionRequest>(clientId, action);
 }
+
+void ContactActionRequest::handle(RequestHandler& handler)
+{
+   return handler.OnRequestContactsAction(*this);
+}
