@@ -5,12 +5,6 @@
 #include "RequestReplyCommand.h"
 #include "OhlcHistory.pb.h"
 
-//#include <vector>
-//
-//#include <QDateTime>
-//#include <QRandomGenerator>
-//
-
 // Private Market
 const std::string ANT_XBT = "ANT/XBT";
 const std::string BLK_XBT = "BLK/XBT";
@@ -62,55 +56,6 @@ MdhsClient::MdhsClient(
     , logger_(logger)
 {
 }
-
-//void TradesClient::init()
-//{
-////    tradesDb_->init();
-//}
-//
-//const std::vector<DataPointsLocal::DataPoint *> TradesClient::getRawPointDataArray(
-//        const QString &product
-//        , DataPointsLocal::Interval interval
-//        , qint64 maxCount)
-//{
-////   return tradesDb_->getDataPoints(product.toStdString(), interval, maxCount);
-//   std::vector<DataPointsLocal::DataPoint *> result;
-//   auto timestamp = QDateTime::currentDateTimeUtc();
-//   for (int i = 0; i < maxCount; ++i) {
-//      auto last = i == 0 ? 0 : result.at(i - 1);
-//      result.push_back(generatePoint(timestamp.toMSecsSinceEpoch(), last));
-//      switch (interval) {
-//      case DataPointsLocal::OneYear:
-//         timestamp = timestamp.addYears(-1);
-//         break;
-//      case DataPointsLocal::SixMonths:
-//         timestamp = timestamp.addMonths(-6);
-//         break;
-//      case DataPointsLocal::OneMonth:
-//         timestamp = timestamp.addMonths(-1);
-//         break;
-//      case DataPointsLocal::OneWeek:
-//         timestamp = timestamp.addDays(-timestamp.date().dayOfWeek());
-//         break;
-//      case DataPointsLocal::TwentyFourHours:
-//         timestamp = timestamp.addDays(-1);
-//         break;
-//      case DataPointsLocal::TwelveHours:
-//         timestamp = timestamp.addSecs(-3600*12);
-//         break;
-//      case DataPointsLocal::SixHours:
-//         timestamp = timestamp.addSecs(-3600*6);
-//         break;
-//      case DataPointsLocal::OneHour:
-//         timestamp = timestamp.addSecs(-3600);
-//         break;
-//      default:
-//         timestamp = timestamp.addSecs(-3600);
-//         break;
-//      }
-//   }
-//   return result;
-//}
 
 void MdhsClient::SendRequest(const OhlcRequest& request)
 {

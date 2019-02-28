@@ -1,9 +1,7 @@
 #ifndef MDHS_CLIENT_H
 #define MDHS_CLIENT_H
 
-//#include <memory>
 #include <QObject>
-//#include "CommonTypes.h"
 
 class ApplicationSettings;
 class ConnectionManager;
