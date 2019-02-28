@@ -24,7 +24,7 @@ public:
    StatusBarView(const std::shared_ptr<ArmoryConnection> &, std::shared_ptr<WalletsManager> walletsManager
       , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &
       , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
-   ~StatusBarView() noexcept override = default;
+   ~StatusBarView() noexcept override;
 
    StatusBarView(const StatusBarView&) = delete;
    StatusBarView& operator = (const StatusBarView&) = delete;
@@ -32,7 +32,7 @@ public:
    StatusBarView& operator = (StatusBarView&&) = delete;
 
 private slots:
-   void onPrepareArmoryConnection(NetworkType, std::string host, std::string port);
+   void onPrepareArmoryConnection(const ArmorySettings &server);
    void onArmoryStateChanged(ArmoryConnection::State);
    void onArmoryProgress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress);
    void onArmoryError(QString);
@@ -76,6 +76,7 @@ private:
    QLabel            *connectionStatusLabel_;
    QLabel            *containerStatusLabel_;
    CircleProgressBar *progressBar_;
+   QVector<QWidget *> separators_;
 
    const QSize iconSize_;
    ArmoryConnection::State armoryConnState_;
