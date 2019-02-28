@@ -64,7 +64,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    : QMainWindow(parent)
    , ui(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
-   , splashScreen_(splashScreen)
 {
    UiUtils::SetupLocale();
 
@@ -1488,11 +1487,11 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
    QApplication::processEvents();
 
    initArmory();
-   LoadWallets(splashScreen_);
+   LoadWallets();
 
    QApplication::processEvents();
 
-   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsManager_, assetManager_, celerConnection_
+   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
       , signContainer_, ui->statusbar);
 
    InitWalletsView();
@@ -1504,5 +1503,4 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
 
    connectSigner();
    connectArmory();
-
 }

@@ -144,7 +144,6 @@ private:
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
-   BSTerminalSplashScreen                   &splashScreen_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
