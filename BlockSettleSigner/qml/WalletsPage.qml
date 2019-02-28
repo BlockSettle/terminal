@@ -114,7 +114,7 @@ Item {
                         text: qsTr("Manage Encryption")
                         enabled: isHdRoot()
                         onClicked: {
-                            var dlg = Qt.createComponent("BsDialogs/WalletChangePasswordDialog.qml").createObject(mainWindow)
+                            var dlg = Qt.createComponent("BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
                             dlg.walletInfo = getCurrentWalletInfo()
                             dlg.open()
                         }
