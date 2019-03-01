@@ -1175,7 +1175,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
    }
 
    for (const auto &addr : tempAddresses_) {
-      createAddress(addr, false);
+      createAddress(addr, nullptr, false);
       lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
    }
    topUpAddressPool();
