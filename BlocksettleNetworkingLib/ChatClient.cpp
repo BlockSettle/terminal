@@ -149,12 +149,15 @@ void ChatClient::OnContactsActionResponse(const Chat::ContactsActionResponse& re
    switch (response.getAction()) {
       case Chat::ContactsAction::Accept:
          actionString = "ContactsAction::Accept";
+         addOrUpdateContact(QString::fromStdString(response.senderId()));
       break;
       case Chat::ContactsAction::Reject:
          actionString = "ContactsAction::Reject";
       break;
       case Chat::ContactsAction::Request:
          actionString = "ContactsAction::Request";
+         addOrUpdateContact(QString::fromStdString(response.senderId()), QStringLiteral(""), true);
+         emit IncomingFriendRequest({response.senderId()});
       break;
    }
    logger_->debug("[ChatClient::OnContactsActionResponse]: Incoming contact action from {}: {}",
