@@ -66,7 +66,7 @@ static std::map<RequestType, std::string> RequestTypeToString
    ,   { RequestType::RequestAskForPublicKey    ,   "RequestAskForPublicKey"    }
    ,   { RequestType::RequestSendOwnPublicKey   ,   "RequestSendOwnPublicKey"   }
    ,   { RequestType::RequestChangeMessageStatus,   "RequestChangeMessageStatus"}
-   ,   { RequestType::RequestContactsAction     ,   "RequestChangeMessageStatus"}
+   ,   { RequestType::RequestContactsAction     ,   "RequestContactsAction"     }
 };
 
 
