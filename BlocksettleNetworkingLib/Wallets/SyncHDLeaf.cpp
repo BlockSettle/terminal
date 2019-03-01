@@ -642,23 +642,24 @@ hd::Leaf::AddrPoolKey hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) c
    return index;
 }
 
-hd::Leaf::AddrPoolKey hd::Leaf::getAddressIndex(const bs::Address &addr) const
+hd::Leaf::AddrPoolKey hd::Leaf::addressIndex(const bs::Address &addr) const
 {
-   auto itIndex = addrToIndex_.find(addr.prefixed());
+   const auto itIndex = addrToIndex_.find(addr.unprefixed());
    if (itIndex == addrToIndex_.end()) {
-      itIndex = addrToIndex_.find(addr.unprefixed());
-      if (itIndex == addrToIndex_.end()) {
-         return {};
-      }
+      return {};
    }
    return itIndex->second;
 }
 
 bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 {
-   const auto index = getAddressIndex(addr);
+   const auto index = addressIndex(addr);
    if (index.empty()) {
-      return {};
+      const auto &itPool = poolByAddr_.find(addr);
+      if (itPool == poolByAddr_.end()) {
+         return {};
+      }
+      return itPool->second.path;
    }
    if (index.path.length() < 2) {
       return {};

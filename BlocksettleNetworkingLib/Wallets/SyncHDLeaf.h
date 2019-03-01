@@ -216,7 +216,7 @@ namespace bs {
          private:
             bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
-            AddrPoolKey getAddressIndex(const bs::Address &) const;
+            AddrPoolKey addressIndex(const bs::Address &) const;
             void onScanComplete();
             void onSaveToWallet(const std::vector<PooledAddress> &);
             bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;

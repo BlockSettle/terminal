@@ -24,10 +24,10 @@ namespace bs {
             using cb_scan_read_last = std::function<unsigned int(const std::string &walletId)>;
             using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
-            Wallet(const std::string &walletId, const std::string &name, const std::string &desc
-               , const std::shared_ptr<spdlog::logger> &logger = nullptr);
-            Wallet(const std::string &walletId, const std::string &name, const std::string &desc
-               , const std::shared_ptr<SignContainer> &
+            Wallet(NetworkType, const std::string &walletId, const std::string &name
+               , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger = nullptr);
+            Wallet(NetworkType, const std::string &walletId, const std::string &name
+               , const std::string &desc, const std::shared_ptr<SignContainer> &
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
             ~Wallet() override;
 
@@ -112,7 +112,8 @@ namespace bs {
          {
          public:
             DummyWallet(const std::shared_ptr<spdlog::logger> &logger)
-               : Wallet("Dummy", tr("Armory Wallets").toStdString(), "", logger) {}
+               : Wallet(NetworkType::Invalid, "Dummy", tr("Armory Wallets").toStdString()
+                  , "", logger) {}
 
             size_t getNumLeaves() const override { return leaves_.size(); }
 

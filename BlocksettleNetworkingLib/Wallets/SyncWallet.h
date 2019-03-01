@@ -2,6 +2,7 @@
 #define BS_SYNC_WALLET_H
 
 #include <atomic>
+#include <functional>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -49,7 +50,12 @@ namespace bs {
             }
          };
 
-//         size_t getInputScrSize(const std::shared_ptr<AddressEntry> &);
+         bs::core::wallet::TXSignRequest createTXRequest(const std::string &walletId
+            , const std::vector<UTXO> &inputs
+            , const std::vector<std::shared_ptr<ScriptRecipient>> &
+            , const std::function<bs::Address(std::string &index)> &cbChangeAddr = nullptr
+            , const uint64_t fee = 0, bool isRBF = false, const uint64_t& origFee = 0);
+
       }  // namepsace wallet
 
 

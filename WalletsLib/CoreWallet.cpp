@@ -1,5 +1,6 @@
 #include <bech32/ref/c++/segwit_addr.h>
 #include "CheckRecipSigner.h"
+#include "CoinSelection.h"
 #include "Wallets.h"
 #include "CoreHDNode.h"    // only for calculating walletId in Seed
 #include "CoreWallet.h"
@@ -208,6 +209,58 @@ Signer wallet::TXSignRequest::getSigner() const
       signer.setFeed(resolver);
    }*/
    return signer;
+}
+
+static std::vector<UTXO> decorateUTXOs(const std::vector<UTXO> &inUTXOs)
+{
+   std::vector<UTXO> inputUTXOs;
+   if (inUTXOs.empty()) {
+      return inputUTXOs;
+   }
+   inputUTXOs = inUTXOs;
+
+   for (auto &utxo : inputUTXOs) {  // some kind of decoration code to replace the code above
+      const bs::Address recipAddr(utxo.getRecipientScrAddr());
+      utxo.txinRedeemSizeBytes_ = recipAddr.getInputSize();
+      utxo.witnessDataSizeBytes_ = recipAddr.getWitnessDataSize();
+      utxo.isInputSW_ = ((recipAddr.getType() == AddressEntryType_P2WPKH)
+         || (recipAddr.getType() == AddressEntryType_P2WSH)) ? true : false;
+   }
+   return inputUTXOs;
+}
+
+static UtxoSelection computeSizeAndFee(const std::vector<UTXO> &inUTXOs, const PaymentStruct &inPS)
+{
+   auto usedUTXOCopy{ inUTXOs };
+   UtxoSelection selection{ usedUTXOCopy };
+
+   try {
+      selection.computeSizeAndFee(inPS);
+   } catch (...) {
+   }
+   return selection;
+}
+
+static size_t getVirtSize(const UtxoSelection &inUTXOSel)
+{
+   size_t nonWitSize = inUTXOSel.size_ - inUTXOSel.witnessSize_;
+   return std::ceil(static_cast<float>(3 * nonWitSize + inUTXOSel.size_) / 4.0f);
+}
+
+size_t wallet::TXSignRequest::estimateTxVirtSize() const
+{   // another implementation based on Armory and TransactionData code
+   auto transactions = decorateUTXOs(inputs);
+   std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
+   for (unsigned int i = 0; i < recipients.size(); ++i) {
+      recipientsMap[i] = recipients[i];
+   }
+
+   try {
+      PaymentStruct payment(recipientsMap, fee, 0, 0);
+      return getVirtSize(computeSizeAndFee(transactions, payment));
+   }
+   catch (const std::exception &) {}
+   return 0;
 }
 
 

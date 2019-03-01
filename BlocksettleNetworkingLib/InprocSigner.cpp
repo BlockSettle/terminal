@@ -1,6 +1,7 @@
 #include "InprocSigner.h"
 #include <spdlog/spdlog.h>
 #include "Address.h"
+#include "CoreSettlementWallet.h"
 #include "CoreWalletsManager.h"
 #include "CoreHDWallet.h"
 #include "Wallets/SyncHDWallet.h"
@@ -13,12 +14,38 @@ InprocSigner::InprocSigner(const std::shared_ptr<bs::core::WalletsManager> &mgr
    , walletsMgr_(mgr), walletsPath_(walletsPath), netType_(netType)
 { }
 
+InprocSigner::InprocSigner(const std::shared_ptr<bs::core::hd::Wallet> &wallet
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : SignContainer(logger, SignContainer::OpMode::LocalInproc)
+   , walletsPath_({}), netType_(wallet->networkType())
+{
+   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
+   walletsMgr_->addWallet(wallet, walletsPath_);
+}
+
+InprocSigner::InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &wallet
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : SignContainer(logger, SignContainer::OpMode::LocalInproc)
+   , walletsPath_({}), netType_(wallet->networkType())
+{
+   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
+   walletsMgr_->setSettlementWallet(wallet);
+}
+
+InprocSigner::InprocSigner(const InprocSigner &copy)
+   : SignContainer(copy.logger_, SignContainer::OpMode::LocalInproc)
+   , walletsMgr_(copy.walletsMgr_) , walletsPath_(copy.walletsPath_)
+   , netType_(copy.netType_)
+{}
+
 bool InprocSigner::Start()
 {
-   const auto &cbLoadProgress = [this](int cur, int total) {
-      logger_->debug("[InprocSigner::Start] loading wallets: {} of {}", cur, total);
-   };
-   walletsMgr_->loadWallets(netType_, walletsPath_, cbLoadProgress);
+   if (!walletsPath_.empty()) {
+      const auto &cbLoadProgress = [this](int cur, int total) {
+         logger_->debug("[InprocSigner::Start] loading wallets: {} of {}", cur, total);
+      };
+      walletsMgr_->loadWallets(netType_, walletsPath_, cbLoadProgress);
+   }
    inited_ = true;
    emit ready();
    return true;
@@ -120,7 +147,9 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
       return 0;
    }
 
-   walletsMgr_->backupWallet(hdWallet, walletsPath_);
+   if (!walletsPath_.empty()) {
+      walletsMgr_->backupWallet(hdWallet, walletsPath_);
+   }
 
    std::shared_ptr<bs::core::hd::Leaf> leaf;
    SecureBinaryData password;
@@ -152,7 +181,7 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
 
    const RequestId reqId = seqId_++;
    std::shared_ptr<bs::sync::hd::Leaf> hdLeaf;
-   std::shared_ptr<InprocSigner> signContainer(this);
+   const auto signContainer = std::make_shared<InprocSigner>(*this);
    switch (groupType) {
    case bs::hd::CoinType::Bitcoin_main:
    case bs::hd::CoinType::Bitcoin_test:
@@ -180,8 +209,8 @@ SignContainer::RequestId InprocSigner::createHDWallet(const std::string &name, c
    try {
       const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, primary, pwdData, keyRank);
       const RequestId reqId = seqId_++;
-      const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->walletId(), wallet->name()
-         , wallet->description(), std::shared_ptr<InprocSigner>(this), logger_);
+      const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->networkType(), wallet->walletId()
+         , wallet->name(), wallet->description(), std::make_shared<InprocSigner>(*this), logger_);
       QTimer::singleShot(1, [this, reqId, hdWallet] { emit HDWalletCreated(reqId, hdWallet); });
       return reqId;
    }
@@ -191,17 +220,17 @@ SignContainer::RequestId InprocSigner::createHDWallet(const std::string &name, c
    return 0;
 }
 
-SignContainer::RequestId InprocSigner::createSetttlementWallet()
+void InprocSigner::createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &cb)
 {
-   const RequestId reqId = seqId_++;
    auto wallet = walletsMgr_->getSettlementWallet();
    if (!wallet) {
       wallet = walletsMgr_->createSettlementWallet(netType_, walletsPath_);
    }
    const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(wallet->walletId(), wallet->name()
-      , wallet->description(), std::shared_ptr<InprocSigner>(this), logger_);
-   QTimer::singleShot(1, [this, reqId, settlWallet] { emit SettlementWalletCreated(reqId, settlWallet); });
-   return reqId;
+      , wallet->description(), std::make_shared<InprocSigner>(*this), logger_);
+   if (cb) {
+      cb(settlWallet);
+   }
 }
 
 SignContainer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
@@ -373,6 +402,16 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
    const auto wallet = walletsMgr_->getWalletById(walletId);
    if (wallet) {
       for (const auto &in : inData) {
+         std::string index;
+         try {
+            const bs::Address addr(in.first);
+            if (addr.isValid()) {
+               index = wallet->getAddressIndex(addr);
+            }
+         } catch (const std::exception &) {}
+         if (index.empty()) {
+            index = in.first;
+         }
          result.push_back({ wallet->createAddressWithIndex(in.first, in.second), in.first });
       }
    }

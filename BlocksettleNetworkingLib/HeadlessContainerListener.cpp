@@ -1481,7 +1481,18 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
    response.set_walletid(wallet->walletId());
    for (int i = 0; i < request.indices_size(); ++i) {
       const auto indexData = request.indices(i);
-      const auto addr = wallet->createAddressWithIndex(indexData.index()
+      std::string index;
+      try {
+         const bs::Address addr(indexData.index());
+         if (addr.isValid()) {
+            index = wallet->getAddressIndex(addr);
+         }
+      }
+      catch (const std::exception &) {}
+      if (index.empty()) {
+         index = indexData.index();
+      }
+      const auto addr = wallet->createAddressWithIndex(index
          , mapFrom(indexData.addrtype()));
       auto addrData = response.add_addresses();
       addrData->set_address(addr.display<std::string>());

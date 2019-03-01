@@ -24,21 +24,6 @@
 class ArmoryConnection;
 class QProcess;
 
-// Define the BIP 150 public keys used by servers controlled by BS. For dev
-// purposes, they'll be hard-coded for now. THESE MUST BE REPLACED EVENTUALLY
-// WITH THE KEY ROTATION ALGORITHM. HARD-CODED KEYS WILL KILL ANY TERMINAL ONCE
-// THE KEYS ROTATE.
-// armory.blocksettle.com - 185.213.153.37 server
-#define TESTNET_ARMORY_BLOCKSETTLE_NAME "BlockSettle TestNet"
-//#define TESTNET_ARMORY_BLOCKSETTLE_KEY "03a8649b32b9459961e143c5c111b9a47ffa494116791c1cb35945a8b9bc8254ab"
-#define TESTNET_ARMORY_BLOCKSETTLE_ADDRESS "armory.blocksettle.com"
-#define TESTNET_ARMORY_BLOCKSETTLE_PORT 81 //7681
-
-#define MAINNET_ARMORY_BLOCKSETTLE_NAME "BlockSettle MainNet"
-//#define MAINNET_ARMORY_BLOCKSETTLE_KEY "03a8649b32b9459961e143c5c111b9a47ffa494116791c1cb35945a8b9bc8254ab"
-#define MAINNET_ARMORY_BLOCKSETTLE_ADDRESS "armory.blocksettle.com"
-#define MAINNET_ARMORY_BLOCKSETTLE_PORT 80
-
 // The class is used as a callback that processes asynchronous Armory events.
 class ArmoryCallback : public RemoteCallback
 {

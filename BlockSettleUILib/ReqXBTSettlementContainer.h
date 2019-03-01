@@ -7,7 +7,6 @@
 #include "AuthAddress.h"
 #include "SettlementContainer.h"
 #include "SettlementMonitor.h"
-#include "SettlementWallet.h"
 #include "UtxoReservation.h"
 #include "TransactionData.h"
 #include "QWalletInfo.h"

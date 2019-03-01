@@ -2,16 +2,15 @@
 #define __SETTLEMENT_ADDRESS_ENTRY_H__
 
 #include "BinaryData.h"
-#include "PlainWallet.h"
-
 #include <memory>
+#include "CorePlainWallet.h"
 
 namespace bs {
    namespace core {
       class SettlementAddressEntry;
 
       ////////////////////////////////////////////////////////////////////////////////
-      class SettlementAssetEntry : public GenericAsset
+      class SettlementAssetEntry : public bs::core::GenericAsset
       {
       public:
          SettlementAssetEntry(const BinaryData &settlementId, const BinaryData &buyAuthPubKey

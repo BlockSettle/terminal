@@ -142,7 +142,6 @@ public:
    virtual RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) = 0;
-   virtual RequestId createSetttlementWallet() { return 0; }
    virtual RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
    virtual RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
    virtual RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) = 0;
@@ -150,6 +149,7 @@ public:
    virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
    virtual RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) = 0;
+   virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
 
    virtual void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) {}
    virtual void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) {}
@@ -182,7 +182,6 @@ signals:
    void HDWalletCreated(RequestId id, std::shared_ptr<bs::sync::hd::Wallet>);
    void DecryptedRootKey(RequestId id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
       , std::string walletId);
-   void SettlementWalletCreated(RequestId id, const std::shared_ptr<bs::sync::SettlementWallet> &);
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);

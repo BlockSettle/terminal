@@ -36,7 +36,7 @@ std::pair<bs::Address, std::shared_ptr<bs::core::GenericAsset>> SettlementAssetE
    BinaryRefReader brrVal(value);
    const auto assetType = static_cast<AssetEntryType>(brrVal.get_uint8_t());
    if (assetType == AssetEntryType_Single) {
-      return bs::PlainAsset::deserialize(value);
+      return bs::core::PlainAsset::deserialize(value);
    }
    const auto id = brrVal.get_int32_t();
 

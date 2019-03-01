@@ -12,6 +12,7 @@ enum RequestType
    SignPayoutTXRequestType     = 4;
    PasswordRequestType         = 5;
    SetUserIdRequestType        = 6;
+   CreateSettlWalletType       = 7;
    CreateHDWalletRequestType   = 8;
    DeleteHDWalletRequestType   = 9;
    GetRootKeyRequestType       = 10;
@@ -407,4 +408,12 @@ message SyncAddressesResponse
 
    string walletId = 1;
    repeated Address addresses = 2;
+}
+
+
+message SettlWalletResponse
+{
+   string walletId = 1;
+   string name = 2;
+   string description = 3;
 }

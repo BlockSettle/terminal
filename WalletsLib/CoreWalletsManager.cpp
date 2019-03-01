@@ -2,8 +2,9 @@
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 #include "enable_warnings.h"
+#include <QDateTime>
 #include <QDir>
-
+#include "BIP150_151.h"
 #include "CoreWalletsManager.h"
 #include "CoreHDWallet.h"
 #include "CorePlainWallet.h"
@@ -36,6 +37,9 @@ void WalletsManager::reset()
 void WalletsManager::loadWallets(NetworkType netType, const std::string &walletsPath
    , const CbProgress &cbProgress)
 {
+   if (walletsPath.empty()) {
+      return;
+   }
    QDir walletsDir(QString::fromStdString(walletsPath));
 
    if (!walletsDir.exists()) {
@@ -230,24 +234,14 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::st
    return nullptr;
 }
 
-/*WalletsManager::WalletPtr WalletsManager::getWallet(const unsigned int index) const
-{
-   if (index > wallets_.size()) {
-      return nullptr;
-   } else if (index == wallets_.size()) {
-      return settlementWallet_;
-   }
-
-   return getWalletById(walletsId_[index].toBinStr());
-}*/
-
 WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walletId) const
 {
-   const auto &walletIt = wallets_.find(walletId);
-   if (walletIt != wallets_.end()) {
-      return walletIt->second;
+   if (!wallets_.empty()) {
+      const auto &walletIt = wallets_.find(walletId);
+      if (walletIt != wallets_.end()) {
+         return walletIt->second;
+      }
    }
-
    if (settlementWallet_ && (settlementWallet_->walletId() == walletId)) {
       return settlementWallet_;
    }
@@ -368,6 +362,8 @@ void WalletsManager::addWallet(const HDWalletPtr &wallet, const std::string &wal
    if (!wallet) {
       return;
    }
-   wallet->saveToDir(walletsPath);
+   if (!walletsPath.empty()) {
+      wallet->saveToDir(walletsPath);
+   }
    saveWallet(wallet);
 }

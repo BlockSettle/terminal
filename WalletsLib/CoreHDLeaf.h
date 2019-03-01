@@ -151,7 +151,7 @@ namespace bs {
             std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
                , AddressEntryType ae_type = AddressEntryType_Default);
             bs::hd::Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
-            bs::hd::Path::Elem getAddressIndex(const bs::Address &addr) const;
+            bs::hd::Path::Elem addressIndex(const bs::Address &addr) const;
             void topUpAddressPool(size_t intAddresses = 0
                , size_t extAddresses = 0);
             bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;

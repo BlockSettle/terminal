@@ -41,13 +41,13 @@ namespace bs {
          void backupWallet(const HDWalletPtr &, const std::string &targetDir) const;
 
          bool empty() const { return wallets_.empty(); }
-//         size_t getWalletsCount() const { return wallets_.size(); }
-//         wallet_gen_type getWallet(const unsigned int index) const;
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
 
          WalletPtr createSettlementWallet(NetworkType, const std::string &walletsPath);
          WalletPtr getSettlementWallet() const { return settlementWallet_; }
+         void setSettlementWallet(const std::shared_ptr<bs::core::SettlementWallet> &wallet) {
+            settlementWallet_ = wallet; }
          WalletPtr getAuthWallet() const;
          HDWalletPtr getPrimaryWallet() const;
 

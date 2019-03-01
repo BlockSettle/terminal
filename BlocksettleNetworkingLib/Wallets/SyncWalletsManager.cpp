@@ -73,8 +73,8 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          switch (info.format) {
          case bs::sync::WalletFormat::HD: {
             try {
-               const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name, info.description
-                  , signContainer_, logger_);
+               const auto hdWallet = std::make_shared<hd::Wallet>(info.netType, info.id, info.name
+                  , info.description, signContainer_, logger_);
                if (hdWallet) {
                   const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
                      saveWallet(hdWallet);
