@@ -706,7 +706,9 @@ bool BSTerminalMainWindow::isArmoryConnected() const
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
-   walletsMgr_->unregisterWallets();
+   if (walletsMgr_) {
+      walletsMgr_->unregisterWallets();
+   }
    connectArmory();
    updateControlEnabledState();
    // XXX: disabled until armory connection is stable in terminal
