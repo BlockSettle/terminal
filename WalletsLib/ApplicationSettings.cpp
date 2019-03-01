@@ -136,7 +136,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { Filter_MD_RFQ_Portfolio, SettingDef(QLatin1String("Filter/MD/RFQ_Portfolio")) },
       { Filter_MD_QN,            SettingDef(QLatin1String("Filter/MD/QN")) },
       { Filter_MD_QN_cnt,        SettingDef(QLatin1String("Filter/MD/QN/counters")) },
-      { ChangeLog_Base_Url,      SettingDef(QString(), QLatin1String("http://185.213.153.44/ChangeLog"))},
+      { ChangeLog_Base_Url,      SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/Changelog/changelog.json"))},
       { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/terminal/downloads"))},
       { ResetPassword_Url,       SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/pub-forgot-password"))},
       { GetAccount_Url,          SettingDef(QString(), QLatin1String("https://pubb.blbocksettle.com/pub-registration")) },

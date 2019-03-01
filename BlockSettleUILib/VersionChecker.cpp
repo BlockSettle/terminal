@@ -36,7 +36,7 @@ VersionChecker::VersionChecker(const QString &baseUrl)
 
 bool VersionChecker::loadLatestVersion()
 {
-   if (!sendRequest(baseUrl_ + QLatin1String("/latest"))) {
+   if (!sendRequest(baseUrl_)) {
       return false;
    }
 
