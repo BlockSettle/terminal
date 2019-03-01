@@ -22,10 +22,16 @@ public:
 public slots:
    void onAddServer();
    void onDeleteServer();
+   void onEdit();
+   void onSelect();
+   void onSave();
    void onConnect();
 
 signals:
    void reconnectArmory();
+
+private slots:
+   void resetForm();
 
 private:
    std::unique_ptr<Ui::ArmoryServersWidget> ui_; // The main widget object.

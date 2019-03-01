@@ -24,8 +24,9 @@ public:
       initSettings();
       display();
    }
-   virtual void initSettings() {}
 
+public slots:
+   virtual void initSettings() {}
    virtual void display() = 0;
    virtual void reset() = 0;
    virtual void apply() = 0;
