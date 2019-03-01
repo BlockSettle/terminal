@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <QObject>
-#include "MetaData.h"
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"

@@ -2,8 +2,9 @@
 #include <QFileInfo>
 #include <spdlog/spdlog.h>
 #include "OfflineProcessor.h"
-#include "OfflineSigner.h"
 #include "CoreWalletsManager.h"
+#include "OfflineSigner.h"
+#include "make_unique.h"
 
 #include "signer.pb.h"
 

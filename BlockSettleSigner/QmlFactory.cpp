@@ -1,13 +1,10 @@
 #include "QmlFactory.h"
-#include "AuthProxy.h"
-#include "WalletsManager.h"
-
 #include <QApplication>
 #include <QClipboard>
+#include <spdlog/spdlog.h>
+#include "AuthProxy.h"
 
 using namespace bs::hd;
-using namespace bs::wallet;
-
 
 // todo
 // check authObject->signWallet results, return null object, emit error signal

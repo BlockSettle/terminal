@@ -4,7 +4,6 @@
 #include <memory>
 #include <unordered_set>
 #include <QObject>
-#include "MetaData.h"
 #include <QSystemTrayIcon>
 
 namespace bs {

@@ -35,7 +35,7 @@ public:
    bool isValid() const { return txReq_.isValid(); }
    int nbInputs() const { return (int)txReq_.inputs.size(); }
    QStringList recvAddresses() const;
-   int txVirtSize() const { return 123; } //FIXME: use Armory code for size calculation
+   int txVirtSize() const { return txReq_.estimateTxVirtSize(); }
    double amount() const;
    double total() const { return amount() + fee(); }
    double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }

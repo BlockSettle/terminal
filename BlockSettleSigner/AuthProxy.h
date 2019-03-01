@@ -3,7 +3,6 @@
 
 #include "AutheIDClient.h"
 #include "EncryptionUtils.h"
-#include "MetaData.h"
 #include "QWalletInfo.h"
 #include "WalletEncryption.h"
 
