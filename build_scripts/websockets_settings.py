@@ -120,7 +120,11 @@ class WebsocketsSettings(Configurator):
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-        self.filter_copy(lib_dir, install_lib_dir, '.a')
+        if self._project_settings.get_link_mode() == 'shared':
+            self.filter_copy(lib_dir, install_lib_dir, '.so')
+        else:
+            self.filter_copy(lib_dir, install_lib_dir, '.a')
+            
         self.filter_copy(include_dir, install_include_dir)
 
         return True

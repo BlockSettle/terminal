@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import shutil
 import subprocess
+import sys
 
 from component_configurator import Configurator
 
@@ -30,7 +31,7 @@ class BotanSettings(Configurator):
         return True
 
     def config(self):
-        command = ['python',
+        command = [sys.executable,
                    self.get_unpacked_sources_dir() + '/configure.py',
                    '--disable-modules=pkcs11',
                    '--without-documentation']
