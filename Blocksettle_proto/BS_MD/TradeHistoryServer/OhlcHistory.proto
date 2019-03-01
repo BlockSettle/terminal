@@ -4,34 +4,39 @@ package Blocksettle.BS_MD.TradeHistoryServer;
 
 enum Interval
 {
-	OneYear = 0;
-	SixMonths = 1;
-	OneMonth = 2;
-	OneWeek = 3;
-	TwentyFourHours = 4;
-	TwelveHours = 5;
-	SixHours = 6;
-	OneHour = 7;
+	OneYear			= 0;
+	SixMonths		= 1;
+	OneMonth		= 2;
+	OneWeek			= 3;
+	TwentyFourHours	= 4;
+	TwelveHours		= 5;
+	SixHours		= 6;
+	OneHour			= 7;
 };
 
 message OhlcRequest
 {
-	string market = 1;
-	Interval interval = 2;
-	uint32 limit = 3;
+	string product		= 1;
+	Interval interval	= 2;
+	uint32 limit		= 3;
 };
 
 message OhlcCandle
 {
-	uint64 timestamp = 1;
-	double open = 2;
-	double high = 3;
-	double low = 4;
-	double close = 5;
-	double volume = 6;
+	uint64 timestamp	= 1;
+	uint64 start		= 2;
+	uint64 end			= 3;
+	double open			= 4;
+	double high			= 5;
+	double low			= 6;
+	double close		= 7;
+	uint64 trades		= 8;
+	double volume		= 9;
 };
 
 message OhlcResponse
 {
-	repeated OhlcCandle candles = 1;
+	string product				= 1;
+	Interval interval			= 2;
+	repeated OhlcCandle candles = 3;
 };
