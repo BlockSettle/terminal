@@ -103,7 +103,7 @@ void ChartWidget::UpdateChart(const int& interval) const
 	volumeChart_->setWidth(width);
 
 	OhlcRequest request;
-	request.set_market(product.toStdString());
+	request.set_product(product.toStdString());
 	request.set_interval(static_cast<Interval>(interval));
 	request.set_limit(100);
 	mdhsClient_->SendRequest(request);
@@ -123,6 +123,12 @@ void ChartWidget::OnDataReceived(const std::string& data)
 		logger_->error("can't parse response from mdhs: {}", data);
 		return;
 	}
+
+	auto product = ui_->cboInstruments->currentText();
+	auto interval = dateRange_.checkedId();
+
+	if (!product.compare(QString::fromStdString(response.product())) || interval != response.interval())
+		return;
 
 	qreal maxPrice = 0.0;
 	qreal minPrice = -1.0;
@@ -152,10 +158,6 @@ void ChartWidget::OnDataReceived(const std::string& data)
 	maxPrice += margin;
 	minPrice = qMax(minPrice, 0.0);
 
-	//TODO: Add product and interval to response
-	auto product = ui_->cboInstruments->currentText();
-	auto interval = dateRange_.checkedId();
-	
 	ui_->customPlot->rescaleAxes();
 	qreal size = IntervalWidth(interval, 100);
 	qreal upper = maxTimestamp + 0.8 * IntervalWidth(interval) / 2;
