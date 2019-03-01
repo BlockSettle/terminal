@@ -172,6 +172,7 @@ namespace bs {
             bool isValid() const noexcept;
             BinaryData serializeState() const { return getSigner().serializeState(); }
             BinaryData txId() const { return getSigner().getTxId(); }
+            size_t estimateTxVirtSize() const;
 
          private:
             Signer getSigner() const;

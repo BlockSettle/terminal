@@ -35,6 +35,7 @@ class HeadlessContainer : public SignContainer
    Q_OBJECT
 public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
+   HeadlessContainer(const HeadlessContainer &);
    ~HeadlessContainer() noexcept = default;
 
    RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
@@ -58,7 +59,6 @@ public:
    RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &seed
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
-   RequestId createSetttlementWallet() override { return 0; }
    RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
    RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override;
@@ -67,6 +67,7 @@ public:
    RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
       , bool addNew, bool removeOld, bool dryRun) override;
+   void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) override;
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;
@@ -95,10 +96,12 @@ protected:
    void ProcessSyncHDWallet(unsigned int id, const std::string &data);
    void ProcessSyncWallet(unsigned int id, const std::string &data);
    void ProcessSyncAddresses(unsigned int id, const std::string &data);
+   void ProcessSettlWalletCreate(unsigned int id, const std::string &data);
 
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
    std::set<RequestId>                 signRequests_;
+   std::map<SignContainer::RequestId, std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)>>   cbSettlWalletMap_;
    std::map<SignContainer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfoMap_;
    std::map<SignContainer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
    std::map<SignContainer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;

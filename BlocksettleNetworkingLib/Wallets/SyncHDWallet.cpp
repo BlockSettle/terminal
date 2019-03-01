@@ -11,14 +11,17 @@ if ((logger)) { \
 
 using namespace bs::sync;
 
-hd::Wallet::Wallet(const std::string &walletId, const std::string &name, const std::string &desc
-   , const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), logger_(logger)
+hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
+   , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger)
+   : QObject(nullptr), netType_(netType), walletId_(walletId), name_(name), desc_(desc)
+   , logger_(logger)
 {}
 
-hd::Wallet::Wallet(const std::string &walletId, const std::string &name, const std::string &desc
-   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger)
-   : walletId_(walletId), name_(name), desc_(desc), signContainer_(container), logger_(logger)
+hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
+   , const std::string &desc, const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : QObject(nullptr), netType_(netType), walletId_(walletId), name_(name), desc_(desc)
+   , signContainer_(container), logger_(logger)
 {}
 
 hd::Wallet::~Wallet() = default;
@@ -57,7 +60,7 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
             }
          };
          leaf->synchronize(cbLeafDone);
-         if (encryptionTypes_.empty()) {  //FIXME: pass this directly for HD wallet at sync
+         if (encryptionTypes_.empty()) {
             encryptionTypes_ = leaf->encryptionTypes();
             encryptionKeys_ = leaf->encryptionKeys();
             encryptionRank_ = leaf->encryptionRank();
@@ -173,7 +176,7 @@ void hd::Wallet::addGroup(const std::shared_ptr<hd::Group> &group)
 std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
 {
    QMutexLocker lock(&mtxGroups_);
-   const auto &itGroup = groups_.find(static_cast<bs::hd::Path::Elem>(ct));
+   const auto itGroup = groups_.find(static_cast<bs::hd::Path::Elem>(ct));
    if (itGroup == groups_.end()) {
       return nullptr;
    }

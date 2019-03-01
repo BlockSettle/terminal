@@ -199,7 +199,7 @@ std::shared_ptr<hd::Node> hd::Leaf::getNodeForAddr(const bs::Address &addr) cons
    if (addr.isNull()) {
       return nullptr;
    }
-   const auto index = getAddressIndex(addr);
+   const auto index = addressIndex(addr);
    if (index == UINT32_MAX) {
       return nullptr;
    }
@@ -432,23 +432,24 @@ bs::hd::Path::Elem hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) cons
    return index;
 }
 
-bs::hd::Path::Elem hd::Leaf::getAddressIndex(const bs::Address &addr) const
+bs::hd::Path::Elem hd::Leaf::addressIndex(const bs::Address &addr) const
 {
-   auto itIndex = addrToIndex_.find(addr.prefixed());
+   const auto itIndex = addrToIndex_.find(addr.unprefixed());
    if (itIndex == addrToIndex_.end()) {
-      itIndex = addrToIndex_.find(addr.unprefixed());
-      if (itIndex == addrToIndex_.end()) {
-         return UINT32_MAX;
-      }
+      return UINT32_MAX;
    }
    return itIndex->second;
 }
 
 bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 {
-   const auto index = getAddressIndex(addr);
+   const auto index = addressIndex(addr);
    if (index == UINT32_MAX) {
-      return {};
+      const auto itAddr = poolByAddr_.find(addr);
+      if (itAddr == poolByAddr_.end()) {
+         return {};
+      }
+      return itAddr->second.path;
    }
    const auto addrIt = addressMap_.find(index);
    if (addrIt == addressMap_.end()) {

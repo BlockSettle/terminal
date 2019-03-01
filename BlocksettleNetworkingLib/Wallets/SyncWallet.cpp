@@ -13,9 +13,7 @@ using namespace bs::sync;
 Wallet::Wallet(const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr)
    , signContainer_(container), logger_(logger)
-{
-   //TODO: setup signContainer connections
-}
+{}
 
 Wallet::~Wallet()
 {
@@ -659,14 +657,14 @@ void Wallet::firstInit(bool force)
    updateBalances();
 }
 
-bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> &inputs
-   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
-   , bool isRBF, bs::Address changeAddress, const uint64_t& origFee)
+bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walletId
+   , const std::vector<UTXO> &inputs
+   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients
+   , const std::function<bs::Address(std::string &)> &cbChangeAddr
+   , const uint64_t fee, bool isRBF, const uint64_t &origFee)
 {
    bs::core::wallet::TXSignRequest request;
-   request.walletId = walletId();
-//   request.wallet = this;
-//   request.resolver = GetPublicKeyResolver();
+   request.walletId = walletId;
 
    uint64_t inputAmount = 0;
    uint64_t spendAmount = 0;
@@ -695,25 +693,42 @@ bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> 
 
    if (isRBF && (fee < wallet::kMinRelayFee)) {
       request.fee = wallet::kMinRelayFee;
-   }
-   else {
+   } else {
       request.fee = fee;
    }
 
    const uint64_t changeAmount = inputAmount - (spendAmount + fee);
    if (changeAmount) {
-      if (changeAddress.isNull() && (changeAmount >= fee)) {
-         changeAddress = getNewChangeAddress();
-         setAddressComment(changeAddress, wallet::Comment::toString(wallet::Comment::ChangeAddress));
+      if (cbChangeAddr) {
+         const auto changeAddress = cbChangeAddr(request.change.index);
+         if (!changeAddress.isNull()) {
+            request.change.value = changeAmount;
+            request.change.address = changeAddress;
+         }
+         else if (changeAmount >= fee) {
+            throw std::runtime_error("failed to get change address");
+         }
       }
-      if (!changeAddress.isNull()) {
-         request.change.value = changeAmount;
-         request.change.address = changeAddress;
-         request.change.index = getAddressIndex(changeAddress);
+      else {
+         throw std::logic_error("can't get change address for " + std::to_string(changeAmount));
       }
    }
 
    return request;
+}
+
+bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> &inputs
+   , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
+   , bool isRBF, bs::Address changeAddress, const uint64_t& origFee)
+{
+   const auto &cbChangeAddr = [this](std::string &index) -> bs::Address {
+      const auto result = getNewChangeAddress();
+      setAddressComment(result, wallet::Comment::toString(wallet::Comment::ChangeAddress));
+      index = getAddressIndex(result);
+      return result;
+   };
+   return wallet::createTXRequest(walletId(), inputs, recipients, cbChangeAddr
+      , fee, isRBF, origFee);
 }
 
 bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
@@ -853,7 +868,15 @@ int Wallet::addAddress(const bs::Address &addr, const std::string &index, Addres
       usedAddresses_.push_back(addr);
    }
    if (sync && signContainer_) {
-      signContainer_->syncNewAddress(walletId(), index, aet, [](const bs::Address &) {});
+      std::string idxCopy = index;
+      if (idxCopy.empty() && !addr.isNull()) {
+         aet = addr.getType();
+         idxCopy = getAddressIndex(addr);
+         if (idxCopy.empty()) {
+            idxCopy = addr.display<std::string>();
+         }
+      }
+      signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
    }
    return (usedAddresses_.size() - 1);
 }

@@ -167,6 +167,14 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
 }
 
+HeadlessContainer::HeadlessContainer(const HeadlessContainer &copy)
+   : SignContainer(copy.logger_, copy.mode_), listener_(copy.listener_)
+   , missingWallets_(copy.missingWallets_), signRequests_(copy.signRequests_)
+   , cbSettlWalletMap_(copy.cbSettlWalletMap_), cbWalletInfoMap_(copy.cbWalletInfoMap_)
+   , cbHDWalletMap_(copy.cbHDWalletMap_), cbWalletMap_(copy.cbWalletMap_)
+   , cbNewAddrsMap_(copy.cbNewAddrsMap_)
+{}
+
 static void killProcess(int pid)
 {
 #ifdef Q_OS_WIN
@@ -260,16 +268,16 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
       default:    break;
       }
       const auto leaf = std::make_shared<bs::sync::hd::Leaf>(response.leaf().walletid()
-         , response.leaf().name(), response.leaf().desc(), std::shared_ptr<HeadlessContainer>(this)
+         , response.leaf().name(), response.leaf().desc(), std::make_shared<HeadlessContainer>(*this)
          , logger_, leafType, response.leaf().extonly());
       logger_->debug("[HeadlessContainer] HDLeaf {} created", response.leaf().walletid());
       emit HDLeafCreated(id, leaf);
    }
    else if (response.has_wallet()) {
       const auto netType = (response.wallet().nettype() == headless::TestNetType) ? NetworkType::TestNet : NetworkType::MainNet;
-      auto wallet = std::make_shared<bs::sync::hd::Wallet>(response.wallet().walletid()
+      auto wallet = std::make_shared<bs::sync::hd::Wallet>(netType, response.wallet().walletid()
          , response.wallet().name(), response.wallet().description()
-         , std::shared_ptr<HeadlessContainer>(this), logger_);
+         , std::make_shared<HeadlessContainer>(*this), logger_);
 
       for (int i = 0; i < response.wallet().groups_size(); i++) {
          const auto grpPath = bs::hd::Path::fromString(response.wallet().groups(i).path());
@@ -729,6 +737,14 @@ bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
    return (missingWallets_.find(walletId) != missingWallets_.end());
 }
 
+void HeadlessContainer::createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &cb)
+{
+   headless::RequestPacket packet;
+   packet.set_type(headless::CreateSettlWalletType);
+   const auto reqId = Send(packet);
+   cbSettlWalletMap_[reqId] = cb;
+}
+
 void HeadlessContainer::syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb)
 {
    headless::RequestPacket packet;
@@ -865,6 +881,24 @@ static bs::sync::WalletFormat mapFrom(headless::WalletFormat format)
    case headless::WalletFormatUnknown:
    default:    return bs::sync::WalletFormat::Unknown;
    }
+}
+
+void HeadlessContainer::ProcessSettlWalletCreate(unsigned int id, const std::string &data)
+{
+   headless::SettlWalletResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[{}] Failed to parse reply", __func__);
+      emit Error(id, "failed to parse");
+      return;
+   }
+   const auto itCb = cbSettlWalletMap_.find(id);
+   if (itCb == cbSettlWalletMap_.end()) {
+      emit Error(id, "no callback found for id " + std::to_string(id));
+      return;
+   }
+   const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(response.walletid()
+      , response.name(), response.description(), std::make_shared<HeadlessContainer>(*this), logger_);
+   itCb->second(settlWallet);
 }
 
 void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string &data)
@@ -1222,6 +1256,10 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
    case headless::SetLimitsRequestType:
       ProcessSetLimitsResponse(packet.id(), packet.data());
+      break;
+
+   case headless::CreateSettlWalletType:
+      ProcessSettlWalletCreate(packet.id(), packet.data());
       break;
 
    case headless::SyncWalletInfoType:
