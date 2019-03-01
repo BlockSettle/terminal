@@ -6,6 +6,7 @@
 #include "ChatUserListTreeWidget.h"
 #include "ApplicationSettings.h"
 #include "ChatSearchPopup.h"
+#include "ChatMessagesItemDelegate.h"
 
 #include <QMouseEvent>
 #include <QApplication>
@@ -147,6 +148,9 @@ ChatWidget::ChatWidget(QWidget *parent)
 
    messagesViewModel_.reset(new ChatMessagesViewModel());
    ui_->tableViewMessages->setModel(messagesViewModel_.get());
+
+   auto chatMessagesItemDelegate = new ChatMessagesItemDelegate(this);
+   ui_->tableViewMessages->setItemDelegate(chatMessagesItemDelegate);
 
    qRegisterMetaType<std::vector<std::string>>();
 }
