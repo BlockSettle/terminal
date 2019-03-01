@@ -6,7 +6,6 @@
 #include "SwigClient.h"
 #include "SelectedTransactionInputs.h"
 #include "ScriptRecipient.h"
-#include "SettlementWallet.h"
 #include "RecipientContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWallet.h"
@@ -202,8 +201,6 @@ bool TransactionData::UpdateTransactionData()
                logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
                   , summary_.txVirtSize);
             }
-            //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
-            summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
          summary_.feePerByte =
@@ -244,8 +241,6 @@ bool TransactionData::UpdateTransactionData()
                logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
                   , summary_.txVirtSize);
             }
-            //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
-            summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;

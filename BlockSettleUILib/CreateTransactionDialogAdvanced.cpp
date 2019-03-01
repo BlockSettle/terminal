@@ -836,7 +836,8 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
          result = transactionData_->getWallet()->getNewChangeAddress(
             ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
-         transactionData_->getWallet()->setAddressComment(result, bs::wallet::Comment::toString(bs::wallet::Comment::ChangeAddress));
+         transactionData_->getWallet()->setAddressComment(result, bs::sync::wallet::Comment::toString(
+            bs::sync::wallet::Comment::ChangeAddress));
       } else {
          result = selectedChangeAddress_;
       }

@@ -9,7 +9,6 @@
 #include "BinaryData.h"
 #include "CheckRecipSigner.h"
 #include "CommonTypes.h"
-#include "SettlementWallet.h"
 #include "UtxoReservation.h"
 
 namespace Ui {

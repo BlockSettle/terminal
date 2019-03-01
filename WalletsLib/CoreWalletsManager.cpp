@@ -2,8 +2,9 @@
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 #include "enable_warnings.h"
+#include <QDateTime>
 #include <QDir>
-
+#include "BIP150_151.h"
 #include "CoreWalletsManager.h"
 #include "CoreHDWallet.h"
 #include "CorePlainWallet.h"

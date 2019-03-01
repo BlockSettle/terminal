@@ -4,7 +4,6 @@
 
 #include "ApplicationSettings.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
 
 #include <QLineEdit>
 #include <QPushButton>

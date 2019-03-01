@@ -734,7 +734,8 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
                if (transData->GetTransactionSummary().hasChange) {
                   const auto changeAddr = transData->getWallet()->getNewChangeAddress();
                   unsignedTxReq = transData->createUnsignedTransaction(false, changeAddr);
-                  transData->getWallet()->setAddressComment(changeAddr, bs::wallet::Comment::toString(bs::wallet::Comment::ChangeAddress));
+                  transData->getWallet()->setAddressComment(changeAddr, bs::sync::wallet::Comment::toString(
+                     bs::sync::wallet::Comment::ChangeAddress));
                }
                else {
                   unsignedTxReq = transData->createUnsignedTransaction();

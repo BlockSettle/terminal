@@ -65,12 +65,6 @@ namespace bs {
 
          void RefreshWallets(const std::vector<BinaryData>& ids);
 
-      private:
-         using CreateMonitorCallback = std::function<void(const std::shared_ptr<AsyncClient::BtcWallet>&)>;
-         bool createMonitorCommon(const std::shared_ptr<SettlementAddressEntry> &addr
-            , const std::shared_ptr<spdlog::logger>& logger
-            , const CreateMonitorCallback& internalCB);
-
       protected:
          int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;
          int addAddress(const std::shared_ptr<SettlementAddressEntry> &, const std::shared_ptr<SettlementAssetEntry> &);

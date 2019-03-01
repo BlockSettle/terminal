@@ -1,9 +1,10 @@
 #ifndef __COIN_CONTROL_DIALOG_H__
 #define __COIN_CONTROL_DIALOG_H__
 
-#include <QDialog>
-#include "WalletsManager.h"
 #include <memory>
+#include <vector>
+#include <QDialog>
+#include "TxClasses.h"
 
 namespace Ui {
     class CoinControlDialog;

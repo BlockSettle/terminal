@@ -11,7 +11,6 @@
 #include "ReqXBTSettlementContainer.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
 #include "XBTSettlementTransactionWidget.h"
 
 enum StackWidgetId

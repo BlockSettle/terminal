@@ -278,7 +278,7 @@ void DealerXBTSettlementContainer::onTXSigned(unsigned int id, BinaryData signed
       txWallet->setTransactionComment(signedTX, comment_);
       settlWallet_->setTransactionComment(signedTX, comment_);
       txWallet->setAddressComment(transactionData_->GetFallbackRecvAddress()
-         , bs::wallet::Comment::toString(bs::wallet::Comment::SettlementPayOut));
+         , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
 
       logger_->debug("[DealerXBTSettlementContainer::onTXSigned] Payout sent");
       emit info(tr("Pay-out broadcasted. Waiting to appear on chain"));
