@@ -22,7 +22,7 @@ void BSChatInput::keyPressEvent(QKeyEvent * e)
 	if (e->key() == Qt::Key_Enter || e->key() == Qt::Key_Return) {
 		if (e->modifiers().testFlag(Qt::ShiftModifier)) {
 			qDebug("Shift + Return/Enter press %d", e->key());
-			this->insertPlainText(QString::fromStdString("\n"));
+			this->insertPlainText(QStringLiteral("\n"));
 
 		} else {
 			qDebug("Return/Enter press %d", e->key());
