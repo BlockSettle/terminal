@@ -31,8 +31,17 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
 {
    if (index.row() >= servers_.size()) return QVariant();
    ArmoryServer server = servers_.at(index.row());
+   int currentServerIndex = serversProvider_->indexOfCurrent();
 
-   if (role == Qt::DisplayRole) {
+   if (role == Qt::FontRole && index.row() == currentServerIndex) {
+       QFont font;
+       font.setBold(true);
+       return font;
+   }
+   else if (role == Qt::TextColorRole && index.row() == currentServerIndex && highLightSelectedServer_) {
+       return QColor(Qt::white);
+   }
+   else if (role == Qt::DisplayRole) {
       switch (index.column()) {
       case 0:
          return server.name;
@@ -82,6 +91,11 @@ void ArmoryServersViewModel::update()
    beginResetModel();
    servers_ = serversProvider_->servers();
    endResetModel();
+}
+
+void ArmoryServersViewModel::setHighLightSelectedServer(bool highLightSelectedServer)
+{
+   highLightSelectedServer_ = highLightSelectedServer;
 }
 
 

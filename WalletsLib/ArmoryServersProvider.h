@@ -13,16 +13,20 @@ public:
 
    QList<ArmoryServer> servers() const;
    ArmorySettings getArmorySettings() const;
+
+   int indexOfCurrent() const;   // index of server which set in ini file
    int indexOf(const QString &name) const;
    int indexOfIpPort(const std::string &srvIPPort) const;
-   void add(const ArmoryServer &server);
-   void remove(int index);
+
+   bool add(const ArmoryServer &server);
+   bool replace(int index, const ArmoryServer &server);
+   bool remove(int index);
    void setupServer(int index);
 
    void addKey(const QString &address, int port, const QString &key);
    void addKey(const std::string &srvIPPort, const BinaryData &srvPubKey);
 
-   static const int defaultServersCount = 4;
+   static const int kDefaultServersCount = 4;
 
 signals:
    void dataChanged();

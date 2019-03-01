@@ -17,6 +17,11 @@ struct ArmoryServer
    QString armoryDBKey;
    bool runLocally = false;
 
+   bool operator ==(const ArmoryServer &other) const  {
+      return armoryDBIp == other.armoryDBIp
+            && armoryDBPort == other.armoryDBPort
+            && netType == other.netType;
+   }
    static ArmoryServer fromTextSettings(const QString &text) {
       ArmoryServer server;
       if (text.split(QStringLiteral(":")).size() != 5) {
