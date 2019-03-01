@@ -4,6 +4,15 @@
 #include <QDir>
 #include <QStandardPaths>
 
+const QList<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
+   ArmoryServer::fromTextSettings(QStringLiteral(MAINNET_ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:")),
+   ArmoryServer::fromTextSettings(QStringLiteral(TESTNET_ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:")),
+   ArmoryServer::fromTextSettings(QStringLiteral("Local Node MainNet:0:127.0.0.1::")),
+   ArmoryServer::fromTextSettings(QStringLiteral("Local Node TestNet:1:127.0.0.1::"))
+};
+
+const int ArmoryServersProvider::kDefaultServersCount = ArmoryServersProvider::defaultServers_.size();
+
 ArmoryServersProvider::ArmoryServersProvider(const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
    : appSettings_(appSettings)
    , QObject(parent)
@@ -16,40 +25,37 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
    QStringList userServers = appSettings_->get<QStringList>(ApplicationSettings::armoryServers);
 
    QList<ArmoryServer> servers;
+   //QList<ArmoryServer> defaultServers = defaultServers_;
 
    QStringList defaultServersKeys = appSettings_->get<QStringList>(ApplicationSettings::defaultArmoryServersKeys);
 
    // #1 add MainNet blocksettle server
-   ArmoryServer bsMainNet = ArmoryServer::fromTextSettings(QStringLiteral(MAINNET_ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:"));
+   ArmoryServer bsMainNet = defaultServers_.at(0);
+   bsMainNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet);
    if (defaultServersKeys.size() >= 1) {
       bsMainNet.armoryDBKey = defaultServersKeys.at(0);
    }
    servers.append(bsMainNet);
 
    // #2 add TestNet blocksettle server
-   ArmoryServer bsTestNet = ArmoryServer::fromTextSettings(QStringLiteral(TESTNET_ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:"));
+   ArmoryServer bsTestNet = defaultServers_.at(1);
+   bsTestNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet);
    if (defaultServersKeys.size() >= 2) {
       bsTestNet.armoryDBKey = defaultServersKeys.at(1);
    }
    servers.append(bsTestNet);
 
    // #3 add localhost node MainNet
-   ArmoryServer localMainNet;
-   localMainNet.netType = NetworkType::MainNet;
-   localMainNet.armoryDBIp = QStringLiteral("127.0.0.1");
-   localMainNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet);
-   localMainNet.name =  QStringLiteral("Local Node MainNet");
+   ArmoryServer localMainNet = defaultServers_.at(2);
+   localMainNet.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(NetworkType::MainNet);
    if (defaultServersKeys.size() >= 3) {
       localMainNet.armoryDBKey = defaultServersKeys.at(2);
    }
    servers.append(localMainNet);
 
    // #4 add localhost node TestNet
-   ArmoryServer localTestNet;
-   localTestNet.netType = NetworkType::TestNet;
-   localTestNet.armoryDBIp = QStringLiteral("127.0.0.1");
-   localTestNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet);
-   localTestNet.name =  QStringLiteral("Local Node TestNet");
+   ArmoryServer localTestNet = defaultServers_.at(3);
+   localTestNet.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(NetworkType::TestNet);
    if (defaultServersKeys.size() >= 4) {
       localTestNet.armoryDBKey = defaultServersKeys.at(3);
    }
@@ -129,7 +135,7 @@ int ArmoryServersProvider::indexOfIpPort(const std::string &srvIPPort) const
 
 bool ArmoryServersProvider::add(const ArmoryServer &server)
 {
-   if (server.armoryDBPort < 1 || server.armoryDBPort > 65525) {
+   if (server.armoryDBPort < 1 || server.armoryDBPort > USHRT_MAX) {
       return false;
    }
    if (server.name.isEmpty()) {
@@ -159,7 +165,7 @@ bool ArmoryServersProvider::add(const ArmoryServer &server)
 
 bool ArmoryServersProvider::replace(int index, const ArmoryServer &server)
 {
-   if (server.armoryDBPort < 1 || server.armoryDBPort > 65525) {
+   if (server.armoryDBPort < 1 || server.armoryDBPort > USHRT_MAX) {
       return false;
    }
    if (server.name.isEmpty()) {
