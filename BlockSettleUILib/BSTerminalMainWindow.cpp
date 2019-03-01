@@ -1204,7 +1204,6 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
 {
-   qDebug() << "showMessage" << sysTrayIcon_->isVisible();
    sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QSystemTrayIcon::Information);
 }
 
@@ -1409,61 +1408,67 @@ void BSTerminalMainWindow::onButtonUserClicked() {
 
 void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, const std::string &srvIPPort, std::shared_ptr<std::promise<bool>> promiseObj)
 {
-
    QList<ArmoryServer> servers = armoryServersProvider_->servers();
-   ArmoryServer server = servers.at(armoryServersProvider_->indexOfIpPort(srvIPPort));
+   int serverIndex = armoryServersProvider_->indexOfIpPort(srvIPPort);
+   if (serverIndex >= 0) {
+      ArmoryServer server = servers.at(serverIndex);
 
-   if (server.armoryDBKey.isEmpty()) {
-      BSMessageBox *box = new BSMessageBox(BSMessageBox::question
-                       , tr("ArmoryDB Key Import")
-                       , tr("Do you wish to import the following ArmoryDB Key?")
-                       , tr("Address: %1\n"
-                            "Port: %2\n"
-                            "Key: %3")
-                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
-                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
-                                 .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
-                       , this);
-      box->setMinimumSize(600, 150);
-      box->setMaximumSize(600, 150);
+      if (server.armoryDBKey.isEmpty()) {
+         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+                          , tr("ArmoryDB Key Import")
+                          , tr("Do you wish to import the following ArmoryDB Key?")
+                          , tr("Address: %1\n"
+                               "Port: %2\n"
+                               "Key: %3")
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                          , this);
+         box->setMinimumSize(600, 150);
+         box->setMaximumSize(600, 150);
 
-      bool answer = (box->exec() == QDialog::Accepted);
-      box->deleteLater();
+         bool answer = (box->exec() == QDialog::Accepted);
+         box->deleteLater();
 
-      if (answer) {
-         armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         if (answer) {
+            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         }
+
+         promiseObj->set_value(true);
       }
+      else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
+         BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
+                          , tr("ArmoryDB Key")
+                          , tr("ArmoryDB Key was changed.\n"
+                               "Do you wish to proceed connection and save new key?")
+                          , tr("Address: %1\n"
+                               "Port: %2\n"
+                               "Old Key: %3\n"
+                               "New Key: %4")
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                          , this);
+         box->setMinimumSize(600, 150);
+         box->setMaximumSize(600, 150);
+         box->setCancelVisible(true);
 
-      promiseObj->set_value(true);
-   }
-   else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
-      BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
-                       , tr("ArmoryDB Key")
-                       , tr("ArmoryDB Key was changed.\n"
-                            "Do you want to proceed connection and save new key?")
-                       , tr("Address: %1\n"
-                            "Port: %2\n"
-                            "Old Key: %3\n"
-                            "New Key: %4")
-                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
-                                 .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
-                                 .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
-                                 .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
-                       , this);
-      box->setMinimumSize(600, 150);
-      box->setMaximumSize(600, 150);
-      box->setCancelVisible(true);
+         bool answer = (box->exec() == QDialog::Accepted);
+         box->deleteLater();
 
-      bool answer = (box->exec() == QDialog::Accepted);
-      box->deleteLater();
+         if (answer) {
+            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         }
 
-      if (answer) {
-         armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         promiseObj->set_value(answer);
       }
-
-      promiseObj->set_value(answer);
+      else {
+         promiseObj->set_value(true);
+      }
    }
    else {
+      // server not in the list - added directly to ini config
       promiseObj->set_value(true);
    }
 }

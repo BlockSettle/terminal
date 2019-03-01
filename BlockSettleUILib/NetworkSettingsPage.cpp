@@ -79,11 +79,14 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
          file.write(ui_->labelArmoryTerminalKey->text().toLatin1());
       }
    });
+
+   connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::display);
 }
 
 void NetworkSettingsPage::initSettings()
 {
    armoryServerModel_ = new ArmoryServersViewModel(armoryServersProvider_);
+   armoryServerModel_->setHighLightSelectedServer(false);
    ui_->comboBoxArmoryServer->setModel(armoryServerModel_);
 
    connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, [this](){
@@ -100,13 +103,11 @@ void NetworkSettingsPage::display()
 #ifdef PRODUCTION_BUILD
    ui_->PublicBridgeSettingsGroup->hide();
 #endif
-   ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
-   ui_->lineEditPublicBridgeHost->setEnabled(false);
-   ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
 
    ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
    ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
    ui_->spinBoxPublicBridgePort->setEnabled(false);
+
 
    int serverIndex = armoryServersProvider_->indexOf(appSettings_->get<QString>(ApplicationSettings::armoryDbName));
    if (serverIndex >= 0) {
@@ -125,8 +126,6 @@ void NetworkSettingsPage::display()
    ui_->comboBoxEnvironment->addItem(tr("Staging"));
    ui_->comboBoxEnvironment->addItem(tr("UAT"));
    ui_->comboBoxEnvironment->addItem(tr("PROD"));
-
-   ui_->comboBoxEnvironment->setCurrentIndex(-1);
 
    DetectEnvironmentSettings();
 }
