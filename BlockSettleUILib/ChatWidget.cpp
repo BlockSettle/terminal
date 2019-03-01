@@ -135,10 +135,10 @@ ChatWidget::ChatWidget(QWidget *parent)
    //Init UI and other stuff
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
-   ui_->tableViewMessages->verticalHeader()->setDefaultSectionSize(15);
+   ui_->tableViewMessages->verticalHeader()->setDefaultSectionSize(10);
    ui_->tableViewMessages->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-   ui_->tableViewMessages->horizontalHeader()->setDefaultSectionSize(50);
+   ui_->tableViewMessages->horizontalHeader()->setDefaultSectionSize(10);
    ui_->tableViewMessages->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->tableViewMessages->setSelectionBehavior(QAbstractItemView::SelectRows);
    ui_->tableViewMessages->horizontalHeader()->setDefaultAlignment(Qt::AlignLeading | Qt::AlignVCenter);

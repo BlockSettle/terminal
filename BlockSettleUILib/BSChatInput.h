@@ -18,7 +18,7 @@ public:
 signals:
 	void sendMessage();
 
-protected:
+public:
 	void keyPressEvent(QKeyEvent * e) override;
 };
 
