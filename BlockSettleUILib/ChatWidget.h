@@ -6,7 +6,6 @@
 #include <QScopedPointer>
 
 #include "ChatUsersViewModel.h"
-#include "ChatMessagesViewModel.h"
 #include "ChatUserListLogic.h"
 
 #include <memory>
@@ -50,7 +49,7 @@ public:
 private slots:
    void onSendButtonClicked();
    void onUserClicked(const QString& index);
-   void onMessagesUpdated(const QModelIndex& parent, int start, int end);
+   void onMessagesUpdated();
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
    void onSearchUserReturnPressed();
@@ -63,7 +62,6 @@ signals:
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
    QScopedPointer<ChatUsersViewModel> usersViewModel_;
-   QScopedPointer<ChatMessagesViewModel> messagesViewModel_;
 
 
    std::shared_ptr<ChatClient>      client_;
