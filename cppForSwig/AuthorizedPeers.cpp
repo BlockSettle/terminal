@@ -39,9 +39,13 @@ AuthorizedPeers::AuthorizedPeers(
 
    //grab all meta entries, populate public key map
    auto peerAccount = wallet_->getMetaAccount(MetaAccount_AuthPeers);
-   auto&& pubkeymap = AuthPeerAssetConversion::getAssetMap(peerAccount.get());
+   auto&& peerAssets = AuthPeerAssetConversion::getAssetMap(peerAccount.get());
 
-   for (auto& pubkey : pubkeymap)
+   //root signature
+   rootSignature_ = move(peerAssets.rootSignature_);
+
+   //name key pairs
+   for (auto& pubkey : peerAssets.nameKeyPair_)
    {
       btc_pubkey btckey;
       btc_pubkey_init(&btckey);
@@ -57,6 +61,9 @@ AuthorizedPeers::AuthorizedPeers(
       keySet_.insert(pubkey_cmp);
       nameToKeyMap_.emplace(make_pair(pubkey.first, btckey));
    }
+
+   //peer root public keys
+   peerRootKeys_ = move(peerAssets.peerRootKeys_);
    
    //get the private key
    SecureBinaryData privateKey;
@@ -434,7 +441,11 @@ void AuthorizedPeers::eraseKey(const SecureBinaryData& pubkey)
    btckey.compressed = true;
 
    //erase from public key set
-   keySet_.erase(pubkey_cmp);
+   if (keySet_.erase(pubkey_cmp) == 0)
+   {
+      erasePeerRootKey(pubkey);
+      return;
+   }
 
    if (wallet_ == nullptr)
    {
@@ -506,4 +517,70 @@ const btc_pubkey& AuthorizedPeers::getOwnPublicKey() const
       throw AuthorizedPeersException("malformed authpeer object");
 
    return iter->second;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AuthorizedPeers::addRootSignature(
+   const SecureBinaryData& key, const SecureBinaryData& sig)
+{
+   //check key is valid
+   if(!CryptoECDSA().VerifyPublicKeyValid(key))
+      throw AuthorizedPeersException("invalid root pubkey");
+
+   //check sig is valid
+   auto ownKey = getOwnPublicKey();
+   BinaryDataRef ownKeyBdr(ownKey.pubkey, 33);
+   if(!CryptoECDSA().VerifyData(ownKeyBdr, sig, key))
+      throw AuthorizedPeersException("invalid root signature");
+
+   rootSignature_ = make_pair(key, sig);
+
+   if (wallet_ == nullptr)
+      return;
+
+   auto peerAccount = wallet_->getMetaAccount(MetaAccount_AuthPeers);
+   AuthPeerAssetConversion::addRootSignature(peerAccount.get(), key, sig);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AuthorizedPeers::addPeerRootKey(
+   const SecureBinaryData& key, std::string description)
+{
+   //check key is valid
+   if (!CryptoECDSA().VerifyPublicKeyValid(key))
+      throw AuthorizedPeersException("invalid root pubkey");
+
+   if (wallet_ == nullptr)
+   {
+      auto descPair = make_pair(description, 0);
+      auto insertIter = peerRootKeys_.insert(make_pair(key, descPair));
+      return;
+   }
+
+   auto peerAccount = wallet_->getMetaAccount(MetaAccount_AuthPeers);
+   auto index = AuthPeerAssetConversion::addRootPeer(
+      peerAccount.get(), key, description);
+
+   auto descPair = make_pair(description, index);
+   auto insertIter = peerRootKeys_.insert(make_pair(key, descPair));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AuthorizedPeers::erasePeerRootKey(const SecureBinaryData& key)
+{
+   auto iter = peerRootKeys_.find(key);
+   if (iter == peerRootKeys_.end())
+      return;
+
+   if (wallet_ != nullptr)
+   {
+      //update wallet to reflect erasure
+      auto metaAccount = wallet_->getMetaAccount(MetaAccount_AuthPeers);
+      metaAccount->eraseMetaDataByIndex(iter->second.second);
+
+      //update on disk
+      metaAccount->updateOnDisk();
+   }
+
+   peerRootKeys_.erase(iter);
 }
