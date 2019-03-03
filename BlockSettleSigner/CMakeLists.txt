@@ -61,10 +61,10 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    Qt5::Qml
    Qt5::Quick
    Qt5::Gui
-   Qt5::DBus
    Qt5::Network
    Qt5::PrintSupport
    Qt5::Core
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
+   Qt5::DBus
 )

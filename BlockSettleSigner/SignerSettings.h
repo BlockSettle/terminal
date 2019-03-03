@@ -28,6 +28,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString dirDocuments READ dirDocuments NOTIFY dirDocumentsChanged)
    Q_PROPERTY(QString autoSignWallet READ autoSignWallet WRITE setAutoSignWallet NOTIFY autoSignWalletChanged)
    Q_PROPERTY(bool hideEidInfoBox READ hideEidInfoBox WRITE setHideEidInfoBox NOTIFY hideEidInfoBoxChanged)
+   Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
 
 public:
    SignerSettings(const QStringList &args = {}, const QString &fileName = QLatin1String("signer.ini"));
@@ -52,7 +53,8 @@ public:
       LimitAutoSignXBT,
       LimitAutoSignTime,
       LimitManualPwKeep,
-      HideEidInfoBox
+      HideEidInfoBox,
+      TrustedTerminals
    };
 
    QString zmqPubKeyFile() const { return get(ZMQPubKey).toString(); }
@@ -77,6 +79,7 @@ public:
    QStringList requestFiles() const { return reqFiles_; }
    SignContainer::Limits limits() const;
    bool hideEidInfoBox() const { return get(HideEidInfoBox).toBool(); }
+   QStringList trustedTerminals() const { return get(TrustedTerminals).toStringList(); }
 
    QString dirDocuments() const;
 
@@ -94,6 +97,7 @@ public:
    void setLimitAutoSignTimeStr(const QString &val) { set(LimitAutoSignTime, intervalStrToSeconds(val)); }
    void setLimitManualPwKeepStr(const QString &val) { set(LimitManualPwKeep, intervalStrToSeconds(val)); }
    void setHideEidInfoBox(bool val) { set(HideEidInfoBox, val); }
+   void setTrustedTerminals(const QStringList &val) { set(TrustedTerminals, val); }
 
    void reset(Setting s, bool toFile = true);     // Reset setting to default value
 
@@ -115,6 +119,7 @@ signals:
    void hideEidInfoBoxChanged();
    void zmqPrvKeyFileChanged();
    void zmqPubKeyFileChanged();
+   void trustedTerminalsChanged();
 
 private:
    QVariant get(Setting s) const;
