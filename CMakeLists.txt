@@ -3,6 +3,7 @@ CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
 SET(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_CXX_EXTENSIONS OFF)
+SET(QT_USE_QTDBUS ON)
 
 SET(PROJECT_NAME_STR BS_Terminal)
 PROJECT(${PROJECT_NAME_STR})
@@ -172,7 +173,11 @@ IF( WIN32 )
       SET( ZMQ_LIB_NAME "libzmq-v140-mt-4_3_1" )
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ELSE ()
-   SET( ZMQ_LIB_NAME "libzmq.a" "zmq" )
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET( ZMQ_LIB_NAME "libzmq.so" "zmq" )
+   ELSE()
+      SET( ZMQ_LIB_NAME "libzmq.a" "zmq" )
+   ENDIF()
 ENDIF( WIN32 )
 FIND_LIBRARY(ZMQ_LIB NAMES ${ZMQ_LIB_NAME} REQUIRED NO_CMAKE_ENVIRONMENT_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
 
@@ -214,7 +219,11 @@ SET(BOTAN_INCLUDE_DIR ${BOTAN_PACKAGE_ROOT}/include/botan-2)
 IF (WIN32)
    SET(BOTAN_LIB_NAME botan-2.lib botan.lib)
 ELSE(WIN32)
-   SET(BOTAN_LIB_NAME libbotan-2.a)
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET(BOTAN_LIB_NAME libbotan-2.so)
+   ELSE()
+      SET(BOTAN_LIB_NAME libbotan-2.a)
+   ENDIF()
 ENDIF(WIN32)
 
 FIND_LIBRARY( BOTAN_LIB NAMES ${BOTAN_LIB_NAME} PATHS ${BOTAN_LIB_DIR} NO_DEFAULT_PATH )
@@ -235,7 +244,11 @@ IF (WIN32)
       SET(WS_LIB_NAME websockets_static)
    ENDIF()
 ELSE(WIN32)
-   SET(WS_LIB_NAME libwebsockets.a)
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET(WS_LIB_NAME libwebsockets.so)
+   ELSE(BSTERMINAL_SHARED_LIBS)
+      SET(WS_LIB_NAME libwebsockets.a)
+   ENDIF()
 ENDIF(WIN32)
 
 FIND_LIBRARY(WS_LIB NAMES ${WS_LIB_NAME} PATHS ${WS_LIB_DIR} NO_DEFAULT_PATH )
@@ -301,7 +314,11 @@ SET(MPIR_LIB_DIR ${MPIR_PACKAGE_ROOT}/lib)
 IF (WIN32)
    SET(MPIR_LIB_NAME mpir)
 ELSE(WIN32)
-   SET(MPIR_LIB_NAME libgmp.a)
+   IF(BSTERMINAL_SHARED_LIBS)
+      SET(MPIR_LIB_NAME libgmp.so)
+   ELSE()
+      SET(MPIR_LIB_NAME libgmp.a)
+   ENDIF()
 ENDIF(WIN32)
 FIND_LIBRARY( MPIR_LIB NAMES ${MPIR_LIB_NAME} PATHS ${MPIR_LIB_DIR} NO_DEFAULT_PATH )
 IF( NOT MPIR_LIB)
@@ -593,91 +610,144 @@ ELSE(WIN32)
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
-      SET( QT_LIBS
-         libqtharfbuzz.a
-         libqtpcre2.a )
+      IF(BSTERMINAL_SHARED_LIBS)
+         SET( TMP_LIBS
+            libQt5ServiceSupport.a
+            libQt5ThemeSupport.a
+            libQt5EventDispatcherSupport.a
+            libQt5FontDatabaseSupport.a
+            libQt5LinuxAccessibilitySupport.a
+            libQt5AccessibilitySupport.a
+            libQt5EdidSupport.a )
 
-      SET( TMP_LIBS
-         libQt5XcbQpa.a
-         libQt5ServiceSupport.a
-         libQt5ThemeSupport.a
-         libQt5EventDispatcherSupport.a
-         libQt5FontDatabaseSupport.a
-         libQt5LinuxAccessibilitySupport.a
-         libQt5AccessibilitySupport.a
-         libQt5EdidSupport.a )
+         FOREACH(lib_name ${TMP_LIBS})
+            IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
+               MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
+            ENDIF()
 
-      LIST(APPEND QT_LINUX_LIBS
-         ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
-         ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
-      )
+            LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
+         ENDFOREACH(lib_name)
 
-      IF(NOT EXISTS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
-         MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a")
-      ENDIF()
+         SET( OS_SPECIFIC_LIBS
+            fontconfig
+            freetype
+            X11-xcb
+            X11
+            Xi
+            SM
+            ICE
+            Xrender
+            xcb-xkb
+            xcb-render-util
+            xcb-sync
+            xcb-xfixes
+            xcb-xinerama
+            xcb-randr
+            xcb-render
+            xcb-image
+            xcb-shm
+            xcb-keysyms
+            xcb-icccm
+            xcb-shape
+            xcb
+            xkbcommon-x11
+            xkbcommon
+            dbus-1
+            ${ZLIB_LIBRARIES}
+            png
+            m
+            double-conversion
+            dl
+            cups
+            ${CMAKE_THREAD_LIBS_INIT} )
 
-      FOREACH(lib_name ${TMP_LIBS})
-         IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
-            MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
+      ELSE(BSTERMINAL_SHARED_LIBS)
+         SET( QT_LIBS
+            libqtharfbuzz.a
+            libqtpcre2.a )
+
+         SET( TMP_LIBS
+            libQt5XcbQpa.a
+            libQt5ServiceSupport.a
+            libQt5ThemeSupport.a
+            libQt5EventDispatcherSupport.a
+            libQt5FontDatabaseSupport.a
+            libQt5LinuxAccessibilitySupport.a
+            libQt5AccessibilitySupport.a
+            libQt5EdidSupport.a )
+
+         LIST(APPEND QT_LINUX_LIBS
+            ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
+            ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
+         )
+
+         IF(NOT EXISTS ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a)
+            MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/../plugins/platforms/libqxcb.a")
          ENDIF()
 
-         LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
-      ENDFOREACH(lib_name)
+         FOREACH(lib_name ${TMP_LIBS})
+            IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
+               MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
+            ENDIF()
 
-      SET( OS_SPECIFIC_LIBS
-         Qt5::QXcbIntegrationPlugin
-         Qt5::QICOPlugin
-         Qt5::QCupsPrinterSupportPlugin
-         fontconfig
-         freetype
-         X11-xcb
-         X11
-         Xi
-         SM
-         ICE
-         Xrender
-         xcb-xkb
-         xcb-render-util
-         xcb-sync
-         xcb-xfixes
-         xcb-xinerama
-         xcb-randr
-         xcb-render
-         xcb-image
-         xcb-shm
-         xcb-keysyms
-         xcb-icccm
-         xcb-shape
-         xcb
-         xkbcommon-x11
-         xkbcommon
-         dbus-1
-         ${ZLIB_LIBRARIES}
-         png
-         m
-         double-conversion
-         dl
-         cups
-         ${CMAKE_THREAD_LIBS_INIT} )
+            LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
+         ENDFOREACH(lib_name)
 
-      add_definitions(-DUSE_QXcbIntegrationPlugin)
+         SET( OS_SPECIFIC_LIBS
+            Qt5::QXcbIntegrationPlugin
+            Qt5::QICOPlugin
+            Qt5::QCupsPrinterSupportPlugin
+            fontconfig
+            freetype
+            X11-xcb
+            X11
+            Xi
+            SM
+            ICE
+            Xrender
+            xcb-xkb
+            xcb-render-util
+            xcb-sync
+            xcb-xfixes
+            xcb-xinerama
+            xcb-randr
+            xcb-render
+            xcb-image
+            xcb-shm
+            xcb-keysyms
+            xcb-icccm
+            xcb-shape
+            xcb
+            xkbcommon-x11
+            xkbcommon
+            dbus-1
+            ${ZLIB_LIBRARIES}
+            png
+            m
+            double-conversion
+            dl
+            cups
+            ${CMAKE_THREAD_LIBS_INIT} )
 
-      SET(QT_QUICK_LIBS
-         ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
-         ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
-         ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
-         ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
-         ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
-         ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
-         ${QT5_QML_ROOT}/QtQuick/PrivateWidgets/libwidgetsplugin.a
-         ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
-         ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
-         ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
-         ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
-         ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
-         ${QT5_LIB_ROOT}/libQt5QuickControls2.a
-         ${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
-      )
+         add_definitions(-DUSE_QXcbIntegrationPlugin)
+
+         SET(QT_QUICK_LIBS
+            ${QT5_QML_ROOT}/QtQml/Models.2/libmodelsplugin.a
+            ${QT5_QML_ROOT}/QtQuick.2/libqtquick2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Controls/libqtquickcontrolsplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Controls.2/libqtquickcontrols2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/libdialogplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/libdialogsprivateplugin.a
+            ${QT5_QML_ROOT}/QtQuick/PrivateWidgets/libwidgetsplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Layouts/libqquicklayoutsplugin.a
+            ${QT5_QML_ROOT}/QtQuick/Templates.2/libqtquicktemplates2plugin.a
+            ${QT5_QML_ROOT}/QtQuick/Window.2/libwindowplugin.a
+            ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/libqmlfolderlistmodelplugin.a
+            ${QT5_QML_ROOT}/Qt/labs/settings/libqmlsettingsplugin.a
+            ${QT5_LIB_ROOT}/libQt5QuickControls2.a
+            ${QT5_LIB_ROOT}/libQt5QuickTemplates2.a
+         )
+      ENDIF(BSTERMINAL_SHARED_LIBS)
    ENDIF( APPLE )
 ENDIF(WIN32)
 
@@ -688,6 +758,8 @@ FOREACH(lib_name ${QT_LIBS})
 
    LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
+
+LIST(REMOVE_DUPLICATES OS_SPECIFIC_LIBS)
 
 IF(BSTERMINAL_SHARED_LIBS)
    unset(OPENSSL_USE_STATIC_LIBS)
