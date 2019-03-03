@@ -3,7 +3,7 @@
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
 #include "RequestReplyCommand.h"
-#include "OhlcHistory.pb.h"
+#include "market_data_history.pb.h"
 
 // Private Market
 const std::string ANT_XBT = "ANT/XBT";

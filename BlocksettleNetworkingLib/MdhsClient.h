@@ -7,9 +7,9 @@ class ApplicationSettings;
 class ConnectionManager;
 namespace spdlog { class logger; }
 class RequestReplyCommand;
-namespace Blocksettle { namespace BS_MD { namespace TradeHistoryServer { class OhlcRequest; } } }
+namespace Blocksettle { namespace Communication { namespace MarketDataHistory { class OhlcRequest; } } }
 
-using namespace Blocksettle::BS_MD::TradeHistoryServer;
+using namespace Blocksettle::Communication::MarketDataHistory;
 
 class MdhsClient : public QObject
 {
