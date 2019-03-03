@@ -31,12 +31,15 @@ public:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
+   void setHighLightSelectedServer(bool highLightSelectedServer);
+
 public slots:
    void update();
 
 private:
    std::shared_ptr<ArmoryServersProvider> serversProvider_;
    QList<ArmoryServer> servers_;
+   bool highLightSelectedServer_ = true;
 
    enum ArmoryServersViewViewColumns : int
    {

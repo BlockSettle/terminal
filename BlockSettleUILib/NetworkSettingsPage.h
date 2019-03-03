@@ -19,13 +19,13 @@ public:
    NetworkSettingsPage(QWidget* parent = nullptr);
    ~NetworkSettingsPage() override;
 
-   void initSettings() override;
+   void applyArmoryServers();
 
+public slots:
+   void initSettings() override;
    void display() override;
    void reset() override;
    void apply() override;
-
-   void applyArmoryServers();
 
 signals:
    void reconnectArmory();
