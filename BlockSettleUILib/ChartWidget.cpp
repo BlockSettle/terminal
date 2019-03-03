@@ -4,7 +4,7 @@
 #include "Colors.h"
 #include "MarketDataProvider.h"
 #include "MdhsClient.h"
-#include "OhlcHistory.pb.h"
+#include "market_data_history.pb.h"
 
 const qreal BASE_FACTOR = 1.0;
 
@@ -102,14 +102,50 @@ void ChartWidget::UpdateChart(const int& interval) const
 	candlesticksChart_->setWidth(width);
 	volumeChart_->setWidth(width);
 
-	OhlcRequest request;
-	request.set_product(product.toStdString());
-	request.set_interval(static_cast<Interval>(interval));
-	request.set_limit(100);
+	OhlcRequest ohlcRequest;
+	ohlcRequest.set_product(product.toStdString());
+	ohlcRequest.set_interval(static_cast<Interval>(interval));
+	ohlcRequest.set_limit(100);
+
+	MarketDataHistoryRequest request;
+	request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
+	request.set_request(ohlcRequest.SerializeAsString());
 	mdhsClient_->SendRequest(request);
 }
 
 void ChartWidget::OnDataReceived(const std::string& data)
+{
+	if (data.empty())
+	{
+		logger_->error("Empty data received from mdhs.");
+		return;
+	}
+
+	MarketDataHistoryResponse response;
+	if (!response.ParseFromString(data))
+	{
+		logger_->error("can't parse response from mdhs: {}", data);
+		return;
+	}
+
+	switch (response.response_type()) {
+	case MarketDataHistoryMessageType::ProductsListType:
+		ProcessProductsListResponse(response.response());
+		break;
+	case MarketDataHistoryMessageType::OhlcHistoryType:
+		ProcessOhlcHistoryResponse(response.response());
+		break;
+	default:
+		logger_->error("[ApiServerConnectionListener::OnDataReceived] undefined message type");
+		break;
+	}
+}
+
+void ChartWidget::ProcessProductsListResponse(const std::string& data)
+{
+}
+
+void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 {
 	if (data.empty())
 	{

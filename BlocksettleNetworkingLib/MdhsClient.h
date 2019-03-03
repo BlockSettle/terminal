@@ -7,7 +7,7 @@ class ApplicationSettings;
 class ConnectionManager;
 namespace spdlog { class logger; }
 class RequestReplyCommand;
-namespace Blocksettle { namespace Communication { namespace MarketDataHistory { class OhlcRequest; } } }
+namespace Blocksettle { namespace Communication { namespace MarketDataHistory { class MarketDataHistoryRequest; } } }
 
 using namespace Blocksettle::Communication::MarketDataHistory;
 
@@ -35,7 +35,7 @@ public:
    MdhsClient(MdhsClient&&) = delete;
    MdhsClient& operator = (MdhsClient&&) = delete;
 
-   void SendRequest(const OhlcRequest& request);
+   void SendRequest(const MarketDataHistoryRequest& request);
    const ProductType GetProductType(const QString &product) const;
 
 signals:

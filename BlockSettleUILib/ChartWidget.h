@@ -45,6 +45,8 @@ protected:
 	void InitializeCustomPlot();
 	qreal IntervalWidth(int interval = -1, int count = 1) const;
 	int FractionSizeForProduct(const QString &product) const;
+	void ProcessProductsListResponse(const std::string& data);
+	void ProcessOhlcHistoryResponse(const std::string& data);
 
 private:
 	std::shared_ptr<ApplicationSettings>			appSettings_;

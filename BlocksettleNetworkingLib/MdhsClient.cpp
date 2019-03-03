@@ -57,7 +57,7 @@ MdhsClient::MdhsClient(
 {
 }
 
-void MdhsClient::SendRequest(const OhlcRequest& request)
+void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
 {
 	const auto apiConnection = connectionManager_->CreateGenoaClientConnection();
 	command_ = std::make_shared<RequestReplyCommand>("MdhsClient", apiConnection, logger_);
