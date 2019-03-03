@@ -43,21 +43,6 @@ void AuthSignWalletObject::connectToServer()
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](const QString &text){
       emit failed(text);
    });
-
-   std::string serverPubKey = settings.get<std::string>(ApplicationSettings::authServerPubKey);
-   std::string serverHost = settings.get<std::string>(ApplicationSettings::authServerHost);
-   std::string serverPort = settings.get<std::string>(ApplicationSettings::authServerPort);
-
-   try {
-      autheIDClient_->connect(serverPubKey, serverHost, serverPort);
-   }
-   catch (const std::exception &e) {
-      logger_->error("AuthEidClient failed to connect: {}", e.what());
-      QMetaObject::invokeMethod(this, [this, e](){
-         emit failed(QString::fromStdString(e.what()));
-      },
-      Qt::QueuedConnection);
-   }
 }
 
 void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
