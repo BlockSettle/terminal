@@ -39,12 +39,17 @@ class WebsocketsSettings(Configurator):
                    '-DLWS_WITHOUT_TEST_PING=ON',
                    '-DLWS_WITHOUT_TEST_CLIENT=ON']
 
-        if self._project_settings.get_link_mode() == 'shared':
-            command.append('-DLWS_WITH_STATIC=OFF')
-            command.append('-DLWS_WITH_SHARED=ON')
-        else:
-            command.append('-DLWS_WITH_SHARED=OFF')
+        if self._project_settings.on_linux():
             command.append('-DLWS_WITH_STATIC=ON')
+            command.append('-DLWS_WITH_SHARED=ON')
+            
+        if self._project_settings.on_windows():
+            if self._project_settings.get_link_mode() == 'shared':
+                command.append('-DLWS_WITH_STATIC=OFF')
+                command.append('-DLWS_WITH_SHARED=ON')
+            else:
+                command.append('-DLWS_WITH_SHARED=OFF')
+                command.append('-DLWS_WITH_STATIC=ON')
 
         command.append('-G')
         command.append(self._project_settings.get_cmake_generator())
@@ -122,8 +127,7 @@ class WebsocketsSettings(Configurator):
 
         if self._project_settings.get_link_mode() == 'shared':
             self.filter_copy(lib_dir, install_lib_dir, '.so')
-        else:
-            self.filter_copy(lib_dir, install_lib_dir, '.a')
+        self.filter_copy(lib_dir, install_lib_dir, '.a')
             
         self.filter_copy(include_dir, install_include_dir)
 
