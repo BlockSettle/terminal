@@ -51,16 +51,6 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings
    connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &LoginWindow::onAutheIDDone);
    connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &LoginWindow::onAutheIDFailed);
 
-   const BinaryData serverPubKey = settings->get<std::string>(ApplicationSettings::authServerPubKey);
-   const auto serverHost = settings->get<std::string>(ApplicationSettings::authServerHost);
-   const auto serverPort = settings->get<std::string>(ApplicationSettings::authServerPort);
-   try {
-      autheIDConnection_->connect(serverPubKey, serverHost, serverPort);
-   }
-   catch (const std::exception &e) {
-      logger_->error("[LoginWindow] Failed to establish Auth eID connection: {}", e.what());
-   }
-
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 
    timer_.setInterval(500);
@@ -118,14 +108,9 @@ void LoginWindow::accept()
 void LoginWindow::onAuthPressed()
 {
    if (state_ == Login) {
-      if (autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString(), settings_)) {
-         setupLoginPage();
-         timer_.start();
-      }
-      else {
-         onAutheIDFailed(tr("Auth eID username was rejected"));
-         autheIDConnection_->cancel();
-      }
+      autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString());
+      setupLoginPage();
+      timer_.start();
       setupCancelPage();
    }
    else {

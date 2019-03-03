@@ -3,7 +3,7 @@
 
 #include <QTimer>
 #include <QWidget>
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 #include "EncryptionUtils.h"
 #include "AutheIDClient.h"
 #include "QWalletInfo.h"

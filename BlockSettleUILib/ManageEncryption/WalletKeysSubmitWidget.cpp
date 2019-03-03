@@ -4,7 +4,6 @@
 #include <QFrame>
 #include <QtConcurrent/QtConcurrentRun>
 #include "ApplicationSettings.h"
-#include "MobileUtils.h"
 
 using namespace bs::wallet;
 using namespace bs::hd;
@@ -66,14 +65,15 @@ void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
    }
    else {
       ui_->labelPubKeyFP->show();
-      QtConcurrent::run([this] {
-         const auto &authKeys = appSettings_->GetAuthKeys();
-         const auto &pubKeyFP = autheid::getPublicKeyFingerprint(authKeys.second);
-         const auto &sPubKeyFP = QString::fromStdString(autheid::toHexWithSeparators(pubKeyFP));
-         QMetaObject::invokeMethod(this, [this, sPubKeyFP] {
-            ui_->labelPubKeyFP->setText(sPubKeyFP);
-         });
-      });
+      // TODO: Public key fingerprints need replacement
+//      QtConcurrent::run([this] {
+//         const auto &authKeys = appSettings_->GetAuthKeys();
+//         const auto &pubKeyFP = autheid::getPublicKeyFingerprint(authKeys.second);
+//         const auto &sPubKeyFP = QString::fromStdString(autheid::toHexWithSeparators(pubKeyFP));
+//         QMetaObject::invokeMethod(this, [this, sPubKeyFP] {
+//            ui_->labelPubKeyFP->setText(sPubKeyFP);
+//         });
+//      });
    }
 
 

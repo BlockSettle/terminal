@@ -3,7 +3,6 @@
 #include <set>
 #include <QSpinBox>
 #include "ApplicationSettings.h"
-#include "MobileUtils.h"
 
 
 WalletKeysCreateWidget::WalletKeysCreateWidget(QWidget* parent)
@@ -69,8 +68,9 @@ void WalletKeysCreateWidget::addKey()
       ui_->labelPubKeyFP->hide();
    }
    else {
-      const auto &pubKeyFP = autheid::toHexWithSeparators(autheid::getPublicKeyFingerprint(authKeys.second));
-      ui_->labelPubKeyFP->setText(QString::fromStdString(pubKeyFP));
+      // TODO: Public key fingerprints need replacement
+      //const auto &pubKeyFP = autheid::toHexWithSeparators(autheid::getPublicKeyFingerprint(authKeys.second));
+      //ui_->labelPubKeyFP->setText(QString::fromStdString(pubKeyFP));
    }
 
    connect(widget, &WalletKeyWidget::passwordDataChanged, this, &WalletKeysCreateWidget::onPasswordDataChanged);

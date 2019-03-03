@@ -193,14 +193,6 @@ void WalletKeyWidget::onAuthSignClicked()
 
       connect(autheIDClient_, &AutheIDClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
       connect(autheIDClient_, &AutheIDClient::failed, this, &WalletKeyWidget::onAuthFailed);
-
-      try {
-         autheIDClient_->connect(serverPubKey, serverHost, serverPort);
-      }
-      catch (const std::exception &e) {
-         // TODO display error
-         // ui_->pushButtonAuth->setEnabled(false);
-      }
    }
    timeLeft_ = 120;
    ui_->progressBar->setMaximum(timeLeft_ * 2);

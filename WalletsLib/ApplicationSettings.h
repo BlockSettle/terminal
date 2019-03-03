@@ -9,7 +9,7 @@
 #include <bdmenums.h>
 
 #include "ArmorySettings.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 #include "LogManager.h"
 
 

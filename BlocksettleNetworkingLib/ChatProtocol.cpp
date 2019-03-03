@@ -5,7 +5,7 @@
 #include <QStringLiteral>
 #include <QDebug>
 #include "EncryptionUtils.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 
 
 using namespace Chat;
@@ -98,6 +98,20 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseChangeMessageStatus,  "ResponseChangeMessageStatus"}
 };
 
+autheid::PublicKey Chat::publicKeyFromString(const std::string &s)
+{
+   QByteArray copy(s.data());
+   QByteArray value = QByteArray::fromBase64(copy);
+   autheid::PublicKey key(value.begin(), value.end());
+   return key;
+}
+
+std::string Chat::publicKeyToString(const autheid::PublicKey &k)
+{
+   QByteArray copy(reinterpret_cast<const char*>(k.data()), int(k.size()));
+   QByteArray value = copy.toBase64();
+   return value.toStdString();
+}
 
 template <typename T>
 std::string serializeData(const T* thisPtr)
@@ -159,7 +173,7 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return std::make_shared<SendOwnPublicKeyRequest>(clientId
             , data[ReceiverIdKey].toString().toStdString()
             , data[SenderIdKey].toString().toStdString()
-            , autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+            , publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
          
       case RequestType::RequestChangeMessageStatus:
          return MessageChangeStatusRequest::fromJSON(clientId, jsonData);
@@ -446,9 +460,8 @@ bool MessageData::encrypt(const autheid::PublicKey& pubKey)
       return false;
    }
    const QByteArray message_bytes = messageData_.toLocal8Bit();
-   const auto encryptedData = autheid::base64Encode(autheid::encryptData(
-      message_bytes.data(), message_bytes.size(), pubKey));
-   messageData_ = QString::fromStdString(encryptedData);
+   auto data = autheid::encryptData(message_bytes.data(), size_t(message_bytes.size()), pubKey);
+   messageData_ = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(data.data()), int(data.size())).toBase64());
    state_ |= (int)State::Encrypted;
    return true;
 }
@@ -556,7 +569,7 @@ QJsonObject SendOwnPublicKeyRequest::toJson() const
    data[SenderIdKey] = QString::fromStdString(sendingNodeId_);
    data[ReceiverIdKey] = QString::fromStdString(receivingNodeId_);
    data[PublicKeyKey] = QString::fromStdString(
-      autheid::publicKeyToString(sendingNodePublicKey_));
+      publicKeyToString(sendingNodePublicKey_));
    return data;
 }
 
@@ -570,7 +583,7 @@ std::shared_ptr<Request> SendOwnPublicKeyRequest::fromJSON(
       clientId,
       data[SenderIdKey].toString().toStdString(),
       data[ReceiverIdKey].toString().toStdString(), 
-      autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+      publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
 }
 
 void SendOwnPublicKeyRequest::handle(RequestHandler& handler)
@@ -728,7 +741,7 @@ QJsonObject SendOwnPublicKeyResponse::toJson() const
    data[SenderIdKey] = QString::fromStdString(sendingNodeId_);
    data[ReceiverIdKey] = QString::fromStdString(receivingNodeId_);
    data[PublicKeyKey] = QString::fromStdString(
-      autheid::publicKeyToString(sendingNodePublicKey_));
+      publicKeyToString(sendingNodePublicKey_));
    return data;
 }
 
@@ -740,7 +753,7 @@ std::shared_ptr<Response> SendOwnPublicKeyResponse::fromJSON(
    return std::make_shared<SendOwnPublicKeyResponse>(
       data[SenderIdKey].toString().toStdString(),
       data[ReceiverIdKey].toString().toStdString(), 
-      autheid::publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+      publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
 }
 
 void SendOwnPublicKeyResponse::handle(ResponseHandler& handler)
