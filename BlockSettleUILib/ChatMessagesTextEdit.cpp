@@ -8,6 +8,16 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    : QTextEdit(parent)
 {
    tableFormat.setBorder(0);
+   tableFormat.setCellPadding(0);
+   tableFormat.setCellSpacing(0);
+
+   QVector <QTextLength> col_widths;
+   col_widths << QTextLength (QTextLength::FixedLength, 140);
+   col_widths << QTextLength (QTextLength::FixedLength, 70);
+   col_widths << QTextLength (QTextLength::FixedLength, 16);
+   col_widths << QTextLength (QTextLength::FixedLength, 55);
+   col_widths << QTextLength (QTextLength::VariableLength, 50);
+   tableFormat.setColumnWidthConstraints (col_widths);
 }
 
 QString ChatMessagesTextEdit::data(const int &row, const Column &column)
@@ -112,28 +122,24 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
    messages_[currentChatId_].push_back(msg);
    
    /* add text */
-   if (table == NULL) {
-      QTextCursor cursor(textCursor());
-      cursor.movePosition(QTextCursor::End);
-      table = cursor.insertTable(1, 5, tableFormat);
-   } else {
-      table->appendRows(1);
-   }
+   QTextCursor cursor(textCursor());
+   cursor.movePosition(QTextCursor::End);
+   table = cursor.insertTable(1, 5, tableFormat);
 
-   QString time = QStringLiteral(" ") + data(rowIdx, Column::Time) + QStringLiteral(" ");
-   table->cellAt(rowIdx, 0).firstCursorPosition().insertText(time);
+   QString time = data(rowIdx, Column::Time);
+   table->cellAt(0, 0).firstCursorPosition().insertText(time);
 
-   QString user = QStringLiteral(" ") + data(rowIdx, Column::User) + QStringLiteral(" ");
-   table->cellAt(rowIdx, 1).firstCursorPosition().insertText(user);
+   QString user = data(rowIdx, Column::User);
+   table->cellAt(0, 1).firstCursorPosition().insertText(user);
 
    QImage image = statusImage(rowIdx);
-   table->cellAt(rowIdx, 2).firstCursorPosition().insertImage(image);
+   table->cellAt(0, 2).firstCursorPosition().insertImage(image);
 
-   QString status = QStringLiteral(" ") + data(rowIdx, Column::Status) + QStringLiteral(" ");
-   table->cellAt(rowIdx, 3).firstCursorPosition().insertText(status);
+   QString status = data(rowIdx, Column::Status);
+   table->cellAt(0, 3).firstCursorPosition().insertText(status);
 
-   QString message = QStringLiteral(" ") + data(rowIdx, Column::Message) + QStringLiteral(" ");
-   table->cellAt(rowIdx, 4).firstCursorPosition().insertText(message);
+   QString message = data(rowIdx, Column::Message);
+   table->cellAt(0, 4).firstCursorPosition().insertText(message);
 }
 
 void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &msg)
@@ -194,23 +200,28 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
       if (it != messages_[chatId].end()) {
          int distance = static_cast<int>(std::distance(messages_[chatId].begin(), it));
          
-         table->removeRows(distance, 1);
-         table->insertRows(distance, 1);
+         QTextCursor cursor(textCursor());
+         cursor.movePosition(QTextCursor::Start);
+         cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2);
+         cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 2);
+         cursor.removeSelectedText();
          
-         QString time = QStringLiteral(" ") + data(distance, Column::Time) + QStringLiteral(" ");
-         table->cellAt(distance, 0).firstCursorPosition().insertText(time);
+         table = cursor.insertTable(1, 5, tableFormat);
+         
+         QString time = data(distance, Column::Time);
+         table->cellAt(0, 0).firstCursorPosition().insertText(time);
 
-         QString user = QStringLiteral(" ") + data(distance, Column::User) + QStringLiteral(" ");
-         table->cellAt(distance, 1).firstCursorPosition().insertText(user);
+         QString user = data(distance, Column::User);
+         table->cellAt(0, 1).firstCursorPosition().insertText(user);
 
          QImage image = statusImage(distance);
-         table->cellAt(distance, 2).firstCursorPosition().insertImage(image);
+         table->cellAt(0, 2).firstCursorPosition().insertImage(image);
 
-         QString status = QStringLiteral(" ") + data(distance, Column::Status) + QStringLiteral(" ");
-         table->cellAt(distance, 3).firstCursorPosition().insertText(status);
+         QString status = data(distance, Column::Status);
+         table->cellAt(0, 3).firstCursorPosition().insertText(status);
 
-         QString message = QStringLiteral(" ") + data(distance, Column::Message) + QStringLiteral(" ");
-         table->cellAt(distance, 4).firstCursorPosition().insertText(message);
+         QString message = data(distance, Column::Message);
+         table->cellAt(0, 4).firstCursorPosition().insertText(message);
 
          emit rowsInserted();
       }
