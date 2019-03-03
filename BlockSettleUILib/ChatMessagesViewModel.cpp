@@ -61,6 +61,9 @@ QVariant ChatMessagesViewModel::data(const QModelIndex &index, int role) const
          return QColor(Qt::gray);
       default: break;
       }
+   } 
+   else if (role == Qt::TextAlignmentRole) {
+      return Qt::AlignLeft;
    }
    else if (role == Qt::DisplayRole) {
       if (messages_[currentChatId_].empty()) {

@@ -54,6 +54,7 @@
 #include "WalletsManager.h"
 #include "ZMQHelperFunctions.h"
 #include "ZmqSecuredDataConnection.h"
+#include "ArmoryServersProvider.h"
 
 #include <spdlog/spdlog.h>
 
@@ -63,6 +64,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    , ui(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
    , walletsManager_(nullptr)
+   , splashScreen_(splashScreen)
 {
    UiUtils::SetupLocale();
 
@@ -75,6 +77,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
    }
+
+   armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
 
    auto geom = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
    if (!geom.isEmpty()) {
@@ -724,7 +728,20 @@ void BSTerminalMainWindow::initArmory()
 
 void BSTerminalMainWindow::connectArmory()
 {
-   armory_->setupConnection(applicationSettings_->GetArmorySettings());
+   armory_->setupConnection(armoryServersProvider_->getArmorySettings(), [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
+      std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
+      std::future<bool> futureObj = promiseObj->get_future();
+      QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
+                                , Q_ARG(BinaryData, srvPubKey)
+                                , Q_ARG(std::string, srvIPPort)
+                                , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
+      bool result = futureObj.get();
+
+      // stop armory connection loop if server key was rejected
+      armory_->needsBreakConnectionLoop_.store(!result);
+      armory_->setState(ArmoryConnection::State::Canceled);
+      return result;
+   });
 }
 
 void BSTerminalMainWindow::connectSigner()
@@ -917,7 +934,9 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 
 void BSTerminalMainWindow::openConfigDialog()
 {
-   ConfigDialog(applicationSettings_, this).exec();
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, this);
+   connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
+   configDialog.exec();
 
    UpdateMainWindowAppearence();
 }
@@ -1185,7 +1204,6 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
 {
-   qDebug() << "showMessage" << sysTrayIcon_->isVisible();
    sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QSystemTrayIcon::Information);
 }
 
@@ -1386,4 +1404,97 @@ void BSTerminalMainWindow::onButtonUserClicked() {
          , tr("Do you want to continue?")).exec() == QDialog::Accepted)
       onLogout();
    }
+}
+
+void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, const std::string &srvIPPort, std::shared_ptr<std::promise<bool>> promiseObj)
+{
+   QList<ArmoryServer> servers = armoryServersProvider_->servers();
+   int serverIndex = armoryServersProvider_->indexOfIpPort(srvIPPort);
+   if (serverIndex >= 0) {
+      ArmoryServer server = servers.at(serverIndex);
+
+      if (server.armoryDBKey.isEmpty()) {
+         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+                          , tr("ArmoryDB Key Import")
+                          , tr("Do you wish to import the following ArmoryDB Key?")
+                          , tr("Address: %1\n"
+                               "Port: %2\n"
+                               "Key: %3")
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                          , this);
+         box->setMinimumSize(600, 150);
+         box->setMaximumSize(600, 150);
+
+         bool answer = (box->exec() == QDialog::Accepted);
+         box->deleteLater();
+
+         if (answer) {
+            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         }
+
+         promiseObj->set_value(true);
+      }
+      else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
+         BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
+                          , tr("ArmoryDB Key")
+                          , tr("ArmoryDB Key was changed.\n"
+                               "Do you wish to proceed connection and save new key?")
+                          , tr("Address: %1\n"
+                               "Port: %2\n"
+                               "Old Key: %3\n"
+                               "New Key: %4")
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                          , this);
+         box->setMinimumSize(600, 150);
+         box->setMaximumSize(600, 150);
+         box->setCancelVisible(true);
+
+         bool answer = (box->exec() == QDialog::Accepted);
+         box->deleteLater();
+
+         if (answer) {
+            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         }
+
+         promiseObj->set_value(answer);
+      }
+      else {
+         promiseObj->set_value(true);
+      }
+   }
+   else {
+      // server not in the list - added directly to ini config
+      promiseObj->set_value(true);
+   }
+}
+
+void BSTerminalMainWindow::onArmoryNeedsReconnect()
+{
+   disconnect(statusBarView_.get(), 0, 0, 0);
+   statusBarView_->deleteLater();
+   QApplication::processEvents();
+
+   initArmory();
+   LoadWallets(splashScreen_);
+
+   QApplication::processEvents();
+
+   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsManager_, assetManager_, celerConnection_
+      , signContainer_, ui->statusbar);
+
+   InitWalletsView();
+
+
+   widgetsInited_ = false;
+   InitSigningContainer();
+   InitAuthManager();
+
+   connectSigner();
+   connectArmory();
+
 }
