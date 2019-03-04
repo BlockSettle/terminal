@@ -108,11 +108,25 @@ public:
    }
 
    void onUserClicked(const QString& userId)  override {
+
+      // save draft
+      if (!chat_->currentChat_.isEmpty()) {
+         QString messageText = chat_->ui_->input_textEdit->toPlainText();
+         chat_->draftMessages_[chat_->currentChat_] = messageText;
+      }
+
       chat_->currentChat_ = userId;
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
       chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
       chat_->client_->retrieveUserMessages(chat_->currentChat_);
+
+      // load draft
+      if (chat_->draftMessages_.contains(userId)) {
+         chat_->ui_->input_textEdit->setText(chat_->draftMessages_[userId]);
+      } else {
+         chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
+      }
    }
 
    void onMessagesUpdated()  override {

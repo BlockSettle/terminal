@@ -74,6 +74,7 @@ private:
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
    ChatUserListLogicPtr _chatUserListLogicPtr;
+   QMap<QString, QString> draftMessages_;
 
 private:
    void changeState(ChatWidget::State state);
