@@ -289,14 +289,15 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
 
 void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds, const AutheIDClient::ResultCallback &callback)
 {
+   // Use this as context because AutheIDClient might be already destroyed when reply is finished!
    connect(reply, &QNetworkReply::finished, this, [reply, callback] {
       QByteArray payload = reply->readAll();
-      reply->deleteLater();
 
       Result result;
 
       if (reply->error()) {
          rp::Error error;
+         // Auth eID will send rp::Error
          if (!payload.isEmpty() && error.ParseFromArray(payload.data(), payload.size())) {
             result.errorMsg = fmt::format("Auth eID failed: {}", error.message());
          } else {
@@ -315,15 +316,9 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
       }
    });
 
-   QTimer::singleShot(timeoutSeconds * 1000, this, [reply, callback] {
+   QTimer::singleShot(timeoutSeconds * 1000, reply, [reply] {
+      // This would call finished slot and that would call callback if that is still needed
       reply->abort();
-      reply->deleteLater();
-
-      Result result;
-      result.errorMsg = "Network connection timed out";
-      if (callback) {
-         callback(result);
-      }
    });
 
    connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
