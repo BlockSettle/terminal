@@ -477,6 +477,8 @@ bool BSTerminalMainWindow::InitSigningContainer()
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
 
+   walletsMgr_->setSignContainer(signContainer_);
+
    return true;
 }
 
