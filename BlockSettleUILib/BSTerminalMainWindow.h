@@ -86,6 +86,8 @@ private:
    bool isMDLicenseAccepted() const;
    void saveUserAcceptedMDLicense();
 
+   void LoadCCDefinitionsFromPuB();
+
 signals:
    void readyToLogin();
    void armoryServerPromptResultReady();
@@ -113,14 +115,13 @@ private slots:
    void showArmoryServerPrompt(const BinaryData& srvPubKey, const std::string& srvIPPort, std::shared_ptr<std::promise<bool> > promiseObj);
 
    void onArmoryNeedsReconnect();
+
 private:
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
    QAction *action_send_;
    QAction *action_receive_;
    QAction *action_login_;
    QAction *action_logout_;
-
-private:
-   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
 
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;

@@ -14,10 +14,9 @@
 
 using namespace bs::sync;
 
-WalletsManager::WalletsManager(const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger>& logger
+WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ApplicationSettings>& appSettings, const std::shared_ptr<ArmoryConnection> &armory)
    : QObject(nullptr)
-   , signContainer_(container)
    , logger_(logger)
    , appSettings_(appSettings)
    , armory_(armory)
@@ -113,6 +112,10 @@ void WalletsManager::syncWallets(const CbProgress &cb)
       }
       logger_->debug("[WalletsManager::syncWallets] initial wallets synchronized");
    };
+   if (!signContainer_) {
+      logger_->error("[{}] signer is not set - aborting", __func__);
+      return;
+   }
    signContainer_->syncWalletInfo(cbWalletInfo);
 }
 
@@ -849,6 +852,10 @@ void WalletsManager::createWallet(const std::string& name, const std::string& de
    , bs::core::wallet::Seed seed, bool primary
    , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
+   if (!signContainer_) {
+      logger_->error("[{}] signer is not set - aborting", __func__);
+      return;
+   }
    createHdReqId_ = signContainer_->createHDWallet(name, description, primary
       , seed, pwdData, keyRank);
 }

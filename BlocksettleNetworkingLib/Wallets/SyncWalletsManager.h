@@ -41,7 +41,7 @@ namespace bs {
          using WalletPtr = std::shared_ptr<Wallet>;     // Generic wallet interface
          using HDWalletPtr = std::shared_ptr<hd::Wallet>;
 
-         WalletsManager(const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
+         WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
             , const std::shared_ptr<ArmoryConnection> &);
          ~WalletsManager() noexcept;
 
@@ -50,6 +50,9 @@ namespace bs {
          WalletsManager(WalletsManager&&) = delete;
          WalletsManager& operator = (WalletsManager&&) = delete;
 
+         void setSignContainer(const std::shared_ptr<SignContainer> &container) {
+            signContainer_ = container;
+         }
          void reset();
 
          void syncWallets(const CbProgress &cb = nullptr);
@@ -135,7 +138,6 @@ namespace bs {
          void onNewBlock();
          void onRefresh(std::vector<BinaryData> ids, bool online);
          void onStateChanged(ArmoryConnection::State);
-//         void onFeeObjDestroyed();
          void onWalletImported(const std::string &walletId);
          void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
 

@@ -35,6 +35,7 @@ public:
 
    using CCSecurities = std::vector<bs::network::CCSecurityDef>;
    CCSecurities ccSecurities() const { return ccSecurities_; }
+   bool synchronized() const { return syncFinished_; }
 
    void LoadSavedCCDefinitions();
    void ConnectToCelerClient(const std::shared_ptr<CelerClient> &);
@@ -83,6 +84,9 @@ private:
    // when user changes PuB connection settings - save to file should be disabled.
    // dev build feature only. final release should have single PuB.
    bool saveToFileDisabled_ = false;
+
+   bool syncStarted_ = false;
+   bool syncFinished_ = false;
 
 private:
    bool LoadFromFile(const std::string &path);

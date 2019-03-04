@@ -100,6 +100,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    initArmory();
 
+   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
 
    InitSigningContainer();
@@ -140,19 +141,25 @@ void BSTerminalMainWindow::onMDConnectionDetailsRequired()
    GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
 }
 
-void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
+void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
 {
-   if (networkSettings_.isSet) {
-      cb();
+   if (!ccFileManager_ || ccFileManager_->synchronized()) {
       return;
    }
-
    const auto &priWallet = walletsMgr_->getPrimaryWallet();
    if (priWallet) {
       const auto &ccGroup = priWallet->getGroup(bs::hd::BlockSettle_CC);
       if (ccGroup && (ccGroup->getNumLeaves() > 0)) {
          ccFileManager_->LoadCCDefinitionsFromPub();
       }
+   }
+}
+
+void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
+{
+   if (networkSettings_.isSet) {
+      cb();
+      return;
    }
 
    Blocksettle::Communication::RequestPacket reqPkt;
@@ -364,8 +371,6 @@ void BSTerminalMainWindow::LoadWallets()
    logMgr_->logger()->debug("Loading wallets");
 
    bs::UtxoReservation::init();
-
-   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(signContainer_, logMgr_->logger(), applicationSettings_, armory_);
 
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
       ui->widgetRFQ->setWalletsManager(walletsMgr_);
@@ -984,7 +989,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
 
 void BSTerminalMainWindow::onLogin()
 {
-   // disable login and set tooltip
+   LoadCCDefinitionsFromPuB();
 
    GetNetworkSettingsFromPuB([this]()
       {
