@@ -23,8 +23,9 @@ enum ProductGroup
 
 message UpdateHeader
 {
-   UpdateType type = 1;
-   bytes data = 2;
+   UpdateType  type = 1;
+   bytes       data = 2;
+   int64       timestamp = 3;
 };
 
 message VolumeInfo
