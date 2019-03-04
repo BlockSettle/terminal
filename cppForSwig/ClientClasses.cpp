@@ -9,10 +9,20 @@
 #include "ClientClasses.h"
 #include "WebSocketClient.h"
 #include "protobuf/BDVCommand.pb.h"
+#include "btc/ecc.h"
 
 using namespace std;
 using namespace ClientClasses;
 using namespace ::Codec_BDVCommand;
+
+
+///////////////////////////////////////////////////////////////////////////////
+void ClientClasses::initLibrary()
+{
+   startupBIP150CTX(4, false);
+   startupBIP151CTX();
+   btc_ecc_start();
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //
