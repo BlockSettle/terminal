@@ -1,8 +1,9 @@
-#ifndef __ZMQ_BIP15X_CONNECTION_H__
-#define __ZMQ_BIP15X_CONNECTION_H__
+#ifndef __ZMQ_BIP15X_MSG_H__
+#define __ZMQ_BIP15X_MSG_H__
 
 #include <spdlog/spdlog.h>
 #include "BinaryData.h"
+#include "BIP150_151.h"
 
 #define ZMQ_MSGTYPE_SINGLEPACKET              1
 #define ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER   2
@@ -21,6 +22,12 @@
 #define ZMQ_MSGTYPE_AUTH_REPLY                22
 #define ZMQ_MSGTYPE_AUTH_PROPOSE              23
 
+#define ZMQ_MESSAGE_PACKET_SIZE 1500
+#define ZMQ_CALLBACK_ID 0xFFFFFFFD
+#define ZMQ_AEAD_HANDSHAKE_ID 0xFFFFFFFC
+#define ZMQ_MAGIC_WORD 0x56E1
+#define AEAD_REKEY_INVERVAL_SECONDS 600
+
 #define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
 class ZMQ_BIP15X_Msg {
@@ -30,6 +37,16 @@ public:
    bool isReady(void) const;
    const uint32_t& getId(void) const { return id_; }
    uint8_t getType(void) const { return type_; }
+
+   static std::vector<BinaryData> serialize(const std::vector<uint8_t>& payload
+      , BIP151Connection* connPtr, uint8_t type, uint32_t id);
+   static std::vector<BinaryData> serialize(const std::string& payload
+      , BIP151Connection* connPtr, uint8_t type, uint32_t id);
+   static std::vector<BinaryData> serialize(const BinaryDataRef& payload
+      , BIP151Connection* connPtr, uint8_t type, uint32_t id);
+   static std::vector<BinaryData> serializePacketWithoutId(
+      const BinaryDataRef& payload, BIP151Connection* connPtr, uint8_t type);
+   BinaryDataRef getSingleBinaryMessage() const;
 
    const std::map<uint16_t, BinaryDataRef>& getPacketMap(void) const { return packets_; }
    static uint8_t getPacketType(const BinaryDataRef&);
@@ -47,4 +64,4 @@ private:
    bool parseMessageWithoutId(const BinaryDataRef& bdr);
 };
 
-#endif // __ZMQ_BIP15X_CONNECTION_H__
+#endif // __ZMQ_BIP15X_MSG_H__
