@@ -2,7 +2,7 @@
 #define __CHAT_MESSAGES_VIEW_MODEL_H__
 
 #include <memory>
-#include <QTextEdit>
+#include <QTextBrowser>
 #include <QMap>
 #include <QVector>
 #include <QDateTime>
@@ -14,7 +14,7 @@ namespace Chat {
    class MessageData;
 }
 
-class ChatMessagesTextEdit : public QTextEdit
+class ChatMessagesTextEdit : public QTextBrowser
 {
    Q_OBJECT
 
@@ -48,7 +48,7 @@ public slots:
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
    void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
-   
+   void	urlActivated(const QUrl &link);
 
 
 private:
@@ -61,6 +61,7 @@ private:
    std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
    void insertMessage(std::shared_ptr<Chat::MessageData> message);
+   QString toHtmlText(const QString &text);
 
    QTextTableFormat tableFormat;
    QTextTable *table;

@@ -1,3 +1,5 @@
+#include <QDebug>
+#include <QDesktopServices>
 #include "ChatMessagesTextEdit.h"
 #include "ChatClient.h"
 #include "ChatProtocol.h"
@@ -5,7 +7,7 @@
 
 
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
-   : QTextEdit(parent)
+   : QTextBrowser(parent)
 {
    tableFormat.setBorder(0);
    tableFormat.setCellPadding(0);
@@ -17,6 +19,13 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    col_widths << QTextLength (QTextLength::FixedLength, 25);
    col_widths << QTextLength (QTextLength::VariableLength, 50);
    tableFormat.setColumnWidthConstraints (col_widths);
+
+   setAutoFormatting(QTextEdit::AutoAll);
+   setAcceptRichText(true);
+   setOpenExternalLinks(false);
+   setOpenLinks(false);
+
+   connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
 }
 
 QString ChatMessagesTextEdit::data(const int &row, const Column &column)
@@ -109,11 +118,16 @@ QImage ChatMessagesTextEdit::statusImage(const int &row) {
 
 void ChatMessagesTextEdit::onSwitchToChat(const QString& chatId)
 {
+   qDebug() << "onSwitchToChat";
    currentChatId_ = chatId;
    messages_.clear();
    
    clear();
    table = NULL;
+}
+
+void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
+   QDesktopServices::openUrl(link);
 }
 
 void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg) {
@@ -135,7 +149,8 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
    table->cellAt(0, 2).firstCursorPosition().insertImage(image);
 
    QString message = data(rowIdx, Column::Message);
-   table->cellAt(0, 3).firstCursorPosition().insertText(message);
+   message = toHtmlText(message);
+   table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
 }
 
 void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &msg)
@@ -214,7 +229,8 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
          table->cellAt(0, 2).firstCursorPosition().insertImage(image);
 
          QString message = data(distance, Column::Message);
-         table->cellAt(0, 3).firstCursorPosition().insertText(message);
+         message = toHtmlText(message);
+         table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
 
          emit rowsInserted();
       }
@@ -235,4 +251,36 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
    }
 
    emit rowsInserted();
+}
+
+QString ChatMessagesTextEdit::toHtmlText(const QString &text) {
+   QString changedText = text;
+
+   // make linkable
+   int index = 0;
+   int startIndex;
+
+   while ((startIndex = changedText.indexOf(QLatin1Literal("https://"), index, Qt::CaseInsensitive)) != -1
+      || (startIndex = changedText.indexOf(QLatin1Literal("http://"), index, Qt::CaseInsensitive)) != -1) {
+      
+      int endIndex = changedText.indexOf(QLatin1Literal(" "), startIndex);
+      if (endIndex == -1) {
+         endIndex = changedText.indexOf(QLatin1Literal("\n"), startIndex);
+      }
+      if (endIndex == -1) {
+         endIndex = changedText.length();
+      }
+
+      QString linkText = changedText.mid(startIndex, endIndex - startIndex);
+      QString hyperlinkText = QLatin1Literal("<a href=\"") + linkText + QLatin1Literal("\">") + linkText + QLatin1Literal("</a>");
+
+      changedText = changedText.replace(startIndex, endIndex - startIndex, hyperlinkText);
+
+      index = startIndex + hyperlinkText.length();
+   }
+
+   // replace linefeed with <br>
+   changedText.replace(QLatin1Literal("\n"), QLatin1Literal("<br>"));
+
+   return changedText;
 }
