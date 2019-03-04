@@ -282,6 +282,7 @@ void ManageEncryptionDialog::continueAddDevice()
    newPasswordData_ = newKeys;
    newKeyRank_ = walletInfo_.keyRank();
    newKeyRank_.second++;
+   addNew_ = true;
    changePassword();
 }
 

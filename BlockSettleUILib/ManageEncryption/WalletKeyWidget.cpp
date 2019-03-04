@@ -41,13 +41,15 @@ WalletKeyWidget::WalletKeyWidget(AutheIDClient::RequestType requestType
 
    passwordData_.encType = EncryptionType::Unencrypted;
    for (int i = 0; i < walletInfo.encKeys().size(); ++i) {
-      if (keyIndex == i) {
-         const auto &encKey = walletInfo.encKeys().at(i);
-         auto deviceInfo = AutheIDClient::getDeviceInfo(encKey.toStdString());
-         if (!deviceInfo.deviceId.empty()) {
-            knownDeviceIds_.push_back(deviceInfo.deviceId);
-         }
+      const auto &encKey = walletInfo.encKeys().at(i);
+      auto deviceInfo = AutheIDClient::getDeviceInfo(encKey.toStdString());
 
+      // Auth eID need to know all devices
+      if (!deviceInfo.deviceId.empty()) {
+         knownDeviceIds_.push_back(deviceInfo.deviceId);
+      }
+
+      if (keyIndex == i) {
          ui_->comboBoxAuthId->addItem(QString::fromStdString(deviceInfo.userId));
 
          if (deviceInfo.userId.empty()) {
