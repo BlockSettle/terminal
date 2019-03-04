@@ -1,5 +1,5 @@
-#ifndef __ZMQ_BIP15X_CONNECTION_H__
-#define __ZMQ_BIP15X_CONNECTION_H__
+#ifndef __ZMQ_BIP15X_DATACONNECTION_H__
+#define __ZMQ_BIP15X_DATACONNECTION_H__
 
 #include <spdlog/spdlog.h>
 //#include <string>
@@ -47,4 +47,4 @@ private:
 //   const std::string marker = "\r\n\r\n";
 };
 
-#endif // __ZMQ_BIP15X_CONNECTION_H__
+#endif // __ZMQ_BIP15X_DATACONNECTION_H__
