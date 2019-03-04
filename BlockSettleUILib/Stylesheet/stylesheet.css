@@ -1076,7 +1076,7 @@ QTextEdit {
     border: none; }
 
 QTextEdit#textEditMessages {
-  border: none;
+  border: 1px solid #3f4c50;
   padding: 1px 5px;
   background: transparent;
   font-family: 'Open Sans', sans-serif;

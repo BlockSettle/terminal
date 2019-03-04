@@ -40,10 +40,10 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
          const auto dateTime = messages_[currentChatId_][row]->getDateTime().toLocalTime();
 
          if (dateTime.date() == QDate::currentDate()) {
-            return dateTime.time().toString(QString::fromUtf8("hh:mm"));
+            return dateTime.time().toString(QString::fromUtf8("hh:mm:ss"));
          }
          else {
-            return dateTime.toString();
+            return dateTime.toString(QString::fromUtf8("MM/dd/yy hh:mm:ss"));
          }
       }
 
