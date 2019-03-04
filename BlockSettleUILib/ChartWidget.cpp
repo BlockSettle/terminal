@@ -58,6 +58,10 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
 	connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
 	connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
 
+	MarketDataHistoryRequest request;
+	request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
+	mdhsClient_->SendRequest(request);
+
    // initialize charts
    InitializeCustomPlot();
 
@@ -78,10 +82,10 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       return;
    }
 
-   if (cboModel_->findItems(security).isEmpty())
-   {
-      cboModel_->appendRow(new QStandardItem(security));
-   }
+   //if (cboModel_->findItems(security).isEmpty())
+   //{
+   //   cboModel_->appendRow(new QStandardItem(security));
+   //}
 }
 
 void ChartWidget::UpdateChart(const int& interval) const
@@ -143,6 +147,23 @@ void ChartWidget::OnDataReceived(const std::string& data)
 
 void ChartWidget::ProcessProductsListResponse(const std::string& data)
 {
+	if (data.empty())
+	{
+		logger_->error("Empty data received from mdhs.");
+		return;
+	}
+
+	ProductsListResponse response;
+	if (!response.ParseFromString(data))
+	{
+		logger_->error("can't parse response from mdhs: {}", data);
+		return;
+	}
+
+	for (const auto& product : response.products())
+	{
+		cboModel_->appendRow(new QStandardItem(QString::fromStdString(product)));
+	}
 }
 
 void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
