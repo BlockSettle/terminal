@@ -863,18 +863,11 @@ const int BIP151Connection::decryptPacket(const uint8_t* cipherData,
                                           uint8_t* plainData,
                                           const size_t& plainSize)
 {
-   int retVal = -1;
-
    int result = inSes_.decPayload(cipherData, cipherSize, plainData, plainSize);
    if (result != 0)
-   {
-      LOGERR << "BIP 151 - Session ID " << inSes_.getSessionIDHex()
-         << " decryption failed (seq num " << inSes_.getSeqNum() - 1 << ").";
       return result;
-   }
 
-   retVal = 0;
-   return retVal;
+   return 0;
 }
 
 // Function that gets encinit data from the outbound session. Assume the session

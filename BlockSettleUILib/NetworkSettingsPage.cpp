@@ -80,7 +80,15 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       }
    });
 
+   ui_->comboBoxEnvironment->addItem(tr("Custom"));
+   ui_->comboBoxEnvironment->addItem(tr("Staging"));
+   ui_->comboBoxEnvironment->addItem(tr("UAT"));
+   ui_->comboBoxEnvironment->addItem(tr("PROD"));
+
+   ui_->comboBoxEnvironment->setCurrentIndex(-1);
+
    connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::display);
+
 }
 
 void NetworkSettingsPage::initSettings()
@@ -105,6 +113,8 @@ void NetworkSettingsPage::display()
 #endif
 
    ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
+   ui_->lineEditPublicBridgeHost->setEnabled(false);
+
    ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
    ui_->spinBoxPublicBridgePort->setEnabled(false);
 
@@ -120,12 +130,6 @@ void NetworkSettingsPage::display()
       ui_->labelArmoryServerPort->setText(QString::number(port));
       ui_->labelArmoryServerKey->setText(server.armoryDBKey);
    }
-
-
-   ui_->comboBoxEnvironment->addItem(tr("Custom"));
-   ui_->comboBoxEnvironment->addItem(tr("Staging"));
-   ui_->comboBoxEnvironment->addItem(tr("UAT"));
-   ui_->comboBoxEnvironment->addItem(tr("PROD"));
 
    DetectEnvironmentSettings();
 }

@@ -71,6 +71,7 @@ message PBStatusResponse
 
    required ArmoryConnectionState armoryConnectionState = 12;
    required string uptime = 13;
+   required uint64 uptime_seconds = 14;
 }
 
 message ErrorMessage

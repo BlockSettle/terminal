@@ -982,10 +982,6 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
       ui->widgetWallets->setUsername(userName);
       action_logout_->setVisible(false);
       action_login_->setEnabled(false);
-
-      // set button text to this temporary text until the login
-      // completes and button text is changed to the username
-      setLoginButtonText(tr("Logging in..."));
    }
 }
 
@@ -1081,8 +1077,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (authManager_) {
       authManager_->OnDisconnectedFromCeler();
    }
-
-   setLoginButtonText(loginButtonText_);
 }
 
 void BSTerminalMainWindow::onCelerConnected()

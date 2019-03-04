@@ -782,7 +782,9 @@ void WebSocketClient::promptUser(
       if (this->userPromptLambda_(key_copy, name))
       {
          //the lambda returns true, the user accepted the key, add it to peers
-         this->authPeers_->addPeer(key_copy, name);
+         std::vector<std::string> nameVec;
+         nameVec.push_back(name);
+         this->authPeers_->addPeer(key_copy, nameVec);
          serverPubkeyProm_->set_value(true);
       }
       else
