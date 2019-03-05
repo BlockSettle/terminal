@@ -72,10 +72,11 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       }
    });
 
-   ui_->comboBoxEnvironment->addItem(tr("Custom"));
-   ui_->comboBoxEnvironment->addItem(tr("Staging"));
-   ui_->comboBoxEnvironment->addItem(tr("UAT"));
+   static_assert (int(EnvConfiguration::Count) == 4, "Please update me");
    ui_->comboBoxEnvironment->addItem(tr("PROD"));
+   ui_->comboBoxEnvironment->addItem(tr("UAT"));
+   ui_->comboBoxEnvironment->addItem(tr("Staging"));
+   ui_->comboBoxEnvironment->addItem(tr("Custom"));
 
    ui_->comboBoxEnvironment->setCurrentIndex(-1);
 
@@ -118,12 +119,6 @@ void NetworkSettingsPage::display()
       ui_->labelArmoryServerPort->setText(QString::number(port));
       ui_->labelArmoryServerKey->setText(server.armoryDBKey);
    }
-
-   static_assert (int(EnvConfiguration::Count) == 4, "Please update me");
-   ui_->comboBoxEnvironment->addItem(tr("PROD"));
-   ui_->comboBoxEnvironment->addItem(tr("UAT"));
-   ui_->comboBoxEnvironment->addItem(tr("Staging"));
-   ui_->comboBoxEnvironment->addItem(tr("Custom"));
 
    ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
    ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
