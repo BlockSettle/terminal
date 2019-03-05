@@ -4,12 +4,11 @@
 #include <memory>
 #include <QObject>
 #include <QStringList>
-#include "MetaData.h"
+#include "CoreWallet.h"
 
 
 namespace bs {
 namespace wallet {
-
 
 // wrapper on bs::wallet::TXSignRequest
 class TXInfo : public QObject
@@ -30,13 +29,13 @@ class TXInfo : public QObject
 
 public:
    TXInfo() : QObject(), txReq_() {}
-   TXInfo(const bs::wallet::TXSignRequest &txReq) : QObject(), txReq_(txReq) {}
+   TXInfo(const bs::core::wallet::TXSignRequest &txReq) : QObject(), txReq_(txReq) {}
    TXInfo(const TXInfo &src) : QObject(), txReq_(src.txReq_) { }
 
    bool isValid() const { return txReq_.isValid(); }
    int nbInputs() const { return (int)txReq_.inputs.size(); }
    QStringList recvAddresses() const;
-   int txVirtSize() const { return (int)txReq_.estimateTxVirtSize(); }
+   int txVirtSize() const { return txReq_.estimateTxVirtSize(); }
    double amount() const;
    double total() const { return amount() + fee(); }
    double fee() const { return txReq_.fee / BTCNumericTypes::BalanceDivider; }
@@ -49,7 +48,7 @@ signals:
    void dataChanged();
 
 private:
-   const bs::wallet::TXSignRequest  txReq_;
+   const bs::core::wallet::TXSignRequest  txReq_;
 };
 
 }  //namespace wallet
