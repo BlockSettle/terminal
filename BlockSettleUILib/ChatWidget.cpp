@@ -56,6 +56,7 @@ public:
       chat_->logger_->debug("Set user name {}", email);
       const auto userId = chat_->client_->loginToServer(email, jwt);
       chat_->ui_->textEditMessages->setOwnUserId(userId);
+      chat_->ui_->labelUserName->setText(QString::fromStdString(userId));
 
       return userId;
    }

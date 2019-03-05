@@ -110,7 +110,7 @@ QImage ChatMessagesTextEdit::statusImage(const int &row) {
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Read)){
-      statusImage = QImage(QLatin1Literal(":/ICON_DOT"), "PNG");
+      statusImage = QImage(QLatin1Literal(":/ICON_STATUS_READ"), "PNG");
    }
    
    return statusImage;
