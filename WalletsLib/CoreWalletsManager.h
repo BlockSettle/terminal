@@ -64,7 +64,7 @@ namespace bs {
          HDWalletPtr createWallet(const std::string& name, const std::string& description
             , bs::core::wallet::Seed, const std::string &walletsPath, bool primary = false
             , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
-         void addWallet(const HDWalletPtr &, const std::string &walletsPath);
+         void addWallet(const HDWalletPtr &, const std::string &walletsPath = {});
 
       private:
          void addWallet(const WalletPtr &);

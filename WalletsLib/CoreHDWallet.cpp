@@ -714,12 +714,13 @@ bool hd::Wallet::changePassword(const std::vector<bs::wallet::PasswordData> &new
       });
 
       for (const auto &passData : newPass) {
-         rootNodes.emplace_back(decrypted->encrypt(passData.password, { passData.encType }
+         rootNodes.push_back(decrypted->encrypt(passData.password, { passData.encType }
             , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
       }
 
       if (keyRank.second != rootNodes.size()) {
-         LOG(logger_, error, "Wallet::changePassword: keyRank.second != rootNodes.size() after adding keys");
+         LOG(logger_, error, "[Wallet::changePassword] keyRank.second ({}) != rootNodes.size ({}) after adding keys"
+            , keyRank.second, rootNodes.size());
          return false;
       }
    } else if (removeOld) {

@@ -192,8 +192,8 @@ std::shared_ptr<hd::Group> hd::Group::deserialize(BinaryDataRef key
 
 std::shared_ptr<hd::Leaf> hd::Group::newLeaf() const
 {
-   return std::make_shared<hd::Leaf>(netType_, walletName_, desc_, logger_
-      , type(), extOnlyAddresses_);
+   return std::make_shared<hd::Leaf>(netType_, walletName_ + "/" + std::to_string(index())
+      , desc_, logger_, type(), extOnlyAddresses_);
 }
 
 void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &path, const std::shared_ptr<Node> &extNode) const
@@ -369,7 +369,7 @@ void hd::AuthGroup::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path
 
 std::shared_ptr<hd::Leaf> hd::AuthGroup::newLeaf() const
 {
-   return std::make_shared<hd::AuthLeaf>(netType_, walletName_, desc_);
+   return std::make_shared<hd::AuthLeaf>(netType_, walletName_ + "/" + bs::hd::Path::elemToKey(index()), desc_);
 }
 
 bool hd::AuthGroup::addLeaf(const std::shared_ptr<Leaf> &leaf)
@@ -402,6 +402,6 @@ std::shared_ptr<hd::Group> hd::CCGroup::createWO() const
 
 std::shared_ptr<hd::Leaf> hd::CCGroup::newLeaf() const
 {
-   return std::make_shared<hd::CCLeaf>(netType_, walletName_, desc_, logger_
-      , extOnlyAddresses_);
+   return std::make_shared<hd::CCLeaf>(netType_, walletName_ + "/" + bs::hd::Path::elemToKey(index())
+      , desc_, logger_, extOnlyAddresses_);
 }

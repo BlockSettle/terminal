@@ -29,16 +29,7 @@ void hd::Leaf::init(const std::shared_ptr<Node> &node, const bs::hd::Path &path,
    if (path != path_) {
       path_ = path;
       suffix_.clear();
-      const auto idx = index();
-      for (size_t i = 4; i > 0; i--) {
-         unsigned char c = (idx >> (8 * (i - 1))) & 0xff;
-         if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'))) {
-            suffix_.append(1, c);
-         }
-      }
-      if (suffix_.empty()) {
-         suffix_ = std::to_string(idx);
-      }
+      suffix_ = bs::hd::Path::elemToKey(index());
       walletName_ = name_ + "/" + suffix_;
    }
 

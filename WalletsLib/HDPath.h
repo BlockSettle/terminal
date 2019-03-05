@@ -39,6 +39,7 @@ namespace bs {
 
          static Path fromString(const std::string &);
          static Elem keyToElem(const std::string &key);
+         static std::string elemToKey(Elem);
 
       private:
          std::vector<Elem> path_;

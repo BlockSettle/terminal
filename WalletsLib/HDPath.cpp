@@ -70,6 +70,21 @@ hd::Path::Elem hd::Path::keyToElem(const std::string &key)
    return result;
 }
 
+std::string hd::Path::elemToKey(hd::Path::Elem elem)
+{
+   std::string result;
+   for (size_t i = 4; i > 0; i--) {
+      unsigned char c = (elem >> (8 * (i - 1))) & 0xff;
+      if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'))) {
+         result.append(1, c);
+      }
+   }
+   if (result.empty()) {
+      result = std::to_string(elem);
+   }
+   return result;
+}
+
 void hd::Path::append(const std::string &key, bool hardened)
 {
    append(keyToElem(key), hardened);

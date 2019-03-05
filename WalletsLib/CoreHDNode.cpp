@@ -223,7 +223,7 @@ std::unique_ptr<hd::Node> hd::Node::createUnique(const btc_hdnode &node, Network
 
 std::shared_ptr<hd::Node> hd::Node::derive(const bs::hd::Path &path, bool pubCKD) const
 {
-   if (!pubCKD && !hasPrivKey_) {
+   if ((!pubCKD && !hasPrivKey_) || !encTypes_.empty()) {
       return nullptr;
    }
    btc_hdnode newNode;
@@ -451,11 +451,13 @@ std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password
    , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys)
 {
-   if (!encTypes_.empty()) {
+   if (!encTypes_.empty() || password.isNull()) {
       return nullptr;
    }
    auto result = std::make_shared<hd::Node>(node_, netType_);
-   result->encTypes_ = encTypes;
+   result->encTypes_ = encTypes.empty()
+      ? std::vector<bs::wallet::EncryptionType>{ bs::wallet::EncryptionType::Password }
+      : encTypes;
    result->encKeys_ = encKeys;
    result->seed_.clear();
    memset(result->node_.private_key, 0, sizeof(result->node_.private_key));
