@@ -45,7 +45,6 @@ ENDIF()
 
 # setup directories
 SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
-SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
 
@@ -56,7 +55,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 12 )
-SET(BS_VERSION_PATCH 10 )
+SET(BS_VERSION_PATCH 12 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -326,11 +325,14 @@ ELSE ( APPLE )
    SET( PROTO_LIB ${PROTOBUF_LIBRARIES} )
 ENDIF ( APPLE )
 
+# autheid helper sources
+INCLUDE_DIRECTORIES( ${BLOCK_SETTLE_ROOT}/AuthAPI/utils/cpp )
+
 
 SET( PATH_TO_GENERATED ${BLOCK_SETTLE_ROOT}/generated_proto )
 FILE( MAKE_DIRECTORY ${PATH_TO_GENERATED} )
 
-SET( AUTH_PROTO_LIB_NAME               AuthProtoLib )
+SET( AUTH_PROTO_LIB_NAME               AuthAPI )
 SET( BS_PROTO_LIB_NAME                 BsProtoLib )
 SET( CELER_PROTO_LIB_NAME              CelerProtoLib )
 SET( BLOCKSETTLE_APP_NAME              blocksettle )
@@ -649,9 +651,9 @@ FOREACH(lib_name ${QT_LIBS})
    LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
 ENDFOREACH(lib_name)
 
-ADD_SUBDIRECTORY( AuthCommon )
 ADD_SUBDIRECTORY( Celer )
 ADD_SUBDIRECTORY( common/Blocksettle_proto )
+ADD_SUBDIRECTORY( AuthAPI )
 
 ADD_SUBDIRECTORY(BlockSettleApp)
 ADD_SUBDIRECTORY(BlockSettleSigner)

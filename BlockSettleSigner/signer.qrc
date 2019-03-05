@@ -52,7 +52,7 @@
         <file>qml/BsDialogs/DirSelectionDialog.qml</file>
         <file>qml/BsDialogs/qmldir</file>
         <file>qml/BsDialogs/WalletBackupDialog.qml</file>
-        <file>qml/BsDialogs/WalletChangePasswordDialog.qml</file>
+        <file>qml/BsDialogs/WalletManageEncryptionDialog.qml</file>
         <file>qml/BsDialogs/WalletCreateDialog.qml</file>
         <file>qml/BsDialogs/WalletDeleteDialog.qml</file>
         <file>qml/BsDialogs/WalletExportWoDialog.qml</file>
@@ -63,5 +63,6 @@
         <file>qml/BsControls/BSWalletDetailsFrame.qml</file>
         <file>qml/BsControls/BSResultBox.qml</file>
         <file>qml/BsDialogs/TxSignDialog.qml</file>
+        <file>qml/BsDialogs/TerminalKeysDialog.qml</file>
     </qresource>
 </RCC>

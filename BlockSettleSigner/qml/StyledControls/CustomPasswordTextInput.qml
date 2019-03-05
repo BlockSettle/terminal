@@ -9,6 +9,7 @@ TextField {
     color: BSStyle.inputsFontColor
     padding: 0
     echoMode: button.pressed ? TextInput.Normal : TextInput.Password
+    selectByMouse: false
 
     background: Rectangle {
         implicitWidth: 200

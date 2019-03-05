@@ -1,0 +1,38 @@
+{
+   "latest_version" : "0.12.12",
+   "changes" : [
+      {
+         "version_string" : "0.12.12",
+         "previous_version" : "0.12.11",
+         "improvements" :
+         [
+            "Version checker",
+            "Env select"
+         ],
+         "bug_fixes" :
+         [
+            "Armory connection in release build"
+         ]
+      },
+      {
+         "version_string" : "0.12.11",
+         "previous_version" : "0.12.10",
+         "improvements" :
+         [
+            "login updates"
+         ]
+      },
+      {
+         "version_string" : "0.12.10",
+         "improvements" :
+         [
+            "BIP150/151"
+         ],
+         "bug_fixes" :
+         [
+            "couple of crashes",
+            "signer connection"
+         ]
+      }
+   ]
+}
