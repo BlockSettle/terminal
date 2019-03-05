@@ -45,6 +45,9 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 {
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 
+   auto settings = std::make_shared<ApplicationSettings>();
+   auto connectionManager = std::make_shared<ConnectionManager>(logger);
+
    registerQtTypes();
 
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger_);
@@ -62,7 +65,7 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    settingsConnections();
 
-   qmlFactory_ = std::make_shared<QmlFactory>(walletsMgr_, logger_);
+   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, walletsMgr_, logger_);
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
 
 
@@ -230,8 +233,9 @@ void QMLAppObj::registerQtTypes()
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
+   qmlRegisterUncreatableType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject",
+      QStringLiteral("Cannot create a AuthSignWalletObject instance"));
 
-   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");

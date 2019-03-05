@@ -2,6 +2,7 @@
 #define __AUTH_PROXY_H__
 
 #include "AutheIDClient.h"
+#include "ApplicationSettings.h"
 #include "EncryptionUtils.h"
 #include "QWalletInfo.h"
 #include "WalletEncryption.h"
@@ -23,11 +24,7 @@ class AuthObject : public QObject
    Q_PROPERTY(QString status READ status NOTIFY statusChanged)
 
 public:
-   AuthObject(QObject *parent = nullptr)
-      : QObject(parent) {}
-
-   AuthObject(std::shared_ptr<spdlog::logger> logger, QObject *parent = nullptr)
-      : logger_(logger), QObject(parent) {}
+   AuthObject(std::shared_ptr<spdlog::logger> logger, QObject *parent = nullptr);
 
 signals:
    void statusChanged();
@@ -46,9 +43,9 @@ class AuthSignWalletObject : public AuthObject
    Q_OBJECT
 
 public:
-   AuthSignWalletObject(QObject *parent = nullptr) {}
-
    AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &
+                        , const std::shared_ptr<ApplicationSettings> &
+                        , const std::shared_ptr<ConnectionManager> &
                         , QObject *parent = nullptr);
 
    void connectToServer();
@@ -67,6 +64,8 @@ signals:
 
 private:
    std::shared_ptr<AutheIDClient> autheIDClient_;
+   std::shared_ptr<ApplicationSettings> settings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
 };
 
 
