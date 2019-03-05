@@ -1,4 +1,6 @@
 #include <QFile>
+#include "CoreHDWallet.h"
+#include "Wallets/SyncHDWallet.h"
 #include "WalletEncryption.h"
 #include "QWalletInfo.h"
 #include "AutheIDClient.h"
@@ -41,26 +43,33 @@ WalletInfo::WalletInfo(const headless::PasswordRequest &request)
    keyRank_ = { request.rankm(), 0 };
 }
 
-WalletInfo::WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent)
+WalletInfo::WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *parent)
+{
+   initFromRootWallet(hdWallet);
+   initEncKeys(hdWallet);
+}
+
+WalletInfo::WalletInfo(std::shared_ptr<bs::sync::hd::Wallet> hdWallet, QObject *parent)
 {
    initFromRootWallet(hdWallet);
    initEncKeys(hdWallet);
 
-   connect(hdWallet.get(), &bs::hd::Wallet::metaDataChanged, this, [this, hdWallet](){
+   connect(hdWallet.get(), &bs::sync::hd::Wallet::metaDataChanged, this, [this, hdWallet](){
       initFromRootWallet(hdWallet);
       initEncKeys(hdWallet);
    });
 }
 
-WalletInfo::WalletInfo(std::shared_ptr<bs::Wallet> wallet, std::shared_ptr<bs::hd::Wallet> rootHdWallet, QObject *parent)
+WalletInfo::WalletInfo(std::shared_ptr<bs::core::Wallet> wallet, std::shared_ptr<bs::core::hd::Wallet> rootHdWallet, QObject *parent)
 {
-   initFromWallet(wallet.get(), rootHdWallet->getWalletId());
+   initFromWallet(wallet.get(), rootHdWallet->walletId());
    initEncKeys(rootHdWallet);
 
-   connect(rootHdWallet.get(), &bs::hd::Wallet::metaDataChanged, this, [this, rootHdWallet](){
+/*   connect(rootHdWallet.get(), &bs::hd::Wallet::metaDataChanged, this, [this, rootHdWallet](){
       initFromRootWallet(rootHdWallet);
       initEncKeys(rootHdWallet);
-   });
+   });*/
+   //FIXME: switch to bs::sync wallets at some point
 }
 
 WalletInfo::WalletInfo(const WalletInfo &other)
@@ -99,27 +108,43 @@ WalletInfo WalletInfo::fromDigitalBackup(const QString &filename)
    return walletInfo;
 }
 
-void WalletInfo::initFromWallet(const bs::Wallet *wallet, const std::string &rootId)
+void WalletInfo::initFromWallet(const bs::core::Wallet *wallet, const std::string &rootId)
 {
    if (!wallet)
       return;
 
-   walletId_ = QString::fromStdString(wallet->GetWalletId());
+   walletId_ = QString::fromStdString(wallet->walletId());
    rootId_ = QString::fromStdString(rootId);
-   name_ = QString::fromStdString(wallet->GetWalletName());
+   name_ = QString::fromStdString(wallet->name());
    emit walletChanged();
 }
 
-void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &rootWallet)
+void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::core::hd::Wallet> &rootWallet)
 {
-   walletId_ = QString::fromStdString(rootWallet->getWalletId());
-   name_ = QString::fromStdString(rootWallet->getName());
-   rootId_ = QString::fromStdString(rootWallet->getWalletId());
+   walletId_ = QString::fromStdString(rootWallet->walletId());
+   name_ = QString::fromStdString(rootWallet->name());
+   rootId_ = QString::fromStdString(rootWallet->walletId());
    keyRank_ = rootWallet->encryptionRank();
    emit walletChanged();
 }
 
-void WalletInfo::initEncKeys(const std::shared_ptr<Wallet> &rootWallet)
+void WalletInfo::initEncKeys(const std::shared_ptr<bs::core::hd::Wallet> &rootWallet)
+{
+   encKeys_.clear();
+   setEncKeys(rootWallet->encryptionKeys());
+   setEncTypes(rootWallet->encryptionTypes());
+}
+
+void WalletInfo::initFromRootWallet(const std::shared_ptr<bs::sync::hd::Wallet> &rootWallet)
+{
+   walletId_ = QString::fromStdString(rootWallet->walletId());
+   name_ = QString::fromStdString(rootWallet->name());
+   rootId_ = QString::fromStdString(rootWallet->walletId());
+   keyRank_ = rootWallet->encryptionRank();
+   emit walletChanged();
+}
+
+void WalletInfo::initEncKeys(const std::shared_ptr<bs::sync::hd::Wallet> &rootWallet)
 {
    encKeys_.clear();
    setEncKeys(rootWallet->encryptionKeys());

@@ -5,40 +5,41 @@
 #include <memory>
 #include "BinaryData.h"
 
-
-namespace spdlog
-{
+namespace spdlog {
    class logger;
 }
 namespace Ui {
    class WalletDeleteDialog;
 }
 namespace bs {
-   namespace hd {
+   namespace sync {
+      namespace hd {
+         class Wallet;
+      }
       class Wallet;
+      class WalletsManager;
    }
-   class Wallet;
 }
 class SignContainer;
-class WalletsManager;
 class ApplicationSettings;
 class ConnectionManager;
+
 
 class WalletDeleteDialog : public QDialog
 {
    Q_OBJECT
 
 public:
-   WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &
-      , const std::shared_ptr<WalletsManager> &
+   WalletDeleteDialog(const std::shared_ptr<bs::sync::hd::Wallet> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr
       , bool fixedCheckBoxes = false, bool delRemote = false);
-   WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &
-      , const std::shared_ptr<WalletsManager> &
+   WalletDeleteDialog(const std::shared_ptr<bs::sync::Wallet> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -56,10 +57,10 @@ private:
    void deleteHDWallet();
    void deleteWallet();
 
-   std::unique_ptr<Ui::WalletDeleteDialog> ui_;
-   std::shared_ptr<bs::hd::Wallet>  hdWallet_;
-   std::shared_ptr<bs::Wallet>      wallet_;
-   std::shared_ptr<WalletsManager>  walletsManager_;
+   std::unique_ptr<Ui::WalletDeleteDialog>   ui_;
+   std::shared_ptr<bs::sync::hd::Wallet>     hdWallet_;
+   std::shared_ptr<bs::sync::Wallet>         wallet_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager> connectionManager_;

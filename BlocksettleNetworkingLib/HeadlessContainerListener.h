@@ -5,8 +5,8 @@
 #include <memory>
 #include <string>
 #include "BinaryData.h"
+#include "CoreWallet.h"
 #include "EncryptionUtils.h"
-#include "MetaData.h"
 #include "ServerConnectionListener.h"
 #include "SignContainer.h"
 
@@ -16,13 +16,16 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   namespace hd {
-      class Wallet;
+   namespace core {
+      namespace hd {
+         class Node;
+         class Wallet;
+      }
+      class WalletsManager;
    }
    class Wallet;
 }
 class ServerConnection;
-class WalletsManager;
 
 
 class HeadlessContainerListener : public QObject, public ServerConnectionListener
@@ -32,7 +35,7 @@ class HeadlessContainerListener : public QObject, public ServerConnectionListene
 public:
    HeadlessContainerListener(const std::shared_ptr<ServerConnection> &conn
       , const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<WalletsManager> &walletsMgr
+      , const std::shared_ptr<bs::core::WalletsManager> &
       , const std::string &walletsPath
       , NetworkType netType
       , const bool &hasUI = false
@@ -44,7 +47,7 @@ public:
    bool disconnect(const std::string &clientId = {});
 
 signals:
-   void passwordRequired(const bs::wallet::TXSignRequest &, const QString &prompt);
+   void passwordRequired(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void clientAuthenticated(const std::string &clientId, const std::string &clientInfo);
    void clientDisconnected(const std::string &clientId);
    void txSigned();
@@ -88,7 +91,6 @@ private:
    bool onSignMultiTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onPasswordReceived(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
-   bool onSyncAddress(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCreateHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onDeleteHDWallet(Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSetLimits(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
@@ -96,19 +98,23 @@ private:
    bool onGetHDWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onChangePassword(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCancelSignTx(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncComment(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncAddresses(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
    void AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet
       , const std::string &errMsg = {});
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
       , const std::string &error, const BinaryData &tx = {}, bool cancelledByUser = false);
    void CreateHDWalletResponse(const std::string &clientId, unsigned int id, const std::string &errorOrWalletId
-      , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}, const std::shared_ptr<bs::hd::Wallet> &wallet = nullptr);
-   void GetRootKeyResponse(const std::string &clientId, unsigned int id, const std::shared_ptr<bs::hd::Node> &
+      , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}
+      , const std::shared_ptr<bs::core::hd::Wallet> &wallet = nullptr);
+   void GetRootKeyResponse(const std::string &clientId, unsigned int id, const std::shared_ptr<bs::core::hd::Node> &
       , const std::string &errorOrId);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
-      , const std::shared_ptr<bs::hd::Wallet> &, const std::string &error = {});
-   void SyncAddrResponse(const std::string &clientId, unsigned int id, const std::set<std::string> &failedWallets
-      , const std::vector<std::pair<std::string, std::string>> &failedAddresses);
+      , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
    void ChangePasswordResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bool ok);
    void AutoSignActiveResponse(const std::string &clientId, const std::string &walletId, bool active
       , const std::string &error = {}, unsigned int id = 0);
@@ -117,11 +123,12 @@ private:
       , const std::vector<bs::wallet::PasswordData> &pwdData);
    bool CreateHDWallet(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDWallet &request
       , NetworkType, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
-   bool RequestPasswordIfNeeded(const std::string &clientId, const bs::wallet::TXSignRequest &
+   bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
       , const QString &prompt, const PasswordReceivedCb &cb, bool autoSign);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
-      , const bs::wallet::TXMultiSignRequest &, const QString &prompt, const PasswordsReceivedCb &cb);
-   bool RequestPassword(const std::string &clientId, const bs::wallet::TXSignRequest &, const QString &prompt
+      , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
+      , const QString &prompt, const PasswordsReceivedCb &cb);
+   bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &, const QString &prompt
       , const PasswordReceivedCb &cb);
 
    bool CheckSpendLimit(uint64_t value, bool autoSign, const std::string &walletId);
@@ -131,7 +138,7 @@ private:
 private:
    std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<WalletsManager>     walletsMgr_;
+   std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    const std::string                   walletsPath_;
    const std::string                   backupPath_;
    const NetworkType                   netType_;

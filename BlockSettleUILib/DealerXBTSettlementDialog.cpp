@@ -1,25 +1,24 @@
-#include "DealerXBTSettlementDialog.h"
 #include "ui_DealerXBTSettlementDialog.h"
+#include "DealerXBTSettlementDialog.h"
+#include <spdlog/spdlog.h>
 
 #include "AddressVerificator.h"
 #include "AssetManager.h"
 #include "AuthAddressManager.h"
+#include "CelerClient.h"
 #include "DealerXBTSettlementContainer.h"
 #include "QuoteProvider.h"
 #include "SettlementContainer.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
-#include "HDWallet.h"
-#include "CelerClient.h"
-
-#include <spdlog/spdlog.h>
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
 DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<DealerXBTSettlementContainer> &settlContainer
       , const std::shared_ptr<AssetManager>& assetManager
-      , std::shared_ptr<WalletsManager> walletsManager
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
       , std::shared_ptr<CelerClient> celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -47,8 +46,8 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    ui_->labelTotal->setText(UiUtils::displayCurrencyAmount(settlContainer_->amount() * settlContainer_->price()));
 
-   const auto &wallet = walletsManager->GetHDRootForLeaf(settlContainer_->GetWallet()->GetWalletId());
-   ui_->labelWallet->setText(QString::fromStdString(wallet->getName()));
+   const auto &wallet = walletsManager->getHDRootForLeaf(settlContainer_->getWallet()->walletId());
+   ui_->labelWallet->setText(QString::fromStdString(wallet->name()));
    setWallet(wallet);
 
    if (settlContainer_->weSell()) {

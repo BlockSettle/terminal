@@ -3,8 +3,6 @@
 
 #include "Address.h"
 #include "ArmoryConnection.h"
-#include "PlainWallet.h"
-#include "WalletsManager.h"
 
 #include <QWidget>
 #include <QItemSelection>
@@ -12,7 +10,11 @@
 namespace Ui {
    class AddressDetailsWidget;
 }
-
+namespace bs {
+   namespace sync {
+      class PlainWallet;
+   }
+}
 class QTreeWidgetItem;
 
 class AddressDetailsWidget : public QWidget
@@ -52,7 +54,7 @@ private:
    void setConfirmationColor(QTreeWidgetItem *item);
    void setOutputColor(QTreeWidgetItem *item);
    void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
-   void refresh(const std::shared_ptr<bs::PlainWallet> &);
+   void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
 
 private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
@@ -72,7 +74,7 @@ private:
    // about BinaryTXID. A simple endian flip in printed strings is all we need.
 
    std::unique_ptr<Ui::AddressDetailsWidget> ui_; // The main widget object.
-   std::unordered_map<std::string, std::shared_ptr<bs::PlainWallet>> dummyWallets_;
+   std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
 

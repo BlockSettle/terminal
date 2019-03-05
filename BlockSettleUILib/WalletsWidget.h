@@ -2,17 +2,25 @@
 #define __WALLETS_WIDGET_H__
 
 #include <memory>
+#include <unordered_map>
 #include <QWidget>
-#include "WalletsManager.h"
+#include "Address.h"
 #include "TabWithShortcut.h"
 
 
 namespace Ui {
     class WalletsWidget;
 }
+namespace spdlog {
+   class logger;
+}
 namespace bs {
-   namespace hd {
+   namespace sync {
+      namespace hd {
+         class Wallet;
+      }
       class Wallet;
+      class WalletsManager;
    }
 }
 class AddressListModel;
@@ -37,7 +45,7 @@ public:
    ~WalletsWidget() override;
 
    void init(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -47,8 +55,8 @@ public:
 
    void setUsername(const QString& username);
 
-   std::vector<WalletsManager::wallet_gen_type> GetSelectedWallets() const;
-   std::vector<WalletsManager::wallet_gen_type> GetFirstWallets() const;
+   std::vector<std::shared_ptr<bs::sync::Wallet>> getSelectedWallets() const;
+   std::vector<std::shared_ptr<bs::sync::Wallet>> getFirstWallets() const;
 
    bool CreateNewWallet(bool report = true);
    bool ImportNewWallet(bool report = true);
@@ -90,7 +98,7 @@ private:
    std::unique_ptr<Ui::WalletsWidget> ui;
 
    std::shared_ptr<spdlog::logger> logger_;
-   std::shared_ptr<WalletsManager>  walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
@@ -106,10 +114,10 @@ private:
    QAction  *  actRevokeSettl_ = nullptr;
    QAction  *  actDeleteWallet_ = nullptr;
    bs::Address curAddress_;
-   std::shared_ptr<bs::Wallet>   curWallet_;
+   std::shared_ptr<bs::sync::Wallet>   curWallet_;
    unsigned int   revokeReqId_ = 0;
    QString username_;
-   std::vector<std::shared_ptr<bs::Wallet>>  prevSelectedWallets_;
+   std::vector<std::shared_ptr<bs::sync::Wallet>>  prevSelectedWallets_;
 };
 
 #endif // __WALLETS_WIDGET_H__

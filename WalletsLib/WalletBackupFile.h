@@ -7,8 +7,10 @@
 #include "EasyCoDec.h"
 
 namespace bs {
-   namespace hd {
-      class Wallet;
+   namespace core {
+      namespace hd {
+         class Wallet;
+      }
    }
 }
 
@@ -23,7 +25,7 @@ public:
       EasyCoDec::Data   chainCode;
    };
 
-   WalletBackupFile(const std::shared_ptr<bs::hd::Wallet> &
+   WalletBackupFile(const std::shared_ptr<bs::core::hd::Wallet> &
       , const EasyCoDec::Data& data
       , const EasyCoDec::Data& chainCode);
    ~WalletBackupFile() noexcept  = default;
@@ -32,7 +34,7 @@ public:
    std::string       Serialize() const;
 
 private:
-   const std::shared_ptr<bs::hd::Wallet>  wallet_;
+   const std::shared_ptr<bs::core::hd::Wallet>  wallet_;
    EasyCoDec::Data data_;
    EasyCoDec::Data chainCode_;
 };

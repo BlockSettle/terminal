@@ -15,6 +15,9 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
    class SettlementContainer;
 }
 class ArmoryConnection;
@@ -25,7 +28,6 @@ class QuoteProvider;
 class ReqCCSettlementContainer;
 class ReqXBTSettlementContainer;
 class SignContainer;
-class WalletsManager;
 class XBTSettlementTransactionWidget;
 class CelerClient;
 class ApplicationSettings;
@@ -41,7 +43,7 @@ public:
       , const std::shared_ptr<QuoteProvider>& quoteProvider
       , const std::shared_ptr<AuthAddressManager>& authAddressManager
       , const std::shared_ptr<AssetManager>& assetManager
-      , const std::shared_ptr<WalletsManager> &walletsManager
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<CelerClient> &celerClient
@@ -78,7 +80,7 @@ private:
    std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<QuoteProvider>      quoteProvider_;
    std::shared_ptr<AuthAddressManager> authAddressManager_;
-   std::shared_ptr<WalletsManager>     walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signContainer_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<ArmoryConnection>   armory_;

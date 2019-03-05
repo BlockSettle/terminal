@@ -15,7 +15,6 @@
 #include "DealerXBTSettlementContainer.h"
 #include "DealerXBTSettlementDialog.h"
 #include "DialogManager.h"
-#include "HDWallet.h"
 #include "MarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "OrderListModel.h"
@@ -25,6 +24,8 @@
 #include "RFQBlotterTreeView.h"
 #include "CustomDoubleSpinBox.h"
 #include "OrdersView.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 using namespace bs::ui;
 
@@ -41,16 +42,16 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
 
 RFQReplyWidget::~RFQReplyWidget() = default;
 
-void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
+void RFQReplyWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    if (!walletsManager_ && walletsManager) {
       walletsManager_ = walletsManager;
       ui_->pageRFQReply->setWalletsManager(walletsManager_);
 
       if (signingContainer_) {
-         auto primaryWallet = walletsManager_->GetPrimaryWallet();
+         auto primaryWallet = walletsManager_->getPrimaryWallet();
          if (primaryWallet != nullptr) {
-            signingContainer_->GetInfo(primaryWallet->getWalletId());
+            signingContainer_->GetInfo(primaryWallet->walletId());
          }
       }
    }
@@ -271,13 +272,13 @@ void RFQReplyWidget::onAutoSignActivated(const SecureBinaryData &password, const
       return;
    }
 
-   auto hdWallet = walletsManager_->GetHDWalletById(hdWalletId.toStdString());
+   auto hdWallet = walletsManager_->getHDWalletById(hdWalletId.toStdString());
    if (!hdWallet) {
       logger_->warn("[RFQReplyWidget::onAutoSignActivated] failed to get HD wallet for id {} - falling back to main primary"
          , hdWalletId.toStdString());
-      hdWallet = walletsManager_->GetPrimaryWallet();
+      hdWallet = walletsManager_->getPrimaryWallet();
    }
-   signingContainer_->SetLimits(hdWallet, password, active);
+   signingContainer_->setLimits(hdWallet->walletId(), password, active);
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)

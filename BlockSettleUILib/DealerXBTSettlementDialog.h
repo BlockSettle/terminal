@@ -5,7 +5,6 @@
 
 #include "AuthAddress.h"
 #include "CommonTypes.h"
-#include "SettlementWallet.h"
 #include "ConnectionManager.h"
 
 #include <string>
@@ -14,12 +13,13 @@ namespace Ui {
    class DealerXBTSettlementDialog;
 }
 namespace bs {
-   class SettlementAddressEntry;
+   namespace sync {
+      class WalletsManager;
+   }
 }
 class AssetManager;
 class DealerXBTSettlementContainer;
 class SignContainer;
-class WalletsManager;
 class CelerClient;
 class ApplicationSettings;
 
@@ -30,7 +30,7 @@ public:
    DealerXBTSettlementDialog(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<DealerXBTSettlementContainer> &
       , const std::shared_ptr<AssetManager>& assetManager
-      , std::shared_ptr<WalletsManager> walletsManager
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
       , const std::shared_ptr<ApplicationSettings> &appSettings

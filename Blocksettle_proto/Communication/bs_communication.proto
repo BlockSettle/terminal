@@ -13,7 +13,7 @@ enum RequestType
    RevokeAuthAddressRequestType         = 8;
    ConfirmAuthAddressSubmitType         = 9;
    CancelAuthAddressSubmitType          = 10;
-   FundCCGenAddrRequestType		       = 11;
+   FundCCGenAddrRequestType		= 11;
    GetNetworkSettingsType               = 12;
 }
 

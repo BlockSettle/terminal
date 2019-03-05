@@ -4,16 +4,20 @@
 #include <memory>
 #include <QAbstractItemModel>
 
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 class AssetGroupNode;
 class AssetManager;
 class AssetNode;
 class RootAssetGroupNode;
-class WalletsManager;
 
 class CCPortfolioModel : public QAbstractItemModel
 {
 public:
-   CCPortfolioModel(const std::shared_ptr<WalletsManager>& walletsManager
+   CCPortfolioModel(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<AssetManager>& assetManager
       , QObject *parent = nullptr);
    ~CCPortfolioModel() noexcept override = default;
@@ -65,8 +69,8 @@ private slots:
    void updateCCBalance();
 
 private:
-   std::shared_ptr<AssetManager>       assetManager_;
-   std::shared_ptr<WalletsManager>     walletsManager_;
+   std::shared_ptr<AssetManager>             assetManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
 
    std::shared_ptr<RootAssetGroupNode> root_ = nullptr;
 };

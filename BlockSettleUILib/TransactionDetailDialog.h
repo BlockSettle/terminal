@@ -5,18 +5,20 @@
 
 #include <QDialog>
 #include <memory>
+#include "TransactionsViewModel.h"
 
 namespace Ui {
     class TransactionDetailDialog;
 }
 namespace bs {
-   class Wallet;
+   namespace sync {
+      class Wallet;
+      class WalletsManager;
+   }
 }
 class ArmoryConnection;
 class QTreeWidgetItem;
-class TransactionsViewItem;
 class TxOut;
-class WalletsManager;
 
 //sublcassing this Dialog is not a good idea because of how it handles minimumSize
 
@@ -25,7 +27,7 @@ class TransactionDetailDialog : public QDialog
 Q_OBJECT
 
 public:
-   TransactionDetailDialog(TransactionsViewItem, const std::shared_ptr<WalletsManager> &
+   TransactionDetailDialog(TransactionsViewItem, const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<ArmoryConnection> &, QWidget* parent = nullptr);
    ~TransactionDetailDialog() override;
    virtual QSize minimumSizeHint() const override;
@@ -36,12 +38,12 @@ public:
 
 private:
    std::unique_ptr<Ui::TransactionDetailDialog> ui_;
-   std::shared_ptr<WalletsManager> walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    QTreeWidgetItem   *  itemSender = nullptr;
    QTreeWidgetItem   *  itemReceiver = nullptr;
 
 private:
-   void addAddress(const std::shared_ptr<bs::Wallet> &, const TxOut& out,
+   void addAddress(const std::shared_ptr<bs::sync::Wallet> &, const TxOut& out,
                    bool isOutput, bool isTxOutgoing, const BinaryData& txHash);
    QString getScriptType(const TxOut &);
 };

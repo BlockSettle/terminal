@@ -3,9 +3,10 @@
 #include <QTreeView>
 #include <QSortFilterProxyModel>
 #include "SignContainer.h"
-#include "WalletsManager.h"
-#include "HDWallet.h"
 #include "UiUtils.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncSettlementWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
 void WalletNode::clear()
@@ -21,7 +22,7 @@ WalletNode *WalletNode::child(int index) const
 
 WalletNode *WalletNode::findByWalletId(const std::string &walletId)
 {
-   if ((type() == Type::Leaf) && (wallets()[0] != nullptr) && (wallets()[0]->GetWalletId() == walletId)) {
+   if ((type() == Type::Leaf) && (wallets()[0] != nullptr) && (wallets()[0]->walletId() == walletId)) {
       return this;
    }
    for (const auto &child : children_) {
@@ -88,7 +89,7 @@ public:
    }
 
    std::string id() const override {
-      return (hdWallet_ ? hdWallet_->getWalletId() : std::string{});
+      return (hdWallet_ ? hdWallet_->walletId() : std::string{});
    }
 
    void setState(State state) override {
@@ -98,11 +99,11 @@ public:
       }
    }
 
-   void addGroups(const std::vector<std::shared_ptr<bs::hd::Group>> &groups);
+   void addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups);
 
-   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override
    {
-      std::vector<std::shared_ptr<bs::Wallet>> ret = wallets_;
+      std::vector<std::shared_ptr<bs::sync::Wallet>> ret = wallets_;
 
       for (const auto * g : qAsConst(children_)) {
          const auto tmp = g->wallets();
@@ -115,9 +116,9 @@ public:
    BTCNumericTypes::balance_type getBalanceUnconf() const { return balUnconf_; }
    BTCNumericTypes::balance_type getBalanceSpend() const { return balSpend_; }
    size_t getNbUsedAddresses() const { return nbAddr_; }
-   std::shared_ptr<bs::hd::Wallet> hdWallet() const override { return hdWallet_; }
+   std::shared_ptr<bs::sync::hd::Wallet> hdWallet() const override { return hdWallet_; }
 
-   void setHdWallet(const std::shared_ptr<bs::hd::Wallet> &hdWallet) {
+   void setHdWallet(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet) {
       hdWallet_ = hdWallet;
    }
 
@@ -125,8 +126,8 @@ protected:
    std::string desc_;
    BTCNumericTypes::balance_type balTotal_, balUnconf_, balSpend_;
    size_t      nbAddr_;
-   std::shared_ptr<bs::hd::Wallet>           hdWallet_;
-   std::vector<std::shared_ptr<bs::Wallet>>  wallets_;
+   std::shared_ptr<bs::sync::hd::Wallet>           hdWallet_;
+   std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
 
 protected:
    void updateCounters(WalletRootNode *node) {
@@ -172,15 +173,15 @@ protected:
       }
    }
 
-   static WalletNode::Type getNodeType(bs::wallet::Type grpType) {
+   static WalletNode::Type getNodeType(bs::core::wallet::Type grpType) {
       switch (grpType) {
-      case bs::wallet::Type::Bitcoin:
+      case bs::core::wallet::Type::Bitcoin:
          return Type::GroupBitcoin;
 
-      case bs::wallet::Type::Authentication:
+      case bs::core::wallet::Type::Authentication:
          return Type::GroupAuth;
 
-      case bs::wallet::Type::ColorCoin:
+      case bs::core::wallet::Type::ColorCoin:
          return Type::GroupCC;
 
       default:
@@ -192,17 +193,22 @@ protected:
 class WalletLeafNode : public WalletRootNode
 {
 public:
-   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::Wallet> &wallet, int row, WalletNode *parent)
-      : WalletRootNode(vm, wallet->GetShortName(), wallet->GetWalletDescription(), Type::Leaf, row, parent
-         , wallet->GetTotalBalance(), wallet->GetUnconfirmedBalance(), wallet->GetSpendableBalance()
-         , wallet->GetUsedAddressCount())
+   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, int row, WalletNode *parent)
+      : WalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, row, parent
+         , wallet->getTotalBalance(), wallet->getUnconfirmedBalance(), wallet->getSpendableBalance()
+         , wallet->getUsedAddressCount())
+      , wallet_(wallet)
+   { }
+   WalletLeafNode(WalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet, int row, WalletNode *parent)
+      : WalletRootNode(vm, wallet->name(), wallet->description(), Type::Leaf, row, parent
+         , 0, 0, 0, wallet->getUsedAddressCount())
       , wallet_(wallet)
    { }
 
-   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override { return {wallet_}; }
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return {wallet_}; }
 
    std::string id() const override {
-      return wallet_->GetWalletId();
+      return wallet_->walletId();
    }
 
    QVariant data(int col, int role) const override {
@@ -217,7 +223,7 @@ public:
    }
 
 private:
-   std::shared_ptr<bs::Wallet>   wallet_;
+   std::shared_ptr<bs::sync::Wallet>   wallet_;
 };
 
 class WalletGroupNode : public WalletRootNode
@@ -233,9 +239,9 @@ public:
       }
    }
 
-   std::vector<std::shared_ptr<bs::Wallet>> wallets() const override { return wallets_; }
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return wallets_; }
 
-   void addLeaves(const std::vector<std::shared_ptr<bs::Wallet>> &leaves) {
+   void addLeaves(const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves) {
       for (const auto &leaf : leaves) {
          if (viewModel_->showRegularWallets() && (leaf == viewModel_->getAuthWallet())) {
             continue;
@@ -248,23 +254,24 @@ public:
    }
 };
 
-void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::hd::Group>> &groups)
+void WalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups)
 {
    for (const auto &group : groups) {
       if (viewModel_->showRegularWallets()) {
-         if ((group->getType() == bs::wallet::Type::Authentication)
-            || (group->getType() == bs::wallet::Type::ColorCoin)) {
+         if ((group->type() == bs::core::wallet::Type::Authentication)
+            || (group->type() == bs::core::wallet::Type::ColorCoin)) {
             continue;
          }
       }
-      const auto groupNode = new WalletGroupNode(viewModel_, group->getName(), group->getDesc(), getNodeType(group->getType()), nbChildren(), this);
+      const auto groupNode = new WalletGroupNode(viewModel_, group->name(), group->description()
+         , getNodeType(group->type()), nbChildren(), this);
       add(groupNode);
       groupNode->addLeaves(group->getAllLeaves());
    }
 }
 
 
-WalletsViewModel::WalletsViewModel(const std::shared_ptr<WalletsManager> &walletsManager
+WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::string &defaultWalletId, const std::shared_ptr<SignContainer> &container
    , QObject* parent, bool showOnlyRegular)
    : QAbstractItemModel(parent)
@@ -274,17 +281,16 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<WalletsManager> &wallet
    , showRegularWallets_(showOnlyRegular)
 {
    rootNode_ = std::make_shared<WalletNode>(this, WalletNode::Type::Root);
-   connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &WalletsManager::walletDeleted, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
 
    if (signContainer_) {
       connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &WalletsViewModel::onWalletInfo);
       connect(signContainer_.get(), &SignContainer::Error, this, &WalletsViewModel::onHDWalletError);
-      connect(signContainer_.get(), &SignContainer::MissingWallets, this, &WalletsViewModel::onMissingWallets);
       connect(signContainer_.get(), &SignContainer::authenticated, this, &WalletsViewModel::onSignerAuthenticated);
       connect(signContainer_.get(), &SignContainer::ready, this, &WalletsViewModel::onWalletChanged);
    }
@@ -308,7 +314,7 @@ int WalletsViewModel::rowCount(const QModelIndex &parent) const
    return getNode(parent)->nbChildren();
 }
 
-std::vector<std::shared_ptr<bs::Wallet>> WalletsViewModel::getWallets(const QModelIndex &index) const
+std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsViewModel::getWallets(const QModelIndex &index) const
 {
    const auto node = getNode(index);
    if (node == nullptr) {
@@ -317,7 +323,7 @@ std::vector<std::shared_ptr<bs::Wallet>> WalletsViewModel::getWallets(const QMod
    return node->wallets();
 }
 
-std::shared_ptr<bs::Wallet> WalletsViewModel::getWallet(const QModelIndex &index) const
+std::shared_ptr<bs::sync::Wallet> WalletsViewModel::getWallet(const QModelIndex &index) const
 {
    const auto &wallets = getWallets(index);
    if (wallets.size() == 1) {
@@ -438,17 +444,18 @@ bool WalletsViewModel::hasChildren(const QModelIndex& parent) const
    return node->hasChildren();
 }
 
-std::shared_ptr<bs::Wallet> WalletsViewModel::getAuthWallet() const
+std::shared_ptr<bs::sync::Wallet> WalletsViewModel::getAuthWallet() const
 {
-   return walletsManager_->GetAuthWallet();
+   return walletsManager_->getAuthWallet();
 }
 
-static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::hd::Wallet> &hdWallet, const std::shared_ptr<WalletsManager> &walletsMgr)
+static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
-   if (walletsMgr->GetPrimaryWallet() == hdWallet) {
+   if (walletsMgr->getPrimaryWallet() == hdWallet) {
       return WalletNode::Type::WalletPrimary;
    }
-   if (walletsMgr->GetDummyWallet() == hdWallet) {
+   if (walletsMgr->getDummyWallet() == hdWallet) {
       return WalletNode::Type::WalletDummy;
    }
    return WalletNode::Type::WalletRegular;
@@ -488,25 +495,14 @@ void WalletsViewModel::onHDWalletError(unsigned int id, std::string)
    }
 }
 
-void WalletsViewModel::onMissingWallets(const std::vector<std::string> &ids)
-{
-   for (const auto &id : ids) {
-      auto node = rootNode_->findByWalletId(id);
-      if (node) {
-         node->setState(WalletNode::State::Offline);
-      }
-      failedLeaves_.insert(id);
-   }
-}
-
 void WalletsViewModel::onSignerAuthenticated()
 {
-   for (unsigned int i = 0; i < walletsManager_->GetHDWalletsCount(); i++) {
-      const auto &hdWallet = walletsManager_->GetHDWallet(i);
+   for (unsigned int i = 0; i < walletsManager_->hdWalletsCount(); i++) {
+      const auto &hdWallet = walletsManager_->getHDWallet(i);
       if (!hdWallet) {
          continue;
       }
-      const auto walletId = hdWallet->getWalletId();
+      const auto walletId = hdWallet->walletId();
       hdInfoReqIds_[signContainer_->GetInfo(walletId)] = walletId;
    }
 }
@@ -533,21 +529,21 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
          if (node != nullptr) {
             const auto &wallets = node->wallets();
             if (wallets.size() == 1) {
-               selectedWalletId = wallets[0]->GetWalletId();
+               selectedWalletId = wallets[0]->walletId();
             }
          }
       }
    }
 
-   const auto hdCount = walletsManager_->GetHDWalletsCount();
+   const auto hdCount = walletsManager_->hdWalletsCount();
    beginResetModel();
    rootNode_->clear();
    for (unsigned int i = 0; i < hdCount; i++) {
-      const auto &hdWallet = walletsManager_->GetHDWallet(i);
+      const auto &hdWallet = walletsManager_->getHDWallet(i);
       if (!hdWallet) {
          continue;
       }
-      const auto hdNode = new WalletRootNode(this, hdWallet->getName(), hdWallet->getDesc()
+      const auto hdNode = new WalletRootNode(this, hdWallet->name(), hdWallet->description()
          , getHDWalletType(hdWallet, walletsManager_), rootNode_->nbChildren(), rootNode_.get());
       hdNode->setHdWallet(hdWallet);
       rootNode_->add(hdNode);
@@ -557,21 +553,15 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
             hdNode->setState(WalletNode::State::Offline);
          }
          else {
-            const auto stateIt = signerStates_.find(hdWallet->getWalletId());
+            const auto stateIt = signerStates_.find(hdWallet->walletId());
             if (stateIt != signerStates_.end()) {
                hdNode->setState(stateIt->second);
             }
          }
       }
    }
-   for (const auto &failedLeaf : failedLeaves_) {
-      auto leaf = rootNode_->findByWalletId(failedLeaf);
-      if (leaf) {
-         leaf->setState(WalletNode::State::Offline);
-      }
-   }
 
-   const auto &stmtWallet = walletsManager_->GetSettlementWallet();
+   const auto stmtWallet = walletsManager_->getSettlementWallet();
    if (!showRegularWallets() && (stmtWallet != nullptr)) {
       const auto stmtNode = new WalletLeafNode(this, stmtWallet, rootNode_->nbChildren(), rootNode_.get());
       rootNode_->add(stmtNode);
@@ -604,67 +594,4 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
 void WalletsViewModel::onWalletChanged()
 {
    LoadWallets(true);
-}
-
-
-QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
-{
-   if (index.isValid() && role >= firstRole) {
-      const auto &node = getNode(index);
-      if (!node) {
-         return tr("invalid node");
-      }
-      auto hdWallet = node->hdWallet();
-      if (node->type() == WalletNode::Type::Leaf) {
-         auto parent = node->parent();
-         if (parent) {
-            parent = parent->parent();
-         }
-         hdWallet = parent ? parent->hdWallet() : nullptr;
-      }
-
-      switch (role) {
-      case NameRole:       return node->data(static_cast<int>(WalletRegColumns::ColumnName), Qt::DisplayRole);
-      case DescRole:       return node->data(static_cast<int>(WalletRegColumns::ColumnDescription), Qt::DisplayRole);
-      case WalletIdRole:   return QString::fromStdString(node->id());
-      case IsEncryptedRole: return hdWallet ? static_cast<int>(hdWallet->encryptionTypes().empty() ? bs::wallet::EncryptionType::Unencrypted : hdWallet->encryptionTypes()[0]) : 0;
-      case EncKeyRole:     return hdWallet ? (hdWallet->encryptionKeys().empty() ? QString() : QString::fromStdString(hdWallet->encryptionKeys()[0].toBinStr())) : QString();
-      case StateRole:
-         if ((node->type() != WalletNode::Type::Leaf) || !hdWallet) {
-            return {};
-         }
-         if (hdWallet->encryptionTypes().empty()) {
-            return tr("No");
-         }
-         else if (hdWallet->encryptionRank().second <= 1) {
-            switch (hdWallet->encryptionTypes()[0]) {
-            case bs::wallet::EncryptionType::Password:   return tr("Password");
-            case bs::wallet::EncryptionType::Auth:   return tr("Auth eID");
-            default:    return tr("No");
-            }
-         }
-         else {
-            return tr("%1 of %2").arg(hdWallet->encryptionRank().first).arg(hdWallet->encryptionRank().second);
-         }
-      case RootWalletIdRole:  return hdWallet ? QString::fromStdString(hdWallet->getWalletId()) : QString();
-      case IsHDRootRole:   return ((node->type() == WalletNode::Type::WalletPrimary)
-                                 || (node->type() == WalletNode::Type::WalletRegular));
-      default:    break;
-      }
-   }
-   return WalletsViewModel::data(index, role);
-}
-
-QHash<int, QByteArray> QmlWalletsViewModel::roleNames() const
-{
-   return QHash<int, QByteArray> {
-      { NameRole, QByteArrayLiteral("name") },
-      { DescRole, QByteArrayLiteral("desc") },
-      { StateRole, QByteArrayLiteral("state") },
-      { WalletIdRole, QByteArrayLiteral("walletId") },
-      { IsHDRootRole, QByteArrayLiteral("isHdRoot") },
-      { RootWalletIdRole, QByteArrayLiteral("rootWalletId") },
-      { IsEncryptedRole, QByteArrayLiteral("isEncrypted") },
-      { EncKeyRole, QByteArrayLiteral("encryptionKey") }
-   };
 }

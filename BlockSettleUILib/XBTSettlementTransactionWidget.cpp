@@ -7,7 +7,6 @@
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
 #include <CelerClient.h>
 
 #include <spdlog/logger.h>

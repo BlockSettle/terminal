@@ -7,15 +7,16 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "MetaData.h"
 #include "QWalletInfo.h"
 
 
-class WalletsManager;
 namespace bs {
-   class Wallet;
-   namespace hd {
+   namespace sync {
+      namespace hd {
+         class Wallet;
+      }
       class Wallet;
+      class WalletsManager;
    }
 }
 class SignContainer;
@@ -46,8 +47,8 @@ public:
       : viewModel_(vm), parent_(parent), row_(row), type_(type) {}
    virtual ~WalletNode() { clear(); }
 
-   virtual std::vector<std::shared_ptr<bs::Wallet>> wallets() const { return {}; }
-   virtual std::shared_ptr<bs::hd::Wallet> hdWallet() const { return nullptr; }
+   virtual std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const { return {}; }
+   virtual std::shared_ptr<bs::sync::hd::Wallet> hdWallet() const { return nullptr; }
    virtual QVariant data(int, int) const { return QVariant(); }
    virtual std::string id() const { return {}; }
 
@@ -80,7 +81,7 @@ class WalletsViewModel : public QAbstractItemModel
 {
 Q_OBJECT
 public:
-   WalletsViewModel(const std::shared_ptr<WalletsManager>& walletsManager, const std::string &defaultWalletId
+   WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManager>& walletsManager, const std::string &defaultWalletId
       , const std::shared_ptr<SignContainer> &sc = nullptr, QObject *parent = nullptr, bool showOnlyRegular = false);
    ~WalletsViewModel() noexcept override = default;
 
@@ -89,14 +90,14 @@ public:
    WalletsViewModel(WalletsViewModel&&) = delete;
    WalletsViewModel& operator = (WalletsViewModel&&) = delete;
 
-   std::vector<std::shared_ptr<bs::Wallet>> getWallets(const QModelIndex &index) const;
-   std::shared_ptr<bs::Wallet> getWallet(const QModelIndex &index) const;
+   std::vector<std::shared_ptr<bs::sync::Wallet>> getWallets(const QModelIndex &index) const;
+   std::shared_ptr<bs::sync::Wallet> getWallet(const QModelIndex &index) const;
    WalletNode *getNode(const QModelIndex &) const;
-   void setSelectedWallet(const std::shared_ptr<bs::Wallet> &selWallet) { selectedWallet_ = selWallet; }
+   void setSelectedWallet(const std::shared_ptr<bs::sync::Wallet> &selWallet) { selectedWallet_ = selWallet; }
 
-   std::shared_ptr<bs::Wallet> selectedWallet() const { return selectedWallet_; }
+   std::shared_ptr<bs::sync::Wallet> selectedWallet() const { return selectedWallet_; }
    bool showRegularWallets() const { return showRegularWallets_; }
-   std::shared_ptr<bs::Wallet> getAuthWallet() const;
+   std::shared_ptr<bs::sync::Wallet> getAuthWallet() const;
 
    void LoadWallets(bool keepSelection = false);
 
@@ -118,7 +119,6 @@ private slots:
    void onNewWalletAdded(const std::string &walletId);
    void onWalletInfo(unsigned int id, bs::hd::WalletInfo);
    void onHDWalletError(unsigned int id, std::string err);
-   void onMissingWallets(const std::vector<std::string> &);
    void onSignerAuthenticated();
 
 public:
@@ -146,43 +146,15 @@ public:
    };
 
 private:
-   std::shared_ptr<WalletsManager>  walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signContainer_;
-   std::shared_ptr<bs::Wallet>      selectedWallet_;
+   std::shared_ptr<bs::sync::Wallet>      selectedWallet_;
    std::shared_ptr<WalletNode>      rootNode_;
    std::string       defaultWalletId_;
    bool              showRegularWallets_;
    std::unordered_map<int, std::string>   hdInfoReqIds_;
-   std::unordered_set<std::string>        failedLeaves_;
    std::unordered_map<std::string, WalletNode::State> signerStates_;
 };
 
-
-class QmlWalletsViewModel : public WalletsViewModel
-{
-   Q_OBJECT
-public:
-   QmlWalletsViewModel(const std::shared_ptr<WalletsManager>& walletsMgr
-                       , QObject *parent = nullptr
-                       , bool showOnlyRegular = false)
-      : WalletsViewModel(walletsMgr, "", nullptr, parent, showOnlyRegular) {}
-   ~QmlWalletsViewModel() override = default;
-
-   enum Roles {
-      firstRole = Qt::UserRole + 1,
-      NameRole = firstRole,
-      DescRole,
-      StateRole,
-      WalletIdRole,
-      IsHDRootRole,
-      RootWalletIdRole,
-      IsEncryptedRole,
-      EncKeyRole
-   };
-   Q_ENUM(Roles)
-
-   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
-   QHash<int, QByteArray> roleNames() const Q_DECL_OVERRIDE;
-};
 
 #endif // __WALLETS_VIEW_MODEL_H__
