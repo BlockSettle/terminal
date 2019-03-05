@@ -7,7 +7,6 @@
 #include <spdlog/spdlog.h>
 
 #include "AuthProxy.h"
-#include "ApplicationSettings.h"
 
 
 void AuthSignWalletObject::cancel()
@@ -17,6 +16,10 @@ void AuthSignWalletObject::cancel()
    }
 }
 
+AuthObject::AuthObject(std::shared_ptr<spdlog::logger> logger, QObject *parent)
+   : QObject(parent), logger_(logger)
+{
+}
 
 void AuthObject::setStatus(const QString &status)
 {
@@ -24,18 +27,20 @@ void AuthObject::setStatus(const QString &status)
    emit statusChanged();
 }
 
-
-AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
-   : AuthObject(logger)
+AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ApplicationSettings> &settings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
+   , QObject *parent)
+   : AuthObject(logger, parent)
+   , settings_(settings)
+   , connectionManager_(connectionManager)
 {
-
 }
 
 void AuthSignWalletObject::connectToServer()
 {
-   ApplicationSettings settings;
-   auto authKeys = settings.GetAuthKeys();
-   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, authKeys, this);
+   auto authKeys = settings_->GetAuthKeys();
+   autheIDClient_ = std::make_shared<AutheIDClient>(logger_, settings_, connectionManager_, this);
 
    connect(autheIDClient_.get(), &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
