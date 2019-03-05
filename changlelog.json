@@ -6,7 +6,12 @@
          "previous_version" : "0.12.11",
          "improvements" :
          [
-            "Version checker"
+            "Version checker",
+            "Env select"
+         ],
+         "bug_fixes" :
+         [
+            "Armory connection in release build"
          ]
       },
       {
