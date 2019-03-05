@@ -25,29 +25,33 @@ const QColor kFailColor = Qt::red;
 WalletKeyWidget::WalletKeyWidget(AutheIDClient::RequestType requestType
                                        , const bs::hd::WalletInfo &walletInfo
                                        , int keyIndex
-                                       , const std::shared_ptr<ApplicationSettings> &appSettings
                                        , const std::shared_ptr<spdlog::logger> &logger
+                                       , const std::shared_ptr<ApplicationSettings> &appSettings
+                                       , const std::shared_ptr<ConnectionManager> &connectionManager
                                        , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::WalletKeyWidget())
    , requestType_(requestType)
    , walletInfo_(walletInfo)
    , keyIndex_(keyIndex)
-   , appSettings_(appSettings)
    , logger_(logger)
+   , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
 
 {
    ui_->setupUi(this);
 
    passwordData_.encType = EncryptionType::Unencrypted;
    for (int i = 0; i < walletInfo.encKeys().size(); ++i) {
-      if (keyIndex == i) {
-         const auto &encKey = walletInfo.encKeys().at(i);
-         auto deviceInfo = AutheIDClient::getDeviceInfo(encKey.toStdString());
-         if (!deviceInfo.deviceId.empty()) {
-            knownDeviceIds_.push_back(deviceInfo.deviceId);
-         }
+      const auto &encKey = walletInfo.encKeys().at(i);
+      auto deviceInfo = AutheIDClient::getDeviceInfo(encKey.toStdString());
 
+      // Auth eID need to know all devices
+      if (!deviceInfo.deviceId.empty()) {
+         knownDeviceIds_.push_back(deviceInfo.deviceId);
+      }
+
+      if (keyIndex == i) {
          ui_->comboBoxAuthId->addItem(QString::fromStdString(deviceInfo.userId));
 
          if (deviceInfo.userId.empty()) {
@@ -186,21 +190,10 @@ void WalletKeyWidget::onAuthSignClicked()
       return;
    }
    else {
-      autheIDClient_ = new AutheIDClient(logger_, appSettings_->GetAuthKeys(), this);
-      const auto &serverPubKey = appSettings_->get<std::string>(ApplicationSettings::authServerPubKey);
-      const auto &serverHost = appSettings_->get<std::string>(ApplicationSettings::authServerHost);
-      const auto &serverPort = appSettings_->get<std::string>(ApplicationSettings::authServerPort);
+      autheIDClient_ = new AutheIDClient(logger_, appSettings_, connectionManager_, this);
 
       connect(autheIDClient_, &AutheIDClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
       connect(autheIDClient_, &AutheIDClient::failed, this, &WalletKeyWidget::onAuthFailed);
-
-      try {
-         autheIDClient_->connect(serverPubKey, serverHost, serverPort);
-      }
-      catch (const std::exception &e) {
-         // TODO display error
-         // ui_->pushButtonAuth->setEnabled(false);
-      }
    }
    timeLeft_ = 120;
    ui_->progressBar->setMaximum(timeLeft_ * 2);

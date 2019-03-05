@@ -9,8 +9,19 @@
 #include <bdmenums.h>
 
 #include "ArmorySettings.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 #include "LogManager.h"
+
+enum class EnvConfiguration
+{
+   // Do not change order!
+   PROD,
+   UAT,
+   Staging,
+   Custom,
+
+   Count
+};
 
 
 class ApplicationSettings : public QObject
@@ -43,9 +54,7 @@ public:
       pubBridgeHost,
       pubBridgePort,
       pubBridgePubKey,
-      authServerHost,
-      authServerPort,
-      authServerPubKey,
+      envConfiguration,
       celerHost,
       celerPort,
       mdServerHost,

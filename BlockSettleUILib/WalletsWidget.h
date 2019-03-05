@@ -26,7 +26,7 @@ class QMenu;
 class SignContainer;
 class WalletImporter;
 class WalletsViewModel;
-
+class ConnectionManager;
 
 class WalletsWidget : public TabWithShortcut
 {
@@ -37,9 +37,13 @@ public:
    ~WalletsWidget() override;
 
    void init(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ApplicationSettings> &, const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<AuthAddressManager> &, const std::shared_ptr<ArmoryConnection> &);
+      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &connectionManager
+      , const std::shared_ptr<AssetManager> &
+      , const std::shared_ptr<AuthAddressManager> &
+      , const std::shared_ptr<ArmoryConnection> &);
 
    void setUsername(const QString& username);
 
@@ -89,6 +93,7 @@ private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<AuthAddressManager>    authMgr_;
    std::shared_ptr<ArmoryConnection>      armory_;

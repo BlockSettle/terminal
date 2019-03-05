@@ -8,7 +8,7 @@
 #include "ChatDB.h"
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 #include "UserHasher.h"
 
 #include <QDateTime>

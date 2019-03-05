@@ -31,6 +31,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<CelerClient> &celerClient
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::RFQDialog())
@@ -45,6 +46,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    , armory_(armory)
    , celerClient_(celerClient)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
 {
    ui_->setupUi(this);
 
@@ -127,7 +129,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newXBTcontainer()
       , this, &RFQDialog::onXBTQuoteAccept);
 
    const auto xbtSettlementWidget = new XBTSettlementTransactionWidget(logger_
-      , celerClient_, appSettings_, xbtSettlContainer_, this);
+      , celerClient_, appSettings_, xbtSettlContainer_, connectionManager_, this);
 
    auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(xbtSettlementWidget);
    ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);
@@ -148,7 +150,7 @@ std::shared_ptr<bs::SettlementContainer> RFQDialog::newCCcontainer()
       , this, &QDialog::close);
 
    const auto ccSettlementWidget = new CCSettlementTransactionWidget(logger_
-      , celerClient_, appSettings_, ccSettlContainer_, this);
+      , celerClient_, appSettings_, ccSettlContainer_, connectionManager_, this);
 
    auto settlementIndex = ui_->stackedWidgetRFQ->addWidget(ccSettlementWidget);
    ui_->stackedWidgetRFQ->setCurrentIndex(settlementIndex);

@@ -20,8 +20,9 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
       , const std::shared_ptr<SignContainer> &signContainer
       , std::shared_ptr<CelerClient> celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent)
-   : BaseDealerSettlementDialog(logger, container, signContainer, appSettings, parent)
+   : BaseDealerSettlementDialog(logger, container, signContainer, appSettings, connectionManager, parent)
    , ui_(new Ui::DealerCCSettlementDialog())
    , settlContainer_(container)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))

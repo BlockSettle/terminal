@@ -14,6 +14,7 @@ class SubscriberConnection;
 class ZmqContext;
 class ZmqSecuredDataConnection;
 class ZmqSecuredServerConnection;
+class QNetworkAccessManager;
 
 class ConnectionManager
 {
@@ -46,6 +47,8 @@ public:
    std::shared_ptr<PublisherConnection>   CreatePublisherConnection() const;
    std::shared_ptr<SubscriberConnection>  CreateSubscriberConnection() const;
 
+   const std::shared_ptr<QNetworkAccessManager> &GetNAM();
+
 private:
    bool InitNetworkLibs();
    void DeinitNetworkLibs();
@@ -54,6 +57,7 @@ private:
 
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<ZmqContext>      zmqContext_;
+   std::shared_ptr<QNetworkAccessManager> nam_;
 };
 
 #endif // __CONNECTION_MANAGER_H__

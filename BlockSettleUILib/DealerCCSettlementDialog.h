@@ -24,6 +24,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent = nullptr);
    ~DealerCCSettlementDialog() override;
 

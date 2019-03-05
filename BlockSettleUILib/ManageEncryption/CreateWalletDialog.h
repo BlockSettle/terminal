@@ -22,6 +22,7 @@ class SignContainer;
 class WalletsManager;
 class WalletKeysCreateWidget;
 class ApplicationSettings;
+class ConnectionManager;
 
 class CreateWalletDialog : public QDialog
 {
@@ -36,6 +37,7 @@ public:
       , const std::string& walletId
       , const QString& username
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    ~CreateWalletDialog() override;
@@ -59,6 +61,7 @@ private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager>           connectionManager_;
    std::shared_ptr<spdlog::logger> logger_;
    const QString     walletsPath_;
    const bs::wallet::Seed walletSeed_;
