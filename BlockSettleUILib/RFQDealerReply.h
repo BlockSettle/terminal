@@ -39,6 +39,7 @@ class SignContainer;
 class TransactionData;
 class CustomDoubleSpinBox;
 class MarketDataProvider;
+class ConnectionManager;
 
 QT_BEGIN_NAMESPACE
 class QDoubleSpinBox;
@@ -66,6 +67,7 @@ namespace bs {
             , const std::shared_ptr<AssetManager>& assetManager
             , const std::shared_ptr<QuoteProvider>& quoteProvider
             , const std::shared_ptr<ApplicationSettings> &
+            , const std::shared_ptr<ConnectionManager> &connectionManager
             , const std::shared_ptr<SignContainer> &
             , const std::shared_ptr<ArmoryConnection> &
             , std::shared_ptr<MarketDataProvider> mdProvider);
@@ -128,6 +130,7 @@ namespace bs {
          std::shared_ptr<AssetManager>          assetManager_;
          std::shared_ptr<QuoteProvider>         quoteProvider_;
          std::shared_ptr<ApplicationSettings>   appSettings_;
+         std::shared_ptr<ConnectionManager>     connectionManager_;
          std::shared_ptr<SignContainer>         signingContainer_;
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<MarketDataProvider>    mdProvider_;

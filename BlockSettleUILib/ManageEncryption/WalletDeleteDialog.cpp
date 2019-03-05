@@ -19,6 +19,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::sync::hd::Walle
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<SignContainer> &container
    , std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent, bool fixedCheckBoxes, bool delRemote)
    : QDialog(parent)
@@ -27,6 +28,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::sync::hd::Walle
    , walletsManager_(walletsMgr)
    , signingContainer_(container)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
    , logger_(logger)
    , fixedCheckBoxes_(fixedCheckBoxes)
    , delRemoteWallet_(delRemote)
@@ -46,6 +48,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::sync::Wallet> &
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<SignContainer> &container
    , std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
    : QDialog(parent)
@@ -54,6 +57,7 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::sync::Wallet> &
    , walletsManager_(walletsMgr)
    , signingContainer_(container)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
    , logger_(logger)
    , fixedCheckBoxes_(false), delRemoteWallet_(false)
 {
@@ -90,7 +94,7 @@ void WalletDeleteDialog::init()
 void WalletDeleteDialog::deleteHDWallet()
 {
    if (ui_->checkBoxBackup->isChecked()) {
-      if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_
+      if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_, connectionManager_
                                  , logger_, this)) {
 //         BSMessageBox(BSMessageBox::critical, tr("No backup")
 //            , tr("No backup was created for this wallet - deletion cancelled"), this).exec();

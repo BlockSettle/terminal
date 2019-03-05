@@ -21,6 +21,7 @@ class ApplicationSettings;
 class CelerClient;
 class WalletsManager;
 class ReqCCSettlementContainer;
+class ConnectionManager;
 
 namespace SwigClient
 {
@@ -36,6 +37,7 @@ public:
       , const std::shared_ptr<CelerClient> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ReqCCSettlementContainer> &
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent = nullptr);
    ~CCSettlementTransactionWidget() noexcept override;
 
@@ -61,6 +63,7 @@ private:
    std::shared_ptr<spdlog::logger>     logger_;
    const std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ReqCCSettlementContainer>    settlContainer_;
+   std::shared_ptr<ConnectionManager>           connectionManager_;
 
    const QString  sValid_;
    const QString  sInvalid_;

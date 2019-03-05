@@ -77,6 +77,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<QuoteProvider>& quoteProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , std::shared_ptr<MarketDataProvider> mdProvider)
@@ -88,6 +89,7 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
    appSettings_ = appSettings;
    signingContainer_ = container;
    armory_ = armory;
+   connectionManager_ = connectionManager;
 
    connect(authAddressManager_.get(), &AuthAddressManager::VerifiedAddressListUpdated, [this] {
       UiUtils::fillAuthAddressesComboBox(ui_->authenticationAddressComboBox, authAddressManager_);
@@ -224,7 +226,7 @@ void RFQDealerReply::onWalletInfo(unsigned int reqId, bs::hd::WalletInfo walletI
 
    EnterWalletPassword passwordDialog(AutheIDClient::SettlementTransaction, this);
    walletInfo.setRootId(autoSignWalletId_);
-   passwordDialog.init(walletInfo, appSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog
+   passwordDialog.init(walletInfo, appSettings_, connectionManager_, WalletKeyWidget::UseType::RequestAuthAsDialog
                        , tr("Activate Auto-Sign"), logger_, tr("Activate Auto-Sign"));
    if (passwordDialog.exec() != QDialog::Accepted) {
       disableAutoSign();

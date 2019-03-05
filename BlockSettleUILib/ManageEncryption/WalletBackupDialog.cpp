@@ -21,6 +21,7 @@
 WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
    : QDialog(parent)
@@ -30,6 +31,7 @@ WalletBackupDialog::WalletBackupDialog(const std::shared_ptr<bs::sync::hd::Walle
    , outputDir_(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation).toStdString())
    , logger_(logger)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
 {
    ui_->setupUi(this);
 
@@ -139,7 +141,7 @@ void WalletBackupDialog::onWalletInfo(unsigned int id, const bs::hd::WalletInfo 
    walletInfo_ = walletInfo;
 
    ui_->widgetSubmitKeys->init(AutheIDClient::BackupWallet, walletInfo
-      , WalletKeyWidget::UseType::RequestAuthForDialog, appSettings_, logger_, tr("Backup keys"));
+      , WalletKeyWidget::UseType::RequestAuthForDialog, logger_, appSettings_, connectionManager_, tr("Backup keys"));
    ui_->widgetSubmitKeys->setFocus();
 
    QApplication::processEvents();
@@ -195,7 +197,7 @@ void WalletBackupDialog::onBackupClicked()
    if (walletInfo_.isEidAuthOnly()) {
       // Request eid auth to decrypt wallet
       EnterWalletPassword enterWalletOldPassword(AutheIDClient::BackupWallet, this);
-      enterWalletOldPassword.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog, tr("Backup Wallet"), logger_);
+      enterWalletOldPassword.init(walletInfo_, appSettings_, connectionManager_, WalletKeyWidget::UseType::RequestAuthAsDialog, tr("Backup Wallet"), logger_);
       int result = enterWalletOldPassword.exec();
       if (result != QDialog::Accepted) {
          return;
@@ -240,13 +242,14 @@ void WalletBackupDialog::reject()
 bool WalletBackupAndVerify(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
 {
    if (!wallet) {
       return false;
    }
-   WalletBackupDialog walletBackupDialog(wallet, container, appSettings, logger, parent);
+   WalletBackupDialog walletBackupDialog(wallet, container, appSettings, connectionManager, logger, parent);
    if (walletBackupDialog.exec() == QDialog::Accepted) {
       BSMessageBox(BSMessageBox::success, QObject::tr("Backup"), QObject::tr("%1 Backup successfully created")
          .arg(walletBackupDialog.isDigitalBackup() ? QObject::tr("Digital") : QObject::tr("Paper"))

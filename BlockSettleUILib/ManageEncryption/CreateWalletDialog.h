@@ -23,6 +23,7 @@ namespace bs {
 class ApplicationSettings;
 class SignContainer;
 class WalletKeysCreateWidget;
+class ConnectionManager;
 
 class CreateWalletDialog : public QDialog
 {
@@ -36,6 +37,7 @@ public:
       , const std::string &walletId
       , const QString &username
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    ~CreateWalletDialog() override;
@@ -59,6 +61,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager>           connectionManager_;
    std::shared_ptr<spdlog::logger> logger_;
    const bs::core::wallet::Seed walletSeed_;
    bs::hd::WalletInfo walletInfo_;

@@ -11,12 +11,14 @@ BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spd
       , const std::shared_ptr<bs::SettlementContainer> &settlContainer
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent)
    : QDialog(parent)
    , logger_(logger)
    , settlContainer_(settlContainer)
    , signContainer_(signContainer)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
 {
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStarted, this, &BaseDealerSettlementDialog::onTimerStarted);
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStopped, this, &BaseDealerSettlementDialog::onTimerStopped);
@@ -137,7 +139,7 @@ void BaseDealerSettlementDialog::startAccepting()
       return;
    }
    widgetWalletKeys()->init(AutheIDClient::SettlementTransaction, walletInfo_
-                            , WalletKeyWidget::UseType::RequestAuthInParent, appSettings_, logger_);
+                            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
    widgetPassword()->show();
    widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();
