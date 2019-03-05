@@ -173,9 +173,13 @@ WalletsWidget::WalletsWidget(QWidget* parent)
 WalletsWidget::~WalletsWidget() = default;
 
 void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<WalletsManager> &manager, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ApplicationSettings> &applicationSettings, const std::shared_ptr<AssetManager> &assetMgr
-   , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryConnection> &armory)
+   , const std::shared_ptr<WalletsManager> &manager
+   , const std::shared_ptr<SignContainer> &container
+   , const std::shared_ptr<ApplicationSettings> &applicationSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const std::shared_ptr<AssetManager> &assetMgr
+   , const std::shared_ptr<AuthAddressManager> &authMgr
+   , const std::shared_ptr<ArmoryConnection> &armory)
 {
    logger_ = logger;
    walletsManager_ = manager;
@@ -184,6 +188,7 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
    assetManager_ = assetMgr;
    authMgr_ = authMgr;
    armory_ = armory;
+   connectionManager_ = connectionManager;
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &WalletsWidget::onTXSigned);
 
@@ -295,7 +300,7 @@ void WalletsWidget::showWalletProperties(const QModelIndex& index)
 //         , walletsModel_, appSettings_, assetManager_, this).exec();
 
       RootWalletPropertiesDialog(logger_, hdWallet, walletsManager_, armory_, signingContainer_
-         , walletsModel_, appSettings_, assetManager_, this).exec();
+         , walletsModel_, appSettings_, connectionManager_, assetManager_, this).exec();
    }
 }
 
@@ -445,7 +450,7 @@ bool WalletsWidget::CreateNewWallet(bool report)
 //   CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
 //      , appSettings_->GetHomeDir(), walletSeed, walletId, username_, appSettings_, this);
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-      , appSettings_->GetHomeDir(), walletSeed, walletId, username_, appSettings_, logger_, this);
+      , appSettings_->GetHomeDir(), walletSeed, walletId, username_, appSettings_, connectionManager_, logger_, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
          newWallet = walletsManager_->GetHDWalletById(walletId);
@@ -498,6 +503,7 @@ bool WalletsWidget::ImportNewWallet(bool report)
                                                     , importWalletDialog.GetSeedData()
                                                     , importWalletDialog.GetChainCodeData()
                                                     , appSettings_
+                                                    , connectionManager_
                                                     , logger_
                                                     , username_
                                                     , importWalletDialog.GetName()
@@ -726,6 +732,6 @@ void WalletsWidget::onDeleteWallet()
       BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
       return;
    }
-   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_
+   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, connectionManager_
                       , logger_, this).exec();
 }

@@ -26,6 +26,7 @@ namespace bs {
 class SignContainer;
 class WalletKeysSubmitWidget;
 class ApplicationSettings;
+class ConnectionManager;
 
 class BaseDealerSettlementDialog : public QDialog
 {
@@ -36,6 +37,7 @@ public:
       , const std::shared_ptr<bs::SettlementContainer> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &
       , QWidget* parent = nullptr);
    ~BaseDealerSettlementDialog() noexcept override = default;
 
@@ -93,6 +95,7 @@ private:
    bool           accepting_ = false;
    QString        authPrompt_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    bs::hd::WalletInfo walletInfo_;
 };
 

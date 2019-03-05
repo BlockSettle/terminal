@@ -29,6 +29,7 @@ class WalletsManager;
 class XBTSettlementTransactionWidget;
 class CelerClient;
 class ApplicationSettings;
+class ConnectionManager;
 
 class RFQDialog : public QDialog
 {
@@ -45,6 +46,7 @@ public:
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<CelerClient> &celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &
       , QWidget* parent = nullptr);
    ~RFQDialog() override;
 
@@ -82,6 +84,7 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<CelerClient>        celerClient_;
    std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager>  connectionManager_;
    std::unordered_map<std::string, std::string> ccTxMap_;
    std::map<QString, QString>          ccReqIdToOrder_;
 

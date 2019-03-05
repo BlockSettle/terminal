@@ -15,7 +15,7 @@
 #include <QDateTime>
 
 #include "SecureBinaryData.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 
 
 namespace Chat
@@ -586,7 +586,10 @@ namespace Chat
       virtual void OnContactsActionResponse(const ContactsActionResponse&) = 0;
    };
 
-}
+   autheid::PublicKey publicKeyFromString(const std::string &s);
+   std::string publicKeyToString(const autheid::PublicKey &k);
+
+} // namespace Chat
 
 
 #endif // __CHAT_PROTOCOL_H__

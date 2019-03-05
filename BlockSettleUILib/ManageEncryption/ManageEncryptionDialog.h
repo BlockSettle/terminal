@@ -42,6 +42,7 @@ public:
       , const std::shared_ptr<bs::hd::Wallet> &wallet
       , const bs::hd::WalletInfo &walletInfo
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent = nullptr);
    ~ManageEncryptionDialog() override;
 
@@ -78,6 +79,7 @@ private:
    bool deviceKeyNewValid_;
    bool isLatestChangeAddDevice_;
    std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager>   connectionManager_;
    bs::hd::WalletInfo walletInfo_;
 };
 

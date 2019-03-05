@@ -21,6 +21,7 @@ class QuoteProvider;
 class SignContainer;
 class WalletsManager;
 class WalletsManager;
+class ConnectionManager;
 
 namespace spdlog {
    class logger;
@@ -44,7 +45,8 @@ public:
          , const std::shared_ptr<AssetManager>& assetManager
          , const std::shared_ptr<DialogManager> &dialogManager
          , const std::shared_ptr<SignContainer> &
-         , const std::shared_ptr<ArmoryConnection> &);
+         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<ConnectionManager> &connectionManager);
    void SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
 
    void shortcutActivated(ShortcutType s) override;
@@ -70,6 +72,7 @@ private:
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager>  connectionManager_;
 };
 
 #endif // __RFQ_REQUEST_WIDGET_H__

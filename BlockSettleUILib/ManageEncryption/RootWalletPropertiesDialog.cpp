@@ -57,6 +57,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    , const std::shared_ptr<SignContainer> &container
    , WalletsViewModel *walletsModel
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AssetManager> &assetMgr
    , QWidget* parent)
   : QDialog(parent)
@@ -65,6 +66,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
   , walletsManager_(walletsManager)
   , signingContainer_(container)
   , appSettings_(appSettings)
+  , connectionManager_(connectionManager)
   , assetMgr_(assetMgr)
   , logger_(logger)
 {
@@ -118,7 +120,7 @@ RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
    WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_
-                             , appSettings_, logger_, this);
+                             , appSettings_, connectionManager_, logger_, this);
    if (delDlg.exec() == QDialog::Accepted) {
       close();
    }
@@ -126,7 +128,7 @@ void RootWalletPropertiesDialog::onDeleteWallet()
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, logger_
+   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, connectionManager_, logger_
                          , this);
 }
 
@@ -180,7 +182,7 @@ void RootWalletPropertiesDialog::copyWoWallet()
 void RootWalletPropertiesDialog::onChangePassword()
 {
    ManageEncryptionDialog manageEncryptionDialog(logger_, signingContainer_, wallet_
-                                                 , walletInfo_, appSettings_, this);
+                                                 , walletInfo_, appSettings_, connectionManager_, this);
 
    int result = manageEncryptionDialog.exec();
 

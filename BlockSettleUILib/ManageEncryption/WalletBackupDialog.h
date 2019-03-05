@@ -19,7 +19,7 @@ namespace bs {
 class SignContainer;
 class WalletsManager;
 class ApplicationSettings;
-
+class ConnectionManager;
 
 class WalletBackupDialog : public QDialog
 {
@@ -29,6 +29,7 @@ public:
    WalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    ~WalletBackupDialog() override;
@@ -58,6 +59,7 @@ private:
    std::string    outputDir_;
    QString        selectedFile_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager>         connectionManager_;
    std::shared_ptr<spdlog::logger> logger_;
    bs::hd::WalletInfo walletInfo_;
 };
@@ -65,6 +67,7 @@ private:
 bool WalletBackupAndVerify(const std::shared_ptr<bs::hd::Wallet> &
    , const std::shared_ptr<SignContainer> &
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent);
 

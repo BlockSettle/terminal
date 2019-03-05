@@ -6,6 +6,7 @@
 #include "AuthAddress.h"
 #include "CommonTypes.h"
 #include "SettlementWallet.h"
+#include "ConnectionManager.h"
 
 #include <string>
 
@@ -33,6 +34,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &
       , QWidget* parent = nullptr);
    ~DealerXBTSettlementDialog() override;
 
@@ -71,7 +73,7 @@ private:
 
 private:
    std::unique_ptr<Ui::DealerXBTSettlementDialog> ui_;
-   std::shared_ptr<DealerXBTSettlementContainer>   settlContainer_;
+   std::shared_ptr<DealerXBTSettlementContainer>  settlContainer_;
    bool acceptable_ = false;
 };
 

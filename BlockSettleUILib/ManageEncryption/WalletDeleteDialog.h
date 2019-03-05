@@ -22,6 +22,7 @@ namespace bs {
 class SignContainer;
 class WalletsManager;
 class ApplicationSettings;
+class ConnectionManager;
 
 class WalletDeleteDialog : public QDialog
 {
@@ -32,6 +33,7 @@ public:
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr
       , bool fixedCheckBoxes = false, bool delRemote = false);
@@ -39,6 +41,7 @@ public:
       , const std::shared_ptr<WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , QWidget *parent = nullptr);
    ~WalletDeleteDialog() override;
@@ -59,6 +62,7 @@ private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<spdlog::logger>     logger_;
    const bool fixedCheckBoxes_;
    const bool delRemoteWallet_;

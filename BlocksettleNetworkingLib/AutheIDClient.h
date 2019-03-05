@@ -1,26 +1,24 @@
 #ifndef __AUTH_EID_CLIENT_H__
 #define __AUTH_EID_CLIENT_H__
-
-#include <botan/ecies.h>
-#include <botan/auto_rng.h>
 #include <QObject>
-#include "DataConnectionListener.h"
 #include "EncryptionUtils.h"
-#include "AutheIDClient.h"
-#include "ZmqSecuredDataConnection.h"
-#include "EncryptUtils.h"
-#include "rp.pb.h"
+#include "autheid_utils.h"
 
 namespace spdlog {
    class logger;
 }
 
-class QTimer;
-class ConnectionManager;
-class RequestReplyCommand;
-class ApplicationSettings;
+namespace autheid {
+   namespace rp {
+   class GetResultResponse_SignatureResult;
+   }
+}
 
-class AutheIDClient : public QObject, public DataConnectionListener
+class ApplicationSettings;
+class QNetworkReply;
+class ConnectionManager;
+
+class AutheIDClient : public QObject
 {
    Q_OBJECT
 
@@ -53,21 +51,18 @@ public:
 
    static DeviceInfo getDeviceInfo(const std::string &encKey);
 
-   AutheIDClient(const std::shared_ptr<spdlog::logger> &
-      , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
-      , QObject *parent = nullptr);
+   // ConnectionManager must live long enough to be able send cancel message
+   // (if cancelling request in mobile app is needed)
+   AutheIDClient(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &, QObject *parent = nullptr);
    ~AutheIDClient() override;
 
-   void connect(const BinaryData& serverPubKey, const std::string &serverHost
-      , const std::string &serverPort);
-   bool start(RequestType requestType, const std::string &email, const std::string &walletId
+   void start(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds);
-   bool sign(const BinaryData &data, const std::string &email
+   void sign(const BinaryData &data, const std::string &email
       , const QString &title, const QString &description, int expiration = 30);
-   bool authenticate(const std::string& email, const std::shared_ptr<ApplicationSettings> &appSettings);
+   void authenticate(const std::string& email);
    void cancel();
-
-   bool isConnected() const;
 
 signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
@@ -75,40 +70,43 @@ signals:
    void authSuccess(const std::string &jwt);
    void failed(const QString &text);
 
-private slots:
-   void timeout();
-
 private:
-   void OnDataReceived(const std::string& data) override;
-   void OnConnected() override;
-   void OnDisconnected() override;
-   void OnError(DataConnectionError errorCode) override;
+   struct Result
+   {
+      QByteArray payload;
+      std::string errorMsg;
+      bool success{false};
+   };
 
-   bool requestAuth(const std::string& email);
-   bool sendToAuthServer(const std::string &payload, const autheid::rp::PayloadType type);
-   void processCreateReply(const uint8_t *payload, size_t payloadSize);
-   void processResultReply(const uint8_t *payload, size_t payloadSize);
+   using ResultCallback = std::function<void(const Result &result)>;
 
-   void processSignatureReply(const autheid::rp::SignatureReply &);
+   void requestAuth(const std::string& email);
+   void createCreateRequest(const std::string &payload, int expiration);
+   void processCreateReply(const QByteArray &payload, int expiration);
+   void processResultReply(const QByteArray &payload);
+
+   void processNetworkReply(QNetworkReply *, int timeoutSeconds, const ResultCallback &);
+
+   void processSignatureReply(const autheid::rp::GetResultResponse_SignatureResult &);
 
    QString getAutheIDClientRequestText(RequestType requestType);
    bool isAutheIDClientNewDeviceNeeded(RequestType requestType);
    int getAutheIDClientTimeout(RequestType requestType);
 
 private:
-   std::unique_ptr<ConnectionManager> connectionManager_;
-   std::shared_ptr<ZmqSecuredDataConnection> connection_;
    std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<ApplicationSettings> settings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    std::string requestId_;
    std::string email_;
-   bool resultAuth_;
+   bool resultAuth_{};
 
    const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
 
-   QTimer *timer_;
-
    std::vector<std::string> knownDeviceIds_;
+
+   std::string baseUrl_;
 };
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)
 
-#endif // __AUTH_EID_CLIENT_H__
+#endif __AUTH_EID_CLIENT_H__

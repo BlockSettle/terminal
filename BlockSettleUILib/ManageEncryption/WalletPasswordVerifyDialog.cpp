@@ -5,10 +5,12 @@
 #include "ui_WalletPasswordVerifyDialog.h"
 
 WalletPasswordVerifyDialog::WalletPasswordVerifyDialog(const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , QWidget *parent)
    : QDialog(parent)
    , ui_(new Ui::WalletPasswordVerifyDialog)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
 {
    ui_->setupUi(this);
 
@@ -71,7 +73,7 @@ void WalletPasswordVerifyDialog::onContinueClicked()
    
    if (key.encType == bs::wallet::EncryptionType::Auth) {
       EnterWalletPassword dialog(AutheIDClient::VerifyWalletKey, this);
-      dialog.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog
+      dialog.init(walletInfo_, appSettings_, connectionManager_, WalletKeyWidget::UseType::RequestAuthAsDialog
                   , tr("Confirm Auth eID Signing"), logger_, tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
