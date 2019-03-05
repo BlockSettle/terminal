@@ -69,7 +69,18 @@ AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
    , resultAuth_(false)
    , authKeys_(settings->GetAuthKeys())
 {
-   baseUrl_ = "https://api.autheid.com/v1/requests";
+   EnvConfiguration conf = EnvConfiguration(settings_->get<int>(ApplicationSettings::envConfiguration));
+
+   switch (conf) {
+      case EnvConfiguration::UAT:
+      case EnvConfiguration::Staging:
+      case EnvConfiguration::Custom:
+         baseUrl_ = "https://api.staging.autheid.com/v1/requests";
+         break;
+      default:
+         baseUrl_ = "https://api.autheid.com/v1/requests";
+         break;
+   }
 }
 
 AutheIDClient::~AutheIDClient()
