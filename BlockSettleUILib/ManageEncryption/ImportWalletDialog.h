@@ -22,6 +22,7 @@ class AuthAddressManager;
 class SignContainer;
 class WalletImporter;
 class WalletsManager;
+class ConnectionManager;
 
 class ImportWalletDialog : public QDialog
 {
@@ -36,6 +37,7 @@ public:
       , const EasyCoDec::Data& walletData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &
       , const QString& username
       , const std::string &walletName = {}
@@ -66,6 +68,7 @@ private:
    std::shared_ptr<WalletsManager>  walletsManager_;
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<WalletImporter>  walletImporter_;
    std::shared_ptr<spdlog::logger> logger_;

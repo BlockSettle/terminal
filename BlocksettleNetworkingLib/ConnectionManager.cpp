@@ -1,5 +1,6 @@
 #include "ConnectionManager.h"
 
+#include <QNetworkAccessManager>
 #include "CelerClientConnection.h"
 #include "CelerStreamServerConnection.h"
 #include "GenoaConnection.h"
@@ -120,4 +121,13 @@ std::shared_ptr<PublisherConnection> ConnectionManager::CreatePublisherConnectio
 std::shared_ptr<SubscriberConnection> ConnectionManager::CreateSubscriberConnection() const
 {
    return std::make_shared<SubscriberConnection>(logger_, zmqContext_);
+}
+
+const std::shared_ptr<QNetworkAccessManager> &ConnectionManager::GetNAM()
+{
+   if (!nam_) {
+      nam_.reset(new QNetworkAccessManager);
+   }
+
+   return nam_;
 }

@@ -11,11 +11,12 @@
 
 AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<CelerClient> &celerClient)
+      , const std::shared_ptr<CelerClient> &celerClient
+      , const std::shared_ptr<ConnectionManager> &connectionManager)
    : logger_(logger)
    , appSettings_(appSettings)
    , celerClient_(celerClient)
-   , autheIDClient_(new AutheIDClient(logger, appSettings_->GetAuthKeys()))
+   , autheIDClient_(new AutheIDClient(logger, appSettings, connectionManager))
 {
    connect(autheIDClient_.get(), &AutheIDClient::signSuccess, this, &AuthSignManager::onSignSuccess);
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, &AuthSignManager::onFailed);

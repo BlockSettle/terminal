@@ -24,6 +24,7 @@ EnterWalletPassword::~EnterWalletPassword() = default;
 
 void EnterWalletPassword::init(const WalletInfo &walletInfo
                                   , const std::shared_ptr<ApplicationSettings> &appSettings
+                                  , const std::shared_ptr<ConnectionManager> &connectionManager
                                   , WalletKeyWidget::UseType useType
                                   , const QString &prompt
                                   , const std::shared_ptr<spdlog::logger> &logger
@@ -59,7 +60,7 @@ void EnterWalletPassword::init(const WalletInfo &walletInfo
       ui_->groupBoxSubmitKeys->setTitle(QStringLiteral());
    }
 
-   ui_->widgetSubmitKeys->init(requestType_, walletInfo_, useType, appSettings_, logger_, prompt);
+   ui_->widgetSubmitKeys->init(requestType_, walletInfo_, useType, logger_, appSettings_, connectionManager, prompt);
    ui_->widgetSubmitKeys->setFocus();
    ui_->widgetSubmitKeys->resume();
 

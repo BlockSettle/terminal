@@ -21,6 +21,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , const std::string& walletId
    , const QString& username
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
 
@@ -28,6 +29,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , ui_(new Ui::CreateWalletDialog)
    , walletsManager_(walletsManager)
    , signingContainer_(container)
+   , connectionManager_(connectionManager)
    , appSettings_(appSettings)
    , walletsPath_(walletsPath)
    , walletSeed_(walletSeed)
@@ -64,7 +66,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    // for eid wallet signing suggest email used for login into app
 
    ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet
-      , walletInfo_, WalletKeyWidget::UseType::ChangeAuthForDialog, appSettings, logger);
+      , walletInfo_, WalletKeyWidget::UseType::ChangeAuthForDialog, appSettings, connectionManager, logger);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::createWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::createWallet);
@@ -117,7 +119,7 @@ void CreateWalletDialog::createWallet()
 
       EnterWalletPassword dialog(AutheIDClient::ActivateWallet, this);
 
-      dialog.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::ChangeToEidAsDialog
+      dialog.init(walletInfo_, appSettings_, connectionManager_, WalletKeyWidget::UseType::ChangeToEidAsDialog
          , QObject::tr("Activate Auth eID Signing"), logger_, QObject::tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
@@ -133,7 +135,7 @@ void CreateWalletDialog::createWallet()
       messageBox.exec();
    }
 
-   WalletPasswordVerifyDialog verifyDialog(appSettings_, this);
+   WalletPasswordVerifyDialog verifyDialog(appSettings_, connectionManager_, this);
    verifyDialog.init(walletInfo_, pwData, logger_);
    int result = verifyDialog.exec();
    if (!result) {

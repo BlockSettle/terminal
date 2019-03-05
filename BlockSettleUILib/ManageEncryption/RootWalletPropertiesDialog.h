@@ -23,6 +23,7 @@ class CurrentWalletFilter;
 class SignContainer;
 class WalletsManager;
 class WalletsViewModel;
+class ConnectionManager;
 
 class RootWalletPropertiesDialog : public QDialog
 {
@@ -30,9 +31,13 @@ Q_OBJECT
 
 public:
    RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<SignContainer> &
-      , WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<bs::hd::Wallet> &
+      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<SignContainer> &
+      , WalletsViewModel *walletsModel
+      , const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
    ~RootWalletPropertiesDialog() override;
 
@@ -61,6 +66,7 @@ private:
    std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<spdlog::logger>     logger_;
    CurrentWalletFilter                 *walletFilter_;

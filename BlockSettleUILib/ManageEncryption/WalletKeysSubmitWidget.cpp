@@ -31,14 +31,16 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
 void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
                                      , const bs::hd::WalletInfo &walletInfo
                                      , WalletKeyWidget::UseType useType
-                                     , const std::shared_ptr<ApplicationSettings> &appSettings
                                      , const std::shared_ptr<spdlog::logger> &logger
+                                     , const std::shared_ptr<ApplicationSettings> &appSettings
+                                     , const std::shared_ptr<ConnectionManager> &connectionManager
                                      , const QString &prompt)
 {
    requestType_ = requestType;
    walletInfo_ = walletInfo;
    logger_ = logger;
    appSettings_ = appSettings;
+   connectionManager_ = connectionManager;
    useType_ = useType;
 
    qDeleteAll(widgets_.cbegin(), widgets_.cend());
@@ -123,7 +125,8 @@ void WalletKeysSubmitWidget::addKey(int encKeyIndex, const QString &prompt)
       layout()->addWidget(separator);
    }
 
-   auto widget = new WalletKeyWidget(requestType_, walletInfo_, encKeyIndex, appSettings_, logger_, this);
+   auto widget = new WalletKeyWidget(requestType_, walletInfo_, encKeyIndex
+      , logger_, appSettings_, connectionManager_, this);
    widget->setUseType(useType_);
 
    widgets_.push_back(widget);

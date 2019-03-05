@@ -23,6 +23,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       , const EasyCoDec::Data& seedData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<spdlog::logger> &logger
       , const QString& username
       , const std::string &walletName, const std::string &walletDesc
@@ -33,6 +34,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    , walletsManager_(walletsManager)
    , signContainer_(container)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
    , logger_(logger)
    , armory_(armory)
    , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
@@ -92,7 +94,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    //ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet, walletId_, username, appSettings);
 
    ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet
-      , walletInfo_, WalletKeyWidget::UseType::ChangeAuthForDialog, appSettings, logger);
+      , walletInfo_, WalletKeyWidget::UseType::ChangeAuthForDialog, appSettings, connectionManager, logger);
 
    adjustSize();
    setMinimumSize(size());
@@ -107,7 +109,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
             , tr("Watching-only wallet with the same id already exists in the terminal"
                " - do you want to delete it first?"), this);
          if (delWoWallet.exec() == QDialog::Accepted) {
-            WalletDeleteDialog delDlg(hdWallet, walletsManager_, signContainer_, appSettings_, logger, this, true);
+            WalletDeleteDialog delDlg(hdWallet, walletsManager_, signContainer_, appSettings_, connectionManager_, logger, this, true);
             if (delDlg.exec() == QDialog::Accepted) {
                existingChecked_ = true;
             }
@@ -156,7 +158,7 @@ void ImportWalletDialog::promptForSignWalletDelete()
             existingChecked_ = true;
          }
       } else {
-         WalletDeleteDialog delDlg(hdWallet, walletsManager_, signContainer_, appSettings_, logger_, this, true, true);
+         WalletDeleteDialog delDlg(hdWallet, walletsManager_, signContainer_, appSettings_, connectionManager_, logger_, this, true, true);
          if (delDlg.exec() == QDialog::Accepted) {
             existingChecked_ = true;
          }
@@ -229,7 +231,7 @@ void ImportWalletDialog::importWallet()
 
       EnterWalletPassword dialog(AutheIDClient::ActivateWallet, this);
 
-      dialog.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::ChangeToEidAsDialog
+      dialog.init(walletInfo_, appSettings_, connectionManager_, WalletKeyWidget::UseType::ChangeToEidAsDialog
          , QObject::tr("Activate Auth eID Signing"), logger_, QObject::tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {

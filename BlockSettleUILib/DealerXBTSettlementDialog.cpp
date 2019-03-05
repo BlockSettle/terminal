@@ -23,8 +23,9 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
       , const std::shared_ptr<SignContainer> &signContainer
       , std::shared_ptr<CelerClient> celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent)
-   : BaseDealerSettlementDialog(logger, settlContainer, signContainer, appSettings, parent)
+   : BaseDealerSettlementDialog(logger, settlContainer, signContainer, appSettings, connectionManager, parent)
    , ui_(new Ui::DealerXBTSettlementDialog())
    , settlContainer_(settlContainer)
 {

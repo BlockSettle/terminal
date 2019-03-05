@@ -25,16 +25,18 @@ const QColor kFailColor = Qt::red;
 WalletKeyWidget::WalletKeyWidget(AutheIDClient::RequestType requestType
                                        , const bs::hd::WalletInfo &walletInfo
                                        , int keyIndex
-                                       , const std::shared_ptr<ApplicationSettings> &appSettings
                                        , const std::shared_ptr<spdlog::logger> &logger
+                                       , const std::shared_ptr<ApplicationSettings> &appSettings
+                                       , const std::shared_ptr<ConnectionManager> &connectionManager
                                        , QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::WalletKeyWidget())
    , requestType_(requestType)
    , walletInfo_(walletInfo)
    , keyIndex_(keyIndex)
-   , appSettings_(appSettings)
    , logger_(logger)
+   , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
 
 {
    ui_->setupUi(this);
@@ -188,10 +190,7 @@ void WalletKeyWidget::onAuthSignClicked()
       return;
    }
    else {
-      autheIDClient_ = new AutheIDClient(logger_, appSettings_->GetAuthKeys(), this);
-      const auto &serverPubKey = appSettings_->get<std::string>(ApplicationSettings::authServerPubKey);
-      const auto &serverHost = appSettings_->get<std::string>(ApplicationSettings::authServerHost);
-      const auto &serverPort = appSettings_->get<std::string>(ApplicationSettings::authServerPort);
+      autheIDClient_ = new AutheIDClient(logger_, appSettings_, connectionManager_, this);
 
       connect(autheIDClient_, &AutheIDClient::succeeded, this, &WalletKeyWidget::onAuthSucceeded);
       connect(autheIDClient_, &AutheIDClient::failed, this, &WalletKeyWidget::onAuthFailed);

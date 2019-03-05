@@ -1,5 +1,7 @@
 #include "AutheIDClient.h"
 
+#include "ApplicationSettings.h"
+#include "ConnectionManager.h"
 #include <spdlog/spdlog.h>
 #include <QTimer>
 #include <QNetworkAccessManager>
@@ -57,18 +59,16 @@ AutheIDClient::DeviceInfo AutheIDClient::getDeviceInfo(const std::string &encKey
 }
 
 AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
-   , const std::pair<autheid::PrivateKey, autheid::PublicKey> &authKeys
+   , const std::shared_ptr<ApplicationSettings> &settings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , QObject *parent)
    : QObject(parent)
    , logger_(logger)
+   , settings_(settings)
+   , connectionManager_(connectionManager)
    , resultAuth_(false)
-   , authKeys_(authKeys)
+   , authKeys_(settings->GetAuthKeys())
 {
-   // Need this to be able cancel requests after destroying AutheIDClient
-   static QNetworkAccessManager *nam = new QNetworkAccessManager();
-
-   nam_ = nam;
-
    baseUrl_ = "https://api.autheid.com/v1/requests";
 }
 
@@ -81,7 +81,7 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
 {
    QNetworkRequest request = getRequest(baseUrl_);
 
-   QNetworkReply *reply = nam_->post(request, QByteArray::fromStdString(payload));
+   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray::fromStdString(payload));
    processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration] (const Result &result) {
       if (!result.success) {
          emit failed(tr("Auth eID faild: %1").arg(QString::fromStdString(result.errorMsg)));
@@ -195,7 +195,7 @@ void AutheIDClient::cancel()
 
    QNetworkRequest request = getRequest(fmt::format("{}/{}/cancel", baseUrl_, requestId_));
 
-   QNetworkReply *reply = nam_->post(request, QByteArray());
+   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray());
    processNetworkReply(reply, kNetworkTimeoutSeconds, {});
 
    requestId_.clear();
@@ -214,7 +214,7 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
 
    QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_));
 
-   QNetworkReply *reply = nam_->get(request);
+   QNetworkReply *reply = connectionManager_->GetNAM()->get(request);
    processNetworkReply(reply, expiration, [this] (const Result &result) {
       if (!result.success) {
          emit failed(tr("Auth eID faild: %1").arg(QString::fromStdString(result.errorMsg)));

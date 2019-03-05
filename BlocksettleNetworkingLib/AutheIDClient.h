@@ -14,11 +14,9 @@ namespace autheid {
    }
 }
 
-class QTimer;
-class QNetworkAccessManager;
+class ApplicationSettings;
 class QNetworkReply;
 class ConnectionManager;
-class RequestReplyCommand;
 
 class AutheIDClient : public QObject
 {
@@ -53,9 +51,10 @@ public:
 
    static DeviceInfo getDeviceInfo(const std::string &encKey);
 
-   AutheIDClient(const std::shared_ptr<spdlog::logger> &
-      , const std::pair<autheid::PrivateKey, autheid::PublicKey> &
-      , QObject *parent = nullptr);
+   // ConnectionManager must live long enough to be able send cancel message
+   // (if cancelling request in mobile app is needed)
+   AutheIDClient(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &, QObject *parent = nullptr);
    ~AutheIDClient() override;
 
    void start(RequestType requestType, const std::string &email, const std::string &walletId
@@ -96,6 +95,8 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<ApplicationSettings> settings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    std::string requestId_;
    std::string email_;
    bool resultAuth_{};
@@ -103,8 +104,6 @@ private:
    const std::pair<autheid::PrivateKey, autheid::PublicKey> authKeys_;
 
    std::vector<std::string> knownDeviceIds_;
-
-   QNetworkAccessManager *nam_{};
 
    std::string baseUrl_;
 };

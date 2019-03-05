@@ -33,11 +33,13 @@ void WalletKeysCreateWidget::init(AutheIDClient::RequestType requestType
                                      , const bs::hd::WalletInfo &walletInfo
                                      , WalletKeyWidget::UseType useType
                                      , const std::shared_ptr<ApplicationSettings>& appSettings
+                                     , const std::shared_ptr<ConnectionManager> &connectionManager
                                      , const std::shared_ptr<spdlog::logger> &logger)
 {
    requestType_ = requestType;
    walletInfo_ = walletInfo;
    appSettings_ = appSettings;
+   connectionManager_ = connectionManager;
    logger_ = logger;
    useType_ = useType;
 
@@ -59,8 +61,7 @@ void WalletKeysCreateWidget::init(AutheIDClient::RequestType requestType
 void WalletKeysCreateWidget::addKey()
 {
    assert(!walletInfo_.rootId().isEmpty());
-   const auto &authKeys = appSettings_->GetAuthKeys();
-   auto widget = new WalletKeyWidget(requestType_, walletInfo_, widgets_.size(), appSettings_, logger_, this);
+   auto widget = new WalletKeyWidget(requestType_, walletInfo_, widgets_.size(), logger_, appSettings_, connectionManager_, this);
    widget->setUseType(useType_);
 
 

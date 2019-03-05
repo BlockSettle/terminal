@@ -15,13 +15,15 @@ namespace {
    int kAuthTimeout = 60;
 }
 
-LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings
-                         , const std::shared_ptr<spdlog::logger> &logger
+LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
+                         , const std::shared_ptr<ApplicationSettings> &settings
+                         , const std::shared_ptr<ConnectionManager> &connectionManager
                          , QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::LoginWindow())
-   , settings_(settings)
    , logger_(logger)
+   , settings_(settings)
+   , connectionManager_(connectionManager)
 {
    ui_->setupUi(this);
    ui_->progressBar->setMaximum(kAuthTimeout * 2); // update every 0.5 sec
@@ -47,7 +49,7 @@ LoginWindow::LoginWindow(const std::shared_ptr<ApplicationSettings> &settings
       ui_->lineEditUsername->setFocus();
    }
 
-   autheIDConnection_ = std::make_shared<AutheIDClient>(logger_, settings_->GetAuthKeys());
+   autheIDConnection_ = std::make_shared<AutheIDClient>(logger_, settings, connectionManager_);
    connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &LoginWindow::onAutheIDDone);
    connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &LoginWindow::onAutheIDFailed);
 
@@ -61,7 +63,7 @@ LoginWindow::~LoginWindow() = default;
 
 void LoginWindow::onTimer()
 {
-   timeLeft_ -= 0.5;
+   timeLeft_ -= 0.5f;
    if (timeLeft_ <= 0) {
       onAutheIDFailed(tr("Timeout"));
    }
