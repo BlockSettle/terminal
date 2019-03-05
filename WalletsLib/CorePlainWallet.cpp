@@ -1,32 +1,31 @@
-#include "PlainWallet.h"
+#include "CorePlainWallet.h"
 #include <QFile>
 #include <spdlog/spdlog.h>
-#include "ArmoryConnection.h"
 #include "SystemFileUtils.h"
 #include "Wallets.h"
 
-using namespace bs;
+using namespace bs::core;
 
 #define WALLET_PREFIX_BYTE    0x01     // can use as format version
 
 
-PlainWallet::PlainWallet(const std::string &name, const std::string &desc
+PlainWallet::PlainWallet(NetworkType netType, const std::string &name, const std::string &desc
                          , const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(logger), desc_(desc)
+   : Wallet(netType, logger), desc_(desc)
 {
    walletName_ = name;
    walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
 }
 
-PlainWallet::PlainWallet(const std::string &filename
+PlainWallet::PlainWallet(NetworkType netType, const std::string &filename
                          , const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(logger)
+   : Wallet(netType, logger)
 {
    loadFromFile(filename);
 }
 
-PlainWallet::PlainWallet(const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(logger)
+PlainWallet::PlainWallet(NetworkType netType, const std::shared_ptr<spdlog::logger> &logger)
+   : Wallet(netType, logger)
 {
    walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
 }
@@ -85,7 +84,7 @@ void PlainWallet::writeDB()
       return;     // diskless operation
    }
    if (!db_) {
-      BinaryData masterID(GetWalletId());
+      BinaryData masterID(walletId());
       if (masterID.isNull()) {
          throw std::invalid_argument("master ID is empty");
       }
@@ -349,12 +348,12 @@ void PlainWallet::saveToFile(const std::string &filename)
 
 std::string PlainWallet::getFileName(const std::string &dir) const
 {
-   return (dir + "/" + fileNamePrefix(isWatchingOnly()) + GetWalletId() + "_wallet.lmdb");
+   return (dir + "/" + fileNamePrefix(isWatchingOnly()) + walletId() + "_wallet.lmdb");
 }
 
 void PlainWallet::saveToDir(const std::string &targetDir)
 {
-   const auto masterID = BinaryData(GetWalletId());
+   const auto masterID = BinaryData(walletId());
    saveToFile(getFileName(targetDir));
 }
 
@@ -378,22 +377,8 @@ int PlainWallet::addAddress(const bs::Address &addr, const std::shared_ptr<Gener
    assets_[id] = asset;
    assetByAddr_[addr] = asset;
    usedAddresses_.push_back(addr);
-   addrPrefixedHashes_.insert(addr.id());
    addressHashes_.insert(addr.unprefixed());
    return id;
-}
-
-std::vector<BinaryData> PlainWallet::getAddrHashes() const
-{
-   if (addrPrefixedHashes_.empty() || addressHashes_.empty()) {
-      for (const auto &addr : usedAddresses_) {
-         addrPrefixedHashes_.insert(addr.prefixed());
-         addressHashes_.insert(addr.unprefixed());
-      }
-   }
-   std::vector<BinaryData> result;
-   result.insert(result.end(), addrPrefixedHashes_.cbegin(), addrPrefixedHashes_.cend());
-   return result;
 }
 
 std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryData &addr)
@@ -437,7 +422,7 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
    return result;
 }
 
-int PlainWallet::getAddressIndex(const bs::Address &addr) const
+int PlainWallet::addressIndex(const bs::Address &addr) const
 {
    const auto &itAsset = assetByAddr_.find(addr);
    if (itAsset == assetByAddr_.end()) {
@@ -446,16 +431,16 @@ int PlainWallet::getAddressIndex(const bs::Address &addr) const
    return itAsset->second->id();
 }
 
-std::string PlainWallet::GetAddressIndex(const bs::Address &addr)
+std::string PlainWallet::getAddressIndex(const bs::Address &addr)
 {
-   const auto index = getAddressIndex(addr);
+   const auto index = addressIndex(addr);
    if (index < 0) {
       return {};
    }
    return std::to_string(index);
 }
 
-bool PlainWallet::AddressIndexExists(const std::string &index) const
+bool PlainWallet::addressIndexExists(const std::string &index) const
 {
    if (index.empty()) {
       return false;
@@ -464,26 +449,13 @@ bool PlainWallet::AddressIndexExists(const std::string &index) const
    return (assets_.find(id) != assets_.end());
 }
 
-AddressEntryType PlainWallet::getAddrTypeForAddr(const BinaryData &data)
-{
-   const std::vector<AddressEntryType> addrTypes = {AddressEntryType_P2WPKH
-      , AddressEntryType_P2PKH, AddressEntryType_P2SH, AddressEntryType_P2WSH };
-   for (const auto &aet : addrTypes) {
-      const bs::Address addr(data, aet);
-      if (containsAddress(addr)) {
-         return aet;
-      }
-   }
-   return AddressEntryType_Default;
-}
-
 bool PlainWallet::containsAddress(const bs::Address &addr)
 {
    const auto itAsset = assetByAddr_.find(addr);
    return (itAsset != assetByAddr_.end());
 }
 
-SecureBinaryData PlainWallet::GetPublicKeyFor(const bs::Address &addr)
+SecureBinaryData PlainWallet::getPublicKeyFor(const bs::Address &addr)
 {
    const auto &itAsset = assetByAddr_.find(addr);
    if (itAsset == assetByAddr_.end()) {
@@ -496,7 +468,7 @@ SecureBinaryData PlainWallet::GetPublicKeyFor(const bs::Address &addr)
    return plainAsset->publicKey();
 }
 
-KeyPair PlainWallet::GetKeyPairFor(const bs::Address &addr, const SecureBinaryData &)
+KeyPair PlainWallet::getKeyPairFor(const bs::Address &addr, const SecureBinaryData &)
 {
    const auto &itAsset = assetByAddr_.find(addr);
    if (itAsset == assetByAddr_.end()) {
@@ -509,7 +481,7 @@ KeyPair PlainWallet::GetKeyPairFor(const bs::Address &addr, const SecureBinaryDa
    return { plainAsset->privKey(), plainAsset->publicKey() };
 }
 
-bool PlainWallet::EraseFile()
+bool PlainWallet::eraseFile()
 {
    if (dbFilename_.empty()) {
       return true;
@@ -586,7 +558,7 @@ private:
    std::map<SecureBinaryData, SecureBinaryData>   pubToPriv_;
 };
 
-std::shared_ptr<ResolverFeed> PlainWallet::GetResolver(const SecureBinaryData &)
+std::shared_ptr<ResolverFeed> PlainWallet::getResolver(const SecureBinaryData &)
 {
    if (isWatchingOnly()) {
       return nullptr;
@@ -594,7 +566,7 @@ std::shared_ptr<ResolverFeed> PlainWallet::GetResolver(const SecureBinaryData &)
    return std::make_shared<PlainSigningResolver>(assetByAddr_);
 }
 
-std::shared_ptr<ResolverFeed> PlainWallet::GetPublicKeyResolver()
+std::shared_ptr<ResolverFeed> PlainWallet::getPublicKeyResolver()
 {
    return std::make_shared<PlainResolver>(assetByAddr_);
 }
@@ -665,7 +637,7 @@ SecureBinaryData PlainAsset::publicKey() const
    return pubKey_;
 }
 
-std::pair<bs::Address, std::shared_ptr<PlainAsset>> PlainAsset::GenerateRandom(AddressEntryType addrType)
+std::pair<bs::Address, std::shared_ptr<PlainAsset>> PlainAsset::generateRandom(AddressEntryType addrType)
 {
    const auto &privKey = CryptoPRNG::generateRandom(32);
    const auto &pubKey = CryptoECDSA().ComputePublicKey(privKey);

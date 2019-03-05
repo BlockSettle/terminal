@@ -6,7 +6,6 @@
 #include <QDialog>
 #include <QTimer>
 #include "EncryptionUtils.h"
-#include "MetaData.h"
 #include "AutheIDClient.h"
 #include "QWalletInfo.h"
 #include "WalletKeyWidget.h"

@@ -20,7 +20,13 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   class Wallet;
+   namespace sync {
+      namespace hd {
+         class Leaf;
+      }
+      class Wallet;
+      class WalletsManager;
+   }
 }
 class AddressVerificator;
 class ApplicationSettings;
@@ -31,12 +37,7 @@ class AuthSignManager;
 class RequestReplyCommand;
 class ResolverFeed_AuthAddress;
 class SignContainer;
-class WalletsManager;
 
-namespace SwigClient
-{
-   class BtcWallet;
-};
 
 class AuthAddressManager : public QObject
 {
@@ -53,7 +54,7 @@ public:
    AuthAddressManager& operator = (AuthAddressManager&&) = delete;
 
    void init(const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<AuthSignManager> &
       , const std::shared_ptr<SignContainer> &);
    void ConnectToPublicBridge(const std::shared_ptr<ConnectionManager> &
@@ -98,7 +99,7 @@ private slots:
    void onAuthWalletChanged();
    void authAddressAdded();
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
-   void onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onWalletFailed(unsigned int id, std::string errMsg);
 
 signals:
@@ -163,7 +164,7 @@ protected:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ArmoryConnection>      armory_;
    std::shared_ptr<ApplicationSettings>   settings_;
-   std::shared_ptr<WalletsManager>        walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<CelerClient>           celerClient_;
@@ -181,7 +182,7 @@ protected:
    bs::Address                               defaultAddr_;
 
    std::unordered_set<std::string>           bsAddressList_;
-   std::shared_ptr<bs::Wallet>               authWallet_;
+   std::shared_ptr<bs::sync::Wallet>         authWallet_;
 
    std::shared_ptr<SignContainer>      signingContainer_;
    std::unordered_set<unsigned int>    signIdsVerify_;

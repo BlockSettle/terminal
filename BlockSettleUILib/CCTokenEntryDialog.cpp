@@ -6,14 +6,14 @@
 #include <QPushButton>
 #include <spdlog/spdlog.h>
 #include "CCFileManager.h"
-#include "HDLeaf.h"
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDLeaf.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
-CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &walletsMgr
+CCTokenEntryDialog::CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<CCFileManager> &ccFileMgr
       , const std::shared_ptr<SignContainer> &container
       , QWidget *parent)
@@ -61,14 +61,14 @@ void CCTokenEntryDialog::tokenChanged()
       seed_ = response.bsseed();
       ccProduct_ = response.ccproduct();
 
-      ccWallet_ = walletsMgr_->GetCCWallet(ccProduct_);
+      ccWallet_ = walletsMgr_->getCCWallet(ccProduct_);
       if (!ccWallet_) {
          ui_->labelTokenHint->setText(tr("The Terminal will prompt you to create the relevant subwallet,"
             " if required").arg(QString::fromStdString(ccProduct_)));
 
          MessageBoxCCWalletQuestion qry(QString::fromStdString(ccProduct_), this);
          if (qry.exec() == QDialog::Accepted) {
-            const auto priWallet = walletsMgr_->GetPrimaryWallet();
+            const auto priWallet = walletsMgr_->getPrimaryWallet();
             if (!priWallet->getGroup(bs::hd::CoinType::BlockSettle_CC)) {
                priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
             }
@@ -76,7 +76,7 @@ void CCTokenEntryDialog::tokenChanged()
             path.append(bs::hd::purpose, true);
             path.append(bs::hd::BlockSettle_CC, true);
             path.append(ccProduct_, true);
-            createWalletReqId_ = signingContainer_->CreateHDLeaf(priWallet, path);
+            createWalletReqId_ = signingContainer_->createHDLeaf(priWallet->walletId(), path);
          }
          else {
             reject();
@@ -97,16 +97,16 @@ void CCTokenEntryDialog::updateOkState()
    ui_->pushButtonOk->setEnabled(walletOk_);
 }
 
-void CCTokenEntryDialog::onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)
+void CCTokenEntryDialog::onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
 {
    if (!createWalletReqId_ || (createWalletReqId_ != id)) {
       return;
    }
    createWalletReqId_ = 0;
-   const auto priWallet = walletsMgr_->GetPrimaryWallet();
+   const auto priWallet = walletsMgr_->getPrimaryWallet();
    const auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
-   const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, priWallet->networkType());
-   ccWallet_ = group->createLeaf(bs::hd::Path::keyToElem(ccProduct_), leafNode);
+   group->addLeaf(leaf);
+   ccWallet_ = leaf;
    if (ccWallet_) {
       walletOk_ = true;
       ui_->labelTokenHint->setText(tr("Private Market subwallet for %1 created!").arg(QString::fromStdString(ccProduct_)));
@@ -134,8 +134,7 @@ void CCTokenEntryDialog::accept()
       reject();
       return;
    }
-   const auto address = ccWallet_->GetNewExtAddress();
-   signingContainer_->SyncAddresses({ { ccWallet_, address } });
+   const auto address = ccWallet_->getNewExtAddress();
 
    if (ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
       ui_->pushButtonOk->setEnabled(false);

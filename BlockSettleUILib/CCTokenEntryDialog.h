@@ -10,11 +10,16 @@ namespace Ui {
     class CCTokenEntryDialog;
 }
 namespace bs {
-   class Wallet;
+   namespace sync {
+      class Wallet;
+      class WalletsManager;
+      namespace hd {
+         class Leaf;
+      }
+   }
 }
 class CCFileManager;
 class SignContainer;
-class WalletsManager;
 
 
 class CCTokenEntryDialog : public QDialog
@@ -22,7 +27,7 @@ class CCTokenEntryDialog : public QDialog
 Q_OBJECT
 
 public:
-   CCTokenEntryDialog(const std::shared_ptr<WalletsManager> &, const std::shared_ptr<CCFileManager> &
+   CCTokenEntryDialog(const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<CCFileManager> &
       , const std::shared_ptr<SignContainer> &, QWidget *parent);
    ~CCTokenEntryDialog() override;
 
@@ -32,7 +37,7 @@ protected:
 private slots:
    void tokenChanged();
    void updateOkState();
-   void onWalletCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onWalletFailed(unsigned int id, std::string errMsg);
    void onCCAddrSubmitted(const QString addr);
    void onCCInitialSubmitted(const QString addr);
@@ -42,11 +47,11 @@ private:
    std::unique_ptr<Ui::CCTokenEntryDialog> ui_;
    std::shared_ptr<CCFileManager>   ccFileMgr_;
    std::shared_ptr<SignContainer>   signingContainer_;
-   std::shared_ptr<WalletsManager>  walletsMgr_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   std::shared_ptr<bs::sync::Wallet>         ccWallet_;
    std::string    ccProduct_;
    uint32_t       seed_ = 0;
    unsigned int   createWalletReqId_ = 0;
-   std::shared_ptr<bs::Wallet>      ccWallet_;
    bool  walletOk_ = false;
 };
 

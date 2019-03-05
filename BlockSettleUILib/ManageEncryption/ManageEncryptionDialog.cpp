@@ -5,19 +5,18 @@
 #include <QToolButton>
 #include "ApplicationSettings.h"
 #include "EnterWalletPassword.h"
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "WalletKeyWidget.h"
 #include "WalletKeysDeleteDevice.h"
 #include "WalletKeysSubmitWidget.h"
 #include "WalletKeysCreateWidget.h"
+#include "Wallets/SyncHDWallet.h"
 
-#include <QDebug>
 
 ManageEncryptionDialog::ManageEncryptionDialog(const std::shared_ptr<spdlog::logger> &logger
       , std::shared_ptr<SignContainer> signingContainer
-      , const std::shared_ptr<bs::hd::Wallet> &wallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &wallet
       , const bs::hd::WalletInfo &walletInfo
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -293,15 +292,8 @@ void ManageEncryptionDialog::changePassword()
    //   TODO add to bs::hd::wallet overload for PasswordData
    std::vector<bs::wallet::PasswordData> pwData;
    pwData.assign(newPasswordData_.cbegin(), newPasswordData_.cend());
-   if (wallet_->isWatchingOnly()) {
-      signingContainer_->ChangePassword(wallet_, pwData, newKeyRank_, oldKey_
-         , addNew_, removeOld_, false);
-   }
-   else {
-      bool result = wallet_->changePassword(pwData, newKeyRank_, oldKey_
-         , addNew_, removeOld_, false);
-      onPasswordChanged(wallet_->getWalletId(), result);
-   }
+   signingContainer_->changePassword(wallet_->walletId(), pwData, newKeyRank_
+      , oldKey_, addNew_, removeOld_, false);
 }
 
 void ManageEncryptionDialog::resetKeys()
@@ -318,9 +310,9 @@ void ManageEncryptionDialog::resetKeys()
 
 void ManageEncryptionDialog::onPasswordChanged(const std::string &walletId, bool ok)
 {
-   if (walletId != wallet_->getWalletId()) {
+   if (walletId != wallet_->walletId()) {
       logger_->error("ManageEncryptionDialog::onPasswordChanged: unknown walletId {}, expected: {}"
-         , walletId, wallet_->getWalletId());
+         , walletId, wallet_->walletId());
       return;
    }
 

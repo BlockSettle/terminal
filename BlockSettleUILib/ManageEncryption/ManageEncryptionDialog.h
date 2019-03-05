@@ -4,7 +4,6 @@
 #include <memory>
 #include <QDialog>
 #include "EncryptionUtils.h"
-#include "MetaData.h"
 #include "AutheIDClient.h"
 #include "QWalletInfo.h"
 
@@ -12,8 +11,10 @@ namespace Ui {
     class ManageEncryptionDialog;
 }
 namespace bs {
-   namespace hd {
-      class Wallet;
+   namespace sync {
+      namespace hd {
+         class Wallet;
+      }
    }
 }
 
@@ -39,7 +40,7 @@ public:
 
    ManageEncryptionDialog(const std::shared_ptr<spdlog::logger> &logger
       , std::shared_ptr<SignContainer> signingContainer
-      , const std::shared_ptr<bs::hd::Wallet> &wallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &wallet
       , const bs::hd::WalletInfo &walletInfo
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -66,7 +67,7 @@ private:
    std::unique_ptr<Ui::ManageEncryptionDialog> ui_;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<SignContainer> signingContainer_;
-   std::shared_ptr<bs::hd::Wallet>  wallet_;
+   std::shared_ptr<bs::sync::hd::Wallet>  wallet_;
    bs::wallet::KeyRank newKeyRank_;
    std::vector<bs::wallet::PasswordData> oldPasswordData_;
    std::vector<bs::wallet::PasswordData> newPasswordData_;

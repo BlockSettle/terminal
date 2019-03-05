@@ -4,7 +4,7 @@
 
 #include <BTCNumericTypes.h>
 #include <TxClasses.h>
-#include "WalletsManager.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
 #include <QDateTime>
@@ -18,8 +18,8 @@
 #include <limits>
 
 
-TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item
-   , const std::shared_ptr<WalletsManager>& walletsManager
+TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::shared_ptr<ArmoryConnection> &armory, QWidget* parent)
  : QDialog(parent)
  , ui_(new Ui::TransactionDetailDialog())
@@ -29,7 +29,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item
 
    const auto &cbInit = [this, armory] (const TransactionsViewItem *item) {
       ui_->labelAmount->setText(item->amountStr);
-      ui_->labelDirection->setText(tr(bs::Transaction::toString(item->direction)));
+      ui_->labelDirection->setText(tr(bs::sync::Transaction::toString(item->direction)));
       ui_->labelAddress->setText(item->mainAddress);
 
       if (item->confirmations > 0) {
@@ -68,15 +68,15 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item
 
             bool isTxOutgoing = false;
             switch (item->direction) {
-            case bs::Transaction::Sent:
-            case bs::Transaction::PayOut:
-            case bs::Transaction::Revoke:
+            case bs::sync::Transaction::Sent:
+            case bs::sync::Transaction::PayOut:
+            case bs::sync::Transaction::Revoke:
                isTxOutgoing = true;
                break;
 
-            case bs::Transaction::Delivery:
-            case bs::Transaction::Payment:
-            case bs::Transaction::Auth:
+            case bs::sync::Transaction::Delivery:
+            case bs::sync::Transaction::Payment:
+            case bs::sync::Transaction::Auth:
                isTxOutgoing = (item->amount < 0);
                break;
 
@@ -115,7 +115,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item
                   addAddress(wallet, out, true, isTxOutgoing,
                              item->tx.getThisHash());
                }
-               ui_->labelComment->setText(QString::fromStdString(wallet->GetTransactionComment(item->tx.getThisHash())));
+               ui_->labelComment->setText(QString::fromStdString(wallet->getTransactionComment(item->tx.getThisHash())));
             }
 
             if (initialized) {
@@ -144,13 +144,13 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem item
 
       ui_->labelConfirmations->setText(QString::number(item->confirmations));
    };
-   item.initialize(armory, walletsManager, cbInit);
+   tvi.initialize(armory, walletsManager, cbInit);
 
    bool bigEndianHash = true;
-   ui_->labelHash->setText(QString::fromStdString(item.txEntry.txHash.toHexStr(bigEndianHash)));
-   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(item.txEntry.txTime)));
+   ui_->labelHash->setText(QString::fromStdString(tvi.txEntry.txHash.toHexStr(bigEndianHash)));
+   ui_->labelTime->setText(UiUtils::displayDateTime(QDateTime::fromTime_t(tvi.txEntry.txTime)));
 
-   ui_->labelWalletName->setText(item.walletName.isEmpty() ? tr("Unknown") : item.walletName);
+   ui_->labelWalletName->setText(tvi.walletName.isEmpty() ? tr("Unknown") : tvi.walletName);
 
    /* disabled the context menu for copy to clipboard functionality, it can be removed later
    ui_->treeAddresses->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -199,20 +199,20 @@ QSize TransactionDetailDialog::minimumSizeHint() const
 //      The TX hash. (const BinaryData&)
 // OUT: None
 // RET: None
-void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wallet,
+void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet> &wallet,
                                          const TxOut& out,
                                          bool isOutput,
                                          bool isTxOutgoing,
                                          const BinaryData& txHash)
 {
    const auto addr = bs::Address::fromTxOut(out);
-   const auto &addressWallet = walletsManager_->GetWalletByAddress(addr.id());
+   const auto &addressWallet = walletsManager_->getWalletByAddress(addr.id());
    QString valueStr;
    QString addressType;
    const bool isOurs = (addressWallet == wallet);
 
    if (isTxOutgoing) {
-      const bool isSettlement = (wallet->GetType() == bs::wallet::Type::Settlement);
+      const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
       if (isOurs) {
          if (!isOutput) {
             valueStr += QLatin1Char('-');
@@ -239,7 +239,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::Wallet> &wall
       addressType = isOutput ? tr("Output") : tr("Input");
    }
 
-   QString walletName = addressWallet ? QString::fromStdString(addressWallet->GetWalletName()) : QString();
+   QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
    QStringList items;
    items << addressType;
    items << valueStr;

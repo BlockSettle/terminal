@@ -1,9 +1,10 @@
 #include "AddressDetailsWidget.h"
 #include "ui_AddressDetailsWidget.h"
-#include "UiUtils.h"
-
 #include <QDateTime>
 #include <QDebug>
+#include "UiUtils.h"
+#include "Wallets/SyncPlainWallet.h"
+
 
 AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
    : QWidget(parent)
@@ -46,9 +47,11 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    // Armory can't directly take an address and return all the required data.
    // Work around this by creating a dummy wallet, adding the explorer address,
    // registering the wallet, and getting the required data.
-   const auto dummyWallet = std::make_shared<bs::PlainWallet>(logger_);
-   dummyWallet->addAddress(inAddrVal);
-   const auto regIds = dummyWallet->RegisterWallet(armory_, true);
+   const auto walletId = CryptoPRNG::generateRandom(8).toHexStr();
+   const auto dummyWallet = std::make_shared<bs::sync::PlainWallet>(walletId
+      , "temporary", "Dummy explorer wallet", nullptr, logger_);
+   dummyWallet->addAddress(inAddrVal, {}, AddressEntryType_Default, false);
+   const auto regIds = dummyWallet->registerWallet(armory_, true);
    for (const auto &regId : regIds) {
       dummyWallets_[regId] = dummyWallet;
    }
@@ -268,14 +271,14 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 }
 
 // Function that grabs the TX data for the address. Used in callback.
-void AddressDetailsWidget::refresh(const std::shared_ptr<bs::PlainWallet> &wallet)
+void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> &wallet)
 {
    logger_->debug("[{}] get refresh command for {}", __func__
-                  , wallet->GetWalletId());
-   if (wallet->GetUsedAddressCount() != 1) {
+                  , wallet->walletId());
+   if (wallet->getUsedAddressCount() != 1) {
       logger_->debug("[{}}] dummy wallet {} contains invalid amount of "
-                     "addresses ({})", __func__, wallet->GetWalletId()
-                     , wallet->GetUsedAddressCount());
+                     "addresses ({})", __func__, wallet->walletId()
+                     , wallet->getUsedAddressCount());
       return;
    }
 
@@ -283,11 +286,11 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::PlainWallet> &walle
    const auto &cbLedgerDelegate = [this](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       getTxData(delegate);
    };
-   const auto addr = wallet->GetUsedAddressList()[0];
+   const auto addr = wallet->getUsedAddressList()[0];
    if (!wallet->getLedgerDelegateForAddress(addr, cbLedgerDelegate)) {
       logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
                      "get ledger delegate for wallet ID {} - address {}"
-                     , wallet->GetWalletId(), addr.display<std::string>());
+                     , wallet->walletId(), addr.display<std::string>());
    }
 }
 
@@ -312,7 +315,7 @@ void AddressDetailsWidget::OnRefresh(std::vector<BinaryData> ids, bool online)
 void AddressDetailsWidget::clear()
 {
    for (const auto &dummyWallet : dummyWallets_) {
-      dummyWallet.second->UnregisterWallet();
+      dummyWallet.second->unregisterWallet();
    }
    dummyWallets_.clear();
    txMap_.clear();

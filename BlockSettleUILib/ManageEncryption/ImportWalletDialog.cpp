@@ -10,14 +10,15 @@
 #include "WalletPasswordVerifyDialog.h"
 #include "WalletKeysCreateWidget.h"
 #include "EnterWalletPassword.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 #include "QWalletInfo.h"
 
 #include <spdlog/spdlog.h>
 
 
-ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &walletsManager
+ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<AssetManager> &assetMgr
       , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryConnection> &armory
       , const EasyCoDec::Data& seedData
@@ -37,11 +38,11 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    , connectionManager_(connectionManager)
    , logger_(logger)
    , armory_(armory)
-   , walletSeed_(bs::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
+   , walletSeed_(bs::core::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
    , appSettings->get<NetworkType>(ApplicationSettings::netType)))
    , disableImportPrimary_{disableImportPrimary}
 {
-   walletInfo_.setRootId(bs::hd::Node(walletSeed_).getId());
+   walletInfo_.setRootId(QString::fromStdString(walletSeed_.getWalletId()));
 
    ui_->setupUi(this);
 
@@ -49,7 +50,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
 
    ui_->labelWalletId->setText(walletInfo_.rootId());
 
-   if (!walletsManager->HasPrimaryWallet() && !disableImportPrimary_) {
+   if (!walletsManager->hasPrimaryWallet() && !disableImportPrimary_) {
       setWindowTitle(tr("Import Primary Wallet"));
       ui_->checkBoxPrimaryWallet->setChecked(true);
       ui_->checkBoxPrimaryWallet->setEnabled(true);
@@ -58,7 +59,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       setWindowTitle(tr("Import Wallet"));
       ui_->checkBoxPrimaryWallet->setEnabled(false);
       ui_->checkBoxPrimaryWallet->setChecked(false);
-      ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->GetWalletsCount() + 1));
+      ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->hdWalletsCount() + 1));
    }
 
    if (!walletName.empty()) {
@@ -73,7 +74,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
       appSettings->SetWalletScanIndex(walletId, idx);
    };
    walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager, armory
-      , assetMgr, authMgr, appSettings_->GetHomeDir(), cbr, cbw);
+      , assetMgr, authMgr, cbr, cbw);
 
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);
    connect(walletImporter_.get(), &WalletImporter::error, this, &ImportWalletDialog::onError);
@@ -99,8 +100,8 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<WalletsManager> &wa
    adjustSize();
    setMinimumSize(size());
 
-   if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletInfo_.rootId().toStdString())) {
-      const auto hdWallet = walletsManager_->GetHDWalletById(walletInfo_.rootId().toStdString());
+   if (signContainer_->isOffline()) {
+      const auto hdWallet = walletsManager_->getHDWalletById(walletInfo_.rootId().toStdString());
       if (hdWallet == nullptr) {
          existingChecked_ = true;
       }
@@ -148,7 +149,7 @@ void ImportWalletDialog::promptForSignWalletDelete()
       , tr("Signing wallet with the same id already exists in the terminal"
          " - do you want to delete it first?"), this);
    if (delWallet.exec() == QDialog::Accepted) {
-      const auto hdWallet = walletsManager_->GetHDWalletById(walletInfo_.rootId().toStdString());
+      const auto hdWallet = walletsManager_->getHDWalletById(walletInfo_.rootId().toStdString());
       if (hdWallet == nullptr) {
          BSMessageBox noWoWallet(BSMessageBox::question, tr("Missing WO wallet")
             , tr("Watching-only wallet with id %1 is not loaded in the terminal, but still exists in Signer."
@@ -191,10 +192,10 @@ void ImportWalletDialog::onWalletCreated(const std::string &walletId)
       emit walletsManager_->walletImportStarted(walletId);
    }
    else {
-      const auto &rootWallet = walletsManager_->GetHDWalletById(walletId);
+      const auto rootWallet = walletsManager_->getHDWalletById(walletId);
       if (rootWallet) {
          for (const auto &leaf : rootWallet->getLeaves()) {
-            appSettings_->SetWalletScanIndex(leaf->GetWalletId(), 0);
+            appSettings_->SetWalletScanIndex(leaf->walletId(), 0);
          }
       }
    }
@@ -211,7 +212,7 @@ void ImportWalletDialog::importWallet()
 
 
    // check wallet name
-   if (walletsManager_->WalletNameExists(walletInfo_.name().toStdString())) {
+   if (walletsManager_->walletNameExists(walletInfo_.name().toStdString())) {
       BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid wallet name")
          , QObject::tr("Wallet with this name already exists"), this);
       messageBox.exec();

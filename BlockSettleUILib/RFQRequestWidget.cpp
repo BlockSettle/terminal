@@ -19,8 +19,6 @@
 RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    : TabWithShortcut(parent)
    , ui_(new Ui::RFQRequestWidget())
-   , authAddressManager_(nullptr)
-   , walletsManager_(nullptr)
 {
    ui_->setupUi(this);
 
@@ -29,7 +27,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
 RFQRequestWidget::~RFQRequestWidget() = default;
 
-void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
+void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;

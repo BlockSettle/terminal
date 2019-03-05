@@ -18,12 +18,12 @@ QSeed QSeed::fromPaperKey(const QString &key, QNetworkType netType)
       const auto seedLines = key.split(QLatin1String("\n"), QString::SkipEmptyParts);
       if (seedLines.count() == 2) {
          EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
-         seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, fromQNetworkType(netType));
+         seed = bs::core::wallet::Seed::fromEasyCodeChecksum(easyData, fromQNetworkType(netType));
       }
       else if (seedLines.count() == 4) {
          EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
          EasyCoDec::Data edChainCode = { seedLines[2].toStdString(), seedLines[3].toStdString() };
-         seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, fromQNetworkType(netType));
+         seed = bs::core::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, fromQNetworkType(netType));
       }
       else {
          seed.setSeed(key.toStdString());
@@ -53,7 +53,7 @@ QSeed QSeed::fromDigitalBackup(const QString &filename, QNetworkType netType)
          seed.lastError_ = tr("Digital Backup file %1 corrupted").arg(filename);
       }
       else {
-         seed = bs::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode, fromQNetworkType(netType));
+         seed = bs::core::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode, fromQNetworkType(netType));
       }
    }
    else {

@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QStandardPaths>
+#include <QSortFilterProxyModel>
 
 #include <bech32/ref/c++/segwit_addr.h>
 
@@ -13,22 +14,21 @@
 #include "AssetManager.h"
 #include "ManageEncryption/ManageEncryptionDialog.h"
 #include "WalletBackupDialog.h"
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
 #include "WalletDeleteDialog.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "WalletsViewModel.h"
 #include "WalletsWidget.h"
 #include "ManageEncryption/ManageEncryptionDialog.h"
 
-#include <QSortFilterProxyModel>
 
 class CurrentWalletFilter : public QSortFilterProxyModel
 {
 public:
-   CurrentWalletFilter(const std::shared_ptr<bs::hd::Wallet> &wallet, QObject* parent)
+   CurrentWalletFilter(const std::shared_ptr<bs::sync::hd::Wallet> &wallet, QObject* parent)
       : QSortFilterProxyModel(parent)
       , wallet_(wallet)
    {
@@ -43,16 +43,16 @@ public:
       auto node = dynamic_cast<WalletsViewModel*>(sourceModel())->getNode(index);
 
       auto wallet = node->hdWallet();
-      return (wallet != nullptr) && (node->hdWallet()->getWalletId() == wallet_->getWalletId());
+      return (wallet != nullptr) && (node->hdWallet()->walletId() == wallet_->walletId());
    }
 
 private:
-   std::shared_ptr<bs::hd::Wallet> wallet_;
+   std::shared_ptr<bs::sync::hd::Wallet> wallet_;
 };
 
 RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::hd::Wallet> &wallet
-   , const std::shared_ptr<WalletsManager> &walletsManager
+   , const std::shared_ptr<bs::sync::hd::Wallet> &wallet
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<SignContainer> &container
    , WalletsViewModel *walletsModel
@@ -90,7 +90,6 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 
    connect(ui_->deleteButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onDeleteWallet);
    connect(ui_->backupButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onBackupWallet);
-   connect(ui_->exportButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onCreateWoWallet);
    connect(ui_->manageEncryptionButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onChangePassword);
    connect(ui_->rescanButton, &QPushButton::clicked, this, &RootWalletPropertiesDialog::onRescanBlockchain);
 
@@ -98,18 +97,16 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 
    ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
    ui_->manageEncryptionButton->setEnabled(false);
-   if (!wallet_->isWatchingOnly()) {
-      walletInfo_ = bs::hd::WalletInfo(wallet_);
-   }
+   walletInfo_ = bs::hd::WalletInfo(wallet_);
 
    if (signingContainer_) {
-      if (signingContainer_->isOffline() || signingContainer_->isWalletOffline(wallet->getWalletId())) {
+      if (signingContainer_->isOffline() || signingContainer_->isWalletOffline(wallet->walletId())) {
          ui_->backupButton->setEnabled(false);
          ui_->manageEncryptionButton->setEnabled(false);
       }
       connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &RootWalletPropertiesDialog::onHDWalletInfo);
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RootWalletPropertiesDialog::onHDLeafCreated);
-      infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
+      infoReqId_ = signingContainer_->GetInfo(wallet_->walletId());
    }
 
    ui_->treeViewWallets->expandAll();
@@ -132,53 +129,6 @@ void RootWalletPropertiesDialog::onBackupWallet()
                          , this);
 }
 
-void RootWalletPropertiesDialog::onCreateWoWallet()
-{
-   if (wallet_->isWatchingOnly()) {
-      copyWoWallet();
-   } else {
-      BSMessageBox(BSMessageBox::warning, tr("Create W/O wallet")
-         , tr("Watching-only wallet from full wallet should be created on signer side")).exec();
-   }
-}
-
-void RootWalletPropertiesDialog::copyWoWallet()
-{
-   const auto dir = QFileDialog::getExistingDirectory(this, tr("Watching-Only Wallet Target Directory")
-      , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), QFileDialog::ShowDirsOnly);
-   if (dir.isEmpty()) {
-      return;
-   }
-   const auto title = tr("Watching-Only Wallet");
-   const auto walletFileName = wallet_->fileNamePrefix(true) + wallet_->getWalletId() + "_wallet.lmdb";
-   const auto target = dir + QString::fromStdString("/" + walletFileName);
-   if (QFile::exists(target)) {
-      BSMessageBox request(BSMessageBox::question, title
-         , tr("Confirm wallet file overwrite")
-         , tr("Wallet file <b>%1</b> already exists in %2. Overwrite it?").arg(QString::fromStdString(walletFileName)).arg(dir)
-         , this);
-      if (request.exec() == QDialog::Rejected) {
-         return;
-      }
-      QFile::remove(target);
-   }
-
-   if (QFile::copy(appSettings_->GetHomeDir() + QString::fromStdString("/" + walletFileName), target)) {
-      BSMessageBox(BSMessageBox::success, title, tr("Wallet created")
-         , tr("Created watch-only wallet file <b>%1</b> in <span>%2</span>")
-            .arg(QString::fromStdString(walletFileName))
-            .arg(dir)
-         , this).exec();
-   } else {
-      BSMessageBox(BSMessageBox::critical, title
-         , tr("Failed to copy")
-         , tr("Failed to copy <b>%1</b> from %2 to %3")
-            .arg(QString::fromStdString(walletFileName)).arg(appSettings_->GetHomeDir())
-            .arg(dir)
-         , this).exec();
-   }
-}
-
 void RootWalletPropertiesDialog::onChangePassword()
 {
    ManageEncryptionDialog manageEncryptionDialog(logger_, signingContainer_, wallet_
@@ -189,7 +139,7 @@ void RootWalletPropertiesDialog::onChangePassword()
 
    if (result == QDialog::Accepted) {
       // Update wallet encryption type
-      infoReqId_ = signingContainer_->GetInfo(wallet_->getWalletId());
+      infoReqId_ = signingContainer_->GetInfo(wallet_->walletId());
    }
 }
 
@@ -218,7 +168,7 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::W
    walletInfo_ = walletInfo;
 
    // but wallet name is from bs::hd::Wallet
-   walletInfo_.setName(QString::fromStdString(wallet_->getName()));
+   walletInfo_.setName(QString::fromStdString(wallet_->name()));
 
    ui_->manageEncryptionButton->setEnabled(true);
 
@@ -240,7 +190,7 @@ void RootWalletPropertiesDialog::onWalletSelected()
 
       auto modelIndex = walletFilter_->mapToSource(index);
       auto node = dynamic_cast<WalletsViewModel*>(walletFilter_->sourceModel())->getNode(modelIndex);
-      auto wallet = node->hdWallet();
+      const auto wallet = node->hdWallet();
 
       if (wallet != nullptr) {
          updateWalletDetails(wallet);
@@ -254,11 +204,11 @@ void RootWalletPropertiesDialog::onWalletSelected()
       }
 }
 
-void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::hd::Wallet>& wallet)
+void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::sync::hd::Wallet>& wallet)
 {
-   ui_->labelWalletId->setText(QString::fromStdString(wallet->getWalletId()));
-   ui_->labelWalletName->setText(QString::fromStdString(wallet->getName()));
-   ui_->labelDescription->setText(QString::fromStdString(wallet->getDesc()));
+   ui_->labelWalletId->setText(QString::fromStdString(wallet->walletId()));
+   ui_->labelWalletName->setText(QString::fromStdString(wallet->name()));
+   ui_->labelDescription->setText(QString::fromStdString(wallet->description()));
 
    ui_->balanceWidget->hide();
 
@@ -285,20 +235,20 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::h
 
    for (const auto &leaf : wallet->getLeaves()) {
       leaf->getSpendableTxOutList(cbUTXOs, this);
-      leaf->GetActiveAddressCount(cbActiveAddrs);
+      leaf->getActiveAddressCount(cbActiveAddrs);
 
-      nbTotalAddresses += leaf->GetUsedAddressCount();
+      nbTotalAddresses += leaf->getUsedAddressCount();
    }
    ui_->labelAddressesUsed->setText(QString::number(nbTotalAddresses));
 }
 
-void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::Wallet>& wallet)
+void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::sync::Wallet>& wallet)
 {
-   ui_->labelWalletId->setText(QString::fromStdString(wallet->GetWalletId()));
-   ui_->labelWalletName->setText(QString::fromStdString(wallet->GetWalletName()));
-   ui_->labelDescription->setText(QString::fromStdString(wallet->GetWalletDescription()));
+   ui_->labelWalletId->setText(QString::fromStdString(wallet->walletId()));
+   ui_->labelWalletName->setText(QString::fromStdString(wallet->name()));
+   ui_->labelDescription->setText(QString::fromStdString(wallet->description()));
 
-   ui_->labelAddressesUsed->setText(QString::number(wallet->GetUsedAddressCount()));
+   ui_->labelAddressesUsed->setText(QString::number(wallet->getUsedAddressCount()));
 
    if (wallet->isBalanceAvailable()) {
       ui_->labelAddressesActive->setText(tr("Loading..."));
@@ -308,14 +258,14 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::W
             ui_->labelUTXOs->setText(QString::number(size));
          });
       }, this);
-      wallet->GetActiveAddressCount([this](size_t count) {
+      wallet->getActiveAddressCount([this](size_t count) {
          QMetaObject::invokeMethod(this, [this, count]{
             ui_->labelAddressesActive->setText(QString::number(count));
          });
       });
-      ui_->labelSpendable->setText(UiUtils::displayAmount(wallet->GetSpendableBalance()));
-      ui_->labelUnconfirmed->setText(UiUtils::displayAmount(wallet->GetUnconfirmedBalance()));
-      ui_->labelTotal->setText(UiUtils::displayAmount(wallet->GetTotalBalance()));
+      ui_->labelSpendable->setText(UiUtils::displayAmount(wallet->getSpendableBalance()));
+      ui_->labelUnconfirmed->setText(UiUtils::displayAmount(wallet->getUnconfirmedBalance()));
+      ui_->labelTotal->setText(UiUtils::displayAmount(wallet->getTotalBalance()));
       ui_->balanceWidget->show();
    } else {
       ui_->labelAddressesActive->setText(tr("N/A"));
@@ -330,15 +280,15 @@ void RootWalletPropertiesDialog::startWalletScan()
    const auto &settings = appSettings_;
 
    const auto &cbr = [walletsMgr](const std::string &walletId) -> unsigned int {
-      const auto &wallet = walletsMgr->GetWalletById(walletId);
-      return wallet ? wallet->GetUsedAddressCount() : 0;
+      const auto &wallet = walletsMgr->getWalletById(walletId);
+      return wallet ? wallet->getUsedAddressCount() : 0;
    };
    const auto &cbw = [settings](const std::string &walletId, unsigned int idx) {
       settings->SetWalletScanIndex(walletId, idx);
    };
 
    if (wallet_->startRescan(nullptr, cbr, cbw)) {
-      emit walletsManager_->walletImportStarted(wallet_->getWalletId());
+      emit walletsManager_->walletImportStarted(wallet_->walletId());
    }
    else {
       BSMessageBox(BSMessageBox::warning, tr("Wallet rescan")
@@ -357,7 +307,7 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
          path.append(bs::hd::purpose, true);
          path.append(bs::hd::CoinType::BlockSettle_CC, true);
          path.append(cc, true);
-         const auto reqId = signingContainer_->CreateHDLeaf(wallet_, path);
+         const auto reqId = signingContainer_->createHDLeaf(wallet_->walletId(), path);
          if (reqId) {
             createCCWalletReqs_[reqId] = cc;
          }
@@ -368,15 +318,14 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
    }
 }
 
-void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)
+void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
 {
    if (!createCCWalletReqs_.empty() && (createCCWalletReqs_.find(id) != createCCWalletReqs_.end())) {
       const auto cc = createCCWalletReqs_[id];
       createCCWalletReqs_.erase(id);
 
-      const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, wallet_->networkType());
       const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
-      group->createLeaf(bs::hd::Path::keyToElem(cc), leafNode);
+      group->addLeaf(leaf);
 
       if (createCCWalletReqs_.empty()) {
          startWalletScan();

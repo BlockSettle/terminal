@@ -3,22 +3,24 @@
 
 #include <memory>
 #include "CheckRecipSigner.h"
-#include "MetaData.h"
 #include "SettlementContainer.h"
 #include "CommonTypes.h"
+#include "CoreWallet.h"
 #include "QWalletInfo.h"
+#include "UtxoReservation.h"
 
 namespace spdlog {
    class logger;
 }
 namespace bs {
-   class UtxoReservation;
+   namespace sync {
+      class WalletsManager;
+   }
 }
 class ArmoryConnection;
 class AssetManager;
 class SignContainer;
 class TransactionData;
-class WalletsManager;
 
 
 class ReqCCSettlementContainer : public bs::SettlementContainer
@@ -29,7 +31,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const bs::network::RFQ &, const bs::network::Quote &
       , const std::shared_ptr<TransactionData> &);
    ~ReqCCSettlementContainer() override;
@@ -76,7 +78,7 @@ private:
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<TransactionData>    transactionData_;
    std::shared_ptr<AssetManager>       assetMgr_;
-   std::shared_ptr<WalletsManager>     walletsMgr_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bs::network::RFQ           rfq_;
    bs::network::Quote         quote_;
    const bs::Address          genAddress_;
@@ -90,7 +92,7 @@ private:
 
    BinaryData                 dealerTx_;
    BinaryData                 requesterTx_;
-   bs::wallet::TXSignRequest  ccTxData_;
+   bs::core::wallet::TXSignRequest  ccTxData_;
    std::string                ccTxSigned_;
 
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;

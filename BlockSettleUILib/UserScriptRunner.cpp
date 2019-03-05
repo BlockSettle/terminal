@@ -4,7 +4,7 @@
 #include "SignContainer.h"
 #include "MarketDataProvider.h"
 #include "UserScript.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include <QThread>
 #include <QTimer>
@@ -58,7 +58,7 @@ UserScriptHandler::~UserScriptHandler() noexcept
    deinitAQ(false);
 }
 
-void UserScriptHandler::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+void UserScriptHandler::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    walletsManager_ = walletsManager;
 
@@ -335,7 +335,7 @@ bool UserScriptRunner::isEnabled() const
    return enabled_;
 }
 
-void UserScriptRunner::setWalletsManager(std::shared_ptr<WalletsManager> walletsManager)
+void UserScriptRunner::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    script_->setWalletsManager(walletsManager);
 }

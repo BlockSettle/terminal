@@ -14,16 +14,17 @@
 #include "AddressListModel.h"
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "NewWalletDialog.h"
 #include "NewWalletSeedDialog.h"
 #include "SelectAddressDialog.h"
 #include "SignContainer.h"
 #include "WalletImporter.h"
-#include "WalletsManager.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncSettlementWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "TreeViewWithEnterKey.h"
 #include "NewWalletSeedConfirmDialog.h"
 #include "ManageEncryption/VerifyWalletBackupDialog.h"
@@ -173,7 +174,7 @@ WalletsWidget::WalletsWidget(QWidget* parent)
 WalletsWidget::~WalletsWidget() = default;
 
 void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<WalletsManager> &manager
+   , const std::shared_ptr<bs::sync::WalletsManager> &manager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ApplicationSettings> &applicationSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -192,9 +193,9 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &WalletsWidget::onTXSigned);
 
-   const auto &defWallet = walletsManager_->GetDefaultWallet();
-   InitWalletsView(defWallet ? defWallet->GetWalletId() : std::string{});
-   connect(walletsManager_.get(), &WalletsManager::walletImportFinished, [this] { walletsModel_->LoadWallets(); });
+   const auto &defWallet = walletsManager_->getDefaultWallet();
+   InitWalletsView(defWallet ? defWallet->walletId() : std::string{});
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, [this] { walletsModel_->LoadWallets(); });
 
    auto filter = appSettings_->get<int>(ApplicationSettings::WalletFiltering);
 
@@ -253,10 +254,10 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    updateAddresses();
    connect(ui->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
    connect(walletsModel_, &WalletsViewModel::updateAddresses, this, &WalletsWidget::updateAddresses);
-   connect(walletsManager_.get(), &WalletsManager::walletBalanceChanged, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceChanged, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
 }
 
-std::vector<WalletsManager::wallet_gen_type> WalletsWidget::GetSelectedWallets() const
+std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getSelectedWallets() const
 {
    auto indexes = ui->treeViewWallets->selectionModel()->selectedIndexes();
    if (!indexes.isEmpty()) {
@@ -265,7 +266,7 @@ std::vector<WalletsManager::wallet_gen_type> WalletsWidget::GetSelectedWallets()
    return {};
 }
 
-std::vector<WalletsManager::wallet_gen_type> WalletsWidget::GetFirstWallets() const
+std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getFirstWallets() const
 {
    if (walletsModel_->rowCount()) {
       return walletsModel_->getWallets(walletsModel_->index(0, 0));
@@ -308,12 +309,12 @@ void WalletsWidget::showAddressProperties(const QModelIndex& index)
 {
    auto sourceIndex = addressSortFilterModel_->mapToSource(index);
    const auto walletId = addressModel_->data(sourceIndex, AddressListModel::WalletIdRole).toString().toStdString();
-   const auto wallet = walletsManager_->GetWalletById(walletId);
-   if (!wallet || (wallet->GetType() == bs::wallet::Type::Authentication)) {
+   const auto wallet = walletsManager_->getWalletById(walletId);
+   if (!wallet || (wallet->type() == bs::core::wallet::Type::Authentication)) {
       return;
    }
 
-   const auto &addresses = wallet->GetUsedAddressList();
+   const auto &addresses = wallet->getUsedAddressList();
    const size_t addrIndex = addressModel_->data(sourceIndex, AddressListModel::AddrIndexRole).toUInt();
    const auto address = (addrIndex < addresses.size()) ? addresses[addrIndex] : bs::Address();
 
@@ -335,7 +336,7 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
       curAddress_.clear();
       return;
    }
-   curWallet_ = walletsManager_->GetWalletByAddress(curAddress_);
+   curWallet_ = walletsManager_->getWalletByAddress(curAddress_);
 
    if (!curWallet_) {
       logger_->warn("Failed to find wallet for address {}", curAddress_.display<std::string>());
@@ -343,13 +344,13 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
    }
    auto contextMenu = new QMenu(this);
 
-   if ((curWallet_->GetType() == bs::wallet::Type::Bitcoin) || (GetSelectedWallets().size() == 1)) {
+   if ((curWallet_->type() == bs::core::wallet::Type::Bitcoin) || (getSelectedWallets().size() == 1)) {
       contextMenu->addAction(actCopyAddr_);
    }
    contextMenu->addAction(actEditComment_);
 
    const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances) {
-      if ((curWallet_ == walletsManager_->GetSettlementWallet()) && walletsManager_->GetAuthWallet()
+      if ((curWallet_ == walletsManager_->getSettlementWallet()) && walletsManager_->getAuthWallet()
          /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
          contextMenu->addAction(actRevokeSettl_);
       }
@@ -381,7 +382,7 @@ void WalletsWidget::onWalletContextMenu(const QPoint &p)
 
 void WalletsWidget::updateAddresses()
 {
-   const auto &selectedWallets = GetSelectedWallets();
+   const auto &selectedWallets = getSelectedWallets();
    if (selectedWallets == prevSelectedWallets_) {
       return;
    }
@@ -391,10 +392,10 @@ void WalletsWidget::updateAddresses()
 
 void WalletsWidget::onWalletBalanceChanged(std::string walletId)
 {
-   const auto &selectedWallets = GetSelectedWallets();
+   const auto &selectedWallets = getSelectedWallets();
    bool changedSelected = false;
    for (const auto &wallet : selectedWallets) {
-      if (wallet->GetWalletId() == walletId) {
+      if (wallet->walletId() == walletId) {
          changedSelected = true;
          break;
       }
@@ -426,11 +427,11 @@ bool WalletsWidget::CreateNewWallet(bool report)
 {
    NetworkType netType = appSettings_->get<NetworkType>(ApplicationSettings::netType);
 
-   bs::wallet::Seed walletSeed(netType, CryptoPRNG::generateRandom(32));
+   bs::core::wallet::Seed walletSeed(netType, CryptoPRNG::generateRandom(32));
 
    EasyCoDec::Data easyData = walletSeed.toEasyCodeChecksum();
 
-   std::string walletId = bs::hd::Node(walletSeed).getId();
+   const auto walletId = walletSeed.getWalletId();
 
    NewWalletSeedDialog newWalletSeedDialog(QString::fromStdString(walletId)
       , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);
@@ -446,14 +447,14 @@ bool WalletsWidget::CreateNewWallet(bool report)
    if (!result) {
       return false;
    }
-   std::shared_ptr<bs::hd::Wallet> newWallet;
+   std::shared_ptr<bs::sync::hd::Wallet> newWallet;
 //   CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
 //      , appSettings_->GetHomeDir(), walletSeed, walletId, username_, appSettings_, this);
    CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-      , appSettings_->GetHomeDir(), walletSeed, walletId, username_, appSettings_, connectionManager_, logger_, this);
+      , walletSeed, walletId, username_, appSettings_, connectionManager_, logger_, this);
    if (createWalletDialog.exec() == QDialog::Accepted) {
       if (createWalletDialog.walletCreated()) {
-         newWallet = walletsManager_->GetHDWalletById(walletId);
+         newWallet = walletsManager_->getHDWalletById(walletId);
          if (!newWallet) {
             showError(tr("Failed to find newly created wallet"));
             return false;
@@ -462,7 +463,7 @@ bool WalletsWidget::CreateNewWallet(bool report)
          if (report) {
             BSMessageBox(BSMessageBox::success
                , tr("%1Wallet Created").arg(createWalletDialog.isNewWalletPrimary() ? tr("Primary ") : QString())
-               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->getName())), this).exec();
+               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->name())), this).exec();
          }
 
          return true;
@@ -479,7 +480,7 @@ bool WalletsWidget::ImportNewWallet(bool report)
 {
    bool disablePrimaryImport = false;
 
-   if (!walletsManager_->HasPrimaryWallet() && assetManager_->privateShares(true).empty()) {
+   if (!walletsManager_->hasPrimaryWallet() && assetManager_->privateShares(true).empty()) {
       BSMessageBox q(BSMessageBox::warning, tr("Private Market Import"), tr("Private Market data is missing")
          , tr("You do not have Private Market data available in the BlockSettle Terminal. You must first log "
             "into the BlockSettle trading network from the main menu. A successful login will cause the proper data to be "
@@ -524,36 +525,7 @@ bool WalletsWidget::ImportNewWallet(bool report)
             }
          }
       }
-      else {
-         const QFileInfo fi(importWalletDialog.GetWatchinOnlyFileName());
-         const auto targetFile = appSettings_->GetHomeDir() + QLatin1String("/") + fi.fileName();
-         const auto title = tr("Wallet import error");
-         if (QFile(targetFile).exists()) {
-            BSMessageBox(BSMessageBox::critical, title, tr("Watching-only wallet file %1 already exists!").arg(targetFile)).exec();
-            return false;
-         }
-         if (!QFile::copy(importWalletDialog.GetWatchinOnlyFileName(), targetFile)) {
-            BSMessageBox(BSMessageBox::critical, title, tr("Failed to copy watching-only wallet file to %1").arg(targetFile)).exec();
-            return false;
-         }
-         const auto &newWallet = std::make_shared<bs::hd::Wallet>(targetFile.toStdString()
-                                                                  , logger_);
-         if (!newWallet) {
-            BSMessageBox(BSMessageBox::critical, title, tr("Failed to load watching-only wallet from %1").arg(targetFile)).exec();
-            return false;
-         }
-         if (walletsManager_->GetHDWalletById(newWallet->getWalletId()) != nullptr) {
-            BSMessageBox(BSMessageBox::critical, title, tr("Watching-only wallet with id %1 already exists!")
-               .arg(QString::fromStdString(newWallet->getWalletId()))).exec();
-            return false;
-         }
-         walletsManager_->AddWallet(newWallet, appSettings_->GetHomeDir());
-         if (report) {
-            BSMessageBox(BSMessageBox::success
-               , tr("Wallet Created")
-               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->getName()))
-               , this).exec();
-         }
+      else {   //TODO: decide on WO wallet import later
       }
    }
 
@@ -648,9 +620,9 @@ void WalletsWidget::onEditAddrComment()
    bool isOk = false;
    const auto comment = QInputDialog::getText(this, tr("Edit Comment")
       , tr("Enter new comment for address %1:").arg(curAddress_.display())
-      , QLineEdit::Normal, QString::fromStdString(curWallet_->GetAddressComment(curAddress_)), &isOk);
+      , QLineEdit::Normal, QString::fromStdString(curWallet_->getAddressComment(curAddress_)), &isOk);
    if (isOk) {
-      if (!curWallet_->SetAddressComment(curAddress_, comment.toStdString())) {
+      if (!curWallet_->setAddressComment(curAddress_, comment.toStdString())) {
          BSMessageBox(BSMessageBox::critical, tr("Address Comment"), tr("Failed to save comment")).exec();
       }
    }
@@ -659,22 +631,22 @@ void WalletsWidget::onEditAddrComment()
 void WalletsWidget::onRevokeSettlement()
 {
    const auto &title = tr("Settlement Revoke");
-   const auto &settlWallet = walletsManager_->GetSettlementWallet();
-   const auto &addrIndex = QString::fromStdString(settlWallet->GetAddressIndex(curAddress_));
+   const auto &settlWallet = walletsManager_->getSettlementWallet();
+   const auto &addrIndex = QString::fromStdString(settlWallet->getAddressIndex(curAddress_));
    const auto settlId = BinaryData::CreateFromHex(addrIndex.section(QLatin1Char('.'), 0, 0).toStdString());
    const auto sellAuthKey = BinaryData::CreateFromHex(addrIndex.section(QLatin1Char('.'), 2, 2).toStdString());
    if (addrIndex.isEmpty() || settlId.isNull() || sellAuthKey.isNull()) {
       BSMessageBox(BSMessageBox::critical, title, tr("Unknown settlement address")).exec();
       return;
    }
-   const auto &ae = settlWallet->getExistingAddress(settlId);
-   if (!ae) {
+   const auto ae = settlWallet->getExistingAddress(settlId);
+   if (ae.isNull()) {
       BSMessageBox(BSMessageBox::critical, title, tr("Invalid settlement address")).exec();
       return;
    }
 
    const auto &cbSettlInput = [this, settlWallet, sellAuthKey, title, ae] (UTXO utxo) {
-      SelectAddressDialog selectAddressDialog{ walletsManager_, walletsManager_->GetDefaultWallet(), this };
+      SelectAddressDialog selectAddressDialog{ walletsManager_, walletsManager_->getDefaultWallet(), this };
       bs::Address recvAddr;
       if (selectAddressDialog.exec() == QDialog::Accepted) {
          recvAddr = selectAddressDialog.getSelectedAddress();
@@ -685,9 +657,9 @@ void WalletsWidget::onRevokeSettlement()
 
       const auto &cbFee = [this, settlWallet, utxo, recvAddr, sellAuthKey, title, ae](float feePerByte) {
          try {
-            const auto txReq = settlWallet->CreatePayoutTXRequest(utxo, recvAddr, feePerByte);
+            const auto txReq = settlWallet->createPayoutTXRequest(utxo, recvAddr, feePerByte);
             const auto authAddr = bs::Address::fromPubKey(sellAuthKey, AddressEntryType_P2WPKH);
-            revokeReqId_ = signingContainer_->SignPayoutTXRequest(txReq, authAddr, ae);
+            revokeReqId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlWallet->getAddressIndex(ae));
          }
          catch (const std::exception &e) {
             BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QLatin1String(e.what())).exec();
@@ -695,7 +667,7 @@ void WalletsWidget::onRevokeSettlement()
       };
       walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };
-   settlWallet->GetInputFor(ae, cbSettlInput, false);
+   settlWallet->getInputFor(ae, cbSettlInput, false);
 }
 
 void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
@@ -712,7 +684,7 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
    }
 
    if (armory_->broadcastZC(signedTX)) {
-      walletsManager_->GetSettlementWallet()->SetTransactionComment(signedTX, "Settlement Revoke");
+      walletsManager_->getSettlementWallet()->setTransactionComment(signedTX, "Settlement Revoke");
    }
    else {
       BSMessageBox(BSMessageBox::critical, title, tr("Failed to send transaction to mempool")).exec();
@@ -727,7 +699,7 @@ void WalletsWidget::onDeleteWallet()
       BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
       return;
    }
-   const auto &wallet = walletsManager_->GetWalletById(walletId.toStdString());
+   const auto &wallet = walletsManager_->getWalletById(walletId.toStdString());
    if (!wallet) {
       BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
       return;

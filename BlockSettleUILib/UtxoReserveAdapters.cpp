@@ -18,7 +18,7 @@ void bs::OrderUtxoResAdapter::unreserved(const std::string &walletId, const std:
    emit reservedUtxosChanged(walletId, {});
 }
 
-void bs::OrderUtxoResAdapter::reserve(const bs::wallet::TXSignRequest &txReq, const std::string &reserveId)
+void bs::OrderUtxoResAdapter::reserve(const bs::core::wallet::TXSignRequest &txReq, const std::string &reserveId)
 {
    bs::UtxoReservation::Adapter::reserve(txReq.walletId, reserveId, txReq.inputs);
 }

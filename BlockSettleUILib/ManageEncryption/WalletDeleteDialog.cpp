@@ -6,15 +6,17 @@
 #include <QFileInfo>
 #include <QStandardPaths>
 
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "WalletsWidget.h"
 #include "SignContainer.h"
 #include "WalletBackupDialog.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncSettlementWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
-WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
-   , const std::shared_ptr<WalletsManager> &walletsMgr
+WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<SignContainer> &container
    , std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -35,15 +37,15 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::hd::Wallet> &wa
 
    const auto &group = hdWallet_->getGroup(hdWallet_->getXBTGroupType());
    const auto &xbtLeaf = group ? group->getLeaf(0) : nullptr;
-   if (signingContainer_->isOffline() || (xbtLeaf && signingContainer_->isWalletOffline(xbtLeaf->GetWalletId()))) {
+   if (signingContainer_->isOffline() || (xbtLeaf && signingContainer_->isWalletOffline(xbtLeaf->walletId()))) {
       ui_->checkBoxBackup->setChecked(false);
       ui_->checkBoxBackup->hide();
       ui_->checkBoxDeleteSigner->hide();
    }
 }
 
-WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &wallet
-   , const std::shared_ptr<WalletsManager> &walletsMgr
+WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<SignContainer> &container
    , std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ConnectionManager> &connectionManager
@@ -64,8 +66,8 @@ WalletDeleteDialog::WalletDeleteDialog(const std::shared_ptr<bs::Wallet> &wallet
    ui_->checkBoxBackup->setChecked(false);
    ui_->checkBoxBackup->hide();
 
-   if (signingContainer_->isOffline() || signingContainer_->isWalletOffline(wallet_->GetWalletId())
-      || (walletsManager_->GetSettlementWallet() == wallet_)) {
+   if (signingContainer_->isOffline() || signingContainer_->isWalletOffline(wallet_->walletId())
+      || (walletsManager_->getSettlementWallet()->walletId() == wallet_->walletId())) {
       ui_->checkBoxDeleteSigner->hide();
    }
 }
@@ -101,19 +103,19 @@ void WalletDeleteDialog::deleteHDWallet()
       }
    }
    if (ui_->checkBoxDeleteSigner->isChecked()) {
-      signingContainer_->DeleteHDRoot(hdWallet_->getWalletId());
+      signingContainer_->DeleteHDRoot(hdWallet_->walletId());
    }
-   if (walletsManager_->DeleteWalletFile(hdWallet_)) {
+   if (walletsManager_->deleteWallet(hdWallet_)) {
       BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
          , tr("HD Wallet was successfully deleted")
          , tr("HD wallet \"%1\" (%2) was successfully deleted")
-         .arg(QString::fromStdString(hdWallet_->getName()))
-         .arg(QString::fromStdString(hdWallet_->getWalletId())), this).exec();
+         .arg(QString::fromStdString(hdWallet_->name()))
+         .arg(QString::fromStdString(hdWallet_->walletId())), this).exec();
       accept();
    }
    else {
       BSMessageBox(BSMessageBox::critical, tr("Wallet deletion failed")
-         , tr("Failed to delete local copy of %1").arg(QString::fromStdString(hdWallet_->getName())), this).exec();
+         , tr("Failed to delete local copy of %1").arg(QString::fromStdString(hdWallet_->name())), this).exec();
       reject();
    }
 }
@@ -121,19 +123,19 @@ void WalletDeleteDialog::deleteHDWallet()
 void WalletDeleteDialog::deleteWallet()
 {
    if (ui_->checkBoxDeleteSigner->isChecked()) {
-      signingContainer_->DeleteHDLeaf(wallet_->GetWalletId());
+      signingContainer_->DeleteHDLeaf(wallet_->walletId());
    }
-   if (walletsManager_->DeleteWalletFile(wallet_)) {
+   if (walletsManager_->deleteWallet(wallet_)) {
       BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
          , tr("Wallet was successfully deleted")
          , tr("Wallet \"%1\" (%2) was successfully deleted")
-         .arg(QString::fromStdString(wallet_->GetWalletName()))
-         .arg(QString::fromStdString(wallet_->GetWalletId())), this).exec();
+         .arg(QString::fromStdString(wallet_->name()))
+         .arg(QString::fromStdString(wallet_->walletId())), this).exec();
       accept();
    }
    else {
       BSMessageBox(BSMessageBox::critical, tr("Wallet deletion failed")
-         , tr("Failed to delete wallet %1").arg(QString::fromStdString(wallet_->GetWalletName())), this).exec();
+         , tr("Failed to delete wallet %1").arg(QString::fromStdString(wallet_->name())), this).exec();
       reject();
    }
 }
