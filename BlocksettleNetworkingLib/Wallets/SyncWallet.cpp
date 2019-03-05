@@ -586,20 +586,6 @@ bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
    return addresses[qrand() % addresses.size()];
 }
 
-/*bool Wallet::isSegWitScript(const BinaryData &script)
-{
-//   const auto scrType = BtcUtils::getTxOutScriptType(script);
-   switch (getAddrTypeForAddr(BtcUtils::getTxOutRecipientAddr(script))) {
-      case AddressEntryType_P2WPKH:
-      case AddressEntryType_P2WSH:
-      case AddressEntryType_P2SH:
-         return true;
-      case AddressEntryType_Default:   // fallback for script not from our wallet
-      default: break;                  // fallback for incorrectly deserialized wallet
-   }
-   return false;
-}*/
-
 QString Wallet::displayTxValue(int64_t val) const
 {
    return QLocale().toString(val / BTCNumericTypes::BalanceDivider, 'f', BTCNumericTypes::default_precision);
@@ -721,11 +707,17 @@ bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> 
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const uint64_t fee
    , bool isRBF, bs::Address changeAddress, const uint64_t& origFee)
 {
-   const auto &cbChangeAddr = [this](std::string &index) -> bs::Address {
+   const auto &cbNewChangeAddr = [this](std::string &index) -> bs::Address {
       const auto result = getNewChangeAddress();
       setAddressComment(result, wallet::Comment::toString(wallet::Comment::ChangeAddress));
       index = getAddressIndex(result);
       return result;
+   };
+   const auto &cbChangeAddr = [this, changeAddress, cbNewChangeAddr](std::string &index) {
+      if (changeAddress.isNull()) {
+         return cbNewChangeAddr(index);
+      }
+      return changeAddress;
    };
    return wallet::createTXRequest(walletId(), inputs, recipients, cbChangeAddr
       , fee, isRBF, origFee);

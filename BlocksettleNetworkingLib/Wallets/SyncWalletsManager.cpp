@@ -992,7 +992,6 @@ void WalletsManager::invokeFeeCallbacks(unsigned int blocks, float fee)
       }
    }
    for (const auto &obj : objsToDelete) {
-      disconnect(obj, SIGNAL(destroyed()), this, SLOT(onFeeObjDestroyed()));
       feeCallbacks_.erase(obj);
    }
 }
