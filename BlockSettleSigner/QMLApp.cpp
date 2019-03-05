@@ -5,18 +5,18 @@
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
-#include "CoreHDWallet.h"
 #include "AuthProxy.h"
 #include "AutheIDClient.h"
-#include "CoreWalletsManager.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
-#include "QmlWalletsViewModel.h"
+#include "HDWallet.h"
 #include "HeadlessContainerListener.h"
 #include "OfflineProcessor.h"
 #include "SignerSettings.h"
 #include "TXInfo.h"
+#include "WalletsManager.h"
 #include "WalletsProxy.h"
+#include "WalletsViewModel.h"
 #include "ZmqSecuredServerConnection.h"
 #include "EasyEncValidator.h"
 #include "PasswordConfirmValidator.h"
@@ -31,7 +31,7 @@
 #include "DBusNotification.h"
 #endif // BS_USE_DBUS
 
-Q_DECLARE_METATYPE(bs::core::wallet::TXSignRequest)
+Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(bs::wallet::TXInfo)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
@@ -50,9 +50,9 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    registerQtTypes();
 
-   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger_);
+   walletsMgr_ = std::make_shared<WalletsManager>(logger_);
 
-   walletsModel_ = new QmlWalletsViewModel(walletsMgr_, ctxt_->engine());
+   walletsModel_ = new QmlWalletsViewModel(walletsMgr_, ctxt_->engine(), true);
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
 
    statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_);
@@ -116,12 +116,12 @@ void QMLAppObj::settingsConnections()
 void QMLAppObj::walletsLoad()
 {
    logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
-   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString());
-   if (!walletsMgr_->empty()) {
-      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+   walletsMgr_->LoadWallets(settings_->netType(), settings_->getWalletsDir());
+   if (walletsMgr_->GetWalletsCount() > 0) {
+      logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
 
-      if (!walletsMgr_->getSettlementWallet()) {
-         if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir().toStdString())) {
+      if (!walletsMgr_->GetSettlementWallet()) {
+         if (!walletsMgr_->CreateSettlementWallet(QString())) {
             logger_->error("Failed to create Settlement wallet");
          }
       }
@@ -130,7 +130,7 @@ void QMLAppObj::walletsLoad()
       logger_->warn("No wallets loaded");
    }
 
-   walletsModel_->loadWallets();
+   walletsModel_->LoadWallets();
 }
 
 void QMLAppObj::Start()
@@ -220,7 +220,7 @@ void QMLAppObj::initZmqKeys()
 
 void QMLAppObj::registerQtTypes()
 {
-   qRegisterMetaType<bs::core::wallet::TXSignRequest>();
+   qRegisterMetaType<bs::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
@@ -270,7 +270,7 @@ void QMLAppObj::onOfflineChanged()
 
 void QMLAppObj::onWalletsDirChanged()
 {
-   walletsMgr_->reset();
+   walletsMgr_->Reset();
    walletsLoad();
 }
 
@@ -319,34 +319,34 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
    }
 }
 
-void QMLAppObj::onOfflinePassword(const bs::core::wallet::TXSignRequest &txReq)
+void QMLAppObj::onOfflinePassword(const bs::wallet::TXSignRequest &txReq)
 {
    offlinePasswordRequests_.insert(txReq.walletId);
    requestPassword(txReq, {}, false);
 }
 
-void QMLAppObj::onPasswordRequested(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt)
+void QMLAppObj::onPasswordRequested(const bs::wallet::TXSignRequest &txReq, const QString &prompt)
 {
    requestPassword(txReq, prompt);
 }
 
 void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
 {
-   bs::core::wallet::TXSignRequest txReq;
+   bs::wallet::TXSignRequest txReq;
    QString walletName;
    txReq.walletId = walletId;
    if (txReq.walletId.empty()) {
-      const auto wallet = walletsMgr_->getPrimaryWallet();
+      const auto &wallet = walletsMgr_->GetPrimaryWallet();
       if (wallet) {
-         txReq.walletId = wallet->walletId();
-         walletName = QString::fromStdString(wallet->name());
+         txReq.walletId = wallet->getWalletId();
+         walletName = QString::fromStdString(wallet->getName());
       }
    }
    requestPassword(txReq, walletName.isEmpty() ? tr("Activate Auto-Signing") :
       tr("Activate Auto-Signing for %1").arg(walletName));
 }
 
-void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
+void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
 {
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);

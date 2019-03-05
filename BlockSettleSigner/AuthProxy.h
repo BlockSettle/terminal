@@ -4,6 +4,7 @@
 #include "AutheIDClient.h"
 #include "ApplicationSettings.h"
 #include "EncryptionUtils.h"
+#include "MetaData.h"
 #include "QWalletInfo.h"
 #include "WalletEncryption.h"
 

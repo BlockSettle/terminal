@@ -8,14 +8,10 @@
 namespace spdlog {
    class logger;
 }
-namespace bs {
-   namespace core {
-      class WalletsManager;
-   }
-}
 class HeadlessContainerListener;
 class OfflineProcessor;
 class SignerSettings;
+class WalletsManager;
 class ZmqSecuredServerConnection;
 
 
@@ -40,7 +36,7 @@ private:
 
    std::shared_ptr<spdlog::logger>  logger_;
    const std::shared_ptr<SignerSettings>        settings_;
-   std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
+   std::shared_ptr<WalletsManager>              walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;

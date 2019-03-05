@@ -8,11 +8,11 @@
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
-#include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
 #include "OfflineProcessor.h"
 #include "SignerSettings.h"
+#include "WalletsManager.h"
 #include "ZmqSecuredServerConnection.h"
 #include "ZMQHelperFunctions.h"
 
@@ -32,28 +32,25 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("failed to read ZMQ server private key");
    }
 
-   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
+   walletsMgr_ = std::make_shared<WalletsManager>(logger);
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
 
 void HeadlessAppObj::Start()
 {
    logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
-   const auto &cbProgress = [this](int cur, int total) {
-      logger_->debug("Loading wallet {} of {}", cur, total);
-   };
-   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString(), cbProgress);
-   if (!walletsMgr_->getSettlementWallet()) {
-      if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir().toStdString())) {
+   walletsMgr_->LoadWallets(settings_->netType(), settings_->getWalletsDir());
+   if (!walletsMgr_->GetSettlementWallet()) {
+      if (!walletsMgr_->CreateSettlementWallet(QString())) {
          logger_->error("Failed to create Settlement wallet");
       }
    }
 
-   if (walletsMgr_->empty()) {
+   if (!walletsMgr_->GetWalletsCount()) {
       logger_->warn("No wallets loaded");
    }
    else {
-      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
+      logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
    }
 
    if (settings_->offline()) {
@@ -93,10 +90,10 @@ void HeadlessAppObj::OnlineProcessing()
 
 void HeadlessAppObj::OfflineProcessing()
 {
-   const auto cbCLI = [this](const std::shared_ptr<bs::core::Wallet> &wallet) -> SecureBinaryData {
-      std::cout << "Enter password for wallet " << wallet->name();
-      if (!wallet->description().empty()) {
-         std::cout << " (" << wallet->description() << ")";
+   const auto cbCLI = [this](const std::shared_ptr<bs::Wallet> &wallet) -> SecureBinaryData {
+      std::cout << "Enter password for wallet " << wallet->GetWalletName();
+      if (!wallet->GetWalletDescription().empty()) {
+         std::cout << " (" << wallet->GetWalletDescription() << ")";
       }
       (std::cout << ": ").flush();
       setConsoleEcho(false);

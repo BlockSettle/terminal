@@ -1,7 +1,10 @@
 #include "TXInfo.h"
+#include "HDWallet.h"
 #include "QWalletInfo.h"
 #include "QmlFactory.h"
+#include "WalletsManager.h"
 
+using namespace bs::hd;
 using namespace bs::wallet;
 
 QStringList TXInfo::recvAddresses() const
