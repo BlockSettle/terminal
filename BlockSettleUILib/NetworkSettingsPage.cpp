@@ -72,7 +72,15 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       }
    });
 
+   ui_->comboBoxEnvironment->addItem(tr("Custom"));
+   ui_->comboBoxEnvironment->addItem(tr("Staging"));
+   ui_->comboBoxEnvironment->addItem(tr("UAT"));
+   ui_->comboBoxEnvironment->addItem(tr("PROD"));
+
+   ui_->comboBoxEnvironment->setCurrentIndex(-1);
+
    connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::display);
+
 }
 
 void NetworkSettingsPage::initSettings()
