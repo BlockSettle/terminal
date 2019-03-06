@@ -5,7 +5,7 @@
 #include "ChatProtocol.h"
 #include "NotificationCenter.h"
 
-const int FIRST_FETCH_MESSAGES_SIZE = 10;
+const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    : QTextBrowser(parent)
@@ -171,13 +171,16 @@ void ChatMessagesTextEdit::loadMore() {
    // delete insert more button
    QTextCursor cursor(textCursor());
    cursor.movePosition(QTextCursor::Start);
-   cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
+   cursor.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor, 1);
    cursor.removeSelectedText();
 
    // load more messages
    int i = 0;
    for (const auto &msg: messagesToLoadMore_) {
-      messages_[currentChatId_].push_back(msg);
+      cursor.movePosition(QTextCursor::Start);
+      cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, i * 2);
+      
+      messages_[currentChatId_].insert(messages_[currentChatId_].begin() + i, msg);
 
       table = cursor.insertTable(1, 4, tableFormat);
 
