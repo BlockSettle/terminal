@@ -35,6 +35,7 @@ namespace Chat
    ,   RequestSendOwnPublicKey
    ,   RequestChangeMessageStatus
    ,   RequestContactsAction
+   ,   RequestChatroomsList
    };
 
 
@@ -340,6 +341,17 @@ namespace Chat
       std::string receiverId_;
    };
    
+   class ChatroomsListRequest : public Request
+   {
+   public:
+      ChatroomsListRequest(const std::string& clientId, const std::string& senderId);
+      std::string getSenderId() const { return senderId_; } 
+      QJsonObject toJson() const override;
+      void handle(RequestHandler &) override;
+   private:
+      std::string senderId_;
+   };
+   
    class HeartbeatPongResponse : public Response
    {
    public:
@@ -563,6 +575,8 @@ namespace Chat
       virtual void OnRequestChangeMessageStatus(const MessageChangeStatusRequest &) = 0;
       
       virtual void OnRequestContactsAction(const ContactActionRequest &) = 0;
+      
+      virtual void OnRequestChatroomsList(const ChatroomsListRequest &) = 0;
    };
 
    class ResponseHandler

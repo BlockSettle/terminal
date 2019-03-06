@@ -52,6 +52,7 @@ static std::map<std::string, RequestType> RequestTypeFromString
    ,   { "RequestSendOwnPublicKey"   ,   RequestType::RequestSendOwnPublicKey   }
    ,   { "RequestChangeMessageStatus",   RequestType::RequestChangeMessageStatus}
    ,   { "RequestContactsAction"     ,   RequestType::RequestContactsAction     }
+   ,   { "RequestChatroomsList"      ,   RequestType::RequestChatroomsList      }
 };
 
 
@@ -67,6 +68,7 @@ static std::map<RequestType, std::string> RequestTypeToString
    ,   { RequestType::RequestSendOwnPublicKey   ,   "RequestSendOwnPublicKey"   }
    ,   { RequestType::RequestChangeMessageStatus,   "RequestChangeMessageStatus"}
    ,   { RequestType::RequestContactsAction     ,   "RequestContactsAction"     }
+   ,   { RequestType::RequestChatroomsList      ,   "RequestChatroomsList"      }
 };
 
 
@@ -991,4 +993,25 @@ std::shared_ptr<Request> ContactActionRequest::fromJSON(const std::string& clien
 void ContactActionRequest::handle(RequestHandler& handler)
 {
    return handler.OnRequestContactsAction(*this);
+}
+
+ChatroomsListRequest::ChatroomsListRequest(const std::string& clientId, const std::string& senderId)
+   : Request (RequestType::RequestChatroomsList, clientId)
+   , senderId_(senderId)
+{
+   
+}
+
+QJsonObject ChatroomsListRequest::toJson() const
+{
+   QJsonObject data = Request::toJson();
+
+   data[SenderIdKey] = QString::fromStdString(senderId_);
+
+   return data;
+}
+
+void ChatroomsListRequest::handle(RequestHandler& handler)
+{
+   return handler.OnRequestChatroomsList(*this);
 }
