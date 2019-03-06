@@ -44,7 +44,7 @@ protected:
    
 public slots:
    void onSwitchToChat(const QString& chatId);
-   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
+   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
    void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
@@ -54,6 +54,7 @@ public slots:
 private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
    QMap<QString, MessagesHistory> messages_;
+   MessagesHistory messagesToLoadMore_;
    QString   currentChatId_;
    QString   ownUserId_;
    
@@ -61,6 +62,8 @@ private:
    std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
    void insertMessage(std::shared_ptr<Chat::MessageData> message);
+   void insertLoadMore();
+   void loadMore();
    QString toHtmlText(const QString &text);
 
    QTextTableFormat tableFormat;

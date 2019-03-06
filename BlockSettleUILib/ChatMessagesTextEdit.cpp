@@ -5,6 +5,7 @@
 #include "ChatProtocol.h"
 #include "NotificationCenter.h"
 
+const int FIRST_FETCH_MESSAGES_SIZE = 10;
 
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    : QTextBrowser(parent)
@@ -20,6 +21,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    col_widths << QTextLength (QTextLength::VariableLength, 50);
    tableFormat.setColumnWidthConstraints (col_widths);
 
+   setAlignment(Qt::AlignHCenter);
    setAutoFormatting(QTextEdit::AutoAll);
    setAcceptRichText(true);
    setOpenExternalLinks(false);
@@ -121,13 +123,18 @@ void ChatMessagesTextEdit::onSwitchToChat(const QString& chatId)
    qDebug() << "onSwitchToChat";
    currentChatId_ = chatId;
    messages_.clear();
+   messagesToLoadMore_.clear();
    
    clear();
    table = NULL;
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
-   QDesktopServices::openUrl(link);
+   if (link.toString() == QLatin1Literal("load_more")) {
+      loadMore();
+   } else {
+      QDesktopServices::openUrl(link);
+   }
 }
 
 void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg) {
@@ -151,6 +158,46 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
    QString message = data(rowIdx, Column::Message);
    message = toHtmlText(message);
    table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+}
+
+void ChatMessagesTextEdit::insertLoadMore() {
+   QTextCursor cursor(textCursor());
+   cursor.movePosition(QTextCursor::Start);
+   cursor.insertHtml(QLatin1Literal("<a href=\"load_more\">Load More...</a>"));
+}
+
+void ChatMessagesTextEdit::loadMore() {
+
+   // delete insert more button
+   QTextCursor cursor(textCursor());
+   cursor.movePosition(QTextCursor::Start);
+   cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 1);
+   cursor.removeSelectedText();
+
+   // load more messages
+   int i = 0;
+   for (const auto &msg: messagesToLoadMore_) {
+      messages_[currentChatId_].push_back(msg);
+
+      table = cursor.insertTable(1, 4, tableFormat);
+
+      QString time = data(i, Column::Time);
+      table->cellAt(0, 0).firstCursorPosition().insertText(time);
+
+      QString user = data(i, Column::User);
+      table->cellAt(0, 1).firstCursorPosition().insertText(user);
+
+      QImage image = statusImage(i);
+      table->cellAt(0, 2).firstCursorPosition().insertImage(image);
+
+      QString message = data(i, Column::Message);
+      message = toHtmlText(message);
+      table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+
+      i++;
+   }
+
+   messagesToLoadMore_.clear();
 }
 
 void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &msg)
@@ -213,7 +260,7 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
          
          QTextCursor cursor(textCursor());
          cursor.movePosition(QTextCursor::Start);
-         cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2);
+         cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2 + (messagesToLoadMore_.size() > 0));
          cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 2);
          cursor.removeSelectedText();
          
@@ -237,17 +284,59 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
    }
 }
 
-void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages)
+void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages, bool isFirstFetch)
 {
-   for (const auto &msg : messages) {
-      if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
-         insertMessage(msg);
-      }
-      else {
-         messages_[msg->getSenderId()].push_back(msg);
+   if (isFirstFetch) {
+      for (const auto &msg : messages) {
+         if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
+            messagesToLoadMore_.push_back(msg);
+         }
+         else {
+            messages_[msg->getSenderId()].push_back(msg);
+         }
+
+         NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
       }
 
-      NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
+      if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) { 
+         /* display certain count of messages and thus remove the displayed messages from the messagesToLoadMore */
+
+         // add "load more" hyperlink text
+         insertLoadMore();
+         
+         // display last messages
+         unsigned long i = 0;
+         for (const auto &msg: messagesToLoadMore_) {
+            if (i >= messagesToLoadMore_.size() - FIRST_FETCH_MESSAGES_SIZE) {
+               insertMessage(msg);
+            }
+
+            i++;
+         }
+
+         // remove the messages shown
+         for (i = 0; i < FIRST_FETCH_MESSAGES_SIZE; i++) {
+            messagesToLoadMore_.pop_back();
+         }
+      } else { // flush all messages
+         for (const auto &msg: messagesToLoadMore_) {
+            insertMessage(msg);
+         }
+
+         messagesToLoadMore_.clear();
+      }
+   }
+   else {
+      for (const auto &msg : messages) {
+         if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
+            insertMessage(msg);
+         }
+         else {
+            messages_[msg->getSenderId()].push_back(msg);
+         }
+
+         NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
+      }
    }
 
    emit rowsInserted();
