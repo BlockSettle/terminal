@@ -16,7 +16,10 @@ class Settings:
         self._downloads_dir = os.path.join(self._3rdparty_dir, 'downloads')
         self._sources_dir = os.path.join(self._downloads_dir, 'unpacked_sources')
 
-        self._common_build_dir = os.path.join(self._3rdparty_dir, build_mode + '-' + link_mode)
+        if link_mode == 'shared':
+            self._common_build_dir = os.path.join(self._3rdparty_dir, build_mode + '-' + link_mode)
+        else:
+            self._common_build_dir = os.path.join(self._3rdparty_dir, build_mode)
 
         self._is_windows = False
         self._is_linux = False
