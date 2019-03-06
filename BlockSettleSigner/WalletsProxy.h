@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <QObject>
-#include "MetaData.h"
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
@@ -12,13 +11,15 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   namespace hd {
+   namespace core {
+      namespace hd {
+         class Wallet;
+      }
       class Wallet;
+      class WalletsManager;
    }
-   class Wallet;
 }
 class SignerSettings;
-class WalletsManager;
 
 
 class WalletsProxy : public QObject
@@ -30,7 +31,7 @@ class WalletsProxy : public QObject
    Q_PROPERTY(QString defaultBackupLocation READ defaultBackupLocation NOTIFY walletsChanged)
 
 public:
-   WalletsProxy(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<WalletsManager> &
+   WalletsProxy(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<bs::core::WalletsManager> &
       , const std::shared_ptr<SignerSettings> &);
 
    Q_INVOKABLE bool createWallet(bool isPrimary, bs::wallet::QSeed *
@@ -84,12 +85,12 @@ private slots:
 
 private:
    bool primaryWalletExists() const;
-   std::shared_ptr<bs::hd::Wallet> getRootForId(const QString &walletId) const;
+   std::shared_ptr<bs::core::hd::Wallet> getRootForId(const QString &walletId) const;
    QStringList walletNames() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<WalletsManager>  walletsMgr_;
+   std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<SignerSettings>  settings_;
    bool walletsLoaded_ = false;
 };
