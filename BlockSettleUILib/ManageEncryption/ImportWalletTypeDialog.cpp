@@ -7,7 +7,7 @@
 
 #include "EasyEncValidator.h"
 #include "BSMessageBox.h"
-#include "MetaData.h"
+#include "CoreWallet.h"
 #include "UiUtils.h"
 #include "make_unique.h"
 
@@ -171,7 +171,7 @@ bool ImportWalletTypeDialog::PaperImportOk()
          easyData.part1 = line1.toStdString();
          easyData.part2 = line2.toStdString();
 
-         bs::wallet::Seed::fromEasyCodeChecksum(easyData, NetworkType::Invalid);
+         bs::core::wallet::Seed::fromEasyCodeChecksum(easyData, NetworkType::Invalid);
 
          return true;
       } catch (...) {

@@ -12,161 +12,199 @@
 
 #include <QObject>
 
-namespace bs
-{
+namespace bs {
 
-struct PayoutSigner
-{
-   enum Type {
-      SignatureUndefined,
-      SignedByBuyer,
-      SignedBySeller
+   class SettlementAddress
+   {
+   public:
+      SettlementAddress(const std::vector<BinaryData> &scripts
+         , const BinaryData &buyKey, const BinaryData &sellKey)
+         : scripts_(scripts), buyPubKey_(buyKey), sellPubKey_(sellKey) {}
+
+      std::vector<BinaryData> supportedAddrHashes() const { return scripts_; }
+      BinaryData getScript() const {
+         if (!scripts_.empty()) {
+            return scripts_[0];
+         }
+         return {};
+      }
+
+      BinaryData buyChainedPubKey() const { return buyPubKey_; }
+      BinaryData sellChainedPubKey() const { return sellPubKey_; }
+
+   private:
+      std::vector<BinaryData> scripts_;
+      BinaryData  buyPubKey_;
+      BinaryData  sellPubKey_;
    };
 
-   static const char *toString(const Type t) {
-      switch (t) {
-      case SignedByBuyer:        return "buyer";
-      case SignedBySeller:       return "seller";
-      case SignatureUndefined:
-      default:                   return "undefined";
+
+   struct PayoutSigner
+   {
+      enum Type {
+         SignatureUndefined,
+         SignedByBuyer,
+         SignedBySeller
+      };
+
+      static const char *toString(const Type t) {
+         switch (t) {
+         case SignedByBuyer:        return "buyer";
+         case SignedBySeller:       return "seller";
+         case SignatureUndefined:
+         default:                   return "undefined";
+         }
       }
-   }
 
-   static void WhichSignature(const Tx &
-      , uint64_t value
-      , const std::shared_ptr<bs::SettlementAddressEntry> &
-      , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
-};
+      static void WhichSignature(const Tx &
+         , uint64_t value
+         , const std::shared_ptr<SettlementAddress> &
+         , const std::shared_ptr<spdlog::logger> &
+         , const std::shared_ptr<ArmoryConnection> &, std::function<void(Type)>);
+   };
 
-class SettlementMonitor
-{
-public:
-   SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::SettlementAddressEntry> &
-      , const std::shared_ptr<spdlog::logger> &);
+   std::shared_ptr<SettlementAddress> entryToAddress(const std::shared_ptr<core::SettlementAddressEntry> &);
 
-   virtual ~SettlementMonitor() noexcept;
+   class SettlementMonitor
+   {
+   public:
+      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<core::SettlementAddressEntry> &
+         , const std::shared_ptr<spdlog::logger> &);
+      SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<SettlementAddress> &, const bs::Address &
+         , const std::shared_ptr<spdlog::logger> &);
 
-   int getPayinConfirmations() const { return payinConfirmations_; }
-   int getPayoutConfirmations() const { return payoutConfirmations_; }
+      virtual ~SettlementMonitor() noexcept;
 
-   PayoutSigner::Type getPayoutSignerSide() const { return payoutSignedBy_; }
+      int getPayinConfirmations() const { return payinConfirmations_; }
+      int getPayoutConfirmations() const { return payoutConfirmations_; }
 
-   int confirmedThreshold() const { return 6; }
+      PayoutSigner::Type getPayoutSignerSide() const { return payoutSignedBy_; }
 
-protected:
-   // payin detected is sent on ZC and once it's get to block.
-   // if payin is already on chain before monitor started, payInDetected will
-   // emited only once
-   virtual void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) = 0;
-   virtual void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) = 0;
-   virtual void onPayOutConfirmed(PayoutSigner::Type signedBy) = 0;
+      int confirmedThreshold() const { return 6; }
 
-public:
-   void checkNewEntries();
+   protected:
+      // payin detected is sent on ZC and once it's get to block.
+      // if payin is already on chain before monitor started, payInDetected will
+      // emited only once
+      virtual void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) = 0;
+      virtual void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) = 0;
+      virtual void onPayOutConfirmed(PayoutSigner::Type signedBy) = 0;
 
-private:
-   std::atomic_flag                          walletLock_ = ATOMIC_FLAG_INIT;
-   std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
-   std::set<BinaryData>                      ownAddresses_;
+   public:
+      void checkNewEntries();
 
-   std::shared_ptr<bs::SettlementAddressEntry>    addressEntry_;
+   private:
+      std::atomic_flag                          walletLock_ = ATOMIC_FLAG_INIT;
+      std::shared_ptr<AsyncClient::BtcWallet>   rtWallet_;
+      std::set<BinaryData>                      ownAddresses_;
 
-   int payinConfirmations_ = -1;
-   int payoutConfirmations_ = -1;
+      std::shared_ptr<SettlementAddress>  addressEntry_;
 
-   bool payinInBlockChain_ = false;
-   bool payoutConfirmedFlag_ = false;
+      int payinConfirmations_ = -1;
+      int payoutConfirmations_ = -1;
 
-   PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
+      bool payinInBlockChain_ = false;
+      bool payoutConfirmedFlag_ = false;
 
-protected:
-   std::shared_ptr<ArmoryConnection>         armory_;
-   std::shared_ptr<spdlog::logger>           logger_;
-   std::string                               addressString_;
+      PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
 
-protected:
-   void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
-   void IsPayOutTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
+   protected:
+      std::shared_ptr<ArmoryConnection>         armory_;
+      std::shared_ptr<spdlog::logger>           logger_;
+      std::string                               addressString_;
 
-   void CheckPayoutSignature(const ClientClasses::LedgerEntry &, std::function<void(PayoutSigner::Type)>) const;
+   protected:
+      void IsPayInTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
+      void IsPayOutTransaction(const ClientClasses::LedgerEntry &, std::function<void(bool)>) const;
 
-   void SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash);
-   void SendPayOutNotification(const ClientClasses::LedgerEntry &);
-};
+      void CheckPayoutSignature(const ClientClasses::LedgerEntry &, std::function<void(PayoutSigner::Type)>) const;
 
-class SettlementMonitorQtSignals : public QObject, public SettlementMonitor
-{
-Q_OBJECT;
-public:
-   SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::SettlementAddressEntry> &
-      , const std::shared_ptr<spdlog::logger> &);
-   ~SettlementMonitorQtSignals() noexcept override;
+      void SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash);
+      void SendPayOutNotification(const ClientClasses::LedgerEntry &);
+   };
 
-   SettlementMonitorQtSignals(const SettlementMonitorQtSignals&) = delete;
-   SettlementMonitorQtSignals& operator = (const SettlementMonitorQtSignals&) = delete;
+   class SettlementMonitorQtSignals : public QObject, public SettlementMonitor
+   {
+   Q_OBJECT;
+   public:
+      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<core::SettlementAddressEntry> &
+         , const std::shared_ptr<spdlog::logger> &);
+      SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<SettlementAddress> &, const bs::Address &
+         , const std::shared_ptr<spdlog::logger> &);
+      ~SettlementMonitorQtSignals() noexcept override;
 
-   SettlementMonitorQtSignals(SettlementMonitorQtSignals&&) = delete;
-   SettlementMonitorQtSignals& operator = (SettlementMonitorQtSignals&&) = delete;
+      SettlementMonitorQtSignals(const SettlementMonitorQtSignals&) = delete;
+      SettlementMonitorQtSignals& operator = (const SettlementMonitorQtSignals&) = delete;
 
-   void start();
-   void stop();
+      SettlementMonitorQtSignals(SettlementMonitorQtSignals&&) = delete;
+      SettlementMonitorQtSignals& operator = (SettlementMonitorQtSignals&&) = delete;
 
-protected slots:
-   void onBlockchainEvent(unsigned int);
-   void onZCEvent(const std::vector<bs::TXEntry>);
+      void start();
+      void stop();
 
-signals:
-   void payInDetected(int confirmationsNumber, const BinaryData &txHash);
-   void payOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy);
-   void payOutConfirmed(PayoutSigner::Type signedBy);
+   protected slots:
+      void onBlockchainEvent(unsigned int);
+      void onZCEvent(const std::vector<bs::TXEntry>);
 
-protected:
-   void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
-   void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
-   void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
-};
+   signals:
+      void payInDetected(int confirmationsNumber, const BinaryData &txHash);
+      void payOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy);
+      void payOutConfirmed(PayoutSigner::Type signedBy);
 
-class SettlementMonitorCb : public SettlementMonitor
-{
-public:
-   using onPayInDetectedCB = std::function<void (int, const BinaryData &)>;
-   using onPayOutDetectedCB = std::function<void (int, PayoutSigner::Type )>;
-   using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
+   protected:
+      void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
+      void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
+      void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
+   };
 
-public:
-   SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-      , const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<bs::SettlementAddressEntry> &
-      , const std::shared_ptr<spdlog::logger> &);
-   ~SettlementMonitorCb() noexcept override;
+   class SettlementMonitorCb : public SettlementMonitor
+   {
+   public:
+      using onPayInDetectedCB = std::function<void (int, const BinaryData &)>;
+      using onPayOutDetectedCB = std::function<void (int, PayoutSigner::Type )>;
+      using onPayOutConfirmedCB = std::function<void (PayoutSigner::Type )>;
 
-   SettlementMonitorCb(const SettlementMonitorCb&) = delete;
-   SettlementMonitorCb& operator = (const SettlementMonitorCb&) = delete;
+   public:
+      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<core::SettlementAddressEntry> &
+         , const std::shared_ptr<spdlog::logger> &);
+      SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<SettlementAddress> &, const bs::Address &
+         , const std::shared_ptr<spdlog::logger> &);
+      ~SettlementMonitorCb() noexcept override;
 
-   SettlementMonitorCb(SettlementMonitorCb&&) = delete;
-   SettlementMonitorCb& operator = (SettlementMonitorCb&&) = delete;
+      SettlementMonitorCb(const SettlementMonitorCb&) = delete;
+      SettlementMonitorCb& operator = (const SettlementMonitorCb&) = delete;
 
-   void start(const onPayInDetectedCB& onPayInDetected
-      , const onPayOutDetectedCB& onPayOutDetected
-      , const onPayOutConfirmedCB& onPayOutConfirmed);
+      SettlementMonitorCb(SettlementMonitorCb&&) = delete;
+      SettlementMonitorCb& operator = (SettlementMonitorCb&&) = delete;
 
-   void stop();
+      void start(const onPayInDetectedCB& onPayInDetected
+         , const onPayOutDetectedCB& onPayOutDetected
+         , const onPayOutConfirmedCB& onPayOutConfirmed);
 
-protected:
-   void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
-   void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
-   void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
+      void stop();
 
-private:
-   onPayInDetectedCB    onPayInDetected_;
-   onPayOutDetectedCB   onPayOutDetected_;
-   onPayOutConfirmedCB  onPayOutConfirmed_;
-};
+   protected:
+      void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
+      void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
+      void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
+
+   private:
+      onPayInDetectedCB    onPayInDetected_;
+      onPayOutDetectedCB   onPayOutDetected_;
+      onPayOutConfirmedCB  onPayOutConfirmed_;
+   };
 
 } //namespace bs
 

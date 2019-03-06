@@ -13,15 +13,19 @@
 #include <atomic>
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
-#include "MetaData.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncWallet.h"
 
 namespace spdlog {
    class logger;
 }
-
+namespace bs {
+   namespace sync {
+      class Wallet;
+      class WalletsManager;
+   }
+}
 class SafeLedgerDelegate;
-class WalletsManager;
+
 
 struct TransactionsViewItem
 {
@@ -30,8 +34,8 @@ struct TransactionsViewItem
    bool initialized = false;
    QString mainAddress;
    int addressCount;
-   bs::Transaction::Direction direction = bs::Transaction::Unknown;
-   std::shared_ptr<bs::Wallet> wallet = nullptr;
+   bs::sync::Transaction::Direction direction = bs::sync::Transaction::Unknown;
+   std::shared_ptr<bs::sync::Wallet> wallet = nullptr;
    QString dirStr;
    QString walletName;
    QString walletID;
@@ -48,8 +52,9 @@ struct TransactionsViewItem
 
    bool isSet() const { return (!txEntry.txHash.isNull() && !walletID.isEmpty()); }
    void initialize(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<WalletsManager> &, std::function<void(const TransactionsViewItem *)>);
-   void calcAmount(const std::shared_ptr<WalletsManager> &);
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , std::function<void(const TransactionsViewItem *)>);
+   void calcAmount(const std::shared_ptr<bs::sync::WalletsManager> &);
    bool containsInputsFrom(const Tx &tx) const;
 
    bool isRBFeligible() const;
@@ -111,13 +116,13 @@ class TransactionsViewModel : public QAbstractItemModel
 Q_OBJECT
 public:
     TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
-                          , const std::shared_ptr<WalletsManager> &
+                          , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent
-                          , const std::shared_ptr<bs::Wallet> &defWlt);
+                          , const std::shared_ptr<bs::sync::Wallet> &defWlt);
     TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
-                          , const std::shared_ptr<WalletsManager> &
+                          , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent = nullptr);
     ~TransactionsViewModel() noexcept;
@@ -204,9 +209,9 @@ private:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
-   std::shared_ptr<WalletsManager>     walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    mutable QMutex                      updateMutex_;
-   std::shared_ptr<bs::Wallet>         defaultWallet_;
+   std::shared_ptr<bs::sync::Wallet>   defaultWallet_;
    std::atomic_bool  signalOnEndLoading_{ false };
    const bool        allWallets_;
    std::atomic_bool  stopped_;

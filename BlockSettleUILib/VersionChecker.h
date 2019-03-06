@@ -7,6 +7,7 @@
 
 #include <QNetworkAccessManager>
 #include <QObject>
+#include <QJsonObject>
 #include <QUrl>
 
 class QNetworkReply;
@@ -17,6 +18,10 @@ namespace bs {
       QString versionString;
       std::vector<QString> newFeatures;
       std::vector<QString> bugFixes;
+
+      bool IsValid() const {
+         return !versionString.isEmpty();
+      }
    };
 
    class VersionChecker : public QObject
@@ -39,6 +44,9 @@ namespace bs {
 
    private slots:
       void finishedReply(QNetworkReply *);
+
+   private:
+      ChangeLog LoadChangelog(const QJsonObject& jsonObject);
 
    private:
       bool sendRequest(const QUrl &url);

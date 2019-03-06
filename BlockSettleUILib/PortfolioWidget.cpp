@@ -1,17 +1,15 @@
-#include "PortfolioWidget.h"
-
 #include "ui_PortfolioWidget.h"
+#include "PortfolioWidget.h"
+#include <QSortFilterProxyModel>
+#include <QMenu>
 
 #include "ApplicationSettings.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "BSMessageBox.h"
-#include "MetaData.h"
 #include "TransactionDetailDialog.h"
 #include "TransactionsViewModel.h"
-#include "WalletsManager.h"
-
-#include <QSortFilterProxyModel>
-#include <QMenu>
+#include "Wallets/SyncWalletsManager.h"
+#include "Wallets/SyncWallet.h"
 
 
 class UnconfirmedTransactionFilter : public QSortFilterProxyModel
@@ -88,7 +86,7 @@ void PortfolioWidget::init(const std::shared_ptr<ApplicationSettings> &appSettin
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<WalletsManager> &walletsMgr)
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
    signContainer_ = container;
    armory_ = armory;
@@ -108,7 +106,7 @@ void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {
    if (filter_) {
       QModelIndex sourceIndex = filter_->mapToSource(index);
-      auto txItem = model_->getItem(sourceIndex);
+      const auto txItem = model_->getItem(sourceIndex);
 
       TransactionDetailDialog transactionDetailDialog(txItem, walletsManager_, armory_, this);
       transactionDetailDialog.exec();

@@ -32,8 +32,10 @@ public:
 #define PRIVKEY_BYTE             0x82
 #define ENCRYPTIONKEY_BYTE       0x83
 
-#define METADATA_COMMENTS_PREFIX  0x90
-#define METADATA_AUTHPEER_PREFIX  0x91
+#define METADATA_COMMENTS_PREFIX 0x90
+#define METADATA_AUTHPEER_PREFIX 0x91
+#define METADATA_PEERROOT_PREFIX 0x92
+#define METADATA_ROOTSIG_PREFIX  0x93
 
 #define ROOT_ASSETENTRY_ID       0xFFFFFFFF
 
@@ -49,7 +51,9 @@ enum AssetType
 enum MetaType
 {
    MetaType_Comment,
-   MetaType_AuthorizedPeer
+   MetaType_AuthorizedPeer,
+   MetaType_PeerRootKey,
+   MetaType_PeerRootSig
 };
 
 ////
@@ -451,6 +455,7 @@ public:
    //locals
    bool needsCommit(void) { return needsCommit_; }
    void flagForCommit(void) { needsCommit_ = true; }
+   MetaType type(void) const { return type_; }
 
    //static
    static std::shared_ptr<MetaData> deserialize(
@@ -483,6 +488,63 @@ public:
    //
    const std::set<std::string> getNames(void) const { return names_; }
    const SecureBinaryData& getPublicKey(void) const { return publicKey_; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class PeerRootKey : public MetaData
+{
+   //carries the root key of authorized peers' parent public key
+   //used to check signatures of child peer keys, typically a server with a
+   //key pair cycling schedule
+
+private:
+   SecureBinaryData publicKey_;
+   std::string description_;
+
+public:
+   PeerRootKey(const BinaryData& accountID, unsigned index) :
+      MetaData(MetaType_PeerRootKey, accountID, index)
+   {}
+
+   //virtuals
+   BinaryData serialize(void) const;
+   BinaryData getDbKey(void) const;
+   void deserializeDBValue(const BinaryDataRef&);
+   void clear(void);
+
+   //locals
+   void set(const std::string&, const SecureBinaryData&);
+   const SecureBinaryData& getKey(void) const { return publicKey_; }
+   const std::string& getDescription(void) const { return description_; }
+
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class PeerRootSignature : public MetaData
+{
+   // carries the peer wallet's key pair signature from a 'parent' wallet
+   // typically only one per peer wallet
+
+private:
+   SecureBinaryData publicKey_;
+   SecureBinaryData signature_;
+
+public:
+   PeerRootSignature(const BinaryData& accountID, unsigned index) :
+      MetaData(MetaType_PeerRootSig, accountID, index)
+   {}
+
+   //virtuals
+   BinaryData serialize(void) const;
+   BinaryData getDbKey(void) const;
+   void deserializeDBValue(const BinaryDataRef&);
+   void clear(void);
+
+   //locals
+   void set(const SecureBinaryData& key, const SecureBinaryData& sig);
+   const SecureBinaryData& getKey(void) const { return publicKey_; }
+   const SecureBinaryData& getSig(void) const { return signature_; }
+
 };
 
 #endif

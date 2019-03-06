@@ -1,9 +1,8 @@
-#include "HDWallet.h"
+#include "CoreHDWallet.h"
 #include <QFile>
-#include <QtConcurrent/QtConcurrentRun>
 #include <bech32/ref/c++/segwit_addr.h>
+#include <spdlog/spdlog.h>
 #include "SystemFileUtils.h"
-#include "MetaData.h"
 #include "Wallets.h"
 
 
@@ -13,15 +12,16 @@ if ((logger)) { \
 }
 
 
-using namespace bs;
+using namespace bs::core;
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
-                   , const bs::wallet::Seed &seed
+                   , const wallet::Seed &seed
                    , const std::shared_ptr<spdlog::logger> &logger
                    , bool extOnlyAddresses)
-   : QObject(nullptr), name_(name), desc_(desc)
-      , netType_(seed.networkType()), extOnlyAddresses_(extOnlyAddresses)
-      , logger_(logger)
+   : name_(name), desc_(desc)
+   , netType_(seed.networkType())
+   , extOnlyAddresses_(extOnlyAddresses)
+   , logger_(logger)
 {
    initNew(seed);
 }
@@ -29,7 +29,8 @@ hd::Wallet::Wallet(const std::string &name, const std::string &desc
 hd::Wallet::Wallet(const std::string &filename
                    , const std::shared_ptr<spdlog::logger> &logger
                    , bool extOnlyAddresses)
-   : extOnlyAddresses_(extOnlyAddresses), logger_(logger)
+   : extOnlyAddresses_(extOnlyAddresses)
+   , logger_(logger)
 {
    loadFromFile(filename);
 }
@@ -38,13 +39,13 @@ hd::Wallet::Wallet(const std::string &walletId, NetworkType netType
                    , bool extOnlyAddresses, const std::string &name
                    , const std::shared_ptr<spdlog::logger> &logger
                    , const std::string &desc)
-   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc)
-      , netType_(netType), logger_(logger)
+   : walletId_(walletId), name_(name), desc_(desc)
+   , netType_(netType)
    , extOnlyAddresses_(extOnlyAddresses)
-{ }
+   , logger_(logger)
+{}
 
-
-void hd::Wallet::initNew(const bs::wallet::Seed &seed)
+void hd::Wallet::initNew(const wallet::Seed &seed)
 {
    const auto &rootNode = std::make_shared<hd::Node>(seed);
    walletId_ = rootNode->getId();
@@ -76,20 +77,12 @@ hd::Wallet::~Wallet()
    }
 }
 
-std::string hd::Wallet::getWalletId() const
-{
-   return walletId_;
-}
-
 std::vector<std::shared_ptr<hd::Group>> hd::Wallet::getGroups() const
 {
    std::vector<std::shared_ptr<hd::Group>> result;
    result.reserve(groups_.size());
-   {
-      QMutexLocker lock(&mtxGroups_);
-      for (const auto &group : groups_) {
-         result.emplace_back(group.second);
-      }
+   for (const auto &group : groups_) {
+      result.emplace_back(group.second);
    }
    return result;
 }
@@ -97,30 +90,26 @@ std::vector<std::shared_ptr<hd::Group>> hd::Wallet::getGroups() const
 size_t hd::Wallet::getNumLeaves() const
 {
    size_t result = 0;
-   {
-      QMutexLocker lock(&mtxGroups_);
-      for (const auto &group : groups_) {
-         result += group.second->getNumLeaves();
-      }
+   for (const auto &group : groups_) {
+      result += group.second->getNumLeaves();
    }
    return result;
 }
 
-std::vector<std::shared_ptr<bs::Wallet>> hd::Wallet::getLeaves() const
+std::vector<std::shared_ptr<bs::core::Wallet>> hd::Wallet::getLeaves() const
 {
    const auto nbLeaves = getNumLeaves();
    if (leaves_.size() != nbLeaves) {
       leaves_.clear();
-      QMutexLocker lock(&mtxGroups_);
       for (const auto &group : groups_) {
          const auto &groupLeaves = group.second->getAllLeaves();
          for (const auto &leaf : groupLeaves) {
-            leaves_[leaf->GetWalletId()] = leaf;
+            leaves_[leaf->walletId()] = leaf;
          }
       }
    }
 
-   std::vector<std::shared_ptr<bs::Wallet>> result;
+   std::vector<std::shared_ptr<bs::core::Wallet>> result;
    result.reserve(leaves_.size());
    for (const auto &leaf : leaves_) {
       result.emplace_back(leaf.second);
@@ -128,7 +117,7 @@ std::vector<std::shared_ptr<bs::Wallet>> hd::Wallet::getLeaves() const
    return result;
 }
 
-std::shared_ptr<bs::Wallet> hd::Wallet::getLeaf(const std::string &id) const
+std::shared_ptr<bs::core::Wallet> hd::Wallet::getLeaf(const std::string &id) const
 {
    const auto &itLeaf = leaves_.find(id);
    if (itLeaf == leaves_.end()) {
@@ -137,7 +126,7 @@ std::shared_ptr<bs::Wallet> hd::Wallet::getLeaf(const std::string &id) const
    return itLeaf->second;
 }
 
-std::shared_ptr<hd::Group> hd::Wallet::createGroup(CoinType ct)
+std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
 {
    std::shared_ptr<Group> result;
    result = getGroup(ct);
@@ -145,20 +134,21 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(CoinType ct)
       return result;
    }
 
-   const Path path({ purpose, ct });
+   const bs::hd::Path path({ bs::hd::purpose, ct });
    switch (ct) {
-   case CoinType::BlockSettle_Auth:
+   case bs::hd::CoinType::BlockSettle_Auth:
       result = std::make_shared<AuthGroup>(rootNodes_, path, name_, desc_
                                            , logger_, extOnlyAddresses_);
       break;
 
-   case CoinType::BlockSettle_CC:
+   case bs::hd::CoinType::BlockSettle_CC:
       result = std::make_shared<CCGroup>(rootNodes_, path, name_, desc_, logger_
                                          , extOnlyAddresses_);
       break;
 
    default:
-      result = std::make_shared<Group>(rootNodes_, path, name_, hd::Group::nameForType(ct), desc_, extOnlyAddresses_);
+      result = std::make_shared<Group>(rootNodes_, path, name_, desc_, logger_
+         , extOnlyAddresses_);
       break;
    }
    addGroup(result);
@@ -167,43 +157,20 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(CoinType ct)
 
 void hd::Wallet::addGroup(const std::shared_ptr<hd::Group> &group)
 {
-   connect(group.get(), &hd::Group::changed, this, &hd::Wallet::onGroupChanged);
-   connect(group.get(), &hd::Group::leafAdded, this, &hd::Wallet::onLeafAdded);
-   connect(group.get(), &hd::Group::leafDeleted, this, &hd::Wallet::onLeafDeleted);
    group->setDB(dbEnv_, db_);
-   if (!userId_.isNull()) {
-      group->setUserID(userId_);
+   if (!chainCode_.isNull()) {
+      group->setChainCode(chainCode_);
    }
-
-   QMutexLocker lock(&mtxGroups_);
-   groups_[group->getIndex()] = group;
+   groups_[group->index()] = group;
 }
 
-std::shared_ptr<hd::Group> hd::Wallet::getGroup(hd::CoinType ct) const
+std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
 {
-   QMutexLocker lock(&mtxGroups_);
-   const auto &itGroup = groups_.find(static_cast<Path::Elem>(ct));
+   const auto &itGroup = groups_.find(static_cast<bs::hd::Path::Elem>(ct));
    if (itGroup == groups_.end()) {
       return nullptr;
    }
    return itGroup->second;
-}
-
-void hd::Wallet::onGroupChanged()
-{
-   updatePersistence();
-}
-
-void hd::Wallet::onLeafAdded(QString id)
-{
-   getLeaves();
-   emit leafAdded(id);
-}
-
-void hd::Wallet::onLeafDeleted(QString id)
-{
-   getLeaves();
-   emit leafDeleted(id);
 }
 
 void hd::Wallet::createStructure()
@@ -212,57 +179,23 @@ void hd::Wallet::createStructure()
    groupXBT->createLeaf(0u);
 }
 
-void hd::Wallet::setUserId(const BinaryData &userId)
+void hd::Wallet::setChainCode(const BinaryData &chainCode)
 {
-   userId_ = userId;
-   std::vector<std::shared_ptr<hd::Group>> groups;
-   groups.reserve(groups_.size());
-   {
-      QMutexLocker lock(&mtxGroups_);
-      for (const auto &group : groups_) {
-         groups.push_back(group.second);
-      }
-   }
-   for (const auto &group : groups) {
-      group->setUserID(userId);
-   }
-}
+   chainCode_ = chainCode;
 
-void hd::Wallet::SetArmory(const std::shared_ptr<ArmoryConnection> &armory)
-{
-   for (const auto &leaf : getLeaves()) {
-      leaf->SetArmory(armory);
+   for (const auto &group : groups_) {
+      group.second->setChainCode(chainCode);
    }
-}
-
-void hd::Wallet::RegisterWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
-{
-   for (const auto &leaf : getLeaves()) {
-      leaf->RegisterWallet(armory, asNew);
-   }
-}
-
-bool hd::Wallet::startRescan(const hd::Wallet::cb_scan_notify &cb, const cb_scan_read_last &cbr
-   , const cb_scan_write_last &cbw)
-{
-   {
-      QMutexLocker lock(&mtxGroups_);
-      if (!scannedLeaves_.empty()) {
-         return false;
-      }
-   }
-   QtConcurrent::run(this, &hd::Wallet::rescanBlockchain, cb, cbr, cbw);
-   return true;
 }
 
 std::string hd::Wallet::getFileName(const std::string &dir) const
 {
-   return (dir + "/" + fileNamePrefix(isWatchingOnly()) + getWalletId() + "_wallet.lmdb");
+   return (dir + "/" + fileNamePrefix(isWatchingOnly()) + walletId() + "_wallet.lmdb");
 }
 
 void hd::Wallet::saveToDir(const std::string &targetDir)
 {
-   const auto masterID = BinaryData(getWalletId());
+   const auto masterID = BinaryData(walletId());
    saveToFile(getFileName(targetDir));
 }
 
@@ -317,7 +250,7 @@ void hd::Wallet::openDBEnv(const std::string &filename)
 
 void hd::Wallet::initDB()
 {
-   BinaryData masterID(getWalletId());
+   BinaryData masterID(walletId());
    if (masterID.isNull()) {
       throw std::invalid_argument("master ID is empty");
    }
@@ -344,7 +277,7 @@ void hd::Wallet::initDB()
          BinaryWriter bwKey;
          bwKey.put_uint32_t(MAINWALLET_KEY);
 
-         const auto mainWalletId = leafMain->GetWalletId();
+         const auto mainWalletId = leafMain->walletId();
          BinaryWriter bwData;
          bwData.put_var_int(mainWalletId.size());
          bwData.put_BinaryData(mainWalletId);
@@ -359,7 +292,7 @@ void hd::Wallet::initDB()
 
       BinaryWriter bw;
       bw.put_var_int(sizeof(uint32_t));
-      bw.put_uint32_t(hd::purpose);
+      bw.put_uint32_t(bs::hd::purpose);
       putDataToDB(&dbMeta, bwKey.getData(), bw.getData());
    }
    dbMeta.close();
@@ -489,7 +422,7 @@ void hd::Wallet::openDB()
             {
                BinaryRefReader brrVal(val);
                auto wltType = (WalletMetaType)brrVal.get_uint32_t();
-               if (wltType != hd::purpose) {
+               if (wltType != bs::hd::purpose) {
                   throw WalletException("invalid BIP44 wallet meta type");
                }
             }
@@ -536,7 +469,7 @@ void hd::Wallet::readFromDB()
    }
    catch (const NoEntryInWalletException&) {}
 
-   wallet::KeyRank keyRank = { 0, 0 };
+   bs::wallet::KeyRank keyRank = { 0, 0 };
    {
       BinaryWriter bwKey;
       bwKey.put_uint32_t(MAIN_ACCOUNT_KEY);
@@ -592,7 +525,7 @@ void hd::Wallet::readFromDB()
          }
          dbIter.advance();
       }
-      if ((keyRank == wallet::KeyRank{ 0, 0 }) && (rootNodes.size() == 1) && !rootNodes[0]->encTypes().empty()) {
+      if ((keyRank == bs::wallet::KeyRank{ 0, 0 }) && (rootNodes.size() == 1) && !rootNodes[0]->encTypes().empty()) {
          keyRank = { 1, 1 };
       }
       rootNodes_ = hd::Nodes(rootNodes, keyRank, walletId_);
@@ -637,7 +570,6 @@ void hd::Wallet::readFromDB()
 
 void hd::Wallet::setDBforDependants()
 {
-   QMutexLocker lock(&mtxGroups_);
    for (auto group : groups_) {
       group.second->setDB(dbEnv_, db_);
    }
@@ -645,14 +577,13 @@ void hd::Wallet::setDBforDependants()
 
 void hd::Wallet::writeToDB(bool force)
 {
-   QMutexLocker lock(&mtxGroups_);
    for (const auto &group : groups_) {
       if (!force && !group.second->needsCommit()) {
          continue;
       }
       BinaryWriter bwKey;
       bwKey.put_uint8_t(ASSETENTRY_PREFIX);
-      bwKey.put_uint32_t(group.second->getIndex());
+      bwKey.put_uint32_t(group.second->index());
       putDataToDB(db_, bwKey.getData(), group.second->serialize());
       group.second->committed();
    }
@@ -691,40 +622,18 @@ void hd::Wallet::putDataToDB(LMDB* db, const BinaryData& key, const BinaryData& 
    db->insert(keyRef, dataRef);
 }
 
-void hd::Wallet::rescanBlockchain(const hd::Wallet::cb_scan_notify &cb, const cb_scan_read_last &cbr
-   , const cb_scan_write_last &cbw)
-{
-   QMutexLocker lock(&mtxGroups_);
-   for (const auto &group : groups_) {
-      group.second->rescanBlockchain(cb, cbr, cbw);
-      for (const auto &leaf : group.second->getLeaves()) {
-         scannedLeaves_.insert(leaf->GetWalletId());
-         connect(leaf.get(), &hd::Leaf::scanComplete, this, &hd::Wallet::onScanComplete);
-      }
-   }
-}
-
-void hd::Wallet::onScanComplete(const std::string &leafId)
-{
-   QMutexLocker lock(&mtxGroups_);
-   scannedLeaves_.erase(leafId);
-   if (scannedLeaves_.empty()) {
-      emit scanComplete(getWalletId());
-   }
-}
-
 std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
 {
    return watchingOnly ? "bip44wo_" : "bip44_";
 }
 
-std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryData &password) const
+std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly(const SecureBinaryData &password) const
 {
    if (rootNodes_.empty()) {
-      LOG(logger_, info, "[Wallet::CreateWatchingOnly] already watching-only");
+      LOG(logger_, info, "[Wallet::CreateWatchingOnly] {} already watching-only", walletId());
       return nullptr;
    }
-   auto woWallet = std::make_shared<hd::Wallet>(getWalletId(), netType_
+   auto woWallet = std::make_shared<hd::Wallet>(walletId(), netType_
                                                 , extOnlyAddresses_, name_
                                                 , logger_, desc_);
 
@@ -734,7 +643,7 @@ std::shared_ptr<hd::Wallet> hd::Wallet::CreateWatchingOnly(const SecureBinaryDat
       return nullptr;
    }
    for (const auto &group : groups_) {
-      woWallet->addGroup(group.second->CreateWatchingOnly(extNode));
+      woWallet->addGroup(group.second->createWatchingOnly(extNode));
    }
    return woWallet;
 }
@@ -753,8 +662,9 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
    return false;
 }
 
-bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass, wallet::KeyRank keyRank
-   , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
+bool hd::Wallet::changePassword(const std::vector<bs::wallet::PasswordData> &newPass
+   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
+   , bool addNew, bool removeOld, bool dryRun)
 {
    unsigned int newPassSize = (unsigned int)newPass.size();
    if (addNew) {
@@ -803,13 +713,14 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
          rootNodes.push_back(node);
       });
 
-      for (const wallet::PasswordData &passData : newPass) {
-         rootNodes.emplace_back(decrypted->encrypt(passData.password, { passData.encType }
+      for (const auto &passData : newPass) {
+         rootNodes.push_back(decrypted->encrypt(passData.password, { passData.encType }
             , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
       }
 
       if (keyRank.second != rootNodes.size()) {
-         LOG(logger_, error, "Wallet::changePassword: keyRank.second != rootNodes.size() after adding keys");
+         LOG(logger_, error, "[Wallet::changePassword] keyRank.second ({}) != rootNodes.size ({}) after adding keys"
+            , keyRank.second, rootNodes.size());
          return false;
       }
    } else if (removeOld) {
@@ -833,7 +744,7 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
          }
          else {
             SecureBinaryData xorPass;
-            std::set<wallet::EncryptionType> encTypes;
+            std::set<bs::wallet::EncryptionType> encTypes;
             std::set<SecureBinaryData> encKeys;
             for (int i = 0; i < int(keyRank.first); ++i) {
                const auto &idx = combi[i];
@@ -844,7 +755,7 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
                   encKeys.insert(passData.encKey);
                }
             }
-            std::vector<wallet::EncryptionType> mergedEncTypes;
+            std::vector<bs::wallet::EncryptionType> mergedEncTypes;
             for (const auto &encType : encTypes) {
                mergedEncTypes.emplace_back(encType);
             }
@@ -885,7 +796,6 @@ bool hd::Wallet::changePassword(const std::vector<wallet::PasswordData> &newPass
 
    updatePersistence();
    LOG(logger_, info, "Wallet::changePassword: success");
-   emit metaDataChanged();
    return true;
 }
 

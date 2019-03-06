@@ -5,13 +5,12 @@
 #include <QDebug>
 
 #include "BSMessageBox.h"
+#include "CoreWallet.h"
 #include "PaperBackupWriter.h"
 #include "UiUtils.h"
 #include "ui_NewWalletSeedConfirmDialog.h"
 #include "make_unique.h"
 #include "EasyEncValidator.h"
-#include "HDNode.h"
-#include "MetaData.h"
 
 
 NewWalletSeedConfirmDialog::NewWalletSeedConfirmDialog(const std::string &walletId
@@ -90,8 +89,8 @@ void NewWalletSeedConfirmDialog::onKeyChanged(const QString &)
       EasyCoDec::Data ecData;
       ecData.part1 = inputLine1.toStdString();
       ecData.part2 = inputLine2.toStdString();
-      const auto &seed = bs::wallet::Seed::fromEasyCodeChecksum(ecData, netType_);
-      keysAreCorrect_ = (bs::hd::Node(seed).getId() == walletId_);
+      const auto &seed = bs::core::wallet::Seed::fromEasyCodeChecksum(ecData, netType_);
+      keysAreCorrect_ = (seed.getWalletId() == walletId_);
    }
 
    if (inputLine1.size() == validator_->getNumWords() * validator_->getWordSize()) {

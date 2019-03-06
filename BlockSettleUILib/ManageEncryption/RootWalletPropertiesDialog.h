@@ -4,25 +4,29 @@
 #include <QDialog>
 #include <memory>
 #include "BinaryData.h"
-#include "MetaData.h"
 #include "QWalletInfo.h"
 
 namespace Ui {
     class WalletPropertiesDialog;
 }
 namespace bs {
-   namespace hd {
+   namespace sync {
+      namespace hd {
+         class Leaf;
+         class Wallet;
+      }
+      class WalletsManager;
       class Wallet;
    }
-   class Wallet;
 }
 class ArmoryConnection;
 class ApplicationSettings;
 class AssetManager;
 class CurrentWalletFilter;
 class SignContainer;
-class WalletsManager;
 class WalletsViewModel;
+class ConnectionManager;
+
 
 class RootWalletPropertiesDialog : public QDialog
 {
@@ -30,37 +34,39 @@ Q_OBJECT
 
 public:
    RootWalletPropertiesDialog(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<bs::hd::Wallet> &, const std::shared_ptr<WalletsManager> &
-      , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<SignContainer> &
-      , WalletsViewModel *walletsModel, const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<bs::sync::hd::Wallet> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<SignContainer> &
+      , WalletsViewModel *walletsModel
+      , const std::shared_ptr<ApplicationSettings> &
+      , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<AssetManager> &, QWidget* parent = nullptr);
    ~RootWalletPropertiesDialog() override;
 
 private slots:
    void onDeleteWallet();
    void onBackupWallet();
-   void onCreateWoWallet();
    void onChangePassword();
    void onHDWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo);
    void onWalletSelected();
    void onRescanBlockchain();
-   void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onModelReset();
 
 private:
-   void copyWoWallet();
-
-   void updateWalletDetails(const std::shared_ptr<bs::hd::Wallet>& wallet);
-   void updateWalletDetails(const std::shared_ptr<bs::Wallet>& wallet);
+   void updateWalletDetails(const std::shared_ptr<bs::sync::hd::Wallet> &);
+   void updateWalletDetails(const std::shared_ptr<bs::sync::Wallet> &);
    void startWalletScan();
 
 private:
-   std::unique_ptr<Ui::WalletPropertiesDialog> ui_;
-   std::shared_ptr<bs::hd::Wallet>     wallet_;
+   std::unique_ptr<Ui::WalletPropertiesDialog>  ui_;
+   std::shared_ptr<bs::sync::hd::Wallet>        wallet_;
+   std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
    bs::hd::WalletInfo                  walletInfo_;
-   std::shared_ptr<WalletsManager>     walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ConnectionManager>  connectionManager_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<spdlog::logger>     logger_;
    CurrentWalletFilter                 *walletFilter_;

@@ -35,6 +35,7 @@ public:
              , const bs::hd::WalletInfo &walletInfo
              , WalletKeyWidget::UseType useType
              , const std::shared_ptr<ApplicationSettings>& appSettings
+             , const std::shared_ptr<ConnectionManager> &connectionManager
              , const std::shared_ptr<spdlog::logger> &logger);
 
    void cancel();
@@ -70,6 +71,7 @@ private:
    bs::wallet::KeyRank keyRank_ = { 0, 0 };
    Flags flags_{NoFlag};
    std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    QString username_;
    AutheIDClient::RequestType requestType_{};
    bs::hd::WalletInfo walletInfo_;

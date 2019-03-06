@@ -1,9 +1,9 @@
 #include "WalletBackupFile.h"
-#include "HDWallet.h"
+#include "CoreHDWallet.h"
 
 #include "bs_storage.pb.h"
 
-WalletBackupFile::WalletBackupFile(const std::shared_ptr<bs::hd::Wallet> &wallet
+WalletBackupFile::WalletBackupFile(const std::shared_ptr<bs::core::hd::Wallet> &wallet
    , const EasyCoDec::Data& data
    , const EasyCoDec::Data& chainCode)
   : wallet_(wallet)
@@ -40,10 +40,10 @@ std::string WalletBackupFile::Serialize() const
 {
    Blocksettle::Storage::WalletBackupFile backup;
 
-   backup.set_id(wallet_->getWalletId());
-   backup.set_name(wallet_->getName());
+   backup.set_id(wallet_->walletId());
+   backup.set_name(wallet_->name());
 
-   const auto &desc = wallet_->getDesc();
+   const auto &desc = wallet_->description();
    if (!desc.empty()) {
       backup.set_description(desc);
    }
