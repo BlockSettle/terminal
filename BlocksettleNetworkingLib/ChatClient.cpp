@@ -261,7 +261,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
       sendUpdateMessageState(msg);
    }
 
-   emit MessagesUpdate(messages);
+   emit MessagesUpdate(messages, false);
 }
 
 void ChatClient::OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response)
@@ -382,7 +382,7 @@ void ChatClient::retrieveUserMessages(const QString &userId)
             }
          }
       }
-      emit MessagesUpdate(messages);
+      emit MessagesUpdate(messages, true);
    }
 }
 
