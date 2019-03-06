@@ -397,6 +397,7 @@ message SyncAddressesRequest
 
    string walletId = 1;
    repeated AddressIndex indices = 2;
+   bool   persistent = 3;
 }
 
 message SyncAddressesResponse

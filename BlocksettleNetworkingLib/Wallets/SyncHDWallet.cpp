@@ -18,7 +18,7 @@ hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::
 {}
 
 hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
-   , const std::string &desc, const std::shared_ptr<SignContainer> &container
+   , const std::string &desc, SignContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), netType_(netType), walletId_(walletId), name_(name), desc_(desc)
    , signContainer_(container), logger_(logger)
@@ -41,8 +41,8 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
          for (const auto &leafData : grpData.leaves) {
             auto leaf = group->createLeaf(leafData.index, leafData.id);
             if (!leaf) {
-               LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{}"
-                  , (uint32_t)grpData.type, leafData.index);
+               LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{} with id {}"
+                  , (uint32_t)grpData.type, leafData.index, leafData.id);
                continue;
             }
          }
@@ -190,7 +190,11 @@ void hd::Wallet::onGroupChanged()
 
 void hd::Wallet::onLeafAdded(QString id)
 {
-   getLeaves();
+   for (const auto &leaf : getLeaves()) {
+      if ((leaf->walletId() == id.toStdString()) && armory_) {
+         leaf->setArmory(armory_);
+      }
+   }
    emit leafAdded(id);
 }
 
@@ -218,6 +222,7 @@ void hd::Wallet::setUserId(const BinaryData &userId)
 
 void hd::Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
+   armory_ = armory;
    for (const auto &leaf : getLeaves()) {
       leaf->setArmory(armory);
    }
@@ -245,7 +250,10 @@ bool hd::Wallet::startRescan(const hd::Wallet::cb_scan_notify &cb, const cb_scan
 
 bool hd::Wallet::deleteRemotely()
 {
-   return false;  //stub
+   if (!signContainer_) {
+      return false;
+   }
+   return (signContainer_->DeleteHDRoot(walletId_) > 0);
 }
 
 void hd::Wallet::rescanBlockchain(const hd::Wallet::cb_scan_notify &cb, const cb_scan_read_last &cbr

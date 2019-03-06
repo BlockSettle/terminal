@@ -5,7 +5,7 @@
 using namespace bs::sync;
 
 PlainWallet::PlainWallet(const std::string &walletId, const std::string &name, const std::string &desc,
-   const std::shared_ptr<SignContainer> &container
+   SignContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
    : Wallet(container, logger), walletId_(walletId), desc_(desc)
 {

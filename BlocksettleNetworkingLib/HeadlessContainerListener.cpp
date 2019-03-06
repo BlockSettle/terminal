@@ -149,7 +149,7 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
    }
    else {
       if (!onRequestPacket(clientId, packet)) {
-         packet.set_data({});
+         packet.set_data("");
          sendData(packet.SerializeAsString(), clientId);
       }
    }
@@ -1482,20 +1482,33 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
    for (int i = 0; i < request.indices_size(); ++i) {
       const auto indexData = request.indices(i);
       std::string index;
+      bs::Address address;
       try {
-         const bs::Address addr(indexData.index());
-         if (addr.isValid()) {
-            index = wallet->getAddressIndex(addr);
+         address = bs::Address(indexData.index());
+         if (address.isValid()) {
+            index = wallet->getAddressIndex(address);
          }
       }
       catch (const std::exception &) {}
       if (index.empty()) {
          index = indexData.index();
       }
-      const auto addr = wallet->createAddressWithIndex(index
-         , mapFrom(indexData.addrtype()));
+      if (address.isValid() && index.empty()) {
+//         wallet->addAddress(address);
+         logger_->info("[{}] can't add address {} to wallet {}", __func__
+            , address.display<std::string>(), wallet->walletId());
+         continue;
+      }
+      else {
+         address = wallet->createAddressWithIndex(index
+            , request.persistent(), mapFrom(indexData.addrtype()));
+         if (!address.isValid()) {
+            logger_->error("[{}] failed to create address for index {}", __func__, index);
+            continue;
+         }
+      }
       auto addrData = response.add_addresses();
-      addrData->set_address(addr.display<std::string>());
+      addrData->set_address(address.display<std::string>());
       addrData->set_index(indexData.index());
    }
 

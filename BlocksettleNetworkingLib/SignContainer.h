@@ -159,7 +159,7 @@ public:
    virtual void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
       , const std::function<void(const bs::Address &)> &) {}
    virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) {}
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) {}
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }

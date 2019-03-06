@@ -13,7 +13,7 @@ using namespace bs::sync;
 
 
 hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger
+   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger
    , bs::core::wallet::Type type, bool extOnlyAddresses)
    : bs::sync::Wallet(container, logger)
    , walletId_(walletId), rescanWalletId_(walletId + "_rescan"), type_(type)
@@ -63,16 +63,7 @@ void hd::Leaf::init(const bs::hd::Path &path)
    if (path != path_) {
       path_ = path;
       suffix_.clear();
-      const auto idx = index();
-      for (size_t i = 4; i > 0; i--) {
-         unsigned char c = (idx >> (8 * (i - 1))) & 0xff;
-         if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'))) {
-            suffix_.append(1, c);
-         }
-      }
-      if (suffix_.empty()) {
-         suffix_ = std::to_string(idx);
-      }
+      suffix_ = bs::hd::Path::elemToKey(index());
       walletName_ = name_ + "/" + suffix_;
    }
 
@@ -118,7 +109,7 @@ void hd::Leaf::fillPortion(bs::hd::Path::Elem start, const std::function<void()>
          cb();
       }
    };
-   newAddresses(request, cbAddrs);
+   newAddresses(request, cbAddrs, false);
 }
 
 void hd::Leaf::scanAddresses(unsigned int startIdx, unsigned int portionSize
@@ -129,8 +120,11 @@ void hd::Leaf::scanAddresses(unsigned int startIdx, unsigned int portionSize
       return;
    }
    const auto &cbPortion = [this]() {
+      if (!armory_) {
+         logger_->error("[sync::hd::Leaf::scanAddresses] {} armory is not set", walletId());
+         return;
+      }
       currentPortion_.registered = true;
-
       rescanRegId_ = armory_->registerWallet(rescanWallet_, rescanWalletId_
          , getRegAddresses(currentPortion_.addresses), nullptr, true);
    };
@@ -247,7 +241,6 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 {
    const auto &cbRegisterExt = [this, online] {
       if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
-         logger_->debug("{} ready (ext)", walletId());
          emit walletReady(QString::fromStdString(walletId()));
          if (online) {
             postOnline();
@@ -256,7 +249,6 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
    };
    const auto &cbRegisterInt = [this, online] {
       if (regIdExt_.empty() && regIdInt_.empty()) {
-         logger_->debug("{} ready (int)", walletId());
          emit walletReady(QString::fromStdString(walletId()));
          if (online) {
             postOnline();
@@ -297,6 +289,7 @@ void hd::Leaf::postOnline()
    if (btcWalletInt_) {
       btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
    }
+   bs::sync::Wallet::firstInit();
 }
 
 void hd::Leaf::firstInit(bool force)
@@ -305,8 +298,6 @@ void hd::Leaf::firstInit(bool force)
       return;
    }
    postOnline();
-
-   bs::sync::Wallet::firstInit();
 
    if (activateAddressesInvoked_ || !armory_) {
       return;
@@ -507,14 +498,12 @@ std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryCo
       regIdExt_ = armory_->registerWallet(btcWallet_, walletId()
          , addrsExt, cbEmpty, asNew);
       regIds.push_back(regIdExt_);
-      logger_->debug("{} ext {} regId = {}", walletId(), addrsExt.size(), regIdExt_);
 
       if (!isExtOnly_) {
          const auto addrsInt = getAddrHashesInt();
          regIdInt_ = armory_->registerWallet(btcWalletInt_
             , getWalletIdInt(), addrsInt, cbEmpty, asNew);
          regIds.push_back(regIdInt_);
-         logger_->debug("{} int {} regId = {}", walletId(), addrsInt.size(), regIdInt_);
       }
       return regIds;
    }
@@ -624,7 +613,7 @@ void hd::Leaf::topUpAddressPool(const std::function<void()> &cb, size_t nbIntAdd
          cb();
       }
    };
-   newAddresses(request, cbAddrs);
+   newAddresses(request, cbAddrs, false);
 }
 
 hd::Leaf::AddrPoolKey hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) const
@@ -1102,23 +1091,41 @@ bs::Address hd::Leaf::createAddressWithPath(const AddrPoolKey &key, bool signal)
 void hd::Leaf::onSaveToWallet(const std::vector<PooledAddress> &addresses)
 {
    for (const auto &addr : addresses) {
-      createAddressWithPath(addr.first, false);
-   }
-   if (!addresses.empty()) {
-      emit addressAdded();
+      activeScanAddresses_.insert(addr.first);
    }
 }
 
 void hd::Leaf::onScanComplete()
 {
-   const bool hasAddresses = (getUsedAddressCount() > 0);
+   reset();
+   const bool hasAddresses = !activeScanAddresses_.empty();
    if (hasAddresses) {
-      topUpAddressPool();
-      const auto &regId = registerWallet(armory_, true);
+      std::vector<std::pair<std::string, AddressEntryType>> newAddrReq;
+      newAddrReq.reserve(activeScanAddresses_.size());
+      for (const auto &addr : activeScanAddresses_) {
+         newAddrReq.push_back({ addr.path.toString(), addr.aet });
+      }
+      const auto &cbAddrsAdded = [this](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
+         for (const auto &addr : addrs) {
+            addAddress(addr.first, addr.second, addr.first.getType(), false);
+         }
+         topUpAddressPool();
+         registerWallet(armory_, true);
+      };
+      newAddresses(newAddrReq, cbAddrsAdded);
+      activeScanAddresses_.clear();
+
+      emit addressAdded();
+      emit scanComplete(walletId());
+      if (cbScanNotify_) {
+         cbScanNotify_(index(), hasAddresses);
+      }
    }
-   emit scanComplete(walletId());
-   if (cbScanNotify_) {
-      cbScanNotify_(index(), hasAddresses);
+   else {
+      emit scanComplete(walletId());
+      if (cbScanNotify_) {
+         cbScanNotify_(index(), hasAddresses);
+      }
    }
 }
 
@@ -1141,7 +1148,7 @@ bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex(bs::hd::Path::Elem addrType) c
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger)
+   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Authentication, true)
 {
    intAddressPoolSize_ = 0;
@@ -1185,7 +1192,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::CCLeaf::CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger
+   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger
    , bool extOnlyAddresses)
    : hd::Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::ColorCoin, extOnlyAddresses)
    , validationStarted_(false), validationEnded_(false)

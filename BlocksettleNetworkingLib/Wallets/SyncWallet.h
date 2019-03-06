@@ -64,7 +64,7 @@ namespace bs {
          Q_OBJECT
 
       public:
-         Wallet(const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger = nullptr);
+         Wallet(SignContainer *, const std::shared_ptr<spdlog::logger> &logger = nullptr);
          ~Wallet() override;
 
          using CbAddress = std::function<void(const bs::Address &)>;
@@ -145,7 +145,8 @@ namespace bs {
          virtual int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true);
 
          //Request a bunch of addresses identified by index and aet - returns a vector of address-index pairs
-         virtual void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &, const CbAddresses &);
+         virtual void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &, const CbAddresses &
+            , bool persistent = true);
 
          virtual bool getLedgerDelegateForAddress(const bs::Address &
             , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
@@ -200,12 +201,12 @@ namespace bs {
 
       protected:
          std::string       walletName_;
+         SignContainer  *  signContainer_;
          BTCNumericTypes::balance_type spendableBalance_ = 0;
          BTCNumericTypes::balance_type unconfirmedBalance_ = 0;
          BTCNumericTypes::balance_type totalBalance_ = 0;
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
-         std::shared_ptr<SignContainer>   signContainer_;
          std::shared_ptr<spdlog::logger>  logger_; // May need to be set manually.
          mutable std::vector<bs::Address>       usedAddresses_;
          NetworkType netType_ = NetworkType::Invalid;

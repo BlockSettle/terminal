@@ -417,6 +417,7 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    item->wallet = walletsManager_->getWalletById(entry.id);
    if (!item->wallet && defaultWallet_) {
       item->wallet = defaultWallet_;
+      item->walletID = QString::fromStdString(defaultWallet_->walletId());
    }
 
    item->confirmations = armory_->getConfirmationsNumber(entry.blockNum);
@@ -812,7 +813,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
          calcAmount(walletsMgr);
       }
       if (mainAddress.isEmpty()) {
-         if (!walletsMgr->getTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr)) {
+         if (!walletsMgr->getTransactionMainAddress(tx, walletID.toStdString(), (amount > 0), cbMainAddr)) {
             userCB(nullptr);
          }
       }
@@ -924,7 +925,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       }
 
       if (dirStr.isEmpty()) {
-         if (!walletsMgr->getTransactionDirection(tx, wallet, cbDir)) {
+         if (!walletsMgr->getTransactionDirection(tx, walletID.toStdString(), cbDir)) {
             userCB(nullptr);
          }
       }

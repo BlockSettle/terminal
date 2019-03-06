@@ -60,7 +60,8 @@ namespace bs {
             std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
-            bs::Address createAddressWithIndex(const std::string &index, AddressEntryType) override;
+            bs::Address createAddressWithIndex(const std::string &index, bool persistent = true
+               , AddressEntryType = AddressEntryType_Default) override;
 
             std::shared_ptr<ResolverFeed> getResolver(const SecureBinaryData &password) override;
             std::shared_ptr<ResolverFeed> getPublicKeyResolver() override;
@@ -80,7 +81,8 @@ namespace bs {
             void addAddress(const bs::Address &, const BinaryData &pubChainedKey, const bs::hd::Path &path);
 
          protected:
-            virtual bs::Address createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index, AddressEntryType aet);
+            virtual bs::Address createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index
+               , AddressEntryType aet, bool persistent = true);
             virtual BinaryData serializeNode() const { return node_ ? node_->serialize() : BinaryData{}; }
             virtual void setRootNodes(Nodes);
             void reset();
@@ -88,7 +90,7 @@ namespace bs {
             bs::hd::Path getPathForAddress(const bs::Address &) const;
             std::shared_ptr<Node> getNodeForAddr(const bs::Address &) const;
             std::shared_ptr<hd::Node> getPrivNodeFor(const bs::Address &, const SecureBinaryData &password);
-            bs::Address createAddressWithPath(const bs::hd::Path &, AddressEntryType);
+            bs::Address createAddressWithPath(const bs::hd::Path &, bool persistent, AddressEntryType);
 
             struct AddrPoolKey {
                bs::hd::Path      path;
@@ -172,7 +174,8 @@ namespace bs {
             void setChainCode(const BinaryData &) override;
 
          protected:
-            bs::Address createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index, AddressEntryType aet) override;
+            bs::Address createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index
+               , AddressEntryType aet, bool persistent = true) override;
             BinaryData serializeNode() const override {
                return unchainedNode_ ? unchainedNode_->serialize() : BinaryData{};
             }

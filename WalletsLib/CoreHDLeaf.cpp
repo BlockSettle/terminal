@@ -273,33 +273,41 @@ bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
    return createAddress(addrPath, lastIntIdx_ + lastExtIdx_, aet);
 }
 
-bs::Address hd::Leaf::createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index, AddressEntryType aet)
+bs::Address hd::Leaf::createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index
+   , AddressEntryType aet, bool persistent)
 {
-   const auto addrNode = node_ ? node_->derive(path, true) : nullptr;
-   if (addrNode == nullptr) {
-      return {};
-   }
    const bool isInternal = (path.get(-2) == addrTypeInternal);
    if (isInternal && isExtOnly_) {
       return {};
    }
    bs::Address result;
 
+   std::shared_ptr<hd::Node> addrNode;
    AddressEntryType addrType = aet;
    if (aet == AddressEntryType_Default) {
       addrType = defaultAET_;
    }
    const auto addrPoolIt = addressPool_.find({ path, addrType });
    if (addrPoolIt != addressPool_.end()) {
-      result = std::move(addrPoolIt->second);
-      addressPool_.erase(addrPoolIt->first);
-      poolByAddr_.erase(result);
+      result = addrPoolIt->second;
+      if (persistent) {
+         addressPool_.erase(addrPoolIt->first);
+         poolByAddr_.erase(result);
+      }
    }
    else {
-      result = Address::fromPubKey(addrNode->pubChainedKey(), addrType);
+      if (result.isNull()) {
+         if (node_) {
+            addrNode = node_->derive(path, true);
+         }
+         if (addrNode == nullptr) {
+            return {};
+         }
+         result = bs::Address::fromPubKey(addrNode->pubChainedKey(), addrType);
+      }
    }
 
-   if (addrToIndex_.find(result.unprefixed()) != addrToIndex_.end()) {
+   if (!persistent || (addrToIndex_.find(result.unprefixed()) != addrToIndex_.end())) {
       return result;
    }
 
@@ -481,12 +489,12 @@ bool hd::Leaf::addressIndexExists(const std::string &index) const
    return false;
 }
 
-bs::Address hd::Leaf::createAddressWithIndex(const std::string &index, AddressEntryType aet)
+bs::Address hd::Leaf::createAddressWithIndex(const std::string &index, bool persistent, AddressEntryType aet)
 {
-   return createAddressWithPath(bs::hd::Path::fromString(index), aet);
+   return createAddressWithPath(bs::hd::Path::fromString(index), persistent, aet);
 }
 
-bs::Address hd::Leaf::createAddressWithPath(const bs::hd::Path &path, AddressEntryType aet)
+bs::Address hd::Leaf::createAddressWithPath(const bs::hd::Path &path, bool persistent, AddressEntryType aet)
 {
    if (path.length() < 2) {
       return {};
@@ -499,20 +507,28 @@ bs::Address hd::Leaf::createAddressWithPath(const bs::hd::Path &path, AddressEnt
    }
    for (const auto &addr : addressMap_) {
       if (std::get<2>(addr.second) == addrPath) {
-         return std::get<0>(addr.second);
+         const auto address = std::get<0>(addr.second);
+         if ((aet != AddressEntryType_Default) && (aet == address.getType())) {
+            return address;
+         }
       }
    }
    auto &lastIndex = (path.get(-2) == addrTypeInternal) ? lastIntIdx_ : lastExtIdx_;
+   const auto prevLastIndex = lastIndex;
    const auto addrIndex = path.get(-1);
    const int nbAddresses = addrIndex - lastIndex;
    if (nbAddresses > 0) {
       for (const auto &addr : generateAddresses(path.get(-2), lastIndex, nbAddresses, aet)) {
          lastIndex++;
-         createAddress(addr.first.path, lastIntIdx_ + lastExtIdx_, aet);
+         createAddress(addr.first.path, lastIntIdx_ + lastExtIdx_, aet, persistent);
       }
    }
    lastIndex++;
-   return createAddress(addrPath, lastIntIdx_ + lastExtIdx_, aet);
+   const auto result = createAddress(addrPath, lastIntIdx_ + lastExtIdx_, aet, persistent);
+   if (!persistent) {
+      lastIndex = prevLastIndex;
+   }
+   return result;
 }
 
 bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex(bs::hd::Path::Elem addrType) const
@@ -747,13 +763,14 @@ void hd::AuthLeaf::setRootNodes(Nodes rootNodes)
    unchainedRootNodes_ = rootNodes;
 }
 
-bs::Address hd::AuthLeaf::createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index, AddressEntryType aet)
+bs::Address hd::AuthLeaf::createAddress(const bs::hd::Path &path, bs::hd::Path::Elem index
+   , AddressEntryType aet, bool persistent)
 {
    if (chainCode_.isNull()) {
       tempAddresses_[index] = { path, aet };
       return {};
    }
-   return hd::Leaf::createAddress(path, index, aet);
+   return hd::Leaf::createAddress(path, index, aet, persistent);
 }
 
 void hd::AuthLeaf::setChainCode(const BinaryData &chainCode)

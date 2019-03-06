@@ -73,7 +73,7 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          case bs::sync::WalletFormat::HD: {
             try {
                const auto hdWallet = std::make_shared<hd::Wallet>(info.netType, info.id, info.name
-                  , info.description, signContainer_, logger_);
+                  , info.description, signContainer_.get(), logger_);
                if (hdWallet) {
                   const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
                      saveWallet(hdWallet);
@@ -95,7 +95,7 @@ void WalletsManager::syncWallets(const CbProgress &cb)
             }
             else {
                const auto settlWallet = std::make_shared<SettlementWallet>(info.id, info.name, info.description
-                  , signContainer_, logger_);
+                  , signContainer_.get(), logger_);
                const auto &cbSettlementDone = [this, settlWallet, cbDone] {
                   setSettlementWallet(settlWallet);
                   cbDone();
@@ -445,16 +445,17 @@ void WalletsManager::onWalletReady(const QString &walletId)
    if (!armory_) {
       return;
    }
-   readyWallets_.insert(walletId);
-   auto nbWallets = wallets_.size();
-   if (settlementWallet_ != nullptr) {
-      nbWallets++;
-   }
-   logger_->debug("onWalletReady {}, ready size={}, nbWallets = {}", walletId.toStdString(), readyWallets_.size(), nbWallets);
-   if (readyWallets_.size() >= nbWallets) {
-      logger_->debug("All wallets are ready - going online");
-      armory_->goOnline();
-      readyWallets_.clear();
+   if (armory_->state() != ArmoryConnection::State::Ready) {
+      readyWallets_.insert(walletId);
+      auto nbWallets = wallets_.size();
+      if (settlementWallet_ != nullptr) {
+         nbWallets++;
+      }
+      if (readyWallets_.size() >= nbWallets) {
+         logger_->debug("All wallets are ready - going online");
+         armory_->goOnline();
+         readyWallets_.clear();
+      }
    }
 }
 
@@ -493,6 +494,7 @@ bool WalletsManager::deleteWallet(const WalletPtr &wallet)
          for (auto group : hdWallet.second->getGroups()) {
             if (group->deleteLeaf(wallet)) {
                isHDLeaf = true;
+               signContainer_->DeleteHDLeaf(wallet->walletId());
                eraseWallet(wallet);
                break;
             }
@@ -594,7 +596,7 @@ void WalletsManager::updateWallets(bool force)
    }
 }
 
-bool WalletsManager::getTransactionDirection(Tx tx, const WalletPtr &wallet
+bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
    , const std::function<void(Transaction::Direction, std::vector<bs::Address>)> &cb)
 {
    if (!tx.isInitialized()) {
@@ -607,8 +609,9 @@ bool WalletsManager::getTransactionDirection(Tx tx, const WalletPtr &wallet
       return false;
    }
 
+   const auto wallet = getWalletById(walletId);
    if (!wallet) {
-      logger_->error("[WalletsManager::GetTransactionDirection] wallet not specified");
+      logger_->error("[{}] failed to get wallet for id {}", __func__, walletId);
       return false;
    }
 
@@ -621,7 +624,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const WalletPtr &wallet
       return true;
    }
 
-   const std::string txKey = tx.getThisHash().toBinStr() + wallet->walletId();
+   const std::string txKey = tx.getThisHash().toBinStr() + walletId;
    auto dir = Transaction::Direction::Unknown;
    std::vector<bs::Address> inAddrs;
    {
@@ -745,18 +748,22 @@ bool WalletsManager::getTransactionDirection(Tx tx, const WalletPtr &wallet
    return true;
 }
 
-bool WalletsManager::getTransactionMainAddress(const Tx &tx, const WalletPtr &wallet
+bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &walletId
    , bool isReceiving, const std::function<void(QString, int)> &cb)
 {
-   if (!tx.isInitialized() || !armory_ || !wallet) {
+   if (!tx.isInitialized() || !armory_) {
       return false;
    }
-
-   const std::string txKey = tx.getThisHash().toBinStr() + wallet->walletId();
+   const std::string txKey = tx.getThisHash().toBinStr() + walletId;
    const auto &itDesc = txDesc_.find(txKey);
    if (itDesc != txDesc_.end()) {
       cb(itDesc->second.first, itDesc->second.second);
       return true;
+   }
+
+   const auto wallet = getWalletById(walletId);
+   if (!wallet) {
+      return false;
    }
 
    const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
