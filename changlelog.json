@@ -1,6 +1,24 @@
 {
-   "latest_version" : "0.12.12",
+   "latest_version" : "0.13.1",
    "changes" : [
+      {
+         "version_string" : "0.13.1",
+         "previous_version" : "0.13.0",
+         "improvements" :
+         [
+            "Chat page updates",
+            "Armory Environment select"
+         ]
+      },
+      {
+         "version_string" : "0.13.0",
+         "previous_version" : "0.12.12",
+         "improvements" :
+         [
+            "Isolate wallet code",
+            "Armory Environment select"
+         ]
+      },
       {
          "version_string" : "0.12.12",
          "previous_version" : "0.12.11",
