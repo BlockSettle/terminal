@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <QStringList>
+#include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
 namespace spdlog {
    class logger;
@@ -47,6 +49,8 @@ public:
 
    std::shared_ptr<ZmqSecuredServerConnection>  CreateSecuredServerConnection() const;
    std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(bool monitored = false) const;
+   std::shared_ptr<ZMQ_BIP15X_DataConnection>   CreateZMQBIP15XDataConnection(bool monitored = false) const;
+   std::shared_ptr<ZMQ_BIP15X_ServerConnection> CreateZMQBIP15XServerConnection() const;
 
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;
 

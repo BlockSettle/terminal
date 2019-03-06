@@ -10,6 +10,7 @@
 #include "ApplicationSettings.h"
 #include "DataConnectionListener.h"
 #include "SignContainer.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include "headless.pb.h"
 
@@ -30,7 +31,7 @@ class DataConnection;
 class HeadlessListener;
 class QProcess;
 class WalletsManager;
-class ZmqSecuredDataConnection;
+class ZMQ_BIP15X_DataConnection;
 
 class HeadlessContainer : public SignContainer
 {
@@ -144,14 +145,14 @@ private:
    void Authenticate();
 
 protected:
-   const QString          host_;
-   const QString          port_;
-   const NetworkType      netType_;
-   std::shared_ptr<ZmqSecuredDataConnection> connection_;
-   SecureBinaryData       zmqSignerPubKey_;
-   bool  authPending_ = false;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<ArmoryServersProvider> armoryServers_;
+   const QString                              host_;
+   const QString                              port_;
+   const NetworkType                          netType_;
+   std::shared_ptr<ZMQ_BIP15X_DataConnection> connection_;
+   SecureBinaryData                           zmqSignerPubKey_;
+   bool                                       authPending_ = false;
+   std::shared_ptr<ApplicationSettings>       appSettings_;
+   std::shared_ptr<ArmoryServersProvider>     armoryServers_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;

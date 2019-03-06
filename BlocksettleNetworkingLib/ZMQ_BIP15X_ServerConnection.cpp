@@ -472,6 +472,30 @@ void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
 //      closeConnection();
 }
 
+// Copied from Armory.
+AuthPeersLambdas ZMQ_BIP15X_ServerConnection::getAuthPeerLambda() const
+{
+   auto authPeerPtr = authPeers_;
+
+   auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>&
+   {
+      return authPeerPtr->getPeerNameMap();
+   };
+
+   auto getPrivKey = [authPeerPtr](
+      const BinaryDataRef& pubkey)->const SecureBinaryData&
+   {
+      return authPeerPtr->getPrivateKey(pubkey);
+   };
+
+   auto getAuthSet = [authPeerPtr](void)->const set<SecureBinaryData>&
+   {
+      return authPeerPtr->getPublicKeySet();
+   };
+
+   return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /*void ZMQ_BIP15X_ServerConnection::closeConnection()
 {

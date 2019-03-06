@@ -1047,14 +1047,7 @@ bool RemoteSigner::Start()
       return false;
    }
 
-   connection_ = connectionManager_->CreateSecuredDataConnection(true);
-   if (!connection_->SetServerPublicKey(zmqSignerPubKey_)) {
-      logger_->error("[RemoteSigner::{}] Failed to set ZMQ server public key"
-         , __func__);
-      connection_ = nullptr;
-      return false;
-   }
-
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(true);
    if (opMode() == OpMode::RemoteInproc) {
       connection_->SetZMQTransport(ZMQTransport::InprocTransport);
    }

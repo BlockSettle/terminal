@@ -106,23 +106,32 @@ std::shared_ptr<DataConnection> ConnectionManager::CreateGenoaClientConnection(b
    return connection;
 }
 
-// TO DO: Activate ZMQ BIP 150/151 connection.
 std::shared_ptr<ZmqSecuredServerConnection> ConnectionManager::CreateSecuredServerConnection() const
 {
-   auto&& bdID = CryptoPRNG::generateRandom(8);
-// TO DO: Activate ZMQ BIP 150/151 connection.
-//   return std::make_shared<ZMQ_BIP15X_ServerConnection>(logger_, zmqContext_
-//      , ZMQTrustedTerminals_, bdID, false);
    return std::make_shared<ZmqSecuredServerConnection>(logger_, zmqContext_);
 }
 
-// TO DO: Activate ZMQ BIP 150/151 connection.
 std::shared_ptr<ZmqSecuredDataConnection> ConnectionManager::CreateSecuredDataConnection(bool monitored) const
 {
-   // TO DO: Activate ZMQ BIP 150/151 connection.
-//   auto connection = std::make_shared<ZMQ_BIP15X_DataConnection>(logger_
-//      , armoryServer_, false, monitored);
-   auto connection = std::make_shared<ZmqSecuredDataConnection>(logger_, monitored);
+   auto connection = std::make_shared<ZmqSecuredDataConnection>(logger_
+      , monitored);
+   connection->SetContext(zmqContext_);
+
+   return connection;
+}
+
+std::shared_ptr<ZMQ_BIP15X_ServerConnection> ConnectionManager::CreateZMQBIP15XServerConnection() const
+{
+   BinaryData bdID = CryptoPRNG::generateRandom(8);
+   return std::make_shared<ZMQ_BIP15X_ServerConnection>(logger_, zmqContext_
+      , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), false);
+}
+
+std::shared_ptr<ZMQ_BIP15X_DataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(
+   bool monitored) const
+{
+   auto connection = std::make_shared<ZMQ_BIP15X_DataConnection>(logger_
+      , *(armoryServers_.get()), false, monitored);
    connection->SetContext(zmqContext_);
 
    return connection;
