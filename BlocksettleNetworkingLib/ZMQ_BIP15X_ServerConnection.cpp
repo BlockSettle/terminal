@@ -10,7 +10,8 @@ using namespace std;
 
 ZMQ_BIP15X_ServerConnection::ZMQ_BIP15X_ServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ZmqContext>& context, const uint64_t& id
+   , const std::shared_ptr<ZmqContext>& context
+   , const QStringList& trustedClients, const uint64_t& id
    , const bool& ephemeralPeers)
    : ZmqServerConnection(logger, context), id_(id) {
       string datadir =
@@ -27,6 +28,16 @@ ZMQ_BIP15X_ServerConnection::ZMQ_BIP15X_ServerConnection(
       }
 
       auto lbds = getAuthPeerLambda();
+      for (auto b : trustedClients) {
+         QStringList nameKeyList = b.split(QStringLiteral(":"));
+/*         if (nameKeyList.size() != 2) {
+            return -1;
+         }*/
+         vector<string> keyName;
+         keyName.push_back(nameKeyList[0].toStdString());
+         SecureBinaryData inKey(nameKeyList[1].toStdString());
+         authPeers_->addPeer(inKey, keyName);
+      }
       bip151Connection_ = make_shared<BIP151Connection>(lbds);
 
 /*      writeLock_ = std::make_shared<std::atomic<unsigned>>();

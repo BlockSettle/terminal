@@ -22,14 +22,15 @@ namespace bs {
       class Wallet;
    }
 }
+
 class ApplicationSettings;
+//class ArmoryServersProvider;
 class ConnectionManager;
 class DataConnection;
 class HeadlessListener;
 class QProcess;
 class WalletsManager;
 class ZmqSecuredDataConnection;
-
 
 class HeadlessContainer : public SignContainer
 {
@@ -120,8 +121,8 @@ public:
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const SecureBinaryData& pubKey
-      , OpMode opMode = OpMode::Remote);
+      , const std::shared_ptr<ArmoryServersProvider>& armoryServers
+      , const SecureBinaryData& pubKey, OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
    bool Start() override;
@@ -149,7 +150,8 @@ protected:
    std::shared_ptr<ZmqSecuredDataConnection> connection_;
    SecureBinaryData       zmqSignerPubKey_;
    bool  authPending_ = false;
-   std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ApplicationSettings>   appSettings_;
+   std::shared_ptr<ArmoryServersProvider> armoryServers_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
@@ -164,7 +166,9 @@ public:
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const SecureBinaryData& pubKey, SignContainer::OpMode mode = OpMode::Local
+      , const std::shared_ptr<ArmoryServersProvider>& armoryServers
+      , const SecureBinaryData& pubKey
+      , SignContainer::OpMode mode = OpMode::Local
       , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 

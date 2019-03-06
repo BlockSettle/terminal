@@ -11,6 +11,8 @@
 #include "ZmqDataConnection.h"
 #include "ZmqSecuredDataConnection.h"
 #include "ZmqSecuredServerConnection.h"
+#include "ZMQ_BIP15X_DataConnection.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
 #ifdef Q_OS_WIN
    #include <Winsock2.h>
@@ -21,6 +23,22 @@
 
 ConnectionManager::ConnectionManager(const std::shared_ptr<spdlog::logger>& logger)
    : logger_(logger)
+{
+   // init network
+   isInitialized_ = InitNetworkLibs();
+}
+
+ConnectionManager::ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
+   , QStringList ZMQTrustedTerminals)
+   : logger_(logger), ZMQTrustedTerminals_(ZMQTrustedTerminals)
+{
+   // init network
+   isInitialized_ = InitNetworkLibs();
+}
+
+ConnectionManager::ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
+   , std::shared_ptr<ArmoryServersProvider> armoryServers)
+   : logger_(logger), armoryServers_(armoryServers)
 {
    // init network
    isInitialized_ = InitNetworkLibs();
@@ -88,13 +106,22 @@ std::shared_ptr<DataConnection> ConnectionManager::CreateGenoaClientConnection(b
    return connection;
 }
 
+// TO DO: Activate ZMQ BIP 150/151 connection.
 std::shared_ptr<ZmqSecuredServerConnection> ConnectionManager::CreateSecuredServerConnection() const
 {
+   auto&& bdID = CryptoPRNG::generateRandom(8);
+// TO DO: Activate ZMQ BIP 150/151 connection.
+//   return std::make_shared<ZMQ_BIP15X_ServerConnection>(logger_, zmqContext_
+//      , ZMQTrustedTerminals_, bdID, false);
    return std::make_shared<ZmqSecuredServerConnection>(logger_, zmqContext_);
 }
 
+// TO DO: Activate ZMQ BIP 150/151 connection.
 std::shared_ptr<ZmqSecuredDataConnection> ConnectionManager::CreateSecuredDataConnection(bool monitored) const
 {
+   // TO DO: Activate ZMQ BIP 150/151 connection.
+//   auto connection = std::make_shared<ZMQ_BIP15X_DataConnection>(logger_
+//      , armoryServer_, false, monitored);
    auto connection = std::make_shared<ZmqSecuredDataConnection>(logger_, monitored);
    connection->SetContext(zmqContext_);
 

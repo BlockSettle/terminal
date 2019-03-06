@@ -2,11 +2,13 @@
 #define __CONNECTION_MANAGER_H__
 
 #include <memory>
+#include <QStringList>
 
 namespace spdlog {
    class logger;
 };
 
+class ArmoryServersProvider;
 class DataConnection;
 class PublisherConnection;
 class ServerConnection;
@@ -15,11 +17,17 @@ class ZmqContext;
 class ZmqSecuredDataConnection;
 class ZmqSecuredServerConnection;
 class QNetworkAccessManager;
+class ZMQ_BIP15X_DataConnection;
+class ZMQ_BIP15X_ServerConnection;
 
 class ConnectionManager
 {
 public:
    ConnectionManager(const std::shared_ptr<spdlog::logger>& logger);
+   ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
+      , QStringList ZMQTrustedTerminals);
+   ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
+      , std::shared_ptr<ArmoryServersProvider> armoryServers);
    ~ConnectionManager() noexcept;
 
    ConnectionManager(const ConnectionManager&) = delete;
@@ -55,9 +63,11 @@ private:
 private:
    bool isInitialized_;
 
-   std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<ZmqContext>      zmqContext_;
+   std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ZmqContext>            zmqContext_;
    std::shared_ptr<QNetworkAccessManager> nam_;
+   std::shared_ptr<ArmoryServersProvider> armoryServers_;
+   QStringList                            ZMQTrustedTerminals_;
 };
 
 #endif // __CONNECTION_MANAGER_H__

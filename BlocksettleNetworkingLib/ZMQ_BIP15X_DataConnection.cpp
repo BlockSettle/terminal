@@ -7,7 +7,8 @@
 using namespace std;
 
 ZMQ_BIP15X_DataConnection::ZMQ_BIP15X_DataConnection(
-   const shared_ptr<spdlog::logger>& logger, const bool& ephemeralPeers)
+   const shared_ptr<spdlog::logger>& logger
+   , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers)
    : ZmqDataConnection(logger) {
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
@@ -23,11 +24,16 @@ ZMQ_BIP15X_DataConnection::ZMQ_BIP15X_DataConnection(
    }
 
    auto lbds = getAuthPeerLambda();
+   stringstream ss;
+   ss << trustedServer.getArmorySettings().armoryDBIp.toStdString() << ":"
+      << trustedServer.getArmorySettings().armoryDBPort;
+   authPeers_->addPeer(ss.str());
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
 }
 
 ZMQ_BIP15X_DataConnection::ZMQ_BIP15X_DataConnection(
-   const shared_ptr<spdlog::logger>& logger, const bool& ephemeralPeers
+   const shared_ptr<spdlog::logger>& logger
+   , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
    , bool monitored)
    : ZmqDataConnection(logger, monitored) {
    string datadir =

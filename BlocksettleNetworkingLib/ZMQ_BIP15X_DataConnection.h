@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 //#include <string>
 //#include <memory>
+#include "ArmoryServersProvider.h"
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
 #include "ZmqDataConnection.h"
@@ -14,9 +15,9 @@
 class ZMQ_BIP15X_DataConnection : public ZmqDataConnection {
 public:
    ZMQ_BIP15X_DataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const bool& ephemeralPeers);
+      , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers);
    ZMQ_BIP15X_DataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const bool& ephemeralPeers, bool monitored);
+      , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers, bool monitored);
 
    ~ZMQ_BIP15X_DataConnection() noexcept override = default;
 

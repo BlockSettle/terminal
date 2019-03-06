@@ -19,7 +19,8 @@ class ZMQ_BIP15X_ServerConnection : public ZmqServerConnection
 {
 public:
    ZMQ_BIP15X_ServerConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ZmqContext>& context, const uint64_t& id
+      , const std::shared_ptr<ZmqContext>& context
+      , const QStringList& trustedClients, const uint64_t& id
       , const bool& ephemeralPeers);
 
    ~ZMQ_BIP15X_ServerConnection() noexcept override = default;

@@ -67,6 +67,7 @@ protected:
    ZmqContext::sock_ptr             monSocket_;
 
    std::unordered_map<std::string, std::string> clientInfo_;
+   std::string cliIP_;
 
 private:
    void stopServer();

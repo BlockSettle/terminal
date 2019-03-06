@@ -1020,17 +1020,17 @@ void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string 
 
 
 RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
-                           , const QString &host, const QString &port
-                           , NetworkType netType
-                           , const std::shared_ptr<ConnectionManager>& connectionManager
-                           , const std::shared_ptr<ApplicationSettings>& appSettings
-                           , const SecureBinaryData& pubKey
-                           , OpMode opMode)
+   , const QString &host, const QString &port, NetworkType netType
+   , const std::shared_ptr<ConnectionManager>& connectionManager
+   , const std::shared_ptr<ApplicationSettings>& appSettings
+   , const std::shared_ptr<ArmoryServersProvider>& armoryServers
+   , const SecureBinaryData& pubKey, OpMode opMode)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
    , zmqSignerPubKey_{pubKey}
    , appSettings_{appSettings}
    , connectionManager_{connectionManager}
+   , armoryServers_{armoryServers}
 {}
 
 // Establish the remote connection to the signer.
@@ -1268,13 +1268,14 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
 
 LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
-                         , const QString &homeDir, NetworkType netType, const QString &port
-                         , const std::shared_ptr<ConnectionManager>& connectionManager
-                         , const std::shared_ptr<ApplicationSettings> &appSettings
-                         , const SecureBinaryData& pubKey, SignContainer::OpMode mode
-                         , double asSpendLimit)
+   , const QString &homeDir, NetworkType netType, const QString &port
+   , const std::shared_ptr<ConnectionManager>& connectionManager
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ArmoryServersProvider>& armoryServers
+   , const SecureBinaryData& pubKey, SignContainer::OpMode mode
+   , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-                  , connectionManager, appSettings, pubKey, mode)
+   , connectionManager, appSettings, armoryServers, pubKey, mode)
    , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
 {
 }

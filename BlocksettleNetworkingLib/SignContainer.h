@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QStringList>
 
+#include "ArmoryServersProvider.h"
 #include "HDPath.h"
 #include "CoreWallet.h"
 #include "QWalletInfo.h"
@@ -198,7 +199,8 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    , const SecureBinaryData& pubKey
    , SignContainer::OpMode
    , const QString &host
-   , const std::shared_ptr<ConnectionManager> & connectionManager);
+   , const std::shared_ptr<ConnectionManager> & connectionManager
+   , const std::shared_ptr<ArmoryServersProvider> & armoryServers);
 
 bool SignerConnectionExists(const QString &host, const QString &port);
 
