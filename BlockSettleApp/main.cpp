@@ -34,7 +34,6 @@ Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
 
 #ifdef USE_QXcbIntegrationPlugin
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
-Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
 #endif // USE_QXcbIntegrationPlugin
 

@@ -54,8 +54,9 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    ${CRYPTO_LIB_NAME}
    ${BOTAN_LIB}
    ${ZMQ_LIB}
-   ${WS_LIB}
    ${QRENCODE_LIB}
+   ${WS_LIB}
+   ${OS_SPECIFIC_LIBS}
    ${QT_LINUX_LIBS}
    ${QT_QUICK_LIBS}
    Qt5::Qml
@@ -64,7 +65,6 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    Qt5::Network
    Qt5::PrintSupport
    Qt5::Core
-   ${OS_SPECIFIC_LIBS}
-   ${OPENSSL_LIBS}
    Qt5::DBus
+   ${OPENSSL_LIBS}
 )

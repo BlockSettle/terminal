@@ -43,10 +43,8 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    ${BOTAN_LIB}
    ${ZMQ_LIB}
    ${QRENCODE_LIB}
-   ${WS_LIB}
-   ${OS_SPECIFIC_LIBS}
-   ${OPENSSL_LIBS}
    ${QT_LINUX_LIBS}
+   ${WS_LIB}
    Qt5::Qml
    Qt5::Core
    Qt5::Widgets
@@ -56,4 +54,6 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    Qt5::Core
    Qt5::Svg
    Qt5::DBus
+   ${OS_SPECIFIC_LIBS}
+   ${OPENSSL_LIBS}
    )
