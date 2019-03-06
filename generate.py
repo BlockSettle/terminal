@@ -54,21 +54,6 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings):
       BotanSettings(project_settings),
       QtSettings(project_settings)
    ]
-   """
-   required_3rdparty += [
-      ProtobufSettings(project_settings),
-      OpenSslSettings(project_settings),
-      QtSettings(project_settings),
-      SpdlogSettings(project_settings),
-      ZeroMQSettings(project_settings),
-      LibQREncode(project_settings),
-      MPIRSettings(project_settings),
-      LibBTC(project_settings),
-      LibChaCha20Poly1305Settings(project_settings),
-      WebsocketsSettings(project_settings),
-      BotanSettings(project_settings),
-      ]
-   """
 
    for component in required_3rdparty:
       if not component.config_component():
@@ -80,10 +65,11 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings):
    os.chdir(project_settings.get_project_root())
 
    generated_dir = os.path.join(os.getcwd(), 'generated_proto')
-   build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode + '-' + link_mode)
+   if link_mode == 'shared':
+      build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode + '-' + link_mode)
+   else:
+      build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode)
 
-   # TODO: uncomment
-   """
    if os.path.isfile(generated_dir):
       os.remove(generated_dir)
    elif os.path.isdir(generated_dir):
@@ -93,7 +79,6 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings):
       os.remove(build_dir)
    elif os.path.isdir(build_dir):
       shutil.rmtree(build_dir)
-   """
 
    os.makedirs(build_dir, exist_ok=True)
    os.chdir(build_dir)

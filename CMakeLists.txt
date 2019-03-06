@@ -608,7 +608,8 @@ ELSE(WIN32)
    ELSE(APPLE)
       FIND_PACKAGE( Threads REQUIRED )
       FIND_PACKAGE( X11 REQUIRED )
-      FIND_PACKAGE( XCB REQUIRED )
+      FIND_PACKAGE( X11_XCB REQUIRED )
+      FIND_PACKAGE( XCB COMPONENTS XKB RENDERUTIL SYNC XFIXES XINERAMA RANDR RENDER IMAGE SHM KEYSYMS ICCCM SHAPE REQUIRED )
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
@@ -631,27 +632,27 @@ ELSE(WIN32)
          ENDFOREACH(lib_name)
 
          SET( OS_SPECIFIC_LIBS
-            fontconfig
+            Fontconfig::Fontconfig
             freetype
-            X11-xcb
+            X11::XCB
             X11
             Xi
             SM
             ICE
             Xrender
-            xcb-xkb
-            xcb-render-util
-            xcb-sync
-            xcb-xfixes
-            xcb-xinerama
-            xcb-randr
-            xcb-render
-            xcb-image
-            xcb-shm
-            xcb-keysyms
-            xcb-icccm
-            xcb-shape
-            xcb
+            XCB::XKB
+            XCB::RENDERUTIL
+            XCB::SYNC
+            XCB::XFIXES
+            XCB::XINERAMA
+            XCB::RANDR
+            XCB::RENDER
+            XCB::IMAGE
+            XCB::SHM
+            XCB::KEYSYMS
+            XCB::ICCCM
+            XCB::SHAPE
+            XCB::XCB
             xkbcommon-x11
             xkbcommon
             dbus-1
@@ -699,27 +700,27 @@ ELSE(WIN32)
             Qt5::QXcbIntegrationPlugin
             Qt5::QICOPlugin
             Qt5::QCupsPrinterSupportPlugin
-            fontconfig
+            Fontconfig::Fontconfig
             freetype
-            X11-xcb
+            X11::XCB
             X11
             Xi
             SM
             ICE
             Xrender
-            xcb-xkb
-            xcb-render-util
-            xcb-sync
-            xcb-xfixes
-            xcb-xinerama
-            xcb-randr
-            xcb-render
-            xcb-image
-            xcb-shm
-            xcb-keysyms
-            xcb-icccm
-            xcb-shape
-            xcb
+            XCB::XKB
+            XCB::RENDERUTIL
+            XCB::SYNC
+            XCB::XFIXES
+            XCB::XINERAMA
+            XCB::RANDR
+            XCB::RENDER
+            XCB::IMAGE
+            XCB::SHM
+            XCB::KEYSYMS
+            XCB::ICCCM
+            XCB::SHAPE
+            XCB::XCB
             xkbcommon-x11
             xkbcommon
             dbus-1
