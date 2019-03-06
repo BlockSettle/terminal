@@ -31,10 +31,13 @@ BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spd
    connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &BaseDealerSettlementDialog::onWalletInfo);
 }
 
-void BaseDealerSettlementDialog::connectToProgressBar(QProgressBar *progressBar)
+void BaseDealerSettlementDialog::connectToProgressBar(QProgressBar *progressBar, QLabel *timeLeftLabel)
 {
    progressBar_ = progressBar;
    progressBar_->hide();
+
+   timeLeftLabel_ = timeLeftLabel;
+   timeLeftLabel_->hide();
 }
 
 void BaseDealerSettlementDialog::connectToHintLabel(QLabel *hintLabel, QLabel *errorLabel)
@@ -69,9 +72,13 @@ void BaseDealerSettlementDialog::setAuthPasswordPrompt(const QString &prompt)
 
 void BaseDealerSettlementDialog::onTimerStarted(int msDuration)
 {
+   timeLeftLabel_->show();
+   timeLeftLabel_->setText(tr("%1 second(s) remaining")
+                               .arg(QString::number(msDuration > 0 ? msDuration/1000 : 0)));
+
    progressBar_->show();
-   progressBar_->setMinimum(0);
    progressBar_->setMaximum(msDuration);
+   progressBar_->setMinimum(0);
    progressBar_->setValue(progressBar_->maximum());
    progressBar_->setFormat(QString());
 }
