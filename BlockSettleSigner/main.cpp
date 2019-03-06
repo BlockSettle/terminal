@@ -264,10 +264,10 @@ static int QMLApp(int argc, char **argv)
    // app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
 
    // we need this only for desktop app
-   const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
+/*   const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
    QSplashScreen splashScreen(splashImage);
    splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
-   splashScreen.show();
+   splashScreen.show();*/  //FIXME: uncomment when sync::WalletsManager is enabled
 
    const auto settings = std::make_shared<SignerSettings>(app.arguments());
    std::shared_ptr<spdlog::logger> logger;
@@ -303,8 +303,8 @@ static int QMLApp(int argc, char **argv)
    try {
       QQmlApplicationEngine engine;
       QMLAppObj appObj(logger, settings, engine.rootContext());
-      QObject::connect(&appObj, &QMLAppObj::loadingComplete, &splashScreen
-         , &QSplashScreen::close);
+/*      QObject::connect(&appObj, &QMLAppObj::loadingComplete, &splashScreen
+         , &QSplashScreen::close);*/   //FIXME: uncomment when switched to sync::WalletsManager
       QTimer::singleShot(0, &appObj, &QMLAppObj::Start);
 
       engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
