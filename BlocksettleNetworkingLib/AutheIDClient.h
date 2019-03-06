@@ -1,6 +1,10 @@
 #ifndef __AUTH_EID_CLIENT_H__
 #define __AUTH_EID_CLIENT_H__
+
 #include <QObject>
+
+#include <functional>
+
 #include "EncryptionUtils.h"
 #include "autheid_utils.h"
 
