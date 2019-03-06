@@ -62,20 +62,6 @@ class Settings:
     def get_link_mode(self):
         return self._link_mode
 
-    def get_directory_name(self):
-        directory = ""
-        if self._build_mode == 'release':
-            directory = "Release"
-        else:
-            directory = "Debug"
-
-        if self._link_mode == 'static':
-            directory += '-static'
-        else:
-            directory += '-shared'
-        
-        return directory
-
     def on_windows(self):
         return self._is_windows
 

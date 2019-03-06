@@ -20,18 +20,14 @@ class Configurator:
                 if self.is_archive():
                     self.unpack_package()
                 build_dir = self.get_build_dir()
-                #self.remove_fs_object(build_dir)
+                self.remove_fs_object(build_dir)
 
-                try:
-                    os.makedirs(build_dir)
-                except:
-                    pass
+                os.makedirs(build_dir, exist_ok=True)
 
                 os.chdir(build_dir)
 
-                # TODO: uncomment this
-                #if os.path.isdir(self.get_install_dir()):
-                #    self.remove_fs_object(self.get_install_dir())
+                if os.path.isdir(self.get_install_dir()):
+                    self.remove_fs_object(self.get_install_dir())
 
                 if self.config() and self.make() and self.install():
                     self.SetRevision()
@@ -181,13 +177,10 @@ class Configurator:
             src_name = os.path.join(src, name)
             dst_name = os.path.join(dst, name)
 
-            try:
-                if os.path.isdir(src_name):
-                    shutil.copytree(src_name, dst_name)
-                else:
-                    shutil.copy(src_name, dst_name)
-            except:
-                pass
+            if os.path.isdir(src_name):
+                shutil.copytree(src_name, dst_name)
+            else:
+                shutil.copy(src_name, dst_name)
 
     def remove_fs_object(self, name):
         if os.path.isfile(name):
@@ -197,9 +190,7 @@ class Configurator:
 
     def filter_copy(self, src, dst, file_extension=None, cleanupDst=True):
         if cleanupDst:
-            pass
-            # TODO: uncomment
-            #self.remove_fs_object(dst)
+            self.remove_fs_object(dst)
         # Don't rise error if directory exist!
         os.makedirs(dst, exist_ok=True)
 
