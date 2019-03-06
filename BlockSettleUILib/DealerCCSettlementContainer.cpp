@@ -1,9 +1,9 @@
 #include "DealerCCSettlementContainer.h"
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
-#include "MetaData.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
+#include "Wallets/SyncWallet.h"
 
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
@@ -20,7 +20,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , autoSign_(autoSign)
    , delivery_(order.side == bs::network::Side::Sell)
    , transactionData_(txData)
-   , wallet_(txData->GetSigningWallet())
+   , wallet_(txData->getSigningWallet())
    , signingContainer_(container)
    , txReqData_(BinaryData::CreateFromHex(order.reqTransaction))
    , ownRecvAddr_(ownRecvAddr)
@@ -34,7 +34,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    utxoAdapter_ = std::make_shared<bs::UtxoReservation::Adapter>();
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
-   walletName_ = QString::fromStdString(wallet_->GetWalletName());
+   walletName_ = QString::fromStdString(wallet_->name());
 }
 
 DealerCCSettlementContainer::~DealerCCSettlementContainer()
@@ -83,8 +83,6 @@ void DealerCCSettlementContainer::activate()
    }
 
    startTimer(30);
-
-   signingContainer_->SyncAddresses(transactionData_->createAddresses());
 }
 
 void DealerCCSettlementContainer::onGenAddressVerified(bool addressVerified)
@@ -117,14 +115,14 @@ bool DealerCCSettlementContainer::accept(const SecureBinaryData &password)
       return false;
    }
 
-   bs::wallet::TXSignRequest txReq;
-   txReq.walletId = wallet_->GetWalletId();
+   bs::core::wallet::TXSignRequest txReq;
+   txReq.walletId = wallet_->walletId();
    txReq.prevStates = { txReqData_ };
    txReq.populateUTXOs = true;
    txReq.inputs = utxoAdapter_->get(id());
    logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
-      , wallet_->GetWalletName(), txReq.inputs.size());
-   signId_ = signingContainer_->SignPartialTXRequest(txReq, autoSign_, password);
+      , wallet_->name(), txReq.inputs.size());
+   signId_ = signingContainer_->signPartialTXRequest(txReq, autoSign_, password);
    emit info(tr("Waiting for TX half signing..."));
    return true;
 }

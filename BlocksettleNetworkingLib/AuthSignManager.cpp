@@ -11,11 +11,12 @@
 
 AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<ApplicationSettings> &appSettings
-      , const std::shared_ptr<CelerClient> &celerClient)
+      , const std::shared_ptr<CelerClient> &celerClient
+      , const std::shared_ptr<ConnectionManager> &connectionManager)
    : logger_(logger)
    , appSettings_(appSettings)
    , celerClient_(celerClient)
-   , autheIDClient_(new AutheIDClient(logger, appSettings_->GetAuthKeys()))
+   , autheIDClient_(new AutheIDClient(logger, appSettings, connectionManager))
 {
    connect(autheIDClient_.get(), &AutheIDClient::signSuccess, this, &AuthSignManager::onSignSuccess);
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, &AuthSignManager::onFailed);
@@ -28,26 +29,9 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
 {
    onSignedCB_ = onSigned;
    onSignFailedCB_ = onSignFailed;
-   try {
-      autheIDClient_->connect(appSettings_->get<std::string>(ApplicationSettings::authServerPubKey)
-         , appSettings_->get<std::string>(ApplicationSettings::authServerHost)
-         , appSettings_->get<std::string>(ApplicationSettings::authServerPort));
-   }
-   catch (const std::exception &e) {
-      logger_->error("[{}] failed to connect: {}", __func__, e.what());
-      if (onSignFailed) {
-         onSignFailed(tr("Failed to connect to Auth eID"));
-      }
-      return false;
-   }
    const auto &userId = celerClient_->userName();
    logger_->debug("[{}] sending sign {} request to {}", __func__, title.toStdString(), userId);
-   if (!autheIDClient_->sign(dataToSign, userId, title, desc, expiration)) {
-      if (onSignFailed) {
-         onSignFailed(tr("Failed to sign with Auth eID"));
-      }
-      return false;
-   }
+   autheIDClient_->sign(dataToSign, userId, title, desc, expiration);
    return true;
 }
 

@@ -6,7 +6,6 @@
 #include <QDialog>
 #include <QTimer>
 #include "EncryptionUtils.h"
-#include "MetaData.h"
 #include "AutheIDClient.h"
 #include "QWalletInfo.h"
 #include "WalletKeyWidget.h"
@@ -28,6 +27,7 @@ public:
 
    void init(const bs::hd::WalletInfo &walletInfo
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , WalletKeyWidget::UseType useType
       , const QString &prompt
       , const std::shared_ptr<spdlog::logger> &logger

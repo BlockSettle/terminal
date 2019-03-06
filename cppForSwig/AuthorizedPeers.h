@@ -48,8 +48,13 @@ private:
 
    //for wallet management
    std::map<SecureBinaryData, std::set<unsigned>> keyToAssetIndexMap_;
-
    std::shared_ptr<AssetWallet> wallet_ = nullptr;
+
+   //<pubkey, sig>
+   std::pair<SecureBinaryData, SecureBinaryData> rootSignature_;
+
+   //<pubkey, description>
+   std::map<SecureBinaryData, std::pair<std::string, unsigned>> peerRootKeys_;
 
 private:
    void loadWallet(const std::string&);
@@ -59,6 +64,8 @@ private:
       const SecureBinaryData&, const std::initializer_list<std::string>&);
    void addPeer(
       const btc_pubkey&, const std::initializer_list<std::string>&);
+   
+   void erasePeerRootKey(const SecureBinaryData&);
 
 public:
    AuthorizedPeers(const std::string&, const std::string&);
@@ -67,6 +74,11 @@ public:
    const std::map<std::string, btc_pubkey>& getPeerNameMap(void) const;
    const std::set<SecureBinaryData>& getPublicKeySet(void) const;
    const SecureBinaryData& getPrivateKey(const BinaryDataRef&) const;
+   
+   const std::map<SecureBinaryData, std::pair<std::string, unsigned>>& 
+      getRootKeys(void) const { return peerRootKeys_; }
+   const std::pair<SecureBinaryData, SecureBinaryData>& getRootSig(void) {
+      return rootSignature_; }
 
    /* addPeer:
    input:
@@ -93,6 +105,10 @@ public:
 
    void addPeer(
       const SecureBinaryData&, const std::vector<std::string>&);
+
+   void addRootSignature(
+      const SecureBinaryData& key, const SecureBinaryData& sig);
+   void addPeerRootKey(const SecureBinaryData&, std::string);
 
    //
    void eraseName(const std::string&);

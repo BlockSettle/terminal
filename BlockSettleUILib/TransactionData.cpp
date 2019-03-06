@@ -6,9 +6,10 @@
 #include "SwigClient.h"
 #include "SelectedTransactionInputs.h"
 #include "ScriptRecipient.h"
-#include "SettlementWallet.h"
 #include "RecipientContainer.h"
 #include "UiUtils.h"
+#include "Wallets/SyncWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include <vector>
 #include <map>
@@ -47,7 +48,7 @@ bool TransactionData::InputsLoadedFromArmory() const
    return inputsLoaded_;
 }
 
-bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint32_t topBlock
+bool TransactionData::setWallet(const std::shared_ptr<bs::sync::Wallet> &wallet, uint32_t topBlock
    , bool resetInputs, const std::function<void()> &cbInputsReset)
 {
    if (wallet == nullptr) {
@@ -68,7 +69,7 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
             return this->selectedInputs_->GetSelectedTransactions();
          }
          , std::vector<AddressBookEntry>{}
-         , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider)
+         , static_cast<uint64_t>(wallet_->getSpendableBalance() * BTCNumericTypes::BalanceDivider)
          , topBlock);
       InvalidateTransactionData();
    }
@@ -88,8 +89,8 @@ bool TransactionData::SetWallet(const std::shared_ptr<bs::Wallet> &wallet, uint3
    return true;
 }
 
-bool TransactionData::SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &wallet, const std::vector<UTXO> &utxos
-   , uint32_t topBlock)
+bool TransactionData::setWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::vector<UTXO> &utxos, uint32_t topBlock)
 {
    if (wallet == nullptr) {
       return false;
@@ -102,7 +103,7 @@ bool TransactionData::SetWalletAndInputs(const std::shared_ptr<bs::Wallet> &wall
       return this->selectedInputs_->GetSelectedTransactions();
    }
       , std::vector<AddressBookEntry>{}
-   , static_cast<uint64_t>(wallet_->GetSpendableBalance() * BTCNumericTypes::BalanceDivider)
+   , static_cast<uint64_t>(wallet_->getSpendableBalance() * BTCNumericTypes::BalanceDivider)
       , topBlock);
    InvalidateTransactionData();
 
@@ -200,8 +201,6 @@ bool TransactionData::UpdateTransactionData()
                logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
                   , summary_.txVirtSize);
             }
-            //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
-            summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
          summary_.feePerByte =
@@ -242,8 +241,6 @@ bool TransactionData::UpdateTransactionData()
                logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
                   , summary_.txVirtSize);
             }
-            //TODO: estimateTXVirtSize call should be removed once getVirtSize() is fixed
-            summary_.txVirtSize = bs::wallet::estimateTXVirtSize(transactions, recipientsMap);
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
@@ -372,10 +369,10 @@ std::vector<UTXO> TransactionData::decorateUTXOs(const std::vector<UTXO> &inUTXO
    inputUTXOs = inUTXOs.empty() ? selectedInputs_->GetSelectedTransactions() : inUTXOs;
 
    if (utxoAdapter_ && reservedUTXO_.empty()) {
-      utxoAdapter_->filter(selectedInputs_->GetWallet()->GetWalletId()
-         , inputUTXOs);
+      utxoAdapter_->filter(selectedInputs_->GetWallet()->walletId(), inputUTXOs);
    }
 
+#if 0 // since we don't have address entries and public keys now, we need to re-think this code
    for (auto& utxo : inputUTXOs) {
       // Prep the UTXOs for calculation.
       auto aefa = wallet_->getAddressEntryForAddr(utxo.getRecipientScrAddr());
@@ -406,6 +403,15 @@ std::vector<UTXO> TransactionData::decorateUTXOs(const std::vector<UTXO> &inUTXO
          } // while
       } // if
    } // for
+#endif //0
+
+   for (auto &utxo : inputUTXOs) {  // some kind of decoration code to replace the code above
+      const bs::Address recipAddr(utxo.getRecipientScrAddr());
+      utxo.txinRedeemSizeBytes_ = recipAddr.getInputSize();
+      utxo.witnessDataSizeBytes_ = recipAddr.getWitnessDataSize();
+      utxo.isInputSW_ = ((recipAddr.getType() == AddressEntryType_P2WPKH)
+         || (recipAddr.getType() == AddressEntryType_P2WSH)) ? true : false;
+   }
 
    return inputUTXOs;
 }
@@ -514,7 +520,7 @@ void TransactionData::ReserveUtxosFor(double amount, const std::string &reserveI
       reservedUTXO_ = usedUTXO_;
    }
    if (!reservedUTXO_.empty()) {
-      utxoAdapter_->reserve(wallet_->GetWalletId(), reserveId, reservedUTXO_);
+      utxoAdapter_->reserve(wallet_->walletId(), reserveId, reservedUTXO_);
    }
 }
 
@@ -536,7 +542,6 @@ void TransactionData::clear()
    reservedUTXO_.clear();
    summary_ = {};
    fallbackRecvAddress_ = {};
-   createAddresses_.clear();
 }
 
 std::vector<UTXO> TransactionData::inputs() const
@@ -598,13 +603,6 @@ void TransactionData::ClearAllRecipients()
 
 bool TransactionData::UpdateRecipientAddress(unsigned int recipientId, const bs::Address &address)
 {
-   if (wallet_) {
-      const auto &recptAddrEntry = wallet_->getAddressEntryForAddr(address);
-      if (recptAddrEntry != nullptr) {
-         return UpdateRecipientAddress(recipientId, recptAddrEntry);
-      }
-   }
-
    auto it = recipients_.find(recipientId);
    if (it == recipients_.end()) {
       return false;
@@ -615,20 +613,6 @@ bool TransactionData::UpdateRecipientAddress(unsigned int recipientId, const bs:
       InvalidateTransactionData();
    }
 
-   return result;
-}
-
-bool TransactionData::UpdateRecipientAddress(unsigned int recipientId, const std::shared_ptr<AddressEntry> &address)
-{
-   auto it = recipients_.find(recipientId);
-   if (it == recipients_.end()) {
-      return false;
-   }
-
-   bool result = it->second->SetAddressEntry(address);
-   if (result) {
-      InvalidateTransactionData();
-   }
    return result;
 }
 
@@ -731,9 +715,8 @@ bs::Address TransactionData::GetFallbackRecvAddress()
       return fallbackRecvAddress_;
    }
    if (wallet_ != nullptr) {
-      const auto addr = wallet_->GetNewExtAddress();
-      createAddress(addr, wallet_);
-      wallet_->RegisterWallet();
+      const auto addr = wallet_->getNewExtAddress();
+//      wallet_->registerWallet();  //TODO: register only when address callback is invoked
       fallbackRecvAddress_ = addr;
    }
    return fallbackRecvAddress_;
@@ -759,9 +742,9 @@ std::vector<std::shared_ptr<ScriptRecipient>> TransactionData::GetRecipientList(
    return recipientList;
 }
 
-bs::wallet::TXSignRequest TransactionData::CreateUnsignedTransaction(bool isRBF, const bs::Address &changeAddress)
+bs::core::wallet::TXSignRequest TransactionData::createUnsignedTransaction(bool isRBF, const bs::Address &changeAddress)
 {
-   unsignedTxReq_ = wallet_->CreateTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddress);
+   unsignedTxReq_ = wallet_->createTXRequest(inputs(), GetRecipientList(), summary_.totalFee, isRBF, changeAddress);
    if (!unsignedTxReq_.isValid()) {
       throw std::runtime_error("missing unsigned TX");
    }
@@ -769,7 +752,7 @@ bs::wallet::TXSignRequest TransactionData::CreateUnsignedTransaction(bool isRBF,
    return unsignedTxReq_;
 }
 
-bs::wallet::TXSignRequest TransactionData::GetSignTXRequest() const
+bs::core::wallet::TXSignRequest TransactionData::getSignTXRequest() const
 {
    if (!unsignedTxReq_.isValid()) {
       throw std::runtime_error("missing unsigned TX");
@@ -777,33 +760,22 @@ bs::wallet::TXSignRequest TransactionData::GetSignTXRequest() const
    return unsignedTxReq_;
 }
 
-bs::wallet::TXSignRequest TransactionData::CreateTXRequest(bool isRBF
+bs::core::wallet::TXSignRequest TransactionData::createTXRequest(bool isRBF
                                                  , const bs::Address &changeAddr
                                                 , const uint64_t& origFee) const
 {
-   return wallet_->CreateTXRequest(inputs(), GetRecipientList()
+   return wallet_->createTXRequest(inputs(), GetRecipientList()
                                    , summary_.totalFee, isRBF, changeAddr
                                    , origFee);
 }
 
-bs::wallet::TXSignRequest TransactionData::CreatePartialTXRequest(uint64_t spendVal, float feePerByte
+bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t spendVal, float feePerByte
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData
    , const std::vector<UTXO> &utxos)
 {
-   const auto &changeAddr = wallet_->GetNewChangeAddress();
-   createAddress(changeAddr);
-   auto txReq = wallet_->CreatePartialTXRequest(spendVal, utxos.empty() ? inputs() : utxos
+   const auto &changeAddr = wallet_->getNewChangeAddress();
+   auto txReq = wallet_->createPartialTXRequest(spendVal, utxos.empty() ? inputs() : utxos
       , changeAddr, feePerByte, recipients, prevData);
    txReq.populateUTXOs = true;
    return txReq;
-}
-
-void TransactionData::createAddress(const bs::Address &addr, const std::shared_ptr<bs::Wallet> &wallet)
-{
-   if (!wallet) {
-      createAddresses_.push_back({wallet_, addr});
-   }
-   else {
-      createAddresses_.push_back({ wallet, addr });
-   }
 }

@@ -1,6 +1,6 @@
 #include "EncryptionUtils.h"
 #include "EasyEncValidator.h"
-#include "MetaData.h"
+#include "CoreWallet.h"
 
 QValidator::State EasyEncValidator::validate(QString &input, int &pos) const
 {
@@ -125,7 +125,7 @@ void EasyEncValidator::setStatusMsg(const QString &statusMsg) const
 EasyEncValidator::ValidationResult EasyEncValidator::validateChecksum(const std::string &in) const
 {
    try {
-      bs::wallet::Seed::decodeEasyCodeLineChecksum(in);
+      bs::core::wallet::Seed::decodeEasyCodeLineChecksum(in);
         return Valid;
     } catch (...) {
         return InvalidChecksum;

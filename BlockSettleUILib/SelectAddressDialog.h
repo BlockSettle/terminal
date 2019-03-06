@@ -10,20 +10,21 @@
 namespace Ui {
     class SelectAddressDialog;
 }
-
-class WalletsManager;
-
 namespace bs {
-   class Wallet;
+   namespace sync {
+      class Wallet;
+      class WalletsManager;
+   }
 }
+
 
 class SelectAddressDialog : public QDialog
 {
 Q_OBJECT
 
 public:
-   SelectAddressDialog(const std::shared_ptr<WalletsManager>& walletsManager
-      , const std::shared_ptr<bs::Wallet>& wallet, QWidget* parent = nullptr
+   SelectAddressDialog(const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::sync::Wallet> &, QWidget* parent = nullptr
       , AddressListModel::AddressType addrType = AddressListModel::AddressType::All);
    ~SelectAddressDialog() override;
 
@@ -37,8 +38,8 @@ private:
    bs::Address getAddress(const QModelIndex& index) const;
 
 private:
-   std::unique_ptr<Ui::SelectAddressDialog> ui_;
-   std::shared_ptr<bs::Wallet>   wallet_;
+   std::unique_ptr<Ui::SelectAddressDialog>  ui_;
+   std::shared_ptr<bs::sync::Wallet>         wallet_;
    AddressListModel*             model_;
    bs::Address                   selectedAddr_;
 };

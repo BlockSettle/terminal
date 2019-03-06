@@ -249,7 +249,7 @@ bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)
    }
 
    while (query.next()) {
-      keys_out[query.value(0).toString()] = autheid::publicKeyFromString(
+      keys_out[query.value(0).toString()] = Chat::publicKeyFromString(
          query.value(1).toString().toStdString());
    }
    return true;
@@ -260,7 +260,7 @@ bool ChatDB::addKey(const QString& user, const autheid::PublicKey& key)
    QSqlQuery qryAdd(QLatin1String(
       "INSERT INTO user_keys(user_id, key) VALUES(?, ?);"), db_);
    qryAdd.bindValue(0, user);
-   qryAdd.bindValue(1, QString::fromStdString(autheid::publicKeyToString(key)));
+   qryAdd.bindValue(1, QString::fromStdString(Chat::publicKeyToString(key)));
 
    if (!qryAdd.exec()) {
       logger_->error("[ChatDB::addKey] failed to insert new public key value to user_keys.");

@@ -9,8 +9,13 @@
 #include <QMenu>
 #include <QPoint>
 #include <QString>
-#include "MetaData.h"
+#include "CoreWallet.h"
 
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 class ArmoryConnection;
 class OfflineSigner;
 class QCheckBox;
@@ -24,7 +29,6 @@ class SignContainer;
 class TransactionData;
 class TransactionOutputsModel;
 class UsedInputsModel;
-class WalletsManager;
 class XbtAmountValidator;
 
 
@@ -34,7 +38,7 @@ Q_OBJECT
 
 public:
    CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , bool loadFeeSuggestions, const std::shared_ptr<spdlog::logger>& logger
       , QWidget* parent);
@@ -76,7 +80,7 @@ protected:
 
    virtual bool HaveSignedImportedTransaction() const { return false; }
 
-   std::vector<bs::wallet::TXSignRequest> ImportTransactions();
+   std::vector<bs::core::wallet::TXSignRequest> ImportTransactions();
    bool BroadcastImportedTx();
    bool CreateTransaction();
 
@@ -106,7 +110,7 @@ private:
 
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<WalletsManager>  walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>   signingContainer_;
    std::shared_ptr<OfflineSigner>   offlineSigner_;
    std::shared_ptr<SignContainer>   signer_;
@@ -127,7 +131,7 @@ protected:
    BinaryData     importedSignedTX_;
 
 private:
-   bs::wallet::TXSignRequest txReq_;
+   bs::core::wallet::TXSignRequest  txReq_;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_H__

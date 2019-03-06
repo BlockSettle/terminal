@@ -13,7 +13,7 @@ class ApplicationSettings;
 class CelerClient;
 class AutheIDClient;
 class SecureBinaryData;
-
+class ConnectionManager;
 
 class AuthSignManager : public QObject
 {
@@ -22,7 +22,7 @@ Q_OBJECT
 public:
    AuthSignManager(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<CelerClient> &);
+      , const std::shared_ptr<CelerClient> &, const std::shared_ptr<ConnectionManager> &);
    ~AuthSignManager() noexcept;
 
    AuthSignManager(const AuthSignManager&) = delete;

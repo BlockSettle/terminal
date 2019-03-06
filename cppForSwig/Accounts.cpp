@@ -1551,26 +1551,58 @@ void MetaDataAccount::eraseMetaDataByIndex(unsigned id)
 //// AuthPeerAssetConversion
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-map<string, const SecureBinaryData*> AuthPeerAssetConversion::getAssetMap(
+AuthPeerAssetMap AuthPeerAssetConversion::getAssetMap(
    const MetaDataAccount* account)
 {
    if (account == nullptr || account->type_ != MetaAccount_AuthPeers)
       throw AccountException("invalid metadata account ptr");
    ReentrantLock lock(account);
 
-   map<string, const SecureBinaryData*> result;
+   AuthPeerAssetMap result;
 
    for (auto& asset : account->assets_)
    {
-      auto assetPeer = dynamic_pointer_cast<PeerPublicData>(asset.second);
-      if (assetPeer == nullptr)
-         throw AccountException("invalid asset type");
+      switch (asset.second->type())
+      {
+      case MetaType_AuthorizedPeer:
+      {
+         auto assetPeer = dynamic_pointer_cast<PeerPublicData>(asset.second);
+         if (assetPeer == nullptr)
+            continue;
 
-      auto& names = assetPeer->getNames();
-      auto& pubKey = assetPeer->getPublicKey();
+         auto& names = assetPeer->getNames();
+         auto& pubKey = assetPeer->getPublicKey();
 
-      for (auto& name : names)
-         result.emplace(make_pair(name, &pubKey));
+         for (auto& name : names)
+            result.nameKeyPair_.emplace(make_pair(name, &pubKey));
+
+         break;
+      }
+
+      case MetaType_PeerRootKey:
+      {
+         auto assetRoot = dynamic_pointer_cast<PeerRootKey>(asset.second);
+         if (assetRoot == nullptr)
+            continue;
+
+         auto descPair = make_pair(assetRoot->getDescription(), asset.first);
+         result.peerRootKeys_.emplace(make_pair(assetRoot->getKey(), descPair));
+         
+         break;
+      }
+
+      case MetaType_PeerRootSig:
+      {
+         auto assetSig = dynamic_pointer_cast<PeerRootSignature>(asset.second);
+         if (assetSig == nullptr)
+            continue;
+
+         result.rootSignature_ = make_pair(assetSig->getKey(), assetSig->getSig());
+      }
+
+      default:
+         continue;
+      }
    }
 
    return result;
@@ -1625,6 +1657,47 @@ int AuthPeerAssetConversion::addAsset(
    metaObject->setPublicKey(pubkey);
    for (auto& name : names)
       metaObject->addName(name);
+
+   metaObject->flagForCommit();
+   account->assets_.emplace(make_pair(index, metaObject));
+   account->updateOnDisk();
+
+   return index;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AuthPeerAssetConversion::addRootSignature(MetaDataAccount* account,
+   const SecureBinaryData& key, const SecureBinaryData& sig)
+{
+   ReentrantLock lock(account);
+
+   if (account == nullptr || account->type_ != MetaAccount_AuthPeers)
+      throw AccountException("invalid metadata account ptr");
+
+   auto& accountID = account->ID_;
+   unsigned index = account->assets_.size();
+
+   auto metaObject = make_shared<PeerRootSignature>(accountID, index);
+   metaObject->set(key, sig);
+   
+   metaObject->flagForCommit();
+   account->assets_.emplace(make_pair(index, metaObject));
+   account->updateOnDisk();
+}
+////////////////////////////////////////////////////////////////////////////////
+unsigned AuthPeerAssetConversion::addRootPeer(MetaDataAccount* account,
+   const SecureBinaryData& key, const std::string& desc)
+{
+   ReentrantLock lock(account);
+
+   if (account == nullptr || account->type_ != MetaAccount_AuthPeers)
+      throw AccountException("invalid metadata account ptr");
+
+   auto& accountID = account->ID_;
+   unsigned index = account->assets_.size();
+
+   auto metaObject = make_shared<PeerRootKey>(accountID, index);
+   metaObject->set(desc, key);
 
    metaObject->flagForCommit();
    account->assets_.emplace(make_pair(index, metaObject));

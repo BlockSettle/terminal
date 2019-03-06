@@ -531,6 +531,20 @@ shared_ptr<MetaData> MetaData::deserialize(
       break;
    }
 
+   case METADATA_PEERROOT_PREFIX:
+   {
+      resultPtr = make_shared<PeerRootKey>(accountID, index);
+      resultPtr->deserializeDBValue(data);
+      break;
+   }
+
+   case METADATA_ROOTSIG_PREFIX:
+   {
+      resultPtr = make_shared<PeerRootSignature>(accountID, index);
+      resultPtr->deserializeDBValue(data);
+      break;
+   }
+
    default:
       throw AssetException("unexpected metadata prefix");
    }
@@ -540,7 +554,7 @@ shared_ptr<MetaData> MetaData::deserialize(
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-//// AuthorizedPeer
+//// PeerPublicData
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 BinaryData PeerPublicData::getDbKey() const
@@ -642,4 +656,173 @@ void PeerPublicData::clear()
 {
    names_.clear();
    flagForCommit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// PeerRootKey
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+BinaryData PeerRootKey::getDbKey() const
+{
+   if (accountID_.getSize() != 4)
+      throw AssetException("invalid accountID");
+
+   BinaryWriter bw;
+   bw.put_uint8_t(METADATA_PEERROOT_PREFIX);
+   bw.put_BinaryData(accountID_);
+   bw.put_uint32_t(index_, BE);
+
+   return bw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData PeerRootKey::serialize() const
+{
+   //returning an empty serialized string will cause the key to be deleted
+   if (publicKey_.getSize() == 0)
+      return BinaryData();
+
+   BinaryWriter bw;
+   bw.put_var_int(publicKey_.getSize());
+   bw.put_BinaryData(publicKey_);
+
+   bw.put_var_int(description_.size());
+   if (description_.size() > 0)
+   {
+      BinaryDataRef descBdr;
+      descBdr.setRef(description_);
+      bw.put_BinaryDataRef(descBdr);
+   }
+
+   BinaryWriter bwWithSize;
+   bwWithSize.put_var_int(bw.getSize());
+   bwWithSize.put_BinaryDataRef(bw.getDataRef());
+
+   return bwWithSize.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerRootKey::deserializeDBValue(const BinaryDataRef& data)
+{
+   BinaryRefReader brrData(data);
+   auto len = brrData.get_var_int();
+   if (len != brrData.getSizeRemaining())
+      throw AssetException("size mismatch in metadata entry");
+
+   auto keyLen = brrData.get_var_int();
+   publicKey_ = brrData.get_BinaryData(keyLen);
+
+   //check pubket is valid
+   if (!CryptoECDSA().VerifyPublicKeyValid(publicKey_))
+      throw AssetException("invalid pubkey in peer metadata");
+
+   auto descLen = brrData.get_var_int();
+   if (descLen == 0)
+      return;
+
+   auto descBdr = brrData.get_BinaryDataRef(descLen);
+   description_ = string(descBdr.toCharPtr(), descBdr.getSize());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerRootKey::clear()
+{
+   publicKey_.clear();
+   description_.clear();
+   flagForCommit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerRootKey::set(const string& desc, const SecureBinaryData& key)
+{
+   if (publicKey_.getSize() != 0)
+      throw AssetException("peer root key already set");
+
+   if (!CryptoECDSA().VerifyPublicKeyValid(key))
+      throw AssetException("invalid pubkey for peer root");
+
+   publicKey_ = key;
+   description_ = desc;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// PeerRootSignature
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+BinaryData PeerRootSignature::getDbKey() const
+{
+   if (accountID_.getSize() != 4)
+      throw AssetException("invalid accountID");
+
+   BinaryWriter bw;
+   bw.put_uint8_t(METADATA_ROOTSIG_PREFIX);
+   bw.put_BinaryData(accountID_);
+   bw.put_uint32_t(index_, BE);
+
+   return bw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData PeerRootSignature::serialize() const
+{
+   //returning an empty serialized string will cause the key to be deleted
+   if (publicKey_.getSize() == 0)
+      return BinaryData();
+
+   BinaryWriter bw;
+   bw.put_var_int(publicKey_.getSize());
+   bw.put_BinaryData(publicKey_);
+
+   bw.put_var_int(signature_.getSize());
+   bw.put_BinaryData(signature_);
+
+   BinaryWriter bwWithSize;
+   bwWithSize.put_var_int(bw.getSize());
+   bwWithSize.put_BinaryDataRef(bw.getDataRef());
+
+   return bwWithSize.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerRootSignature::deserializeDBValue(const BinaryDataRef& data)
+{
+   BinaryRefReader brrData(data);
+   auto len = brrData.get_var_int();
+   if (len != brrData.getSizeRemaining())
+      throw AssetException("size mismatch in metadata entry");
+
+   auto keyLen = brrData.get_var_int();
+   publicKey_ = brrData.get_BinaryData(keyLen);
+
+   //check pubket is valid
+   if (!CryptoECDSA().VerifyPublicKeyValid(publicKey_))
+      throw AssetException("invalid pubkey in peer metadata");
+
+   len = brrData.get_var_int();
+   signature_ = brrData.get_BinaryDataRef(len);
+
+   //cannot check sig is valid until full peer account is loaded
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerRootSignature::clear()
+{
+   publicKey_.clear();
+   signature_.clear();
+   flagForCommit();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void PeerRootSignature::set(
+   const SecureBinaryData& key, const SecureBinaryData& sig)
+{
+   if (publicKey_.getSize() != 0)
+      throw AssetException("peer root key already set");
+
+   //check pubkey and sig prior to calling this
+
+   publicKey_ = key;
+   signature_ = sig;
 }

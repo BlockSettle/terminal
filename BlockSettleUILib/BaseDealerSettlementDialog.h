@@ -11,21 +11,23 @@
 #include <chrono>
 #include <memory>
 
-#include "MetaData.h"
 #include "QWalletInfo.h"
 
 namespace spdlog {
    class logger;
 }
 namespace bs {
-   namespace hd {
-      class Wallet;
+   namespace sync {
+      namespace hd {
+         class Wallet;
+      }
    }
    class SettlementContainer;
 }
 class SignContainer;
 class WalletKeysSubmitWidget;
 class ApplicationSettings;
+class ConnectionManager;
 
 class BaseDealerSettlementDialog : public QDialog
 {
@@ -36,6 +38,7 @@ public:
       , const std::shared_ptr<bs::SettlementContainer> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &
       , QWidget* parent = nullptr);
    ~BaseDealerSettlementDialog() noexcept override = default;
 
@@ -55,7 +58,7 @@ protected slots:
 protected:
    void reject() override;
 
-   void setWallet(const std::shared_ptr<bs::hd::Wallet> &);
+   void setWallet(const std::shared_ptr<bs::sync::hd::Wallet> &);
 
    virtual void readyToAccept();
    void startAccepting();
@@ -83,7 +86,7 @@ protected:
 private:
    std::shared_ptr<bs::SettlementContainer>  settlContainer_;
    std::shared_ptr<SignContainer>            signContainer_;
-   std::shared_ptr<bs::hd::Wallet>           rootWallet_;
+   std::shared_ptr<bs::sync::hd::Wallet>     rootWallet_;
    QProgressBar   *progressBar_ = nullptr;
    QLabel         *hintLabel_ = nullptr;
    QLabel         *errorLabel_ = nullptr;
@@ -93,6 +96,7 @@ private:
    bool           accepting_ = false;
    QString        authPrompt_;
    const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    bs::hd::WalletInfo walletInfo_;
 };
 

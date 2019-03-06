@@ -11,7 +11,9 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   class Wallet;
+   namespace sync {
+      class Wallet;
+   }
 }
 class ArmoryConnection;
 class SignContainer;
@@ -50,7 +52,7 @@ public:
 
    QString GetSigningWalletName() const;
 
-   std::shared_ptr<bs::Wallet> GetSigningWallet() const { return wallet_; }
+   std::shared_ptr<bs::sync::Wallet> GetSigningWallet() const { return wallet_; }
 
    bool isDelivery() const { return delivery_; }
 
@@ -71,7 +73,7 @@ private:
    const bool                 autoSign_;
    const bool                 delivery_;
    std::shared_ptr<TransactionData>    transactionData_;
-   std::shared_ptr<bs::Wallet>         wallet_;
+   std::shared_ptr<bs::sync::Wallet>   wallet_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<bs::UtxoReservation::Adapter>   utxoAdapter_;
    const BinaryData  txReqData_;

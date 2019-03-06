@@ -10,22 +10,61 @@ using namespace bs;
 
 struct Version
 {
-   int major;
-   int minor;
-   int patch;
+   int major = -1;
+   int minor = -1;
+   int patch = -1;
+
+   bool IsValid() const {
+      return major != -1
+         && minor  != -1
+         && patch  != -1;
+   }
 };
 
 bool operator < (const Version& l, const Version& r)
 {
-   int lVersion = l.major * 100 + l.minor * 10 + l.patch;
-   int rVersion = r.major * 100 + r.minor * 10 + r.patch;
+   if (l.major != r.major) {
+      return l.major < r.major;
+   }
 
-   return lVersion < rVersion;
+   if (l.minor != r.minor) {
+      return l.minor < r.minor;
+   }
+
+   return l.patch < r.patch;
 }
 
 QString VersionToString(const Version& version)
 {
    return QString(QLatin1String("%1.%2.%3")).arg(version.major).arg(version.minor).arg(version.patch);
+}
+
+Version VersionFromString(const QString& versionString)
+{
+   auto stringList = versionString.split(QString::fromStdString("."), QString::SkipEmptyParts);
+
+   Version version;
+
+   if (stringList.size() == 3) {
+      bool converted = false;
+
+      version.major = stringList[0].toUInt(&converted);
+      if (!converted) {
+         return Version{};
+      }
+
+      version.minor = stringList[1].toUInt(&converted);
+      if (!converted) {
+         return Version{};
+      }
+
+      version.patch = stringList[2].toUInt(&converted);
+      if (!converted) {
+         return Version{};
+      }
+   }
+
+   return version;
 }
 
 VersionChecker::VersionChecker(const QString &baseUrl)
@@ -36,7 +75,7 @@ VersionChecker::VersionChecker(const QString &baseUrl)
 
 bool VersionChecker::loadLatestVersion()
 {
-   if (!sendRequest(baseUrl_ + QLatin1String("/latest"))) {
+   if (!sendRequest(baseUrl_)) {
       return false;
    }
 
@@ -45,10 +84,7 @@ bool VersionChecker::loadLatestVersion()
 
 QString VersionChecker::getLatestVersion() const
 {
-   if (changeLog_.empty()) {
-      return QString::fromLatin1(TERMINAL_VERSION_STRING);
-   }
-   return changeLog_[0].versionString;
+   return latestVer_;
 }
 
 bool VersionChecker::processReply(const QByteArray &data)
@@ -65,83 +101,69 @@ bool VersionChecker::processReply(const QByteArray &data)
    const auto reply = doc.object();
 
    QString version;
-   const auto versionIt = reply.find(QLatin1String("version"));
+   const auto versionIt = reply.find(QLatin1String("latest_version"));
    if (versionIt == reply.end()) {
       return false;
    }
-   const auto versionObject = versionIt.value().toObject();
-
-   int major = 0;
-   int minor = 0;
-   int patch = 0;
-
-   const auto majorIt = versionObject.find(QLatin1String("major"));
-   if (majorIt == versionObject.end()) {
-      return false;
-   }
-   major = majorIt.value().toInt();
-
-   const auto minorIt = versionObject.find(QLatin1String("minor"));
-   if (minorIt == versionObject.end()) {
-      return false;
-   }
-   minor = minorIt.value().toInt();
-
-   const auto patchIt = versionObject.find(QLatin1String("patch"));
-   if (patchIt == versionObject.end()) {
-      return false;
-   }
-   patch = patchIt.value().toInt();
+   latestVer_ = versionIt.value().toString();
 
    Version currentVersion{TERMINAL_VERSION_MAJOR, TERMINAL_VERSION_MINOR, TERMINAL_VERSION_PATCH};
-   Version receivedVersion{major, minor, patch};
+   Version receivedVersion = VersionFromString(latestVer_);
 
    if (currentVersion < receivedVersion) {
-      ChangeLog loadedVersionLog;
-      loadedVersionLog.versionString = VersionToString(receivedVersion);
+      const auto changesIt = reply.find(QLatin1String("changes"));
+      if (changesIt != reply.end()) {
+         auto changesList = changesIt.value().toArray();
 
-      const auto changelogIt = reply.find(QLatin1String("changelog"));
-      if (changelogIt == reply.end()) {
-         return false;
-      }
-      auto changelogObject = changelogIt.value().toObject();
+         for (int i=0; i<changesList.size(); ++i) {
+            auto changeLog  = LoadChangelog(changesList[i].toObject());
+            const auto loadedVersion = VersionFromString(changeLog.versionString);
+            if (!loadedVersion.IsValid()) {
+               break;
+            }
 
-      const auto newFeaturesIt = changelogObject.find(QLatin1String("New features"));
-      if (newFeaturesIt != changelogObject.end()) {
-         for (const auto& feature : newFeaturesIt.value().toArray()) {
-            loadedVersionLog.newFeatures.emplace_back(feature.toString());
+            if (currentVersion < loadedVersion) {
+               changeLog_.emplace_back(std::move(changeLog));
+            }
          }
       }
 
-      const auto bugFixes = changelogObject.find(QLatin1String("Bug fixes"));
-      if (bugFixes != changelogObject.end()) {
-         for (const auto& bugFix : bugFixes.value().toArray()) {
-            loadedVersionLog.bugFixes.emplace_back(bugFix.toString());
-         }
-      }
-
-      changeLog_.emplace_back(std::move(loadedVersionLog));
-
-      // load prev version
-      const auto prevVerIt = reply.find(QLatin1String("prev_version"));
-      if (prevVerIt == reply.end()) {
-         emit latestVersionLoaded(false);
-         return true;
-      }
-
-      const QString prevVersion = prevVerIt.value().toString();
-      if (prevVersion == VersionToString(currentVersion)) {
-         emit latestVersionLoaded(false);
-         return true;
-      }
-
-      return sendRequest(baseUrl_ + QLatin1String("/") + prevVersion);
+      emit latestVersionLoaded(false);
    } else {
-      emit latestVersionLoaded(changeLog_.empty());
+      emit latestVersionLoaded(true);
    }
 
    return true;
 };
+
+ChangeLog VersionChecker::LoadChangelog(const QJsonObject& jsonObject)
+{
+   ChangeLog changeLog;
+   auto versionIt = jsonObject.find(QLatin1String("version_string"));
+   if (versionIt == jsonObject.end()) {
+      return ChangeLog{};
+   }
+
+   changeLog.versionString = versionIt.value().toString();
+
+   auto improvementsIt = jsonObject.find(QLatin1String("improvements"));
+   if (improvementsIt != jsonObject.end()) {
+      auto improvements = improvementsIt.value().toArray();
+      for (int i = 0; i < improvements.size(); ++i) {
+         changeLog.newFeatures.emplace_back(improvements[i].toString());
+      }
+   }
+
+   auto fixesIt = jsonObject.find(QLatin1String("bug_fixes"));
+   if (fixesIt != jsonObject.end()) {
+      auto fixes = fixesIt.value().toArray();
+      for (int i = 0; i < fixes.size(); ++i) {
+         changeLog.bugFixes.emplace_back(fixes[i].toString());
+      }
+   }
+
+   return changeLog;
+}
 
 bool VersionChecker::sendRequest(const QUrl &url)
 {
@@ -157,10 +179,14 @@ void VersionChecker::finishedReply(QNetworkReply *reply)
    if (reply->error()) {
       reply->deleteLater();
       processReply({});
+      emit failedToLoadVersion();
       return;
    }
    const auto data = reply->readAll();
-   processReply(data);
+   if (!processReply(data)) {
+      emit failedToLoadVersion();
+   }
+
    reply->deleteLater();
 }
 

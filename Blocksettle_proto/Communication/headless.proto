@@ -12,7 +12,7 @@ enum RequestType
    SignPayoutTXRequestType     = 4;
    PasswordRequestType         = 5;
    SetUserIdRequestType        = 6;
-   SyncAddressRequestType      = 7;
+   CreateSettlWalletType       = 7;
    CreateHDWalletRequestType   = 8;
    DeleteHDWalletRequestType   = 9;
    GetRootKeyRequestType       = 10;
@@ -22,6 +22,11 @@ enum RequestType
    SignTXMultiRequestType      = 14;
    ChangePasswordRequestType   = 15;
    CancelSignTxRequestType     = 16;
+   SyncWalletInfoType          = 17;
+   SyncHDWalletType            = 18;
+   SyncWalletType              = 19;
+   SyncCommentType             = 20;
+   SyncAddressesType           = 21;
 }
 
 message RequestPacket
@@ -110,8 +115,6 @@ message SignPayoutTXRequest
    bytes    recipient = 2;
    string   authAddress = 3;
    bytes    settlementId = 4;
-   bytes    buyAuthKey = 5;
-   bytes    sellAuthKey = 6;
    bool     applyAutoSignRules = 7;
    string   password = 8;
 }
@@ -136,32 +139,6 @@ message PasswordReply
 message SetUserIdRequest
 {
    bytes userId = 1;
-}
-
-
-enum AddressType
-{
-   LegacyAddressType = 0;
-   NestedSWAddressType  = 1;
-   NativeSWAddressType  = 2;
-}
-
-message AddressIndex
-{
-   string   walletId = 1;
-   string   index = 2;
-   AddressType addrType = 3;
-}
-
-message SyncAddressRequest
-{
-   repeated AddressIndex address = 1;
-}
-
-message SyncAddressResponse
-{
-   repeated string    missingWalletId = 1;
-   repeated AddressIndex failedAddress = 2;
 }
 
 
@@ -202,16 +179,16 @@ message CreateHDWalletRequest
 
 message HDLeafWO
 {
-   bytes pubKey = 1;
-   bytes chainCode = 2;
+   string   name = 1;
+   string   desc = 2;
    string   walletId = 3;
    string   path = 4;
+   bool     extOnly = 5;
 }
 
 message HDGroupWO
 {
    string   path = 1;
-   string   name = 2;
 }
 
 message HDWalletWO
@@ -311,4 +288,132 @@ message ChangePasswordResponse
 {
    string   rootWalletId = 1;
    bool     success = 2;
+}
+
+
+enum WalletFormat
+{
+   WalletFormatUnknown    = 0;
+   WalletFormatHD         = 1;
+   WalletFormatPlain      = 2;
+   WalletFormatSettlement = 3;
+}
+
+message SyncWalletInfoResponse
+{
+   message WalletInfo {
+      WalletFormat format = 1;
+      string id = 2;
+      string name = 3;
+      string description = 4;
+      NetworkType netType = 5;
+   }
+   repeated WalletInfo wallets = 1;
+}
+
+
+message SyncWalletRequest
+{
+   string walletId = 1;
+}
+
+message SyncHDWalletResponse
+{
+   message Leaf {
+      string id = 1;
+      uint32 index = 2;
+   }
+   message Group {
+      uint32 type = 1;
+      repeated Leaf leaves = 2;
+   }
+
+   string walletId = 1;
+   repeated Group groups = 2;
+}
+
+enum EncryptionType
+{
+   EncryptionTypeUnencrypted = 0;
+   EncryptionTypePassword    = 1;
+   EncryptionTypeAutheID     = 2;
+}
+
+message SyncWalletResponse
+{
+   message WalletKeyRank {
+      uint32 m = 1;
+      uint32 n = 2;
+   }
+   message Address {
+      string index = 1;
+      string address = 2;
+      string comment = 3;
+   }
+   message TxComment {
+      bytes  txHash = 1;
+      string comment = 2;
+   }
+
+   string walletId = 1;
+   repeated EncryptionType encryptionTypes = 2;
+   repeated bytes encryptionKeys = 3;
+   WalletKeyRank keyRank = 4;
+   NetworkType netType = 5;
+
+   repeated Address   addresses = 6;
+   repeated Address   addrPool = 7;
+   repeated TxComment txComments = 8;
+}
+
+message SyncCommentRequest
+{
+   string walletId = 1;
+   oneof key {
+      string address = 2;
+      bytes  txHash = 3;
+   }
+   string comment = 4;
+}
+
+
+enum AddressType
+{
+   AddressType_Default = 0;
+   AddressType_P2PKH = 1;
+   AddressType_P2PK = 2;
+   AddressType_P2WPKH = 3;
+   AddressType_Multisig = 4;
+   AddressType_P2SH = 5;
+   AddressType_P2WSH = 6;
+}
+
+message SyncAddressesRequest
+{
+   message AddressIndex {
+      string index = 1;
+      AddressType addrType = 2;
+   }
+
+   string walletId = 1;
+   repeated AddressIndex indices = 2;
+}
+
+message SyncAddressesResponse
+{
+   message Address {
+      string address = 1;
+      string index = 2;
+   }
+
+   string walletId = 1;
+   repeated Address addresses = 2;
+}
+
+
+message SettlWalletResponse
+{
+   string walletId = 1;
+   string name = 2;
+   string description = 3;
 }

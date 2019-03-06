@@ -605,16 +605,33 @@ public:
    void eraseMetaDataByIndex(unsigned);
 };
 
+struct AuthPeerAssetMap
+{
+   //<name, authorized pubkey>
+   std::map<std::string, const SecureBinaryData*> nameKeyPair_;
+   
+   //<pubkey, sig>
+   std::pair<SecureBinaryData, SecureBinaryData> rootSignature_;
+
+   //<pubkey, description>
+   std::map<SecureBinaryData, std::pair<std::string, unsigned>> peerRootKeys_;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 struct AuthPeerAssetConversion
 {
-   static std::map<std::string, const SecureBinaryData*> getAssetMap(
+   static AuthPeerAssetMap getAssetMap(
       const MetaDataAccount*);
    static std::map<SecureBinaryData, std::set<unsigned>> getKeyIndexMap(
       const MetaDataAccount*);
 
    static int addAsset(MetaDataAccount*, const SecureBinaryData&,
       const std::vector<std::string>&);
+
+   static void addRootSignature(MetaDataAccount*, 
+      const SecureBinaryData&, const SecureBinaryData&);
+   static unsigned addRootPeer(MetaDataAccount*,
+      const SecureBinaryData&, const std::string&);
 };
 
 #endif
