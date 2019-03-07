@@ -1,5 +1,5 @@
 #include "ChatClient.h"
-#include "ChatProtocol.h"
+#include "ChatProtocol/ChatProtocol.h"
 
 #include <spdlog/spdlog.h>
 #include "botan/base64.h"

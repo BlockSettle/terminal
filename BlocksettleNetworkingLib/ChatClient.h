@@ -5,7 +5,7 @@
 #include <QObject>
 #include <QTimer>
 
-#include "ChatProtocol.h"
+#include "ChatProtocol/ChatProtocol.h"
 #include "ChatDB.h"
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"

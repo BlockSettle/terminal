@@ -8,7 +8,7 @@
 #include <QStringList>
 #include <QtSql/QSqlDatabase>
 #include "BinaryData.h"
-#include "ChatProtocol.h"
+#include "ChatProtocol/ChatProtocol.h"
 
 namespace spdlog {
    class logger;
