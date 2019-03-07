@@ -147,7 +147,8 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
    table = cursor.insertTable(1, 4, tableFormat);
 
    QString time = data(rowIdx, Column::Time);
-   table->cellAt(0, 0).firstCursorPosition().insertText(time);
+   time = toHtmlText(time);
+   table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
    QString user = data(rowIdx, Column::User);
    table->cellAt(0, 1).firstCursorPosition().insertText(user);
@@ -185,7 +186,8 @@ void ChatMessagesTextEdit::loadMore() {
       table = cursor.insertTable(1, 4, tableFormat);
 
       QString time = data(i, Column::Time);
-      table->cellAt(0, 0).firstCursorPosition().insertText(time);
+      time = toHtmlText(time);
+      table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
       QString user = data(i, Column::User);
       table->cellAt(0, 1).firstCursorPosition().insertText(user);
@@ -270,7 +272,8 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
          table = cursor.insertTable(1, 4, tableFormat);
          
          QString time = data(distance, Column::Time);
-         table->cellAt(0, 0).firstCursorPosition().insertText(time);
+         time = toHtmlText(time);
+         table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
          QString user = data(distance, Column::User);
          table->cellAt(0, 1).firstCursorPosition().insertText(user);
@@ -373,6 +376,9 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text) {
 
    // replace linefeed with <br>
    changedText.replace(QLatin1Literal("\n"), QLatin1Literal("<br>"));
+
+   // set text color as white
+   changedText = QLatin1Literal("<font color=\"white\">") + changedText + QLatin1Literal("</font>");
 
    return changedText;
 }
