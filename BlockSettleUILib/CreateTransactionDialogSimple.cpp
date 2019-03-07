@@ -19,9 +19,9 @@ CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_p
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
- : CreateTransactionDialog(armory, walletManager, container, true, logger,
+   : CreateTransactionDialog(armory, walletManager, container, true, logger,
                            parent)
- , ui_(new Ui::CreateTransactionDialogSimple)
+   , ui_(new Ui::CreateTransactionDialogSimple)
 {
    ui_->setupUi(this);
    initUI();

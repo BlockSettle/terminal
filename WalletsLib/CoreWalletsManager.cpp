@@ -35,7 +35,7 @@ void WalletsManager::reset()
 }
 
 void WalletsManager::loadWallets(NetworkType netType, const std::string &walletsPath
-   , const CbProgress &cbProgress)
+   , bool wo, const CbProgress &cbProgress)
 {
    if (walletsPath.empty()) {
       return;
@@ -56,6 +56,10 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
    for (const auto& file : fileList) {
       QFileInfo fileInfo(walletsDir.absoluteFilePath(file));
       if (file.startsWith(QString::fromStdString(SettlementWallet::fileNamePrefix()))) {
+         if (wo) {
+            logger_->info("[{}] ignoring settlement wallet in watching-only mode", __func__);
+            continue;
+         }
          if (settlementWallet_) {
             logger_->warn("Can't load more than 1 settlement wallet from {}", file.toStdString());
             continue;
@@ -78,14 +82,19 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
       }
       try {
          logger_->debug("Loading BIP44 wallet from {}", file.toStdString());
-         const auto &wallet = std::make_shared<hd::Wallet>(fileInfo.absoluteFilePath().toStdString()
+         const auto wallet = std::make_shared<hd::Wallet>(fileInfo.absoluteFilePath().toStdString()
                                                                , logger_);
          current++;
          if (cbProgress) {
             cbProgress(current, totalCount);
          }
          if ((netType != NetworkType::Invalid) && (netType != wallet->networkType())) {
-            logger_->warn("Network type mismatch: loading {}, wallet has {}", (int)netType, (int)wallet->networkType());
+            logger_->warn("[{}] Network type mismatch: loading {}, wallet has {}", __func__, (int)netType, (int)wallet->networkType());
+         }
+         if (wo != wallet->isWatchingOnly()) {
+            logger_->warn("[{}] watching-only state mismatch, required: {}, wallet: {} - skipping", __func__
+               , wo, wallet->isWatchingOnly());
+            continue;
          }
 
          saveWallet(wallet);

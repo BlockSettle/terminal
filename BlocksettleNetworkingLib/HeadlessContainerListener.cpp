@@ -14,7 +14,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::string &walletsPath, NetworkType netType
-   , const bool &hasUI, const bool &backupEnabled)
+   , bool wo, const bool &hasUI, const bool &backupEnabled)
    : QObject(nullptr), ServerConnectionListener()
    , connection_(conn)
    , logger_(logger)
@@ -22,6 +22,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , walletsPath_(walletsPath)
    , backupPath_(walletsPath + "/../backup")
    , netType_(netType)
+   , watchingOnly_(wo)
    , hasUI_(hasUI)
    , backupEnabled_(backupEnabled)
 {
@@ -107,7 +108,7 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
 {
    headless::RequestPacket packet;
    if (!packet.ParseFromString(data)) {
-      logger_->error("[HeadlessContainerListener] failed to parse request packet");
+      logger_->error("[{}] failed to parse request packet", __func__);
       return;
    }
 
@@ -198,8 +199,34 @@ void HeadlessContainerListener::AuthResponse(const std::string &clientId, headle
    emit clientAuthenticated(clientId, connection_->GetClientInfo(clientId));
 }
 
+bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::headless::RequestType reqType) const
+{
+   if (watchingOnly_) {
+      switch (reqType) {
+      case headless::CancelSignTxRequestType:
+      case headless::SignTXRequestType:
+      case headless::SignPartialTXRequestType:
+      case headless::SignPayoutTXRequestType:
+      case headless::SignTXMultiRequestType:
+      case headless::PasswordRequestType:
+      case headless::CreateHDWalletRequestType:
+      case headless::GetRootKeyRequestType:
+      case headless::SetLimitsRequestType:
+      case headless::ChangePasswordRequestType:
+         return false;
+      default:    break;
+      }
+   }
+   return true;
+}
+
 bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, headless::RequestPacket packet)
 {
+   if (!isRequestAllowed(packet.type())) {
+      logger_->info("[{}] request {} is not applicable at this state", __func__, (int)packet.type());
+      return false;
+   }
+
    switch (packet.type()) {
    case headless::HeartbeatType:
       packet.set_data({});

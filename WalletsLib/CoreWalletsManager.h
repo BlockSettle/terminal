@@ -37,7 +37,7 @@ namespace bs {
 
          void reset();
 
-         void loadWallets(NetworkType, const std::string &walletsPath, const CbProgress &cb = nullptr);
+         void loadWallets(NetworkType, const std::string &walletsPath, bool wo = false, const CbProgress &cb = nullptr);
          void backupWallet(const HDWalletPtr &, const std::string &targetDir) const;
 
          bool empty() const { return wallets_.empty(); }
