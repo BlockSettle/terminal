@@ -13,6 +13,7 @@ class SignerSettings : public QObject
    Q_OBJECT
    Q_PROPERTY(bool offline READ offline WRITE setOffline NOTIFY offlineChanged)
    Q_PROPERTY(bool testNet READ testNet WRITE setTestNet NOTIFY testNetChanged)
+   Q_PROPERTY(bool watchingOnly READ watchingOnly WRITE setWatchingOnly NOTIFY woChanged)
    Q_PROPERTY(QString walletsDir READ getWalletsDir WRITE setWalletsDir NOTIFY walletsDirChanged)
    Q_PROPERTY(QString exportWalletsDir READ getExportWalletsDir WRITE setExportWalletsDir NOTIFY exportWalletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
@@ -41,6 +42,7 @@ public:
    enum Setting {
       OfflineMode,
       TestNet,
+      WatchingOnly,
       WalletsDir,
       ExportWalletsDir,
       AutoSignWallet,
@@ -64,6 +66,7 @@ public:
    QString logFileName() const { return get(LogFileName).toString(); }
    bool testNet() const { return get(TestNet).toBool(); }
    NetworkType netType() const { return (testNet() ? NetworkType::TestNet : NetworkType::MainNet); }
+   bool watchingOnly() const { return get(WatchingOnly).toBool(); }
    QString getWalletsDir() const;
    QString getExportWalletsDir() const;
    QString autoSignWallet() const { return get(AutoSignWallet).toString(); }
@@ -85,6 +88,7 @@ public:
 
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
+   void setWatchingOnly(const bool val) { set(WatchingOnly, val); }
    void setWalletsDir(const QString &);
    void setExportWalletsDir(const QString &);
    void setAutoSignWallet(const QString &val) { set(AutoSignWallet, val); }
@@ -107,6 +111,7 @@ public:
 signals:
    void offlineChanged();
    void testNetChanged();
+   void woChanged();
    void walletsDirChanged();
    void exportWalletsDirChanged();
    void listenSocketChanged();

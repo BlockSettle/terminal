@@ -41,6 +41,9 @@ static const QString headlessHelp = QObject::tr("Run without UI");
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
+static const QString woName = QString::fromStdString("watchonly");
+static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
+
 
 SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
    : QObject(nullptr)
@@ -53,6 +56,7 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
 
    settingDefs_ = {
       { OfflineMode,       SettingDef(QStringLiteral("Offline"), false)},
+      { WatchingOnly,      SettingDef(QStringLiteral("WatchingOnly"), false)},
       { TestNet,           SettingDef(QStringLiteral("TestNet"), false) },
       { WalletsDir,        SettingDef(QStringLiteral("WalletsDir")) },
       { AutoSignWallet,    SettingDef(QStringLiteral("AutoSignWallet")) },
@@ -188,6 +192,9 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
       emit testNetChanged();
       emit walletsDirChanged();
       break;
+   case WatchingOnly:
+      emit woChanged();
+      break;
    case WalletsDir:
       emit walletsDirChanged();
       break;
@@ -242,6 +249,7 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    parser.addOption({ signName, signHelp, QObject::tr("filename") });
    parser.addOption({ headlessName, headlessHelp });
+   parser.addOption({ woName, woHelp });
 
    parser.process(args);
 
@@ -280,6 +288,10 @@ void SignerSettings::parseArguments(const QStringList &args)
    }
    else if (parser.isSet(testnetName)) {
       set(TestNet, true, false);
+   }
+
+   if (parser.isSet(woName)) {
+      set(WatchingOnly, true, false);
    }
 
    if (parser.isSet(autoSignLimitName)) {
