@@ -448,7 +448,7 @@ IF(WIN32)
          )
       ELSE()
          LIST(APPEND OS_SPECIFIC_LIBS
-            msvcrtd
+            msvcrtd.lib
             msvcprtd.lib
          )
       ENDIF()
@@ -497,7 +497,7 @@ IF(WIN32)
          )
       ELSE()
          LIST(APPEND OS_SPECIFIC_LIBS
-            msvcrt
+            msvcrt.lib
             msvcprt.lib
          )
       ENDIF()
