@@ -32,8 +32,8 @@ signals:
 protected:
    enum class Column {
       Time,
-      User,
       Status,
+      User,
       Message,
       last
    };

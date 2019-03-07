@@ -16,8 +16,8 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
 
    QVector <QTextLength> col_widths;
    col_widths << QTextLength (QTextLength::FixedLength, 110);
-   col_widths << QTextLength (QTextLength::FixedLength, 80);
    col_widths << QTextLength (QTextLength::FixedLength, 40);
+   col_widths << QTextLength (QTextLength::FixedLength, 80);
    col_widths << QTextLength (QTextLength::VariableLength, 50);
    tableFormat.setColumnWidthConstraints (col_widths);
 
@@ -144,11 +144,11 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
    time = toHtmlText(time);
    table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
-   QString user = data(rowIdx, Column::User);
-   table->cellAt(0, 1).firstCursorPosition().insertText(user);
-
    QImage image = statusImage(rowIdx);
-   table->cellAt(0, 2).firstCursorPosition().insertImage(image);
+   table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+
+   QString user = data(rowIdx, Column::User);
+   table->cellAt(0, 2).firstCursorPosition().insertText(user);
 
    QString message = data(rowIdx, Column::Message);
    message = toHtmlText(message);
@@ -183,11 +183,11 @@ void ChatMessagesTextEdit::loadMore() {
       time = toHtmlText(time);
       table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
-      QString user = data(i, Column::User);
-      table->cellAt(0, 1).firstCursorPosition().insertText(user);
-
       QImage image = statusImage(i);
-      table->cellAt(0, 2).firstCursorPosition().insertImage(image);
+      table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+
+      QString user = data(i, Column::User);
+      table->cellAt(0, 2).firstCursorPosition().insertText(user);
 
       QString message = data(i, Column::Message);
       message = toHtmlText(message);
@@ -269,11 +269,11 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
          time = toHtmlText(time);
          table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
-         QString user = data(distance, Column::User);
-         table->cellAt(0, 1).firstCursorPosition().insertText(user);
-
          QImage image = statusImage(distance);
-         table->cellAt(0, 2).firstCursorPosition().insertImage(image);
+         table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+
+         QString user = data(distance, Column::User);
+         table->cellAt(0, 2).firstCursorPosition().insertText(user);
 
          QString message = data(distance, Column::Message);
          message = toHtmlText(message);
