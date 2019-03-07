@@ -119,25 +119,39 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
       return ;
    }
 
+   double timestamp = static_cast<double>(snapshot.timestamp());
+
    for (int i=0; i < snapshot.fx_products_size(); ++i) {
       auto assetType = bs::network::Asset::Type::SpotFX;
       const auto& productInfo = snapshot.fx_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      auto fields = GetMDFields(productInfo);
+      if (!fields.empty()) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      }
    }
 
    for (int i=0; i < snapshot.xbt_products_size(); ++i) {
       auto assetType = bs::network::Asset::Type::SpotXBT;
       const auto& productInfo = snapshot.xbt_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      auto fields = GetMDFields(productInfo);
+      if (!fields.empty()) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      }
    }
 
    for (int i=0; i < snapshot.cc_products_size(); ++i) {
       auto assetType = bs::network::Asset::Type::PrivateMarket;
       const auto& productInfo = snapshot.cc_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      auto fields = GetMDFields(productInfo);
+      if (!fields.empty()) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      }
    }
 }
 
@@ -149,21 +163,35 @@ void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
       return ;
    }
 
+   double timestamp = static_cast<double>(update.timestamp());
+
    for (int i=0; i < update.fx_products_size(); ++i) {
       auto assetType = bs::network::Asset::Type::SpotFX;
       const auto& productInfo = update.fx_products(i);
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      auto fields = GetMDFields(productInfo);
+      if (!fields.empty()) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      }
    }
 
    for (int i=0; i < update.xbt_products_size(); ++i) {
       auto assetType = bs::network::Asset::Type::SpotXBT;
       const auto& productInfo = update.xbt_products(i);
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      auto fields = GetMDFields(productInfo);
+      if (!fields.empty()) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      }
    }
 
    for (int i=0; i < update.cc_products_size(); ++i) {
       auto assetType = bs::network::Asset::Type::PrivateMarket;
       const auto& productInfo = update.cc_products(i);
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      auto fields = GetMDFields(productInfo);
+      if (!fields.empty()) {
+         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      }
    }
 }

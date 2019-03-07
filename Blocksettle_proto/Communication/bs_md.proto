@@ -17,6 +17,7 @@ message IncrementalUpdate
    repeated ProductPriceInfo fx_products  = 1;
    repeated ProductPriceInfo xbt_products = 2;
    repeated ProductPriceInfo cc_products  = 3;
+   int64                     timestamp    = 4;
 }
 
 // contain full info on all products
@@ -25,6 +26,7 @@ message FullSnapshot
    repeated ProductPriceInfo fx_products  = 1;
    repeated ProductPriceInfo xbt_products = 2;
    repeated ProductPriceInfo cc_products  = 3;
+   int64                     timestamp    = 4;
 }
 
 enum UpdateType
@@ -37,5 +39,4 @@ message UpdateHeader
 {
    UpdateType  type        = 1;
    bytes       data        = 2;
-   int64       timestamp   = 3;
 };
