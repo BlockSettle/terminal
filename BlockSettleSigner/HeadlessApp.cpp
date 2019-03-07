@@ -46,7 +46,7 @@ void HeadlessAppObj::Start()
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString()
       , settings_->watchingOnly(), cbProgress);
-   if (!walletsMgr_->getSettlementWallet()) {
+   if (!settings_->watchingOnly() && !walletsMgr_->getSettlementWallet()) {
       if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir().toStdString())) {
          logger_->error("Failed to create Settlement wallet");
       }
