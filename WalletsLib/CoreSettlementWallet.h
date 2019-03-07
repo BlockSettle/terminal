@@ -38,7 +38,8 @@ namespace bs {
          std::shared_ptr<SettlementAddressEntry> getExistingAddress(const BinaryData &settlementId);
 
          std::shared_ptr<SettlementAddressEntry> newAddress(const BinaryData &settlementId
-            , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey, const std::string &comment = {});
+            , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey
+            , bool persistent = true, const std::string &comment = {});
          bool containsAddress(const bs::Address &addr) override;
 
          wallet::Type type() const override { return wallet::Type::Settlement; }
@@ -58,12 +59,10 @@ namespace bs {
          std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;
-         bs::Address createAddressWithIndex(const std::string &index, AddressEntryType) override;
+         bs::Address createAddressWithIndex(const std::string &index, bool persistent, AddressEntryType) override;
 
          SecureBinaryData getPublicKeyFor(const bs::Address &) override;
          KeyPair getKeyPairFor(const bs::Address &, const SecureBinaryData &password) override;
-
-         void RefreshWallets(const std::vector<BinaryData>& ids);
 
       protected:
          int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;

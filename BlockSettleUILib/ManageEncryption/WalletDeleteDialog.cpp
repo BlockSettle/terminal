@@ -102,9 +102,6 @@ void WalletDeleteDialog::deleteHDWallet()
          return;
       }
    }
-   if (ui_->checkBoxDeleteSigner->isChecked()) {
-      signingContainer_->DeleteHDRoot(hdWallet_->walletId());
-   }
    if (walletsManager_->deleteWallet(hdWallet_)) {
       BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
          , tr("HD Wallet was successfully deleted")
@@ -115,16 +112,13 @@ void WalletDeleteDialog::deleteHDWallet()
    }
    else {
       BSMessageBox(BSMessageBox::critical, tr("Wallet deletion failed")
-         , tr("Failed to delete local copy of %1").arg(QString::fromStdString(hdWallet_->name())), this).exec();
+         , tr("Failed to delete wallet %1").arg(QString::fromStdString(hdWallet_->name())), this).exec();
       reject();
    }
 }
 
 void WalletDeleteDialog::deleteWallet()
 {
-   if (ui_->checkBoxDeleteSigner->isChecked()) {
-      signingContainer_->DeleteHDLeaf(wallet_->walletId());
-   }
    if (walletsManager_->deleteWallet(wallet_)) {
       BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
          , tr("Wallet was successfully deleted")

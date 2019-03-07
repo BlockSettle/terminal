@@ -10,7 +10,7 @@
 
 using namespace bs::sync;
 
-Wallet::Wallet(const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger)
+Wallet::Wallet(SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr)
    , signContainer_(container), logger_(logger)
 {}
@@ -873,7 +873,8 @@ int Wallet::addAddress(const bs::Address &addr, const std::string &index, Addres
    return (usedAddresses_.size() - 1);
 }
 
-void Wallet::newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData, const CbAddresses &cb)
+void Wallet::newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const CbAddresses &cb, bool persistent)
 {
    if (signContainer_) {
       signContainer_->syncNewAddresses(walletId(), inData, cb);

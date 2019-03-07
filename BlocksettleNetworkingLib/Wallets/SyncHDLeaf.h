@@ -31,7 +31,7 @@ namespace bs {
             using cb_complete_notify = std::function<void(bs::hd::Path::Elem wallet, bool isValid)>;
 
             Leaf(const std::string &walletId, const std::string &name, const std::string &desc
-               , const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &
+               , SignContainer *, const std::shared_ptr<spdlog::logger> &
                , bs::core::wallet::Type type = bs::core::wallet::Type::Bitcoin
                , bool extOnlyAddresses = false);
             ~Leaf() override;
@@ -212,6 +212,7 @@ namespace bs {
             unsigned int            portionSize_ = 100;
             Portion                 currentPortion_;
             std::atomic_int         processing_;
+            std::set<AddrPoolKey>   activeScanAddresses_;
 
          private:
             bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
@@ -233,7 +234,7 @@ namespace bs {
          {
          public:
             AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-               , const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &);
+               , SignContainer *, const std::shared_ptr<spdlog::logger> &);
 
             void setUserId(const BinaryData &) override;
 
@@ -254,7 +255,7 @@ namespace bs {
 
          public:
             CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-               , const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &
+               , SignContainer *, const std::shared_ptr<spdlog::logger> &
                , bool extOnlyAddresses = false);
             ~CCLeaf() override;
 

@@ -27,7 +27,7 @@ void WalletImporter::onWalletScanComplete(bs::sync::hd::Group *grp, bs::hd::Path
    }
    if (isValid) {
       if (grp && (grp->index() == rootWallet_->getXBTGroupType())) {
-         const bs::hd::Path::Elem nextWallet = (wallet == UINT32_MAX) ? 0 : wallet + 1;
+/*         const bs::hd::Path::Elem nextWallet = (wallet == UINT32_MAX) ? 0 : wallet + 1;
          bs::hd::Path path;
          path.append(bs::hd::purpose, true);
          path.append(grp->index(), true);
@@ -35,13 +35,13 @@ void WalletImporter::onWalletScanComplete(bs::sync::hd::Group *grp, bs::hd::Path
          const auto createNextWalletReq = signingContainer_->createHDLeaf(rootWallet_->walletId(), path, pwdData_);
          if (createNextWalletReq) {
             createNextWalletReqs_[createNextWalletReq] = path;
-         }
+         }*/
       }
    }
    else {
       if (!((grp->index() == rootWallet_->getXBTGroupType()) && (wallet == 0))) {
          const auto leaf = grp->getLeaf(wallet);
-         signingContainer_->DeleteHDLeaf(leaf ? leaf->walletId() : std::string{});
+         walletsMgr_->deleteWallet(leaf);
          grp->deleteLeaf(wallet);
       }
    }

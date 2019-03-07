@@ -167,14 +167,6 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
 }
 
-HeadlessContainer::HeadlessContainer(const HeadlessContainer &copy)
-   : SignContainer(copy.logger_, copy.mode_), listener_(copy.listener_)
-   , missingWallets_(copy.missingWallets_), signRequests_(copy.signRequests_)
-   , cbSettlWalletMap_(copy.cbSettlWalletMap_), cbWalletInfoMap_(copy.cbWalletInfoMap_)
-   , cbHDWalletMap_(copy.cbHDWalletMap_), cbWalletMap_(copy.cbWalletMap_)
-   , cbNewAddrsMap_(copy.cbNewAddrsMap_)
-{}
-
 static void killProcess(int pid)
 {
 #ifdef Q_OS_WIN
@@ -268,16 +260,15 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
       default:    break;
       }
       const auto leaf = std::make_shared<bs::sync::hd::Leaf>(response.leaf().walletid()
-         , response.leaf().name(), response.leaf().desc(), std::make_shared<HeadlessContainer>(*this)
-         , logger_, leafType, response.leaf().extonly());
+         , response.leaf().name(), response.leaf().desc(), this, logger_
+         , leafType, response.leaf().extonly());
       logger_->debug("[HeadlessContainer] HDLeaf {} created", response.leaf().walletid());
       emit HDLeafCreated(id, leaf);
    }
    else if (response.has_wallet()) {
       const auto netType = (response.wallet().nettype() == headless::TestNetType) ? NetworkType::TestNet : NetworkType::MainNet;
       auto wallet = std::make_shared<bs::sync::hd::Wallet>(netType, response.wallet().walletid()
-         , response.wallet().name(), response.wallet().description()
-         , std::make_shared<HeadlessContainer>(*this), logger_);
+         , response.wallet().name(), response.wallet().description(), this, logger_);
 
       for (int i = 0; i < response.wallet().groups_size(); i++) {
          const auto grpPath = bs::hd::Path::fromString(response.wallet().groups(i).path());
@@ -811,7 +802,7 @@ static headless::AddressType mapFrom(AddressEntryType aet)
    case AddressEntryType_Default:   return headless::AddressType_Default;
    case AddressEntryType_P2PKH:     return headless::AddressType_P2PKH;
    case AddressEntryType_P2PK:      return headless::AddressType_P2PK;
-   case AddressEntryType_P2WPKH:    return headless::AddressType_P2PKH;
+   case AddressEntryType_P2WPKH:    return headless::AddressType_P2WPKH;
    case AddressEntryType_Multisig:  return headless::AddressType_Multisig;
    case AddressEntryType_P2SH:      return headless::AddressType_P2SH;
    case AddressEntryType_P2WSH:     return headless::AddressType_P2WSH;
@@ -846,7 +837,8 @@ void HeadlessContainer::syncNewAddress(const std::string &walletId, const std::s
 
 void HeadlessContainer::syncNewAddresses(const std::string &walletId
    , const std::vector<std::pair<std::string, AddressEntryType>> &indices
-   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
+   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
+   , bool persistent)
 {
    headless::SyncAddressesRequest request;
    request.set_walletid(walletId);
@@ -855,12 +847,14 @@ void HeadlessContainer::syncNewAddresses(const std::string &walletId
       idx->set_index(index.first);
       idx->set_addrtype(mapFrom(index.second));
    }
+   request.set_persistent(persistent);
 
    headless::RequestPacket packet;
    packet.set_type(headless::SyncAddressesType);
    packet.set_data(request.SerializeAsString());
    const auto reqId = Send(packet);
    cbNewAddrsMap_[reqId] = cb;
+   const auto &itCb = cbNewAddrsMap_.find(reqId);
 }
 
 static NetworkType mapFrom(headless::NetworkType netType)
@@ -897,7 +891,7 @@ void HeadlessContainer::ProcessSettlWalletCreate(unsigned int id, const std::str
       return;
    }
    const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(response.walletid()
-      , response.name(), response.description(), std::make_shared<HeadlessContainer>(*this), logger_);
+      , response.name(), response.description(), this, logger_);
    itCb->second(settlWallet);
 }
 
@@ -1022,6 +1016,7 @@ void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string 
    }
    const auto itCb = cbNewAddrsMap_.find(id);
    if (itCb == cbNewAddrsMap_.end()) {
+      logger_->error("[{}] no callback found for id {}", __func__, id);
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
@@ -1029,11 +1024,17 @@ void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string 
    std::vector<std::pair<bs::Address, std::string>> result;
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto addrInfo = response.addresses(i);
-      const bs::Address addr(addrInfo.address());
-      if (addr.isNull()) {
-         continue;
+      try {
+         const bs::Address addr(addrInfo.address());
+         if (addr.isNull()) {
+            logger_->debug("[{}] addr #{} is null", __func__, i);
+            continue;
+         }
+         result.push_back({ std::move(addr), addrInfo.index() });
       }
-      result.push_back({ std::move(addr), addrInfo.index() });
+      catch (const std::exception &e) {
+         logger_->error("[{}] failed to create address: {}", __func__, e.what());
+      }
    }
    itCb->second(result);
    cbNewAddrsMap_.erase(itCb);

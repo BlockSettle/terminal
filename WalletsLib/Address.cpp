@@ -258,13 +258,15 @@ namespace bs {
          return {};
       }
 
-      const auto &fullAddress = prefixed();
+      const auto fullAddress = prefixed();
+      std::string result;
 
       switch (format)
       {
       case Base58:
          try {
-            return BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
+            result = BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
+            break;
          }
          catch (const std::exception &) {
             return {};
@@ -275,7 +277,8 @@ namespace bs {
 
       case Bech32:
          try {
-            return BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
+            result = BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
+            break;
          }
          catch (const std::exception &) {
             return {};
@@ -285,19 +288,27 @@ namespace bs {
          switch (aet_) {
          case AddressEntryType_P2SH:
          case AddressEntryType_P2PKH:
-            return BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
+            result = BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
+            break;
 
          case AddressEntryType_P2WPKH:
          case AddressEntryType_P2WSH:
-            return BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
+            result = BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
+            break;
 
          default:
             return fullAddress.toHexStr();
          }
+         break;
 
       default:
          throw std::logic_error("unsupported address format");
       }
+
+      if (*result.rbegin() == 0) {
+         result.resize(result.size() - 1);
+      }
+      return result;
    }
 
    template<> QString Address::display(Format format) const

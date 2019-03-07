@@ -1198,8 +1198,8 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
                delete txInfo;
             }
          };
-         walletsMgr_->getTransactionDirection(tx, wallet, cbDir);
-         walletsMgr_->getTransactionMainAddress(tx, wallet, (value > 0), cbMainAddr);
+         walletsMgr_->getTransactionDirection(tx, id, cbDir);
+         walletsMgr_->getTransactionMainAddress(tx, id, (value > 0), cbMainAddr);
       };
       armory_->getTxByHash(entry.txHash, cbTx);
    }

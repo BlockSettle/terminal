@@ -27,7 +27,7 @@ namespace bs {
             Wallet(NetworkType, const std::string &walletId, const std::string &name
                , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger = nullptr);
             Wallet(NetworkType, const std::string &walletId, const std::string &name
-               , const std::string &desc, const std::shared_ptr<SignContainer> &
+               , const std::string &desc, SignContainer *
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
             ~Wallet() override;
 
@@ -95,7 +95,8 @@ namespace bs {
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
             mutable QMutex    mtxGroups_;
             BinaryData        userId_;
-            std::shared_ptr<SignContainer>      signContainer_;
+            SignContainer  *  signContainer_;
+            std::shared_ptr<ArmoryConnection>   armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
             std::vector<SecureBinaryData>          encryptionKeys_;

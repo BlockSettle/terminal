@@ -35,7 +35,6 @@ class HeadlessContainer : public SignContainer
    Q_OBJECT
 public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
-   HeadlessContainer(const HeadlessContainer &);
    ~HeadlessContainer() noexcept = default;
 
    RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
@@ -77,7 +76,8 @@ public:
    void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
       , const std::function<void(const bs::Address &)> &) override;
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
+      , bool persistent = true) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;
