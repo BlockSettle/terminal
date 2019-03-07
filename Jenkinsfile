@@ -51,5 +51,10 @@ pipeline {
                 sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/Windows/bsterminal_installer_${TAG}.exe /var/www/downloads/bsterminal_installer.exe"
             }
         }
+        stage('Upload changelog') {
+            steps {
+                sh "scp ${WORKSPACE}/terminal/changlelog.json genoa@10.0.1.36:/var/www/Changelog/changelog.json"
+            }
+        }
     }
 }
