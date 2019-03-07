@@ -53,9 +53,6 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    , logger_(logger)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
-
-   offlineSigner_ = std::make_shared<OfflineSigner>(logger, QString{}); //FIXME: use settings for offline TX dir
-   connect(offlineSigner_.get(), &SignContainer::TXSigned, this, &CreateTransactionDialog::onTXSigned);
 }
 
 CreateTransactionDialog::~CreateTransactionDialog() noexcept
@@ -122,7 +119,6 @@ void CreateTransactionDialog::updateCreateButtonText()
       return;
    }
    if (signer_->isOffline() || (signer_->opMode() == SignContainer::OpMode::Offline)) {
-      signer_ = offlineSigner_;
       pushButtonCreate()->setText(tr("Export"));
    } else {
       selectedWalletChanged(-1);
@@ -257,7 +253,6 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    if (signingContainer_->isWalletOffline(currentWallet->walletId())
       || !rootWallet || signingContainer_->isWalletOffline(rootWallet->walletId())) {
       pushButtonCreate()->setText(tr("Export"));
-      signer_ = offlineSigner_;
    } else {
       pushButtonCreate()->setText(tr("Broadcast"));
       signer_ = signingContainer_;
@@ -394,14 +389,24 @@ bool CreateTransactionDialog::CreateTransaction()
    QString text;
    QString detailedText;
 
+   if (!signer_) {
+      BSMessageBox(BSMessageBox::critical, tr("Error")
+         , tr("Signer is invalid - unable to send transaction"), this).exec();
+      return false;
+   }
+
    if (signer_->isOffline()) {
+      auto offlineSigner = std::dynamic_pointer_cast<OfflineSigner>(signer_);
+      if (!offlineSigner) {
+         logger_->error("[{}] failed to cast to offline signer", __func__);
+         return false;
+      }
       const auto txDir = QFileDialog::getExistingDirectory(this, tr("Select Offline TX destination directory")
-         , QString());  //FIXME: offline TX dir
+         , offlineSigner->targetDir());
       if (txDir.isNull()) {
          return true;
       }
-      offlineSigner_->SetTargetDir(txDir);
-//      walletsManager_->SetOfflineTxDir(txDir);
+      offlineSigner->setTargetDir(txDir);
    }
 
    startBroadcasting();
@@ -412,7 +417,7 @@ bool CreateTransactionDialog::CreateTransaction()
 
       // We shouldn't hit this case since the request checks the incremental
       // relay fee requirement for RBF. But, in case we
-      if(txReq_.fee <= originalFee_) {
+      if (txReq_.fee <= originalFee_) {
          BSMessageBox(BSMessageBox::info, tr("Error"), tr("Fee is too low"),
             tr("Due to RBF requirements, the current fee (%1) will be " \
                "increased 1 satoshi above the original transaction fee (%2)")
@@ -455,7 +460,7 @@ bool CreateTransactionDialog::CreateTransaction()
    }
 
    stopBroadcasting();
-   BSMessageBox(BSMessageBox::critical, text, text, detailedText).exec();
+   BSMessageBox(BSMessageBox::critical, text, text, detailedText, this).exec();
    showError(text, detailedText);
    return false;
 }

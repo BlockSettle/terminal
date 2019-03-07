@@ -1,6 +1,7 @@
 #include "OfflineSigner.h"
 #include <QDateTime>
 #include <QFile>
+#include <QStandardPaths>
 #include <QTimer>
 #include <spdlog/spdlog.h>
 #include "Address.h"
@@ -8,19 +9,36 @@
 
 using namespace Blocksettle;
 
-OfflineSigner::OfflineSigner(const std::shared_ptr<spdlog::logger> &logger, const QString &dir)
-   : SignContainer(logger, SignContainer::OpMode::Offline), targetDir_(dir)
+OfflineSigner::OfflineSigner(const std::shared_ptr<spdlog::logger> &logger
+   , const QString &homeDir, NetworkType netType, const QString &port
+   , const std::shared_ptr<ConnectionManager> &connMgr
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const SecureBinaryData &pubKey)
+   : LocalSigner(logger, homeDir, netType, port, connMgr, appSettings, pubKey, OpMode::Offline)
 { }
 
-void OfflineSigner::SetTargetDir(const QString& targetDir)
+void OfflineSigner::setTargetDir(const QString& targetDir)
 {
-   targetDir_ = targetDir;
+   appSettings_->set(ApplicationSettings::signerOfflineDir, targetDir);
 }
 
-bool OfflineSigner::Start()
+QString OfflineSigner::targetDir() const
 {
-   emit ready();
-   return true;
+   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+}
+
+QStringList OfflineSigner::args() const
+{
+   QStringList result;
+   result << QLatin1String("--watchonly");
+   result << QLatin1String("--log") << QLatin1String("bs_offline_signer.log");
+   result << LocalSigner::args();
+   return result;
+}
+
+QString OfflineSigner::pidFileName() const
+{
+   return QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QLatin1String("/bs_offline.pid");
 }
 
 SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
@@ -39,9 +57,6 @@ SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TX
       input->set_utxo(utxo.serialize().toBinStr());
       const auto addr = bs::Address::fromUTXO(utxo);
       input->mutable_address()->set_address(addr.display<std::string>());
-/*      if (txSignReq.wallet) {
-         input->mutable_address()->set_index(txSignReq.wallet->GetAddressIndex(addr));
-      }*/
    }
 
    for (const auto &recip : txSignReq.recipients) {
@@ -72,9 +87,10 @@ SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TX
    container->set_data(request.SerializeAsString());
 
    const auto timestamp = std::to_string(QDateTime::currentDateTime().toSecsSinceEpoch());
-   const std::string fileName = targetDir_.toStdString() + "/" + txSignReq.walletId + "_" + timestamp + ".bin";
+   const auto targetDir = appSettings_->get<std::string>(ApplicationSettings::signerOfflineDir);
+   const std::string fileName = targetDir + "/" + txSignReq.walletId + "_" + timestamp + ".bin";
 
-   const auto reqId = seqId_++;
+   const auto reqId = listener_->newRequestId();
    QFile f(QString::fromStdString(fileName));
    if (f.exists()) {
       QTimer::singleShot(0, [this, reqId, fileName] {
