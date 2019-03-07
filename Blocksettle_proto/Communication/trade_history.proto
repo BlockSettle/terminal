@@ -11,15 +11,24 @@ enum TradeHistoryTradeType
 
 enum TradeHistoryRequestType
 {
-   LoadLatestTradeRequestType     = 0;
-   SubscribeToTradesRequestType   = 1;
+   LoadLatestTradeRequestType                   = 0;
+   LoadLatestTradeForProductRequestType         = 1;
+   LoadBuySellTradePricesOnProductRequestType   = 2;
+   LoadSnapshotRequestType                      = 3;
+   LoadPMProductsListRequestType                = 4;
 }
 
 enum TradeHistoryResponseType
 {
-   LatestTradeResponseType       = 0;
-   TradeHistorySnapshotType      = 1;
-   TradeHistoryUpdateType        = 2;
+   LoadLatestTradeResponseType                  = 0;
+   LoadLatestTradeForProductResponseType        = 1;
+   LoadBuySellTradePricesOnProductResponseType  = 2;
+   LoadSnapshotResponseType                     = 3;
+   LoadPMProductsListResponseType               = 4;
+
+   // updates from TH server side
+   TradeHistoryUpdateType                       = 5;
+   TradeHistoryNewCCProductUpdateType           = 6;
 }
 
 message TradeHistoryRequest
@@ -33,10 +42,22 @@ message LatestTradeRequest
    TradeHistoryTradeType trade_type = 1;
 }
 
-message SubscribeToTradesRequest
+message LoadSnapshotRequest
 {
    TradeHistoryTradeType   trade_type     = 1;
    uint64                  from_timestamp = 2;
+}
+
+message LoadLatestTradeForProductRequest
+{
+   TradeHistoryTradeType   trade_type     = 1;
+   string                  product        = 2;
+}
+
+message LoadBuySellTradePricesOnProductRequest
+{
+   TradeHistoryTradeType   trade_type     = 1;
+   string                  product        = 2;
 }
 
 message TradeHistoryResponse
@@ -71,6 +92,26 @@ message LatestTradeResponse
    bytes                   trade       = 2;
 }
 
+message LoadLatestTradeForProductResponse
+{
+   TradeHistoryTradeType   trade_type     = 1;
+   string                  product        = 2;
+   bytes                   trade          = 3;
+}
+
+message LoadBuySellTradePricesOnProductResponse
+{
+   TradeHistoryTradeType   trade_type     = 1;
+   string                  product        = 2;
+   bytes                   sell_trade     = 3;
+   bytes                   buy_trade      = 4;
+}
+
+message LoadPMProductsListResponse
+{
+   repeated string         product = 1;
+}
+
 message TradeHistorySnapshot
 {
    uint64                  snaphot_id     = 1;
@@ -83,4 +124,9 @@ message TradeHistoryServerUpdate
 {
    TradeHistoryTradeType   trade_type  = 1;
    bytes                   trade       = 2;
+}
+
+message TradeHistoryNewCCProductUpdate
+{
+   string                  product = 1;
 }
