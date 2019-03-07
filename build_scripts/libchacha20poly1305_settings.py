@@ -37,12 +37,14 @@ class LibChaCha20Poly1305Settings(Configurator):
                    '-G',
                    self._project_settings.get_cmake_generator()]
 
-        # only static version
-        if self._project_settings.on_windows():
-            if self._project_settings.get_build_mode() == 'release':
-                command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+        # for static lib
+        if self._project_settings.on_windows() and self._project_settings.get_link_mode() != 'shared':
+            if self._project_settings.get_build_mode() == 'debug':
+                command.append('-DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
             else:
-                command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
+                command.append('-DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
 
         result = subprocess.call(command)
 

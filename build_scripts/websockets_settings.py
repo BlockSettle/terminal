@@ -39,6 +39,15 @@ class WebsocketsSettings(Configurator):
                    '-DLWS_WITHOUT_TEST_PING=ON',
                    '-DLWS_WITHOUT_TEST_CLIENT=ON']
 
+        # for static lib
+        if self._project_settings.on_windows() and self._project_settings.get_link_mode() != 'shared':
+            if self._project_settings.get_build_mode() == 'debug':
+                command.append('-DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
+            else:
+                command.append('-DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
+
         if self._project_settings.on_linux():
             command.append('-DLWS_WITH_STATIC=ON')
             command.append('-DLWS_WITH_SHARED=ON')
@@ -58,6 +67,7 @@ class WebsocketsSettings(Configurator):
         env_vars['OPENSSL_ROOT_DIR'] = self._ssl_settings.get_install_dir()
         env_vars['OPENSSL_INCLUDE_DIR'] = os.path.join(self._ssl_settings.get_install_dir(), 'include')
 
+        print(command)
         result = subprocess.call(command, env=env_vars)
         return result == 0
 
