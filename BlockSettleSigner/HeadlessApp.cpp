@@ -38,11 +38,14 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 
 void HeadlessAppObj::Start()
 {
-   logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
+   logger_->debug("[{}] loading {} wallets from dir <{}>", __func__
+      , settings_->watchingOnly() ? "watching-only" : "full"
+      , settings_->getWalletsDir().toStdString());
    const auto &cbProgress = [this](int cur, int total) {
       logger_->debug("Loading wallet {} of {}", cur, total);
    };
-   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString(), cbProgress);
+   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString()
+      , settings_->watchingOnly(), cbProgress);
    if (!walletsMgr_->getSettlementWallet()) {
       if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir().toStdString())) {
          logger_->error("Failed to create Settlement wallet");
@@ -57,6 +60,11 @@ void HeadlessAppObj::Start()
    }
 
    if (settings_->offline()) {
+      if (settings_->watchingOnly()) {
+         logger_->critical("[{}] offline mode doesn't support watching-only wallets", __func__);
+         emit finished();
+         return;
+      }
       OfflineProcessing();
    }
    else {
