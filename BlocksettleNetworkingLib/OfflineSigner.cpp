@@ -4,7 +4,6 @@
 #include <QTimer>
 #include <spdlog/spdlog.h>
 #include "Address.h"
-#include "MetaData.h"
 #include "signer.pb.h"
 
 using namespace Blocksettle;
@@ -24,7 +23,7 @@ bool OfflineSigner::Start()
    return true;
 }
 
-SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRequest &txSignReq,
+SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
    bool, TXSignMode, const PasswordType&, bool)
 {
    if (!txSignReq.isValid()) {
@@ -40,9 +39,9 @@ SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRe
       input->set_utxo(utxo.serialize().toBinStr());
       const auto addr = bs::Address::fromUTXO(utxo);
       input->mutable_address()->set_address(addr.display<std::string>());
-      if (txSignReq.wallet) {
+/*      if (txSignReq.wallet) {
          input->mutable_address()->set_index(txSignReq.wallet->GetAddressIndex(addr));
-      }
+      }*/
    }
 
    for (const auto &recip : txSignReq.recipients) {
@@ -102,16 +101,16 @@ SignContainer::RequestId OfflineSigner::SignTXRequest(const bs::wallet::TXSignRe
 }
 
 
-std::vector<bs::wallet::TXSignRequest> ParseOfflineTXFile(const std::string &data)
+std::vector<bs::core::wallet::TXSignRequest> ParseOfflineTXFile(const std::string &data)
 {
    Storage::Signer::File fileContainer;
    if (!fileContainer.ParseFromString(data)) {
       return {};
    }
-   std::vector<bs::wallet::TXSignRequest> result;
+   std::vector<bs::core::wallet::TXSignRequest> result;
    for (int i = 0; i < fileContainer.payload_size(); i++) {
       const auto container = fileContainer.payload(i);
-      bs::wallet::TXSignRequest txReq;
+      bs::core::wallet::TXSignRequest txReq;
       if (container.type() == Storage::Signer::RequestFileType) {
          Storage::Signer::TXRequest tx;
          if (!tx.ParseFromString(container.data())) {

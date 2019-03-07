@@ -1,13 +1,12 @@
 #include "VerifyWalletBackupDialog.h"
 #include "ui_VerifyWalletBackupDialog.h"
+#include "CoreWallet.h"
 #include "EasyCoDec.h"
 #include "EasyEncValidator.h"
-#include "HDNode.h"
-#include "HDWallet.h"
-#include "MetaData.h"
+#include "Wallets/SyncHDWallet.h"
 
 
-VerifyWalletBackupDialog::VerifyWalletBackupDialog(const std::shared_ptr<bs::hd::Wallet> &wallet
+VerifyWalletBackupDialog::VerifyWalletBackupDialog(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
                                  , const std::shared_ptr<spdlog::logger> &logger
                                                    , QWidget *parent)
    : QDialog(parent)
@@ -43,10 +42,9 @@ void VerifyWalletBackupDialog::onPrivKeyChanged()
    easyData.part1 = ui_->lineEditPrivKey1->text().toStdString();
    easyData.part2 = ui_->lineEditPrivKey2->text().toStdString();
    try {
-      const auto seed = bs::wallet::Seed::fromEasyCodeChecksum(easyData, netType_);
-      bs::hd::Wallet newWallet(wallet_->getName(), wallet_->getDesc(), seed
-                               , logger_);
-      if (newWallet.getWalletId() == wallet_->getWalletId()) {
+      const auto seed = bs::core::wallet::Seed::fromEasyCodeChecksum(easyData, netType_);
+      //TODO: add verification of wallet seed against wallet_->walletId()
+      if (seed.privateKey().getSize() == 32) {
          ui_->labelResult->setStyleSheet(QLatin1String("QLabel {color : green;}"));
          ui_->labelResult->setText(tr("Valid"));
          return;

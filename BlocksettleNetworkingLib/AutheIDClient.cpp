@@ -1,27 +1,42 @@
 #include "AutheIDClient.h"
 
+#include "ApplicationSettings.h"
+#include "ConnectionManager.h"
 #include <spdlog/spdlog.h>
 #include <QTimer>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 
-#include "ConnectionManager.h"
-#include "MobileUtils.h"
-#include "RequestReplyCommand.h"
-#include "ZmqSecuredDataConnection.h"
-#include "ApplicationSettings.h"
+#include "rp.pb.h"
 
-using namespace autheid::rp;
+using namespace autheid;
 
 namespace
 {
-   const int kConnectTimeoutSeconds = 10;
+   const int kNetworkTimeoutSeconds = 10;
 
    const int kKeySize = 32;
 
-   const std::string kApiKey = "Pj+Q9SsZloftMkmE7EhA8v2Bz1ZC9aOmUkAKTBW9hagJ";
-
    static const char kSeparatorSymbol = ':';
 
-}
+   const auto kContentTypeHeader = "Content-Type";
+   const auto kAcceptHeader = "Accept";
+   const auto kAuthorizationHeader = "Authorization";
+
+   const auto kProtobufType = "application/protobuf";
+   const auto kAuthorizationKey = "Bearer Pj+Q9SsZloftMkmE7EhA8v2Bz1ZC9aOmUkAKTBW9hagJ";
+
+   QNetworkRequest getRequest(const std::string &url)
+   {
+      QNetworkRequest request;
+      request.setUrl(QUrl(QString::fromStdString(url)));
+      request.setRawHeader(kContentTypeHeader, kProtobufType);
+      request.setRawHeader(kAcceptHeader, kProtobufType);
+      request.setRawHeader(kAuthorizationHeader, kAuthorizationKey);
+      return request;
+   }
+} // namespace
 
 AutheIDClient::DeviceInfo AutheIDClient::getDeviceInfo(const std::string &encKey)
 {
@@ -44,18 +59,28 @@ AutheIDClient::DeviceInfo AutheIDClient::getDeviceInfo(const std::string &encKey
 }
 
 AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
-   , const std::pair<autheid::PrivateKey, autheid::PublicKey> &authKeys
+   , const std::shared_ptr<ApplicationSettings> &settings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , QObject *parent)
    : QObject(parent)
    , logger_(logger)
-   , authKeys_(authKeys)
+   , settings_(settings)
+   , connectionManager_(connectionManager)
    , resultAuth_(false)
+   , authKeys_(settings->GetAuthKeys())
 {
-   connectionManager_.reset(new ConnectionManager(logger));
-   timer_ = new QTimer(this);
-   timer_->setSingleShot(true);
+   EnvConfiguration conf = EnvConfiguration(settings_->get<int>(ApplicationSettings::envConfiguration));
 
-   QObject::connect(timer_, &QTimer::timeout, this, &AutheIDClient::timeout);
+   switch (conf) {
+      case EnvConfiguration::UAT:
+      case EnvConfiguration::Staging:
+      case EnvConfiguration::Custom:
+         baseUrl_ = "https://api.staging.autheid.com/v1/requests";
+         break;
+      default:
+         baseUrl_ = "https://api.autheid.com/v1/requests";
+         break;
+   }
 }
 
 AutheIDClient::~AutheIDClient()
@@ -63,48 +88,22 @@ AutheIDClient::~AutheIDClient()
    cancel();
 }
 
-void AutheIDClient::connect(const BinaryData& serverPubKey
-   , const std::string &serverHost, const std::string &serverPort)
+void AutheIDClient::createCreateRequest(const std::string &payload, int expiration)
 {
-   connection_ = connectionManager_->CreateSecuredDataConnection();
-   if (!connection_) {
-      logger_->error("[{}] connection_ == nullptr", __func__);
-      throw std::runtime_error("invalid connection");
-   }
+   QNetworkRequest request = getRequest(baseUrl_);
 
-   if (!connection_->SetServerPublicKey(serverPubKey)) {
-      logger_->error("[{}] failed", __func__);
-      throw std::runtime_error("failed to set connection public key");
-   }
+   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray::fromStdString(payload));
+   processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration] (const Result &result) {
+      if (!result.success) {
+         emit failed(tr("Auth eID faild: %1").arg(QString::fromStdString(result.errorMsg)));
+         return;
+      }
 
-   if (!connection_->openConnection(serverHost, serverPort, this)) {
-      logger_->error("[{}] failed", __func__);
-      throw std::runtime_error("failed to open connection to " + serverHost + \
-                               ":" + serverPort);
-   }
+      processCreateReply(result.payload, expiration);
+   });
 }
 
-bool AutheIDClient::isConnected() const
-{
-   return (connection_ && connection_->isActive());
-}
-
-bool AutheIDClient::sendToAuthServer(const std::string &payload, const PayloadType type)
-{
-   ClientPacket packet;
-   packet.set_type(type);
-   packet.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
-
-   const auto signature = autheid::signData(payload, authKeys_.first);
-
-   packet.set_rasign(signature.data(), signature.size());
-
-   packet.set_payload(payload.data(), payload.size());
-
-   return connection_->send(packet.SerializeAsString());
-}
-
-bool AutheIDClient::start(RequestType requestType, const std::string &email
+void AutheIDClient::start(RequestType requestType, const std::string &email
    , const std::string &walletId, const std::vector<std::string> &knownDeviceIds)
 {
    cancel();
@@ -113,173 +112,136 @@ bool AutheIDClient::start(RequestType requestType, const std::string &email
 
    QString action = getAutheIDClientRequestText(requestType);
    bool newDevice = isAutheIDClientNewDeviceNeeded(requestType);
-   int timeout = getAutheIDClientTimeout(requestType);
+   int expiration = getAutheIDClientTimeout(requestType);
 
-   CreateRequest request;
-   request.set_type(RequestDeviceKey);
-   request.mutable_devicekey()->set_keyid(walletId);
-   request.set_expiration(timeout);
-   request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
+   rp::CreateRequest request;
+   request.set_type(rp::DEVICE_KEY);
+   request.mutable_device_key()->set_key_id(walletId);
+   request.set_timeout_seconds(expiration);
+   request.set_ra_pub_key(authKeys_.second.data(), authKeys_.second.size());
 
    request.set_title(action.toStdString() + "\nWallet ID:" + walletId);
-   request.set_apikey(kApiKey);
-   request.set_userid(email_);
-   request.mutable_devicekey()->set_usenewdevices(newDevice);
+   request.set_email(email_);
+   request.mutable_device_key()->set_use_new_devices(newDevice);
 
    switch (requestType) {
    case ActivateWallet:
-      request.mutable_devicekey()->set_registerkey(RegisterKeyReplace);
+      request.mutable_device_key()->set_register_key(rp::CreateRequest::DeviceKey::REPLACE);
       break;
    case DeactivateWallet:
-      request.mutable_devicekey()->set_registerkey(RegisterKeyClear);
+      request.mutable_device_key()->set_register_key(rp::CreateRequest::DeviceKey::CLEAR);
       break;
    case ActivateWalletNewDevice:
-      request.mutable_devicekey()->set_registerkey(RegisterKeyAdd);
+      request.mutable_device_key()->set_register_key(rp::CreateRequest::DeviceKey::ADD);
       break;
    case DeactivateWalletDevice:
       // No need to update anything, the server will sync it as needed to known device list
-      request.mutable_devicekey()->set_registerkey(RegisterKeyKeep);
+      request.mutable_device_key()->set_register_key(rp::CreateRequest::DeviceKey::KEEP);
       break;
    default:
-      request.mutable_devicekey()->set_registerkey(RegisterKeyKeep);
+      request.mutable_device_key()->set_register_key(rp::CreateRequest::DeviceKey::KEEP);
       break;
    }
 
    for (const std::string& knownDeviceId : knownDeviceIds) {
-      request.mutable_devicekey()->add_knowndeviceids(knownDeviceId);
+      request.mutable_device_key()->add_known_device_ids(knownDeviceId);
    }
 
-   QMetaObject::invokeMethod(timer_, [this] {
-      timer_->start(kConnectTimeoutSeconds * 1000);
-   });
-
-   return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
+   createCreateRequest(request.SerializeAsString(), expiration);
 }
 
-bool AutheIDClient::authenticate(const std::string& email, const std::shared_ptr<ApplicationSettings> &appSettings)
+void AutheIDClient::authenticate(const std::string& email)
 {
-   try {
-      if (!isConnected())
-      {
-         connect(appSettings->get<std::string>(ApplicationSettings::authServerPubKey)
-           , appSettings->get<std::string>(ApplicationSettings::authServerHost)
-           , appSettings->get<std::string>(ApplicationSettings::authServerPort));
-      }
-      return requestAuth(email);
-   }
-   catch (const std::exception &e) {
-      logger_->error("[{}] failed to connect: {}", __func__, e.what());
-      emit failed(tr("Failed to connect to Auth eID"));
-      return false;
-   }
+   requestAuth(email);
 }
 
-bool AutheIDClient::requestAuth(const std::string& email)
+void AutheIDClient::requestAuth(const std::string& email)
 {
    cancel();
    email_ = email;
    resultAuth_ = true;
 
-   CreateRequest request;
+   rp::CreateRequest request;
    auto signRequest = request.mutable_signature();
-   signRequest->set_type(SignatureDataProtobuf);
+   signRequest->set_serialization(rp::SERIALIZATION_PROTOBUF);
+
+   int expiration = getAutheIDClientTimeout(Unknown);
 
    request.set_title("Terminal Login");
-   request.set_type(RequestAuthenticate);
-   request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
-   request.set_apikey(kApiKey);
-   request.set_userid(email);
+   request.set_type(rp::AUTHENTICATION);
+   request.set_ra_pub_key(authKeys_.second.data(), authKeys_.second.size());
+   request.set_email(email);
+   request.set_timeout_seconds(expiration);
 
-   QMetaObject::invokeMethod(timer_, [this] {
-      timer_->start(kConnectTimeoutSeconds * 1000);
-   });
-
-   return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
+   createCreateRequest(request.SerializeAsString(), expiration);
 }
 
-bool AutheIDClient::sign(const BinaryData &data, const std::string &email
+void AutheIDClient::sign(const BinaryData &data, const std::string &email
    , const QString &title, const QString &description, int expiration)
 {
    cancel();
    email_ = email;
 
-   CreateRequest request;
+   rp::CreateRequest request;
    auto signRequest = request.mutable_signature();
-   signRequest->set_type(SignatureDataProtobuf);
-   signRequest->set_invisibledata(data.toBinStr());
+   signRequest->set_serialization(rp::SERIALIZATION_PROTOBUF);
+   signRequest->set_invisible_data(data.toBinStr());
 
-   request.set_type(RequestSignature);
-   request.set_expiration(expiration);
-   request.set_rapubkey(authKeys_.second.data(), authKeys_.second.size());
+   request.set_type(rp::SIGNATURE);
+   request.set_timeout_seconds(expiration);
+   request.set_ra_pub_key(authKeys_.second.data(), authKeys_.second.size());
 
    request.set_title(title.toStdString());
    request.set_description(description.toStdString());
-   request.set_apikey(kApiKey);
-   request.set_userid(email);
+   request.set_email(email);
 
-   QMetaObject::invokeMethod(timer_, [this, expiration] {
-      timer_->start(expiration * 1000);
-   });
-
-   return sendToAuthServer(request.SerializeAsString(), PayloadCreate);
+   createCreateRequest(request.SerializeAsString(), expiration);
 }
 
 void AutheIDClient::cancel()
 {
-   QMetaObject::invokeMethod(timer_, [this] {
-      timer_->stop();
-   });
-
-   if (!connection_ || requestId_.empty()) {
+   if (requestId_.empty()) {
       return;
    }
 
-   CancelRequest request;
-   request.set_requestid(requestId_);
+   QNetworkRequest request = getRequest(fmt::format("{}/{}/cancel", baseUrl_, requestId_));
 
-   sendToAuthServer(request.SerializeAsString(), PayloadCancel);
-
-   connection_->closeConnection();
+   QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray());
+   processNetworkReply(reply, kNetworkTimeoutSeconds, {});
 
    requestId_.clear();
 }
 
-void AutheIDClient::processCreateReply(const uint8_t *payload, size_t payloadSize)
+void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration)
 {
-   QMetaObject::invokeMethod(timer_, [this] {
-      timer_->stop();
-   });
-
-   CreateReply reply;
-   if (!reply.ParseFromArray(payload, payloadSize)) {
+   rp::CreateResponse response;
+   if (!response.ParseFromArray(payload.data(), payload.size())) {
       logger_->error("Can't decode ResultReply packet");
       emit failed(tr("Invalid create reply"));
       return;
    }
 
-   if (!reply.success() || reply.requestid().empty()) {
-      logger_->error("Create request failed: {}", reply.errormsg());
-      emit failed(tr("Request failed"));
-      return;
-   }
+   requestId_ = response.request_id();
 
-   requestId_ = reply.requestid();
+   QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_));
 
-   ResultRequest request;
-   request.set_requestid(requestId_);
-   sendToAuthServer(request.SerializeAsString(), PayloadResult);
+   QNetworkReply *reply = connectionManager_->GetNAM()->get(request);
+   processNetworkReply(reply, expiration, [this] (const Result &result) {
+      if (!result.success) {
+         emit failed(tr("Auth eID faild: %1").arg(QString::fromStdString(result.errorMsg)));
+         return;
+      }
+
+      processResultReply(result.payload);
+   });
 }
 
-void AutheIDClient::processResultReply(const uint8_t *payload, size_t payloadSize)
+void AutheIDClient::processResultReply(const QByteArray &payload)
 {
-   ResultReply reply;
-   if (!reply.ParseFromArray(payload, payloadSize)) {
+   rp::GetResultResponse reply;
+   if (!reply.ParseFromArray(payload.data(), payload.size())) {
       logger_->error("Can't decode ResultReply packet");
       emit failed(tr("Invalid result reply"));
-      return;
-   }
-
-   if (reply.requestid() != requestId_) {
       return;
    }
 
@@ -292,7 +254,7 @@ void AutheIDClient::processResultReply(const uint8_t *payload, size_t payloadSiz
 
    if (resultAuth_)
    {
-       std::string jwtToken = reply.authenticate().jwt();
+       std::string jwtToken = reply.authentication().jwt();
        if (!jwtToken.empty())
        {
             emit authSuccess(jwtToken);
@@ -304,24 +266,25 @@ void AutheIDClient::processResultReply(const uint8_t *payload, size_t payloadSiz
        return;
    }
 
-   if (reply.encsecurereply().empty() || reply.deviceid().empty()) {
+   if (reply.enc_secure_result().empty() || reply.device_id().empty()) {
       emit failed(tr("Cancelled"));
       return;
    }
 
-   autheid::SecureBytes secureReplyData = autheid::decryptData(reply.encsecurereply(), authKeys_.first);
+   autheid::SecureBytes secureReplyData = autheid::decryptData(reply.enc_secure_result().data()
+      , reply.enc_secure_result().size(), authKeys_.first);
    if (secureReplyData.empty()) {
       emit failed(tr("Decrypt failed"));
       return;
    }
 
-   SecureReply secureReply;
-   if (!secureReply.ParseFromArray(secureReplyData.data(), secureReplyData.size())) {
+   rp::GetResultResponse::SecureResult secureReply;
+   if (!secureReply.ParseFromArray(secureReplyData.data(), int(secureReplyData.size()))) {
       emit failed(tr("Invalid secure reply"));
       return;
    }
 
-   const std::string &deviceKey = secureReply.devicekey();
+   const std::string &deviceKey = secureReply.device_key();
 
    if (deviceKey.size() != kKeySize) {
       emit failed(tr("Invalid key size"));
@@ -329,66 +292,47 @@ void AutheIDClient::processResultReply(const uint8_t *payload, size_t payloadSiz
    }
 
    std::string encKey = email_
-      + kSeparatorSymbol + reply.deviceid()
-      + kSeparatorSymbol + reply.devicename();
+      + kSeparatorSymbol + reply.device_id()
+      + kSeparatorSymbol + reply.device_name();
 
    emit succeeded(encKey, SecureBinaryData(deviceKey));
 }
 
-void AutheIDClient::OnDataReceived(const std::string &data)
+void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds, const AutheIDClient::ResultCallback &callback)
 {
-   ServerPacket packet;
-   if (!packet.ParseFromString(data)) {
-      logger_->error("Invalid packet data from AuthServer");
-      emit failed(tr("Invalid packet"));
-      return;
-   }
+   // Use this as context because AutheIDClient might be already destroyed when reply is finished!
+   connect(reply, &QNetworkReply::finished, this, [reply, callback] {
+      QByteArray payload = reply->readAll();
 
-   if (packet.encpayload().empty()) {
-      logger_->error("No payload received from AuthServer");
-      emit failed(tr("Missing payload"));
-      return;
-   }
+      Result result;
 
-   const auto &decryptedPayload = autheid::decryptData(packet.encpayload(), authKeys_.first);
+      if (reply->error()) {
+         rp::Error error;
+         // Auth eID will send rp::Error
+         if (!payload.isEmpty() && error.ParseFromArray(payload.data(), payload.size())) {
+            result.errorMsg = fmt::format("Auth eID failed: {}", error.message());
+         } else {
+            result.errorMsg = fmt::format("Auth eID failed: {}", reply->errorString().toStdString());
+         }
+         if (callback) {
+            callback(result);
+         }
+         return;
+      }
 
-   switch (packet.type()) {
-   case PayloadCreate:
-      QMetaObject::invokeMethod(this, [this, decryptedPayload] {
-         processCreateReply(decryptedPayload.data(), decryptedPayload.size());
-      });
-      break;
-   case PayloadResult:
-      QMetaObject::invokeMethod(this, [this, decryptedPayload] {
-         processResultReply(decryptedPayload.data(), decryptedPayload.size());
-      });
-      break;
-   case PayloadCancel:
-      break;
-   default:
-      logger_->error("Got unknown packet type from AuthServer {}", packet.type());
-      emit failed(tr("Unknown packet"));
-   }
-}
+      result.success = true;
+      result.payload = payload;
+      if (callback) {
+         callback(result);
+      }
+   });
 
-void AutheIDClient::timeout()
-{
-   cancel();
-   logger_->error("Connection to AuthServer failed, no answer received");
-   emit failed(tr("Server offline"));
-}
+   QTimer::singleShot(timeoutSeconds * 1000, reply, [reply] {
+      // This would call finished slot and that would call callback if that is still needed
+      reply->abort();
+   });
 
-void AutheIDClient::OnConnected()
-{
-}
-
-void AutheIDClient::OnDisconnected()
-{
-}
-
-void AutheIDClient::OnError(DataConnectionListener::DataConnectionError errorCode)
-{
-   emit failed(tr("Connection failed"));
+   connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
 }
 
 QString AutheIDClient::getAutheIDClientRequestText(RequestType requestType)
@@ -441,31 +385,27 @@ int AutheIDClient::getAutheIDClientTimeout(RequestType requestType)
    }
 }
 
-void AutheIDClient::processSignatureReply(const SignatureReply &reply)
+void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_SignatureResult &reply)
 {
-   QMetaObject::invokeMethod(timer_, [this] {
-      timer_->stop();
-   });
-
-   if (reply.signaturedata().empty() || reply.sign().empty()) {
+   if (reply.signature_data().empty() || reply.sign().empty()) {
       emit failed(tr("Missing mandatory signature data in reply"));
       return;
    }
-   if (reply.type() != SignatureDataProtobuf) {
+   if (reply.serialization() != rp::SERIALIZATION_PROTOBUF) {
       emit failed(tr("Invalid signature serialization type"));
       return;
    }
-   SignatureData sigData;
-   if (!sigData.ParseFromString(reply.signaturedata())) {
+   rp::GetResultResponse::SignatureResult::SignatureData sigData;
+   if (!sigData.ParseFromString(reply.signature_data())) {
       emit failed(tr("Failed to parse signature data"));
       return;
    }
-   if (!reply.userpubkey().empty()) {
-      const auto &pubKey = autheid::publicKeyFromString(reply.userpubkey());
-      if (autheid::verifyData(reply.signaturedata(), reply.sign(), pubKey)) {
-         emit failed(tr("Signature validation failed"));
-         return;
-      }
+
+   autheid::PublicKey pubKey(reply.user_pub_key().begin(), reply.user_pub_key().end());
+   if (!autheid::verifyData(reply.signature_data().data(), reply.signature_data().size(),
+         reply.sign().data(), reply.sign().size(), pubKey)) {
+      emit failed(tr("Signature validation failed"));
+      return;
    }
-   emit signSuccess(reply.signaturedata(), sigData.invisibledata(), reply.sign());
+   emit signSuccess(reply.signature_data(), sigData.invisible_data(), reply.sign());
 }

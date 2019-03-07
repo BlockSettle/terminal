@@ -13,7 +13,7 @@
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 #include "UsedInputsModel.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 
 #include <QEvent>
@@ -28,7 +28,7 @@ static const size_t kP2WPKHOutputSize = 35;
 
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<WalletsManager>& walletManager
+      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer> &container, bool loadFeeSuggestions
       , const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<TransactionData> &txData
       , QWidget* parent)
@@ -46,11 +46,11 @@ CreateTransactionDialogAdvanced::~CreateTransactionDialogAdvanced() = default;
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForRBF(
         const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<WalletsManager>& walletManager
+      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container
       , const std::shared_ptr<spdlog::logger>& logger
       , const Tx &tx
-      , const std::shared_ptr<bs::Wallet>& wallet
+      , const std::shared_ptr<bs::sync::Wallet>& wallet
       , QWidget* parent)
 {
    auto dlg = std::make_shared<CreateTransactionDialogAdvanced>(armory
@@ -68,9 +68,9 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
 
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced::CreateForCPFP(
         const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<WalletsManager>& walletManager
+      , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
       , const std::shared_ptr<SignContainer>& container
-      , const std::shared_ptr<bs::Wallet>& wallet
+      , const std::shared_ptr<bs::sync::Wallet>& wallet
       , const std::shared_ptr<spdlog::logger>& logger
       , const Tx &tx
       , QWidget* parent)
@@ -85,7 +85,7 @@ std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogAdvanced
    return dlg;
 }
 
-void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::shared_ptr<bs::Wallet> &wallet)
+void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::shared_ptr<bs::sync::Wallet> &wallet)
 {
    std::set<BinaryData> txHashSet;
    std::map<BinaryData, std::set<uint32_t>> txOutIndices;
@@ -175,12 +175,12 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
       walletsManager_->estimatedFeePerByte(2, cbFee, this);
    };
 
-   SetFixedWallet(wallet->GetWalletId(), [this, txHashSet, cbTXs] {
+   SetFixedWallet(wallet->walletId(), [this, txHashSet, cbTXs] {
       armory_->getTXsByHash(txHashSet, cbTXs);
    });
 }
 
-void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shared_ptr<bs::Wallet> &wallet)
+void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shared_ptr<bs::sync::Wallet> &wallet)
 {
    isRBF_ = true;
 
@@ -235,7 +235,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       // Assume change address is the last internal address in the
       // list of outputs belonging to the wallet
       for (const auto &output : ownOutputs) {
-         const auto path = bs::hd::Path::fromString(wallet->GetAddressIndex(output.first));
+         const auto path = bs::hd::Path::fromString(wallet->getAddressIndex(output.first));
          if (path.length() == 2) {
             if (path.get(-2) == 1) {   // internal HD address
                changeAddress = output.first.display();
@@ -304,7 +304,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       try {
          auto inUTXOs = utxos.get();
          QMetaObject::invokeMethod(this, [this, wallet, txHashSet, inUTXOs, cbTXs] {
-            SetFixedWalletAndInputs(wallet, inUTXOs);
+            setFixedWalletAndInputs(wallet, inUTXOs);
 
             armory_->getTXsByHash(txHashSet, cbTXs);
          });
@@ -834,10 +834,10 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
          result = selectedChangeAddress_;
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
-         result = transactionData_->GetWallet()->GetNewChangeAddress(
+         result = transactionData_->getWallet()->getNewChangeAddress(
             ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
-         transactionData_->createAddress(result);
-         transactionData_->GetWallet()->SetAddressComment(result, bs::wallet::Comment::toString(bs::wallet::Comment::ChangeAddress));
+         transactionData_->getWallet()->setAddressComment(result, bs::sync::wallet::Comment::toString(
+            bs::sync::wallet::Comment::ChangeAddress));
       } else {
          result = selectedChangeAddress_;
       }
@@ -868,7 +868,7 @@ bool CreateTransactionDialogAdvanced::HaveSignedImportedTransaction() const
    return !importedSignedTX_.isNull();
 }
 
-void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::wallet::TXSignRequest>& transactions)
+void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<bs::core::wallet::TXSignRequest>& transactions)
 {
    ui_->pushButtonCreate->setEnabled(false);
    ui_->pushButtonCreate->setText(tr("Broadcast"));
@@ -897,7 +897,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
             }
 
             const auto &cbTXs = [this, tx, utxoHashes, txOutIndices](std::vector<Tx> txs) {
-               std::shared_ptr<bs::Wallet> wallet;
+               std::shared_ptr<bs::sync::Wallet> wallet;
                int64_t totalVal = 0;
 
                for (const auto &prevTx : txs) {
@@ -910,7 +910,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      totalVal += prevOut.getValue();
                      if (!wallet) {
                         const auto addr = bs::Address::fromTxOut(prevOut);
-                        const auto &addrWallet = walletsManager_->GetWalletByAddress(addr);
+                        const auto &addrWallet = walletsManager_->getWalletByAddress(addr);
                         if (addrWallet) {
                            wallet = addrWallet;
                         }
@@ -919,7 +919,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                }
 
                if (wallet) {
-                  SetFixedWallet(wallet->GetWalletId());
+                  SetFixedWallet(wallet->walletId());
                   auto selInputs = transactionData_->GetSelectedInputs();
                   for (const auto &txHash : utxoHashes) {
                      selInputs->SetUTXOSelection(txHash.first, txHash.second);
@@ -993,7 +993,7 @@ void CreateTransactionDialogAdvanced::onNewAddressSelectedForChange()
 
 void CreateTransactionDialogAdvanced::onExistingAddressSelectedForChange()
 {
-   SelectAddressDialog selectAddressDialog(walletsManager_, transactionData_->GetWallet(), this
+   SelectAddressDialog selectAddressDialog(walletsManager_, transactionData_->getWallet(), this
       , AddressListModel::AddressType::Internal);
 
    if (selectAddressDialog.exec() == QDialog::Accepted) {
@@ -1013,13 +1013,13 @@ void CreateTransactionDialogAdvanced::SetFixedWallet(const std::string& walletId
    ui_->comboBoxWallets->setEnabled(false);
 }
 
-void CreateTransactionDialogAdvanced::SetFixedWalletAndInputs(const std::shared_ptr<bs::Wallet> &wallet, const std::vector<UTXO> &inputs)
+void CreateTransactionDialogAdvanced::setFixedWalletAndInputs(const std::shared_ptr<bs::sync::Wallet> &wallet, const std::vector<UTXO> &inputs)
 {
-   SelectWallet(wallet->GetWalletId());
+   SelectWallet(wallet->walletId());
    ui_->comboBoxWallets->setEnabled(false);
    disableInputSelection();
    usedInputsModel_->updateInputs(inputs);
-   transactionData_->SetWalletAndInputs(wallet, inputs, armory_->topBlock());
+   transactionData_->setWalletAndInputs(wallet, inputs, armory_->topBlock());
 }
 
 void CreateTransactionDialogAdvanced::disableOutputsEditing()

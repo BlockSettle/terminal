@@ -7,14 +7,6 @@
 #include "ApplicationSettings.h"
 #include "ArmoryServersWidget.h"
 
-enum EnvConfiguration
-{
-   CustomConfiguration,
-   StagingConfiguration,
-   UATConfiguration,
-   PRODConfiguration
-};
-
 struct EnvSettings
 {
    QString  pubHost;
@@ -80,10 +72,11 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       }
    });
 
-   ui_->comboBoxEnvironment->addItem(tr("Custom"));
-   ui_->comboBoxEnvironment->addItem(tr("Staging"));
-   ui_->comboBoxEnvironment->addItem(tr("UAT"));
+   static_assert (int(EnvConfiguration::Count) == 4, "Please update me");
    ui_->comboBoxEnvironment->addItem(tr("PROD"));
+   ui_->comboBoxEnvironment->addItem(tr("UAT"));
+   ui_->comboBoxEnvironment->addItem(tr("Staging"));
+   ui_->comboBoxEnvironment->addItem(tr("Custom"));
 
    ui_->comboBoxEnvironment->setCurrentIndex(-1);
 
@@ -98,7 +91,10 @@ void NetworkSettingsPage::initSettings()
    ui_->comboBoxArmoryServer->setModel(armoryServerModel_);
 
    connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, [this](){
-      display();
+      // Disable wrong callback call after pressing apply
+      if (!disableSettingUpdate_) {
+         display();
+      }
    });
 
    connect(ui_->comboBoxEnvironment, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NetworkSettingsPage::onEnvSelected);
@@ -112,13 +108,6 @@ void NetworkSettingsPage::display()
    ui_->PublicBridgeSettingsGroup->hide();
 #endif
 
-   ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
-   ui_->lineEditPublicBridgeHost->setEnabled(false);
-
-   ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
-   ui_->spinBoxPublicBridgePort->setEnabled(false);
-
-
    int serverIndex = armoryServersProvider_->indexOf(appSettings_->get<QString>(ApplicationSettings::armoryDbName));
    if (serverIndex >= 0) {
       ArmoryServer server = armoryServersProvider_->servers().at(serverIndex);
@@ -131,12 +120,16 @@ void NetworkSettingsPage::display()
       ui_->labelArmoryServerKey->setText(server.armoryDBKey);
    }
 
+   ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
+   ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
+   ui_->spinBoxPublicBridgePort->setEnabled(false);
+
    DetectEnvironmentSettings();
 }
 
 void NetworkSettingsPage::DetectEnvironmentSettings()
 {
-   int index = CustomConfiguration;
+   EnvConfiguration conf = EnvConfiguration::Custom;
 
    EnvSettings currentConfiguration{
       ui_->lineEditPublicBridgeHost->text(),
@@ -144,14 +137,14 @@ void NetworkSettingsPage::DetectEnvironmentSettings()
    };
 
    if (currentConfiguration == StagingEnvSettings) {
-      index = StagingConfiguration;
+      conf = EnvConfiguration::Staging;
    } else if (currentConfiguration == UATEnvSettings) {
-      index = UATConfiguration;
+      conf = EnvConfiguration::UAT;
    } else if (currentConfiguration == PRODEnvSettings) {
-      index = PRODConfiguration;
+      conf = EnvConfiguration::PROD;
    }
 
-   ui_->comboBoxEnvironment->setCurrentIndex(index);
+   ui_->comboBoxEnvironment->setCurrentIndex(int(conf));
 }
 
 void NetworkSettingsPage::reset()
@@ -166,10 +159,17 @@ void NetworkSettingsPage::reset()
 
 void NetworkSettingsPage::apply()
 {
+   disableSettingUpdate_ = true;
+
    applyArmoryServers();
 
    appSettings_->set(ApplicationSettings::pubBridgeHost, ui_->lineEditPublicBridgeHost->text());
    appSettings_->set(ApplicationSettings::pubBridgePort, ui_->spinBoxPublicBridgePort->value());
+
+   DetectEnvironmentSettings();
+   appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
+
+   disableSettingUpdate_ = false;
 }
 
 void NetworkSettingsPage::applyArmoryServers()
@@ -179,22 +179,30 @@ void NetworkSettingsPage::applyArmoryServers()
 
 void NetworkSettingsPage::onEnvSelected(int index)
 {
-   if (index != CustomConfiguration) {
-      const EnvSettings *settings = nullptr;
-      if (index == StagingConfiguration) {
-         settings = &StagingEnvSettings;
-      } else if (index == UATConfiguration) {
-         settings = &UATEnvSettings;
-      } else  {
-         settings = &PRODEnvSettings;
-      }
+   EnvConfiguration conf = EnvConfiguration(index);
 
-      ui_->lineEditPublicBridgeHost->setText(settings->pubHost);
-      ui_->lineEditPublicBridgeHost->setEnabled(false);
-      ui_->spinBoxPublicBridgePort->setValue(settings->pubPort);
-      ui_->spinBoxPublicBridgePort->setEnabled(false);
-   } else {
+   if (conf == EnvConfiguration::Custom) {
       ui_->lineEditPublicBridgeHost->setEnabled(true);
       ui_->spinBoxPublicBridgePort->setEnabled(true);
+      return;
    }
+
+   const EnvSettings *settings = nullptr;
+
+   switch (conf) {
+      case EnvConfiguration::UAT:
+         settings = &UATEnvSettings;
+         break;
+      case EnvConfiguration::Staging:
+         settings = &StagingEnvSettings;
+         break;
+      default:
+         settings = &PRODEnvSettings;
+         break;
+   }
+
+   ui_->lineEditPublicBridgeHost->setText(settings->pubHost);
+   ui_->lineEditPublicBridgeHost->setEnabled(false);
+   ui_->spinBoxPublicBridgePort->setValue(settings->pubPort);
+   ui_->spinBoxPublicBridgePort->setEnabled(false);
 }

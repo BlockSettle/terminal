@@ -3,7 +3,6 @@
 
 #include <QWidget>
 #include <memory>
-#include "WalletsManager.h"
 
 namespace Ui {
     class CoinControlWidget;

@@ -4,17 +4,30 @@
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::SettlementAddressEntry> &addr
+   , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
- : rtWallet_(rtWallet)
- , addressEntry_(addr)
- , armory_(armory)
- , logger_(logger)
+   : rtWallet_(rtWallet)
+   , addressEntry_(entryToAddress(addr))
+   , armory_(armory)
+   , logger_(logger)
 {
    const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
 
-   addressString_ = bs::Address{addressEntry_->getPrefixedHash()}.display<std::string>();
+   addressString_ = bs::Address{addr->getPrefixedHash()}.display<std::string>();
+}
+
+bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
+   , const std::shared_ptr<spdlog::logger>& logger)
+   : rtWallet_(rtWallet)
+   , armory_(armory)
+   , logger_(logger)
+   , addressString_(addr.display<std::string>())
+{
+   const auto &addrHashes = addrEntry->supportedAddrHashes();
+   ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
 }
 
 void bs::SettlementMonitor::checkNewEntries()
@@ -189,7 +202,7 @@ void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEn
 
 void bs::PayoutSigner::WhichSignature(const Tx& tx
    , uint64_t value
-   , const std::shared_ptr<bs::SettlementAddressEntry> &ae
+   , const std::shared_ptr<bs::SettlementAddress> &ae
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory, std::function<void(Type)> cb)
 {
@@ -252,16 +265,14 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
                , tx.getThisHash().toHexStr());
          }
 
-         if (inputState.isSignedForPubKey(ae->getAsset()->buyChainedPubKey())) {
+         if (inputState.isSignedForPubKey(ae->buyChainedPubKey())) {
             cb(SignedByBuyer);
             return;
-         }
-         else if (inputState.isSignedForPubKey(ae->getAsset()->sellChainedPubKey())) {
+         } else if (inputState.isSignedForPubKey(ae->sellChainedPubKey())) {
             cb(SignedBySeller);
             return;
          }
-      }
-      catch (const std::exception &e) {
+      } catch (const std::exception &e) {
          logger->error("[PayoutSigner::WhichSignature] exception {}", e.what());
       }
       cb(SignatureUndefined);
@@ -273,10 +284,16 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
          result->txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
       armory->getTXsByHash(result->txHashSet, cbProcess);
-   }
-   else {
+   } else {
       cbProcess({});
    }
+}
+
+std::shared_ptr<bs::SettlementAddress> bs::entryToAddress(
+   const std::shared_ptr<bs::core::SettlementAddressEntry> &ae)
+{
+   return std::make_shared<bs::SettlementAddress>(ae->getAsset()->supportedAddrHashes()
+      , ae->getAsset()->buyChainedPubKey(), ae->getAsset()->sellChainedPubKey());
 }
 
 void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntry &entry
@@ -303,9 +320,16 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
 
 bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::SettlementAddressEntry> &addr
+   , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
  : SettlementMonitor(rtWallet, armory, addr, logger)
+{}
+
+bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
+   , const std::shared_ptr<spdlog::logger>& logger)
+   : SettlementMonitor(rtWallet, armory, addrEntry, addr, logger)
 {}
 
 bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
@@ -359,9 +383,16 @@ void bs::SettlementMonitorQtSignals::onPayOutConfirmed(PayoutSigner::Type signed
 
 bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
    , const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<bs::SettlementAddressEntry> &addr
+   , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
  : SettlementMonitor(rtWallet, armory, addr, logger)
+{}
+
+bs::SettlementMonitorCb::SettlementMonitorCb(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
+   , const std::shared_ptr<spdlog::logger>& logger)
+   : SettlementMonitor(rtWallet, armory, addrEntry, addr, logger)
 {}
 
 bs::SettlementMonitorCb::~SettlementMonitorCb() noexcept

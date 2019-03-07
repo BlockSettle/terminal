@@ -2,12 +2,21 @@
 #define __BS_QWALLETINFO_H__
 
 #include <QObject>
-#include "HDWallet.h"
-#include "MetaData.h"
 #include "headless.pb.h"
 #include "QSeed.h"
 
 namespace bs {
+   namespace core {
+      namespace hd {
+         class Wallet;
+      }
+      class Wallet;
+   }
+   namespace sync {
+      namespace hd {
+         class Wallet;
+      }
+   }
 namespace hd {
 
 class WalletInfo : public QObject
@@ -34,16 +43,20 @@ public:
    WalletInfo(const Blocksettle::Communication::headless::PasswordRequest &request);
 
    // used in signer
-   WalletInfo(std::shared_ptr<bs::hd::Wallet> hdWallet, QObject *parent = nullptr);
-   WalletInfo(std::shared_ptr<bs::Wallet> wallet, std::shared_ptr<bs::hd::Wallet> rootHdWallet, QObject *parent = nullptr);
+   WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *parent = nullptr);
+   WalletInfo(std::shared_ptr<bs::sync::hd::Wallet> hdWallet, QObject *parent = nullptr);
+   WalletInfo(std::shared_ptr<bs::core::Wallet> wallet
+      , std::shared_ptr<bs::core::hd::Wallet> rootHdWallet, QObject *parent = nullptr);
 
    WalletInfo(const WalletInfo &other);
    WalletInfo& operator= (const WalletInfo &other);
 
    static WalletInfo fromDigitalBackup(const QString &filename);
-   void initFromWallet(const bs::Wallet *, const std::string &rootId = {});
-   void initFromRootWallet(const std::shared_ptr<bs::hd::Wallet> &);
-   void initEncKeys(const std::shared_ptr<bs::hd::Wallet> &rootWallet);
+   void initFromWallet(const bs::core::Wallet *, const std::string &rootId = {});
+   void initFromRootWallet(const std::shared_ptr<bs::core::hd::Wallet> &);
+   void initEncKeys(const std::shared_ptr<bs::core::hd::Wallet> &rootWallet);
+   void initFromRootWallet(const std::shared_ptr<bs::sync::hd::Wallet> &);
+   void initEncKeys(const std::shared_ptr<bs::sync::hd::Wallet> &rootWallet);
 
    QString walletId() const { return walletId_; }
    void setWalletId(const QString &walletId);

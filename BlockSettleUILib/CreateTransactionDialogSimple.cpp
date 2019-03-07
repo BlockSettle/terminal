@@ -9,14 +9,14 @@
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 
 #include <QFileDialog>
 #include <QDebug>
 
 CreateTransactionDialogSimple::CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<WalletsManager>& walletManager
+   , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
    , const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<spdlog::logger>& logger, QWidget* parent)
  : CreateTransactionDialog(armory, walletManager, container, true, logger,
@@ -174,7 +174,7 @@ bs::Address CreateTransactionDialogSimple::getChangeAddress() const
 {
    bs::Address result;
    if (transactionData_->GetTransactionSummary().hasChange) {
-      result = transactionData_->GetWallet()->GetNewChangeAddress();
+      result = transactionData_->getWallet()->getNewChangeAddress();
    }
    return result;
 }

@@ -1075,6 +1075,22 @@ QTextEdit {
   *[textEditReadOnly="true"]:focus {
     border: none; }
 
+QTextEdit#textEditMessages {
+  border: none;
+  padding: 1px 5px;
+  background: transparent;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 11px;
+  color: #81888f; }
+
+*[textEditReadOnly="true"] {
+  border: none;
+  padding: 0px;
+  background: transparent;
+  color: #ffffff; }
+  *[textEditReadOnly="true"]:focus {
+    border: none; }
+
 QDoubleSpinBox,
 QSpinBox {
   padding: 0 5px 0 5px;

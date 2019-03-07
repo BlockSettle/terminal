@@ -3,8 +3,7 @@
 
 #include <memory>
 #include <QObject>
-#include "HDWallet.h"
-#include "MetaData.h"
+#include "CoreWallet.h"
 #include "WalletEncryption.h"
 
 namespace bs {
@@ -12,13 +11,13 @@ namespace wallet {
 
 /// wrapper on bs::wallet::Seed enables using this type in QML
 /// Seed class may operate with plain seed key (seed_) and secured data(privKey_)
-class QSeed : public QObject, public Seed
+class QSeed : public QObject, public bs::core::wallet::Seed
 {
    Q_OBJECT
 
    Q_PROPERTY(QString part1 READ part1)
    Q_PROPERTY(QString part2 READ part2)
-   Q_PROPERTY(QString walletId READ walletId)
+   Q_PROPERTY(QString walletId READ walletId) //see below
    Q_PROPERTY(int networkType READ networkType)
 public:
    enum QNetworkType {
@@ -57,7 +56,7 @@ public:
 
    QString part1() const { return QString::fromStdString(toEasyCodeChecksum().part1); }
    QString part2() const { return QString::fromStdString(toEasyCodeChecksum().part2); }
-   QString walletId() { return QString::fromStdString(bs::hd::Node(*this).getId()); }
+   QString walletId() const { return QString::fromStdString(getWalletId()); }
 
    QString lastError() const;
 

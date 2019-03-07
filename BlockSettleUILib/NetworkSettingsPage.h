@@ -41,6 +41,7 @@ private:
 private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
    ArmoryServersViewModel *armoryServerModel_;
+   bool disableSettingUpdate_{false};
 };
 
 #endif // __NETWORK_SETTINGS_PAGE_H__

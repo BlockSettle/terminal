@@ -2,7 +2,6 @@
 
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
-#include "HDWallet.h"
 #include "HeadlessContainer.h"
 #include "OfflineSigner.h"
 #include "ZMQHelperFunctions.h"

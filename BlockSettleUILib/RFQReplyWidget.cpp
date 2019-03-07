@@ -15,7 +15,6 @@
 #include "DealerXBTSettlementContainer.h"
 #include "DealerXBTSettlementDialog.h"
 #include "DialogManager.h"
-#include "HDWallet.h"
 #include "MarketDataProvider.h"
 #include "BSMessageBox.h"
 #include "OrderListModel.h"
@@ -25,6 +24,8 @@
 #include "RFQBlotterTreeView.h"
 #include "CustomDoubleSpinBox.h"
 #include "OrdersView.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 using namespace bs::ui;
 
@@ -41,16 +42,16 @@ RFQReplyWidget::RFQReplyWidget(QWidget* parent)
 
 RFQReplyWidget::~RFQReplyWidget() = default;
 
-void RFQReplyWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
+void RFQReplyWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    if (!walletsManager_ && walletsManager) {
       walletsManager_ = walletsManager;
       ui_->pageRFQReply->setWalletsManager(walletsManager_);
 
       if (signingContainer_) {
-         auto primaryWallet = walletsManager_->GetPrimaryWallet();
+         auto primaryWallet = walletsManager_->getPrimaryWallet();
          if (primaryWallet != nullptr) {
-            signingContainer_->GetInfo(primaryWallet->getWalletId());
+            signingContainer_->GetInfo(primaryWallet->walletId());
          }
       }
    }
@@ -107,7 +108,8 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<DialogManager> &dialogManager
    , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory)
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<ConnectionManager> &connectionManager)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -118,13 +120,14 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    signingContainer_ = container;
    armory_ = armory;
    appSettings_ = appSettings;
+   connectionManager_ = connectionManager;
 
    statsCollector_ = std::make_shared<bs::SecurityStatsCollector>(appSettings, ApplicationSettings::Filter_MD_QN_cnt);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, statsCollector_.get(), &bs::SecurityStatsCollector::onQuoteSubmitted);
 
    ui_->widgetQuoteRequests->init(logger_, quoteProvider_, assetManager, statsCollector_,
                                   appSettings, celerClient_);
-   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, signingContainer_, armory_, mdProvider);
+   ui_->pageRFQReply->init(logger, authAddressManager, assetManager, quoteProvider_, appSettings, connectionManager, signingContainer_, armory_, mdProvider);
 
    connect(ui_->widgetQuoteRequests, &QuoteRequestsWidget::Selected, ui_->pageRFQReply, &RFQDealerReply::setQuoteReqNotification);
    connect(ui_->pageRFQReply, &RFQDealerReply::submitQuoteNotif, quoteProvider_.get()
@@ -202,7 +205,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
             } else {
                auto settlDlg = new DealerCCSettlementDialog(logger_, settlContainer,
                   sr.requestorAuthAddress, walletsManager_, signingContainer_
-                  , celerClient_, appSettings_, this);
+                  , celerClient_, appSettings_, connectionManager_, this);
                showSettlementDialog(settlDlg);
             }
          } catch (const std::exception &e) {
@@ -228,7 +231,7 @@ void RFQReplyWidget::onOrder(const bs::network::Order &order)
                   settlContainer->activate();
                } else {
                   auto *dsd = new DealerXBTSettlementDialog(logger_, settlContainer, assetManager_,
-                     walletsManager_, signingContainer_, celerClient_, appSettings_, this);
+                     walletsManager_, signingContainer_, celerClient_, appSettings_, connectionManager_, this);
                   showSettlementDialog(dsd);
                }
             } catch (const std::exception &e) {
@@ -269,13 +272,13 @@ void RFQReplyWidget::onAutoSignActivated(const SecureBinaryData &password, const
       return;
    }
 
-   auto hdWallet = walletsManager_->GetHDWalletById(hdWalletId.toStdString());
+   auto hdWallet = walletsManager_->getHDWalletById(hdWalletId.toStdString());
    if (!hdWallet) {
       logger_->warn("[RFQReplyWidget::onAutoSignActivated] failed to get HD wallet for id {} - falling back to main primary"
          , hdWalletId.toStdString());
-      hdWallet = walletsManager_->GetPrimaryWallet();
+      hdWallet = walletsManager_->getPrimaryWallet();
    }
-   signingContainer_->SetLimits(hdWallet, password, active);
+   signingContainer_->setLimits(hdWallet->walletId(), password, active);
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)

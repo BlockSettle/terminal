@@ -1,150 +1,11 @@
-#include "HDNode.h"
 #include <memory>
 #include <botan/serpent.h>
 #include "AssetEncryption.h"
 #include "EncryptionUtils.h"
+#include "CoreHDNode.h"
 #include "make_unique.h"
 
-using namespace bs;
-
-hd::Path::Path(const std::vector<Elem> &elems) : path_(elems)
-{
-   isAbsolute_ = (path_[0] == hd::purpose);
-   if (isAbsolute_) {
-      for (size_t i = 0; i < qMin<size_t>(3, path_.size()); i++) {
-         setHardened(i);
-      }
-   }
-}
-
-bool hd::Path::isHardened(size_t index) const
-{
-   return (hardenedIdx_.find(index) != hardenedIdx_.end());
-}
-
-void hd::Path::setHardened(size_t index)
-{
-   hardenedIdx_.insert(index);
-}
-
-hd::Path::Elem hd::Path::get(int index) const
-{
-   if (path_.empty()) {
-      return UINT32_MAX;
-   }
-   if (index < 0) {
-      index += (int)length();
-      if (index < 0) {
-         return UINT32_MAX;
-      }
-   }
-   else {
-      if (index >= length()) {
-         return UINT32_MAX;
-      }
-   }
-   return path_[index];
-}
-
-void hd::Path::clear()
-{
-   isAbsolute_ = false;
-   path_.clear();
-   hardenedIdx_.clear();
-}
-
-void hd::Path::append(Elem elem, bool hardened)
-{
-   path_.push_back(elem);
-   if (hardened) {
-      setHardened(length() - 1);
-   }
-}
-
-hd::Path::Elem hd::Path::keyToElem(const std::string &key)
-{
-   hd::Path::Elem result = 0;
-   const std::string &str = (key.length() > 4) ? key.substr(0, 4) : key;
-   if (str.empty()) {
-      return result;
-   }
-   for (size_t i = 0; i < str.length(); i++) {
-      result |= static_cast<hd::Path::Elem>(str[str.length() - 1 - i]) << (i * 8);
-   }
-   return result;
-}
-
-void hd::Path::append(const std::string &key, bool hardened)
-{
-   append(keyToElem(key), hardened);
-}
-
-std::string hd::Path::toString(bool alwaysAbsolute) const
-{
-   if (path_.empty()) {
-      return {};
-   }
-   std::string result = (alwaysAbsolute || isAbsolute_) ? "m/" : "";
-   for (size_t i = 0; i < path_.size(); i++) {
-      const auto &elem = path_[i];
-      result.append(std::to_string(elem));
-      if (isHardened(i)) {
-         result.append("'");
-      }
-      if (i < (path_.size() - 1)) {
-         result.append("/");
-      }
-   }
-   return result;
-}
-
-static bool isValidPathElem(const std::string &elem)
-{
-   if (elem.empty()) {
-      return false;
-   }
-   if (elem == "m") {
-      return true;
-   }
-   for (const auto &c : elem) {
-      if ((c != '\'') && ((c > '9') || (c < '0'))) {
-         return false;
-      }
-   }
-   return true;
-}
-
-hd::Path hd::Path::fromString(const std::string &s)
-{
-   std::string str = s;
-   std::vector<std::string>   stringVec;
-   size_t cutAt = 0;
-   while ((cutAt = str.find('/')) != std::string::npos) {
-      if (cutAt > 0) {
-         stringVec.push_back(str.substr(0, cutAt));
-         str = str.substr(cutAt + 1);
-      }
-   }
-   if (!str.empty()) {
-      stringVec.push_back(str);
-   }
-
-   Path result;
-   for (const auto &elem : stringVec) {
-      if ((elem == "m") || !isValidPathElem(elem)) {
-         continue;
-      }
-      const auto pe = static_cast<Elem>(std::stoul(elem));
-      result.append(pe, (elem.find("'") != std::string::npos));
-   }
-   if (result.get(0) == hd::purpose) {
-      result.isAbsolute_ = true;
-   }
-   return result;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+using namespace bs::core;
 
 hd::Node::Node(NetworkType netType)
 {
@@ -153,7 +14,7 @@ hd::Node::Node(NetworkType netType)
    initFromSeed();
 }
 
-hd::Node::Node(const bs::wallet::Seed &seed)
+hd::Node::Node(const wallet::Seed &seed)
 {
    setNetworkType(seed.networkType());
    initFrom(seed);
@@ -239,7 +100,7 @@ void hd::Node::initFromSeed()
    btc_hdnode_fill_public_key(&node_);
 }
 
-void hd::Node::initFrom(const bs::wallet::Seed &seed)
+void hd::Node::initFrom(const wallet::Seed &seed)
 {
    if (seed.hasPrivateKey()) {
       if (seed.privateKey().isNull()) {
@@ -309,9 +170,9 @@ SecureBinaryData hd::Node::privateKey() const
    return SecureBinaryData(node_.private_key, sizeof(node_.private_key));
 }
 
-bs::wallet::Seed hd::Node::seed() const
+wallet::Seed hd::Node::seed() const
 {
-   bs::wallet::Seed seed(netType_);
+   wallet::Seed seed(netType_);
    if (hasPrivKey_) {
       seed.setPrivateKey(privateKey());
    }
@@ -360,9 +221,9 @@ std::unique_ptr<hd::Node> hd::Node::createUnique(const btc_hdnode &node, Network
    return make_unique<hd::Node>(node, netType);
 }
 
-std::shared_ptr<hd::Node> hd::Node::derive(const Path &path, bool pubCKD) const
+std::shared_ptr<hd::Node> hd::Node::derive(const bs::hd::Path &path, bool pubCKD) const
 {
-   if (!pubCKD && !hasPrivKey_) {
+   if ((!pubCKD && !hasPrivKey_) || !encTypes_.empty()) {
       return nullptr;
    }
    btc_hdnode newNode;
@@ -383,7 +244,7 @@ std::shared_ptr<hd::Node> hd::Node::derive(const Path &path, bool pubCKD) const
 BinaryData hd::Node::serialize() const
 {
    BinaryWriter bw;
-   bw.put_uint8_t(hd::purpose);     // node type
+   bw.put_uint8_t(bs::hd::purpose);     // node type
    bw.put_uint8_t((uint8_t)netType_);
 
    if (hasPrivKey_) {
@@ -436,7 +297,7 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
 {
    BinaryRefReader brrVal(value);
    auto nodeType = brrVal.get_uint8_t();
-   if (nodeType != hd::purpose) {
+   if (nodeType != bs::hd::purpose) {
       throw std::runtime_error("BIP44-incompatible purpose: " + std::to_string(nodeType));
    }
    const auto netType = static_cast<NetworkType>(brrVal.get_uint8_t());
@@ -468,7 +329,7 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
          brrData = values[ENCTYPE_BYTE][0];
          const auto encData = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
          for (size_t i = 0; i < encData.getSize(); ++i) {
-            result->encTypes_.emplace_back(static_cast<wallet::EncryptionType>(encData.getPtr()[i]));
+            result->encTypes_.emplace_back(static_cast<bs::wallet::EncryptionType>(encData.getPtr()[i]));
          }
       }
 
@@ -480,7 +341,7 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
 
       if (values.find(ENCRYPTIONKEY_BYTE) != values.end()) {
          if (result->encTypes().empty()) {
-            result->encTypes_.push_back(wallet::EncryptionType::Password);
+            result->encTypes_.push_back(bs::wallet::EncryptionType::Password);
          }
          brrData = values[ENCRYPTIONKEY_BYTE][0];
          result->iv_ = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
@@ -587,14 +448,16 @@ std::shared_ptr<KeyDerivationFunction> hd::Node::getKDF()
 }
 
 std::shared_ptr<hd::Node> hd::Node::encrypt(const SecureBinaryData &password
-   , const std::vector<wallet::EncryptionType> &encTypes
+   , const std::vector<bs::wallet::EncryptionType> &encTypes
    , const std::vector<SecureBinaryData> &encKeys)
 {
-   if (!encTypes_.empty()) {
+   if (!encTypes_.empty() || password.isNull()) {
       return nullptr;
    }
    auto result = std::make_shared<hd::Node>(node_, netType_);
-   result->encTypes_ = encTypes;
+   result->encTypes_ = encTypes.empty()
+      ? std::vector<bs::wallet::EncryptionType>{ bs::wallet::EncryptionType::Password }
+      : encTypes;
    result->encKeys_ = encKeys;
    result->seed_.clear();
    memset(result->node_.private_key, 0, sizeof(result->node_.private_key));
@@ -652,7 +515,6 @@ BinaryData hd::ChainedNode::pubChainedKey() const
 }
 
 
-
 std::shared_ptr<hd::Node> hd::Nodes::decrypt(const SecureBinaryData &password) const
 {
    if (nodes_.empty()) {
@@ -693,17 +555,17 @@ std::shared_ptr<hd::Node> hd::Nodes::decrypt(const SecureBinaryData &password) c
    return nullptr;
 }
 
-std::vector<wallet::EncryptionType> hd::Nodes::encryptionTypes() const
+std::vector<bs::wallet::EncryptionType> hd::Nodes::encryptionTypes() const
 {
    if (nodes_.empty()) {
       return {};
    }
-   std::set<wallet::EncryptionType> encTypes;
+   std::set<bs::wallet::EncryptionType> encTypes;
    for (const auto &node : nodes_) {
       const auto &nodeEncTypes = node->encTypes();
       encTypes.insert(nodeEncTypes.begin(), nodeEncTypes.end());
    }
-   std::vector<wallet::EncryptionType> result;
+   std::vector<bs::wallet::EncryptionType> result;
    for (const auto &encType : encTypes) {
       result.emplace_back(encType);
    }
@@ -731,7 +593,7 @@ hd::Nodes hd::Nodes::chained(const BinaryData &chainKey) const
 {
    std::vector<std::shared_ptr<hd::Node>> chainedNodes;
    for (const auto &node : nodes_) {
-      chainedNodes.emplace_back(std::make_shared<bs::hd::ChainedNode>(*node, chainKey));
+      chainedNodes.emplace_back(std::make_shared<hd::ChainedNode>(*node, chainKey));
    }
    return hd::Nodes(chainedNodes, rank_, id_);
 }
@@ -744,20 +606,4 @@ void hd::Nodes::forEach(const std::function<void(std::shared_ptr<Node>)> &cb) co
    for (const auto &node : nodes_) {
       cb(node);
    }
-}
-
-
-bool operator < (const hd::Path &l, const hd::Path &r)
-{
-   if (l.length() != r.length()) {
-      return (l.length() < r.length());
-   }
-   for (size_t i = 0; i < l.length(); i++) {
-      const auto &lval = l.get((int)i);
-      const auto &rval = r.get((int)i);
-      if (lval != rval) {
-         return (lval < rval);
-      }
-   }
-   return false;
 }

@@ -3,7 +3,7 @@
 #include "ArmoryConnection.h"
 #include "CheckRecipSigner.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -197,11 +197,11 @@ unsigned int TXNode::level() const
 
 
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
-                         , const std::shared_ptr<WalletsManager> &walletsManager
+                         , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
                          , const std::shared_ptr<AsyncClient::LedgerDelegate> &ledgerDelegate
                          , const std::shared_ptr<spdlog::logger> &logger
                          , QObject* parent
-                         , const std::shared_ptr<bs::Wallet> &defWlt)
+                         , const std::shared_ptr<bs::sync::Wallet> &defWlt)
    : QAbstractItemModel(parent)
    , armory_(armory)
    , ledgerDelegate_(ledgerDelegate)
@@ -215,7 +215,7 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
 }
 
 TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
-                         , const std::shared_ptr<WalletsManager> &walletsManager
+                         , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
                                  , const std::shared_ptr<spdlog::logger> &logger
                                              , QObject* parent)
    : QAbstractItemModel(parent)
@@ -239,12 +239,12 @@ void TransactionsViewModel::init()
       connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
       connect(armory_.get(), &ArmoryConnection::newBlock, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
    }
-   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &WalletsManager::walletDeleted, this, &TransactionsViewModel::cleanRefresh, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &WalletsManager::invalidatedZCs, this, &TransactionsViewModel::onDelTransactions, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::cleanRefresh, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, this, &TransactionsViewModel::onDelTransactions, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel()
@@ -414,14 +414,15 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    item->txEntry = entry;
    item->displayDateTime = UiUtils::displayDateTime(entry.txTime);
    item->walletID = QString::fromStdString(entry.id);
-   item->wallet = walletsManager_->GetWalletById(entry.id);
+   item->wallet = walletsManager_->getWalletById(entry.id);
    if (!item->wallet && defaultWallet_) {
       item->wallet = defaultWallet_;
+      item->walletID = QString::fromStdString(defaultWallet_->walletId());
    }
 
    item->confirmations = armory_->getConfirmationsNumber(entry.blockNum);
    if (item->wallet) {
-      item->walletName = QString::fromStdString(item->wallet->GetWalletName());
+      item->walletName = QString::fromStdString(item->wallet->name());
    }
    item->isValid = item->wallet ? item->wallet->isTxValid(entry.txHash) : false;
    item->initialized = false;
@@ -788,7 +789,7 @@ void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<Trans
 
 
 void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<WalletsManager> &walletsMgr
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , std::function<void(const TransactionsViewItem *)> userCB)
 {
    const auto cbCheckIfInitializationCompleted = [this, userCB] {
@@ -812,7 +813,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
          calcAmount(walletsMgr);
       }
       if (mainAddress.isEmpty()) {
-         if (!walletsMgr->GetTransactionMainAddress(tx, wallet, (amount > 0), cbMainAddr)) {
+         if (!walletsMgr->getTransactionMainAddress(tx, walletID.toStdString(), (amount > 0), cbMainAddr)) {
             userCB(nullptr);
          }
       }
@@ -829,10 +830,10 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       txHashesReceived = true;
       cbInit();
    };
-   const auto &cbDir = [this, cbInit](bs::Transaction::Direction dir, std::vector<bs::Address> inAddrs) {
+   const auto &cbDir = [this, cbInit](bs::sync::Transaction::Direction dir, std::vector<bs::Address> inAddrs) {
       direction = dir;
-      dirStr = QObject::tr(bs::Transaction::toStringDir(dir));
-      if (dir == bs::Transaction::Direction::Received) {
+      dirStr = QObject::tr(bs::sync::Transaction::toStringDir(dir));
+      if (dir == bs::sync::Transaction::Direction::Received) {
          if (inAddrs.size() == 1) {    // likely a settlement address
             switch (inAddrs[0].getType()) {
             case AddressEntryType_P2WSH:
@@ -844,7 +845,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
             }
          }
       }
-      else if (dir == bs::Transaction::Direction::Sent) {
+      else if (dir == bs::sync::Transaction::Direction::Sent) {
          for (int i = 0; i < tx.getNumTxOut(); ++i) {
             TxOut out = tx.getTxOutCopy((int)i);
             bs::Address addr(out.getScrAddressStr());
@@ -861,7 +862,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
             }
          }
       }
-      else if (dir == bs::Transaction::Direction::PayIn) {
+      else if (dir == bs::sync::Transaction::Direction::PayIn) {
          for (int i = 0; i < tx.getNumTxOut(); ++i) {
             TxOut out = tx.getTxOutCopy((int)i);
             bs::Address addr(out.getScrAddressStr());
@@ -878,7 +879,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
             }
          }
       }
-      else if (dir == bs::Transaction::Direction::PayOut) {
+      else if (dir == bs::sync::Transaction::Direction::PayOut) {
          if (inAddrs.size() == 1) {
             groupId = inAddrs[0];
          }
@@ -892,7 +893,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
          return;
       }
       if (comment.isEmpty()) {
-         comment = wallet ? QString::fromStdString(wallet->GetTransactionComment(txEntry.txHash))
+         comment = wallet ? QString::fromStdString(wallet->getTransactionComment(txEntry.txHash))
             : QString();
          const auto endLineIndex = comment.indexOf(QLatin1Char('\n'));
          if (endLineIndex != -1) {
@@ -924,7 +925,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       }
 
       if (dirStr.isEmpty()) {
-         if (!walletsMgr->GetTransactionDirection(tx, wallet, cbDir)) {
+         if (!walletsMgr->getTransactionDirection(tx, walletID.toStdString(), cbDir)) {
             userCB(nullptr);
          }
       }
@@ -948,21 +949,21 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
    }
 }
 
-static bool isSpecialWallet(const std::shared_ptr<bs::Wallet> &wallet)
+static bool isSpecialWallet(const std::shared_ptr<bs::sync::Wallet> &wallet)
 {
    if (!wallet) {
       return false;
    }
-   switch (wallet->GetType()) {
-   case bs::wallet::Type::Settlement:
-   case bs::wallet::Type::ColorCoin:
+   switch (wallet->type()) {
+   case bs::core::wallet::Type::Settlement:
+   case bs::core::wallet::Type::ColorCoin:
       return true;
    default: break;
    }
    return false;
 }
 
-void TransactionsViewItem::calcAmount(const std::shared_ptr<WalletsManager> &walletsManager)
+void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    if (wallet && tx.isInitialized()) {
       bool hasSpecialAddr = false;
@@ -971,7 +972,7 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<WalletsManager> &wal
          TxOut out = tx.getTxOutCopy(i);
          if (txEntry.isChainedZC && !hasSpecialAddr) {
             const auto addr = bs::Address::fromTxOut(out);
-            hasSpecialAddr = isSpecialWallet(walletsManager->GetWalletByAddress(addr.id()));
+            hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr.id()));
          }
          outputVal += out.getValue();
       }
@@ -986,17 +987,17 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<WalletsManager> &wal
             inputVal += prevOut.getValue();
             if (txEntry.isChainedZC && !hasSpecialAddr) {
                const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(op.getTxOutIndex()));
-               hasSpecialAddr = isSpecialWallet(walletsManager->GetWalletByAddress(addr.id()));
+               hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr.id()));
             }
          }
       }
       auto value = txEntry.value;
-      const auto fee = (wallet->GetType() == bs::wallet::Type::ColorCoin) || (value > 0) ? 0 : (outputVal - inputVal);
+      const auto fee = (wallet->type() == bs::core::wallet::Type::ColorCoin) || (value > 0) ? 0 : (outputVal - inputVal);
       value -= fee;
-      amount = wallet->GetTxBalance(value);
+      amount = wallet->getTxBalance(value);
       amountStr = wallet->displayTxValue(value);
 
-      if (txEntry.isChainedZC && (wallet->GetType() == bs::wallet::Type::Bitcoin) && !hasSpecialAddr) {
+      if (txEntry.isChainedZC && (wallet->type() == bs::core::wallet::Type::Bitcoin) && !hasSpecialAddr) {
          isCPFP = true;
       }
    }
@@ -1034,12 +1035,14 @@ std::string TransactionsViewItem::id() const
 bool TransactionsViewItem::isRBFeligible() const
 {
    return ((confirmations == 0) && txEntry.isRBF
-      && (wallet != nullptr && wallet->GetType() != bs::wallet::Type::Settlement)
-      && (direction == bs::Transaction::Direction::Internal || direction == bs::Transaction::Direction::Sent));
+      && (wallet != nullptr && wallet->type() != bs::core::wallet::Type::Settlement)
+      && (direction == bs::sync::Transaction::Direction::Internal
+         || direction == bs::sync::Transaction::Direction::Sent));
 }
 
 bool TransactionsViewItem::isCPFPeligible() const
 {
-   return ((confirmations == 0) && (wallet != nullptr && wallet->GetType() != bs::wallet::Type::Settlement)
-      && (direction == bs::Transaction::Direction::Internal || direction == bs::Transaction::Direction::Received));
+   return ((confirmations == 0) && (wallet != nullptr && wallet->type() != bs::core::wallet::Type::Settlement)
+      && (direction == bs::sync::Transaction::Direction::Internal
+         || direction == bs::sync::Transaction::Direction::Received));
 }

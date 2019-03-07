@@ -1,6 +1,6 @@
 #include "BaseDealerSettlementDialog.h"
 #include <QCoreApplication>
-#include "HDWallet.h"
+#include "Wallets/SyncHDWallet.h"
 #include "SettlementContainer.h"
 #include "SignContainer.h"
 #include "ManageEncryption/WalletKeysSubmitWidget.h"
@@ -11,12 +11,14 @@ BaseDealerSettlementDialog::BaseDealerSettlementDialog(const std::shared_ptr<spd
       , const std::shared_ptr<bs::SettlementContainer> &settlContainer
       , const std::shared_ptr<SignContainer> &signContainer
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent)
    : QDialog(parent)
    , logger_(logger)
    , settlContainer_(settlContainer)
    , signContainer_(signContainer)
    , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
 {
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStarted, this, &BaseDealerSettlementDialog::onTimerStarted);
    connect(settlContainer_.get(), &bs::SettlementContainer::timerStopped, this, &BaseDealerSettlementDialog::onTimerStopped);
@@ -110,14 +112,14 @@ void BaseDealerSettlementDialog::onWalletInfo(unsigned int reqId, const bs::hd::
    }
 }
 
-void BaseDealerSettlementDialog::setWallet(const std::shared_ptr<bs::hd::Wallet> &wallet)
+void BaseDealerSettlementDialog::setWallet(const std::shared_ptr<bs::sync::hd::Wallet> &wallet)
 {
    widgetPassword()->hide();
    connect(widgetWalletKeys(), &WalletKeysSubmitWidget::keyChanged, [this] { validateGUI(); });
 
    rootWallet_ = wallet;
    if (signContainer_ && !signContainer_->isOffline()) {
-      infoReqId_ = signContainer_->GetInfo(rootWallet_->getWalletId());
+      infoReqId_ = signContainer_->GetInfo(rootWallet_->walletId());
    }
    walletInfo_ = bs::hd::WalletInfo(rootWallet_);
 }
@@ -137,7 +139,7 @@ void BaseDealerSettlementDialog::startAccepting()
       return;
    }
    widgetWalletKeys()->init(AutheIDClient::SettlementTransaction, walletInfo_
-                            , WalletKeyWidget::UseType::RequestAuthInParent, appSettings_, logger_);
+                            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
    widgetPassword()->show();
    widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();
