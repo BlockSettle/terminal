@@ -163,7 +163,7 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
 void ChatMessagesTextEdit::insertLoadMore() {
    QTextCursor cursor(textCursor());
    cursor.movePosition(QTextCursor::Start);
-   cursor.insertHtml(QLatin1Literal("<a href=\"load_more\">Load More...</a>"));
+   cursor.insertHtml(QLatin1Literal("<a href=\"load_more\" style=\"color:#20709a\">Load More...</a>"));
 }
 
 void ChatMessagesTextEdit::loadMore() {
@@ -364,7 +364,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text) {
       }
 
       QString linkText = changedText.mid(startIndex, endIndex - startIndex);
-      QString hyperlinkText = QLatin1Literal("<a href=\"") + linkText + QLatin1Literal("\">") + linkText + QLatin1Literal("</a>");
+      QString hyperlinkText = QLatin1Literal("<a href=\"") + linkText + QLatin1Literal("\" style=\"color:#20709a\">") + linkText + QLatin1Literal("</a>");
 
       changedText = changedText.replace(startIndex, endIndex - startIndex, hyperlinkText);
 
