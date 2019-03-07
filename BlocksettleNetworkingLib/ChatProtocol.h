@@ -53,6 +53,7 @@ namespace Chat
    ,   ResponseSendMessage
    ,   ResponseChangeMessageStatus
    ,   ResponseContactsAction
+   ,   ResponseChatroomsList
    };
    
    enum class ContactsAction {
@@ -480,6 +481,14 @@ namespace Chat
       QString id_;
       
    };
+   
+   class ChatroomsListResponse : public ListResponse
+   {
+   public:
+      ChatroomsListResponse(std::vector<std::string> dataList);
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      void handle(ResponseHandler&) override;
+   };
 
    class PendingMessagesResponse : public PendingResponse
    {
@@ -598,6 +607,8 @@ namespace Chat
       virtual void OnSendMessageResponse(const SendMessageResponse&) = 0;
       virtual void OnMessageChangeStatusResponse(const MessageChangeStatusResponse&) = 0;
       virtual void OnContactsActionResponse(const ContactsActionResponse&) = 0;
+      
+      virtual void OnChatroomsList(const ChatroomsListResponse&) = 0;
    };
 
    autheid::PublicKey publicKeyFromString(const std::string &s);

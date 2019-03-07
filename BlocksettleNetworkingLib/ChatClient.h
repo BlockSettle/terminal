@@ -51,6 +51,7 @@ public:
    void OnSendMessageResponse(const Chat::SendMessageResponse& ) override;
    void OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse&) override;
    void OnContactsActionResponse(const Chat::ContactsActionResponse&) override;
+   void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;

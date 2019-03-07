@@ -86,6 +86,7 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseSendMessage"        ,   ResponseType::ResponseSendMessage        }
    ,   { "ResponseChangeMessageStatus",   ResponseType::ResponseChangeMessageStatus}
    ,   { "ResponseContactsAction"     ,   ResponseType::ResponseContactsAction     }
+   ,   { "ResponseChatroomsList"      ,   ResponseType::ResponseChatroomsList      }
 };
 
 
@@ -103,6 +104,7 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseSendMessage        ,  "ResponseSendMessage"        }
    ,   { ResponseType::ResponseChangeMessageStatus,  "ResponseChangeMessageStatus"}
    ,   { ResponseType::ResponseContactsAction     ,  "ResponseContactsAction"     }
+   ,   { ResponseType::ResponseChatroomsList      ,  "ResponseChatroomsList"      }
 };
 
 autheid::PublicKey Chat::publicKeyFromString(const std::string &s)
@@ -187,6 +189,10 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
       
       case RequestType::RequestContactsAction:
          return ContactActionRequest::fromJSON(clientId, jsonData);
+         
+      case RequestType::RequestChatroomsList:
+      return std::make_shared<ChatroomsListRequest>(clientId
+            , data[SenderIdKey].toString().toStdString());
 
       default:
          break;
@@ -260,6 +266,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       
       case ResponseType::ResponseContactsAction:
          return ContactsActionResponse::fromJSON(jsonData);
+      
+      case ResponseType::ResponseChatroomsList:
+         return ChatroomsListResponse::fromJSON(jsonData);
 
       default:
          break;
@@ -1027,4 +1036,21 @@ QJsonObject ChatroomsListRequest::toJson() const
 void ChatroomsListRequest::handle(RequestHandler& handler)
 {
    return handler.OnRequestChatroomsList(*this);
+}
+
+ChatroomsListResponse::ChatroomsListResponse(std::vector<std::string> dataList)
+   : ListResponse (ResponseType::ResponseChatroomsList, dataList)
+{
+   
+}
+
+std::shared_ptr<Response> ChatroomsListResponse::fromJSON(const std::string& jsonData)
+{
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   return std::make_shared<ChatroomsListResponse>(ListResponse::fromJSON(jsonData));
+}
+
+void ChatroomsListResponse::handle(ResponseHandler& handler)
+{
+   handler.OnChatroomsList(*this);
 }
