@@ -90,12 +90,12 @@ void HeadlessAppObj::OnlineProcessing()
       , settings_->port().toStdString()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
-   const ConnectionManager connMgr(logger_);
-   connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(zmqPubKey_, zmqPrvKey_)) {
+   const ConnectionManager connMgr(logger_, settings_->trustedTerminals());
+   connection_ = connMgr.CreateZMQBIP15XServerConnection();
+/*   if (!connection_->SetKeyPair(zmqPubKey_, zmqPrvKey_)) {
       logger_->error("Failed to establish secure connection");
       throw std::runtime_error("secure connection problem");
-   }
+   }*/
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
