@@ -19,7 +19,10 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , info_(nullptr)
    , candlesticksChart_(nullptr)
    , volumeChart_(nullptr)
-   , volumeAxisRect_(nullptr) {
+   , volumeAxisRect_(nullptr)
+   , lastHigh (0.0)
+   , lastLow (0.0)
+   , lastClose (0.0) {
    ui_->setupUi(this);
 
    // setting up date range radio button group
@@ -67,6 +70,17 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
 
    // initial select interval
    ui_->btn1h->click();
+
+   auto currentTime = QDateTime::currentDateTime().time();
+
+   auto timerInterval = std::chrono::minutes(60);
+   if (currentTime.minute() != std::chrono::minutes(0).count())
+   {
+	   auto diff = timerInterval.count() - currentTime.minute();
+	   timerInterval = std::chrono::minutes(diff);
+   }
+
+   timer_->start(timerInterval);
 }
 
 ChartWidget::~ChartWidget() {
@@ -82,6 +96,27 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       return;
    }
 
+   if (title_->text() == security)
+   {
+	   for (const auto& field : mdFields)
+	   {
+		   if (field.type == bs::network::MDField::PriceBid)
+		   {
+			   const auto currentTime = QDateTime::currentSecsSinceEpoch();
+			   if (field.value == lastClose)
+				   return;
+			   else
+				   lastClose = field.value;
+
+			   if (lastClose > lastHigh)
+				   lastHigh = lastClose;
+
+			   if (lastClose < lastLow)
+				   lastLow = lastClose;
+		   }
+	   }
+   }
+
    //if (cboModel_->findItems(security).isEmpty())
    //{
    //   cboModel_->appendRow(new QStandardItem(security));
@@ -92,7 +127,7 @@ void ChartWidget::UpdateChart(const int& interval) const
 {
 	auto product = ui_->cboInstruments->currentText();
 	if (product.isEmpty()) {
-		product = QStringLiteral("EUR/GBP");
+		return;
 	}
 	if (title_) {
 		title_->setText(product);
@@ -164,6 +199,8 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
 	{
 		cboModel_->appendRow(new QStandardItem(QString::fromStdString(product)));
 	}
+
+	UpdateChart(dateRange_.checkedId());
 }
 
 void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
@@ -184,7 +221,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	auto product = ui_->cboInstruments->currentText();
 	auto interval = dateRange_.checkedId();
 
-	if (!product.compare(QString::fromStdString(response.product())) || interval != response.interval())
+	if (product.toStdString() != response.product() || interval != response.interval())
 		return;
 
 	qreal maxPrice = 0.0;
@@ -193,11 +230,22 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	qreal maxTimestamp = -1.0;
 	for (int i = 0; i < response.candles_size(); ++i)
 	{
-		const auto& candle = response.candles(i);
+		auto candle = response.candles(i);
 		maxPrice = qMax(maxPrice, candle.high());
 		minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
 		maxVolume = qMax(maxVolume, candle.volume());
 		maxTimestamp = qMax(maxTimestamp, static_cast<qreal>(candle.timestamp()));
+
+		if (i == response.candles_size() - 1)
+		{
+			if (lastHigh != 0.0 && lastLow != 0.0 && lastClose != 0.0)
+			{
+				candle.set_high(lastHigh);
+				candle.set_low(lastLow);
+				candle.set_close(lastClose);
+			}
+		}
+
 		AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
 		qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
 			, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
@@ -206,6 +254,10 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 			, candle.low()
 			, candle.close()
 			, candle.volume());
+
+		lastHigh = candle.high();
+		lastLow = candle.low();
+		lastClose = candle.close();
 	}
 
 	qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
@@ -223,6 +275,22 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
 	ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(product));
 	ui_->customPlot->replot();
+}
+
+void ChartWidget::updateTimer()
+{
+	auto currentTime = QDateTime::currentDateTime().time();
+
+	auto timerInterval = std::chrono::minutes(60);
+	if (currentTime.minute() != std::chrono::minutes(0).count())
+	{
+		auto diff = timerInterval.count() - currentTime.minute();
+		timerInterval = std::chrono::minutes(diff);
+	}
+
+	timer_->start(timerInterval);
+
+	AddDataPoint(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const
@@ -425,4 +493,7 @@ void ChartWidget::InitializeCustomPlot()
    volumeAxisRect_->setRangeDrag(Qt::Horizontal);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
+
+   timer_ = new QTimer(this);
+   connect(timer_, SIGNAL(timeout()), this, SLOT(updateTimer()));
 }

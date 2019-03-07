@@ -48,6 +48,8 @@ protected:
 	void ProcessProductsListResponse(const std::string& data);
 	void ProcessOhlcHistoryResponse(const std::string& data);
 
+	void updateTimer();
+
 private:
 	std::shared_ptr<ApplicationSettings>			appSettings_;
 	std::shared_ptr<MarketDataProvider>				mdProvider_;
@@ -62,6 +64,11 @@ private:
     QCPFinancial *candlesticksChart_;
     QCPBars *volumeChart_;
     QCPAxisRect *volumeAxisRect_;
+	QTimer *timer_;
+
+	double lastHigh;
+	double lastLow;
+	double lastClose;
 };
 
 #endif // CHARTWIDGET_H
