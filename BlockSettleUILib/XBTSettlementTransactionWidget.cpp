@@ -83,6 +83,7 @@ void XBTSettlementTransactionWidget::onTimerTick(int msCurrent, int)
 {
    ui_->progressBar->setValue(msCurrent);
    ui_->progressBar->setFormat(tr("%n second(s) remaining", "", msCurrent / 1000));
+   ui_->labelTimeLeft->setText(tr("%n second(s) remaining", "", msCurrent / 1000));
 }
 
 void XBTSettlementTransactionWidget::onTimerExpired()
