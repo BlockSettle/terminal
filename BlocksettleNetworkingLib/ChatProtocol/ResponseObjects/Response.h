@@ -2,6 +2,7 @@
 
 #include "../ProtocolDefinitions.h"
 #include "../ResponseHandler.h"
+#include "../DataObjects.h"
 
 namespace Chat {
    

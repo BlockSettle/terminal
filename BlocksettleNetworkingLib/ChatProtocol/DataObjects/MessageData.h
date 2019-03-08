@@ -1,16 +1,18 @@
 #pragma once
 
+#include "DataObject.h"
 #include <memory>
 
 #include <QString>
 #include <QDateTime>
 #include <QJsonObject>
 
+
 #include "autheid_utils.h"
 
 namespace Chat {
    
-   class MessageData
+   class MessageData : public DataObject
    {
    public:
       enum class State {
@@ -32,7 +34,7 @@ namespace Chat {
       QString getMessageData() const { return messageData_; }
       int getState() const { return state_; }
       QJsonObject toJson() const;
-      std::string toJsonString() const;
+      //std::string toJsonString() const;
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
    
       void setFlag(const State);

@@ -78,6 +78,12 @@ namespace Chat
    static const QString MessageStateDeltaMaskKey = QStringLiteral("message_state_delta_mask");
    static const QString MessageStateKey = QStringLiteral("message_state");
    static const QString ContactActionKey = QStringLiteral("contacts_action");
+   static const QString RoomKeyKey = QStringLiteral("room_id");
+   static const QString RoomTitleKey = QStringLiteral("room_title");
+   static const QString RoomOwnerIdKey = QStringLiteral("room_owner_id");
+   static const QString RoomIsPrivateKey = QStringLiteral("room_is_private");
+   static const QString RoomSendUserUpdatesKey = QStringLiteral("room_send_user_updates");
+   static const QString RoomDisplayUserListKey = QStringLiteral("room_display_user_list");
 
 
    template <typename T>

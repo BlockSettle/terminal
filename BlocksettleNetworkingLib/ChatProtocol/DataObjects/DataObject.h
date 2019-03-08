@@ -1,15 +1,25 @@
 #pragma once
-
 #include <memory>
 
 #include <QJsonObject>
 
 namespace Chat {
+   
    class DataObject {
    public:
-      virtual QJsonObject toJson() = 0;
-      virtual std::string toJsonString() = 0;
+      enum class Type {
+            MessageData,
+            ChatRoomData
+         };
+   protected:
+      DataObject(Type type);
+   public:
+      Type getType() const;
+      virtual QJsonObject toJson() const;
+      std::string toJsonString() const;
       static std::shared_ptr<DataObject> fromJSON(const std::string& jsonData);
       virtual ~DataObject() = default;
+   private:
+      Type type_;
    };
 }

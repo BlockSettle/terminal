@@ -6,15 +6,16 @@ namespace Chat {
    MessageData::MessageData(const QString& senderId, const QString& receiverId
          , const QString &id, const QDateTime& dateTime
          , const QString& messageData, int state)
-      : senderId_(senderId), receiverId_(receiverId)
-      , id_(id), dateTime_(dateTime)
+      : DataObject(DataObject::Type::MessageData)
+      , id_(id), senderId_(senderId), receiverId_(receiverId)
+      , dateTime_(dateTime)
       , messageData_(messageData), state_(state)
    {
    }
    
    QJsonObject MessageData::toJson() const
    {
-      QJsonObject data;
+      QJsonObject data = DataObject::toJson();
    
       data[SenderIdKey] = senderId_;
       data[ReceiverIdKey] = receiverId_;
@@ -26,10 +27,10 @@ namespace Chat {
       return data;
    }
    
-   std::string MessageData::toJsonString() const
-   {
-      return serializeData(this);
-   }
+//   std::string MessageData::toJsonString() const
+//   {
+//      return serializeData(this);
+//   }
    
    std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
    {

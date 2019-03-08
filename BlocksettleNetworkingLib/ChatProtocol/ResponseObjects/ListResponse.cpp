@@ -15,8 +15,8 @@ namespace Chat {
    
       QJsonArray listJson;
    
-      std::for_each(dataList_.begin(), dataList_.end(), [&](const std::string& userId){
-         listJson << QString::fromStdString(userId);
+      std::for_each(dataList_.begin(), dataList_.end(), [&](const std::string& dataString){
+         listJson << QString::fromStdString(dataString);
       });
    
       data[DataKey] = listJson;
@@ -29,9 +29,10 @@ namespace Chat {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
    
       std::vector<std::string> dataList;
-      QJsonArray usersArray = data[DataKey].toArray();
-      foreach(auto userId, usersArray) {
-         dataList.push_back(userId.toString().toStdString());
+      QJsonArray dataArray = data[DataKey].toArray();
+      foreach(auto dataItem, dataArray) {
+         std::string dataString = dataItem.toString().toStdString();
+         dataList.push_back(dataString);
       }
       return dataList;
    }
