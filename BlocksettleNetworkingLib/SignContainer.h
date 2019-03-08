@@ -151,21 +151,21 @@ public:
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) = 0;
    virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
 
-   virtual void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) {}
-   virtual void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) {}
-   virtual void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) {}
-   virtual void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) {}
-   virtual void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) {}
+   virtual void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) = 0;
+   virtual void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) = 0;
+   virtual void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) = 0;
+   virtual void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) = 0;
+   virtual void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) = 0;
    virtual void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &) {}
+      , const std::function<void(const bs::Address &)> &) = 0;
    virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) {}
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }
    virtual bool isReady() const { return true; }
    virtual bool isOffline() const { return true; }
-   virtual bool isWalletOffline(const std::string &walletId) const { return true; }
+   virtual bool isWalletOffline(const std::string &) const { return true; }
 
 signals:
    void connected();

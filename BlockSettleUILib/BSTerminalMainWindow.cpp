@@ -43,10 +43,10 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
+#include "OfflineSigner.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
 #include "SelectWalletDialog.h"
-#include "SignContainer.h"
 #include "StatusBarView.h"
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
@@ -200,8 +200,6 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 		  applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
 	  }
 #endif // NDEBUG
-
-     
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
@@ -421,18 +419,17 @@ void BSTerminalMainWindow::InitAuthManager()
    });
 }
 
-bool BSTerminalMainWindow::InitSigningContainer()
+std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 {
-   const auto &signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
-   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
+   std::shared_ptr<SignContainer> retPtr;
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
-
+   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
+   const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
    SecureBinaryData signerPubKey;
 
    if (runMode == SignContainer::OpMode::Remote) {
-      auto pubKeyString = applicationSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
-
-      if (pubKeyString.isEmpty()) {
+      const auto pubKeyString = applicationSettings_->get<std::string>(ApplicationSettings::zmqRemoteSignerPubKey);
+      if (pubKeyString.empty()) {
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Remote Connection")
             , tr("Remote signer public key is unavailable.")
@@ -441,7 +438,11 @@ bool BSTerminalMainWindow::InitSigningContainer()
                " Please import the signer's public key (Settings -> Signer) "
                "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
             , this).exec();
-         return false;
+         return retPtr;
+      }
+
+      if (!bs::network::readZmqKeyString(QByteArray::fromStdString(pubKeyString), signerPubKey, true, logMgr_->logger())) {
+         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load remote signer key");
       }
    }
 
@@ -451,26 +452,35 @@ bool BSTerminalMainWindow::InitSigningContainer()
          , tr("Another Signer (or some other program occupying port %1) is running. Would you like to continue connecting to it?").arg(signerPort)
          , tr("If you wish to continue using GUI signer running on the same host, just select Remote Signer in settings and configure local connection")
          , this).exec() == QDialog::Rejected) {
-         return false;
+         return retPtr;
       }
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
+   }
 
+   if (signerPubKey.isNull()) {
       const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
 
       if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->debug("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
+         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Local Connection")
             , tr("Could not load local signer key.")
             , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
             , this).exec();
-         return false;
+         return retPtr;
       }
    }
 
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey
-      , runMode, signerHost, connectionManager_);
+   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey,
+      runMode, signerHost, connectionManager_);
+   return retPtr;
+}
+
+bool BSTerminalMainWindow::InitSigningContainer()
+{
+   signContainer_ = createSigner();
+
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
       return false;
@@ -848,9 +858,8 @@ void BSTerminalMainWindow::onReceive()
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_,
-                                                  signContainer_, true,
-                                                  logMgr_->logger("ui"), nullptr, this};
+   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_
+      , signContainer_, true, logMgr_->logger("ui"), nullptr, this};
    advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    if (!selectedWalletId.empty()) {
@@ -877,8 +886,8 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg{armory_, walletsMgr_,
-                                           signContainer_, logMgr_->logger("ui"),
+         CreateTransactionDialogSimple dlg{armory_, walletsMgr_, signContainer_
+            , logMgr_->logger("ui"),
                                            this};
          dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
@@ -1198,8 +1207,8 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
                delete txInfo;
             }
          };
-         walletsMgr_->getTransactionDirection(tx, wallet, cbDir);
-         walletsMgr_->getTransactionMainAddress(tx, wallet, (value > 0), cbMainAddr);
+         walletsMgr_->getTransactionDirection(tx, id, cbDir);
+         walletsMgr_->getTransactionMainAddress(tx, id, (value > 0), cbMainAddr);
       };
       armory_->getTxByHash(entry.txHash, cbTx);
    }

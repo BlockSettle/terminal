@@ -11,6 +11,7 @@
 #include "ArmoryConnection.h"
 #include "CelerClient.h"
 #include "QWalletInfo.h"
+#include "SignContainer.h"
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -35,9 +36,9 @@ class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
 class CelerMarketDataProvider;
+class OfflineSigner;
 class QSystemTrayIcon;
 class RequestReplyCommand;
-class SignContainer;
 class StatusBarView;
 class StatusViewBlockListener;
 class TransactionsViewModel;
@@ -67,6 +68,7 @@ private:
    void initArmory();
    void connectArmory();
    void connectSigner();
+   std::shared_ptr<SignContainer> createSigner();
 
    void setTabStyle();
 

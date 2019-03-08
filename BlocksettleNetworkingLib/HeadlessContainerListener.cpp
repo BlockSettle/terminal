@@ -14,7 +14,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::string &walletsPath, NetworkType netType
-   , const bool &hasUI, const bool &backupEnabled)
+   , bool wo, const bool &hasUI, const bool &backupEnabled)
    : QObject(nullptr), ServerConnectionListener()
    , connection_(conn)
    , logger_(logger)
@@ -22,6 +22,7 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , walletsPath_(walletsPath)
    , backupPath_(walletsPath + "/../backup")
    , netType_(netType)
+   , watchingOnly_(wo)
    , hasUI_(hasUI)
    , backupEnabled_(backupEnabled)
 {
@@ -107,7 +108,7 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
 {
    headless::RequestPacket packet;
    if (!packet.ParseFromString(data)) {
-      logger_->error("[HeadlessContainerListener] failed to parse request packet");
+      logger_->error("[{}] failed to parse request packet", __func__);
       return;
    }
 
@@ -149,7 +150,7 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
    }
    else {
       if (!onRequestPacket(clientId, packet)) {
-         packet.set_data({});
+         packet.set_data("");
          sendData(packet.SerializeAsString(), clientId);
       }
    }
@@ -198,8 +199,34 @@ void HeadlessContainerListener::AuthResponse(const std::string &clientId, headle
    emit clientAuthenticated(clientId, connection_->GetClientInfo(clientId));
 }
 
+bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::headless::RequestType reqType) const
+{
+   if (watchingOnly_) {
+      switch (reqType) {
+      case headless::CancelSignTxRequestType:
+      case headless::SignTXRequestType:
+      case headless::SignPartialTXRequestType:
+      case headless::SignPayoutTXRequestType:
+      case headless::SignTXMultiRequestType:
+      case headless::PasswordRequestType:
+      case headless::CreateHDWalletRequestType:
+      case headless::GetRootKeyRequestType:
+      case headless::SetLimitsRequestType:
+      case headless::ChangePasswordRequestType:
+         return false;
+      default:    break;
+      }
+   }
+   return true;
+}
+
 bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, headless::RequestPacket packet)
 {
+   if (!isRequestAllowed(packet.type())) {
+      logger_->info("[{}] request {} is not applicable at this state", __func__, (int)packet.type());
+      return false;
+   }
+
    switch (packet.type()) {
    case headless::HeartbeatType:
       packet.set_data({});
@@ -1482,20 +1509,33 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
    for (int i = 0; i < request.indices_size(); ++i) {
       const auto indexData = request.indices(i);
       std::string index;
+      bs::Address address;
       try {
-         const bs::Address addr(indexData.index());
-         if (addr.isValid()) {
-            index = wallet->getAddressIndex(addr);
+         address = bs::Address(indexData.index());
+         if (address.isValid()) {
+            index = wallet->getAddressIndex(address);
          }
       }
       catch (const std::exception &) {}
       if (index.empty()) {
          index = indexData.index();
       }
-      const auto addr = wallet->createAddressWithIndex(index
-         , mapFrom(indexData.addrtype()));
+      if (address.isValid() && index.empty()) {
+//         wallet->addAddress(address);
+         logger_->info("[{}] can't add address {} to wallet {}", __func__
+            , address.display<std::string>(), wallet->walletId());
+         continue;
+      }
+      else {
+         address = wallet->createAddressWithIndex(index
+            , request.persistent(), mapFrom(indexData.addrtype()));
+         if (!address.isValid()) {
+            logger_->error("[{}] failed to create address for index {}", __func__, index);
+            continue;
+         }
+      }
       auto addrData = response.add_addresses();
-      addrData->set_address(addr.display<std::string>());
+      addrData->set_address(address.display<std::string>());
       addrData->set_index(indexData.index());
    }
 

@@ -64,7 +64,7 @@ namespace bs {
          Q_OBJECT
 
       public:
-         Wallet(const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger = nullptr);
+         Wallet(SignContainer *, const std::shared_ptr<spdlog::logger> &logger = nullptr);
          ~Wallet() override;
 
          using CbAddress = std::function<void(const bs::Address &)>;
@@ -145,7 +145,8 @@ namespace bs {
          virtual int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true);
 
          //Request a bunch of addresses identified by index and aet - returns a vector of address-index pairs
-         virtual void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &, const CbAddresses &);
+         virtual void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &, const CbAddresses &
+            , bool persistent = true);
 
          virtual bool getLedgerDelegateForAddress(const bs::Address &
             , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
@@ -181,10 +182,31 @@ namespace bs {
       protected:
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
-         template <typename MapT> void updateMap(const MapT &src, MapT &dst) const;
+         template <typename MapT> void updateMap(const MapT &src, MapT &dst) const {
+            QMutexLocker lock(&addrMapsMtx_);
+            for (const auto &elem : src) {     // std::map::insert doesn't replace elements
+               dst[elem.first] = std::move(elem.second);
+            }
+         }
+
          template <typename ArgT> void invokeCb(const std::map<BinaryData, ArgT> &data
             , std::map<bs::Address, std::vector<std::function<void(ArgT)>>> &cbMap
-            , const ArgT &defVal) const;
+            , const ArgT &defVal) const {
+            for (const auto &queuedCb : cbMap) {
+               const auto &it = data.find(queuedCb.first.id());
+               if (it != data.end()) {
+                  for (const auto &cb : queuedCb.second) {
+                     cb(it->second);
+                  }
+               }
+               else {
+                  for (const auto &cb : queuedCb.second) {
+                     cb(defVal);
+                  }
+               }
+            }
+            cbMap.clear();
+         }
 
          bool getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &
             , std::function<void(std::vector<UTXO>)>, QObject *obj, uint64_t val);
@@ -200,12 +222,12 @@ namespace bs {
 
       protected:
          std::string       walletName_;
+         SignContainer  *  signContainer_;
          BTCNumericTypes::balance_type spendableBalance_ = 0;
          BTCNumericTypes::balance_type unconfirmedBalance_ = 0;
          BTCNumericTypes::balance_type totalBalance_ = 0;
          std::shared_ptr<ArmoryConnection>      armory_;
          std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
-         std::shared_ptr<SignContainer>   signContainer_;
          std::shared_ptr<spdlog::logger>  logger_; // May need to be set manually.
          mutable std::vector<bs::Address>       usedAddresses_;
          NetworkType netType_ = NetworkType::Invalid;

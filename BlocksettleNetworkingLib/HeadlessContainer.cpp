@@ -2,7 +2,6 @@
 
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
-#include "DataConnectionListener.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -31,133 +30,107 @@ static NetworkType mapNetworkType(headless::NetworkType netType)
    }
 }
 
-class HeadlessListener : public QObject, public DataConnectionListener
+void HeadlessListener::OnDataReceived(const std::string& data)
 {
-   Q_OBJECT
-public:
-   HeadlessListener(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<DataConnection> &conn, NetworkType netType)
-      : logger_(logger), connection_(conn), netType_(netType) {
+   headless::RequestPacket packet;
+   if (!packet.ParseFromString(data)) {
+      logger_->error("[HeadlessListener] failed to parse request packet");
+      return;
+   }
+   if (packet.id() > id_) {
+      logger_->error("[HeadlessListener] reply id inconsistency: {} > {}", packet.id(), id_);
+      emit error(tr("reply id inconsistency"));
+      return;
+   }
+   if ((packet.type() != headless::AuthenticationRequestType)
+      && (authTicket_.isNull() || (SecureBinaryData(packet.authticket()) != authTicket_))) {
+      if (packet.type() == headless::DisconnectionRequestType) {
+         if (packet.authticket().empty()) {
+            emit authFailed();
+         }
+         return;
+      }
+      if (packet.type() != headless::HeartbeatType) {
+         logger_->error("[HeadlessListener] {} auth ticket mismatch ({} vs {})!", packet.type()
+            , authTicket_.toHexStr(), BinaryData(packet.authticket()).toHexStr());
+         emit error(tr("auth ticket mismatch"));
+      }
+      return;
    }
 
-   void OnDataReceived(const std::string& data) override {
-      headless::RequestPacket packet;
-      if (!packet.ParseFromString(data)) {
-         logger_->error("[HeadlessListener] failed to parse request packet");
+   if (packet.type() == headless::DisconnectionRequestType) {
+      OnDisconnected();
+      return;
+   }
+
+   if (packet.type() == headless::AuthenticationRequestType) {
+      if (!authTicket_.isNull()) {
+         logger_->error("[HeadlessListener] already authenticated");
+         emit error(tr("already authenticated"));
          return;
       }
-      if (packet.id() > id_) {
-         logger_->error("[HeadlessListener] reply id inconsistency: {} > {}", packet.id(), id_);
-         emit error(tr("reply id inconsistency"));
+      headless::AuthenticationReply response;
+      if (!response.ParseFromString(packet.data())) {
+         logger_->error("[HeadlessListener] failed to parse auth reply");
+         emit error(tr("failed to parse auth reply"));
          return;
       }
-      if ((packet.type() != headless::AuthenticationRequestType)
-         && (authTicket_.isNull() || (SecureBinaryData(packet.authticket()) != authTicket_))) {
-         if (packet.type() == headless::DisconnectionRequestType) {
-            if (packet.authticket().empty()) {
-               emit authFailed();
-            }
-            return;
-         }
-         if (packet.type() != headless::HeartbeatType) {
-            logger_->error("[HeadlessListener] {} auth ticket mismatch ({} vs {})!", packet.type()
-               , authTicket_.toHexStr(), BinaryData(packet.authticket()).toHexStr());
-            emit error(tr("auth ticket mismatch"));
-         }
+      if (mapNetworkType(response.nettype()) != netType_) {
+         logger_->error("[HeadlessListener] network type mismatch");
+         emit error(tr("network type mismatch"));
          return;
       }
 
-      if (packet.type() == headless::DisconnectionRequestType) {
-         OnDisconnected();
-         return;
-      }
-
-      if (packet.type() == headless::AuthenticationRequestType) {
-         if (!authTicket_.isNull()) {
-            logger_->error("[HeadlessListener] already authenticated");
-            emit error(tr("already authenticated"));
-            return;
-         }
-         headless::AuthenticationReply response;
-         if (!response.ParseFromString(packet.data())) {
-            logger_->error("[HeadlessListener] failed to parse auth reply");
-            emit error(tr("failed to parse auth reply"));
-            return;
-         }
-         if (mapNetworkType(response.nettype()) != netType_) {
-            logger_->error("[HeadlessListener] network type mismatch");
-            emit error(tr("network type mismatch"));
-            return;
-         }
-
-         if (!response.authticket().empty()) {
-            authTicket_ = response.authticket();
-            hasUI_ = response.hasui();
-            logger_->debug("[HeadlessListener] successfully authenticated");
-            emit authenticated();
-         }
-         else {
-            logger_->error("[HeadlessListener] authentication failure: {}", response.error());
-            emit error(QString::fromStdString(response.error()));
-            return;
-         }
+      if (!response.authticket().empty()) {
+         authTicket_ = response.authticket();
+         hasUI_ = response.hasui();
+         logger_->debug("[HeadlessListener] successfully authenticated");
+         emit authenticated();
       }
       else {
-         emit PacketReceived(packet);
+         logger_->error("[HeadlessListener] authentication failure: {}", response.error());
+         emit error(QString::fromStdString(response.error()));
+         return;
       }
    }
-
-   void OnConnected() override {
-      logger_->debug("[HeadlessListener] Connected");
-      emit connected();
+   else {
+      emit PacketReceived(packet);
    }
+}
 
-   void OnDisconnected() override {
-      logger_->debug("[HeadlessListener] Disconnected");
+void HeadlessListener::OnConnected()
+{
+   logger_->debug("[HeadlessListener] Connected");
+   emit connected();
+}
+
+void HeadlessListener::OnDisconnected()
+{
+   logger_->debug("[HeadlessListener] Disconnected");
+   emit disconnected();
+}
+
+void HeadlessListener::OnError(DataConnectionListener::DataConnectionError errorCode)
+{
+   logger_->debug("[HeadlessListener] error {}", errorCode);
+   emit error(tr("error #%1").arg(QString::number(errorCode)));
+}
+
+HeadlessContainer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
+{
+   HeadlessContainer::RequestId id = 0;
+   if (updateId) {
+      id = newRequestId();
+      packet.set_id(id);
+   }
+   packet.set_authticket(authTicket_.toBinStr());
+   if (!connection_->send(packet.SerializeAsString())) {
+      logger_->error("[HeadlessListener] Failed to send request packet");
       emit disconnected();
+      return 0;
    }
-
-   void OnError(DataConnectionError errorCode) override {
-      logger_->debug("[HeadlessListener] error {}", errorCode);
-      emit error(tr("error #%1").arg(QString::number(errorCode)));
-   }
-
-   HeadlessContainer::RequestId Send(headless::RequestPacket packet, bool updateId = true) {
-      HeadlessContainer::RequestId id = 0;
-      if (updateId) {
-         id = newRequestId();
-         packet.set_id(id);
-      }
-      packet.set_authticket(authTicket_.toBinStr());
-      if (!connection_->send(packet.SerializeAsString())) {
-         logger_->error("[HeadlessListener] Failed to send request packet");
-         emit disconnected();
-         return 0;
-      }
-      return id;
-   }
-
-   HeadlessContainer::RequestId newRequestId() { return ++id_; }
-   void resetAuthTicket() { authTicket_.clear(); }
-   bool isAuthenticated() const { return !authTicket_.isNull(); }
-   bool hasUI() const { return hasUI_; }
-
-signals:
-   void authenticated();
-   void authFailed();
-   void connected();
-   void disconnected();
-   void error(const QString &err);
-   void PacketReceived(headless::RequestPacket);
-
-private:
-   std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<DataConnection>  connection_;
-   const NetworkType                netType_;
-   HeadlessContainer::RequestId     id_ = 0;
-   SecureBinaryData  authTicket_;
-   bool     hasUI_ = false;
-};
+   return id;
+}
 
 
 HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logger, OpMode opMode)
@@ -166,14 +139,6 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
    qRegisterMetaType<headless::RequestPacket>();
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
 }
-
-HeadlessContainer::HeadlessContainer(const HeadlessContainer &copy)
-   : SignContainer(copy.logger_, copy.mode_), listener_(copy.listener_)
-   , missingWallets_(copy.missingWallets_), signRequests_(copy.signRequests_)
-   , cbSettlWalletMap_(copy.cbSettlWalletMap_), cbWalletInfoMap_(copy.cbWalletInfoMap_)
-   , cbHDWalletMap_(copy.cbHDWalletMap_), cbWalletMap_(copy.cbWalletMap_)
-   , cbNewAddrsMap_(copy.cbNewAddrsMap_)
-{}
 
 static void killProcess(int pid)
 {
@@ -187,18 +152,23 @@ static void killProcess(int pid)
 #endif   // Q_OS_WIN
 }
 
-static const QString pidFileName = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QLatin1String("/bs_headless.pid");
+static const QString pidFN = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QLatin1String("/bs_headless.pid");
+
+QString LocalSigner::pidFileName() const
+{
+   return pidFN;
+}
 
 bool KillHeadlessProcess()
 {
-   QFile pidFile(pidFileName);
+   QFile pidFile(pidFN);
    if (pidFile.exists()) {
       if (pidFile.open(QIODevice::ReadOnly)) {
          const auto pidData = pidFile.readAll();
          pidFile.close();
          const auto pid = atoi(pidData.toStdString().c_str());
          if (pid <= 0) {
-            qDebug() << "[HeadlessContainer] invalid PID" << pid <<"in" << pidFileName;
+            qDebug() << "[HeadlessContainer] invalid PID" << pid <<"in" << pidFN;
          }
          else {
             killProcess(pid);
@@ -207,7 +177,7 @@ bool KillHeadlessProcess()
          }
       }
       else {
-         qDebug() << "[HeadlessContainer] Failed to open PID file" << pidFileName;
+         qDebug() << "[HeadlessContainer] Failed to open PID file" << pidFN;
       }
       pidFile.remove();
    }
@@ -268,16 +238,15 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
       default:    break;
       }
       const auto leaf = std::make_shared<bs::sync::hd::Leaf>(response.leaf().walletid()
-         , response.leaf().name(), response.leaf().desc(), std::make_shared<HeadlessContainer>(*this)
-         , logger_, leafType, response.leaf().extonly());
+         , response.leaf().name(), response.leaf().desc(), this, logger_
+         , leafType, response.leaf().extonly());
       logger_->debug("[HeadlessContainer] HDLeaf {} created", response.leaf().walletid());
       emit HDLeafCreated(id, leaf);
    }
    else if (response.has_wallet()) {
       const auto netType = (response.wallet().nettype() == headless::TestNetType) ? NetworkType::TestNet : NetworkType::MainNet;
       auto wallet = std::make_shared<bs::sync::hd::Wallet>(netType, response.wallet().walletid()
-         , response.wallet().name(), response.wallet().description()
-         , std::make_shared<HeadlessContainer>(*this), logger_);
+         , response.wallet().name(), response.wallet().description(), this, logger_);
 
       for (int i = 0; i < response.wallet().groups_size(); i++) {
          const auto grpPath = bs::hd::Path::fromString(response.wallet().groups(i).path());
@@ -811,7 +780,7 @@ static headless::AddressType mapFrom(AddressEntryType aet)
    case AddressEntryType_Default:   return headless::AddressType_Default;
    case AddressEntryType_P2PKH:     return headless::AddressType_P2PKH;
    case AddressEntryType_P2PK:      return headless::AddressType_P2PK;
-   case AddressEntryType_P2WPKH:    return headless::AddressType_P2PKH;
+   case AddressEntryType_P2WPKH:    return headless::AddressType_P2WPKH;
    case AddressEntryType_Multisig:  return headless::AddressType_Multisig;
    case AddressEntryType_P2SH:      return headless::AddressType_P2SH;
    case AddressEntryType_P2WSH:     return headless::AddressType_P2WSH;
@@ -846,7 +815,8 @@ void HeadlessContainer::syncNewAddress(const std::string &walletId, const std::s
 
 void HeadlessContainer::syncNewAddresses(const std::string &walletId
    , const std::vector<std::pair<std::string, AddressEntryType>> &indices
-   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
+   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
+   , bool persistent)
 {
    headless::SyncAddressesRequest request;
    request.set_walletid(walletId);
@@ -855,12 +825,14 @@ void HeadlessContainer::syncNewAddresses(const std::string &walletId
       idx->set_index(index.first);
       idx->set_addrtype(mapFrom(index.second));
    }
+   request.set_persistent(persistent);
 
    headless::RequestPacket packet;
    packet.set_type(headless::SyncAddressesType);
    packet.set_data(request.SerializeAsString());
    const auto reqId = Send(packet);
    cbNewAddrsMap_[reqId] = cb;
+   const auto &itCb = cbNewAddrsMap_.find(reqId);
 }
 
 static NetworkType mapFrom(headless::NetworkType netType)
@@ -897,7 +869,7 @@ void HeadlessContainer::ProcessSettlWalletCreate(unsigned int id, const std::str
       return;
    }
    const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(response.walletid()
-      , response.name(), response.description(), std::make_shared<HeadlessContainer>(*this), logger_);
+      , response.name(), response.description(), this, logger_);
    itCb->second(settlWallet);
 }
 
@@ -1022,6 +994,7 @@ void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string 
    }
    const auto itCb = cbNewAddrsMap_.find(id);
    if (itCb == cbNewAddrsMap_.end()) {
+      logger_->error("[{}] no callback found for id {}", __func__, id);
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
@@ -1029,11 +1002,17 @@ void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string 
    std::vector<std::pair<bs::Address, std::string>> result;
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto addrInfo = response.addresses(i);
-      const bs::Address addr(addrInfo.address());
-      if (addr.isNull()) {
-         continue;
+      try {
+         const bs::Address addr(addrInfo.address());
+         if (addr.isNull()) {
+            logger_->debug("[{}] addr #{} is null", __func__, i);
+            continue;
+         }
+         result.push_back({ std::move(addr), addrInfo.index() });
       }
-      result.push_back({ std::move(addr), addrInfo.index() });
+      catch (const std::exception &e) {
+         logger_->error("[{}] failed to create address: {}", __func__, e.what());
+      }
    }
    itCb->second(result);
    cbNewAddrsMap_.erase(itCb);
@@ -1292,35 +1271,41 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
                          , const QString &homeDir, NetworkType netType, const QString &port
                          , const std::shared_ptr<ConnectionManager>& connectionManager
                          , const std::shared_ptr<ApplicationSettings> &appSettings
-                         , const SecureBinaryData& pubKey
+                         , const SecureBinaryData& pubKey, SignContainer::OpMode mode
                          , double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-                  , connectionManager, appSettings, pubKey, OpMode::Local)
-
+                  , connectionManager, appSettings, pubKey, mode)
+   , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
 {
-   auto walletsCopyDir = homeDir + QLatin1String("/copy");
+}
+
+QStringList LocalSigner::args() const
+{
+   auto walletsCopyDir = homeDir_ + QLatin1String("/copy");
    if (!QDir().exists(walletsCopyDir)) {
-      walletsCopyDir = homeDir + QLatin1String("/signer");
+      walletsCopyDir = homeDir_ + QLatin1String("/signer");
    }
 
-   args_ << QLatin1String("--headless");
-   switch (netType) {
+   QStringList result;
+   result << QLatin1String("--headless");
+   switch (netType_) {
    case NetworkType::TestNet:
    case NetworkType::RegTest:
-      args_ << QString::fromStdString("--testnet");
+      result << QString::fromStdString("--testnet");
       break;
    case NetworkType::MainNet:
-      args_ << QString::fromStdString("--mainnet");
+      result << QString::fromStdString("--mainnet");
       break;
    default: break;
    }
 
-   args_ << QLatin1String("--listen") << QLatin1String("127.0.0.1");
-   args_ << QLatin1String("--port") << port_;
-   args_ << QLatin1String("--dirwallets") << walletsCopyDir;
-   if (asSpendLimit > 0) {
-      args_ << QLatin1String("--auto_sign_spend_limit") << QString::number(asSpendLimit, 'f', 8);
+   result << QLatin1String("--listen") << QLatin1String("127.0.0.1");
+   result << QLatin1String("--port") << port_;
+   result << QLatin1String("--dirwallets") << walletsCopyDir;
+   if (asSpendLimit_ > 0) {
+      result << QLatin1String("--auto_sign_spend_limit") << QString::number(asSpendLimit_, 'f', 8);
    }
+   return result;
 }
 
 bool LocalSigner::Start()
@@ -1329,8 +1314,8 @@ bool LocalSigner::Start()
    KillHeadlessProcess();
    headlessProcess_ = std::make_shared<QProcess>();
    connect(headlessProcess_.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished)
-      , [](int exitCode, QProcess::ExitStatus exitStatus) {
-      QFile::remove(pidFileName);
+      , [this](int exitCode, QProcess::ExitStatus exitStatus) {
+      QFile::remove(pidFileName());
    });
 
 #ifdef Q_OS_WIN
@@ -1352,9 +1337,10 @@ bool LocalSigner::Start()
       return false;
    }
 
+   const auto cmdArgs = args();
    logger_->debug("[HeadlessContainer] starting {} {}"
-      , signerAppPath.toStdString(), args_.join(QLatin1Char(' ')).toStdString());
-   headlessProcess_->start(signerAppPath, args_);
+      , signerAppPath.toStdString(), cmdArgs.join(QLatin1Char(' ')).toStdString());
+   headlessProcess_->start(signerAppPath, cmdArgs);
    if (!headlessProcess_->waitForStarted(5000)) {
       logger_->error("[HeadlessContainer] Failed to start child");
       headlessProcess_.reset();
@@ -1362,7 +1348,7 @@ bool LocalSigner::Start()
       return false;
    }
 
-   QFile pidFile(pidFileName);
+   QFile pidFile(pidFileName());
    if (pidFile.open(QIODevice::WriteOnly)) {
       const auto pidStr = \
          QString::number(headlessProcess_->processId()).toStdString();
@@ -1371,7 +1357,7 @@ bool LocalSigner::Start()
    }
    else {
       logger_->warn("[LocalSigner::{}] Failed to open PID file {} for writing"
-         , __func__, pidFileName.toStdString());
+         , __func__, pidFileName().toStdString());
    }
    logger_->debug("[LocalSigner::{}] child process started", __func__);
 

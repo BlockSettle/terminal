@@ -1,17 +1,17 @@
 #ifndef __HEADLESS_CONTAINER_H__
 #define __HEADLESS_CONTAINER_H__
 
-#include <string>
 #include <memory>
-#include <QObject>
-#include <QStringList>
-#include "SignContainer.h"
-#include "ApplicationSettings.h"
-
-#include "headless.pb.h"
-
 #include <mutex>
 #include <set>
+#include <string>
+#include <QObject>
+#include <QStringList>
+#include "ApplicationSettings.h"
+#include "DataConnectionListener.h"
+#include "SignContainer.h"
+
+#include "headless.pb.h"
 
 namespace spdlog {
    class logger;
@@ -24,6 +24,7 @@ namespace bs {
 }
 class ApplicationSettings;
 class ConnectionManager;
+class DataConnection;
 class HeadlessListener;
 class QProcess;
 class WalletsManager;
@@ -35,7 +36,6 @@ class HeadlessContainer : public SignContainer
    Q_OBJECT
 public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
-   HeadlessContainer(const HeadlessContainer &);
    ~HeadlessContainer() noexcept = default;
 
    RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
@@ -77,7 +77,8 @@ public:
    void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
       , const std::function<void(const bs::Address &)> &) override;
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
+      , bool persistent = true) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;
@@ -163,16 +164,59 @@ public:
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const SecureBinaryData& pubKey
+      , const SecureBinaryData& pubKey, SignContainer::OpMode mode = OpMode::Local
       , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
 
    bool Start() override;
    bool Stop() override;
 
+protected:
+   virtual QStringList args() const;
+   virtual QString pidFileName() const;
+
 private:
-   QStringList                args_;
+   const QString  homeDir_;
+   const double   asSpendLimit_;
    std::shared_ptr<QProcess>  headlessProcess_;
+};
+
+
+class HeadlessListener : public QObject, public DataConnectionListener
+{
+   Q_OBJECT
+public:
+   HeadlessListener(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<DataConnection> &conn, NetworkType netType)
+      : logger_(logger), connection_(conn), netType_(netType) {}
+
+   void OnDataReceived(const std::string& data) override;
+   void OnConnected() override;
+   void OnDisconnected() override;
+   void OnError(DataConnectionError errorCode) override;
+
+   HeadlessContainer::RequestId Send(Blocksettle::Communication::headless::RequestPacket
+      , bool updateId = true);
+   HeadlessContainer::RequestId newRequestId() { return ++id_; }
+   void resetAuthTicket() { authTicket_.clear(); }
+   bool isAuthenticated() const { return !authTicket_.isNull(); }
+   bool hasUI() const { return hasUI_; }
+
+signals:
+   void authenticated();
+   void authFailed();
+   void connected();
+   void disconnected();
+   void error(const QString &err);
+   void PacketReceived(Blocksettle::Communication::headless::RequestPacket);
+
+private:
+   std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<DataConnection>  connection_;
+   const NetworkType                netType_;
+   HeadlessContainer::RequestId     id_ = 0;
+   SecureBinaryData  authTicket_;
+   bool     hasUI_ = false;
 };
 
 #endif // __HEADLESS_CONTAINER_H__

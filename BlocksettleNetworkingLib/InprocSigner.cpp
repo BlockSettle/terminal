@@ -32,19 +32,13 @@ InprocSigner::InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &wa
    walletsMgr_->setSettlementWallet(wallet);
 }
 
-InprocSigner::InprocSigner(const InprocSigner &copy)
-   : SignContainer(copy.logger_, SignContainer::OpMode::LocalInproc)
-   , walletsMgr_(copy.walletsMgr_) , walletsPath_(copy.walletsPath_)
-   , netType_(copy.netType_)
-{}
-
 bool InprocSigner::Start()
 {
    if (!walletsPath_.empty()) {
       const auto &cbLoadProgress = [this](int cur, int total) {
          logger_->debug("[InprocSigner::Start] loading wallets: {} of {}", cur, total);
       };
-      walletsMgr_->loadWallets(netType_, walletsPath_, cbLoadProgress);
+      walletsMgr_->loadWallets(netType_, walletsPath_, false, cbLoadProgress);
    }
    inited_ = true;
    emit ready();
@@ -181,20 +175,19 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
 
    const RequestId reqId = seqId_++;
    std::shared_ptr<bs::sync::hd::Leaf> hdLeaf;
-   const auto signContainer = std::make_shared<InprocSigner>(*this);
    switch (groupType) {
    case bs::hd::CoinType::Bitcoin_main:
    case bs::hd::CoinType::Bitcoin_test:
       hdLeaf = std::make_shared<bs::sync::hd::Leaf>(leaf->walletId(), leaf->name(), leaf->description()
-         , signContainer, logger_, leaf->type(), leaf->hasExtOnlyAddresses());
+         , this, logger_, leaf->type(), leaf->hasExtOnlyAddresses());
       break;
    case bs::hd::CoinType::BlockSettle_Auth:
       hdLeaf = std::make_shared<bs::sync::hd::AuthLeaf>(leaf->walletId(), leaf->name()
-         , leaf->description(), signContainer, logger_);
+         , leaf->description(), this, logger_);
       break;
    case bs::hd::CoinType::BlockSettle_CC:
       hdLeaf = std::make_shared<bs::sync::hd::CCLeaf>(leaf->walletId(), leaf->name()
-         , leaf->description(), signContainer, logger_, leaf->hasExtOnlyAddresses());
+         , leaf->description(), this, logger_, leaf->hasExtOnlyAddresses());
       break;
    default:    break;
    }
@@ -210,7 +203,7 @@ SignContainer::RequestId InprocSigner::createHDWallet(const std::string &name, c
       const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, primary, pwdData, keyRank);
       const RequestId reqId = seqId_++;
       const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->networkType(), wallet->walletId()
-         , wallet->name(), wallet->description(), std::make_shared<InprocSigner>(*this), logger_);
+         , wallet->name(), wallet->description(), this, logger_);
       QTimer::singleShot(1, [this, reqId, hdWallet] { emit HDWalletCreated(reqId, hdWallet); });
       return reqId;
    }
@@ -227,7 +220,7 @@ void InprocSigner::createSettlementWallet(const std::function<void(const std::sh
       wallet = walletsMgr_->createSettlementWallet(netType_, walletsPath_);
    }
    const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(wallet->walletId(), wallet->name()
-      , wallet->description(), std::make_shared<InprocSigner>(*this), logger_);
+      , wallet->description(), this, logger_);
    if (cb) {
       cb(settlWallet);
    }
@@ -395,7 +388,8 @@ void InprocSigner::syncNewAddress(const std::string &walletId, const std::string
 
 void InprocSigner::syncNewAddresses(const std::string &walletId
    , const std::vector<std::pair<std::string, AddressEntryType>> &inData
-   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
+   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
+   , bool persistent)
 {
    std::vector<std::pair<bs::Address, std::string>> result;
    result.reserve(inData.size());
@@ -412,7 +406,7 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
          if (index.empty()) {
             index = in.first;
          }
-         result.push_back({ wallet->createAddressWithIndex(in.first, in.second), in.first });
+         result.push_back({ wallet->createAddressWithIndex(in.first, persistent, in.second), in.first });
       }
    }
    cb(result);

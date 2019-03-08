@@ -92,9 +92,9 @@ namespace bs {
          void registerWallets();
          void unregisterWallets();
 
-         bool getTransactionDirection(Tx, const WalletPtr &
+         bool getTransactionDirection(Tx, const std::string &walletId
             , const std::function<void(Transaction::Direction, std::vector<bs::Address> inAddrs)> &);
-         bool getTransactionMainAddress(const Tx &, const WalletPtr &
+         bool getTransactionMainAddress(const Tx &, const std::string &walletId
             , bool isReceiving, const std::function<void(QString, int)> &);
 
          void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed

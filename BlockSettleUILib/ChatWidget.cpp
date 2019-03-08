@@ -6,8 +6,8 @@
 #include "ChatUserListTreeWidget.h"
 #include "ApplicationSettings.h"
 #include "ChatSearchPopup.h"
-#include "ChatMessagesItemDelegate.h"
 
+#include <QScrollBar>
 #include <QMouseEvent>
 #include <QApplication>
 #include <QObject>
@@ -32,7 +32,7 @@ public:
    virtual void logout() = 0;
    virtual void onSendButtonClicked() = 0;
    virtual void onUserClicked(const QString& userId) = 0;
-   virtual void onMessagesUpdated(const QModelIndex& parent, int start, int end) = 0;
+   virtual void onMessagesUpdated() = 0;
    virtual void onLoginFailed() = 0;
    virtual void onUsersDeleted(const std::vector<std::string> &) = 0;
 
@@ -55,7 +55,8 @@ public:
    std::string login(const std::string& email, const std::string& jwt) override {
       chat_->logger_->debug("Set user name {}", email);
       const auto userId = chat_->client_->loginToServer(email, jwt);
-      chat_->messagesViewModel_->setOwnUserId(userId);
+      chat_->ui_->textEditMessages->setOwnUserId(userId);
+      chat_->ui_->labelUserName->setText(QString::fromStdString(userId));
 
       return userId;
    }
@@ -69,7 +70,7 @@ public:
    }
 
    void onUserClicked(const QString& /*userId*/)  override {}
-   void onMessagesUpdated(const QModelIndex& /*parent*/, int /*start*/, int /*end*/)  override {}
+   void onMessagesUpdated()  override {}
    void onLoginFailed()  override {
       chat_->changeState(ChatWidget::LoggedOut);
    }
@@ -103,20 +104,35 @@ public:
          auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
          chat_->ui_->input_textEdit->clear();
 
-         chat_->messagesViewModel_->onSingleMessageUpdate(msg);
+         chat_->ui_->textEditMessages->onSingleMessageUpdate(msg);
       }
    }
 
    void onUserClicked(const QString& userId)  override {
+
+      // save draft
+      if (!chat_->currentChat_.isEmpty()) {
+         QString messageText = chat_->ui_->input_textEdit->toPlainText();
+         chat_->draftMessages_[chat_->currentChat_] = messageText;
+      }
+
       chat_->currentChat_ = userId;
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
-      chat_->messagesViewModel_->onSwitchToChat(chat_->currentChat_);
+      chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
       chat_->client_->retrieveUserMessages(chat_->currentChat_);
+
+      // load draft
+      if (chat_->draftMessages_.contains(userId)) {
+         chat_->ui_->input_textEdit->setText(chat_->draftMessages_[userId]);
+      } else {
+         chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
+      }
    }
 
-   void onMessagesUpdated(const QModelIndex& /*parent*/, int /*start*/, int /*end*/)  override {
-      chat_->ui_->tableViewMessages->scrollToBottom();
+   void onMessagesUpdated()  override {
+      QScrollBar *bar = chat_->ui_->textEditMessages->verticalScrollBar();
+      bar->setValue(bar->maximum());
    }
 
    void onLoginFailed()  override {
@@ -136,21 +152,7 @@ ChatWidget::ChatWidget(QWidget *parent)
    //Init UI and other stuff
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
-   ui_->tableViewMessages->verticalHeader()->setDefaultSectionSize(10);
-   ui_->tableViewMessages->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-   ui_->tableViewMessages->horizontalHeader()->setDefaultSectionSize(10);
-   ui_->tableViewMessages->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->tableViewMessages->setSelectionBehavior(QAbstractItemView::SelectRows);
-   ui_->tableViewMessages->horizontalHeader()->setDefaultAlignment(Qt::AlignLeading | Qt::AlignVCenter);
-
    _chatUserListLogicPtr = std::make_shared<ChatUserListLogic>(this);
-
-   messagesViewModel_.reset(new ChatMessagesViewModel());
-   ui_->tableViewMessages->setModel(messagesViewModel_.get());
-
-   auto chatMessagesItemDelegate = new ChatMessagesItemDelegate(this);
-   ui_->tableViewMessages->setItemDelegate(chatMessagesItemDelegate);
 
    qRegisterMetaType<std::vector<std::string>>();
 }
@@ -184,16 +186,16 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(_chatUserListLogicPtr.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserRemoved,
            this, &ChatWidget::onChatUserRemoved);
 
-   connect(client_.get(), &ChatClient::MessagesUpdate, messagesViewModel_.get()
-                        , &ChatMessagesViewModel::onMessagesUpdate);
-   connect(messagesViewModel_.get(), &ChatMessagesViewModel::rowsInserted,
+   connect(client_.get(), &ChatClient::MessagesUpdate, ui_->textEditMessages
+                        , &ChatMessagesTextEdit::onMessagesUpdate);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::rowsInserted,
            this, &ChatWidget::onMessagesUpdated);
    
-   connect(client_.get(), &ChatClient::MessageIdUpdated, messagesViewModel_.get()
-                        , &ChatMessagesViewModel::onMessageIdUpdate);
-   connect(client_.get(), &ChatClient::MessageStatusUpdated, messagesViewModel_.get()
-                        , &ChatMessagesViewModel::onMessageStatusChanged);
-   connect(messagesViewModel_.get(), &ChatMessagesViewModel::MessageRead,
+   connect(client_.get(), &ChatClient::MessageIdUpdated, ui_->textEditMessages
+                        , &ChatMessagesTextEdit::onMessageIdUpdate);
+   connect(client_.get(), &ChatClient::MessageStatusUpdated, ui_->textEditMessages
+                        , &ChatMessagesTextEdit::onMessageStatusChanged);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::MessageRead,
            client_.get(), &ChatClient::onMessageRead);
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
@@ -255,9 +257,9 @@ void ChatWidget::onSendButtonClicked()
    return stateCurrent_->onSendButtonClicked();
 }
 
-void ChatWidget::onMessagesUpdated(const QModelIndex& parent, int start, int end)
+void ChatWidget::onMessagesUpdated()
 {
-   return stateCurrent_->onMessagesUpdated(parent, start, end);
+   return stateCurrent_->onMessagesUpdated();
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)

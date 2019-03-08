@@ -10,7 +10,7 @@
 
 using namespace bs::sync;
 
-Wallet::Wallet(const std::shared_ptr<SignContainer> &container, const std::shared_ptr<spdlog::logger> &logger)
+Wallet::Wallet(SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr)
    , signContainer_(container), logger_(logger)
 {}
@@ -117,32 +117,6 @@ BTCNumericTypes::balance_type Wallet::getTotalBalance() const
       return -1;
    }
    return totalBalance_;
-}
-
-template <typename MapT> void Wallet::updateMap(const MapT &src, MapT &dst) const
-{
-   QMutexLocker lock(&addrMapsMtx_);
-   for (const auto &elem : src) {     // std::map::insert doesn't replace elements
-      dst[elem.first] = std::move(elem.second);
-   }
-}
-
-template <typename ArgT> void Wallet::invokeCb(const std::map<BinaryData, ArgT> &data
-   , std::map<bs::Address, std::vector<std::function<void(ArgT)>>> &cbMap, const ArgT &defVal) const
-{
-   for (const auto &queuedCb : cbMap) {
-      const auto &it = data.find(queuedCb.first.id());
-      if (it != data.end()) {
-         for (const auto &cb : queuedCb.second) {
-            cb(it->second);
-         }
-      } else {
-         for (const auto &cb : queuedCb.second) {
-            cb(defVal);
-         }
-      }
-   }
-   cbMap.clear();
 }
 
 bool Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
@@ -873,7 +847,8 @@ int Wallet::addAddress(const bs::Address &addr, const std::string &index, Addres
    return (usedAddresses_.size() - 1);
 }
 
-void Wallet::newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData, const CbAddresses &cb)
+void Wallet::newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const CbAddresses &cb, bool persistent)
 {
    if (signContainer_) {
       signContainer_->syncNewAddresses(walletId(), inData, cb);

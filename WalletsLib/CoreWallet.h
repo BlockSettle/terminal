@@ -273,7 +273,7 @@ namespace bs {
          virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
-         virtual bs::Address createAddressWithIndex(const std::string &index
+         virtual bs::Address createAddressWithIndex(const std::string &index, bool persistent = true
             , AddressEntryType aet = AddressEntryType_Default) = 0;
 
          virtual std::shared_ptr<ResolverFeed> getResolver(const SecureBinaryData &password) = 0;
