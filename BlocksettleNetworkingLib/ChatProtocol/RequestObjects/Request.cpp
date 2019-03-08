@@ -1,7 +1,6 @@
 #include "Request.h"
 #include <map>
 
-using namespace Chat;
 
 #include "HeartbeatPingRequest.h"
 #include "LoginRequest.h"
@@ -13,6 +12,8 @@ using namespace Chat;
 #include "MessageChangeStatusRequest.h"
 #include "ContactActionRequest.h"
 #include "ChatroomsListRequest.h"
+
+using namespace Chat;
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
@@ -45,7 +46,6 @@ static std::map<RequestType, std::string> RequestTypeToString
    ,   { RequestType::RequestChatroomsList      ,   "RequestChatroomsList"      }
 };
 
-
 template <typename T>
 QJsonObject Message<T>::toJson() const
 {
@@ -56,13 +56,13 @@ QJsonObject Message<T>::toJson() const
    return data;
 }
 
-Chat::Request::Request(Chat::RequestType requestType, const std::__cxx11::string& clientId)
+Request::Request(RequestType requestType, const std::string& clientId)
    : Message<RequestType> (requestType)
    , clientId_(clientId)
 {
 }
 
-std::string Chat::Request::getClientId() const { return clientId_; }
+std::string Request::getClientId() const { return clientId_; }
 
 std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const std::string& jsonData)
 {
@@ -106,13 +106,13 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
             , data[ReceiverIdKey].toString().toStdString()
             , data[SenderIdKey].toString().toStdString()
             , publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
-         
+
       case RequestType::RequestChangeMessageStatus:
          return MessageChangeStatusRequest::fromJSON(clientId, jsonData);
-      
+
       case RequestType::RequestContactsAction:
          return ContactActionRequest::fromJSON(clientId, jsonData);
-         
+
       case RequestType::RequestChatroomsList:
       return std::make_shared<ChatroomsListRequest>(clientId
             , data[SenderIdKey].toString().toStdString());
