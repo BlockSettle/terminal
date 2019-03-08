@@ -16,10 +16,12 @@ public:
    void removeByUserId(const QString &userId);
    void setUserStatus(const QString &userId, const ChatUserData::ConnectionStatus &userStatus);
    void setUserState(const QString &userId, const ChatUserData::State &userState);
+   void setUserHaveNewMessage(const QString &userId, const bool &haveNewMessage);
    void resetModel();
 
    bool isChatUserExist(const QString &userId) const;
    bool isChatUserInContacts(const QString &userId) const;
+   bool hasUnreadMessages() const;
 
    ChatUserDataListPtr chatUserDataList() const;
 
@@ -32,6 +34,7 @@ signals:
    void chatUserRemoved(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStatusChanged(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStateChanged(const ChatUserDataPtr &chatUserDataPtr);
+   void chatUserHaveNewMessageChanged(const ChatUserDataPtr &chatUserDataPtr);
 
 public slots:
 

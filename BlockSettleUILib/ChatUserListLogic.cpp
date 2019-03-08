@@ -86,6 +86,15 @@ void ChatUserListLogic::onIcomingFriendRequest(const UserIdList &userIdList)
    }
 }
 
+void ChatUserListLogic::onUserHaveNewMessageChanged(const QString &userId, const bool &userHaveNewMessage) {
+      ChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(userId);
+
+      if (chatUserDataPtr)
+      {
+         _chatUserModelPtr->setUserHaveNewMessage(userId, userHaveNewMessage);
+      }
+}
+
 ChatUserModelPtr ChatUserListLogic::chatUserModelPtr() const
 {
    return _chatUserModelPtr;

@@ -121,6 +121,9 @@ void ChatMessagesTextEdit::onSwitchToChat(const QString& chatId)
    
    clear();
    table = NULL;
+
+   emit userHaveNewMessageChanged(chatId, false);
+   NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("Read message") });
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
@@ -294,8 +297,6 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
          else {
             messages_[msg->getSenderId()].push_back(msg);
          }
-
-         NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
       }
 
       if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) { 
@@ -330,12 +331,15 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
       for (const auto &msg : messages) {
          if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
             insertMessage(msg);
+
+            NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message"), QVariant(true) });
          }
          else {
             messages_[msg->getSenderId()].push_back(msg);
-         }
 
-         NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
+            NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message") });
+            emit userHaveNewMessageChanged(msg->getSenderId(), true);
+         }
       }
    }
 

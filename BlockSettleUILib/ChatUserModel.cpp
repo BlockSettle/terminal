@@ -52,6 +52,19 @@ bool ChatUserModel::isChatUserExist(const QString &userId) const
    return false;
 }
 
+bool ChatUserModel::hasUnreadMessages() const
+{
+   ChatUserDataPtr chatUserDataPtr;
+   foreach( chatUserDataPtr, _chatUserDataListPtr )
+   {
+      if (chatUserDataPtr->haveNewMessage()) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
 void ChatUserModel::setUserStatus(const QString &userId, const ChatUserData::ConnectionStatus &userStatus)
 {
    ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
@@ -79,6 +92,20 @@ void ChatUserModel::setUserState(const QString &userId, const ChatUserData::Stat
    chatUserDataPtr->setUserState(userState);
 
    emit chatUserStateChanged(chatUserDataPtr);
+   emit chatUserDataListChanged(_chatUserDataListPtr);
+}
+
+void ChatUserModel::setUserHaveNewMessage(const QString &userId, const bool &haveNewMessage) {
+   ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
+
+   if (!chatUserDataPtr)
+   {
+      return;
+   }
+
+   chatUserDataPtr->setHaveNewMessage(haveNewMessage);
+
+   emit chatUserHaveNewMessageChanged(chatUserDataPtr);
    emit chatUserDataListChanged(_chatUserDataListPtr);
 }
 

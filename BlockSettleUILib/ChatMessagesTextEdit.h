@@ -27,7 +27,8 @@ public:
    
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
-   void	rowsInserted();
+   void rowsInserted();
+   void userHaveNewMessageChanged(const QString &userId, const bool &haveNewMessage);
 
 protected:
    enum class Column {
@@ -48,7 +49,7 @@ public slots:
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
    void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
-   void	urlActivated(const QUrl &link);
+   void urlActivated(const QUrl &link);
 
 
 private:

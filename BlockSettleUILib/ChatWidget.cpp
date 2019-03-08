@@ -199,8 +199,11 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
            client_.get(), &ChatClient::onMessageRead);
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
-   connect(_chatUserListLogicPtr->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
+   connect(_chatUserListLogicPtr.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
            ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatUserDataListChanged);
+
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::userHaveNewMessageChanged, 
+           _chatUserListLogicPtr.get(), &ChatUserListLogic::onUserHaveNewMessageChanged);
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
 }
@@ -287,6 +290,18 @@ void ChatWidget::onLoginFailed()
 void ChatWidget::logout()
 {
    return stateCurrent_->logout(); //test
+}
+
+bool ChatWidget::hasUnreadMessages()
+{
+   ChatUserModelPtr chatUserModelPtr = _chatUserListLogicPtr->chatUserModelPtr();
+
+   if (chatUserModelPtr)
+   {
+      return chatUserModelPtr->hasUnreadMessages();
+   } else {
+      return false;
+   }
 }
 
 void ChatWidget::onSearchUserReturnPressed()
