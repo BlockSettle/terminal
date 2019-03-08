@@ -200,8 +200,6 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 		  applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
 	  }
 #endif // NDEBUG
-
-     
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
@@ -423,6 +421,7 @@ void BSTerminalMainWindow::InitAuthManager()
 
 std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 {
+   std::shared_ptr<SignContainer> retPtr;
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
    auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
    const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
@@ -439,7 +438,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
                " Please import the signer's public key (Settings -> Signer) "
                "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
             , this).exec();
-         return false;
+         return retPtr;
       }
 
       if (!bs::network::readZmqKeyString(QByteArray::fromStdString(pubKeyString), signerPubKey, true, logMgr_->logger())) {
@@ -453,7 +452,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
          , tr("Another Signer (or some other program occupying port %1) is running. Would you like to continue connecting to it?").arg(signerPort)
          , tr("If you wish to continue using GUI signer running on the same host, just select Remote Signer in settings and configure local connection")
          , this).exec() == QDialog::Rejected) {
-         return false;
+         return retPtr;
       }
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
@@ -469,11 +468,13 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             , tr("Could not load local signer key.")
             , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
             , this).exec();
-         return false;
+         return retPtr;
       }
    }
 
-   return CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey, runMode, signerHost, connectionManager_);
+   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey,
+      runMode, signerHost, connectionManager_);
+   return retPtr;
 }
 
 bool BSTerminalMainWindow::InitSigningContainer()
