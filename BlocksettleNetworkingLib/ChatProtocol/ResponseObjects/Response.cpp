@@ -51,6 +51,16 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseChatroomsList      ,  "ResponseChatroomsList"      }
 };
 
+template <typename T>
+QJsonObject Message<T>::toJson() const
+{
+   QJsonObject data;
+
+   data[VersionKey] = QString::fromStdString(version_);
+
+   return data;
+}
+
 QJsonObject Response::toJson() const
 {
    QJsonObject data = Message<ResponseType>::toJson();

@@ -46,6 +46,16 @@ static std::map<RequestType, std::string> RequestTypeToString
 };
 
 
+template <typename T>
+QJsonObject Message<T>::toJson() const
+{
+   QJsonObject data;
+
+   data[VersionKey] = QString::fromStdString(version_);
+
+   return data;
+}
+
 Chat::Request::Request(Chat::RequestType requestType, const std::__cxx11::string& clientId)
    : Message<RequestType> (requestType)
    , clientId_(clientId)

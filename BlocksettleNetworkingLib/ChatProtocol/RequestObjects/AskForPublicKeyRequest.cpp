@@ -1,5 +1,7 @@
 #include "AskForPublicKeyRequest.h"
 
+#include "../ProtocolDefinitions.h"
+
 namespace Chat {
    AskForPublicKeyRequest::AskForPublicKeyRequest(
          const std::string& clientId,

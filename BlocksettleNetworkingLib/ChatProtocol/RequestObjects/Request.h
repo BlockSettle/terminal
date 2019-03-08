@@ -5,6 +5,8 @@
 
 namespace Chat {
 
+   
+   
    class Request : public Message<RequestType>
    {
    public:

@@ -1,5 +1,7 @@
 #include "AskForPublicKeyResponse.h"
 
+#include "../ProtocolDefinitions.h"
+
 namespace Chat {
    AskForPublicKeyResponse::AskForPublicKeyResponse(
          const std::string& askingNodeId,

@@ -5,16 +5,6 @@
 
 namespace Chat {
    
-   template <typename T>
-   QJsonObject Message<T>::toJson() const
-   {
-      QJsonObject data;
-   
-      data[VersionKey] = QString::fromStdString(version_);
-   
-      return data;
-   }
-   
    class Response : public Message<ResponseType>
    {
    public:
