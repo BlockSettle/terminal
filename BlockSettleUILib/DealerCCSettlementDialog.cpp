@@ -28,7 +28,7 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
-   connectToProgressBar(ui_->progressBar);
+   connectToProgressBar(ui_->progressBar, ui_->labelTimeLeft);
    connectToHintLabel(ui_->labelHint, ui_->labelError);
 
    connect(celerClient.get(), &CelerClient::OnConnectionClosed,
