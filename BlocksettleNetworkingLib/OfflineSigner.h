@@ -26,8 +26,7 @@ public:
       , const QString &homeDir, NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager> &
       , const std::shared_ptr<ApplicationSettings> &
-      , const std::shared_ptr<ArmoryServersProvider>& armoryServers
-      , const SecureBinaryData& pubKey);
+      , const std::shared_ptr<ArmoryServersProvider>& armoryServers);
    ~OfflineSigner() noexcept = default;
 
    OfflineSigner(const OfflineSigner&) = delete;

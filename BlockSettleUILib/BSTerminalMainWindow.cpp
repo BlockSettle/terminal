@@ -456,25 +456,6 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
    SecureBinaryData signerPubKey;
 
-   if (runMode == SignContainer::OpMode::Remote) {
-      const auto pubKeyString = applicationSettings_->get<std::string>(ApplicationSettings::zmqRemoteSignerPubKey);
-      if (pubKeyString.empty()) {
-         BSMessageBox(BSMessageBox::messageBoxType::warning
-            , tr("Signer Remote Connection")
-            , tr("Remote signer public key is unavailable.")
-            , tr("Remote signer public key is unavailable."
-               " Transaction signing is not available."
-               " Please import the signer's public key (Settings -> Signer) "
-               "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
-            , this).exec();
-         return retPtr;
-      }
-
-      if (!bs::network::readZmqKeyString(QByteArray::fromStdString(pubKeyString), signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load remote signer key");
-      }
-   }
-
    if ((runMode == SignContainer::OpMode::Local)
       && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
       if (BSMessageBox(BSMessageBox::messageBoxType::question, tr("Signer Local Connection")
@@ -501,8 +482,8 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       }
    }
 
-   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey
-      , runMode, signerHost, connectionManager_, armoryServersProvider_);
+   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
+      , signerHost, connectionManager_, armoryServersProvider_);
    return retPtr;
 }
 

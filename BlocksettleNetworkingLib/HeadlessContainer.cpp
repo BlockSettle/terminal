@@ -1024,12 +1024,11 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<ApplicationSettings>& appSettings
    , const std::shared_ptr<ArmoryServersProvider>& armoryServers
-   , const SecureBinaryData& pubKey, OpMode opMode)
+   , OpMode opMode)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
-   , zmqSignerPubKey_{pubKey}
-   , appSettings_{appSettings}
    , connectionManager_{connectionManager}
+   , appSettings_{appSettings}
    , armoryServers_{armoryServers}
 {}
 
@@ -1038,13 +1037,6 @@ bool RemoteSigner::Start()
 {
    if (connection_) {
       return true;
-   }
-
-   // Load remote singer zmq pub key.
-   // If the server pub key exists, proceed (it was initialized in LocalSigner::Start()).
-   if (!zmqSignerPubKey_.getSize()){
-      logger_->error("[RemoteSigner::Start] missing server public key.");
-      return false;
    }
 
    connection_ = connectionManager_->CreateZMQBIP15XDataConnection(true);
@@ -1265,10 +1257,9 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<ArmoryServersProvider>& armoryServers
-   , const SecureBinaryData& pubKey, SignContainer::OpMode mode
-   , double asSpendLimit)
+   , SignContainer::OpMode mode, double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, appSettings, armoryServers, pubKey, mode)
+   , connectionManager, appSettings, armoryServers, mode)
    , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
 {
 }
@@ -1356,51 +1347,8 @@ bool LocalSigner::Start()
    logger_->debug("[LocalSigner::{}] child process started", __func__);
 
 
-   // Load local ZMQ server public key.
-   if (zmqSignerPubKey_.getSize() == 0) {
-      // If the server pub key exists, proceed. If not, give the signer a little time to create the key.
-      // 50 ms seems reasonable on a VM but we'll add some padding to be safe.
-      const auto zmqLocalSignerPubKeyPath = appSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
-
-      QFile zmqLocalSignerPubKeyFile(zmqLocalSignerPubKeyPath);
-      if (!zmqLocalSignerPubKeyFile.exists()) {
-         QThread::msleep(250);
-      }
-
-      if (!bs::network::readZmqKeyFile(zmqLocalSignerPubKeyPath, zmqSignerPubKey_, true
-         , logger_)) {
-         logger_->error("[LocalSigner::{}] failed to read ZMQ server public "
-            "key ({})", __func__, zmqLocalSignerPubKeyPath.toStdString());
-      }
-   }
-
-
-   // SPECIAL CASE: Unlike Windows and Linux, the Signer and Terminal have
-   // different data directories on Macs. Check the Signer for a file. There is
-   // an issue here if the Signer has moved its keys away from the standard
-   // location. We really should check the Signer's config file instead.
-#ifdef Q_OS_MACOS
-   QString zmqSignerPubKeyPath = \
-      appSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
-   QFile zmqSignerPubKeyFile(zmqSignerPubKeyPath);
-   if (!zmqSignerPubKeyFile.exists()) {
-      QThread::msleep(250); // Give Signer time to create files if needed.
-      QDir signZMQFileDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-      signZMQFileDir.cdUp();
-      QString signZMQSrvPubKeyPath = signZMQFileDir.path() + \
-         QString::fromStdString("/Blocksettle/zmq_conn_srv.pub");
-      if (!QFile::copy(signZMQSrvPubKeyPath, zmqSignerPubKeyPath)) {
-         logger_->error("[LocalSigner::{}] Failed to copy ZMQ public key file "
-            "{} to the terminal. Connection will not start.", __func__
-            , signZMQSrvPubKeyPath.toStdString());
-         return false;
-      }
-      else {
-         logger_->info("[LocalSigner::{}] Copied ZMQ public key file ({}) to "
-            "the terminal.", __func__, zmqSignerPubKeyPath.toStdString());
-      }
-   }
-#endif
+   // Give the signer a little time to get set up.
+   QThread::msleep(250);
 
    return RemoteSigner::Start();
 }

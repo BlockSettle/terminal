@@ -13,10 +13,9 @@ OfflineSigner::OfflineSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager> &connMgr
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<ArmoryServersProvider>& armoryServers
-   , const SecureBinaryData &pubKey)
+   , const std::shared_ptr<ArmoryServersProvider>& armoryServers)
    : LocalSigner(logger, homeDir, netType, port, connMgr, appSettings
-      , armoryServers, pubKey, OpMode::Offline)
+      , armoryServers, OpMode::Offline)
 { }
 
 void OfflineSigner::setTargetDir(const QString& targetDir)

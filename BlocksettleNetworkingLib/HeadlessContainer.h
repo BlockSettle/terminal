@@ -123,7 +123,7 @@ public:
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryServersProvider>& armoryServers
-      , const SecureBinaryData& pubKey, OpMode opMode = OpMode::Remote);
+      , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
    bool Start() override;
@@ -149,7 +149,6 @@ protected:
    const QString                              port_;
    const NetworkType                          netType_;
    std::shared_ptr<ZMQ_BIP15X_DataConnection> connection_;
-   SecureBinaryData                           zmqSignerPubKey_;
    bool                                       authPending_ = false;
    std::shared_ptr<ApplicationSettings>       appSettings_;
    std::shared_ptr<ArmoryServersProvider>     armoryServers_;
@@ -168,7 +167,6 @@ public:
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryServersProvider>& armoryServers
-      , const SecureBinaryData& pubKey
       , SignContainer::OpMode mode = OpMode::Local
       , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
