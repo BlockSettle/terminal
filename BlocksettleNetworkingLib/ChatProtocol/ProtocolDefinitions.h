@@ -25,6 +25,7 @@ namespace Chat
    ,   RequestChangeMessageStatus
    ,   RequestContactsAction
    ,   RequestChatroomsList
+   ,   RequestSendRoomMessage
    };
 
 
@@ -43,6 +44,7 @@ namespace Chat
    ,   ResponseChangeMessageStatus
    ,   ResponseContactsAction
    ,   ResponseChatroomsList
+   ,   ResponseRoomMessages
    };
    
    enum class ContactsAction {

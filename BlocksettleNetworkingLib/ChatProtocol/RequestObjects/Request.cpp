@@ -12,6 +12,7 @@
 #include "MessageChangeStatusRequest.h"
 #include "ContactActionRequest.h"
 #include "ChatroomsListRequest.h"
+#include "SendRoomMessageRequest.h"
 
 using namespace Chat;
 
@@ -28,6 +29,7 @@ static std::map<std::string, RequestType> RequestTypeFromString
    ,   { "RequestChangeMessageStatus",   RequestType::RequestChangeMessageStatus}
    ,   { "RequestContactsAction"     ,   RequestType::RequestContactsAction     }
    ,   { "RequestChatroomsList"      ,   RequestType::RequestChatroomsList      }
+   ,   { "RequestSendRoomMessage"    ,   RequestType::RequestSendRoomMessage    }
 };
 
 
@@ -44,6 +46,7 @@ static std::map<RequestType, std::string> RequestTypeToString
    ,   { RequestType::RequestChangeMessageStatus,   "RequestChangeMessageStatus"}
    ,   { RequestType::RequestContactsAction     ,   "RequestContactsAction"     }
    ,   { RequestType::RequestChatroomsList      ,   "RequestChatroomsList"      }
+   ,   { RequestType::RequestSendRoomMessage    ,   "RequestSendRoomMessage"    }
 };
 
 template <typename T>
@@ -114,8 +117,10 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return ContactActionRequest::fromJSON(clientId, jsonData);
 
       case RequestType::RequestChatroomsList:
-      return std::make_shared<ChatroomsListRequest>(clientId
-            , data[SenderIdKey].toString().toStdString());
+         return std::make_shared<ChatroomsListRequest>(clientId
+               , data[SenderIdKey].toString().toStdString());
+      case RequestType::RequestSendRoomMessage:
+         return SendRoomMessageRequest::fromJSON(clientId, jsonData);
 
       default:
          break;

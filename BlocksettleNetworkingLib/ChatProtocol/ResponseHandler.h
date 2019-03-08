@@ -11,6 +11,8 @@ namespace Chat {
    class MessageChangeStatusResponse;
    class ContactsActionResponse;
    class ChatroomsListResponse;
+   class SendRoomMessageResponse;
+   class RoomMessagesResponse;
    
    class ResponseHandler
    {
@@ -33,5 +35,6 @@ namespace Chat {
       virtual void OnContactsActionResponse(const ContactsActionResponse&) = 0;
       
       virtual void OnChatroomsList(const ChatroomsListResponse&) = 0;
+      virtual void OnRoomMessages(const RoomMessagesResponse&) = 0;
    };
 }

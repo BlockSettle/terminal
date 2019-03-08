@@ -177,6 +177,11 @@ void ChatClient::OnChatroomsList(const Chat::ChatroomsListResponse& response)
                   );
 }
 
+void ChatClient::OnRoomMessages(const Chat::RoomMessagesResponse& response)
+{
+   logger_->debug("Received chatroom messages from server (receiver id is chatroom): {}", response.getData());
+}
+
 void ChatClient::logout()
 {
    loggedIn_ = false;

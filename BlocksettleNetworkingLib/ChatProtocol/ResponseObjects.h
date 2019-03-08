@@ -12,5 +12,6 @@
 #include "ResponseObjects/SendMessageResponse.h"
 #include "ResponseObjects/SendOwnPublicKeyResponse.h"
 #include "ResponseObjects/UsersListResponse.h"
+#include "ResponseObjects/RoomMessagesResponse.h"
 
 #include "ResponseHandler.h"

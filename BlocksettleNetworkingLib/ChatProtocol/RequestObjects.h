@@ -10,5 +10,6 @@
 #include "RequestObjects/MessageChangeStatusRequest.h"
 #include "RequestObjects/ContactActionRequest.h"
 #include "RequestObjects/ChatroomsListRequest.h"
+#include "RequestObjects/SendRoomMessageRequest.h"
 
 #include "RequestHandler.h"

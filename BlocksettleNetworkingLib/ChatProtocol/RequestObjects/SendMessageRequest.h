@@ -12,7 +12,7 @@ namespace Chat {
       static std::shared_ptr<Request> fromJSON(const std::string& clientId
                                      , const std::string& jsonData);
       void handle(RequestHandler &) override;
-      const std::string& getMessageData() const { return messageData_; }
+      const std::string& getMessageData() const;
 
    private:
       std::string messageData_;

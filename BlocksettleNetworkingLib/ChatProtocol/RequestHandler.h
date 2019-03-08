@@ -14,6 +14,7 @@ namespace Chat {
    class ContactActionRequest;
    class ChatroomsListRequest;
    class PendingMessagesResponse;
+   class SendRoomMessageRequest;
    
    class RequestHandler
    {
@@ -38,5 +39,7 @@ namespace Chat {
       virtual void OnRequestContactsAction(const ContactActionRequest &) = 0;
       
       virtual void OnRequestChatroomsList(const ChatroomsListRequest &) = 0;
+      
+      virtual void OnSendRoomMessage(const SendRoomMessageRequest& ) = 0;
    };
 }

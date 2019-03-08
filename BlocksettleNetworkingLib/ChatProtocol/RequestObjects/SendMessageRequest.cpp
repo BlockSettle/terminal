@@ -30,4 +30,9 @@ namespace Chat {
    {
       handler.OnSendMessage(*this);
    }
+   
+   const std::string& SendMessageRequest::getMessageData() const
+   {
+      return messageData_;
+   }
 }
