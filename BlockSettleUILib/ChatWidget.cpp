@@ -11,6 +11,7 @@
 #include <QMouseEvent>
 #include <QApplication>
 #include <QObject>
+#include <QDebug>
 
 #include <thread>
 #include <spdlog/spdlog.h>
@@ -315,9 +316,22 @@ void ChatWidget::onSearchUserReturnPressed()
    }
 
    QString userToAdd = ui_->chatSearchLineEdit->text();
-   if (!_chatUserListLogicPtr->chatUserModelPtr()->isChatUserExist(userToAdd))
-       return;
+   if (userToAdd.isEmpty() || userToAdd.length() < 3) {
+      return;
+   }
+   
+   auto chatUserDataPtr = _chatUserListLogicPtr->chatUserModelPtr()->getUserByEmail(userToAdd);
+   if (!chatUserDataPtr) { // email exists?
+      chatUserDataPtr = _chatUserListLogicPtr->chatUserModelPtr()->getUserByUserIdPrefix(userToAdd); // user ID autocomplete?
+      if (!chatUserDataPtr)
+      {
+         return;
+      }
+   }
+   
+   userToAdd = chatUserDataPtr->userId();
 
+   // qDebug() << userToAdd;
    popup_->setText(userToAdd);
    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
    popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);

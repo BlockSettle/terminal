@@ -5,6 +5,8 @@
 
 #include "ChatUserData.h"
 
+class UserHasher;
+
 class ChatUserModel : public QObject
 {
    Q_OBJECT
@@ -26,6 +28,8 @@ public:
    ChatUserDataListPtr chatUserDataList() const;
 
    ChatUserDataPtr getUserByUserId(const QString &userId) const;
+   ChatUserDataPtr getUserByUserIdPrefix(const QString &userIdPrefix) const;
+   ChatUserDataPtr getUserByEmail(const QString &email) const;
 
 signals:
    void chatUserDataListChanged(const ChatUserDataListPtr &chatUserDataList);
@@ -40,6 +44,7 @@ public slots:
 
 private:
    ChatUserDataListPtr _chatUserDataListPtr;
+   std::shared_ptr<UserHasher> hasher_;
 };
 
 using ChatUserModelPtr = std::shared_ptr<ChatUserModel>;
