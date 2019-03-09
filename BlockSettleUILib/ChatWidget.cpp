@@ -129,6 +129,7 @@ public:
       } else {
          chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
       }
+      chat_->ui_->input_textEdit->setFocus();
    }
 
    void onMessagesUpdated()  override {
