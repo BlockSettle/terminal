@@ -46,6 +46,9 @@ namespace bs {
       std::shared_ptr<ScriptRecipient> getRecipient(uint64_t amount) const;
       std::shared_ptr<ScriptRecipient> getRecipient(double amount) const;
 
+      size_t getInputSize() const;
+      size_t getWitnessDataSize() const;  // returns UINT32_MAX if irrelevant
+
       static bs::Address fromPubKey(const BinaryData &data, AddressEntryType aet = AddressEntryType_Default) {
          return Address(BtcUtils::getHash160(data), aet);
       }

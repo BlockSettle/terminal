@@ -2,7 +2,6 @@
 #define __BS_QPASSWORDDATA_H__
 
 #include <QObject>
-#include "MetaData.h"
 #include "WalletEncryption.h"
 
 

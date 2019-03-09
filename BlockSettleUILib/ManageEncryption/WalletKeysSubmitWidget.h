@@ -41,8 +41,9 @@ public:
    void init(AutheIDClient::RequestType requestType
              , const bs::hd::WalletInfo &walletInfo
              , WalletKeyWidget::UseType useType
-             , const std::shared_ptr<ApplicationSettings> &appSettings
              , const std::shared_ptr<spdlog::logger> &logger
+             , const std::shared_ptr<ApplicationSettings> &appSettings
+             , const std::shared_ptr<ConnectionManager> &connectionManager
              , const QString &prompt = QString());
 
    void cancel();
@@ -77,12 +78,13 @@ private:
    std::vector<bs::wallet::PasswordData> pwdData_;
    std::atomic_bool suspended_;
    Flags flags_{NoFlag};
-   std::shared_ptr<ApplicationSettings> appSettings_;
    AutheIDClient::RequestType requestType_{};
    bool isKeyFinal_{false};
    bs::hd::WalletInfo walletInfo_;
    std::shared_ptr<spdlog::logger> logger_;
-   WalletKeyWidget::UseType useType_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
+   WalletKeyWidget::UseType useType_{};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WalletKeysSubmitWidget::Flags)

@@ -2,7 +2,8 @@
 
 #include "AssetManager.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include <QFont>
 
@@ -564,12 +565,12 @@ private:
 
 //==============================================================================
 
-CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& walletsManager
+CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
       , const std::shared_ptr<AssetManager>& assetManager
       , QObject *parent)
  : QAbstractItemModel(parent)
  , assetManager_{assetManager}
- , walletsManager_{walletsManager}
+ , walletsManager_{walletsMgr}
 {
    root_ = std::make_shared<RootAssetGroupNode>(tr("XBT"), tr("Private Shares"), tr("Cash"));
 
@@ -584,12 +585,12 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<WalletsManager>& wallet
    connect(assetManager_.get(), &AssetManager::ccPriceChanged
       , this, &CCPortfolioModel::onCCPriceChanged, Qt::QueuedConnection);
 
-   connect(walletsManager.get(), &WalletsManager::walletsReady, this, &CCPortfolioModel::reloadXBTWalletsList);
-   connect(walletsManager.get(), &WalletsManager::walletsLoaded, this, &CCPortfolioModel::reloadXBTWalletsList);
-   connect(walletsManager.get(), &WalletsManager::walletChanged, this, &CCPortfolioModel::reloadXBTWalletsList);
-   connect(walletsManager.get(), &WalletsManager::walletDeleted, this, &CCPortfolioModel::reloadXBTWalletsList);
-   connect(walletsManager.get(), &WalletsManager::walletImportFinished, this, &CCPortfolioModel::reloadXBTWalletsList);
-   connect(walletsManager.get(), &WalletsManager::blockchainEvent, this, &CCPortfolioModel::updateXBTBalance);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &CCPortfolioModel::updateXBTBalance);
 }
 
 int CCPortfolioModel::columnCount(const QModelIndex & parent) const
@@ -830,7 +831,7 @@ void CCPortfolioModel::onCCPriceChanged(const std::string& currency)
 
 void CCPortfolioModel::reloadXBTWalletsList()
 {
-   if (walletsManager_->GetWalletsCount() == 0) {
+   if (walletsManager_->hdWalletsCount() == 0) {
       if (root_->HaveXBTGroup()) {
          beginResetModel();
          root_->RemoveXBTGroup();
@@ -847,30 +848,19 @@ void CCPortfolioModel::reloadXBTWalletsList()
 
       std::vector<walletInfo>           walletsToAdd{};
 
-      const size_t walletsCount = walletsManager_->GetWalletsCount();
-      walletsToAdd.reserve(walletsCount);
-
       if (root_->HaveXBTGroup()) {
          displayedWallets = root_->GetXBTGroup()->GetWalletIds();
       }
 
-      for (size_t i=0; i<walletsManager_->GetWalletsCount(); ++i) {
-         const auto wallet = walletsManager_->GetWallet(i);
-         if (wallet == nullptr) {
-            break;
-         }
-
-         if (wallet->GetType() != bs::wallet::Type::Bitcoin) {
+      for (const auto &wallet : walletsManager_->getAllWallets()) {
+         if (!wallet || (wallet->type() != bs::core::wallet::Type::Bitcoin)) {
             continue;
          }
 
-         auto walletName = wallet->GetWalletName();
-         auto walletId = wallet->GetWalletId();
-
-         if (displayedWallets.find(walletId) == displayedWallets.end()) {
-            walletsToAdd.emplace_back(walletInfo{std::move(walletName), std::move(walletId)});
+         if (displayedWallets.find(wallet->walletId()) == displayedWallets.end()) {
+            walletsToAdd.push_back(walletInfo{wallet->name(), wallet->walletId()});
          } else {
-            displayedWallets.erase(walletId);
+            displayedWallets.erase(wallet->walletId());
          }
       }
 
@@ -911,20 +901,15 @@ void CCPortfolioModel::updateXBTBalance()
 
       auto parentIndex = createIndex(xbtGroup->getRow(), 0, static_cast<void*>(xbtGroup));
 
-      for (size_t i=0; i<walletsManager_->GetWalletsCount(); ++i) {
-         auto wallet = walletsManager_->GetWallet(i);
-         if (wallet == nullptr) {
-            break;
-         }
-
-         if (wallet->GetType() != bs::wallet::Type::Bitcoin) {
+      for (const auto &wallet : walletsManager_->getAllWallets()) {
+         if (!wallet || (wallet->type() != bs::core::wallet::Type::Bitcoin)) {
             continue;
          }
 
-         auto walletId = wallet->GetWalletId();
-         auto xbtNode = xbtGroup->GetXBTNode(walletId);
+         const auto walletId = wallet->walletId();
+         const auto xbtNode = xbtGroup->GetXBTNode(walletId);
          if (xbtNode != nullptr) {
-            const double balance = wallet->GetSpendableBalance();
+            const double balance = wallet->getSpendableBalance();
             if (xbtNode->SetXBTAmount(balance)) {
                dataChanged(index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
                   , index(xbtNode->getRow(), PortfolioColumns::XBTValueColumn, parentIndex)
@@ -947,7 +932,7 @@ void CCPortfolioModel::updateXBTBalance()
 
 void CCPortfolioModel::reloadCCWallets()
 {
-   if (walletsManager_->GetWalletsCount() == 0) {
+   if (walletsManager_->hdWalletsCount() == 0) {
       if (root_->HaveCCGroup()) {
          beginResetModel();
          root_->RemoveCCGroup();

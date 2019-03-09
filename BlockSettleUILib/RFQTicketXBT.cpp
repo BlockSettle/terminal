@@ -14,7 +14,6 @@
 #include "CurrencyPair.h"
 #include "EncryptionUtils.h"
 #include "FXAmountValidator.h"
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "QuoteProvider.h"
 #include "SelectedTransactionInputs.h"
@@ -22,7 +21,8 @@
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "UtxoReserveAdapters.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "XbtAmountValidator.h"
 
 #include <cstdlib>
@@ -103,7 +103,7 @@ void RFQTicketXBT::setWallets()
    if (currentGroupType_ == ProductGroupType::CCGroupType) {
       const auto &product = getProduct();
       if (!product.isEmpty()) {
-         std::shared_ptr<bs::Wallet> wallet;
+         std::shared_ptr<bs::sync::Wallet> wallet;
          const auto side = getSelectedSide();
          if (side == bs::network::Side::Sell) {
             wallet = getCCWallet(product.toStdString());
@@ -112,13 +112,13 @@ void RFQTicketXBT::setWallets()
             wallet = curWallet_;
             recvWallet_ = getCCWallet(product.toStdString());
          }
-         transactionData_->SetSigningWallet(wallet);
+         transactionData_->setSigningWallet(wallet);
       }
    } else {
       recvWallet_ = curWallet_;
    }
 
-  transactionData_->SetWallet(curWallet_, armory_->topBlock());
+  transactionData_->setWallet(curWallet_, armory_->topBlock());
   if (prevRecvWallet != recvWallet_) {
      fillRecvAddresses();
   }
@@ -167,7 +167,6 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQTicketXBT::onHDLeafCreated);
       connect(signingContainer_.get(), &SignContainer::Error, this, &RFQTicketXBT::onCreateHDWalletError);
-      connect(signingContainer_.get(), &SignContainer::AddressSyncComplete, this, &RFQTicketXBT::walletsLoaded);
       connect(signingContainer_.get(), &SignContainer::ready, this, &RFQTicketXBT::onSignerReady);
    }
 
@@ -176,25 +175,25 @@ void RFQTicketXBT::init(const std::shared_ptr<AuthAddressManager> &authAddressMa
 
 void RFQTicketXBT::onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &utxos)
 {
-   if (ccCoinSel_ && (ccCoinSel_->GetWallet()->GetWalletId() == walletId)) {
+   if (ccCoinSel_ && (ccCoinSel_->GetWallet()->walletId() == walletId)) {
       ccCoinSel_->Reload(utxos);
    } else if (transactionData_
-     && transactionData_->GetWallet()
-     && (transactionData_->GetWallet()->GetWalletId() == walletId)) {
+     && transactionData_->getWallet()
+     && (transactionData_->getWallet()->walletId() == walletId)) {
       transactionData_->ReloadSelection(utxos);
    }
    updateBalances();
    updateSubmitButton();
 }
 
-std::shared_ptr<bs::Wallet> RFQTicketXBT::getCCWallet(const std::string &cc)
+std::shared_ptr<bs::sync::Wallet> RFQTicketXBT::getCCWallet(const std::string &cc)
 {
-   if (ccWallet_ && (ccWallet_->GetShortName() == cc)) {
+   if (ccWallet_ && (ccWallet_->shortName() == cc)) {
       return ccWallet_;
    }
 
    if (walletsManager_) {
-      return walletsManager_->GetCCWallet(cc);
+      return walletsManager_->getCCWallet(cc);
    }
 
    return nullptr;
@@ -223,7 +222,7 @@ void RFQTicketXBT::updatePanel()
    updateSubmitButton();
 }
 
-void RFQTicketXBT::setCurrentCCWallet(const std::shared_ptr<bs::Wallet>& newCCWallet)
+void RFQTicketXBT::setCurrentCCWallet(const std::shared_ptr<bs::sync::Wallet>& newCCWallet)
 {
    if (newCCWallet != nullptr) {
       ccWallet_ = newCCWallet;
@@ -234,42 +233,36 @@ void RFQTicketXBT::setCurrentCCWallet(const std::shared_ptr<bs::Wallet>& newCCWa
    }
 }
 
-void RFQTicketXBT::onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId)
+void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
 {
    if (!leafCreateReqId_ || (leafCreateReqId_ != id)) {
       return;
    }
    leafCreateReqId_ = 0;
-   const auto &priWallet = walletsManager_->GetPrimaryWallet();
+   const auto &priWallet = walletsManager_->getPrimaryWallet();
    auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    if (!group) {
       group = priWallet->createGroup(bs::hd::BlockSettle_CC);
    }
-   const auto netType = (priWallet->getXBTGroupType() == bs::hd::CoinType::Bitcoin_main)
-      ? NetworkType::MainNet : NetworkType::TestNet;
-   const auto leafNode = std::make_shared<bs::hd::Node>(pubKey, chainCode, netType);
    const auto &ccProduct = getProduct().toStdString();
-   const auto leaf = group->createLeaf(ccProduct, leafNode);
-   if (leaf) {
-      leaf->setData(assetManager_->getCCGenesisAddr(ccProduct).display<std::string>());
-      leaf->setData(assetManager_->getCCLotSize(ccProduct));
+   group->addLeaf(leaf);
 
-      ui_->comboBoxCCWallets->clear();
-      ui_->comboBoxCCWallets->addItem(QString::fromStdString(leaf->GetWalletName()));
-      ui_->comboBoxCCWallets->setItemData(0, QString::fromStdString(leaf->GetWalletId()), UiUtils::WalletIdRole);
-      ui_->comboBoxCCWallets->setCurrentIndex(0);
+   leaf->setData(assetManager_->getCCGenesisAddr(ccProduct).display<std::string>());
+   leaf->setData(assetManager_->getCCLotSize(ccProduct));
 
-      ui_->pushButtonCreateWallet->hide();
-      ui_->pushButtonCreateWallet->setText(tr("Create Wallet"));
-      ui_->pushButtonSubmit->show();
+   ui_->comboBoxCCWallets->clear();
+   ui_->comboBoxCCWallets->addItem(QString::fromStdString(leaf->name()));
+   ui_->comboBoxCCWallets->setItemData(0, QString::fromStdString(leaf->walletId()), UiUtils::WalletIdRole);
+   ui_->comboBoxCCWallets->setCurrentIndex(0);
 
-      ui_->comboBoxCCWallets->setEnabled(true);
-      setCurrentCCWallet(leaf);
-      clearHelp();
-      updatePanel();
-   } else {
-      showHelp(tr("Failed to create wallet"));
-   }
+   ui_->pushButtonCreateWallet->hide();
+   ui_->pushButtonCreateWallet->setText(tr("Create Wallet"));
+   ui_->pushButtonSubmit->show();
+
+   ui_->comboBoxCCWallets->setEnabled(true);
+   setCurrentCCWallet(leaf);
+   clearHelp();
+   updatePanel();
 }
 
 void RFQTicketXBT::onCreateHDWalletError(unsigned int id, std::string errMsg)
@@ -321,7 +314,7 @@ RFQTicketXBT::BalanceInfoContainer RFQTicketXBT::getBalanceInfo() const
       balance.productType = ProductGroupType::XBTGroupType;
    } else {
       if (currentGroupType_ == ProductGroupType::CCGroupType) {
-         balance.amount = ccCoinSel_ ? ccCoinSel_->GetWallet()->GetTxBalance(ccCoinSel_->GetBalance()) : 0;
+         balance.amount = ccCoinSel_ ? ccCoinSel_->GetWallet()->getTxBalance(ccCoinSel_->GetBalance()) : 0;
          balance.product = productToSpend;
          balance.productType = ProductGroupType::CCGroupType;
       } else {
@@ -346,15 +339,16 @@ bool RFQTicketXBT::isXBTProduct() const
    return (getProduct() == UiUtils::XbtCurrency);
 }
 
-void RFQTicketXBT::setWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
+void RFQTicketXBT::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    walletsManager_ = walletsManager;
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &RFQTicketXBT::walletsLoaded);
    QMetaObject::invokeMethod(this, "walletsLoaded");
 }
 
 void RFQTicketXBT::walletsLoaded()
 {
-   if (!signingContainer_) {
+   if (!signingContainer_ || !walletsManager_ || !walletsManager_->hdWalletsCount()) {
       return;
    }
    ui_->comboBoxXBTWallets->clear();
@@ -378,7 +372,7 @@ void RFQTicketXBT::fillRecvAddresses()
    ui_->receivingAddressComboBox->clear();
    if (recvWallet_) {
       ui_->receivingAddressComboBox->addItem(tr("Auto Create"));
-      for (auto addr : recvWallet_->GetExtAddressList()) {
+      for (auto addr : recvWallet_->getExtAddressList()) {
          ui_->receivingAddressComboBox->addItem(addr.display());
       }
       ui_->receivingAddressComboBox->setEnabled(true);
@@ -395,7 +389,7 @@ void RFQTicketXBT::showCoinControl()
    }
 }
 
-void RFQTicketXBT::setCurrentWallet(const std::shared_ptr<bs::Wallet> &newWallet)
+void RFQTicketXBT::setCurrentWallet(const std::shared_ptr<bs::sync::Wallet> &newWallet)
 {
    curWallet_ = newWallet;
 
@@ -409,7 +403,7 @@ void RFQTicketXBT::walletSelected(int index)
    }
 
    if (walletsManager_) {
-      setCurrentWallet(walletsManager_->GetWalletById(ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString()));
+      setCurrentWallet(walletsManager_->getWalletById(ui_->comboBoxXBTWallets->currentData(UiUtils::WalletIdRole).toString().toStdString()));
    }
 }
 
@@ -531,14 +525,10 @@ bs::Address RFQTicketXBT::recvAddress() const
    }
 
    if (index == 0) {
-      const auto &addr = recvWallet_->GetNewIntAddress();
-      if (transactionData_) {
-         transactionData_->createAddress(addr, recvWallet_);
-      }
-      recvWallet_->RegisterWallet();
+      const auto &addr = recvWallet_->getNewIntAddress();
       return addr;
    }
-   return recvWallet_->GetExtAddressList()[index - 1];
+   return recvWallet_->getExtAddressList()[index - 1];
 }
 
 void RFQTicketXBT::onTransactinDataChanged()
@@ -707,16 +697,15 @@ void RFQTicketXBT::submitButtonClicked()
       rfq.receiptAddress = recvAddress().display<std::string>();
 
       if (rfq.side == bs::network::Side::Sell) {
-         const auto wallet = transactionData_->GetSigningWallet();
+         const auto wallet = transactionData_->getSigningWallet();
          const uint64_t spendVal = rfq.quantity * assetManager_->getCCLotSize(rfq.product);
          try {
             if (!ccCoinSel_) {
                throw std::runtime_error("CC coin selection is missing");
             }
             const auto &inputs = ccCoinSel_->GetSelectedTransactions();
-            const auto &changeAddr = wallet->GetNewChangeAddress();
-            transactionData_->createAddress(changeAddr, wallet);
-            const auto txReq = wallet->CreatePartialTXRequest(spendVal, inputs, changeAddr);
+            const auto &changeAddr = wallet->getNewChangeAddress();
+            const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, changeAddr);
             rfq.coinTxInput = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, rfq.requestId);
          } catch (const std::exception &e) {
@@ -994,8 +983,8 @@ void RFQTicketXBT::productSelectionChanged()
             const auto &product = getProduct();
             const auto ccWallet = getCCWallet(product.toStdString());
             if (ccWallet) {
-               ui_->comboBoxCCWallets->addItem(QString::fromStdString(ccWallet->GetWalletName()));
-               ui_->comboBoxCCWallets->setItemData(0, QString::fromStdString(ccWallet->GetWalletId()), UiUtils::WalletIdRole);
+               ui_->comboBoxCCWallets->addItem(QString::fromStdString(ccWallet->name()));
+               ui_->comboBoxCCWallets->setItemData(0, QString::fromStdString(ccWallet->walletId()), UiUtils::WalletIdRole);
                ui_->comboBoxCCWallets->setCurrentIndex(0);
 
                ui_->comboBoxCCWallets->setEnabled(true);
@@ -1035,7 +1024,7 @@ void RFQTicketXBT::onCreateWalletClicked()
    path.append(bs::hd::purpose, true);
    path.append(bs::hd::BlockSettle_CC, true);
    path.append(getProduct().toStdString(), true);
-   leafCreateReqId_ = signingContainer_->CreateHDLeaf(walletsManager_->GetPrimaryWallet(), path);
+   leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
    if (leafCreateReqId_ == 0) {
       showHelp(tr("Create CC wallet request failed"));
    }

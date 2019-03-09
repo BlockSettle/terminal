@@ -19,8 +19,6 @@
 RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    : TabWithShortcut(parent)
    , ui_(new Ui::RFQRequestWidget())
-   , authAddressManager_(nullptr)
-   , walletsManager_(nullptr)
 {
    ui_->setupUi(this);
 
@@ -29,7 +27,7 @@ RFQRequestWidget::RFQRequestWidget(QWidget* parent)
 
 RFQRequestWidget::~RFQRequestWidget() = default;
 
-void RFQRequestWidget::SetWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager)
+void RFQRequestWidget::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    if (walletsManager_ == nullptr) {
       walletsManager_ = walletsManager;
@@ -101,7 +99,8 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    , const std::shared_ptr<AssetManager>& assetManager
    , const std::shared_ptr<DialogManager> &dialogManager
    , const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory)
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<ConnectionManager> &connectionManager)
 {
    logger_ = logger;
    celerClient_ = celerClient;
@@ -111,6 +110,7 @@ void RFQRequestWidget::init(std::shared_ptr<spdlog::logger> logger
    dialogManager_ = dialogManager;
    signingContainer_ = container;
    armory_ = armory;
+   connectionManager_ = connectionManager;
 
    ui_->pageRFQTicket->init(authAddressManager, assetManager, quoteProvider, container, armory);
 
@@ -153,7 +153,7 @@ void RFQRequestWidget::onDisconnectedFromCeler()
 void RFQRequestWidget::onRFQSubmit(const bs::network::RFQ& rfq)
 {
    RFQDialog* dialog = new RFQDialog(logger_, rfq, ui_->pageRFQTicket->GetTransactionData(), quoteProvider_,
-      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, this);
+      authAddressManager_, assetManager_, walletsManager_, signingContainer_, armory_, celerClient_, appSettings_, connectionManager_, this);
 
    dialog->setAttribute(Qt::WA_DeleteOnClose);
 

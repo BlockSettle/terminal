@@ -1,7 +1,6 @@
 #include "ConfigDialog.h"
 
 #include "AssetManager.h"
-#include "WalletsManager.h"
 #include "GeneralSettingsPage.h"
 #include "NetworkSettingsPage.h"
 

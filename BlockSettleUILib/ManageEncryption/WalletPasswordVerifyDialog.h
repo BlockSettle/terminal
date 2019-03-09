@@ -10,6 +10,7 @@ namespace Ui {
    class WalletPasswordVerifyDialog;
 }
 class ApplicationSettings;
+class ConnectionManager;
 
 class WalletPasswordVerifyDialog : public QDialog
 {
@@ -17,6 +18,7 @@ class WalletPasswordVerifyDialog : public QDialog
 
 public:
    explicit WalletPasswordVerifyDialog(const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget *parent = nullptr);
    ~WalletPasswordVerifyDialog() override;
 
@@ -37,7 +39,8 @@ private:
    std::vector<bs::wallet::PasswordData> keys_;
    bs::hd::WalletInfo walletInfo_;
    bool runPasswordCheck_ = false;
-   const std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<spdlog::logger> logger_;
 };
 

@@ -6,15 +6,25 @@
 #include <string>
 #include <QObject>
 #include <QStringList>
-#include "HDWallet.h"
+#include "CoreWallet.h"
+#include "HDPath.h"
 #include "WalletEncryption.h"
 
-
+namespace bs {
+   namespace sync {
+      namespace hd {
+         class Group;
+         class Leaf;
+         class Wallet;
+      }
+      class WalletsManager;
+   }
+}
 class ApplicationSettings;
+class ArmoryConnection;
 class AssetManager;
 class AuthAddressManager;
 class SignContainer;
-class WalletsManager;
 
 
 class WalletImporter : public QObject
@@ -22,13 +32,17 @@ class WalletImporter : public QObject
    Q_OBJECT
 
 public:
-   WalletImporter(const std::shared_ptr<SignContainer> &, const std::shared_ptr<WalletsManager> &
+   using CbScanReadLast = std::function<unsigned int(const std::string &walletId)>;
+   using CbScanWriteLast = std::function<void(const std::string &walletId, unsigned int idx)>;
+
+   WalletImporter(const std::shared_ptr<SignContainer> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<ArmoryConnection> &, const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<AuthAddressManager> &, const QString &walletsPath
-      , const bs::hd::Wallet::cb_scan_read_last &, const bs::hd::Wallet::cb_scan_write_last &);
+      , const std::shared_ptr<AuthAddressManager> &
+      , const CbScanReadLast &, const CbScanWriteLast &);
 
    void Import(const std::string& name, const std::string& description
-      , bs::wallet::Seed seed, bool primary = false
+      , bs::core::wallet::Seed seed, bool primary = false
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
 
 signals:
@@ -36,22 +50,20 @@ signals:
    void error(const QString &errMsg);
 
 private slots:
-   void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet>);
-   void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
+   void onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onHDWalletError(unsigned int id, std::string error);
-   void onWalletScanComplete(bs::hd::Group *, bs::hd::Path::Elem wallet, bool isValid);
-   void onImportComplete(const std::string &id);
+   void onWalletScanComplete(bs::sync::hd::Group *, bs::hd::Path::Elem wallet, bool isValid);
 
 private:
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<WalletsManager>     walletsMgr_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<AssetManager>       assetMgr_;
    std::shared_ptr<AuthAddressManager> authMgr_;
-   const QString  walletsPath_;
-   const bs::hd::Wallet::cb_scan_read_last   cbReadLast_;
-   const bs::hd::Wallet::cb_scan_write_last  cbWriteLast_;
-   std::shared_ptr<bs::hd::Wallet>     rootWallet_;
+   const CbScanReadLast    cbReadLast_;
+   const CbScanWriteLast   cbWriteLast_;
+   std::shared_ptr<bs::sync::hd::Wallet>     rootWallet_;
    std::map<unsigned int, std::string> createCCWalletReqs_;
    unsigned int      createWalletReq_ = 0;
    std::vector<bs::wallet::PasswordData>  pwdData_;

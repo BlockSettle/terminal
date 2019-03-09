@@ -4,8 +4,6 @@
 #include "AddressVerificator.h"
 #include "SettlementContainer.h"
 #include "SettlementMonitor.h"
-#include "SettlementWallet.h"
-
 #include "TransactionData.h"
 
 #include <memory>
@@ -14,12 +12,17 @@
 namespace spdlog {
    class logger;
 }
-
+namespace bs {
+   namespace sync {
+      class SettlementWallet;
+      class Wallet;
+      class WalletsManager;
+   }
+}
 class ArmoryConnection;
 class SignContainer;
 class QuoteProvider;
 class TransactionData;
-class WalletsManager;
 
 
 class DealerXBTSettlementContainer : public bs::SettlementContainer
@@ -27,7 +30,7 @@ class DealerXBTSettlementContainer : public bs::SettlementContainer
    Q_OBJECT
 public:
    DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
-      , const std::shared_ptr<WalletsManager> &, const std::shared_ptr<QuoteProvider> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<TransactionData> &, const std::unordered_set<std::string> &bsAddresses
       , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &, bool autoSign);
    ~DealerXBTSettlementContainer() override = default;
@@ -54,7 +57,7 @@ public:
    std::string walletName() const;
    bs::Address receiveAddress() const;
 
-   std::shared_ptr<bs::Wallet> GetWallet() const { return transactionData_->GetWallet(); }
+   std::shared_ptr<bs::sync::Wallet> getWallet() const { return transactionData_->getWallet(); }
 
 signals:
    void cptyAddressStateChanged(AddressVerificationState);
@@ -81,12 +84,12 @@ private:
    const bool     autoSign_;
    std::shared_ptr<spdlog::logger>              logger_;
    std::shared_ptr<TransactionData>             transactionData_;
-   std::shared_ptr<bs::SettlementWallet>        settlWallet_;
-   std::shared_ptr<bs::SettlementAddressEntry>  settlAddr_;
+   std::shared_ptr<bs::sync::SettlementWallet>  settlWallet_;
    std::shared_ptr<bs::SettlementMonitorCb>     settlMonitor_;
    std::shared_ptr<AddressVerificator>          addrVerificator_;
    std::shared_ptr<SignContainer>               signingContainer_;
    AddressVerificationState                     cptyAddressState_ = AddressVerificationState::InProgress;
+   bs::Address settlAddr_;
    std::string settlIdStr_;
    BinaryData  authKey_, reqAuthKey_;
    bool        payInDetected_ = false;

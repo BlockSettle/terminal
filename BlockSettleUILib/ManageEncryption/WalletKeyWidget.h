@@ -3,7 +3,7 @@
 
 #include <QTimer>
 #include <QWidget>
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 #include "EncryptionUtils.h"
 #include "AutheIDClient.h"
 #include "QWalletInfo.h"
@@ -22,8 +22,9 @@ public:
    WalletKeyWidget(AutheIDClient::RequestType requestType
                       , const bs::hd::WalletInfo &walletInfo
                       , int keyIndex
-                      , const std::shared_ptr<ApplicationSettings>& appSettings
                       , const std::shared_ptr<spdlog::logger> &logger
+                      , const std::shared_ptr<ApplicationSettings>& appSettings
+                      , const std::shared_ptr<ConnectionManager> &connectionManager
                       , QWidget* parent = nullptr);
 
    enum class UseType {
@@ -75,8 +76,6 @@ private:
    QPropertyAnimation* startAuthAnimation(bool success);
 
 private:
-   std::shared_ptr<ApplicationSettings> appSettings_;
-
    std::unique_ptr<Ui::WalletKeyWidget> ui_;
    int         keyIndex_;
    bool        authRunning_ = false;
@@ -90,8 +89,11 @@ private:
 
    bs::hd::WalletInfo walletInfo_;
    bs::wallet::PasswordData passwordData_;
+   UseType useType_{};
+
    std::shared_ptr<spdlog::logger> logger_;
-   UseType useType_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<ConnectionManager> connectionManager_;
 };
 
 #endif // __WALLET_KEY_WIDGET_H__

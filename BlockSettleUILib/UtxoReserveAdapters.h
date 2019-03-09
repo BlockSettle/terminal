@@ -6,7 +6,7 @@
 #include <QObject>
 #include "UtxoReservation.h"
 #include "CommonTypes.h"
-#include "MetaData.h"
+#include "CoreWallet.h"
 
 
 namespace spdlog {
@@ -23,7 +23,7 @@ namespace bs {
       OrderUtxoResAdapter(const std::shared_ptr<spdlog::logger> &, QObject *parent);
       ~OrderUtxoResAdapter() noexcept override = default;
 
-      void reserve(const bs::wallet::TXSignRequest &, const std::string &reserveId);
+      void reserve(const bs::core::wallet::TXSignRequest &, const std::string &reserveId);
 
    signals:
       void reservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);

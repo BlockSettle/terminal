@@ -9,8 +9,19 @@
 #include <bdmenums.h>
 
 #include "ArmorySettings.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 #include "LogManager.h"
+
+enum class EnvConfiguration
+{
+   // Do not change order!
+   PROD,
+   UAT,
+   Staging,
+   Custom,
+
+   Count
+};
 
 // hasher to allow compile std::unordered_map with enum as key
 struct EnumClassHash
@@ -21,6 +32,7 @@ struct EnumClassHash
         return static_cast<std::size_t>(t);
     }
 };
+
 
 
 class ApplicationSettings : public QObject
@@ -53,9 +65,7 @@ public:
       pubBridgeHost,
       pubBridgePort,
       pubBridgePubKey,
-      authServerHost,
-      authServerPort,
-      authServerPubKey,
+      envConfiguration,
       celerHost,
       celerPort,
       mdServerHost,
