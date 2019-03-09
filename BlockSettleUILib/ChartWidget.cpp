@@ -71,16 +71,7 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    // initial select interval
    ui_->btn1h->click();
 
-   auto currentTime = QDateTime::currentDateTime().time();
-
-   auto timerInterval = std::chrono::minutes(60);
-   if (currentTime.minute() != std::chrono::minutes(0).count())
-   {
-	   auto diff = timerInterval.count() - currentTime.minute();
-	   timerInterval = std::chrono::minutes(diff);
-   }
-
-   timer_->start(timerInterval);
+   timer_->start(getTimerInterval());
 }
 
 ChartWidget::~ChartWidget() {
@@ -127,7 +118,7 @@ void ChartWidget::UpdateChart(const int& interval) const
 {
 	auto product = ui_->cboInstruments->currentText();
 	if (product.isEmpty()) {
-		return;
+		product = QStringLiteral("EUR/GBP");
 	}
 	if (title_) {
 		title_->setText(product);
@@ -199,8 +190,6 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
 	{
 		cboModel_->appendRow(new QStandardItem(QString::fromStdString(product)));
 	}
-
-	UpdateChart(dateRange_.checkedId());
 }
 
 void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
@@ -221,7 +210,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	auto product = ui_->cboInstruments->currentText();
 	auto interval = dateRange_.checkedId();
 
-	if (product.toStdString() != response.product() || interval != response.interval())
+	if (product != QString::fromStdString(response.product()) || interval != response.interval())
 		return;
 
 	qreal maxPrice = 0.0;
@@ -279,6 +268,14 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 void ChartWidget::updateTimer()
 {
+	timer_->stop();
+	timer_->start(getTimerInterval());
+
+	AddDataPoint(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+std::chrono::minutes ChartWidget::getTimerInterval()
+{
 	auto currentTime = QDateTime::currentDateTime().time();
 
 	auto timerInterval = std::chrono::minutes(60);
@@ -288,9 +285,7 @@ void ChartWidget::updateTimer()
 		timerInterval = std::chrono::minutes(diff);
 	}
 
-	timer_->start(timerInterval);
-
-	AddDataPoint(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	return timerInterval;
 }
 
 void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const

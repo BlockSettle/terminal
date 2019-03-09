@@ -49,6 +49,7 @@ protected:
 	void ProcessOhlcHistoryResponse(const std::string& data);
 
 	void updateTimer();
+	std::chrono::minutes getTimerInterval();
 
 private:
 	std::shared_ptr<ApplicationSettings>			appSettings_;
