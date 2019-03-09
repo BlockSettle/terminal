@@ -61,9 +61,9 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
 	connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
 	connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
 
-	MarketDataHistoryRequest request;
-	request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
-	mdhsClient_->SendRequest(request);
+	//MarketDataHistoryRequest request;
+	//request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
+	//mdhsClient_->SendRequest(request);
 
    // initialize charts
    InitializeCustomPlot();
@@ -108,10 +108,10 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 	   }
    }
 
-   //if (cboModel_->findItems(security).isEmpty())
-   //{
-   //   cboModel_->appendRow(new QStandardItem(security));
-   //}
+   if (cboModel_->findItems(security).isEmpty())
+   {
+      cboModel_->appendRow(new QStandardItem(security));
+   }
 }
 
 void ChartWidget::UpdateChart(const int& interval) const
