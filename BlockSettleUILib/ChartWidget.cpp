@@ -96,7 +96,6 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 	   {
 		   if (field.type == bs::network::MDField::PriceBid)
 		   {
-			   const auto currentTime = QDateTime::currentSecsSinceEpoch();
 			   if (field.value == lastClose)
 				   return;
 			   else
@@ -110,6 +109,8 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 		   }
 	   }
    }
+
+   ModifyCandle();
 
    if (cboModel_->findItems(security).isEmpty())
    {
@@ -257,22 +258,6 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 		lastClose = candle.close();
 	}
 
-	if (timerUpdated)
-	{
-		auto candle = lastCandle;
-		auto currentTime = QDateTime::currentMSecsSinceEpoch();
-		candle.set_timestamp(currentTime);
-
-		AddDataPoint(candle.close(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
-		qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
-			, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
-			, candle.open()
-			, candle.high()
-			, candle.low()
-			, candle.close()
-			, candle.volume());
-	}
-
 	qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
 
 	auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
@@ -290,26 +275,70 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	ui_->customPlot->replot();
 }
 
+void ChartWidget::AddNewCandle()
+{
+	const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
+	OhlcCandle candle;
+	candle.set_open(lastClose);
+	candle.set_close(lastClose);
+	candle.set_high(lastClose);
+	candle.set_low(lastClose);
+	candle.set_timestamp(currentTimestamp);
+	candle.set_volume(0.0);
+
+	AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
+	qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
+		, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
+		, candle.open()
+		, candle.high()
+		, candle.low()
+		, candle.close()
+		, candle.volume());
+
+	auto interval = dateRange_.checkedId();
+
+	ui_->customPlot->rescaleAxes();
+	qreal size = IntervalWidth(interval, 100);
+	qreal upper = currentTimestamp + 0.8 * IntervalWidth(interval) / 2;
+	ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
+	ui_->customPlot->replot();
+}
+
+void ChartWidget::ModifyCandle()
+{
+	const auto& lastCandle = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1);
+	QCPFinancialData candle(*lastCandle);
+
+	candle.close = lastClose;
+	candle.high = lastHigh;
+	candle.low = lastLow;
+
+	candlesticksChart_->data()->remove(lastCandle->key);
+	candlesticksChart_->data()->add(candle);
+}
+
 void ChartWidget::timerEvent(QTimerEvent* event)
 {
-	timerUpdated = false;
 	killTimer(timerId);
 
 	timerId = startTimer(getTimerInterval());
-	timerUpdated = true;
 
-	UpdateChart(dateRange_.checkedId());
+	AddNewCandle();
 }
 
-std::chrono::minutes ChartWidget::getTimerInterval()
+std::chrono::seconds ChartWidget::getTimerInterval()
 {
 	auto currentTime = QDateTime::currentDateTime().time();
 
-	auto timerInterval = std::chrono::minutes(60);
-	if (currentTime.minute() != std::chrono::minutes(0).count())
+	auto timerInterval = std::chrono::seconds(3600);
+	if (currentTime.second() != std::chrono::seconds(0).count())
 	{
-		auto diff = timerInterval.count() - currentTime.minute();
-		timerInterval = std::chrono::minutes(diff);
+		if (currentTime.minute() != std::chrono::minutes(0).count())
+		{
+			auto currentSeconds = currentTime.minute() * 60 + currentTime.second();
+			auto diff = timerInterval.count() - currentSeconds;
+			timerInterval = std::chrono::seconds(diff);
+		}
 	}
 
 	return timerInterval;

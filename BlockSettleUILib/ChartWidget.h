@@ -48,8 +48,11 @@ protected:
 	void ProcessProductsListResponse(const std::string& data);
 	void ProcessOhlcHistoryResponse(const std::string& data);
 
+	void AddNewCandle();
+	void ModifyCandle();
+
 	void timerEvent(QTimerEvent* event);
-	std::chrono::minutes getTimerInterval();
+	std::chrono::seconds getTimerInterval();
 
 private:
 	std::shared_ptr<ApplicationSettings>			appSettings_;
