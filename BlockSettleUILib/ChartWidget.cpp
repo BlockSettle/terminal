@@ -121,9 +121,8 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 void ChartWidget::UpdateChart(const int& interval) const
 {
 	auto product = ui_->cboInstruments->currentText();
-	if (product.isEmpty()) {
-		product = QStringLiteral("EUR/GBP");
-	}
+	if (product.isEmpty())
+		return;
 	if (title_) {
 		title_->setText(product);
 	}
