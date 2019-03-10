@@ -143,6 +143,7 @@ protected slots:
 private:
    void ConnectHelper();
    void Authenticate();
+   void startBIP151Handshake();
 
 protected:
    const QString                              host_;

@@ -1,6 +1,8 @@
 #include <chrono>
 #include <QStandardPaths>
+#include "zmq.h"
 
+#include "FastLock.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_Msg.h"
 
@@ -130,7 +132,30 @@ bool ZMQ_BIP15X_DataConnection::send(const string& data) {
 
    writeQueue_.push_back(move(ws_msg));*/
 
-   return ZmqDataConnection::sendRawData(message);
+   int result = -1;
+   {
+      FastLock locker(lockSocket_);
+      result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
+   }
+   if (result != (int)data.size()) {
+      if (logger_) {
+         logger_->error("[ZMQ_BIP15X_DataConnection::{}] {} failed to send "
+            "data: {}", __func__, connectionName_, zmq_strerror(zmq_errno()));
+      }
+      return false;
+   }
+
+   return true;
+}
+
+bool ZMQ_BIP15X_DataConnection::startBIP151Handshake() {
+   ZMQ_BIP15X_Msg msg;
+   BIP151Connection* connPtr = nullptr;
+   BinaryData nullPayload;
+
+   vector<BinaryData> outData = msg.serialize(nullPayload.getDataVector()
+      , connPtr, ZMQ_MSGTYPE_AEAD_SETUP, 0);
+   send(move(outData[0].toBinStr()));
 }
 
 // The function that handles raw data coming in from a ZMQ socket.
@@ -174,11 +199,12 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
    //deser packet
    ZMQ_BIP15X_Msg inMsg;
    if (!inMsg.parsePacket(payload.getRef())) {
-      cout << "DEBUG: Error" << endl;
+      cout << "DEBUG: Parse packet error" << endl;
       return;
    }
 
-   if (inMsg.getType() > ZMQ_MSGTYPE_AEAD_THESHOLD)
+   if (inMsg.getType() > ZMQ_MSGTYPE_AEAD_THESHOLD
+      && !bip151Connection_->connectionComplete())
    {
       if (!processAEADHandshake(inMsg))
       {
@@ -246,6 +272,11 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
    }
 
    ZmqDataConnection::notifyOnData(payload.toBinStr());
+}
+
+ZmqContext::sock_ptr ZMQ_BIP15X_DataConnection::CreateDataSocket()
+{
+   return context_->CreateClientSocket();
 }
 
 // The function processing the BIP 150/151 handshake packets.
@@ -451,5 +482,7 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 // If the user is presented with a new server identity key, ask what they want.
 void ZMQ_BIP15X_DataConnection::promptUser(const BinaryDataRef& newKey
    , const string& srvAddrPort) {
-   // TO DO: Insert a user prompt.
+   // TO DO: Insert a user prompt. For now, just approve the key.
+   std::cout << "New key arrived. Prompt the user." << std::endl;
+   serverPubkeyProm_->set_value(true);
 }

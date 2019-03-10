@@ -255,6 +255,10 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData) {
 //   }
 }
 
+bool ZMQ_BIP15X_ServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket) {
+   return ZmqServerConnection::ConfigDataSocket(dataSocket);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
 {

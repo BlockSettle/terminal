@@ -36,7 +36,7 @@ public:
 
 protected:
    ZmqContext::sock_ptr CreateDataSocket() override;
-
+   bool ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket) override;
    bool ReadFromDataSocket() override;
 
 private:

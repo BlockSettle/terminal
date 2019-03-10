@@ -27,10 +27,12 @@ public:
    ZMQ_BIP15X_DataConnection(ZMQ_BIP15X_DataConnection&&) = delete;
    ZMQ_BIP15X_DataConnection& operator= (ZMQ_BIP15X_DataConnection&&) = delete;
 
+   bool startBIP151Handshake();
    bool send(const std::string& data) override;
 
 protected:
    void onRawDataReceived(const std::string& rawData) override;
+   ZmqContext::sock_ptr CreateDataSocket() override;
 
 private:
    void ProcessIncomingData();
@@ -45,6 +47,7 @@ private:
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;
    std::string pendingData_;
+   std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
 //   const std::string marker = "\r\n\r\n";
 };
 

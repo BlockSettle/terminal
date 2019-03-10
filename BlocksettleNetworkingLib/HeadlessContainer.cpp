@@ -1081,7 +1081,7 @@ void RemoteSigner::ConnectHelper()
          return;
       }
    }
-   Authenticate();
+   startBIP151Handshake();
 }
 
 bool RemoteSigner::Disconnect()
@@ -1121,6 +1121,19 @@ void RemoteSigner::Authenticate()
    packet.set_type(headless::AuthenticationRequestType);
    packet.set_data(request.SerializeAsString());
    Send(packet);
+}
+
+void RemoteSigner::startBIP151Handshake()
+{
+   mutex_.lock();
+   if (!listener_) {
+      mutex_.unlock();
+      emit connectionError(tr("listener missing on authenticate"));
+      return;
+   }
+   mutex_.unlock();
+
+   connection_->startBIP151Handshake();
 }
 
 bool RemoteSigner::isOffline() const
