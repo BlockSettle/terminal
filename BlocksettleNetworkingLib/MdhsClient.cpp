@@ -95,7 +95,7 @@ const MdhsClient::ProductType MdhsClient::GetProductType(const QString &product)
 
 const bool MdhsClient::OnDataReceived(const std::string& data)
 {
-	command_->CleanupCallbacks();
 	emit DataReceived(data);
+	command_->CleanupCallbacks();
 	return true;
 }
