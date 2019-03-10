@@ -24,7 +24,8 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , lastLow(0.0)
    , lastClose(0.0)
    , timerId(0)
-   , timerUpdated(false) {
+   , maxPrice(0.0)
+   , minPrice(0.0) {
    ui_->setupUi(this);
 
    // setting up date range radio button group
@@ -218,10 +219,12 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 	OhlcCandle lastCandle;
 
-	qreal maxPrice = 0.0;
-	qreal minPrice = -1.0;
+	maxPrice = 0.0;
+	minPrice = -1.0;
+
 	qreal maxVolume = 0.0;
 	qreal maxTimestamp = -1.0;
+
 	for (int i = response.candles_size() - 1; i >= 0; --i)
 	{
 		auto candle = response.candles(i);
@@ -264,14 +267,8 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	maxPrice += margin;
 	minPrice = qMax(minPrice, 0.0);
 
-	ui_->customPlot->rescaleAxes();
-	qreal size = IntervalWidth(interval, 100);
-	qreal upper = maxTimestamp + 0.8 * IntervalWidth(interval) / 2;
-	ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
 	volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
-	ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
-	ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(product));
-	ui_->customPlot->replot();
+	UpdatePlot(interval, maxTimestamp);
 }
 
 void ChartWidget::AddNewCandle()
@@ -285,6 +282,9 @@ void ChartWidget::AddNewCandle()
 	candle.set_timestamp(currentTimestamp);
 	candle.set_volume(0.0);
 
+	maxPrice = qMax(maxPrice, candle.high());
+	minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
+
 	AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
 	qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
 		, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
@@ -294,13 +294,7 @@ void ChartWidget::AddNewCandle()
 		, candle.close()
 		, candle.volume());
 
-	auto interval = dateRange_.checkedId();
-
-	ui_->customPlot->rescaleAxes();
-	qreal size = IntervalWidth(interval, 100);
-	qreal upper = currentTimestamp + 0.8 * IntervalWidth(interval) / 2;
-	ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
-	ui_->customPlot->replot();
+	UpdatePlot(dateRange_.checkedId(), currentTimestamp);
 }
 
 void ChartWidget::ModifyCandle()
@@ -314,6 +308,18 @@ void ChartWidget::ModifyCandle()
 
 	candlesticksChart_->data()->remove(lastCandle->key);
 	candlesticksChart_->data()->add(candle);
+}
+
+void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
+{
+	qreal size = IntervalWidth(interval, 100);
+	qreal upper = timestamp + 0.8 * IntervalWidth(interval) / 2;
+
+	ui_->customPlot->rescaleAxes();
+	ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
+	ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
+	ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
+	ui_->customPlot->replot();
 }
 
 void ChartWidget::timerEvent(QTimerEvent* event)

@@ -50,6 +50,7 @@ protected:
 
 	void AddNewCandle();
 	void ModifyCandle();
+	void UpdatePlot(const int& interval, const qint64& timestamp);
 
 	void timerEvent(QTimerEvent* event);
 	std::chrono::seconds getTimerInterval();
@@ -73,8 +74,10 @@ private:
 	double lastLow;
 	double lastClose;
 
+	qreal maxPrice;
+	qreal minPrice;
+
 	int timerId;
-	bool timerUpdated;
 };
 
 #endif // CHARTWIDGET_H
