@@ -48,7 +48,7 @@ protected:
 	void ProcessProductsListResponse(const std::string& data);
 	void ProcessOhlcHistoryResponse(const std::string& data);
 
-	void updateTimer();
+	void timerEvent(QTimerEvent* event);
 	std::chrono::minutes getTimerInterval();
 
 private:
@@ -65,11 +65,13 @@ private:
     QCPFinancial *candlesticksChart_;
     QCPBars *volumeChart_;
     QCPAxisRect *volumeAxisRect_;
-	QTimer *timer_;
 
 	double lastHigh;
 	double lastLow;
 	double lastClose;
+
+	int timerId;
+	bool timerUpdated;
 };
 
 #endif // CHARTWIDGET_H

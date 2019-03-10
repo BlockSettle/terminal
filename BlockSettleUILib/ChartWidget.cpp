@@ -20,9 +20,11 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , candlesticksChart_(nullptr)
    , volumeChart_(nullptr)
    , volumeAxisRect_(nullptr)
-   , lastHigh (0.0)
-   , lastLow (0.0)
-   , lastClose (0.0) {
+   , lastHigh(0.0)
+   , lastLow(0.0)
+   , lastClose(0.0)
+   , timerId(0)
+   , timerUpdated(false) {
    ui_->setupUi(this);
 
    // setting up date range radio button group
@@ -71,10 +73,11 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    // initial select interval
    ui_->btn1h->click();
 
-   timer_->start(getTimerInterval());
+   timerId = startTimer(getTimerInterval());
 }
 
 ChartWidget::~ChartWidget() {
+   killTimer(timerId);
    delete ui_;
 }
 
@@ -213,11 +216,13 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	if (product != QString::fromStdString(response.product()) || interval != response.interval())
 		return;
 
+	OhlcCandle lastCandle;
+
 	qreal maxPrice = 0.0;
 	qreal minPrice = -1.0;
 	qreal maxVolume = 0.0;
 	qreal maxTimestamp = -1.0;
-	for (int i = 0; i < response.candles_size(); ++i)
+	for (int i = response.candles_size() - 1; i >= 0; --i)
 	{
 		auto candle = response.candles(i);
 		maxPrice = qMax(maxPrice, candle.high());
@@ -225,7 +230,9 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 		maxVolume = qMax(maxVolume, candle.volume());
 		maxTimestamp = qMax(maxTimestamp, static_cast<qreal>(candle.timestamp()));
 
-		if (i == response.candles_size() - 1)
+		bool isLast = (i == 0);
+
+		if (isLast)
 		{
 			if (lastHigh != 0.0 && lastLow != 0.0 && lastClose != 0.0)
 			{
@@ -233,6 +240,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 				candle.set_low(lastLow);
 				candle.set_close(lastClose);
 			}
+			lastCandle = candle;
 		}
 
 		AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
@@ -247,6 +255,22 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 		lastHigh = candle.high();
 		lastLow = candle.low();
 		lastClose = candle.close();
+	}
+
+	if (timerUpdated)
+	{
+		auto candle = lastCandle;
+		auto currentTime = QDateTime::currentMSecsSinceEpoch();
+		candle.set_timestamp(currentTime);
+
+		AddDataPoint(candle.close(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
+		qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
+			, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
+			, candle.open()
+			, candle.high()
+			, candle.low()
+			, candle.close()
+			, candle.volume());
 	}
 
 	qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
@@ -266,12 +290,15 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 	ui_->customPlot->replot();
 }
 
-void ChartWidget::updateTimer()
+void ChartWidget::timerEvent(QTimerEvent* event)
 {
-	timer_->stop();
-	timer_->start(getTimerInterval());
+	timerUpdated = false;
+	killTimer(timerId);
 
-	AddDataPoint(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	timerId = startTimer(getTimerInterval());
+	timerUpdated = true;
+
+	UpdateChart(dateRange_.checkedId());
 }
 
 std::chrono::minutes ChartWidget::getTimerInterval()
@@ -488,7 +515,4 @@ void ChartWidget::InitializeCustomPlot()
    volumeAxisRect_->setRangeDrag(Qt::Horizontal);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
-
-   timer_ = new QTimer(this);
-   connect(timer_, SIGNAL(timeout()), this, SLOT(updateTimer()));
 }
