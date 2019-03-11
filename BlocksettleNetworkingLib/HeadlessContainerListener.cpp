@@ -1284,7 +1284,7 @@ bool HeadlessContainerListener::CheckSpendLimit(uint64_t value, bool autoSign, c
    return true;
 }
 
-void HeadlessContainerListener::onXbtSpent(qint64 value, bool autoSign)
+void HeadlessContainerListener::onXbtSpent(int64_t value, bool autoSign)
 {
    if (autoSign) {
       limits_.autoSignSpendXBT -= value;
