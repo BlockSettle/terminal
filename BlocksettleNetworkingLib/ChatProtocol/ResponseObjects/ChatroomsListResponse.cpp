@@ -7,6 +7,16 @@ namespace Chat {
       
    }
    
+   ChatroomsListResponse::ChatroomsListResponse(std::vector<std::shared_ptr<ChatRoomData>> roomList)
+      : ChatroomsListResponse({""})
+   {
+      std::vector<std::string> rooms;
+      for (auto room: roomList){
+         rooms.push_back(room->toJsonString());
+      }
+      dataList_ = std::move(rooms);
+   }
+   
    std::shared_ptr<Response> ChatroomsListResponse::fromJSON(const std::string& jsonData)
    {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
