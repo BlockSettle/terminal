@@ -67,7 +67,7 @@ pipeline {
                         script {
                             step ([$class: 'CopyArtifact',
                             projectName: '${JOB_NAME}',
-                            filter: "C:\\Jenkins\\workspace\\terminal_dev\\1.txt",
+                            filter: "\\*.*",
                             target: 'WBuild']);
                         }
                     }
