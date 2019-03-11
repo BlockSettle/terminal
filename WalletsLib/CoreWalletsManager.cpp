@@ -26,6 +26,7 @@ WalletsManager::~WalletsManager() noexcept
 
 void WalletsManager::reset()
 {
+   walletsLoaded_ = false;
    wallets_.clear();
    hdWallets_.clear();
    walletNames_.clear();
@@ -103,6 +104,7 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
          logger_->warn("Failed to load BIP44 wallet: {}", e.what());
       }
    }
+   walletsLoaded_ = true;
 }
 
 void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &targetDir) const
