@@ -128,21 +128,18 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(
    auto val = brrVal.get_uint8_t();
    auto entryType = AssetEntryType(val & 0x0F);
 
-   switch (entryType)
+   auto getKeyData = [](BinaryRefReader& brr,
+      shared_ptr<Asset_PrivateKey>& privKeyPtr,
+      SecureBinaryData& pubKeyCompressed,
+      SecureBinaryData& pubKeyUncompressed
+   )->void
    {
-   case AssetEntryType_Single:
-   {
-      shared_ptr<Asset_PrivateKey> privKeyPtr = nullptr;
-
-      SecureBinaryData pubKeyCompressed;
-      SecureBinaryData pubKeyUncompressed;
-
       vector<pair<size_t, BinaryDataRef>> dataVec;
 
-      while (brrVal.getSizeRemaining() > 0)
+      while (brr.getSizeRemaining() > 0)
       {
-         auto len = brrVal.get_var_int();
-         auto valref = brrVal.get_BinaryDataRef(len);
+         auto len = brr.get_var_int();
+         auto valref = brr.get_BinaryDataRef(len);
 
          dataVec.push_back(make_pair(len, valref));
       }
@@ -164,7 +161,7 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(
 
             pubKeyUncompressed = move(SecureBinaryData(
                brrData.get_BinaryDataRef(
-               brrData.getSizeRemaining())));
+                  brrData.getSizeRemaining())));
 
             break;
          }
@@ -179,7 +176,7 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(
 
             pubKeyCompressed = move(SecureBinaryData(
                brrData.get_BinaryDataRef(
-               brrData.getSizeRemaining())));
+                  brrData.getSizeRemaining())));
 
             break;
          }
@@ -201,14 +198,46 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(
             throw AssetException("unknown key type byte");
          }
       }
+   };
+
+   switch (entryType)
+   {
+   case AssetEntryType_Single:
+   {
+      shared_ptr<Asset_PrivateKey> privKeyPtr;
+      SecureBinaryData pubKeyCompressed;
+      SecureBinaryData pubKeyUncompressed;
+
+      getKeyData(brrVal, privKeyPtr, pubKeyCompressed, pubKeyUncompressed);
 
       auto addrEntry = make_shared<AssetEntry_Single>(
          index, account_id,
          pubKeyUncompressed, pubKeyCompressed, privKeyPtr);
 
       addrEntry->doNotCommit();
-
       return addrEntry;
+   }
+
+   case AssetEntryType_BIP32Root:
+   {
+      auto depth = brrVal.get_uint8_t();
+      auto leafid = brrVal.get_uint32_t();
+      auto cclen = brrVal.get_var_int();
+      auto&& chaincode = brrVal.get_BinaryData(cclen);
+
+      shared_ptr<Asset_PrivateKey> privKeyPtr;
+      SecureBinaryData pubKeyCompressed;
+      SecureBinaryData pubKeyUncompressed;
+
+      getKeyData(brrVal, privKeyPtr, pubKeyCompressed, pubKeyUncompressed);
+
+      auto rootEntry = make_shared<AssetEntry_BIP32Root>(
+         index, account_id,
+         pubKeyUncompressed, pubKeyCompressed, privKeyPtr,
+         chaincode, depth, leafid);
+
+      rootEntry->doNotCommit();
+      return rootEntry;
    }
 
    default:
@@ -229,6 +258,34 @@ BinaryData AssetEntry_Single::serialize() const
    bw.put_BinaryData(pubkey_->serialize());
    if (privkey_ != nullptr && privkey_->hasData())
       bw.put_BinaryData(privkey_->serialize());
+
+   BinaryWriter finalBw;
+
+   finalBw.put_var_int(bw.getSize());
+   finalBw.put_BinaryData(bw.getData());
+
+   return finalBw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData AssetEntry_BIP32Root::serialize() const
+{
+   BinaryWriter bw;
+   auto entryType = getType();
+   bw.put_uint8_t(entryType);
+
+   bw.put_uint8_t(depth_);
+   bw.put_uint32_t(leafID_);
+   
+   bw.put_var_int(chaincode_.getSize());
+   bw.put_BinaryData(chaincode_);
+
+   auto pubkey = getPubKey();
+   auto privkey = getPrivKey();
+
+   bw.put_BinaryData(pubkey->serialize());
+   if (privkey != nullptr && privkey->hasData())
+      bw.put_BinaryData(privkey->serialize());
 
    BinaryWriter finalBw;
 
@@ -325,7 +382,7 @@ Asset_EncryptedData::~Asset_EncryptedData()
 unique_ptr<DecryptedEncryptionKey> Asset_EncryptionKey::decrypt(
    const SecureBinaryData& key) const
 {
-   auto decryptedData = cypher_->decrypt(key, data_);
+   auto decryptedData = cipher_->decrypt(key, data_);
    auto decrPtr = make_unique<DecryptedEncryptionKey>(decryptedData);
    return move(decrPtr);
 }
@@ -334,7 +391,7 @@ unique_ptr<DecryptedEncryptionKey> Asset_EncryptionKey::decrypt(
 unique_ptr<DecryptedPrivateKey> Asset_PrivateKey::decrypt(
    const SecureBinaryData& key) const
 {
-   auto&& decryptedData = cypher_->decrypt(key, data_);
+   auto&& decryptedData = cipher_->decrypt(key, data_);
    auto decrPtr = make_unique<DecryptedPrivateKey>(id_, decryptedData);
    return move(decrPtr);
 }
@@ -364,9 +421,9 @@ BinaryData Asset_PrivateKey::serialize() const
    bw.put_var_int(data_.getSize());
    bw.put_BinaryData(data_);
 
-   auto&& cypherData = cypher_->serialize();
-   bw.put_var_int(cypherData.getSize());
-   bw.put_BinaryData(cypherData);
+   auto&& cipherData = cipher_->serialize();
+   bw.put_var_int(cipherData.getSize());
+   bw.put_BinaryData(cipherData);
 
    BinaryWriter finalBw;
    finalBw.put_var_int(bw.getSize());
@@ -384,9 +441,9 @@ BinaryData Asset_EncryptionKey::serialize() const
    bw.put_var_int(data_.getSize());
    bw.put_BinaryData(data_);
 
-   auto&& cypherData = cypher_->serialize();
-   bw.put_var_int(cypherData.getSize());
-   bw.put_BinaryData(cypherData);
+   auto&& cipherData = cipher_->serialize();
+   bw.put_var_int(cipherData.getSize());
+   bw.put_BinaryData(cipherData);
 
    BinaryWriter finalBw;
    finalBw.put_var_int(bw.getSize());
@@ -402,7 +459,7 @@ bool Asset_PrivateKey::isSame(Asset_EncryptedData* const asset) const
       return false;
 
    return id_ == asset_ed->id_ && data_ == asset_ed->data_ &&
-      cypher_->isSame(asset_ed->cypher_.get());
+      cipher_->isSame(asset_ed->cipher_.get());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -413,7 +470,7 @@ bool Asset_EncryptionKey::isSame(Asset_EncryptedData* const asset) const
       return false;
 
    return id_ == asset_ed->id_ && data_ == asset_ed->data_ &&
-      cypher_->isSame(asset_ed->cypher_.get());
+      cipher_->isSame(asset_ed->cipher_.get());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -454,14 +511,14 @@ shared_ptr<Asset_EncryptedData> Asset_EncryptedData::deserialize(
       auto len = brr.get_var_int();
       auto&& data = brr.get_SecureBinaryData(len);
 
-      //cypher
+      //cipher
       len = brr.get_var_int();
       if (len > brr.getSizeRemaining())
          throw runtime_error("invalid serialized encrypted data len");
-      auto&& cypher = Cypher::deserialize(brr);
+      auto&& cipher = Cipher::deserialize(brr);
 
       //ptr
-      assetPtr = make_shared<Asset_PrivateKey>(id, data, move(cypher));
+      assetPtr = make_shared<Asset_PrivateKey>(id, data, move(cipher));
 
       break;
    }
@@ -476,14 +533,14 @@ shared_ptr<Asset_EncryptedData> Asset_EncryptedData::deserialize(
       len = brr.get_var_int();
       auto&& data = brr.get_SecureBinaryData(len);
 
-      //cypher
+      //cipher
       len = brr.get_var_int();
       if (len > brr.getSizeRemaining())
          throw runtime_error("invalid serialized encrypted data len");
-      auto&& cypher = Cypher::deserialize(brr);
+      auto&& cipher = Cipher::deserialize(brr);
 
       //ptr
-      assetPtr = make_shared<Asset_EncryptionKey>(id, data, move(cypher));
+      assetPtr = make_shared<Asset_EncryptionKey>(id, data, move(cipher));
 
       break;
    }

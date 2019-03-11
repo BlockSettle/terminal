@@ -80,6 +80,9 @@ struct WalletMeta
    SecureBinaryData defaultEncryptionKey_;
    SecureBinaryData defaultEncryptionKeyId_;
 
+   SecureBinaryData defaultKdfId_;
+   SecureBinaryData masterEncryptionKeyId_;
+
    //tors
    WalletMeta(std::shared_ptr<LMDBEnv> env, WalletMetaType type) :
       dbEnv_(env), type_(type)
@@ -196,7 +199,8 @@ protected:
       decryptedData_ = std::make_shared<DecryptedDataContainer>(
          dbEnv_.get(), db_,
          metaPtr->getDefaultEncryptionKey(),
-         metaPtr->getDefaultEncryptionKeyId());
+         metaPtr->getDefaultEncryptionKeyId(),
+         metaPtr->defaultKdfId_, metaPtr->masterEncryptionKeyId_);
    }
 
    static std::shared_ptr<LMDBEnv> getEnvFromFile(
@@ -245,6 +249,7 @@ protected:
    static void putData(LMDB* db, const BinaryData& key, const BinaryData& data);
    static void initWalletMetaDB(std::shared_ptr<LMDBEnv>, const std::string&);
 
+   std::shared_ptr<AddressAccount> createAccount(std::shared_ptr<AccountType>);
 
 public:
    //tors
@@ -313,9 +318,10 @@ protected:
       std::shared_ptr<WalletMeta>,
       std::shared_ptr<KeyDerivationFunction> masterKdf,
       DecryptedEncryptionKey& masterEncryptionKey,
-      std::unique_ptr<Cypher>,
+      std::unique_ptr<Cipher>,
       const SecureBinaryData& passphrase,
       const SecureBinaryData& privateRoot,
+      const SecureBinaryData& chaincode,
       std::set<std::shared_ptr<AccountType>> accountTypes,
       unsigned lookup);
 
@@ -340,7 +346,11 @@ public:
    const SecureBinaryData& getPublicRoot(void) const;
    std::shared_ptr<AssetEntry> getAccountRoot(const BinaryData& accountID) const;
    const SecureBinaryData& getArmory135Chaincode(void) const;
-   
+   const BinaryData& createBIP32Account(
+      std::shared_ptr<AssetEntry_BIP32Root> parentNode,
+      std::vector<unsigned> derPath,
+      bool isMain = false);
+
    std::shared_ptr<AssetEntry> getMainAccountAssetForIndex(unsigned) const;
    unsigned getMainAccountAssetCount(void) const;
    const BinaryData& getMainAccountID(void) const { return mainAccount_; }
@@ -375,6 +385,11 @@ public:
       const std::vector<unsigned>& derivationPath,
       const SecureBinaryData& passphrase,
       unsigned lookup);
+
+   static std::shared_ptr<AssetWallet_Single> createFromSeed_BIP32_Blank(
+      const std::string& folder,
+      const SecureBinaryData& seed,
+      const SecureBinaryData& passphrase);
 };
 
 ////////////////////////////////////////////////////////////////////////////////

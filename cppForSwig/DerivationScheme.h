@@ -91,7 +91,7 @@ public:
    //locals
    std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
       std::shared_ptr<DecryptedDataContainer>,
-      const SecureBinaryData& privKey, std::unique_ptr<Cypher>,
+      const SecureBinaryData& privKey, std::unique_ptr<Cipher>,
       const BinaryData& full_id, unsigned index);
    
    std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
@@ -132,7 +132,7 @@ public:
    //locals
    std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
       std::shared_ptr<DecryptedDataContainer>,
-      const SecureBinaryData& privKey, std::unique_ptr<Cypher>,
+      const SecureBinaryData& privKey, std::unique_ptr<Cipher>,
       const BinaryData& full_id, unsigned index);
 
    std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(

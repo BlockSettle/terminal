@@ -427,6 +427,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 class AddressAccount : public Lockable
 {
+   friend class AssetWallet;
    friend class AssetWallet_Single;
 
 private:
@@ -498,7 +499,7 @@ public:
    void make_new(
       std::shared_ptr<AccountType>,
       std::shared_ptr<DecryptedDataContainer>,
-      std::unique_ptr<Cypher>);
+      std::unique_ptr<Cipher>);
 
    void readFromDisk(const BinaryData& key);
 
