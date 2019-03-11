@@ -93,6 +93,7 @@ signals:
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
    void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
+   void RoomsAdd(const std::vector<std::shared_ptr<Chat::ChatRoomData>>& rooms);
 
 public slots:
    void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);

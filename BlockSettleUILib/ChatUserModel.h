@@ -4,6 +4,7 @@
 #include <QObject>
 
 #include "ChatUserData.h"
+#include "ChatProtocol/DataObjects.h"
 
 class ChatUserModel : public QObject
 {
@@ -24,19 +25,29 @@ public:
    ChatUserDataListPtr chatUserDataList() const;
 
    ChatUserDataPtr getUserByUserId(const QString &userId) const;
+   std::shared_ptr<Chat::ChatRoomData> getRoomByRoomId(const QString &roomId) const;
+   
+public:
+   void addRoom(const std::shared_ptr<Chat::ChatRoomData> roomData);
+   
+   bool isChatRoomExist(const QString &roomId) const;
+   QList<std::shared_ptr<Chat::ChatRoomData>> chatRoomDataList() const;
 
 signals:
    void chatUserDataListChanged(const ChatUserDataListPtr &chatUserDataList);
+   void chatRoomDataListChanged(const QList<std::shared_ptr<Chat::ChatRoomData>> &chatRoomDataList);
 
    void chatUserAdded(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserRemoved(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStatusChanged(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStateChanged(const ChatUserDataPtr &chatUserDataPtr);
+   void chatRoomAdded(const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr);
 
 public slots:
 
 private:
    ChatUserDataListPtr _chatUserDataListPtr;
+   QList<std::shared_ptr<Chat::ChatRoomData>> _chatRoomDataListPtr;
 };
 
 using ChatUserModelPtr = std::shared_ptr<ChatUserModel>;

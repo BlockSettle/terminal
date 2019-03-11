@@ -99,6 +99,51 @@ ChatUserDataPtr ChatUserModel::getUserByUserId(const QString &userId) const
    return chatUserDataPtr;
 }
 
+std::shared_ptr<Chat::ChatRoomData> ChatUserModel::getRoomByRoomId(const QString& roomId) const
+{
+   auto chatRoomIt = std::find_if(std::begin(_chatRoomDataListPtr), std::end(_chatRoomDataListPtr), [roomId](const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr)->bool
+   {
+      return (0 == chatRoomDataPtr->getId().compare(roomId));
+   });
+
+   if (chatRoomIt == std::end(_chatRoomDataListPtr))
+   {
+      return std::shared_ptr<Chat::ChatRoomData>();
+   }
+
+   std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr((*chatRoomIt));
+
+   return chatRoomDataPtr;
+}
+
+void ChatUserModel::addRoom(const std::shared_ptr<Chat::ChatRoomData> roomData)
+{
+   if (isChatRoomExist(roomData->getId()))
+      return;
+
+   _chatRoomDataListPtr.push_back(roomData);
+
+   emit chatRoomAdded(roomData); 
+   emit chatRoomDataListChanged(_chatRoomDataListPtr);
+}
+
+bool ChatUserModel::isChatRoomExist(const QString& roomId) const
+{
+   std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr = getRoomByRoomId(roomId);
+
+   if (chatRoomDataPtr)
+   {
+      return true;
+   }
+
+   return false;
+}
+
+QList<std::shared_ptr<Chat::ChatRoomData> > ChatUserModel::chatRoomDataList() const
+{
+   
+}
+
 void ChatUserModel::resetModel()
 {
    while(!_chatUserDataListPtr.empty())

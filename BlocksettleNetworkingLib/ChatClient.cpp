@@ -15,6 +15,8 @@
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
+Q_DECLARE_METATYPE(std::shared_ptr<Chat::ChatRoomData>)
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::ChatRoomData>>)
 
 //We have current flags
 //We have upladed flags
@@ -37,6 +39,8 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 {
    qRegisterMetaType<std::shared_ptr<Chat::MessageData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::MessageData>>>();
+   qRegisterMetaType<std::shared_ptr<Chat::ChatRoomData>>();
+   qRegisterMetaType<std::vector<std::shared_ptr<Chat::ChatRoomData>>>();
 
    chatDb_ = std::make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
    if (!chatDb_->loadKeys(pubKeys_)) {
@@ -174,6 +178,7 @@ void ChatClient::OnChatroomsList(const Chat::ChatroomsListResponse& response)
    for (auto room : roomList){
       rooms << QString::fromStdString(room->toJsonString());
    }
+   emit RoomsAdd(roomList);
    logger_->debug("[ChatClient::OnChatroomsList]: Received chatroom list from server: {}",
                   rooms.join(QLatin1String(", ")).prepend(QLatin1Char('[')).append(QLatin1Char(']')).toStdString()
                   );

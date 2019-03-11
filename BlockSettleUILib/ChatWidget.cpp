@@ -35,6 +35,7 @@ public:
    virtual void onMessagesUpdated() = 0;
    virtual void onLoginFailed() = 0;
    virtual void onUsersDeleted(const std::vector<std::string> &) = 0;
+   virtual void onRoomClicked(const QString& userId) = 0;
 
    ChatWidget::State type() { return type_; }
 
@@ -70,6 +71,7 @@ public:
    }
 
    void onUserClicked(const QString& /*userId*/)  override {}
+   void onRoomClicked(const QString& /*roomId*/)  override {}
    void onMessagesUpdated()  override {}
    void onLoginFailed()  override {
       chat_->changeState(ChatWidget::LoggedOut);
@@ -129,6 +131,27 @@ public:
          chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
       }
    }
+   
+   void onRoomClicked(const QString& roomId) override {
+      // save draft
+      if (!chat_->currentChat_.isEmpty()) {
+         QString messageText = chat_->ui_->input_textEdit->toPlainText();
+         chat_->draftMessages_[chat_->currentChat_] = messageText;
+      }
+
+      chat_->currentChat_ = roomId;
+      chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
+      chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
+      chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
+      chat_->client_->retrieveUserMessages(chat_->currentChat_);
+
+      // load draft
+      if (chat_->draftMessages_.contains(roomId)) {
+         chat_->ui_->input_textEdit->setText(chat_->draftMessages_[roomId]);
+      } else {
+         chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
+      }
+   }
 
    void onMessagesUpdated()  override {
       QScrollBar *bar = chat_->ui_->textEditMessages->verticalScrollBar();
@@ -172,6 +195,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
 
    connect(ui_->treeWidgetUsers, &ChatUserListTreeWidget::userClicked, this, &ChatWidget::onUserClicked);
+   connect(ui_->treeWidgetUsers, &ChatUserListTreeWidget::roomClicked, this, &ChatWidget::onRoomClicked);
 
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
@@ -185,6 +209,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
            _chatUserListLogicPtr.get(), &ChatUserListLogic::onIcomingFriendRequest);
    connect(_chatUserListLogicPtr.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserRemoved,
            this, &ChatWidget::onChatUserRemoved);
+   connect(client_.get(), &ChatClient::RoomsAdd,
+           _chatUserListLogicPtr.get(), &ChatUserListLogic::onAddChatRooms);
 
    connect(client_.get(), &ChatClient::MessagesUpdate, ui_->textEditMessages
                         , &ChatMessagesTextEdit::onMessagesUpdate);
@@ -201,6 +227,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
    connect(_chatUserListLogicPtr->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
            ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatUserDataListChanged);
+   connect(_chatUserListLogicPtr->chatUserModelPtr().get(), &ChatUserModel::chatRoomDataListChanged,
+           ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatRoomDataListChanged);
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
 }
@@ -355,4 +383,9 @@ void ChatWidget::onAddUserToContacts(const QString &userId)
    popup_->deleteLater();
    popup_ = nullptr;
    qApp->removeEventFilter(this);
+}
+
+void ChatWidget::onRoomClicked(const QString& roomId)
+{
+   stateCurrent_->onRoomClicked(roomId);
 }

@@ -55,6 +55,7 @@ private slots:
    void onSearchUserReturnPressed();
    void onChatUserRemoved(const ChatUserDataPtr &);
    void onAddUserToContacts(const QString &userId);
+   void onRoomClicked(const QString& roomId);
 
 signals:
    void LoginFailed();

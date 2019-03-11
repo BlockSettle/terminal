@@ -86,6 +86,25 @@ void ChatUserListLogic::onIcomingFriendRequest(const UserIdList &userIdList)
    }
 }
 
+void ChatUserListLogic::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)
+{
+   for (const std::shared_ptr<Chat::ChatRoomData>  &room : roomList)
+   {
+      ChatUserDataPtr chatRoomDataPtr = _chatUserModelPtr->getUserByUserId(room->getId());
+      
+      // If not found, set online status and add new user
+      if (!chatRoomDataPtr)
+      {
+         _chatUserModelPtr->addRoom(room);
+      }
+//      else
+//      // If found then set status to online
+//      {
+//         _chatUserModelPtr->setUserStatus(chatUserDataPtr->userId(), ChatUserData::ConnectionStatus::Online);
+//      }
+   }
+}
+
 ChatUserModelPtr ChatUserListLogic::chatUserModelPtr() const
 {
    return _chatUserModelPtr;
