@@ -10,20 +10,19 @@ namespace bs {
    namespace wallet {
       class QPasswordData;
    }
-   namespace core {
+   namespace sync {
       class WalletsManager;
    }
 }
-
 namespace spdlog {
    class logger;
 }
-class HeadlessContainerListener;
 class OfflineProcessor;
 class QmlWalletsViewModel;
 class QQmlContext;
 class QMLStatusUpdater;
 class QSystemTrayIcon;
+class SignerAdapter;
 class SignerSettings;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
@@ -35,7 +34,8 @@ class QMLAppObj : public QObject
    Q_OBJECT
 
 public:
-   QMLAppObj(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<SignerSettings> &, QQmlContext *);
+   QMLAppObj(SignerAdapter *, const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<SignerSettings> &, QQmlContext *);
 
    void Start();
    void SetRootObject(QObject *);
@@ -45,6 +45,8 @@ signals:
    void cancelSignTx(const QString &txId);
 
 private slots:
+   void onReady();
+   void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
                            , bool cancelledByUser);
@@ -60,21 +62,17 @@ private slots:
    void onCancelSignTx(const BinaryData &txId);
 
 private:
-   void OnlineProcessing();
-   void walletsLoad();
    void settingsConnections();
    void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
-   void disconnect();
 
    void initZmqKeys();
    void registerQtTypes();
 
+   SignerAdapter  *  adapter_;
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<SignerSettings>  settings_;
    QQmlContext                *     ctxt_;
-   std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
-   std::shared_ptr<ZmqSecuredServerConnection>  connection_;
-   std::shared_ptr<HeadlessContainerListener>   listener_;
+   std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;

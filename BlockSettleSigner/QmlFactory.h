@@ -8,9 +8,14 @@
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
-#include "CoreWalletsManager.h"
 #include "AuthProxy.h"
 #include "ConnectionManager.h"
+
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 
 class QmlFactory : public QObject
 {
@@ -18,9 +23,10 @@ class QmlFactory : public QObject
 public:
    QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
       , const std::shared_ptr<ConnectionManager> &connectionManager
-      , std::shared_ptr<bs::core::WalletsManager> walletsMgr
       , const std::shared_ptr<spdlog::logger> &logger
       , QObject *parent = nullptr);
+
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    Q_INVOKABLE bs::wallet::QPasswordData *createPasswordData() {
       auto pd = new bs::wallet::QPasswordData();
@@ -67,8 +73,6 @@ public:
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const std::string &walletId) { return createWalletInfo(QString::fromStdString(walletId)); }
    Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename);
 
-
-
    // Auth
    // used for signing
    Q_INVOKABLE AuthSignWalletObject *createAutheIDSignObject(AutheIDClient::RequestType requestType
@@ -84,8 +88,9 @@ public:
                                                              , bs::hd::WalletInfo *walletInfo);
 
    Q_INVOKABLE void setClipboard(const QString &text);
+
 private:
-   std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<ApplicationSettings> settings_;
    std::shared_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<spdlog::logger> logger_;

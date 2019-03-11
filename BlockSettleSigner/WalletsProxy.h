@@ -11,7 +11,7 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   namespace core {
+   namespace sync {
       namespace hd {
          class Wallet;
       }
@@ -19,7 +19,7 @@ namespace bs {
       class WalletsManager;
    }
 }
-class SignerSettings;
+class SignerAdapter;
 
 
 class WalletsProxy : public QObject
@@ -31,8 +31,7 @@ class WalletsProxy : public QObject
    Q_PROPERTY(QString defaultBackupLocation READ defaultBackupLocation NOTIFY walletsChanged)
 
 public:
-   WalletsProxy(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<bs::core::WalletsManager> &
-      , const std::shared_ptr<SignerSettings> &);
+   WalletsProxy(const std::shared_ptr<spdlog::logger> &, SignerAdapter *);
 
    Q_INVOKABLE bool createWallet(bool isPrimary, bs::wallet::QSeed *
                                  , bs::hd::WalletInfo *
@@ -40,23 +39,22 @@ public:
 
    Q_INVOKABLE bool deleteWallet(const QString &walletId);
 
-   Q_INVOKABLE bool changePassword(const QString &walletId
+   Q_INVOKABLE void changePassword(const QString &walletId
                                    , bs::wallet::QPasswordData *oldPasswordData
                                    , bs::wallet::QPasswordData *newPasswordData);
 
-   Q_INVOKABLE bool addEidDevice(const QString &walletId
+   Q_INVOKABLE void addEidDevice(const QString &walletId
                                    , bs::wallet::QPasswordData *oldPasswordData
                                    , bs::wallet::QPasswordData *newPasswordData);
 
-   Q_INVOKABLE bool removeEidDevice(const QString &walletId
+   Q_INVOKABLE void removeEidDevice(const QString &walletId
                                    , bs::wallet::QPasswordData *oldPasswordData
                                    , int removedIndex);
 
    Q_INVOKABLE QString getWoWalletFile(const QString &walletId) const;
 
-   Q_INVOKABLE bool exportWatchingOnly(const QString &walletId
-                                       , QString path
-                                       , bs::wallet::QPasswordData *passwordData) const;
+   Q_INVOKABLE void exportWatchingOnly(const QString &walletId
+      , const QString &path, bs::wallet::QPasswordData *passwordData) const;
 
    Q_INVOKABLE bool backupPrivateKey(const QString &walletId
                                      , QString fileName
@@ -72,7 +70,7 @@ public:
 
    Q_INVOKABLE bool walletNameExists(const QString& name) const;
 
-   bool walletsLoaded() const { return walletsLoaded_; }
+   bool walletsLoaded() const { return walletsSynchronized_; }
 
    QString defaultBackupLocation() const;
 
@@ -82,17 +80,19 @@ signals:
 
 private slots:
    void onWalletsChanged();
+   void setWalletsManager();
 
 private:
    bool primaryWalletExists() const;
-   std::shared_ptr<bs::core::hd::Wallet> getRootForId(const QString &walletId) const;
+   std::shared_ptr<bs::sync::hd::Wallet> getRootForId(const QString &walletId) const;
    QStringList walletNames() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<SignerSettings>  settings_;
-   bool walletsLoaded_ = false;
+   SignerAdapter  *  adapter_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   bool walletsSynchronized_ = false;
 };
 
 #endif // __WALLETS_PROXY_H__
