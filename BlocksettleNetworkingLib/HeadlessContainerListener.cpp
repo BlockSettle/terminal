@@ -353,7 +353,6 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       BinaryData serialized = request.recipients(i);
       const auto recip = ScriptRecipient::deserialize(serialized);
       txSignReq.recipients.push_back(recip);
-      const auto outAddr = bs::Address::fromRecipient(recip);
       outputVal += recip->getValue();
    }
    int64_t value = outputVal;
