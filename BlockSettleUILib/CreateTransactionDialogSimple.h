@@ -16,7 +16,7 @@ Q_OBJECT
 
 public:
    CreateTransactionDialogSimple(const std::shared_ptr<ArmoryConnection> &
-      , const std::shared_ptr<WalletsManager> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<spdlog::logger>&, QWidget* parent = nullptr);
    ~CreateTransactionDialogSimple() override;
@@ -64,7 +64,7 @@ private:
    unsigned int   recipientId_ = 0;
    bool  advancedDialogRequested_ = false;
 
-   std::vector<bs::wallet::TXSignRequest> offlineTransactions_;
+   std::vector<bs::core::wallet::TXSignRequest> offlineTransactions_;
 };
 
 #endif // __CREATE_TRANSACTION_DIALOG_SIMPLE_H__

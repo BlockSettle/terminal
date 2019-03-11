@@ -698,6 +698,14 @@ void ClientConnection::processReadQueue(shared_ptr<Clients> clients)
 
       if (bip151Connection_->connectionComplete())
       {
+         if(packetData.getSize() < POLY1305MACLEN + 4)
+         { 
+            //append to the leftover data until we have a packet that's at least
+            //as large as the MAC length + the encrypted packet size
+            readLeftOverData_ = move(packetData);
+            continue;
+         }
+
          //decrypt packet
          size_t plainTextSize = packetData.getSize() - POLY1305MACLEN;
          auto result = bip151Connection_->decryptPacket(

@@ -48,6 +48,8 @@ public:
    ChatDB& operator = (ChatDB&&) = delete;
 
    bool add(const Chat::MessageData &);
+   bool syncMessageId(const QString& localId, const QString& serverId);
+   bool updateMessageStatus(const QString& messageId, int ustatus);
 
    std::vector<std::shared_ptr<Chat::MessageData>> getUserMessages(const QString &userId);
 

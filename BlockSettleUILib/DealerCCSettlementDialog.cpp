@@ -4,10 +4,9 @@
 #include "ArmoryConnection.h"
 #include "CommonTypes.h"
 #include "DealerCCSettlementContainer.h"
-#include "MetaData.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
-#include "HDWallet.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include <CelerClient.h>
 
 #include <spdlog/spdlog.h>
@@ -16,19 +15,20 @@
 DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<DealerCCSettlementContainer> &container
       , const std::string &reqRecvAddr
-      , std::shared_ptr<WalletsManager> walletsManager
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &signContainer
       , std::shared_ptr<CelerClient> celerClient
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent)
-   : BaseDealerSettlementDialog(logger, container, signContainer, appSettings, parent)
+   : BaseDealerSettlementDialog(logger, container, signContainer, appSettings, connectionManager, parent)
    , ui_(new Ui::DealerCCSettlementDialog())
    , settlContainer_(container)
    , sValid(tr("<span style=\"color: #22C064;\">Verified</span>"))
    , sInvalid(tr("<span style=\"color: #CF292E;\">Invalid</span>"))
 {
    ui_->setupUi(this);
-   connectToProgressBar(ui_->progressBar);
+   connectToProgressBar(ui_->progressBar, ui_->labelTimeLeft);
    connectToHintLabel(ui_->labelHint, ui_->labelError);
 
    connect(celerClient.get(), &CelerClient::OnConnectionClosed,
@@ -74,9 +74,9 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
    if (!settlContainer_->GetSigningWallet()) {
       throw std::runtime_error("missing signing wallet in the container");
    }
-   const auto &wallet = walletsManager->GetHDRootForLeaf(settlContainer_->GetSigningWallet()->GetWalletId());
+   const auto &wallet = walletsManager->getHDRootForLeaf(settlContainer_->GetSigningWallet()->walletId());
    setWallet(wallet);
-   ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(QString::fromStdString(wallet->getName())));
+   ui_->labelPasswordHint->setText(tr("Enter password for \"%1\" wallet").arg(QString::fromStdString(wallet->name())));
 
    validateGUI();
 }

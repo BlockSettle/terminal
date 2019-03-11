@@ -30,12 +30,11 @@
 #include "CelerAccountInfoDialog.h"
 #include "CelerMarketDataProvider.h"
 #include "ChatWidget.h"
-#include "ConfigDialog.h"
+#include "Settings/ConfigDialog.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
 #include "DialogManager.h"
-#include "HDWallet.h"
 #include "HeadlessContainer.h"
 #include "LoginWindow.h"
 #include "ManageEncryption/EnterWalletPassword.h"
@@ -44,16 +43,20 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
+#include "OfflineSigner.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
 #include "SelectWalletDialog.h"
-#include "SignContainer.h"
 #include "StatusBarView.h"
 #include "TabWithShortcut.h"
+#include "TransactionsViewModel.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "ZMQHelperFunctions.h"
 #include "ZmqSecuredDataConnection.h"
+#include "ArmoryServersProvider.h"
+#include "StartupDialog.h"
 
 #include <spdlog/spdlog.h>
 
@@ -62,7 +65,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    : QMainWindow(parent)
    , ui(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
-   , walletsManager_(nullptr)
 {
    UiUtils::SetupLocale();
 
@@ -72,8 +74,14 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    loginButtonText_ = tr("Login");
 
-   if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
-      applicationSettings_->SetDefaultSettings(true);
+   armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
+
+   bool licenseAccepted = showStartupDialog();
+   if (!licenseAccepted) {
+      QTimer::singleShot(0, this, [this](){
+         qApp->exit(EXIT_FAILURE);
+      });
+      return;
    }
 
    auto geom = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
@@ -97,26 +105,20 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    initArmory();
 
-   authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_, celerConnection_);
+   walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
+   authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_
+      , celerConnection_, connectionManager_);
 
-   LoadWallets(splashScreen);
+   if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
+      applicationSettings_->SetDefaultSettings(true);
+   }
+
+   InitSigningContainer();
 
    splashScreen.SetProgress(100);
    splashScreen.close();
-
    QApplication::processEvents();
 
-   InitSigningContainer();
-   InitAuthManager();
-   InitAssets();
-
-   authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
-      , assetManager_, applicationSettings_, this);
-
-   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsManager_, assetManager_, celerConnection_
-      , signContainer_, ui->statusbar);
-
-   InitWalletsView();
    setupToolbar();
    setupMenu();
 
@@ -124,10 +126,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    connectSigner();
    connectArmory();
-
-   InitPortfolioView();
-
-   ui->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
 
    aboutDlg_ = std::make_shared<AboutDialog>(applicationSettings_->get<QString>(ApplicationSettings::ChangeLog_Base_Url), this);
    auto aboutDlgCb = [this] (int tab) {
@@ -141,10 +139,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connect(ui->actionContactBlockSettle, &QAction::triggered, aboutDlgCb(2));
    connect(ui->actionVersion, &QAction::triggered, aboutDlgCb(3));
 
-   // Enable/disable send action when first wallet created/last wallet removed
-   connect(walletsManager_.get(), &WalletsManager::walletChanged, this, &BSTerminalMainWindow::updateControlEnabledState);
-   connect(walletsManager_.get(), &WalletsManager::newWalletAdded, this, &BSTerminalMainWindow::updateControlEnabledState);
-
    ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
    ui->widgetTransactions->setAppSettings(applicationSettings_);
@@ -157,19 +151,25 @@ void BSTerminalMainWindow::onMDConnectionDetailsRequired()
    GetNetworkSettingsFromPuB([this]() { OnNetworkSettingsLoaded(); } );
 }
 
-void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
+void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
 {
-   if (networkSettings_.isSet) {
-      cb();
+   if (!ccFileManager_ || ccFileManager_->synchronized()) {
       return;
    }
-
-   const auto &priWallet = walletsManager_->GetPrimaryWallet();
+   const auto &priWallet = walletsMgr_->getPrimaryWallet();
    if (priWallet) {
       const auto &ccGroup = priWallet->getGroup(bs::hd::BlockSettle_CC);
       if (ccGroup && (ccGroup->getNumLeaves() > 0)) {
          ccFileManager_->LoadCCDefinitionsFromPub();
       }
+   }
+}
+
+void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
+{
+   if (networkSettings_.isSet) {
+      cb();
+      return;
    }
 
    Blocksettle::Communication::RequestPacket reqPkt;
@@ -209,8 +209,6 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 		  applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
 	  }
 #endif // NDEBUG
-
-     
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
@@ -298,10 +296,10 @@ BSTerminalMainWindow::~BSTerminalMainWindow()
    NotificationCenter::destroyInstance();
    if (signContainer_) {
       signContainer_->Stop();
-      signContainer_ = nullptr;
+      signContainer_.reset();
    }
-   walletsManager_ = nullptr;
-   assetManager_ = nullptr;
+   walletsMgr_.reset();
+   assetManager_.reset();
    bs::UtxoReservation::destroy();
 }
 
@@ -343,8 +341,6 @@ void BSTerminalMainWindow::setupToolbar()
    trayMenu->addSeparator();
    trayMenu->addAction(ui->actionQuit);
    sysTrayIcon_->setContextMenu(trayMenu);
-
-   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::setupIcon()
@@ -378,38 +374,47 @@ void BSTerminalMainWindow::setupIcon()
    connect(qApp, SIGNAL(lastWindowClosed()), sysTrayIcon_.get(), SLOT(hide()));
 }
 
-void BSTerminalMainWindow::LoadWallets(BSTerminalSplashScreen& splashScreen)
+void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
-   splashScreen.SetTipText(tr("Loading wallets"));
-   splashScreen.SetProgress(5);
 
    bs::UtxoReservation::init();
 
-   WalletsManager::load_progress_delegate progressDelegate = [&](int progress)
-   {
-      splashScreen.SetProgress(progress);
-   };
-
-   walletsManager_ = std::make_shared<WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
-
-   connect(walletsManager_.get(), &WalletsManager::walletsReady, [this] {
-      ui->widgetRFQ->SetWalletsManager(walletsManager_);
-      ui->widgetRFQReply->SetWalletsManager(walletsManager_);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
+      ui->widgetRFQ->setWalletsManager(walletsMgr_);
+      ui->widgetRFQReply->setWalletsManager(walletsMgr_);
    });
-   connect(walletsManager_.get(), &WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
-   connect(walletsManager_.get(), &WalletsManager::error, this, &BSTerminalMainWindow::showError);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
+      updateControlEnabledState();
+      if (walletsMgr_->hdWalletsCount() == 0) {
+         createWallet(!walletsMgr_->hasPrimaryWallet());
+      }
+      if (readyToRegisterWallets_) {
+         readyToRegisterWallets_ = false;
+         walletsMgr_->registerWallets();
+      }
+   });
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
 
-   walletsManager_->LoadWallets(applicationSettings_->get<NetworkType>(ApplicationSettings::netType)
-      , applicationSettings_->GetHomeDir(), progressDelegate);
+   // Enable/disable send action when first wallet created/last wallet removed
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
+      , &BSTerminalMainWindow::updateControlEnabledState);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::newWalletAdded, this
+      , &BSTerminalMainWindow::updateControlEnabledState);
 
-   logMgr_->logger()->debug("End of wallets loading");
+   const auto &progressDelegate = [this](int cur, int total) {
+//      const int progress = cur * (100 / total);
+//      splashScreen.SetProgress(progress);
+      logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
+   };
+   walletsMgr_->syncWallets(progressDelegate);
 }
 
 void BSTerminalMainWindow::InitAuthManager()
 {
    authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_);
-   authManager_->init(applicationSettings_, walletsManager_, authSignManager_, signContainer_);
+   authManager_->init(applicationSettings_, walletsMgr_, authSignManager_, signContainer_);
 
    connect(authManager_.get(), &AuthAddressManager::NeedVerify, this, &BSTerminalMainWindow::openAuthDlgVerify);
    connect(authManager_.get(), &AuthAddressManager::AddrStateChanged, [](const QString &addr, const QString &state) {
@@ -423,18 +428,17 @@ void BSTerminalMainWindow::InitAuthManager()
    });
 }
 
-bool BSTerminalMainWindow::InitSigningContainer()
+std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 {
-   const auto &signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
-   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
+   std::shared_ptr<SignContainer> retPtr;
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
-
+   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
+   const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
    SecureBinaryData signerPubKey;
 
    if (runMode == SignContainer::OpMode::Remote) {
-      auto pubKeyString = applicationSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
-
-      if (pubKeyString.isEmpty()) {
+      const auto pubKeyString = applicationSettings_->get<std::string>(ApplicationSettings::zmqRemoteSignerPubKey);
+      if (pubKeyString.empty()) {
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Remote Connection")
             , tr("Remote signer public key is unavailable.")
@@ -443,7 +447,11 @@ bool BSTerminalMainWindow::InitSigningContainer()
                " Please import the signer's public key (Settings -> Signer) "
                "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
             , this).exec();
-         return false;
+         return retPtr;
+      }
+
+      if (!bs::network::readZmqKeyString(QByteArray::fromStdString(pubKeyString), signerPubKey, true, logMgr_->logger())) {
+         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load remote signer key");
       }
    }
 
@@ -453,39 +461,44 @@ bool BSTerminalMainWindow::InitSigningContainer()
          , tr("Another Signer (or some other program occupying port %1) is running. Would you like to continue connecting to it?").arg(signerPort)
          , tr("If you wish to continue using GUI signer running on the same host, just select Remote Signer in settings and configure local connection")
          , this).exec() == QDialog::Rejected) {
-         return false;
+         return retPtr;
       }
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
+   }
 
+   if (signerPubKey.isNull()) {
       const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
 
       if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->debug("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
+         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Local Connection")
             , tr("Could not load local signer key.")
             , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
             , this).exec();
-         return false;
+         return retPtr;
       }
    }
 
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey
-      , runMode, signerHost, connectionManager_);
+   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey,
+      runMode, signerHost, connectionManager_);
+   return retPtr;
+}
+
+bool BSTerminalMainWindow::InitSigningContainer()
+{
+   signContainer_ = createSigner();
+
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
       return false;
    }
-   connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady);
-   connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError);
+   connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
+   connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
 
-   if (signContainer_->opMode() != SignContainer::OpMode::Offline) {
-      addrSyncer_ = std::make_shared<HeadlessAddressSyncer>(signContainer_, walletsManager_);
-      connect(signContainer_.get(), &SignContainer::UserIdSet, [this] {
-         addrSyncer_->SyncWallet(walletsManager_->GetAuthWallet());
-      });
-   }
+   walletsMgr_->setSignContainer(signContainer_);
+
    return true;
 }
 
@@ -498,20 +511,33 @@ void BSTerminalMainWindow::SignerReady()
       connect(signContainer_.get(), &SignContainer::PasswordRequested, this, &BSTerminalMainWindow::onPasswordRequested);
    }
 
+   LoadWallets();
+
    if (!widgetsInited_) {
+      InitAuthManager();
+      InitAssets();
+
+      statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
+         , signContainer_, ui->statusbar);
+
+      authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
+         , assetManager_, applicationSettings_, this);
+
+      InitWalletsView();
+      InitPortfolioView();
+
+      ui->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
+
       auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
       quoteProvider->ConnectToCelerClient(celerConnection_);
 
       auto dialogManager = std::make_shared<DialogManager>(geometry());
 
       ui->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
-         , dialogManager, signContainer_, armory_);
+         , dialogManager, signContainer_, armory_, connectionManager_);
       ui->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
-         , applicationSettings_, dialogManager, signContainer_, armory_);
+         , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
 
-      if (walletsManager_->GetWalletsCount() == 0) {
-         createWallet(!walletsManager_->HasPrimaryWallet());
-      }
       widgetsInited_ = true;
    }
    else {
@@ -551,7 +577,7 @@ void BSTerminalMainWindow::acceptMDAgreement()
 
 void BSTerminalMainWindow::updateControlEnabledState()
 {
-   action_send_->setEnabled(walletsManager_->GetWalletsCount() > 0
+   action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
       && armory_->isOnline() && signContainer_);
 }
 
@@ -565,16 +591,42 @@ void BSTerminalMainWindow::saveUserAcceptedMDLicense()
    applicationSettings_->set(ApplicationSettings::MDLicenseAccepted, true);
 }
 
+bool BSTerminalMainWindow::showStartupDialog()
+{
+   bool wasInitialized = applicationSettings_->get<bool>(ApplicationSettings::initialized);
+   if (wasInitialized) {
+     return true;
+   }
+
+ #ifdef _WIN32
+   // Read registry value in case it was set with installer. Could be used only on Windows for now.
+   QSettings settings(QLatin1String("HKEY_CURRENT_USER\\Software\\blocksettle\\blocksettle"), QSettings::NativeFormat);
+   bool showLicense = !settings.value(QLatin1String("license_accepted"), false).toBool();
+ #else
+   bool showLicense = true;
+ #endif // _WIN32
+
+   StartupDialog startupDialog(showLicense);
+   startupDialog.init(applicationSettings_, armoryServersProvider_);
+   int result = startupDialog.exec();
+
+   if (result == QDialog::Rejected) {
+      hide();
+      return false;
+   }
+   return true;
+}
+
 void BSTerminalMainWindow::InitAssets()
 {
    ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
       , authSignManager_, connectionManager_);
-   assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsManager_, mdProvider_, celerConnection_);
+   assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_, mdProvider_, celerConnection_);
    assetManager_->init();
 
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityDef, assetManager_.get(), &AssetManager::onCCSecurityReceived);
-   connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsManager_.get(), &WalletsManager::onCCSecurityInfo);
-   connect(ccFileManager_.get(), &CCFileManager::Loaded, walletsManager_.get(), &WalletsManager::onCCInfoLoaded);
+   connect(ccFileManager_.get(), &CCFileManager::CCSecurityInfo, walletsMgr_.get(), &bs::sync::WalletsManager::onCCSecurityInfo);
+   connect(ccFileManager_.get(), &CCFileManager::Loaded, walletsMgr_.get(), &bs::sync::WalletsManager::onCCInfoLoaded);
    connect(ccFileManager_.get(), &CCFileManager::LoadingFailed, this, &BSTerminalMainWindow::onCCInfoMissing);
 
    connect(ccFileManager_.get(), &CCFileManager::CCSecurityId, mdProvider_.get(), &CelerMarketDataProvider::onCCSecurityReceived);
@@ -591,16 +643,16 @@ void BSTerminalMainWindow::InitAssets()
 
 void BSTerminalMainWindow::InitPortfolioView()
 {
-   portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsManager_, assetManager_, this);
+   portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsMgr_, assetManager_, this);
    ui->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
                              signContainer_, armory_, logMgr_->logger("ui"),
-                             walletsManager_);
+                             walletsMgr_);
 }
 
 void BSTerminalMainWindow::InitWalletsView()
 {
-   ui->widgetWallets->init(logMgr_->logger("ui"), walletsManager_, signContainer_
-      , applicationSettings_, assetManager_, authManager_, armory_);
+   ui->widgetWallets->init(logMgr_->logger("ui"), walletsMgr_, signContainer_
+      , applicationSettings_, connectionManager_, assetManager_, authManager_, armory_);
 }
 
 void BSTerminalMainWindow::InitChatView()
@@ -614,7 +666,7 @@ void BSTerminalMainWindow::InitChatView()
 void BSTerminalMainWindow::InitTransactionsView()
 {
    ui->widgetExplorer->init(armory_, logMgr_->logger());
-   ui->widgetTransactions->init(walletsManager_, armory_, signContainer_,
+   ui->widgetTransactions->init(walletsMgr_, armory_, signContainer_,
                                 logMgr_->logger("ui"));
    ui->widgetTransactions->setEnabled(true);
 
@@ -647,19 +699,21 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 {
    if (!transactionsModel_) {
       transactionsModel_ = std::make_shared<TransactionsViewModel>(armory_
-         , walletsManager_, logMgr_->logger("ui"), this);
+         , walletsMgr_, logMgr_->logger("ui"), this);
 
       InitTransactionsView();
       transactionsModel_->loadAllWallets();
    }
    updateControlEnabledState();
-   updateLoginActionState();
 }
 
 void BSTerminalMainWindow::CompleteDBConnection()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::CompleteDBConnection");
-   walletsManager_->RegisterSavedWallets();
+   if (walletsMgr_ && walletsMgr_->hdWalletsCount()) {
+      walletsMgr_->registerWallets();
+   }
+   readyToRegisterWallets_ = true;
 }
 
 void BSTerminalMainWindow::onReactivate()
@@ -676,25 +730,27 @@ void BSTerminalMainWindow::UpdateMainWindowAppearence()
       activateWindow();
    }
 
-   const auto bsTitle = tr("BlockSettle Terminal [%1]");
-   switch (applicationSettings_->get<NetworkType>(ApplicationSettings::netType)) {
-   case NetworkType::TestNet:
-      setWindowTitle(bsTitle.arg(tr("TESTNET")));
-      break;
+   setWindowTitle(tr("BlockSettle Terminal"));
 
-   case NetworkType::RegTest:
-      setWindowTitle(bsTitle.arg(tr("REGTEST")));
-      break;
+//   const auto bsTitle = tr("BlockSettle Terminal [%1]");
+//   switch (applicationSettings_->get<NetworkType>(ApplicationSettings::netType)) {
+//   case NetworkType::TestNet:
+//      setWindowTitle(bsTitle.arg(tr("TESTNET")));
+//      break;
 
-   default:
-      setWindowTitle(tr("BlockSettle Terminal"));
-      break;
-   }
+//   case NetworkType::RegTest:
+//      setWindowTitle(bsTitle.arg(tr("REGTEST")));
+//      break;
+
+//   default:
+//      setWindowTitle(tr("BlockSettle Terminal"));
+//      break;
+//   }
 }
 
 bool BSTerminalMainWindow::isUserLoggedIn() const
 {
-   return celerConnection_->IsConnected();
+   return (celerConnection_ && celerConnection_->IsConnected());
 }
 
 bool BSTerminalMainWindow::isArmoryConnected() const
@@ -702,28 +758,16 @@ bool BSTerminalMainWindow::isArmoryConnected() const
    return armory_->state() == ArmoryConnection::State::Ready;
 }
 
-void BSTerminalMainWindow::updateLoginActionState()
-{
-   if (!isUserLoggedIn()) {
-      if (!isArmoryConnected()) {
-         action_login_->setEnabled(false);
-         ui->pushButtonUser->setEnabled(false);
-         ui->pushButtonUser->setToolTip(tr("Armory connection required to login"));
-      } else {
-         action_login_->setEnabled(true);
-         ui->pushButtonUser->setEnabled(true);
-         ui->pushButtonUser->setToolTip(QString{});
-      }
-   }
-}
-
 void BSTerminalMainWindow::ArmoryIsOffline()
 {
    logMgr_->logger("ui")->debug("BSTerminalMainWindow::ArmoryIsOffline");
-   walletsManager_->UnregisterSavedWallets();
+   if (walletsMgr_) {
+      walletsMgr_->unregisterWallets();
+   }
    connectArmory();
    updateControlEnabledState();
-   updateLoginActionState();
+   // XXX: disabled until armory connection is stable in terminal
+   // updateLoginActionState();
 }
 
 void BSTerminalMainWindow::initArmory()
@@ -739,7 +783,20 @@ void BSTerminalMainWindow::initArmory()
 
 void BSTerminalMainWindow::connectArmory()
 {
-   armory_->setupConnection(applicationSettings_->GetArmorySettings());
+   armory_->setupConnection(armoryServersProvider_->getArmorySettings(), [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
+      std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
+      std::future<bool> futureObj = promiseObj->get_future();
+      QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
+                                , Q_ARG(BinaryData, srvPubKey)
+                                , Q_ARG(std::string, srvIPPort)
+                                , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
+      bool result = futureObj.get();
+
+      // stop armory connection loop if server key was rejected
+      armory_->needsBreakConnectionLoop_.store(!result);
+      armory_->setState(ArmoryConnection::State::Canceled);
+      return result;
+   });
 }
 
 void BSTerminalMainWindow::connectSigner()
@@ -756,15 +813,15 @@ void BSTerminalMainWindow::connectSigner()
 
 bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
 {
-   if (primary && (walletsManager_->GetHDWalletsCount() > 0)) {
-      auto wallet = walletsManager_->GetHDWallet(0);
+   if (primary && (walletsMgr_->hdWalletsCount() > 0)) {
+      auto wallet = walletsMgr_->getHDWallet(0);
       if (wallet->isPrimary()) {
          return true;
       }
       BSMessageBox qry(BSMessageBox::question, tr("Create primary wallet"), tr("Promote to primary wallet")
          , tr("In order to execute trades and take delivery of XBT and Equity Tokens, you are required to"
             " have a Primary Wallet which supports the sub-wallets required to interact with the system.")
-         .arg(QString::fromStdString(wallet->getName())), this);
+         .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
          wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
          return true;
@@ -810,21 +867,21 @@ void BSTerminalMainWindow::onSignerConnError(const QString &err)
 
 void BSTerminalMainWindow::onReceive()
 {
-   const auto &defWallet = walletsManager_->GetDefaultWallet();
-   std::string selWalletId = defWallet ? defWallet->GetWalletId() : std::string{};
+   const auto defWallet = walletsMgr_->getDefaultWallet();
+   std::string selWalletId = defWallet ? defWallet->walletId() : std::string{};
    if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
-      auto wallets = ui->widgetWallets->GetSelectedWallets();
+      auto wallets = ui->widgetWallets->getSelectedWallets();
       if (!wallets.empty()) {
-         selWalletId = wallets[0]->GetWalletId();
+         selWalletId = wallets[0]->walletId();
       } else {
-         wallets = ui->widgetWallets->GetFirstWallets();
+         wallets = ui->widgetWallets->getFirstWallets();
 
          if (!wallets.empty()) {
-            selWalletId = wallets[0]->GetWalletId();
+            selWalletId = wallets[0]->walletId();
          }
       }
    }
-   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(walletsManager_, selWalletId, this);
+   SelectWalletDialog *selectWalletDialog = new SelectWalletDialog(walletsMgr_, selWalletId, this);
    selectWalletDialog->exec();
 
    if (selectWalletDialog->result() == QDialog::Rejected) {
@@ -838,9 +895,8 @@ void BSTerminalMainWindow::onReceive()
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsManager_,
-                                                  signContainer_, true,
-                                                  logMgr_->logger("ui"), nullptr, this};
+   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_
+      , signContainer_, true, logMgr_->logger("ui"), nullptr, this};
    advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    if (!selectedWalletId.empty()) {
@@ -855,9 +911,9 @@ void BSTerminalMainWindow::onSend()
    std::string selectedWalletId;
 
    if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
-      const auto &wallets = ui->widgetWallets->GetSelectedWallets();
+      const auto &wallets = ui->widgetWallets->getSelectedWallets();
       if (wallets.size() == 1) {
-         selectedWalletId = wallets[0]->GetWalletId();
+         selectedWalletId = wallets[0]->walletId();
       }
    }
 
@@ -867,8 +923,8 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg{armory_, walletsManager_,
-                                           signContainer_, logMgr_->logger("ui"),
+         CreateTransactionDialogSimple dlg{armory_, walletsMgr_, signContainer_
+            , logMgr_->logger("ui"),
                                            this};
          dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
@@ -932,7 +988,9 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 
 void BSTerminalMainWindow::openConfigDialog()
 {
-   ConfigDialog(applicationSettings_, this).exec();
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, this);
+   connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
+   configDialog.exec();
 
    UpdateMainWindowAppearence();
 }
@@ -945,8 +1003,8 @@ void BSTerminalMainWindow::openAccountInfoDialog()
 
 void BSTerminalMainWindow::openCCTokenDialog()
 {
-   if (walletsManager_->HasPrimaryWallet() || createWallet(true, false)) {
-      CCTokenEntryDialog dialog(walletsManager_, ccFileManager_, signContainer_, this);
+   if (walletsMgr_->hasPrimaryWallet() || createWallet(true, false)) {
+      CCTokenEntryDialog dialog(walletsMgr_, ccFileManager_, signContainer_, this);
       dialog.exec();
    }
 }
@@ -971,16 +1029,12 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
       ui->widgetWallets->setUsername(userName);
       action_logout_->setVisible(false);
       action_login_->setEnabled(false);
-
-      // set button text to this temporary text until the login
-      // completes and button text is changed to the username
-      setLoginButtonText(tr("Logging in..."));
    }
 }
 
 void BSTerminalMainWindow::onLogin()
 {
-   // disable login and set tooltip
+   LoadCCDefinitionsFromPuB();
 
    GetNetworkSettingsFromPuB([this]()
       {
@@ -991,7 +1045,7 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onReadyToLogin()
 {
-   LoginWindow loginDialog(applicationSettings_, logMgr_->logger("autheID"), this);
+   LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, connectionManager_, this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
       currentUserLogin_ = loginDialog.getUsername();
@@ -999,8 +1053,13 @@ void BSTerminalMainWindow::onReadyToLogin()
       setLoginButtonText(currentUserLogin_);
 
 #ifndef PRODUCTION_BUILD
-      loginToCeler(loginDialog.getUsername().toStdString()
+      // TODO: uncomment this section once we have armory connection
+      // if (isArmoryConnected()) {
+         loginToCeler(loginDialog.getUsername().toStdString()
             , "Welcome1234");
+      // } else {
+         // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
+      // }
 #endif
    }
 }
@@ -1036,7 +1095,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    if (signContainer_) {
       signContainer_->SetUserId(userId);
    }
-   walletsManager_->SetUserId(userId);
+   walletsMgr_->setUserId(userId);
 
    setLoginButtonText(currentUserLogin_);
 
@@ -1059,11 +1118,12 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (signContainer_) {
       signContainer_->SetUserId(BinaryData{});
    }
-   walletsManager_->SetUserId(BinaryData{});
-   authManager_->OnDisconnectedFromCeler();
-   setLoginButtonText(loginButtonText_);
-
-   updateLoginActionState();
+   if (walletsMgr_) {
+      walletsMgr_->setUserId(BinaryData{});
+   }
+   if (authManager_) {
+      authManager_->OnDisconnectedFromCeler();
+   }
 }
 
 void BSTerminalMainWindow::onCelerConnected()
@@ -1089,20 +1149,23 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    switch(errorCode)
    {
    case CelerClient::LoginError:
-      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), tr("Invalid username/password pair"), this);
-      loginErrorBox.exec();
+      logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
+   }
+
+   if (!mdProvider_->IsConnectionActive()) {
+      mdProvider_->SubscribeToMD();
    }
 }
 
 void BSTerminalMainWindow::createAuthWallet()
 {
    if (celerConnection_->tradingAllowed()) {
-      if (!walletsManager_->HasPrimaryWallet() && !createWallet(true)) {
+      if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
          return;
       }
 
-      if (!walletsManager_->GetAuthWallet()) {
+      if (!walletsMgr_->getAuthWallet()) {
          BSMessageBox createAuthReq(BSMessageBox::question, tr("Authentication Wallet")
             , tr("Create Authentication Wallet")
             , tr("You don't have a sub-wallet in which to hold Authentication Addresses. Would you like to create one?")
@@ -1117,17 +1180,17 @@ void BSTerminalMainWindow::createAuthWallet()
 void BSTerminalMainWindow::onAuthMgrConnComplete()
 {
    if (celerConnection_->tradingAllowed()) {
-      if (!walletsManager_->HasPrimaryWallet() && !createWallet(true)) {
+      if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
          return;
       }
-      if (!walletsManager_->HasSettlementWallet()) {
+      if (!walletsMgr_->hasSettlementWallet()) {
          BSMessageBox createSettlReq(BSMessageBox::question, tr("Create settlement wallet")
             , tr("Settlement wallet missing")
             , tr("You don't have Settlement wallet, yet. Do you wish to create it?")
             , this);
          if (createSettlReq.exec() == QDialog::Accepted) {
             const auto title = tr("Settlement wallet");
-            if (walletsManager_->CreateSettlementWallet(applicationSettings_->GetHomeDir())) {
+            if (walletsMgr_->createSettlementWallet()) {
                BSMessageBox(BSMessageBox::success, title, tr("Settlement wallet successfully created")).exec();
             } else {
                showError(title, tr("Failed to create settlement wallet"));
@@ -1146,6 +1209,15 @@ void BSTerminalMainWindow::onAuthMgrConnComplete()
    }
 }
 
+struct BSTerminalMainWindow::TxInfo {
+   Tx       tx;
+   uint32_t txTime;
+   int64_t  value;
+   std::shared_ptr<bs::sync::Wallet>   wallet;
+   bs::sync::Transaction::Direction    direction;
+   QString  mainAddress;
+};
+
 void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
 {
    if (entries.empty()) {
@@ -1153,40 +1225,40 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
    }
    for (const auto &entry : entries) {
       const auto &cbTx = [this, id = entry.id, txTime = entry.txTime, value = entry.value](Tx tx) {
-         const auto &wallet = walletsManager_->GetWalletById(id);
+         const auto wallet = walletsMgr_->getWalletById(id);
          if (!wallet) {
             return;
          }
-         auto txInfo = new TxInfo { tx, txTime, value, wallet, bs::Transaction::Direction::Unknown, QString() };
-         const auto &cbDir = [this, txInfo] (bs::Transaction::Direction dir, std::vector<bs::Address>) {
+         auto txInfo = new TxInfo { tx, txTime, value, wallet, bs::sync::Transaction::Direction::Unknown, QString() };
+         const auto &cbDir = [this, txInfo] (bs::sync::Transaction::Direction dir, std::vector<bs::Address>) {
             txInfo->direction = dir;
             if (!txInfo->mainAddress.isEmpty() && txInfo->wallet) {
-               showZcNotification(*txInfo);
+               showZcNotification(txInfo);
                delete txInfo;
             }
          };
          const auto &cbMainAddr = [this, txInfo] (QString mainAddr, int addrCount) {
             txInfo->mainAddress = mainAddr;
-            if ((txInfo->direction != bs::Transaction::Direction::Unknown) && txInfo->wallet) {
-               showZcNotification(*txInfo);
+            if ((txInfo->direction != bs::sync::Transaction::Direction::Unknown) && txInfo->wallet) {
+               showZcNotification(txInfo);
                delete txInfo;
             }
          };
-         walletsManager_->GetTransactionDirection(tx, wallet, cbDir);
-         walletsManager_->GetTransactionMainAddress(tx, wallet, (value > 0), cbMainAddr);
+         walletsMgr_->getTransactionDirection(tx, id, cbDir);
+         walletsMgr_->getTransactionMainAddress(tx, id, (value > 0), cbMainAddr);
       };
       armory_->getTxByHash(entry.txHash, cbTx);
    }
 }
 
-void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
+void BSTerminalMainWindow::showZcNotification(const TxInfo *txInfo)
 {
    QStringList lines;
-   lines << tr("Date: %1").arg(UiUtils::displayDateTime(txInfo.txTime));
-   lines << tr("TX: %1 %2 %3").arg(tr(bs::Transaction::toString(txInfo.direction)))
-      .arg(txInfo.wallet->displayTxValue(txInfo.value)).arg(txInfo.wallet->displaySymbol());
-   lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo.wallet->GetWalletName()));
-   lines << txInfo.mainAddress;
+   lines << tr("Date: %1").arg(UiUtils::displayDateTime(txInfo->txTime));
+   lines << tr("TX: %1 %2 %3").arg(tr(bs::sync::Transaction::toString(txInfo->direction)))
+      .arg(txInfo->wallet->displayTxValue(txInfo->value)).arg(txInfo->wallet->displaySymbol());
+   lines << tr("Wallet: %1").arg(QString::fromStdString(txInfo->wallet->name()));
+   lines << txInfo->mainAddress;
 
    const auto &title = tr("New blockchain transaction");
    NotificationCenter::notify(bs::ui::NotifyType::BlockchainTX, { title, lines.join(tr("\n")) });
@@ -1194,7 +1266,6 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo &txInfo)
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
 {
-   qDebug() << "showMessage" << sysTrayIcon_->isVisible();
    sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QSystemTrayIcon::Information);
 }
 
@@ -1251,26 +1322,26 @@ void BSTerminalMainWindow::onPasswordRequested(const bs::hd::WalletInfo &walletI
       logMgr_->logger("ui")->error("[onPasswordRequested] can\'t ask password for empty wallet id");
    } else {
       QString walletName;
-      const auto wallet = walletsManager_->GetWalletById(walletInfo.rootId().toStdString());
+      const auto wallet = walletsMgr_->getWalletById(walletInfo.rootId().toStdString());
       if (wallet != nullptr) {
          // do we need to get name of root wallet?
-         walletName = QString::fromStdString(wallet->GetWalletName());
+         walletName = QString::fromStdString(wallet->name());
       } else {
-         const auto hdWallet = walletsManager_->GetHDWalletById(walletInfo.rootId().toStdString());
-         walletName = QString::fromStdString(hdWallet->getName());
+         const auto hdWallet = walletsMgr_->getHDWalletById(walletInfo.rootId().toStdString());
+         walletName = QString::fromStdString(hdWallet->name());
       }
 
       // pass to dialog root wallet id and root name
       bs::hd::WalletInfo walletInfoCopy = walletInfo;
       if (!walletName.isEmpty()) {
-         const auto &rootWallet = walletsManager_->GetHDRootForLeaf(walletInfo.rootId().toStdString());
+         const auto &rootWallet = walletsMgr_->getHDRootForLeaf(walletInfo.rootId().toStdString());
          if (rootWallet) {
-            walletInfoCopy.setRootId(rootWallet->getWalletId());
-            walletInfoCopy.setName(rootWallet->getName());
+            walletInfoCopy.setRootId(rootWallet->walletId());
+            walletInfoCopy.setName(rootWallet->name());
          }
 
          EnterWalletPassword passwordDialog(AutheIDClient::SignWallet, this);
-         passwordDialog.init(walletInfoCopy, applicationSettings_, WalletKeyWidget::UseType::RequestAuthAsDialog
+         passwordDialog.init(walletInfoCopy, applicationSettings_, connectionManager_, WalletKeyWidget::UseType::RequestAuthAsDialog
                              , QString::fromStdString(prompt), logMgr_->logger("ui"));
 
          if (passwordDialog.exec() == QDialog::Accepted) {
@@ -1395,4 +1466,96 @@ void BSTerminalMainWindow::onButtonUserClicked() {
          , tr("Do you want to continue?")).exec() == QDialog::Accepted)
       onLogout();
    }
+}
+
+void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, const std::string &srvIPPort, std::shared_ptr<std::promise<bool>> promiseObj)
+{
+   QList<ArmoryServer> servers = armoryServersProvider_->servers();
+   int serverIndex = armoryServersProvider_->indexOfIpPort(srvIPPort);
+   if (serverIndex >= 0) {
+      ArmoryServer server = servers.at(serverIndex);
+
+      if (server.armoryDBKey.isEmpty()) {
+         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+                          , tr("ArmoryDB Key Import")
+                          , tr("Do you wish to import the following ArmoryDB Key?")
+                          , tr("Address: %1\n"
+                               "Port: %2\n"
+                               "Key: %3")
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                          , this);
+         box->setMinimumSize(600, 150);
+         box->setMaximumSize(600, 150);
+
+         bool answer = (box->exec() == QDialog::Accepted);
+         box->deleteLater();
+
+         if (answer) {
+            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         }
+
+         promiseObj->set_value(true);
+      }
+      else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
+         BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
+                          , tr("ArmoryDB Key")
+                          , tr("ArmoryDB Key was changed.\n"
+                               "Do you wish to proceed connection and save new key?")
+                          , tr("Address: %1\n"
+                               "Port: %2\n"
+                               "Old Key: %3\n"
+                               "New Key: %4")
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
+                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                          , this);
+         box->setMinimumSize(600, 150);
+         box->setMaximumSize(600, 150);
+         box->setCancelVisible(true);
+
+         bool answer = (box->exec() == QDialog::Accepted);
+         box->deleteLater();
+
+         if (answer) {
+            armoryServersProvider_->addKey(srvIPPort, srvPubKey);
+         }
+
+         promiseObj->set_value(answer);
+      }
+      else {
+         promiseObj->set_value(true);
+      }
+   }
+   else {
+      // server not in the list - added directly to ini config
+      promiseObj->set_value(true);
+   }
+}
+
+void BSTerminalMainWindow::onArmoryNeedsReconnect()
+{
+   disconnect(statusBarView_.get(), 0, 0, 0);
+   statusBarView_->deleteLater();
+   QApplication::processEvents();
+
+   initArmory();
+   LoadWallets();
+
+   QApplication::processEvents();
+
+   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
+      , signContainer_, ui->statusbar);
+
+   InitWalletsView();
+
+
+   widgetsInited_ = false;
+   InitSigningContainer();
+   InitAuthManager();
+
+   connectSigner();
+   connectArmory();
 }

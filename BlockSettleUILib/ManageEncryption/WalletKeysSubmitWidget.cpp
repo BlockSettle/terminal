@@ -4,7 +4,6 @@
 #include <QFrame>
 #include <QtConcurrent/QtConcurrentRun>
 #include "ApplicationSettings.h"
-#include "MobileUtils.h"
 
 using namespace bs::wallet;
 using namespace bs::hd;
@@ -32,14 +31,16 @@ void WalletKeysSubmitWidget::setFlags(Flags flags)
 void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
                                      , const bs::hd::WalletInfo &walletInfo
                                      , WalletKeyWidget::UseType useType
-                                     , const std::shared_ptr<ApplicationSettings> &appSettings
                                      , const std::shared_ptr<spdlog::logger> &logger
+                                     , const std::shared_ptr<ApplicationSettings> &appSettings
+                                     , const std::shared_ptr<ConnectionManager> &connectionManager
                                      , const QString &prompt)
 {
    requestType_ = requestType;
    walletInfo_ = walletInfo;
    logger_ = logger;
    appSettings_ = appSettings;
+   connectionManager_ = connectionManager;
    useType_ = useType;
 
    qDeleteAll(widgets_.cbegin(), widgets_.cend());
@@ -66,14 +67,15 @@ void WalletKeysSubmitWidget::init(AutheIDClient::RequestType requestType
    }
    else {
       ui_->labelPubKeyFP->show();
-      QtConcurrent::run([this] {
-         const auto &authKeys = appSettings_->GetAuthKeys();
-         const auto &pubKeyFP = autheid::getPublicKeyFingerprint(authKeys.second);
-         const auto &sPubKeyFP = QString::fromStdString(autheid::toHexWithSeparators(pubKeyFP));
-         QMetaObject::invokeMethod(this, [this, sPubKeyFP] {
-            ui_->labelPubKeyFP->setText(sPubKeyFP);
-         });
-      });
+      // TODO: Public key fingerprints need replacement
+//      QtConcurrent::run([this] {
+//         const auto &authKeys = appSettings_->GetAuthKeys();
+//         const auto &pubKeyFP = autheid::getPublicKeyFingerprint(authKeys.second);
+//         const auto &sPubKeyFP = QString::fromStdString(autheid::toHexWithSeparators(pubKeyFP));
+//         QMetaObject::invokeMethod(this, [this, sPubKeyFP] {
+//            ui_->labelPubKeyFP->setText(sPubKeyFP);
+//         });
+//      });
    }
 
 
@@ -123,7 +125,8 @@ void WalletKeysSubmitWidget::addKey(int encKeyIndex, const QString &prompt)
       layout()->addWidget(separator);
    }
 
-   auto widget = new WalletKeyWidget(requestType_, walletInfo_, encKeyIndex, appSettings_, logger_, this);
+   auto widget = new WalletKeyWidget(requestType_, walletInfo_, encKeyIndex
+      , logger_, appSettings_, connectionManager_, this);
    widget->setUseType(useType_);
 
    widgets_.push_back(widget);

@@ -1,12 +1,13 @@
-#include "SelectWalletDialog.h"
 #include "ui_SelectWalletDialog.h"
-#include "WalletsManager.h"
-#include "WalletsViewModel.h"
-#include "ApplicationSettings.h"
+#include "SelectWalletDialog.h"
 #include <QPushButton>
+#include "ApplicationSettings.h"
+#include "WalletsViewModel.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
-SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<WalletsManager> &walletsManager, const std::string &selWalletId, QWidget* parent)
+SelectWalletDialog::SelectWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
+   , const std::string &selWalletId, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::SelectWalletDialog)
    , walletsManager_(walletsManager)
@@ -50,7 +51,7 @@ void SelectWalletDialog::onSelectionChanged()
    okButton->setEnabled(selectedWallet_ != nullptr);
 }
 
-std::shared_ptr<bs::Wallet> SelectWalletDialog::getSelectedWallet() const
+std::shared_ptr<bs::sync::Wallet> SelectWalletDialog::getSelectedWallet() const
 {
    return selectedWallet_;
 }

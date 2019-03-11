@@ -10,17 +10,19 @@
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
 #include "CelerClient.h"
-#include "TransactionsViewModel.h"
 #include "QWalletInfo.h"
+#include "SignContainer.h"
 
 namespace Ui {
     class BSTerminalMainWindow;
 }
 namespace bs {
    class LogManager;
+   namespace sync {
+      class Wallet;
+      class WalletsManager;
+   }
 }
-
-class ChatServer;
 
 class AboutDialog;
 class AssetManager;
@@ -34,14 +36,14 @@ class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
 class CelerMarketDataProvider;
-class HeadlessAddressSyncer;
+class OfflineSigner;
 class QSystemTrayIcon;
 class RequestReplyCommand;
-class SignContainer;
 class StatusBarView;
 class StatusViewBlockListener;
+class TransactionsViewModel;
 class WalletManagementWizard;
-class WalletsManager;
+class ArmoryServersProvider;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -66,10 +68,11 @@ private:
    void initArmory();
    void connectArmory();
    void connectSigner();
+   std::shared_ptr<SignContainer> createSigner();
 
    void setTabStyle();
 
-   void LoadWallets(BSTerminalSplashScreen& splashScreen);
+   void LoadWallets();
    void InitAuthManager();
    bool InitSigningContainer();
    void InitAssets();
@@ -85,8 +88,12 @@ private:
    bool isMDLicenseAccepted() const;
    void saveUserAcceptedMDLicense();
 
+   bool showStartupDialog();
+   void LoadCCDefinitionsFromPuB();
+
 signals:
    void readyToLogin();
+   void armoryServerPromptResultReady();
 
 private slots:
    // display login dialog once network settings loaded
@@ -108,19 +115,21 @@ private slots:
    void acceptMDAgreement();
    void updateControlEnabledState();
    void onButtonUserClicked();
+   void showArmoryServerPrompt(const BinaryData& srvPubKey, const std::string& srvIPPort, std::shared_ptr<std::promise<bool> > promiseObj);
+
+   void onArmoryNeedsReconnect();
 
 private:
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
    QAction *action_send_;
    QAction *action_receive_;
    QAction *action_login_;
    QAction *action_logout_;
 
-private:
-   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
-
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
-   std::shared_ptr<WalletsManager>        walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ArmoryConnection>      armory_;
@@ -139,7 +148,6 @@ private:
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
    std::shared_ptr<AboutDialog>              aboutDlg_;
    std::shared_ptr<SignContainer>            signContainer_;
-   std::shared_ptr<HeadlessAddressSyncer>    addrSyncer_;
 
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
@@ -160,17 +168,11 @@ private:
    void GetNetworkSettingsFromPuB(const std::function<void()> &);
    void OnNetworkSettingsLoaded();
 
-   struct TxInfo {
-      Tx       tx;
-      uint32_t txTime;
-      int64_t  value;
-      std::shared_ptr<bs::Wallet>   wallet;
-      bs::Transaction::Direction    direction;
-      QString  mainAddress;
-   };
-
 public slots:
    void onReactivate();
+
+private:
+   struct TxInfo;
 
 private slots:
    void onSend();
@@ -181,9 +183,10 @@ private slots:
    void openConfigDialog();
    void openAccountInfoDialog();
    void openCCTokenDialog();
-   void showZcNotification(const TxInfo &);
    void onZCreceived(const std::vector<bs::TXEntry>);
    void onArmoryStateChanged(ArmoryConnection::State);
+
+   void showZcNotification(const TxInfo *);
 
    void onLogin();
    void onLogout();
@@ -215,14 +218,13 @@ private:
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
 
-   void updateLoginActionState();
-
    void loginWithCeler(const std::string& username, const std::string& password);
    void loginToCeler(const std::string& username, const std::string& password);
 
 private:
    QString           loginButtonText_;
    NetworkSettings   networkSettings_;
+   bool  readyToRegisterWallets_ = false;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

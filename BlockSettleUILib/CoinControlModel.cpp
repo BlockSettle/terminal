@@ -8,7 +8,7 @@
 #include "SelectedTransactionInputs.h"
 #include "TxClasses.h"
 #include "UiUtils.h"
-#include <QDebug>
+#include "Wallets/SyncWallet.h"
 
 class TransactionNode;
 class CoinControlNode
@@ -86,12 +86,13 @@ private:
 class TransactionNode : public CoinControlNode
 {
 public:
-   TransactionNode(bool isSelected, int transactionIndex, const UTXO& transaction, const std::shared_ptr<bs::Wallet> &wallet, CoinControlNode *parent)
+   TransactionNode(bool isSelected, int transactionIndex, const UTXO& transaction, const std::shared_ptr<bs::sync::Wallet> &wallet
+      , CoinControlNode *parent)
       : CoinControlNode(QString::fromStdString(transaction.getTxHash().toHexStr(true)), QString(), parent->childrenCount(), parent)
       , checkedState_(isSelected ? Qt::Checked : Qt::Unchecked)
       , transactionIndex_(transactionIndex)
    {
-      amount_ = wallet ? wallet->GetTxBalance(transaction.getValue()) : transaction.getValue() / BTCNumericTypes::BalanceDivider;
+      amount_ = wallet ? wallet->getTxBalance(transaction.getValue()) : transaction.getValue() / BTCNumericTypes::BalanceDivider;
    }
 
    ~TransactionNode() noexcept override = default;
@@ -141,7 +142,8 @@ protected:
 class CPFPTransactionNode : public TransactionNode
 {
 public:
-   CPFPTransactionNode(bool isSelected, int transactionIndex, const UTXO& transaction, const std::shared_ptr<bs::Wallet> &wallet, CoinControlNode *parent)
+   CPFPTransactionNode(bool isSelected, int transactionIndex, const UTXO& transaction, const std::shared_ptr<bs::sync::Wallet> &wallet
+      , CoinControlNode *parent)
       : TransactionNode(isSelected, transactionIndex, transaction, wallet, parent) {}
 
    void ApplySelection(const std::shared_ptr<SelectedTransactionInputs>& selectedInputs) override
@@ -313,7 +315,7 @@ QVariant CoinControlModel::data(const QModelIndex& index, int role) const
          return node->getUtxoCount();
       case ColumnBalance: {
          const auto amount = (node->getSelectedAmount() <= 0) ? node->getTotalAmount() : node->getSelectedAmount();
-         return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
+         return (wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
       }
       default:
          return QVariant{};
@@ -437,7 +439,7 @@ QString CoinControlModel::GetSelectedBalance() const
       return {};
    }
    const auto amount = qMax<BTCNumericTypes::balance_type>(root_->getSelectedAmount(), 0);
-   return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
+   return (wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
 }
 
 QString CoinControlModel::GetTotalBalance() const
@@ -446,7 +448,7 @@ QString CoinControlModel::GetTotalBalance() const
       return {};
    }
    const auto amount = qMax<BTCNumericTypes::balance_type>(root_->getTotalAmount(), 0);
-   return (wallet_->GetType() == bs::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
+   return (wallet_->type() == bs::core::wallet::Type::ColorCoin) ? UiUtils::displayCCAmount(amount) : UiUtils::displayAmount(amount);
 }
 
 CoinControlNode* CoinControlModel::getNodeByIndex(const QModelIndex& index) const
@@ -470,7 +472,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
 
       if (addressIt == addressNodes_.end()) {
          addressNode = new AddressNode(address.display()
-            , QString::fromStdString(selectedInputs->GetWallet()->GetAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
+            , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
          root_->appendChildrenNode(addressNode);
          addressNodes_.emplace(addrStr, addressNode);
       } else {
@@ -493,7 +495,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
          if (itAddr == cpfpNodes_.end()) {
             const int row = cpfpNodes_.size();
             addressNode = new AddressNode(address.display()
-               , QString::fromStdString(selectedInputs->GetWallet()->GetAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
+               , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
             cpfp_->appendChildrenNode(addressNode);
             cpfpNodes_[addrStr] = addressNode;
          }

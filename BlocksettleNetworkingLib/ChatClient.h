@@ -48,6 +48,9 @@ public:
    void OnUsersList(const Chat::UsersListResponse &) override;
    void OnMessages(const Chat::MessagesResponse &) override;
    void OnLoginReturned(const Chat::LoginResponse &) override;
+   void OnSendMessageResponse(const Chat::SendMessageResponse& ) override;
+   void OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse&) override;
+   void OnContactsActionResponse(const Chat::ContactsActionResponse&) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -70,6 +73,7 @@ public:
                            const QString &userName = QStringLiteral(""),
                            const bool &isIncomingFriendRequest = false);
    void sendFriendRequest(const QString &friendUserId);
+   void sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
@@ -84,10 +88,17 @@ signals:
    void UsersAdd(const std::vector<std::string>& users);
    void UsersDel(const std::vector<std::string>& users);
    void IncomingFriendRequest(const std::vector<std::string>& users);
-   void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
+   void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
+   void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
+   void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
 
+public slots:
+   void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
+   
 private slots:
    void sendHeartbeat();
+   void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
+   
 
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;

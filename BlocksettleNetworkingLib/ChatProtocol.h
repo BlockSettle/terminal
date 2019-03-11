@@ -15,7 +15,7 @@
 #include <QDateTime>
 
 #include "SecureBinaryData.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 
 
 namespace Chat
@@ -33,6 +33,8 @@ namespace Chat
    ,   RequestOnlineUsers
    ,   RequestAskForPublicKey
    ,   RequestSendOwnPublicKey
+   ,   RequestChangeMessageStatus
+   ,   RequestContactsAction
    };
 
 
@@ -47,6 +49,15 @@ namespace Chat
    ,   ResponseAskForPublicKey
    ,   ResponseSendOwnPublicKey
    ,   ResponsePendingMessage
+   ,   ResponseSendMessage
+   ,   ResponseChangeMessageStatus
+   ,   ResponseContactsAction
+   };
+   
+   enum class ContactsAction {
+      Accept,
+      Reject,
+      Request
    };
 
 
@@ -166,7 +177,8 @@ namespace Chat
          Invalid = 1,
          Encrypted = 2,
          Acknowledged = 4,
-         Read = 8
+         Read = 8,
+         Sent = 16
       };
 
       MessageData(const QString &sender, const QString &receiver
@@ -183,8 +195,12 @@ namespace Chat
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
 
       void setFlag(const State);
+      void unsetFlag(const State);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
+      
+      //Set ID for message, returns old ID that was replaced
+      QString setId(const QString& id);
 
    private:
       QString id_;
@@ -209,6 +225,39 @@ namespace Chat
 
    private:
       std::string messageData_;
+   };
+   
+   class MessageChangeStatusRequest : public Request
+   {
+   public:
+      MessageChangeStatusRequest(const std::string& clientId, const std::string& messageId, int state);
+      
+      const std::string getMessageId() const {return messageId_; }
+      int getMessageState() const {return messageState_; }
+      
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Request> fromJSON(const std::string& clientId
+                                     , const std::string& jsonData);
+      void handle(RequestHandler &) override;
+   private:
+      const std::string messageId_;
+      int messageState_;
+   };
+   
+   class ContactActionRequest : public Request
+   {
+   public:
+      ContactActionRequest(const std::string& clientId, const std::string& senderId, const std::string& receiverId, ContactsAction action);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Request> fromJSON(const std::string& clientId, const std::string& jsonData);
+      void handle(RequestHandler &) override;
+      std::string senderId() const {return senderId_;}
+      std::string receiverId() const {return receiverId_;}
+      ContactsAction getAction() const {return action_;}
+   private:
+      std::string senderId_;
+      std::string receiverId_;
+      ContactsAction action_;
    };
 
    // Request for asking the peer to send us their public key.
@@ -290,8 +339,7 @@ namespace Chat
       std::string senderId_;
       std::string receiverId_;
    };
-
-
+   
    class HeartbeatPongResponse : public Response
    {
    public:
@@ -407,23 +455,93 @@ namespace Chat
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       void handle(ResponseHandler &) override;
    };
+   
+   class PendingResponse : public Response
+   {
+   public:
+      PendingResponse(ResponseType type, const QString &id = QString());
+      QJsonObject toJson() const override;
+      QString getId() const;
+      void setId(const QString& id);
+      void handle(ResponseHandler &) override;
+   private:
+      QString id_;
+      
+   };
 
-   class PendingMessagesResponse : public Response
+   class PendingMessagesResponse : public PendingResponse
    {
    public: 
       PendingMessagesResponse(const QString& message_id, const QString& id = QString());
       QString getMessageId();
-      QString getId() const;
-      void setId(QString& id);
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
-      void handle(ResponseHandler &);
    protected:
-      QString id_;
       QString message_id_;
    };
-
-
+   
+   class SendMessageResponse : public PendingResponse
+   {
+   public:
+      
+      enum class Result {
+           Accepted
+         , Rejected
+      };
+      SendMessageResponse(const std::string& clientMessageId, const std::string& serverMessageId, const std::string& receiverId, Result result);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      
+      std::string clientMessageId() const { return clientMessageId_;}
+      std::string serverMessageId() const { return serverMessageId_;}
+      std::string receiverId() const { return receiverId_;}
+      Result getResult() const {return result_;}
+      void handle(ResponseHandler&) override;
+      
+   private:
+      std::string clientMessageId_;
+      std::string serverMessageId_;
+      std::string receiverId_;
+      Result result_;
+   };
+   
+   class MessageChangeStatusResponse : public PendingResponse
+   {
+   public:
+      MessageChangeStatusResponse(const std::string& messageId, const std::string& senderId,const std::string& receiverId, int status);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      std::string messageId() const {return messageId_;} 
+      std::string messageSenderId() const {return messageSenderId_;}
+      std::string messageReceiverId() const {return messageReceiverId_;}
+      int getUpdatedStatus() const {return status_; }
+      void handle(ResponseHandler&) override;
+   private:
+      std::string messageId_;
+      std::string messageSenderId_;
+      std::string messageReceiverId_;
+      int status_;
+   };
+   
+   class ContactsActionResponse : public PendingResponse
+   {
+   public:
+      
+      ContactsActionResponse(const std::string& senderId, const std::string& receiverId, ContactsAction action);
+      QJsonObject toJson() const override;
+      static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
+      void handle(ResponseHandler&) override;
+      std::string senderId() const {return senderId_;} 
+      std::string receiverId() const {return receiverId_;} 
+      ContactsAction getAction() const {return action_;} 
+   private:
+      std::string senderId_;
+      std::string receiverId_;
+      ContactsAction action_;
+      
+   };
+   
+   
    class RequestHandler
    {
    public:
@@ -441,6 +559,10 @@ namespace Chat
 
       virtual void OnOnlineUsers(const OnlineUsersRequest &) = 0;
       virtual void OnRequestMessages(const MessagesRequest &) = 0;
+      
+      virtual void OnRequestChangeMessageStatus(const MessageChangeStatusRequest &) = 0;
+      
+      virtual void OnRequestContactsAction(const ContactActionRequest &) = 0;
    };
 
    class ResponseHandler
@@ -458,9 +580,16 @@ namespace Chat
       virtual void OnSendOwnPublicKey(const SendOwnPublicKeyResponse &) = 0;
 
       virtual void OnLoginReturned(const LoginResponse &) = 0;
+      
+      virtual void OnSendMessageResponse(const SendMessageResponse&) = 0;
+      virtual void OnMessageChangeStatusResponse(const MessageChangeStatusResponse&) = 0;
+      virtual void OnContactsActionResponse(const ContactsActionResponse&) = 0;
    };
 
-}
+   autheid::PublicKey publicKeyFromString(const std::string &s);
+   std::string publicKeyToString(const autheid::PublicKey &k);
+
+} // namespace Chat
 
 
 #endif // __CHAT_PROTOCOL_H__

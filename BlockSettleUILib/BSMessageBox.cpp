@@ -35,18 +35,21 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
    ui_->labelTitle->setText(text);
    ui_->labelText->setText(description);
    setType(mbType);
+   resize(width(), 0);
 
    if (details.isEmpty()) {
       ui_->pushButtonShowDetails->hide();
+      ui_->verticalWidgetDetails->setMaximumHeight(0);
    } else {
       connect(ui_->pushButtonShowDetails, &QPushButton::clicked, this, &BSMessageBox::onDetailsPressed);
       ui_->labelDetails->setText(details);
+      ui_->verticalWidgetDetails->setMaximumHeight(SHRT_MAX);
    }
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &BSMessageBox::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &BSMessageBox::reject);
 
    setWindowFlags(Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint);
-   layout()->setSizeConstraint(QLayout::SetFixedSize);
+   //layout()->setSizeConstraint(QLayout::SetFixedSize);
 
    // hide the details part of the message box
    hideDetails();
@@ -60,6 +63,16 @@ void BSMessageBox::showEvent( QShowEvent* )
       QRect parentRect(parentWidget()->mapToGlobal(QPoint(0, 0)), parentWidget()->size());
       move(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), parentRect).topLeft());
    }
+}
+
+void BSMessageBox::setOkVisible(bool visible)
+{
+   ui_->pushButtonOk->setVisible(visible);
+}
+
+void BSMessageBox::setCancelVisible(bool visible)
+{
+   ui_->pushButtonCancel->setVisible(visible);
 }
 
 void BSMessageBox::onDetailsPressed() {

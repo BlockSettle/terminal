@@ -15,14 +15,16 @@ namespace spdlog {
 }
 
 class ApplicationSettings;
+class ConnectionManager;
 
 class LoginWindow : public QDialog
 {
 Q_OBJECT
 
 public:
-   LoginWindow(const std::shared_ptr<ApplicationSettings> &
-               , const std::shared_ptr<spdlog::logger> &logger
+   LoginWindow(const std::shared_ptr<spdlog::logger> &logger
+               , const std::shared_ptr<ApplicationSettings> &
+               , const std::shared_ptr<ConnectionManager> &
                , QWidget* parent = nullptr);
    ~LoginWindow() override;
 
@@ -53,8 +55,9 @@ protected:
 
 private:
    std::unique_ptr<Ui::LoginWindow>       ui_;
-   std::shared_ptr<ApplicationSettings>   settings_;
    std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ApplicationSettings>   settings_;
+   std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AutheIDClient>         autheIDConnection_ {};
 
    std::string jwt_;

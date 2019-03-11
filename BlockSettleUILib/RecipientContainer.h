@@ -18,14 +18,12 @@ public:
 
    RecipientContainer(const RecipientContainer&) = delete;
    RecipientContainer& operator = (const RecipientContainer&) = delete;
-
    RecipientContainer(RecipientContainer&&) = delete;
    RecipientContainer& operator = (RecipientContainer&&) = delete;
 
 public:
    bool IsReady() const;
 
-   bool SetAddressEntry(const std::shared_ptr<AddressEntry> &ae);
    bool SetAddress(const bs::Address& address);
    bs::Address GetAddress() const;
    void ResetAddress();
@@ -37,7 +35,6 @@ public:
    std::shared_ptr<ScriptRecipient> GetScriptRecipient() const;
 
 private:
-   std::shared_ptr<AddressEntry> addrEntry_;
    bs::Address address_;
    double      amount_;
    bool        isMax_;

@@ -2,19 +2,18 @@
 #include <spdlog/spdlog.h>
 #include "AssetManager.h"
 #include "CheckRecipSigner.h"
-#include "HDWallet.h"
-#include "MetaData.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "UtxoReservation.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 static const unsigned int kWaitTimeoutInSec = 30;
 
 ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<AssetManager> &assetMgr
-   , const std::shared_ptr<WalletsManager> &walletsMgr
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const bs::network::RFQ &rfq, const bs::network::Quote &quote
    , const std::shared_ptr<TransactionData> &txData)
    : bs::SettlementContainer(armory), logger_(logger), signingContainer_(container)
@@ -33,9 +32,9 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &ReqCCSettlementContainer::onTXSigned);
 
-   const auto &signingWallet = transactionData_->GetSigningWallet();
+   const auto &signingWallet = transactionData_->getSigningWallet();
    if (signingWallet) {
-      const auto &rootWallet = walletsMgr_->GetHDRootForLeaf(signingWallet->GetWalletId());
+      const auto &rootWallet = walletsMgr_->getHDRootForLeaf(signingWallet->walletId());
       walletInfo_ = bs::hd::WalletInfo(rootWallet);
       infoReqId_ = signingContainer_->GetInfo(walletInfo_.rootId().toStdString());
    }
@@ -57,7 +56,7 @@ ReqCCSettlementContainer::~ReqCCSettlementContainer()
 void ReqCCSettlementContainer::activate()
 {
    if (side() == bs::network::Side::Buy) {
-      if (amount() > assetMgr_->getBalance(bs::network::XbtCurrency, transactionData_->GetSigningWallet())) {
+      if (amount() > assetMgr_->getBalance(bs::network::XbtCurrency, transactionData_->getSigningWallet())) {
          emit paymentVerified(false, tr("Insufficient XBT balance in signing wallet"));
          return;
       }
@@ -124,7 +123,7 @@ void ReqCCSettlementContainer::deactivate()
 
 bool ReqCCSettlementContainer::createCCUnsignedTXdata()
 {
-   const auto wallet = transactionData_->GetSigningWallet();
+   const auto wallet = transactionData_->getSigningWallet();
    if (!wallet) {
       logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] failed to get signing wallet");
       return false;
@@ -133,7 +132,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
    if (side() == bs::network::Side::Sell) {
       const uint64_t spendVal = quantity() * assetMgr_->getCCLotSize(product());
       logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] sell amount={}, spend value = {}", quantity(), spendVal);
-      ccTxData_.walletId = wallet->GetWalletId();
+      ccTxData_.walletId = wallet->walletId();
       ccTxData_.prevStates = { dealerTx_ };
       const auto recipient = bs::Address(dealerAddress_).getRecipient(spendVal);
       if (recipient) {
@@ -149,7 +148,6 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
       logger_->debug("[CCSettlementTransactionWidget::createCCUnsignedTXdata] {} CC inputs reserved ({} recipients)"
          , ccTxData_.inputs.size(), ccTxData_.recipients.size());
       emit sendOrder();
-      signingContainer_->SyncAddresses(transactionData_->createAddresses());
    }
    else {
       const auto &cbFee = [this](float feePerByte) {
@@ -161,12 +159,11 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                   logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] invalid recipient: {}", dealerAddress_);
                   return;
                }
-               ccTxData_ = transactionData_->CreatePartialTXRequest(spendVal, feePerByte, { recipient }
+               ccTxData_ = transactionData_->createPartialTXRequest(spendVal, feePerByte, { recipient }
                , dealerTx_, utxos);
                logger_->debug("{} inputs in ccTxData", ccTxData_.inputs.size());
                utxoAdapter_->reserve(ccTxData_.walletId, id(), ccTxData_.inputs);
                QMetaObject::invokeMethod(this, [this] { emit sendOrder(); });
-               signingContainer_->SyncAddresses(transactionData_->createAddresses());
             }
             catch (const std::exception &e) {
                logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] Failed to create partial CC TX to {}: {}"
@@ -174,7 +171,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                QMetaObject::invokeMethod(this, [this] { emit error(tr("Failed to create CC TX half")); });
             }
          };
-         if (!transactionData_->GetWallet()->getSpendableTxOutList(cbTxOutList, this, spendVal)) {
+         if (!transactionData_->getWallet()->getSpendableTxOutList(cbTxOutList, this, spendVal)) {
             logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] getSpendableTxOutList failed");
          }
       };
@@ -194,7 +191,7 @@ bool ReqCCSettlementContainer::createCCSignedTXdata(const SecureBinaryData &pass
       }
    }
 
-   ccSignId_ = signingContainer_->SignPartialTXRequest(ccTxData_, false, password);
+   ccSignId_ = signingContainer_->signPartialTXRequest(ccTxData_, false, password);
    logger_->debug("[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", ccTxData_.recipients.size());
    return (ccSignId_ > 0);
 }

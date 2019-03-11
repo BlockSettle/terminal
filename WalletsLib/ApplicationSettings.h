@@ -9,7 +9,7 @@
 #include <bdmenums.h>
 
 #include "ArmorySettings.h"
-#include "EncryptUtils.h"
+#include "autheid_utils.h"
 #include "LogManager.h"
 
 
@@ -32,19 +32,27 @@ public:
 
    void     SaveSettings();
 
+   enum EnvConfiguration
+   {
+      PROD,
+      UAT,
+      Staging,
+      Custom,
+   };
+   Q_ENUM(EnvConfiguration)
+
    enum Setting {
       initialized,
       runArmoryLocally,
       netType,
+      armoryDbName,
       armoryDbIp,
       armoryDbPort,
       armoryPathName,
       pubBridgeHost,
       pubBridgePort,
       pubBridgePubKey,
-      authServerHost,
-      authServerPort,
-      authServerPubKey,
+      envConfiguration,
       celerHost,
       celerPort,
       mdServerHost,
@@ -102,6 +110,8 @@ public:
       zmqLocalSignerPubKeyFilePath,
       zmqRemoteSignerPubKey,
       rememberLoginUserName,
+      armoryServers,
+      defaultArmoryServersKeys,
       _last
    };
 
@@ -129,14 +139,20 @@ public:
 
    static int GetDefaultArmoryLocalPort(NetworkType networkType);
    static int GetDefaultArmoryRemotePort(NetworkType networkType);
-   QString GetArmoryRemotePort(NetworkType networkType = NetworkType::Invalid) const;
+   int GetArmoryRemotePort(NetworkType networkType = NetworkType::Invalid) const;
 
    QString GetSettingsPath() const;
 
    QString  GetHomeDir() const;
    QString  GetBackupDir() const;
 
-   ArmorySettings GetArmorySettings() const;
+   SocketType  GetArmorySocketType() const;
+   QString  GetDBDir() const;
+   QString  GetBitcoinBlocksDir() const;
+
+   QString GetDefaultHomeDir() const;
+   QString GetDefaultBitcoinsDir() const;
+   QString GetDefaultDBDir() const;
 
    std::vector<bs::LogConfig> GetLogsConfig() const;
 
@@ -150,17 +166,10 @@ signals:
    void settingChanged(int setting, QVariant value);
 
 private:
-   SocketType  GetArmorySocketType() const;
-   QString  GetDBDir() const;
-   QString  GetBitcoinBlocksDir() const;
 
    void SetHomeDir(const QString& path);
    void SetBitcoinsDir(const QString& path);
    void SetDBDir(const QString& path);
-
-   QString GetDefaultHomeDir() const;
-   QString GetDefaultBitcoinsDir() const;
-   QString GetDefaultDBDir() const;
 
    QString AppendToWritableDir(const QString &filename) const;
    bs::LogConfig parseLogConfig(const QStringList &) const;

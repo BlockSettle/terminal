@@ -7,9 +7,13 @@
 namespace Ui {
    class DealerCCSettlementDialog;
 }
-class DealerCCSettlementContainer;
-class WalletsManager;
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 class CelerClient;
+class DealerCCSettlementContainer;
 
 
 class DealerCCSettlementDialog : public BaseDealerSettlementDialog
@@ -20,10 +24,11 @@ public:
    DealerCCSettlementDialog(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<DealerCCSettlementContainer> &
       , const std::string &reqRecvAddr
-      , std::shared_ptr<WalletsManager> walletsManager
+      , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &
       , std::shared_ptr<CelerClient>
       , const std::shared_ptr<ApplicationSettings> &appSettings
+      , const std::shared_ptr<ConnectionManager> &connectionManager
       , QWidget* parent = nullptr);
    ~DealerCCSettlementDialog() override;
 

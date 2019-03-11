@@ -2,7 +2,6 @@
 #define __ASSET__MANAGER_H__
 
 #include "CommonTypes.h"
-#include "MetaData.h"
 
 #include <memory>
 #include <unordered_map>
@@ -11,12 +10,16 @@
 #include <QMutex>
 #include <QObject>
 
-namespace spdlog
-{
+namespace spdlog {
    class logger;
 }
+namespace bs {
+   namespace sync {
+      class Wallet;
+      class WalletsManager;
+   }
+}
 
-class WalletsManager;
 class MarketDataProvider;
 class CelerClient;
 
@@ -26,7 +29,7 @@ class AssetManager : public QObject
 
 public:
    AssetManager(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<WalletsManager>& walletsManager
+      , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<MarketDataProvider>& mdProvider
       , const std::shared_ptr<CelerClient>& celerClient);
    ~AssetManager() = default;
@@ -36,7 +39,7 @@ public:
 public:
    std::vector<std::string> currencies();
    virtual std::vector<std::string> privateShares(bool forceExternal = false);
-   virtual double getBalance(const std::string& currency, const std::shared_ptr<bs::Wallet> &wallet = nullptr) const;
+   virtual double getBalance(const std::string& currency, const std::shared_ptr<bs::sync::Wallet> &wallet = nullptr) const;
    bool checkBalance(const std::string &currency, double amount) const;
    double getPrice(const std::string& currency) const;
    double getTotalAssets();
@@ -86,7 +89,7 @@ private:
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
-   std::shared_ptr<WalletsManager>        walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<MarketDataProvider>    mdProvider_;
    std::shared_ptr<CelerClient>           celerClient_;
 

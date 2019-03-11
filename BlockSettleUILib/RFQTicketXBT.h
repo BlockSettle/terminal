@@ -20,8 +20,14 @@ namespace Ui {
     class RFQTicketXBT;
 }
 namespace bs {
+   namespace sync {
+      namespace hd {
+         class Leaf;
+      }
+      class Wallet;
+      class WalletsManager;
+   }
    class RequesterUtxoResAdapter;
-   class Wallet;
 }
 class ArmoryConnection;
 class AssetManager;
@@ -31,7 +37,6 @@ class FXAmountValidator;
 class QuoteProvider;
 class SelectedTransactionInputs;
 class SignContainer;
-class WalletsManager;
 class XbtAmountValidator;
 
 
@@ -48,7 +53,7 @@ public:
       , const std::shared_ptr<QuoteProvider> &quoteProvider
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<ArmoryConnection> &);
-   void setWalletsManager(const std::shared_ptr<WalletsManager> &walletsManager);
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void resetTicket();
 
@@ -91,7 +96,7 @@ private slots:
    void updateSubmitButton();
    void submitButtonClicked();
 
-   void onHDLeafCreated(unsigned int id, BinaryData pubKey, BinaryData chainCode, std::string walletId);
+   void onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onCreateHDWalletError(unsigned int id, std::string error);
 
    void onMaxClicked();
@@ -132,9 +137,9 @@ private:
 
    BalanceInfoContainer getBalanceInfo() const;
    QString getProduct() const;
-   std::shared_ptr<bs::Wallet> getCurrentWallet() const { return curWallet_; }
-   void setCurrentWallet(const std::shared_ptr<bs::Wallet> &);
-   std::shared_ptr<bs::Wallet> getCCWallet(const std::string &cc);
+   std::shared_ptr<bs::sync::Wallet> getCurrentWallet() const { return curWallet_; }
+   void setCurrentWallet(const std::shared_ptr<bs::sync::Wallet> &);
+   std::shared_ptr<bs::sync::Wallet> getCCWallet(const std::string &cc);
    void setTransactionData();
    void setWallets();
    bool isXBTProduct() const;
@@ -161,7 +166,7 @@ private:
 
    void HideRFQControls();
 
-   void setCurrentCCWallet(const std::shared_ptr<bs::Wallet>& newCCWallet);
+   void setCurrentCCWallet(const std::shared_ptr<bs::sync::Wallet>& newCCWallet);
 
    void initProductGroupMap();
    ProductGroupType getProductGroupType(const QString& productGroup);
@@ -180,13 +185,13 @@ private:
    std::shared_ptr<AuthAddressManager> authAddressManager_;
 
    std::shared_ptr<TransactionData>    transactionData_;
-   std::shared_ptr<WalletsManager>     walletsManager_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
 
-   std::shared_ptr<bs::Wallet>   curWallet_;
-   std::shared_ptr<bs::Wallet>   ccWallet_;
-   std::shared_ptr<bs::Wallet>   recvWallet_;
+   std::shared_ptr<bs::sync::Wallet>   curWallet_;
+   std::shared_ptr<bs::sync::Wallet>   ccWallet_;
+   std::shared_ptr<bs::sync::Wallet>   recvWallet_;
 
    unsigned int      leafCreateReqId_ = 0;
 

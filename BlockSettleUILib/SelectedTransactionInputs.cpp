@@ -1,9 +1,10 @@
 #include "SelectedTransactionInputs.h"
-#include "MetaData.h"
+#include "Wallets/SyncWallet.h"
 
-SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &wallet
+
+SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
    , bool swTransactionsOnly, bool confirmedOnly
-   , const selectionChangedCallback &selectionChanged, const std::function<void()> &cbInputsReset)
+   , const CbSelectionChanged &selectionChanged, const std::function<void()> &cbInputsReset)
    : QObject(nullptr), wallet_(wallet)
    , swTransactionsOnly_(swTransactionsOnly)
    , confirmedOnly_(confirmedOnly)
@@ -12,9 +13,9 @@ SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::W
    ResetInputs(cbInputsReset);
 }
 
-SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::Wallet> &wallet
+SelectedTransactionInputs::SelectedTransactionInputs(const std::shared_ptr<bs::sync::Wallet> &wallet
    , const std::vector<UTXO> &utxos
-   , const selectionChangedCallback &selectionChanged)
+   , const CbSelectionChanged &selectionChanged)
    : QObject(nullptr), wallet_(wallet)
    , swTransactionsOnly_(false)
    , confirmedOnly_(false)
@@ -116,6 +117,25 @@ bool SelectedTransactionInputs::filterUTXO(std::vector<UTXO> &inputs, const UTXO
    selection_.erase(selection_.begin() + selectionStart + index);
    totalBalance_ -= utxo.getValue();
    return true;
+}
+
+static bool isSegWitInput(const UTXO &utxo)
+{
+   const auto recipAddr = bs::Address::fromUTXO(utxo);
+   switch (recipAddr.getType()) {
+   case AddressEntryType_P2WPKH:
+   case AddressEntryType_P2WSH:
+   case AddressEntryType_P2SH:
+      return true;
+   case AddressEntryType_Default:   // fallback for script not from our wallet
+   default: break;                  // fallback for incorrectly deserialized wallet
+   }
+   return false;
+}
+
+static bool isSegWit(const UTXO &input)
+{
+   return input.isSegWit() || isSegWitInput(input);
 }
 
 std::vector<UTXO> SelectedTransactionInputs::filterNonSWInputs(const std::vector<UTXO> &inputs)
@@ -229,11 +249,6 @@ std::vector<UTXO> SelectedTransactionInputs::GetAllTransactions() const
    allTransactions.insert(allTransactions.end(), inputs_.begin(), inputs_.end());
    allTransactions.insert(allTransactions.end(), cpfpInputs_.begin(), cpfpInputs_.end());
    return allTransactions;
-}
-
-bool SelectedTransactionInputs::isSegWit(const UTXO &input) const
-{
-   return wallet_->IsSegWitInput(input);
 }
 
 void SelectedTransactionInputs::SetUseAutoSel(const bool autoSelect)

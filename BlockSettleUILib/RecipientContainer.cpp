@@ -14,34 +14,22 @@ RecipientContainer::RecipientContainer()
 
 bool RecipientContainer::IsReady() const
 {
-   return (amount_ != InvalidAmount) && (!address_.isNull() || (addrEntry_ != nullptr));
+   return (amount_ != InvalidAmount) && !address_.isNull();
 }
 
 bool RecipientContainer::SetAddress(const bs::Address &address)
 {
    address_ = address;
-   addrEntry_ = nullptr;
-   return true;
-}
-
-bool RecipientContainer::SetAddressEntry(const std::shared_ptr<AddressEntry> &address)
-{
-   addrEntry_ = address;
-   address_.clear();
    return true;
 }
 
 void RecipientContainer::ResetAddress()
 {
    address_.clear();
-   addrEntry_ = nullptr;
 }
 
 bs::Address RecipientContainer::GetAddress() const
 {
-   if (addrEntry_ != nullptr) {
-      return addrEntry_->getPrefixedHash();
-   }
    if (!address_.isNull()) {
       return address_;
    }
@@ -57,9 +45,6 @@ bool RecipientContainer::SetAmount(double amount, bool isMax)
 
 std::shared_ptr<ScriptRecipient> RecipientContainer::GetScriptRecipient() const
 {
-   if (addrEntry_ != nullptr) {
-      return addrEntry_->getRecipient(amount_ * BTCNumericTypes::BalanceDivider);
-   }
    if (address_.isNull()) {
       return nullptr;
    }

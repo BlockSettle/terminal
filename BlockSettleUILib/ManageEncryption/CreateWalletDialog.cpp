@@ -1,26 +1,26 @@
 #include "CreateWalletDialog.h"
 #include "ui_CreateWalletDialog.h"
 
-#include "HDWallet.h"
 #include "BSMessageBox.h"
 #include "WalletPasswordVerifyDialog.h"
 #include "NewWalletSeedDialog.h"
 #include "SignContainer.h"
 #include "EnterWalletPassword.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "WalletKeysCreateWidget.h"
 #include "UiUtils.h"
 
 #include <spdlog/spdlog.h>
 
 
-CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& walletsManager
+CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , const std::shared_ptr<SignContainer> &container
-   , const QString &walletsPath
-   , const bs::wallet::Seed& walletSeed
+   , const bs::core::wallet::Seed& walletSeed
    , const std::string& walletId
    , const QString& username
    , const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<spdlog::logger> &logger
    , QWidget *parent)
 
@@ -28,18 +28,18 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    , ui_(new Ui::CreateWalletDialog)
    , walletsManager_(walletsManager)
    , signingContainer_(container)
+   , connectionManager_(connectionManager)
    , appSettings_(appSettings)
-   , walletsPath_(walletsPath)
    , walletSeed_(walletSeed)
    , logger_(logger)
 {
    ui_->setupUi(this);
    walletInfo_.setRootId(walletId);
 
-   ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->HasPrimaryWallet());
-   ui_->checkBoxPrimaryWallet->setChecked(!walletsManager->HasPrimaryWallet());
+   ui_->checkBoxPrimaryWallet->setEnabled(!walletsManager->hasPrimaryWallet());
+   ui_->checkBoxPrimaryWallet->setChecked(!walletsManager->hasPrimaryWallet());
 
-   if (!walletsManager->HasPrimaryWallet()) {
+   if (!walletsManager->hasPrimaryWallet()) {
       setWindowTitle(tr("Create Primary Wallet"));
       ui_->checkBoxPrimaryWallet->setChecked(true);
 
@@ -48,7 +48,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
       setWindowTitle(tr("Create New Wallet"));
       ui_->checkBoxPrimaryWallet->setChecked(false);
 
-      ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->GetWalletsCount() + 1));
+      ui_->lineEditWalletName->setText(tr("Wallet #%1").arg(walletsManager->hdWalletsCount() + 1));
    }
 
    ui_->lineEditDescription->setValidator(new UiUtils::WalletDescriptionValidator(this));
@@ -64,7 +64,7 @@ CreateWalletDialog::CreateWalletDialog(const std::shared_ptr<WalletsManager>& wa
    // for eid wallet signing suggest email used for login into app
 
    ui_->widgetCreateKeys->init(AutheIDClient::ActivateWallet
-      , walletInfo_, WalletKeyWidget::UseType::ChangeAuthForDialog, appSettings, logger);
+      , walletInfo_, WalletKeyWidget::UseType::ChangeAuthForDialog, appSettings, connectionManager, logger);
 
    connect(ui_->lineEditWalletName, &QLineEdit::returnPressed, this, &CreateWalletDialog::createWallet);
    connect(ui_->lineEditDescription, &QLineEdit::returnPressed, this, &CreateWalletDialog::createWallet);
@@ -97,7 +97,7 @@ void CreateWalletDialog::createWallet()
 
 
    // check wallet name
-   if (walletsManager_->WalletNameExists(walletInfo_.name().toStdString())) {
+   if (walletsManager_->walletNameExists(walletInfo_.name().toStdString())) {
       BSMessageBox messageBox(BSMessageBox::critical, QObject::tr("Invalid wallet name")
          , QObject::tr("Wallet with this name already exists"), this);
       messageBox.exec();
@@ -117,7 +117,7 @@ void CreateWalletDialog::createWallet()
 
       EnterWalletPassword dialog(AutheIDClient::ActivateWallet, this);
 
-      dialog.init(walletInfo_, appSettings_, WalletKeyWidget::UseType::ChangeToEidAsDialog
+      dialog.init(walletInfo_, appSettings_, connectionManager_, WalletKeyWidget::UseType::ChangeToEidAsDialog
          , QObject::tr("Activate Auth eID Signing"), logger_, QObject::tr("Auth eID"));
       int result = dialog.exec();
       if (!result) {
@@ -133,7 +133,7 @@ void CreateWalletDialog::createWallet()
       messageBox.exec();
    }
 
-   WalletPasswordVerifyDialog verifyDialog(appSettings_, this);
+   WalletPasswordVerifyDialog verifyDialog(appSettings_, connectionManager_, this);
    verifyDialog.init(walletInfo_, pwData, logger_);
    int result = verifyDialog.exec();
    if (!result) {
@@ -145,7 +145,7 @@ void CreateWalletDialog::createWallet()
    std::vector<bs::wallet::PasswordData> vectorPwData;
    vectorPwData.assign(pwData.cbegin(), pwData.cend());
 
-   createReqId_ = signingContainer_->CreateHDWallet(walletInfo_.name().toStdString()
+   createReqId_ = signingContainer_->createHDWallet(walletInfo_.name().toStdString()
       , walletInfo_.desc().toStdString()
       , ui_->checkBoxPrimaryWallet->isChecked()
       , walletSeed_, vectorPwData
@@ -166,20 +166,20 @@ void CreateWalletDialog::onWalletCreateError(unsigned int id, std::string errMsg
    reject();
 }
 
-void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::hd::Wallet> wallet)
+void CreateWalletDialog::onWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet> wallet)
 {
    if (!createReqId_ || (createReqId_ != id)) {
       return;
    }
-   if (walletInfo_.rootId().toStdString() != wallet->getWalletId()) {
+   if (walletInfo_.rootId().toStdString() != wallet->walletId()) {
       BSMessageBox(BSMessageBox::critical, tr("Wallet ID mismatch")
          , tr("Pre-created wallet id: %1, id after creation: %2")
-            .arg(walletInfo_.rootId()).arg(QString::fromStdString(wallet->getWalletId()))
+            .arg(walletInfo_.rootId()).arg(QString::fromStdString(wallet->walletId()))
          , this).exec();
       reject();
    }
    createReqId_ = 0;
-   walletsManager_->AdoptNewWallet(wallet, walletsPath_);
+   walletsManager_->adoptNewWallet(wallet);
    walletCreated_ = true;
    createdAsPrimary_ = ui_->checkBoxPrimaryWallet->isChecked();
    accept();

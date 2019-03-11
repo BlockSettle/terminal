@@ -11,10 +11,10 @@
 #include <QAction>
 
 #include "ArmoryConnection.h"
-#include "HDNode.h"
-#include "MetaData.h"
+#include "HDPath.h"
 #include "TransactionsViewModel.h"
 #include "UiUtils.h"
+#include "Wallets/SyncWallet.h"
 
 
 class IncomingTransactionFilter : public QSortFilterProxyModel
@@ -77,8 +77,8 @@ public:
 
 
 AddressDetailDialog::AddressDetailDialog(const bs::Address& address
-                                     , const std::shared_ptr<bs::Wallet> &wallet
-                         , const std::shared_ptr<WalletsManager>& walletsManager
+                                     , const std::shared_ptr<bs::sync::Wallet> &wallet
+                         , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
                                , const std::shared_ptr<ArmoryConnection> &armory
                                  , const std::shared_ptr<spdlog::logger> &logger
                                          , QWidget* parent)
@@ -94,21 +94,22 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    ui_->setupUi(this);
    ui_->labelError->hide();
 
-   connect(wallet_.get(), &bs::Wallet::addrBalanceReceived, this, &AddressDetailDialog::onAddrBalanceReceived);
-   connect(wallet_.get(), &bs::Wallet::addrTxNReceived, this, &AddressDetailDialog::onAddrTxNReceived);
-
-   wallet_->getAddrBalance(address);
-   wallet_->getAddrTxN(address);
+   wallet_->getAddrBalance(address, [this](std::vector<uint64_t> balanceVec) {
+      QMetaObject::invokeMethod(this, [this, balanceVec] { onAddrBalanceReceived(balanceVec); });
+   });
+   wallet_->getAddrTxN(address, [this](uint32_t txn) {
+      QMetaObject::invokeMethod(this, [this, txn] { onAddrTxNReceived(txn); });
+   });
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &AddressDetailDialog::onCopyClicked);
 
-   ui_->labelWallenName->setText(QString::fromStdString(wallet_->GetWalletName()));
+   ui_->labelWallenName->setText(QString::fromStdString(wallet_->name()));
 
    const auto addressString = address.display();
    ui_->labelAddress->setText(addressString);
 
-   const auto addrIndex = wallet_->GetAddressIndex(address);
+   const auto addrIndex = wallet_->getAddressIndex(address);
    const auto path = bs::hd::Path::fromString(addrIndex);
    QString index;
    if (path.length() != 2) {
@@ -132,7 +133,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    }
    ui_->labelAddrIndex->setText(index);
 
-   const auto comment = wallet_->GetAddressComment(address);
+   const auto comment = wallet_->getAddressComment(address);
    ui_->labelComment->setText(QString::fromStdString(comment));
 
    ui_->inputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -146,7 +147,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
          initModels(delegate);
       };
-      if (!armory->getLedgerDelegateForAddress(wallet_->GetWalletId(), address_, cbLedgerDelegate, this)) {
+      if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate, this)) {
          ui_->labelError->setText(tr("Error loading address info"));
          onError();
       }
@@ -190,20 +191,14 @@ void AddressDetailDialog::initModels(const std::shared_ptr<AsyncClient::LedgerDe
    ui_->outputAddressesWidget->sortByColumn(static_cast<int>(TransactionsViewModel::Columns::Date), Qt::DescendingOrder);
 }
 
-void AddressDetailDialog::onAddrBalanceReceived(const bs::Address &addr, std::vector<uint64_t> balance)
+void AddressDetailDialog::onAddrBalanceReceived(std::vector<uint64_t> balance)
 {
-   if (addr != address_) {
-      return;
-   }
-   ui_->labelBalance->setText((wallet_->GetType() == bs::wallet::Type::ColorCoin)
+   ui_->labelBalance->setText((wallet_->type() == bs::core::wallet::Type::ColorCoin)
       ? UiUtils::displayCCAmount(balance[0]) : UiUtils::displayAmount(balance[0]));
 }
 
-void AddressDetailDialog::onAddrTxNReceived(const bs::Address &addr, uint32_t txn)
+void AddressDetailDialog::onAddrTxNReceived(uint32_t txn)
 {
-   if (addr != address_) {
-      return;
-   }
    ui_->labelTransactions->setText(QString::number(txn));
 }
 

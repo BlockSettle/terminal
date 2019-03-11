@@ -20,9 +20,11 @@ QT_END_NAMESPACE
 class UserScriptRunner;
 
 namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
    class DealerUtxoResAdapter;
 }
-
 class SignContainer;
 
 
@@ -51,7 +53,7 @@ public:
       UserScriptRunner *runner);
    ~UserScriptHandler() noexcept override;
 
-   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
 
@@ -74,9 +76,9 @@ private slots:
 private:
    AutoQuoter *aq_ = nullptr;
    std::shared_ptr<bs::DealerUtxoResAdapter> utxoAdapter_;
-   std::shared_ptr<SignContainer> signingContainer_;
-   std::shared_ptr<WalletsManager> walletsManager_;
-   std::shared_ptr<MarketDataProvider> mdProvider_;
+   std::shared_ptr<SignContainer>            signingContainer_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
+   std::shared_ptr<MarketDataProvider>       mdProvider_;
    std::shared_ptr<AssetManager> assetManager_;
    std::shared_ptr<spdlog::logger> logger_;
 
@@ -128,7 +130,7 @@ public:
 
    bool isEnabled() const;
 
-   void setWalletsManager(std::shared_ptr<WalletsManager> walletsManager);
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
 

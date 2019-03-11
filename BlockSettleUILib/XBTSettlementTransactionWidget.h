@@ -9,6 +9,7 @@
 
 #include "AuthAddress.h"
 #include "CommonTypes.h"
+#include "ConnectionManager.h"
 
 namespace Ui {
     class XBTSettlementTransactionWidget;
@@ -30,6 +31,7 @@ public:
       , const std::shared_ptr<CelerClient> &
       , const std::shared_ptr<ApplicationSettings> &
       , const std::shared_ptr<ReqXBTSettlementContainer> &
+      , const std::shared_ptr<ConnectionManager> &
       , QWidget* parent = nullptr);
    ~XBTSettlementTransactionWidget() noexcept override;
 
@@ -59,6 +61,7 @@ private:
    std::shared_ptr<spdlog::logger>              logger_;
    std::shared_ptr<ApplicationSettings>         appSettings_;
    std::shared_ptr<ReqXBTSettlementContainer>   settlContainer_;
+   std::shared_ptr<ConnectionManager>           connectionManager_;
 
    const QString  sValid_;
    const QString  sInvalid_;

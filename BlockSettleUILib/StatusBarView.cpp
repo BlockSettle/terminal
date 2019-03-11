@@ -1,12 +1,13 @@
 #include "StatusBarView.h"
 #include "AssetManager.h"
-#include "HDWallet.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
-StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, std::shared_ptr<WalletsManager> walletsManager
+StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &celerClient
    , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
    : QObject(nullptr)
@@ -80,9 +81,9 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &StatusBarView::updateBalances);
    connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &StatusBarView::updateBalances);
 
-   connect(walletsManager_.get(), &WalletsManager::walletImportStarted, this, &StatusBarView::onWalletImportStarted);
-   connect(walletsManager_.get(), &WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
-   connect(walletsManager_.get(), &WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportStarted, this, &StatusBarView::onWalletImportStarted);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &StatusBarView::onWalletImportFinished);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &StatusBarView::updateBalances);
 
    connect(celerClient.get(), &CelerClient::OnConnectedToServer, this, &StatusBarView::onConnectedToServer);
    connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
@@ -93,7 +94,24 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory, st
    connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
    connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
 
+   onArmoryStateChanged(armory_->state());
+   onConnectionClosed();
+   onContainerConnected();
    setBalances();
+}
+
+StatusBarView::~StatusBarView()
+{
+   estimateLabel_->deleteLater();
+   balanceLabel_->deleteLater();
+   celerConnectionIconLabel_->deleteLater();
+   connectionStatusLabel_->deleteLater();
+   containerStatusLabel_->deleteLater();
+   progressBar_->deleteLater();
+
+   for (QWidget *separator : separators_) {
+      separator->deleteLater();
+   }
 }
 
 void StatusBarView::setupBtcIcon(NetworkType netType)
@@ -120,12 +138,13 @@ QWidget *StatusBarView::CreateSeparator()
    separator->setFixedWidth(1);
    separator->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
    separator->setStyleSheet(QLatin1String("background-color: #939393;"));
+   separators_.append(separator);
    return separator;
 }
 
-void StatusBarView::onPrepareArmoryConnection(NetworkType netType, std::string, std::string)
+void StatusBarView::onPrepareArmoryConnection(const ArmorySettings &server)
 {
-   setupBtcIcon(netType);
+   setupBtcIcon(server.netType);
 
    progressBar_->setVisible(false);
    estimateLabel_->setVisible(false);
@@ -145,13 +164,14 @@ void StatusBarView::onArmoryStateChanged(ArmoryConnection::State state)
 
    switch (state) {
    case ArmoryConnection::State::Scanning:
-   case ArmoryConnection::State::Connected:
+   case ArmoryConnection::State::Connecting:
       connectionStatusLabel_->setToolTip(tr("Connecting..."));
       connectionStatusLabel_->setPixmap(iconConnecting_);
       break;
 
    case ArmoryConnection::State::Closing:
    case ArmoryConnection::State::Offline:
+   case ArmoryConnection::State::Canceled:
       connectionStatusLabel_->setToolTip(tr("Database Offline"));
       connectionStatusLabel_->setPixmap(iconOffline_);
       break;
@@ -204,7 +224,7 @@ void StatusBarView::setBalances()
 
    switch (armoryConnState_) {
       case ArmoryConnection::State::Ready :
-         xbt = UiUtils::displayAmount(walletsManager_->GetSpendableBalance());
+         xbt = UiUtils::displayAmount(walletsManager_->getSpendableBalance());
       break;
 
       case ArmoryConnection::State::Scanning :
@@ -373,18 +393,18 @@ QString StatusBarView::getImportingText() const
    // Sometimes GetHDWalletById returns nullptr (perhaps importingWallets_ is stalled).
    // So add some error checking here.
    if (importingWallets_.size() == 1) {
-      auto wallet = walletsManager_->GetHDWalletById(*(importingWallets_.begin()));
+      auto wallet = walletsManager_->getHDWalletById(*(importingWallets_.begin()));
       if (!wallet) {
          return {};
       }
-      return tr("Rescanning blockchain for wallet %1...").arg(QString::fromStdString(wallet->getName()));
+      return tr("Rescanning blockchain for wallet %1...").arg(QString::fromStdString(wallet->name()));
    }
    else {
       QStringList walletNames;
       for (const auto &walletId : importingWallets_) {
-         auto wallet = walletsManager_->GetHDWalletById(walletId);
+         auto wallet = walletsManager_->getHDWalletById(walletId);
          if (wallet) {
-            walletNames << QString::fromStdString(wallet->getName());
+            walletNames << QString::fromStdString(wallet->name());
          }
       }
       if (walletNames.empty()) {
