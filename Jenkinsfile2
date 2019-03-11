@@ -67,7 +67,7 @@ pipeline {
                         script {
                             step ([$class: 'CopyArtifact',
                             projectName: '${JOB_NAME}',
-                            filter: "1.txt",
+                            filter: "terminal_dev\\1.txt",
                             target: 'WBuild']);
                         }
                     }
