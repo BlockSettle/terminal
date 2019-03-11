@@ -226,15 +226,10 @@ static int GuiApp(int argc, char** argv)
    checkFirstStart(settings.get());
 
    QString logoIcon;
-   if (settings->get<NetworkType>(ApplicationSettings::netType) == NetworkType::MainNet) {
-      logoIcon = QLatin1String(":/SPLASH_LOGO");
-   }
-   else {
-      logoIcon = QLatin1String(":/SPLASH_LOGO_TESTNET");
-   }
+   logoIcon = QLatin1String(":/SPLASH_LOGO");
 
    QPixmap splashLogo(logoIcon);
-   BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(390, Qt::SmoothTransformation));
+   BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(640, Qt::SmoothTransformation));
 
    splashScreen.show();
    app.processEvents();
