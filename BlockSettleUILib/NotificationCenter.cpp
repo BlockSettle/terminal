@@ -60,12 +60,36 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 {
    mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
    connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
-      mainWinUi_->tabWidget->setTabIcon(index, QIcon());
+      if (index != mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat)) {
+         mainWinUi_->tabWidget->setTabIcon(index, QIcon());
+      }
    });
 }
 
 void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
+   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
+      int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
+      bool hasUnreadMessages = mainWinUi_->widgetChat->hasUnreadMessages();
+
+      if (hasUnreadMessages) {
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
+      } else {
+         bool isInCurrentChat = false;
+         if (!msg.empty() && msg.size() > 1) {
+            isInCurrentChat = msg[1].toBool();
+         }
+
+         if (mainWinUi_->tabWidget->currentIndex() != chatIndex && isInCurrentChat) {
+            mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
+         } else {
+            mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
+         }
+      }
+      
+      return;
+   }
+
    const auto tabAction = getTabActionFor(nt, msg);
    if ((tabAction.index >= 0) && (mainWinUi_->tabWidget->currentIndex() != tabAction.index)) {
       mainWinUi_->tabWidget->setTabIcon(tabAction.index,
@@ -85,9 +109,6 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 
    case bs::ui::NotifyType::BlockchainTX:
       return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true, true };
-   
-   case bs::ui::NotifyType::NewChatMessage:
-      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat), true, true };
 
    default: break;
    }
