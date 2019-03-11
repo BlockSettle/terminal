@@ -1507,4 +1507,5 @@ ChatUserCategoryListViewStyle {
     qproperty-color_user_default: #c0c0c0; }
 
 ChatMessagesTextEditStyle {
-    qproperty-color_hyperlink: #20709a; }
+    qproperty-color_hyperlink: #20709a;
+    qproperty-color_white: #ff0000; }
