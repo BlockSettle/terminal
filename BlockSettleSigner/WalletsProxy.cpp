@@ -209,6 +209,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
    }
    const auto &cbResult = [this, fileName, walletId, name=wallet->name(), desc=wallet->description(), isPrintable]
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
+      QString fn = fileName;
       if (privKey.isNull()) {
          logger_->error("[WalletsProxy] failed to get root private key: {}", chainCode.toBinStr());
          emit walletError(walletId, tr("Failed to decrypt private key for wallet %1").arg(walletId));
@@ -229,7 +230,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
 
 #if !defined (Q_OS_WIN)
       if (!fileName.startsWith(QLatin1Char('/'))) {
-         fileName = QLatin1String("/") + fileName;
+         fn = QLatin1String("/") + fn;
       }
 #endif
       if (isPrintable) {
@@ -237,7 +238,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
             WalletBackupPdfWriter pdfWriter(walletId, QString::fromStdString(easyData.part1),
                QString::fromStdString(easyData.part2), QPixmap(QLatin1String(":/FULL_LOGO")),
                UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2)));
-            if (!pdfWriter.write(fileName)) {
+            if (!pdfWriter.write(fn)) {
                throw std::runtime_error("write failure");
             }
          } catch (const std::exception &e) {
@@ -247,10 +248,10 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
             return;
          }
       } else {
-         QFile f(fileName);
+         QFile f(fn);
          if (!f.open(QIODevice::WriteOnly)) {
-            logger_->error("[WalletsProxy] failed to open file {} for writing", fileName.toStdString());
-            emit walletError(walletId, tr("Failed to open digital wallet backup file {} for writing").arg(fileName));
+            logger_->error("[WalletsProxy] failed to open file {} for writing", fn.toStdString());
+            emit walletError(walletId, tr("Failed to open digital wallet backup file {} for writing").arg(fn));
             return;
          }
          WalletBackupFile backupData(walletId.toStdString(), name, desc, easyData, edChainCode);

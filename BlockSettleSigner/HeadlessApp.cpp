@@ -234,8 +234,8 @@ void HeadlessAppObj::createWatchingOnlyWallet(const std::string &walletId, const
       return;
    }
 #if !defined (Q_OS_WIN)
-   if (path.find('/') != 0) {}
-      path = "/) + path;
+   if (path.find('/') != 0) {
+      path = "/" + path;
    }
 #endif
    try {
