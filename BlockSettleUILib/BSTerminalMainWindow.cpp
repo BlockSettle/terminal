@@ -30,7 +30,7 @@
 #include "CelerAccountInfoDialog.h"
 #include "CelerMarketDataProvider.h"
 #include "ChatWidget.h"
-#include "ConfigDialog.h"
+#include "Settings/ConfigDialog.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -43,10 +43,10 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
+#include "OfflineSigner.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
 #include "SelectWalletDialog.h"
-#include "SignContainer.h"
 #include "StatusBarView.h"
 #include "TabWithShortcut.h"
 #include "TransactionsViewModel.h"
@@ -56,6 +56,7 @@
 #include "ZMQHelperFunctions.h"
 #include "ZmqSecuredDataConnection.h"
 #include "ArmoryServersProvider.h"
+#include "StartupDialog.h"
 
 #include <spdlog/spdlog.h>
 
@@ -73,11 +74,15 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    loginButtonText_ = tr("Login");
 
-   if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
-      applicationSettings_->SetDefaultSettings(true);
-   }
-
    armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
+
+   bool licenseAccepted = showStartupDialog();
+   if (!licenseAccepted) {
+      QTimer::singleShot(0, this, [this](){
+         qApp->exit(EXIT_FAILURE);
+      });
+      return;
+   }
 
    auto geom = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
    if (!geom.isEmpty()) {
@@ -104,7 +109,16 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_
       , celerConnection_, connectionManager_);
 
+   if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
+      applicationSettings_->SetDefaultSettings(true);
+   }
+
+   InitAssets();
    InitSigningContainer();
+   InitAuthManager();
+
+   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
+      , signContainer_, ui->statusbar);
 
    splashScreen.SetProgress(100);
    splashScreen.close();
@@ -200,8 +214,6 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 		  applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
 	  }
 #endif // NDEBUG
-
-     
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
@@ -421,18 +433,17 @@ void BSTerminalMainWindow::InitAuthManager()
    });
 }
 
-bool BSTerminalMainWindow::InitSigningContainer()
+std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 {
-   const auto &signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
-   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
+   std::shared_ptr<SignContainer> retPtr;
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
-
+   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
+   const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
    SecureBinaryData signerPubKey;
 
    if (runMode == SignContainer::OpMode::Remote) {
-      auto pubKeyString = applicationSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey);
-
-      if (pubKeyString.isEmpty()) {
+      const auto pubKeyString = applicationSettings_->get<std::string>(ApplicationSettings::zmqRemoteSignerPubKey);
+      if (pubKeyString.empty()) {
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Remote Connection")
             , tr("Remote signer public key is unavailable.")
@@ -441,7 +452,11 @@ bool BSTerminalMainWindow::InitSigningContainer()
                " Please import the signer's public key (Settings -> Signer) "
                "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
             , this).exec();
-         return false;
+         return retPtr;
+      }
+
+      if (!bs::network::readZmqKeyString(QByteArray::fromStdString(pubKeyString), signerPubKey, true, logMgr_->logger())) {
+         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load remote signer key");
       }
    }
 
@@ -451,26 +466,35 @@ bool BSTerminalMainWindow::InitSigningContainer()
          , tr("Another Signer (or some other program occupying port %1) is running. Would you like to continue connecting to it?").arg(signerPort)
          , tr("If you wish to continue using GUI signer running on the same host, just select Remote Signer in settings and configure local connection")
          , this).exec() == QDialog::Rejected) {
-         return false;
+         return retPtr;
       }
       runMode = SignContainer::OpMode::Remote;
       signerHost = QLatin1String("127.0.0.1");
+   }
 
+   if (signerPubKey.isNull()) {
       const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
 
       if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->debug("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
+         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
          BSMessageBox(BSMessageBox::messageBoxType::warning
             , tr("Signer Local Connection")
             , tr("Could not load local signer key.")
             , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
             , this).exec();
-         return false;
+         return retPtr;
       }
    }
 
-   signContainer_ = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey
-      , runMode, signerHost, connectionManager_);
+   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey,
+      runMode, signerHost, connectionManager_);
+   return retPtr;
+}
+
+bool BSTerminalMainWindow::InitSigningContainer()
+{
+   signContainer_ = createSigner();
+
    if (!signContainer_) {
       showError(tr("BlockSettle Signer"), tr("BlockSettle Signer creation failure"));
       return false;
@@ -495,12 +519,6 @@ void BSTerminalMainWindow::SignerReady()
    LoadWallets();
 
    if (!widgetsInited_) {
-      InitAuthManager();
-      InitAssets();
-
-      statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
-         , signContainer_, ui->statusbar);
-
       authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
          , assetManager_, applicationSettings_, this);
 
@@ -570,6 +588,32 @@ bool BSTerminalMainWindow::isMDLicenseAccepted() const
 void BSTerminalMainWindow::saveUserAcceptedMDLicense()
 {
    applicationSettings_->set(ApplicationSettings::MDLicenseAccepted, true);
+}
+
+bool BSTerminalMainWindow::showStartupDialog()
+{
+   bool wasInitialized = applicationSettings_->get<bool>(ApplicationSettings::initialized);
+   if (wasInitialized) {
+     return true;
+   }
+
+ #ifdef _WIN32
+   // Read registry value in case it was set with installer. Could be used only on Windows for now.
+   QSettings settings(QLatin1String("HKEY_CURRENT_USER\\Software\\blocksettle\\blocksettle"), QSettings::NativeFormat);
+   bool showLicense = !settings.value(QLatin1String("license_accepted"), false).toBool();
+ #else
+   bool showLicense = true;
+ #endif // _WIN32
+
+   StartupDialog startupDialog(showLicense);
+   startupDialog.init(applicationSettings_, armoryServersProvider_);
+   int result = startupDialog.exec();
+
+   if (result == QDialog::Rejected) {
+      hide();
+      return false;
+   }
+   return true;
 }
 
 void BSTerminalMainWindow::InitAssets()
@@ -685,20 +729,22 @@ void BSTerminalMainWindow::UpdateMainWindowAppearence()
       activateWindow();
    }
 
-   const auto bsTitle = tr("BlockSettle Terminal [%1]");
-   switch (applicationSettings_->get<NetworkType>(ApplicationSettings::netType)) {
-   case NetworkType::TestNet:
-      setWindowTitle(bsTitle.arg(tr("TESTNET")));
-      break;
+   setWindowTitle(tr("BlockSettle Terminal"));
 
-   case NetworkType::RegTest:
-      setWindowTitle(bsTitle.arg(tr("REGTEST")));
-      break;
+//   const auto bsTitle = tr("BlockSettle Terminal [%1]");
+//   switch (applicationSettings_->get<NetworkType>(ApplicationSettings::netType)) {
+//   case NetworkType::TestNet:
+//      setWindowTitle(bsTitle.arg(tr("TESTNET")));
+//      break;
 
-   default:
-      setWindowTitle(tr("BlockSettle Terminal"));
-      break;
-   }
+//   case NetworkType::RegTest:
+//      setWindowTitle(bsTitle.arg(tr("REGTEST")));
+//      break;
+
+//   default:
+//      setWindowTitle(tr("BlockSettle Terminal"));
+//      break;
+//   }
 }
 
 bool BSTerminalMainWindow::isUserLoggedIn() const
@@ -848,9 +894,8 @@ void BSTerminalMainWindow::onReceive()
 
 void BSTerminalMainWindow::createAdvancedTxDialog(const std::string &selectedWalletId)
 {
-   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_,
-                                                  signContainer_, true,
-                                                  logMgr_->logger("ui"), nullptr, this};
+   CreateTransactionDialogAdvanced advancedDialog{armory_, walletsMgr_
+      , signContainer_, true, logMgr_->logger("ui"), nullptr, this};
    advancedDialog.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    if (!selectedWalletId.empty()) {
@@ -877,8 +922,8 @@ void BSTerminalMainWindow::onSend()
       if (applicationSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault)) {
          createAdvancedTxDialog(selectedWalletId);
       } else {
-         CreateTransactionDialogSimple dlg{armory_, walletsMgr_,
-                                           signContainer_, logMgr_->logger("ui"),
+         CreateTransactionDialogSimple dlg{armory_, walletsMgr_, signContainer_
+            , logMgr_->logger("ui"),
                                            this};
          dlg.setOfflineDir(applicationSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 

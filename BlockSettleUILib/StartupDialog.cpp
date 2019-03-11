@@ -20,11 +20,6 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
 
    connect(ui_->pushButtonBack, &QPushButton::clicked, this, &StartupDialog::onBack);
    connect(ui_->pushButtonNext, &QPushButton::clicked, this, &StartupDialog::onNext);
-   connect(ui_->radioButtonArmoryBlockSettle, &QPushButton::clicked, this, &StartupDialog::updateStatus);
-   connect(ui_->radioButtonArmoryCustom, &QPushButton::clicked, this, &StartupDialog::updateStatus);
-   connect(ui_->radioButtonArmoryLocal, &QPushButton::clicked, this, &StartupDialog::updateStatus);
-   connect(ui_->checkBoxTestnet, &QCheckBox::clicked, this, &StartupDialog::updatePort);
-
    ui_->stackedWidget->setCurrentIndex(showLicense_ ? Pages::LicenseAgreement : Pages::Settings);
 
    QFile file;
@@ -34,9 +29,17 @@ StartupDialog::StartupDialog(bool showLicense, QWidget *parent) :
    QString licenseText = QString::fromUtf8(file.readAll());
 
    ui_->textBrowserLicense->setPlainText(licenseText);
-
-   updatePort();
    updateStatus();
+}
+
+void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings, const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider)
+{
+   appSettings_ = appSettings;
+   armoryServersProvider_ = armoryServersProvider;
+   armoryServersWidget_ = new ArmoryServersWidget(armoryServersProvider_, ui_->widgetManageArmory);
+   armoryServersWidget_->adaptForStartupDialog();
+   ui_->widgetManageArmory->layout()->addWidget(armoryServersWidget_);
+   armoryServersWidget_->show();
 }
 
 StartupDialog::~StartupDialog() = default;
@@ -65,8 +68,6 @@ void StartupDialog::onNext()
 
 void StartupDialog::updateStatus()
 {
-   ui_->armoryGroupBox->setVisible(ui_->radioButtonArmoryCustom->isChecked());
-
    int currentPage = ui_->stackedWidget->currentIndex();
 
    if (currentPage == Pages::LicenseAgreement) {
@@ -93,37 +94,4 @@ void StartupDialog::updateStatus()
          break;
       }
    }
-}
-
-StartupDialog::RunMode StartupDialog::runMode() const
-{
-   if (ui_->radioButtonArmoryBlockSettle->isChecked()) {
-      return RunMode::BlocksettleSN;
-   }
-   else if (ui_->radioButtonArmoryLocal->isChecked()) {
-      return RunMode::Local;
-   }
-   else if (ui_->radioButtonArmoryCustom->isChecked()) {
-      return RunMode::Custom;
-   }
-}
-
-QString StartupDialog::armoryDbIp() const
-{
-   return ui_->lineEditArmoryDBHost->text();
-}
-
-int StartupDialog::armoryDbPort() const
-{
-   return ui_->spinBoxArmoryDBPort->value();
-}
-
-NetworkType StartupDialog::networkType() const
-{
-   return ui_->checkBoxTestnet->isChecked() ? NetworkType::TestNet : NetworkType::MainNet;
-}
-
-void StartupDialog::updatePort()
-{
-   ui_->spinBoxArmoryDBPort->setValue(ApplicationSettings::GetDefaultArmoryLocalPort(networkType()));
 }

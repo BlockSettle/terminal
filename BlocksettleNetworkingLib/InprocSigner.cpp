@@ -34,11 +34,11 @@ InprocSigner::InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &wa
 
 bool InprocSigner::Start()
 {
-   if (!walletsPath_.empty()) {
+   if (!walletsPath_.empty() && !walletsMgr_->walletsLoaded()) {
       const auto &cbLoadProgress = [this](int cur, int total) {
          logger_->debug("[InprocSigner::Start] loading wallets: {} of {}", cur, total);
       };
-      walletsMgr_->loadWallets(netType_, walletsPath_, cbLoadProgress);
+      walletsMgr_->loadWallets(netType_, walletsPath_, false, cbLoadProgress);
    }
    inited_ = true;
    emit ready();

@@ -14,18 +14,41 @@ HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<Serve
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::string &walletsPath, NetworkType netType
-   , const bool &hasUI, const bool &backupEnabled)
-   : QObject(nullptr), ServerConnectionListener()
+   , bool wo, const bool &backupEnabled)
+   : ServerConnectionListener()
    , connection_(conn)
    , logger_(logger)
    , walletsMgr_(walletsMgr)
    , walletsPath_(walletsPath)
    , backupPath_(walletsPath + "/../backup")
    , netType_(netType)
-   , hasUI_(hasUI)
+   , watchingOnly_(wo)
    , backupEnabled_(backupEnabled)
+{}
+
+void HeadlessContainerListener::setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
+   , const std::function<void(const std::string &)> &cbPeerDisconn
+   , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
+   , const std::function<void(const BinaryData &)> &cbTxSigned
+   , const std::function<void(const BinaryData &)> &cbCancelTxSign
+   , const std::function<void(int64_t, bool)> &cbXbtSpent
+   , const std::function<void(const std::string &)> &cbAsAct
+   , const std::function<void(const std::string &)> &cbAsDeact)
 {
-   connect(this, &HeadlessContainerListener::xbtSpent, this, &HeadlessContainerListener::onXbtSpent);
+   const auto &cbWrapXbtSpent = [this, cbXbtSpent](int64_t value, bool autoSign) {
+      onXbtSpent(value, autoSign);
+      if (cbXbtSpent) {
+         cbXbtSpent(value, autoSign);
+      }
+   };
+   cbPeerConn_ = cbPeerConn;
+   cbPeerDisconn_ = cbPeerDisconn;
+   cbPwd_ = cbPwd;
+   cbTxSigned_ = cbTxSigned;
+   cbCancelTxSign_ = cbCancelTxSign;
+   cbXbtSpent_ = cbWrapXbtSpent;
+   cbAsAct_ = cbAsAct;
+   cbAsDeact_ = cbAsDeact;
 }
 
 HeadlessContainerListener::~HeadlessContainerListener() noexcept
@@ -100,14 +123,14 @@ void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId)
 {
    logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
-   emit clientDisconnected(clientId);
+//   emit clientDisconnected(clientId);
 }
 
 void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, const std::string &data)
 {
    headless::RequestPacket packet;
    if (!packet.ParseFromString(data)) {
-      logger_->error("[HeadlessContainerListener] failed to parse request packet");
+      logger_->error("[{}] failed to parse request packet", __func__);
       return;
    }
 
@@ -157,12 +180,16 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
 
 void HeadlessContainerListener::OnPeerConnected(const std::string &ip)
 {
-   emit peerConnected(QString::fromStdString(ip));
+   if (cbPeerConn_) {
+      cbPeerConn_(ip);
+   }
 }
 
 void HeadlessContainerListener::OnPeerDisconnected(const std::string &ip)
 {
-   emit peerDisconnected(QString::fromStdString(ip));
+   if (cbPeerDisconn_) {
+      cbPeerDisconn_(ip);
+   }
 }
 
 SecureBinaryData HeadlessContainerListener::authTicket(const std::string &clientId) const
@@ -180,7 +207,7 @@ void HeadlessContainerListener::AuthResponse(const std::string &clientId, headle
    headless::AuthenticationReply response;
    if (errMsg.empty()) {
       response.set_authticket(authTicket(clientId).toBinStr());
-      if (hasUI_) {
+      if (cbPwd_) {
          response.set_hasui(true);
       }
    }
@@ -195,11 +222,37 @@ void HeadlessContainerListener::AuthResponse(const std::string &clientId, headle
    }
    logger_->info("[HeadlessContainerListener] client {} authenticated", toHex(clientId));
    connectedClients_.insert(clientId);
-   emit clientAuthenticated(clientId, connection_->GetClientInfo(clientId));
+//   emit clientAuthenticated(clientId, connection_->GetClientInfo(clientId));
+}
+
+bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::headless::RequestType reqType) const
+{
+   if (watchingOnly_) {
+      switch (reqType) {
+      case headless::CancelSignTxRequestType:
+      case headless::SignTXRequestType:
+      case headless::SignPartialTXRequestType:
+      case headless::SignPayoutTXRequestType:
+      case headless::SignTXMultiRequestType:
+      case headless::PasswordRequestType:
+      case headless::CreateHDWalletRequestType:
+      case headless::GetRootKeyRequestType:
+      case headless::SetLimitsRequestType:
+      case headless::ChangePasswordRequestType:
+         return false;
+      default:    break;
+      }
+   }
+   return true;
 }
 
 bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, headless::RequestPacket packet)
 {
+   if (!isRequestAllowed(packet.type())) {
+      logger_->info("[{}] request {} is not applicable at this state", __func__, (int)packet.type());
+      return false;
+   }
+
    switch (packet.type()) {
    case headless::HeartbeatType:
       packet.set_data({});
@@ -303,7 +356,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       const auto outAddr = bs::Address::fromRecipient(recip);
       outputVal += recip->getValue();
    }
-   uint64_t value = outputVal;
+   int64_t value = outputVal;
 
    txSignReq.fee = request.fee();
    txSignReq.RBF = request.rbf();
@@ -361,14 +414,18 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
          const auto tx = partial ? wallet->signPartialTXRequest(txSignReq, pass)
             : wallet->signTXRequest(txSignReq, pass, keepDuplicatedRecipients);
          SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
-         emit xbtSpent(value, autoSign);
+         if (cbXbtSpent_) {
+            cbXbtSpent_(value, autoSign);
+         }
       }
       catch (const std::exception &e) {
          logger_->error("[HeadlessContainerListener] failed to sign {} TX request: {}", partial ? "partial" : "full", e.what());
          SignTXResponse(clientId, id, reqType, std::string("failed to sign: ") + e.what());
          passwords_.erase(wallet->walletId());
          passwords_.erase(rootWalletId);
-         emit autoSignDeactivated(rootWalletId);
+         if (cbAsDeact_) {
+            cbAsDeact_(rootWalletId);
+         }
       }
    };
 
@@ -377,7 +434,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       return true;
    }
 
-   const QString prompt = tr("Outgoing %1Transaction").arg(partial ? tr("Partial ") : tr(""));
+   const std::string prompt = "Outgoing " + partial ? "Partial " : "" "Transaction";
    return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onPassword, request.applyautosignrules());
 }
 
@@ -389,7 +446,9 @@ bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::Re
       return false;
    }
 
-   emit cancelSignTx(request.txid());
+   if (cbCancelTxSign_) {
+      cbCancelTxSign_(request.txid());
+   }
 
    return true;
 }
@@ -449,7 +508,9 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
          SignTXResponse(clientId, id, reqType, "no auth priv/pub keys found");
          passwords_.erase(authWallet->walletId());
          passwords_.erase(rootWalletId);
-         emit autoSignDeactivated(rootWalletId);
+         if (cbAsDeact_) {
+            cbAsDeact_(rootWalletId);
+         }
          return;
       }
 
@@ -472,12 +533,12 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
       return true;
    }
 
-   const QString prompt = tr("Signing pay-out transaction for %1 XBT:\n"
-      "  Settlement ID: %2"
-   ).arg(QString::number(utxo.getValue() / BTCNumericTypes::BalanceDivider, 'f', 8))
-      .arg(QString::fromStdString(settlementId.toHexStr()));
+   std::stringstream ssPrompt;
+   ssPrompt << "Signing pay-out transaction for " << std::fixed
+      << std::setprecision(8) << utxo.getValue() / BTCNumericTypes::BalanceDivider
+      << " XBT:\n Settlement ID: " << settlementId.toHexStr();
 
-   return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onAuthPassword, request.applyautosignrules());
+   return RequestPasswordIfNeeded(clientId, txSignReq, ssPrompt.str(), onAuthPassword, request.applyautosignrules());
 }
 
 bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId, const headless::RequestPacket &packet)
@@ -503,7 +564,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
       walletMap[wallet->walletId()] = wallet;
    }
 
-   QString prompt = tr("Signing multi-wallet input (auth revoke) transaction");
+   const std::string prompt("Signing multi-wallet input (auth revoke) transaction");
 
    const auto cbOnAllPasswords = [this, txMultiReq, walletMap, reqType, clientId, id=packet.id()]
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
@@ -540,8 +601,8 @@ void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsi
    if (!sendData(packet.SerializeAsString(), clientId)) {
       logger_->error("[HeadlessContainerListener] failed to send response signTX packet");
    }
-   if (!tx.isNull()) {
-      emit txSigned();
+   if (cbTxSigned_) {
+      cbTxSigned_(tx);
    }
 }
 
@@ -596,7 +657,7 @@ void HeadlessContainerListener::passwordReceived(const std::string &walletId,
 
 bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clientId
    , const bs::core::wallet::TXSignRequest &txReq
-   , const QString &prompt, const PasswordReceivedCb &cb, bool autoSign)
+   , const std::string &prompt, const PasswordReceivedCb &cb, bool autoSign)
 {
    const auto &wallet = walletsMgr_->getWalletById(txReq.walletId);
    if (!wallet) {
@@ -628,7 +689,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
 
 bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::string &clientId
    , const bs::core::wallet::TXMultiSignRequest &txMultiReq, const bs::core::WalletMap &walletMap
-   , const QString &prompt, const PasswordsReceivedCb &cb)
+   , const std::string &prompt, const PasswordsReceivedCb &cb)
 {
    TempPasswords tempPasswords;
    for (const auto &wallet : walletMap) {
@@ -673,7 +734,7 @@ bool HeadlessContainerListener::RequestPasswordsIfNeeded(int reqId, const std::s
 }
 
 bool HeadlessContainerListener::RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &txReq
-   , const QString &prompt, const PasswordReceivedCb &cb)
+   , const std::string &prompt, const PasswordReceivedCb &cb)
 {
    if (cb) {
       auto &callbacks = passwordCallbacks_[txReq.walletId];
@@ -683,14 +744,14 @@ bool HeadlessContainerListener::RequestPassword(const std::string &clientId, con
       }
    }
 
-   if (hasUI_) {
-      emit passwordRequired(txReq, prompt);
+   if (cbPwd_) {
+      cbPwd_(txReq, prompt);
       return true;
    }
    else {
       headless::PasswordRequest request;
-      if (!prompt.isEmpty()) {
-         request.set_prompt(prompt.toStdString());
+      if (!prompt.empty()) {
+         request.set_prompt(prompt);
       }
       if (!txReq.walletId.empty()) {
          request.set_walletid(txReq.walletId);
@@ -818,7 +879,7 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
       else {
          bs::core::wallet::TXSignRequest txReq;
          txReq.walletId = hdWallet->walletId();
-         return RequestPassword(clientId, txReq, tr("Creating a wallet %1").arg(QString::fromStdString(txReq.walletId)), onPassword);
+         return RequestPassword(clientId, txReq, "Creating a wallet " + txReq.walletId, onPassword);
       }
    }
    else {
@@ -1003,10 +1064,17 @@ bool HeadlessContainerListener::onSetLimits(const std::string &clientId, headles
       }
       if (!wallet->encryptionTypes().empty() && !isAutoSignActive(request.rootwalletid())) {
          addPendingAutoSignReq(request.rootwalletid());
-         emit autoSignRequiresPwd(request.rootwalletid());
+         if (cbPwd_) {
+            bs::core::wallet::TXSignRequest txReq;
+            txReq.walletId = request.rootwalletid();
+            txReq.autoSign = true;
+            cbPwd_(txReq, {});
+         }
       }
       else {
-         emit autoSignActivated(request.rootwalletid());
+         if (cbAsAct_) {
+            cbAsAct_(request.rootwalletid());
+         }
          AutoSignActiveResponse(clientId, request.rootwalletid(), true, {}, packet.id());
       }
    }
@@ -1216,7 +1284,7 @@ bool HeadlessContainerListener::CheckSpendLimit(uint64_t value, bool autoSign, c
    return true;
 }
 
-void HeadlessContainerListener::onXbtSpent(qint64 value, bool autoSign)
+void HeadlessContainerListener::onXbtSpent(int64_t value, bool autoSign)
 {
    if (autoSign) {
       limits_.autoSignSpendXBT -= value;
@@ -1248,7 +1316,9 @@ void HeadlessContainerListener::activateAutoSign(const std::string &clientId, co
       }
    }
    passwords_[wallet->walletId()] = password;
-   emit autoSignActivated(wallet->walletId());
+   if (cbAsAct_) {
+      cbAsAct_(wallet->walletId());
+   }
    if (clientId.empty()) {
       for (const auto &authTicket : authTickets_) {
          AutoSignActiveResponse(authTicket.first, wallet->walletId(), true);
@@ -1268,7 +1338,9 @@ void HeadlessContainerListener::deactivateAutoSign(const std::string &clientId, 
    else {
       passwords_.erase(walletId);
    }
-   emit autoSignDeactivated(walletId);
+   if (cbAsDeact_) {
+      cbAsDeact_(walletId);
+   }
    if (clientId.empty()) {
       for (const auto &authTicket : authTickets_) {
          AutoSignActiveResponse(authTicket.first, walletId, false, reason);

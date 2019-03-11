@@ -4,6 +4,7 @@
 #include <QSplashScreen>
 #include <QProgressBar>
 #include <QPixmap>
+#include <QLabel>
 
 class BSTerminalSplashScreen : public QSplashScreen
 {
@@ -20,6 +21,7 @@ public:
 
 private:
    QProgressBar* progress_;
+   QLabel* blockSettleLabel_;
 };
 
 #endif // __ARMORY_SPLASH_SCREEN_H__
