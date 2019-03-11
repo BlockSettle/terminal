@@ -8,7 +8,7 @@ from component_configurator import Configurator
 class SpdlogSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '0.17.0'
+        self._version = '1.3.1'
         self._package_name = 'SPDLog' + self._version
         self._package_url = "https://github.com/gabime/spdlog/archive/v" + self._version + ".zip"
 
