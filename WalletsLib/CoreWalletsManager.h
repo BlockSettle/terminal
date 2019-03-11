@@ -37,6 +37,7 @@ namespace bs {
 
          void reset();
 
+         bool walletsLoaded() const { return walletsLoaded_; }
          void loadWallets(NetworkType, const std::string &walletsPath, bool wo = false, const CbProgress &cb = nullptr);
          void backupWallet(const HDWalletPtr &, const std::string &targetDir) const;
 
@@ -76,7 +77,7 @@ namespace bs {
 
       private:
          std::shared_ptr<spdlog::logger>        logger_;
-
+         bool  walletsLoaded_ = false;
          const unsigned int                  nbBackupFilesToKeep_;
          std::unordered_map<std::string, HDWalletPtr> hdWallets_;
          std::unordered_map<std::string, WalletPtr>   wallets_;

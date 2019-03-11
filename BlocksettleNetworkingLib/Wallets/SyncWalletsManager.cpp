@@ -1057,6 +1057,9 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
 
 void WalletsManager::resumeRescan()
 {
+   if (!appSettings_) {
+      return;
+   }
    std::unordered_map<std::string, std::shared_ptr<bs::sync::hd::Wallet>> rootWallets;
    for (const auto &resumeIdx : appSettings_->UnfinishedWalletsRescan()) {
       const auto &rootWallet = getHDRootForLeaf(resumeIdx.first);
