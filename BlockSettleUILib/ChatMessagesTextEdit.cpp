@@ -8,7 +8,7 @@
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
-   : QTextBrowser(parent)
+   : QTextBrowser(parent), _internalStyle(this)
 {
    tableFormat.setBorder(0);
    tableFormat.setCellPadding(0);
@@ -164,7 +164,7 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
 void ChatMessagesTextEdit::insertLoadMore() {
    QTextCursor cursor(textCursor());
    cursor.movePosition(QTextCursor::Start);
-   cursor.insertHtml(QLatin1Literal("<a href=\"load_more\" style=\"color:#20709a\">Load More...</a>"));
+   cursor.insertHtml(QString(QLatin1Literal("<a href=\"load_more\" style=\"color:%1\">Load More...</a>")).arg(_internalStyle.colorHyperlink().name()));
 }
 
 void ChatMessagesTextEdit::loadMore() {
@@ -367,7 +367,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text) {
       }
 
       QString linkText = changedText.mid(startIndex, endIndex - startIndex);
-      QString hyperlinkText = QLatin1Literal("<a href=\"") + linkText + QLatin1Literal("\" style=\"color:#20709a\">") + linkText + QLatin1Literal("</a>");
+      QString hyperlinkText = QString(QLatin1Literal("<a href=\"%1\" style=\"color:%2\">%1</a>")).arg(linkText).arg(_internalStyle.colorHyperlink().name());
 
       changedText = changedText.replace(startIndex, endIndex - startIndex, hyperlinkText);
 
