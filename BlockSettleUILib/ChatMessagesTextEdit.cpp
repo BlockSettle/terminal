@@ -378,7 +378,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text) {
    changedText.replace(QLatin1Literal("\n"), QLatin1Literal("<br>"));
 
    // set text color as white
-   changedText = QString(QLatin1Literal("<font color=\"%1\">%2</font>")).arg(internalStyle_.colorWhite()).arg(changedText);
+   changedText = QString(QLatin1Literal("<font color=\"%1\">%2</font>")).arg(internalStyle_.colorWhite().name()).arg(changedText);
 
    return changedText;
 }
