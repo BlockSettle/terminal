@@ -3,6 +3,7 @@
 #include <QClipboard>
 #include <spdlog/spdlog.h>
 #include "AuthProxy.h"
+#include "Wallets/SyncWalletsManager.h"
 
 using namespace bs::hd;
 
@@ -11,14 +12,17 @@ using namespace bs::hd;
 
 QmlFactory::QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
    , const std::shared_ptr<ConnectionManager> &connectionManager
-   , std::shared_ptr<bs::core::WalletsManager> walletsMgr
    , const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
    : QObject(parent)
    , settings_(settings)
    , connectionManager_(connectionManager)
-   , walletsMgr_(walletsMgr)
    , logger_(logger)
 {
+}
+
+void QmlFactory::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+{
+   walletsMgr_ = walletsMgr;
 }
 
 WalletInfo *QmlFactory::createWalletInfo() {
@@ -27,13 +31,17 @@ WalletInfo *QmlFactory::createWalletInfo() {
    return wi;
 }
 
-WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) {
+WalletInfo *QmlFactory::createWalletInfo(const QString &walletId)
+{
+   if (!walletsMgr_) {
+      return nullptr;
+   }
    // ? move logic to WalletsManager ?
    bs::hd::WalletInfo *wi = nullptr;
 
    const auto &wallet = walletsMgr_->getWalletById(walletId.toStdString());
    if (wallet) {
-      const std::shared_ptr<bs::core::hd::Wallet> &rootWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
+      const auto rootWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
       wi = new bs::hd::WalletInfo(wallet, rootWallet);
    }
    else {

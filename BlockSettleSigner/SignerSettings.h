@@ -7,7 +7,7 @@
 
 class QSettings;
 
-
+//SignerSettings should be separated to headless and GUI parts once all the communication will be stabilized
 class SignerSettings : public QObject
 {
    Q_OBJECT
@@ -32,7 +32,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
 
 public:
-   SignerSettings(const QStringList &args = {}, const QString &fileName = QLatin1String("signer.ini"));
+   SignerSettings(const QStringList &args, const QString &fileName = QLatin1String("signer.ini"));
 
    SignerSettings(const SignerSettings&) = delete;
    SignerSettings& operator = (const SignerSettings&) = delete;
@@ -149,5 +149,6 @@ private:
    std::string    writableDir_;
    QStringList    reqFiles_;
 };
+
 
 #endif // __SIGNER_SETTINGS_H__
