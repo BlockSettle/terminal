@@ -104,6 +104,12 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_
       , celerConnection_, connectionManager_);
 
+   InitAuthManager();
+   InitAssets();
+
+   statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
+      , signContainer_, ui->statusbar);
+
    InitSigningContainer();
 
    splashScreen.SetProgress(100);
@@ -505,12 +511,6 @@ void BSTerminalMainWindow::SignerReady()
    LoadWallets();
 
    if (!widgetsInited_) {
-      InitAuthManager();
-      InitAssets();
-
-      statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
-         , signContainer_, ui->statusbar);
-
       authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
          , assetManager_, applicationSettings_, this);
 
