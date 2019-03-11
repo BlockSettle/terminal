@@ -403,10 +403,6 @@ void ApplicationSettings::SetDefaultSettings(bool toFile)
    reset(pubBridgeHost, toFile);
    reset(pubBridgePort, toFile);
 
-   reset(runArmoryLocally, toFile);
-   reset(netType, toFile);
-   reset(armoryDbIp, toFile);
-   reset(armoryDbPort, toFile);
    reset(celerHost, toFile);
    reset(celerPort, toFile);
    reset(launchToTray, toFile);

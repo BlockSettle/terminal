@@ -7,14 +7,17 @@ configure_file(TerminalVersion.h.in TerminalVersion.h)
 FILE(GLOB SOURCES
    *.cpp
    ManageEncryption/*.cpp
+   Settings/*.cpp
 )
 FILE(GLOB HEADERS
    *.h
    ManageEncryption/*.h
+   Settings/*.h
 )
 FILE(GLOB UI_FILES
    *.ui
    ManageEncryption/*.ui
+   Settings/*.ui
 )
 
 FILE(GLOB RESOURCE_FILES *.qrc)
