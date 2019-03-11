@@ -98,27 +98,28 @@ bool ZMQ_BIP15X_ServerConnection::ReadFromDataSocket() {
    }
 
    // Decrypt data here.
-   ProcessIncomingData(data.ToString());
+   ProcessIncomingData(data.ToString(), clientIdStr);
 //   if (decData == "") {
 //      logger_->error("[{}] {} failed decryption", __func__, connectionName_);
 //      return false;
 //   }
 
 // TO DO: Refactor such that decrypted data is placed in notification
-   notifyListenerOnData(clientIdStr, data.ToString());
+//   notifyListenerOnData(clientIdStr, data.ToString());
    return true;
 }
 
 //
-bool ZMQ_BIP15X_ServerConnection::SendDataToClient(const std::string& clientId
-   , const std::string& data, const SendResultCb &cb) {
-   // TO DO: Encrypt data here.
+bool ZMQ_BIP15X_ServerConnection::SendDataToClient(const string& clientId
+   , const string& data, const SendResultCb &cb) {
+   // TO DO: Encrypt data here if needed.
 
    return QueueDataToSend(clientId, data, cb, false);
 }
 
 
-void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData) {
+void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
+   , const string& clientID) {
    size_t position;
 
    // Process all incoming data.
@@ -152,12 +153,11 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData) {
    {
       //decrypt packet
       size_t plainTextSize = packetData.getSize() - POLY1305MACLEN;
-      auto result = bip151Connection_->decryptPacket(
-         packetData.getPtr(), packetData.getSize(),
-         (uint8_t*)packetData.getPtr(), packetData.getSize());
+      auto result = bip151Connection_->decryptPacket(packetData.getPtr()
+         , packetData.getSize(), (uint8_t*)packetData.getPtr()
+         , packetData.getSize());
 
-      if (result != 0)
-      {
+      if (result != 0) {
 //         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1)
 //         {
             /*
@@ -192,14 +192,12 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData) {
    uint8_t msgType =
       ZMQ_BIP15X_Msg::getPacketType(packetData.getRef());
 
-   if (msgType > ZMQ_MSGTYPE_AEAD_THESHOLD)
-   {
-      processAEADHandshake(move(packetData));
+   if (msgType > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
+      processAEADHandshake(move(packetData), clientID);
       return;
    }
 
-   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)
-   {
+   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
       //can't get this far without fully setup AEAD
       return;
    }
@@ -223,17 +221,15 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData) {
    {*/
       //unregistered command
       ZMQ_BIP15X_Msg msgObj;
-      msgObj.parsePacket(packetData);
-      if (msgObj.getType() != ZMQ_MSGTYPE_SINGLEPACKET)
-      {
+      msgObj.parsePacket(packetData.getRef());
+      if (msgObj.getType() != ZMQ_MSGTYPE_SINGLEPACKET) {
          //invalid msg type, kill connection
          return;
       }
 
       auto&& messageRef = msgObj.getSingleBinaryMessage();
 
-      if (messageRef.getSize() == 0)
-      {
+      if (messageRef.getSize() == 0) {
          //invalid msg, kill connection
          return;
       }
@@ -260,63 +256,64 @@ bool ZMQ_BIP15X_ServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr& d
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
-{
-   auto writeToClient = [this](uint8_t type,
-      const BinaryDataRef& msg, bool encrypt)->void
-   {
+bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
+      , const string& clientID) {
+   auto writeToClient = [this, clientID](uint8_t type, const BinaryDataRef& msg
+      , bool encrypt)->bool {
       ZMQ_BIP15X_Msg outMsg;
       BIP151Connection* connPtr = nullptr;
-      if (encrypt)
+      if (encrypt) {
          connPtr = bip151Connection_.get();
+      }
 
       vector<BinaryData> outData = outMsg.serialize(msg, connPtr, type, 0);
 //      serializedStack_->push_back(move(aeadMsg));
 
-// TO DO: Proper send call.
-//      SendDataToClient(move(outData[0].toBinStr()));
+      return SendDataToClient(clientID, move(outData[0].toBinStr()));
    };
 
-   auto processHandshake = [this, &writeToClient](const BinaryData& msgdata)->bool
-   {
-      ZMQ_BIP15X_Msg wsMsg;
+   auto processHandshake = [this, &writeToClient](
+      const BinaryData& msgdata)->bool {
+      ZMQ_BIP15X_Msg zmqMsg;
 
-      if (!wsMsg.parsePacket(msgdata.getRef())) {
+      if (!zmqMsg.parsePacket(msgdata.getRef())) {
          //invalid packet
          return false;
       }
 
-      auto dataBdr = wsMsg.getSingleBinaryMessage();
-      switch (wsMsg.getType())
-      {
+      auto dataBdr = zmqMsg.getSingleBinaryMessage();
+      switch (zmqMsg.getType()) {
       case ZMQ_MSGTYPE_AEAD_SETUP:
       {
          //send pubkey message
-         writeToClient(
-            ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY,
-            bip151Connection_->getOwnPubKey(),
-            false);
+         if (!writeToClient(ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY,
+            bip151Connection_->getOwnPubKey(), false)) {
+            logger_->error("[processHandshake] ZMG_MSGTYPE_AEAD_SETUP: "
+               "Response 1 not sent");
+         }
 
          //init bip151 handshake
          BinaryData encinitData(ENCINITMSGSIZE);
-         if (bip151Connection_->getEncinitData(
-            encinitData.getPtr(), ENCINITMSGSIZE,
-            BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0)
-         {
+         if (bip151Connection_->getEncinitData(encinitData.getPtr()
+            , ENCINITMSGSIZE
+            , BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0) {
             //failed to init handshake, kill connection
             return false;
          }
 
-         writeToClient(ZMQ_MSGTYPE_AEAD_ENCINIT, encinitData.getRef(), false);
+         if (!writeToClient(ZMQ_MSGTYPE_AEAD_ENCINIT, encinitData.getRef()
+            , false)) {
+            logger_->error("[processHandshake] ZMG_MSGTYPE_AEAD_SETUP: "
+               "Response 2 not sent");
+         }
          break;
       }
 
       case ZMQ_MSGTYPE_AEAD_ENCACK:
       {
          //process client encack
-         if (bip151Connection_->processEncack(
-            dataBdr.getPtr(), dataBdr.getSize(), true) != 0)
-         {
+         if (bip151Connection_->processEncack(dataBdr.getPtr()
+            , dataBdr.getSize(), true) != 0) {
             //failed to init handshake, kill connection
             return false;
          }
@@ -326,19 +323,16 @@ void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
 
       case ZMQ_MSGTYPE_AEAD_REKEY:
       {
-         if (bip151Connection_->getBIP150State() !=
-            BIP150State::SUCCESS)
-         {
+         if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
             //can't rekey before auth, kill connection
             return false;
          }
 
          //process rekey
-         if (bip151Connection_->processEncack(
-            dataBdr.getPtr(), dataBdr.getSize(), false) != 0)
-         {
+         if (bip151Connection_->processEncack(dataBdr.getPtr()
+            , dataBdr.getSize(), false) != 0) {
             //failed to init handshake, kill connection
-            LOGWARN << "failed to process rekey";
+            std::cout << "failed to process rekey" << std::endl;
             return false;
          }
 
@@ -348,23 +342,25 @@ void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
       case ZMQ_MSGTYPE_AEAD_ENCINIT:
       {
          //process client encinit
-         if (bip151Connection_->processEncinit(
-            dataBdr.getPtr(), dataBdr.getSize(), false) != 0)
-         {
+         if (bip151Connection_->processEncinit(dataBdr.getPtr()
+            , dataBdr.getSize(), false) != 0) {
             //failed to init handshake, kill connection
             return false;
          }
 
          //return encack
          BinaryData encackData(BIP151PUBKEYSIZE);
-         if (bip151Connection_->getEncackData(
-            encackData.getPtr(), BIP151PUBKEYSIZE) != 0)
-         {
+         if (bip151Connection_->getEncackData(encackData.getPtr()
+            , BIP151PUBKEYSIZE) != 0) {
             //failed to init handshake, kill connection
             return false;
          }
 
-         writeToClient(ZMQ_MSGTYPE_AEAD_ENCACK, encackData.getRef(), false);
+         if (!writeToClient(ZMQ_MSGTYPE_AEAD_ENCACK, encackData.getRef()
+            , false)) {
+            logger_->error("[processHandshake] ZMG_MSGTYPE_AEAD_ENCINIT: "
+               "Response not sent");
+         }
 
          break;
       }
@@ -373,34 +369,30 @@ void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
       {
          bool goodChallenge = true;
          auto challengeResult =
-            bip151Connection_->processAuthchallenge(
-               dataBdr.getPtr(),
-               dataBdr.getSize(),
-               true); //true: step #1 of 6
+            bip151Connection_->processAuthchallenge(dataBdr.getPtr()
+            , dataBdr.getSize(), true); //true: step #1 of 6
 
-         if (challengeResult == -1)
-         {
+         if (challengeResult == -1) {
             //auth fail, kill connection
             return false;
          }
-         else if (challengeResult == 1)
-         {
+         else if (challengeResult == 1) {
             goodChallenge = false;
          }
 
          BinaryData authreplyBuf(BIP151PRVKEYSIZE * 2);
-         if (bip151Connection_->getAuthreplyData(
-            authreplyBuf.getPtr(),
-            authreplyBuf.getSize(),
-            true, //true: step #2 of 6
-            goodChallenge) == -1)
-         {
+         if (bip151Connection_->getAuthreplyData(authreplyBuf.getPtr()
+            , authreplyBuf.getSize(), true //true: step #2 of 6
+            , goodChallenge) == -1) {
             //auth setup failure, kill connection
             return false;
          }
 
-         writeToClient(ZMQ_MSGTYPE_AUTH_REPLY,
-            authreplyBuf.getRef(), true);
+         if (!writeToClient(ZMQ_MSGTYPE_AUTH_REPLY, authreplyBuf.getRef()
+            , true)) {
+            logger_->error("[processHandshake] ZMG_MSGTYPE_AUTH_CHALLENGE: "
+               "Response not sent");
+         }
 
          break;
       }
@@ -409,50 +401,44 @@ void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
       {
          bool goodPropose = true;
          auto proposeResult = bip151Connection_->processAuthpropose(
-            dataBdr.getPtr(),
-            dataBdr.getSize());
+            dataBdr.getPtr(), dataBdr.getSize());
 
-         if (proposeResult == -1)
-         {
+         if (proposeResult == -1) {
             //auth setup failure, kill connection
             return false;
          }
-         else if (proposeResult == 1)
-         {
+         else if (proposeResult == 1) {
             goodPropose = false;
          }
-         else
-         {
+         else {
             //keep track of the propose check state
             bip151Connection_->setGoodPropose();
          }
 
          BinaryData authchallengeBuf(BIP151PRVKEYSIZE);
-         if (bip151Connection_->getAuthchallengeData(
-            authchallengeBuf.getPtr(),
-            authchallengeBuf.getSize(),
-            "", //empty string, use chosen key from processing auth propose
-            false, //false: step #4 of 6
-            goodPropose) == -1)
-         {
+         if (bip151Connection_->getAuthchallengeData(authchallengeBuf.getPtr()
+            , authchallengeBuf.getSize()
+            , "" //empty string, use chosen key from processing auth propose
+            , false //false: step #4 of 6
+            , goodPropose) == -1) {
             //auth setup failure, kill connection
             return false;
          }
 
-         writeToClient(ZMQ_MSGTYPE_AUTH_CHALLENGE,
-            authchallengeBuf.getRef(), true);
+         if (!writeToClient(ZMQ_MSGTYPE_AUTH_CHALLENGE
+            , authchallengeBuf.getRef(), true)) {
+            logger_->error("[processHandshake] ZMG_MSGTYPE_AUTH_PROPOSE: "
+               "Response not sent");
+         }
 
          break;
       }
 
       case ZMQ_MSGTYPE_AUTH_REPLY:
       {
-         if (bip151Connection_->processAuthreply(
-            dataBdr.getPtr(),
-            dataBdr.getSize(),
-            false,
-            bip151Connection_->getProposeFlag()) != 0)
-         {
+         if (bip151Connection_->processAuthreply(dataBdr.getPtr()
+            , dataBdr.getSize(), false
+            , bip151Connection_->getProposeFlag()) != 0) {
             //invalid auth setup, kill connection
             return false;
          }
@@ -465,6 +451,7 @@ void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
       }
 
       default:
+         logger_->error("[processHandshake] Unknown message type.");
          //unexpected msg id, kill connection
          return false;
       }
@@ -472,8 +459,10 @@ void ZMQ_BIP15X_ServerConnection::processAEADHandshake(BinaryData msg)
       return true;
    };
 
-//   if (!processHandshake(msg))
-//      closeConnection();
+   if (!processHandshake(msgObj)) {
+      // TO DO: Log the failure.
+      logger_->error("[{}] BIP 150/151 handshake process failed.");
+   }
 }
 
 // Copied from Armory.
@@ -481,19 +470,16 @@ AuthPeersLambdas ZMQ_BIP15X_ServerConnection::getAuthPeerLambda() const
 {
    auto authPeerPtr = authPeers_;
 
-   auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>&
-   {
+   auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>& {
       return authPeerPtr->getPeerNameMap();
    };
 
    auto getPrivKey = [authPeerPtr](
-      const BinaryDataRef& pubkey)->const SecureBinaryData&
-   {
+      const BinaryDataRef& pubkey)->const SecureBinaryData& {
       return authPeerPtr->getPrivateKey(pubkey);
    };
 
-   auto getAuthSet = [authPeerPtr](void)->const set<SecureBinaryData>&
-   {
+   auto getAuthSet = [authPeerPtr](void)->const set<SecureBinaryData>& {
       return authPeerPtr->getPublicKeySet();
    };
 

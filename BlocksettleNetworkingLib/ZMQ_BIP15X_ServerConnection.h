@@ -40,11 +40,13 @@ protected:
    bool ReadFromDataSocket() override;
 
 private:
-   void ProcessIncomingData(const std::string& encData);
-   bool processAEADHandshake(const ZMQ_BIP15X_Msg& msgObj);
+   void ProcessIncomingData(const std::string& encData
+      , const std::string& clientID);
+   bool processAEADHandshake(const BinaryData& msgObj
+      , const std::string& clientID);
    void promptUser(const BinaryDataRef& newKey, const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
-   void processAEADHandshake(BinaryData);
+   void processAEADHandshake(BinaryData& msg, const std::string& clientID);
 
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::shared_ptr<BIP151Connection> bip151Connection_;

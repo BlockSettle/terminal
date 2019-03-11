@@ -15,13 +15,11 @@ ZMQ_BIP15X_DataConnection::ZMQ_BIP15X_DataConnection(
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
    string filename(CLIENT_AUTH_PEER_FILENAME);
-   if (!ephemeralPeers)
-   {
+   if (!ephemeralPeers) {
       authPeers_ = make_shared<AuthorizedPeers>(
          datadir, filename);
    }
-   else
-   {
+   else {
       authPeers_ = make_shared<AuthorizedPeers>();
    }
 
@@ -41,13 +39,11 @@ ZMQ_BIP15X_DataConnection::ZMQ_BIP15X_DataConnection(
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
    string filename(CLIENT_AUTH_PEER_FILENAME);
-   if (!ephemeralPeers)
-   {
+   if (!ephemeralPeers) {
       authPeers_ = make_shared<AuthorizedPeers>(
          datadir, filename);
    }
-   else
-   {
+   else {
       authPeers_ = make_shared<AuthorizedPeers>();
    }
 
@@ -60,19 +56,16 @@ AuthPeersLambdas ZMQ_BIP15X_DataConnection::getAuthPeerLambda() const
 {
    auto authPeerPtr = authPeers_;
 
-   auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>&
-   {
+   auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>& {
       return authPeerPtr->getPeerNameMap();
    };
 
    auto getPrivKey = [authPeerPtr](
-      const BinaryDataRef& pubkey)->const SecureBinaryData&
-   {
+      const BinaryDataRef& pubkey)->const SecureBinaryData& {
       return authPeerPtr->getPrivateKey(pubkey);
    };
 
-   auto getAuthSet = [authPeerPtr](void)->const set<SecureBinaryData>&
-   {
+   auto getAuthSet = [authPeerPtr](void)->const set<SecureBinaryData>& {
       return authPeerPtr->getPublicKeySet();
    };
 
@@ -174,8 +167,7 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
    BinaryData payload(pendingData_);
 
    // If we've completed the BIP 150/151 handshake, decrypt.
-   if (bip151Connection_->connectionComplete())
-   {
+   if (bip151Connection_->connectionComplete()) {
       //decrypt packet
       auto result = bip151Connection_->decryptPacket(
          payload.getPtr(), payload.getSize(),
@@ -203,11 +195,9 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
       return;
    }
 
-   if (inMsg.getType() > ZMQ_MSGTYPE_AEAD_THESHOLD
-      && !bip151Connection_->connectionComplete())
-   {
-      if (!processAEADHandshake(inMsg))
-      {
+   if (inMsg.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD
+      && !bip151Connection_->connectionComplete()) {
+      if (!processAEADHandshake(inMsg)) {
          //invalid AEAD message, kill connection
          return;
       }
@@ -216,8 +206,7 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
       return;
    }
 
-   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)
-   {
+   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
       cout << "DEBUG: encryption layer is uninitialized, aborting connection" << endl;
       return;
    }
@@ -326,15 +315,15 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 
    case ZMQ_MSGTYPE_AEAD_ENCINIT:
    {
-      if (bip151Connection_->processEncinit(
-         msgbdr.getPtr(), msgbdr.getSize(), false) != 0)
+      if (bip151Connection_->processEncinit(msgbdr.getPtr(), msgbdr.getSize()
+         , false) != 0) {
          return false;
+      }
 
       //valid encinit, send client side encack
       BinaryData encackPayload(BIP151PUBKEYSIZE);
-      if (bip151Connection_->getEncackData(
-         encackPayload.getPtr(), BIP151PUBKEYSIZE) != 0)
-      {
+      if (bip151Connection_->getEncackData(encackPayload.getPtr()
+         , BIP151PUBKEYSIZE) != 0) {
          return false;
       }
 
@@ -342,10 +331,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 
       //start client side encinit
       BinaryData encinitPayload(ENCINITMSGSIZE);
-      if (bip151Connection_->getEncinitData(
-         encinitPayload.getPtr(), ENCINITMSGSIZE,
-         BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0)
-      {
+      if (bip151Connection_->getEncinitData(encinitPayload.getPtr()
+         , ENCINITMSGSIZE, BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0) {
          return false;
       }
 
@@ -355,13 +342,13 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
    }
    case ZMQ_MSGTYPE_AEAD_ENCACK:
    {
-      if (bip151Connection_->processEncack(
-         msgbdr.getPtr(), msgbdr.getSize(), true) == -1)
+      if (bip151Connection_->processEncack(msgbdr.getPtr(), msgbdr.getSize()
+         , true) == -1) {
          return false;
+      }
 
       //have we seen the server's pubkey?
-      if (serverPubkeyProm_ != nullptr)
-      {
+      if (serverPubkeyProm_ != nullptr) {
          //if so, wait on the promise
          auto serverProm = serverPubkeyProm_;
          auto fut = serverProm->get_future();
@@ -376,12 +363,9 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 
       BinaryData authchallengeBuf(BIP151PRVKEYSIZE);
       if (bip151Connection_->getAuthchallengeData(
-         authchallengeBuf.getPtr(),
-         authchallengeBuf.getSize(),
-         ss.str(),
-         true, //true: auth challenge step #1 of 6
-         false) != 0) //false: have not processed an auth propose yet
-      {
+         authchallengeBuf.getPtr(), authchallengeBuf.getSize(), ss.str()
+         , true //true: auth challenge step #1 of 6
+         , false) != 0) { //false: have not processed an auth propose yet
          return false;
       }
 
@@ -393,13 +377,15 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
    case ZMQ_MSGTYPE_AEAD_REKEY:
    {
       //rekey requests before auth are invalid
-      if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)
+      if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
          return false;
+      }
 
       //if connection is already setup, we only accept rekey enack messages
       if (bip151Connection_->processEncack(
-         msgbdr.getPtr(), msgbdr.getSize(), false) == -1)
+         msgbdr.getPtr(), msgbdr.getSize(), false) == -1) {
          return false;
+      }
 
       ++innerRekeyCount_;
       break;
@@ -407,20 +393,16 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 
    case ZMQ_MSGTYPE_AUTH_REPLY:
    {
-      if (bip151Connection_->processAuthreply(
-         msgbdr.getPtr(),
-         msgbdr.getSize(),
-         true, //true: step #2 out of 6
-         false) != 0) //false: haven't seen an auth challenge yet
-      {
+      if (bip151Connection_->processAuthreply(msgbdr.getPtr(), msgbdr.getSize()
+         , true //true: step #2 out of 6
+         , false) != 0) { //false: haven't seen an auth challenge yet
          return false;
       }
 
       BinaryData authproposeBuf(BIP151PRVKEYSIZE);
       if (bip151Connection_->getAuthproposeData(
          authproposeBuf.getPtr(),
-         authproposeBuf.getSize()) != 0)
-      {
+         authproposeBuf.getSize()) != 0) {
          return false;
       }
 
@@ -432,32 +414,26 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
    {
       bool goodChallenge = true;
       auto challengeResult =
-         bip151Connection_->processAuthchallenge(
-            msgbdr.getPtr(),
-            msgbdr.getSize(),
-            false); //true: step #4 of 6
+         bip151Connection_->processAuthchallenge(msgbdr.getPtr()
+            , msgbdr.getSize(), false); //true: step #4 of 6
 
-      if (challengeResult == -1)
-      {
+      if (challengeResult == -1) {
          //auth fail, kill connection
          return false;
       }
-      else if (challengeResult == 1)
-      {
+      else if (challengeResult == 1) {
          goodChallenge = false;
       }
 
       BinaryData authreplyBuf(BIP151PRVKEYSIZE * 2);
       auto validReply = bip151Connection_->getAuthreplyData(
-         authreplyBuf.getPtr(),
-         authreplyBuf.getSize(),
-         false, //true: step #5 of 6
-         goodChallenge);
+         authreplyBuf.getPtr(), authreplyBuf.getSize()
+         , false //true: step #5 of 6
+         , goodChallenge);
 
       writeData(authreplyBuf, ZMQ_MSGTYPE_AUTH_REPLY, true);
 
-      if (validReply != 0)
-      {
+      if (validReply != 0) {
          //auth setup failure, kill connection
          return false;
       }

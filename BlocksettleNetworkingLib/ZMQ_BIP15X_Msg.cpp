@@ -20,7 +20,6 @@ bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
    auto packetlen = brrPacket.get_uint32_t();
    if (packetlen != brrPacket.getSizeRemaining())
    {
-      LOGERR << "invalid packet size";
       return false;
    }
 
@@ -61,7 +60,7 @@ bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
    }
 
    default:
-      LOGERR << "invalid packet type";
+      break;
    }
 
    return false;
@@ -76,13 +75,15 @@ bool ZMQ_BIP15X_Msg::parseSinglePacket(const BinaryDataRef& bdr)
    nbytes payload
    */
 
-   if (id_ != UINT32_MAX)
+   if (id_ != UINT32_MAX) {
       return false;
+   }
    BinaryRefReader brr(bdr);
 
    type_ = brr.get_uint8_t();
-   if (type_ != ZMQ_MSGTYPE_SINGLEPACKET)
+   if (type_ != ZMQ_MSGTYPE_SINGLEPACKET) {
       return false;
+   }
 
    id_ = brr.get_uint32_t();
    packets_.emplace(make_pair(
@@ -160,7 +161,7 @@ bool ZMQ_BIP15X_Msg::parseMessageWithoutId(const BinaryDataRef& bdr)
    BinaryRefReader brr(bdr);
 
    type_ = brr.get_uint8_t();
-   if (type_ < ZMQ_MSGTYPE_AEAD_THESHOLD)
+   if (type_ < ZMQ_MSGTYPE_AEAD_THRESHOLD)
       return false;
 
    packets_.emplace(make_pair(
@@ -231,8 +232,9 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const string& payload
 vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id) {
    //is this payload carrying a msgid?
-   if (type > ZMQ_MSGTYPE_AEAD_THESHOLD)
+   if (type > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       return serializePacketWithoutId(payload, connPtr, type);
+   }
 
    /***
    Fragmented packet seralization
