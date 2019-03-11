@@ -88,6 +88,7 @@ private:
    bool isMDLicenseAccepted() const;
    void saveUserAcceptedMDLicense();
 
+   bool showStartupDialog();
    void LoadCCDefinitionsFromPuB();
 
 signals:

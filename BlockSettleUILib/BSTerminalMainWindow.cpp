@@ -30,7 +30,7 @@
 #include "CelerAccountInfoDialog.h"
 #include "CelerMarketDataProvider.h"
 #include "ChatWidget.h"
-#include "ConfigDialog.h"
+#include "Settings/ConfigDialog.h"
 #include "ConnectionManager.h"
 #include "CreateTransactionDialogAdvanced.h"
 #include "CreateTransactionDialogSimple.h"
@@ -56,6 +56,7 @@
 #include "ZMQHelperFunctions.h"
 #include "ZmqSecuredDataConnection.h"
 #include "ArmoryServersProvider.h"
+#include "StartupDialog.h"
 
 #include <spdlog/spdlog.h>
 
@@ -73,11 +74,15 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    loginButtonText_ = tr("Login");
 
-   if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
-      applicationSettings_->SetDefaultSettings(true);
-   }
-
    armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
+
+   bool licenseAccepted = showStartupDialog();
+   if (!licenseAccepted) {
+      QTimer::singleShot(0, this, [this](){
+         qApp->exit(EXIT_FAILURE);
+      });
+      return;
+   }
 
    auto geom = settings->get<QRect>(ApplicationSettings::GUI_main_geometry);
    if (!geom.isEmpty()) {
@@ -103,6 +108,10 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
    authSignManager_ = std::make_shared<AuthSignManager>(logMgr_->logger(), applicationSettings_
       , celerConnection_, connectionManager_);
+
+   if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
+      applicationSettings_->SetDefaultSettings(true);
+   }
 
    InitAssets();
    InitSigningContainer();
@@ -581,6 +590,32 @@ void BSTerminalMainWindow::saveUserAcceptedMDLicense()
    applicationSettings_->set(ApplicationSettings::MDLicenseAccepted, true);
 }
 
+bool BSTerminalMainWindow::showStartupDialog()
+{
+   bool wasInitialized = applicationSettings_->get<bool>(ApplicationSettings::initialized);
+   if (wasInitialized) {
+     return true;
+   }
+
+ #ifdef _WIN32
+   // Read registry value in case it was set with installer. Could be used only on Windows for now.
+   QSettings settings(QLatin1String("HKEY_CURRENT_USER\\Software\\blocksettle\\blocksettle"), QSettings::NativeFormat);
+   bool showLicense = !settings.value(QLatin1String("license_accepted"), false).toBool();
+ #else
+   bool showLicense = true;
+ #endif // _WIN32
+
+   StartupDialog startupDialog(showLicense);
+   startupDialog.init(applicationSettings_, armoryServersProvider_);
+   int result = startupDialog.exec();
+
+   if (result == QDialog::Rejected) {
+      hide();
+      return false;
+   }
+   return true;
+}
+
 void BSTerminalMainWindow::InitAssets()
 {
    ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
@@ -694,20 +729,22 @@ void BSTerminalMainWindow::UpdateMainWindowAppearence()
       activateWindow();
    }
 
-   const auto bsTitle = tr("BlockSettle Terminal [%1]");
-   switch (applicationSettings_->get<NetworkType>(ApplicationSettings::netType)) {
-   case NetworkType::TestNet:
-      setWindowTitle(bsTitle.arg(tr("TESTNET")));
-      break;
+   setWindowTitle(tr("BlockSettle Terminal"));
 
-   case NetworkType::RegTest:
-      setWindowTitle(bsTitle.arg(tr("REGTEST")));
-      break;
+//   const auto bsTitle = tr("BlockSettle Terminal [%1]");
+//   switch (applicationSettings_->get<NetworkType>(ApplicationSettings::netType)) {
+//   case NetworkType::TestNet:
+//      setWindowTitle(bsTitle.arg(tr("TESTNET")));
+//      break;
 
-   default:
-      setWindowTitle(tr("BlockSettle Terminal"));
-      break;
-   }
+//   case NetworkType::RegTest:
+//      setWindowTitle(bsTitle.arg(tr("REGTEST")));
+//      break;
+
+//   default:
+//      setWindowTitle(tr("BlockSettle Terminal"));
+//      break;
+//   }
 }
 
 bool BSTerminalMainWindow::isUserLoggedIn() const

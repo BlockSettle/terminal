@@ -1,7 +1,7 @@
 #ifndef ARMORYSERVERSWIDGET_H
 #define ARMORYSERVERSWIDGET_H
 
-#include <QDialog>
+#include <QWidget>
 #include <ApplicationSettings.h>
 
 #include "ArmoryServersProvider.h"
@@ -11,13 +11,15 @@ namespace Ui {
 class ArmoryServersWidget;
 }
 
-class ArmoryServersWidget : public QDialog
+class ArmoryServersWidget : public QWidget
 {
    Q_OBJECT
 
 public:
    explicit ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider>& armoryServersProvider, QWidget *parent = nullptr);
    ~ArmoryServersWidget();
+
+   void adaptForStartupDialog();
 
 public slots:
    void onAddServer();
@@ -29,6 +31,7 @@ public slots:
 
 signals:
    void reconnectArmory();
+   void needClose();
 
 private slots:
    void resetForm();
