@@ -51,25 +51,28 @@ void ChatUserCategoryListViewDelegate::paint(QPainter *painter,
    {
       itemOption.palette.setColor(QPalette::Text, _internalStyle.colorUserOnline());
       itemOption.palette.setColor(QPalette::HighlightedText, _internalStyle.colorUserOnline());
+      QStyledItemDelegate::paint(painter, itemOption, index);
+
+      // draw dot
+      bool haveMessage =
+            qvariant_cast<bool>(index.data(ChatUsersViewModel::HaveNewMessageRole));
+      if (haveMessage)
+      {
+         auto text = index.data(Qt::DisplayRole).toString();
+         QFontMetrics fm(itemOption.font, painter->device());
+         auto textRect = fm.boundingRect(itemOption.rect, 0, text);
+         auto textWidth = textRect.width();
+         QPoint dotPoint(textWidth + DOT_SHIFT, textRect.height()/2 + (itemOption.rect.height() * index.row()));
+         painter->save();
+         painter->setBrush(QBrush(_internalStyle.colorUserOnline(), Qt::SolidPattern));
+         painter->drawEllipse(dotPoint, DOT_RADIUS, DOT_RADIUS);
+         painter->restore();
+      }
+
+      return;
    }
 
-   QStyledItemDelegate::paint(painter, itemOption, index);
-
-   // draw dot
-   bool haveMessage =
-         qvariant_cast<bool>(index.data(ChatUsersViewModel::HaveNewMessageRole));
-   if (haveMessage)
-   {
-      auto text = index.data(Qt::DisplayRole).toString();
-      QFontMetrics fm(itemOption.font, painter->device());
-      auto textRect = fm.boundingRect(itemOption.rect, 0, text);
-      auto textWidth = textRect.width();
-      QPoint dotPoint(textWidth + DOT_SHIFT, textRect.height()/2 + (itemOption.rect.height() * index.row()));
-      painter->save();
-      painter->setBrush(QBrush(_internalStyle.colorUserOnline(), Qt::SolidPattern));
-      painter->drawEllipse(dotPoint, DOT_RADIUS, DOT_RADIUS);
-      painter->restore();
-   }
+   return QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
 ChatUserCategoryListView::ChatUserCategoryListView(QWidget *parent) : QListView(parent), _internalStyle(this)

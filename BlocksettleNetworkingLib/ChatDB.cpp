@@ -208,16 +208,15 @@ bool ChatDB::updateMessageStatus(const QString& messageId, int ustatus)
    return true;
 }
 
-std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &ownUserId, const QString &userId)
+std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &userId)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String("SELECT sender, receiver, id, timestamp, enctext, state FROM messages "\
-      "WHERE (sender=:user AND receiver=:owner) OR (receiver=:user AND sender=:owner)"))) {
+      "WHERE sender=:user OR receiver=:user"))) {
       logger_->error("[ChatDB::getUserMessages] failed to prepare query: {}", query.lastError().text().toStdString());
       return {};
    }
    query.bindValue(QString::fromStdString(":user"), userId);
-   query.bindValue(QString::fromStdString(":owner"), ownUserId);
    if (!query.exec()) {
       logger_->error("[ChatDB::getUserMessages] failed to exec query: {}", query.lastError().text().toStdString());
       return {};

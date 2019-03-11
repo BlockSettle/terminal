@@ -4,7 +4,6 @@ ChatUserData::ChatUserData(QObject *parent)  : QObject(parent)
 {
    setUserConnectionStatus(ConnectionStatus::Offline);
    setUserState(State::Unknown);
-   setHaveNewMessage(false);
 }
 
 QString ChatUserData::userName() const
