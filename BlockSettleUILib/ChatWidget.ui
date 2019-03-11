@@ -233,7 +233,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>YOU: </string>
+               <string>User: </string>
               </property>
              </widget>
             </item>
@@ -576,7 +576,7 @@
            <number>0</number>
           </property>
           <property name="leftMargin">
-           <number>3</number>
+           <number>0</number>
           </property>
           <property name="topMargin">
            <number>0</number>
@@ -607,7 +607,7 @@
              </font>
             </property>
             <property name="text">
-             <string>CHAT ROOMS</string>
+             <string>OTC</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>

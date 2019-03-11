@@ -319,7 +319,7 @@ QMenu::item:first {
 *[title="true"] {
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   padding: 5px 0; }
-  *[title="true"] QLabel {
+  *[title="true"] {
     color: #e7e8e9;
     text-transform: uppercase; }
 
@@ -967,6 +967,9 @@ QDateEdit {
   height: 18px;
   max-height: 20px;
   color: #ffffff; }
+  QComboBox:focus,
+  QDateEdit:focus {
+    border: 1px solid #247dac; }
   QComboBox QAbstractItemView,
   QDateEdit QAbstractItemView {
     color: #0b1619;
@@ -988,6 +991,7 @@ QDateEdit {
   QComboBox::drop-down:disabled,
   QDateEdit::drop-down:disabled {
     border-left-color: #28363a; }
+
 
 QComboBox:editable:disabled {
   background: transparent; }
