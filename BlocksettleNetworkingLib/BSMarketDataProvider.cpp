@@ -113,7 +113,7 @@ bs::network::MDFields GetMDFields(const Blocksettle::Communication::BlocksettleM
 
 void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
 {
-   Blocksettle::Communication::BlocksettleMarketData::FullSnapshot snapshot;
+   Blocksettle::Communication::BlocksettleMarketData::MDSnapshot snapshot;
    if (!snapshot.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::OnFullSnapshot] failed to parse snapshot");
       return ;
@@ -157,7 +157,7 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
 
 void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
 {
-   Blocksettle::Communication::BlocksettleMarketData::IncrementalUpdate update;
+   Blocksettle::Communication::BlocksettleMarketData::MDSnapshot update;
    if (!update.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::OnIncrementalUpdate] failed to parse update");
       return ;
