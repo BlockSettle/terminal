@@ -25,7 +25,7 @@ namespace bs {
 
       public:
          SettlementWallet(const std::string &walletId, const std::string &name, const std::string &desc
-            , const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger);
+            , SignContainer *, const std::shared_ptr<spdlog::logger> &logger);
          ~SettlementWallet() override = default;
 
          SettlementWallet(const SettlementWallet&) = delete;

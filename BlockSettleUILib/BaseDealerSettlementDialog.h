@@ -63,7 +63,7 @@ protected:
    virtual void readyToAccept();
    void startAccepting();
 
-   void connectToProgressBar(QProgressBar *progressBar);
+   void connectToProgressBar(QProgressBar *progressBar, QLabel *timeLeftLabel);
    void connectToHintLabel(QLabel *hintLabel, QLabel *errorLabel);
 
    void setHintText(const QString& hint);
@@ -88,6 +88,7 @@ private:
    std::shared_ptr<SignContainer>            signContainer_;
    std::shared_ptr<bs::sync::hd::Wallet>     rootWallet_;
    QProgressBar   *progressBar_ = nullptr;
+   QLabel         *timeLeftLabel_ = nullptr;
    QLabel         *hintLabel_ = nullptr;
    QLabel         *errorLabel_ = nullptr;
    bool           hintSetToCritical_ = false;

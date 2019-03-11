@@ -27,7 +27,7 @@ namespace bs {
          public:
             Group(const bs::hd::Path &path, const std::string &walletName
                , const std::string &name, const std::string &desc
-               , const std::shared_ptr<SignContainer> &container
+               , SignContainer *container
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
                : QObject(nullptr), signContainer_(container)
@@ -77,7 +77,7 @@ namespace bs {
 //               , const std::shared_ptr<hd::Leaf> &) const;
 
          protected:
-            std::shared_ptr<SignContainer>   signContainer_;
+            SignContainer  *  signContainer_;
             std::shared_ptr<spdlog::logger>  logger_;
             bs::hd::Path   path_;
             std::string    walletName_, name_, desc_;
@@ -93,7 +93,7 @@ namespace bs {
 
          public:
             AuthGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, const std::shared_ptr<SignContainer> &
+               , const std::string &desc, SignContainer *
                , const std::shared_ptr<spdlog::logger>& logger
                , bool extOnlyAddresses = false);
 
@@ -117,7 +117,7 @@ namespace bs {
 
          public:
             CCGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, const std::shared_ptr<SignContainer> &container
+               , const std::string &desc, SignContainer *container
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
                : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_CC),

@@ -88,7 +88,7 @@ signals:
    void UsersAdd(const std::vector<std::string>& users);
    void UsersDel(const std::vector<std::string>& users);
    void IncomingFriendRequest(const std::vector<std::string>& users);
-   void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &);
+   void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
    void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
 

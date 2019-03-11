@@ -16,7 +16,7 @@ using namespace bs::sync;
 
 
 SettlementWallet::SettlementWallet(const std::string &walletId, const std::string &name, const std::string &desc
-   , const std::shared_ptr<SignContainer> &container,const std::shared_ptr<spdlog::logger> &logger)
+   , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger)
    : PlainWallet(walletId, name, desc, container, logger)
 {}
 

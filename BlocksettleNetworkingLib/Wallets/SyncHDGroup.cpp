@@ -40,8 +40,13 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> hd::Group::getAllLeaves() const
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const std::string &walletId)
 {
-   if (getLeaf(elem) != nullptr) {
-      return nullptr;
+   const auto prevLeaf = getLeaf(elem);
+   if (prevLeaf != nullptr) {
+      if (walletId != prevLeaf->walletId()) {
+         logger_->warn("[{}] wallet ids mismatch, new: {}, existing: {}", __func__, walletId
+            , prevLeaf->walletId());
+      }
+      return prevLeaf;
    }
    auto pathLeaf = path_;
    pathLeaf.append(elem, true);
@@ -173,7 +178,7 @@ void hd::Group::rescanBlockchain(const hd::Group::cb_scan_notify &cb, const hd::
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(const bs::hd::Path &path, const std::string &name
-   , const std::string &desc, const std::shared_ptr<SignContainer> &container
+   , const std::string &desc, SignContainer *container
    , const std::shared_ptr<spdlog::logger>& logger, bool extOnlyAddresses)
    : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Auth), desc
            , container, logger, extOnlyAddresses)

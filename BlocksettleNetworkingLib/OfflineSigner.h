@@ -1,8 +1,8 @@
 #ifndef __OFFLINE_SIGNER_H__
 #define __OFFLINE_SIGNER_H__
 
-#include "SignContainer.h"
 #include <vector>
+#include "HeadlessContainer.h"
 
 
 namespace spdlog {
@@ -18,11 +18,15 @@ namespace bs {
 }
 
 
-class OfflineSigner : public SignContainer
+class OfflineSigner : public LocalSigner
 {
    Q_OBJECT
 public:
-   OfflineSigner(const std::shared_ptr<spdlog::logger> &, const QString &dir);
+   OfflineSigner(const std::shared_ptr<spdlog::logger> &
+      , const QString &homeDir, NetworkType, const QString &port
+      , const std::shared_ptr<ConnectionManager> &
+      , const std::shared_ptr<ApplicationSettings> &
+      , const SecureBinaryData& pubKey);
    ~OfflineSigner() noexcept = default;
 
    OfflineSigner(const OfflineSigner&) = delete;
@@ -30,9 +34,11 @@ public:
    OfflineSigner(OfflineSigner&&) = delete;
    OfflineSigner& operator = (OfflineSigner&&) = delete;
 
-   void SetTargetDir(const QString& targetDir);
+   void setTargetDir(const QString& targetDir);
+   QString targetDir() const;
 
-   bool Start() override;
+   bool isOffline() const override { return true; }
+   bool isWalletOffline(const std::string &) const override { return true; }
 
    RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
@@ -52,25 +58,19 @@ public:
    void SendPassword(const std::string &walletId, const PasswordType &password, bool) override
    {}
 
-   RequestId CancelSignTx(const BinaryData &txId) override
-   { return 0; }
-
-   RequestId SetUserId(const BinaryData &) override { return 0; }
-   RequestId createHDLeaf(const std::string &walletId, const bs::hd::Path &, const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
+   RequestId createHDLeaf(const std::string &walletId, const bs::hd::Path &
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
    RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override { return 0; }
-   RequestId DeleteHDRoot(const std::string &) override { return 0; }
-   RequestId DeleteHDLeaf(const std::string &) override { return 0; }
    RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
-   RequestId GetInfo(const std::string &) override { return 0; }
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass
       , bool addNew, bool removeOld, bool dryRun) override { return 0; }
 
-private:
-   QString        targetDir_;
-   RequestId      seqId_ = 1;
+protected:
+   virtual QStringList args() const;
+   virtual QString pidFileName() const;
 };
 
 

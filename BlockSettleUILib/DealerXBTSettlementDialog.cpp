@@ -33,7 +33,7 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
    connect(celerClient.get(), &CelerClient::OnConnectionClosed,
       this, &DealerXBTSettlementDialog::reject);
 
-   connectToProgressBar(ui_->progressBar);
+   connectToProgressBar(ui_->progressBar, ui_->labelTimeLeft);
    connectToHintLabel(ui_->labelHint, ui_->labelError);
 
    ui_->labelProductGroup->setText(QString::fromStdString(bs::network::Asset::toString(settlContainer_->assetType())));

@@ -26,7 +26,7 @@ namespace bs {
 
       public:
          PlainWallet(const std::string &walletId, const std::string &name, const std::string &desc
-            , const std::shared_ptr<SignContainer> &, const std::shared_ptr<spdlog::logger> &logger);
+            , SignContainer *, const std::shared_ptr<spdlog::logger> &logger);
          ~PlainWallet() override;
 
          PlainWallet(const PlainWallet&) = delete;
