@@ -33,7 +33,7 @@ namespace Chat {
       handler.OnChatroomsList(*this);
    }
    
-   const std::vector<std::shared_ptr<ChatRoomData> >&ChatroomsListResponse::getChatRoomList()
+   const std::vector<std::shared_ptr<ChatRoomData> >&ChatroomsListResponse::getChatRoomList() const
    {
       return roomList_;
    }

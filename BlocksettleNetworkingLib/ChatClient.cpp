@@ -169,8 +169,10 @@ void ChatClient::OnContactsActionResponse(const Chat::ContactsActionResponse& re
 void ChatClient::OnChatroomsList(const Chat::ChatroomsListResponse& response)
 {
    QStringList rooms;
-   for (auto room : response.getDataList()){
-      rooms << QString::fromStdString(room);
+   
+   std::vector<std::shared_ptr<Chat::ChatRoomData>> roomList = response.getChatRoomList();
+   for (auto room : roomList){
+      rooms << QString::fromStdString(room->toJsonString());
    }
    logger_->debug("[ChatClient::OnChatroomsList]: Received chatroom list from server: {}",
                   rooms.join(QLatin1String(", ")).prepend(QLatin1Char('[')).append(QLatin1Char(']')).toStdString()
