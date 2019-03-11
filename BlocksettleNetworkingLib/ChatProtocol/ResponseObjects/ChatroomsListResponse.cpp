@@ -4,17 +4,22 @@ namespace Chat {
    ChatroomsListResponse::ChatroomsListResponse(std::vector<std::string> dataList)
       : ListResponse (ResponseType::ResponseChatroomsList, dataList)
    {
-      
+      roomList_.reserve(dataList_.size());
+      for (const auto& roomData: dataList_){
+         roomList_.push_back(ChatRoomData::fromJSON(roomData));
+      }
    }
    
    ChatroomsListResponse::ChatroomsListResponse(std::vector<std::shared_ptr<ChatRoomData>> roomList)
-      : ChatroomsListResponse({""})
+      : ListResponse (ResponseType::ResponseChatroomsList, {})
+      , roomList_(roomList)
    {
       std::vector<std::string> rooms;
-      for (auto room: roomList){
+      for (const auto& room: roomList_){
          rooms.push_back(room->toJsonString());
       }
       dataList_ = std::move(rooms);
+      
    }
    
    std::shared_ptr<Response> ChatroomsListResponse::fromJSON(const std::string& jsonData)

@@ -42,7 +42,7 @@ QJsonObject ChatRoomData::toJson() const
    return data;
 }
 
-std::shared_ptr<DataObject> ChatRoomData::fromJSON(const std::string& jsonData)
+std::shared_ptr<ChatRoomData> ChatRoomData::fromJSON(const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
    

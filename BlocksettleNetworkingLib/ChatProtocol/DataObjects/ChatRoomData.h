@@ -48,6 +48,6 @@ namespace Chat {
       // DataObject interface
    public:
       QJsonObject toJson() const;
-      static std::shared_ptr<DataObject> fromJSON(const std::string& jsonData);
+      static std::shared_ptr<ChatRoomData> fromJSON(const std::string& jsonData);
    };
 }
