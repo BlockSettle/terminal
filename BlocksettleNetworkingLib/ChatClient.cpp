@@ -372,7 +372,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
 void ChatClient::retrieveUserMessages(const QString &userId)
 {
-   auto messages = chatDb_->getUserMessages(userId);
+   auto messages = chatDb_->getUserMessages(QString::fromStdString(currentUserId_), userId);
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {

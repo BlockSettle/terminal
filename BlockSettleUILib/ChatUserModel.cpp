@@ -1,8 +1,9 @@
 #include "ChatUserModel.h"
+#include "UserHasher.h"
 
 ChatUserModel::ChatUserModel(QObject *parent) : QObject(parent)
 {
-
+   hasher_ = std::make_shared<UserHasher>();
 }
 
 void ChatUserModel::addUser(const ChatUserDataPtr &chatUserDataPtr)
@@ -52,6 +53,19 @@ bool ChatUserModel::isChatUserExist(const QString &userId) const
    return false;
 }
 
+bool ChatUserModel::hasUnreadMessages() const
+{
+   ChatUserDataPtr chatUserDataPtr;
+   foreach( chatUserDataPtr, _chatUserDataListPtr )
+   {
+      if (chatUserDataPtr->haveNewMessage()) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
 void ChatUserModel::setUserStatus(const QString &userId, const ChatUserData::ConnectionStatus &userStatus)
 {
    ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
@@ -82,8 +96,57 @@ void ChatUserModel::setUserState(const QString &userId, const ChatUserData::Stat
    emit chatUserDataListChanged(_chatUserDataListPtr);
 }
 
+void ChatUserModel::setUserHaveNewMessage(const QString &userId, const bool &haveNewMessage) {
+   ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
+
+   if (!chatUserDataPtr)
+   {
+      return;
+   }
+
+   chatUserDataPtr->setHaveNewMessage(haveNewMessage);
+
+   emit chatUserHaveNewMessageChanged(chatUserDataPtr);
+   emit chatUserDataListChanged(_chatUserDataListPtr);
+}
+
 ChatUserDataPtr ChatUserModel::getUserByUserId(const QString &userId) const
 {
+   auto chatUserIt = std::find_if (std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr), [userId](const ChatUserDataPtr &chatUserDataPtr)->bool
+   {
+      return (0 == chatUserDataPtr->userId().compare(userId));
+   });
+
+   if (chatUserIt == std::end(_chatUserDataListPtr))
+   {
+      return ChatUserDataPtr();
+   }
+
+   ChatUserDataPtr chatUserDataPtr((*chatUserIt));
+
+   return chatUserDataPtr;
+}
+
+ChatUserDataPtr ChatUserModel::getUserByUserIdPrefix(const QString &userIdPrefix) const
+{
+   auto chatUserIt = std::find_if (std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr), [userIdPrefix](const ChatUserDataPtr &chatUserDataPtr)->bool
+   {
+      return (true == chatUserDataPtr->userId().startsWith(userIdPrefix));
+   });
+
+   if (chatUserIt == std::end(_chatUserDataListPtr))
+   {
+      return ChatUserDataPtr();
+   }
+
+   ChatUserDataPtr chatUserDataPtr((*chatUserIt));
+
+   return chatUserDataPtr;
+}
+
+ChatUserDataPtr ChatUserModel::getUserByEmail(const QString &email) const
+{
+   QString userId = QString::fromStdString(hasher_->deriveKey(email.toStdString()));
    auto chatUserIt = std::find_if (std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr), [userId](const ChatUserDataPtr &chatUserDataPtr)->bool
    {
       return (0 == chatUserDataPtr->userId().compare(userId));
