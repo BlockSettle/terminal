@@ -56,7 +56,6 @@
         <file>resources/ios-infinity.ttf</file>
         <file>resources/progress-bar-pattern.png</file>
         <file alias="SPLASH_LOGO">resources/splashlogo_splashscreen.png</file>
-        <file alias="SPLASH_LOGO_TESTNET">resources/splashlogo_testnet.png</file>
         <file alias="ICON_BITCOIN">resources/bitcoin-main-net.png</file>
         <file alias="ICON_BITCOIN_2X">resources/bitcoin-main-net@2x.png</file>
         <file alias="ICON_BITCOIN_GRAY">resources/bitcoin-disabled.png</file>
