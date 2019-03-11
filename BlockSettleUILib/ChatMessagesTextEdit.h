@@ -14,6 +14,29 @@ namespace Chat {
    class MessageData;
 }
 
+class ChatMessagesTextEditStyle : public QWidget
+{
+   Q_OBJECT
+
+   Q_PROPERTY(QColor color_hyperlink READ colorHyperlink
+              WRITE setColorHyperlink)
+
+public:
+   inline explicit ChatMessagesTextEditStyle(QWidget *parent)
+      : QWidget(parent), _colorHyperlink(Qt::blue)
+   {
+      setVisible(false);
+   }
+
+   QColor colorHyperlink() const { return _colorHyperlink; }
+   void setColorHyperlink(const QColor &colorHyperlink) {
+      _colorHyperlink = colorHyperlink;
+   }
+
+private:
+   QColor _colorHyperlink;
+};
+
 class ChatMessagesTextEdit : public QTextBrowser
 {
    Q_OBJECT
@@ -69,6 +92,7 @@ private:
 
    QTextTableFormat tableFormat;
    QTextTable *table;
+   ChatMessagesTextEditStyle _internalStyle;
 };
 
 #endif
