@@ -4,69 +4,70 @@ ChatUserData::ChatUserData(QObject *parent)  : QObject(parent)
 {
    setUserConnectionStatus(ConnectionStatus::Offline);
    setUserState(State::Unknown);
+   setHaveNewMessage(false);
 }
 
 QString ChatUserData::userName() const
 {
-   return _userName;
+   return userName_;
 }
 
 void ChatUserData::setUserName(const QString &userName)
 {
-   _userName = userName;
+   userName_ = userName;
    emit userNameChanged();
 }
 
 ChatUserData::ConnectionStatus ChatUserData::userConnectionStatus() const
 {
-   return _userConnectionStatus;
+   return userConnectionStatus_;
 }
 
 void ChatUserData::setUserConnectionStatus(const ChatUserData::ConnectionStatus &userStatus)
 {
-   _userConnectionStatus = userStatus;
+   userConnectionStatus_ = userStatus;
    emit userStatusChanged();
 }
 
 ChatUserData::State ChatUserData::userState() const
 {
-   return _userState;
+   return userState_;
 }
 
 void ChatUserData::setUserState(const ChatUserData::State &userState)
 {
-   _userState = userState;
+   userState_ = userState;
    emit userStateChanged();
 }
 
 QString ChatUserData::userEmail() const
 {
-   return _userEmail;
+   return userEmail_;
 }
 
 void ChatUserData::setUserEmail(const QString &userEmail)
 {
-   _userEmail = userEmail;
+   userEmail_ = userEmail;
    emit userEmailChanged();
 }
 
 QString ChatUserData::userId() const
 {
-    return _userId;
+    return userId_;
 }
 
 void ChatUserData::setUserId(const QString &userId)
 {
-    _userId = userId;
+    userId_ = userId;
     emit userIdChanged();
 }
 
 bool ChatUserData::haveNewMessage() const
 {
-   return _haveNewMessage;
+   return haveNewMessage_;
 }
 
 void ChatUserData::setHaveNewMessage(bool haveNewMessage)
 {
-   _haveNewMessage = haveNewMessage;
+   haveNewMessage_ = haveNewMessage;
 }

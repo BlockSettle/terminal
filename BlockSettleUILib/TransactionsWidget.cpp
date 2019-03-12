@@ -155,14 +155,14 @@ public:
 
 TransactionsWidget::TransactionsWidget(QWidget* parent)
    : TabWithShortcut(parent)
-   , ui(new Ui::TransactionsWidget())
+   , ui_(new Ui::TransactionsWidget())
    , transactionsModel_(nullptr)
    , sortFilterModel_(nullptr)
 
 {
-   ui->setupUi(this);
-   connect(ui->treeViewTransactions, &QAbstractItemView::doubleClicked, this, &TransactionsWidget::showTransactionDetails);
-   ui->treeViewTransactions->setContextMenuPolicy(Qt::CustomContextMenu);
+   ui_->setupUi(this);
+   connect(ui_->treeViewTransactions, &QAbstractItemView::doubleClicked, this, &TransactionsWidget::showTransactionDetails);
+   ui_->treeViewTransactions->setContextMenuPolicy(Qt::CustomContextMenu);
 
    actionCopyAddr_ = new QAction(tr("&Copy Address"));
    connect(actionCopyAddr_, &QAction::triggered, [this]() {
@@ -180,15 +180,15 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
    actionCPFP_ = new QAction(tr("Child-Pays-For-Parent (CPFP)"), this);
    connect(actionCPFP_, &QAction::triggered, this, &TransactionsWidget::onCreateCPFPDialog);
 
-   connect(ui->treeViewTransactions, &QAbstractItemView::customContextMenuRequested, [=](const QPoint& p) {
-      auto index = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
+   connect(ui_->treeViewTransactions, &QAbstractItemView::customContextMenuRequested, [=](const QPoint& p) {
+      auto index = sortFilterModel_->mapToSource(ui_->treeViewTransactions->indexAt(p));
       auto addressIndex = transactionsModel_->index(index.row(), static_cast<int>(TransactionsViewModel::Columns::Address));
       curAddress_ = transactionsModel_->data(addressIndex).toString();
 
       contextMenu_.clear();
 
       if (sortFilterModel_) {
-         const auto &sourceIndex = sortFilterModel_->mapToSource(ui->treeViewTransactions->indexAt(p));
+         const auto &sourceIndex = sortFilterModel_->mapToSource(ui_->treeViewTransactions->indexAt(p));
          const auto &txNode = transactionsModel_->getNode(sourceIndex);
          if (txNode && txNode->item() && txNode->item()->initialized) {
             if (txNode->item()->isRBFeligible() && (txNode->level() < 2)) {
@@ -217,40 +217,40 @@ TransactionsWidget::TransactionsWidget(QWidget* parent)
             }
          }
       }
-      contextMenu_.popup(ui->treeViewTransactions->mapToGlobal(p));
+      contextMenu_.popup(ui_->treeViewTransactions->mapToGlobal(p));
    });
-   ui->treeViewTransactions->setUniformRowHeights(true);
-   ui->treeViewTransactions->setItemsExpandable(true);
-   ui->treeViewTransactions->setRootIsDecorated(true);
-   ui->treeViewTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewTransactions->setUniformRowHeights(true);
+   ui_->treeViewTransactions->setItemsExpandable(true);
+   ui_->treeViewTransactions->setRootIsDecorated(true);
+   ui_->treeViewTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-   connect(ui->typeFilterComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [&](int index) {
+   connect(ui_->typeFilterComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [&](int index) {
       sortFilterModel_->updateFilters(sortFilterModel_->walletIds, sortFilterModel_->searchString
          , static_cast<bs::sync::Transaction::Direction>(index));
    });
 
-   connect(ui->walletBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &TransactionsWidget::walletsFilterChanged);
+   connect(ui_->walletBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &TransactionsWidget::walletsFilterChanged);
 
-   ui->dateEditEnd->setDateTime(QDateTime::currentDateTime().addDays(1));
+   ui_->dateEditEnd->setDateTime(QDateTime::currentDateTime().addDays(1));
 
-   connect(ui->dateEditEnd, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
-      if (ui->dateEditStart->dateTime() > dateTime)
+   connect(ui_->dateEditEnd, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
+      if (ui_->dateEditStart->dateTime() > dateTime)
       {
-         ui->dateEditStart->setDateTime(dateTime);
+         ui_->dateEditStart->setDateTime(dateTime);
       }
    });
-   connect(ui->dateEditStart, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
-      if (ui->dateEditEnd->dateTime() < dateTime)
+   connect(ui_->dateEditStart, &QDateTimeEdit::dateTimeChanged, [=](const QDateTime& dateTime) {
+      if (ui_->dateEditEnd->dateTime() < dateTime)
       {
-         ui->dateEditEnd->setDateTime(dateTime);
+         ui_->dateEditEnd->setDateTime(dateTime);
       }
    });
 
-   connect(ui->treeViewTransactions, &TreeViewWithEnterKey::enterKeyPressed,
+   connect(ui_->treeViewTransactions, &TreeViewWithEnterKey::enterKeyPressed,
           this, &TransactionsWidget::onEnterKeyInTrxPressed);
 
-   ui->labelResultCount->hide();
-   ui->progressBar->hide();
+   ui_->labelResultCount->hide();
+   ui_->progressBar->hide();
 }
 
 TransactionsWidget::~TransactionsWidget() = default;
@@ -287,44 +287,44 @@ void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<Transactions
    walletsChanged();
 
    auto updateDateTimes = [=]() {
-      sortFilterModel_->updateDates(ui->dateEditStart->dateTime(), ui->dateEditEnd->dateTime());
+      sortFilterModel_->updateDates(ui_->dateEditStart->dateTime(), ui_->dateEditEnd->dateTime());
    };
-   connect(ui->dateEditStart, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
-   connect(ui->dateEditEnd, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
+   connect(ui_->dateEditStart, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
+   connect(ui_->dateEditEnd, &QDateTimeEdit::dateTimeChanged, updateDateTimes);
 
-   connect(ui->searchField, &QLineEdit::textChanged, [=](const QString& text) {
+   connect(ui_->searchField, &QLineEdit::textChanged, [=](const QString& text) {
       sortFilterModel_->updateFilters(sortFilterModel_->walletIds, text, sortFilterModel_->transactionDirection);
    });
 
-   ui->treeViewTransactions->setSortingEnabled(true);
-   ui->treeViewTransactions->setModel(sortFilterModel_);
-   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
-//   ui->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
+   ui_->treeViewTransactions->setSortingEnabled(true);
+   ui_->treeViewTransactions->setModel(sortFilterModel_);
+   ui_->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::TxHash));
+//   ui_->treeViewTransactions->hideColumn(static_cast<int>(TransactionsViewModel::Columns::MissedBlocks));
 }
 
 void TransactionsWidget::onDataLoaded(int count)
 {
-   ui->progressBar->hide();
-   ui->progressBar->setMaximum(0);
-   ui->progressBar->setMinimum(0);
+   ui_->progressBar->hide();
+   ui_->progressBar->setMaximum(0);
+   ui_->progressBar->setMinimum(0);
 
-   if ((count <= 0) || (ui->dateEditStart->dateTime().date().year() > 2009)) {
+   if ((count <= 0) || (ui_->dateEditStart->dateTime().date().year() > 2009)) {
       return;
    }
    const auto &item = transactionsModel_->getOldestItem();
-   ui->dateEditStart->setDateTime(QDateTime::fromTime_t(item.txEntry.txTime));
+   ui_->dateEditStart->setDateTime(QDateTime::fromTime_t(item.txEntry.txTime));
 }
 
 void TransactionsWidget::onProgressInited(int start, int end)
 {
-   ui->progressBar->show();
-   ui->progressBar->setMinimum(start);
-   ui->progressBar->setMaximum(end);
+   ui_->progressBar->show();
+   ui_->progressBar->setMinimum(start);
+   ui_->progressBar->setMaximum(end);
 }
 
 void TransactionsWidget::onProgressUpdated(int value)
 {
-   ui->progressBar->setValue(value);
+   ui_->progressBar->setValue(value);
 }
 
 void TransactionsWidget::setAppSettings(std::shared_ptr<ApplicationSettings> appSettings)
@@ -335,7 +335,7 @@ void TransactionsWidget::setAppSettings(std::shared_ptr<ApplicationSettings> app
 void TransactionsWidget::shortcutActivated(ShortcutType s)
 {
    if (s == ShortcutType::Alt_1)
-      ui->treeViewTransactions->activate();
+      ui_->treeViewTransactions->activate();
 }
 
 static inline QStringList walletLeavesIds(bs::sync::WalletsManager::HDWalletPtr wallet)
@@ -382,12 +382,12 @@ void TransactionsWidget::walletsChanged()
    int currentIndex = -1;
    int primaryWalletIndex = 0;
 
-   ui->walletBox->clear();
-   ui->walletBox->addItem(tr("All Wallets"));
+   ui_->walletBox->clear();
+   ui_->walletBox->addItem(tr("All Wallets"));
    int index = 1;
    for (unsigned int i = 0; i < walletsManager_->hdWalletsCount(); i++) {
       const auto &hdWallet = walletsManager_->getHDWallet(i);
-      ui->walletBox->addItem(QString::fromStdString(hdWallet->name()));
+      ui_->walletBox->addItem(QString::fromStdString(hdWallet->name()));
       QStringList allLeafIds = walletLeavesIds(hdWallet);
 
       if (exactlyThisLeaf(walletIds, allLeafIds)) {
@@ -398,21 +398,21 @@ void TransactionsWidget::walletsChanged()
          primaryWalletIndex = index;
       }
 
-      ui->walletBox->setItemData(index++, allLeafIds, UiUtils::WalletIdRole);
+      ui_->walletBox->setItemData(index++, allLeafIds, UiUtils::WalletIdRole);
 
       for (const auto &group : hdWallet->getGroups()) {
-         ui->walletBox->addItem(QString::fromStdString("   " + group->name()));
+         ui_->walletBox->addItem(QString::fromStdString("   " + group->name()));
          const auto groupIndex = index++;
          QStringList groupLeafIds;
          for (const auto &leaf : group->getLeaves()) {
             groupLeafIds << QString::fromStdString(leaf->walletId());
-            ui->walletBox->addItem(QString::fromStdString("      " + leaf->shortName()));
+            ui_->walletBox->addItem(QString::fromStdString("      " + leaf->shortName()));
 
             const auto id = QString::fromStdString(leaf->walletId());
             QStringList ids;
             ids << id;
 
-            ui->walletBox->setItemData(index, ids, UiUtils::WalletIdRole);
+            ui_->walletBox->setItemData(index, ids, UiUtils::WalletIdRole);
 
             if (exactlyThisLeaf(walletIds, ids)) {
                currentIndex = index;
@@ -423,30 +423,30 @@ void TransactionsWidget::walletsChanged()
          if (groupLeafIds.isEmpty()) {
             groupLeafIds << QLatin1String("non-existent");
          }
-         ui->walletBox->setItemData(groupIndex, groupLeafIds, UiUtils::WalletIdRole);
+         ui_->walletBox->setItemData(groupIndex, groupLeafIds, UiUtils::WalletIdRole);
       }
    }
    const auto settlWallet = walletsManager_->getSettlementWallet();
    if (settlWallet) {
-      ui->walletBox->addItem(QLatin1String("Settlement"));
-      ui->walletBox->setItemData(index++, QStringList() << QString::fromStdString(settlWallet->walletId())
+      ui_->walletBox->addItem(QLatin1String("Settlement"));
+      ui_->walletBox->setItemData(index++, QStringList() << QString::fromStdString(settlWallet->walletId())
          , UiUtils::WalletIdRole);
    }
 
-   ui->typeFilterComboBox->setCurrentIndex(direction);
+   ui_->typeFilterComboBox->setCurrentIndex(direction);
 
    if (currentIndex >= 0) {
-      ui->walletBox->setCurrentIndex(currentIndex);
+      ui_->walletBox->setCurrentIndex(currentIndex);
    } else {
       if (walletIds.contains(c_allWalletsId)) {
-         ui->walletBox->setCurrentIndex(0);
+         ui_->walletBox->setCurrentIndex(0);
       } else {
          const auto primaryWallet = walletsManager_->getPrimaryWallet();
 
          if (primaryWallet) {
-            ui->walletBox->setCurrentIndex(primaryWalletIndex);
+            ui_->walletBox->setCurrentIndex(primaryWalletIndex);
          } else {
-            ui->walletBox->setCurrentIndex(0);
+            ui_->walletBox->setCurrentIndex(0);
          }
       }
    }
@@ -457,7 +457,7 @@ void TransactionsWidget::walletsFilterChanged(int index)
    if (index < 0) {
       return;
    }
-   const auto &walletIds = ui->walletBox->itemData(index, UiUtils::WalletIdRole).toStringList();
+   const auto &walletIds = ui_->walletBox->itemData(index, UiUtils::WalletIdRole).toStringList();
    sortFilterModel_->updateFilters(walletIds, sortFilterModel_->searchString, sortFilterModel_->transactionDirection);
 }
 
@@ -478,9 +478,9 @@ void TransactionsWidget::updateResultCount()
 {
    auto shown = sortFilterModel_->rowCount();
    auto total = transactionsModel_->itemsCount();
-   ui->labelResultCount->setText(tr("Displaying %L1 transactions (of %L2 total).")
+   ui_->labelResultCount->setText(tr("Displaying %L1 transactions (of %L2 total).")
       .arg(shown).arg(total));
-   ui->labelResultCount->show();
+   ui_->labelResultCount->show();
 }
 
 void TransactionsWidget::onCreateRBFDialog()

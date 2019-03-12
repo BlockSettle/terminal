@@ -11,6 +11,7 @@
 #include <QMouseEvent>
 #include <QApplication>
 #include <QObject>
+#include <QDebug>
 
 #include <thread>
 #include <spdlog/spdlog.h>
@@ -138,6 +139,7 @@ public:
       } else {
          chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
       }
+      chat_->ui_->input_textEdit->setFocus();
    }
    
    void onRoomClicked(const QString& roomId) override {
@@ -234,10 +236,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
            client_.get(), &ChatClient::onMessageRead);
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
-   connect(chatUserListLogicPtr_->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
+   connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
            ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatUserDataListChanged);
    connect(chatUserListLogicPtr_->chatUserModelPtr().get(), &ChatUserModel::chatRoomDataListChanged,
            ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatRoomDataListChanged);
+
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::userHaveNewMessageChanged, 
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onUserHaveNewMessageChanged);
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
 }
@@ -326,6 +331,18 @@ void ChatWidget::logout()
    return stateCurrent_->logout(); //test
 }
 
+bool ChatWidget::hasUnreadMessages()
+{
+   ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
+
+   if (chatUserModelPtr)
+   {
+      return chatUserModelPtr->hasUnreadMessages();
+   } else {
+      return false;
+   }
+}
+
 void ChatWidget::onSearchUserReturnPressed()
 {
    if (!popup_)
@@ -337,9 +354,22 @@ void ChatWidget::onSearchUserReturnPressed()
    }
 
    QString userToAdd = ui_->chatSearchLineEdit->text();
-   if (!chatUserListLogicPtr_->chatUserModelPtr()->isChatUserExist(userToAdd))
-       return;
+   if (userToAdd.isEmpty() || userToAdd.length() < 3) {
+      return;
+   }
+   
+   auto chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByEmail(userToAdd);
+   if (!chatUserDataPtr) { // email exists?
+      chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByUserIdPrefix(userToAdd); // user ID autocomplete?
+      if (!chatUserDataPtr)
+      {
+         return;
+      }
+   }
+   
+   userToAdd = chatUserDataPtr->userId();
 
+   // qDebug() << userToAdd;
    popup_->setText(userToAdd);
    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
    popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);

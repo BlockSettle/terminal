@@ -8,6 +8,7 @@
 
 #include "ApplicationSettings.h"
 #include "ChatClient.h"
+#include "NotificationCenter.h"
 
 void ChatUserListLogic::init(const std::shared_ptr<ChatClient> &client,
    const std::shared_ptr<spdlog::logger>& logger)
@@ -84,6 +85,18 @@ void ChatUserListLogic::onIcomingFriendRequest(const UserIdList &userIdList)
          chatUserModelPtr_->setUserState(searchUserId, ChatUserData::State::IncomingFriendRequest);
       }
    }
+}
+
+void ChatUserListLogic::onUserHaveNewMessageChanged(const QString &userId, const bool &userHaveNewMessage, const bool &isInCurrentChat) {
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr_->getUserByUserId(userId);
+
+      if (chatUserDataPtr)
+      {
+         chatUserModelPtr_->setUserHaveNewMessage(userId, userHaveNewMessage);
+      }
+
+      bool hasUnreadMessages = chatUserModelPtr_->hasUnreadMessages();
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });
 }
 
 void ChatUserListLogic::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)

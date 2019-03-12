@@ -3,7 +3,6 @@
 #include "ChatMessagesTextEdit.h"
 #include "ChatClient.h"
 #include "ChatProtocol/ChatProtocol.h"
-#include "NotificationCenter.h"
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
@@ -15,9 +14,9 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setCellSpacing(0);
 
    QVector <QTextLength> col_widths;
-   col_widths << QTextLength (QTextLength::FixedLength, 140);
-   col_widths << QTextLength (QTextLength::FixedLength, 85);
+   col_widths << QTextLength (QTextLength::FixedLength, 110);
    col_widths << QTextLength (QTextLength::FixedLength, 40);
+   col_widths << QTextLength (QTextLength::FixedLength, 80);
    col_widths << QTextLength (QTextLength::VariableLength, 50);
    tableFormat.setColumnWidthConstraints (col_widths);
 
@@ -40,13 +39,7 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
       case Column::Time:
       {
          const auto dateTime = messages_[currentChatId_][row]->getDateTime().toLocalTime();
-
-         if (dateTime.date() == QDate::currentDate()) {
-            return dateTime.time().toString(QString::fromUtf8("hh:mm:ss"));
-         }
-         else {
-            return dateTime.toString(QString::fromUtf8("MM/dd/yy hh:mm:ss"));
-         }
+         return dateTime.toString(QString::fromUtf8("MM/dd/yy hh:mm:ss"));
       }
 
       case Column::User:
@@ -127,6 +120,8 @@ void ChatMessagesTextEdit::onSwitchToChat(const QString& chatId)
    
    clear();
    table = NULL;
+
+   emit userHaveNewMessageChanged(chatId, false, false);
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
@@ -150,11 +145,11 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
    time = toHtmlText(time);
    table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
-   QString user = data(rowIdx, Column::User);
-   table->cellAt(0, 1).firstCursorPosition().insertText(user);
-
    QImage image = statusImage(rowIdx);
-   table->cellAt(0, 2).firstCursorPosition().insertImage(image);
+   table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+
+   QString user = data(rowIdx, Column::User);
+   table->cellAt(0, 2).firstCursorPosition().insertText(user);
 
    QString message = data(rowIdx, Column::Message);
    message = toHtmlText(message);
@@ -189,11 +184,11 @@ void ChatMessagesTextEdit::loadMore() {
       time = toHtmlText(time);
       table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
-      QString user = data(i, Column::User);
-      table->cellAt(0, 1).firstCursorPosition().insertText(user);
-
       QImage image = statusImage(i);
-      table->cellAt(0, 2).firstCursorPosition().insertImage(image);
+      table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+
+      QString user = data(i, Column::User);
+      table->cellAt(0, 2).firstCursorPosition().insertText(user);
 
       QString message = data(i, Column::Message);
       message = toHtmlText(message);
@@ -275,11 +270,11 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
          time = toHtmlText(time);
          table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
-         QString user = data(distance, Column::User);
-         table->cellAt(0, 1).firstCursorPosition().insertText(user);
-
          QImage image = statusImage(distance);
-         table->cellAt(0, 2).firstCursorPosition().insertImage(image);
+         table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+
+         QString user = data(distance, Column::User);
+         table->cellAt(0, 2).firstCursorPosition().insertText(user);
 
          QString message = data(distance, Column::Message);
          message = toHtmlText(message);
@@ -300,8 +295,6 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
          else {
             messages_[msg->getSenderId()].push_back(msg);
          }
-
-         NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
       }
 
       if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) { 
@@ -336,12 +329,14 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
       for (const auto &msg : messages) {
          if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
             insertMessage(msg);
+            
+            emit userHaveNewMessageChanged(msg->getSenderId(), false, true);
          }
          else {
             messages_[msg->getSenderId()].push_back(msg);
-         }
 
-         NotificationCenter::notify(bs::ui::NotifyType::NewChatMessage, { tr("New message") });
+            emit userHaveNewMessageChanged(msg->getSenderId(), true, false);
+         }
       }
    }
 

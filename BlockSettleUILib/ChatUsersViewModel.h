@@ -45,7 +45,7 @@ public slots:
    void onUserDataListChanged(const ChatUserDataListPtr &chatUserDataListPtr);
 
 private:
-   ChatUserDataListPtr _users;
+   ChatUserDataListPtr users_;
 };
 
 

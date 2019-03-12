@@ -57,7 +57,7 @@ private slots:
    void onProgressUpdated(int value);
 
 private:
-   std::unique_ptr<Ui::TransactionsWidget> ui;
+   std::unique_ptr<Ui::TransactionsWidget> ui_;
    std::shared_ptr<spdlog::logger>     logger_;
 
    std::shared_ptr<TransactionsViewModel> transactionsModel_;
