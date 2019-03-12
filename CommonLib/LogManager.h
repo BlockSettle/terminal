@@ -67,6 +67,7 @@ namespace bs {
       std::unordered_map<std::string, std::shared_ptr<spdlog::sinks::sink>>   sinks_;
       std::unordered_map<std::string, std::string> patterns_;
       std::shared_ptr<spdlog::logger>              defaultLogger_;
+      std::shared_ptr<spdlog::logger>              stdoutLogger_;
    };
 
 }  // namespace bs

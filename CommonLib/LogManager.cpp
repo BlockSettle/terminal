@@ -159,5 +159,10 @@ std::shared_ptr<spdlog::logger> LogManager::logger(const std::string &category)
          return copy(defaultLogger_, catDefault, category);
       }
    }
-   return spdlog::stdout_logger_mt("stdout");
+
+   // Fix new spdlog exception trying to create logger with same name
+   if (!stdoutLogger_) {
+      stdoutLogger_ = spdlog::stdout_logger_mt("stdout");
+   }
+   return stdoutLogger_;
 }
