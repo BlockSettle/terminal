@@ -17,13 +17,10 @@ ZMQ_BIP15X_ServerConnection::ZMQ_BIP15X_ServerConnection(
       string datadir =
          QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
       string filename(SERVER_AUTH_PEER_FILENAME);
-      if (!ephemeralPeers)
-      {
-         authPeers_ = make_shared<AuthorizedPeers>(
-            datadir, filename);
+      if (!ephemeralPeers) {
+          authPeers_ = make_shared<AuthorizedPeers>(datadir, filename);
       }
-      else
-      {
+      else {
          authPeers_ = make_shared<AuthorizedPeers>();
       }
 
@@ -35,7 +32,7 @@ ZMQ_BIP15X_ServerConnection::ZMQ_BIP15X_ServerConnection(
          }*/
          vector<string> keyName;
          keyName.push_back(nameKeyList[0].toStdString());
-         SecureBinaryData inKey(nameKeyList[1].toStdString());
+         SecureBinaryData inKey = READHEX(nameKeyList[1].toStdString());
          authPeers_->addPeer(inKey, keyName);
       }
       bip151Connection_ = make_shared<BIP151Connection>(lbds);
@@ -56,8 +53,7 @@ ZMQ_BIP15X_ServerConnection::ZMQ_BIP15X_ServerConnection(
       run_->store(0, std::memory_order_relaxed);*/
 }
 
-ZmqContext::sock_ptr ZMQ_BIP15X_ServerConnection::CreateDataSocket()
-{
+ZmqContext::sock_ptr ZMQ_BIP15X_ServerConnection::CreateDataSocket() {
    return context_->CreateServerSocket();
 }
 
@@ -136,8 +132,7 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
       return;
    }*/
 
-   if (packetData.getSize() == 0)
-   {
+   if (packetData.getSize() == 0) {
 //      LOGWARN << "empty command packet";
       return;
    }
@@ -149,8 +144,7 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
       readLeftOverData_.clear();
    }*/
 
-   if (bip15XHandshakeCompleted_)
-   {
+   if (bip151HandshakeCompleted_) {
       //decrypt packet
       size_t plainTextSize = packetData.getSize() - POLY1305MACLEN;
       auto result = bip151Connection_->decryptPacket(packetData.getPtr()
@@ -251,13 +245,14 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
 //   }
 }
 
-bool ZMQ_BIP15X_ServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket) {
+bool ZMQ_BIP15X_ServerConnection::ConfigDataSocket(
+   const ZmqContext::sock_ptr& dataSocket) {
    return ZmqServerConnection::ConfigDataSocket(dataSocket);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
-      , const string& clientID) {
+   , const string& clientID) {
    auto writeToClient = [this, clientID](uint8_t type, const BinaryDataRef& msg
       , bool encrypt)->bool {
       ZMQ_BIP15X_Msg outMsg;
@@ -362,6 +357,7 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
                "Response not sent");
          }
 
+         bip151HandshakeCompleted_ = true;
          break;
       }
 
@@ -447,8 +443,6 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
          bip151Connection_->bip150HandshakeRekey();
          outKeyTimePoint_ = chrono::system_clock::now();
 
-         bip15XHandshakeCompleted_ = true;
-
          break;
       }
 
@@ -462,14 +456,12 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
    };
 
    if (!processHandshake(msgObj)) {
-      // TO DO: Log the failure.
       logger_->error("[{}] BIP 150/151 handshake process failed.");
    }
 }
 
 // Copied from Armory.
-AuthPeersLambdas ZMQ_BIP15X_ServerConnection::getAuthPeerLambda() const
-{
+AuthPeersLambdas ZMQ_BIP15X_ServerConnection::getAuthPeerLambda() const {
    auto authPeerPtr = authPeers_;
 
    auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>& {
@@ -489,7 +481,6 @@ AuthPeersLambdas ZMQ_BIP15X_ServerConnection::getAuthPeerLambda() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/*void ZMQ_BIP15X_ServerConnection::closeConnection()
-{
+/*void ZMQ_BIP15X_ServerConnection::closeConnection() {
    run_->store(-1, memory_order_relaxed);
 }*/

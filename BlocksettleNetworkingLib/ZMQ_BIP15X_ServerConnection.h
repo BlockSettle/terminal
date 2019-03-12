@@ -52,6 +52,6 @@ private:
    std::shared_ptr<BIP151Connection> bip151Connection_;
    std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
    const uint64_t id_;
-   bool bip15XHandshakeCompleted_ = false;
+   bool bip151HandshakeCompleted_ = false;
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

@@ -17,18 +17,13 @@ ZMQ_BIP15X_DataConnection::ZMQ_BIP15X_DataConnection(
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
    string filename(CLIENT_AUTH_PEER_FILENAME);
    if (!ephemeralPeers) {
-      authPeers_ = make_shared<AuthorizedPeers>(
-         datadir, filename);
+      authPeers_ = make_shared<AuthorizedPeers>(datadir, filename);
    }
    else {
       authPeers_ = make_shared<AuthorizedPeers>();
    }
 
    auto lbds = getAuthPeerLambda();
-   stringstream ss;
-   ss << trustedServer.getArmorySettings().armoryDBIp.toStdString() << ":"
-      << trustedServer.getArmorySettings().armoryDBPort;
-   authPeers_->addPeer(ss.str());
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
 }
 
@@ -167,15 +162,14 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
    BinaryData payload(pendingData_);
    pendingData_.clear();
 
-   // If we've completed the BIP 150/151 handshake, decrypt.
-   if (bip15XHandshakeCompleted_) {
+   // If we've completed the BIP 151 handshake, decrypt.
+   if (bip151HandshakeCompleted_) {
       //decrypt packet
       auto result = bip151Connection_->decryptPacket(
          payload.getPtr(), payload.getSize(),
          payload.getPtr(), payload.getSize());
 
-      if (result != 0)
-      {
+      if (result != 0) {
 /*         //see WebSocketServer::commandThread for the explainantion
          if (result <= WEBSOCKET_MESSAGE_PACKET_SIZE && result > -1)
          {
@@ -196,8 +190,7 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
       return;
    }
 
-   if (inMsg.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD
-      && !bip151Connection_->connectionComplete()) {
+   if (inMsg.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(inMsg)) {
          //invalid AEAD message, kill connection
          return;
@@ -214,8 +207,7 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
 
    //figure out request id, fulfill promise
    auto& msgid = inMsg.getId();
-   switch (msgid)
-   {
+   switch (msgid) {
    case ZMQ_CALLBACK_ID:
    {
 /*      if (callbackPtr_ == nullptr)
@@ -264,13 +256,11 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
    ZmqDataConnection::notifyOnData(payload.toBinStr());
 }
 
-ZmqContext::sock_ptr ZMQ_BIP15X_DataConnection::CreateDataSocket()
-{
+ZmqContext::sock_ptr ZMQ_BIP15X_DataConnection::CreateDataSocket() {
    return context_->CreateClientSocket();
 }
 
-bool ZMQ_BIP15X_DataConnection::recvData()
-{
+bool ZMQ_BIP15X_DataConnection::recvData() {
    MessageHolder data;
 
    int result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
@@ -289,14 +279,15 @@ bool ZMQ_BIP15X_DataConnection::recvData()
 }
 
 // The function processing the BIP 150/151 handshake packets.
-bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgObj) {
+bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
+   const ZMQ_BIP15X_Msg& msgObj) {
    // Callback used to send data out on the wire.
-   auto writeData = [this](BinaryData& payload, uint8_t type, bool encrypt)
-   {
+   auto writeData = [this](BinaryData& payload, uint8_t type, bool encrypt) {
       ZMQ_BIP15X_Msg msg;
       BIP151Connection* connPtr = nullptr;
-      if (encrypt)
+      if (encrypt) {
          connPtr = bip151Connection_.get();
+      }
 
       vector<BinaryData> outData = msg.serialize(payload.getDataVector()
          , connPtr, type, 0);
@@ -305,8 +296,7 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 
    // Read the msg, get the type, and process as needed.
    auto msgbdr = msgObj.getSingleBinaryMessage();
-   switch (msgObj.getType())
-   {
+   switch (msgObj.getType()) {
    case ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY:
    {
       /*packet is server's pubkey, do we have it?*/
@@ -319,13 +309,11 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
       stringstream ss;
 //      ss << addr_ << ":" << port_;
 
-      if (!bip151Connection_->havePublicKey(msgbdr, ss.str()))
-      {
+      if (!bip151Connection_->havePublicKey(msgbdr, ss.str())) {
          //we don't have this key, call user prompt lambda
          promptUser(msgbdr, ss.str());
       }
-      else
-      {
+      else {
          //set server key promise
          serverPubkeyProm_->set_value(true);
       }
@@ -360,6 +348,7 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 
       break;
    }
+
    case ZMQ_MSGTYPE_AEAD_ENCACK:
    {
       if (bip151Connection_->processEncack(msgbdr.getPtr(), msgbdr.getSize()
@@ -390,7 +379,7 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
       }
 
       writeData(authchallengeBuf, ZMQ_MSGTYPE_AUTH_CHALLENGE, true);
-
+      bip151HandshakeCompleted_ = true;
       break;
    }
 
@@ -402,8 +391,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
       }
 
       //if connection is already setup, we only accept rekey enack messages
-      if (bip151Connection_->processEncack(
-         msgbdr.getPtr(), msgbdr.getSize(), false) == -1) {
+      if (bip151Connection_->processEncack(msgbdr.getPtr(), msgbdr.getSize()
+         , false) == -1) {
          return false;
       }
 
@@ -427,9 +416,9 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
       }
 
       writeData(authproposeBuf, ZMQ_MSGTYPE_AUTH_PROPOSE, true);
-
       break;
    }
+
    case ZMQ_MSGTYPE_AUTH_CHALLENGE:
    {
       bool goodChallenge = true;
@@ -463,7 +452,6 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
       outKeyTimePoint_ = chrono::system_clock::now();
 
       //flag connection as ready
-      bip15XHandshakeCompleted_ = true;
 //      connectionReadyProm_.set_value(true);
 
       break;
@@ -479,7 +467,18 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
 // If the user is presented with a new server identity key, ask what they want.
 void ZMQ_BIP15X_DataConnection::promptUser(const BinaryDataRef& newKey
    , const string& srvAddrPort) {
-   // TO DO: Insert a user prompt. For now, just approve the key.
-   std::cout << "New key arrived. Prompt the user." << std::endl;
-   serverPubkeyProm_->set_value(true);
+   // TO DO: Insert a user prompt. For now, just approve the key and add it to
+   // the set of approved key.
+   auto authPeerNameMap = authPeers_->getPeerNameMap();
+   auto authPeerNameSearch = authPeerNameMap.find(srvAddrPort);
+   if (authPeerNameSearch == authPeerNameMap.end()) {
+      std::cout << "New key arrived. Prompt the user." << std::endl;
+      vector<string> keyName;
+      keyName.push_back(srvAddrPort);
+      authPeers_->addPeer(newKey.copy(), keyName);
+      serverPubkeyProm_->set_value(true);
+   }
+   else {
+      serverPubkeyProm_->set_value(true);
+   }
 }
