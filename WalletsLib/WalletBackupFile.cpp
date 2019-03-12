@@ -3,12 +3,11 @@
 
 #include "bs_storage.pb.h"
 
-WalletBackupFile::WalletBackupFile(const std::shared_ptr<bs::core::hd::Wallet> &wallet
-   , const EasyCoDec::Data& data
+WalletBackupFile::WalletBackupFile(const std::string &id, const std::string &name
+   , const std::string &description, const EasyCoDec::Data& data
    , const EasyCoDec::Data& chainCode)
-  : wallet_(wallet)
-  , data_(data)
-  , chainCode_(chainCode)
+  : id_(id), name_(name), description_(description)
+  , data_(data), chainCode_(chainCode)
 {}
 
 WalletBackupFile::WalletData WalletBackupFile::Deserialize(const std::string& rawData)
@@ -40,12 +39,11 @@ std::string WalletBackupFile::Serialize() const
 {
    Blocksettle::Storage::WalletBackupFile backup;
 
-   backup.set_id(wallet_->walletId());
-   backup.set_name(wallet_->name());
+   backup.set_id(id_);
+   backup.set_name(name_);
 
-   const auto &desc = wallet_->description();
-   if (!desc.empty()) {
-      backup.set_description(desc);
+   if (!description_.empty()) {
+      backup.set_description(description_);
    }
    backup.set_seed1(data_.part1);
    backup.set_seed2(data_.part2);
