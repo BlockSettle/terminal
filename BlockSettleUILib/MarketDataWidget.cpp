@@ -8,11 +8,11 @@
 
 MarketDataWidget::MarketDataWidget(QWidget* parent)
    : QWidget(parent)
-   , ui(new Ui::MarketDataWidget())
+   , ui_(new Ui::MarketDataWidget())
    , marketDataModel_(nullptr)
    , mdSortFilterModel_(nullptr)
 {
-   ui->setupUi(this);
+   ui_->setupUi(this);
 }
 
 MarketDataWidget::~MarketDataWidget()
@@ -29,15 +29,15 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
       visSettings = appSettings->get<QStringList>(settingVisibility_);
       appSettings_ = appSettings;
    }
-   marketDataModel_ = new MarketDataModel(visSettings, ui->treeViewMarketData);
-   mdSortFilterModel_ = new MDSortFilterProxyModel(ui->treeViewMarketData);
+   marketDataModel_ = new MarketDataModel(visSettings, ui_->treeViewMarketData);
+   mdSortFilterModel_ = new MDSortFilterProxyModel(ui_->treeViewMarketData);
    mdSortFilterModel_->setSourceModel(marketDataModel_);
 
-   ui->treeViewMarketData->setModel(mdSortFilterModel_);
-   ui->treeViewMarketData->setSortingEnabled(true);
+   ui_->treeViewMarketData->setModel(mdSortFilterModel_);
+   ui_->treeViewMarketData->setSortingEnabled(true);
 
    if (appSettings != nullptr) {
-      mdHeader_ = std::make_shared<MDHeader>(Qt::Horizontal, ui->treeViewMarketData);
+      mdHeader_ = std::make_shared<MDHeader>(Qt::Horizontal, ui_->treeViewMarketData);
       connect(mdHeader_.get(), &MDHeader::stateChanged, marketDataModel_, &MarketDataModel::onVisibilityToggled);
       connect(mdHeader_.get(), &MDHeader::stateChanged, this, &MarketDataWidget::onHeaderStateChanged);
       mdHeader_->setEnabled(false);
@@ -46,8 +46,8 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
       mdHeader_->show();
    }
 
-   ui->treeViewMarketData->setHeader(mdHeader_.get());
-   ui->treeViewMarketData->header()->setSortIndicator(
+   ui_->treeViewMarketData->setHeader(mdHeader_.get());
+   ui_->treeViewMarketData->header()->setSortIndicator(
       static_cast<int>(MarketDataModel::MarketDataColumns::First), Qt::AscendingOrder);
 
    connect(marketDataModel_, &QAbstractItemModel::rowsInserted, [this]() {
@@ -58,14 +58,14 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    connect(mdSortFilterModel_, &QAbstractItemModel::rowsInserted, this, &MarketDataWidget::resizeAndExpand);
    connect(marketDataModel_, &MarketDataModel::needResize, this, &MarketDataWidget::resizeAndExpand);
 
-   connect(ui->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::onRowClicked);
-   connect(ui->treeViewMarketData, &TreeViewWithEnterKey::enterKeyPressed,
+   connect(ui_->treeViewMarketData, &QTreeView::clicked, this, &MarketDataWidget::onRowClicked);
+   connect(ui_->treeViewMarketData, &TreeViewWithEnterKey::enterKeyPressed,
            this, &MarketDataWidget::onEnterKeyPressed);
 
    connect(mdProvider.get(), &MarketDataProvider::MDUpdate, marketDataModel_, &MarketDataModel::onMDUpdated);
    connect(mdProvider.get(), &MarketDataProvider::MDReqRejected, this, &MarketDataWidget::onMDRejected);
 
-   connect(ui->pushButtonMDConnection, &QPushButton::clicked, this, &MarketDataWidget::ChangeMDSubscriptionState);
+   connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this, &MarketDataWidget::ChangeMDSubscriptionState);
 
    connect(mdProvider.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &MarketDataWidget::onLoadingNetworkSettings);
    connect(mdProvider.get(), &MarketDataProvider::StartConnecting, this, &MarketDataWidget::OnMDConnecting);
@@ -73,39 +73,39 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    connect(mdProvider.get(), &MarketDataProvider::Disconnecting, this, &MarketDataWidget::OnMDDisconnecting);
    connect(mdProvider.get(), &MarketDataProvider::Disconnected, this, &MarketDataWidget::OnMDDisconnected);
 
-   ui->pushButtonMDConnection->setText(tr("Subscribe"));
+   ui_->pushButtonMDConnection->setText(tr("Subscribe"));
 }
 
 void MarketDataWidget::onLoadingNetworkSettings()
 {
-   ui->pushButtonMDConnection->setText(tr("Connecting"));
-   ui->pushButtonMDConnection->setEnabled(false);
-   ui->pushButtonMDConnection->setToolTip(tr("Waiting for connection details"));
+   ui_->pushButtonMDConnection->setText(tr("Connecting"));
+   ui_->pushButtonMDConnection->setEnabled(false);
+   ui_->pushButtonMDConnection->setToolTip(tr("Waiting for connection details"));
 }
 
 void MarketDataWidget::OnMDConnecting()
 {
-   ui->pushButtonMDConnection->setText(tr("Connecting"));
-   ui->pushButtonMDConnection->setEnabled(false);
-   ui->pushButtonMDConnection->setToolTip(QString{});
+   ui_->pushButtonMDConnection->setText(tr("Connecting"));
+   ui_->pushButtonMDConnection->setEnabled(false);
+   ui_->pushButtonMDConnection->setToolTip(QString{});
 }
 
 void MarketDataWidget::OnMDConnected()
 {
-   ui->pushButtonMDConnection->setText(tr("Disconnect"));
-   ui->pushButtonMDConnection->setEnabled(true);
+   ui_->pushButtonMDConnection->setText(tr("Disconnect"));
+   ui_->pushButtonMDConnection->setEnabled(true);
 }
 
 void MarketDataWidget::OnMDDisconnecting()
 {
-   ui->pushButtonMDConnection->setText(tr("Disconnecting"));
-   ui->pushButtonMDConnection->setEnabled(false);
+   ui_->pushButtonMDConnection->setText(tr("Disconnecting"));
+   ui_->pushButtonMDConnection->setEnabled(false);
 }
 
 void MarketDataWidget::OnMDDisconnected()
 {
-   ui->pushButtonMDConnection->setText(tr("Subscribe"));
-   ui->pushButtonMDConnection->setEnabled(true);
+   ui_->pushButtonMDConnection->setText(tr("Subscribe"));
+   ui_->pushButtonMDConnection->setEnabled(true);
 }
 
 void MarketDataWidget::ChangeMDSubscriptionState()
@@ -119,7 +119,7 @@ void MarketDataWidget::ChangeMDSubscriptionState()
 
 TreeViewWithEnterKey* MarketDataWidget::view() const
 {
-   return ui->treeViewMarketData;
+   return ui_->treeViewMarketData;
 }
 
 void MarketDataWidget::onMDRejected(const std::string &security, const std::string &reason)
@@ -178,15 +178,15 @@ void MarketDataWidget::onEnterKeyPressed(const QModelIndex &index)
 
 void MarketDataWidget::resizeAndExpand()
 {
-   ui->treeViewMarketData->expandAll();
-   ui->treeViewMarketData->resizeColumnToContents(0);
+   ui_->treeViewMarketData->expandAll();
+   ui_->treeViewMarketData->resizeColumnToContents(0);
 }
 
 void MarketDataWidget::onHeaderStateChanged(bool state)
 {
    filteredView_ = state;
    marketDataModel_->setHeaderData(0, Qt::Horizontal, state ? tr("Filtered view") : tr("Visibility selection"));
-   ui->treeViewMarketData->resizeColumnToContents(0);
+   ui_->treeViewMarketData->resizeColumnToContents(0);
 
    if (state && (appSettings_ != nullptr)) {
       const auto settings = marketDataModel_->getVisibilitySettings();

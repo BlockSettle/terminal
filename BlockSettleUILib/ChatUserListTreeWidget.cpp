@@ -9,11 +9,11 @@ const QString allUsersListDescription = QObject::tr("All users");
 
 ChatUserListTreeWidget::ChatUserListTreeWidget(QWidget *parent) : QTreeWidget(parent)
 {
-   _friendUsersViewModel = new ChatUsersViewModel(this);
-   _nonFriendUsersViewModel = new ChatUsersViewModel(this);
+   friendUsersViewModel_ = new ChatUsersViewModel(this);
+   nonFriendUsersViewModel_ = new ChatUsersViewModel(this);
 
-   _friendUsersListView = new ChatUserCategoryListView(this);
-   _nonFriendUsersListView = new ChatUserCategoryListView(this);
+   friendUsersListView_ = new ChatUserCategoryListView(this);
+   nonFriendUsersListView_ = new ChatUserCategoryListView(this);
 
    createCategories();
 }
@@ -29,12 +29,12 @@ void ChatUserListTreeWidget::createCategories()
    QTreeWidgetItem *embedItem = new QTreeWidgetItem(contactsItem);
    embedItem->setFlags(Qt::ItemIsEnabled);
 
-   _friendUsersListView->setViewMode(QListView::ListMode);
-   _friendUsersListView->setModel(_friendUsersViewModel);
-   _friendUsersListView->setObjectName(QStringLiteral("chatUserCategoryListView"));
-   setItemWidget(embedItem, 0, _friendUsersListView);
+   friendUsersListView_->setViewMode(QListView::ListMode);
+   friendUsersListView_->setModel(friendUsersViewModel_);
+   friendUsersListView_->setObjectName(QStringLiteral("chatUserCategoryListView"));
+   setItemWidget(embedItem, 0, friendUsersListView_);
 
-   connect(_friendUsersListView, &QAbstractItemView::clicked,
+   connect(friendUsersListView_, &QAbstractItemView::clicked,
            this, &ChatUserListTreeWidget::onUserListItemClicked);
 
    QTreeWidgetItem *allUsers = new QTreeWidgetItem(this);
@@ -46,12 +46,12 @@ void ChatUserListTreeWidget::createCategories()
    QTreeWidgetItem *embedAllUsers = new QTreeWidgetItem(allUsers);
    embedAllUsers->setFlags(Qt::ItemIsEnabled);
 
-   _nonFriendUsersListView->setViewMode(QListView::ListMode);
-   _nonFriendUsersListView->setModel(_nonFriendUsersViewModel);
-   _nonFriendUsersListView->setObjectName(QStringLiteral("chatUserCategoryListView"));
-   setItemWidget(embedAllUsers, 0, _nonFriendUsersListView);
+   nonFriendUsersListView_->setViewMode(QListView::ListMode);
+   nonFriendUsersListView_->setModel(nonFriendUsersViewModel_);
+   nonFriendUsersListView_->setObjectName(QStringLiteral("chatUserCategoryListView"));
+   setItemWidget(embedAllUsers, 0, nonFriendUsersListView_);
 
-   connect(_nonFriendUsersListView, &QAbstractItemView::clicked,
+   connect(nonFriendUsersListView_, &QAbstractItemView::clicked,
            this, &ChatUserListTreeWidget::onUserListItemClicked);
 
    adjustListViewSize();
@@ -74,8 +74,8 @@ void ChatUserListTreeWidget::onChatUserDataListChanged(const ChatUserDataListPtr
       }
    }
 
-   _friendUsersViewModel->onUserDataListChanged(friendList);
-   _nonFriendUsersViewModel->onUserDataListChanged(nonFriendList);
+   friendUsersViewModel_->onUserDataListChanged(friendList);
+   nonFriendUsersViewModel_->onUserDataListChanged(nonFriendList);
 
    adjustListViewSize();
 }
@@ -129,13 +129,13 @@ void ChatUserListTreeWidget::onUserListItemClicked(const QModelIndex &index)
       return;
    }
 
-   if (listView == _friendUsersListView)
+   if (listView == friendUsersListView_)
    {
-      _nonFriendUsersListView->clearSelection();
+      nonFriendUsersListView_->clearSelection();
    }
    else
    {
-      _friendUsersListView->clearSelection();
+      friendUsersListView_->clearSelection();
    }
 
    ChatUsersViewModel *model = qobject_cast<ChatUsersViewModel*>(listView->model());

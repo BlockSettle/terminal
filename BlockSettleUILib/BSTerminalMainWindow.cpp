@@ -63,12 +63,12 @@
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QWidget* parent)
    : QMainWindow(parent)
-   , ui(new Ui::BSTerminalMainWindow())
+   , ui_(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
 {
    UiUtils::SetupLocale();
 
-   ui->setupUi(this);
+   ui_->setupUi(this);
 
    setupShortcuts();
 
@@ -89,7 +89,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       setGeometry(geom);
    }
 
-   connect(ui->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
+   connect(ui_->actionQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
    connect(this, &BSTerminalMainWindow::readyToLogin, this, &BSTerminalMainWindow::onReadyToLogin);
 
    logMgr_ = std::make_shared<bs::LogManager>([] { KillHeadlessProcess(); });
@@ -99,7 +99,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    setupIcon();
    UiUtils::setupIconFont(this);
-   NotificationCenter::createInstance(applicationSettings_, ui.get(), sysTrayIcon_, this);
+   NotificationCenter::createInstance(applicationSettings_, ui_.get(), sysTrayIcon_, this);
 
    InitConnections();
 
@@ -118,7 +118,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    InitAuthManager();
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
-      , signContainer_, ui->statusbar);
+      , signContainer_, ui_->statusbar);
 
    splashScreen.SetProgress(100);
    splashScreen.close();
@@ -127,7 +127,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    setupToolbar();
    setupMenu();
 
-   ui->widgetTransactions->setEnabled(false);
+   ui_->widgetTransactions->setEnabled(false);
 
    connectSigner();
    connectArmory();
@@ -139,14 +139,14 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
          aboutDlg_->show();
       };
    };
-   connect(ui->actionAboutBlockSettle, &QAction::triggered, aboutDlgCb(0));
-   connect(ui->actionAboutTerminal, &QAction::triggered, aboutDlgCb(1));
-   connect(ui->actionContactBlockSettle, &QAction::triggered, aboutDlgCb(2));
-   connect(ui->actionVersion, &QAction::triggered, aboutDlgCb(3));
+   connect(ui_->actionAboutBlockSettle, &QAction::triggered, aboutDlgCb(0));
+   connect(ui_->actionAboutTerminal, &QAction::triggered, aboutDlgCb(1));
+   connect(ui_->actionContactBlockSettle, &QAction::triggered, aboutDlgCb(2));
+   connect(ui_->actionVersion, &QAction::triggered, aboutDlgCb(3));
 
-   ui->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
+   ui_->tabWidget->setCurrentIndex(settings->get<int>(ApplicationSettings::GUI_main_tab));
 
-   ui->widgetTransactions->setAppSettings(applicationSettings_);
+   ui_->widgetTransactions->setAppSettings(applicationSettings_);
 
    UpdateMainWindowAppearence();
 }
@@ -295,7 +295,7 @@ void BSTerminalMainWindow::postSplashscreenActions()
 BSTerminalMainWindow::~BSTerminalMainWindow()
 {
    applicationSettings_->set(ApplicationSettings::GUI_main_geometry, geometry());
-   applicationSettings_->set(ApplicationSettings::GUI_main_tab, ui->tabWidget->currentIndex());
+   applicationSettings_->set(ApplicationSettings::GUI_main_tab, ui_->tabWidget->currentIndex());
    applicationSettings_->SaveSettings();
 
    NotificationCenter::destroyInstance();
@@ -323,7 +323,7 @@ void BSTerminalMainWindow::setupToolbar()
 
    auto toolBar = new QToolBar(this);
    toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-   ui->tabWidget->setCornerWidget(toolBar, Qt::TopRightCorner);
+   ui_->tabWidget->setCornerWidget(toolBar, Qt::TopRightCorner);
 
    // send bitcoins
    toolBar->addAction(action_send_);
@@ -332,7 +332,7 @@ void BSTerminalMainWindow::setupToolbar()
 
    action_logout_->setVisible(false);
 
-   connect(ui->pushButtonUser, &QPushButton::clicked, this, &BSTerminalMainWindow::onButtonUserClicked);
+   connect(ui_->pushButtonUser, &QPushButton::clicked, this, &BSTerminalMainWindow::onButtonUserClicked);
 
    QMenu* trayMenu = new QMenu(this);
    QAction* trayShowAction = trayMenu->addAction(tr("&Open Terminal"));
@@ -341,10 +341,10 @@ void BSTerminalMainWindow::setupToolbar()
 
    trayMenu->addAction(action_send_);
    trayMenu->addAction(action_receive_);
-   trayMenu->addAction(ui->actionSettings);
+   trayMenu->addAction(ui_->actionSettings);
 
    trayMenu->addSeparator();
-   trayMenu->addAction(ui->actionQuit);
+   trayMenu->addAction(ui_->actionQuit);
    sysTrayIcon_->setContextMenu(trayMenu);
 }
 
@@ -386,8 +386,8 @@ void BSTerminalMainWindow::LoadWallets()
    bs::UtxoReservation::init();
 
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
-      ui->widgetRFQ->setWalletsManager(walletsMgr_);
-      ui->widgetRFQReply->setWalletsManager(walletsMgr_);
+      ui_->widgetRFQ->setWalletsManager(walletsMgr_);
+      ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
       updateControlEnabledState();
@@ -525,16 +525,16 @@ void BSTerminalMainWindow::SignerReady()
       InitWalletsView();
       InitPortfolioView();
 
-      ui->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
+      ui_->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
 
       auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
       quoteProvider->ConnectToCelerClient(celerConnection_);
 
       auto dialogManager = std::make_shared<DialogManager>(geometry());
 
-      ui->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
+      ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
          , dialogManager, signContainer_, armory_, connectionManager_);
-      ui->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
+      ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
          , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
 
       widgetsInited_ = true;
@@ -643,34 +643,34 @@ void BSTerminalMainWindow::InitAssets()
 void BSTerminalMainWindow::InitPortfolioView()
 {
    portfolioModel_ = std::make_shared<CCPortfolioModel>(walletsMgr_, assetManager_, this);
-   ui->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
+   ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
                              signContainer_, armory_, logMgr_->logger("ui"),
                              walletsMgr_);
 }
 
 void BSTerminalMainWindow::InitWalletsView()
 {
-   ui->widgetWallets->init(logMgr_->logger("ui"), walletsMgr_, signContainer_
+   ui_->widgetWallets->init(logMgr_->logger("ui"), walletsMgr_, signContainer_
       , applicationSettings_, connectionManager_, assetManager_, authManager_, armory_);
 }
 
 void BSTerminalMainWindow::InitChatView()
 {
-   ui->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
+   ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
 
-   //connect(ui->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
+   //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
 }
 
 // Initialize widgets related to transactions.
 void BSTerminalMainWindow::InitTransactionsView()
 {
-   ui->widgetExplorer->init(armory_, logMgr_->logger());
-   ui->widgetTransactions->init(walletsMgr_, armory_, signContainer_,
+   ui_->widgetExplorer->init(armory_, logMgr_->logger());
+   ui_->widgetTransactions->init(walletsMgr_, armory_, signContainer_,
                                 logMgr_->logger("ui"));
-   ui->widgetTransactions->setEnabled(true);
+   ui_->widgetTransactions->setEnabled(true);
 
-   ui->widgetTransactions->SetTransactionsModel(transactionsModel_);
-   ui->widgetPortfolio->SetTransactionsModel(transactionsModel_);
+   ui_->widgetTransactions->SetTransactionsModel(transactionsModel_);
+   ui_->widgetPortfolio->SetTransactionsModel(transactionsModel_);
 }
 
 void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState)
@@ -835,15 +835,15 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
       }
 
       if (newWalletDialog.isCreate()) {
-         return ui->widgetWallets->CreateNewWallet(reportSuccess);
+         return ui_->widgetWallets->CreateNewWallet(reportSuccess);
       }
       else if (newWalletDialog.isImport()) {
-         return ui->widgetWallets->ImportNewWallet(reportSuccess);
+         return ui_->widgetWallets->ImportNewWallet(reportSuccess);
       }
 
       return false;
    } else {
-      return ui->widgetWallets->ImportNewWallet(reportSuccess);
+      return ui_->widgetWallets->ImportNewWallet(reportSuccess);
    }
 }
 
@@ -868,12 +868,12 @@ void BSTerminalMainWindow::onReceive()
 {
    const auto defWallet = walletsMgr_->getDefaultWallet();
    std::string selWalletId = defWallet ? defWallet->walletId() : std::string{};
-   if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
-      auto wallets = ui->widgetWallets->getSelectedWallets();
+   if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
+      auto wallets = ui_->widgetWallets->getSelectedWallets();
       if (!wallets.empty()) {
          selWalletId = wallets[0]->walletId();
       } else {
-         wallets = ui->widgetWallets->getFirstWallets();
+         wallets = ui_->widgetWallets->getFirstWallets();
 
          if (!wallets.empty()) {
             selWalletId = wallets[0]->walletId();
@@ -909,8 +909,8 @@ void BSTerminalMainWindow::onSend()
 {
    std::string selectedWalletId;
 
-   if (ui->tabWidget->currentWidget() == ui->widgetWallets) {
-      const auto &wallets = ui->widgetWallets->getSelectedWallets();
+   if (ui_->tabWidget->currentWidget() == ui_->widgetWallets) {
+      const auto &wallets = ui_->widgetWallets->getSelectedWallets();
       if (wallets.size() == 1) {
          selectedWalletId = wallets[0]->walletId();
       }
@@ -948,24 +948,24 @@ void BSTerminalMainWindow::setupMenu()
    action_login_->setMenuRole(QAction::ApplicationSpecificRole);
    action_logout_->setMenuRole(QAction::ApplicationSpecificRole);
 
-   ui->menuFile->insertAction(ui->actionSettings, action_login_);
-   ui->menuFile->insertAction(ui->actionSettings, action_logout_);
+   ui_->menuFile->insertAction(ui_->actionSettings, action_login_);
+   ui_->menuFile->insertAction(ui_->actionSettings, action_logout_);
 
-   ui->menuFile->insertSeparator(action_login_);
-   ui->menuFile->insertSeparator(ui->actionSettings);
+   ui_->menuFile->insertSeparator(action_login_);
+   ui_->menuFile->insertSeparator(ui_->actionSettings);
 
-   connect(ui->actionCreateNewWallet, &QAction::triggered, [ww = ui->widgetWallets]{ ww->CreateNewWallet(); });
-   connect(ui->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
-   connect(ui->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
-   connect(ui->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
-   connect(ui->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
+   connect(ui_->actionCreateNewWallet, &QAction::triggered, [ww = ui_->widgetWallets]{ ww->CreateNewWallet(); });
+   connect(ui_->actionAuthenticationAddresses, &QAction::triggered, this, &BSTerminalMainWindow::openAuthManagerDialog);
+   connect(ui_->actionSettings, &QAction::triggered, this, [=]() { openConfigDialog(); });
+   connect(ui_->actionAccountInformation, &QAction::triggered, this, &BSTerminalMainWindow::openAccountInfoDialog);
+   connect(ui_->actionEnterColorCoinToken, &QAction::triggered, this, &BSTerminalMainWindow::openCCTokenDialog);
 
    onUserLoggedOut();
 
 #ifndef Q_OS_MAC
-   ui->horizontalFrame->hide();
+   ui_->horizontalFrame->hide();
 
-   ui->menubar->setCornerWidget(ui->pushButtonUser);
+   ui_->menubar->setCornerWidget(ui_->pushButtonUser);
 #endif
 }
 
@@ -1025,7 +1025,7 @@ void BSTerminalMainWindow::loginToCeler(const std::string& username, const std::
    } else {
       auto userName = QString::fromStdString(username);
       currentUserLogin_ = userName;
-      ui->widgetWallets->setUsername(userName);
+      ui_->widgetWallets->setUsername(userName);
       action_logout_->setVisible(false);
       action_login_->setEnabled(false);
    }
@@ -1048,7 +1048,7 @@ void BSTerminalMainWindow::onReadyToLogin()
 
    if (loginDialog.exec() == QDialog::Accepted) {
       currentUserLogin_ = loginDialog.getUsername();
-      auto id = ui->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
+      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
       setLoginButtonText(currentUserLogin_);
 
 #ifndef PRODUCTION_BUILD
@@ -1065,8 +1065,8 @@ void BSTerminalMainWindow::onReadyToLogin()
 
 void BSTerminalMainWindow::onLogout()
 {
-   ui->widgetWallets->setUsername(QString());
-   ui->widgetChat->logout();
+   ui_->widgetWallets->setUsername(QString());
+   ui_->widgetChat->logout();
 
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();
@@ -1078,14 +1078,14 @@ void BSTerminalMainWindow::onLogout()
 
 void BSTerminalMainWindow::onUserLoggedIn()
 {
-   ui->actionAccountInformation->setEnabled(true);
-   ui->actionAuthenticationAddresses->setEnabled(true);
-   ui->actionOneTimePassword->setEnabled(true);
-   ui->actionEnterColorCoinToken->setEnabled(true);
+   ui_->actionAccountInformation->setEnabled(true);
+   ui_->actionAuthenticationAddresses->setEnabled(true);
+   ui_->actionOneTimePassword->setEnabled(true);
+   ui_->actionEnterColorCoinToken->setEnabled(true);
 
-   ui->actionDeposits->setEnabled(true);
-   ui->actionWithdrawalRequest->setEnabled(true);
-   ui->actionLinkAdditionalBankAccount->setEnabled(true);
+   ui_->actionDeposits->setEnabled(true);
+   ui_->actionWithdrawalRequest->setEnabled(true);
+   ui_->actionLinkAdditionalBankAccount->setEnabled(true);
 
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
    ccFileManager_->ConnectToCelerClient(celerConnection_);
@@ -1105,14 +1105,14 @@ void BSTerminalMainWindow::onUserLoggedIn()
 
 void BSTerminalMainWindow::onUserLoggedOut()
 {
-   ui->actionAccountInformation->setEnabled(false);
-   ui->actionAuthenticationAddresses->setEnabled(false);
-   ui->actionEnterColorCoinToken->setEnabled(false);
-   ui->actionOneTimePassword->setEnabled(false);
+   ui_->actionAccountInformation->setEnabled(false);
+   ui_->actionAuthenticationAddresses->setEnabled(false);
+   ui_->actionEnterColorCoinToken->setEnabled(false);
+   ui_->actionOneTimePassword->setEnabled(false);
 
-   ui->actionDeposits->setEnabled(false);
-   ui->actionWithdrawalRequest->setEnabled(false);
-   ui->actionLinkAdditionalBankAccount->setEnabled(false);
+   ui_->actionDeposits->setEnabled(false);
+   ui_->actionWithdrawalRequest->setEnabled(false);
+   ui_->actionLinkAdditionalBankAccount->setEnabled(false);
 
    if (signContainer_) {
       signContainer_->SetUserId(BinaryData{});
@@ -1305,10 +1305,10 @@ void BSTerminalMainWindow::changeEvent(QEvent* e)
 
 void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 {
-   ui->pushButtonUser->setText(text);
+   ui_->pushButtonUser->setText(text);
 
 #ifndef Q_OS_MAC
-   ui->menubar->adjustSize();
+   ui_->menubar->adjustSize();
 #endif
 }
 
@@ -1366,28 +1366,28 @@ void BSTerminalMainWindow::setupShortcuts()
 {
    auto overviewTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+1")), this);
    overviewTabShortcut->setContext(Qt::WindowShortcut);
-   connect(overviewTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(0);});
+   connect(overviewTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(0);});
 
    auto tradingTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+2")), this);
    tradingTabShortcut->setContext(Qt::WindowShortcut);
-   connect(tradingTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(1);});
+   connect(tradingTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(1);});
 
    auto dealingTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+3")), this);
    dealingTabShortcut->setContext(Qt::WindowShortcut);
-   connect(dealingTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(2);});
+   connect(dealingTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(2);});
 
    auto walletsTabShortcutt = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+4")), this);
    walletsTabShortcutt->setContext(Qt::WindowShortcut);
-   connect(walletsTabShortcutt, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(3);});
+   connect(walletsTabShortcutt, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(3);});
 
    auto transactionsTabShortcut = new QShortcut(QKeySequence(QString::fromStdString("Ctrl+5")), this);
    transactionsTabShortcut->setContext(Qt::WindowShortcut);
-   connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui->tabWidget->setCurrentIndex(4);});
+   connect(transactionsTabShortcut, &QShortcut::activated, [this](){ ui_->tabWidget->setCurrentIndex(4);});
 
    auto alt_1 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+1")), this);
    alt_1->setContext(Qt::WindowShortcut);
    connect(alt_1, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_1);
       }
    );
@@ -1395,7 +1395,7 @@ void BSTerminalMainWindow::setupShortcuts()
    auto alt_2 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+2")), this);
    alt_2->setContext(Qt::WindowShortcut);
    connect(alt_2, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_2);
       }
    );
@@ -1403,7 +1403,7 @@ void BSTerminalMainWindow::setupShortcuts()
    auto alt_3 = new QShortcut(QKeySequence(QString::fromLatin1("Alt+3")), this);
    alt_3->setContext(Qt::WindowShortcut);
    connect(alt_3, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_3);
       }
    );
@@ -1411,7 +1411,7 @@ void BSTerminalMainWindow::setupShortcuts()
    auto ctrl_s = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+S")), this);
    ctrl_s->setContext(Qt::WindowShortcut);
    connect(ctrl_s, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Ctrl_S);
       }
    );
@@ -1419,7 +1419,7 @@ void BSTerminalMainWindow::setupShortcuts()
    auto ctrl_p = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+P")), this);
    ctrl_p->setContext(Qt::WindowShortcut);
    connect(ctrl_p, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Ctrl_P);
       }
    );
@@ -1427,7 +1427,7 @@ void BSTerminalMainWindow::setupShortcuts()
    auto ctrl_q = new QShortcut(QKeySequence(QString::fromLatin1("Ctrl+Q")), this);
    ctrl_q->setContext(Qt::WindowShortcut);
    connect(ctrl_q, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Ctrl_Q);
       }
    );
@@ -1435,7 +1435,7 @@ void BSTerminalMainWindow::setupShortcuts()
    auto alt_s = new QShortcut(QKeySequence(QString::fromLatin1("Alt+S")), this);
    alt_s->setContext(Qt::WindowShortcut);
    connect(alt_s, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_S);
       }
    );
@@ -1443,7 +1443,7 @@ void BSTerminalMainWindow::setupShortcuts()
    auto alt_b = new QShortcut(QKeySequence(QString::fromLatin1("Alt+B")), this);
    alt_b->setContext(Qt::WindowShortcut);
    connect(alt_b, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_B);
       }
    );
@@ -1451,14 +1451,14 @@ void BSTerminalMainWindow::setupShortcuts()
    auto alt_p = new QShortcut(QKeySequence(QString::fromLatin1("Alt+P")), this);
    alt_p->setContext(Qt::WindowShortcut);
    connect(alt_p, &QShortcut::activated, [this]() {
-         static_cast<TabWithShortcut*>(ui->tabWidget->currentWidget())->shortcutActivated(
+         static_cast<TabWithShortcut*>(ui_->tabWidget->currentWidget())->shortcutActivated(
             TabWithShortcut::ShortcutType::Alt_P);
       }
    );
 }
 
 void BSTerminalMainWindow::onButtonUserClicked() {
-   if (ui->pushButtonUser->text() == loginButtonText_) {
+   if (ui_->pushButtonUser->text() == loginButtonText_) {
       onLogin();
    } else {
       if (BSMessageBox(BSMessageBox::question, tr("User Logout"), tr("You are about to logout")
@@ -1546,7 +1546,7 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
    QApplication::processEvents();
 
    statusBarView_ = std::make_shared<StatusBarView>(armory_, walletsMgr_, assetManager_, celerConnection_
-      , signContainer_, ui->statusbar);
+      , signContainer_, ui_->statusbar);
 
    InitWalletsView();
 

@@ -43,7 +43,7 @@ signals:
 public slots:
 
 private:
-   ChatUserDataListPtr _chatUserDataListPtr;
+   ChatUserDataListPtr chatUserDataListPtr_;
    std::shared_ptr<UserHasher> hasher_;
 };
 

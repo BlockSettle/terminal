@@ -154,7 +154,7 @@ ChatWidget::ChatWidget(QWidget *parent)
    //Init UI and other stuff
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
-   _chatUserListLogicPtr = std::make_shared<ChatUserListLogic>(this);
+   chatUserListLogicPtr_ = std::make_shared<ChatUserListLogic>(this);
 
    qRegisterMetaType<std::vector<std::string>>();
 }
@@ -167,7 +167,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 {
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
-   _chatUserListLogicPtr->init(client_, logger);
+   chatUserListLogicPtr_->init(client_, logger);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
 
@@ -178,14 +178,14 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
    connect(client_.get(), &ChatClient::UsersReplace,
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::onReplaceChatUsers);
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onReplaceChatUsers);
    connect(client_.get(), &ChatClient::UsersAdd,
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::onAddChatUsers);
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onAddChatUsers);
    connect(client_.get(), &ChatClient::UsersDel,
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::onRemoveChatUsers);
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onRemoveChatUsers);
    connect(client_.get(), &ChatClient::IncomingFriendRequest,
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::onIcomingFriendRequest);
-   connect(_chatUserListLogicPtr.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserRemoved,
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onIcomingFriendRequest);
+   connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserRemoved,
            this, &ChatWidget::onChatUserRemoved);
 
    connect(client_.get(), &ChatClient::MessagesUpdate, ui_->textEditMessages
@@ -201,11 +201,11 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
            client_.get(), &ChatClient::onMessageRead);
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
-   connect(_chatUserListLogicPtr.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
+   connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
            ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatUserDataListChanged);
 
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::userHaveNewMessageChanged, 
-           _chatUserListLogicPtr.get(), &ChatUserListLogic::onUserHaveNewMessageChanged);
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onUserHaveNewMessageChanged);
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
 }
@@ -241,14 +241,14 @@ void ChatWidget::changeState(ChatWidget::State state)
          {
             stateCurrent_ = std::make_shared<ChatWidgetStateLoggedIn>(this);
 
-            _chatUserListLogicPtr->readUsersFromDB();
+            chatUserListLogicPtr_->readUsersFromDB();
          }
          break;
       case State::LoggedOut:
          {
             stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
-            _chatUserListLogicPtr->chatUserModelPtr()->resetModel();
-            _chatUserListLogicPtr->readUsersFromDB();
+            chatUserListLogicPtr_->chatUserModelPtr()->resetModel();
+            chatUserListLogicPtr_->readUsersFromDB();
          }
          break;
       }
@@ -296,7 +296,7 @@ void ChatWidget::logout()
 
 bool ChatWidget::hasUnreadMessages()
 {
-   ChatUserModelPtr chatUserModelPtr = _chatUserListLogicPtr->chatUserModelPtr();
+   ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
 
    if (chatUserModelPtr)
    {
@@ -321,9 +321,9 @@ void ChatWidget::onSearchUserReturnPressed()
       return;
    }
    
-   auto chatUserDataPtr = _chatUserListLogicPtr->chatUserModelPtr()->getUserByEmail(userToAdd);
+   auto chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByEmail(userToAdd);
    if (!chatUserDataPtr) { // email exists?
-      chatUserDataPtr = _chatUserListLogicPtr->chatUserModelPtr()->getUserByUserIdPrefix(userToAdd); // user ID autocomplete?
+      chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByUserIdPrefix(userToAdd); // user ID autocomplete?
       if (!chatUserDataPtr)
       {
          return;
@@ -369,7 +369,7 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
 void ChatWidget::onAddUserToContacts(const QString &userId)
 {
    // check if user isn't already in contacts
-   ChatUserModelPtr chatUserModelPtr = _chatUserListLogicPtr->chatUserModelPtr();
+   ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
 
    if (chatUserModelPtr && !chatUserModelPtr->isChatUserInContacts(userId))
    {
