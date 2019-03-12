@@ -31,6 +31,7 @@ public:
    bool send(const std::string& data) override;
 
 protected:
+   bool recvData() override;
    void onRawDataReceived(const std::string& rawData) override;
    ZmqContext::sock_ptr CreateDataSocket() override;
 
@@ -48,6 +49,7 @@ private:
    uint32_t innerRekeyCount_ = 0;
    std::string pendingData_;
    std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
+   bool bip15XHandshakeCompleted_ = false;
 //   const std::string marker = "\r\n\r\n";
 };
 

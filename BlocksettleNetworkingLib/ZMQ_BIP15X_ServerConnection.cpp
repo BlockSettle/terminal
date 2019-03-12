@@ -149,7 +149,7 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
       readLeftOverData_.clear();
    }*/
 
-   if (bip151Connection_->connectionComplete())
+   if (bip15XHandshakeCompleted_)
    {
       //decrypt packet
       size_t plainTextSize = packetData.getSize() - POLY1305MACLEN;
@@ -446,6 +446,8 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
          //rekey after succesful BIP150 handshake
          bip151Connection_->bip150HandshakeRekey();
          outKeyTimePoint_ = chrono::system_clock::now();
+
+         bip15XHandshakeCompleted_ = true;
 
          break;
       }

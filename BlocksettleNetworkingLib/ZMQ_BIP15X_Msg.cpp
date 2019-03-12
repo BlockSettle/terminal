@@ -18,8 +18,7 @@ bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
 
    BinaryRefReader brrPacket(dataRef);
    auto packetlen = brrPacket.get_uint32_t();
-   if (packetlen != brrPacket.getSizeRemaining())
-   {
+   if (packetlen != brrPacket.getSizeRemaining()) {
       return false;
    }
 
@@ -398,7 +397,7 @@ bool ZMQ_BIP15X_Msg::isReady() const
 uint8_t ZMQ_BIP15X_Msg::getPacketType(const BinaryDataRef& bdr)
 {
    if (bdr.getSize() < 5) {
-      throw runtime_error("packet is too small to be serialized fragment");
+      throw runtime_error("packet is too small to be a serialized fragment");
    }
 
    return bdr.getPtr()[4];

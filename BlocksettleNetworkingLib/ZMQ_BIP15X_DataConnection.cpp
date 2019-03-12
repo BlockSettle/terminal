@@ -3,6 +3,7 @@
 #include "zmq.h"
 
 #include "FastLock.h"
+#include "MessageHolder.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_Msg.h"
 
@@ -162,12 +163,12 @@ void ZMQ_BIP15X_DataConnection::onRawDataReceived(const string& rawData) {
 void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
    size_t position;
 
-   // Process all incoming data.
-//   string message = pendingData_;
+   // Process all incoming data while clearing the buffer.
    BinaryData payload(pendingData_);
+   pendingData_.clear();
 
    // If we've completed the BIP 150/151 handshake, decrypt.
-   if (bip151Connection_->connectionComplete()) {
+   if (bip15XHandshakeCompleted_) {
       //decrypt packet
       auto result = bip151Connection_->decryptPacket(
          payload.getPtr(), payload.getSize(),
@@ -266,6 +267,25 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
 ZmqContext::sock_ptr ZMQ_BIP15X_DataConnection::CreateDataSocket()
 {
    return context_->CreateClientSocket();
+}
+
+bool ZMQ_BIP15X_DataConnection::recvData()
+{
+   MessageHolder data;
+
+   int result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
+   if (result == -1) {
+      if (logger_) {
+         logger_->error("[ZMQ_BIP15X_DataConnection::{}] {} failed to recv data "
+            "frame from stream: {}" , __func__, connectionName_
+            , zmq_strerror(zmq_errno()));
+      }
+      return false;
+   }
+
+   onRawDataReceived(data.ToString());
+
+   return true;
 }
 
 // The function processing the BIP 150/151 handshake packets.
@@ -443,6 +463,7 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(const ZMQ_BIP15X_Msg& msgOb
       outKeyTimePoint_ = chrono::system_clock::now();
 
       //flag connection as ready
+      bip15XHandshakeCompleted_ = true;
 //      connectionReadyProm_.set_value(true);
 
       break;

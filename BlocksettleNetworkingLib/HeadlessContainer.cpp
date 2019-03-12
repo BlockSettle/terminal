@@ -1072,7 +1072,8 @@ bool RemoteSigner::Connect()
 void RemoteSigner::ConnectHelper()
 {
    if (!connection_->isActive()) {
-      if (connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get())) {
+      if (!connection_->openConnection(host_.toStdString(), port_.toStdString()
+         , listener_.get())) {
          emit connected();
       }
       else {
@@ -1081,7 +1082,6 @@ void RemoteSigner::ConnectHelper()
          return;
       }
    }
-   startBIP151Handshake();
 }
 
 bool RemoteSigner::Disconnect()
@@ -1155,7 +1155,7 @@ bool RemoteSigner::hasUI() const
 
 void RemoteSigner::onConnected()
 {
-   Connect();
+   startBIP151Handshake();
 }
 
 void RemoteSigner::onAuthenticated()
