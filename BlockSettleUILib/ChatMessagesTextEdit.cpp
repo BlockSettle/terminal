@@ -3,7 +3,6 @@
 #include "ChatMessagesTextEdit.h"
 #include "ChatClient.h"
 #include "ChatProtocol.h"
-#include "NotificationCenter.h"
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
@@ -122,8 +121,7 @@ void ChatMessagesTextEdit::onSwitchToChat(const QString& chatId)
    clear();
    table = NULL;
 
-   emit userHaveNewMessageChanged(chatId, false);
-   NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("Read message") });
+   emit userHaveNewMessageChanged(chatId, false, false);
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
@@ -331,14 +329,13 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
       for (const auto &msg : messages) {
          if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
             insertMessage(msg);
-
-            NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message"), QVariant(true) });
+            
+            emit userHaveNewMessageChanged(msg->getSenderId(), false, true);
          }
          else {
             messages_[msg->getSenderId()].push_back(msg);
 
-            NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message") });
-            emit userHaveNewMessageChanged(msg->getSenderId(), true);
+            emit userHaveNewMessageChanged(msg->getSenderId(), true, false);
          }
       }
    }

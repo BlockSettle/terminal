@@ -59,7 +59,7 @@ public:
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
    void rowsInserted();
-   void userHaveNewMessageChanged(const QString &userId, const bool &haveNewMessage);
+   void userHaveNewMessageChanged(const QString &userId, const bool &haveNewMessage, const bool &isInCurrentChat);
 
 protected:
    enum class Column {

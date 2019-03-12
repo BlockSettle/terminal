@@ -70,16 +70,12 @@ void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMess
 {
    if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
       int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
-      bool hasUnreadMessages = mainWinUi_->widgetChat->hasUnreadMessages();
+      bool isInCurrentChat = msg[1].toBool();
+      bool hasUnreadMessages = msg[2].toBool();
 
       if (hasUnreadMessages) {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
       } else {
-         bool isInCurrentChat = false;
-         if (!msg.empty() && msg.size() > 1) {
-            isInCurrentChat = msg[1].toBool();
-         }
-
          if (mainWinUi_->tabWidget->currentIndex() != chatIndex && isInCurrentChat) {
             mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
          } else {

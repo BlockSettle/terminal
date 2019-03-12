@@ -33,7 +33,7 @@ public slots:
    void onRemoveChatUsers(const UserIdList &userIdList);
    void onReplaceChatUsers(const UserIdList &userIdList);
    void onIcomingFriendRequest(const UserIdList &userIdList);
-   void onUserHaveNewMessageChanged(const QString &userId, const bool &userHaveNewMessage);
+   void onUserHaveNewMessageChanged(const QString &userId, const bool &userHaveNewMessage, const bool &isInCurrentChat);
 
 private:
    ChatUserModelPtr chatUserModelPtr_;
