@@ -126,7 +126,7 @@ public:
       }
 
       chat_->currentChat_ = userId;
-      isRoom = false;
+      chat_->setIsRoom(false);
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
       chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
@@ -148,7 +148,7 @@ public:
       }
 
       chat_->currentChat_ = roomId;
-      isRoom = true;
+      chat_->setIsRoom(true);
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
       chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
@@ -399,4 +399,9 @@ void ChatWidget::onAddUserToContacts(const QString &userId)
 void ChatWidget::onRoomClicked(const QString& roomId)
 {
    stateCurrent_->onRoomClicked(roomId);
+}
+
+void ChatWidget::setIsRoom(bool isRoom)
+{
+   isRoom_ = isRoom;
 }
