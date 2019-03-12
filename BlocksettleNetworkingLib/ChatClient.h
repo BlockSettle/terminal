@@ -61,8 +61,11 @@ public:
 
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
+   std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
+         const QString& message, const QString &receiver);
 
    void retrieveUserMessages(const QString &userId);
+   void retrieveRoomMessages(const QString &roomId);
 
    // Called when a peer asks for our public key.
    void OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response) override;

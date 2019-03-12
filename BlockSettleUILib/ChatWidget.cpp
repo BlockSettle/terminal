@@ -143,7 +143,7 @@ public:
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
       chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
-      chat_->client_->retrieveUserMessages(chat_->currentChat_);
+      chat_->client_->retrieveRoomMessages(chat_->currentChat_);
 
       // load draft
       if (chat_->draftMessages_.contains(roomId)) {
