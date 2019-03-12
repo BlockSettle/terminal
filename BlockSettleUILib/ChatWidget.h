@@ -55,6 +55,7 @@ private slots:
    void onSearchUserReturnPressed();
    void onChatUserRemoved(const ChatUserDataPtr &);
    void onAddUserToContacts(const QString &userId);
+   void onRoomClicked(const QString& roomId);
 
 signals:
    void LoginFailed();
@@ -70,17 +71,19 @@ private:
    std::string serverPublicKey_;
    QString  currentChat_;
    ChatSearchPopup *popup_;
+   bool isRoom_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
-   ChatUserListLogicPtr _chatUserListLogicPtr;
+   ChatUserListLogicPtr chatUserListLogicPtr_;
    QMap<QString, QString> draftMessages_;
 
 private:
+   bool isRoom();
+   void setIsRoom(bool);
    void changeState(ChatWidget::State state);
 
    bool eventFilter(QObject * obj, QEvent * event) override;
-
 };
 
 #endif // CHAT_WIDGET_H

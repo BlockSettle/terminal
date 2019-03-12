@@ -1,5 +1,5 @@
 #include "ChatClient.h"
-#include "ChatProtocol.h"
+#include "ChatProtocol/ChatProtocol.h"
 
 #include <spdlog/spdlog.h>
 #include "botan/base64.h"
@@ -15,6 +15,8 @@
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
+Q_DECLARE_METATYPE(std::shared_ptr<Chat::ChatRoomData>)
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::ChatRoomData>>)
 
 //We have current flags
 //We have upladed flags
@@ -37,6 +39,8 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 {
    qRegisterMetaType<std::shared_ptr<Chat::MessageData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::MessageData>>>();
+   qRegisterMetaType<std::shared_ptr<Chat::ChatRoomData>>();
+   qRegisterMetaType<std::vector<std::shared_ptr<Chat::ChatRoomData>>>();
 
    chatDb_ = std::make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
    if (!chatDb_->loadKeys(pubKeys_)) {
@@ -164,6 +168,43 @@ void ChatClient::OnContactsActionResponse(const Chat::ContactsActionResponse& re
                   response.senderId(),
                   actionString
                   );
+}
+
+void ChatClient::OnChatroomsList(const Chat::ChatroomsListResponse& response)
+{
+   QStringList rooms;
+   
+   std::vector<std::shared_ptr<Chat::ChatRoomData>> roomList = response.getChatRoomList();
+   for (auto room : roomList){
+      rooms << QString::fromStdString(room->toJsonString());
+   }
+   emit RoomsAdd(roomList);
+   logger_->debug("[ChatClient::OnChatroomsList]: Received chatroom list from server: {}",
+                  rooms.join(QLatin1String(", ")).prepend(QLatin1Char('[')).append(QLatin1Char(']')).toStdString()
+                  );
+}
+
+void ChatClient::OnRoomMessages(const Chat::RoomMessagesResponse& response)
+{
+   logger_->debug("Received chatroom messages from server (receiver id is chatroom): {}", response.getData());
+   std::vector<std::shared_ptr<Chat::MessageData>> messages;
+   for (const auto &msgStr : response.getDataList()) {
+      const auto msg = Chat::MessageData::fromJSON(msgStr);
+      msg->setFlag(Chat::MessageData::State::Acknowledged);
+      chatDb_->add(*msg);
+
+      if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
+         if (!msg->decrypt(ownPrivKey_)) {
+            logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
+            msg->setFlag(Chat::MessageData::State::Invalid);
+         }
+      }
+      messages.push_back(msg);
+      //int mask = old_state ^ msg->getState();
+      //sendUpdateMessageState(msg);
+   }
+
+   emit MessagesUpdate(messages, false);
 }
 
 void ChatClient::logout()
@@ -370,9 +411,65 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    return result;
 }
 
+std::shared_ptr<Chat::MessageData> ChatClient::sendRoomOwnMessage(const QString& message, const QString& receiver)
+{
+   Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc(), message);
+   auto result = std::make_shared<Chat::MessageData>(msg);
+
+//   const auto &itPub = pubKeys_.find(receiver);
+//   if (itPub == pubKeys_.end()) {
+//      // Ask for public key from peer. Enqueue the message to be sent, once we receive the
+//      // necessary public key.
+//      enqueued_messages_[receiver].push(message);
+
+//      // Send our key to the peer.
+//      auto request = std::make_shared<Chat::AskForPublicKeyRequest>(
+//         "", // clientId
+//         currentUserId_,
+//         receiver.toStdString());
+//      sendRequest(request);
+//      return result;
+//   }
+
+   logger_->debug("[ChatClient::sendRoomOwnMessage] {}", message.toStdString());
+
+//   auto localEncMsg = msg;
+//   if (!localEncMsg.encrypt(appSettings_->GetAuthKeys().second)) {
+//      logger_->error("[ChatClient::sendRoomOwnMessage] failed to encrypt by local key");
+//   }
+   chatDb_->add(msg);
+
+//   if (!msg.encrypt(itPub->second)) {
+//      logger_->error("[ChatClient::sendMessage] failed to encrypt message {}"
+//         , msg.getId().toStdString());
+//   }
+
+   auto request = std::make_shared<Chat::SendRoomMessageRequest>("", receiver.toStdString(), msg.toJsonString());
+   sendRequest(request);
+   return result;
+}
+
 void ChatClient::retrieveUserMessages(const QString &userId)
 {
    auto messages = chatDb_->getUserMessages(userId);
+   if (!messages.empty()) {
+      for (auto &msg : messages) {
+         if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
+            if (!msg->decrypt(ownPrivKey_)) {
+               logger_->error("Failed to decrypt msg from DB {}", msg->getId().toStdString());
+               msg->setFlag(Chat::MessageData::State::Invalid);
+            }
+         }
+      }
+      emit MessagesUpdate(messages, true);
+   }
+}
+
+void ChatClient::retrieveRoomMessages(const QString& roomId)
+{
+   auto messages = chatDb_->getUserMessages(roomId);
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {

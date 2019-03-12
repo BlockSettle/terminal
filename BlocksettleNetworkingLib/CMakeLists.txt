@@ -5,6 +5,10 @@ PROJECT( ${BS_NETWORK_LIB_NAME} )
 FILE(GLOB SOURCES
    *.cpp
    Wallets/*.cpp
+   ChatProtocol/*.cpp
+   ChatProtocol/DataObjects/*.cpp
+   ChatProtocol/RequestObjects/*.cpp
+   ChatProtocol/ResponseObjects/*.cpp
 )
 
 IF (DISABLE_CELER)
@@ -45,6 +49,10 @@ ENDIF()
 FILE(GLOB HEADERS
    *.h
    Wallets/*.h
+   ChatProtocol/*.h
+   ChatProtocol/DataObjects/*.h
+   ChatProtocol/RequestObjects/*.h
+   ChatProtocol/ResponseObjects/*.h
 )
 
 IF (DISABLE_CELER)

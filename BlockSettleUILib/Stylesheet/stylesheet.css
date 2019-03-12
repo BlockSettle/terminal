@@ -1510,6 +1510,18 @@ ChatUserCategoryListViewStyle {
     qproperty-color_incoming_friend_request: #ffa834;
     qproperty-color_user_default: #c0c0c0; }
 
+QListView#chatRoomsCategoryListView:item {
+    font-size: 11px;
+    background-color: #1c2835;
+    selection-background-color: #3a8ab4;
+    border: 1px solid transparent;}
+    
+QListView#chatRoomsCategoryListView:item:selected {
+    background-color: #3a8ab4; }
+    
+ChatRoomsCategoryListViewStyle {
+    qproperty-color_room: #00c8f8;}
+
 ChatMessagesTextEditStyle {
     qproperty-color_hyperlink: #20709a;
     qproperty-color_white: #ff0000; }
