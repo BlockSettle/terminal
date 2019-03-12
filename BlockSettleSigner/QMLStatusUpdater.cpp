@@ -1,9 +1,12 @@
 #include "QMLStatusUpdater.h"
+#include <spdlog/spdlog.h>
 #include "HeadlessContainerListener.h"
+#include "SignerAdapter.h"
 
 
-QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params)
-   : QObject(nullptr), settings_(params)
+QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params, SignerAdapter *adapter
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : QObject(nullptr), settings_(params), adapter_(adapter), logger_(logger)
 {
    connect(settings_.get(), &SignerSettings::offlineChanged, [this] { emit offlineChanged(); });
    connect(settings_.get(), &SignerSettings::listenSocketChanged, [this] { emit listenSocketChanged(); });
@@ -11,22 +14,14 @@ QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, [this] { emit autoSignLimitChanged(); });
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, [this] { emit autoSignTimeLimitChanged(); });
 
-   connect(&asTimer_, &QTimer::timeout, this, &QMLStatusUpdater::onAutoSignTick);
-}
+   connect(adapter_, &SignerAdapter::peerConnected, this, &QMLStatusUpdater::onPeerConnected);
+   connect(adapter_, &SignerAdapter::peerDisconnected, this, &QMLStatusUpdater::onPeerDisconnected);
+   connect(adapter_, &SignerAdapter::txSigned, this, &QMLStatusUpdater::txSigned);
+   connect(adapter_, &SignerAdapter::xbtSpent, this, &QMLStatusUpdater::xbtSpent);
+   connect(adapter_, &SignerAdapter::autoSignActivated, this, &QMLStatusUpdater::onAutoSignActivated);
+   connect(adapter_, &SignerAdapter::autoSignDeactivated, this, &QMLStatusUpdater::onAutoSignDeactivated);
 
-void QMLStatusUpdater::SetListener(const std::shared_ptr<HeadlessContainerListener> &listener)
-{
-   listener_ = listener;
-   if (listener_) {
-      connect(listener_.get(), &HeadlessContainerListener::peerConnected,
-         this, &QMLStatusUpdater::onPeerConnected);
-      connect(listener_.get(), &HeadlessContainerListener::peerDisconnected,
-         this, &QMLStatusUpdater::onPeerDisconnected);
-      connect(listener_.get(), &HeadlessContainerListener::txSigned, this, &QMLStatusUpdater::txSigned);
-      connect(listener_.get(), &HeadlessContainerListener::xbtSpent, this, &QMLStatusUpdater::xbtSpent);
-      connect(listener_.get(), &HeadlessContainerListener::autoSignActivated, this, &QMLStatusUpdater::onAutoSignActivated);
-      connect(listener_.get(), &HeadlessContainerListener::autoSignDeactivated, this, &QMLStatusUpdater::onAutoSignDeactivated);
-   }
+   connect(&asTimer_, &QTimer::timeout, this, &QMLStatusUpdater::onAutoSignTick);
 }
 
 void QMLStatusUpdater::setSocketOk(bool val)
@@ -45,19 +40,15 @@ void QMLStatusUpdater::clearConnections()
 
 void QMLStatusUpdater::deactivateAutoSign()
 {
-   if (listener_) {
-      listener_->deactivateAutoSign();
-   }
+   adapter_->deactivateAutoSign();
 }
 
 void QMLStatusUpdater::activateAutoSign()
 {
-   if (listener_) {
-      emit autoSignActiveChanged();
-      const auto &walletId = settings_->autoSignWallet().toStdString();
-      listener_->addPendingAutoSignReq(walletId);
-      emit autoSignRequiresPwd(walletId);
-   }
+   emit autoSignActiveChanged();
+   const auto &walletId = settings_->autoSignWallet().toStdString();
+   adapter_->addPendingAutoSignReq(walletId);
+   emit autoSignRequiresPwd(walletId);
 }
 
 void QMLStatusUpdater::onAutoSignActivated(const std::string &walletId)
@@ -89,17 +80,19 @@ void QMLStatusUpdater::onAutoSignTick()
 
 void QMLStatusUpdater::onPeerConnected(const QString &ip)
 {
+   logger_->debug("[{}] {}", __func__, ip.toStdString());
    connectedClients_.insert(ip);
    emit connectionsChanged();
 }
 
 void QMLStatusUpdater::onPeerDisconnected(const QString &ip)
 {
+   logger_->debug("[{}] {}", __func__, ip.toStdString());
    connectedClients_.erase(ip);
    emit connectionsChanged();
 }
 
-void QMLStatusUpdater::txSigned()
+void QMLStatusUpdater::txSigned(const BinaryData &)
 {
    txSignedCount_++;
    emit txSignedCountChanged();

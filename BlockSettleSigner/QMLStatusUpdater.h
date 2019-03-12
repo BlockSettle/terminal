@@ -6,7 +6,11 @@
 #include <QTimer>
 #include "SignerSettings.h"
 
+namespace spdlog {
+   class logger;
+}
 class HeadlessContainerListener;
+class SignerAdapter;
 
 
 class QMLStatusUpdater : public QObject
@@ -29,9 +33,8 @@ class QMLStatusUpdater : public QObject
    Q_PROPERTY(QStringList connectedClients READ connectedClients NOTIFY connectionsChanged)
 
 public:
-   QMLStatusUpdater(const std::shared_ptr<SignerSettings> &);
-
-   void SetListener(const std::shared_ptr<HeadlessContainerListener> &);
+   QMLStatusUpdater(const std::shared_ptr<SignerSettings> &, SignerAdapter *
+      , const std::shared_ptr<spdlog::logger> &);
 
    void setSocketOk(bool);
    void clearConnections();
@@ -55,7 +58,7 @@ signals:
    void autoSignRequiresPwd(const std::string &walletId);
 
 private slots:
-   void txSigned();
+   void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);
    void onAutoSignActivated(const std::string &walletId);
    void onAutoSignDeactivated(const std::string &walletId);
@@ -82,7 +85,8 @@ private:
 
 private:
    std::shared_ptr<SignerSettings>  settings_;
-   std::shared_ptr<HeadlessContainerListener>   listener_;
+   SignerAdapter  *  adapter_;
+   std::shared_ptr<spdlog::logger>  logger_;
    QTimer   asTimer_;
    int      txSignedCount_ = 0;
    uint64_t autoSignSpent_ = 0;

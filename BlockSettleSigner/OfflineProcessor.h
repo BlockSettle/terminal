@@ -12,22 +12,21 @@ namespace spdlog {
    class logger;
 }
 namespace bs {
-   namespace core {
-      class WalletsManager;
+   namespace sync {
+      class Wallet;
    }
 }
-
+class SignerAdapter;
 
 class OfflineProcessor : public QObject
 {
    Q_OBJECT
 
 public:
-   using CbPassword = std::function<SecureBinaryData(const std::shared_ptr<bs::core::Wallet> &)>;
+   using CbPassword = std::function<SecureBinaryData(const std::shared_ptr<bs::sync::Wallet> &)>;
 
    OfflineProcessor(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::core::WalletsManager> &
-      , const CbPassword &cb = nullptr);
+      , SignerAdapter *, const CbPassword &cb = nullptr);
 
    void ProcessFiles(const QStringList &);
    Q_INVOKABLE void processFile(const QString &file);
@@ -47,18 +46,18 @@ public slots:
 private:
    struct SignData {
       bs::core::wallet::TXSignRequest     request;
-      std::shared_ptr<bs::core::Wallet>   wallet;
+      std::shared_ptr<bs::sync::Wallet>   wallet;
       QString     requestFile;
    };
 
    SignData ParseSignTX(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFN);
    void ProcessSignTX(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFN);
    void SignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFN
-      , const std::shared_ptr<bs::core::Wallet> &, const SecureBinaryData &password = {});
+      , const SecureBinaryData &password = {});
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<bs::core::WalletsManager>  walletsMgr_;
+   SignerAdapter     *  adapter_;
    const CbPassword     cbPassword_;
    std::unordered_map<std::string, std::vector<SignData>>   pendingReqs_;
    std::map<int, std::vector<SignData>>   parsedReqs_;

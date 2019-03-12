@@ -1,10 +1,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <spdlog/spdlog.h>
-#include "OfflineProcessor.h"
-#include "CoreWalletsManager.h"
-#include "OfflineSigner.h"
 #include "make_unique.h"
+#include "OfflineProcessor.h"
+#include "OfflineSigner.h"
+#include "SignerAdapter.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include "signer.pb.h"
 
@@ -14,8 +15,8 @@ Q_DECLARE_METATYPE(SecureBinaryData)
 
 
 OfflineProcessor::OfflineProcessor(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr, const CbPassword &cb)
-   : logger_(logger), walletsMgr_(walletsMgr), cbPassword_(cb)
+   , SignerAdapter *adapter, const CbPassword &cb)
+   : logger_(logger), adapter_(adapter), cbPassword_(cb)
 {
    qRegisterMetaType<SecureBinaryData>();
 }
@@ -142,6 +143,10 @@ QString OfflineProcessor::parsedText(int reqId) const
       return tr("Sign request with ID %1 not found").arg(QString::number(reqId));
    }
    const bool isSingleReq = (reqIt->second.size() == 1);
+   const auto walletsMgr = adapter_->getWalletsManager();
+   if (!walletsMgr) {
+      return tr("No wallets manager found");
+   }
    size_t txCounter = 1;
    QString result = isSingleReq ? tr("") : tr("%1 transactions in request:\n").arg(QString::number(reqIt->second.size()));
    for (const auto &req : reqIt->second) {
@@ -154,7 +159,7 @@ QString OfflineProcessor::parsedText(int reqId) const
             const auto &utxo = req.request.inputs[i];
             const auto inputIdx = (req.request.inputs.size() == 1) ? tr("") : tr("%1").arg(QString::number(i+1));
             const auto address = bs::Address::fromUTXO(utxo);
-            const auto &wallet = walletsMgr_->getWalletByAddress(address);
+            const auto &wallet = walletsMgr->getWalletByAddress(address);
             result += tr("%1Input%2: %3 from %4@%5\n").arg(prefix).arg(inputIdx)
                .arg(displayXbt(utxo.getValue())).arg(address.display())
                .arg(wallet ? QString::fromStdString(wallet->name()) : tr("<External>"));
@@ -163,13 +168,13 @@ QString OfflineProcessor::parsedText(int reqId) const
             const auto &recipient = req.request.recipients[i];
             const auto recipIdx = (req.request.recipients.size() == 1) ? tr("") : tr("%1").arg(QString::number(i+1));
             const auto address = bs::Address::fromRecipient(recipient);
-            const auto &wallet = walletsMgr_->getWalletByAddress(address);
+            const auto &wallet = walletsMgr->getWalletByAddress(address);
             result += tr("%1Output%2: %3 to %4@%5\n").arg(prefix).arg(recipIdx)
                .arg(displayXbt(recipient->getValue())).arg(address.display())
                .arg(wallet ? QString::fromStdString(wallet->name()) : tr("<External>"));
          }
          if (req.request.change.value) {
-            const auto &wallet = walletsMgr_->getWalletByAddress(req.request.change.address);
+            const auto &wallet = walletsMgr->getWalletByAddress(req.request.change.address);
             result += tr("%1Change: %2 to %3@%4\n").arg(prefix).arg(displayXbt(req.request.change.value))
                .arg(req.request.change.address.display())
                .arg(wallet ? QString::fromStdString(wallet->name()) : tr("<External>"));
@@ -193,7 +198,8 @@ void OfflineProcessor::removeSignReq(int reqId)
 
 void OfflineProcessor::ProcessSignTX(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFileName)
 {
-   const auto &wallet = walletsMgr_->getWalletById(txReq.walletId);
+   const auto walletsMgr = adapter_->getWalletsManager();
+   const auto &wallet = walletsMgr->getWalletById(txReq.walletId);
    if (!wallet) {
       logger_->error("Failed to find wallet with ID {}", txReq.walletId);
       emit signFailure();
@@ -218,15 +224,17 @@ void OfflineProcessor::ProcessSignTX(const bs::core::wallet::TXSignRequest &txRe
          return;
       }
    }
-   SignTxRequest(txReq, reqFileName, wallet, password);
+   SignTxRequest(txReq, reqFileName, password);
 }
 
 void OfflineProcessor::SignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const QString &reqFN
-   , const std::shared_ptr<bs::core::Wallet> &wallet, const SecureBinaryData &password)
+   , const SecureBinaryData &password)
 {
-   try {
-      const auto signedTX = wallet->signTXRequest(txReq, password);
-
+   const auto &cbSigned = [this, reqFN, txReq] (const BinaryData &signedTX) {
+      if (signedTX.isNull()) {
+         emit signFailure();
+         return;
+      }
       QFileInfo fi(reqFN);
       QString outputFN = fi.path() + QLatin1String("/") + fi.baseName() + QLatin1String("_signed.bin");
       QFile f(outputFN);
@@ -254,16 +262,12 @@ void OfflineProcessor::SignTxRequest(const bs::core::wallet::TXSignRequest &txRe
       if (f.write(data) == data.size()) {
          logger_->info("Created signed TX response file in {}", outputFN.toStdString());
          // remove original request file?
-      }
-      else {
+      } else {
          logger_->error("Failed to write TX response data to {}", outputFN.toStdString());
       }
-   }
-   catch (const std::exception &e) {
-      logger_->error("Failed to sign TX request: {}", e.what());
-      emit signFailure();
-   }
-   emit signSuccess();
+      emit signSuccess();
+   };
+   adapter_->signTxRequest(txReq, password, cbSigned);
 }
 
 void OfflineProcessor::passwordEntered(const std::string &walletId, const SecureBinaryData &password)
@@ -274,7 +278,7 @@ void OfflineProcessor::passwordEntered(const std::string &walletId, const Secure
    }
    logger_->debug("Signing {} pending request[s] on password receive", reqsIt->second.size());
    for (const auto &req : reqsIt->second) {
-      SignTxRequest(req.request, req.requestFile, req.wallet, password);
+      SignTxRequest(req.request, req.requestFile, password);
    }
    pendingReqs_.erase(reqsIt);
 }
