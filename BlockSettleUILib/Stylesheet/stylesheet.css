@@ -1521,3 +1521,7 @@ QListView#chatRoomsCategoryListView:item:selected {
     
 ChatRoomsCategoryListViewStyle {
     qproperty-color_room: #00c8f8;}
+
+ChatMessagesTextEditStyle {
+    qproperty-color_hyperlink: #20709a;
+    qproperty-color_white: #ff0000; }

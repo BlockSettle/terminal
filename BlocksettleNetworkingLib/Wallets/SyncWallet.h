@@ -178,6 +178,7 @@ namespace bs {
 
          void balanceUpdated(std::string walletId, std::vector<uint64_t>) const;
          void balanceChanged(std::string walletId, std::vector<uint64_t>) const;
+         void metaDataChanged();
 
       protected:
          virtual std::vector<BinaryData> getAddrHashes() const = 0;

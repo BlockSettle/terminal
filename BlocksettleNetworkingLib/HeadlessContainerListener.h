@@ -28,10 +28,8 @@ namespace bs {
 class ServerConnection;
 
 
-class HeadlessContainerListener : public QObject, public ServerConnectionListener
+class HeadlessContainerListener : public ServerConnectionListener
 {
-   Q_OBJECT
-
 public:
    HeadlessContainerListener(const std::shared_ptr<ServerConnection> &conn
       , const std::shared_ptr<spdlog::logger> &logger
@@ -39,7 +37,6 @@ public:
       , const std::string &walletsPath
       , NetworkType netType
       , bool watchingOnly = false
-      , const bool &hasUI = false
       , const bool &backupEnabled = true);
    ~HeadlessContainerListener() noexcept override;
 
@@ -47,31 +44,26 @@ public:
 
    bool disconnect(const std::string &clientId = {});
 
-signals:
-   void passwordRequired(const bs::core::wallet::TXSignRequest &, const QString &prompt);
-   void clientAuthenticated(const std::string &clientId, const std::string &clientInfo);
-   void clientDisconnected(const std::string &clientId);
-   void txSigned();
-   void xbtSpent(const qint64 value, bool autoSign);
-   void autoSignActivated(const std::string &walletId);
-   void autoSignDeactivated(const std::string &walletId);
-   void autoSignRequiresPwd(const std::string &walletId);
-   void peerConnected(const QString &ip);
-   void peerDisconnected(const QString &ip);
-   void cancelSignTx(const BinaryData &txId);
+   void setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
+      , const std::function<void(const std::string &)> &cbPeerDisconn
+      , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
+      , const std::function<void(const BinaryData &)> &cbTxSigned
+      , const std::function<void(const BinaryData &)> &cbCancelTxSign
+      , const std::function<void(int64_t, bool)> &cbXbtSpent
+      , const std::function<void(const std::string &)> &cbAsAct
+      , const std::function<void(const std::string &)> &cbAsDeact);
 
-public slots:
+   void passwordReceived(const std::string &walletId
+      , const SecureBinaryData &password, bool cancelledByUser);
    void activateAutoSign(const std::string &clientId, const std::string &walletId, const SecureBinaryData &password);
    void deactivateAutoSign(const std::string &clientId = {}, const std::string &walletId = {}, const std::string &reason = {});
    void addPendingAutoSignReq(const std::string &walletId);
-   bool isAutoSignActive(const std::string &walletId) const;
-   void passwordReceived(const std::string &walletId
-      , const SecureBinaryData &password, bool cancelledByUser);
-
-private slots:
-   void onXbtSpent(const qint64 value, bool autoSign);
 
 protected:
+   bool isAutoSignActive(const std::string &walletId) const;
+
+   void onXbtSpent(const int64_t value, bool autoSign);
+
    void OnClientConnected(const std::string &clientId) override;
    void OnClientDisconnected(const std::string &clientId) override;
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
@@ -125,11 +117,11 @@ private:
    bool CreateHDWallet(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDWallet &request
       , NetworkType, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
-      , const QString &prompt, const PasswordReceivedCb &cb, bool autoSign);
+      , const std::string &prompt, const PasswordReceivedCb &cb, bool autoSign);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
       , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
-      , const QString &prompt, const PasswordsReceivedCb &cb);
-   bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &, const QString &prompt
+      , const std::string &prompt, const PasswordsReceivedCb &cb);
+   bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &, const std::string &prompt
       , const PasswordReceivedCb &cb);
 
    bool CheckSpendLimit(uint64_t value, bool autoSign, const std::string &walletId);
@@ -147,7 +139,6 @@ private:
    const NetworkType                   netType_;
    SignContainer::Limits               limits_;
    const bool                          watchingOnly_;
-   const bool                          hasUI_;
    std::unordered_map<std::string, SecureBinaryData>  authTickets_;
    std::unordered_set<std::string>     connectedClients_;
 
@@ -164,6 +155,15 @@ private:
    int reqSeqNo_ = 0;
 
    const bool backupEnabled_ = true;
+
+   std::function<void(const std::string &)> cbPeerConn_ = nullptr;
+   std::function<void(const std::string &)> cbPeerDisconn_ = nullptr;
+   std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> cbPwd_ = nullptr;
+   std::function<void(const BinaryData &)> cbTxSigned_ = nullptr;
+   std::function<void(const BinaryData &)> cbCancelTxSign_ = nullptr;
+   std::function<void(int64_t, bool)> cbXbtSpent_ = nullptr;
+   std::function<void(const std::string &)> cbAsAct_ = nullptr;
+   std::function<void(const std::string &)> cbAsDeact_ = nullptr;
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__

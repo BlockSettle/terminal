@@ -8,7 +8,7 @@
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
-   : QTextBrowser(parent)
+   : QTextBrowser(parent), internalStyle_(this)
 {
    tableFormat.setBorder(0);
    tableFormat.setCellPadding(0);
@@ -147,7 +147,8 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
    table = cursor.insertTable(1, 4, tableFormat);
 
    QString time = data(rowIdx, Column::Time);
-   table->cellAt(0, 0).firstCursorPosition().insertText(time);
+   time = toHtmlText(time);
+   table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
    QString user = data(rowIdx, Column::User);
    table->cellAt(0, 1).firstCursorPosition().insertText(user);
@@ -163,7 +164,7 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
 void ChatMessagesTextEdit::insertLoadMore() {
    QTextCursor cursor(textCursor());
    cursor.movePosition(QTextCursor::Start);
-   cursor.insertHtml(QLatin1Literal("<a href=\"load_more\" style=\"color:#20709a\">Load More...</a>"));
+   cursor.insertHtml(QString(QLatin1Literal("<a href=\"load_more\" style=\"color:%1\">Load More...</a>")).arg(internalStyle_.colorHyperlink().name()));
 }
 
 void ChatMessagesTextEdit::loadMore() {
@@ -185,7 +186,8 @@ void ChatMessagesTextEdit::loadMore() {
       table = cursor.insertTable(1, 4, tableFormat);
 
       QString time = data(i, Column::Time);
-      table->cellAt(0, 0).firstCursorPosition().insertText(time);
+      time = toHtmlText(time);
+      table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
       QString user = data(i, Column::User);
       table->cellAt(0, 1).firstCursorPosition().insertText(user);
@@ -270,7 +272,8 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
          table = cursor.insertTable(1, 4, tableFormat);
          
          QString time = data(distance, Column::Time);
-         table->cellAt(0, 0).firstCursorPosition().insertText(time);
+         time = toHtmlText(time);
+         table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
          QString user = data(distance, Column::User);
          table->cellAt(0, 1).firstCursorPosition().insertText(user);
@@ -364,7 +367,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text) {
       }
 
       QString linkText = changedText.mid(startIndex, endIndex - startIndex);
-      QString hyperlinkText = QLatin1Literal("<a href=\"") + linkText + QLatin1Literal("\" style=\"color:#20709a\">") + linkText + QLatin1Literal("</a>");
+      QString hyperlinkText = QString(QLatin1Literal("<a href=\"%1\" style=\"color:%2\">%1</a>")).arg(linkText).arg(internalStyle_.colorHyperlink().name());
 
       changedText = changedText.replace(startIndex, endIndex - startIndex, hyperlinkText);
 
@@ -373,6 +376,9 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text) {
 
    // replace linefeed with <br>
    changedText.replace(QLatin1Literal("\n"), QLatin1Literal("<br>"));
+
+   // set text color as white
+   changedText = QString(QLatin1Literal("<font color=\"%1\">%2</font>")).arg(internalStyle_.colorWhite().name()).arg(changedText);
 
    return changedText;
 }
