@@ -103,7 +103,7 @@ public:
       QString messageText = chat_->ui_->input_textEdit->toPlainText();
 
       if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
-         if(!isRoom){
+         if(!chat_->isRoom()){
             auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
             chat_->ui_->input_textEdit->clear();
    
@@ -172,8 +172,6 @@ public:
    }
 
    void onUsersDeleted(const std::vector<std::string> &/*users*/)  override {}
-private:
-   bool isRoom = false;
 };
 
 ChatWidget::ChatWidget(QWidget *parent)
@@ -399,6 +397,11 @@ void ChatWidget::onAddUserToContacts(const QString &userId)
 void ChatWidget::onRoomClicked(const QString& roomId)
 {
    stateCurrent_->onRoomClicked(roomId);
+}
+
+bool ChatWidget::isRoom()
+{
+   return isRoom_;
 }
 
 void ChatWidget::setIsRoom(bool isRoom)

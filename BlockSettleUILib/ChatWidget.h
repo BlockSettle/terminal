@@ -79,6 +79,7 @@ private:
    QMap<QString, QString> draftMessages_;
 
 private:
+   bool isRoom();
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
 
