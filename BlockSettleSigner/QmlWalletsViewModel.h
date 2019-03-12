@@ -7,15 +7,15 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "CoreWallet.h"
 #include "QWalletInfo.h"
 
 
 namespace bs {
-   namespace core {
+   namespace sync {
       namespace hd {
          class Wallet;
       }
+      class Wallet;
       class WalletsManager;
    }
 }
@@ -42,8 +42,8 @@ public:
       : viewModel_(vm), parent_(parent), row_(row), type_(type) {}
    virtual ~QmlWalletNode() { clear(); }
 
-   virtual std::vector<std::shared_ptr<bs::core::Wallet>> wallets() const { return {}; }
-   virtual std::shared_ptr<bs::core::hd::Wallet> hdWallet() const { return nullptr; }
+   virtual std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const { return {}; }
+   virtual std::shared_ptr<bs::sync::hd::Wallet> hdWallet() const { return nullptr; }
    virtual QVariant data(int, int) const { return QVariant(); }
    virtual std::string id() const { return {}; }
 
@@ -73,8 +73,7 @@ class QmlWalletsViewModel : public QAbstractItemModel
 {
    Q_OBJECT
 public:
-   QmlWalletsViewModel(const std::shared_ptr<bs::core::WalletsManager> &
-                       , QObject *parent = nullptr);
+   QmlWalletsViewModel(QObject *parent = nullptr);
    ~QmlWalletsViewModel() override = default;
 
    QmlWalletsViewModel(const QmlWalletsViewModel&) = delete;
@@ -82,13 +81,9 @@ public:
    QmlWalletsViewModel(QmlWalletsViewModel&&) = delete;
    QmlWalletsViewModel& operator = (QmlWalletsViewModel&&) = delete;
 
-   std::shared_ptr<bs::core::Wallet> getWallet(const QModelIndex &index) const;
+   void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
+   std::shared_ptr<bs::sync::Wallet> getWallet(const QModelIndex &index) const;
    QmlWalletNode *getNode(const QModelIndex &) const;
-
-/*   void setSelectedWallet(const std::shared_ptr<bs::core::Wallet> &selWallet) { selectedWallet_ = selWallet; }
-   std::shared_ptr<bs::core::Wallet> selectedWallet() const { return selectedWallet_; }*/
-
-   void loadWallets();
 
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -99,6 +94,9 @@ public:
    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
    QModelIndex parent(const QModelIndex &child) const override;
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
+
+public slots:
+   void loadWallets();
 
 public:
    enum class WalletColumns : int
@@ -127,8 +125,7 @@ private:
    QVariant getData(const QModelIndex &index, int role) const;
 
 private:
-   std::shared_ptr<bs::core::WalletsManager> walletsManager_;
-//   std::shared_ptr<bs::core::Wallet>   selectedWallet_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<QmlWalletNode>      rootNode_;
 };
 

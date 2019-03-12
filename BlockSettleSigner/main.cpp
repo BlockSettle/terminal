@@ -16,6 +16,7 @@
 #include <spdlog/spdlog.h>
 #include "ArmoryConnection.h"
 #include "HeadlessApp.h"
+#include "SignerAdapter.h"
 #include "SignerSettings.h"
 #include "QMLApp.h"
 #include "ZMQHelperFunctions.h"
@@ -264,10 +265,10 @@ static int QMLApp(int argc, char **argv)
    // app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
 
    // we need this only for desktop app
-/*   const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
+   const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
    QSplashScreen splashScreen(splashImage);
    splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
-   splashScreen.show();*/  //FIXME: uncomment when sync::WalletsManager is enabled
+   splashScreen.show();
 
    const auto settings = std::make_shared<SignerSettings>(app.arguments());
    std::shared_ptr<spdlog::logger> logger;
@@ -301,17 +302,23 @@ static int QMLApp(int argc, char **argv)
    }
 
    try {
+      HeadlessAppObj appObj(logger, settings);
+      SignerAdapter adapter(logger, &appObj);
+      QObject::connect(&appObj, &HeadlessAppObj::finished, &app
+         , &QCoreApplication::quit);
+      QTimer::singleShot(0, &appObj, &HeadlessAppObj::Start);
+
       QQmlApplicationEngine engine;
-      QMLAppObj appObj(logger, settings, engine.rootContext());
-/*      QObject::connect(&appObj, &QMLAppObj::loadingComplete, &splashScreen
-         , &QSplashScreen::close);*/   //FIXME: uncomment when switched to sync::WalletsManager
-      QTimer::singleShot(0, &appObj, &QMLAppObj::Start);
+      QMLAppObj qmlAppObj(&adapter, logger, settings, engine.rootContext());
+      QObject::connect(&qmlAppObj, &QMLAppObj::loadingComplete, &splashScreen
+         , &QSplashScreen::close);
+      QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
       engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
       if (engine.rootObjects().isEmpty()) {
          throw std::runtime_error("Failed to load main QML file");
       }
-      appObj.SetRootObject(engine.rootObjects().at(0));
+      qmlAppObj.SetRootObject(engine.rootObjects().at(0));
       return app.exec();
    }
    catch (const std::exception &e) {

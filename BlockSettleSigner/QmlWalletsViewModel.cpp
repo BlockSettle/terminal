@@ -2,8 +2,9 @@
 #include <QFont>
 #include <QTreeView>
 #include <QSortFilterProxyModel>
-#include "CoreHDWallet.h"
-#include "CoreWalletsManager.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncSettlementWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "UiUtils.h"
 
 
@@ -62,11 +63,11 @@ public:
       return (hdWallet_ ? hdWallet_->walletId() : std::string{});
    }
 
-   void addGroups(const std::vector<std::shared_ptr<bs::core::hd::Group>> &groups);
+   void addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups);
 
-   std::vector<std::shared_ptr<bs::core::Wallet>> wallets() const override
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override
    {
-      std::vector<std::shared_ptr<bs::core::Wallet>> ret = wallets_;
+      std::vector<std::shared_ptr<bs::sync::Wallet>> ret = wallets_;
 
       for (const auto * g : qAsConst(children_)) {
          const auto tmp = g->wallets();
@@ -75,16 +76,16 @@ public:
 
       return ret;
    }
-   std::shared_ptr<bs::core::hd::Wallet> hdWallet() const override { return hdWallet_; }
+   std::shared_ptr<bs::sync::hd::Wallet> hdWallet() const override { return hdWallet_; }
 
-   void setHdWallet(const std::shared_ptr<bs::core::hd::Wallet> &hdWallet) {
+   void setHdWallet(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet) {
       hdWallet_ = hdWallet;
    }
 
 protected:
    std::string desc_;
-   std::shared_ptr<bs::core::hd::Wallet>           hdWallet_;
-   std::vector<std::shared_ptr<bs::core::Wallet>>  wallets_;
+   std::shared_ptr<bs::sync::hd::Wallet>           hdWallet_;
+   std::vector<std::shared_ptr<bs::sync::Wallet>>  wallets_;
 
 protected:
    static QmlWalletNode::Type getNodeType(bs::core::wallet::Type grpType) {
@@ -107,12 +108,16 @@ protected:
 class QmlWalletLeafNode : public QmlWalletRootNode
 {
 public:
-   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::core::Wallet> &wallet, int row, QmlWalletNode *parent)
+   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, int row, QmlWalletNode *parent)
       : QmlWalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, row, parent)
       , wallet_(wallet)
    { }
+   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet, int row, QmlWalletNode *parent)
+      : QmlWalletRootNode(vm, "Settlement", "Settlement wallet", Type::Leaf, row, parent)
+      , wallet_(wallet)
+   { }
 
-   std::vector<std::shared_ptr<bs::core::Wallet>> wallets() const override { return {wallet_}; }
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return {wallet_}; }
 
    std::string id() const override {
       return wallet_->walletId();
@@ -123,7 +128,7 @@ public:
    }
 
 private:
-   std::shared_ptr<bs::core::Wallet>   wallet_;
+   std::shared_ptr<bs::sync::Wallet>   wallet_;
 };
 
 class QmlWalletGroupNode : public QmlWalletRootNode
@@ -133,9 +138,9 @@ public:
       , int row, QmlWalletNode *parent)
       : QmlWalletRootNode(vm, name, desc, type, row, parent) {}
 
-   std::vector<std::shared_ptr<bs::core::Wallet>> wallets() const override { return wallets_; }
+   std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return wallets_; }
 
-   void addLeaves(const std::vector<std::shared_ptr<bs::core::Wallet>> &leaves) {
+   void addLeaves(const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves) {
       for (const auto &leaf : leaves) {
          const auto leafNode = new QmlWalletLeafNode(viewModel_, leaf, nbChildren(), this);
          add(leafNode);
@@ -144,10 +149,10 @@ public:
    }
 };
 
-void QmlWalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::core::hd::Group>> &groups)
+void QmlWalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd::Group>> &groups)
 {
    for (const auto &group : groups) {
-      const auto groupNode = new QmlWalletGroupNode(viewModel_, std::to_string(group->index()), {}
+      const auto groupNode = new QmlWalletGroupNode(viewModel_, group->name(), {}
          , getNodeType(group->type()), nbChildren(), this);
       add(groupNode);
       groupNode->addLeaves(group->getAllLeaves());
@@ -155,12 +160,18 @@ void QmlWalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::core::hd
 }
 
 
-QmlWalletsViewModel::QmlWalletsViewModel(const std::shared_ptr<bs::core::WalletsManager> &walletsManager
-   , QObject* parent)
+QmlWalletsViewModel::QmlWalletsViewModel(QObject* parent)
    : QAbstractItemModel(parent)
-   , walletsManager_(walletsManager)
 {
    rootNode_ = std::make_shared<QmlWalletNode>(this, QmlWalletNode::Type::Root);
+}
+
+void QmlWalletsViewModel::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
+{
+   walletsManager_ = walletsManager;
+   loadWallets();
+
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletReady, this, &QmlWalletsViewModel::loadWallets);
 }
 
 QmlWalletNode *QmlWalletsViewModel::getNode(const QModelIndex &index) const
@@ -181,7 +192,7 @@ int QmlWalletsViewModel::rowCount(const QModelIndex &parent) const
    return getNode(parent)->nbChildren();
 }
 
-std::shared_ptr<bs::core::Wallet> QmlWalletsViewModel::getWallet(const QModelIndex &index) const
+std::shared_ptr<bs::sync::Wallet> QmlWalletsViewModel::getWallet(const QModelIndex &index) const
 {
    const auto node = getNode(index);
    if (!node) {
@@ -255,8 +266,8 @@ bool QmlWalletsViewModel::hasChildren(const QModelIndex& parent) const
    return node->hasChildren();
 }
 
-static QmlWalletNode::Type getHDWalletType(const std::shared_ptr<bs::core::hd::Wallet> &hdWallet
-   , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr)
+static QmlWalletNode::Type getHDWalletType(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
 {
    if (walletsMgr->getPrimaryWallet() == hdWallet) {
       return QmlWalletNode::Type::WalletPrimary;
@@ -266,7 +277,7 @@ static QmlWalletNode::Type getHDWalletType(const std::shared_ptr<bs::core::hd::W
 
 void QmlWalletsViewModel::loadWallets()
 {
-   const auto hdCount = walletsManager_->getHDWalletsCount();
+   const auto hdCount = walletsManager_->hdWalletsCount();
    beginResetModel();
    rootNode_->clear();
    for (unsigned int i = 0; i < hdCount; i++) {
@@ -281,7 +292,7 @@ void QmlWalletsViewModel::loadWallets()
       hdNode->addGroups(hdWallet->getGroups());
    }
 
-   const auto &stmtWallet = walletsManager_->getSettlementWallet();
+   const auto stmtWallet = walletsManager_->getSettlementWallet();
    if (stmtWallet) {
       const auto stmtNode = new QmlWalletLeafNode(this, stmtWallet, rootNode_->nbChildren(), rootNode_.get());
       rootNode_->add(stmtNode);
