@@ -86,7 +86,9 @@ void BSMarketDataProvider::onConnectedToMD()
 
 void BSMarketDataProvider::onDisconnectedFromMD()
 {
+   emit Disconnecting();
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
+
    mdConnection_ = nullptr;
    emit Disconnected();
 }
@@ -96,10 +98,10 @@ bs::network::MDFields GetMDFields(const Blocksettle::Communication::BlocksettleM
    bs::network::MDFields result;
 
    if (!qFuzzyIsNull(productInfo.offer())) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.offer(), QString()} );
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.offer(), QString()} );
    }
    if (!qFuzzyIsNull(productInfo.bid())) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.bid(), QString()} );
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.bid(), QString()} );
    }
    if (!qFuzzyIsNull(productInfo.last_price())) {
       result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceLast, productInfo.last_price(), QString()} );
