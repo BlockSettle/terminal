@@ -15,6 +15,7 @@ public:
    void addUser(const ChatUserDataPtr &chatUserDataPtr);
    void removeUser(const ChatUserDataPtr &chatUserDataPtr);
    void removeByUserId(const QString &userId);
+   void removeByRoomId(const QString &roomId);
    void setUserStatus(const QString &userId, const ChatUserData::ConnectionStatus &userStatus);
    void setUserState(const QString &userId, const ChatUserData::State &userState);
    void resetModel();
@@ -42,6 +43,7 @@ signals:
    void chatUserStatusChanged(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStateChanged(const ChatUserDataPtr &chatUserDataPtr);
    void chatRoomAdded(const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr);
+   void chatRoomRemoved(const std::shared_ptr<Chat::ChatRoomData>& chatRoomDataPtr);
 
 public slots:
 
