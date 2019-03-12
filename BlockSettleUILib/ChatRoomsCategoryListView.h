@@ -13,24 +13,24 @@ class ChatRoomsCategoryListViewStyle : public QWidget
     
 public:
     ChatRoomsCategoryListViewStyle(QWidget* parent)
-    : QWidget(parent), _color_room(Qt::white)
+    : QWidget(parent), colorRoom_(Qt::white)
     {
         setVisible(false);
     }
     
     QColor colorRoom() const
     {
-        return _color_room;
+        return colorRoom_;
     }
     
 public slots:
-    void setColorRoom(QColor color_room)
+    void setColorRoom(QColor colorRoom)
     {
-        _color_room = color_room;
+        colorRoom_ = colorRoom;
     }
     
 private:
-    QColor _color_room;
+    QColor colorRoom_;
 };
 
 class ChatRoomsCategoryListViewDelegate : public QStyledItemDelegate
@@ -46,7 +46,7 @@ public:
               const QModelIndex &index) const override;
 
 private:
-   const ChatRoomsCategoryListViewStyle &_internalStyle;
+   const ChatRoomsCategoryListViewStyle &internalStyle_;
 };
 
 class ChatRoomsCategoryListView : public QListView
@@ -56,7 +56,7 @@ public:
    ChatRoomsCategoryListView(QWidget* parent = nullptr);
    using QListView::contentsSize;
 private:
-   ChatRoomsCategoryListViewStyle _internalStyle;
+   ChatRoomsCategoryListViewStyle internalStyle_;
 };
 
 #endif // CHATROOMSCATEGORYLISTVIEW_H

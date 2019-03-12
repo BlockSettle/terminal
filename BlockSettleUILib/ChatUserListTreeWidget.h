@@ -33,12 +33,12 @@ private:
    void adjustListViewSize();
    ChatUserCategoryListView *listViewAt(int idx) const;
 
-   ChatUsersViewModel *_friendUsersViewModel;
-   ChatUsersViewModel *_nonFriendUsersViewModel;
-   ChatUserCategoryListView *_friendUsersListView;
-   ChatUserCategoryListView *_nonFriendUsersListView;
-   ChatRoomsViewModel *_publicRoomsViewModel;
-   ChatRoomsCategoryListView* _publicRoomsListView;
+   ChatUsersViewModel *friendUsersViewModel_;
+   ChatUsersViewModel *nonFriendUsersViewModel_;
+   ChatUserCategoryListView *friendUsersListView_;
+   ChatUserCategoryListView *nonFriendUsersListView_;
+   ChatRoomsViewModel *publicRoomsViewModel_;
+   ChatRoomsCategoryListView* publicRoomsListView_;
 };
 
 #endif // CHATUSERLISTTREEWIDGET_H

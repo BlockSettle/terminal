@@ -32,7 +32,7 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role) const;
    
 private:
-   QList<std::shared_ptr<Chat::ChatRoomData>> _rooms;
+   QList<std::shared_ptr<Chat::ChatRoomData>> rooms_;
 };
 
 #endif // CHATROOMSVIEWMODEL_H

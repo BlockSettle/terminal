@@ -10,10 +10,10 @@ void ChatUserModel::addUser(const ChatUserDataPtr &chatUserDataPtr)
    if (isChatUserExist(chatUserDataPtr->userId()))
       return;
 
-   _chatUserDataListPtr.push_back(chatUserDataPtr);
+   chatUserDataListPtr_.push_back(chatUserDataPtr);
 
    emit chatUserAdded(chatUserDataPtr);
-   emit chatUserDataListChanged(_chatUserDataListPtr);
+   emit chatUserDataListChanged(chatUserDataListPtr_);
 }
 
 void ChatUserModel::removeUser(const ChatUserDataPtr &chatUserDataPtr)
@@ -29,15 +29,15 @@ void ChatUserModel::removeByUserId(const QString &userId)
       return;
    }
 
-   _chatUserDataListPtr.erase(
-      std::remove_if(std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr),
+   chatUserDataListPtr_.erase(
+      std::remove_if(std::begin(chatUserDataListPtr_), std::end(chatUserDataListPtr_),
       [chatUserDataPtr](const ChatUserDataPtr cudPtr)
    {
       return cudPtr && (cudPtr == chatUserDataPtr);
    }));
 
    emit chatUserRemoved(chatUserDataPtr);
-   emit chatUserDataListChanged(_chatUserDataListPtr);
+   emit chatUserDataListChanged(chatUserDataListPtr_);
 }
 
 void ChatUserModel::removeByRoomId(const QString& roomId)
@@ -48,15 +48,15 @@ void ChatUserModel::removeByRoomId(const QString& roomId)
       return;
    }
 
-   _chatRoomDataListPtr.erase(
-      std::remove_if(std::begin(_chatRoomDataListPtr), std::end(_chatRoomDataListPtr),
+   chatRoomDataListPtr_.erase(
+      std::remove_if(std::begin(chatRoomDataListPtr_), std::end(chatRoomDataListPtr_),
       [chatRoomDataPtr](const std::shared_ptr<Chat::ChatRoomData> cudPtr)
    {
       return cudPtr && (cudPtr == chatRoomDataPtr);
    }));
 
    emit chatRoomRemoved(chatRoomDataPtr);
-   emit chatRoomDataListChanged(_chatRoomDataListPtr);
+   emit chatRoomDataListChanged(chatRoomDataListPtr_);
 }
 
 bool ChatUserModel::isChatUserExist(const QString &userId) const
@@ -83,7 +83,7 @@ void ChatUserModel::setUserStatus(const QString &userId, const ChatUserData::Con
    chatUserDataPtr->setUserConnectionStatus(userStatus);
 
    emit chatUserStatusChanged(chatUserDataPtr);
-   emit chatUserDataListChanged(_chatUserDataListPtr);
+   emit chatUserDataListChanged(chatUserDataListPtr_);
 }
 
 void ChatUserModel::setUserState(const QString &userId, const ChatUserData::State &userState)
@@ -98,17 +98,17 @@ void ChatUserModel::setUserState(const QString &userId, const ChatUserData::Stat
    chatUserDataPtr->setUserState(userState);
 
    emit chatUserStateChanged(chatUserDataPtr);
-   emit chatUserDataListChanged(_chatUserDataListPtr);
+   emit chatUserDataListChanged(chatUserDataListPtr_);
 }
 
 ChatUserDataPtr ChatUserModel::getUserByUserId(const QString &userId) const
 {
-   auto chatUserIt = std::find_if (std::begin(_chatUserDataListPtr), std::end(_chatUserDataListPtr), [userId](const ChatUserDataPtr &chatUserDataPtr)->bool
+   auto chatUserIt = std::find_if (std::begin(chatUserDataListPtr_), std::end(chatUserDataListPtr_), [userId](const ChatUserDataPtr &chatUserDataPtr)->bool
    {
       return (0 == chatUserDataPtr->userId().compare(userId));
    });
 
-   if (chatUserIt == std::end(_chatUserDataListPtr))
+   if (chatUserIt == std::end(chatUserDataListPtr_))
    {
       return ChatUserDataPtr();
    }
@@ -120,12 +120,12 @@ ChatUserDataPtr ChatUserModel::getUserByUserId(const QString &userId) const
 
 std::shared_ptr<Chat::ChatRoomData> ChatUserModel::getRoomByRoomId(const QString& roomId) const
 {
-   auto chatRoomIt = std::find_if(std::begin(_chatRoomDataListPtr), std::end(_chatRoomDataListPtr), [roomId](const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr)->bool
+   auto chatRoomIt = std::find_if(std::begin(chatRoomDataListPtr_), std::end(chatRoomDataListPtr_), [roomId](const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr)->bool
    {
       return (0 == chatRoomDataPtr->getId().compare(roomId));
    });
 
-   if (chatRoomIt == std::end(_chatRoomDataListPtr))
+   if (chatRoomIt == std::end(chatRoomDataListPtr_))
    {
       return std::shared_ptr<Chat::ChatRoomData>();
    }
@@ -140,10 +140,10 @@ void ChatUserModel::addRoom(const std::shared_ptr<Chat::ChatRoomData> roomData)
    if (isChatRoomExist(roomData->getId()))
       return;
 
-   _chatRoomDataListPtr.push_back(roomData);
+   chatRoomDataListPtr_.push_back(roomData);
 
    emit chatRoomAdded(roomData); 
-   emit chatRoomDataListChanged(_chatRoomDataListPtr);
+   emit chatRoomDataListChanged(chatRoomDataListPtr_);
 }
 
 bool ChatUserModel::isChatRoomExist(const QString& roomId) const
@@ -160,33 +160,33 @@ bool ChatUserModel::isChatRoomExist(const QString& roomId) const
 
 QList<std::shared_ptr<Chat::ChatRoomData> > ChatUserModel::chatRoomDataList() const
 {
-   return _chatRoomDataListPtr;
+   return chatRoomDataListPtr_;
 }
 
 void ChatUserModel::resetModel()
 {
-   while(!_chatUserDataListPtr.empty())
+   while(!chatUserDataListPtr_.empty())
    {
-      ChatUserDataPtr chatUserDataPtr = _chatUserDataListPtr.back();
-      _chatUserDataListPtr.pop_back();
+      ChatUserDataPtr chatUserDataPtr = chatUserDataListPtr_.back();
+      chatUserDataListPtr_.pop_back();
       emit chatUserRemoved(chatUserDataPtr);
    }
 
-   emit chatUserDataListChanged(_chatUserDataListPtr);
+   emit chatUserDataListChanged(chatUserDataListPtr_);
    
-   while(!_chatRoomDataListPtr.empty())
+   while(!chatRoomDataListPtr_.empty())
    {
-      std::shared_ptr<Chat::ChatRoomData> roomDataPtr = _chatRoomDataListPtr.back();
-      _chatRoomDataListPtr.pop_back();
+      std::shared_ptr<Chat::ChatRoomData> roomDataPtr = chatRoomDataListPtr_.back();
+      chatRoomDataListPtr_.pop_back();
       emit chatRoomRemoved(roomDataPtr);
    }
 
-   emit chatRoomDataListChanged(_chatRoomDataListPtr);
+   emit chatRoomDataListChanged(chatRoomDataListPtr_);
 }
 
 ChatUserDataListPtr ChatUserModel::chatUserDataList() const
 {
-   return _chatUserDataListPtr;
+   return chatUserDataListPtr_;
 }
 
 bool ChatUserModel::isChatUserInContacts(const QString &userId) const

@@ -7,35 +7,35 @@ ChatRoomsViewModel::ChatRoomsViewModel(QObject *parent) : QAbstractTableModel(pa
 
 QString ChatRoomsViewModel::resolveRoomDisplay(const QModelIndex& index) const
 {
-   if ((index.row() < 0) || (index.row() >= _rooms.size())) {
+   if ((index.row() < 0) || (index.row() >= rooms_.size())) {
       return {};
    }
-   const auto room = _rooms[index.row()];
+   const auto room = rooms_[index.row()];
    return room->getTitle().isEmpty()?room->getId():room->getTitle();
 }
 
 QString ChatRoomsViewModel::resolveRoom(const QModelIndex& index) const
 {
-   if ((index.row() < 0) || (index.row() >= _rooms.size())) {
+   if ((index.row() < 0) || (index.row() >= rooms_.size())) {
       return {};
    }
-   return _rooms[index.row()]->getId();
+   return rooms_[index.row()]->getId();
 }
 
 void ChatRoomsViewModel::onRoomsDataListChanged(const QList<std::shared_ptr<Chat::ChatRoomData> >& roomsDataList)
 {
    beginResetModel();
-   _rooms.clear();
-   _rooms.reserve(roomsDataList.size());
+   rooms_.clear();
+   rooms_.reserve(roomsDataList.size());
    for (const auto &dataPtr : roomsDataList) {
-      _rooms.push_back(std::move(dataPtr));
+      rooms_.push_back(std::move(dataPtr));
    }
    endResetModel();
 }
 
 int ChatRoomsViewModel::rowCount(const QModelIndex& /*parent*/) const
 {
-   return _rooms.size();
+   return rooms_.size();
 }
 
 int ChatRoomsViewModel::columnCount(const QModelIndex& /*parent*/) const
@@ -45,7 +45,7 @@ int ChatRoomsViewModel::columnCount(const QModelIndex& /*parent*/) const
 
 QVariant ChatRoomsViewModel::data(const QModelIndex& index, int role) const
 {
-   if (index.row() >= _rooms.size())
+   if (index.row() >= rooms_.size())
       return QVariant();
 
    switch (role)

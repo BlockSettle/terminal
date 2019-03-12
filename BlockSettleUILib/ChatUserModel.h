@@ -48,8 +48,8 @@ signals:
 public slots:
 
 private:
-   ChatUserDataListPtr _chatUserDataListPtr;
-   QList<std::shared_ptr<Chat::ChatRoomData>> _chatRoomDataListPtr;
+   ChatUserDataListPtr chatUserDataListPtr_;
+   QList<std::shared_ptr<Chat::ChatRoomData>> chatRoomDataListPtr_;
 };
 
 using ChatUserModelPtr = std::shared_ptr<ChatUserModel>;

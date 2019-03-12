@@ -2,20 +2,20 @@
 
 namespace Chat {
    PendingMessagesResponse::PendingMessagesResponse(const QString & message_id, const QString &id)
-      : PendingResponse(ResponseType::ResponsePendingMessage, id), message_id_(message_id)
+      : PendingResponse(ResponseType::ResponsePendingMessage, id), messageId_(message_id)
    {
    
    }
    
    QString PendingMessagesResponse::getMessageId()
    {
-      return message_id_;
+      return messageId_;
    }
    
    QJsonObject PendingMessagesResponse::toJson() const
    {
       QJsonObject data = PendingResponse::toJson();
-      data[MessageIdKey] = message_id_;
+      data[MessageIdKey] = messageId_;
       return data;
    }
    
