@@ -69,9 +69,9 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
    if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
-      int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
-      bool isInCurrentChat = msg[1].toBool();
-      bool hasUnreadMessages = msg[2].toBool();
+      const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
+      const bool isInCurrentChat = msg[1].toBool();
+      const bool hasUnreadMessages = msg[2].toBool();
 
       if (hasUnreadMessages) {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
