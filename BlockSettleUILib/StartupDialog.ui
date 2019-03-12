@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>543</width>
-    <height>514</height>
+    <width>682</width>
+    <height>649</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -109,35 +109,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="radioButtonArmoryBlockSettle">
-            <property name="text">
-             <string>Continue with BlockSettle's Supernode for network connectivity</string>
+           <widget class="QWidget" name="widgetManageArmory" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>100</height>
+             </size>
             </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioButtonArmoryLocal">
-            <property name="text">
-             <string>Continue with Armory running on the same host</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioButtonArmoryCustom">
-            <property name="text">
-             <string>Continue by setting up own network connectivity </string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="armoryGroupBox">
-            <property name="title">
-             <string>ARMORY DATABASE</string>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout">
+            <layout class="QGridLayout" name="gridLayout_2">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -150,103 +129,13 @@
              <property name="bottomMargin">
               <number>0</number>
              </property>
-             <item>
-              <layout class="QGridLayout" name="gridLayout">
-               <item row="0" column="0">
-                <widget class="QLabel" name="armoryDBHostLabel">
-                 <property name="minimumSize">
-                  <size>
-                   <width>130</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>130</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>ArmoryDB Hostname</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                 <property name="wordWrap">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLineEdit" name="lineEditArmoryDBHost">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>127.0.0.1</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="armoryDBPortLabel">
-                 <property name="minimumSize">
-                  <size>
-                   <width>130</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>130</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>ArmoryDB Port</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                 <property name="wordWrap">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QSpinBox" name="spinBoxArmoryDBPort">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="minimum">
-                  <number>1</number>
-                 </property>
-                 <property name="maximum">
-                  <number>65535</number>
-                 </property>
-                 <property name="value">
-                  <number>1</number>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
+             <property name="spacing">
+              <number>0</number>
+             </property>
             </layout>
            </widget>
           </item>
          </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="checkBoxTestnet">
-         <property name="text">
-          <string>Use Testnet network (testing-only purposes)</string>
-         </property>
         </widget>
        </item>
        <item>
@@ -331,12 +220,6 @@
    </item>
   </layout>
  </widget>
- <tabstops>
-  <tabstop>radioButtonArmoryBlockSettle</tabstop>
-  <tabstop>radioButtonArmoryCustom</tabstop>
-  <tabstop>lineEditArmoryDBHost</tabstop>
-  <tabstop>spinBoxArmoryDBPort</tabstop>
- </tabstops>
  <resources/>
  <connections/>
 </ui>

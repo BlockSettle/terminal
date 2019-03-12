@@ -43,6 +43,20 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
    connect(ui_->pageNetwork, &NetworkSettingsPage::reconnectArmory, this, [this](){
       emit reconnectArmory();
    });
+
+   // armory servers should we saved even if whole ConfigDialog rejected
+   // we overwriting prevState_ with new vales once ArmoryServersWidget closed
+   connect(ui_->pageNetwork, &NetworkSettingsPage::armoryServerChanged, this, [this](){
+      for (ApplicationSettings::Setting s : {
+           ApplicationSettings::armoryServers,
+           ApplicationSettings::runArmoryLocally,
+           ApplicationSettings::netType,
+           ApplicationSettings::armoryDbName,
+           ApplicationSettings::armoryDbIp,
+           ApplicationSettings::armoryDbPort}) {
+         prevState_[s] = appSettings_->get<QStringList>(s);
+      }
+   });
 }
 
 ConfigDialog::~ConfigDialog() = default;

@@ -38,6 +38,7 @@ public:
       , const std::shared_ptr<bs::core::WalletsManager> &
       , const std::string &walletsPath
       , NetworkType netType
+      , bool watchingOnly = false
       , const bool &hasUI = false
       , const bool &backupEnabled = true);
    ~HeadlessContainerListener() noexcept override;
@@ -135,6 +136,8 @@ private:
 
    SecureBinaryData authTicket(const std::string &clientId) const;
 
+   bool isRequestAllowed(Blocksettle::Communication::headless::RequestType) const;
+
 private:
    std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
@@ -143,6 +146,7 @@ private:
    const std::string                   backupPath_;
    const NetworkType                   netType_;
    SignContainer::Limits               limits_;
+   const bool                          watchingOnly_;
    const bool                          hasUI_;
    std::unordered_map<std::string, SecureBinaryData>  authTickets_;
    std::unordered_set<std::string>     connectedClients_;

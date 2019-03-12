@@ -12,17 +12,6 @@
 #include "autheid_utils.h"
 #include "LogManager.h"
 
-enum class EnvConfiguration
-{
-   // Do not change order!
-   PROD,
-   UAT,
-   Staging,
-   Custom,
-
-   Count
-};
-
 
 class ApplicationSettings : public QObject
 {
@@ -42,6 +31,15 @@ public:
    QString  ErrorText() const { return errorText_; }
 
    void     SaveSettings();
+
+   enum EnvConfiguration
+   {
+      PROD,
+      UAT,
+      Staging,
+      Custom,
+   };
+   Q_ENUM(EnvConfiguration)
 
    enum Setting {
       initialized,
