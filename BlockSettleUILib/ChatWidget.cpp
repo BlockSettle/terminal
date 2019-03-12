@@ -103,10 +103,17 @@ public:
       QString messageText = chat_->ui_->input_textEdit->toPlainText();
 
       if (!messageText.isEmpty() && !chat_->currentChat_.isEmpty()) {
-         auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
-         chat_->ui_->input_textEdit->clear();
-
-         chat_->ui_->textEditMessages->onSingleMessageUpdate(msg);
+         if(!isRoom){
+            auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
+            chat_->ui_->input_textEdit->clear();
+   
+            chat_->ui_->textEditMessages->onSingleMessageUpdate(msg);
+         } else {
+            auto msg = chat_->client_->sendRoomOwnMessage(messageText, chat_->currentChat_);
+            chat_->ui_->input_textEdit->clear();
+   
+            chat_->ui_->textEditMessages->onSingleMessageUpdate(msg);
+         }
       }
    }
 
@@ -119,6 +126,7 @@ public:
       }
 
       chat_->currentChat_ = userId;
+      isRoom = false;
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
       chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
@@ -140,6 +148,7 @@ public:
       }
 
       chat_->currentChat_ = roomId;
+      isRoom = true;
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
       chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
@@ -163,6 +172,8 @@ public:
    }
 
    void onUsersDeleted(const std::vector<std::string> &/*users*/)  override {}
+private:
+   bool isRoom = false;
 };
 
 ChatWidget::ChatWidget(QWidget *parent)

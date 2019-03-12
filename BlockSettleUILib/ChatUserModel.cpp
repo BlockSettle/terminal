@@ -141,7 +141,7 @@ bool ChatUserModel::isChatRoomExist(const QString& roomId) const
 
 QList<std::shared_ptr<Chat::ChatRoomData> > ChatUserModel::chatRoomDataList() const
 {
-   
+   return _chatRoomDataListPtr;
 }
 
 void ChatUserModel::resetModel()
