@@ -39,13 +39,17 @@ message TradeHistoryRequest
 
 message LatestTradeRequest
 {
-   TradeHistoryTradeType trade_type = 1;
+   TradeHistoryTradeType   trade_type  = 1;
 }
 
 message LoadSnapshotRequest
 {
    TradeHistoryTradeType   trade_type     = 1;
    uint64                  from_timestamp = 2;
+   // to_timestamp - optional
+   uint64                  to_timestamp   = 3;
+   // product - optional
+   string                  product        = 4;
 }
 
 message LoadLatestTradeForProductRequest
