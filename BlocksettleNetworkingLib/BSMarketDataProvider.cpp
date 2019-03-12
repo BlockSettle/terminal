@@ -126,10 +126,8 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
       const auto& productInfo = snapshot.fx_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
       auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
 
    for (int i=0; i < snapshot.xbt_products_size(); ++i) {
@@ -137,10 +135,8 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
       const auto& productInfo = snapshot.xbt_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
       auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
 
    for (int i=0; i < snapshot.cc_products_size(); ++i) {
@@ -148,10 +144,8 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
       const auto& productInfo = snapshot.cc_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
       auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
 }
 
