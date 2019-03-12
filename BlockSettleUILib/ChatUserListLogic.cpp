@@ -99,6 +99,25 @@ void ChatUserListLogic::onUserHaveNewMessageChanged(const QString &userId, const
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });
 }
 
+void ChatUserListLogic::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)
+{
+   for (const std::shared_ptr<Chat::ChatRoomData>  &room : roomList)
+   {
+      std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr = chatUserModelPtr_->getRoomByRoomId(room->getId());
+      
+      // If not found, set online status and add new user
+      if (!chatRoomDataPtr)
+      {
+         chatUserModelPtr_->addRoom(room);
+      }
+//      else
+//      // If found then set status to online
+//      {
+//         _chatUserModelPtr->setUserStatus(chatUserDataPtr->userId(), ChatUserData::ConnectionStatus::Online);
+//      }
+   }
+}
+
 ChatUserModelPtr ChatUserListLogic::chatUserModelPtr() const
 {
    return chatUserModelPtr_;

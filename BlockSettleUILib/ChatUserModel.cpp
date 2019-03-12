@@ -41,6 +41,25 @@ void ChatUserModel::removeByUserId(const QString &userId)
    emit chatUserDataListChanged(chatUserDataListPtr_);
 }
 
+void ChatUserModel::removeByRoomId(const QString& roomId)
+{
+   std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr = getRoomByRoomId(roomId);
+   if (!chatRoomDataPtr)
+   {
+      return;
+   }
+
+   chatRoomDataListPtr_.erase(
+      std::remove_if(std::begin(chatRoomDataListPtr_), std::end(chatRoomDataListPtr_),
+      [chatRoomDataPtr](const std::shared_ptr<Chat::ChatRoomData> cudPtr)
+   {
+      return cudPtr && (cudPtr == chatRoomDataPtr);
+   }));
+
+   emit chatRoomRemoved(chatRoomDataPtr);
+   emit chatRoomDataListChanged(chatRoomDataListPtr_);
+}
+
 bool ChatUserModel::isChatUserExist(const QString &userId) const
 {
    ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
@@ -162,6 +181,51 @@ ChatUserDataPtr ChatUserModel::getUserByEmail(const QString &email) const
    return chatUserDataPtr;
 }
 
+std::shared_ptr<Chat::ChatRoomData> ChatUserModel::getRoomByRoomId(const QString& roomId) const
+{
+   auto chatRoomIt = std::find_if(std::begin(chatRoomDataListPtr_), std::end(chatRoomDataListPtr_), [roomId](const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr)->bool
+   {
+      return (0 == chatRoomDataPtr->getId().compare(roomId));
+   });
+
+   if (chatRoomIt == std::end(chatRoomDataListPtr_))
+   {
+      return std::shared_ptr<Chat::ChatRoomData>();
+   }
+
+   std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr((*chatRoomIt));
+
+   return chatRoomDataPtr;
+}
+
+void ChatUserModel::addRoom(const std::shared_ptr<Chat::ChatRoomData> roomData)
+{
+   if (isChatRoomExist(roomData->getId()))
+      return;
+
+   chatRoomDataListPtr_.push_back(roomData);
+
+   emit chatRoomAdded(roomData); 
+   emit chatRoomDataListChanged(chatRoomDataListPtr_);
+}
+
+bool ChatUserModel::isChatRoomExist(const QString& roomId) const
+{
+   std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr = getRoomByRoomId(roomId);
+
+   if (chatRoomDataPtr)
+   {
+      return true;
+   }
+
+   return false;
+}
+
+QList<std::shared_ptr<Chat::ChatRoomData> > ChatUserModel::chatRoomDataList() const
+{
+   return chatRoomDataListPtr_;
+}
+
 void ChatUserModel::resetModel()
 {
    while(!chatUserDataListPtr_.empty())
@@ -172,6 +236,16 @@ void ChatUserModel::resetModel()
    }
 
    emit chatUserDataListChanged(chatUserDataListPtr_);
+
+   
+   while(!chatRoomDataListPtr_.empty())
+   {
+      std::shared_ptr<Chat::ChatRoomData> roomDataPtr = chatRoomDataListPtr_.back();
+      chatRoomDataListPtr_.pop_back();
+      emit chatRoomRemoved(roomDataPtr);
+   }
+
+   emit chatRoomDataListChanged(chatRoomDataListPtr_);
 }
 
 ChatUserDataListPtr ChatUserModel::chatUserDataList() const
