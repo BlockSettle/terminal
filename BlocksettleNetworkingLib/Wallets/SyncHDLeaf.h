@@ -69,10 +69,14 @@ namespace bs {
             size_t getExtAddressCount() const override { return extAddresses_.size(); }
             size_t getIntAddressCount() const override { return intAddresses_.size(); }
             bool isExternalAddress(const Address &) const override;
-            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
+            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
+            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
+            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
+            bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &
@@ -215,7 +219,8 @@ namespace bs {
             std::set<AddrPoolKey>   activeScanAddresses_;
 
          private:
-            bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
+            bs::Address createAddress(AddressEntryType aet, const CbAddress &cb = nullptr
+               , bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             void onScanComplete();

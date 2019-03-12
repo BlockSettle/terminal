@@ -1583,6 +1583,11 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
       addrData->set_index(indexData.index());
    }
 
+   const auto hdWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
+   if (hdWallet) {
+      hdWallet->updatePersistence();
+   }
+
    packet.set_data(response.SerializeAsString());
    return sendData(packet.SerializeAsString(), clientId);
 }

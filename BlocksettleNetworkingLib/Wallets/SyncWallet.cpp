@@ -551,10 +551,10 @@ bool Wallet::getHistoryPage(uint32_t id, std::function<void(const Wallet *wallet
    return getHistoryPage(btcWallet_, id, clientCb, onlyNew);
 }
 
-bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
+bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet, const CbAddress &cb)
 {
    if (getUsedAddressCount() < 3) {
-      return getNewChangeAddress(aet);
+      return getNewChangeAddress(aet, cb);
    }
    const auto &addresses = getUsedAddressList();
    return addresses[qrand() % addresses.size()];
