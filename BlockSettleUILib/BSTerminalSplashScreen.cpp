@@ -16,6 +16,11 @@ BSTerminalSplashScreen::BSTerminalSplashScreen(const QPixmap& splash_image)
    progress_->setMinimumWidth(this->width());
    progress_->setMaximumHeight(10);
 
+   blockSettleLabel_ = new QLabel(this);
+   blockSettleLabel_->setText(QLatin1String("BLOCKSETTLE TERMINAL"));
+   blockSettleLabel_->move(30, 140);
+   blockSettleLabel_->setStyleSheet(QLatin1String("font-size: 18px; color: white"));
+
    progress_->setStyleSheet(QLatin1String("text-align: center; font-size: 8px; border-width: 0px;"));
    SetTipText(tr("Loading"));
 }

@@ -165,6 +165,7 @@ namespace bs {
             }  change;
             uint64_t    fee = 0;
             bool        RBF = false;
+            bool        autoSign = false;
             std::vector<BinaryData>       prevStates;
             bool        populateUTXOs = false;
             std::string comment;

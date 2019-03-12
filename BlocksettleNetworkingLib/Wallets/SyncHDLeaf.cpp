@@ -29,6 +29,7 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       encryptionKeys_ = data.encryptionKeys;
       encryptionRank_ = data.encryptionRank;
       netType_ = data.netType;
+      emit metaDataChanged();
 
       for (const auto &addr : data.addresses) {
          addAddress(addr.address, addr.index, addr.address.getType(), false);

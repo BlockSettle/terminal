@@ -36,4 +36,14 @@ private:
    T     value_ = T{};
 };
 
+template<class T>
+inline bool operator == (const SettableField<T>& l,const SettableField<T>& r)
+{
+   if (!l.isValid() || !r.isValid()) {
+      return false;
+   }
+
+   return l.getValue() == r.getValue();
+}
+
 #endif // __SETTABLE_FIELD_H__

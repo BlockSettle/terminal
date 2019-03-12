@@ -11,17 +11,8 @@ message ProductPriceInfo
    double volume        = 5;
 }
 
-// contain info only for changed products
-message IncrementalUpdate
-{
-   repeated ProductPriceInfo fx_products  = 1;
-   repeated ProductPriceInfo xbt_products = 2;
-   repeated ProductPriceInfo cc_products  = 3;
-   int64                     timestamp    = 4;
-}
-
 // contain full info on all products
-message FullSnapshot
+message MDSnapshot
 {
    repeated ProductPriceInfo fx_products  = 1;
    repeated ProductPriceInfo xbt_products = 2;
