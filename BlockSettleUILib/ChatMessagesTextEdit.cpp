@@ -26,6 +26,11 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    setOpenExternalLinks(false);
    setOpenLinks(false);
 
+   statusImageOffline_ = QImage(QLatin1Literal(":/ICON_MSG_STATUS_OFFLINE"), "PNG");
+   statusImageConnecting_ = QImage(QLatin1Literal(":/ICON_MSG_STATUS_CONNECTING"), "PNG");
+   statusImageOnline_ = QImage(QLatin1Literal(":/ICON_MSG_STATUS_ONLINE"), "PNG");
+   statusImageRead_ = QImage(QLatin1Literal(":/ICON_MSG_STATUS_READ"), "PNG");
+
    connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
 }
 
@@ -94,18 +99,19 @@ QImage ChatMessagesTextEdit::statusImage(const int &row) {
       return QImage();
    }
    int state = message->getState();
-   QImage statusImage = QImage(QLatin1Literal(":/ICON_STATUS_OFFLINE"), "PNG");
+
+   QImage statusImage = statusImageOffline_;
    
    if (state & static_cast<int>(Chat::MessageData::State::Sent)){
-      statusImage = QImage(QLatin1Literal(":/ICON_STATUS_CONNECTING"), "PNG");
+      statusImage = statusImageConnecting_;
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
-      statusImage = QImage(QLatin1Literal(":/ICON_STATUS_ONLINE"), "PNG");
+      statusImage = statusImageOnline_;
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Read)){
-      statusImage = QImage(QLatin1Literal(":/ICON_STATUS_READ"), "PNG");
+      statusImage = statusImageRead_;
    }
    
    return statusImage;
