@@ -33,21 +33,21 @@ class LibBTC(Configurator):
 
     def config(self):
         command = ['cmake',
-                self.get_unpacked_sources_dir(),
-                '-DGMP_INSTALL_DIR=' + self.mpir.get_install_dir(),
-                '-G',
-                self._project_settings.get_cmake_generator(),
-                ]
+                self.get_unpacked_sources_dir()]
 
         # for static lib
         if self._project_settings.on_windows() and self._project_settings.get_link_mode() != 'shared':
             if self._project_settings.get_build_mode() == 'debug':
-                command.append('-DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
-                command.append('-DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
+                command.append('-DCMAKE_C_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
             else:
-                command.append('-DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
-                command.append('-DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
- 
+                command.append('-DCMAKE_C_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+
+        command.append('-DGMP_INSTALL_DIR=' + self.mpir.get_install_dir())
+        command.append('-G')
+        command.append(self._project_settings.get_cmake_generator())
+
         print(command)
         result = subprocess.call(command)
 

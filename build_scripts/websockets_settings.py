@@ -42,11 +42,11 @@ class WebsocketsSettings(Configurator):
         # for static lib
         if self._project_settings.on_windows() and self._project_settings.get_link_mode() != 'shared':
             if self._project_settings.get_build_mode() == 'debug':
-                command.append('-DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
-                command.append('-DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
+                command.append('-DCMAKE_C_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
             else:
-                command.append('-DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
-                command.append('-DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
+                command.append('-DCMAKE_C_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
 
         if self._project_settings.on_linux():
             command.append('-DLWS_WITH_STATIC=ON')
