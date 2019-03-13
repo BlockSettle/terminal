@@ -349,8 +349,6 @@ void CreateTransactionDialogAdvanced::initUI()
    ui_->line->hide();
    ui_->pushButtonSelectInputs->setEnabled(ui_->comboBoxWallets->count() > 0);
 
-   connect(ui_->comboBoxWallets, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
-
    connect(ui_->lineEditAddress, &QLineEdit::textChanged, this, &CreateTransactionDialogAdvanced::onAddressTextChanged);
    connect(ui_->lineEditAmount, &QLineEdit::textChanged, this, &CreateTransactionDialogAdvanced::onXBTAmountChanged);
    ui_->lineEditAddress->installEventFilter(this);
@@ -568,13 +566,6 @@ void CreateTransactionDialogAdvanced::RemoveOutputByRow(int row)
    outputsModel_->RemoveRecipient(row);
 
    ui_->comboBoxFeeSuggestions->setEnabled(true);
-}
-
-void CreateTransactionDialogAdvanced::selectedWalletChanged(int index, bool resetInputs, const std::function<void()> &cbInputsReset)
-{
-   CreateTransactionDialog::selectedWalletChanged(index, resetInputs, cbInputsReset);
-
-   ui_->radioButtonNewAddrNative->setChecked(true);
 }
 
 void CreateTransactionDialogAdvanced::onTransactionUpdated()

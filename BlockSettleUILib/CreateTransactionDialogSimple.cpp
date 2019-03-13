@@ -35,8 +35,6 @@ void CreateTransactionDialogSimple::initUI()
 
    recipientId_ = transactionData_->RegisterNewRecipient();
 
-   connect(ui_->comboBoxWallets, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
-
    connect(ui_->lineEditAddress, &QLineEdit::textEdited, this, &CreateTransactionDialogSimple::onAddressTextChanged);
    connect(ui_->lineEditAmount, &QLineEdit::textChanged, this, &CreateTransactionDialogSimple::onXBTAmountChanged);
 
