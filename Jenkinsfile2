@@ -59,11 +59,10 @@ pipeline {
                    //     sh 'scp -P 2222 admin@172.17.0.1:C:/Users/Admin/Workspace/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
                         bat "type C:\\Users\\Admin\\Workspace\\build.bat"
                    //     powershell '& "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat ; set PYTHONIOENCODING=UTF-8 ; cd terminal ; python generate.py release"'
-                  //      bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal && python generate.py release'
-                  //      bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal\\terminal.release && devenv BS_Terminal.sln /build Release"'
-                  //      bat "cd terminal\\Deploy\\Windows\\ && deploy.bat"
+                        bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal && python generate.py release'
+                        bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal\\terminal.release && devenv BS_Terminal.sln /build Release"'
+                        bat "cd terminal\\Deploy\\Windows\\ && deploy.bat"
                   //      sh 'scp -P 2222 admin@172.17.0.1:C:/Users/Admin/Workspace/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
-                        sh 'scp -P 2222 admin@172.17.0.1:${WORKSPACE}/1.txt ${WORKSPACE}/22222.txt'
           //              bat "dir"
           //              script {
           //                  step ([$class: 'CopyArtifact',
@@ -101,6 +100,7 @@ pipeline {
                         expression { params.OS == 'Windows' || params.OS == 'All' }
                     }
                     steps {
+                        sh 'scp -P 2222 admin@172.17.0.1:C:/Users/Admin/Workspace/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
                //         sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe genoa@10.0.1.36:/var/www/terminal/Windows/bsterminal_installer_${BRANCH}.exe"
                         sh "echo fine"
                     }
