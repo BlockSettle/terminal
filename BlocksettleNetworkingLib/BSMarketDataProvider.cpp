@@ -1,6 +1,5 @@
 #include "BSMarketDataProvider.h"
 
-#include "bs_md.pb.h"
 #include "ConnectionManager.h"
 #include "SubscriberConnection.h"
 
@@ -113,6 +112,16 @@ bs::network::MDFields GetMDFields(const Blocksettle::Communication::BlocksettleM
    return result;
 }
 
+void BSMarketDataProvider::OnProductSnapshot(const bs::network::Asset::Type& assetType
+   , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+   , double timestamp)
+{
+   emit MDSecurityReceived(productInfo.product_name(), {assetType});
+   auto fields = GetMDFields(productInfo);
+   fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+   emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+}
+
 void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
 {
    Blocksettle::Communication::BlocksettleMarketData::MDSnapshot snapshot;
@@ -124,28 +133,24 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
    double timestamp = static_cast<double>(snapshot.timestamp());
 
    for (int i=0; i < snapshot.fx_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotFX;
-      const auto& productInfo = snapshot.fx_products(i);
-      emit MDSecurityReceived(productInfo.product_name(), {assetType});
-      auto fields = GetMDFields(productInfo);
-      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      OnProductSnapshot(bs::network::Asset::Type::SpotFX, snapshot.fx_products(i), timestamp);
    }
 
    for (int i=0; i < snapshot.xbt_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotXBT;
-      const auto& productInfo = snapshot.xbt_products(i);
-      emit MDSecurityReceived(productInfo.product_name(), {assetType});
-      auto fields = GetMDFields(productInfo);
-      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      OnProductSnapshot(bs::network::Asset::Type::SpotXBT, snapshot.xbt_products(i), timestamp);
    }
 
    for (int i=0; i < snapshot.cc_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::PrivateMarket;
-      const auto& productInfo = snapshot.cc_products(i);
-      emit MDSecurityReceived(productInfo.product_name(), {assetType});
-      auto fields = GetMDFields(productInfo);
+      OnProductSnapshot(bs::network::Asset::Type::PrivateMarket, snapshot.cc_products(i), timestamp);
+   }
+}
+
+void BSMarketDataProvider::OnProductUpdate(const bs::network::Asset::Type& assetType
+   , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+   , double timestamp)
+{
+   auto fields = GetMDFields(productInfo);
+   if (!fields.empty()) {
       fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
       emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
@@ -162,32 +167,14 @@ void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
    double timestamp = static_cast<double>(update.timestamp());
 
    for (int i=0; i < update.fx_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotFX;
-      const auto& productInfo = update.fx_products(i);
-      auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      OnProductUpdate(bs::network::Asset::Type::SpotFX, update.fx_products(i), timestamp);
    }
 
    for (int i=0; i < update.xbt_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotXBT;
-      const auto& productInfo = update.xbt_products(i);
-      auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      OnProductUpdate(bs::network::Asset::Type::SpotXBT, update.xbt_products(i), timestamp);
    }
 
    for (int i=0; i < update.cc_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::PrivateMarket;
-      const auto& productInfo = update.cc_products(i);
-      auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      OnProductUpdate(bs::network::Asset::Type::PrivateMarket, update.cc_products(i), timestamp);
    }
 }
