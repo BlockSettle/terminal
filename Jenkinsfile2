@@ -63,13 +63,14 @@ pipeline {
                   //      bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal\\terminal.release && devenv BS_Terminal.sln /build Release"'
                   //      bat "cd terminal\\Deploy\\Windows\\ && deploy.bat"
                   //      sh 'scp -P 2222 admin@172.17.0.1:C:/Users/Admin/Workspace/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
-                        bat "dir"
-                        script {
-                            step ([$class: 'CopyArtifact',
-                            projectName: '${JOB_NAME}',
-                            filter: "\\*.*",
-                            target: 'WBuild']);
-                        }
+                        sh sh 'scp -P 2222 admin@172.17.0.1:${WORKSPACE}/1.txt ${WORKSPACE}/22222.txt'
+          //              bat "dir"
+          //              script {
+          //                  step ([$class: 'CopyArtifact',
+          //                  projectName: '${JOB_NAME}',
+          //                  filter: "\\*.*",
+          //                  target: 'WBuild']);
+          //              }
                     }
                 }
             }
