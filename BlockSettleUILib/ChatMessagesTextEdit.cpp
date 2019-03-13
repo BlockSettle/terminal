@@ -78,7 +78,7 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
       }
          
       case Column::Message:
-         return QString(QLatin1String("[%1] %2")).arg(messages_[currentChatId_][row]->getId(), messages_[currentChatId_][row]->getMessageData());
+         return messages_[currentChatId_][row]->getMessageData();
 
       default:
          break;
