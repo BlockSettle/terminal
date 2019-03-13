@@ -86,7 +86,9 @@ void BSMarketDataProvider::onConnectedToMD()
 
 void BSMarketDataProvider::onDisconnectedFromMD()
 {
+   emit Disconnecting();
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
+
    mdConnection_ = nullptr;
    emit Disconnected();
 }
@@ -96,10 +98,10 @@ bs::network::MDFields GetMDFields(const Blocksettle::Communication::BlocksettleM
    bs::network::MDFields result;
 
    if (!qFuzzyIsNull(productInfo.offer())) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.offer(), QString()} );
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.offer(), QString()} );
    }
    if (!qFuzzyIsNull(productInfo.bid())) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.bid(), QString()} );
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.bid(), QString()} );
    }
    if (!qFuzzyIsNull(productInfo.last_price())) {
       result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceLast, productInfo.last_price(), QString()} );
@@ -126,10 +128,8 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
       const auto& productInfo = snapshot.fx_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
       auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
 
    for (int i=0; i < snapshot.xbt_products_size(); ++i) {
@@ -137,10 +137,8 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
       const auto& productInfo = snapshot.xbt_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
       auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
 
    for (int i=0; i < snapshot.cc_products_size(); ++i) {
@@ -148,10 +146,8 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
       const auto& productInfo = snapshot.cc_products(i);
       emit MDSecurityReceived(productInfo.product_name(), {assetType});
       auto fields = GetMDFields(productInfo);
-      if (!fields.empty()) {
-         fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-         emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
-      }
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
 }
 

@@ -234,8 +234,6 @@ void PublisherConnection::listenFunction()
             if (result != 0) {
                logger_->error("[PublisherConnection::SetWelcomeMessage] failed to set no welcome message: {}"
                   , zmq_strerror(zmq_errno()));
-            } else {
-               logger_->debug("[PublisherConnection::SetWelcomeMessage] welcome message updated");
             }
          } else if (command_code == PublisherConnection::CommandStop) {
             break;
