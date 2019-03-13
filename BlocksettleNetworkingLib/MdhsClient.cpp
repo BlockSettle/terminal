@@ -46,43 +46,43 @@ static const std::map<std::string, MdhsClient::ProductType> PRODUCT_TYPES = {
 };
 
 MdhsClient::MdhsClient(
-	const std::shared_ptr<ApplicationSettings>& appSettings,
-	const std::shared_ptr<ConnectionManager>& connectionManager,
-	const std::shared_ptr<spdlog::logger>& logger,
-	QObject* pParent)
-	: QObject(pParent)
+   const std::shared_ptr<ApplicationSettings>& appSettings,
+   const std::shared_ptr<ConnectionManager>& connectionManager,
+   const std::shared_ptr<spdlog::logger>& logger,
+   QObject* pParent)
+   : QObject(pParent)
     , appSettings_(appSettings)
-	, connectionManager_(connectionManager)
+   , connectionManager_(connectionManager)
     , logger_(logger)
 {
 }
 
 void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
 {
-	const auto apiConnection = connectionManager_->CreateGenoaClientConnection();
-	command_ = std::make_shared<RequestReplyCommand>("MdhsClient", apiConnection, logger_);
+   const auto apiConnection = connectionManager_->CreateGenoaClientConnection();
+   command_ = std::make_shared<RequestReplyCommand>("MdhsClient", apiConnection, logger_);
 
-	command_->SetReplyCallback([this](const std::string& data) -> bool
-	{
-		return OnDataReceived(data);
-	});
+   command_->SetReplyCallback([this](const std::string& data) -> bool
+   {
+      return OnDataReceived(data);
+   });
 
-	command_->SetErrorCallback([this](const std::string& message)
-	{
-		logger_->error("Failed to get history data from mdhs: {}", message);
-		command_->CleanupCallbacks();
-	});
+   command_->SetErrorCallback([this](const std::string& message)
+   {
+      logger_->error("Failed to get history data from mdhs: {}", message);
+      command_->CleanupCallbacks();
+   });
 
-	if (!command_->ExecuteRequest(
-		//appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
-		//appSettings_->get<std::string>(ApplicationSettings::mdhsPort),
-		"localhost",
-		"5000",
-		request.SerializeAsString()))
-	{
-		logger_->error("Failed to send request for mdhs.");
-		command_->CleanupCallbacks();
-	}
+   if (!command_->ExecuteRequest(
+      //appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
+      //appSettings_->get<std::string>(ApplicationSettings::mdhsPort),
+      "localhost",
+      "5000",
+      request.SerializeAsString()))
+   {
+      logger_->error("Failed to send request for mdhs.");
+      command_->CleanupCallbacks();
+   }
 }
 
 const MdhsClient::ProductType MdhsClient::GetProductType(const QString &product) const
@@ -95,7 +95,7 @@ const MdhsClient::ProductType MdhsClient::GetProductType(const QString &product)
 
 const bool MdhsClient::OnDataReceived(const std::string& data)
 {
-	emit DataReceived(data);
-	command_->CleanupCallbacks();
-	return true;
+   emit DataReceived(data);
+   command_->CleanupCallbacks();
+   return true;
 }

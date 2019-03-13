@@ -56,17 +56,17 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
                        , const std::shared_ptr<ConnectionManager>& connectionManager
                        , const std::shared_ptr<spdlog::logger>& logger)
 {
-	appSettings_ = appSettings;
-	mdProvider_ = mdProvider;
-	mdhsClient_ = std::make_shared<MdhsClient>(appSettings, connectionManager, logger);
-	logger_ = logger;
+   appSettings_ = appSettings;
+   mdProvider_ = mdProvider;
+   mdhsClient_ = std::make_shared<MdhsClient>(appSettings, connectionManager, logger);
+   logger_ = logger;
 
-	connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
-	connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
+   connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
+   connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
 
-	//MarketDataHistoryRequest request;
-	//request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
-	//mdhsClient_->SendRequest(request);
+   //MarketDataHistoryRequest request;
+   //request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
+   //mdhsClient_->SendRequest(request);
 
    // initialize charts
    InitializeCustomPlot();
@@ -93,22 +93,22 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 
    if (title_->text() == security)
    {
-	   for (const auto& field : mdFields)
-	   {
-		   if (field.type == bs::network::MDField::PriceBid)
-		   {
-			   if (field.value == lastClose)
-				   return;
-			   else
-				   lastClose = field.value;
+      for (const auto& field : mdFields)
+      {
+         if (field.type == bs::network::MDField::PriceBid)
+         {
+            if (field.value == lastClose)
+               return;
+            else
+               lastClose = field.value;
 
-			   if (lastClose > lastHigh)
-				   lastHigh = lastClose;
+            if (lastClose > lastHigh)
+               lastHigh = lastClose;
 
-			   if (lastClose < lastLow)
-				   lastLow = lastClose;
-		   }
-	   }
+            if (lastClose < lastLow)
+               lastLow = lastClose;
+         }
+      }
    }
 
    ModifyCandle();
@@ -121,232 +121,232 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 
 void ChartWidget::UpdateChart(const int& interval) const
 {
-	auto product = ui_->cboInstruments->currentText();
-	if (product.isEmpty())
-		return;
-	if (title_) {
-		title_->setText(product);
-	}
-	if (!candlesticksChart_ || !volumeChart_) {
-		return;
-	}
-	candlesticksChart_->data()->clear();
-	volumeChart_->data()->clear();
-	qreal width = 0.8 * IntervalWidth(interval) / 1000;
-	candlesticksChart_->setWidth(width);
-	volumeChart_->setWidth(width);
+   auto product = ui_->cboInstruments->currentText();
+   if (product.isEmpty())
+      return;
+   if (title_) {
+      title_->setText(product);
+   }
+   if (!candlesticksChart_ || !volumeChart_) {
+      return;
+   }
+   candlesticksChart_->data()->clear();
+   volumeChart_->data()->clear();
+   qreal width = 0.8 * IntervalWidth(interval) / 1000;
+   candlesticksChart_->setWidth(width);
+   volumeChart_->setWidth(width);
 
-	OhlcRequest ohlcRequest;
-	ohlcRequest.set_product(product.toStdString());
-	ohlcRequest.set_interval(static_cast<Interval>(interval));
-	ohlcRequest.set_limit(100);
+   OhlcRequest ohlcRequest;
+   ohlcRequest.set_product(product.toStdString());
+   ohlcRequest.set_interval(static_cast<Interval>(interval));
+   ohlcRequest.set_limit(100);
 
-	MarketDataHistoryRequest request;
-	request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
-	request.set_request(ohlcRequest.SerializeAsString());
-	mdhsClient_->SendRequest(request);
+   MarketDataHistoryRequest request;
+   request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
+   request.set_request(ohlcRequest.SerializeAsString());
+   mdhsClient_->SendRequest(request);
 }
 
 void ChartWidget::OnDataReceived(const std::string& data)
 {
-	if (data.empty())
-	{
-		logger_->error("Empty data received from mdhs.");
-		return;
-	}
+   if (data.empty())
+   {
+      logger_->error("Empty data received from mdhs.");
+      return;
+   }
 
-	MarketDataHistoryResponse response;
-	if (!response.ParseFromString(data))
-	{
-		logger_->error("can't parse response from mdhs: {}", data);
-		return;
-	}
+   MarketDataHistoryResponse response;
+   if (!response.ParseFromString(data))
+   {
+      logger_->error("can't parse response from mdhs: {}", data);
+      return;
+   }
 
-	switch (response.response_type()) {
-	case MarketDataHistoryMessageType::ProductsListType:
-		ProcessProductsListResponse(response.response());
-		break;
-	case MarketDataHistoryMessageType::OhlcHistoryType:
-		ProcessOhlcHistoryResponse(response.response());
-		break;
-	default:
-		logger_->error("[ApiServerConnectionListener::OnDataReceived] undefined message type");
-		break;
-	}
+   switch (response.response_type()) {
+   case MarketDataHistoryMessageType::ProductsListType:
+      ProcessProductsListResponse(response.response());
+      break;
+   case MarketDataHistoryMessageType::OhlcHistoryType:
+      ProcessOhlcHistoryResponse(response.response());
+      break;
+   default:
+      logger_->error("[ApiServerConnectionListener::OnDataReceived] undefined message type");
+      break;
+   }
 }
 
 void ChartWidget::ProcessProductsListResponse(const std::string& data)
 {
-	if (data.empty())
-	{
-		logger_->error("Empty data received from mdhs.");
-		return;
-	}
+   if (data.empty())
+   {
+      logger_->error("Empty data received from mdhs.");
+      return;
+   }
 
-	ProductsListResponse response;
-	if (!response.ParseFromString(data))
-	{
-		logger_->error("can't parse response from mdhs: {}", data);
-		return;
-	}
+   ProductsListResponse response;
+   if (!response.ParseFromString(data))
+   {
+      logger_->error("can't parse response from mdhs: {}", data);
+      return;
+   }
 
-	for (const auto& product : response.products())
-	{
-		cboModel_->appendRow(new QStandardItem(QString::fromStdString(product)));
-	}
+   for (const auto& product : response.products())
+   {
+      cboModel_->appendRow(new QStandardItem(QString::fromStdString(product)));
+   }
 }
 
 void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 {
-	if (data.empty())
-	{
-		logger_->error("Empty data received from mdhs.");
-		return;
-	}
+   if (data.empty())
+   {
+      logger_->error("Empty data received from mdhs.");
+      return;
+   }
 
-	OhlcResponse response;
-	if (!response.ParseFromString(data))
-	{
-		logger_->error("can't parse response from mdhs: {}", data);
-		return;
-	}
+   OhlcResponse response;
+   if (!response.ParseFromString(data))
+   {
+      logger_->error("can't parse response from mdhs: {}", data);
+      return;
+   }
 
-	auto product = ui_->cboInstruments->currentText();
-	auto interval = dateRange_.checkedId();
+   auto product = ui_->cboInstruments->currentText();
+   auto interval = dateRange_.checkedId();
 
-	if (product != QString::fromStdString(response.product()) || interval != response.interval())
-		return;
+   if (product != QString::fromStdString(response.product()) || interval != response.interval())
+      return;
 
-	OhlcCandle lastCandle;
+   OhlcCandle lastCandle;
 
-	maxPrice = 0.0;
-	minPrice = -1.0;
+   maxPrice = 0.0;
+   minPrice = -1.0;
 
-	qreal maxVolume = 0.0;
-	qreal maxTimestamp = -1.0;
+   qreal maxVolume = 0.0;
+   qreal maxTimestamp = -1.0;
 
-	for (int i = response.candles_size() - 1; i >= 0; --i)
-	{
-		auto candle = response.candles(i);
-		maxPrice = qMax(maxPrice, candle.high());
-		minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
-		maxVolume = qMax(maxVolume, candle.volume());
-		maxTimestamp = qMax(maxTimestamp, static_cast<qreal>(candle.timestamp()));
+   for (int i = response.candles_size() - 1; i >= 0; --i)
+   {
+      auto candle = response.candles(i);
+      maxPrice = qMax(maxPrice, candle.high());
+      minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
+      maxVolume = qMax(maxVolume, candle.volume());
+      maxTimestamp = qMax(maxTimestamp, static_cast<qreal>(candle.timestamp()));
 
-		bool isLast = (i == 0);
+      bool isLast = (i == 0);
 
-		if (isLast)
-		{
-			if (lastHigh != 0.0 && lastLow != 0.0 && lastClose != 0.0)
-			{
-				candle.set_high(lastHigh);
-				candle.set_low(lastLow);
-				candle.set_close(lastClose);
-			}
-			lastCandle = candle;
-		}
+      if (isLast)
+      {
+         if (lastHigh != 0.0 && lastLow != 0.0 && lastClose != 0.0)
+         {
+            candle.set_high(lastHigh);
+            candle.set_low(lastLow);
+            candle.set_close(lastClose);
+         }
+         lastCandle = candle;
+      }
 
-		AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
-		qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
-			, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
-			, candle.open()
-			, candle.high()
-			, candle.low()
-			, candle.close()
-			, candle.volume());
+      AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
+      qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
+         , QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
+         , candle.open()
+         , candle.high()
+         , candle.low()
+         , candle.close()
+         , candle.volume());
 
-		lastHigh = candle.high();
-		lastLow = candle.low();
-		lastClose = candle.close();
-	}
+      lastHigh = candle.high();
+      lastLow = candle.low();
+      lastClose = candle.close();
+   }
 
-	qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
+   qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
 
-	auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
-	minPrice -= margin;
-	maxPrice += margin;
-	minPrice = qMax(minPrice, 0.0);
+   auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
+   minPrice -= margin;
+   maxPrice += margin;
+   minPrice = qMax(minPrice, 0.0);
 
-	volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
-	UpdatePlot(interval, maxTimestamp);
+   volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
+   UpdatePlot(interval, maxTimestamp);
 }
 
 void ChartWidget::AddNewCandle()
 {
-	const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
-	OhlcCandle candle;
-	candle.set_open(lastClose);
-	candle.set_close(lastClose);
-	candle.set_high(lastClose);
-	candle.set_low(lastClose);
-	candle.set_timestamp(currentTimestamp);
-	candle.set_volume(0.0);
+   const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
+   OhlcCandle candle;
+   candle.set_open(lastClose);
+   candle.set_close(lastClose);
+   candle.set_high(lastClose);
+   candle.set_low(lastClose);
+   candle.set_timestamp(currentTimestamp);
+   candle.set_volume(0.0);
 
-	maxPrice = qMax(maxPrice, candle.high());
-	minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
+   maxPrice = qMax(maxPrice, candle.high());
+   minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
 
-	AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
-	qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
-		, QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
-		, candle.open()
-		, candle.high()
-		, candle.low()
-		, candle.close()
-		, candle.volume());
+   AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
+   qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
+      , QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
+      , candle.open()
+      , candle.high()
+      , candle.low()
+      , candle.close()
+      , candle.volume());
 
-	UpdatePlot(dateRange_.checkedId(), currentTimestamp);
+   UpdatePlot(dateRange_.checkedId(), currentTimestamp);
 }
 
 void ChartWidget::ModifyCandle()
 {
-	const auto& lastCandle = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1);
-	QCPFinancialData candle(*lastCandle);
+   const auto& lastCandle = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1);
+   QCPFinancialData candle(*lastCandle);
 
-	candle.close = lastClose;
-	candle.high = lastHigh;
-	candle.low = lastLow;
+   candle.close = lastClose;
+   candle.high = lastHigh;
+   candle.low = lastLow;
 
-	candlesticksChart_->data()->remove(lastCandle->key);
-	candlesticksChart_->data()->add(candle);
+   candlesticksChart_->data()->remove(lastCandle->key);
+   candlesticksChart_->data()->add(candle);
 }
 
 void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
 {
-	qreal size = IntervalWidth(interval, 100);
-	qreal upper = timestamp + 0.8 * IntervalWidth(interval) / 2;
+   qreal size = IntervalWidth(interval, 100);
+   qreal upper = timestamp + 0.8 * IntervalWidth(interval) / 2;
 
-	ui_->customPlot->rescaleAxes();
-	ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
-	ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
-	ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
-	ui_->customPlot->replot();
+   ui_->customPlot->rescaleAxes();
+   ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
+   ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
+   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
+   ui_->customPlot->replot();
 }
 
 void ChartWidget::timerEvent(QTimerEvent* event)
 {
-	killTimer(timerId);
+   killTimer(timerId);
 
-	timerId = startTimer(getTimerInterval());
+   timerId = startTimer(getTimerInterval());
 
-	AddNewCandle();
+   AddNewCandle();
 }
 
 std::chrono::seconds ChartWidget::getTimerInterval()
 {
-	auto currentTime = QDateTime::currentDateTime().time();
+   auto currentTime = QDateTime::currentDateTime().time();
 
-	auto timerInterval = std::chrono::seconds(3600);
-	if (currentTime.second() != std::chrono::seconds(0).count())
-	{
-		if (currentTime.minute() != std::chrono::minutes(0).count())
-		{
-			auto currentSeconds = currentTime.minute() * 60 + currentTime.second();
-			auto diff = timerInterval.count() - currentSeconds;
-			timerInterval = std::chrono::seconds(diff);
-		}
-	}
+   auto timerInterval = std::chrono::seconds(3600);
+   if (currentTime.second() != std::chrono::seconds(0).count())
+   {
+      if (currentTime.minute() != std::chrono::minutes(0).count())
+      {
+         auto currentSeconds = currentTime.minute() * 60 + currentTime.second();
+         auto diff = timerInterval.count() - currentSeconds;
+         timerInterval = std::chrono::seconds(diff);
+      }
+   }
 
-	return timerInterval;
+   return timerInterval;
 }
 
 void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const
@@ -389,18 +389,18 @@ qreal ChartWidget::IntervalWidth(int interval, int count) const
 
 int ChartWidget::FractionSizeForProduct(const QString &product) const
 {
-	auto productType = mdhsClient_->GetProductType(product);
-	switch (productType)
-	{
-	case MdhsClient::ProductTypeFX:
-		return 4;
-	case MdhsClient::ProductTypeXBT:
-		return 2;
-	case MdhsClient::ProductTypePrivateMarket:
-		return 6;
-	default:
-		return -1;
-	}
+   auto productType = mdhsClient_->GetProductType(product);
+   switch (productType)
+   {
+   case MdhsClient::ProductTypeFX:
+      return 4;
+   case MdhsClient::ProductTypeXBT:
+      return 2;
+   case MdhsClient::ProductTypePrivateMarket:
+      return 6;
+   default:
+      return -1;
+   }
 }
 
 // Handles changes of date range.

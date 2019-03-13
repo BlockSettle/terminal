@@ -384,12 +384,12 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 
 #ifndef NDEBUG
    if (parser.isSet(chatServerIPName)) {
-	   QString vcip = parser.value(chatServerIPName);
-	   set(chatServerHost, vcip);
+      QString vcip = parser.value(chatServerIPName);
+      set(chatServerHost, vcip);
    }
    if (parser.isSet(chatServerPortName)) {
-	   int vcp = parser.value(chatServerPortName).toInt();
-	   set(chatServerPort, vcp);
+      int vcp = parser.value(chatServerPortName).toInt();
+      set(chatServerPort, vcp);
    }
 #endif // NDEBUG
 
