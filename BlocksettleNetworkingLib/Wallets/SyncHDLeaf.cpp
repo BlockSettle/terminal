@@ -731,29 +731,45 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
                bv[i] += (*prevBalances)[i];
             }
          }
-         const auto totalBalance =
-            static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
-         const auto spendableBalance =
-            static_cast<BTCNumericTypes::balance_type>(bv[1]) / BTCNumericTypes::BalanceDivider;
-         const auto unconfirmedBalance =
-            static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
-         const auto count = bv[3];
 
-         if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
-            || (unconfirmedBalance_ != unconfirmedBalance)) {
-            {
-               QMutexLocker lock(&addrMapsMtx_);
-               updateAddrBalance_ = true;
-               updateAddrTxN_ = true;
-               addrCount_ = count;
+         const auto &cbTxOutList = [this, bv] (std::vector<UTXO> inputs) {
+            spendableBalanceCorrection_ = 0;
+            for (const auto &input : inputs) {
+               if (armory_->getConfirmationsNumber(input.getHeight()) >= kExtConfCount) {
+                  continue;
+               }
+               const auto addr = bs::Address::fromUTXO(input);
+               if (!isExternalAddress(addr)) {
+                  continue;
+               }
+               spendableBalanceCorrection_ += input.getValue() / BTCNumericTypes::BalanceDivider;
             }
-            totalBalance_ = totalBalance;
-            spendableBalance_ = spendableBalance;
-            unconfirmedBalance_ = unconfirmedBalance;
 
-            emit balanceChanged(walletId(), bv);
-         }
-         emit balanceUpdated(walletId(), bv);
+            const auto totalBalance =
+               static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
+            const auto spendableBalance =
+               static_cast<BTCNumericTypes::balance_type>(bv[1]) / BTCNumericTypes::BalanceDivider;
+            const auto unconfirmedBalance =
+               static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
+            const auto count = bv[3];
+
+            if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
+               || (unconfirmedBalance_ != unconfirmedBalance)) {
+                  {
+                     QMutexLocker lock(&addrMapsMtx_);
+                     updateAddrBalance_ = true;
+                     updateAddrTxN_ = true;
+                     addrCount_ = count;
+                  }
+                  totalBalance_ = totalBalance;
+                  spendableBalance_ = spendableBalance;
+                  unconfirmedBalance_ = unconfirmedBalance;
+
+                  emit balanceChanged(walletId(), bv);
+            }
+            emit balanceUpdated(walletId(), bv);
+         };
+         Wallet::getSpendableTxOutList(cbTxOutList, this);
 
          if (cb) {
             cb(bv);
@@ -915,7 +931,7 @@ bool hd::Leaf::getActiveAddressCount(const std::function<void(size_t)> &cb) cons
 
 BTCNumericTypes::balance_type hd::Leaf::getSpendableBalance() const
 {
-   return Wallet::getSpendableBalance();
+   return (Wallet::getSpendableBalance() - spendableBalanceCorrection_);
 }
 
 bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb

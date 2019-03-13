@@ -183,6 +183,7 @@ namespace bs {
             cb_complete_notify                           cbScanNotify_ = nullptr;
             std::function<void(const std::string &walletId, unsigned int idx)> cbWriteLast_ = nullptr;
             volatile bool activateAddressesInvoked_ = false;
+            BTCNumericTypes::balance_type spendableBalanceCorrection_ = 0;
 
             struct AddrPrefixedHashes {
                std::set<BinaryData> external;
