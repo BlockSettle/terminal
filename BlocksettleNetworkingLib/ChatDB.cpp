@@ -237,6 +237,34 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
    return records;
 }
 
+std::vector<std::shared_ptr<Chat::MessageData> > ChatDB::getRoomMessages(const QString& roomId)
+{
+   QSqlQuery query(db_);
+   if (!query.prepare(QLatin1String("SELECT sender, receiver, id, timestamp, enctext, state FROM messages "\
+      "WHERE (receiver=:roomid);"))) {
+      logger_->error("[ChatDB::getRoomMessages] failed to prepare query: {}", query.lastError().text().toStdString());
+      return {};
+   }
+   query.bindValue(QString::fromStdString(":roomid"), roomId);
+   if (!query.exec()) {
+      logger_->error("[ChatDB::getRoomMessages] failed to exec query: {}", query.lastError().text().toStdString());
+      return {};
+   }
+
+   std::vector<std::shared_ptr<Chat::MessageData>> records;
+   while (query.next()) {
+      const auto msg = std::make_shared<Chat::MessageData>(query.value(0).toString()
+         , query.value(1).toString(), query.value(2).toString(), query.value(3).toDateTime()
+         , query.value(4).toString(), query.value(5).toInt());
+      records.push_back(msg);
+   }
+   std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a
+      , const std::shared_ptr<Chat::MessageData> &b) {
+      return (a->getDateTime().toMSecsSinceEpoch() < b->getDateTime().toMSecsSinceEpoch());
+   });
+   return records;
+}
+
 bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)
 {
    QSqlQuery query(db_);
