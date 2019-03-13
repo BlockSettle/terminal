@@ -73,6 +73,13 @@ static spdlog::level::level_enum convertLevel(LogLevel level)
 
 std::shared_ptr<spdlog::logger> LogManager::create(const LogConfig &config)
 {
+   // Latest spdlog creates default logger with empty name by default (search for SPDLOG_DISABLE_DEFAULT_LOGGER).
+   // In this case logger creation would fail because same name already used by spdlog.
+   // Let's unregister this default logger and create new one.
+   if (config.category.empty()) {
+      spdlog::drop("");
+   }
+
    std::shared_ptr<spdlog::logger> result;
    if (config.category.empty()) {
       result = createOrAppend(defaultLogger_, config);
