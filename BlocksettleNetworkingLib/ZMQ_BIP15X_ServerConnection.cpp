@@ -93,7 +93,6 @@ bool ZMQ_BIP15X_ServerConnection::ReadFromDataSocket() {
       return false;
    }
 
-   // Decrypt data here.
    ProcessIncomingData(data.ToString(), clientIdStr);
 //   if (decData == "") {
 //      logger_->error("[{}] {} failed decryption", __func__, connectionName_);
@@ -108,11 +107,23 @@ bool ZMQ_BIP15X_ServerConnection::ReadFromDataSocket() {
 //
 bool ZMQ_BIP15X_ServerConnection::SendDataToClient(const string& clientId
    , const string& data, const SendResultCb &cb) {
-   // TO DO: Encrypt data here if needed.
+   string sendStr = data;
 
-   return QueueDataToSend(clientId, data, cb, false);
+   // Encrypt data here if the BIP 150 connection is complete.
+   if (bip151Connection_->getBIP150State() == BIP150State::SUCCESS) {
+      ZMQ_BIP15X_Msg msg;
+      BIP151Connection* connPtr = nullptr;
+      if (bip151HandshakeCompleted_) {
+         connPtr = bip151Connection_.get();
+      }
+      BinaryData payload(data);
+      vector<BinaryData> outData = msg.serialize(payload.getDataVector()
+         , connPtr, ZMQ_MSGTYPE_SINGLEPACKET, 0);
+      sendStr = outData[0].toBinStr();
+   }
+
+   return QueueDataToSend(clientId, sendStr, cb, false);
 }
-
 
 void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
    , const string& clientID) {
@@ -196,53 +207,20 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
       return;
    }
 
-//   BinaryDataRef bdr((uint8_t*)&id_, 8);
-//   auto&& hexID = bdr.toHexStr();
-//   auto bdvPtr = clients->get(hexID);
-
-/*   if (bdvPtr != nullptr)
-   {
-      //create payload
-      auto bdv_payload = make_shared<BDV_Payload>();
-      bdv_payload->bdvPtr_ = bdvPtr;
-      bdv_payload->packetData_ = move(packetData);
-      bdv_payload->bdvID_ = id_;
-
-      //queue for clients thread pool to process
-      clients->queuePayload(bdv_payload);
+   ZMQ_BIP15X_Msg msgObj;
+   msgObj.parsePacket(packetData.getRef());
+   if (msgObj.getType() != ZMQ_MSGTYPE_SINGLEPACKET) {
+      //invalid msg type, kill connection
+      return;
    }
-   else
-   {*/
-      //unregistered command
-      ZMQ_BIP15X_Msg msgObj;
-      msgObj.parsePacket(packetData.getRef());
-      if (msgObj.getType() != ZMQ_MSGTYPE_SINGLEPACKET) {
-         //invalid msg type, kill connection
-         return;
-      }
 
-      auto&& messageRef = msgObj.getSingleBinaryMessage();
+   auto&& outMsg = msgObj.getSingleBinaryMessage();
+   if (outMsg.getSize() == 0) {
+      //invalid msg, kill connection
+      return;
+   }
 
-      if (messageRef.getSize() == 0) {
-         //invalid msg, kill connection
-         return;
-      }
-
-      //process command
-/*      auto message = make_shared<::Codec_BDVCommand::StaticCommand>();
-      if (!message->ParseFromArray(messageRef.getPtr(), messageRef.getSize()))
-      {
-         //invalid msg, kill connection
-         continue;
-      }
-
-      auto&& reply = clients->processUnregisteredCommand(
-         id_, message);*/
-
-      //reply
-// TO DO: Proper send call.
-//      SendDataToClient(id_, msgObj.getId(), reply);
-//   }
+   notifyListenerOnData(clientID, outMsg.toHexStr());
 }
 
 bool ZMQ_BIP15X_ServerConnection::ConfigDataSocket(

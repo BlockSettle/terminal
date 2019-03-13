@@ -1047,12 +1047,20 @@ bool RemoteSigner::Start()
    {
       std::lock_guard<std::mutex> lock(mutex_);
       listener_ = std::make_shared<HeadlessListener>(logger_, connection_, netType_);
-      connect(listener_.get(), &HeadlessListener::connected, this, &RemoteSigner::onConnected, Qt::QueuedConnection);
-      connect(listener_.get(), &HeadlessListener::authenticated, this, &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
-      connect(listener_.get(), &HeadlessListener::authFailed, [this] { authPending_ = false; });
-      connect(listener_.get(), &HeadlessListener::disconnected, this, &RemoteSigner::onDisconnected, Qt::QueuedConnection);
-      connect(listener_.get(), &HeadlessListener::error, this, &RemoteSigner::onConnError, Qt::QueuedConnection);
-      connect(listener_.get(), &HeadlessListener::PacketReceived, this, &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::connected, this
+         , &RemoteSigner::onConnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authenticated, this
+         , &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::authFailed
+         , [this] { authPending_ = false; });
+      connect(listener_.get(), &HeadlessListener::disconnected, this
+         , &RemoteSigner::onDisconnected, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::error, this
+         , &RemoteSigner::onConnError, Qt::QueuedConnection);
+      connect(listener_.get(), &HeadlessListener::PacketReceived, this
+         , &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
+      connect(connection_.get(), &ZMQ_BIP15X_DataConnection::bip15XCompleted
+         , this, &RemoteSigner::onBIP15XCompleted, Qt::QueuedConnection);
    }
 
    return Connect();
@@ -1163,6 +1171,13 @@ void RemoteSigner::onAuthenticated()
    authPending_ = false;
    emit authenticated();
    emit ready();
+}
+
+void RemoteSigner::onBIP15XCompleted()
+{
+   // Once the BIP 150/151 handshake is complete, it's safe to start sending
+   // app-level data to the signer.
+   Authenticate();
 }
 
 void RemoteSigner::onDisconnected()

@@ -1,6 +1,7 @@
 #ifndef __ZMQ_BIP15X_DATACONNECTION_H__
 #define __ZMQ_BIP15X_DATACONNECTION_H__
 
+#include <QObject>
 #include <spdlog/spdlog.h>
 //#include <string>
 //#include <memory>
@@ -12,7 +13,8 @@
 
 #define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
-class ZMQ_BIP15X_DataConnection : public ZmqDataConnection {
+class ZMQ_BIP15X_DataConnection : public QObject, public ZmqDataConnection {
+   Q_OBJECT
 public:
    ZMQ_BIP15X_DataConnection(const std::shared_ptr<spdlog::logger>& logger
       , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers);
@@ -29,6 +31,9 @@ public:
 
    bool startBIP151Handshake();
    bool send(const std::string& data) override;
+
+signals:
+   void bip15XCompleted();
 
 protected:
    bool recvData() override;

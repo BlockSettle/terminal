@@ -68,63 +68,70 @@ AuthPeersLambdas ZMQ_BIP15X_DataConnection::getAuthPeerLambda() const
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
 }
 
-/////////////////////////////////////////////
+// The send function for the data connection. Ideally, this should not be used
+// before the handshake is completed, but it is possible to use at any time.
 bool ZMQ_BIP15X_DataConnection::send(const string& data) {
    string message = data;
 
 // TO DO: CLEAN ALL THIS UP.
    //check for rekey
+   bool needs_rekey = false;
+   auto rightnow = chrono::system_clock::now();
+
+/*   if (bip151Connection_->rekeyNeeded(message->getSerializedSize()))
    {
-      bool needs_rekey = false;
-      auto rightnow = chrono::system_clock::now();
-
-/*      if (bip151Connection_->rekeyNeeded(message->getSerializedSize()))
-      {
+      needs_rekey = true;
+   }
+   else
+   {
+      auto time_sec = chrono::duration_cast<chrono::seconds>(
+         rightnow - outKeyTimePoint_);
+      if (time_sec.count() >= AEAD_REKEY_INVERVAL_SECONDS)
          needs_rekey = true;
-      }
-      else
-      {
-         auto time_sec = chrono::duration_cast<chrono::seconds>(
-            rightnow - outKeyTimePoint_);
-         if (time_sec.count() >= AEAD_REKEY_INVERVAL_SECONDS)
-            needs_rekey = true;
-      }*/
+   }*/
 
-/*      if (needs_rekey)
-      {
-         BinaryData rekeyPacket(BIP151PUBKEYSIZE);
-         memset(rekeyPacket.getPtr(), 0, BIP151PUBKEYSIZE);
+/*   if (needs_rekey)
+   {
+      BinaryData rekeyPacket(BIP151PUBKEYSIZE);
+      memset(rekeyPacket.getPtr(), 0, BIP151PUBKEYSIZE);
 
 // TO DO: FIX ID VALUE, FIX
-         std::vector<BinaryData> outPacket = serialize(rekeyPacket.getRef()
-            , bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY, 0);
-         SerializedMessage rekey_msg;
-         rekey_msg.construct(
-            rekeyPacket.getDataVector(),
-            bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY);
+      std::vector<BinaryData> outPacket = serialize(rekeyPacket.getRef()
+         , bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY, 0);
+      SerializedMessage rekey_msg;
+      rekey_msg.construct(
+         rekeyPacket.getDataVector(),
+         bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY);
 
-         if (!ZmqDataConnection::sendRawData(message)) {
-            // TO DO: FIX THIS
-         }
-         bip151Connection_->rekeyOuterSession();
-         outKeyTimePoint_ = rightnow;
-         ++outerRekeyCount_;
-      }*/
+      if (!ZmqDataConnection::sendRawData(message)) {
+         // TO DO: FIX THIS
+      }
+      bip151Connection_->rekeyOuterSession();
+      outKeyTimePoint_ = rightnow;
+      ++outerRekeyCount_;
+   }*/
+
+   // Encrypt data here only after the BIP 150 handshake is complete.
+   char* sendData = const_cast<char*>(&data[0]);
+   size_t dataLen = data.size();
+   if (bip151Connection_->getBIP150State() == BIP150State::SUCCESS) {
+      ZMQ_BIP15X_Msg msg;
+      BIP151Connection* connPtr = nullptr;
+      if (bip151HandshakeCompleted_) {
+         connPtr = bip151Connection_.get();
+      }
+      BinaryData payload(data);
+      vector<BinaryData> encData = msg.serialize(payload.getDataVector()
+         , connPtr, ZMQ_MSGTYPE_SINGLEPACKET, 0);
+      sendData = const_cast<char*>(encData[0].toBinStr().c_str());
+      dataLen = encData[0].toBinStr().size() + 1;
    }
-
-   // TO DO: Generate output data
-   // Generate outgoing packet.
-/*   SerializedMessage ws_msg;
-   ws_msg.construct(
-      data, bip151Connection_.get(),
-      ZMQ_MSGTYPE_SINGLEPACKET, message->id_);
-
-   writeQueue_.push_back(move(ws_msg));*/
+//   send(move(outData[0].toBinStr()));
 
    int result = -1;
    {
       FastLock locker(lockSocket_);
-      result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
+      result = zmq_send(dataSocket_.get(), sendData, dataLen, 0);
    }
    if (result != (int)data.size()) {
       if (logger_) {
@@ -253,7 +260,8 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
       break;
    }
 
-   ZmqDataConnection::notifyOnData(payload.toBinStr());
+   auto&& outMsg = inMsg.getSingleBinaryMessage();
+   ZmqDataConnection::notifyOnData(outMsg.toHexStr());
 }
 
 ZmqContext::sock_ptr ZMQ_BIP15X_DataConnection::CreateDataSocket() {
@@ -450,6 +458,7 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
       //rekey
       bip151Connection_->bip150HandshakeRekey();
       outKeyTimePoint_ = chrono::system_clock::now();
+      emit bip15XCompleted();
 
       //flag connection as ready
 //      connectionReadyProm_.set_value(true);

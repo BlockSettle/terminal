@@ -137,6 +137,7 @@ protected slots:
    void onAuthenticated();
    void onConnected();
    void onDisconnected();
+   void onBIP15XCompleted();
    void onConnError(const QString &err);
    void onPacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
