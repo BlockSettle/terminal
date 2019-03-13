@@ -52,12 +52,12 @@ signals:
    void userIdChanged();
 
 private:
-   ConnectionStatus _userConnectionStatus;
-   QString _userName;
-   QString _userEmail;
-   QString _userId;
-   State _userState;
-   bool _haveNewMessage;
+   ConnectionStatus userConnectionStatus_;
+   QString userName_;
+   QString userEmail_;
+   QString userId_;
+   State userState_;
+   bool haveNewMessage_;
 };
 
 using ChatUserDataPtr = std::shared_ptr<ChatUserData>;

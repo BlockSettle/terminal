@@ -17,31 +17,31 @@ class ChatUserCategoryListViewStyle : public QWidget
 
 public:
    inline explicit ChatUserCategoryListViewStyle(QWidget *parent)
-      : QWidget(parent), _colorUserOnline(Qt::white), _colorIncomingFriendRequest(Qt::white),
-        _colorUserDefault(Qt::white) 
+      : QWidget(parent), colorUserOnline_(Qt::white), colorIncomingFriendRequest_(Qt::white),
+        colorUserDefault_(Qt::white) 
    {
       setVisible(false);
    }
 
-   QColor colorUserOnline() const { return _colorUserOnline; }
+   QColor colorUserOnline() const { return colorUserOnline_; }
    void setColorUserOnline(const QColor &colorUserOnline) {
-      _colorUserOnline = colorUserOnline;
+      colorUserOnline_ = colorUserOnline;
    }
 
-   QColor colorIncomingFriendRequest() const { return _colorIncomingFriendRequest; }
+   QColor colorIncomingFriendRequest() const { return colorIncomingFriendRequest_; }
    void setColorIncomingFriendRequest(const QColor &colorIncomingFriendRequest) {
-      _colorIncomingFriendRequest = colorIncomingFriendRequest;
+      colorIncomingFriendRequest_ = colorIncomingFriendRequest;
    }
 
-   QColor colorUserDefault() const { return _colorUserDefault; }
+   QColor colorUserDefault() const { return colorUserDefault_; }
    void setColorUserDefault(const QColor &colorUserDefault) {
-      _colorUserDefault = colorUserDefault;
+      colorUserDefault_ = colorUserDefault;
    }
 
 private:
-   QColor _colorUserOnline;
-   QColor _colorIncomingFriendRequest;
-   QColor _colorUserDefault;
+   QColor colorUserOnline_;
+   QColor colorIncomingFriendRequest_;
+   QColor colorUserDefault_;
 };
 
 class ChatUserCategoryListViewDelegate : public QStyledItemDelegate
@@ -57,7 +57,7 @@ public:
               const QModelIndex &index) const override;
 
 private:
-   const ChatUserCategoryListViewStyle &_internalStyle;
+   const ChatUserCategoryListViewStyle &internalStyle_;
 };
 
 class ChatUserCategoryListView : public QListView
@@ -69,7 +69,7 @@ public:
    using QListView::contentsSize;
 
 private:
-   ChatUserCategoryListViewStyle _internalStyle;
+   ChatUserCategoryListViewStyle internalStyle_;
 };
 
 #endif // CHATUSERCATEGORYLISTVIEW_H

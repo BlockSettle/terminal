@@ -137,7 +137,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { ChangeLog_Base_Url,      SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/Changelog/changelog.json"))},
       { Binaries_Dl_Url,         SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/terminal/downloads"))},
       { ResetPassword_Url,       SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/pub-forgot-password"))},
-      { GetAccount_Url,          SettingDef(QString(), QLatin1String("https://pubb.blocksettle.com/pub-registration")) },
+      { GetAccount_Url,          SettingDef(QString(), QLatin1String("http://www.blocksettle.com")) },
       { GettingStartedGuide_Url,  SettingDef(QString(), QLatin1String("http://pubb.blocksettle.com/PDF/BlockSettle%20Getting%20Started.pdf")) },
       { WalletFiltering,         SettingDef(QLatin1String("WalletWidgetFilteringFlags"), 0x06) },
       { FxRfqLimit,              SettingDef(QLatin1String("FxRfqLimit"), 5) },
@@ -403,10 +403,6 @@ void ApplicationSettings::SetDefaultSettings(bool toFile)
    reset(pubBridgeHost, toFile);
    reset(pubBridgePort, toFile);
 
-   reset(runArmoryLocally, toFile);
-   reset(netType, toFile);
-   reset(armoryDbIp, toFile);
-   reset(armoryDbPort, toFile);
    reset(celerHost, toFile);
    reset(celerPort, toFile);
    reset(launchToTray, toFile);

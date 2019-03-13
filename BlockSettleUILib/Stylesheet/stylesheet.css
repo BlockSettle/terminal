@@ -319,7 +319,7 @@ QMenu::item:first {
 *[title="true"] {
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   padding: 5px 0; }
-  *[title="true"] QLabel {
+  *[title="true"] {
     color: #e7e8e9;
     text-transform: uppercase; }
 
@@ -967,6 +967,9 @@ QDateEdit {
   height: 18px;
   max-height: 20px;
   color: #ffffff; }
+  QComboBox:focus,
+  QDateEdit:focus {
+    border: 1px solid #247dac; }
   QComboBox QAbstractItemView,
   QDateEdit QAbstractItemView {
     color: #0b1619;
@@ -988,6 +991,7 @@ QDateEdit {
   QComboBox::drop-down:disabled,
   QDateEdit::drop-down:disabled {
     border-left-color: #28363a; }
+
 
 QComboBox:editable:disabled {
   background: transparent; }
@@ -1505,3 +1509,19 @@ ChatUserCategoryListViewStyle {
     qproperty-color_user_online: #00c8f8;
     qproperty-color_incoming_friend_request: #ffa834;
     qproperty-color_user_default: #c0c0c0; }
+
+QListView#chatRoomsCategoryListView:item {
+    font-size: 11px;
+    background-color: #1c2835;
+    selection-background-color: #3a8ab4;
+    border: 1px solid transparent;}
+    
+QListView#chatRoomsCategoryListView:item:selected {
+    background-color: #3a8ab4; }
+    
+ChatRoomsCategoryListViewStyle {
+    qproperty-color_room: #00c8f8;}
+
+ChatMessagesTextEditStyle {
+    qproperty-color_hyperlink: #20709a;
+    qproperty-color_white: #ffffff; }

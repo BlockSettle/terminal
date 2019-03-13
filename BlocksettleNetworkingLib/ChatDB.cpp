@@ -208,17 +208,46 @@ bool ChatDB::updateMessageStatus(const QString& messageId, int ustatus)
    return true;
 }
 
-std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &userId)
+std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &ownUserId, const QString &userId)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String("SELECT sender, receiver, id, timestamp, enctext, state FROM messages "\
-      "WHERE sender=:user OR receiver=:user"))) {
+      "WHERE (sender=:user AND receiver=:owner) OR (receiver=:user AND sender=:owner)"))) {
       logger_->error("[ChatDB::getUserMessages] failed to prepare query: {}", query.lastError().text().toStdString());
       return {};
    }
    query.bindValue(QString::fromStdString(":user"), userId);
+   query.bindValue(QString::fromStdString(":owner"), ownUserId);
    if (!query.exec()) {
       logger_->error("[ChatDB::getUserMessages] failed to exec query: {}", query.lastError().text().toStdString());
+      return {};
+   }
+
+   std::vector<std::shared_ptr<Chat::MessageData>> records;
+   while (query.next()) {
+      const auto msg = std::make_shared<Chat::MessageData>(query.value(0).toString()
+         , query.value(1).toString(), query.value(2).toString(), query.value(3).toDateTime()
+         , query.value(4).toString(), query.value(5).toInt());
+      records.push_back(msg);
+   }
+   std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a
+      , const std::shared_ptr<Chat::MessageData> &b) {
+      return (a->getDateTime().toMSecsSinceEpoch() < b->getDateTime().toMSecsSinceEpoch());
+   });
+   return records;
+}
+
+std::vector<std::shared_ptr<Chat::MessageData> > ChatDB::getRoomMessages(const QString& roomId)
+{
+   QSqlQuery query(db_);
+   if (!query.prepare(QLatin1String("SELECT sender, receiver, id, timestamp, enctext, state FROM messages "\
+      "WHERE (receiver=:roomid);"))) {
+      logger_->error("[ChatDB::getRoomMessages] failed to prepare query: {}", query.lastError().text().toStdString());
+      return {};
+   }
+   query.bindValue(QString::fromStdString(":roomid"), roomId);
+   if (!query.exec()) {
+      logger_->error("[ChatDB::getRoomMessages] failed to exec query: {}", query.lastError().text().toStdString());
       return {};
    }
 

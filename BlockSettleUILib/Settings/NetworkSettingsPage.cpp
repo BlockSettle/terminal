@@ -1,0 +1,221 @@
+#include <QClipboard>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <QMetaEnum>
+
+#include "NetworkSettingsPage.h"
+#include "ui_NetworkSettingsPage.h"
+#include "ApplicationSettings.h"
+#include "ArmoryServersWidget.h"
+
+
+struct EnvSettings
+{
+   QString  pubHost;
+   int      pubPort;
+};
+
+bool operator == (const EnvSettings& l, const EnvSettings& r)
+{
+   return l.pubHost == r.pubHost
+      && l.pubPort == r.pubPort;
+}
+
+static const EnvSettings StagingEnvSettings {
+   QLatin1String("185.213.153.45"), 9091 };
+
+static const EnvSettings UATEnvSettings{
+   QLatin1String("185.213.153.44"), 9091 };
+
+static const EnvSettings PRODEnvSettings{
+   QLatin1String("185.213.153.36"), 9091 };
+
+NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
+   : SettingsPage{parent}
+   , ui_{new Ui::NetworkSettingsPage}
+{
+   ui_->setupUi(this);
+
+   QMetaEnum metaEnumEnvConfiguration = QMetaEnum::fromType<ApplicationSettings::EnvConfiguration>();
+   for (int i = 0; i < metaEnumEnvConfiguration.keyCount(); ++i) {
+      ui_->comboBoxEnvironment->addItem(tr(metaEnumEnvConfiguration.valueToKey(i)));
+   }
+   ui_->comboBoxEnvironment->setCurrentIndex(-1);
+
+   connect(ui_->pushButtonManageArmory, &QPushButton::clicked, this, [this](){
+      // workaround here - wrap widget by QDialog
+      // TODO: fix stylesheet to support popup widgets
+
+      QDialog *d = new QDialog(this);
+      QVBoxLayout *l = new QVBoxLayout(d);
+      l->setContentsMargins(0,0,0,0);
+      d->setLayout(l);
+
+      ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, this);
+
+//      armoryServersWidget->setWindowModality(Qt::ApplicationModal);
+//      armoryServersWidget->setWindowFlags(Qt::Dialog);
+      l->addWidget(armoryServersWidget);
+
+      connect(armoryServersWidget, &ArmoryServersWidget::reconnectArmory, this, [this](){
+         emit reconnectArmory();
+      });
+      connect(armoryServersWidget, &ArmoryServersWidget::needClose, this, [d](){
+         d->reject();
+      });
+
+      d->exec();
+      emit armoryServerChanged();
+   });
+
+   connect(ui_->pushButtonArmoryServerKeyCopy, &QPushButton::clicked, this, [this](){
+      qApp->clipboard()->setText(ui_->labelArmoryServerKey->text());
+   });
+   connect(ui_->pushButtonArmoryServerKeySave, &QPushButton::clicked, this, [this](){
+      QString fileName = QFileDialog::getSaveFileName(this
+                                   , tr("Save Armory Public Key")
+                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                   , tr("Key files (*.pub)"));
+
+      QFile file(fileName);
+      if (file.open(QIODevice::WriteOnly)) {
+         file.write(ui_->labelArmoryServerKey->text().toLatin1());
+      }
+   });
+
+   connect(ui_->pushButtonArmoryTerminalKeyCopy, &QPushButton::clicked, this, [this](){
+      qApp->clipboard()->setText(ui_->labelArmoryTerminalKey->text());
+   });
+   connect(ui_->pushButtonArmoryTerminalKeySave, &QPushButton::clicked, this, [this](){
+      QString fileName = QFileDialog::getSaveFileName(this
+                                   , tr("Save Armory Public Key")
+                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                   , tr("Key files (*.pub)"));
+
+      QFile file(fileName);
+      if (file.open(QIODevice::WriteOnly)) {
+         file.write(ui_->labelArmoryTerminalKey->text().toLatin1());
+      }
+   });
+
+   connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::display);
+}
+
+void NetworkSettingsPage::initSettings()
+{
+   armoryServerModel_ = new ArmoryServersViewModel(armoryServersProvider_);
+   armoryServerModel_->setHighLightSelectedServer(false);
+   ui_->comboBoxArmoryServer->setModel(armoryServerModel_);
+
+   connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::displayArmorySettings);
+   connect(ui_->comboBoxEnvironment, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NetworkSettingsPage::onEnvSelected);
+}
+
+NetworkSettingsPage::~NetworkSettingsPage() = default;
+
+void NetworkSettingsPage::display()
+{
+#ifdef PRODUCTION_BUILD
+   ui_->PublicBridgeSettingsGroup->hide();
+#endif
+
+   displayArmorySettings();
+   displayEnvironmentSettings();
+}
+
+void NetworkSettingsPage::DetectEnvironmentSettings()
+{
+   ApplicationSettings::EnvConfiguration conf = ApplicationSettings::EnvConfiguration::Custom;
+
+   EnvSettings currentConfiguration{
+      ui_->lineEditPublicBridgeHost->text(),
+      ui_->spinBoxPublicBridgePort->value()
+   };
+
+   if (currentConfiguration == StagingEnvSettings) {
+      conf = ApplicationSettings::EnvConfiguration::Staging;
+   } else if (currentConfiguration == UATEnvSettings) {
+      conf = ApplicationSettings::EnvConfiguration::UAT;
+   } else if (currentConfiguration == PRODEnvSettings) {
+      conf = ApplicationSettings::EnvConfiguration::PROD;
+   }
+
+   ui_->comboBoxEnvironment->setCurrentIndex(int(conf));
+}
+
+void NetworkSettingsPage::displayArmorySettings()
+{
+   int serverIndex = armoryServersProvider_->indexOf(appSettings_->get<QString>(ApplicationSettings::armoryDbName));
+   if (serverIndex >= 0) {
+      ArmoryServer server = armoryServersProvider_->servers().at(serverIndex);
+
+      int port = appSettings_->GetArmoryRemotePort(server.netType);
+      ui_->comboBoxArmoryServer->setCurrentIndex(serverIndex);
+      ui_->labelArmoryServerNetwork->setText(server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
+      ui_->labelArmoryServerAddress->setText(server.armoryDBIp);
+      ui_->labelArmoryServerPort->setText(QString::number(port));
+      ui_->labelArmoryServerKey->setText(server.armoryDBKey);
+   }
+
+}
+
+void NetworkSettingsPage::displayEnvironmentSettings()
+{
+   ui_->lineEditPublicBridgeHost->setText(appSettings_->get<QString>(ApplicationSettings::pubBridgeHost));
+   ui_->spinBoxPublicBridgePort->setValue(appSettings_->get<int>(ApplicationSettings::pubBridgePort));
+   ui_->spinBoxPublicBridgePort->setEnabled(false);
+
+   DetectEnvironmentSettings();
+}
+
+void NetworkSettingsPage::reset()
+{
+   for (const auto &setting : {
+        ApplicationSettings::runArmoryLocally,
+        ApplicationSettings::netType,
+        ApplicationSettings::pubBridgeHost,
+        ApplicationSettings::pubBridgePort,
+        ApplicationSettings::armoryDbIp,
+        ApplicationSettings::armoryDbPort}) {
+      appSettings_->reset(setting, false);
+   }
+   display();
+}
+
+void NetworkSettingsPage::apply()
+{
+   armoryServersProvider_->setupServer(ui_->comboBoxArmoryServer->currentIndex());
+
+   appSettings_->set(ApplicationSettings::pubBridgeHost, ui_->lineEditPublicBridgeHost->text());
+   appSettings_->set(ApplicationSettings::pubBridgePort, ui_->spinBoxPublicBridgePort->value());
+}
+
+void NetworkSettingsPage::onEnvSelected(int index)
+{
+   ApplicationSettings::EnvConfiguration conf = ApplicationSettings::EnvConfiguration(index);
+
+   if (conf == ApplicationSettings::EnvConfiguration::Custom) {
+      ui_->lineEditPublicBridgeHost->setEnabled(true);
+      ui_->spinBoxPublicBridgePort->setEnabled(true);
+      return;
+   }
+
+   const EnvSettings *settings = nullptr;
+
+   switch (conf) {
+   case ApplicationSettings::EnvConfiguration::UAT:
+      settings = &UATEnvSettings;
+      break;
+   case ApplicationSettings::EnvConfiguration::Staging:
+      settings = &StagingEnvSettings;
+      break;
+   default:
+      settings = &PRODEnvSettings;
+      break;
+   }
+
+   ui_->lineEditPublicBridgeHost->setText(settings->pubHost);
+   ui_->lineEditPublicBridgeHost->setEnabled(false);
+   ui_->spinBoxPublicBridgePort->setValue(settings->pubPort);
+   ui_->spinBoxPublicBridgePort->setEnabled(false);
+}

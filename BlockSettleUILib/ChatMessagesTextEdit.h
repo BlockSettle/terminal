@@ -14,6 +14,37 @@ namespace Chat {
    class MessageData;
 }
 
+class ChatMessagesTextEditStyle : public QWidget
+{
+   Q_OBJECT
+
+   Q_PROPERTY(QColor color_hyperlink READ colorHyperlink
+              WRITE setColorHyperlink)
+   Q_PROPERTY(QColor color_white READ colorWhite
+              WRITE setColorWhite)
+
+public:
+   inline explicit ChatMessagesTextEditStyle(QWidget *parent)
+      : QWidget(parent), colorHyperlink_(Qt::blue), colorWhite_(Qt::white)
+   {
+      setVisible(false);
+   }
+
+   QColor colorHyperlink() const { return colorHyperlink_; }
+   void setColorHyperlink(const QColor &colorHyperlink) {
+      colorHyperlink_ = colorHyperlink;
+   }
+
+   QColor colorWhite() const { return colorWhite_; }
+   void setColorWhite(const QColor &colorWhite) {
+      colorWhite_ = colorWhite;
+   }
+
+private:
+   QColor colorHyperlink_;
+   QColor colorWhite_;
+};
+
 class ChatMessagesTextEdit : public QTextBrowser
 {
    Q_OBJECT
@@ -27,13 +58,14 @@ public:
    
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
-   void	rowsInserted();
+   void rowsInserted();
+   void userHaveNewMessageChanged(const QString &userId, const bool &haveNewMessage, const bool &isInCurrentChat);
 
 protected:
    enum class Column {
       Time,
-      User,
       Status,
+      User,
       Message,
       last
    };
@@ -48,7 +80,7 @@ public slots:
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
    void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
-   void	urlActivated(const QUrl &link);
+   void urlActivated(const QUrl &link);
 
 
 private:
@@ -68,6 +100,7 @@ private:
 
    QTextTableFormat tableFormat;
    QTextTable *table;
+   ChatMessagesTextEditStyle internalStyle_;
 };
 
 #endif

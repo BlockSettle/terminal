@@ -204,10 +204,10 @@ void WalletKeyWidget::onAuthSignClicked()
 
    autheIDClient_->start(requestType_, ui_->comboBoxAuthId->currentText().toStdString()
       , walletInfo_.rootId().toStdString(), knownDeviceIds_);
-   ui_->pushButtonAuth->setText(tr("Cancel Auth request"));
+   ui_->pushButtonAuth->setText(tr("Cancel"));
    ui_->comboBoxAuthId->setEnabled(false);
 
-   ui_->widgetAuthLayout->hide();
+   //ui_->widgetAuthLayout->hide();
 }
 
 void WalletKeyWidget::onAuthSucceeded(const std::string &encKey, const SecureBinaryData &password)
@@ -215,7 +215,8 @@ void WalletKeyWidget::onAuthSucceeded(const std::string &encKey, const SecureBin
    stop();
    ui_->pushButtonAuth->setText(tr("Successfully signed"));
    ui_->pushButtonAuth->setEnabled(false);
-   ui_->widgetAuthLayout->show();
+   //ui_->widgetAuthLayout->show();
+   ui_->labelProgress->setMaximumHeight(0);
 
    QPropertyAnimation *a = startAuthAnimation(true);
    connect(a, &QPropertyAnimation::finished, [this, encKey, password]() {
@@ -230,7 +231,7 @@ void WalletKeyWidget::onAuthFailed(const QString &text)
    stop();
    ui_->pushButtonAuth->setEnabled(true);
    ui_->pushButtonAuth->setText(tr("Auth failed: %1 - retry").arg(text));
-   ui_->widgetAuthLayout->show();
+   //ui_->widgetAuthLayout->show();
    
    QPropertyAnimation *a = startAuthAnimation(false);
    connect(a, &QPropertyAnimation::finished, [this]() {
@@ -267,7 +268,7 @@ void WalletKeyWidget::stop()
    timer_.stop();
    ui_->progressBar->hide();
    ui_->comboBoxAuthId->setEnabled(true);
-   ui_->widgetAuthLayout->show();
+   //ui_->widgetAuthLayout->show();
 }
 
 void WalletKeyWidget::cancel()
@@ -331,12 +332,20 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
 
    if (useType == UseType::RequestAuthInParent
        || useType == UseType::ChangeAuthInParent) {
-      ui_->widgetAuthIdText->setMaximumHeight(0);
-      ui_->widgetAuthIdText->hide();
-      ui_->widgetAuthIdText->deleteLater();
+//      ui_->widgetAuthIdText->setMaximumHeight(0);
+//      ui_->widgetAuthIdText->hide();
+//      ui_->widgetAuthIdText->deleteLater();
       ui_->progressBar->setMaximumHeight(0);
       ui_->progressBar->hide();
-      ui_->labelProgress->setMaximumHeight(0);
+      //ui_->labelProgress->setMaximumHeight(0);
+
+      ui_->labelAuthIdEmailText->setMinimumWidth(130);
+      ui_->labelAuthIdEmailText->setMaximumWidth(SHRT_MAX);
+      ui_->labelAuthId->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+      ui_->widgetCombo->setMaximumHeight(0);
+      ui_->widgetCombo->setMaximumWidth(0);
+      ui_->progressBar->setMaximumHeight(0);
    }
 
    if (useType == UseType::ChangeAuthForDialog) {
@@ -363,6 +372,10 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
    if (useType == UseType::RequestAuthAsDialog && walletInfo_.isPasswordOnly()) {
       ui_->labelPassword->setMaximumWidth(70);
       ui_->labelPassword->setMinimumWidth(70);
+   }
+
+   if (requestAuthType && walletInfo_.encType() == EncryptionType::Password) {
+      setMaximumHeight(40);
    }
 }
 
