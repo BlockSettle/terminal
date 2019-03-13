@@ -1,5 +1,7 @@
 #include "LogManager.h"
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_sinks.h>
 
 using namespace bs;
 
@@ -106,7 +108,7 @@ std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr
          if (sinks_.find(config.fileName) != sinks_.end()) {
             return nullptr;
          }
-         sinks.push_back(std::make_shared<spdlog::sinks::simple_file_sink_mt>(config.fileName, config.truncate));
+         sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(config.fileName, config.truncate));
       }
       result = std::make_shared<spdlog::logger>(config.category, std::begin(sinks), std::end(sinks));
    }
@@ -157,5 +159,10 @@ std::shared_ptr<spdlog::logger> LogManager::logger(const std::string &category)
          return copy(defaultLogger_, catDefault, category);
       }
    }
-   return spdlog::stdout_logger_mt("stdout");
+
+   // Fix new spdlog exception trying to create logger with same name
+   if (!stdoutLogger_) {
+      stdoutLogger_ = spdlog::stdout_logger_mt("stdout");
+   }
+   return stdoutLogger_;
 }
