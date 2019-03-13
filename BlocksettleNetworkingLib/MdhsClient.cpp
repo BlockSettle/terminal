@@ -74,10 +74,8 @@ void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
    });
 
    if (!command_->ExecuteRequest(
-      //appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
-      //appSettings_->get<std::string>(ApplicationSettings::mdhsPort),
-      "localhost",
-      "5000",
+      appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
+      appSettings_->get<std::string>(ApplicationSettings::mdhsPort),
       request.SerializeAsString()))
    {
       logger_->error("Failed to send request for mdhs.");
