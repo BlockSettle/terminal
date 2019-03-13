@@ -36,12 +36,12 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget* parent)
       this, &GeneralSettingsPage::onLogLevelChanged);
 
    connect(ui_->pushButtonEnableEncryption, &QPushButton::clicked, this, [this](){
-      TerminalEncryptionDialog dialog(TerminalEncryptionDialog::EnableEncryption);
+      TerminalEncryptionDialog dialog(TerminalEncryptionDialog::EnableEncryption, this);
       dialog.exec();
    });
 
    connect(ui_->pushButtonDisableEncryption, &QPushButton::clicked, this, [this](){
-      TerminalEncryptionDialog dialog(TerminalEncryptionDialog::DisableEncryption);
+      TerminalEncryptionDialog dialog(TerminalEncryptionDialog::DisableEncryption, this);
       dialog.exec();
    });
 }
