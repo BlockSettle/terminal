@@ -99,20 +99,22 @@ QImage ChatMessagesTextEdit::statusImage(const int &row) {
       return QImage();
    }
    int state = message->getState();
+
+   QImage statusImage = statusImageOffline_;
    
    if (state & static_cast<int>(Chat::MessageData::State::Sent)){
-      return statusImageConnecting_;
+      statusImage = statusImageConnecting_;
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
-      return statusImageOnline_;
+      statusImage = statusImageOnline_;
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Read)){
-      return statusImageRead_;
+      statusImage = statusImageRead_;
    }
    
-   return statusImageOffline_;
+   return statusImage;
 }
 
 void ChatMessagesTextEdit::onSwitchToChat(const QString& chatId)
