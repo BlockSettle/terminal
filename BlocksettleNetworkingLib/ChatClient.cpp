@@ -469,7 +469,7 @@ void ChatClient::retrieveUserMessages(const QString &userId)
 
 void ChatClient::retrieveRoomMessages(const QString& roomId)
 {
-   auto messages = chatDb_->getUserMessages(QString::fromStdString(currentUserId_), roomId);
+   auto messages = chatDb_->getRoomMessages(roomId);
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
