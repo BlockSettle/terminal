@@ -104,7 +104,7 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
 }
 
 void AutheIDClient::start(RequestType requestType, const std::string &email
-   , const std::string &walletId, const std::vector<std::string> &knownDeviceIds)
+   , const std::string &walletId, const std::vector<std::string> &knownDeviceIds, int expiration)
 {
    cancel();
 
@@ -112,7 +112,6 @@ void AutheIDClient::start(RequestType requestType, const std::string &email
 
    QString action = getAutheIDClientRequestText(requestType);
    bool newDevice = isAutheIDClientNewDeviceNeeded(requestType);
-   int expiration = getAutheIDClientTimeout(requestType);
 
    rp::CreateRequest request;
    request.set_type(rp::DEVICE_KEY);
@@ -150,12 +149,12 @@ void AutheIDClient::start(RequestType requestType, const std::string &email
    createCreateRequest(request.SerializeAsString(), expiration);
 }
 
-void AutheIDClient::authenticate(const std::string& email)
+void AutheIDClient::authenticate(const std::string &email, int expiration)
 {
-   requestAuth(email);
+   requestAuth(email, expiration);
 }
 
-void AutheIDClient::requestAuth(const std::string& email)
+void AutheIDClient::requestAuth(const std::string &email, int expiration)
 {
    cancel();
    email_ = email;
@@ -164,8 +163,6 @@ void AutheIDClient::requestAuth(const std::string& email)
    rp::CreateRequest request;
    auto signRequest = request.mutable_signature();
    signRequest->set_serialization(rp::SERIALIZATION_PROTOBUF);
-
-   int expiration = getAutheIDClientTimeout(Unknown);
 
    request.set_title("Terminal Login");
    request.set_type(rp::AUTHENTICATION);
@@ -372,16 +369,6 @@ bool AutheIDClient::isAutheIDClientNewDeviceNeeded(RequestType requestType)
       return true;
    default:
       return false;
-   }
-}
-
-int AutheIDClient::getAutheIDClientTimeout(RequestType requestType)
-{
-   switch (requestType) {
-   case SettlementTransaction:
-      return 30;
-   default:
-      return 120;
    }
 }
 
