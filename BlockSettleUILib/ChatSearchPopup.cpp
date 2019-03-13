@@ -7,34 +7,34 @@
 
 ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
    QWidget(parent),
-   ui(new Ui::ChatSearchPopup)
+   ui_(new Ui::ChatSearchPopup)
 {
    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
-   ui->setupUi(this);
-   ui->chatSearchPopupLabel->setContextMenuPolicy(Qt::CustomContextMenu);
-   connect(ui->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
-   _searchPopupMenu = new QMenu(this);
-   QAction *addUserToContactsAction = _searchPopupMenu->addAction(QObject::tr("Add to contacts"));
+   ui_->setupUi(this);
+   ui_->chatSearchPopupLabel->setContextMenuPolicy(Qt::CustomContextMenu);
+   connect(ui_->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
+   searchPopupMenu_ = new QMenu(this);
+   QAction *addUserToContactsAction = searchPopupMenu_->addAction(QObject::tr("Add to contacts"));
    addUserToContactsAction->setStatusTip(QObject::tr("Click to add user to contact list"));
    connect(addUserToContactsAction, &QAction::triggered,
-      [this](bool) { emit addUserToContacts(ui->chatSearchPopupLabel->text()); }
+      [this](bool) { emit addUserToContacts(ui_->chatSearchPopupLabel->text()); }
    );
 }
 
 ChatSearchPopup::~ChatSearchPopup()
 {
-   _searchPopupMenu->deleteLater();
-   delete ui;
+   searchPopupMenu_->deleteLater();
+   delete ui_;
 }
 
 void ChatSearchPopup::setText(const QString &text)
 {
-   ui->chatSearchPopupLabel->setText(text);
+   ui_->chatSearchPopupLabel->setText(text);
 }
 
 void ChatSearchPopup::showMenu(const QPoint &pos)
 {
-   _searchPopupMenu->exec(mapToGlobal(pos));
+   searchPopupMenu_->exec(mapToGlobal(pos));
 }
 
 void ChatSearchPopup::setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY)

@@ -8,7 +8,7 @@
 #include <QStringList>
 #include <QtSql/QSqlDatabase>
 #include "BinaryData.h"
-#include "ChatProtocol.h"
+#include "ChatProtocol/ChatProtocol.h"
 
 namespace spdlog {
    class logger;
@@ -51,7 +51,8 @@ public:
    bool syncMessageId(const QString& localId, const QString& serverId);
    bool updateMessageStatus(const QString& messageId, int ustatus);
 
-   std::vector<std::shared_ptr<Chat::MessageData>> getUserMessages(const QString &userId);
+   std::vector<std::shared_ptr<Chat::MessageData>> getUserMessages(const QString &ownUserId, const QString &userId);
+   std::vector<std::shared_ptr<Chat::MessageData>> getRoomMessages(const QString &roomId);
 
    /** Adds given username->publickey pair to DB.
     * \param[in] user Chat user name, currently a base64 encoded hash or PK.

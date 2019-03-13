@@ -11,6 +11,8 @@
 
 #include <math.h>
 
+#include <QDateTime>
+
 #include <spdlog/spdlog.h>
 
 #include "com/celertech/marketdata/api/price/DownstreamPriceProto.pb.h"
@@ -208,6 +210,9 @@ bool CelerMarketDataProvider::onFullSnapshot(const std::string& data)
 
    const auto assetType = bs::network::Asset::fromCelerProductType(response.producttype());
 
+   // we probably should not use celer timestamp
+   fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, static_cast<double>(QDateTime::currentDateTime().toSecsSinceEpoch()), QString{}});
+
    emit MDUpdate(assetType, security, fields);
 
    return true;
@@ -255,6 +260,8 @@ bool CelerMarketDataProvider::onMDStatisticsUpdate(const std::string& data)
    }
 
    if (!fields.empty()) {
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp
+         , static_cast<double>(QDateTime::currentDateTime().toSecsSinceEpoch()), {}});
       emit MDUpdate(assetType, security, fields);
    }
 

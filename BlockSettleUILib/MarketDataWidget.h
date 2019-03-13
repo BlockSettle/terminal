@@ -56,7 +56,7 @@ private slots:
    void ChangeMDSubscriptionState();
 
 private:
-   std::unique_ptr<Ui::MarketDataWidget> ui;
+   std::unique_ptr<Ui::MarketDataWidget> ui_;
    MarketDataModel         *              marketDataModel_;
    MDSortFilterProxyModel  *              mdSortFilterModel_;
    std::shared_ptr<ApplicationSettings>   appSettings_;

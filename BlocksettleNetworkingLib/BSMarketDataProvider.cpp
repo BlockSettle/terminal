@@ -1,6 +1,5 @@
 #include "BSMarketDataProvider.h"
 
-#include "TradeHistory.pb.h"
 #include "ConnectionManager.h"
 #include "SubscriberConnection.h"
 
@@ -62,7 +61,7 @@ bool BSMarketDataProvider::DisconnectFromMDSource()
 
 void BSMarketDataProvider::onDataFromMD(const std::string& data)
 {
-   Blocksettle::BS_MD::TradeHistoryServer::UpdateHeader header;
+   Blocksettle::Communication::BlocksettleMarketData::UpdateHeader header;
 
    if (!header.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::onDataFromMD] failed to parse header");
@@ -70,10 +69,10 @@ void BSMarketDataProvider::onDataFromMD(const std::string& data)
    }
 
    switch (header.type()) {
-   case Blocksettle::BS_MD::TradeHistoryServer::FullSnapshotType:
+   case Blocksettle::Communication::BlocksettleMarketData::FullSnapshotType:
       OnFullSnapshot(header.data());
       break;
-   case Blocksettle::BS_MD::TradeHistoryServer::IncrementalUpdateType:
+   case Blocksettle::Communication::BlocksettleMarketData::IncrementalUpdateType:
       OnIncrementalUpdate(header.data());
       break;
    }
@@ -86,82 +85,96 @@ void BSMarketDataProvider::onConnectedToMD()
 
 void BSMarketDataProvider::onDisconnectedFromMD()
 {
+   emit Disconnecting();
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
+
    mdConnection_ = nullptr;
    emit Disconnected();
 }
 
-bs::network::MDFields GetMDFields(const Blocksettle::BS_MD::TradeHistoryServer::ProductHistoryInfo& productInfo)
+bs::network::MDFields GetMDFields(const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo)
 {
    bs::network::MDFields result;
 
-   if (productInfo.has_sell_price()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.sell_price().price(), QString()} );
+   if (!qFuzzyIsNull(productInfo.offer())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.offer(), QString()} );
    }
-   if (productInfo.has_buy_price()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.buy_price().price(), QString()} );
+   if (!qFuzzyIsNull(productInfo.bid())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.bid(), QString()} );
    }
-   if (productInfo.has_last_price()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceLast, productInfo.last_price().price(), QString()} );
+   if (!qFuzzyIsNull(productInfo.last_price())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceLast, productInfo.last_price(), QString()} );
    }
-   if (productInfo.has_volume()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::DailyVolume, productInfo.volume().volume(), QString()} );
+   if (!qFuzzyIsNull(productInfo.volume())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::DailyVolume, productInfo.volume(), QString()} );
    }
 
    return result;
 }
 
+void BSMarketDataProvider::OnProductSnapshot(const bs::network::Asset::Type& assetType
+   , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+   , double timestamp)
+{
+   emit MDSecurityReceived(productInfo.product_name(), {assetType});
+   auto fields = GetMDFields(productInfo);
+   fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+   emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+}
+
 void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
 {
-   Blocksettle::BS_MD::TradeHistoryServer::FullSnapshot snapshot;
+   Blocksettle::Communication::BlocksettleMarketData::MDSnapshot snapshot;
    if (!snapshot.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::OnFullSnapshot] failed to parse snapshot");
       return ;
    }
 
+   double timestamp = static_cast<double>(snapshot.timestamp());
+
    for (int i=0; i < snapshot.fx_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotFX;
-      const auto& productInfo = snapshot.fx_products(i);
-      emit MDSecurityReceived(productInfo.name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+      OnProductSnapshot(bs::network::Asset::Type::SpotFX, snapshot.fx_products(i), timestamp);
    }
 
    for (int i=0; i < snapshot.xbt_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotXBT;
-      const auto& productInfo = snapshot.xbt_products(i);
-      emit MDSecurityReceived(productInfo.name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+      OnProductSnapshot(bs::network::Asset::Type::SpotXBT, snapshot.xbt_products(i), timestamp);
    }
 
    for (int i=0; i < snapshot.cc_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::PrivateMarket;
-      const auto& productInfo = snapshot.cc_products(i);
-      emit MDSecurityReceived(productInfo.name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+      OnProductSnapshot(bs::network::Asset::Type::PrivateMarket, snapshot.cc_products(i), timestamp);
+   }
+}
+
+void BSMarketDataProvider::OnProductUpdate(const bs::network::Asset::Type& assetType
+   , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+   , double timestamp)
+{
+   auto fields = GetMDFields(productInfo);
+   if (!fields.empty()) {
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
    }
 }
 
 void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
 {
-   Blocksettle::BS_MD::TradeHistoryServer::IncrementalUpdate update;
+   Blocksettle::Communication::BlocksettleMarketData::MDSnapshot update;
    if (!update.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::OnIncrementalUpdate] failed to parse update");
       return ;
    }
 
-   bs::network::Asset::Type assetType;
-   switch(update.group()) {
-   case Blocksettle::BS_MD::TradeHistoryServer::FXProductGroup:
-      assetType = bs::network::Asset::Type::SpotFX;
-      break;
-   case Blocksettle::BS_MD::TradeHistoryServer::XBTProductGroup:
-      assetType = bs::network::Asset::Type::SpotXBT;
-      break;
-   case Blocksettle::BS_MD::TradeHistoryServer::CCProductGroup:
-      assetType = bs::network::Asset::Type::PrivateMarket;
-      break;
+   double timestamp = static_cast<double>(update.timestamp());
+
+   for (int i=0; i < update.fx_products_size(); ++i) {
+      OnProductUpdate(bs::network::Asset::Type::SpotFX, update.fx_products(i), timestamp);
    }
 
-   const auto& productInfo = update.update_info();
-   emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+   for (int i=0; i < update.xbt_products_size(); ++i) {
+      OnProductUpdate(bs::network::Asset::Type::SpotXBT, update.xbt_products(i), timestamp);
+   }
+
+   for (int i=0; i < update.cc_products_size(); ++i) {
+      OnProductUpdate(bs::network::Asset::Type::PrivateMarket, update.cc_products(i), timestamp);
+   }
 }

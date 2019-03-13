@@ -27,7 +27,7 @@ private slots:
 
 private:
    std::shared_ptr<AssetManager> assetManager_;
-   std::unique_ptr<Ui::CCWidget> ui;
+   std::unique_ptr<Ui::CCWidget> ui_;
 };
 
 #endif // __CC_WIDGET_H__

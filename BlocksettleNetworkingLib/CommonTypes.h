@@ -319,7 +319,8 @@ namespace bs {
             PriceBestBid,
             PriceBestOffer,
             DailyVolume,
-            Reject
+            Reject,
+            MDTimestamp
          };
          Type     type;
          double   value;

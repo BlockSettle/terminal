@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.BlocksettleMarketData;
+
+message ProductPriceInfo
+{
+   string product_name  = 1;
+   double offer         = 2;
+   double bid           = 3;
+   double last_price    = 4;
+   double volume        = 5;
+}
+
+// contain full info on all products
+message MDSnapshot
+{
+   repeated ProductPriceInfo fx_products  = 1;
+   repeated ProductPriceInfo xbt_products = 2;
+   repeated ProductPriceInfo cc_products  = 3;
+   int64                     timestamp    = 4;
+}
+
+enum UpdateType
+{
+   FullSnapshotType        = 0;
+   IncrementalUpdateType   = 1;
+};
+
+message UpdateHeader
+{
+   UpdateType  type        = 1;
+   bytes       data        = 2;
+};

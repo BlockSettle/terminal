@@ -27,8 +27,8 @@ private slots:
    void showMenu(const QPoint &pos);
 
 private:
-   Ui::ChatSearchPopup *ui;
-   QMenu *_searchPopupMenu;
+   Ui::ChatSearchPopup *ui_;
+   QMenu *searchPopupMenu_;
 };
 
 #endif // CHATSEARCHPOPUP_H
