@@ -194,7 +194,8 @@ static int GuiApp(int &argc, char** argv)
    logoIcon = QLatin1String(":/SPLASH_LOGO");
 
    QPixmap splashLogo(logoIcon);
-   BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(640, Qt::SmoothTransformation));
+   const int splashScreenWidth = 400;
+   BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(splashScreenWidth, Qt::SmoothTransformation));
 
    splashScreen.show();
    app.processEvents();
