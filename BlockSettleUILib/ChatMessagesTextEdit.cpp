@@ -94,18 +94,18 @@ QImage ChatMessagesTextEdit::statusImage(const int &row) {
       return QImage();
    }
    int state = message->getState();
-   QImage statusImage = QImage(QLatin1Literal(":/ICON_STATUS_OFFLINE"), "PNG");
+   QImage statusImage = QImage(QLatin1Literal(":/ICON_MSG_STATUS_OFFLINE"), "PNG");
    
    if (state & static_cast<int>(Chat::MessageData::State::Sent)){
-      statusImage = QImage(QLatin1Literal(":/ICON_STATUS_CONNECTING"), "PNG");
+      statusImage = QImage(QLatin1Literal(":/ICON_MSG_STATUS_CONNECTING"), "PNG");
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
-      statusImage = QImage(QLatin1Literal(":/ICON_STATUS_ONLINE"), "PNG");
+      statusImage = QImage(QLatin1Literal(":/ICON_MSG_STATUS_ONLINE"), "PNG");
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Read)){
-      statusImage = QImage(QLatin1Literal(":/ICON_STATUS_READ"), "PNG");
+      statusImage = QImage(QLatin1Literal(":/ICON_MSG_STATUS_READ"), "PNG");
    }
    
    return statusImage;
