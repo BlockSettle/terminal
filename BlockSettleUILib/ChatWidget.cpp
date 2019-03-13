@@ -203,7 +203,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
 
-   connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
+   // connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
 
    connect(ui_->treeWidgetUsers, &ChatUserListTreeWidget::userClicked, this, &ChatWidget::onUserClicked);
    connect(ui_->treeWidgetUsers, &ChatUserListTreeWidget::roomClicked, this, &ChatWidget::onRoomClicked);
