@@ -52,6 +52,7 @@ namespace bs {
             bool hasExtOnlyAddresses() const override { return isExtOnly_; }
             bool hasId(const std::string &) const override;
 
+            BTCNumericTypes::balance_type getSpendableBalance() const override;
             bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
                , QObject *obj, uint64_t val = UINT64_MAX) override;
             bool getSpendableZCList(std::function<void(std::vector<UTXO>)>

@@ -913,6 +913,11 @@ bool hd::Leaf::getActiveAddressCount(const std::function<void(size_t)> &cb) cons
    return true;
 }
 
+BTCNumericTypes::balance_type hd::Leaf::getSpendableBalance() const
+{
+   return Wallet::getSpendableBalance();
+}
+
 bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
    , QObject *obj, uint64_t val)
 {
