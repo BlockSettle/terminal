@@ -670,7 +670,7 @@ void BSTerminalMainWindow::InitChatView()
 
 void BSTerminalMainWindow::InitChartsView()
 {
-    ui->widgetChart->init(applicationSettings_, mdProvider_, connectionManager_, logMgr_->logger("ui"));
+    ui_->widgetChart->init(applicationSettings_, mdProvider_, connectionManager_, logMgr_->logger("ui"));
 }
 
 // Initialize widgets related to transactions.
