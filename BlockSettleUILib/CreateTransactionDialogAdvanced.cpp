@@ -297,6 +297,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       originalFeePerByte_ = feePerByte;
       const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
       SetMinimumFee(newMinFee, originalFeePerByte_);
+      advisedFeePerByte_ = newMinFee / tx.getTxWeight();
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
@@ -791,7 +792,14 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
 
    CreateTransactionDialog::onFeeSuggestionsLoaded(feeValues);
 
-   AddManualFeeEntries((minFeePerByte_ > 0) ? minFeePerByte_ : feeValues.begin()->second
+   float manualFeePerByte = advisedFeePerByte_;
+   if (manualFeePerByte < minFeePerByte_) {
+      manualFeePerByte = minFeePerByte_;
+   }
+   if (qFuzzyIsNull(manualFeePerByte)) {
+      manualFeePerByte = feeValues.begin()->second;
+   }
+   AddManualFeeEntries(manualFeePerByte
       , (minTotalFee_ > 0) ? minTotalFee_ : transactionData_->totalFee());
 
    if (minFeePerByte_ > 0) {
