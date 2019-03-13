@@ -4,6 +4,9 @@
 #include <QObject>
 
 #include "ChatUserData.h"
+#include "ChatProtocol/DataObjects.h"
+
+class UserHasher;
 
 class ChatUserModel : public QObject
 {
@@ -14,29 +17,47 @@ public:
    void addUser(const ChatUserDataPtr &chatUserDataPtr);
    void removeUser(const ChatUserDataPtr &chatUserDataPtr);
    void removeByUserId(const QString &userId);
+   void removeByRoomId(const QString &roomId);
    void setUserStatus(const QString &userId, const ChatUserData::ConnectionStatus &userStatus);
    void setUserState(const QString &userId, const ChatUserData::State &userState);
+   void setUserHaveNewMessage(const QString &userId, const bool &haveNewMessage);
    void resetModel();
 
    bool isChatUserExist(const QString &userId) const;
    bool isChatUserInContacts(const QString &userId) const;
+   bool hasUnreadMessages() const;
 
    ChatUserDataListPtr chatUserDataList() const;
 
    ChatUserDataPtr getUserByUserId(const QString &userId) const;
+   ChatUserDataPtr getUserByUserIdPrefix(const QString &userIdPrefix) const;
+   ChatUserDataPtr getUserByEmail(const QString &email) const;
+   std::shared_ptr<Chat::ChatRoomData> getRoomByRoomId(const QString &roomId) const;
+   
+public:
+   void addRoom(const std::shared_ptr<Chat::ChatRoomData> roomData);
+   
+   bool isChatRoomExist(const QString &roomId) const;
+   QList<std::shared_ptr<Chat::ChatRoomData>> chatRoomDataList() const;
 
 signals:
    void chatUserDataListChanged(const ChatUserDataListPtr &chatUserDataList);
+   void chatRoomDataListChanged(const QList<std::shared_ptr<Chat::ChatRoomData>> &chatRoomDataList);
 
    void chatUserAdded(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserRemoved(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStatusChanged(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStateChanged(const ChatUserDataPtr &chatUserDataPtr);
+   void chatUserHaveNewMessageChanged(const ChatUserDataPtr &chatUserDataPtr);
+   void chatRoomAdded(const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr);
+   void chatRoomRemoved(const std::shared_ptr<Chat::ChatRoomData>& chatRoomDataPtr);
 
 public slots:
 
 private:
-   ChatUserDataListPtr _chatUserDataListPtr;
+   ChatUserDataListPtr chatUserDataListPtr_;
+   std::shared_ptr<UserHasher> hasher_;
+   QList<std::shared_ptr<Chat::ChatRoomData>> chatRoomDataListPtr_;
 };
 
 using ChatUserModelPtr = std::shared_ptr<ChatUserModel>;

@@ -8,17 +8,18 @@
 
 #include "ApplicationSettings.h"
 #include "ChatClient.h"
+#include "NotificationCenter.h"
 
 void ChatUserListLogic::init(const std::shared_ptr<ChatClient> &client,
    const std::shared_ptr<spdlog::logger>& logger)
 {
-   _logger = logger;
-   _client = client;
+   logger_ = logger;
+   client_ = client;
 }
 
 ChatUserListLogic::ChatUserListLogic(QObject *parent) : QObject(parent)
 {
-   _chatUserModelPtr = std::make_shared<ChatUserModel>(this);
+   chatUserModelPtr_ = std::make_shared<ChatUserModel>(this);
 }
 
 void ChatUserListLogic::onAddChatUsers(const UserIdList &userIdList)
@@ -27,7 +28,7 @@ void ChatUserListLogic::onAddChatUsers(const UserIdList &userIdList)
    {
       QString newUserId = QString::fromStdString(userId);
 
-      ChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(newUserId);
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr_->getUserByUserId(newUserId);
       // If not found, set online status and add new user
       if (!chatUserDataPtr)
       {
@@ -35,12 +36,12 @@ void ChatUserListLogic::onAddChatUsers(const UserIdList &userIdList)
          newChatUserData->setUserConnectionStatus(ChatUserData::ConnectionStatus::Online);
          newChatUserData->setUserId(newUserId);
          newChatUserData->setUserName(newUserId);
-         _chatUserModelPtr->addUser(newChatUserData);
+         chatUserModelPtr_->addUser(newChatUserData);
       }
       else
       // If found then set status to online
       {
-         _chatUserModelPtr->setUserStatus(chatUserDataPtr->userId(), ChatUserData::ConnectionStatus::Online);
+         chatUserModelPtr_->setUserStatus(chatUserDataPtr->userId(), ChatUserData::ConnectionStatus::Online);
       }
    }
 }
@@ -50,17 +51,17 @@ void ChatUserListLogic::onRemoveChatUsers(const UserIdList &userIdList)
    for (const std::string &userId : userIdList)
    {
       QString newUserId = QString::fromStdString(userId);
-      ChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(newUserId);
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr_->getUserByUserId(newUserId);
 
       if (chatUserDataPtr)
       {
          if (chatUserDataPtr->userState() == ChatUserData::State::Unknown)
          {
-            _chatUserModelPtr->removeByUserId(chatUserDataPtr->userId());
+            chatUserModelPtr_->removeByUserId(chatUserDataPtr->userId());
          }
          else
          {
-            _chatUserModelPtr->setUserStatus(chatUserDataPtr->userId(), ChatUserData::ConnectionStatus::Offline);
+            chatUserModelPtr_->setUserStatus(chatUserDataPtr->userId(), ChatUserData::ConnectionStatus::Offline);
          }
       }
    }
@@ -77,27 +78,58 @@ void ChatUserListLogic::onIcomingFriendRequest(const UserIdList &userIdList)
    for (const std::string &userId : userIdList)
    {
       QString searchUserId = QString::fromStdString(userId);
-      ChatUserDataPtr chatUserDataPtr = _chatUserModelPtr->getUserByUserId(searchUserId);
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr_->getUserByUserId(searchUserId);
 
       if (chatUserDataPtr)
       {
-         _chatUserModelPtr->setUserState(searchUserId, ChatUserData::State::IncomingFriendRequest);
+         chatUserModelPtr_->setUserState(searchUserId, ChatUserData::State::IncomingFriendRequest);
       }
+   }
+}
+
+void ChatUserListLogic::onUserHaveNewMessageChanged(const QString &userId, const bool &userHaveNewMessage, const bool &isInCurrentChat) {
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr_->getUserByUserId(userId);
+
+      if (chatUserDataPtr)
+      {
+         chatUserModelPtr_->setUserHaveNewMessage(userId, userHaveNewMessage);
+      }
+
+      bool hasUnreadMessages = chatUserModelPtr_->hasUnreadMessages();
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });
+}
+
+void ChatUserListLogic::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)
+{
+   for (const std::shared_ptr<Chat::ChatRoomData>  &room : roomList)
+   {
+      std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr = chatUserModelPtr_->getRoomByRoomId(room->getId());
+      
+      // If not found, set online status and add new user
+      if (!chatRoomDataPtr)
+      {
+         chatUserModelPtr_->addRoom(room);
+      }
+//      else
+//      // If found then set status to online
+//      {
+//         _chatUserModelPtr->setUserStatus(chatUserDataPtr->userId(), ChatUserData::ConnectionStatus::Online);
+//      }
    }
 }
 
 ChatUserModelPtr ChatUserListLogic::chatUserModelPtr() const
 {
-   return _chatUserModelPtr;
+   return chatUserModelPtr_;
 }
 
 void ChatUserListLogic::readUsersFromDB()
 {
    ContactUserDataList contactUserDataList;
 
-   if (!_client->getContacts(contactUserDataList))
+   if (!client_->getContacts(contactUserDataList))
    {
-      _logger->debug("[ChatUserListLogic] failed to get contact list from DB.");
+      logger_->debug("[ChatUserListLogic] failed to get contact list from DB.");
       return;
    }
 
@@ -114,6 +146,6 @@ void ChatUserListLogic::readUsersFromDB()
       }
       newChatUserData->setUserName(contactUserData.userName());
       newChatUserData->setUserId(contactUserData.userId());
-      _chatUserModelPtr->addUser(newChatUserData);
+      chatUserModelPtr_->addUser(newChatUserData);
    }
 }

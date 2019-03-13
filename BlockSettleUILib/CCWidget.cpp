@@ -8,9 +8,9 @@
 
 CCWidget::CCWidget(QWidget* parent)
    : QWidget(parent)
-   , ui(new Ui::CCWidget())
+   , ui_(new Ui::CCWidget())
 {
-   ui->setupUi(this);
+   ui_->setupUi(this);
 }
 
 CCWidget::~CCWidget() = default;
@@ -19,8 +19,8 @@ void CCWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
 {
    assetManager_ = model->assetManager();
 
-   ui->treeViewCC->setModel(model.get());
-   ui->treeViewCC->header()->setSectionResizeMode(QHeaderView::Stretch);
+   ui_->treeViewCC->setModel(model.get());
+   ui_->treeViewCC->header()->setSectionResizeMode(QHeaderView::Stretch);
 
    connect(model.get(), &CCPortfolioModel::rowsInserted, this, &CCWidget::onRowsInserted);
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &CCWidget::updateTotalAssets);
@@ -31,10 +31,10 @@ void CCWidget::updateTotalAssets()
 {
    auto assets = assetManager_->getTotalAssets();
    if (assets < 0) {
-      ui->labelTotalValue->setText(tr("<b>%1</b>").arg(tr("Loading...")));
+      ui_->labelTotalValue->setText(tr("<b>%1</b>").arg(tr("Loading...")));
    }
    else {
-      ui->labelTotalValue->setText(tr("<b>%1</b>").arg(UiUtils::displayAmount(assets)));
+      ui_->labelTotalValue->setText(tr("<b>%1</b>").arg(UiUtils::displayAmount(assets)));
    }
 }
 
@@ -42,7 +42,7 @@ void CCWidget::onRowsInserted(const QModelIndex &parent, int first, int last)
 {
     Q_UNUSED(first)
     Q_UNUSED(last)
-   if (ui->treeViewCC->model()->data(parent) != UiUtils::XbtCurrency) {
-      ui->treeViewCC->expand(parent);
+   if (ui_->treeViewCC->model()->data(parent) != UiUtils::XbtCurrency) {
+      ui_->treeViewCC->expand(parent);
    }
 }

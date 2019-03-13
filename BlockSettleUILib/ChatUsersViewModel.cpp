@@ -10,10 +10,10 @@ ChatUsersViewModel::ChatUsersViewModel(QObject* parent)
 
 QString ChatUsersViewModel::resolveUser(const QModelIndex &index) const
 {
-   if ((index.row() < 0) || (index.row() >= _users.size())) {
+   if ((index.row() < 0) || (index.row() >= users_.size())) {
       return {};
    }
-   return _users[index.row()]->userId();
+   return users_[index.row()]->userId();
 }
 
 int ChatUsersViewModel::columnCount(const QModelIndex &/*parent*/) const
@@ -23,7 +23,7 @@ int ChatUsersViewModel::columnCount(const QModelIndex &/*parent*/) const
 
 int ChatUsersViewModel::rowCount(const QModelIndex &/*parent*/) const
 {
-   return _users.size();
+   return users_.size();
 }
 
 QVariant ChatUsersViewModel::headerData(int /*section*/, Qt::Orientation /*orientation*/, int /*role*/) const
@@ -33,7 +33,7 @@ QVariant ChatUsersViewModel::headerData(int /*section*/, Qt::Orientation /*orien
 
 QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 {
-   if (index.row() >= _users.size())
+   if (index.row() >= users_.size())
       return QVariant();
 
    switch (role)
@@ -42,16 +42,16 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
          return resolveUser(index);
 
       case UserConnectionStatusRole:
-         return QVariant::fromValue(_users[index.row()]->userConnectionStatus());
+         return QVariant::fromValue(users_[index.row()]->userConnectionStatus());
 
       case UserStateRole:
-         return QVariant::fromValue(_users[index.row()]->userState());
+         return QVariant::fromValue(users_[index.row()]->userState());
 
       case UserNameRole:
-         return _users[index.row()]->userName();
+         return users_[index.row()]->userName();
 
       case HaveNewMessageRole:
-         return _users[index.row()]->haveNewMessage();
+         return users_[index.row()]->haveNewMessage();
    }
 
    return QVariant();
@@ -60,10 +60,10 @@ QVariant ChatUsersViewModel::data(const QModelIndex &index, int role) const
 void ChatUsersViewModel::onUserDataListChanged(const ChatUserDataListPtr &chatUserDataListPtr)
 {
    beginResetModel();
-   _users.clear();
-   _users.reserve(chatUserDataListPtr.size());
+   users_.clear();
+   users_.reserve(chatUserDataListPtr.size());
    for (const auto &userDataPtr : chatUserDataListPtr) {
-      _users.push_back(std::move(userDataPtr));
+      users_.push_back(std::move(userDataPtr));
    }
    endResetModel();
 }

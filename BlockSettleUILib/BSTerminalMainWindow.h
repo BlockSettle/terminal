@@ -121,7 +121,7 @@ private slots:
    void onArmoryNeedsReconnect();
 
 private:
-   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_;
    QAction *action_receive_;
    QAction *action_login_;

@@ -95,7 +95,7 @@ private slots:
    void onWalletBalanceChanged(std::string);
 
 private:
-   std::unique_ptr<Ui::WalletsWidget> ui;
+   std::unique_ptr<Ui::WalletsWidget> ui_;
 
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
