@@ -300,8 +300,7 @@ void CreateTransactionDialog::onMaxPressed()
    QCoreApplication::processEvents();
 
    const bs::Address outputAddr(lineEditAddress()->text().trimmed());
-   const auto maxValue = transactionData_->CalculateMaxAmount(outputAddr)
-      - transactionData_->GetTotalRecipientsAmount();
+   const auto maxValue = transactionData_->CalculateMaxAmount(outputAddr);
    if (maxValue > 0) {
       lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
    }
