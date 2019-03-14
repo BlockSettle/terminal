@@ -260,8 +260,8 @@ namespace bs {
          std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
 
       private:
-         std::map<std::string, std::vector<std::pair<QPointer<QObject>, std::function<void(std::vector<UTXO>)>>>>   spendableCallbacks_;
-         std::map<QPointer<QObject>, std::vector<std::function<void(std::vector<UTXO>)>>>   zcListCallbacks_;
+         std::map<std::string, std::vector<std::pair<QPointer<QObject>, std::function<void(std::vector<UTXO>)>>>> spendableCallbacks_;
+         std::map<std::string, std::vector<std::pair<QPointer<QObject>, std::function<void(std::vector<UTXO>)>>>> zcListCallbacks_;
 
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
          std::atomic_bool  heartbeatRunning_ = { false };

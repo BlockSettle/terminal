@@ -363,33 +363,37 @@ bool Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)
 bool Wallet::getSpendableZCList(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
    , std::function<void(std::vector<UTXO>)> cb, QObject *obj)
 {
-   if (!isBalanceAvailable()) {
+   if (!btcWallet) {
       return false;
    }
 
-   zcListCallbacks_[obj].push_back(cb);
-   if (zcListCallbacks_.size() > 1) {
+   auto &cbList = zcListCallbacks_[btcWallet->walletID()];
+   cbList.push_back({ obj, cb });
+   if (cbList.size() > 1) {
       return true;
    }
-   const auto &cbZCList = [this](ReturnMessage<std::vector<UTXO>> utxos)-> void {
+   const auto &cbZCList = [this, btcWallet](ReturnMessage<std::vector<UTXO>> utxos)-> void {
       try {
          auto inUTXOs = utxos.get();
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
-         const auto &cbProcess = [this, inUTXOs] {
-            QMetaObject::invokeMethod(this, [this, inUTXOs] {
-               for (const auto &cbPairs : zcListCallbacks_) {
-                  if (cbPairs.first) {
-                     for (const auto &cb : cbPairs.second) {
-                        cb(inUTXOs);
-                     }
+         const auto &cbProcess = [this, btcWallet, inUTXOs] {
+            QMetaObject::invokeMethod(this, [this, btcWallet, inUTXOs] {
+               const auto &itCb = zcListCallbacks_.find(btcWallet->walletID());
+               if (itCb == zcListCallbacks_.end()) {
+                  logger_->error("[sync::Wallet::getSpendableZCList] failed to find callback for id {}"
+                     , btcWallet->walletID());
+                  return;
+               }
+               for (const auto &cb : itCb->second) {
+                  if (cb.first) {
+                     cb.second(inUTXOs);
                   }
                }
-               zcListCallbacks_.clear();
+               zcListCallbacks_.erase(itCb);
             });
          };
-
          cbProcess();
       }
       catch (const std::exception &e) {
