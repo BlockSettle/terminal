@@ -353,7 +353,6 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       BinaryData serialized = request.recipients(i);
       const auto recip = ScriptRecipient::deserialize(serialized);
       txSignReq.recipients.push_back(recip);
-      const auto outAddr = bs::Address::fromRecipient(recip);
       outputVal += recip->getValue();
    }
    int64_t value = outputVal;
@@ -1582,6 +1581,11 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
       auto addrData = response.add_addresses();
       addrData->set_address(address.display<std::string>());
       addrData->set_index(indexData.index());
+   }
+
+   const auto hdWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
+   if (hdWallet) {
+      hdWallet->updatePersistence();
    }
 
    packet.set_data(response.SerializeAsString());

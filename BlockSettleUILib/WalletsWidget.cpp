@@ -139,16 +139,16 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(AddressSortFilterModel::Filter)
 
 WalletsWidget::WalletsWidget(QWidget* parent)
    : TabWithShortcut(parent)
-   , ui(new Ui::WalletsWidget())
+   , ui_(new Ui::WalletsWidget())
    , walletsManager_(nullptr)
    , walletsModel_(nullptr)
    , addressModel_(nullptr)
    , addressSortFilterModel_(nullptr)
 {
-   ui->setupUi(this);
+   ui_->setupUi(this);
 
-   ui->gridLayout->setRowStretch(0, 1);
-   ui->gridLayout->setRowStretch(1, 2);
+   ui_->gridLayout->setRowStretch(0, 1);
+   ui_->gridLayout->setRowStretch(1, 2);
 
    actCopyAddr_ = new QAction(tr("&Copy Address"), this);
    connect(actCopyAddr_, &QAction::triggered, this, &WalletsWidget::onCopyAddress);
@@ -162,13 +162,13 @@ WalletsWidget::WalletsWidget(QWidget* parent)
    actDeleteWallet_ = new QAction(tr("&Delete Permanently"));
    connect(actDeleteWallet_, &QAction::triggered, this, &WalletsWidget::onDeleteWallet);
 
-   connect(ui->treeViewAddresses, &TreeViewWithEnterKey::enterKeyPressed,
+   connect(ui_->treeViewAddresses, &TreeViewWithEnterKey::enterKeyPressed,
            this, &WalletsWidget::onEnterKeyInAddressesPressed);
-   connect(ui->treeViewWallets, &WalletsTreeView::enterKeyPressed,
+   connect(ui_->treeViewWallets, &WalletsTreeView::enterKeyPressed,
            this, &WalletsWidget::onEnterKeyInWalletsPressed);
    connect(this, &WalletsWidget::showContextMenu, this, &WalletsWidget::onShowContextMenu, Qt::QueuedConnection);
 
-   ui->treeViewWallets->setEnableDeselection(false);
+   ui_->treeViewWallets->setEnableDeselection(false);
 }
 
 WalletsWidget::~WalletsWidget() = default;
@@ -199,15 +199,15 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
 
    auto filter = appSettings_->get<int>(ApplicationSettings::WalletFiltering);
 
-   ui->pushButtonEmpty->setChecked(filter & AddressSortFilterModel::HideEmpty);
-   ui->pushButtonInternal->setChecked(filter & AddressSortFilterModel::HideInternal);
-   ui->pushButtonExternal->setChecked(filter & AddressSortFilterModel::HideExternal);
-   ui->pushButtonUsed->setChecked(filter & AddressSortFilterModel::HideUsedEmpty);
+   ui_->pushButtonEmpty->setChecked(filter & AddressSortFilterModel::HideEmpty);
+   ui_->pushButtonInternal->setChecked(filter & AddressSortFilterModel::HideInternal);
+   ui_->pushButtonExternal->setChecked(filter & AddressSortFilterModel::HideExternal);
+   ui_->pushButtonUsed->setChecked(filter & AddressSortFilterModel::HideUsedEmpty);
 
    updateAddressFilters(filter);
 
-   for (auto button : {ui->pushButtonEmpty, ui->pushButtonInternal,
-      ui->pushButtonExternal, ui->pushButtonUsed}) {
+   for (auto button : {ui_->pushButtonEmpty, ui_->pushButtonInternal,
+      ui_->pushButtonExternal, ui_->pushButtonUsed}) {
          connect(button, &QPushButton::toggled, this, &WalletsWidget::onFilterSettingsChanged);
    }
 }
@@ -219,47 +219,47 @@ void WalletsWidget::setUsername(const QString& username)
 
 void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
 {
-   walletsModel_ = new WalletsViewModel(walletsManager_, defaultWalletId, signingContainer_, ui->treeViewWallets);
-   ui->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui->treeViewWallets->setModel(walletsModel_);
-   ui->treeViewWallets->setFocus(Qt::ActiveWindowFocusReason);
-   ui->treeViewWallets->setItemsExpandable(true);
-   ui->treeViewWallets->setRootIsDecorated(true);
-   ui->treeViewWallets->setExpandsOnDoubleClick(false);
+   walletsModel_ = new WalletsViewModel(walletsManager_, defaultWalletId, signingContainer_, ui_->treeViewWallets);
+   ui_->treeViewWallets->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewWallets->setModel(walletsModel_);
+   ui_->treeViewWallets->setFocus(Qt::ActiveWindowFocusReason);
+   ui_->treeViewWallets->setItemsExpandable(true);
+   ui_->treeViewWallets->setRootIsDecorated(true);
+   ui_->treeViewWallets->setExpandsOnDoubleClick(false);
    // show the column as per BST-1520
-   //ui->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
+   //ui_->treeViewWallets->hideColumn(static_cast<int>(WalletsViewModel::WalletColumns::ColumnID));
    walletsModel_->LoadWallets();
 
-   connect(ui->walletPropertiesButton, &QPushButton::clicked, this, &WalletsWidget::showSelectedWalletProperties);
-   connect(ui->createWalletButton, &QPushButton::clicked, this, &WalletsWidget::onNewWallet);
-   connect(ui->treeViewWallets, &QTreeView::doubleClicked, this, &WalletsWidget::showWalletProperties);
-   connect(ui->treeViewAddresses, &QTreeView::doubleClicked, this, &WalletsWidget::showAddressProperties);
+   connect(ui_->walletPropertiesButton, &QPushButton::clicked, this, &WalletsWidget::showSelectedWalletProperties);
+   connect(ui_->createWalletButton, &QPushButton::clicked, this, &WalletsWidget::onNewWallet);
+   connect(ui_->treeViewWallets, &QTreeView::doubleClicked, this, &WalletsWidget::showWalletProperties);
+   connect(ui_->treeViewAddresses, &QTreeView::doubleClicked, this, &WalletsWidget::showAddressProperties);
 
-   ui->treeViewAddresses->setContextMenuPolicy(Qt::CustomContextMenu);
-   ui->treeViewWallets->setContextMenuPolicy(Qt::CustomContextMenu);
-   connect(ui->treeViewAddresses, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onAddressContextMenu);
-   connect(ui->treeViewWallets, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onWalletContextMenu);
+   ui_->treeViewAddresses->setContextMenuPolicy(Qt::CustomContextMenu);
+   ui_->treeViewWallets->setContextMenuPolicy(Qt::CustomContextMenu);
+   connect(ui_->treeViewAddresses, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onAddressContextMenu);
+   connect(ui_->treeViewWallets, &QTreeView::customContextMenuRequested, this, &WalletsWidget::onWalletContextMenu);
 
    addressModel_ = new AddressListModel(walletsManager_, this);
    addressSortFilterModel_ = new AddressSortFilterModel(this);
    addressSortFilterModel_->setSourceModel(addressModel_);
    addressSortFilterModel_->setSortRole(AddressListModel::SortRole);
 
-   ui->treeViewAddresses->setUniformRowHeights(true);
-   ui->treeViewAddresses->setModel(addressSortFilterModel_);
-   ui->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
-   ui->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+   ui_->treeViewAddresses->setUniformRowHeights(true);
+   ui_->treeViewAddresses->setModel(addressSortFilterModel_);
+   ui_->treeViewAddresses->sortByColumn(2, Qt::DescendingOrder);
+   ui_->treeViewAddresses->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewAddresses->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
    updateAddresses();
-   connect(ui->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
+   connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
    connect(walletsModel_, &WalletsViewModel::updateAddresses, this, &WalletsWidget::updateAddresses);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceChanged, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
 }
 
 std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getSelectedWallets() const
 {
-   auto indexes = ui->treeViewWallets->selectionModel()->selectedIndexes();
+   auto indexes = ui_->treeViewWallets->selectionModel()->selectedIndexes();
    if (!indexes.isEmpty()) {
       return walletsModel_->getWallets(indexes.first());
    }
@@ -277,7 +277,7 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getFirstWallets() 
 
 void WalletsWidget::showSelectedWalletProperties()
 {
-   auto indexes = ui->treeViewWallets->selectionModel()->selectedIndexes();
+   auto indexes = ui_->treeViewWallets->selectionModel()->selectedIndexes();
    if (!indexes.isEmpty())
    {
       showWalletProperties(indexes.first());
@@ -327,7 +327,7 @@ void WalletsWidget::showAddressProperties(const QModelIndex& index)
 
 void WalletsWidget::onAddressContextMenu(const QPoint &p)
 {
-   const auto index = addressSortFilterModel_->mapToSource(ui->treeViewAddresses->indexAt(p));
+   const auto index = addressSortFilterModel_->mapToSource(ui_->treeViewAddresses->indexAt(p));
    const auto addressIndex = addressModel_->index(index.row(), static_cast<int>(AddressListModel::ColumnAddress));
    try {
       curAddress_ = bs::Address(addressModel_->data(addressIndex, AddressListModel::Role::AddressRole).toString());
@@ -354,10 +354,10 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
          /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
          contextMenu->addAction(actRevokeSettl_);
       }
-      emit showContextMenu(contextMenu, ui->treeViewAddresses->mapToGlobal(p));
+      emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
    };
    if (!curWallet_->getAddrBalance(curAddress_, cbAddrBalance)) {
-      emit showContextMenu(contextMenu, ui->treeViewAddresses->mapToGlobal(p));
+      emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
    }
 }
 
@@ -368,7 +368,7 @@ void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
 
 void WalletsWidget::onWalletContextMenu(const QPoint &p)
 {
-   const auto node = walletsModel_->getNode(ui->treeViewWallets->indexAt(p));
+   const auto node = walletsModel_->getNode(ui_->treeViewWallets->indexAt(p));
    if (!node || node->hasChildren() || (node->parent()->type() != WalletNode::Type::Root)) {
       return;
    }
@@ -377,7 +377,7 @@ void WalletsWidget::onWalletContextMenu(const QPoint &p)
    actDeleteWallet_->setData(QString::fromStdString(node->id()));
    contextMenu.addAction(actDeleteWallet_);
 
-   contextMenu.exec(ui->treeViewWallets->mapToGlobal(p));
+   contextMenu.exec(ui_->treeViewWallets->mapToGlobal(p));
 }
 
 void WalletsWidget::updateAddresses()
@@ -536,12 +536,12 @@ void WalletsWidget::shortcutActivated(ShortcutType s)
 {
    switch (s) {
       case ShortcutType::Alt_1 : {
-         ui->treeViewWallets->activate();
+         ui_->treeViewWallets->activate();
       }
          break;
 
       case ShortcutType::Alt_2 : {
-         ui->treeViewAddresses->activate();
+         ui_->treeViewAddresses->activate();
       }
          break;
 
@@ -573,16 +573,16 @@ int WalletsWidget::getUIFilterSettings() const
 {
    AddressSortFilterModel::Filter filter;
 
-   if (ui->pushButtonEmpty->isChecked()) {
+   if (ui_->pushButtonEmpty->isChecked()) {
       filter |= AddressSortFilterModel::HideEmpty;
    }
-   if (ui->pushButtonInternal->isChecked()) {
+   if (ui_->pushButtonInternal->isChecked()) {
       filter |= AddressSortFilterModel::HideInternal;
    }
-   if (ui->pushButtonExternal->isChecked()) {
+   if (ui_->pushButtonExternal->isChecked()) {
       filter |= AddressSortFilterModel::HideExternal;
    }
-   if (ui->pushButtonUsed->isChecked()) {
+   if (ui_->pushButtonUsed->isChecked()) {
       filter |= AddressSortFilterModel::HideUsedEmpty;
    }
 

@@ -179,11 +179,15 @@ void SubscriberConnection::stopListen()
       return;
    }
 
-   listenThread_.join();
+   if (std::this_thread::get_id() == listenThread_.get_id()) {
+      listenThread_.detach();
+   } else {
+      listenThread_.join();
+   }
 
    auto tempListener = listener_;
    listener_ = nullptr;
-   if (isConnected_) {
+   if (isConnected_ && tempListener) {
       tempListener->OnDisconnected();
    }
 

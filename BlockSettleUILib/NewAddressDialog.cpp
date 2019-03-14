@@ -12,17 +12,9 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    : QDialog(parent)
    , ui_(new Ui::NewAddressDialog())
    , wallet_(wallet)
-   , address_(wallet_->getNewExtAddress(isNested ? AddressEntryType_P2SH : AddressEntryType_P2WPKH))
 {
-//   wallet_->registerWallet();  //TODO: only when address callback is invoked
-
    ui_->setupUi(this);
    ui_->labelWallet->setText(QString::fromStdString(wallet->name()));
-
-   QString displayAddress = address_.display();
-   ui_->lineEditNewAddress->setText(displayAddress);
-   const QString addrURI = QLatin1String("bitcoin:") + displayAddress;
-   ui_->labelQRCode->setPixmap(UiUtils::getQRCode(addrURI, 128));
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &NewAddressDialog::copyToClipboard);
@@ -32,9 +24,38 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    if (closeButton) {
       connect(closeButton, &QPushButton::clicked, this, &NewAddressDialog::onClose);
    }
+
+   const auto &cbAddr = [this, copyButton, closeButton](const bs::Address &addr) {
+      closeButton->setEnabled(true);
+      if (!addr.isValid()) {
+         return;
+      }
+      if (address_.isNull()) {
+         address_ = addr;
+         displayAddress();
+         wallet_->registerWallet();
+      }
+      copyButton->setEnabled(true);
+   };
+   address_ = wallet_->getNewExtAddress(isNested ? AddressEntryType_P2SH : AddressEntryType_P2WPKH, cbAddr);
+   if (address_.isNull()) {
+      copyButton->setEnabled(false);
+      closeButton->setEnabled(false);
+   }
+   else {
+      displayAddress();
+   }
 }
 
 NewAddressDialog::~NewAddressDialog() = default;
+
+void NewAddressDialog::displayAddress()
+{
+   const auto dispAddress = address_.display();
+   ui_->lineEditNewAddress->setText(dispAddress);
+   const QString addrURI = QLatin1String("bitcoin:") + dispAddress;
+   ui_->labelQRCode->setPixmap(UiUtils::getQRCode(addrURI, 128));
+}
 
 void NewAddressDialog::copyToClipboard()
 {

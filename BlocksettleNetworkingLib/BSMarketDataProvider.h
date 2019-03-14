@@ -9,6 +9,8 @@
 
 #include "CommonTypes.h"
 
+#include "bs_md.pb.h"
+
 namespace spdlog
 {
    class logger;
@@ -47,6 +49,13 @@ private:
 
    void OnFullSnapshot(const std::string& data);
    void OnIncrementalUpdate(const std::string& data);
+
+   void OnProductSnapshot(const bs::network::Asset::Type& assetType
+      , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+      , double timestamp);
+   void OnProductUpdate(const bs::network::Asset::Type& assetType
+      , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+      , double timestamp);
 
 private:
    std::shared_ptr<ConnectionManager>  connectionManager_;

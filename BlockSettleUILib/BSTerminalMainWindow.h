@@ -25,17 +25,18 @@ namespace bs {
 }
 
 class AboutDialog;
+class ArmoryServersProvider;
 class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
-class AuthSignManager;
 class AutheIDClient;
+class AuthSignManager;
+class BSMarketDataProvider;
 class BSTerminalSplashScreen;
 class CCFileManager;
 class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
-class CelerMarketDataProvider;
 class OfflineSigner;
 class QSystemTrayIcon;
 class RequestReplyCommand;
@@ -43,7 +44,6 @@ class StatusBarView;
 class StatusViewBlockListener;
 class TransactionsViewModel;
 class WalletManagementWizard;
-class ArmoryServersProvider;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -120,7 +120,7 @@ private slots:
    void onArmoryNeedsReconnect();
 
 private:
-   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_;
    QAction *action_receive_;
    QAction *action_login_;
@@ -142,7 +142,7 @@ private:
    std::shared_ptr<CCPortfolioModel>         portfolioModel_;
    std::shared_ptr<ConnectionManager>        connectionManager_;
    std::shared_ptr<CelerClient>              celerConnection_;
-   std::shared_ptr<CelerMarketDataProvider>  mdProvider_;
+   std::shared_ptr<BSMarketDataProvider>     mdProvider_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;

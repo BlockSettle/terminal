@@ -33,6 +33,7 @@ private slots:
    void onClose();
 
 private:
+   void displayAddress();
    void UpdateSizeToAddress();
 
 private:
