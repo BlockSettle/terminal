@@ -2,6 +2,8 @@
 #define MDHS_CLIENT_H
 
 #include <QObject>
+#include <atomic>
+#include <set>
 
 class ApplicationSettings;
 class ConnectionManager;
@@ -13,7 +15,7 @@ using namespace Blocksettle::Communication::MarketDataHistory;
 
 class MdhsClient : public QObject
 {
-   Q_OBJECT
+	Q_OBJECT
 public:
 	//TODO: Move to proto file
 	enum ProductType {
@@ -23,20 +25,20 @@ public:
 		ProductTypePrivateMarket
 	};
 	MdhsClient(
-	   const std::shared_ptr<ApplicationSettings>& appSettings,
-	   const std::shared_ptr<ConnectionManager>& connectionManager,
-	   const std::shared_ptr<spdlog::logger>& logger,
-	   QObject* pParent = nullptr);
+		const std::shared_ptr<ApplicationSettings>& appSettings,
+		const std::shared_ptr<ConnectionManager>& connectionManager,
+		const std::shared_ptr<spdlog::logger>& logger,
+		QObject* pParent = nullptr);
 
-   ~MdhsClient() noexcept override = default;
+	~MdhsClient() noexcept;
 
-   MdhsClient(const MdhsClient&) = delete;
-   MdhsClient& operator = (const MdhsClient&) = delete;
-   MdhsClient(MdhsClient&&) = delete;
-   MdhsClient& operator = (MdhsClient&&) = delete;
+	MdhsClient(const MdhsClient&) = delete;
+	MdhsClient& operator = (const MdhsClient&) = delete;
+	MdhsClient(MdhsClient&&) = delete;
+	MdhsClient& operator = (MdhsClient&&) = delete;
 
-   void SendRequest(const MarketDataHistoryRequest& request);
-   const ProductType GetProductType(const QString &product) const;
+	void SendRequest(const MarketDataHistoryRequest& request);
+	const ProductType GetProductType(const QString &product) const;
 
 signals:
 	void DataReceived(const std::string& data);
@@ -47,7 +49,9 @@ private:
 	std::shared_ptr<ApplicationSettings>	appSettings_;
 	std::shared_ptr<ConnectionManager>		connectionManager_;
 	std::shared_ptr<spdlog::logger>			logger_;
-	std::shared_ptr<RequestReplyCommand>	command_;
+
+	std::atomic_flag                                lockCommands_ = ATOMIC_FLAG_INIT;
+	std::set<std::shared_ptr<RequestReplyCommand>>  activeCommands_;
 };
- 
+
 #endif // MDHS_CLIENT_H

@@ -3,6 +3,7 @@
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
 #include "RequestReplyCommand.h"
+#include "FastLock.h"
 #include "market_data_history.pb.h"
 
 // Private Market
@@ -25,75 +26,92 @@ const std::string GBP_SEK = "GBP/SEK";
 const std::string JPY_SEK = "JPY/SEK";
 
 static const std::map<std::string, MdhsClient::ProductType> PRODUCT_TYPES = {
-   // Private Market
-   { ANT_XBT, MdhsClient::ProductTypePrivateMarket },
-   { BLK_XBT, MdhsClient::ProductTypePrivateMarket },
-   { BSP_XBT, MdhsClient::ProductTypePrivateMarket },
-   { JAN_XBT, MdhsClient::ProductTypePrivateMarket },
-   { SCO_XBT, MdhsClient::ProductTypePrivateMarket },
-   // Spot XBT
-   { XBT_EUR, MdhsClient::ProductTypeXBT },
-   { XBT_GBP, MdhsClient::ProductTypeXBT },
-   { XBT_JPY, MdhsClient::ProductTypeXBT },
-   { XBT_SEK, MdhsClient::ProductTypeXBT },
-   // Spot FX
-   { EUR_GBP, MdhsClient::ProductTypeFX },
-   { EUR_JPY, MdhsClient::ProductTypeFX },
-   { EUR_SEK, MdhsClient::ProductTypeFX },
-   { GPB_JPY, MdhsClient::ProductTypeFX },
-   { GBP_SEK, MdhsClient::ProductTypeFX },
-   { JPY_SEK, MdhsClient::ProductTypeFX }
+	// Private Market
+	{ ANT_XBT, MdhsClient::ProductTypePrivateMarket },
+	{ BLK_XBT, MdhsClient::ProductTypePrivateMarket },
+	{ BSP_XBT, MdhsClient::ProductTypePrivateMarket },
+	{ JAN_XBT, MdhsClient::ProductTypePrivateMarket },
+	{ SCO_XBT, MdhsClient::ProductTypePrivateMarket },
+	// Spot XBT
+	{ XBT_EUR, MdhsClient::ProductTypeXBT },
+	{ XBT_GBP, MdhsClient::ProductTypeXBT },
+	{ XBT_JPY, MdhsClient::ProductTypeXBT },
+	{ XBT_SEK, MdhsClient::ProductTypeXBT },
+	// Spot FX
+	{ EUR_GBP, MdhsClient::ProductTypeFX },
+	{ EUR_JPY, MdhsClient::ProductTypeFX },
+	{ EUR_SEK, MdhsClient::ProductTypeFX },
+	{ GPB_JPY, MdhsClient::ProductTypeFX },
+	{ GBP_SEK, MdhsClient::ProductTypeFX },
+	{ JPY_SEK, MdhsClient::ProductTypeFX }
 };
 
 MdhsClient::MdhsClient(
-   const std::shared_ptr<ApplicationSettings>& appSettings,
-   const std::shared_ptr<ConnectionManager>& connectionManager,
-   const std::shared_ptr<spdlog::logger>& logger,
-   QObject* pParent)
-   : QObject(pParent)
-    , appSettings_(appSettings)
-   , connectionManager_(connectionManager)
-    , logger_(logger)
+	const std::shared_ptr<ApplicationSettings>& appSettings,
+	const std::shared_ptr<ConnectionManager>& connectionManager,
+	const std::shared_ptr<spdlog::logger>& logger,
+	QObject* pParent)
+	: QObject(pParent)
+	, appSettings_(appSettings)
+	, connectionManager_(connectionManager)
+	, logger_(logger)
 {
+}
+
+MdhsClient::~MdhsClient()
+{
+	FastLock locker(lockCommands_);
+	for (auto &cmd : activeCommands_) {
+		cmd->DropResult();
+	}
 }
 
 void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
 {
-   const auto apiConnection = connectionManager_->CreateGenoaClientConnection();
-   command_ = std::make_shared<RequestReplyCommand>("MdhsClient", apiConnection, logger_);
+	const auto apiConnection = connectionManager_->CreateGenoaClientConnection();
+	auto command = std::make_shared<RequestReplyCommand>("MdhsClient", apiConnection, logger_);
 
-   command_->SetReplyCallback([this](const std::string& data) -> bool
-   {
-      return OnDataReceived(data);
-   });
+	command->SetReplyCallback([command, this](const std::string& data) -> bool
+	{
+		command->CleanupCallbacks();
+		FastLock locker(lockCommands_);
+		activeCommands_.erase(command);
+		return OnDataReceived(data);
+	});
 
-   command_->SetErrorCallback([this](const std::string& message)
-   {
-      logger_->error("Failed to get history data from mdhs: {}", message);
-      command_->CleanupCallbacks();
-   });
+	command->SetErrorCallback([command, this](const std::string& message)
+	{
+		logger_->error("Failed to get history data from mdhs: {}", message);
+		command->CleanupCallbacks();
+		FastLock locker(lockCommands_);
+		activeCommands_.erase(command);
+	});
 
-   if (!command_->ExecuteRequest(
-      appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
-      appSettings_->get<std::string>(ApplicationSettings::mdhsPort),
-      request.SerializeAsString()))
-   {
-      logger_->error("Failed to send request for mdhs.");
-      command_->CleanupCallbacks();
-   }
+	FastLock locker(lockCommands_);
+	activeCommands_.emplace(command);
+
+	if (!command->ExecuteRequest(
+		appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
+		appSettings_->get<std::string>(ApplicationSettings::mdhsPort),
+		request.SerializeAsString()))
+	{
+		logger_->error("Failed to send request for mdhs.");
+		command->CleanupCallbacks();
+		FastLock locker(lockCommands_);
+		activeCommands_.erase(command);
+	}
 }
 
 const MdhsClient::ProductType MdhsClient::GetProductType(const QString &product) const
 {
-   auto found = PRODUCT_TYPES.find(product.toStdString());
-   if (found == PRODUCT_TYPES.end())
-      return MdhsClient::ProductTypeUnknown;
-   return found->second;
+	auto found = PRODUCT_TYPES.find(product.toStdString());
+	if (found == PRODUCT_TYPES.end())
+		return MdhsClient::ProductTypeUnknown;
+	return found->second;
 }
 
 const bool MdhsClient::OnDataReceived(const std::string& data)
 {
-   emit DataReceived(data);
-   command_->CleanupCallbacks();
-   return true;
+	emit DataReceived(data);
+	return true;
 }
