@@ -22,12 +22,10 @@ pipeline {
                         docker {
                             image 'terminal:latest'
                             reuseNode true
-                            args '-v /var/cache/3rd:/home/3rd'
+                            args '-v /var/cache/3rd:${WORKSPACE}/3rd'
                         }
                     }
                     steps {
-                        sh "pwd && ls"
-                        sh "ls ../"
                         sh "cd ./terminal && pip install requests"
                         sh "cd ./terminal && python generate.py ${L_ARGS}"
                         sh "cd ./terminal/terminal.release && make -j 4"
@@ -53,7 +51,7 @@ pipeline {
                         expression { params.OS == 'Windows' || params.OS == 'All' }
                     }
                     steps {
-                        bat 'set DEV_3RD_ROOT=C:\\Users\\Admin\\Workspace\\3rd && "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal && python generate.py release'
+                        bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal && python generate.py release'
                         bat '"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" && cd terminal\\terminal.release && devenv BS_Terminal.sln /build Release"'
                         bat "cd terminal\\Deploy\\Windows\\ && deploy.bat"
                     }
