@@ -802,6 +802,7 @@ void HeadlessContainer::syncNewAddress(const std::string &walletId, const std::s
 
    headless::SyncAddressesRequest request;
    request.set_walletid(walletId);
+   request.set_persistent(true);
    auto idx = request.add_indices();
    idx->set_index(index);
    idx->set_addrtype(mapFrom(aet));

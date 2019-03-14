@@ -101,6 +101,11 @@ private:
    QTextTableFormat tableFormat;
    QTextTable *table;
    ChatMessagesTextEditStyle internalStyle_;
+
+   QImage statusImageOffline_;
+   QImage statusImageConnecting_;
+   QImage statusImageOnline_;
+   QImage statusImageRead_;
 };
 
 #endif

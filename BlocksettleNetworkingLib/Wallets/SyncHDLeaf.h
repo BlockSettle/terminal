@@ -52,6 +52,7 @@ namespace bs {
             bool hasExtOnlyAddresses() const override { return isExtOnly_; }
             bool hasId(const std::string &) const override;
 
+            BTCNumericTypes::balance_type getSpendableBalance() const override;
             bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
                , QObject *obj, uint64_t val = UINT64_MAX) override;
             bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
@@ -69,10 +70,14 @@ namespace bs {
             size_t getExtAddressCount() const override { return extAddresses_.size(); }
             size_t getIntAddressCount() const override { return intAddresses_.size(); }
             bool isExternalAddress(const Address &) const override;
-            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
+            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
+            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
+            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
+            bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default
+               , const CbAddress &cb = nullptr) override;
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &
@@ -182,6 +187,7 @@ namespace bs {
             cb_complete_notify                           cbScanNotify_ = nullptr;
             std::function<void(const std::string &walletId, unsigned int idx)> cbWriteLast_ = nullptr;
             volatile bool activateAddressesInvoked_ = false;
+            BTCNumericTypes::balance_type spendableBalanceCorrection_ = 0;
 
             struct AddrPrefixedHashes {
                std::set<BinaryData> external;
@@ -215,7 +221,8 @@ namespace bs {
             std::set<AddrPoolKey>   activeScanAddresses_;
 
          private:
-            bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
+            bs::Address createAddress(AddressEntryType aet, const CbAddress &cb = nullptr
+               , bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             void onScanComplete();
