@@ -293,6 +293,9 @@ bs::Address hd::Leaf::createAddress(const bs::hd::Path &path, bs::hd::Path::Elem
       if (persistent) {
          addressPool_.erase(addrPoolIt->first);
          poolByAddr_.erase(result);
+         if (node_) {
+            addrNode = node_->derive(path, true);
+         }
       }
    }
    else {
@@ -311,23 +314,27 @@ bs::Address hd::Leaf::createAddress(const bs::hd::Path &path, bs::hd::Path::Elem
       return result;
    }
 
-   const auto complementaryAddrType = (aet == AddressEntryType_P2SH) ? AddressEntryType_P2WPKH : AddressEntryType_P2SH;
-   const auto &complementaryAddr = Address::fromPubKey(addrNode->pubChainedKey(), complementaryAddrType);
-
    if (isInternal) {
       intAddresses_.push_back(result);
    }
    else {
       extAddresses_.push_back(result);
    }
+
    usedAddresses_.push_back(result);
-   addressMap_[index] = AddressTuple(result, addrNode, path);
    addrToIndex_[result.unprefixed()] = index;
-   addrToIndex_[complementaryAddr.unprefixed()] = index;
    addressHashes_.insert(result.unprefixed());
-   addressHashes_.insert(complementaryAddr.unprefixed());
-   addAddress(result, addrNode->pubChainedKey(), path);
-   addAddress(complementaryAddr, addrNode->pubChainedKey(), path);
+
+   if (addrNode) {
+      const auto complementaryAddrType = (aet == AddressEntryType_P2SH) ? AddressEntryType_P2WPKH : AddressEntryType_P2SH;
+      const auto &complementaryAddr = Address::fromPubKey(addrNode->pubChainedKey(), complementaryAddrType);
+
+      addressMap_[index] = AddressTuple(result, addrNode, path);
+      addrToIndex_[complementaryAddr.unprefixed()] = index;
+      addressHashes_.insert(complementaryAddr.unprefixed());
+      addAddress(result, addrNode->pubChainedKey(), path);
+      addAddress(complementaryAddr, addrNode->pubChainedKey(), path);
+   }
    return result;
 }
 
@@ -491,7 +498,8 @@ bool hd::Leaf::addressIndexExists(const std::string &index) const
 
 bs::Address hd::Leaf::createAddressWithIndex(const std::string &index, bool persistent, AddressEntryType aet)
 {
-   return createAddressWithPath(bs::hd::Path::fromString(index), persistent, aet);
+   const auto addr = createAddressWithPath(bs::hd::Path::fromString(index), persistent, aet);
+   return addr;
 }
 
 bs::Address hd::Leaf::createAddressWithPath(const bs::hd::Path &path, bool persistent, AddressEntryType aet)
@@ -528,6 +536,7 @@ bs::Address hd::Leaf::createAddressWithPath(const bs::hd::Path &path, bool persi
    if (!persistent) {
       lastIndex = prevLastIndex;
    }
+
    return result;
 }
 
