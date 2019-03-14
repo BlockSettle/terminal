@@ -95,19 +95,19 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
    {
       for (const auto& field : mdFields)
       {
-         if (field.type == bs::network::MDField::PriceBid)
-         {
-            if (field.value == lastClose)
-               return;
-            else
-               lastClose = field.value;
+		 if (field.type == bs::network::MDField::PriceLast)
+		 {
+			 if (field.value == lastClose)
+				 return;
+			 else
+				 lastClose = field.value;
 
-            if (lastClose > lastHigh)
-               lastHigh = lastClose;
+			 if (lastClose > lastHigh)
+				 lastHigh = lastClose;
 
-            if (lastClose < lastLow)
-               lastLow = lastClose;
-         }
+			 if (lastClose < lastLow)
+				 lastLow = lastClose;
+		 }
 
 		 if (field.type == bs::network::MDField::MDTimestamp)
 		 {
