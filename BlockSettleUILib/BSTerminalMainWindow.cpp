@@ -61,7 +61,6 @@
 
 #include <spdlog/spdlog.h>
 
-
 BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSettings>& settings
    , BSTerminalSplashScreen& splashScreen, QWidget* parent)
    : QMainWindow(parent)
@@ -75,7 +74,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    setupShortcuts();
 
    loginButtonText_ = tr("Login");
-
 
    armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
 
@@ -115,7 +113,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    if (!applicationSettings_->get<bool>(ApplicationSettings::initialized)) {
       applicationSettings_->SetDefaultSettings(true);
    }
-
 
    InitAssets();
    InitSigningContainer();
