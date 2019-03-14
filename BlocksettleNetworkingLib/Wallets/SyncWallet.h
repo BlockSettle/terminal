@@ -134,10 +134,14 @@ namespace bs {
          virtual size_t getWalletAddressCount() const { return addrCount_; }
          virtual bool getActiveAddressCount(const std::function<void(size_t)> &) const;
 
-         virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return getNewExtAddress(aet); }
-         virtual bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default);
+         virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default
+            , const CbAddress &cb = nullptr) = 0;
+         virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default
+            , const CbAddress &cb = nullptr) = 0;
+         virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default
+            , const CbAddress &cb = nullptr) { return getNewExtAddress(aet); }
+         virtual bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default
+            , const CbAddress &cb = nullptr);
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
 
