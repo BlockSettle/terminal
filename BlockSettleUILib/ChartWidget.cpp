@@ -27,6 +27,8 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , maxPrice(0.0)
    , minPrice(0.0)
    , timerId(0)
+   , lastInterval(-1)
+   , dragY(0)
    , isDraggingYAxis(false) {
    ui_->setupUi(this);
 
@@ -413,8 +415,12 @@ int ChartWidget::FractionSizeForProduct(const QString &product) const
 
 // Handles changes of date range.
 void ChartWidget::OnDateRangeChanged(int interval) {
-   qDebug() << "clicked" << interval;
-   UpdateChart(interval);
+	if (lastInterval != interval)
+	{
+		lastInterval = interval;
+		qDebug() << "clicked" << interval;
+		UpdateChart(interval);
+	}
 }
 
 void ChartWidget::OnInstrumentChanged(const QString &text) {

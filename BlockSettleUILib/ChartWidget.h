@@ -81,10 +81,10 @@ private:
 	qreal minPrice;
 
 	int timerId;
+	int lastInterval;
+	int dragY;
 
 	bool isDraggingYAxis;
-
-	int dragY;
 };
 
 #endif // CHARTWIDGET_H
