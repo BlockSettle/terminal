@@ -345,6 +345,9 @@ void CreateTransactionDialogAdvanced::initUI()
 
    currentAddress_.clear();
    currentValue_ = 0;
+   if (qFuzzyIsNull(minFeePerByte_) || qFuzzyIsNull(minTotalFee_)) {
+      SetMinimumFee(0, 1.0);
+   }
 
    ui_->pushButtonAddOutput->setEnabled(false);
    ui_->line->hide();
@@ -589,6 +592,12 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       showExistingChangeAddress(changeSelectionEnabled);
    }
 
+   if (transactionData_->totalFee() && summary.txVirtSize
+      && (transactionData_->totalFee() < summary.txVirtSize)) {
+      transactionData_->setTotalFee(summary.txVirtSize);
+      ui_->spinBoxFeesManualTotal->setValue(summary.txVirtSize);
+   }
+
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
       , Qt::QueuedConnection);
 }
@@ -802,7 +811,7 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    AddManualFeeEntries(manualFeePerByte
       , (minTotalFee_ > 0) ? minTotalFee_ : transactionData_->totalFee());
 
-   if (minFeePerByte_ > 0) {
+   if (advisedFeePerByte_ > 0) {
       const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
       ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
       feeSelectionChanged(index);
