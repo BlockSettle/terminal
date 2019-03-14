@@ -52,6 +52,7 @@ namespace bs {
             bool hasExtOnlyAddresses() const override { return isExtOnly_; }
             bool hasId(const std::string &) const override;
 
+            BTCNumericTypes::balance_type getSpendableBalance() const override;
             bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
                , QObject *obj, uint64_t val = UINT64_MAX) override;
             bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
@@ -186,6 +187,7 @@ namespace bs {
             cb_complete_notify                           cbScanNotify_ = nullptr;
             std::function<void(const std::string &walletId, unsigned int idx)> cbWriteLast_ = nullptr;
             volatile bool activateAddressesInvoked_ = false;
+            BTCNumericTypes::balance_type spendableBalanceCorrection_ = 0;
 
             struct AddrPrefixedHashes {
                std::set<BinaryData> external;
