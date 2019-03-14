@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QBitmap>
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDirIterator>
 #include <QFile>
 #include <QFontDatabase>
@@ -15,7 +16,6 @@
 #include "BSTerminalSplashScreen.h"
 #include "BSTerminalMainWindow.h"
 #include "EncryptionUtils.h"
-#include "StartupDialog.h"
 #include "BSMessageBox.h"
 #include "ZMQHelperFunctions.h"
 
@@ -81,38 +81,6 @@ private:
    bool activationRequired_ = false;
 };
 
-static void checkFirstStart(ApplicationSettings *applicationSettings)
-{
-  bool wasInitialized = applicationSettings->get<bool>(ApplicationSettings::initialized);
-  if (wasInitialized) {
-    return;
-  }
-
-#ifdef _WIN32
-  // Read registry value in case it was set with installer. Could be used only on Windows for now.
-  QSettings settings(QLatin1String("HKEY_CURRENT_USER\\Software\\blocksettle\\blocksettle"), QSettings::NativeFormat);
-  bool showLicense = !settings.value(QLatin1String("license_accepted"), false).toBool();
-#else
-  bool showLicense = true;
-#endif // _WIN32
-
-  StartupDialog startupDialog(showLicense);
-  int result = startupDialog.exec();
-
-  if (result == QDialog::Rejected) {
-    std::exit(EXIT_FAILURE);
-  }
-
-  const bool runArmoryLocally = (startupDialog.runMode() == StartupDialog::RunMode::Local);
-  applicationSettings->set(ApplicationSettings::runArmoryLocally, runArmoryLocally);
-  applicationSettings->set(ApplicationSettings::netType, int(startupDialog.networkType()));
-
-  if (startupDialog.runMode() == StartupDialog::RunMode::Custom) {
-    applicationSettings->set(ApplicationSettings::armoryDbIp, startupDialog.armoryDbIp());
-    applicationSettings->set(ApplicationSettings::armoryDbPort, startupDialog.armoryDbPort());
-  }
-}
-
 static void checkStyleSheet(QApplication &app)
 {
    QLatin1String styleSheetFileName = QLatin1String("stylesheet.css");
@@ -135,7 +103,7 @@ static void checkStyleSheet(QApplication &app)
    app.setStyleSheet(QString::fromLatin1(stylesheetFile.readAll()));
 }
 
-static int GuiApp(int argc, char** argv)
+static int GuiApp(int &argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
 
@@ -222,18 +190,12 @@ static int GuiApp(int argc, char** argv)
       return 1;
    }
 
-   checkFirstStart(settings.get());
-
    QString logoIcon;
-   if (settings->get<NetworkType>(ApplicationSettings::netType) == NetworkType::MainNet) {
-      logoIcon = QLatin1String(":/SPLASH_LOGO");
-   }
-   else {
-      logoIcon = QLatin1String(":/SPLASH_LOGO_TESTNET");
-   }
+   logoIcon = QLatin1String(":/SPLASH_LOGO");
 
    QPixmap splashLogo(logoIcon);
-   BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(390, Qt::SmoothTransformation));
+   const int splashScreenWidth = 400;
+   BSTerminalSplashScreen splashScreen(splashLogo.scaledToWidth(splashScreenWidth, Qt::SmoothTransformation));
 
    splashScreen.show();
    app.processEvents();

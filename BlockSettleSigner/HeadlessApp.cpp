@@ -8,11 +8,15 @@
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
+#include "CoreHDWallet.h"
+#include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
+#include "InprocSigner.h"
 #include "OfflineProcessor.h"
+#include "SignerAdapter.h"
 #include "SignerSettings.h"
-#include "WalletsManager.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "ZmqSecuredServerConnection.h"
 #include "ZMQHelperFunctions.h"
 
@@ -32,33 +36,51 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("failed to read ZMQ server private key");
    }
 
-   walletsMgr_ = std::make_shared<WalletsManager>(logger);
+   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
 
 void HeadlessAppObj::Start()
 {
-   logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(settings_->netType(), settings_->getWalletsDir());
-   if (!walletsMgr_->GetSettlementWallet()) {
-      if (!walletsMgr_->CreateSettlementWallet(QString())) {
+   logger_->debug("[{}] loading {} wallets from dir <{}>", __func__
+      , settings_->watchingOnly() ? "watching-only" : "full"
+      , settings_->getWalletsDir().toStdString());
+   const auto &cbProgress = [this](int cur, int total) {
+      logger_->debug("Loading wallet {} of {}", cur, total);
+   };
+   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString()
+      , settings_->watchingOnly(), cbProgress);
+   if (!settings_->watchingOnly() && !walletsMgr_->getSettlementWallet()) {
+      if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir().toStdString())) {
          logger_->error("Failed to create Settlement wallet");
       }
    }
 
-   if (!walletsMgr_->GetWalletsCount()) {
+   if (walletsMgr_->empty()) {
       logger_->warn("No wallets loaded");
    }
    else {
-      logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
+      logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
    if (settings_->offline()) {
+      if (settings_->watchingOnly()) {
+         logger_->critical("[{}] offline mode doesn't support watching-only wallets", __func__);
+         emit finished();
+         if (cbReady_) {
+            cbReady_(false);
+         }
+         return;
+      }
       OfflineProcessing();
    }
    else {
       OnlineProcessing();
    }
+   if (cbReady_) {
+      cbReady_(true);
+   }
+   emit started();
 }
 
 void HeadlessAppObj::OnlineProcessing()
@@ -75,9 +97,11 @@ void HeadlessAppObj::OnlineProcessing()
       throw std::runtime_error("secure connection problem");
    }
 
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
-      , walletsMgr_, settings_->getWalletsDir().toStdString()
-      , settings_->netType());
+   if (!listener_) {
+      listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
+         , walletsMgr_, settings_->getWalletsDir().toStdString()
+         , settings_->netType());
+   }
    listener_->SetLimits(settings_->limits());
    if (!connection_->BindConnection(settings_->listenAddress().toStdString()
       , settings_->port().toStdString(), listener_.get())) {
@@ -90,10 +114,10 @@ void HeadlessAppObj::OnlineProcessing()
 
 void HeadlessAppObj::OfflineProcessing()
 {
-   const auto cbCLI = [this](const std::shared_ptr<bs::Wallet> &wallet) -> SecureBinaryData {
-      std::cout << "Enter password for wallet " << wallet->GetWalletName();
-      if (!wallet->GetWalletDescription().empty()) {
-         std::cout << " (" << wallet->GetWalletDescription() << ")";
+   const auto cbCLI = [this](const std::shared_ptr<bs::sync::Wallet> &wallet) -> SecureBinaryData {
+      std::cout << "Enter password for wallet " << wallet->name();
+      if (!wallet->description().empty()) {
+         std::cout << " (" << wallet->description() << ")";
       }
       (std::cout << ": ").flush();
       setConsoleEcho(false);
@@ -104,7 +128,10 @@ void HeadlessAppObj::OfflineProcessing()
       return password;
    };
 
-   offlineProc_ = std::make_shared<OfflineProcessor>(logger_, walletsMgr_, cbCLI);
+   if (!offlineProc_) {
+      auto adapter = new SignerAdapter(logger_, this);
+      offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter, cbCLI);
+   }
    if (!settings_->requestFiles().empty()) {
       offlineProc_->ProcessFiles(settings_->requestFiles());
       emit finished();
@@ -136,4 +163,136 @@ void HeadlessAppObj::setConsoleEcho(bool enable) const
    }
    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 #endif
+}
+
+std::shared_ptr<bs::sync::WalletsManager> HeadlessAppObj::getWalletsManager() const
+{
+   auto inprocSigner = std::make_shared<InprocSigner>(walletsMgr_, logger_
+      , settings_->getWalletsDir().toStdString(), settings_->netType());
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(logger_, nullptr, nullptr);
+   inprocSigner->Start();
+   syncMgr->setSignContainer(inprocSigner);
+   return syncMgr;
+}
+
+void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::function<void()> &cb)
+{
+   walletsMgr_->reset();
+   walletsMgr_->loadWallets(settings_->netType(), walletsDir
+      , settings_->watchingOnly(), [](int, int) {});
+   settings_->setWalletsDir(QString::fromStdString(walletsDir));
+   cb();
+}
+
+void HeadlessAppObj::setOnline(bool value)
+{
+   if (value && connection_ && listener_) {
+      return;
+   }
+   logger_->info("[{}] changing online state to {}", __func__, value);
+   if (value) {
+      OnlineProcessing();
+   }
+   else {
+      connection_.reset();
+      listener_.reset();
+   }
+}
+
+void HeadlessAppObj::reconnect(const std::string &listenAddr, const std::string &port)
+{
+   setOnline(false);
+   settings_->setListenAddress(QString::fromStdString(listenAddr));  // won't be any QString trans-
+   settings_->setPort(QString::fromStdString(port));  // formations once SignerSettings are split, too
+   setOnline(true);
+}
+
+void HeadlessAppObj::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
+   , const SecureBinaryData &password, const std::function<void(const BinaryData &)> &cb)
+{
+   const auto wallet = walletsMgr_->getWalletById(txReq.walletId);
+   if (!wallet) {
+      cb({});
+      return;
+   }
+   const auto signedTX = wallet->signTXRequest(txReq, password);
+   cb(signedTX);
+}
+
+void HeadlessAppObj::createWatchingOnlyWallet(const std::string &walletId, const SecureBinaryData &password
+   , std::string path, const std::function<void(bool)> &cb)
+{
+   const auto hdWallet = walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
+      cb(false);
+      return;
+   }
+   const auto woWallet = hdWallet->createWatchingOnly(password);
+   if (!woWallet) {
+      logger_->error("[{}] failed to create watching-only wallet for id {}", __func__, walletId);
+      cb(false);
+      return;
+   }
+#if !defined (Q_OS_WIN)
+   if (path.find('/') != 0) {
+      path = "/" + path;
+   }
+#endif
+   try {
+      woWallet->saveToDir(path);
+      cb(true);
+   } catch (const std::exception &e) {
+      logger_->error("[WalletsProxy] failed to save watching-only wallet to {}: {}", path, e.what());
+      cb(false);
+   }
+}
+
+void HeadlessAppObj::getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
+   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
+{
+   const auto hdWallet = walletsMgr_->getHDWalletById(walletId);
+   if (!hdWallet) {
+      cb(SecureBinaryData{}, SecureBinaryData("wallet not found"));
+      return;
+   }
+   const auto decrypted = hdWallet->getRootNode(password);
+   if (!decrypted) {
+      cb(SecureBinaryData{}, SecureBinaryData("failed to decrypt root node"));
+      return;
+   }
+   cb(decrypted->privateKey(), decrypted->chainCode());
+}
+
+void HeadlessAppObj::setLimits(SignContainer::Limits limits)
+{
+   if (listener_) {
+      listener_->SetLimits(limits);
+   }
+}
+
+void HeadlessAppObj::passwordReceived(const std::string &walletId
+   , const SecureBinaryData &password, bool cancelledByUser)
+{
+   if (listener_) {
+      listener_->passwordReceived(walletId, password, cancelledByUser);
+   }
+}
+
+void HeadlessAppObj::setCallbacks(
+   const std::function<void(const std::string &)> &cbPeerConn
+   , const std::function<void(const std::string &)> &cbPeerDisconn
+   , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
+   , const std::function<void(const BinaryData &)> &cbTxSigned
+   , const std::function<void(const BinaryData &)> &cbCancelTxSign
+   , const std::function<void(int64_t, bool)> &cbXbtSpent
+   , const std::function<void(const std::string &)> &cbAsAct
+   , const std::function<void(const std::string &)> &cbAsDeact)
+{
+   if (listener_) {
+      listener_->setCallbacks(cbPeerConn, cbPeerDisconn, cbPwd, cbTxSigned
+         , cbCancelTxSign, cbXbtSpent, cbAsAct, cbAsDeact);
+   }
+   else {
+      logger_->error("[{}] attempting to set callbacks on uninited listener", __func__);
+   }
 }

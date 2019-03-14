@@ -7,16 +7,15 @@
 #include "ConnectionManager.h"
 #include "AuthProxy.h"
 #include "AutheIDClient.h"
+#include "CoreWalletsManager.h"
 #include "QMLApp.h"
 #include "QMLStatusUpdater.h"
-#include "HDWallet.h"
-#include "HeadlessContainerListener.h"
+#include "QmlWalletsViewModel.h"
 #include "OfflineProcessor.h"
+#include "SignerAdapter.h"
 #include "SignerSettings.h"
 #include "TXInfo.h"
-#include "WalletsManager.h"
 #include "WalletsProxy.h"
-#include "WalletsViewModel.h"
 #include "ZmqSecuredServerConnection.h"
 #include "EasyEncValidator.h"
 #include "PasswordConfirmValidator.h"
@@ -25,20 +24,22 @@
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 #include "ZMQHelperFunctions.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
 #endif // BS_USE_DBUS
 
-Q_DECLARE_METATYPE(bs::wallet::TXSignRequest)
+Q_DECLARE_METATYPE(bs::core::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(bs::wallet::TXInfo)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
-QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
+QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignerSettings> &params, QQmlContext *ctxt)
-   : QObject(nullptr), logger_(logger), settings_(params), ctxt_(ctxt)
-   , notifMode_(QSystemTray)
+   : QObject(nullptr), adapter_(adapter), logger_(logger), settings_(params)
+   , ctxt_(ctxt), notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
 #endif // BS_USE_DBUS
@@ -50,12 +51,15 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    registerQtTypes();
 
-   walletsMgr_ = std::make_shared<WalletsManager>(logger_);
+   connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
+   connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
+   connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
+   connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
 
-   walletsModel_ = new QmlWalletsViewModel(walletsMgr_, ctxt_->engine(), true);
+   walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
 
-   statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_);
+   statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_, adapter_, logger_);
    connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
 
@@ -65,15 +69,14 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    settingsConnections();
 
-   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, walletsMgr_, logger_);
+   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
 
-
-   offlineProc_ = std::make_shared<OfflineProcessor>(logger_, walletsMgr_);
+   offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter_);
    connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
    ctxt_->setContextProperty(QStringLiteral("offlineProc"), offlineProc_.get());
 
-   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, walletsMgr_, settings_);
+   walletsProxy_ = std::make_shared<WalletsProxy>(logger_, adapter_);
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
@@ -103,6 +106,25 @@ QMLAppObj::QMLAppObj(const std::shared_ptr<spdlog::logger> &logger
 #endif // BS_USE_DBUS
 }
 
+void QMLAppObj::onReady()
+{
+   walletsMgr_ = adapter_->getWalletsManager();
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &QMLAppObj::onWalletsSynced);
+
+   const auto &cbProgress = [this](int cur, int total) {
+      logger_->debug("Syncing wallet {} of {}", cur, total);
+   };
+   walletsMgr_->syncWallets(cbProgress);
+
+   walletsModel_->setWalletsManager(walletsMgr_);
+   qmlFactory_->setWalletsManager(walletsMgr_);
+}
+
+void QMLAppObj::onWalletsSynced()
+{
+   emit loadingComplete();
+}
+
 void QMLAppObj::settingsConnections()
 {
    connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
@@ -113,64 +135,11 @@ void QMLAppObj::settingsConnections()
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
 }
 
-void QMLAppObj::walletsLoad()
-{
-   logger_->debug("Loading wallets from dir <{}>", settings_->getWalletsDir().toStdString());
-   walletsMgr_->LoadWallets(settings_->netType(), settings_->getWalletsDir());
-   if (walletsMgr_->GetWalletsCount() > 0) {
-      logger_->debug("Loaded {} wallet[s]", walletsMgr_->GetWalletsCount());
-
-      if (!walletsMgr_->GetSettlementWallet()) {
-         if (!walletsMgr_->CreateSettlementWallet(QString())) {
-            logger_->error("Failed to create Settlement wallet");
-         }
-      }
-   }
-   else {
-      logger_->warn("No wallets loaded");
-   }
-
-   walletsModel_->LoadWallets();
-}
-
 void QMLAppObj::Start()
 {
    initZmqKeys();
 
    trayIcon_->show();
-   walletsLoad();
-
-   try {
-      if (!settings_->offline()) {
-         OnlineProcessing();
-      }
-   }
-   catch (const std::exception &e) {
-      if (notifMode_ == QSystemTray) {
-         trayIcon_->showMessage(tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what()))
-            , QSystemTrayIcon::Critical, 10000);
-      }
-#ifdef BS_USE_DBUS
-      else {
-         dbus_->notifyDBus(QSystemTrayIcon::Critical,
-            tr("BlockSettle Signer"), tr("Error: %1").arg(QLatin1String(e.what())),
-            QIcon(), 10000);
-      }
-#endif // BS_USE_DBUS
-      throw std::runtime_error("failed to open connection");
-   }
-}
-
-void QMLAppObj::disconnect()
-{
-   if (listener_)
-      listener_->disconnect();
-
-   listener_ = nullptr;
-   connection_ = nullptr;
-
-   if (statusUpdater_)
-      statusUpdater_->clearConnections();
 }
 
 void QMLAppObj::initZmqKeys()
@@ -220,7 +189,7 @@ void QMLAppObj::initZmqKeys()
 
 void QMLAppObj::registerQtTypes()
 {
-   qRegisterMetaType<bs::wallet::TXSignRequest>();
+   qRegisterMetaType<bs::core::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
@@ -259,19 +228,14 @@ void QMLAppObj::registerQtTypes()
 
 void QMLAppObj::onOfflineChanged()
 {
-   if (settings_->offline()) {
-      logger_->info("Going offline");
-      disconnect();
-   }
-   else {
-      OnlineProcessing();
-   }
+   adapter_->setOnline(!settings_->offline());
 }
 
 void QMLAppObj::onWalletsDirChanged()
 {
-   walletsMgr_->Reset();
-   walletsLoad();
+   adapter_->reloadWallets(settings_->getWalletsDir(), [this] {
+      walletsMgr_->syncWallets();
+   });
 }
 
 void QMLAppObj::onListenSocketChanged()
@@ -280,15 +244,12 @@ void QMLAppObj::onListenSocketChanged()
       return;
    }
    logger_->info("Restarting listening socket");
-   disconnect();
-   OnlineProcessing();
+   adapter_->reconnect(settings_->listenAddress(), settings_->port());
 }
 
 void QMLAppObj::onLimitsChanged()
 {
-   if (listener_) {
-      listener_->SetLimits(settings_->limits());
-   }
+   adapter_->setLimits(settings_->limits());
 }
 
 void QMLAppObj::SetRootObject(QObject *obj)
@@ -310,43 +271,41 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
 {
    //SecureBinaryData decodedPwd = passwordData->password;
    logger_->debug("Password for wallet {} was accepted", walletId.toStdString());
-   if (listener_) {
-      listener_->passwordReceived(walletId.toStdString(), passwordData->password, cancelledByUser);
-   }
+   adapter_->passwordReceived(walletId.toStdString(), passwordData->password, cancelledByUser);
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
       offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password);
       offlinePasswordRequests_.erase(walletId.toStdString());
    }
 }
 
-void QMLAppObj::onOfflinePassword(const bs::wallet::TXSignRequest &txReq)
+void QMLAppObj::onOfflinePassword(const bs::core::wallet::TXSignRequest &txReq)
 {
    offlinePasswordRequests_.insert(txReq.walletId);
    requestPassword(txReq, {}, false);
 }
 
-void QMLAppObj::onPasswordRequested(const bs::wallet::TXSignRequest &txReq, const QString &prompt)
+void QMLAppObj::onPasswordRequested(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt)
 {
    requestPassword(txReq, prompt);
 }
 
 void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
 {
-   bs::wallet::TXSignRequest txReq;
+   bs::core::wallet::TXSignRequest txReq;
    QString walletName;
    txReq.walletId = walletId;
    if (txReq.walletId.empty()) {
-      const auto &wallet = walletsMgr_->GetPrimaryWallet();
+      const auto wallet = walletsMgr_->getPrimaryWallet();
       if (wallet) {
-         txReq.walletId = wallet->getWalletId();
-         walletName = QString::fromStdString(wallet->getName());
+         txReq.walletId = wallet->walletId();
+         walletName = QString::fromStdString(wallet->name());
       }
    }
    requestPassword(txReq, walletName.isEmpty() ? tr("Activate Auto-Signing") :
       tr("Activate Auto-Signing for %1").arg(walletName));
 }
 
-void QMLAppObj::requestPassword(const bs::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
+void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
 {
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
@@ -402,41 +361,4 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 {
    emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
-}
-
-void QMLAppObj::OnlineProcessing()
-{
-   logger_->debug("Going online with socket {}:{}, network {}"
-      , settings_->listenAddress().toStdString()
-      , settings_->port().toStdString()
-      , (settings_->testNet() ? "testnet" : "mainnet"));
-
-   const ConnectionManager connMgr(logger_);
-   connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(zmqPubKey_, zmqPrvKey_)) {
-      logger_->error("Failed to establish secure connection");
-      throw std::runtime_error("secure connection problem");
-   }
-
-   listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
-      , walletsMgr_, settings_->getWalletsDir().toStdString()
-      , settings_->netType(), true);
-   listener_->SetLimits(settings_->limits());
-   statusUpdater_->SetListener(listener_);
-   connect(listener_.get(), &HeadlessContainerListener::passwordRequired, this
-      , &QMLAppObj::onPasswordRequested);
-   connect(listener_.get(), &HeadlessContainerListener::autoSignRequiresPwd
-      , this, &QMLAppObj::onAutoSignPwdRequested);
-   connect(listener_.get(), &HeadlessContainerListener::cancelSignTx, this
-      , &QMLAppObj::onCancelSignTx);
-
-   if (!connection_->BindConnection(settings_->listenAddress().toStdString()
-      , settings_->port().toStdString(), listener_.get())) {
-      logger_->error("Failed to bind to {}:{}"
-         , settings_->listenAddress().toStdString()
-         , settings_->port().toStdString());
-      statusUpdater_->setSocketOk(false);
-      return;
-   }
-   statusUpdater_->setSocketOk(true);
 }
