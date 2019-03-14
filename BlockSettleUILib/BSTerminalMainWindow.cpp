@@ -50,6 +50,7 @@
 #include "StartupDialog.h"
 #include "StatusBarView.h"
 #include "TabWithShortcut.h"
+#include "TerminalEncryptionDialog.h"
 #include "TransactionsViewModel.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
