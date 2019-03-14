@@ -1130,7 +1130,10 @@ void CreateTransactionDialogAdvanced::setTxFees()
 
    if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
-      ui_->spinBoxFeesManualTotal->setValue(transactionData_->totalFee());
+      ui_->doubleSpinBoxFeesManualPerByte->setValue(minFeePerByte_);
+      ui_->doubleSpinBoxFeesManualPerByte->setVisible(false);
+      ui_->spinBoxFeesManualTotal->setVisible(true);
+      ui_->spinBoxFeesManualTotal->setValue(transactionData_->GetTransactionSummary().totalFee);
       enableFeeChanging(false);
    }
 }
