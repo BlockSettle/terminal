@@ -23,9 +23,10 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , lastHigh(0.0)
    , lastLow(0.0)
    , lastClose(0.0)
-   , timerId(0)
    , maxPrice(0.0)
-   , minPrice(0.0) {
+   , minPrice(0.0)
+   , timerId(0)
+   , isDraggingYAxis(false) {
    ui_->setupUi(this);
 
    // setting up date range radio button group
@@ -415,11 +416,11 @@ void ChartWidget::OnInstrumentChanged(const QString &text) {
 
 void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 {
-   if (!info_) {
+   if (info_ == nullptr)
       return;
-   }
-   auto plottable = ui_->customPlot->plottableAt(event->localPos());
-   if (plottable) {
+
+   if (auto plottable = ui_->customPlot->plottableAt(event->localPos()))
+   {
       double x = event->localPos().x();
       double width = 0.8 * IntervalWidth(dateRange_.checkedId()) / 1000;
       double timestamp = ui_->customPlot->xAxis->pixelToCoord(x) + width / 2;
@@ -435,11 +436,38 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
                      .arg(ohlcValue.high, 0, 'g', -1)
                      .arg(ohlcValue.low, 0, 'g', -1)
                      .arg(ohlcValue.close, 0, 'g', -1)
-                     .arg( volumeValue.value, 0, 'g', -1));
-   } else {
+                     .arg(volumeValue.value, 0, 'g', -1));
+   } else 
+   {
       info_->setText({});
    }
+
+   if (isDraggingYAxis)
+   {
+	   qDebug() << "OnPlotMouseMove -> dragging Y axis";
+   }
+
    ui_->customPlot->replot();
+}
+
+void ChartWidget::OnAxisPressed(QMouseEvent *event)
+{
+	qDebug() << "OnAxisPressed";
+	auto axis = ui_->customPlot->axisRectAt(event->localPos());
+	auto verticalAxis = axis->axis(QCPAxis::atRight);
+	if (verticalAxis == ui_->customPlot->yAxis2)
+	{
+		qDebug() << "yAxis2 pressed";
+		isDraggingYAxis = true;
+		ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
+	}
+}
+
+void ChartWidget::OnAxisReleased(QMouseEvent *event)
+{
+	qDebug() << "OnAxisReleased";
+	isDraggingYAxis = false;
+	ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
 }
 
 void ChartWidget::InitializeCustomPlot()
@@ -549,4 +577,9 @@ void ChartWidget::InitializeCustomPlot()
    volumeAxisRect_->setRangeDrag(Qt::Horizontal);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
+   connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnAxisPressed);
+   connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnAxisReleased);
+
+   // make zoomable
+   ui_->customPlot->setInteraction(QCP::iRangeZoom, true);
 }
