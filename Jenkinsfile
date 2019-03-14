@@ -12,7 +12,7 @@ pipeline {
                         docker {
                             image 'terminal:latest'
                             reuseNode true
-                            args '-v /var/cache/3rd:/home/3rd'
+                            args '-v /var/cache/3rd:${WORKSPACE}/3rd'
                         }
                     }
                     steps {
