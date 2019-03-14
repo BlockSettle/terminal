@@ -533,11 +533,11 @@ bs::Address hd::Leaf::createAddress(AddressEntryType aet, const CbAddress &cb, b
          return {};
       }
       addrPath.append(addrTypeInternal);
-      addrPath.append(++lastIntIdx_);
+      addrPath.append(lastIntIdx_++);
    }
    else {
       addrPath.append(addrTypeExternal);
-      addrPath.append(++lastExtIdx_);
+      addrPath.append(lastExtIdx_++);
    }
    return createAddress({ addrPath, aet }, cb);
 }
@@ -599,21 +599,21 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb,
 
 void hd::Leaf::topUpAddressPool(const std::function<void()> &cb, size_t nbIntAddresses, size_t nbExtAddresses)
 {
-   const size_t nbPoolInt = nbIntAddresses ? 0 : getLastAddrPoolIndex(addrTypeInternal) - lastIntIdx_;
-   const size_t nbPoolExt = nbExtAddresses ? 0 : getLastAddrPoolIndex(addrTypeExternal) - lastExtIdx_;
+   const size_t nbPoolInt = nbIntAddresses ? 0 : getLastAddrPoolIndex(addrTypeInternal) - lastIntIdx_ + 1;
+   const size_t nbPoolExt = nbExtAddresses ? 0 : getLastAddrPoolIndex(addrTypeExternal) - lastExtIdx_ + 1;
    nbIntAddresses = qMax(nbIntAddresses, intAddressPoolSize_);
    nbExtAddresses = qMax(nbExtAddresses, extAddressPoolSize_);
 
    std::vector<std::pair<std::string, AddressEntryType>> request;
    for (const auto aet : poolAET_) {
       if (!isExtOnly_ && (nbPoolInt < (intAddressPoolSize_ / 2))) {
-         for (bs::hd::Path::Elem i = lastIntIdx_ + 1; i < lastIntIdx_ + nbIntAddresses + 1; i++) {
+         for (bs::hd::Path::Elem i = lastIntIdx_; i < lastIntIdx_ + nbIntAddresses; i++) {
             bs::hd::Path addrPath({ addrTypeExternal, i });
             request.push_back({ addrPath.toString(), aet });
          }
       }
       if (nbPoolExt < (extAddressPoolSize_ / 2)) {
-         for (bs::hd::Path::Elem i = lastExtIdx_ + 1; i < lastExtIdx_ + nbExtAddresses + 1; i++) {
+         for (bs::hd::Path::Elem i = lastExtIdx_; i < lastExtIdx_ + nbExtAddresses; i++) {
             bs::hd::Path addrPath({ addrTypeExternal, i });
             request.push_back({ addrPath.toString(), aet });
          }
@@ -720,14 +720,14 @@ int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, Addr
    if (isInternal) {
       intAddresses_.push_back(addr);
       addrPrefixedHashes_.internal.insert(addr.id());
-      if (addrIndex > lastIntIdx_) {
-         lastIntIdx_ = addrIndex;
+      if (addrIndex >= lastIntIdx_) {
+         lastIntIdx_ = addrIndex + 1;
       }
    } else {
       extAddresses_.push_back(addr);
       addrPrefixedHashes_.external.insert(addr.id());
-      if (addrIndex > lastExtIdx_) {
-         lastExtIdx_ = addrIndex;
+      if (addrIndex >= lastExtIdx_) {
+         lastExtIdx_ = addrIndex + 1;
       }
    }
    addressMap_[{path, aet}] = addr;
@@ -1207,7 +1207,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
 
    for (const auto &addr : tempAddresses_) {
       createAddress(addr, nullptr, false);
-      lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1));
+      lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
    }
    topUpAddressPool();
 }

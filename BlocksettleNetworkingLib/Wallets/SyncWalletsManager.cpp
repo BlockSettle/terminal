@@ -754,16 +754,16 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
    if (!tx.isInitialized() || !armory_) {
       return false;
    }
+   const auto wallet = getWalletById(walletId);
+   if (!wallet) {
+      return false;
+   }
+
    const std::string txKey = tx.getThisHash().toBinStr() + walletId;
    const auto &itDesc = txDesc_.find(txKey);
    if (itDesc != txDesc_.end()) {
       cb(itDesc->second.first, itDesc->second.second);
       return true;
-   }
-
-   const auto wallet = getWalletById(walletId);
-   if (!wallet) {
-      return false;
    }
 
    const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
