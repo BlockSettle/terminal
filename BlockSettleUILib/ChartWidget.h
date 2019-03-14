@@ -75,6 +75,7 @@ private:
 	double lastHigh;
 	double lastLow;
 	double lastClose;
+	double currentTimestamp;
 
 	qreal maxPrice;
 	qreal minPrice;

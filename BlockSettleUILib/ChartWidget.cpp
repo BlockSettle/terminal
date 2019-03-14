@@ -23,6 +23,7 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , lastHigh(0.0)
    , lastLow(0.0)
    , lastClose(0.0)
+   , currentTimestamp(0.0)
    , maxPrice(0.0)
    , minPrice(0.0)
    , timerId(0)
@@ -74,8 +75,6 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
 
    // initial select interval
    ui_->btn1h->click();
-
-   timerId = startTimer(getTimerInterval());
 }
 
 ChartWidget::~ChartWidget() {
@@ -109,6 +108,12 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
             if (lastClose < lastLow)
                lastLow = lastClose;
          }
+
+		 if (field.type == bs::network::MDField::MDTimestamp)
+		 {
+			 currentTimestamp = field.value;
+			 timerId = startTimer(getTimerInterval());
+		 }
       }
    }
 
@@ -334,9 +339,9 @@ void ChartWidget::timerEvent(QTimerEvent* event)
 
 std::chrono::seconds ChartWidget::getTimerInterval()
 {
-   auto currentTime = QDateTime::currentDateTime().time();
+   auto currentTime = QDateTime::fromMSecsSinceEpoch(static_cast<qint64> (currentTimestamp)).time();
 
-   auto timerInterval = std::chrono::seconds(3600);
+   auto timerInterval = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::milliseconds ((int) IntervalWidth(dateRange_.checkedId())));
    if (currentTime.second() != std::chrono::seconds(0).count())
    {
       if (currentTime.minute() != std::chrono::minutes(0).count())
@@ -346,6 +351,8 @@ std::chrono::seconds ChartWidget::getTimerInterval()
          timerInterval = std::chrono::seconds(diff);
       }
    }
+
+   qDebug() << "timer will start after " << timerInterval.count() << " seconds";
 
    return timerInterval;
 }
