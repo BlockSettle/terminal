@@ -18,7 +18,7 @@ pipeline {
                     steps {
                         sh "cd ./terminal && pip install requests"
                         sh "cd ./terminal && python generate.py release -production"
-                        sh "cd ./terminal/terminal.release && make -j 8"
+                        sh "cd ./terminal/terminal.release && make -j 4"
                         sh "cd ./terminal/Deploy && ./deploy.sh"
                     }
                 }
