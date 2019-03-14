@@ -411,7 +411,13 @@ void ChartWidget::OnDateRangeChanged(int interval) {
 }
 
 void ChartWidget::OnInstrumentChanged(const QString &text) {
-   UpdateChart(dateRange_.checkedId());
+   if (title_ != nullptr)
+   {
+	   if (text != title_->text())
+	   {
+		   UpdateChart(dateRange_.checkedId());
+	   }
+   }
 }
 
 void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
