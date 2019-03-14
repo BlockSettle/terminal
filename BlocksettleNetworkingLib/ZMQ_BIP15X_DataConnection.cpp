@@ -78,33 +78,27 @@ bool ZMQ_BIP15X_DataConnection::send(const string& data) {
    bool needs_rekey = false;
    auto rightnow = chrono::system_clock::now();
 
-/*   if (bip151Connection_->rekeyNeeded(message->getSerializedSize()))
-   {
+/*   if (bip151Connection_->rekeyNeeded(message->getSerializedSize())) {
       needs_rekey = true;
    }
-   else
-   {
+   else {
       auto time_sec = chrono::duration_cast<chrono::seconds>(
          rightnow - outKeyTimePoint_);
       if (time_sec.count() >= AEAD_REKEY_INVERVAL_SECONDS)
          needs_rekey = true;
-   }*/
+   }
 
-/*   if (needs_rekey)
-   {
-      BinaryData rekeyPacket(BIP151PUBKEYSIZE);
-      memset(rekeyPacket.getPtr(), 0, BIP151PUBKEYSIZE);
+   if (needs_rekey) {
+      BinaryData rekeyData(BIP151PUBKEYSIZE);
+      memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
 
 // TO DO: FIX ID VALUE, FIX
-      std::vector<BinaryData> outPacket = serialize(rekeyPacket.getRef()
+      ZMQ_BIP15X_Msg rekeyPacket;
+      std::vector<BinaryData> outPacket = rekeyPacket.serialize(rekeyData.getRef()
          , bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY, 0);
-      SerializedMessage rekey_msg;
-      rekey_msg.construct(
-         rekeyPacket.getDataVector(),
-         bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY);
 
-      if (!ZmqDataConnection::sendRawData(message)) {
-         // TO DO: FIX THIS
+      if (!send(move(outPacket[0].toBinStr()))) {
+    std::cout << "DEBUG: ZMQ_BIP15X_DataConnection::send - Rekey send failed" << dataLen << std::endl;
       }
       bip151Connection_->rekeyOuterSession();
       outKeyTimePoint_ = rightnow;
@@ -112,8 +106,8 @@ bool ZMQ_BIP15X_DataConnection::send(const string& data) {
    }*/
 
    // Encrypt data here only after the BIP 150 handshake is complete.
-   char* sendData = const_cast<char*>(&data[0]);
-   size_t dataLen = data.size();
+   string sendData = data;
+   size_t dataLen = sendData.size();
    if (bip151Connection_->getBIP150State() == BIP150State::SUCCESS) {
       ZMQ_BIP15X_Msg msg;
       BIP151Connection* connPtr = nullptr;
@@ -123,15 +117,14 @@ bool ZMQ_BIP15X_DataConnection::send(const string& data) {
       BinaryData payload(data);
       vector<BinaryData> encData = msg.serialize(payload.getDataVector()
          , connPtr, ZMQ_MSGTYPE_SINGLEPACKET, 0);
-      sendData = const_cast<char*>(encData[0].toBinStr().c_str());
-      dataLen = encData[0].toBinStr().size() + 1;
+      sendData = encData[0].toBinStr();
+      dataLen = sendData.size();
    }
-//   send(move(outData[0].toBinStr()));
 
    int result = -1;
    {
       FastLock locker(lockSocket_);
-      result = zmq_send(dataSocket_.get(), sendData, dataLen, 0);
+      result = zmq_send(dataSocket_.get(), sendData.c_str(), dataLen, 0);
    }
    if (result != (int)data.size()) {
       if (logger_) {
@@ -159,6 +152,12 @@ void ZMQ_BIP15X_DataConnection::onRawDataReceived(const string& rawData) {
    pendingData_.append(rawData);
    ProcessIncomingData();
 }
+
+bool ZMQ_BIP15X_DataConnection::closeConnection() {
+   bip151Connection_.reset();
+   return ZmqDataConnection::closeConnection();
+}
+
 
 // The function that processes raw ZMQ connection data. It processes the BIP
 // 150/151 handshake (if necessary) and decrypts the raw data.
@@ -261,7 +260,7 @@ void ZMQ_BIP15X_DataConnection::ProcessIncomingData() {
    }
 
    auto&& outMsg = inMsg.getSingleBinaryMessage();
-   ZmqDataConnection::notifyOnData(outMsg.toHexStr());
+   ZmqDataConnection::notifyOnData(outMsg.toBinStr());
 }
 
 ZmqContext::sock_ptr ZMQ_BIP15X_DataConnection::CreateDataSocket() {
@@ -333,6 +332,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
    {
       if (bip151Connection_->processEncinit(msgbdr.getPtr(), msgbdr.getSize()
          , false) != 0) {
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AEAD_ENCINIT not processed");
          return false;
       }
 
@@ -340,6 +341,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
       BinaryData encackPayload(BIP151PUBKEYSIZE);
       if (bip151Connection_->getEncackData(encackPayload.getPtr()
          , BIP151PUBKEYSIZE) != 0) {
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AEAD_ENCACK data not obtained");
          return false;
       }
 
@@ -349,6 +352,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
       BinaryData encinitPayload(ENCINITMSGSIZE);
       if (bip151Connection_->getEncinitData(encinitPayload.getPtr()
          , ENCINITMSGSIZE, BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0) {
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AEAD_ENCINIT data not obtained");
          return false;
       }
 
@@ -361,6 +366,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
    {
       if (bip151Connection_->processEncack(msgbdr.getPtr(), msgbdr.getSize()
          , true) == -1) {
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AEAD_ENCACK not processed");
          return false;
       }
 
@@ -383,6 +390,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
          authchallengeBuf.getPtr(), authchallengeBuf.getSize(), ss.str()
          , true //true: auth challenge step #1 of 6
          , false) != 0) { //false: have not processed an auth propose yet
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AUTH_CHALLENGE data not obtained");
          return false;
       }
 
@@ -393,14 +402,18 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
 
    case ZMQ_MSGTYPE_AEAD_REKEY:
    {
-      //rekey requests before auth are invalid
+      // Rekey requests before auth are invalid.
       if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - Not ready to rekey");
          return false;
       }
 
-      //if connection is already setup, we only accept rekey enack messages
+      // If connection is already setup, we only accept rekey enack messages.
       if (bip151Connection_->processEncack(msgbdr.getPtr(), msgbdr.getSize()
          , false) == -1) {
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AEAD_REKEY not processed");
          return false;
       }
 
@@ -413,6 +426,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
       if (bip151Connection_->processAuthreply(msgbdr.getPtr(), msgbdr.getSize()
          , true //true: step #2 out of 6
          , false) != 0) { //false: haven't seen an auth challenge yet
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AUTH_REPLY not processed");
          return false;
       }
 
@@ -420,6 +435,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
       if (bip151Connection_->getAuthproposeData(
          authproposeBuf.getPtr(),
          authproposeBuf.getSize()) != 0) {
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AUTH_PROPOSE data not obtained");
          return false;
       }
 
@@ -436,6 +453,8 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
 
       if (challengeResult == -1) {
          //auth fail, kill connection
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AUTH_CHALLENGE not processed");
          return false;
       }
       else if (challengeResult == 1) {
@@ -448,12 +467,14 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
          , false //true: step #5 of 6
          , goodChallenge);
 
-      writeData(authreplyBuf, ZMQ_MSGTYPE_AUTH_REPLY, true);
-
       if (validReply != 0) {
          //auth setup failure, kill connection
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - AUTH_REPLY data not obtained");
          return false;
       }
+
+      writeData(authreplyBuf, ZMQ_MSGTYPE_AUTH_REPLY, true);
 
       //rekey
       bip151Connection_->bip150HandshakeRekey();
@@ -467,6 +488,7 @@ bool ZMQ_BIP15X_DataConnection::processAEADHandshake(
    }
 
    default:
+      logger_->error("[processHandshake] Unknown message type.");
       return false;
    }
 

@@ -31,6 +31,7 @@ public:
 
    bool startBIP151Handshake();
    bool send(const std::string& data) override;
+   bool closeConnection() override;
 
 signals:
    void bip15XCompleted();

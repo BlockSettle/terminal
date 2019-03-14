@@ -14,43 +14,28 @@ ZMQ_BIP15X_ServerConnection::ZMQ_BIP15X_ServerConnection(
    , const QStringList& trustedClients, const uint64_t& id
    , const bool& ephemeralPeers)
    : ZmqServerConnection(logger, context), id_(id) {
-      string datadir =
-         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
-      string filename(SERVER_AUTH_PEER_FILENAME);
-      if (!ephemeralPeers) {
-          authPeers_ = make_shared<AuthorizedPeers>(datadir, filename);
-      }
-      else {
-         authPeers_ = make_shared<AuthorizedPeers>();
-      }
+   string datadir =
+      QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
+   string filename(SERVER_AUTH_PEER_FILENAME);
+   if (!ephemeralPeers) {
+       authPeers_ = make_shared<AuthorizedPeers>(datadir, filename);
+   }
+   else {
+      authPeers_ = make_shared<AuthorizedPeers>();
+   }
 
-      auto lbds = getAuthPeerLambda();
-      for (auto b : trustedClients) {
-         QStringList nameKeyList = b.split(QStringLiteral(":"));
+   auto lbds = getAuthPeerLambda();
+   for (auto b : trustedClients) {
+      QStringList nameKeyList = b.split(QStringLiteral(":"));
 /*         if (nameKeyList.size() != 2) {
             return -1;
          }*/
-         vector<string> keyName;
-         keyName.push_back(nameKeyList[0].toStdString());
-         SecureBinaryData inKey = READHEX(nameKeyList[1].toStdString());
-         authPeers_->addPeer(inKey, keyName);
-      }
-      bip151Connection_ = make_shared<BIP151Connection>(lbds);
-
-/*      writeLock_ = std::make_shared<std::atomic<unsigned>>();
-      writeLock_->store(0);
-
-      readLock_ = std::make_shared<std::atomic<unsigned>>();
-      readLock_->store(0);
-
-      serializedStack_ = std::make_shared<Queue<SerializedMessage>>();
-      readQueue_ = std::make_shared<Queue<BinaryData>>();
-
-      count_ = std::make_shared<std::atomic<int>>();
-      count_->store(0, std::memory_order_relaxed);
-
-      run_ = std::make_shared<std::atomic<int>>();
-      run_->store(0, std::memory_order_relaxed);*/
+      vector<string> keyName;
+      keyName.push_back(nameKeyList[0].toStdString());
+      SecureBinaryData inKey = READHEX(nameKeyList[1].toStdString());
+      authPeers_->addPeer(inKey, keyName);
+   }
+   bip151Connection_ = make_shared<BIP151Connection>(lbds);
 }
 
 ZmqContext::sock_ptr ZMQ_BIP15X_ServerConnection::CreateDataSocket() {
@@ -94,13 +79,7 @@ bool ZMQ_BIP15X_ServerConnection::ReadFromDataSocket() {
    }
 
    ProcessIncomingData(data.ToString(), clientIdStr);
-//   if (decData == "") {
-//      logger_->error("[{}] {} failed decryption", __func__, connectionName_);
-//      return false;
-//   }
 
-// TO DO: Refactor such that decrypted data is placed in notification
-//   notifyListenerOnData(clientIdStr, data.ToString());
    return true;
 }
 
@@ -162,33 +141,11 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
          , packetData.getSize(), (uint8_t*)packetData.getPtr()
          , packetData.getSize());
 
+      // Did decryption succeed? If packets ever have to be split up, we may
+      // have to make like Armory's WS implementation and look for fragments.
       if (result != 0) {
-//         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1)
-//         {
-            /*
-            lws receives packet in the order the counterpart sent them, but
-            it may break down a packet into several payloads, dependent on the
-            write buffer fillrate.
-
-            The AEAD layer requires full packets to verify the attached MAC,
-            meaning we cannot distinguish between packets with invalid encryption
-            and partially transmitted packets with valid encryption until we have
-            as many bytes as the advertized chacha20 size available to us.
-
-            At same time we can reject packets that advertize a size superior to
-            our expected maximum packet size (WEBSOCKET_MESSAGE_PACKET_SIZE),
-            which is often the case when deciphering the length of an invalidly
-            encrypted packet.
-
-            Since lws does not spill packets onto one another, there is no risk
-            that the data we receive carries the head of another packet at its tail.
-            Reconstruction is therefor a simple case of appending the incoming data
-            to the previous left over until we have enough data to decrypt for the
-            advertized packet size.
-            */
-//            readLeftOverData_ = move(packetData);
-//            return;
-         }
+std::cout << "DEBUG: ZMQ_BIP15X_ServerConnection::ProcessIncomingData() - Decryption failed! Code = " << result << std::endl;
+      }
 
 // TO DO: Double check logic.
       packetData.resize(plainTextSize);
@@ -220,7 +177,7 @@ void ZMQ_BIP15X_ServerConnection::ProcessIncomingData(const string& encData
       return;
    }
 
-   notifyListenerOnData(clientID, outMsg.toHexStr());
+   notifyListenerOnData(clientID, outMsg.toBinStr());
 }
 
 bool ZMQ_BIP15X_ServerConnection::ConfigDataSocket(
@@ -251,6 +208,8 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
 
       if (!zmqMsg.parsePacket(msgdata.getRef())) {
          //invalid packet
+         logger_->error("[processHandshake] BIP 150/151 handshake process "
+            "failed - ZMQ packet not properly parsed");
          return false;
       }
 
@@ -271,6 +230,8 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
             , ENCINITMSGSIZE
             , BIP151SymCiphers::CHACHA20POLY1305_OPENSSH) != 0) {
             //failed to init handshake, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AEAD_ENCINIT data not obtained");
             return false;
          }
 
@@ -288,6 +249,8 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
          if (bip151Connection_->processEncack(dataBdr.getPtr()
             , dataBdr.getSize(), true) != 0) {
             //failed to init handshake, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AEAD_ENCACK not processed");
             return false;
          }
 
@@ -296,16 +259,20 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
 
       case ZMQ_MSGTYPE_AEAD_REKEY:
       {
+         // Rekey requests before auth are invalid
          if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
             //can't rekey before auth, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - Not yet able to process a rekey");
             return false;
          }
 
-         //process rekey
+         // If connection is already set up, we only accept rekey encack messages.
          if (bip151Connection_->processEncack(dataBdr.getPtr()
             , dataBdr.getSize(), false) != 0) {
             //failed to init handshake, kill connection
-            std::cout << "failed to process rekey" << std::endl;
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AEAD_ENCACK not processed");
             return false;
          }
 
@@ -318,6 +285,8 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
          if (bip151Connection_->processEncinit(dataBdr.getPtr()
             , dataBdr.getSize(), false) != 0) {
             //failed to init handshake, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_ENCINIT processing failed");
             return false;
          }
 
@@ -326,13 +295,15 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
          if (bip151Connection_->getEncackData(encackData.getPtr()
             , BIP151PUBKEYSIZE) != 0) {
             //failed to init handshake, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_ENCACK data not obtained");
             return false;
          }
 
          if (!writeToClient(ZMQ_MSGTYPE_AEAD_ENCACK, encackData.getRef()
             , false)) {
-            logger_->error("[processHandshake] ZMG_MSGTYPE_AEAD_ENCINIT: "
-               "Response not sent");
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AEAD_ENCACK not sent");
          }
 
          bip151HandshakeCompleted_ = true;
@@ -348,6 +319,8 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
 
          if (challengeResult == -1) {
             //auth fail, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_CHALLENGE processing failed");
             return false;
          }
          else if (challengeResult == 1) {
@@ -359,13 +332,16 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
             , authreplyBuf.getSize(), true //true: step #2 of 6
             , goodChallenge) == -1) {
             //auth setup failure, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_REPLY data not obtained");
             return false;
          }
 
          if (!writeToClient(ZMQ_MSGTYPE_AUTH_REPLY, authreplyBuf.getRef()
             , true)) {
-            logger_->error("[processHandshake] ZMG_MSGTYPE_AUTH_CHALLENGE: "
-               "Response not sent");
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_REPLY not sent");
+            return false;
          }
 
          break;
@@ -379,6 +355,8 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
 
          if (proposeResult == -1) {
             //auth setup failure, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_PROPOSE processing failed");
             return false;
          }
          else if (proposeResult == 1) {
@@ -396,13 +374,15 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
             , false //false: step #4 of 6
             , goodPropose) == -1) {
             //auth setup failure, kill connection
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_CHALLENGE data not obtained");
             return false;
          }
 
          if (!writeToClient(ZMQ_MSGTYPE_AUTH_CHALLENGE
             , authchallengeBuf.getRef(), true)) {
-            logger_->error("[processHandshake] ZMG_MSGTYPE_AUTH_PROPOSE: "
-               "Response not sent");
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AUTH_CHALLENGE not sent");
          }
 
          break;
@@ -426,7 +406,6 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
 
       default:
          logger_->error("[processHandshake] Unknown message type.");
-         //unexpected msg id, kill connection
          return false;
       }
 
@@ -434,7 +413,7 @@ bool ZMQ_BIP15X_ServerConnection::processAEADHandshake(const BinaryData& msgObj
    };
 
    if (!processHandshake(msgObj)) {
-      logger_->error("[{}] BIP 150/151 handshake process failed.");
+      logger_->error("[{}] BIP 150/151 handshake process failed.", __func__);
    }
 }
 
