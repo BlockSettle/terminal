@@ -78,7 +78,7 @@ bool ArmoryConnection::startLocalArmoryProcess(const ArmorySettings &settings)
       default: break;
       }
 
-      args.append(QLatin1String("--db-type=DB_FULL"));
+//      args.append(QLatin1String("--db-type=DB_FULL"));
       args.append(QLatin1String("--listen-port=") + QString::number(settings.armoryDBPort));
       args.append(QLatin1String("--satoshi-datadir=\"") + settings.bitcoinBlocksDir + QLatin1String("\""));
       args.append(QLatin1String("--dbdir=\"") + settings.dbDir + QLatin1String("\""));
