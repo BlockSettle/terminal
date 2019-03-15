@@ -692,7 +692,7 @@ bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> 
       index = getAddressIndex(result);
       return result;
    };
-   const auto &cbChangeAddr = [this, changeAddress, cbNewChangeAddr](std::string &index) {
+   const auto &cbChangeAddr = [changeAddress, cbNewChangeAddr](std::string &index) {
       if (changeAddress.isNull()) {
          return cbNewChangeAddr(index);
       }

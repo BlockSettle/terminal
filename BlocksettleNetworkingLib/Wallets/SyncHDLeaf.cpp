@@ -979,10 +979,10 @@ bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
          cb(*result);
       }
    };
-   const auto &cbTxOutListInt = [this, cbTxOutList](std::vector<UTXO> txOutList) {
+   const auto &cbTxOutListInt = [cbTxOutList](std::vector<UTXO> txOutList) {
       cbTxOutList(txOutList, kIntConfCount);
    };
-   const auto &cbTxOutListExt = [this, cbTxOutList](std::vector<UTXO> txOutList) {
+   const auto &cbTxOutListExt = [cbTxOutList](std::vector<UTXO> txOutList) {
       cbTxOutList(txOutList, kExtConfCount);
    };
    bool rc = Wallet::getSpendableTxOutList(btcWallet_, cbTxOutListExt, obj, val);

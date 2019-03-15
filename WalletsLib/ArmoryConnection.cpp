@@ -371,7 +371,7 @@ bool ArmoryConnection::getWalletsLedgerDelegate(std::function<void(const std::sh
       try {
          auto ld = std::make_shared< AsyncClient::LedgerDelegate>(delegate.get());
          if (cbInMainThread_) {
-            QMetaObject::invokeMethod(this, [this, cb, ld]{
+            QMetaObject::invokeMethod(this, [cb, ld]{
                cb(ld);
             });
          }
