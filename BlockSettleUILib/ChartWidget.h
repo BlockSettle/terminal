@@ -84,12 +84,16 @@ private:
 	qreal newMaxPrice;
 	qreal newMinPrice;
 
+	qreal currentMinPrice{ 0 };
+	qreal currentMaxPrice{ 0 };
+
 	int timerId;
 	int lastInterval;
 	int dragY;
 
 	bool isDraggingYAxis;
 	bool isDraggingXAxis{ false };
+	bool isDraggingMainPlot{ false };
 
 	qreal lastDragCoordX{ 0.0 };
 	qreal startDragCoordX{ 0.0 };

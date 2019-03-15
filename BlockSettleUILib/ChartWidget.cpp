@@ -270,6 +270,9 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
    qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
 
+   currentMinPrice = minPrice;
+   currentMaxPrice = maxPrice;
+
    auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
    minPrice -= margin;
    maxPrice += margin;
@@ -500,8 +503,26 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   lower_bound += diff / tempCoeff * scalingCoeff * directionCoeff;
 	   upper_bound -= diff / tempCoeff * scalingCoeff * directionCoeff;
 	   bottomAxis->setRange(lower_bound, upper_bound);
+
+	   
+
+
 	   ui_->customPlot->replot();
 	   ui_->customPlot->update();
+   }
+
+   if (isDraggingMainPlot) {
+	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+	   currentMinPrice = std::numeric_limits<qreal>::max();
+	   currentMaxPrice = std::numeric_limits<qreal>::min();
+	   for (const auto& it : *candlesticksChart_->data()) {
+		   if (it.key >= lower_bound && it.key <= upper_bound) {
+			   currentMinPrice = qMin(currentMinPrice, it.low);
+			   currentMaxPrice = qMax(currentMaxPrice, it.high);
+		   }
+	   }
+	   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
    }
 
    ui_->customPlot->replot();
@@ -519,12 +540,18 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
 		lastDragCoordX = event->pos().x();
 		startDragCoordX = event->pos().x();
 	}
+
+	if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
+		isDraggingMainPlot = true;
+	}
+	qDebug() << (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos()));
 }
 
 void ChartWidget::OnMouseReleased(QMouseEvent* event)
 {
 	isDraggingYAxis = false;
 	isDraggingXAxis = false;
+	isDraggingMainPlot = false;
 	ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
 }
 
