@@ -1736,6 +1736,14 @@ shared_ptr<AddressAccount> AssetWallet::getAccountForID(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+const string& AssetWallet::getDbFilename(void) const
+{ 
+   if (dbEnv_ == nullptr)
+      throw WalletException("uninitialized db environment");
+   return dbEnv_->getFilename(); 
+}
+
+////////////////////////////////////////////////////////////////////////////////
 AddressEntryType AssetWallet::getAddrTypeForAccount(const BinaryData& ID)
 {
    auto acc = getAccountForID(ID);
@@ -2051,4 +2059,10 @@ shared_ptr<MetaDataAccount> AssetWallet::getMetaAccount(MetaAccountType type)
    if (iter == metaDataAccounts_.end())
       throw WalletException("no meta account for this type");
    return *iter;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool AssetWallet_Single::isWatchingOnly() const
+{
+   return !root_->hasPrivateKey();
 }

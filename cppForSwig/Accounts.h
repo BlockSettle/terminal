@@ -346,6 +346,7 @@ private:
 
    unsigned lastUsedIndex_ = 0;
 
+   //<assetID, <address type, prefixed address hash>>
    std::map<BinaryData, std::map<AddressEntryType, BinaryData>> addrHashMap_;
    bool updateHashMap_ = true;
 
@@ -438,6 +439,8 @@ private:
 
    AddressEntryType defaultAddressEntryType_ = AddressEntryType_P2PKH;
    std::set<AddressEntryType> addressTypes_;
+
+   //<prefixed address hash, <assetID, address type>>
    std::map<BinaryData, std::pair<BinaryData, AddressEntryType>> addressHashes_;
 
    BinaryData ID_;
@@ -524,6 +527,7 @@ public:
 
 
    AddressEntryType getAddressType(void) const { return defaultAddressEntryType_; }
+   std::set<AddressEntryType> getAddressTypeSet(void) const { return addressTypes_; }
    bool hasAddressType(AddressEntryType);
 
    std::shared_ptr<AssetEntry> getAssetForID(const BinaryData&) const;
@@ -534,6 +538,11 @@ public:
 
    std::shared_ptr<AssetAccount> getOuterAccount(void) const;
    const std::map<BinaryData, std::shared_ptr<AssetAccount>>& getAccountMap(void) const;
+
+   const BinaryData& getOuterAccountID(void) const { return outerAccount_; }
+   const BinaryData& getInnerAccountID(void) const { return innerAccount_; }
+
+   std::shared_ptr<LMDBEnv> getDbEnv(void) const { return dbEnv_; }
 
    //Lockable virtuals
    void initAfterLock(void) {}

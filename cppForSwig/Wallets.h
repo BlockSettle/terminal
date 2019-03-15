@@ -221,7 +221,6 @@ protected:
    void updateAddressSet(std::shared_ptr<AddressEntry>);
    void writeAddressType(std::shared_ptr<AddressEntry>);
    AddressEntryType getAddrTypeForAccount(const BinaryData& ID);
-   std::shared_ptr<AddressAccount> getAccountForID(const BinaryData& ID) const;
 
    void loadMetaAccounts(void);
 
@@ -288,6 +287,10 @@ public:
 
    void addMetaAccount(MetaAccountType);
    std::shared_ptr<MetaDataAccount> getMetaAccount(MetaAccountType);
+   std::shared_ptr<AddressAccount> getAccountForID(const BinaryData& ID) const;
+   
+   const std::string& getDbFilename(void) const;
+   std::shared_ptr<LMDBEnv> getDbEnv(void) const { return dbEnv_; }
 
    //virtual
    virtual std::set<BinaryData> getAddrHashSet();
@@ -350,6 +353,8 @@ public:
       std::shared_ptr<AssetEntry_BIP32Root> parentNode,
       std::vector<unsigned> derPath,
       bool isMain = false);
+
+   bool isWatchingOnly(void) const;
 
    std::shared_ptr<AssetEntry> getMainAccountAssetForIndex(unsigned) const;
    unsigned getMainAccountAssetCount(void) const;
