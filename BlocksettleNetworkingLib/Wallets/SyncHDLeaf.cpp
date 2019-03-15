@@ -16,8 +16,9 @@ hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::
    , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger
    , bs::core::wallet::Type type, bool extOnlyAddresses)
    : bs::sync::Wallet(container, logger)
-   , walletId_(walletId), rescanWalletId_(walletId + "_rescan"), type_(type)
+   , walletId_(walletId), type_(type)
    , name_(name), desc_(desc), isExtOnly_(extOnlyAddresses)
+   , rescanWalletId_(walletId + "_rescan")
 { }
 
 hd::Leaf::~Leaf() = default;
