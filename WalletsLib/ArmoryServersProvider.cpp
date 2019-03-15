@@ -14,8 +14,8 @@ const QList<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
 const int ArmoryServersProvider::kDefaultServersCount = ArmoryServersProvider::defaultServers_.size();
 
 ArmoryServersProvider::ArmoryServersProvider(const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
-   : appSettings_(appSettings)
-   , QObject(parent)
+   : QObject(parent)
+   , appSettings_(appSettings)
 {
 }
 

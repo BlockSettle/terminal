@@ -59,9 +59,6 @@ static const QString regtestSubdir = QLatin1String("regtest");
 
 static const QString zmqSignerKeyFileName = QLatin1String("zmq_conn_srv.pub");
 
-static const int DefaultSatoshiPort = 8333;
-static const int DefaultTestnetSatoshiPort = 18333;
-
 static const int ArmoryDefaultLocalMainPort = 9001;
 static const int ArmoryDefaultLocalTestPort = 19001;
 static const int ArmoryDefaultRemoteMainPort = 80;

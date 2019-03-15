@@ -6,8 +6,6 @@
 #include "Wallets.h"
 
 #define ADDR_KEY     0x00002002
-const uint32_t kExtConfCount = 6;
-const uint32_t kIntConfCount = 1;
 
 using namespace bs::core;
 

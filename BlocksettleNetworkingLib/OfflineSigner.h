@@ -45,28 +45,28 @@ public:
       , bool keepDuplicatedRecipients = false) override;
 
    RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, const PasswordType& password = {}) override
+      , bool  = false, const PasswordType&  = {}) override
    { return 0; }
 
    RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override
+      , const std::string &settlementId, bool = false, const PasswordType& = {}) override
    { return 0; }
 
    RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override
    { return 0; }
 
-   void SendPassword(const std::string &walletId, const PasswordType &password, bool) override
+   void SendPassword(const std::string &, const PasswordType &, bool) override
    {}
 
-   RequestId createHDLeaf(const std::string &walletId, const bs::hd::Path &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
-   RequestId createHDWallet(const std::string &name, const std::string &desc
-      , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override { return 0; }
-   RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
-   void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
-   RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank, const SecureBinaryData &oldPass
-      , bool addNew, bool removeOld, bool dryRun) override { return 0; }
+   RequestId createHDLeaf(const std::string &, const bs::hd::Path &
+      , const std::vector<bs::wallet::PasswordData> & = {}) override { return 0; }
+   RequestId createHDWallet(const std::string &, const std::string &
+      , bool , const bs::core::wallet::Seed &, const std::vector<bs::wallet::PasswordData> & = {}, bs::wallet::KeyRank  = { 0, 0 }) override { return 0; }
+   RequestId getDecryptedRootKey(const std::string &, const SecureBinaryData & = {}) override { return 0; }
+   void setLimits(const std::string &, const SecureBinaryData &, bool ) override {}
+   RequestId changePassword(const std::string &, const std::vector<bs::wallet::PasswordData> &
+      , bs::wallet::KeyRank, const SecureBinaryData &
+      , bool , bool , bool ) override { return 0; }
 
 protected:
    virtual QStringList args() const;

@@ -13,14 +13,14 @@ using namespace bs::sync;
 
 hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
    , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), netType_(netType), walletId_(walletId), name_(name), desc_(desc)
+   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
    , logger_(logger)
 {}
 
 hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
    , const std::string &desc, SignContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), netType_(netType), walletId_(walletId), name_(name), desc_(desc)
+   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
    , signContainer_(container), logger_(logger)
 {}
 

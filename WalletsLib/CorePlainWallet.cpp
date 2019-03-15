@@ -523,7 +523,7 @@ public:
       return itKey->second;
    }
 
-   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey) override {
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData&) override {
       throw std::runtime_error("no privkey");
       return {};
    }
