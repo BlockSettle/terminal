@@ -89,6 +89,10 @@ private:
 	int dragY;
 
 	bool isDraggingYAxis;
+	bool isDraggingXAxis{ false };
+
+	qreal lastDragCoordX{ 0.0 };
+	qreal startDragCoordX{ 0.0 };
 };
 
 #endif // CHARTWIDGET_H

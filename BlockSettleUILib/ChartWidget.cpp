@@ -471,7 +471,7 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   bool minusY = event->y() < dragY;
 	   dragY = event->y();
 
-	   auto margin = qMax(newMaxPrice - newMinPrice, 0.01) / 100;
+	   auto margin = qMax(newMaxPrice - newMinPrice, 0.01) / 10;
 	   margin = minusY ? -margin : margin;
 	   newMinPrice -= margin;
 	   newMaxPrice += margin;
@@ -486,6 +486,23 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
    {
 	   ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal | Qt::Vertical);
    }
+   if (isDraggingXAxis) {
+	   auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
+	   bottomAxis->axisRect()->setRangeDrag(bottomAxis->orientation());
+	   auto currentXPos = event->pos().x();
+	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+	   auto diff = upper_bound - lower_bound;
+	   auto directionCoeff = (currentXPos - lastDragCoordX > 0) ? -1 : 1;
+	   double scalingCoeff = qAbs(currentXPos - startDragCoordX) / ui_->customPlot->size().width();
+	   lastDragCoordX = currentXPos;
+	   double tempCoeff = 4.0; //change this to impact on xAxis scale speed
+	   lower_bound += diff / tempCoeff * scalingCoeff * directionCoeff;
+	   upper_bound -= diff / tempCoeff * scalingCoeff * directionCoeff;
+	   bottomAxis->setRange(lower_bound, upper_bound);
+	   ui_->customPlot->replot();
+	   ui_->customPlot->update();
+   }
 
    ui_->customPlot->replot();
 }
@@ -494,11 +511,21 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
 {
 	auto select = ui_->customPlot->yAxis2->selectTest(event->pos(), false);
 	isDraggingYAxis = select != -1.0;
+
+	auto selectXPoint = volumeAxisRect_->axis(QCPAxis::atBottom)->selectTest(event->pos(), false);
+	isDraggingXAxis = selectXPoint != -1.0;
+	if (isDraggingXAxis) {
+		ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
+		lastDragCoordX = event->pos().x();
+		startDragCoordX = event->pos().x();
+	}
 }
 
 void ChartWidget::OnMouseReleased(QMouseEvent* event)
 {
 	isDraggingYAxis = false;
+	isDraggingXAxis = false;
+	ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
 }
 
 void ChartWidget::InitializeCustomPlot()
