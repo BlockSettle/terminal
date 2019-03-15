@@ -188,6 +188,8 @@ void NetworkSettingsPage::apply()
 
    appSettings_->set(ApplicationSettings::pubBridgeHost, ui_->lineEditPublicBridgeHost->text());
    appSettings_->set(ApplicationSettings::pubBridgePort, ui_->spinBoxPublicBridgePort->value());
+
+   appSettings_->set(ApplicationSettings::envConfiguration, ui_->comboBoxEnvironment->currentIndex());
 }
 
 void NetworkSettingsPage::onEnvSelected(int index)
