@@ -20,7 +20,7 @@ class WebsocketsSettings(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + '_' + self._script_revision
 
     def get_install_dir(self):
         return os.path.join(self._project_settings.get_common_build_dir(), 'libwebsockets')
