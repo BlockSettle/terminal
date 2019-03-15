@@ -78,10 +78,14 @@ bool ArmoryConnection::startLocalArmoryProcess(const ArmorySettings &settings)
       default: break;
       }
 
+      args.append(QLatin1String("--db-type=DB_FULL"));
+      args.append(QLatin1String("--listen-port=") + QString::number(settings.armoryDBPort));
       args.append(QLatin1String("--satoshi-datadir=\"") + settings.bitcoinBlocksDir + QLatin1String("\""));
       args.append(QLatin1String("--dbdir=\"") + settings.dbDir + QLatin1String("\""));
       args.append(QLatin1String("--public"));
 
+      logger_->debug("[{}] running {} {}", __func__, settings.armoryExecutablePath.toStdString()
+         , args.join(QLatin1Char(' ')).toStdString());
       armoryProcess_->start(settings.armoryExecutablePath, args);
       if (armoryProcess_->waitForStarted(DefaultArmoryDBStartTimeoutMsec)) {
          return true;
