@@ -275,6 +275,9 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    maxPrice += margin;
    minPrice = qMax(minPrice, 0.0);
 
+   newMaxPrice = maxPrice;
+   newMinPrice = minPrice;
+
    volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
    UpdatePlot(interval, maxTimestamp);
 }
@@ -463,30 +466,39 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 
    if (isDraggingYAxis)
    {
-	   qDebug() << "OnPlotMouseMove -> dragging Y axis";
+	   ui_->customPlot->axisRect()->setRangeDrag(ui_->customPlot->yAxis2->orientation());
+
+	   bool minusY = event->y() < dragY;
+	   dragY = event->y();
+
+	   auto margin = qMax(newMaxPrice - newMinPrice, 0.01) / 100;
+	   margin = minusY ? -margin : margin;
+	   newMinPrice -= margin;
+	   newMaxPrice += margin;
+	   newMinPrice = qMax(newMinPrice, 0.0);
+
+	   ui_->customPlot->yAxis2->setRange(newMinPrice, newMaxPrice);
+	   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
+	   ui_->customPlot->replot();
+	   ui_->customPlot->update();
+   }
+   else
+   {
+	   ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal | Qt::Vertical);
    }
 
    ui_->customPlot->replot();
 }
 
-void ChartWidget::OnAxisPressed(QMouseEvent *event)
+void ChartWidget::OnMousePressed(QMouseEvent* event)
 {
-	qDebug() << "OnAxisPressed";
-	auto axis = ui_->customPlot->axisRectAt(event->localPos());
-	auto verticalAxis = axis->axis(QCPAxis::atRight);
-	if (verticalAxis == ui_->customPlot->yAxis2)
-	{
-		qDebug() << "yAxis2 pressed";
-		isDraggingYAxis = true;
-		ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
-	}
+	auto select = ui_->customPlot->yAxis2->selectTest(event->pos(), false);
+	isDraggingYAxis = select != -1.0;
 }
 
-void ChartWidget::OnAxisReleased(QMouseEvent *event)
+void ChartWidget::OnMouseReleased(QMouseEvent* event)
 {
-	qDebug() << "OnAxisReleased";
 	isDraggingYAxis = false;
-	ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
 }
 
 void ChartWidget::InitializeCustomPlot()
@@ -591,14 +603,11 @@ void ChartWidget::InitializeCustomPlot()
    volumeAxisRect_->setMarginGroup(QCP::msLeft|QCP::msRight, group);
 
    //make draggable horizontally
-   ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
-   ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal);
-   volumeAxisRect_->setRangeDrag(Qt::Horizontal);
+   ui_->customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
-   connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnAxisPressed);
-   connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnAxisReleased);
+   connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnMousePressed);
+   connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnMouseReleased);
 
    // make zoomable
-   ui_->customPlot->setInteraction(QCP::iRangeZoom, true);
 }
