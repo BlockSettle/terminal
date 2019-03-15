@@ -244,13 +244,13 @@ bool TransactionData::UpdateTransactionData()
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
-         summary_.hasChange = true;   // only maxAmount shouldn't have change   // selection.hasChange_;
+         summary_.hasChange = selection.hasChange_;
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
 
-         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
+/*         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
             summary_.totalFee = totalFee();
             summary_.feePerByte = feePerByte();
-         }
+         }*/
       }
       summary_.usedTransactions = usedUTXO_.size();
    }
