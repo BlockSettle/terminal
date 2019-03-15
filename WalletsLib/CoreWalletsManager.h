@@ -8,7 +8,6 @@
 #include "EncryptionUtils.h"
 #include "CoreSettlementWallet.h"
 #include "CoreWallet.h"
-#include "WalletEncryption.h"
 
 
 namespace spdlog {
@@ -59,11 +58,11 @@ namespace bs {
          bool deleteWalletFile(const WalletPtr &);
          bool deleteWalletFile(const HDWalletPtr &);
 
-         void setChainCode(const BinaryData &);
+         void setChainCode(const BinaryData &) {}
 
          HDWalletPtr createWallet(const std::string& name, const std::string& description
-            , bs::core::wallet::Seed, const std::string &walletsPath, bool primary = false
-            , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
+            , bs::core::wallet::Seed, const std::string &walletsPath, 
+            const SecureBinaryData& passprase, bool primary = false);
          void addWallet(const HDWalletPtr &, const std::string &walletsPath = {});
 
       private:

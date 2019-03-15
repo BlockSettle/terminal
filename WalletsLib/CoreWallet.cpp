@@ -364,8 +364,8 @@ wallet::Seed wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &privKey, 
 }
 
 
-Wallet::Wallet(NetworkType netType, const std::shared_ptr<spdlog::logger> &logger)
-   : wallet::MetaData(), netType_(netType), logger_(logger)
+Wallet::Wallet(std::shared_ptr<spdlog::logger> logger)
+   : wallet::MetaData(), logger_(logger)
 {}
 
 Wallet::~Wallet() = default;
@@ -456,7 +456,7 @@ bool Wallet::isSegWitScript(const BinaryData &script)
 }
 */
 
-Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinaryData &password,
+Signer Wallet::getSigner(const wallet::TXSignRequest &request,
                              bool keepDuplicatedRecipients)
 {
    bs::CheckRecipSigner signer;
@@ -478,7 +478,7 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinar
    }
    else {
       for (const auto &utxo : request.inputs) {
-         auto spender = std::make_shared<ScriptSpender>(utxo, getResolver(password));
+         auto spender = std::make_shared<ScriptSpender>(utxo, getResolver());
          if (request.RBF) {
             spender->setSequence(UINT32_MAX - 2);
          }
@@ -491,10 +491,12 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinar
    }
 
    if (request.change.value && !request.populateUTXOs) {
-      auto changeAddress = createAddressWithIndex(request.change.index);
-      if (changeAddress.isNull() || (changeAddress.prefixed() != request.change.address.prefixed())) {
-         changeAddress = request.change.address;   // pub and priv wallets are not synchronized for some reason
-      }
+      
+      //check change address belongs to wallet
+      auto changeAddress = request.change.address;
+      if (!containsAddress(changeAddress))
+         throw WalletException("invalid change address");
+
       setAddressComment(changeAddress, wallet::Comment::toString(wallet::Comment::ChangeAddress));
       const auto addr = getAddressEntryForAddr(changeAddress);
       const auto changeRecip = (addr != nullptr) ? addr->getRecipient(request.change.value)
@@ -509,14 +511,13 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinar
       signer.removeDupRecipients();
    }
 
-   signer.setFeed(getResolver(password));
+   signer.setFeed(getResolver());
    return signer;
 }
 
-BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request,
-   const SecureBinaryData &password, bool keepDuplicatedRecipients)
+BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request, bool keepDuplicatedRecipients)
 {
-   auto signer = getSigner(request, password, keepDuplicatedRecipients);
+   auto signer = getSigner(request, keepDuplicatedRecipients);
    signer.sign();
    if (!signer.verify()) {
       throw std::logic_error("signer failed to verify");
@@ -524,9 +525,9 @@ BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request,
    return signer.serialize();
 }
 
-BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request, const SecureBinaryData &password)
+BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request)
 {
-   auto signer = getSigner(request, password);
+   auto signer = getSigner(request);
    signer.sign();
    return signer.serializeState();
 }
@@ -545,9 +546,7 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
       if (wallet.second->isWatchingOnly()) {
          throw std::logic_error("Won't sign with watching-only wallet");
       }
-      const auto &itKey = keys.find(wallet.first);
-      const auto password = (itKey == keys.end()) ? SecureBinaryData{} : itKey->second;
-      signer.setFeed(wallet.second->getResolver(password));
+      signer.setFeed(wallet.second->getResolver());
       signer.sign();
       signer.resetFeeds();
    }

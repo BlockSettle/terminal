@@ -380,13 +380,8 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       , keepDuplicatedRecipients = request.keepduplicatedrecipients()] (const SecureBinaryData &pass,
             bool cancelledByUser) {
       try {
-         if (!wallet->encryptionTypes().empty() && pass.isNull()) {
-            logger_->error("[HeadlessContainerListener] empty password for wallet {}", wallet->name());
-            SignTXResponse(clientId, id, reqType, "missing password for encrypted wallet", {}, cancelledByUser);
-            return;
-         }
-         const auto tx = partial ? wallet->signPartialTXRequest(txSignReq, pass)
-            : wallet->signTXRequest(txSignReq, pass, keepDuplicatedRecipients);
+         const auto tx = partial ? wallet->signPartialTXRequest(txSignReq)
+            : wallet->signTXRequest(txSignReq);
          SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
          emit xbtSpent(value, autoSign);
       }
@@ -470,7 +465,7 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
          SignTXResponse(clientId, id, reqType, "password required, but empty received");
       }
 
-      const auto authKeys = authWallet->getKeyPairFor(authAddr, pass);
+      bs::core::KeyPair authKeys;// = authWallet->getKeyPairFor(authAddr, pass);
       if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
          logger_->error("[HeadlessContainerListener] failed to get priv/pub keys for {}", authAddr.display<std::string>());
          SignTXResponse(clientId, id, reqType, "no auth priv/pub keys found");
@@ -807,29 +802,28 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
       }
       const auto &rootNode = hdWallet->getRootNode(pass);
       if (rootNode) {
-         leafNode = rootNode->derive(path);
+         leafNode = nullptr;
       } else {
          logger_->error("[HeadlessContainerListener] failed to decrypt root node");
          CreateHDWalletResponse(clientId, id, "root node decryption failed");
       }
 
       if (leafNode) {
-         leafNode->clearPrivKey();
-
+         //what is this horror?
          const auto groupIndex = static_cast<bs::hd::CoinType>(path.get(1));
          auto group = hdWallet->getGroup(groupIndex);
          if (!group) {
             group = hdWallet->createGroup(groupIndex);
          }
          const auto leafIndex = path.get(2);
-         auto leaf = group->createLeaf(leafIndex, leafNode);
+         auto leaf = nullptr;
          if (!leaf || (leaf != group->getLeaf(leafIndex))) {
             logger_->error("[HeadlessContainerListener] failed to create/get leaf {}", path.toString());
             CreateHDWalletResponse(clientId, id, "failed to create leaf");
             return;
          }
 
-         CreateHDWalletResponse(clientId, id, leaf->walletId()
+         CreateHDWalletResponse(clientId, id, ""
          , leafNode->pubCompressedKey(), leafNode->chainCode());
       }
       else {
@@ -865,8 +859,8 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    try {
       auto seed = request.privatekey().empty() ? bs::core::wallet::Seed(request.seed(), netType)
          : bs::core::wallet::Seed(netType, request.privatekey(), request.chaincode());
-      wallet = walletsMgr_->createWallet(request.name(), request.description()
-         , seed, walletsPath_, request.primary(), pwdData, keyRank);
+      wallet = walletsMgr_->createWallet(request.name(), request.description(),
+         seed, walletsPath_, pwdData.begin()->password, request.primary());
    }
    catch (const std::exception &e) {
       CreateHDWalletResponse(clientId, id, e.what());
@@ -1165,9 +1159,7 @@ bool HeadlessContainerListener::onChangePassword(const std::string &clientId
    }
    bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
 
-   bool result = wallet->changePassword(pwdData, keyRank
-      , BinaryData::CreateFromHex(request.oldpassword())
-      , request.addnew(), request.removeold(), request.dryrun());
+   bool result = wallet->changePassword(pwdData.begin()->password);
 
    if (!result) {
       logger_->error("[HeadlessContainerListener] failed to change password for wallet {}", request.rootwalletid());
@@ -1527,8 +1519,7 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
          continue;
       }
       else {
-         address = wallet->createAddressWithIndex(index
-            , request.persistent(), mapFrom(indexData.addrtype()));
+         bs::Address address;
          if (!address.isValid()) {
             logger_->error("[{}] failed to create address for index {}", __func__, index);
             continue;

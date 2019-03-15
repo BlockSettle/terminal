@@ -134,6 +134,7 @@ void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &
    const auto curTime = QDateTime::currentDateTime().toLocalTime().toString(QLatin1String("yyyyMMddHHmmss"));
    const auto backupFile = targetDir + "/" + hd::Wallet::fileNamePrefix(false)
       + wallet->walletId()  + "_" + curTime.toStdString() + ".lmdb";
+   
    wallet->copyToFile(backupFile);
 }
 
@@ -197,22 +198,11 @@ void WalletsManager::addWallet(const WalletPtr &wallet)
 
 void WalletsManager::saveWallet(const HDWalletPtr &wallet)
 {
-   if (!chainCode_.isNull()) {
-      wallet->setChainCode(chainCode_);
-   }
    hdWalletsId_.emplace_back(wallet->walletId());
    hdWallets_[wallet->walletId()] = wallet;
    walletNames_.insert(wallet->name());
    for (const auto &leaf : wallet->getLeaves()) {
       addWallet(leaf);
-   }
-}
-
-void WalletsManager::setChainCode(const BinaryData &chainCode)
-{
-   chainCode_ = chainCode;
-   for (const auto &hdWallet : hdWallets_) {
-      hdWallet.second->setChainCode(chainCode);
    }
 }
 
@@ -344,12 +334,13 @@ bool WalletsManager::deleteWalletFile(const HDWalletPtr &wallet)
    return result;
 }
 
-WalletsManager::HDWalletPtr WalletsManager::createWallet(const std::string& name, const std::string& description
-   , wallet::Seed seed, const std::string &walletsPath, bool primary
-   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
+WalletsManager::HDWalletPtr WalletsManager::createWallet(
+   const std::string& name, const std::string& description
+   , wallet::Seed seed, const std::string &walletsPath, 
+   const SecureBinaryData& passphrase, bool primary)
 {
-   const HDWalletPtr newWallet = std::make_shared<hd::Wallet>(name, description
-                                                           , seed, logger_);
+   const HDWalletPtr newWallet = std::make_shared<hd::Wallet>(
+      name, description, seed, walletsPath, passphrase, logger_);
 
    if (hdWallets_.find(newWallet->walletId()) != hdWallets_.end()) {
       throw std::runtime_error("HD wallet with id " + newWallet->walletId() + " already exists");
@@ -359,9 +350,7 @@ WalletsManager::HDWalletPtr WalletsManager::createWallet(const std::string& name
    if (primary) {
       newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
    }
-   if (!pwdData.empty()) {
-      newWallet->changePassword(pwdData, keyRank, SecureBinaryData(), false, false, false);
-   }
+
    addWallet(newWallet, walletsPath);
    return newWallet;
 }
@@ -371,8 +360,6 @@ void WalletsManager::addWallet(const HDWalletPtr &wallet, const std::string &wal
    if (!wallet) {
       return;
    }
-   if (!walletsPath.empty()) {
-      wallet->saveToDir(walletsPath);
-   }
+
    saveWallet(wallet);
 }

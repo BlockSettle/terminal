@@ -11,7 +11,7 @@ using namespace bs::core;
 
 PlainWallet::PlainWallet(NetworkType netType, const std::string &name, const std::string &desc
                          , const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(netType, logger), desc_(desc)
+   : Wallet(logger), desc_(desc), netType_(netType)
 {
    walletName_ = name;
    walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
@@ -19,13 +19,13 @@ PlainWallet::PlainWallet(NetworkType netType, const std::string &name, const std
 
 PlainWallet::PlainWallet(NetworkType netType, const std::string &filename
                          , const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(netType, logger)
+   : Wallet(logger), netType_(netType)
 {
    loadFromFile(filename);
 }
 
 PlainWallet::PlainWallet(NetworkType netType, const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(netType, logger)
+   : Wallet(logger), netType_(netType)
 {
    walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
 }
@@ -393,7 +393,7 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
    }
    SecureBinaryData privKeyBin = plainAsset->privKey().copy();
    const auto privKey = std::make_shared<Asset_PrivateKey>(0, privKeyBin
-      , make_unique<Cypher_AES>(BinaryData{}, BinaryData{}));
+      , make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
    SecureBinaryData pubKey = plainAsset->publicKey();
    const auto assetEntry = std::make_shared<AssetEntry_Single>(plainAsset->id(), BinaryData{}, pubKey, privKey);
 
@@ -558,19 +558,13 @@ private:
    std::map<SecureBinaryData, SecureBinaryData>   pubToPriv_;
 };
 
-std::shared_ptr<ResolverFeed> PlainWallet::getResolver(const SecureBinaryData &)
+std::shared_ptr<ResolverFeed> PlainWallet::getResolver() const
 {
    if (isWatchingOnly()) {
       return nullptr;
    }
    return std::make_shared<PlainSigningResolver>(assetByAddr_);
 }
-
-std::shared_ptr<ResolverFeed> PlainWallet::getPublicKeyResolver()
-{
-   return std::make_shared<PlainResolver>(assetByAddr_);
-}
-
 
 std::pair<bs::Address, std::shared_ptr<PlainAsset>> PlainAsset::deserialize(BinaryDataRef value)
 {

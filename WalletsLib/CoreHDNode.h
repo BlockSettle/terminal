@@ -16,7 +16,6 @@
 #include "CoreWallet.h"
 #include "EncryptionUtils.h"
 #include "HDPath.h"
-#include "WalletEncryption.h"
 
 struct KeyDerivationFunction;
 
@@ -44,27 +43,10 @@ namespace bs {
             virtual BinaryData pubChainedKey() const { return pubCompressedKey(); }
             BinaryData chainCode() const;
             std::shared_ptr<AssetEntry_Single> getAsset(int id) const;
-            wallet::Seed seed() const;
             std::string getId() const;
 
-            const BinaryData &getSeed() const { return seed_; }
             NetworkType getNetworkType() const { return netType_; }
-
-            BinaryData serialize() const;
-            static std::shared_ptr<Node> deserialize(BinaryDataRef);
-
-            std::shared_ptr<Node> derive(const bs::hd::Path &path, bool pubCKD = false) const;
-
-            void clearPrivKey();
-            bool hasPrivateKey() const { return hasPrivKey_; }
-
-            std::vector<bs::wallet::EncryptionType> encTypes() const { return encTypes_; }
-            std::vector<SecureBinaryData> encKeys() const { return encKeys_; }
-
-            std::unique_ptr<hd::Node> decrypt(const SecureBinaryData &password);
-            std::shared_ptr<hd::Node> encrypt(const SecureBinaryData &password
-               , const std::vector<bs::wallet::EncryptionType> &encTypes = {}
-            , const std::vector<SecureBinaryData> &encKeys = {});
+            bool hasPrivateKey() const { return false; }
 
          protected:
             virtual std::shared_ptr<Node> create(const btc_hdnode &, NetworkType) const;
@@ -74,9 +56,7 @@ namespace bs {
             BinaryData        seed_;
             SecureBinaryData  iv_;
             btc_hdnode        node_ = {};
-            bool              hasPrivKey_ = true;
             std::vector<SecureBinaryData> encKeys_;
-            std::vector<bs::wallet::EncryptionType> encTypes_;
             const btc_chainparams * chainParams_ = nullptr;
             std::shared_ptr<KeyDerivationFunction> kdf_;
             NetworkType       netType_;
@@ -87,7 +67,6 @@ namespace bs {
             void initFromSeed();
             void initFromPrivateKey(const std::string &privKey);
             void initFrom(const wallet::Seed &);
-            std::shared_ptr<KeyDerivationFunction> getKDF();
          };
 
 
@@ -114,22 +93,17 @@ namespace bs {
          {
          public:
             Nodes() {}
-            Nodes(const std::vector<std::shared_ptr<Node>> &nodes, bs::wallet::KeyRank rank, const std::string &id)
-               : nodes_(nodes), rank_(rank), id_(id) {}
+            Nodes(const std::vector<std::shared_ptr<Node>> &nodes, const std::string &id)
+               : nodes_(nodes), id_(id) {}
 
             bool empty() const { return nodes_.empty(); }
-            std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
-            std::vector<SecureBinaryData> encryptionKeys() const;
-            bs::wallet::KeyRank rank() const { return rank_; }
 
-            std::shared_ptr<hd::Node> decrypt(const SecureBinaryData &) const;
             Nodes chained(const BinaryData &chainKey) const;
 
             void forEach(const std::function<void(std::shared_ptr<Node>)> &) const;
 
          private:
             std::vector<std::shared_ptr<Node>>  nodes_;
-            bs::wallet::KeyRank  rank_ = { 0, 0 };
             std::string       id_;
          };
 

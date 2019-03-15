@@ -65,9 +65,9 @@ SignContainer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXS
    try {
       BinaryData signedTx;
       if (mode == TXSignMode::Full) {
-         signedTx = wallet->signTXRequest(txSignReq, password);
+         signedTx = wallet->signTXRequest(txSignReq);
       } else {
-         signedTx = wallet->signPartialTXRequest(txSignReq, password);
+         signedTx = wallet->signPartialTXRequest(txSignReq);
       }
       QTimer::singleShot(1, [this, reqId, signedTx] {emit TXSigned(reqId, signedTx, {}, false); });
    }
@@ -100,7 +100,7 @@ SignContainer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::walle
       logger_->error("[{}] failed to find auth wallet", __func__);
       return 0;
    }
-   const auto authKeys = authWallet->getKeyPairFor(authAddr, password);
+   bs::core::KeyPair authKeys; // = authWallet->getKeyPairFor(authAddr, password);
    if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
       logger_->error("[{}] failed to get priv/pub keys for {}", __func__, authAddr.display<std::string>());
       return 0;
@@ -155,14 +155,14 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
       std::shared_ptr<bs::core::hd::Node> leafNode;
       const auto &rootNode = hdWallet->getRootNode(password);
       if (rootNode) {
-         leafNode = rootNode->derive(path);
+         //leafNode = rootNode->derive(path);
       } else {
          logger_->error("[{}] failed to decrypt root node", __func__);
          return 0;
       }
 
       const auto leafIndex = path.get(2);
-      leaf = group->createLeaf(leafIndex, leafNode);
+      std::shared_ptr<bs::core::hd::Leaf> leaf; // = group->createLeaf(leafIndex, leafNode);
       if (!leaf || !(leaf = group->getLeaf(leafIndex))) {
          logger_->error("[{}] failed to create/get leaf {}", __func__, path.toString());
          return 0;
@@ -178,16 +178,16 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
    switch (groupType) {
    case bs::hd::CoinType::Bitcoin_main:
    case bs::hd::CoinType::Bitcoin_test:
-      hdLeaf = std::make_shared<bs::sync::hd::Leaf>(leaf->walletId(), leaf->name(), leaf->description()
+      hdLeaf = std::make_shared<bs::sync::hd::Leaf>(leaf->walletId(), leaf->name(), ""
          , this, logger_, leaf->type(), leaf->hasExtOnlyAddresses());
       break;
    case bs::hd::CoinType::BlockSettle_Auth:
       hdLeaf = std::make_shared<bs::sync::hd::AuthLeaf>(leaf->walletId(), leaf->name()
-         , leaf->description(), this, logger_);
+         , "", this, logger_);
       break;
    case bs::hd::CoinType::BlockSettle_CC:
       hdLeaf = std::make_shared<bs::sync::hd::CCLeaf>(leaf->walletId(), leaf->name()
-         , leaf->description(), this, logger_, leaf->hasExtOnlyAddresses());
+         , "", this, logger_, leaf->hasExtOnlyAddresses());
       break;
    default:    break;
    }
@@ -200,7 +200,7 @@ SignContainer::RequestId InprocSigner::createHDWallet(const std::string &name, c
    , bs::wallet::KeyRank keyRank)
 {
    try {
-      const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, primary, pwdData, keyRank);
+      const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, pwdData.begin()->password, primary);
       const RequestId reqId = seqId_++;
       const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->networkType(), wallet->walletId()
          , wallet->name(), wallet->description(), this, logger_);
@@ -220,7 +220,7 @@ void InprocSigner::createSettlementWallet(const std::function<void(const std::sh
       wallet = walletsMgr_->createSettlementWallet(netType_, walletsPath_);
    }
    const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(wallet->walletId(), wallet->name()
-      , wallet->description(), this, logger_);
+      , "", this, logger_);
    if (cb) {
       cb(settlWallet);
    }
@@ -272,7 +272,7 @@ SignContainer::RequestId InprocSigner::changePassword(const std::string &walletI
          return 0;
       }
    }
-   const bool result = hdWallet->changePassword(newPass, keyRank, oldPass, addNew, removeOld, dryRun);
+   const bool result = hdWallet->changePassword(newPass.begin()->password);
    emit PasswordChanged(walletId, result);
    return seqId_++;
 }
@@ -304,7 +304,7 @@ void InprocSigner::syncWalletInfo(const std::function<void(std::vector<bs::sync:
    const auto settlWallet = walletsMgr_->getSettlementWallet();
    if (settlWallet) {
       result.push_back({ bs::sync::WalletFormat::Settlement, settlWallet->walletId(), settlWallet->name()
-         , settlWallet->description(), settlWallet->networkType() });
+         , "", settlWallet->networkType() });
    }
    cb(result);
 }
@@ -406,7 +406,7 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
          if (index.empty()) {
             index = in.first;
          }
-         result.push_back({ wallet->createAddressWithIndex(in.first, persistent, in.second), in.first });
+         //result.push_back({ wallet->createAddressWithIndex(in.first, persistent, in.second), in.first });
       }
    }
    cb(result);
