@@ -1,10 +1,13 @@
 #include "MdhsClient.h"
-#include "spdlog/logger.h"
+
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
-#include "RequestReplyCommand.h"
 #include "FastLock.h"
+#include "RequestReplyCommand.h"
+
 #include "market_data_history.pb.h"
+
+#include <spdlog/logger.h>
 
 // Private Market
 const std::string ANT_XBT = "ANT/XBT";
