@@ -3,7 +3,6 @@
 #include "Response.h"
 
 namespace Chat {
-   
    class ListResponse : public Response
    {
    public:
@@ -15,5 +14,4 @@ namespace Chat {
    protected:
       std::vector<std::string> dataList_;
    };
-   
 }

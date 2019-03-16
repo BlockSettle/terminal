@@ -3,7 +3,7 @@
 #include "ListResponse.h"
 
 namespace Chat {
-   
+
    class UsersListResponse : public ListResponse
    {
    public:
@@ -21,5 +21,5 @@ namespace Chat {
    private:
       Command  cmd_;
    };
-   
+
 }

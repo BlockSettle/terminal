@@ -1029,9 +1029,9 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
                            , OpMode opMode)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
-   , connectionManager_{connectionManager}
-   , appSettings_{appSettings}
    , zmqSignerPubKey_{pubKey}
+   , appSettings_{appSettings}
+   , connectionManager_{connectionManager}
 {}
 
 // Establish the remote connection to the signer.
