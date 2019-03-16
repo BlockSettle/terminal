@@ -5,7 +5,6 @@
 #include <QStringListModel>
 #include <QScopedPointer>
 
-#include "ChatUsersViewModel.h"
 #include "ChatUserListLogic.h"
 
 #include <memory>
@@ -63,8 +62,6 @@ signals:
 
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
-   QScopedPointer<ChatUsersViewModel> usersViewModel_;
-
 
    std::shared_ptr<ChatClient>      client_;
    std::shared_ptr<spdlog::logger>  logger_;
