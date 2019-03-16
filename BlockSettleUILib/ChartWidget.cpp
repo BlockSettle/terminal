@@ -491,7 +491,6 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
    }
    if (isDraggingXAxis) {
 	   auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
-	   bottomAxis->axisRect()->setRangeDrag(bottomAxis->orientation());
 	   auto currentXPos = event->pos().x();
 	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
 	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
@@ -504,11 +503,6 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   upper_bound -= diff / tempCoeff * scalingCoeff * directionCoeff;
 	   bottomAxis->setRange(lower_bound, upper_bound);
 
-	   
-
-
-	   ui_->customPlot->replot();
-	   ui_->customPlot->update();
    }
 
    if (isDraggingMainPlot) {
@@ -537,6 +531,7 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
 	isDraggingXAxis = selectXPoint != -1.0;
 	if (isDraggingXAxis) {
 		ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
+		volumeAxisRect_->axis(QCPAxis::atBottom)->axisRect()->setRangeDrag(volumeAxisRect_->axis(QCPAxis::atBottom)->orientation());
 		lastDragCoordX = event->pos().x();
 		startDragCoordX = event->pos().x();
 	}
