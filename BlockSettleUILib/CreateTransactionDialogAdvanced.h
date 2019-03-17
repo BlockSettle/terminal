@@ -82,9 +82,6 @@ protected:
    bool HaveSignedImportedTransaction() const override;
 
 protected slots:
-   void selectedWalletChanged(int currentIndex, bool resetInputs
-      , const std::function<void()> &cbInputsReset = nullptr) override;
-
    void onAddressTextChanged(const QString& addressString);
    void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &) override;
    void onXBTAmountChanged(const QString& text);

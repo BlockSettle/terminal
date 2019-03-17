@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QButtonGroup>
 #include "CommonTypes.h"
+#include "qcustomplot.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ChartWidget; }
@@ -38,8 +39,8 @@ protected slots:
 	void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 	void OnInstrumentChanged(const QString &text);
 	void OnPlotMouseMove(QMouseEvent* event);
-	void OnAxisPressed(QMouseEvent *event);
-	void OnAxisReleased(QMouseEvent *event);
+	void OnMousePressed(QMouseEvent* event);
+	void OnMouseReleased(QMouseEvent* event);
 
 protected:
 	void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
@@ -80,11 +81,22 @@ private:
 	qreal maxPrice;
 	qreal minPrice;
 
+	qreal newMaxPrice;
+	qreal newMinPrice;
+
+	qreal currentMinPrice{ 0 };
+	qreal currentMaxPrice{ 0 };
+
 	int timerId;
 	int lastInterval;
 	int dragY;
 
 	bool isDraggingYAxis;
+	bool isDraggingXAxis{ false };
+	bool isDraggingMainPlot{ false };
+
+	qreal lastDragCoordX{ 0.0 };
+	qreal startDragCoordX{ 0.0 };
 };
 
 #endif // CHARTWIDGET_H

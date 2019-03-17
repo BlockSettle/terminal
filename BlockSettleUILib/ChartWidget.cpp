@@ -270,10 +270,16 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
    qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
 
+   currentMinPrice = minPrice;
+   currentMaxPrice = maxPrice;
+
    auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
    minPrice -= margin;
    maxPrice += margin;
    minPrice = qMax(minPrice, 0.0);
+
+   newMaxPrice = maxPrice;
+   newMinPrice = minPrice;
 
    volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
    UpdatePlot(interval, maxTimestamp);
@@ -463,29 +469,89 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 
    if (isDraggingYAxis)
    {
-	   qDebug() << "OnPlotMouseMove -> dragging Y axis";
+	   ui_->customPlot->axisRect()->setRangeDrag(ui_->customPlot->yAxis2->orientation());
+
+	   bool minusY = event->y() < dragY;
+	   dragY = event->y();
+
+	   auto margin = qMax(newMaxPrice - newMinPrice, 0.01) / 10;
+	   margin = minusY ? -margin : margin;
+	   newMinPrice -= margin;
+	   newMaxPrice += margin;
+	   newMinPrice = qMax(newMinPrice, 0.0);
+
+	   ui_->customPlot->yAxis2->setRange(newMinPrice, newMaxPrice);
+	   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
+	   ui_->customPlot->replot();
+	   ui_->customPlot->update();
+   }
+   else
+   {
+	   ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal | Qt::Vertical);
+   }
+   if (isDraggingXAxis) {
+	   auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
+	   bottomAxis->axisRect()->setRangeDrag(bottomAxis->orientation());
+	   auto currentXPos = event->pos().x();
+	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+	   auto diff = upper_bound - lower_bound;
+	   auto directionCoeff = (currentXPos - lastDragCoordX > 0) ? -1 : 1;
+	   double scalingCoeff = qAbs(currentXPos - startDragCoordX) / ui_->customPlot->size().width();
+	   lastDragCoordX = currentXPos;
+	   double tempCoeff = 4.0; //change this to impact on xAxis scale speed
+	   lower_bound += diff / tempCoeff * scalingCoeff * directionCoeff;
+	   upper_bound -= diff / tempCoeff * scalingCoeff * directionCoeff;
+	   bottomAxis->setRange(lower_bound, upper_bound);
+
+	   
+
+
+	   ui_->customPlot->replot();
+	   ui_->customPlot->update();
+   }
+
+   if (isDraggingMainPlot) {
+	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+	   currentMinPrice = std::numeric_limits<qreal>::max();
+	   currentMaxPrice = std::numeric_limits<qreal>::min();
+	   for (const auto& it : *candlesticksChart_->data()) {
+		   if (it.key >= lower_bound && it.key <= upper_bound) {
+			   currentMinPrice = qMin(currentMinPrice, it.low);
+			   currentMaxPrice = qMax(currentMaxPrice, it.high);
+		   }
+	   }
+	   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
    }
 
    ui_->customPlot->replot();
 }
 
-void ChartWidget::OnAxisPressed(QMouseEvent *event)
+void ChartWidget::OnMousePressed(QMouseEvent* event)
 {
-	qDebug() << "OnAxisPressed";
-	auto axis = ui_->customPlot->axisRectAt(event->localPos());
-	auto verticalAxis = axis->axis(QCPAxis::atRight);
-	if (verticalAxis == ui_->customPlot->yAxis2)
-	{
-		qDebug() << "yAxis2 pressed";
-		isDraggingYAxis = true;
+	auto select = ui_->customPlot->yAxis2->selectTest(event->pos(), false);
+	isDraggingYAxis = select != -1.0;
+
+	auto selectXPoint = volumeAxisRect_->axis(QCPAxis::atBottom)->selectTest(event->pos(), false);
+	isDraggingXAxis = selectXPoint != -1.0;
+	if (isDraggingXAxis) {
 		ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
+		lastDragCoordX = event->pos().x();
+		startDragCoordX = event->pos().x();
 	}
+
+	if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
+		isDraggingMainPlot = true;
+	}
+	qDebug() << (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos()));
 }
 
-void ChartWidget::OnAxisReleased(QMouseEvent *event)
+void ChartWidget::OnMouseReleased(QMouseEvent* event)
 {
-	qDebug() << "OnAxisReleased";
 	isDraggingYAxis = false;
+	isDraggingXAxis = false;
+	isDraggingMainPlot = false;
 	ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
 }
 
@@ -591,14 +657,11 @@ void ChartWidget::InitializeCustomPlot()
    volumeAxisRect_->setMarginGroup(QCP::msLeft|QCP::msRight, group);
 
    //make draggable horizontally
-   ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
-   ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal);
-   volumeAxisRect_->setRangeDrag(Qt::Horizontal);
+   ui_->customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
-   connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnAxisPressed);
-   connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnAxisReleased);
+   connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnMousePressed);
+   connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnMouseReleased);
 
    // make zoomable
-   ui_->customPlot->setInteraction(QCP::iRangeZoom, true);
 }

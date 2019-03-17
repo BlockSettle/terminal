@@ -3,7 +3,7 @@
 #include "ListResponse.h"
 
 namespace Chat {
-   
+
    class MessagesResponse : public ListResponse
    {
    public:

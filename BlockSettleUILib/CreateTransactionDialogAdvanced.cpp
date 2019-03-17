@@ -345,12 +345,13 @@ void CreateTransactionDialogAdvanced::initUI()
 
    currentAddress_.clear();
    currentValue_ = 0;
+   if (qFuzzyIsNull(minFeePerByte_) || qFuzzyIsNull(minTotalFee_)) {
+      SetMinimumFee(0, 1.0);
+   }
 
    ui_->pushButtonAddOutput->setEnabled(false);
    ui_->line->hide();
    ui_->pushButtonSelectInputs->setEnabled(ui_->comboBoxWallets->count() > 0);
-
-   connect(ui_->comboBoxWallets, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
 
    connect(ui_->lineEditAddress, &QLineEdit::textChanged, this, &CreateTransactionDialogAdvanced::onAddressTextChanged);
    connect(ui_->lineEditAmount, &QLineEdit::textChanged, this, &CreateTransactionDialogAdvanced::onXBTAmountChanged);
@@ -571,13 +572,6 @@ void CreateTransactionDialogAdvanced::RemoveOutputByRow(int row)
    ui_->comboBoxFeeSuggestions->setEnabled(true);
 }
 
-void CreateTransactionDialogAdvanced::selectedWalletChanged(int index, bool resetInputs, const std::function<void()> &cbInputsReset)
-{
-   CreateTransactionDialog::selectedWalletChanged(index, resetInputs, cbInputsReset);
-
-   ui_->radioButtonNewAddrNative->setChecked(true);
-}
-
 void CreateTransactionDialogAdvanced::onTransactionUpdated()
 {
    CreateTransactionDialog::onTransactionUpdated();
@@ -596,6 +590,12 @@ void CreateTransactionDialogAdvanced::onTransactionUpdated()
       bool changeSelectionEnabled = summary.hasChange || (summary.txVirtSize == 0);
       ui_->changeAddrGroupBox->setEnabled(changeSelectionEnabled);
       showExistingChangeAddress(changeSelectionEnabled);
+   }
+
+   if (transactionData_->totalFee() && summary.txVirtSize
+      && (transactionData_->totalFee() < summary.txVirtSize)) {
+      transactionData_->setTotalFee(summary.txVirtSize);
+      ui_->spinBoxFeesManualTotal->setValue(summary.txVirtSize);
    }
 
    QMetaObject::invokeMethod(this, &CreateTransactionDialogAdvanced::validateCreateButton
@@ -746,8 +746,7 @@ bool CreateTransactionDialogAdvanced::isCurrentAmountValid() const
       return false;
    }
    const double maxAmount = transactionData_->CalculateMaxAmount(currentAddress_);
-   if ((maxAmount - transactionData_->GetTotalRecipientsAmount() - currentValue_)
-      < -0.00000001) {  // 1 satoshi difference is allowed due to rounding error
+   if ((maxAmount - currentValue_) < -0.00000001) {  // 1 satoshi difference is allowed due to rounding error
       UiUtils::setWrongState(ui_->lineEditAmount, true);
       return false;
    }
@@ -812,7 +811,7 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
    AddManualFeeEntries(manualFeePerByte
       , (minTotalFee_ > 0) ? minTotalFee_ : transactionData_->totalFee());
 
-   if (minFeePerByte_ > 0) {
+   if (advisedFeePerByte_ > 0) {
       const auto index = ui_->comboBoxFeeSuggestions->count() - 2;
       ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
       feeSelectionChanged(index);
@@ -1131,7 +1130,10 @@ void CreateTransactionDialogAdvanced::setTxFees()
 
    if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
-      ui_->spinBoxFeesManualTotal->setValue(transactionData_->totalFee());
+      ui_->doubleSpinBoxFeesManualPerByte->setValue(minFeePerByte_);
+      ui_->doubleSpinBoxFeesManualPerByte->setVisible(false);
+      ui_->spinBoxFeesManualTotal->setVisible(true);
+      ui_->spinBoxFeesManualTotal->setValue(transactionData_->GetTransactionSummary().totalFee);
       enableFeeChanging(false);
    }
 }
