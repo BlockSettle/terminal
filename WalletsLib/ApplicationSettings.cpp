@@ -99,6 +99,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { celerPort,               SettingDef(QString()) },
       { mdServerHost,            SettingDef(QString()) },
       { mdServerPort,            SettingDef(QString()) },
+      { mdhsHost,                SettingDef(QString()) },
+      { mdhsPort,                SettingDef(QString()) },
       { chatServerHost,          SettingDef(QString()) },
       { chatServerPort,          SettingDef(QString()) },
       { chatServerPubKey,        SettingDef(QString(), QLatin1String("@:2IFYqVXa}+eRpKW9Q310j4cB%%nKe8$-v6bSOg")) },
