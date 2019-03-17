@@ -91,16 +91,12 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
 
 int ArmoryServersProvider::indexOfCurrent() const
 {
-   ArmorySettings currentServer = getArmorySettings();
+   return indexOf(static_cast<ArmoryServer>(getArmorySettings()));
+}
 
-   QList<ArmoryServer> serversList = servers();
-   for (int i = 0; i < serversList.size(); ++i) {
-      const ArmoryServer &server = serversList.at(i);
-      if (server == static_cast<ArmoryServer>(currentServer)) {
-         return i;
-      }
-   }
-   return -1;
+int ArmoryServersProvider::indexOfConnected() const
+{
+   return indexOf(static_cast<ArmoryServer>(connectedArmorySettings_));
 }
 
 int ArmoryServersProvider::indexOf(const QString &name) const
@@ -109,6 +105,18 @@ int ArmoryServersProvider::indexOf(const QString &name) const
    QList<ArmoryServer> s = servers();
    for (int i = 0; i < s.size(); ++i) {
       if (s.at(i).name == name) {
+         return i;
+      }
+   }
+   return -1;
+}
+
+int ArmoryServersProvider::indexOf(const ArmoryServer &server) const
+{
+   QList<ArmoryServer> serversList = servers();
+   for (int i = 0; i < serversList.size(); ++i) {
+      const ArmoryServer &s = serversList.at(i);
+      if (s == server) {
          return i;
       }
    }
@@ -288,6 +296,16 @@ void ArmoryServersProvider::addKey(const std::string &srvIPPort, const BinaryDat
              , QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()));
    }
    emit dataChanged();
+}
+
+ArmorySettings ArmoryServersProvider::connectedArmorySettings() const
+{
+    return connectedArmorySettings_;
+}
+
+void ArmoryServersProvider::setConnectedArmorySettings(const ArmorySettings &currentArmorySettings)
+{
+   connectedArmorySettings_ = currentArmorySettings;
 }
 
 

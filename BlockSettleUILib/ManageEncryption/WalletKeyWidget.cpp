@@ -328,6 +328,9 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
       ui_->widgetCombo->setMaximumHeight(0);
       ui_->widgetCombo->setMaximumWidth(0);
       ui_->progressBar->setMaximumHeight(0);
+
+      ui_->widgetAuthLayout->hide();
+      ui_->widgetAuthLayout->setMaximumHeight(0);
    }
 
    if (useType == UseType::RequestAuthInParent
@@ -358,6 +361,9 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
       ui_->widgetAuthIdText->deleteLater();
       ui_->comboBoxAuthId->clear();
       ui_->radioButtonPassword->click();
+
+      ui_->widgetAuthLayout->hide();
+      ui_->widgetAuthLayout->setMaximumHeight(0);
    }
 
    if (useType == UseType::RequestAuthForDialog) {
@@ -367,6 +373,9 @@ void WalletKeyWidget::setUseType(WalletKeyWidget::UseType useType)
       ui_->labelAuthIdEmailText->setMinimumWidth(130);
       ui_->labelAuthIdEmailText->setMaximumWidth(SHRT_MAX);
       ui_->labelAuthId->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+      ui_->widgetAuthLayout->hide();
+      ui_->widgetAuthLayout->setMaximumHeight(0);
    }
 
    if (useType == UseType::RequestAuthAsDialog && walletInfo_.isPasswordOnly()) {

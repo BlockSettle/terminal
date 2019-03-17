@@ -31,7 +31,9 @@ public:
    ArmorySettings getArmorySettings() const;
 
    int indexOfCurrent() const;   // index of server which set in ini file
+   int indexOfConnected() const;   // index of server currently connected
    int indexOf(const QString &name) const;
+   int indexOf(const ArmoryServer &server) const;
    int indexOfIpPort(const std::string &srvIPPort) const;
 
    bool add(const ArmoryServer &server);
@@ -44,11 +46,16 @@ public:
 
    static const int kDefaultServersCount;
 
+   ArmorySettings connectedArmorySettings() const;
+   void setConnectedArmorySettings(const ArmorySettings &connectedArmorySettings);
+
 signals:
    void dataChanged();
 private:
    std::shared_ptr<ApplicationSettings> appSettings_;
    static const QList<ArmoryServer> defaultServers_;
+
+   ArmorySettings connectedArmorySettings_;  // latest connected server
 
 };
 
