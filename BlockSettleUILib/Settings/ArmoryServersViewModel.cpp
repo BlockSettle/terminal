@@ -32,6 +32,7 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
    if (index.row() >= servers_.size()) return QVariant();
    ArmoryServer server = servers_.at(index.row());
    int currentServerIndex = serversProvider_->indexOfCurrent();
+   QString serverNetType = (server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
 
    if (role == Qt::FontRole && index.row() == currentServerIndex) {
        QFont font;
@@ -44,9 +45,14 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
    else if (role == Qt::DisplayRole) {
       switch (index.column()) {
       case 0:
-         return server.name;
+         if (singleColumnMode_) {
+            return QStringLiteral("%1 (%2)").arg(server.name).arg(serverNetType);
+         }
+         else {
+            return server.name;
+         }
       case 1:
-         return server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet");
+         return serverNetType;
       case 2:
          return server.armoryDBIp;
       case 3:
@@ -91,6 +97,11 @@ void ArmoryServersViewModel::update()
    beginResetModel();
    servers_ = serversProvider_->servers();
    endResetModel();
+}
+
+void ArmoryServersViewModel::setSingleColumnMode(bool singleColumnMode)
+{
+   singleColumnMode_ = singleColumnMode;
 }
 
 void ArmoryServersViewModel::setHighLightSelectedServer(bool highLightSelectedServer)

@@ -104,6 +104,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
 void NetworkSettingsPage::initSettings()
 {
    armoryServerModel_ = new ArmoryServersViewModel(armoryServersProvider_);
+   armoryServerModel_->setSingleColumnMode(true);
    armoryServerModel_->setHighLightSelectedServer(false);
    ui_->comboBoxArmoryServer->setModel(armoryServerModel_);
 
