@@ -14,7 +14,7 @@ class ChatUserListTreeItem
 public:
    enum Category
    {
-	  NoneCategory = -1,
+      NoneCategory = -1,
       RoomCategory,
       ContactCategory,
       UserCategory,
