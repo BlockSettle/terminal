@@ -26,25 +26,26 @@ void ChatUserListTreeView::onChatUserDataListChanged(const ChatUserDataListPtr &
 void ChatUserListTreeView::onChatRoomDataListChanged(const Chat::ChatRoomDataListPtr &roomsDataList)
 {
    chatUserListModel_->setChatRoomDataList(roomsDataList);
-   expandAll();
+   expandAll();   
 }
 
-void ChatUserListTreeView::onUserListItemClicked(const QModelIndex &index) {
+void ChatUserListTreeView::onUserListItemClicked(const QModelIndex &index)
+{
    const auto &itemType =
             qvariant_cast<ChatUserListTreeViewModel::ItemType>(index.data(ChatUserListTreeViewModel::ItemTypeRole));
 
    clearSelection();
 
-   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem) {
-      
+   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem)
+   {   
       const QString roomId = index.data(ChatUserListTreeViewModel::RoomIDRole).toString();
       emit roomClicked(roomId);
 
-   } else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem) {
-
+   }
+   else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem)
+   {
       const QString userId = index.data(Qt::DisplayRole).toString();
       emit userClicked(userId);
-
    }
 }
 
@@ -66,15 +67,16 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
 
    QStyleOptionViewItem itemOption(option);
 
-   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem) {
-      
+   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem)
+   {   
       itemOption.palette.setColor(QPalette::Text, internalStyle_.colorRoom());
       itemOption.palette.setColor(QPalette::HighlightedText, internalStyle_.colorRoom());
       QStyledItemDelegate::paint(painter, itemOption, index);
       return QStyledItemDelegate::paint(painter, itemOption, index);
 
-   } else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem) {
-
+   } 
+   else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem)
+   {
       // set default text color
       itemOption.palette.setColor(QPalette::Text, internalStyle_.colorUserDefault());
       itemOption.palette.setColor(QPalette::HighlightedText, internalStyle_.colorUserDefault());
@@ -117,11 +119,11 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
          painter->drawEllipse(dotPoint, DOT_RADIUS, DOT_RADIUS);
          painter->restore();
       }
-
-   } else {
+   } 
+   else
+   {
       
       QStyledItemDelegate::paint(painter, itemOption, index);
-
    }
    
 }

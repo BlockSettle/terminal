@@ -33,9 +33,9 @@ public:
    }
    
    void setColorRoom(QColor colorRoom)
-    {
-        colorRoom_ = colorRoom;
-    }
+   {
+      colorRoom_ = colorRoom;
+   }
 
    QColor colorUserOnline() const 
    {

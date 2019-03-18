@@ -10,7 +10,8 @@ class ChatUserListTreeViewModel : public QAbstractItemModel
    Q_OBJECT
 
 public:
-   enum class ItemType {
+   enum class ItemType
+   {
       NoneItem = 0,
       CategoryItem = 1,
       UserItem = 2,
