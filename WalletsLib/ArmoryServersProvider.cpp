@@ -5,8 +5,8 @@
 #include <QStandardPaths>
 
 const QList<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
-   ArmoryServer::fromTextSettings(QStringLiteral(MAINNET_ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:")),
-   ArmoryServer::fromTextSettings(QStringLiteral(TESTNET_ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:")),
+   ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:")),
+   ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:")),
    ArmoryServer::fromTextSettings(QStringLiteral("Local Auto-launch Node:0:127.0.0.1::")),
    ArmoryServer::fromTextSettings(QStringLiteral("Local Auto-launch Node:1:127.0.0.1::"))
 };
@@ -76,7 +76,7 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
    settings.armoryDBPort = appSettings_->GetArmoryRemotePort();
    settings.runLocally = appSettings_->get<bool>(ApplicationSettings::runArmoryLocally);
 
-   int serverIndex = indexOf(static_cast<ArmoryServer>(settings));
+   const int serverIndex = indexOf(static_cast<ArmoryServer>(settings));
    if (serverIndex >= 0) {
       settings.armoryDBKey = servers().at(serverIndex).armoryDBKey;
    }
@@ -118,14 +118,7 @@ int ArmoryServersProvider::indexOf(const QString &name) const
 
 int ArmoryServersProvider::indexOf(const ArmoryServer &server) const
 {
-   QList<ArmoryServer> serversList = servers();
-   for (int i = 0; i < serversList.size(); ++i) {
-      const ArmoryServer &s = serversList.at(i);
-      if (s == server) {
-         return i;
-      }
-   }
-   return -1;
+   return servers().indexOf(server);
 }
 
 int ArmoryServersProvider::indexOfIpPort(const std::string &srvIPPort) const
@@ -307,7 +300,7 @@ void ArmoryServersProvider::addKey(const std::string &srvIPPort, const BinaryDat
 
 ArmorySettings ArmoryServersProvider::connectedArmorySettings() const
 {
-    return connectedArmorySettings_;
+   return connectedArmorySettings_;
 }
 
 void ArmoryServersProvider::setConnectedArmorySettings(const ArmorySettings &currentArmorySettings)

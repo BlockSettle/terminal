@@ -87,7 +87,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { initialized,             SettingDef(QLatin1String("SettingsAccepted"), false) },
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::MainNet) },
-      { armoryDbName,            SettingDef(QLatin1String("ArmoryDBName"), QLatin1String(MAINNET_ARMORY_BLOCKSETTLE_NAME)) },
+      { armoryDbName,            SettingDef(QLatin1String("ArmoryDBName"), QLatin1String(ARMORY_BLOCKSETTLE_NAME)) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String(MAINNET_ARMORY_BLOCKSETTLE_ADDRESS)) },
       { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), MAINNET_ARMORY_BLOCKSETTLE_PORT) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },

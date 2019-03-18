@@ -51,7 +51,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       l->setContentsMargins(0,0,0,0);
       d->setLayout(l);
 
-      ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, this);
+      ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, appSettings_, this);
 
 //      armoryServersWidget->setWindowModality(Qt::ApplicationModal);
 //      armoryServersWidget->setWindowFlags(Qt::Dialog);

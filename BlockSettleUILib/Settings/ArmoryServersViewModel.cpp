@@ -44,20 +44,20 @@ QVariant ArmoryServersViewModel::data(const QModelIndex &index, int role) const
    }
    else if (role == Qt::DisplayRole) {
       switch (index.column()) {
-      case 0:
+      case ColumnName:
          if (singleColumnMode_) {
             return QStringLiteral("%1 (%2)").arg(server.name).arg(serverNetType);
          }
          else {
             return server.name;
          }
-      case 1:
+      case ColumnType:
          return serverNetType;
-      case 2:
+      case ColumnAddress:
          return server.armoryDBIp;
-      case 3:
+      case ColumnPort:
          return server.armoryDBPort;
-      case 4:
+      case ColumnKey:
          return server.armoryDBKey;
       default:
          break;
