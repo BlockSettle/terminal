@@ -513,18 +513,14 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
          return;
       }
 
-      const auto onSettlPassword = [this, clientId, id, txSignReq, authKeys, settlWallet, settlementId]
-         (const std::string &pass, bool cancelledByUser) {
-         try {
-            const auto tx = settlWallet->signPayoutTXRequest(txSignReq, authKeys, settlementId);
-            SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
-         }
-         catch (const std::exception &e) {
-            logger_->error("[HeadlessContainerListener] failed to sign PayoutTX request: {}", e.what());
-            SignTXResponse(clientId, id, reqType, std::string("failed to sign: ") + e.what());
-         }
-      };
-      onSettlPassword({}, cancelledByUser);
+      try {
+         const auto tx = settlWallet->signPayoutTXRequest(txSignReq, authKeys, settlementId);
+         SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
+      }
+      catch (const std::exception &e) {
+         logger_->error("[HeadlessContainerListener] failed to sign PayoutTX request: {}", e.what());
+         SignTXResponse(clientId, id, reqType, std::string("failed to sign: ") + e.what());
+      }
    };
 
    if (!request.password().empty()) {
@@ -565,7 +561,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
 
    const std::string prompt("Signing multi-wallet input (auth revoke) transaction");
 
-   const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, id=packet.id()]
+   const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, reqType, id=packet.id()]
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
       try {
          const auto tx = bs::core::SignMultiInputTX(txMultiReq, walletPasswords, walletMap);
