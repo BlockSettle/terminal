@@ -4,12 +4,27 @@
 #include <QObject>
 #include <atomic>
 #include <set>
+#include <memory>
 
 class ApplicationSettings;
 class ConnectionManager;
-namespace spdlog { class logger; }
 class RequestReplyCommand;
-namespace Blocksettle { namespace Communication { namespace MarketDataHistory { class MarketDataHistoryRequest; } } }
+
+namespace spdlog
+{
+	class logger;
+}
+
+namespace Blocksettle
+{
+	namespace Communication
+	{
+		namespace MarketDataHistory
+		{
+			class MarketDataHistoryRequest;
+		}
+	}
+}
 
 using namespace Blocksettle::Communication::MarketDataHistory;
 
