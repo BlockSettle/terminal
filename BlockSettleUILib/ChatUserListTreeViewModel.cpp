@@ -15,8 +15,7 @@ ChatUserListTreeViewModel::ChatUserListTreeViewModel(QObject* parent)
 
 QString ChatUserListTreeViewModel::resolveCategoryDisplay(const QModelIndex &index) const
 {
-   switch (index.row())
-   {
+   switch (index.row()) {
       case ChatUserListTreeItem::RoomCategory:
          return publicRoomListDescription;
 
@@ -38,18 +37,15 @@ ChatUserListTreeViewModel::ItemType ChatUserListTreeViewModel::resolveItemType(c
    const auto &userDataPtr = item->userData();
    const auto &roomDataPtr = item->roomData();
 
-   if (userDataPtr)
-   {
+   if (userDataPtr) {
       return ChatUserListTreeViewModel::ItemType::UserItem;
 
    }
-   else if (roomDataPtr)
-   {
+   else if (roomDataPtr) {
       return ChatUserListTreeViewModel::ItemType::RoomItem;
 
    }
-   else if (category != ChatUserListTreeItem::NoneCategory)
-   {
+   else if (category != ChatUserListTreeItem::NoneCategory) {
       return ChatUserListTreeViewModel::ItemType::CategoryItem;
 
    }
@@ -117,12 +113,11 @@ QVariant ChatUserListTreeViewModel::data(const QModelIndex &index, int role) con
       return QVariant::fromValue(type);
    }
 
-   if (type == ChatUserListTreeViewModel::ItemType::UserItem)
-   {
+   if (type == ChatUserListTreeViewModel::ItemType::UserItem) {
+
       const auto &userDataPtr = item->userData();
 
-      switch (role)
-      {
+      switch (role) {
          case Qt::DisplayRole:
             return userDataPtr->userId();
 
@@ -140,12 +135,10 @@ QVariant ChatUserListTreeViewModel::data(const QModelIndex &index, int role) con
       }
 
    }
-   else if (type == ChatUserListTreeViewModel::ItemType::RoomItem)
-   {
+   else if (type == ChatUserListTreeViewModel::ItemType::RoomItem) {
       const auto &roomDataPtr = item->roomData();
 
-      switch (role)
-      {
+      switch (role) {
          case Qt::DisplayRole:
             return roomDataPtr->getTitle().isEmpty() ? roomDataPtr->getId() : roomDataPtr->getTitle();
          
@@ -154,8 +147,7 @@ QVariant ChatUserListTreeViewModel::data(const QModelIndex &index, int role) con
       }
 
    }
-   else if (type == ChatUserListTreeViewModel::ItemType::CategoryItem)
-   {
+   else if (type == ChatUserListTreeViewModel::ItemType::CategoryItem) {
       const auto &category = item->category();  
       
       if (role == Qt::DisplayRole) {
@@ -178,14 +170,11 @@ void ChatUserListTreeViewModel::setChatUserDataList(const ChatUserDataListPtr &c
    contactsItem->removeChildren();
    usersItem->removeChildren();
 
-   for (const auto &dataPtr : chatUserDataListPtr)
-   {
-      if (dataPtr->userState() == ChatUserData::State::Unknown)
-      {
+   for (const auto &dataPtr : chatUserDataListPtr) {
+      if (dataPtr->userState() == ChatUserData::State::Unknown) {
          usersItem->addUserAsChild(dataPtr);
       }
-      else
-      {
+      else {
          contactsItem->addUserAsChild(dataPtr);
       }
    }
@@ -200,8 +189,7 @@ void ChatUserListTreeViewModel::setChatRoomDataList(const Chat::ChatRoomDataList
    ChatUserListTreeItem *roomsItem = rootItem_->child(ChatUserListTreeItem::RoomCategory);
    roomsItem->removeChildren();
 
-   for (const auto &dataPtr : roomsDataList)
-   {
+   for (const auto &dataPtr : roomsDataList) {
       roomsItem->addRoomAsChild(dataPtr);
    }
 
@@ -210,8 +198,7 @@ void ChatUserListTreeViewModel::setChatRoomDataList(const Chat::ChatRoomDataList
 
 ChatUserListTreeItem *ChatUserListTreeViewModel::getItem(const QModelIndex &index) const
 {
-   if (index.isValid())
-   {
+   if (index.isValid()) {
       ChatUserListTreeItem *item = static_cast<ChatUserListTreeItem *>(index.internalPointer());
       if (item)
          return item;

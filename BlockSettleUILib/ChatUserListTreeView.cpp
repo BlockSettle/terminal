@@ -36,14 +36,12 @@ void ChatUserListTreeView::onUserListItemClicked(const QModelIndex &index)
 
    clearSelection();
 
-   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem)
-   {   
+   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem) {
       const QString roomId = index.data(ChatUserListTreeViewModel::RoomIDRole).toString();
       emit roomClicked(roomId);
 
    }
-   else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem)
-   {
+   else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem) {
       const QString userId = index.data(Qt::DisplayRole).toString();
       emit userClicked(userId);
    }
@@ -67,16 +65,14 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
 
    QStyleOptionViewItem itemOption(option);
 
-   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem)
-   {   
+   if (itemType == ChatUserListTreeViewModel::ItemType::RoomItem) {
       itemOption.palette.setColor(QPalette::Text, internalStyle_.colorRoom());
       itemOption.palette.setColor(QPalette::HighlightedText, internalStyle_.colorRoom());
       QStyledItemDelegate::paint(painter, itemOption, index);
       return QStyledItemDelegate::paint(painter, itemOption, index);
 
    } 
-   else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem)
-   {
+   else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem) {
       // set default text color
       itemOption.palette.setColor(QPalette::Text, internalStyle_.colorUserDefault());
       itemOption.palette.setColor(QPalette::HighlightedText, internalStyle_.colorUserDefault());
@@ -85,8 +81,7 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
             qvariant_cast<ChatUserData::State>(index.data(ChatUserListTreeViewModel::UserStateRole));
 
       // text color for friend request
-      if (userState == ChatUserData::State::IncomingFriendRequest)
-      {
+      if (userState == ChatUserData::State::IncomingFriendRequest) {
          itemOption.palette.setColor(QPalette::Text, internalStyle_.colorIncomingFriendRequest());
          itemOption.palette.setColor(QPalette::HighlightedText, internalStyle_.colorIncomingFriendRequest());
          return QStyledItemDelegate::paint(painter, itemOption, index);
@@ -96,8 +91,7 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
             qvariant_cast<ChatUserData::ConnectionStatus>(index.data(ChatUserListTreeViewModel::UserConnectionStatusRole));
 
       // text color for user online status
-      if (userStatus == ChatUserData::ConnectionStatus::Online)
-      {
+      if (userStatus == ChatUserData::ConnectionStatus::Online) {
          itemOption.palette.setColor(QPalette::Text, internalStyle_.colorUserOnline());
          itemOption.palette.setColor(QPalette::HighlightedText, internalStyle_.colorUserOnline());
       }
@@ -107,8 +101,7 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
       // draw dot
       const bool haveMessage =
             qvariant_cast<bool>(index.data(ChatUserListTreeViewModel::HaveNewMessageRole));
-      if (haveMessage)
-      {
+      if (haveMessage) {
          auto text = index.data(Qt::DisplayRole).toString();
          QFontMetrics fm(itemOption.font, painter->device());
          auto textRect = fm.boundingRect(itemOption.rect, 0, text);
@@ -120,8 +113,7 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
          painter->restore();
       }
    } 
-   else
-   {
+   else {
       
       QStyledItemDelegate::paint(painter, itemOption, index);
    }
