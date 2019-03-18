@@ -781,7 +781,9 @@ void BSTerminalMainWindow::initArmory()
 
 void BSTerminalMainWindow::connectArmory()
 {
-   armory_->setupConnection(armoryServersProvider_->getArmorySettings(), [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
+   ArmorySettings currentArmorySettings = armoryServersProvider_->getArmorySettings();
+   armoryServersProvider_->setConnectedArmorySettings(currentArmorySettings);
+   armory_->setupConnection(currentArmorySettings, [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
       std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
       std::future<bool> futureObj = promiseObj->get_future();
       QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
