@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>487</width>
-    <height>718</height>
+    <height>551</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -946,21 +946,24 @@
      <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
-       <height>40</height>
+       <height>0</height>
       </size>
      </property>
     </spacer>
    </item>
    <item>
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="labelConfChanged">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Changes will take effect after the application is restarted. </string>
+      <string>Configuration was changed. Changes will take effect after the application is restarted. </string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
      <property name="statusWarningLabel" stdset="0">
       <bool>true</bool>

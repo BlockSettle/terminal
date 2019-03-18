@@ -33,6 +33,8 @@ public:
 
    void setHighLightSelectedServer(bool highLightSelectedServer);
 
+   void setSingleColumnMode(bool singleColumnMode);
+
 public slots:
    void update();
 
@@ -40,6 +42,7 @@ private:
    std::shared_ptr<ArmoryServersProvider> serversProvider_;
    QList<ArmoryServer> servers_;
    bool highLightSelectedServer_ = true;
+   bool singleColumnMode_ = false;
 
    enum ArmoryServersViewViewColumns : int
    {

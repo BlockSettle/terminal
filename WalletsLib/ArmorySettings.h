@@ -22,6 +22,9 @@ struct ArmoryServer
             && armoryDBPort == other.armoryDBPort
             && netType == other.netType;
    }
+   bool operator !=(const ArmoryServer &other) const  {
+      return !(*this == other);
+   }
    static ArmoryServer fromTextSettings(const QString &text) {
       ArmoryServer server;
       if (text.split(QStringLiteral(":")).size() != 5) {
