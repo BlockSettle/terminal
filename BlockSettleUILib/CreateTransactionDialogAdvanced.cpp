@@ -25,6 +25,7 @@
 #include <stdexcept>
 
 static const size_t kP2WPKHOutputSize = 35;
+static const float kDustFeePerByte = 3.0;
 
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
@@ -719,11 +720,24 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
       - transactionData_->GetTotalRecipientsAmount() - totalFee;
    const double newTotalFee = diffMax + totalFee;
 
+   size_t maxOutputSize = 0;
+   for (const auto &recipId : transactionData_->allRecipientIds()) {
+      const auto recipAddr = transactionData_->GetRecipientAddress(recipId);
+      const auto recip = recipAddr.getRecipient(transactionData_->GetRecipientAmount(recipId));
+      if (!recip) {
+         continue;
+      }
+      maxOutputSize = std::max(maxOutputSize, recip->getSize());
+   }
+   if (!maxOutputSize) {
+      maxOutputSize = totalFee / kDustFeePerByte / 2; // fallback if failed to get any recipients size
+   }
+
    if (diffMax < 0) {
       diffMax = 0;
    }
    // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
-   if ((diffMax >= 0.00000001) && (diffMax < totalFee / 2)) {
+   if ((diffMax >= 0.00000001) && (diffMax <= (maxOutputSize * kDustFeePerByte))) {
       BSMessageBox question(BSMessageBox::question, tr("Change fee")
          , tr("Your projected change amount %1 is too small as compared to the projected fee."
             " Attempting to keep the change will prevent the transaction from being propagated through"
