@@ -2,7 +2,7 @@
 #define __TRANSACTION_OUTPUTS_MODEL_H__
 
 #include <QAbstractTableModel>
-
+#include <tuple>
 #include <vector>
 
 class TransactionOutputsModel : public QAbstractTableModel
@@ -14,6 +14,7 @@ public:
    ~TransactionOutputsModel() noexcept override = default;
 
    void AddRecipient(unsigned int recipientId, const QString& address, double amount);
+   void AddRecipients(const std::vector<std::tuple<unsigned int, QString, double>> &);
    void UpdateRecipientAmount(unsigned int recipientId, double amount);
 
    unsigned int   GetOutputId(int row);

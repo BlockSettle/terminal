@@ -71,6 +71,15 @@ void TransactionOutputsModel::AddRecipient(unsigned int recipientId, const QStri
    endInsertRows();
 }
 
+void TransactionOutputsModel::AddRecipients(const std::vector<std::tuple<unsigned int, QString, double>> &recipients)
+{
+   beginInsertRows(QModelIndex{}, (int)outputs_.size(), (int)outputs_.size());
+   for (const auto &recip : recipients) {
+      outputs_.emplace_back(OutputRow{ std::get<0>(recip), std::get<1>(recip), std::get<2>(recip) });
+   }
+   endInsertRows();
+}
+
 void TransactionOutputsModel::UpdateRecipientAmount(unsigned int recipientId, double amount)
 {
    int row = -1;

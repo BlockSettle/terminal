@@ -695,6 +695,19 @@ unsigned int CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &ad
    return recipientId;
 }
 
+void CreateTransactionDialogAdvanced::AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &recipients)
+{
+   std::vector<std::tuple<unsigned int, QString, double>> modelRecips;
+   for (const auto &recip : recipients) {
+      const auto recipientId = transactionData_->RegisterNewRecipient();
+      transactionData_->UpdateRecipientAddress(recipientId, std::get<0>(recip));
+      transactionData_->UpdateRecipientAmount(recipientId, std::get<1>(recip), std::get<2>(recip));
+      modelRecips.push_back({recipientId, std::get<0>(recip).display(), std::get<1>(recip)});
+   }
+   QMetaObject::invokeMethod(outputsModel_, [this, modelRecips] { outputsModel_->AddRecipients(modelRecips); });
+}
+
+
 // Attempts to remove the change if it's small enough and adds its amount to fees
 bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
 {
@@ -933,6 +946,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      selInputs->SetUTXOSelection(txHash.first, txHash.second);
                   }
                }
+               std::vector<std::tuple<bs::Address, double, bool>> recipients;
                for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
                   TxOut out = tx.getTxOutCopy((int)i);
                   const auto addr = bs::Address::fromTxOut(out);
@@ -940,9 +954,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      SetFixedChangeAddress(addr.display());
                   }
                   else {
-                     AddRecipient(addr.display(), out.getValue() / BTCNumericTypes::BalanceDivider);
+                     recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
                   }
                   totalVal -= out.getValue();
+               }
+               if (!recipients.empty()) {
+                  AddRecipients(recipients);
                }
                SetPredefinedFee(totalVal);
             };
@@ -962,10 +979,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
       }
 
+      std::vector<std::tuple<bs::Address, double, bool>> recipients;
       for (const auto &recip : tx.recipients) {
          const auto addr = bs::Address::fromRecipient(recip);
-         AddRecipient(addr.display(), recip->getValue() / BTCNumericTypes::BalanceDivider);
+         recipients.push_back({ addr, recip->getValue() / BTCNumericTypes::BalanceDivider, false });
       }
+      AddRecipients(recipients);
 
       if (!signingContainer_->isOffline() && tx.isValid()) {
          ui_->pushButtonCreate->setEnabled(true);

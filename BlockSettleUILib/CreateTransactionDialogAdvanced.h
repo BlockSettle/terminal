@@ -116,6 +116,7 @@ private:
    Q_INVOKABLE void validateCreateButton();
 
    unsigned int AddRecipient(const bs::Address &, double amount, bool isMax = false);
+   void AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &);
    void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
    bool FixRecipientsAmount();
    void onOutputRemoved();
