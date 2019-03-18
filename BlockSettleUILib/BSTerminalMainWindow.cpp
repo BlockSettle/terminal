@@ -1072,9 +1072,8 @@ void BSTerminalMainWindow::onLogout()
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();
    }
-   else {
-       setLoginButtonText(loginButtonText_);
-   }
+   
+   setLoginButtonText(loginButtonText_);
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()
