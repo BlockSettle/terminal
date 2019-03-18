@@ -198,9 +198,9 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
          summary_.feePerByte =
@@ -238,9 +238,9 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
