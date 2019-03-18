@@ -75,6 +75,11 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
    settings.armoryDBIp = appSettings_->get<QString>(ApplicationSettings::armoryDbIp);
    settings.armoryDBPort = appSettings_->GetArmoryRemotePort();
    settings.runLocally = appSettings_->get<bool>(ApplicationSettings::runArmoryLocally);
+
+   int serverIndex = indexOf(static_cast<ArmoryServer>(settings));
+   if (serverIndex >= 0) {
+      settings.armoryDBKey = servers().at(serverIndex).armoryDBKey;
+   }
 //   if (settings.runLocally) {
 //      settings.armoryDBIp = QStringLiteral("127.0.0.1");
 //      settings.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(appSettings_->get<NetworkType>(ApplicationSettings::netType));
@@ -283,6 +288,9 @@ void ArmoryServersProvider::addKey(const QString &address, int port, const QStri
       appSettings_->set(ApplicationSettings::armoryServers, servers);
    }
 
+   // update key for current server
+   connectedArmorySettings_.armoryDBKey = key;
+
    emit dataChanged();
 }
 
@@ -295,7 +303,6 @@ void ArmoryServersProvider::addKey(const std::string &srvIPPort, const BinaryDat
              , ipPortList.at(1).toInt()
              , QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()));
    }
-   emit dataChanged();
 }
 
 ArmorySettings ArmoryServersProvider::connectedArmorySettings() const
