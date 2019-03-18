@@ -81,17 +81,9 @@ void HeadlessListener::OnDataReceived(const std::string& data)
          return;
       }
 
-      if (!response.authticket().empty()) {
-         authTicket_ = response.authticket();
-         hasUI_ = response.hasui();
-         logger_->debug("[HeadlessListener] successfully authenticated");
-         emit authenticated();
-      }
-      else {
-         logger_->error("[HeadlessListener] authentication failure: {}", response.error());
-         emit error(QString::fromStdString(response.error()));
-         return;
-      }
+      // BIP 150/151 should be be complete by this point.
+      hasUI_ = response.hasui();
+      emit authenticated();
    }
    else {
       emit PacketReceived(packet);
@@ -123,7 +115,6 @@ HeadlessContainer::RequestId HeadlessListener::Send(headless::RequestPacket pack
       id = newRequestId();
       packet.set_id(id);
    }
-   packet.set_authticket(authTicket_.toBinStr());
    if (!connection_->send(packet.SerializeAsString())) {
       logger_->error("[HeadlessListener] Failed to send request packet");
       emit disconnected();
@@ -1080,7 +1071,7 @@ bool RemoteSigner::Connect()
 void RemoteSigner::ConnectHelper()
 {
    if (!connection_->isActive()) {
-      if (!connection_->openConnection(host_.toStdString(), port_.toStdString()
+      if (connection_->openConnection(host_.toStdString(), port_.toStdString()
          , listener_.get())) {
          emit connected();
       }
@@ -1168,7 +1159,8 @@ void RemoteSigner::onConnected()
 
 void RemoteSigner::onAuthenticated()
 {
-   authPending_ = false;
+   // Once the BIP 150/151 handshake is complete, it's safe to start sending
+   // app-level data to the signer.
    emit authenticated();
    emit ready();
 }
@@ -1183,14 +1175,6 @@ void RemoteSigner::onBIP15XCompleted()
 void RemoteSigner::onDisconnected()
 {
    missingWallets_.clear();
-
-   {
-      std::lock_guard<std::mutex> lock(mutex_);
-
-      if (listener_) {
-         listener_->resetAuthTicket();
-      }
-   }
 
    std::set<RequestId> tmpReqs = signRequests_;
    signRequests_.clear();

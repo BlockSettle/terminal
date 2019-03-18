@@ -1,6 +1,22 @@
 #ifndef __ZMQ_BIP15X_MSG_H__
 #define __ZMQ_BIP15X_MSG_H__
 
+// Messages used for ZMQ_BIP15X_DataConnection and ZMQ_BIP15X_ServerConnection
+// connections.
+
+// The message format is as follows:
+//
+// Packet length (4 bytes)
+// Message type (1 byte)
+// Remaining data - Depends.
+//
+// REMAINING DATA - Single packet
+// Message ID (4 bytes - Not in BIP 150/151 handshake packets)
+// Payload  (N bytes)
+//
+// REMAINING DATA - Fragments (header or pieces)
+// Set aside for now. Use only if required.
+
 #include <spdlog/spdlog.h>
 #include "BinaryData.h"
 #include "BIP150_151.h"
@@ -27,8 +43,6 @@
 #define ZMQ_AEAD_HANDSHAKE_ID 0xFFFFFFFC
 #define ZMQ_MAGIC_WORD 0x56E1
 #define AEAD_REKEY_INVERVAL_SECONDS 600
-
-#define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
 class ZMQ_BIP15X_Msg {
 public:

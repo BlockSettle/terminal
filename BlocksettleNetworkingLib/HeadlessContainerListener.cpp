@@ -187,6 +187,7 @@ void HeadlessContainerListener::OnPeerConnected(const std::string &ip)
 
 void HeadlessContainerListener::OnPeerDisconnected(const std::string &ip)
 {
+   logger_->warn("[{}] IP {}", __func__, ip);
    if (cbPeerDisconn_) {
       cbPeerDisconn_(ip);
    }
@@ -248,6 +249,7 @@ bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::hea
 
 bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, headless::RequestPacket packet)
 {
+   connection_->GetClientInfo(clientId);
    if (!isRequestAllowed(packet.type())) {
       logger_->info("[{}] request {} is not applicable at this state", __func__, (int)packet.type());
       return false;

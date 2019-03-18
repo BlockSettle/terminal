@@ -3,8 +3,6 @@
 
 #include <QObject>
 #include <spdlog/spdlog.h>
-//#include <string>
-//#include <memory>
 #include "ArmoryServersProvider.h"
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
@@ -17,29 +15,30 @@ class ZMQ_BIP15X_DataConnection : public QObject, public ZmqDataConnection {
    Q_OBJECT
 public:
    ZMQ_BIP15X_DataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers);
-   ZMQ_BIP15X_DataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers, bool monitored);
-
-   ~ZMQ_BIP15X_DataConnection() noexcept override = default;
-
+      , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
+      , bool monitored);
    ZMQ_BIP15X_DataConnection(const ZMQ_BIP15X_DataConnection&) = delete;
    ZMQ_BIP15X_DataConnection& operator= (const ZMQ_BIP15X_DataConnection&) = delete;
-
    ZMQ_BIP15X_DataConnection(ZMQ_BIP15X_DataConnection&&) = delete;
    ZMQ_BIP15X_DataConnection& operator= (ZMQ_BIP15X_DataConnection&&) = delete;
 
    bool startBIP151Handshake();
+   bool handshakeCompleted() {
+      return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
+   }
+
+   // Overridden functions from ZmqDataConnection.
    bool send(const std::string& data) override;
    bool closeConnection() override;
 
 signals:
-   void bip15XCompleted();
+   void bip15XCompleted(); // BIP 150 & 151 handshakes completed.
 
 protected:
-   bool recvData() override;
+   // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
    ZmqContext::sock_ptr CreateDataSocket() override;
+   bool recvData() override;
 
 private:
    void ProcessIncomingData();
@@ -55,8 +54,8 @@ private:
    uint32_t innerRekeyCount_ = 0;
    std::string pendingData_;
    std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
+   bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
-//   const std::string marker = "\r\n\r\n";
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

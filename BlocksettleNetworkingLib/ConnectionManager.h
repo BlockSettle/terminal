@@ -45,11 +45,14 @@ public:
    std::shared_ptr<ServerConnection>   CreateCelerAPIServerConnection() const;
 
    std::shared_ptr<DataConnection>     CreateCelerClientConnection() const;
-   std::shared_ptr<DataConnection>     CreateGenoaClientConnection(bool monitored = false) const;
+   std::shared_ptr<DataConnection>     CreateGenoaClientConnection(
+      bool monitored = false) const;
 
    std::shared_ptr<ZmqSecuredServerConnection>  CreateSecuredServerConnection() const;
-   std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(bool monitored = false) const;
-   std::shared_ptr<ZMQ_BIP15X_DataConnection>   CreateZMQBIP15XDataConnection(bool monitored = false) const;
+   std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
+      bool monitored = false) const;
+   std::shared_ptr<ZMQ_BIP15X_DataConnection>   CreateZMQBIP15XDataConnection(
+      bool monitored = false) const;
    std::shared_ptr<ZMQ_BIP15X_ServerConnection> CreateZMQBIP15XServerConnection() const;
 
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;

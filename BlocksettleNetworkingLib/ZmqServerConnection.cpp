@@ -7,7 +7,8 @@
 #include <spdlog/spdlog.h>
 #include <zmq.h>
 
-ZmqServerConnection::ZmqServerConnection(const std::shared_ptr<spdlog::logger>& logger
+ZmqServerConnection::ZmqServerConnection(
+   const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context)
    : logger_(logger)
    , context_(context)
@@ -232,6 +233,9 @@ void ZmqServerConnection::listenFunction()
                if (listener_) {
                   listener_->OnPeerConnected(cliIP_);
                }
+               if (cbConnAccepted_) {
+                  cbConnAccepted_(sock);
+               }
             }
                break;
 
@@ -245,6 +249,9 @@ void ZmqServerConnection::listenFunction()
                      listener_->OnPeerDisconnected(it->second);
                   }
                   connectedPeers_.erase(it);
+               }
+               if (cbConnClosed_) {
+                  cbConnClosed_(sock);
                }
             }
                break;

@@ -2,6 +2,13 @@
 
 using namespace std;
 
+// NB: Data is mostly copied from Armory's WebSocket code, with mods as needed.
+
+// Reset the message.
+//
+// INPUT:  None
+// OUTPUT: None
+// RETURN: None
 void ZMQ_BIP15X_Msg::reset()
 {
    packets_.clear();
@@ -10,7 +17,11 @@ void ZMQ_BIP15X_Msg::reset()
    packetCount_ = UINT32_MAX;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// Parse incoming raw data into a message.
+//
+// INPUT:  The raw data. (const BinaryDataRef&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
 bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
 {
    if (dataRef.getSize() == 0)
@@ -53,7 +64,6 @@ bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
    case ZMQ_MSGTYPE_AUTH_CHALLENGE:
    case ZMQ_MSGTYPE_AUTH_REPLY:
    case ZMQ_MSGTYPE_AUTH_PROPOSE:
-
    {
       return parseMessageWithoutId(dataSlice);
    }
@@ -65,11 +75,14 @@ bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
    return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// Parse a packet with all data in one packet.
+//
+// INPUT:  The raw data. (const BinaryDataRef&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
 bool ZMQ_BIP15X_Msg::parseSinglePacket(const BinaryDataRef& bdr)
 {
    /*
-   uint8_t type(ZMQ_MSGTYPE_SINGLEPACKET)
    uint32_t msgid
    nbytes payload
    */
@@ -92,12 +105,15 @@ bool ZMQ_BIP15X_Msg::parseSinglePacket(const BinaryDataRef& bdr)
    return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// Parse a fragmented packet header.
+//
+// INPUT:  The raw data header. (const BinaryDataRef&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
 bool ZMQ_BIP15X_Msg::parseFragmentedMessageHeader(
    const BinaryDataRef& bdr)
 {
    /*
-   uint8_t type (ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER)
    uint32_t msgid
    uint16_t count (>= 2)
    nbytes payload fragment
@@ -106,12 +122,14 @@ bool ZMQ_BIP15X_Msg::parseFragmentedMessageHeader(
    BinaryRefReader brr(bdr);
 
    type_ = brr.get_uint8_t();
-   if (type_ != ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER)
+   if (type_ != ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER) {
       return false;
+   }
 
    auto id = brr.get_uint32_t();
-   if (id_ != UINT32_MAX && id_ != id)
+   if (id_ != UINT32_MAX && id_ != id) {
       return false;
+   }
    id_ = id;
 
    packetCount_ = brr.get_uint16_t();
@@ -121,11 +139,14 @@ bool ZMQ_BIP15X_Msg::parseFragmentedMessageHeader(
    return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// Parse a fragmented packet piece.
+//
+// INPUT:  The raw data header. (const BinaryDataRef&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
 bool ZMQ_BIP15X_Msg::parseMessageFragment(const BinaryDataRef& bdr)
 {
    /*
-   uint8_t type (ZMQ_MSGTYPE_FRAGMENTEDPACKET_FRAGMENT)
    uint32_t msgid
    varint packet id (1 to 65535)
    nbytes payload fragment
@@ -134,12 +155,14 @@ bool ZMQ_BIP15X_Msg::parseMessageFragment(const BinaryDataRef& bdr)
    BinaryRefReader brr(bdr);
 
    auto type = brr.get_uint8_t();
-   if (type != ZMQ_MSGTYPE_FRAGMENTEDPACKET_FRAGMENT)
+   if (type != ZMQ_MSGTYPE_FRAGMENTEDPACKET_FRAGMENT) {
       return false;
+   }
 
    auto id = brr.get_uint32_t();
-   if (id_ != UINT32_MAX && id_ != id)
+   if (id_ != UINT32_MAX && id_ != id) {
       return false;
+   }
    id_ = id;
 
    auto packetId = (uint16_t)brr.get_var_int();
@@ -149,7 +172,11 @@ bool ZMQ_BIP15X_Msg::parseMessageFragment(const BinaryDataRef& bdr)
    return true;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// Parse a single packet with no ID.
+//
+// INPUT:  The raw data. (const BinaryDataRef&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
 bool ZMQ_BIP15X_Msg::parseMessageWithoutId(const BinaryDataRef& bdr)
 {
    /*
@@ -160,8 +187,9 @@ bool ZMQ_BIP15X_Msg::parseMessageWithoutId(const BinaryDataRef& bdr)
    BinaryRefReader brr(bdr);
 
    type_ = brr.get_uint8_t();
-   if (type_ < ZMQ_MSGTYPE_AEAD_THRESHOLD)
+   if (type_ < ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       return false;
+   }
 
    packets_.emplace(make_pair(
       0, brr.get_BinaryDataRef(brr.getSizeRemaining())));
@@ -170,7 +198,13 @@ bool ZMQ_BIP15X_Msg::parseMessageWithoutId(const BinaryDataRef& bdr)
    return true;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// Create a single packet with no ID.
+//
+// INPUT:  The raw payload. (const BinaryDataRef&)
+//         The BIP 150/151 handshake data. (BIP151Connection*)
+//         The packet type. (uint8_t)
+// OUTPUT: None
+// RETURN: A vector with the packets. Will usually have only one entry.
 vector<BinaryData> ZMQ_BIP15X_Msg::serializePacketWithoutId(
    const BinaryDataRef& payload, BIP151Connection* connPtr, uint8_t type)
 {
@@ -183,8 +217,9 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serializePacketWithoutId(
 
    uint32_t size = payload.getSize() + 1;
    BinaryData plainText(4 + size + POLY1305MACLEN);
-   if (plainText.getSize() > ZMQ_MESSAGE_PACKET_SIZE)
+   if (plainText.getSize() > ZMQ_MESSAGE_PACKET_SIZE) {
       throw runtime_error("payload is too large to serialize");
+   }
 
    //skip LWS_PRE, copy in packet size
    memcpy(plainText.getPtr(), &size, 4);
@@ -198,13 +233,11 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serializePacketWithoutId(
 
    //encrypt if possible
    vector<BinaryData> result;
-   if (connPtr != nullptr)
-   {
+   if (connPtr != nullptr) {
       connPtr->assemblePacket(plainText.getPtr(), size, plainText.getPtr()
          , size + POLY1305MACLEN);
    }
-   else
-   {
+   else {
       plainText.resize(size);
    }
 
@@ -220,14 +253,28 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const vector<uint8_t>& payload
    return serialize(bdr, connPtr, type, id);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// Packet serialization frontend.
+//
+// INPUT:  The raw payload. (const string&)
+//         The BIP 150/151 handshake data. (BIP151Connection*)
+//         The packet type. (uint8_t)
+//         Message type. (uint32_t)
+// OUTPUT: None
+// RETURN: A vector with the packets. Will usually have only one entry.
 vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const string& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id) {
    BinaryDataRef bdr((uint8_t*)payload.c_str(), payload.size());
    return serialize(bdr, connPtr, type, id);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// Packet serialization frontend.
+//
+// INPUT:  The raw payload. (const BinaryDataRef&)
+//         The BIP 150/151 handshake data. (BIP151Connection*)
+//         The packet type. (uint8_t)
+//         Message type. (uint32_t)
+// OUTPUT: None
+// RETURN: A vector with the packets. Will usually have only one entry.
 vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id) {
    //is this payload carrying a msgid?
@@ -264,23 +311,19 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
 
    //encrypt lambda
    vector<BinaryData> result;
-   auto encryptAndAdd = [connPtr, &result](BinaryData& data)
-   {
+   auto encryptAndAdd = [connPtr, &result](BinaryData& data) {
       size_t plainTextLen = data.getSize() - POLY1305MACLEN;
       size_t cipherTextLen = data.getSize();
 
-      if (connPtr != nullptr)
-      {
+      if (connPtr != nullptr) {
          if (connPtr->assemblePacket(
             data.getPtr(), plainTextLen,
-            data.getPtr(), cipherTextLen) != 0)
-         {
+            data.getPtr(), cipherTextLen) != 0) {
             //failed to encrypt, abort
             throw runtime_error("failed to encrypt packet, aborting");
          }
       }
-      else
-      {
+      else {
          data.resize(cipherTextLen);
       }
 
@@ -290,8 +333,7 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
    auto data_len = payload.getSize();
    static size_t payload_room =
       ZMQ_MESSAGE_PACKET_SIZE - POLY1305MACLEN - 9;
-   if (data_len <= payload_room)
-   {
+   if (data_len <= payload_room) {
       //single packet serialization
       uint32_t size = data_len + 5;
       BinaryData plainText(POLY1305MACLEN + 9 + data_len);
@@ -303,8 +345,7 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
 
       encryptAndAdd(plainText);
    }
-   else
-   {
+   else {
       cout << "DEBUG: Fragmented send - We should not get here." << endl;
 /*      //2 extra bytes for fragment count
       uint32_t header_room = payload_room - 2;
@@ -387,15 +428,22 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
    return result;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-bool ZMQ_BIP15X_Msg::isReady() const
-{
+// Function indicating if a packet is ready to send. Meant primarily for
+// fragmented packets.
+//
+// INPUT:  None
+// OUTPUT: None
+// RETURN: True if ready, false if not.
+bool ZMQ_BIP15X_Msg::isReady() const {
    return packets_.size() == packetCount_;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-uint8_t ZMQ_BIP15X_Msg::getPacketType(const BinaryDataRef& bdr)
-{
+// Function returning the packet type.
+//
+// INPUT:  The packet data. (const BinaryDataRef&)
+// OUTPUT: None
+// RETURN: The packet type. (uint8_t)
+uint8_t ZMQ_BIP15X_Msg::getPacketType(const BinaryDataRef& bdr) {
    if (bdr.getSize() < 5) {
       throw runtime_error("packet is too small to be a serialized fragment");
    }
@@ -403,7 +451,11 @@ uint8_t ZMQ_BIP15X_Msg::getPacketType(const BinaryDataRef& bdr)
    return bdr.getPtr()[4];
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// Function returning the serialized packet data.
+//
+// INPUT:  None
+// OUTPUT: None
+// RETURN: The packet data. (BinaryDataRef)
 BinaryDataRef ZMQ_BIP15X_Msg::getSingleBinaryMessage() const {
    if (packetCount_ != 1 || !isReady()) {
       return BinaryDataRef();
