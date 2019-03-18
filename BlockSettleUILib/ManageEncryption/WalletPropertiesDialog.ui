@@ -1092,7 +1092,7 @@ Encryption</string>
       <item alignment="Qt::AlignLeft">
        <widget class="QPushButton" name="backupButton">
         <property name="enabled">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
