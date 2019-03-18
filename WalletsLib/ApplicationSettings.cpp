@@ -15,7 +15,7 @@
 #if defined (Q_OS_WIN)
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
-static const QString armoryDBAppPathName = QLatin1String("C:/Program Files/BitcoinArmory/ArmoryDB.exe");
+static const QString armoryDBAppPathName = QLatin1String("C:/Program Files/ArmoryDB/ArmoryDB.exe");
 #elif defined (Q_OS_MACOS)
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
