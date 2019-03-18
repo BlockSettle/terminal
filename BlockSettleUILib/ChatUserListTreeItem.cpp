@@ -82,6 +82,7 @@ void ChatUserListTreeItem::addRoomAsChild(Chat::ChatRoomDataPtr room)
 void ChatUserListTreeItem::removeChildren()
 {
    qDeleteAll(childItems_);
+   childItems_.clear();
 }
 
 int ChatUserListTreeItem::childNumber() const
