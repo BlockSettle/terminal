@@ -119,7 +119,6 @@ QImage ChatMessagesTextEdit::statusImage(const int &row) {
 
 void ChatMessagesTextEdit::onSwitchToChat(const QString& chatId)
 {
-   qDebug() << "onSwitchToChat";
    currentChatId_ = chatId;
    messages_.clear();
    messagesToLoadMore_.clear();

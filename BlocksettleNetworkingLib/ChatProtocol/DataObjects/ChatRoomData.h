@@ -50,4 +50,7 @@ namespace Chat {
       QJsonObject toJson() const;
       static std::shared_ptr<ChatRoomData> fromJSON(const std::string& jsonData);
    };
+
+   using ChatRoomDataPtr = std::shared_ptr<ChatRoomData>;
+   using ChatRoomDataListPtr = QList<ChatRoomDataPtr>;
 }
