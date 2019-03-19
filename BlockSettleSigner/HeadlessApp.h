@@ -23,7 +23,7 @@ namespace bs {
 class HeadlessContainerListener;
 class OfflineProcessor;
 class SignerSettings;
-class ZMQ_BIP15X_ServerConnection;
+class zmqBIP15XServerConnection;
 
 class HeadlessAppObj : public QObject
 {
@@ -70,7 +70,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    const std::shared_ptr<SignerSettings>        settings_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
-   std::shared_ptr<ZMQ_BIP15X_ServerConnection> connection_;
+   std::shared_ptr<zmqBIP15XServerConnection> connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    SecureBinaryData                             zmqPubKey_;

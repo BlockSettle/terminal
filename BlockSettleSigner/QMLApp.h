@@ -73,7 +73,7 @@ private:
    std::shared_ptr<SignerSettings>  settings_;
    QQmlContext                *     ctxt_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
-   std::shared_ptr<ZMQ_BIP15X_ServerConnection> connection_;
+   std::shared_ptr<zmqBIP15XServerConnection>   connection_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;
