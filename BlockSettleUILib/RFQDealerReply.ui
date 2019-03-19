@@ -1805,10 +1805,7 @@
             </property>
             <item>
              <widget class="QWidget" name="verticalWidget8" native="true">
-              <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="7,13">
-               <property name="spacing">
-                <number>5</number>
-               </property>
+              <layout class="QGridLayout" name="horizontalLayout_16" columnstretch="7,13">
                <property name="leftMargin">
                 <number>0</number>
                </property>
@@ -1821,7 +1818,13 @@
                <property name="bottomMargin">
                 <number>0</number>
                </property>
-               <item alignment="Qt::AlignLeft">
+               <property name="horizontalSpacing">
+                <number>5</number>
+               </property>
+               <property name="verticalSpacing">
+                <number>16</number>
+               </property>
+               <item row="0" column="0" alignment="Qt::AlignLeft">
                 <widget class="QLabel" name="labelRecvAddr">
                  <property name="text">
                   <string>Receiving Address</string>
@@ -1831,37 +1834,10 @@
                  </property>
                 </widget>
                </item>
-               <item>
+               <item row="0" column="1">
                 <widget class="QComboBox" name="comboBoxRecvAddr"/>
                </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QWidget" name="address" native="true">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="7,13">
-               <property name="spacing">
-                <number>5</number>
-               </property>
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item>
+               <item row="1" column="0">
                 <widget class="QLabel" name="authenticationAddressLabel">
                  <property name="text">
                   <string>Auth Address</string>
@@ -1871,7 +1847,7 @@
                  </property>
                 </widget>
                </item>
-               <item>
+               <item row="1" column="1">
                 <widget class="QComboBox" name="authenticationAddressComboBox"/>
                </item>
               </layout>
