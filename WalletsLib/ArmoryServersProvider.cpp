@@ -28,7 +28,7 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
 
    // #1 add MainNet blocksettle server
    ArmoryServer bsMainNet = defaultServers_.at(0);
-   bsMainNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet);
+   //bsMainNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet);
    if (defaultServersKeys.size() >= 1) {
       bsMainNet.armoryDBKey = defaultServersKeys.at(0);
    }
@@ -36,7 +36,7 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
 
    // #2 add TestNet blocksettle server
    ArmoryServer bsTestNet = defaultServers_.at(1);
-   bsTestNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet);
+   //bsTestNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet);
    if (defaultServersKeys.size() >= 2) {
       bsTestNet.armoryDBKey = defaultServersKeys.at(1);
    }

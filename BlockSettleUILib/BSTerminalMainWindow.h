@@ -224,7 +224,9 @@ private:
 private:
    QString           loginButtonText_;
    NetworkSettings   networkSettings_;
-   bool  readyToRegisterWallets_ = false;
+   bool readyToRegisterWallets_ = false;
+   bool initialWalletCreateDialogShown_ = false;
+   bool armoryKeyDialogShown_ = false;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

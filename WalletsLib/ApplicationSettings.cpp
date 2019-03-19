@@ -61,8 +61,8 @@ static const QString zmqSignerKeyFileName = QLatin1String("zmq_conn_srv.pub");
 
 static const int ArmoryDefaultLocalMainPort = 9001;
 static const int ArmoryDefaultLocalTestPort = 19001;
-static const int ArmoryDefaultRemoteMainPort = 80;
-static const int ArmoryDefaultRemoteTestPort = 81;
+static const int ArmoryDefaultRemoteMainPort = 9001;
+static const int ArmoryDefaultRemoteTestPort = 19001;
 
 #ifndef NDEBUG
 static const QString chatServerIPName = QLatin1String("chatserver-ip");
