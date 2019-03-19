@@ -53,6 +53,8 @@ public:
 
    std::vector<std::shared_ptr<Chat::MessageData>> getUserMessages(const QString &ownUserId, const QString &userId);
    std::vector<std::shared_ptr<Chat::MessageData>> getRoomMessages(const QString &roomId);
+   bool removeRoomMessages(const QString &roomId);
+   bool isRoomMessagesExist(const QString &userId);
 
    /** Adds given username->publickey pair to DB.
     * \param[in] user Chat user name, currently a base64 encoded hash or PK.

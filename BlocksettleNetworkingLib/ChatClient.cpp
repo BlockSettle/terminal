@@ -177,6 +177,7 @@ void ChatClient::OnChatroomsList(const Chat::ChatroomsListResponse& response)
    std::vector<std::shared_ptr<Chat::ChatRoomData>> roomList = response.getChatRoomList();
    for (auto room : roomList){
       rooms << QString::fromStdString(room->toJsonString());
+      chatDb_->removeRoomMessages(room->getId());
    }
    emit RoomsAdd(roomList);
    logger_->debug("[ChatClient::OnChatroomsList]: Received chatroom list from server: {}",
