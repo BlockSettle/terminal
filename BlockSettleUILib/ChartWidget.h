@@ -61,11 +61,19 @@ protected:
 	void timerEvent(QTimerEvent* event);
 	std::chrono::seconds getTimerInterval() const;
 
+    std::pair<qint64, qint64> GetPlotRange() const;
+
+	void LoadAdditionalPoints(const QCPRange& range) const;
+
 private:
 	std::shared_ptr<ApplicationSettings>			appSettings_;
 	std::shared_ptr<MarketDataProvider>				mdProvider_;
 	std::shared_ptr<MdhsClient>						mdhsClient_;
 	std::shared_ptr<spdlog::logger>					logger_;
+    
+	const int loadDistance{ 15 };
+
+    constexpr static int requestLimit{ 100 };
 
 	Ui::ChartWidget *ui_;
     QButtonGroup dateRange_;
@@ -102,6 +110,8 @@ private:
 
 	qreal lastDragCoordX{ 0.0 };
 	qreal startDragCoordX{ 0.0 };
+
+	quint64 first_timestamp_in_db{ 0 };
 };
 
 #endif // CHARTWIDGET_H

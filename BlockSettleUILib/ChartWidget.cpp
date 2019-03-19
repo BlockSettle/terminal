@@ -150,11 +150,12 @@ void ChartWidget::UpdateChart(const int& interval) const
    qreal width = 0.8 * IntervalWidth(interval) / 1000;
    candlesticksChart_->setWidth(width);
    volumeChart_->setWidth(width);
-
+   const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
    OhlcRequest ohlcRequest;
    ohlcRequest.set_product(product.toStdString());
    ohlcRequest.set_interval(static_cast<Interval>(interval));
-   ohlcRequest.set_limit(100);
+   ohlcRequest.set_count(requestLimit);
+   ohlcRequest.set_lesser_then(-1);
 
    MarketDataHistoryRequest request;
    request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
@@ -226,6 +227,8 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       return;
    }
 
+   bool firstPortion = candlesticksChart_->data()->size() == 0;
+
    auto product = ui_->cboInstruments->currentText();
    auto interval = dateRange_.checkedId();
 
@@ -287,9 +290,13 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
    newMaxPrice = maxPrice;
    newMinPrice = minPrice;
-
    volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
-   UpdatePlot(interval, maxTimestamp);
+   if (firstPortion) {
+	   first_timestamp_in_db = response.first_stamp_in_db() / 1000;
+		UpdatePlot(interval, maxTimestamp);
+   }
+
+
 }
 
 void ChartWidget::setAutoScaleBtnColor() const
@@ -343,7 +350,7 @@ void ChartWidget::ModifyCandle()
 
 void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
 {
-   qreal size = IntervalWidth(interval, 100);
+   qreal size = IntervalWidth(interval, requestLimit);
    qreal upper = timestamp + 0.8 * IntervalWidth(interval) / 2;
 
    ui_->customPlot->rescaleAxes();
@@ -351,6 +358,7 @@ void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
    ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
    ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
    ui_->customPlot->replot();
+
 }
 
 void ChartWidget::timerEvent(QTimerEvent* event)
@@ -380,6 +388,30 @@ std::chrono::seconds ChartWidget::getTimerInterval() const
    qDebug() << "timer will start after " << timerInterval.count() << " seconds";
 
    return timerInterval;
+}
+
+std::pair<qint64, qint64> ChartWidget::GetPlotRange() const
+{
+	return { volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower,
+			 volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper };
+}
+
+void ChartWidget::LoadAdditionalPoints(const QCPRange& range) const
+{
+	const auto data = candlesticksChart_->data();
+	if (data->size() && (range.lower - data->constBegin()->key < IntervalWidth(dateRange_.checkedId()) / 1000 * loadDistance) && first_timestamp_in_db < data->constBegin()->key) {
+		OhlcRequest ohlcRequest;
+		auto product = ui_->cboInstruments->currentText();
+		ohlcRequest.set_product(product.toStdString());
+		ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
+		ohlcRequest.set_count(requestLimit);
+		ohlcRequest.set_lesser_then(data->constBegin()->key * 1000);
+
+		MarketDataHistoryRequest request;
+		request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
+		request.set_request(ohlcRequest.SerializeAsString());
+		mdhsClient_->SendRequest(request);
+	}
 }
 
 void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const
@@ -522,11 +554,6 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   bottomAxis->setRange(lower_bound, upper_bound);
 	   ui_->customPlot->replot();
    }
-
-   if (isDraggingMainPlot && autoScaling) {
-	   rescalePlot();
-   }
-
 }
 
 void ChartWidget::rescalePlot()
@@ -656,8 +683,14 @@ void ChartWidget::InitializeCustomPlot()
    // interconnect x axis ranges of main and bottom axis rects:
    connect(ui_->customPlot->xAxis, SIGNAL(rangeChanged(QCPRange))
            , volumeAxisRect_->axis(QCPAxis::atBottom), SLOT(setRange(QCPRange)));
-   connect(volumeAxisRect_->axis(QCPAxis::atBottom), SIGNAL(rangeChanged(QCPRange))
-           , ui_->customPlot->xAxis, SLOT(setRange(QCPRange)));
+   connect(volumeAxisRect_->axis(QCPAxis::atBottom),
+	       qOverload<const QCPRange&>(&QCPAxis::rangeChanged),
+	   this,
+	   [this](QCPRange range){
+				LoadAdditionalPoints(range);
+			   rescalePlot();
+				ui_->customPlot->xAxis->setRange(range);
+			});
    // configure axes of both main and bottom axis rect:
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker(new QCPAxisTickerDateTime);
    dateTimeTicker->setDateTimeSpec(Qt::UTC);
