@@ -556,10 +556,11 @@ void CreateTransactionDialogAdvanced::onRemoveOutput()
 
 void CreateTransactionDialogAdvanced::onOutputRemoved()
 {
-   if (!transactionData_->GetRecipientsCount()) {
-      transactionData_->setTotalFee(0, false);
-      setTxFees();
+   for (const auto &recipId : transactionData_->allRecipientIds()) {
+      UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), false);
    }
+   transactionData_->setTotalFee(0, false);
+   setTxFees();
    enableFeeChanging();
 }
 

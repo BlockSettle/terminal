@@ -294,18 +294,19 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
          return 0;
       }
 
-      std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      unsigned int recipId = 0;
       for (const auto &recip : recipients_) {
          const auto recipPtr = recip.second->GetScriptRecipient();
          if (!recipPtr || !recipPtr->getValue()) {
             continue;
          }
-         recipientsMap[recip.first] = recipPtr;
+         recipientsMap[recipId++] = recipPtr;
       }
       if (!recipient.isNull()) {
          const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
          if (recipPtr) {
-            recipientsMap[recipients_.size()] = recipPtr;
+            recipientsMap[recipId++] = recipPtr;
          }
       }
       if (recipientsMap.empty()) {
