@@ -52,12 +52,14 @@ protected:
 	void ProcessProductsListResponse(const std::string& data);
 	void ProcessOhlcHistoryResponse(const std::string& data);
 
+	void setAutoScaleBtnColor() const;
+
 	void AddNewCandle();
 	void ModifyCandle();
 	void UpdatePlot(const int& interval, const qint64& timestamp);
 
 	void timerEvent(QTimerEvent* event);
-	std::chrono::seconds getTimerInterval();
+	std::chrono::seconds getTimerInterval() const;
 
 private:
 	std::shared_ptr<ApplicationSettings>			appSettings_;
@@ -73,7 +75,6 @@ private:
     QCPFinancial *candlesticksChart_;
     QCPBars *volumeChart_;
     QCPAxisRect *volumeAxisRect_;
-	QPushButton* autoScalingBtn{ nullptr };
 
 	double lastHigh;
 	double lastLow;

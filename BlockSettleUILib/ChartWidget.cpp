@@ -31,21 +31,14 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , dragY(0)
    , isDraggingYAxis(false) {
    ui_->setupUi(this);
-   autoScalingBtn = new QPushButton(QStringLiteral("auto"), this);
-   //autoScalingBtn->resize(20, 7);
-   autoScalingBtn->move(200, 2);
-   autoScalingBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(36,124,172)"));
-   connect(autoScalingBtn, &QPushButton::clicked, this, [this]() {
-	   if (autoScaling) {
-		   autoScalingBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(255, 255, 255)"));
-	   }
-	   else {
+   setAutoScaleBtnColor();
+   connect(ui_->autoScaleBtn, &QPushButton::clicked, [this]() {
+	   if (autoScaling = !autoScaling)
+	   {
 		   rescalePlot();
-		   autoScalingBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(36,124,172)"));
 	   }
-	   autoScaling = !autoScaling;
+	   setAutoScaleBtnColor();
    });
-   //change to rgb(36,124,172)
    // setting up date range radio button group
    dateRange_.addButton(ui_->btn1h, Interval::OneHour);
    dateRange_.addButton(ui_->btn6h, Interval::SixHours);
@@ -299,6 +292,16 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    UpdatePlot(interval, maxTimestamp);
 }
 
+void ChartWidget::setAutoScaleBtnColor() const
+{
+	if (autoScaling) {
+		ui_->autoScaleBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(36,124,172)"));
+	}
+	else {
+		ui_->autoScaleBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(255, 255, 255)"));
+	}
+}
+
 void ChartWidget::AddNewCandle()
 {
    const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
@@ -359,7 +362,7 @@ void ChartWidget::timerEvent(QTimerEvent* event)
    AddNewCandle();
 }
 
-std::chrono::seconds ChartWidget::getTimerInterval()
+std::chrono::seconds ChartWidget::getTimerInterval() const
 {
    auto currentTime = QDateTime::fromMSecsSinceEpoch(static_cast<qint64> (currentTimestamp)).time();
 
@@ -548,7 +551,7 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
 	isDraggingYAxis = select != -1.0;
 	if (isDraggingYAxis) {
 		if (autoScaling) {
-			autoScalingBtn->animateClick();
+			ui_->autoScaleBtn->animateClick();
 		}
 	}
 
@@ -564,7 +567,6 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
 	if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
 		isDraggingMainPlot = true;
 	}
-	qDebug() << (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos()));
 }
 
 void ChartWidget::OnMouseReleased(QMouseEvent* event)
