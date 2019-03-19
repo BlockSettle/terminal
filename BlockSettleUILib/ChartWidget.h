@@ -39,6 +39,7 @@ protected slots:
 	void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 	void OnInstrumentChanged(const QString &text);
 	void OnPlotMouseMove(QMouseEvent* event);
+	void rescalePlot();
 	void OnMousePressed(QMouseEvent* event);
 	void OnMouseReleased(QMouseEvent* event);
 
@@ -72,11 +73,14 @@ private:
     QCPFinancial *candlesticksChart_;
     QCPBars *volumeChart_;
     QCPAxisRect *volumeAxisRect_;
+	QPushButton* autoScalingBtn{ nullptr };
 
 	double lastHigh;
 	double lastLow;
 	double lastClose;
 	double currentTimestamp;
+
+	bool autoScaling{ true };
 
 	qreal maxPrice;
 	qreal minPrice;

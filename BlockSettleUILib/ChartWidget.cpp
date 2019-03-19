@@ -31,7 +31,21 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , dragY(0)
    , isDraggingYAxis(false) {
    ui_->setupUi(this);
-
+   autoScalingBtn = new QPushButton(QStringLiteral("auto"), this);
+   //autoScalingBtn->resize(20, 7);
+   autoScalingBtn->move(200, 2);
+   autoScalingBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(36,124,172)"));
+   connect(autoScalingBtn, &QPushButton::clicked, this, [this]() {
+	   if (autoScaling) {
+		   autoScalingBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(255, 255, 255)"));
+	   }
+	   else {
+		   rescalePlot();
+		   autoScalingBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(36,124,172)"));
+	   }
+	   autoScaling = !autoScaling;
+   });
+   //change to rgb(36,124,172)
    // setting up date range radio button group
    dateRange_.addButton(ui_->btn1h, Interval::OneHour);
    dateRange_.addButton(ui_->btn6h, Interval::SixHours);
@@ -68,9 +82,9 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
 
-   //MarketDataHistoryRequest request;
-   //request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
-   //mdhsClient_->SendRequest(request);
+   MarketDataHistoryRequest request;
+   request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
+   mdhsClient_->SendRequest(request);
 
    // initialize charts
    InitializeCustomPlot();
@@ -121,10 +135,10 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 
    ModifyCandle();
 
-   if (cboModel_->findItems(security).isEmpty())
-   {
-      cboModel_->appendRow(new QStandardItem(security));
-   }
+   //if (cboModel_->findItems(security).isEmpty())
+   //{
+   //   cboModel_->appendRow(new QStandardItem(security));
+   //}
 }
 
 void ChartWidget::UpdateChart(const int& interval) const
@@ -462,9 +476,11 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
                      .arg(ohlcValue.low, 0, 'g', -1)
                      .arg(ohlcValue.close, 0, 'g', -1)
                      .arg(volumeValue.value, 0, 'g', -1));
+	  ui_->customPlot->replot();
    } else 
    {
       info_->setText({});
+	  ui_->customPlot->replot();
    }
 
    if (isDraggingYAxis)
@@ -483,7 +499,6 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   ui_->customPlot->yAxis2->setRange(newMinPrice, newMaxPrice);
 	   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
 	   ui_->customPlot->replot();
-	   ui_->customPlot->update();
    }
    else
    {
@@ -502,30 +517,40 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   lower_bound += diff / tempCoeff * scalingCoeff * directionCoeff;
 	   upper_bound -= diff / tempCoeff * scalingCoeff * directionCoeff;
 	   bottomAxis->setRange(lower_bound, upper_bound);
-
+	   ui_->customPlot->replot();
    }
 
-   if (isDraggingMainPlot) {
-	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
-	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
-	   currentMinPrice = std::numeric_limits<qreal>::max();
-	   currentMaxPrice = std::numeric_limits<qreal>::min();
-	   for (const auto& it : *candlesticksChart_->data()) {
-		   if (it.key >= lower_bound && it.key <= upper_bound) {
-			   currentMinPrice = qMin(currentMinPrice, it.low);
-			   currentMaxPrice = qMax(currentMaxPrice, it.high);
-		   }
-	   }
-	   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
+   if (isDraggingMainPlot && autoScaling) {
+	   rescalePlot();
    }
 
-   ui_->customPlot->replot();
+}
+
+void ChartWidget::rescalePlot()
+{
+	auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+	auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+	currentMinPrice = std::numeric_limits<qreal>::max();
+	currentMaxPrice = std::numeric_limits<qreal>::min();
+	for (const auto& it : *candlesticksChart_->data()) {
+		if (it.key >= lower_bound && it.key <= upper_bound) {
+			currentMinPrice = qMin(currentMinPrice, it.low);
+			currentMaxPrice = qMax(currentMaxPrice, it.high);
+		}
+	}
+	ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
+	ui_->customPlot->replot();
 }
 
 void ChartWidget::OnMousePressed(QMouseEvent* event)
 {
 	auto select = ui_->customPlot->yAxis2->selectTest(event->pos(), false);
 	isDraggingYAxis = select != -1.0;
+	if (isDraggingYAxis) {
+		if (autoScaling) {
+			autoScalingBtn->animateClick();
+		}
+	}
 
 	auto selectXPoint = volumeAxisRect_->axis(QCPAxis::atBottom)->selectTest(event->pos(), false);
 	isDraggingXAxis = selectXPoint != -1.0;
