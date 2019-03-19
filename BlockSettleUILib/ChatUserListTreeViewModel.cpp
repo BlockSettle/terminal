@@ -144,6 +144,9 @@ QVariant ChatUserListTreeViewModel::data(const QModelIndex &index, int role) con
          
          case RoomIDRole:
             return roomDataPtr->getId();
+
+         case HaveNewMessageRole:
+            return roomDataPtr->haveNewMessage();
       }
 
    }

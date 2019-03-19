@@ -69,7 +69,21 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
       itemOption.palette.setColor(QPalette::Text, internalStyle_.colorRoom());
       itemOption.palette.setColor(QPalette::HighlightedText, internalStyle_.colorRoom());
       QStyledItemDelegate::paint(painter, itemOption, index);
-      return QStyledItemDelegate::paint(painter, itemOption, index);
+      
+      // draw dot
+      const bool haveMessage =
+            qvariant_cast<bool>(index.data(ChatUserListTreeViewModel::HaveNewMessageRole));
+      if (haveMessage) {
+         auto text = index.data(Qt::DisplayRole).toString();
+         QFontMetrics fm(itemOption.font, painter->device());
+         auto textRect = fm.boundingRect(itemOption.rect, 0, text);
+         auto textWidth = textRect.width();
+         QPoint dotPoint(itemOption.rect.left() + textWidth + DOT_SHIFT, itemOption.rect.top() + itemOption.rect.height() / 2);
+         painter->save();
+         painter->setBrush(QBrush(internalStyle_.colorUserOnline(), Qt::SolidPattern));
+         painter->drawEllipse(dotPoint, DOT_RADIUS, DOT_RADIUS);
+         painter->restore();
+      }
 
    } 
    else if (itemType == ChatUserListTreeViewModel::ItemType::UserItem) {
@@ -106,7 +120,7 @@ void ChatUserListTreeViewDelegate::paint(QPainter* painter, const QStyleOptionVi
          QFontMetrics fm(itemOption.font, painter->device());
          auto textRect = fm.boundingRect(itemOption.rect, 0, text);
          auto textWidth = textRect.width();
-         QPoint dotPoint(textWidth + DOT_SHIFT, textRect.height()/2 + (itemOption.rect.height() * index.row()));
+         QPoint dotPoint(itemOption.rect.left() + textWidth + DOT_SHIFT, itemOption.rect.top() + itemOption.rect.height() / 2);
          painter->save();
          painter->setBrush(QBrush(internalStyle_.colorUserOnline(), Qt::SolidPattern));
          painter->drawEllipse(dotPoint, DOT_RADIUS, DOT_RADIUS);

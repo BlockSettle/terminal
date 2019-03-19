@@ -34,6 +34,10 @@ namespace Chat {
       bool isPrivate();
       bool sendUserUpdates();
       bool displayUserList();
+
+      bool haveNewMessage() const;
+      void setHaveNewMessage(bool haveNewMessage);
+      
    private:
       QString id_;
       QString ownerId_;
@@ -42,6 +46,7 @@ namespace Chat {
       bool isPrivate_;
       bool sendUserUpdates_;
       bool displayUserList_;
+      bool haveNewMessage_;
       //QList<UserRecord> userList_;
       
       
