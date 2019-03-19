@@ -51,6 +51,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       l->setContentsMargins(0,0,0,0);
       d->setLayout(l);
       d->setWindowTitle(tr("ArmoryDB connection"));
+      d->resize(847, 593);
 
       ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, appSettings_, this);
 
