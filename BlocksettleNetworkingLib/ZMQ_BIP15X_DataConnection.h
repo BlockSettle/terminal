@@ -11,16 +11,16 @@
 
 #define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
-class ZMQ_BIP15X_DataConnection : public QObject, public ZmqDataConnection {
+class zmqBIP15XDataConnection : public QObject, public ZmqDataConnection {
    Q_OBJECT
 public:
-   ZMQ_BIP15X_DataConnection(const std::shared_ptr<spdlog::logger>& logger
+   zmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
       , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
       , bool monitored);
-   ZMQ_BIP15X_DataConnection(const ZMQ_BIP15X_DataConnection&) = delete;
-   ZMQ_BIP15X_DataConnection& operator= (const ZMQ_BIP15X_DataConnection&) = delete;
-   ZMQ_BIP15X_DataConnection(ZMQ_BIP15X_DataConnection&&) = delete;
-   ZMQ_BIP15X_DataConnection& operator= (ZMQ_BIP15X_DataConnection&&) = delete;
+   zmqBIP15XDataConnection(const zmqBIP15XDataConnection&) = delete;
+   zmqBIP15XDataConnection& operator= (const zmqBIP15XDataConnection&) = delete;
+   zmqBIP15XDataConnection(zmqBIP15XDataConnection&&) = delete;
+   zmqBIP15XDataConnection& operator= (zmqBIP15XDataConnection&&) = delete;
 
    bool startBIP151Handshake();
    bool handshakeCompleted() {
@@ -42,7 +42,7 @@ protected:
 
 private:
    void ProcessIncomingData();
-   bool processAEADHandshake(const ZMQ_BIP15X_Msg& msgObj);
+   bool processAEADHandshake(const zmqBIP15XMsg& msgObj);
    void promptUser(const BinaryDataRef& newKey, const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
 

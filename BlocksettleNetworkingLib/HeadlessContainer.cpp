@@ -1050,7 +1050,7 @@ bool RemoteSigner::Start()
          , &RemoteSigner::onConnError, Qt::QueuedConnection);
       connect(listener_.get(), &HeadlessListener::PacketReceived, this
          , &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
-      connect(connection_.get(), &ZMQ_BIP15X_DataConnection::bip15XCompleted
+      connect(connection_.get(), &zmqBIP15XDataConnection::bip15XCompleted
          , this, &RemoteSigner::onBIP15XCompleted, Qt::QueuedConnection);
    }
 

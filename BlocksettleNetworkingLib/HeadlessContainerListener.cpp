@@ -91,6 +91,9 @@ bool HeadlessContainerListener::sendData(const std::string &data, const std::str
       }
    }
    else {
+if (!connection_) {
+std::cout << "DOUG DEBUG: HeadlessContainerListener::sendData() - Connection doesn't exist!" << std::endl;
+}
       sentOk = connection_->SendDataToClient(clientId, data);
    }
    return sentOk;
@@ -180,17 +183,18 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
 
 void HeadlessContainerListener::OnPeerConnected(const std::string &ip)
 {
-   if (cbPeerConn_) {
+/*   if (cbPeerConn_) {
       cbPeerConn_(ip);
-   }
+   }*/
 }
 
 void HeadlessContainerListener::OnPeerDisconnected(const std::string &ip)
 {
    logger_->warn("[{}] IP {}", __func__, ip);
-   if (cbPeerDisconn_) {
+/*   if (cbPeerDisconn_) {
       cbPeerDisconn_(ip);
    }
+   connection_.reset();*/
 }
 
 SecureBinaryData HeadlessContainerListener::authTicket(const std::string &clientId) const

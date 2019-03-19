@@ -9,7 +9,7 @@ using namespace std;
 // INPUT:  None
 // OUTPUT: None
 // RETURN: None
-void ZMQ_BIP15X_Msg::reset()
+void zmqBIP15XMsg::reset()
 {
    packets_.clear();
    id_ = UINT32_MAX;
@@ -22,7 +22,7 @@ void ZMQ_BIP15X_Msg::reset()
 // INPUT:  The raw data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
+bool zmqBIP15XMsg::parsePacket(const BinaryDataRef& dataRef)
 {
    if (dataRef.getSize() == 0)
       return false;
@@ -80,7 +80,7 @@ bool ZMQ_BIP15X_Msg::parsePacket(const BinaryDataRef& dataRef)
 // INPUT:  The raw data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZMQ_BIP15X_Msg::parseSinglePacket(const BinaryDataRef& bdr)
+bool zmqBIP15XMsg::parseSinglePacket(const BinaryDataRef& bdr)
 {
    /*
    uint32_t msgid
@@ -110,7 +110,7 @@ bool ZMQ_BIP15X_Msg::parseSinglePacket(const BinaryDataRef& bdr)
 // INPUT:  The raw data header. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZMQ_BIP15X_Msg::parseFragmentedMessageHeader(
+bool zmqBIP15XMsg::parseFragmentedMessageHeader(
    const BinaryDataRef& bdr)
 {
    /*
@@ -144,7 +144,7 @@ bool ZMQ_BIP15X_Msg::parseFragmentedMessageHeader(
 // INPUT:  The raw data header. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZMQ_BIP15X_Msg::parseMessageFragment(const BinaryDataRef& bdr)
+bool zmqBIP15XMsg::parseMessageFragment(const BinaryDataRef& bdr)
 {
    /*
    uint32_t msgid
@@ -177,7 +177,7 @@ bool ZMQ_BIP15X_Msg::parseMessageFragment(const BinaryDataRef& bdr)
 // INPUT:  The raw data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZMQ_BIP15X_Msg::parseMessageWithoutId(const BinaryDataRef& bdr)
+bool zmqBIP15XMsg::parseMessageWithoutId(const BinaryDataRef& bdr)
 {
    /*
    uint8_t type
@@ -205,7 +205,7 @@ bool ZMQ_BIP15X_Msg::parseMessageWithoutId(const BinaryDataRef& bdr)
 //         The packet type. (uint8_t)
 // OUTPUT: None
 // RETURN: A vector with the packets. Will usually have only one entry.
-vector<BinaryData> ZMQ_BIP15X_Msg::serializePacketWithoutId(
+vector<BinaryData> zmqBIP15XMsg::serializePacketWithoutId(
    const BinaryDataRef& payload, BIP151Connection* connPtr, uint8_t type)
 {
    /***
@@ -245,7 +245,7 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serializePacketWithoutId(
    return result;
 }
 
-vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const vector<uint8_t>& payload
+vector<BinaryData> zmqBIP15XMsg::serialize(const vector<uint8_t>& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id){
    BinaryDataRef bdr;
    if(payload.size() > 0)
@@ -261,7 +261,7 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const vector<uint8_t>& payload
 //         Message type. (uint32_t)
 // OUTPUT: None
 // RETURN: A vector with the packets. Will usually have only one entry.
-vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const string& payload
+vector<BinaryData> zmqBIP15XMsg::serialize(const string& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id) {
    BinaryDataRef bdr((uint8_t*)payload.c_str(), payload.size());
    return serialize(bdr, connPtr, type, id);
@@ -275,7 +275,7 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const string& payload
 //         Message type. (uint32_t)
 // OUTPUT: None
 // RETURN: A vector with the packets. Will usually have only one entry.
-vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
+vector<BinaryData> zmqBIP15XMsg::serialize(const BinaryDataRef& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id) {
    //is this payload carrying a msgid?
    if (type > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
@@ -434,7 +434,7 @@ vector<BinaryData> ZMQ_BIP15X_Msg::serialize(const BinaryDataRef& payload
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if ready, false if not.
-bool ZMQ_BIP15X_Msg::isReady() const {
+bool zmqBIP15XMsg::isReady() const {
    return packets_.size() == packetCount_;
 }
 
@@ -443,7 +443,7 @@ bool ZMQ_BIP15X_Msg::isReady() const {
 // INPUT:  The packet data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: The packet type. (uint8_t)
-uint8_t ZMQ_BIP15X_Msg::getPacketType(const BinaryDataRef& bdr) {
+uint8_t zmqBIP15XMsg::getPacketType(const BinaryDataRef& bdr) {
    if (bdr.getSize() < 5) {
       throw runtime_error("packet is too small to be a serialized fragment");
    }
@@ -456,7 +456,7 @@ uint8_t ZMQ_BIP15X_Msg::getPacketType(const BinaryDataRef& bdr) {
 // INPUT:  None
 // OUTPUT: None
 // RETURN: The packet data. (BinaryDataRef)
-BinaryDataRef ZMQ_BIP15X_Msg::getSingleBinaryMessage() const {
+BinaryDataRef zmqBIP15XMsg::getSingleBinaryMessage() const {
    if (packetCount_ != 1 || !isReady()) {
       return BinaryDataRef();
    }

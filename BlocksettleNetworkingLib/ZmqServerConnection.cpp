@@ -233,9 +233,6 @@ void ZmqServerConnection::listenFunction()
                if (listener_) {
                   listener_->OnPeerConnected(cliIP_);
                }
-               if (cbConnAccepted_) {
-                  cbConnAccepted_(sock);
-               }
             }
                break;
 
@@ -249,9 +246,6 @@ void ZmqServerConnection::listenFunction()
                      listener_->OnPeerDisconnected(it->second);
                   }
                   connectedPeers_.erase(it);
-               }
-               if (cbConnClosed_) {
-                  cbConnClosed_(sock);
                }
             }
                break;
@@ -304,7 +298,7 @@ bool ZmqServerConnection::SendDataCommand()
    }
 
    if (result == -1) {
-      logger_->error("[{}] failed to send data comamnd for {} : {}", __func__
+      logger_->error("[{}] failed to send data command for {} : {}", __func__
          , connectionName_, zmq_strerror(zmq_errno()));
    }
 

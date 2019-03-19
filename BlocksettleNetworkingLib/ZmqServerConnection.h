@@ -34,15 +34,6 @@ public:
 
    std::string GetClientInfo(const std::string &clientId) const override;
 
-   void setConnAcceptedCB(
-      const std::function<void(const int&)> cbConnAccepted) {
-      cbConnAccepted_ = cbConnAccepted;
-   }
-   void setConnClosedCB(
-      const std::function<void(const int&)> cbConnClosed) {
-      cbConnClosed_ = cbConnClosed;
-   }
-
    bool SetZMQTransport(ZMQTransport transport);
 
    void SetImmediate(bool flag = true) { immediate_ = flag; }
@@ -76,8 +67,6 @@ protected:
 
    std::unordered_map<std::string, std::string> clientInfo_; // ClientID & related string
    std::string cliIP_;
-   std::function<void(const int&)> cbConnAccepted_;
-   std::function<void(const int&)> cbConnClosed_;
 
 private:
    void stopServer();
