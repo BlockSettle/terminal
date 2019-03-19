@@ -737,7 +737,7 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
       diffMax = 0;
    }
    // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
-   if ((diffMax >= 0.00000001) && (diffMax <= (maxOutputSize * kDustFeePerByte))) {
+   if ((diffMax >= 0.00000001) && (diffMax <= (maxOutputSize * kDustFeePerByte / BTCNumericTypes::BalanceDivider))) {
       BSMessageBox question(BSMessageBox::question, tr("Change fee")
          , tr("Your projected change amount %1 is too small as compared to the projected fee."
             " Attempting to keep the change will prevent the transaction from being propagated through"
