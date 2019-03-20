@@ -136,32 +136,26 @@ CustomTitleDialogWindow {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
-                        if (walletsProxy.exportWatchingOnly(walletInfo.walletId, exportDir, passwordData)) {
-                            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                       , qsTr("Wallet")
-                                       , qsTr("Watching-Only Wallet successfully exported.")
-                                       , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
+                        walletsProxy.exportWatchingOnly(walletInfo.walletId, exportDir, passwordData)
+                        var mb = JsHelper.messageBox(BSMessageBox.Type.Success
+                                   , qsTr("Wallet")
+                                   , qsTr("Watching-Only Wallet exported.")
+                                   , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
 
-                            mb.accepted.connect(function(){ acceptAnimated() })
-                        }
+                        mb.accepted.connect(function(){ acceptAnimated() })
                     }
                     else {
-                        JsHelper.requesteIdAuth(AutheIDClient.BackupWallet
-                                                , walletInfo
-                                                , function(passwordData){
-                                                    if (walletsProxy.exportWatchingOnly(walletInfo.walletId, exportDir, passwordData)) {
-                                                        var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                                                   , qsTr("Wallet")
-                                                                   , qsTr("Watching-Only wallet successfully exported.")
-                                                                   , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
+                        JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo
+                            , function(passwordData){
+                                walletsProxy.exportWatchingOnly(walletInfo.walletId, exportDir, passwordData)
+                                var mb = JsHelper.messageBox(BSMessageBox.Type.Success
+                                           , qsTr("Wallet")
+                                           , qsTr("Watching-Only wallet exported.")
+                                           , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
 
-                                                        mb.accepted.connect(function(){ acceptAnimated() })
-                                                    }
-                                                })
+                                mb.accepted.connect(function(){ acceptAnimated() })
+                            })
                     }
-
-
-
                 }
             }
         }
