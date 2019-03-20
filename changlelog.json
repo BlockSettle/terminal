@@ -1,6 +1,30 @@
 {
-   "latest_version" : "0.13.2",
+   "latest_version" : "0.13.4",
    "changes" : [
+      {
+         "version_string" : "0.13.4",
+         "previous_version" : "0.13.3",
+         "improvements" :
+         [
+            "Minor UI improvements"
+         ],
+         "bug_fixes" :
+         [
+            "Create TX fixes"
+         ]
+      },
+      {
+         "version_string" : "0.13.3",
+         "previous_version" : "0.13.2",
+         "improvements" :
+         [
+            "Minor UI improvements"
+         ],
+         "bug_fixes" :
+         [
+            "Create TX fixes"
+         ]
+      },
       {
          "version_string" : "0.13.2",
          "previous_version" : "0.13.1",
