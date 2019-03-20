@@ -205,7 +205,7 @@ std::shared_ptr<AssetEntry_Single> hd::Node::getAsset(int id) const
 {
    SecureBinaryData privKeyBin = privChainedKey().copy();
    const auto privKey = std::make_shared<Asset_PrivateKey>(id, privKeyBin
-      , make_unique<Cypher_AES>(BinaryData{}, BinaryData{}));
+      , make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
    SecureBinaryData pubKey = pubChainedKey();
    const AssetEntry_Single aes(id, BinaryData{}, pubKey, privKey);
    return std::make_shared<AssetEntry_Single>(aes);
@@ -262,7 +262,7 @@ BinaryData hd::Node::serialize() const
 
       if (!seed_.isNull()) {
          bw.put_var_int(seed_.getSize() + 1);
-         bw.put_uint8_t(CYPHER_BYTE);
+         bw.put_uint8_t(CIPHER_BYTE);
          bw.put_BinaryData(seed_);
       }
 
@@ -320,8 +320,8 @@ std::shared_ptr<hd::Node> hd::Node::deserialize(BinaryDataRef value)
          throw std::runtime_error("network type mismatch");
       }
 
-      if (values.find(CYPHER_BYTE) != values.end()) {
-         brrData = values[CYPHER_BYTE][0];
+      if (values.find(CIPHER_BYTE) != values.end()) {
+         brrData = values[CIPHER_BYTE][0];
          result->seed_ = BinaryData(brrData.get_BinaryDataRef((uint32_t)brrData.getSizeRemaining()));
       }
 

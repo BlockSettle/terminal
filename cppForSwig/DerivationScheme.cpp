@@ -118,7 +118,7 @@ vector<shared_ptr<AssetEntry>> DerivationScheme_ArmoryLegacy::extendPublicChain(
 shared_ptr<AssetEntry_Single> 
    DerivationScheme_ArmoryLegacy::computeNextPrivateEntry(
    shared_ptr<DecryptedDataContainer> ddc,
-   const SecureBinaryData& privKeyData, unique_ptr<Cypher> cypher,
+   const SecureBinaryData& privKeyData, unique_ptr<Cipher> cipher,
    const BinaryData& accountID, unsigned index)
 {
    //chain the private key
@@ -129,16 +129,16 @@ shared_ptr<AssetEntry_Single>
    auto&& nextPubkey = CryptoECDSA().ComputePublicKey(nextPrivkeySBD);
 
    //encrypt the new privkey
-   auto&& newCypher = cypher->getCopy(); //copying a cypher cycles the IV
+   auto&& newCipher = cipher->getCopy(); //copying a cipher cycles the IV
    auto&& encryptedNextPrivKey = ddc->encryptData(
-      newCypher.get(), nextPrivkeySBD);
+      newCipher.get(), nextPrivkeySBD);
 
    //clear the unencrypted privkey object
    nextPrivkeySBD.clear();
 
    //instantiate new encrypted key object
    auto nextPrivKey = make_shared<Asset_PrivateKey>(
-      index, encryptedNextPrivKey, move(newCypher));
+      index, encryptedNextPrivKey, move(newCipher));
 
    //instantiate and return new asset entry
    return make_shared<AssetEntry_Single>(
@@ -172,7 +172,7 @@ vector<shared_ptr<AssetEntry>>
 
       return computeNextPrivateEntry(
          ddc, 
-         privkeyData, move(privkey->copyCypher()),
+         privkeyData, move(privkey->copyCipher()),
          account_id, id_int);
    };
 
@@ -219,7 +219,7 @@ BinaryData DerivationScheme_ArmoryLegacy::serialize() const
 shared_ptr<AssetEntry_Single>
    DerivationScheme_BIP32::computeNextPrivateEntry(
    shared_ptr<DecryptedDataContainer> ddc,
-   const SecureBinaryData& privKeyData, unique_ptr<Cypher> cypher,
+   const SecureBinaryData& privKeyData, unique_ptr<Cipher> cipher,
    const BinaryData& accountID, unsigned index)
 {
    //derScheme only allows for soft derivation
@@ -231,13 +231,13 @@ shared_ptr<AssetEntry_Single>
    node.derivePrivate(index);
 
    //encrypt the new privkey
-   auto&& newCypher = cypher->getCopy(); //copying a cypher cycles the IV
+   auto&& newCipher = cipher->getCopy(); //copying a cypher cycles the IV
    auto&& encryptedNextPrivKey = ddc->encryptData(
-      newCypher.get(), node.getPrivateKey());
+      newCipher.get(), node.getPrivateKey());
 
    //instantiate new encrypted key object
    auto nextPrivKey = make_shared<Asset_PrivateKey>(
-      index, encryptedNextPrivKey, move(newCypher));
+      index, encryptedNextPrivKey, move(newCipher));
 
    //instantiate and return new asset entry
    auto nextPubkey = node.movePublicKey();
@@ -271,7 +271,7 @@ vector<shared_ptr<AssetEntry>>
       auto& account_id = rootAsset_single->getAccountID();
       return computeNextPrivateEntry(
          ddc,
-         privkeyData, move(privkey->copyCypher()),
+         privkeyData, move(privkey->copyCipher()),
          account_id, derivationIndex);
    };
 

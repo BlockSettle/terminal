@@ -88,16 +88,47 @@ class PrometheusCpp(Configurator):
 
         command.append('-DENABLE_TESTING=OFF')
         command.append('-DENABLE_PUSH=OFF')
+        command.append('-DENABLE_COMPRESSION=OFF')
         command.append('-DCMAKE_INSTALL_PREFIX='+self.get_install_dir())
+        if self._project_settings.on_windows():
+            command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
+            command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
 
         result = subprocess.call(command)
 
         return result == 0
 
     def make_windows(self):
-        return True
+        command = ['devenv',
+                   "prometheus-cpp.sln",
+                   '/build',
+                   self.get_win_build_configuration(),
+                   '/project',
+                   'pull']
+
+        result = subprocess.call(command)
+        return result == 0
+
+    def get_win_build_configuration(self):
+        if self._project_settings.get_build_mode() == 'release':
+            return 'Release'
+        else:
+            return 'Debug'
 
     def install_win(self):
+        core_lib_dir = os.path.join(self.get_build_dir(), 'core', self.get_win_build_configuration())
+        pull_lib_dir = os.path.join(self.get_build_dir(), 'pull', self.get_win_build_configuration())
+        core_include_dir = os.path.join(self.get_unpacked_sources_dir(), 'core', 'include')
+        pull_include_dir = os.path.join(self.get_unpacked_sources_dir(), 'pull', 'include')
+
+        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
+        install_include_dir = os.path.join(self.get_install_dir(), 'include')
+
+        self.filter_copy(core_lib_dir, install_lib_dir, '.lib', cleanupDst=True)
+        self.filter_copy(pull_lib_dir, install_lib_dir, '.lib', cleanupDst=False)
+        self.filter_copy(core_include_dir, install_include_dir, cleanupDst=True)
+        self.filter_copy(pull_include_dir, install_include_dir, cleanupDst=False)
+
         return True
 
     def make_x(self):

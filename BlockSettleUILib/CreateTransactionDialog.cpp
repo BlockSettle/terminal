@@ -94,6 +94,7 @@ void CreateTransactionDialog::init()
 
    connect(pushButtonMax(), &QPushButton::clicked, this, &CreateTransactionDialog::onMaxPressed);
    connect(comboBoxFeeSuggestions(), SIGNAL(activated(int)), this, SLOT(feeSelectionChanged(int)));
+   connect(comboBoxWallets(), SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
 
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::TXSigned, this, &CreateTransactionDialog::onTXSigned);
@@ -150,10 +151,8 @@ void CreateTransactionDialog::reject()
          return;
       }
 
-      if (txReq_.isValid()) {
-         if (signer_) {
-            signer_->CancelSignTx(txReq_.txId());
-         }
+      if (txReq_.isValid() && signer_) {
+         signer_->CancelSignTx(txReq_.serializeState());
       }
    }
 
@@ -300,8 +299,7 @@ void CreateTransactionDialog::onMaxPressed()
    QCoreApplication::processEvents();
 
    const bs::Address outputAddr(lineEditAddress()->text().trimmed());
-   const auto maxValue = transactionData_->CalculateMaxAmount(outputAddr)
-      - transactionData_->GetTotalRecipientsAmount();
+   const auto maxValue = transactionData_->CalculateMaxAmount(outputAddr);
    if (maxValue > 0) {
       lineEditAmount()->setText(UiUtils::displayAmount(maxValue));
    }

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "ListResponse.h"
 
 namespace Chat {
@@ -8,26 +6,26 @@ namespace Chat {
       , dataList_(dataList)
    {
    }
-   
+
    QJsonObject ListResponse::toJson() const
    {
       QJsonObject data = Response::toJson();
-   
+
       QJsonArray listJson;
-   
+
       std::for_each(dataList_.begin(), dataList_.end(), [&](const std::string& dataString){
          listJson << QString::fromStdString(dataString);
       });
-   
+
       data[DataKey] = listJson;
-   
+
       return data;
    }
-   
+
    std::vector<std::string> ListResponse::fromJSON(const std::string& jsonData)
    {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-   
+
       std::vector<std::string> dataList;
       QJsonArray dataArray = data[DataKey].toArray();
       foreach(auto dataItem, dataArray) {

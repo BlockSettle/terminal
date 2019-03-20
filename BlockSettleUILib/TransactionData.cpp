@@ -198,9 +198,9 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
          summary_.feePerByte =
@@ -238,19 +238,19 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
-         summary_.hasChange = true;   // only maxAmount shouldn't have change   // selection.hasChange_;
+         summary_.hasChange = selection.hasChange_;
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
 
-         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
+/*         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
             summary_.totalFee = totalFee();
             summary_.feePerByte = feePerByte();
-         }
+         }*/
       }
       summary_.usedTransactions = usedUTXO_.size();
    }
@@ -294,18 +294,19 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
          return 0;
       }
 
-      std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      unsigned int recipId = 0;
       for (const auto &recip : recipients_) {
          const auto recipPtr = recip.second->GetScriptRecipient();
          if (!recipPtr || !recipPtr->getValue()) {
             continue;
          }
-         recipientsMap[recip.first] = recipPtr;
+         recipientsMap[recipId++] = recipPtr;
       }
       if (!recipient.isNull()) {
          const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
          if (recipPtr) {
-            recipientsMap[recipients_.size()] = recipPtr;
+            recipientsMap[recipId++] = recipPtr;
          }
       }
       if (recipientsMap.empty()) {

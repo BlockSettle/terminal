@@ -29,6 +29,7 @@ public:
    CCPortfolioModel& operator = (CCPortfolioModel&&) = delete;
 
    std::shared_ptr<AssetManager> assetManager();
+   std::shared_ptr<bs::sync::WalletsManager> walletsManager();
 
 private:
    enum PortfolioColumns

@@ -36,7 +36,7 @@ void StartupDialog::init(const std::shared_ptr<ApplicationSettings> &appSettings
 {
    appSettings_ = appSettings;
    armoryServersProvider_ = armoryServersProvider;
-   armoryServersWidget_ = new ArmoryServersWidget(armoryServersProvider_, ui_->widgetManageArmory);
+   armoryServersWidget_ = new ArmoryServersWidget(armoryServersProvider_, appSettings_, ui_->widgetManageArmory);
    armoryServersWidget_->adaptForStartupDialog();
    ui_->widgetManageArmory->layout()->addWidget(armoryServersWidget_);
    armoryServersWidget_->show();

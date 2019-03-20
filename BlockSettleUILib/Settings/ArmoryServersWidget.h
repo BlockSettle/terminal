@@ -16,7 +16,9 @@ class ArmoryServersWidget : public QWidget
    Q_OBJECT
 
 public:
-   explicit ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider>& armoryServersProvider, QWidget *parent = nullptr);
+   explicit ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider>& armoryServersProvider
+                                , std::shared_ptr<ApplicationSettings> appSettings
+                                , QWidget *parent = nullptr);
    ~ArmoryServersWidget();
 
    void adaptForStartupDialog();
@@ -39,6 +41,8 @@ private slots:
 private:
    std::unique_ptr<Ui::ArmoryServersWidget> ui_; // The main widget object.
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
+   std::shared_ptr<ApplicationSettings> appSettings_;
+
    ArmoryServersViewModel *armoryServersModel;
 };
 

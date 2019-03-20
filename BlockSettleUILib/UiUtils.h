@@ -64,7 +64,7 @@ namespace UiUtils
    template <typename T>
    QString displayAmount(T value)
    {
-      if (static_cast<int>(value) == -1) {
+      if (static_cast<int>(value) < 0) {
          return CommonUiUtilsText::tr("Loading...");
       }
 

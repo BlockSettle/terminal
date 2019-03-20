@@ -5,6 +5,7 @@
 #include "CCPortfolioModel.h"
 #include "UiUtils.h"
 #include "AssetManager.h"
+#include "Wallets/SyncWalletsManager.h"
 
 CCWidget::CCWidget(QWidget* parent)
    : QWidget(parent)
@@ -18,12 +19,14 @@ CCWidget::~CCWidget() = default;
 void CCWidget::SetPortfolioModel(const std::shared_ptr<CCPortfolioModel>& model)
 {
    assetManager_ = model->assetManager();
+   const auto &walletsManager = model->walletsManager();
 
    ui_->treeViewCC->setModel(model.get());
    ui_->treeViewCC->header()->setSectionResizeMode(QHeaderView::Stretch);
 
    connect(model.get(), &CCPortfolioModel::rowsInserted, this, &CCWidget::onRowsInserted);
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &CCWidget::updateTotalAssets);
+   connect(walletsManager.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &CCWidget::updateTotalAssets);
    updateTotalAssets();
 }
 

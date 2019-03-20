@@ -15,7 +15,7 @@
 #if defined (Q_OS_WIN)
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
-static const QString armoryDBAppPathName = QLatin1String("C:/Program Files/BitcoinArmory/ArmoryDB.exe");
+static const QString armoryDBAppPathName = QLatin1String("C:/Program Files/ArmoryDB/ArmoryDB.exe");
 #elif defined (Q_OS_MACOS)
 static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
@@ -59,13 +59,10 @@ static const QString regtestSubdir = QLatin1String("regtest");
 
 static const QString zmqSignerKeyFileName = QLatin1String("zmq_conn_srv.pub");
 
-static const int DefaultSatoshiPort = 8333;
-static const int DefaultTestnetSatoshiPort = 18333;
-
 static const int ArmoryDefaultLocalMainPort = 9001;
 static const int ArmoryDefaultLocalTestPort = 19001;
-static const int ArmoryDefaultRemoteMainPort = 80;
-static const int ArmoryDefaultRemoteTestPort = 81;
+static const int ArmoryDefaultRemoteMainPort = 9001;
+static const int ArmoryDefaultRemoteTestPort = 19001;
 
 #ifndef NDEBUG
 static const QString chatServerIPName = QLatin1String("chatserver-ip");
@@ -90,7 +87,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { initialized,             SettingDef(QLatin1String("SettingsAccepted"), false) },
       { runArmoryLocally,        SettingDef(QLatin1String("RunArmoryLocally"), false) },
       { netType,                 SettingDef(QLatin1String("Testnet"), (int)NetworkType::MainNet) },
-      { armoryDbName,            SettingDef(QLatin1String("ArmoryDBName"), QLatin1String(MAINNET_ARMORY_BLOCKSETTLE_NAME)) },
+      { armoryDbName,            SettingDef(QLatin1String("ArmoryDBName"), QLatin1String(ARMORY_BLOCKSETTLE_NAME)) },
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String(MAINNET_ARMORY_BLOCKSETTLE_ADDRESS)) },
       { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), MAINNET_ARMORY_BLOCKSETTLE_PORT) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
@@ -216,10 +213,11 @@ void ApplicationSettings::set(Setting s, const QVariant &val, bool toFile)
          itSD->second.read = true;
          if (val != itSD->second.value) {
             itSD->second.value = val;
-            if (toFile && !itSD->second.path.isEmpty()) {
-               settings_.setValue(itSD->second.path, val);
-            }
             emit settingChanged(s, val);
+         }
+
+         if (toFile && !itSD->second.path.isEmpty()) {
+            settings_.setValue(itSD->second.path, val);
          }
       }
    }
@@ -234,10 +232,11 @@ void ApplicationSettings::reset(Setting s, bool toFile)
       itSD->second.read = true;
       if (itSD->second.value != itSD->second.defVal) {
          itSD->second.value = itSD->second.defVal;
-         if (toFile && !itSD->second.path.isEmpty()) {
-            settings_.setValue(itSD->second.path, itSD->second.value);
-         }
          emit settingChanged(s, itSD->second.defVal);
+      }
+      
+      if (toFile && !itSD->second.path.isEmpty()) {
+         settings_.setValue(itSD->second.path, itSD->second.value);
       }
    }
 }

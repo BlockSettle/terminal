@@ -855,7 +855,7 @@ const int BIP151Connection::assemblePacket(const uint8_t* plainData,
 //      cipherSize - Encrypted buffer size.
 //      plainSize - Decrypted buffer size.
 // OUT: plainData - The decrypted packet. Must be no more than 16 bytes smaller
-//                  than the cyphertext buffer.
+//                  than the ciphertext buffer.
 // RET: -1 if failure, 0 if success. If the decrypted length is bigger than
 // than the potential max clear text size, return the decrypted length instead
 const int BIP151Connection::decryptPacket(const uint8_t* cipherData,

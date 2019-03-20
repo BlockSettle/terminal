@@ -393,7 +393,7 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
    }
    SecureBinaryData privKeyBin = plainAsset->privKey().copy();
    const auto privKey = std::make_shared<Asset_PrivateKey>(0, privKeyBin
-      , make_unique<Cypher_AES>(BinaryData{}, BinaryData{}));
+      , make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
    SecureBinaryData pubKey = plainAsset->publicKey();
    const auto assetEntry = std::make_shared<AssetEntry_Single>(plainAsset->id(), BinaryData{}, pubKey, privKey);
 
@@ -523,7 +523,7 @@ public:
       return itKey->second;
    }
 
-   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey) override {
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData&) override {
       throw std::runtime_error("no privkey");
       return {};
    }

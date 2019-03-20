@@ -23,14 +23,6 @@
 #include "CoinSelection.h"
 #include "Script.h"
 
-enum AddressType
-{
-   AddressType_P2PKH,
-   AddressType_P2SH_P2PK,
-   AddressType_P2SH_P2WPKH,
-   AddressType_Multisig
-};
-
 class WalletContainer;
 
 ////////////////////////////////////////////////////////////////////////////////

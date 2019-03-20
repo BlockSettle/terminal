@@ -82,9 +82,6 @@ protected:
    bool HaveSignedImportedTransaction() const override;
 
 protected slots:
-   void selectedWalletChanged(int currentIndex, bool resetInputs
-      , const std::function<void()> &cbInputsReset = nullptr) override;
-
    void onAddressTextChanged(const QString& addressString);
    void onFeeSuggestionsLoaded(const std::map<unsigned int, float> &) override;
    void onXBTAmountChanged(const QString& text);
@@ -105,7 +102,7 @@ protected slots:
 private slots:
    void updateManualFeeControls();
    void setTxFees();
-   void onOutputsInserted(const QModelIndex &parent, int first, int last);
+   void onOutputsClicked(const QModelIndex &index);
 
 private:
    void clear() override;
@@ -119,6 +116,7 @@ private:
    Q_INVOKABLE void validateCreateButton();
 
    unsigned int AddRecipient(const bs::Address &, double amount, bool isMax = false);
+   void AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &);
    void UpdateRecipientAmount(unsigned int recipId, double amount, bool isMax = false);
    bool FixRecipientsAmount();
    void onOutputRemoved();

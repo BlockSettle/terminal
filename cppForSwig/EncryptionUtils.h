@@ -272,7 +272,8 @@ public:
    // SWIG to take BTC_PUBKEY and BTC_PRIVKEY
    
    /////////////////////////////////////////////////////////////////////////////
-   SecureBinaryData ComputePublicKey(SecureBinaryData const & cppPrivKey) const;
+   SecureBinaryData ComputePublicKey(
+      SecureBinaryData const & cppPrivKey, bool compressed = false) const;
 
    /////////////////////////////////////////////////////////////////////////////
    bool VerifyPublicKeyValid(SecureBinaryData const & pubKey);

@@ -71,6 +71,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
   , logger_(logger)
 {
    ui_->setupUi(this);
+   ui_->backupButton->hide();
 
    walletFilter_ = new CurrentWalletFilter(wallet, this);
    walletFilter_->setSourceModel(walletsModel);

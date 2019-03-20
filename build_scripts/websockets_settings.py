@@ -12,6 +12,7 @@ class WebsocketsSettings(Configurator):
         self._version = '3.1.0'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
+        self._script_revision = '1'
 
         self._ssl_settings = OpenSslSettings(settings)
 
@@ -19,7 +20,7 @@ class WebsocketsSettings(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + '_' + self._script_revision
 
     def get_install_dir(self):
         return os.path.join(self._project_settings.get_common_build_dir(), 'libwebsockets')
@@ -33,7 +34,8 @@ class WebsocketsSettings(Configurator):
     def config(self):
         command = ['cmake',
                    os.path.join(self._project_settings.get_sources_dir(), self._package_name + '-' + self._version),
-                   '-DLWS_WITHOUT_SERVER=ON',
+                   '-DLWS_WITHOUT_SERVER=OFF',
+                   '-DLWS_WITH_SHARED=OFF',
                    '-DLWS_WITHOUT_TESTAPPS=ON',
                    '-DLWS_WITHOUT_TEST_SERVER=ON',
                    '-DLWS_WITHOUT_TEST_PING=ON',

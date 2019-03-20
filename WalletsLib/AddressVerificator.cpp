@@ -307,7 +307,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
             "error - {}", e.what());
       }
    };
-   const auto &cbLedgerDelegate = [this, state, cbLedger](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
+   const auto &cbLedgerDelegate = [state, cbLedger](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       state->nbTransactions = 0;
       delegate->getHistoryPage(0, cbLedger);
    };

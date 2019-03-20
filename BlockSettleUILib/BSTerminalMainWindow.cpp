@@ -391,9 +391,24 @@ void BSTerminalMainWindow::LoadWallets()
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
       updateControlEnabledState();
-      if (walletsMgr_->hdWalletsCount() == 0) {
-         createWallet(!walletsMgr_->hasPrimaryWallet());
-      }
+
+      connect(armory_.get(), &ArmoryConnection::stateChanged, this, [this](ArmoryConnection::State state) {
+         if (!initialWalletCreateDialogShown_) {
+            if (state == ArmoryConnection::State::Connected && walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
+               initialWalletCreateDialogShown_ = true;
+               QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection, Q_ARG(bool, true));
+            }
+         }
+      });
+      QTimer::singleShot(5000, this, [this](){
+         if (!initialWalletCreateDialogShown_ && !armoryKeyDialogShown_) {
+            if (walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
+               initialWalletCreateDialogShown_ = true;
+               QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection, Q_ARG(bool, true));
+            }
+         }
+      });
+
       if (readyToRegisterWallets_) {
          readyToRegisterWallets_ = false;
          walletsMgr_->registerWallets();
@@ -781,7 +796,9 @@ void BSTerminalMainWindow::initArmory()
 
 void BSTerminalMainWindow::connectArmory()
 {
-   armory_->setupConnection(armoryServersProvider_->getArmorySettings(), [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
+   ArmorySettings currentArmorySettings = armoryServersProvider_->getArmorySettings();
+   armoryServersProvider_->setConnectedArmorySettings(currentArmorySettings);
+   armory_->setupConnection(currentArmorySettings, [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
       std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
       std::future<bool> futureObj = promiseObj->get_future();
       QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
@@ -1034,11 +1051,10 @@ void BSTerminalMainWindow::onLogin()
 {
    LoadCCDefinitionsFromPuB();
 
-   GetNetworkSettingsFromPuB([this]()
-      {
-         OnNetworkSettingsLoaded();
-         emit readyToLogin();
-      });
+   GetNetworkSettingsFromPuB([this]() {
+      OnNetworkSettingsLoaded();
+      emit readyToLogin();
+   });
 }
 
 void BSTerminalMainWindow::onReadyToLogin()
@@ -1070,9 +1086,8 @@ void BSTerminalMainWindow::onLogout()
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();
    }
-   else {
-       setLoginButtonText(loginButtonText_);
-   }
+   
+   setLoginButtonText(loginButtonText_);
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()
@@ -1468,6 +1483,7 @@ void BSTerminalMainWindow::onButtonUserClicked() {
 
 void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, const std::string &srvIPPort, std::shared_ptr<std::promise<bool>> promiseObj)
 {
+   armoryKeyDialogShown_ = true;
    QList<ArmoryServer> servers = armoryServersProvider_->servers();
    int serverIndex = armoryServersProvider_->indexOfIpPort(srvIPPort);
    if (serverIndex >= 0) {
