@@ -37,16 +37,16 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    {
    case SignContainer::OpMode::Local:
       return std::make_shared<LocalSigner>(logger, appSettings->GetHomeDir()
-         , netType, port, connectionManager, appSettings, armoryServers, runMode
+         , netType, port, connectionManager, appSettings, runMode
          , appSettings->get<double>(ApplicationSettings::autoSignSpendLimit));
 
    case SignContainer::OpMode::Remote:
       return std::make_shared<RemoteSigner>(logger, host, port, netType
-         , connectionManager, appSettings, armoryServers);
+         , connectionManager, appSettings);
 
    case SignContainer::OpMode::Offline:
       return std::make_shared<OfflineSigner>(logger, appSettings->GetHomeDir()
-         , netType, port, connectionManager, appSettings, armoryServers);
+         , netType, port, connectionManager, appSettings);
 
    default:
       logger->error("[{}] Unknown signer run mode {}", __func__, (int)runMode);

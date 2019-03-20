@@ -12,10 +12,9 @@ using namespace Blocksettle;
 OfflineSigner::OfflineSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager> &connMgr
-   , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<ArmoryServersProvider>& armoryServers)
+   , const std::shared_ptr<ApplicationSettings> &appSettings)
    : LocalSigner(logger, homeDir, netType, port, connMgr, appSettings
-      , armoryServers, OpMode::Offline)
+      , OpMode::Offline)
 { }
 
 void OfflineSigner::setTargetDir(const QString& targetDir)

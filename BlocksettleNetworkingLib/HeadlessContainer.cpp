@@ -1014,7 +1014,6 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &host, const QString &port, NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<ApplicationSettings>& appSettings
-   , const std::shared_ptr<ArmoryServersProvider>& armoryServers
    , OpMode opMode)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
@@ -1267,10 +1266,9 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const std::shared_ptr<ArmoryServersProvider>& armoryServers
    , SignContainer::OpMode mode, double asSpendLimit)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, appSettings, armoryServers, mode)
+   , connectionManager, appSettings, mode)
    , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
 {
 }

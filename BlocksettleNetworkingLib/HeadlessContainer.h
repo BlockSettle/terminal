@@ -122,7 +122,6 @@ public:
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<ArmoryServersProvider>& armoryServers
       , OpMode opMode = OpMode::Remote);
    ~RemoteSigner() noexcept = default;
 
@@ -167,7 +166,6 @@ public:
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , const std::shared_ptr<ArmoryServersProvider>& armoryServers
       , SignContainer::OpMode mode = OpMode::Local
       , double asSpendLimit = 0);
    ~LocalSigner() noexcept = default;
