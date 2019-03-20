@@ -1020,7 +1020,6 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
    , appSettings_{appSettings}
-   , armoryServers_{armoryServers}
 {}
 
 // Establish the remote connection to the signer.
@@ -1050,7 +1049,7 @@ bool RemoteSigner::Start()
          , &RemoteSigner::onConnError, Qt::QueuedConnection);
       connect(listener_.get(), &HeadlessListener::PacketReceived, this
          , &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
-      connect(connection_.get(), &zmqBIP15XDataConnection::bip15XCompleted
+      connect(connection_.get(), &ZmqBIP15XDataConnection::bip15XCompleted
          , this, &RemoteSigner::onBIP15XCompleted, Qt::QueuedConnection);
    }
 

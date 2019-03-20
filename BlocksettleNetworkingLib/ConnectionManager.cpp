@@ -120,17 +120,17 @@ std::shared_ptr<ZmqSecuredDataConnection> ConnectionManager::CreateSecuredDataCo
    return connection;
 }
 
-std::shared_ptr<zmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XServerConnection() const
+std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XServerConnection() const
 {
    BinaryData bdID = CryptoPRNG::generateRandom(8);
-   return std::make_shared<zmqBIP15XServerConnection>(logger_, zmqContext_
+   return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
       , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), false);
 }
 
-std::shared_ptr<zmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(
+std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(
    bool monitored) const
 {
-   auto connection = std::make_shared<zmqBIP15XDataConnection>(logger_
+   auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
       , *(armoryServers_.get()), false, monitored);
    connection->SetContext(zmqContext_);
 

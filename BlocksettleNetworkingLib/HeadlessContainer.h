@@ -31,7 +31,7 @@ class DataConnection;
 class HeadlessListener;
 class QProcess;
 class WalletsManager;
-class zmqBIP15XDataConnection;
+class ZmqBIP15XDataConnection;
 
 class HeadlessContainer : public SignContainer
 {
@@ -150,10 +150,9 @@ protected:
    const QString                              host_;
    const QString                              port_;
    const NetworkType                          netType_;
-   std::shared_ptr<zmqBIP15XDataConnection> connection_;
+   std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
    bool                                       authPending_ = false;
    std::shared_ptr<ApplicationSettings>       appSettings_;
-   std::shared_ptr<ArmoryServersProvider>     armoryServers_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;

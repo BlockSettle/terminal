@@ -11,32 +11,46 @@
 
 #define SERVER_AUTH_PEER_FILENAME "server.peers"
 
-class zmqBIP15XServerConnection : public ZmqServerConnection
+// A struct containing the data required per-connection with clients.
+struct ZmqBIP15XPerConnData
 {
 public:
-   zmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
+   void reset();
+
+   std::unique_ptr<BIP151Connection> encData_;
+   bool bip150HandshakeCompleted_ = false;
+   bool bip151HandshakeCompleted_ = false;
+   std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
+};
+
+// The class establishing ZMQ sockets and establishing BIP 150/151 handshakes
+// before encrypting/decrypting the on-the-wire data using BIP 150/151.
+class ZmqBIP15XServerConnection : public ZmqServerConnection
+{
+public:
+   ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
       , const QStringList& trustedClients, const uint64_t& id
       , const bool& ephemeralPeers);
-   zmqBIP15XServerConnection(const zmqBIP15XServerConnection&) = delete;
-   zmqBIP15XServerConnection& operator= (const zmqBIP15XServerConnection&) = delete;
-   zmqBIP15XServerConnection(zmqBIP15XServerConnection&&) = delete;
-   zmqBIP15XServerConnection& operator= (zmqBIP15XServerConnection&&) = delete;
+   ZmqBIP15XServerConnection(const ZmqBIP15XServerConnection&) = delete;
+   ZmqBIP15XServerConnection& operator= (const ZmqBIP15XServerConnection&) = delete;
+   ZmqBIP15XServerConnection(ZmqBIP15XServerConnection&&) = delete;
+   ZmqBIP15XServerConnection& operator= (ZmqBIP15XServerConnection&&) = delete;
 
    // Overridden functions from ServerConnection.
    bool SendDataToClient(const std::string& clientId, const std::string& data
-      , const SendResultCb &cb = nullptr) override;
+      , const SendResultCb& cb = nullptr) override;
 
    void resetBIP151Connection(const std::string& clientID);
    void setBIP151Connection(const std::string& clientID);
-   bool handshakeCompleted() {
-      return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
+   bool handshakeCompleted(const ZmqBIP15XPerConnData& checkConn) {
+      return (checkConn.bip150HandshakeCompleted_ &&
+         checkConn.bip151HandshakeCompleted_);
    }
 
 protected:
    // Overridden functions from ZmqServerConnection.
    ZmqContext::sock_ptr CreateDataSocket() override;
-   bool ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket) override;
    bool ReadFromDataSocket() override;
 
 private:
@@ -48,12 +62,8 @@ private:
    AuthPeersLambdas getAuthPeerLambda();
 
    std::shared_ptr<AuthorizedPeers> authPeers_;
-   std::unique_ptr<BIP151Connection> bip151Connection_;
-   std::map<std::string, std::unique_ptr<BIP151Connection>> socketConnMap_; // Socket & connection
-   std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
+   std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
    const uint64_t id_;
-   bool bip150HandshakeCompleted_ = false;
-   bool bip151HandshakeCompleted_ = false;
    QStringList trustedClients_;
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

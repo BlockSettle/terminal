@@ -19,8 +19,8 @@ class ZmqContext;
 class ZmqSecuredDataConnection;
 class ZmqSecuredServerConnection;
 class QNetworkAccessManager;
-class zmqBIP15XDataConnection;
-class zmqBIP15XServerConnection;
+class ZmqBIP15XDataConnection;
+class ZmqBIP15XServerConnection;
 
 class ConnectionManager
 {
@@ -51,9 +51,9 @@ public:
    std::shared_ptr<ZmqSecuredServerConnection>  CreateSecuredServerConnection() const;
    std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
       bool monitored = false) const;
-   std::shared_ptr<zmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
+   std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
       bool monitored = false) const;
-   std::shared_ptr<zmqBIP15XServerConnection> CreateZMQBIP15XServerConnection() const;
+   std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XServerConnection() const;
 
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;
 

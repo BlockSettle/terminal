@@ -15,11 +15,12 @@ using namespace std;
 //         Server info. (const ArmoryServersProvider&) (REMOVE?)
 //         Ephemeral peer usage. Not recommended. (const bool&)
 // OUTPUT: None
-zmqBIP15XDataConnection::zmqBIP15XDataConnection(
+ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    const shared_ptr<spdlog::logger>& logger
    , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
    , bool monitored)
-   : ZmqDataConnection(logger, monitored) {
+   : ZmqDataConnection(logger, monitored)
+{
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
    string filename(CLIENT_AUTH_PEER_FILENAME);
@@ -44,7 +45,7 @@ zmqBIP15XDataConnection::zmqBIP15XDataConnection(
 // INPUT:  None
 // OUTPUT: None
 // RETURN: AuthPeersLambdas object with required lambdas.
-AuthPeersLambdas zmqBIP15XDataConnection::getAuthPeerLambda() const
+AuthPeersLambdas ZmqBIP15XDataConnection::getAuthPeerLambda() const
 {
    auto authPeerPtr = authPeers_;
 
@@ -66,41 +67,43 @@ AuthPeersLambdas zmqBIP15XDataConnection::getAuthPeerLambda() const
 
 // The send function for the data connection. Ideally, this should not be used
 // before the handshake is completed, but it is possible to use at any time.
-// Whether or not the raw data is used, it will be placed in a zmqBIP15XMsg
+// Whether or not the raw data is used, it will be placed in a ZmqBIP15XMsg
 // object.
 //
 // INPUT:  The data to send. It'll be encrypted here if needed. (const string&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool zmqBIP15XDataConnection::send(const string& data) {
+bool ZmqBIP15XDataConnection::send(const string& data)
+{
    string message = data;
 
+   // For now, disable time-based key cycling. This should be re-enabled
+   // eventually. It's an important part of BIP 151.
+   //
    // Check if we need to do a rekey before sending the data.
-   bool needs_rekey = false;
+/*   bool needsRekey = false;
    auto rightnow = chrono::system_clock::now();
 
-   // For now, disable time-based key cycling. This should be re-enabled
-   // eventually.
-/*   if (bip151Connection_->rekeyNeeded(message->getSerializedSize())) {
-      needs_rekey = true;
+   if (bip151Connection_->rekeyNeeded(message->getSerializedSize())) {
+      needsRekey = true;
    }
    else {
       auto time_sec = chrono::duration_cast<chrono::seconds>(
          rightnow - outKeyTimePoint_);
       if (time_sec.count() >= AEAD_REKEY_INVERVAL_SECONDS)
-         needs_rekey = true;
+         needsRekey = true;
    }
 
-   if (needs_rekey) {
+   if (needsRekey) {
       BinaryData rekeyData(BIP151PUBKEYSIZE);
       memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
 
-      zmqBIP15XMsg rekeyPacket;
+      ZmqBIP15XMsg rekeyPacket;
       std::vector<BinaryData> outPacket = rekeyPacket.serialize(rekeyData.getRef()
          , bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY, 0);
 
       if (!send(move(outPacket[0].toBinStr()))) {
-    std::cout << "DEBUG: zmqBIP15XDataConnection::send - Rekey send failed" << dataLen << std::endl;
+    std::cout << "DEBUG: ZmqBIP15XDataConnection::send - Rekey send failed" << dataLen << std::endl;
       }
       bip151Connection_->rekeyOuterSession();
       outKeyTimePoint_ = rightnow;
@@ -111,7 +114,7 @@ bool zmqBIP15XDataConnection::send(const string& data) {
    string sendData = data;
    size_t dataLen = sendData.size();
    if (bip151Connection_->getBIP150State() == BIP150State::SUCCESS) {
-      zmqBIP15XMsg msg;
+      ZmqBIP15XMsg msg;
       BIP151Connection* connPtr = nullptr;
       if (bip151HandshakeCompleted_) {
          connPtr = bip151Connection_.get();
@@ -123,6 +126,7 @@ bool zmqBIP15XDataConnection::send(const string& data) {
       dataLen = sendData.size();
    }
 
+   // Now, we can send the data.
    int result = -1;
    {
       FastLock locker(lockSocket_);
@@ -130,7 +134,7 @@ bool zmqBIP15XDataConnection::send(const string& data) {
    }
    if (result != (int)data.size()) {
       if (logger_) {
-         logger_->error("[zmqBIP15XDataConnection::{}] {} failed to send "
+         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
             "data: {}", __func__, connectionName_, zmq_strerror(zmq_errno()));
       }
       return false;
@@ -145,8 +149,9 @@ bool zmqBIP15XDataConnection::send(const string& data) {
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool zmqBIP15XDataConnection::startBIP151Handshake() {
-   zmqBIP15XMsg msg;
+bool ZmqBIP15XDataConnection::startBIP151Handshake()
+{
+   ZmqBIP15XMsg msg;
    BinaryData nullPayload;
 
    vector<BinaryData> outData = msg.serialize(nullPayload.getDataVector()
@@ -160,7 +165,8 @@ bool zmqBIP15XDataConnection::startBIP151Handshake() {
 // INPUT:  The raw incoming data. It may or may not be encrypted. (const string&)
 // OUTPUT: None
 // RETURN: None
-void zmqBIP15XDataConnection::onRawDataReceived(const string& rawData) {
+void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
+{
    // Place the data in the processing queue and process the queue.
    pendingData_.append(rawData);
    ProcessIncomingData();
@@ -171,7 +177,8 @@ void zmqBIP15XDataConnection::onRawDataReceived(const string& rawData) {
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool zmqBIP15XDataConnection::closeConnection() {
+bool ZmqBIP15XDataConnection::closeConnection()
+{
 //   bip151Connection_.reset();
    return ZmqDataConnection::closeConnection();
 }
@@ -182,7 +189,8 @@ bool zmqBIP15XDataConnection::closeConnection() {
 // INPUT:  None
 // OUTPUT: None
 // RETURN: None
-void zmqBIP15XDataConnection::ProcessIncomingData() {
+void ZmqBIP15XDataConnection::ProcessIncomingData()
+{
    size_t position;
 
    // Process all incoming data while clearing the buffer.
@@ -198,7 +206,7 @@ void zmqBIP15XDataConnection::ProcessIncomingData() {
 
       if (result != 0) {
          if (logger_) {
-            logger_->error("[zmqBIP15XDataConnection::{}] Decryption failed "
+            logger_->error("[ZmqBIP15XDataConnection::{}] Decryption failed "
                "(connection {}) - error code {}", __func__, connectionName_
                , result);
          }
@@ -209,10 +217,10 @@ void zmqBIP15XDataConnection::ProcessIncomingData() {
    }
 
    // Deserialize the packet.
-   zmqBIP15XMsg inMsg;
+   ZmqBIP15XMsg inMsg;
    if (!inMsg.parsePacket(payload.getRef())) {
       if (logger_) {
-         logger_->error("[zmqBIP15XDataConnection::{}] Packet parsing failed "
+         logger_->error("[ZmqBIP15XDataConnection::{}] Packet parsing failed "
             "(connection {})", __func__, connectionName_);
       }
       return;
@@ -222,7 +230,7 @@ void zmqBIP15XDataConnection::ProcessIncomingData() {
    if (inMsg.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(inMsg)) {
          if (logger_) {
-            logger_->error("[zmqBIP15XDataConnection::{}] Encryption "
+            logger_->error("[ZmqBIP15XDataConnection::{}] Encryption "
                "handshake failed (connection {})", __func__, connectionName_);
          }
          return;
@@ -234,59 +242,16 @@ void zmqBIP15XDataConnection::ProcessIncomingData() {
    // We shouldn't get here but just in case....
    if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
       if (logger_) {
-         logger_->error("[zmqBIP15XDataConnection::{}] Encryption handshake "
+         logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
       }
       return;
    }
 
-   // Figure out request ID and fulfill promise. Ignored for now.
-   auto& msgid = inMsg.getId();
-   switch (msgid) {
-   case ZMQ_CALLBACK_ID:
-   {
-/*      if (callbackPtr_ == nullptr)
-      {
-         continue;
-      }
-
-      auto msgptr = make_shared<::Codec_BDVCommand::BDVCallback>();
-      if (!currentReadMessage_.message_.getMessage(msgptr.get()))
-      {
-         currentReadMessage_.reset();
-         continue;
-      }
-
-      callbackPtr_->processNotifications(msgptr);
-      currentReadMessage_.reset();*/
-
-      logger_->error("[{}] No callbacks for now.", __func__);
-      break;
-   }
-
-   default:
-      // Used for callbacks. Not worrying about it for now.
-/*      auto readMap = readPackets_.get();
-      auto iter = readMap->find(msgid);
-      if (iter != readMap->end())
-      {
-         auto& msgObjPtr = iter->second;
-         auto callbackPtr = dynamic_cast<CallbackReturn_WebSocket*>(
-            msgObjPtr->payload_->callbackReturn_.get());
-         if (callbackPtr == nullptr)
-            continue;
-
-         callbackPtr->callback(currentReadMessage_.message_);
-         readPackets_.erase(msgid);
-         currentReadMessage_.reset();
-      }
-      else
-      {
-         LOGWARN << "invalid msg id";
-         currentReadMessage_.reset();
-      }*/
-      break;
-   }
+   // For now, ignore the message ID. ZMQ_CALLBACK_ID is the only type we may
+   // care about. If we need callbacks later, we can go back to what's in Armory
+   // and add support.
+//   auto& msgid = inMsg.getId();
 
    // Pass the final data up the chain.
    auto&& outMsg = inMsg.getSingleBinaryMessage();
@@ -302,7 +267,8 @@ void zmqBIP15XDataConnection::ProcessIncomingData() {
 // INPUT:  None
 // OUTPUT: None
 // RETURN: The data socket. (ZmqContext::sock_ptr)
-ZmqContext::sock_ptr zmqBIP15XDataConnection::CreateDataSocket() {
+ZmqContext::sock_ptr ZmqBIP15XDataConnection::CreateDataSocket()
+{
    return context_->CreateClientSocket();
 }
 
@@ -311,13 +277,14 @@ ZmqContext::sock_ptr zmqBIP15XDataConnection::CreateDataSocket() {
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool zmqBIP15XDataConnection::recvData() {
+bool ZmqBIP15XDataConnection::recvData()
+{
    MessageHolder data;
 
    int result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
    if (result == -1) {
       if (logger_) {
-         logger_->error("[zmqBIP15XDataConnection::{}] {} failed to recv data "
+         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to recv data "
             "frame from stream: {}" , __func__, connectionName_
             , zmq_strerror(zmq_errno()));
       }
@@ -331,14 +298,14 @@ bool zmqBIP15XDataConnection::recvData() {
 
 // The function processing the BIP 150/151 handshake packets.
 //
-// INPUT:  The handshake packet. (const zmqBIP15XMsg&)
+// INPUT:  The handshake packet. (const ZmqBIP15XMsg&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool zmqBIP15XDataConnection::processAEADHandshake(
-   const zmqBIP15XMsg& msgObj) {
+bool ZmqBIP15XDataConnection::processAEADHandshake(const ZmqBIP15XMsg& msgObj)
+{
    // Function used to send data out on the wire.
    auto writeData = [this](BinaryData& payload, uint8_t type, bool encrypt) {
-      zmqBIP15XMsg msg;
+      ZmqBIP15XMsg msg;
       BIP151Connection* connPtr = nullptr;
       if (encrypt) {
          connPtr = bip151Connection_.get();
@@ -523,7 +490,7 @@ bool zmqBIP15XDataConnection::processAEADHandshake(
 
       writeData(authreplyBuf, ZMQ_MSGTYPE_AUTH_REPLY, true);
 
-      //rekey
+      // Rekey.
       bip151Connection_->bip150HandshakeRekey();
       outKeyTimePoint_ = chrono::system_clock::now();
       emit bip15XCompleted();
@@ -540,14 +507,16 @@ bool zmqBIP15XDataConnection::processAEADHandshake(
 }
 
 // If the user is presented with a new server identity key, ask what they want.
-void zmqBIP15XDataConnection::promptUser(const BinaryDataRef& newKey
-   , const string& srvAddrPort) {
+void ZmqBIP15XDataConnection::promptUser(const BinaryDataRef& newKey
+   , const string& srvAddrPort)
+{
    // TO DO: Insert a user prompt. For now, just approve the key and add it to
-   // the set of approved key.
+   // the set of approved keys. This needs to be fixed ASAP!
    auto authPeerNameMap = authPeers_->getPeerNameMap();
    auto authPeerNameSearch = authPeerNameMap.find(srvAddrPort);
    if (authPeerNameSearch == authPeerNameMap.end()) {
-      std::cout << "New key arrived. Prompt the user." << std::endl;
+      logger_->info("[{}] New key ({}) for server [{}] arrived.", __func__
+         , newKey.toHexStr(), srvAddrPort);
       vector<string> keyName;
       keyName.push_back(srvAddrPort);
       authPeers_->addPeer(newKey.copy(), keyName);

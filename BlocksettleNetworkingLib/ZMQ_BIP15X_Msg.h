@@ -1,7 +1,7 @@
 #ifndef __ZMQ_BIP15X_MSG_H__
 #define __ZMQ_BIP15X_MSG_H__
 
-// Messages used for zmqBIP15XDataConnection and zmqBIP15XServerConnection
+// Messages used for ZmqBIP15XDataConnection and ZmqBIP15XServerConnection
 // connections.
 
 // The message format is as follows:
@@ -44,7 +44,7 @@
 #define ZMQ_MAGIC_WORD 0x56E1
 #define AEAD_REKEY_INVERVAL_SECONDS 600
 
-class zmqBIP15XMsg {
+class ZmqBIP15XMsg {
 public:
    void reset(void);
    bool parsePacket(const BinaryDataRef&);
