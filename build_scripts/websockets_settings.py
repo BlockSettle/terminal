@@ -35,7 +35,6 @@ class WebsocketsSettings(Configurator):
         command = ['cmake',
                    os.path.join(self._project_settings.get_sources_dir(), self._package_name + '-' + self._version),
                    '-DLWS_WITHOUT_SERVER=OFF',
-                   '-DLWS_WITH_SHARED=OFF',
                    '-DLWS_WITHOUT_TESTAPPS=ON',
                    '-DLWS_WITHOUT_TEST_SERVER=ON',
                    '-DLWS_WITHOUT_TEST_PING=ON',
@@ -114,13 +113,13 @@ class WebsocketsSettings(Configurator):
         # copy libs
         if self._project_settings.get_link_mode() == 'shared':
             output_dir = os.path.join(self.get_build_dir(), 'lib', self.get_win_build_configuration())
-            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib', False)
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib')
             output_dir = os.path.join(self.get_build_dir(), 'bin', self.get_win_build_configuration())
-            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.dll')
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.dll', False)
         else:
             self.filter_copy(lib_dir, install_lib_dir, '.lib')
 
-        self.filter_copy(include_dir, install_include_dir, False)
+        self.filter_copy(include_dir, install_include_dir, None, False)
 
         return True
 
