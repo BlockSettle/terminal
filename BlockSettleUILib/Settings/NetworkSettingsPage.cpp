@@ -7,6 +7,7 @@
 #include "ui_NetworkSettingsPage.h"
 #include "ApplicationSettings.h"
 #include "ArmoryServersWidget.h"
+#include "WebSocketClient.h"
 
 
 struct EnvSettings
@@ -172,6 +173,10 @@ void NetworkSettingsPage::displayArmorySettings()
       ui_->labelConfChanged->setVisible(false);
    }
 
+   AuthorizedPeers peers(appSettings_->GetDBDir().toStdString(), CLIENT_AUTH_PEER_FILENAME);
+
+   BinaryData ownKey(peers.getOwnPublicKey().pubkey, 33);
+   ui_->labelArmoryTerminalKey->setText(QString::fromStdString(ownKey.toHexStr()));
 }
 
 void NetworkSettingsPage::displayEnvironmentSettings()
