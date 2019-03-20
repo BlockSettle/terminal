@@ -42,7 +42,7 @@ public:
    bool hasChange() const { return (txReq_.change.value > 0); }
    double changeAmount() const { return txReq_.change.value / BTCNumericTypes::BalanceDivider; }
    double inputAmount() const;
-   QString txId() const { return QString::fromStdString(txReq_.txId().toBinStr()); }
+   QString txId() const { return QString::fromStdString(txReq_.serializeState().toBinStr()); }
 
 signals:
    void dataChanged();
