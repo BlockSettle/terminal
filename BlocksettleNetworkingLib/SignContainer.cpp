@@ -22,8 +22,7 @@ SignContainer::SignContainer(const std::shared_ptr<spdlog::logger> &logger, OpMo
 std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , SignContainer::OpMode runMode, const QString &host
-   , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const std::shared_ptr<ArmoryServersProvider> & armoryServers)
+   , const std::shared_ptr<ConnectionManager>& connectionManager)
 {
    if (connectionManager == nullptr) {
       logger->error("[{}] need connection manager to create signer", __func__);

@@ -483,7 +483,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    }
 
    retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-      , signerHost, connectionManager_, armoryServersProvider_);
+      , signerHost, connectionManager_);
    return retPtr;
 }
 
