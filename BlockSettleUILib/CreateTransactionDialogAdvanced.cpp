@@ -338,7 +338,7 @@ void CreateTransactionDialogAdvanced::initUI()
    ui_->treeViewOutputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
    // QModelIndex isn't used. We should use it or lose it.
-   connect(outputsModel_, &TransactionOutputsModel::rowsInserted, this, &CreateTransactionDialogAdvanced::onOutputsInserted);
+   connect(ui_->treeViewOutputs, &QTreeView::clicked, this, &CreateTransactionDialogAdvanced::onOutputsClicked);
    connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last) {
       onOutputRemoved();
    });
@@ -502,32 +502,19 @@ QLabel* CreateTransactionDialogAdvanced::changeLabel() const
    return ui_->labelReturnAmount;
 }
 
-void CreateTransactionDialogAdvanced::onOutputsInserted(const QModelIndex &, int first, int last)
+void CreateTransactionDialogAdvanced::onOutputsClicked(const QModelIndex &index)
 {
-   for (int i = first; i <= last; i++) {
-      auto index = outputsModel_->index(i, 2);
-      auto outputId = outputsModel_->GetOutputId(i);
+   if (!index.isValid()) {
+      return;
+   }
 
-      QPushButton *button = nullptr;
-      if (removeOutputEnabled_) {
-         button = new QPushButton();
-         //button->setFixedSize(30, 16);  // has no effect
-         button->setContentsMargins(0, 0, 0, 0);
+   if (!removeOutputEnabled_) {
+      return;
+   }
 
-         button->setIcon(UiUtils::icon(0xeaf1, QVariantMap{
-            { QLatin1String{ "color" }, QColor{ Qt::white } }
-            // , { QLatin1String{ "scale-factor" }, 0.75 }
-            }));
-      }
-
-      ui_->treeViewOutputs->setIndexWidget(index, button);
-
-      if (removeOutputEnabled_) {
-         connect(button, &QPushButton::clicked, [this, outputId]()
-         {
-            RemoveOutputByRow(outputsModel_->GetRowById(outputId));
-         });
-      }
+   if (outputsModel_->isRemoveColumn(index.column())) {
+      auto outputId = outputsModel_->GetOutputId(index.row());
+      RemoveOutputByRow(outputsModel_->GetRowById(outputId));
    }
 }
 
@@ -1039,7 +1026,6 @@ void CreateTransactionDialogAdvanced::disableOutputsEditing()
    outputsModel_->enableRows(false);
 
    removeOutputEnabled_ = false;
-   onOutputsInserted({}, 0, outputsModel_->rowCount({}) - 1);
 }
 
 void CreateTransactionDialogAdvanced::disableInputSelection()

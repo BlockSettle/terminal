@@ -19,6 +19,7 @@ public:
    unsigned int   GetOutputId(int row);
    int            GetRowById(unsigned int id);
    void           RemoveRecipient(int row);
+   bool           isRemoveColumn(int column);
 
    void clear();
    void enableRows(bool flag = true);
@@ -51,6 +52,7 @@ private:
 private:
    std::vector<OutputRow> outputs_;
    bool rowsEnabled_ = true;
+   QIcon removeIcon_;
 };
 
 #endif // __TRANSACTION_OUTPUTS_MODEL_H__

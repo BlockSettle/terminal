@@ -1,11 +1,16 @@
 #include <QColor>
 #include <QSize>
+#include <QIcon>
 #include "TransactionOutputsModel.h"
 #include "UiUtils.h"
 
 TransactionOutputsModel::TransactionOutputsModel(QObject* parent)
    : QAbstractTableModel{parent}
-{}
+{
+   removeIcon_ = UiUtils::icon(0xeaf1, QVariantMap{
+               { QLatin1String{ "color" }, QColor{ Qt::white } }
+            });
+}
 
 int TransactionOutputsModel::rowCount(const QModelIndex & parent) const
 {
@@ -58,6 +63,9 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
       return int (Qt::AlignLeft | Qt::AlignVCenter);
    case Qt::DisplayRole:
       return getRowData(index.column(), outputs_[index.row()]);
+   case Qt::DecorationRole:
+      if (index.column() == ColumnRemove && rowsEnabled_)
+         return removeIcon_;
    case Qt::TextColorRole:
       return rowsEnabled_ ? QVariant{} : QColor(Qt::gray);
    }
@@ -91,6 +99,11 @@ void TransactionOutputsModel::RemoveRecipient(int row)
    outputs_.erase(outputs_.begin() + row);
 
    endRemoveRows();
+}
+
+bool TransactionOutputsModel::isRemoveColumn(int column)
+{
+   return column == ColumnRemove;
 }
 
 unsigned int TransactionOutputsModel::GetOutputId(int row)
