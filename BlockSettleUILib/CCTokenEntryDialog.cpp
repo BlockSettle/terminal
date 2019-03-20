@@ -73,9 +73,9 @@ void CCTokenEntryDialog::tokenChanged()
                priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
             }
             bs::hd::Path path;
-            path.append(bs::hd::purpose, true);
-            path.append(bs::hd::BlockSettle_CC, true);
-            path.append(ccProduct_, true);
+            path.append(bs::hd::purpose | 0x80000000);
+            path.append(bs::hd::BlockSettle_CC | 0x80000000);
+            path.append(ccProduct_);
             createWalletReqId_ = signingContainer_->createHDLeaf(priWallet->walletId(), path);
          }
          else {

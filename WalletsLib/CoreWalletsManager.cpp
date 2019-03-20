@@ -82,8 +82,8 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
       }
       try {
          logger_->debug("Loading BIP44 wallet from {}", file.toStdString());
-         const auto wallet = std::make_shared<hd::Wallet>(fileInfo.absoluteFilePath().toStdString()
-                                                               , logger_);
+         const auto wallet = std::make_shared<hd::Wallet>(fileInfo.absoluteFilePath().toStdString(),
+                                                             netType , logger_);
          current++;
          if (cbProgress) {
             cbProgress(current, totalCount);
@@ -336,26 +336,29 @@ bool WalletsManager::deleteWalletFile(const HDWalletPtr &wallet)
 
 WalletsManager::HDWalletPtr WalletsManager::createWallet(
    const std::string& name, const std::string& description
-   , wallet::Seed seed, const std::string &walletsPath, 
+   , wallet::Seed seed, const std::string &folder, 
    const SecureBinaryData& passphrase, bool primary)
 {
    const HDWalletPtr newWallet = std::make_shared<hd::Wallet>(
-      name, description, seed, walletsPath, passphrase, logger_);
+      name, description, seed, passphrase, folder, logger_);
 
    if (hdWallets_.find(newWallet->walletId()) != hdWallets_.end()) {
       throw std::runtime_error("HD wallet with id " + newWallet->walletId() + " already exists");
    }
 
-   newWallet->createStructure();
-   if (primary) {
-      newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+   {
+      auto lock = newWallet->lockForEncryption(passphrase);
+      newWallet->createStructure();
+      if (primary) {
+         newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+      }
    }
 
-   addWallet(newWallet, walletsPath);
+   addWallet(newWallet);
    return newWallet;
 }
 
-void WalletsManager::addWallet(const HDWalletPtr &wallet, const std::string &walletsPath)
+void WalletsManager::addWallet(const HDWalletPtr &wallet)
 {
    if (!wallet) {
       return;

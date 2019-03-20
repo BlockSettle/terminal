@@ -32,6 +32,8 @@ void hd::Leaf::init(
       path_ = path;
       suffix_.clear();
       suffix_ = bs::hd::Path::elemToKey(index());
+
+      walletName_ = path_.toString();
    }
 
    reset();
@@ -184,7 +186,9 @@ bs::Address hd::Leaf::newAddress(AddressEntryType aet)
    auto addrPtr = accountPtr_->getNewAddress(aet);
 
    //this will not work with MS assets nor P2PK (the output script does not use a hash)
-   return Address(addrPtr->getHash(), aet);
+   auto addr = Address(addrPtr->getHash(), aet);
+   usedAddresses_.push_back(addr);
+   return addr;
 }
 
 bs::Address hd::Leaf::newInternalAddress(AddressEntryType aet)
@@ -192,6 +196,8 @@ bs::Address hd::Leaf::newInternalAddress(AddressEntryType aet)
    auto addrPtr = accountPtr_->getNewChangeAddress(aet);
 
    //this will not work with MS assets nor P2PK (the output script does not use a hash)
+   auto addr = Address(addrPtr->getHash(), aet);
+   usedAddresses_.push_back(addr);
    return Address(addrPtr->getHash(), aet);
 }
 
@@ -281,8 +287,8 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
       auto indexid = brr.get_uint32_t(BE);
 
       bs::hd::Path addrPath = path_;
-      addrPath.append(nodeid, false);
-      addrPath.append(indexid, false);
+      addrPath.append(nodeid);
+      addrPath.append(indexid);
 
       return addrPath;
    }
@@ -328,6 +334,17 @@ bool hd::Leaf::addressIndexExists(const std::string &index) const
    { }
 
    return false;
+}
+
+bs::Address hd::Leaf::getAddressByIndex(
+   unsigned id, bool extInt, AddressEntryType aet) const
+{
+   auto assetPtr = accountPtr_->getAssetForID(id, extInt);
+   auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
+   if (assetSingle == nullptr)
+      throw AssetException("unexpected asset type");
+
+   return bs::Address::fromPubKey(assetSingle->getPubKey()->getCompressedKey(), aet);
 }
 
 bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex() const
@@ -421,10 +438,7 @@ std::vector<bs::Address> hd::Leaf::getExtAddressList() const
 
 size_t hd::Leaf::getExtAddressCount() const
 {
-   auto& addressMap = 
-      accountPtr_->getOuterAccount()->getAddressHashMap(
-         accountPtr_->getAddressTypeSet());
-   return addressMap.size();
+   return accountPtr_->getOuterAccount()->getAssetCount();
 }
 
 std::vector<bs::Address> hd::Leaf::getIntAddressList() const
@@ -459,9 +473,7 @@ size_t hd::Leaf::getIntAddressCount() const
    if (iter == accMap.end())
       throw WalletException("invalid inner account id");
 
-   auto& addressMap = iter->second->getAddressHashMap(
-      accountPtr_->getAddressTypeSet());
-   return addressMap.size();
+   return iter->second->getAssetCount();
 }
 
 

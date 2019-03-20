@@ -40,6 +40,7 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> hd::Group::getAllLeaves() const
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const std::string &walletId)
 {
+   elem |= 0x80000000;
    const auto prevLeaf = getLeaf(elem);
    if (prevLeaf != nullptr) {
       if (walletId != prevLeaf->walletId()) {
@@ -49,7 +50,7 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const s
       return prevLeaf;
    }
    auto pathLeaf = path_;
-   pathLeaf.append(elem, true);
+   pathLeaf.append(elem);
    auto result = newLeaf(walletId);
    initLeaf(result, pathLeaf);
    addLeaf(result, true);

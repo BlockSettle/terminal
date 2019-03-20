@@ -955,9 +955,9 @@ void AuthAddressManager::CreateAuthWallet(const std::vector<bs::wallet::Password
       return;
    }
    bs::hd::Path path;
-   path.append(bs::hd::purpose, true);
-   path.append(bs::hd::CoinType::BlockSettle_Auth, true);
-   path.append(0u, true);
+   path.append(bs::hd::purpose | 0x80000000);
+   path.append(bs::hd::CoinType::BlockSettle_Auth | 0x80000000);
+   path.append(0x80000000);
    createWalletReqId_ = { signingContainer_->createHDLeaf(priWallet->walletId(), path, pwdData), signal };
 }
 

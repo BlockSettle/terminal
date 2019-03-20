@@ -58,12 +58,10 @@ namespace bs {
          bool deleteWalletFile(const WalletPtr &);
          bool deleteWalletFile(const HDWalletPtr &);
 
-         void setChainCode(const BinaryData &) {}
-
          HDWalletPtr createWallet(const std::string& name, const std::string& description
-            , bs::core::wallet::Seed, const std::string &walletsPath, 
+            , bs::core::wallet::Seed, const std::string &folder, 
             const SecureBinaryData& passprase, bool primary = false);
-         void addWallet(const HDWalletPtr &, const std::string &walletsPath = {});
+         void addWallet(const HDWalletPtr &);
 
       private:
          void addWallet(const WalletPtr &);

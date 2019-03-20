@@ -75,9 +75,9 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
    else {
       for (const auto &cc : ccList) {
          bs::hd::Path path;
-         path.append(bs::hd::purpose, true);
-         path.append(bs::hd::CoinType::BlockSettle_CC, true);
-         path.append(cc, true);
+         path.append(bs::hd::purpose | 0x80000000);
+         path.append(bs::hd::CoinType::BlockSettle_CC | 0x80000000);
+         path.append(cc);
          const auto reqId = signingContainer_->createHDLeaf(rootWallet_->walletId(), path, pwdData_);
          if (reqId) {
             createCCWalletReqs_[reqId] = cc;

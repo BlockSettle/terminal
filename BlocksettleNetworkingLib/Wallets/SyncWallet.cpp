@@ -551,15 +551,6 @@ bool Wallet::getHistoryPage(uint32_t id, std::function<void(const Wallet *wallet
    return getHistoryPage(btcWallet_, id, clientCb, onlyNew);
 }
 
-bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
-{
-   if (getUsedAddressCount() < 3) {
-      return getNewChangeAddress(aet);
-   }
-   const auto &addresses = getUsedAddressList();
-   return addresses[qrand() % addresses.size()];
-}
-
 QString Wallet::displayTxValue(int64_t val) const
 {
    return QLocale().toString(val / BTCNumericTypes::BalanceDivider, 'f', BTCNumericTypes::default_precision);

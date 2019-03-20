@@ -58,6 +58,11 @@ namespace bs {
             std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
+            
+            //index as asset derivation id
+            //bool as external (true) or interal (false)
+            bs::Address getAddressByIndex(unsigned, bool, 
+               AddressEntryType aet = AddressEntryType_Default) const;
 
             SecureBinaryData getPublicKeyFor(const bs::Address &) override;
             SecureBinaryData getPubChainedKeyFor(const bs::Address &) override;
@@ -92,8 +97,8 @@ namespace bs {
             LMDB* getDB() { return db_; }
 
          protected:
-            const bs::hd::Path::Elem  addrTypeExternal = 0u;
-            const bs::hd::Path::Elem  addrTypeInternal = 1u;
+            static const bs::hd::Path::Elem  addrTypeExternal = 0u;
+            static const bs::hd::Path::Elem  addrTypeInternal = 1u;
 
             mutable std::string     walletId_, walletIdInt_;
             wallet::Type            type_;

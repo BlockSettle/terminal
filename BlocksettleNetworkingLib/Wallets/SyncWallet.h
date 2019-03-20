@@ -137,7 +137,6 @@ namespace bs {
          virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return getNewExtAddress(aet); }
-         virtual bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default);
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
 

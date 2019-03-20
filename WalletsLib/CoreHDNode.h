@@ -42,7 +42,6 @@ namespace bs {
             BinaryData pubCompressedKey() const;
             virtual BinaryData pubChainedKey() const { return pubCompressedKey(); }
             BinaryData chainCode() const;
-            std::shared_ptr<AssetEntry_Single> getAsset(int id) const;
             std::string getId() const;
 
             NetworkType getNetworkType() const { return netType_; }

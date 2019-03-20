@@ -72,7 +72,6 @@ namespace bs {
             bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
             bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
             bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &

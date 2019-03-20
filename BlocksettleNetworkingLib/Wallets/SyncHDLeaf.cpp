@@ -427,26 +427,6 @@ bs::Address hd::Leaf::getNewChangeAddress(AddressEntryType aet)
    return createAddress(aet, isExtOnly_ ? false : true);
 }
 
-bs::Address hd::Leaf::getRandomChangeAddress(AddressEntryType aet)
-{
-   if (isExtOnly_) {
-      if (extAddresses_.empty()) {
-         return getNewExtAddress(aet);
-      } else if (extAddresses_.size() == 1) {
-         return extAddresses_[0];
-      }
-      return extAddresses_[qrand() % extAddresses_.size()];
-   }
-   else {
-      if (!lastIntIdx_) {
-         return getNewChangeAddress(aet);
-      }
-      else {
-         return intAddresses_[qrand() % intAddresses_.size()];
-      }
-   }
-}
-
 std::vector<BinaryData> hd::Leaf::getAddrHashes() const
 {
    std::vector<BinaryData> result;

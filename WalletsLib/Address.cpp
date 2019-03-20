@@ -227,6 +227,7 @@ bool bs::Address::isProperHash() const
 
 AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
 {
+   //this shouldn't be used to fill in for default address type!
    if (addr.getSize() == 21) {
       const auto prefix = addr[0];
       if (prefix == NetworkConfig::getPubkeyHashPrefix()) {

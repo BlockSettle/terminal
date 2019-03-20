@@ -16,6 +16,8 @@ hd::Group::Group(std::shared_ptr<AssetWallet_Single> walletPtr,
 
 std::shared_ptr<hd::Leaf> hd::Group::getLeaf(bs::hd::Path::Elem elem) const
 {
+   //leafs are always hardened
+   elem |= 0x80000000;
    const auto itLeaf = leaves_.find(elem);
    if (itLeaf == leaves_.end()) {
       return nullptr;
@@ -50,12 +52,14 @@ std::vector<std::shared_ptr<bs::core::Wallet>> hd::Group::getAllLeaves() const
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem)
 {
+   //groups are always hardened
+   elem |= 0x80000000;
    if (getLeaf(elem) != nullptr) {
       return nullptr;
    }
 
    auto pathLeaf = path_;
-   pathLeaf.append(elem, true);
+   pathLeaf.append(elem);
    auto result = newLeaf();
    initLeaf(result, pathLeaf);
    addLeaf(result);
@@ -185,9 +189,30 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
 
    //Lock the underlying armory wallet to allow accounts to derive their root from
    //the wallet's. We assume the passphrase prompt lambda is already set.
-
    auto lock = walletPtr_->lockDecryptedContainer();
-   auto accID = walletPtr_->createBIP32Account(nullptr, pathInt);
+
+   //setup address account
+   auto accTypePtr = std::make_shared<AccountType_BIP32_Custom>();
+   
+   //nodes
+   accTypePtr->setNodes({ hd::Leaf::addrTypeExternal, hd::Leaf::addrTypeInternal });
+
+   //account IDs
+   accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
+   accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeInternal));
+
+   //address types
+   accTypePtr->setAddressTypes({
+      AddressEntryType_P2PKH, AddressEntryType_P2WPKH, 
+      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)
+      });
+
+   accTypePtr->setDefaultAddressType(AddressEntryType_P2WPKH);
+
+   //address lookup
+   accTypePtr->setAddressLookup(DERIVATION_LOOKUP);
+
+   auto accID = walletPtr_->createBIP32Account(nullptr, pathInt, accTypePtr);
    leaf->init(walletPtr_, accID, path);
 }
 

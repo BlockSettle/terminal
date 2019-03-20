@@ -473,9 +473,9 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
 
                if (qryCCWallet.exec() == QDialog::Accepted) {
                   bs::hd::Path path;
-                  path.append(bs::hd::purpose, true);
-                  path.append(bs::hd::BlockSettle_CC, true);
-                  path.append(qrn.product, true);
+                  path.append(bs::hd::purpose | 0x80000000);
+                  path.append(bs::hd::BlockSettle_CC | 0x80000000);
+                  path.append(qrn.product);
                   leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
                }
             } else {

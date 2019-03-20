@@ -427,15 +427,6 @@ std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const
    return result;
 }
 
-bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
-{
-   if (getUsedAddressCount() < 3) {
-      return getNewChangeAddress(aet);
-   }
-   const auto &addresses = getUsedAddressList();
-   return addresses[qrand() % addresses.size()];
-}
-
 /*bool Wallet::isSegWitInput(const UTXO& input)
 {
    return input.isSegWit() || isSegWitScript(input.getScript());

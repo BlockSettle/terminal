@@ -13,7 +13,7 @@
 #include "Script.h"
 #include "Signer.h"
 #include "WalletEncryption.h"
-
+#include "Wallets.h"
 
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
@@ -268,7 +268,6 @@ namespace bs {
          virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return getNewExtAddress(aet); }
-         virtual bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default);
          virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
@@ -308,6 +307,47 @@ namespace bs {
       using KeyMap = std::unordered_map<std::string, SecureBinaryData>; // key is wallet id
       using WalletMap = std::unordered_map<std::string, std::shared_ptr<Wallet>>;   // key is wallet id
       BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const KeyMap &, const WalletMap &);
+
+      struct WalletEncryptionLock
+      {
+      private:
+         std::shared_ptr<AssetWallet_Single> walletPtr_;
+         ReentrantLock walletLock_;
+
+      private:
+         WalletEncryptionLock(const WalletEncryptionLock&) = delete;
+         WalletEncryptionLock& operator=(const WalletEncryptionLock&) = delete;
+         WalletEncryptionLock& operator=(WalletEncryptionLock&&) = delete;
+
+      public:
+
+         WalletEncryptionLock(
+            std::shared_ptr<AssetWallet_Single> wallet,
+            const SecureBinaryData& passphrase) :
+            walletLock_(std::move(wallet->lockDecryptedContainer())),
+            walletPtr_(wallet)
+         {
+            //std::function<SecureBinaryData(const BinaryData&)>
+            auto lbd = [&passphrase](const BinaryData&)->SecureBinaryData
+            {
+               return passphrase;
+            };
+
+            wallet->setPassphrasePromptLambda(lbd);
+         }
+         
+         WalletEncryptionLock(WalletEncryptionLock&& lock) :
+            walletLock_(std::move(lock.walletLock_))
+         {
+            walletPtr_ = lock.walletPtr_;
+         }
+
+         ~WalletEncryptionLock(void)
+         {
+            walletPtr_->resetPassphrasePromptLambda();
+         }
+
+      };
 
    }  //namespace core
 }  //namespace bs

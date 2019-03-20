@@ -304,9 +304,9 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
    if (wallet_->isPrimary()) {
       for (const auto &cc : assetMgr_->privateShares(true)) {
          bs::hd::Path path;
-         path.append(bs::hd::purpose, true);
-         path.append(bs::hd::CoinType::BlockSettle_CC, true);
-         path.append(cc, true);
+         path.append(bs::hd::purpose | 0x80000000);
+         path.append(bs::hd::CoinType::BlockSettle_CC | 0x80000000);
+         path.append(cc);
          const auto reqId = signingContainer_->createHDLeaf(wallet_->walletId(), path);
          if (reqId) {
             createCCWalletReqs_[reqId] = cc;

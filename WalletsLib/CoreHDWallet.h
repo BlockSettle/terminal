@@ -18,16 +18,22 @@ namespace bs {
          class Wallet
          {
          public:
+
+            //init from seed
             Wallet(const std::string &name, const std::string &desc
-               , const wallet::Seed &, const std::string &walletsPath 
-               , const SecureBinaryData& passphrase
+               , const wallet::Seed &, const SecureBinaryData& passphrase
+               , const std::string& folder = "./"
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
-            Wallet(const std::string &filename
+
+            //load existing wallet
+            Wallet(const std::string &filename, NetworkType netType
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
-            Wallet(const std::string &walletId, NetworkType netType
-               , const std::string &name
-               , const std::shared_ptr<spdlog::logger> &logger = nullptr
-               , const std::string &desc = {});
+
+            //generate random seed and init
+            Wallet(const std::string &name, const std::string &desc
+               , NetworkType netType, const SecureBinaryData& passphrase
+               , const std::string& folder = "./"
+               , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             //stand in for the botched bs encryption code. too expensive to clean up after this mess
             virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
@@ -56,7 +62,7 @@ namespace bs {
             std::vector<std::shared_ptr<bs::core::Wallet>> getLeaves() const;
             std::shared_ptr<bs::core::Wallet> getLeaf(const std::string &id) const;
 
-            virtual std::string walletId() const { return walletId_; }
+            virtual std::string walletId() const { return walletPtr_->getID(); }
             std::string name() const { return name_; }
             std::string description() const { return desc_; }
 
@@ -65,13 +71,15 @@ namespace bs {
             void copyToFile(const std::string& filename);
 
             bool changePassword(const SecureBinaryData& newPass);
+            WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
 
             static std::string fileNamePrefix(bool watchingOnly);
-            bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
-               ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
+            bs::hd::CoinType getXBTGroupType() const { 
+               return ((netType_ == NetworkType::MainNet)
+               ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); 
+            }
 
          protected:
-            std::string    walletId_;
             std::string    name_, desc_;
             NetworkType    netType_ = NetworkType::Invalid;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>              groups_;
@@ -86,7 +94,7 @@ namespace bs {
 
          protected:
             void initNew(const wallet::Seed &, 
-               const std::string &walletsPath, const SecureBinaryData& passphrase);
+               const SecureBinaryData& passphrase, const std::string& folder);
             void loadFromFile(const std::string &filename);
             std::string getFileName(const std::string &dir) const;
             void putDataToDB(const BinaryData& key, const BinaryData& data);

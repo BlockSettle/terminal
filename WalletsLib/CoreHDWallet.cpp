@@ -15,31 +15,36 @@ if ((logger)) { \
 using namespace bs::core;
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
-                   , const wallet::Seed &seed, const std::string &walletsPath
+                   , const wallet::Seed &seed
                    , const SecureBinaryData& passphrase
+                   , const std::string& folder
                    , const std::shared_ptr<spdlog::logger> &logger)
    : name_(name), desc_(desc)
    , netType_(seed.networkType())
    , logger_(logger)
 {
-   initNew(seed, walletsPath, passphrase);
+   initNew(seed, passphrase, folder);
 }
 
-hd::Wallet::Wallet(const std::string &filename
+hd::Wallet::Wallet(const std::string &filename, NetworkType netType
                    , const std::shared_ptr<spdlog::logger> &logger)
-   : logger_(logger)
+   : netType_(netType), logger_(logger)
 {
    loadFromFile(filename);
 }
 
-hd::Wallet::Wallet(const std::string &walletId, NetworkType netType
-                   , const std::string &name
-                   , const std::shared_ptr<spdlog::logger> &logger
-                   , const std::string &desc)
-   : walletId_(walletId), name_(name), desc_(desc)
+hd::Wallet::Wallet(const std::string &name, const std::string &desc
+   , NetworkType netType, const SecureBinaryData& passphrase
+   , const std::string& folder
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : name_(name), desc_(desc)
    , netType_(netType)
    , logger_(logger)
-{}
+{
+   wallet::Seed seed(netType);
+   seed.setSeed(CryptoPRNG::generateRandom(32));
+   initNew(seed, passphrase, folder);
+}
 
 hd::Wallet::~Wallet()
 {
@@ -48,12 +53,13 @@ hd::Wallet::~Wallet()
 }
 
 void hd::Wallet::initNew(const wallet::Seed &seed, 
-   const std::string &walletsPath, const SecureBinaryData& passphrase)
+   const SecureBinaryData& passphrase, const std::string& folder)
 {
    walletPtr_ = AssetWallet_Single::createFromSeed_BIP32_Blank(
-      walletsPath, seed.seed(), passphrase);
+      folder, seed.seed(), passphrase);
    dbEnv_ = walletPtr_->getDbEnv();
    db_ = new LMDB(dbEnv_.get(), BS_WALLET_DBNAME);
+   initializeDB();
 }
 
 void hd::Wallet::loadFromFile(const std::string &filename)
@@ -175,7 +181,6 @@ std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
 
 void hd::Wallet::createStructure()
 {
-   initializeDB();
    const auto groupXBT = createGroup(getXBTGroupType());
    groupXBT->createLeaf(0u);
    writeGroupsToDB();
@@ -351,8 +356,10 @@ std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
 
 std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly(const SecureBinaryData &password) const
 {
+   throw WalletException("not implemented");
+   return nullptr;
    //TODO: rework this
-   if (walletPtr_->isWatchingOnly()) {
+   /*if (walletPtr_->isWatchingOnly()) {
       LOG(logger_, info, "[Wallet::CreateWatchingOnly] {} already watching-only", walletId());
       return nullptr;
    }
@@ -362,7 +369,7 @@ std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly(const SecureBinaryDat
    for (const auto &group : groups_) {
       woWallet->addGroup(group.second);
    }
-   return woWallet;
+   return woWallet;*/
 }
 
 bool hd::Wallet::isWatchingOnly() const
@@ -425,4 +432,9 @@ void hd::Wallet::copyToFile(const std::string& filename)
 
    source.close();
    dest.close();
+}
+
+WalletEncryptionLock hd::Wallet::lockForEncryption(const SecureBinaryData& passphrase)
+{
+   return WalletEncryptionLock(walletPtr_, passphrase);
 }

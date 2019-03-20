@@ -759,7 +759,6 @@ bool HeadlessContainerListener::onSetUserId(const std::string &clientId, headles
       return false;
    }
 
-   walletsMgr_->setChainCode(request.userid());
 
    headless::RequestPacket response;
    response.set_authticket(authTicket(clientId).toBinStr());

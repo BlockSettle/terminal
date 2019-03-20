@@ -179,16 +179,6 @@ BinaryData hd::Node::chainCode() const
    return BinaryData(node_.chain_code, sizeof(node_.chain_code));
 }
 
-std::shared_ptr<AssetEntry_Single> hd::Node::getAsset(int id) const
-{
-   SecureBinaryData privKeyBin = privChainedKey().copy();
-   const auto privKey = std::make_shared<Asset_PrivateKey>(id, privKeyBin
-      , make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
-   SecureBinaryData pubKey = pubChainedKey();
-   const AssetEntry_Single aes(id, BinaryData{}, pubKey, privKey);
-   return std::make_shared<AssetEntry_Single>(aes);
-}
-
 std::shared_ptr<hd::Node> hd::Node::create(const btc_hdnode &node, NetworkType netType) const
 {
    return std::make_shared<hd::Node>(node, netType);
@@ -196,7 +186,7 @@ std::shared_ptr<hd::Node> hd::Node::create(const btc_hdnode &node, NetworkType n
 
 std::unique_ptr<hd::Node> hd::Node::createUnique(const btc_hdnode &node, NetworkType netType) const
 {
-   return make_unique<hd::Node>(node, netType);
+   return std::make_unique<hd::Node>(node, netType);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,7 +198,7 @@ std::shared_ptr<hd::Node> hd::ChainedNode::create(const btc_hdnode &node, Networ
 
 std::unique_ptr<hd::Node> hd::ChainedNode::createUnique(const btc_hdnode &node, NetworkType netType) const
 {
-   return make_unique<hd::ChainedNode>(node, netType, chainCode_);
+   return std::make_unique<hd::ChainedNode>(node, netType, chainCode_);
 }
 
 SecureBinaryData hd::ChainedNode::privChainedKey() const

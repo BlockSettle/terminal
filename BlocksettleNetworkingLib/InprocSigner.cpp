@@ -20,7 +20,7 @@ InprocSigner::InprocSigner(const std::shared_ptr<bs::core::hd::Wallet> &wallet
    , walletsPath_({}), netType_(wallet->networkType())
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
-   walletsMgr_->addWallet(wallet, walletsPath_);
+   walletsMgr_->addWallet(wallet);
 }
 
 InprocSigner::InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &wallet
@@ -228,7 +228,6 @@ void InprocSigner::createSettlementWallet(const std::function<void(const std::sh
 
 SignContainer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
 {
-   walletsMgr_->setChainCode(userId);
    QTimer::singleShot(1, [this] { emit UserIdSet(); });
    return seqId_++;
 }
