@@ -88,7 +88,7 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 
    // The client ID will be sent before the actual data.
    int result = zmq_msg_recv(&clientId, dataSocket_.get(), ZMQ_DONTWAIT);
-   if (result == -1) {
+   if ((result == -1) || !clientId.GetSize()) {
       logger_->error("[{}] {} failed to recv header: {}", __func__
          , connectionName_, zmq_strerror(zmq_errno()));
       return false;
@@ -163,8 +163,15 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData_
       return;
    }
 
+   const auto &connData = socketConnMap_[clientID];
+   if (!connData) {
+      logger_->error("[{}] failed to find connection data for client {}"
+         , __func__, BinaryData(clientID).toHexStr());
+      return;
+   }
+
    // Decrypt only if the BIP 151 handshake is complete.
-   if (socketConnMap_[clientID]->bip151HandshakeCompleted_) {
+   if (connData->bip151HandshakeCompleted_) {
       size_t plainTextSize = packetData.getSize() - POLY1305MACLEN;
       auto result = socketConnMap_[clientID]->encData_->decryptPacket(
          packetData.getPtr(), packetData.getSize()
@@ -490,16 +497,27 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
    if (socketConnMap_[clientID] == nullptr) {
       auto lbds = getAuthPeerLambda();
       for (auto b : trustedClients_) {
-         QStringList nameKeyList = b.split(QStringLiteral(":"));
-            if (nameKeyList.size() != 2) {
-               logger_->error("[{}] Trusted client list is malformed."
-                  , __func__);
-               return;
-            }
-         vector<string> keyName;
-         keyName.push_back(nameKeyList[0].toStdString());
-         SecureBinaryData inKey = READHEX(nameKeyList[1].toStdString());
-         authPeers_->addPeer(inKey, keyName);
+         const auto colonIndex = b.indexOf(QLatin1Char(':'));
+         if (colonIndex < 0) {
+            logger_->error("[{}] Trusted client list is malformed (for {})."
+               , __func__, b.toStdString());
+            return;
+         }
+         const auto keyName = b.left(colonIndex).toStdString();
+         SecureBinaryData inKey = READHEX(b.mid(colonIndex + 1).toStdString());
+         if (inKey.isNull()) {
+            logger_->error("[{}] Trusted client key for {} is malformed."
+               , __func__, keyName);
+            return;
+         }
+         try {
+            authPeers_->addPeer(inKey, vector<string>{ keyName });
+         }
+         catch (const std::exception &e) {
+            logger_->error("[{}] Trusted client key {} [{}] for {} is malformed: {}"
+               , __func__, inKey.toHexStr(), inKey.getSize(), keyName, e.what());
+            return;
+         }
       }
 
       socketConnMap_[clientID] = make_unique<ZmqBIP15XPerConnData>();
