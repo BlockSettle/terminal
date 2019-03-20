@@ -124,6 +124,29 @@ bool ChatDB::createMissingTables()
    return result;
 }
 
+bool ChatDB::isRoomMessagesExist(const QString &roomId)
+{
+   // QSqlQuery qryAdd(QLatin1String("INSERT INTO messages(id, timestamp, sender, receiver, enctext, state, reference)"\
+      // " VALUES(?, ?, ?, ?, ?, ?, ?);"), db_);
+
+   QSqlQuery query(db_);
+   if (!query.prepare(QLatin1String("SELECT receiver FROM messages WHERE receiver=:room_id;"))) {
+      logger_->error("[ChatDB::isContactExist] failed to prepare query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+   query.bindValue(QString::fromStdString(":room_id"), roomId);
+   if (!query.exec()) {
+      logger_->error("[ChatDB::isContactExist] failed to exec query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+
+   if (query.next()) {
+      return true;
+   }
+
+   return false;
+}
+
 bool ChatDB::add(const Chat::MessageData &msg)
 {
    QSqlQuery qryAdd(QLatin1String("INSERT INTO messages(id, timestamp, sender, receiver, enctext, state, reference)"\
@@ -263,6 +286,23 @@ std::vector<std::shared_ptr<Chat::MessageData> > ChatDB::getRoomMessages(const Q
       return (a->getDateTime().toMSecsSinceEpoch() < b->getDateTime().toMSecsSinceEpoch());
    });
    return records;
+}
+
+bool ChatDB::removeRoomMessages(const QString &roomId) {
+   if (!isRoomMessagesExist(roomId)) {
+      return false;
+   }
+
+   QSqlQuery query(QLatin1String(
+      "DELETE FROM messages WHERE receiver=:room_id;"), db_);
+   query.bindValue(0, roomId);
+
+   if (!query.exec()) {
+      logger_->error("[ChatDB::removeContact] failed to delete contact.");
+      return false;
+   }
+
+   return true;
 }
 
 bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)

@@ -50,8 +50,10 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       QVBoxLayout *l = new QVBoxLayout(d);
       l->setContentsMargins(0,0,0,0);
       d->setLayout(l);
+      d->setWindowTitle(tr("ArmoryDB connection"));
+      d->resize(847, 593);
 
-      ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, this);
+      ArmoryServersWidget *armoryServersWidget = new ArmoryServersWidget(armoryServersProvider_, appSettings_, this);
 
 //      armoryServersWidget->setWindowModality(Qt::ApplicationModal);
 //      armoryServersWidget->setWindowFlags(Qt::Dialog);
@@ -104,6 +106,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
 void NetworkSettingsPage::initSettings()
 {
    armoryServerModel_ = new ArmoryServersViewModel(armoryServersProvider_);
+   armoryServerModel_->setSingleColumnMode(true);
    armoryServerModel_->setHighLightSelectedServer(false);
    ui_->comboBoxArmoryServer->setModel(armoryServerModel_);
 
@@ -145,16 +148,28 @@ void NetworkSettingsPage::DetectEnvironmentSettings()
 
 void NetworkSettingsPage::displayArmorySettings()
 {
-   int serverIndex = armoryServersProvider_->indexOf(appSettings_->get<QString>(ApplicationSettings::armoryDbName));
-   if (serverIndex >= 0) {
-      ArmoryServer server = armoryServersProvider_->servers().at(serverIndex);
+   // set index of selected server
+   ArmoryServer selectedServer = armoryServersProvider_->getArmorySettings();
+   int selectedServerIndex = armoryServersProvider_->indexOfCurrent();
+   ui_->comboBoxArmoryServer->setCurrentIndex(selectedServerIndex);
 
-      int port = appSettings_->GetArmoryRemotePort(server.netType);
-      ui_->comboBoxArmoryServer->setCurrentIndex(serverIndex);
-      ui_->labelArmoryServerNetwork->setText(server.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
-      ui_->labelArmoryServerAddress->setText(server.armoryDBIp);
-      ui_->labelArmoryServerPort->setText(QString::number(port));
-      ui_->labelArmoryServerKey->setText(server.armoryDBKey);
+
+   // display info of connected server
+   ArmorySettings connectedServerSettings = armoryServersProvider_->connectedArmorySettings();
+   int connectedServerIndex = armoryServersProvider_->indexOfConnected();
+
+   ui_->labelArmoryServerNetwork->setText(connectedServerSettings.netType == NetworkType::MainNet ? tr("MainNet") : tr("TestNet"));
+   ui_->labelArmoryServerAddress->setText(connectedServerSettings.armoryDBIp);
+   ui_->labelArmoryServerPort->setText(QString::number(connectedServerSettings.armoryDBPort));
+   ui_->labelArmoryServerKey->setText(connectedServerSettings.armoryDBKey);
+
+   // display tip if configuration was changed
+   if (selectedServerIndex != connectedServerIndex
+       || selectedServer != static_cast<ArmoryServer>(connectedServerSettings)) {
+      ui_->labelConfChanged->setVisible(true);
+   }
+   else {
+      ui_->labelConfChanged->setVisible(false);
    }
 
 }

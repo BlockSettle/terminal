@@ -4,8 +4,9 @@
 
 const int kArmoryDefaultMainNetPort = 80;
 
-ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider, QWidget *parent) :
+ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider, std::shared_ptr<ApplicationSettings> appSettings, QWidget *parent) :
    QWidget(parent)
+   , appSettings_(appSettings)
    , armoryServersProvider_(armoryServersProvider)
    , ui_(new Ui::ArmoryServersWidget)
    , armoryServersModel(new ArmoryServersViewModel(armoryServersProvider))
@@ -45,6 +46,16 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
       ui_->pushButtonSelectServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
 
       resetForm();
+   });
+
+   connect(ui_->comboBoxNetworkType, QOverload<int>::of(&QComboBox::currentIndexChanged),
+           [this](int index){
+      if (index == 1) {
+         ui_->spinBoxPort->setValue(appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet));
+      }
+      else if (index == 2){
+         ui_->spinBoxPort->setValue(appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet));
+      }
    });
 
    resetForm();
@@ -168,8 +179,7 @@ void ArmoryServersWidget::resetForm()
    ui_->lineEditName->clear();
    ui_->comboBoxNetworkType->setCurrentIndex(0);
    ui_->lineEditAddress->clear();
-   //ui_->spinBoxPort->setValue(kArmoryDefaultMainNetPort);
    ui_->spinBoxPort->setValue(0);
-   ui_->spinBoxPort->setSpecialValueText(tr("--Select--"));
+   ui_->spinBoxPort->setSpecialValueText(tr(" "));
    ui_->lineEditKey->clear();
 }

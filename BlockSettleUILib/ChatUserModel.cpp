@@ -74,10 +74,14 @@ bool ChatUserModel::isChatUserExist(const QString &userId) const
 
 bool ChatUserModel::hasUnreadMessages() const
 {
-   ChatUserDataPtr chatUserDataPtr;
-   foreach( chatUserDataPtr, chatUserDataListPtr_ )
-   {
+   for (const auto &chatUserDataPtr : chatUserDataListPtr_) {
       if (chatUserDataPtr->haveNewMessage()) {
+         return true;
+      }
+   }
+
+   for (const auto &chatRoomDataPtr : chatRoomDataListPtr_) {
+      if (chatRoomDataPtr->haveNewMessage()) {
          return true;
       }
    }
@@ -115,18 +119,36 @@ void ChatUserModel::setUserState(const QString &userId, const ChatUserData::Stat
    emit chatUserDataListChanged(chatUserDataListPtr_);
 }
 
-void ChatUserModel::setUserHaveNewMessage(const QString &userId, const bool &haveNewMessage) {
+bool ChatUserModel::setUserHaveNewMessage(const QString &userId, const bool &haveNewMessage) {
    ChatUserDataPtr chatUserDataPtr = getUserByUserId(userId);
 
    if (!chatUserDataPtr)
    {
-      return;
+      return false;
    }
 
    chatUserDataPtr->setHaveNewMessage(haveNewMessage);
 
    emit chatUserHaveNewMessageChanged(chatUserDataPtr);
    emit chatUserDataListChanged(chatUserDataListPtr_);
+
+   return true;
+}
+
+bool ChatUserModel::setRoomHaveNewMessage(const QString &roomId, const bool &haveNewMessage)
+{
+   Chat::ChatRoomDataPtr chatRoomDataPtr = getRoomByRoomId(roomId);
+
+   if (!chatRoomDataPtr) {
+      return false;
+   }
+
+   chatRoomDataPtr->setHaveNewMessage(haveNewMessage);
+
+   emit chatRoomDataListChanged(chatRoomDataListPtr_);
+
+   return true;
+
 }
 
 ChatUserDataPtr ChatUserModel::getUserByUserId(const QString &userId) const

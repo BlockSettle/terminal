@@ -11,6 +11,7 @@ ChatRoomData::ChatRoomData(const QString& roomId, const QString& ownerId, const 
    , isPrivate_(isPrivate)
    , sendUserUpdates_(sendUserUpdates)
    , displayUserList_(displayUserList)
+   , haveNewMessage_(false)
 {}
 
 QString ChatRoomData::getId() {return id_;}
@@ -26,6 +27,16 @@ bool ChatRoomData::isPrivate() {return isPrivate_;}
 bool ChatRoomData::sendUserUpdates() {return sendUserUpdates_;}
 
 bool ChatRoomData::displayUserList() {return displayUserList_;}
+
+bool ChatRoomData::haveNewMessage() const
+{
+   return haveNewMessage_;
+}
+
+void ChatRoomData::setHaveNewMessage(bool haveNewMessage)
+{
+   haveNewMessage_ = haveNewMessage;
+}
 
 QJsonObject ChatRoomData::toJson() const
 {

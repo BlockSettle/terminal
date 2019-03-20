@@ -60,7 +60,8 @@ enum MetaType
 enum AssetEntryType
 {
    AssetEntryType_Single = 0x01,
-   AssetEntryType_Multisig
+   AssetEntryType_Multisig,
+   AssetEntryType_BIP32Root
 };
 
 enum ScriptHashType
@@ -75,7 +76,7 @@ enum ScriptHashType
 struct DecryptedEncryptionKey
 {
    friend class DecryptedDataContainer;
-   friend class Cypher_AES;
+   friend class Cipher_AES;
    friend class AssetWallet_Single;
 
 private:
@@ -190,19 +191,19 @@ struct Asset_EncryptedData : public Asset
 
 protected:
    const SecureBinaryData data_;
-   std::unique_ptr<Cypher> cypher_;
+   std::unique_ptr<Cipher> cipher_;
 
 public:
-   Asset_EncryptedData(SecureBinaryData& data, std::unique_ptr<Cypher> cypher)
+   Asset_EncryptedData(SecureBinaryData& data, std::unique_ptr<Cipher> cipher)
       : Asset(AssetType_EncryptedData), data_(std::move(data))
    {
       if (data_.getSize() == 0)
          return;
 
-      if (cypher == nullptr)
-         throw AssetException("null cypher for privkey");
+      if (cipher == nullptr)
+         throw AssetException("null cipher for privkey");
 
-      cypher_ = std::move(cypher);
+      cipher_ = std::move(cipher);
    }
 
    //virtual
@@ -215,17 +216,17 @@ public:
       return (data_.getSize() != 0);
    }
 
-   std::unique_ptr<Cypher> copyCypher(void) const
+   std::unique_ptr<Cipher> copyCipher(void) const
    {
-      if (cypher_ == nullptr)
+      if (cipher_ == nullptr)
          return nullptr;
 
-      return cypher_->getCopy();
+      return cipher_->getCopy();
    }
 
    const SecureBinaryData& getIV(void) const
    {
-      return cypher_->getIV();
+      return cipher_->getIV();
    }
 
    const SecureBinaryData& getEncryptedData(void) const
@@ -235,7 +236,7 @@ public:
 
    const BinaryData& getEncryptionKeyID(void) const
    {
-      return cypher_->getEncryptionKeyId();
+      return cipher_->getEncryptionKeyId();
    }
 
    //static
@@ -256,8 +257,8 @@ private:
 
 public:
    Asset_EncryptionKey(BinaryData& id, SecureBinaryData& data,
-      std::unique_ptr<Cypher> cypher) :
-      Asset_EncryptedData(data, std::move(cypher)), id_(std::move(id))
+      std::unique_ptr<Cipher> cipher) :
+      Asset_EncryptedData(data, std::move(cipher)), id_(std::move(id))
    {}
 
    BinaryData serialize(void) const;
@@ -280,8 +281,8 @@ private:
 
 public:
    Asset_PrivateKey(int id,
-      SecureBinaryData& data, std::unique_ptr<Cypher> cypher) :
-      Asset_EncryptedData(data, std::move(cypher)), id_(id)
+      SecureBinaryData& data, std::unique_ptr<Cipher> cipher) :
+      Asset_EncryptedData(data, std::move(cipher)), id_(id)
    {}
 
    BinaryData serialize(void) const;
@@ -317,7 +318,7 @@ public:
    const BinaryData& getAccountID(void) const { return accountID_; }
    const BinaryData& getID(void) const { return ID_; }
 
-   const AssetEntryType getType(void) const { return type_; }
+   virtual const AssetEntryType getType(void) const { return type_; }
    bool needsCommit(void) const { return needsCommit_; }
    void doNotCommit(void) { needsCommit_ = false; }
    BinaryData getDbKey(void) const;
@@ -376,9 +377,62 @@ public:
    std::shared_ptr<Asset_PrivateKey> getPrivKey(void) const { return privkey_; }
 
    //virtual
-   BinaryData serialize(void) const;
+   virtual BinaryData serialize(void) const;
    bool hasPrivateKey(void) const;
    const BinaryData& getPrivateEncryptionKeyId(void) const;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class AssetEntry_BIP32Root : public AssetEntry_Single
+{
+private:
+   const uint8_t depth_;
+   const unsigned leafID_;
+   const SecureBinaryData chaincode_;
+
+public:
+   //tors
+   AssetEntry_BIP32Root(int id, const BinaryData& accountID,
+      SecureBinaryData& pubkey,
+      std::shared_ptr<Asset_PrivateKey> privkey,
+      const SecureBinaryData& chaincode,
+      uint8_t depth, unsigned leafID) :
+      AssetEntry_Single(id, accountID, pubkey, privkey),
+      chaincode_(chaincode),
+      depth_(depth), leafID_(leafID)
+   {}
+
+   AssetEntry_BIP32Root(int id, const BinaryData& accountID,
+      SecureBinaryData& pubkeyUncompressed,
+      SecureBinaryData& pubkeyCompressed,
+      std::shared_ptr<Asset_PrivateKey> privkey,
+      const SecureBinaryData& chaincode,
+      uint8_t depth, unsigned leafID) :
+      AssetEntry_Single(id, accountID,
+         pubkeyUncompressed, pubkeyCompressed, privkey),
+      chaincode_(chaincode),
+      depth_(depth), leafID_(leafID)
+   {}
+
+   AssetEntry_BIP32Root(int id, const BinaryData& accountID,
+      std::shared_ptr<Asset_PublicKey> pubkey,
+      std::shared_ptr<Asset_PrivateKey> privkey,
+      const SecureBinaryData& chaincode,
+      uint8_t depth, unsigned leafID) :
+      AssetEntry_Single(id, accountID, pubkey, privkey),
+      chaincode_(chaincode),
+      depth_(depth), leafID_(leafID)
+   {}
+
+   //local
+   uint8_t getDepth(void) const { return depth_; }
+   unsigned getLeafID(void) const { return leafID_; }
+   const SecureBinaryData& getChaincode(void) const { return chaincode_; }
+
+   //virtual
+   BinaryData serialize(void) const;
+   const AssetEntryType getType(void) const override 
+   { return AssetEntryType_BIP32Root; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

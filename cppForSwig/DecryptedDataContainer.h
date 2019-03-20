@@ -79,6 +79,9 @@ private:
    */
    const SecureBinaryData defaultEncryptionKey_;
    const SecureBinaryData defaultEncryptionKeyId_;
+   
+   const SecureBinaryData defaultKdfId_;
+   const SecureBinaryData masterEncryptionKeyId_;
 
 protected:
    std::map<BinaryData, std::shared_ptr<Asset_EncryptedData>> encryptionKeyMap_;
@@ -100,10 +103,14 @@ private:
 public:
    DecryptedDataContainer(LMDBEnv* dbEnv, LMDB* dbPtr,
       const SecureBinaryData& defaultEncryptionKey,
-      const BinaryData& defaultEncryptionKeyId) :
+      const BinaryData& defaultEncryptionKeyId,
+      const SecureBinaryData& defaultKdfId,
+      const SecureBinaryData& masterKeyId) :
       dbEnv_(dbEnv), dbPtr_(dbPtr),
       defaultEncryptionKey_(defaultEncryptionKey),
-      defaultEncryptionKeyId_(defaultEncryptionKeyId)
+      defaultEncryptionKeyId_(defaultEncryptionKeyId),
+      defaultKdfId_(defaultKdfId),
+      masterEncryptionKeyId_(masterKeyId)
    {
       resetPassphraseLambda();
    }
@@ -111,7 +118,7 @@ public:
    const SecureBinaryData& getDecryptedPrivateKey(
       std::shared_ptr<Asset_PrivateKey> data);
    SecureBinaryData encryptData(
-      Cypher* const cypher, const SecureBinaryData& data);
+      Cipher* const cipher, const SecureBinaryData& data);
 
 
    void populateEncryptionKey(
@@ -147,6 +154,10 @@ public:
 
    void encryptEncryptionKey(const BinaryData&, const SecureBinaryData&);
    void lockOther(std::shared_ptr<DecryptedDataContainer> other);
+   
+   const SecureBinaryData& getDefaultKdfId(void) const { return defaultKdfId_; }
+   const SecureBinaryData& getDefaultEncryptionKeyId(void) const
+   { return defaultEncryptionKeyId_; }
 };
 
 #endif

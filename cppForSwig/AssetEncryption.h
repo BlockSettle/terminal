@@ -15,18 +15,18 @@
 
 #define KDF_PREFIX                  0xC1
 #define KDF_ROMIX_PREFIX            0xC100
-#define CYPHER_BYTE                 0xB2
+#define CIPHER_BYTE                 0xB2
 
-enum CypherType
+enum CipherType
 {
-   CypherType_AES,
-   CypherType_Serpent
+   CipherType_AES,
+   CipherType_Serpent
 };
 
-class CypherException : public std::runtime_error
+class CipherException : public std::runtime_error
 {
 public:
-   CypherException(const std::string& msg) : std::runtime_error(msg)
+   CipherException(const std::string& msg) : std::runtime_error(msg)
    {}
 };
 
@@ -89,10 +89,10 @@ public:
 struct DecryptedEncryptionKey;
 
 ////////////////////////////////////////////////////////////////////////////////
-class Cypher
+class Cipher
 {
 private:
-   const CypherType type_;
+   const CipherType type_;
 
 protected:
    const BinaryData kdfId_;
@@ -102,23 +102,23 @@ protected:
 public:
 
    //tors
-   Cypher(CypherType type, const BinaryData& kdfId,
+   Cipher(CipherType type, const BinaryData& kdfId,
       const BinaryData encryptionKeyId) :
       type_(type), kdfId_(kdfId), encryptionKeyId_(encryptionKeyId)
    {}
 
-   virtual ~Cypher(void) = 0;
+   virtual ~Cipher(void) = 0;
 
    //locals
-   CypherType getType(void) const { return type_; }
+   CipherType getType(void) const { return type_; }
    const BinaryData& getKdfId(void) const { return kdfId_; }
    const BinaryData& getEncryptionKeyId(void) const { return encryptionKeyId_; }
    const SecureBinaryData& getIV(void) const { return iv_; }
 
    //virtuals
    virtual BinaryData serialize(void) const = 0;
-   virtual std::unique_ptr<Cypher> getCopy(void) const = 0;
-   virtual std::unique_ptr<Cypher> getCopy(const BinaryData& keyId) const = 0;
+   virtual std::unique_ptr<Cipher> getCopy(void) const = 0;
+   virtual std::unique_ptr<Cipher> getCopy(const BinaryData& keyId) const = 0;
 
    virtual SecureBinaryData encrypt(const SecureBinaryData& key,
       const SecureBinaryData& data) const = 0;
@@ -128,38 +128,38 @@ public:
    virtual SecureBinaryData decrypt(const SecureBinaryData& key,
       const SecureBinaryData& data) const = 0;
 
-   virtual bool isSame(Cypher* const) const = 0;
+   virtual bool isSame(Cipher* const) const = 0;
 
    //statics
-   static std::unique_ptr<Cypher> deserialize(BinaryRefReader& brr);
+   static std::unique_ptr<Cipher> deserialize(BinaryRefReader& brr);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-class Cypher_AES : public Cypher
+class Cipher_AES : public Cipher
 {
 public:
    //tors
-   Cypher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId) :
-      Cypher(CypherType_AES, kdfId, encryptionKeyId)
+   Cipher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId) :
+      Cipher(CipherType_AES, kdfId, encryptionKeyId)
    {
       //init IV
       iv_ = std::move(CryptoPRNG::generateRandom(16));
    }
 
-   Cypher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId,
+   Cipher_AES(const BinaryData& kdfId, const BinaryData& encryptionKeyId,
       SecureBinaryData& iv) :
-      Cypher(CypherType_AES, kdfId, encryptionKeyId)
+      Cipher(CipherType_AES, kdfId, encryptionKeyId)
    {
       if (iv.getSize() != 16)
-         throw CypherException("invalid iv length");
+         throw CipherException("invalid iv length");
 
       iv_ = std::move(iv);
    }
 
    //virtuals
    BinaryData serialize(void) const;
-   std::unique_ptr<Cypher> getCopy(void) const;
-   std::unique_ptr<Cypher> getCopy(const BinaryData& keyId) const;
+   std::unique_ptr<Cipher> getCopy(void) const;
+   std::unique_ptr<Cipher> getCopy(const BinaryData& keyId) const;
 
    SecureBinaryData encrypt(const SecureBinaryData& key,
       const SecureBinaryData& data) const;
@@ -170,7 +170,7 @@ public:
    SecureBinaryData decrypt(const SecureBinaryData& key,
       const SecureBinaryData& data) const;
 
-   bool isSame(Cypher* const) const;
+   bool isSame(Cipher* const) const;
 };
 
 #endif

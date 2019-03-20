@@ -2,8 +2,6 @@
 #include "ui_ChatWidget.h"
 
 #include "ChatClient.h"
-#include "ChatUsersViewModel.h"
-#include "ChatUserListTreeWidget.h"
 #include "ApplicationSettings.h"
 #include "ChatSearchPopup.h"
 
@@ -162,6 +160,7 @@ public:
       } else {
          chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
       }
+      chat_->ui_->input_textEdit->setFocus();
    }
 
    void onMessagesUpdated()  override {
@@ -205,8 +204,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    // connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
 
-   connect(ui_->treeWidgetUsers, &ChatUserListTreeWidget::userClicked, this, &ChatWidget::onUserClicked);
-   connect(ui_->treeWidgetUsers, &ChatUserListTreeWidget::roomClicked, this, &ChatWidget::onRoomClicked);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::userClicked, this, &ChatWidget::onUserClicked);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::roomClicked, this, &ChatWidget::onRoomClicked);
 
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
@@ -236,10 +235,12 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
            client_.get(), &ChatClient::onMessageRead);
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
+   
    connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
-           ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatUserDataListChanged);
+           ui_->treeViewUsers, &ChatUserListTreeView::onChatUserDataListChanged);
+
    connect(chatUserListLogicPtr_->chatUserModelPtr().get(), &ChatUserModel::chatRoomDataListChanged,
-           ui_->treeWidgetUsers, &ChatUserListTreeWidget::onChatRoomDataListChanged);
+           ui_->treeViewUsers, &ChatUserListTreeView::onChatRoomDataListChanged);
 
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::userHaveNewMessageChanged, 
            chatUserListLogicPtr_.get(), &ChatUserListLogic::onUserHaveNewMessageChanged);

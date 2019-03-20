@@ -5,8 +5,8 @@
 #include <QStandardPaths>
 
 const QList<ArmoryServer> ArmoryServersProvider::defaultServers_ = {
-   ArmoryServer::fromTextSettings(QStringLiteral(MAINNET_ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:")),
-   ArmoryServer::fromTextSettings(QStringLiteral(TESTNET_ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:")),
+   ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":0:armory.blocksettle.com:80:")),
+   ArmoryServer::fromTextSettings(QStringLiteral(ARMORY_BLOCKSETTLE_NAME":1:armory.blocksettle.com:81:")),
    ArmoryServer::fromTextSettings(QStringLiteral("Local Auto-launch Node:0:127.0.0.1::")),
    ArmoryServer::fromTextSettings(QStringLiteral("Local Auto-launch Node:1:127.0.0.1::"))
 };
@@ -28,7 +28,7 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
 
    // #1 add MainNet blocksettle server
    ArmoryServer bsMainNet = defaultServers_.at(0);
-   bsMainNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet);
+   //bsMainNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::MainNet);
    if (defaultServersKeys.size() >= 1) {
       bsMainNet.armoryDBKey = defaultServersKeys.at(0);
    }
@@ -36,7 +36,7 @@ QList<ArmoryServer> ArmoryServersProvider::servers() const
 
    // #2 add TestNet blocksettle server
    ArmoryServer bsTestNet = defaultServers_.at(1);
-   bsTestNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet);
+   //bsTestNet.armoryDBPort = appSettings_->GetDefaultArmoryRemotePort(NetworkType::TestNet);
    if (defaultServersKeys.size() >= 2) {
       bsTestNet.armoryDBKey = defaultServersKeys.at(1);
    }
@@ -75,6 +75,11 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
    settings.armoryDBIp = appSettings_->get<QString>(ApplicationSettings::armoryDbIp);
    settings.armoryDBPort = appSettings_->GetArmoryRemotePort();
    settings.runLocally = appSettings_->get<bool>(ApplicationSettings::runArmoryLocally);
+
+   const int serverIndex = indexOf(static_cast<ArmoryServer>(settings));
+   if (serverIndex >= 0) {
+      settings.armoryDBKey = servers().at(serverIndex).armoryDBKey;
+   }
 //   if (settings.runLocally) {
 //      settings.armoryDBIp = QStringLiteral("127.0.0.1");
 //      settings.armoryDBPort = appSettings_->GetDefaultArmoryLocalPort(appSettings_->get<NetworkType>(ApplicationSettings::netType));
@@ -91,16 +96,12 @@ ArmorySettings ArmoryServersProvider::getArmorySettings() const
 
 int ArmoryServersProvider::indexOfCurrent() const
 {
-   ArmorySettings currentServer = getArmorySettings();
+   return indexOf(static_cast<ArmoryServer>(getArmorySettings()));
+}
 
-   QList<ArmoryServer> serversList = servers();
-   for (int i = 0; i < serversList.size(); ++i) {
-      const ArmoryServer &server = serversList.at(i);
-      if (server == static_cast<ArmoryServer>(currentServer)) {
-         return i;
-      }
-   }
-   return -1;
+int ArmoryServersProvider::indexOfConnected() const
+{
+   return indexOf(static_cast<ArmoryServer>(connectedArmorySettings_));
 }
 
 int ArmoryServersProvider::indexOf(const QString &name) const
@@ -113,6 +114,11 @@ int ArmoryServersProvider::indexOf(const QString &name) const
       }
    }
    return -1;
+}
+
+int ArmoryServersProvider::indexOf(const ArmoryServer &server) const
+{
+   return servers().indexOf(server);
 }
 
 int ArmoryServersProvider::indexOfIpPort(const std::string &srvIPPort) const
@@ -275,6 +281,9 @@ void ArmoryServersProvider::addKey(const QString &address, int port, const QStri
       appSettings_->set(ApplicationSettings::armoryServers, servers);
    }
 
+   // update key for current server
+   connectedArmorySettings_.armoryDBKey = key;
+
    emit dataChanged();
 }
 
@@ -287,7 +296,16 @@ void ArmoryServersProvider::addKey(const std::string &srvIPPort, const BinaryDat
              , ipPortList.at(1).toInt()
              , QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()));
    }
-   emit dataChanged();
+}
+
+ArmorySettings ArmoryServersProvider::connectedArmorySettings() const
+{
+   return connectedArmorySettings_;
+}
+
+void ArmoryServersProvider::setConnectedArmorySettings(const ArmorySettings &currentArmorySettings)
+{
+   connectedArmorySettings_ = currentArmorySettings;
 }
 
 
