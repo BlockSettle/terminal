@@ -213,10 +213,11 @@ void ApplicationSettings::set(Setting s, const QVariant &val, bool toFile)
          itSD->second.read = true;
          if (val != itSD->second.value) {
             itSD->second.value = val;
-            if (toFile && !itSD->second.path.isEmpty()) {
-               settings_.setValue(itSD->second.path, val);
-            }
             emit settingChanged(s, val);
+         }
+
+         if (toFile && !itSD->second.path.isEmpty()) {
+            settings_.setValue(itSD->second.path, val);
          }
       }
    }
@@ -231,10 +232,11 @@ void ApplicationSettings::reset(Setting s, bool toFile)
       itSD->second.read = true;
       if (itSD->second.value != itSD->second.defVal) {
          itSD->second.value = itSD->second.defVal;
-         if (toFile && !itSD->second.path.isEmpty()) {
-            settings_.setValue(itSD->second.path, itSD->second.value);
-         }
          emit settingChanged(s, itSD->second.defVal);
+      }
+      
+      if (toFile && !itSD->second.path.isEmpty()) {
+         settings_.setValue(itSD->second.path, itSD->second.value);
       }
    }
 }
