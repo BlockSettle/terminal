@@ -61,7 +61,7 @@ protected:
 	void timerEvent(QTimerEvent* event);
 	std::chrono::seconds getTimerInterval() const;
 
-    std::pair<qint64, qint64> GetPlotRange() const;
+   std::pair<qint64, qint64> GetPlotRange() const;
 
 	void LoadAdditionalPoints(const QCPRange& range) const;
 
@@ -73,7 +73,9 @@ private:
     
 	const int loadDistance{ 15 };
 
-    constexpr static int requestLimit{ 100 };
+   constexpr static int requestLimit{ 100 };
+   constexpr static qint64 candleCountOnScreenLimit{ 3000 };
+
 
 	Ui::ChartWidget *ui_;
     QButtonGroup dateRange_;

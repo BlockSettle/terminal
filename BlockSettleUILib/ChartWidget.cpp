@@ -548,7 +548,7 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   auto directionCoeff = (currentXPos - lastDragCoordX > 0) ? -1 : 1;
 	   double scalingCoeff = qAbs(currentXPos - startDragCoordX) / ui_->customPlot->size().width();
 	   lastDragCoordX = currentXPos;
-	   double tempCoeff = 5.0; //change this to impact on xAxis scale speed
+	   double tempCoeff = 5.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
 	   lower_bound += diff / tempCoeff * scalingCoeff * directionCoeff;
 	   bottomAxis->setRange(lower_bound, upper_bound);
 	   ui_->customPlot->replot();
@@ -682,14 +682,24 @@ void ChartWidget::InitializeCustomPlot()
    // interconnect x axis ranges of main and bottom axis rects:
    connect(ui_->customPlot->xAxis, SIGNAL(rangeChanged(QCPRange))
            , volumeAxisRect_->axis(QCPAxis::atBottom), SLOT(setRange(QCPRange)));
+
+
    connect(volumeAxisRect_->axis(QCPAxis::atBottom),
-	       qOverload<const QCPRange&>(&QCPAxis::rangeChanged),
-	   this,
-	   [this](QCPRange range){
-				LoadAdditionalPoints(range);
-			   rescalePlot();
-				ui_->customPlot->xAxis->setRange(range);
-			});
+      qOverload<const QCPRange&, const QCPRange&>(&QCPAxis::rangeChanged),
+      this,
+      [this](QCPRange newOne, QCPRange old) {
+      auto interval = dateRange_.checkedId() == -1 ? 0 : dateRange_.checkedId();
+      if ((newOne.size() > IntervalWidth(interval, candleCountOnScreenLimit) / 1000) && !isDraggingMainPlot) {
+         volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(old.upper - IntervalWidth(interval, candleCountOnScreenLimit) / 1000, old.upper);
+         ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
+      } else {
+         ui_->customPlot->xAxis->setRange(newOne);
+      }
+      LoadAdditionalPoints(newOne);
+      rescalePlot();
+   });
+
+
    // configure axes of both main and bottom axis rect:
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker(new QCPAxisTickerDateTime);
    dateTimeTicker->setDateTimeSpec(Qt::UTC);
