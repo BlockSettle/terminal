@@ -127,14 +127,18 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    // Encrypt data here if the BIP 150 handshake is complete.
    if (socketConnMap_[clientId]->encData_->getBIP150State() ==
       BIP150State::SUCCESS) {
-      ZmqBIP15XMsg msg;
       BIP151Connection* connPtr = nullptr;
       if (socketConnMap_[clientId]->bip151HandshakeCompleted_) {
          connPtr = socketConnMap_[clientId]->encData_.get();
       }
-      BinaryData payload(data);
-      vector<BinaryData> outData = msg.serialize(payload.getDataVector()
+      const BinaryData payload(data);
+      const auto outData = ZmqBIP15XMsg::serialize(payload.getDataVector()
          , connPtr, ZMQ_MSGTYPE_SINGLEPACKET, 0);
+      if (outData.empty()) {
+         logger_->error("[ZmqBIP15XServerConnection::{}] failed to serialize data (size {})"
+            , __func__, data.size());
+         return false;
+      }
       sendStr = outData[0].toBinStr();
    }
 
