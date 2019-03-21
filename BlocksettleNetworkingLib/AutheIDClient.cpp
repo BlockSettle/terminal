@@ -249,6 +249,11 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
       return;
    }
 
+   if (reply.status() == rp::RP_CANCELLED || reply.status() == rp::USER_CANCELLED) {
+      emit userCancelled();
+      return;
+   }
+
    if (resultAuth_)
    {
        std::string jwtToken = reply.authentication().jwt();

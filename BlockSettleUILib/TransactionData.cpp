@@ -31,7 +31,7 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
    , confirmedInputs_(confOnly)
 {}
 
-TransactionData::~TransactionData()
+TransactionData::~TransactionData() noexcept
 {
    disableTransactionUpdate();
    changedCallback_ = {};
@@ -198,9 +198,9 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
          summary_.feePerByte =
@@ -238,9 +238,9 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
@@ -294,18 +294,19 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
          return 0;
       }
 
-      std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      unsigned int recipId = 0;
       for (const auto &recip : recipients_) {
          const auto recipPtr = recip.second->GetScriptRecipient();
          if (!recipPtr || !recipPtr->getValue()) {
             continue;
          }
-         recipientsMap[recip.first] = recipPtr;
+         recipientsMap[recipId++] = recipPtr;
       }
       if (!recipient.isNull()) {
          const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
          if (recipPtr) {
-            recipientsMap[recipients_.size()] = recipPtr;
+            recipientsMap[recipId++] = recipPtr;
          }
       }
       if (recipientsMap.empty()) {

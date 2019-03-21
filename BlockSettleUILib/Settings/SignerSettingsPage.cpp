@@ -6,6 +6,7 @@
 #include "BtcUtils.h"
 #include "ZMQHelperFunctions.h"
 #include "BSMessageBox.h"
+#include "SignContainer.h"
 
 
 enum RunModeIndex {
@@ -83,7 +84,9 @@ void SignerSettingsPage::onModeChanged(int index)
       showZmqPubKey(false);
       showOfflineDir(false);
       showLimits(true);
+      showTwoWayAuth(false);
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
+      ui_->formLayoutConnectionParams->setSpacing(3);
       break;
 
    case Remote:
@@ -95,6 +98,8 @@ void SignerSettingsPage::onModeChanged(int index)
       ui_->lineEditRemoteZmqPubKey->setText(appSettings_->get<QString>(ApplicationSettings::zmqRemoteSignerPubKey));
       showOfflineDir(false);
       showLimits(false);
+      showTwoWayAuth(true);
+      ui_->formLayoutConnectionParams->setSpacing(6);
       break;
 
    case Offline:
@@ -104,6 +109,8 @@ void SignerSettingsPage::onModeChanged(int index)
       showOfflineDir(true);
       ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
       showLimits(false);
+      showTwoWayAuth(false);
+      ui_->formLayoutConnectionParams->setSpacing(0);
       break;
 
    default:    break;
@@ -158,6 +165,12 @@ void SignerSettingsPage::showLimits(bool show)
    ui_->labelAsSpendLimit->setVisible(show);
    ui_->spinBoxAsSpendLimit->setVisible(show);
    onAsSpendLimitChanged(ui_->spinBoxAsSpendLimit->value());
+}
+
+void SignerSettingsPage::showTwoWayAuth(bool show)
+{
+   ui_->widgetTwoWayAuth->setVisible(show);
+   ui_->checkBoxTwoWayAuth->setVisible(show);
 }
 
 void SignerSettingsPage::onAsSpendLimitChanged(double value)

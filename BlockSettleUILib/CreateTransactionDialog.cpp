@@ -151,10 +151,8 @@ void CreateTransactionDialog::reject()
          return;
       }
 
-      if (txReq_.isValid()) {
-         if (signer_) {
-            signer_->CancelSignTx(txReq_.txId());
-         }
+      if (txReq_.isValid() && signer_) {
+         signer_->CancelSignTx(txReq_.serializeState());
       }
    }
 

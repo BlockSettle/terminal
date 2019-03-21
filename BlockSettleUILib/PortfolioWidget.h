@@ -64,6 +64,10 @@ private:
    QMenu    contextMenu_;
    QAction  *actionRBF_;
    QAction  *actionCPFP_;
+   QAction  *actionCopyAddr_;
+   QAction  *actionCopyTx_;
+   QString  curAddress_;
+   QString  curTx_;
    std::shared_ptr<SignContainer>      signContainer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;

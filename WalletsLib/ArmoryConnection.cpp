@@ -178,7 +178,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings
          bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp.toStdString()
             , std::to_string(settings.armoryDBPort)
             , settings.dataDir.toStdString()
-            , true
+            , false
             , cbRemote_);
 
          if (!bdv_) {

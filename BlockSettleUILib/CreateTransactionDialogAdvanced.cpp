@@ -25,6 +25,7 @@
 #include <stdexcept>
 
 static const size_t kP2WPKHOutputSize = 35;
+static const float kDustFeePerByte = 3.0;
 
 
 CreateTransactionDialogAdvanced::CreateTransactionDialogAdvanced(const std::shared_ptr<ArmoryConnection> &armory
@@ -329,7 +330,10 @@ void CreateTransactionDialogAdvanced::initUI()
    CreateTransactionDialog::init();
 
    ui_->treeViewInputs->setModel(usedInputsModel_);
-   ui_->treeViewInputs->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewInputs->setColumnWidth(1, 50);
+   ui_->treeViewInputs->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+   ui_->treeViewInputs->header()->setSectionResizeMode(1, QHeaderView::Fixed);
+   ui_->treeViewInputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
    ui_->treeViewOutputs->setModel(outputsModel_);
    ui_->treeViewOutputs->setColumnWidth(2, 30);
@@ -338,7 +342,7 @@ void CreateTransactionDialogAdvanced::initUI()
    ui_->treeViewOutputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
    // QModelIndex isn't used. We should use it or lose it.
-   connect(outputsModel_, &TransactionOutputsModel::rowsInserted, this, &CreateTransactionDialogAdvanced::onOutputsInserted);
+   connect(ui_->treeViewOutputs, &QTreeView::clicked, this, &CreateTransactionDialogAdvanced::onOutputsClicked);
    connect(outputsModel_, &TransactionOutputsModel::rowsRemoved, [this](const QModelIndex &parent, int first, int last) {
       onOutputRemoved();
    });
@@ -502,32 +506,19 @@ QLabel* CreateTransactionDialogAdvanced::changeLabel() const
    return ui_->labelReturnAmount;
 }
 
-void CreateTransactionDialogAdvanced::onOutputsInserted(const QModelIndex &, int first, int last)
+void CreateTransactionDialogAdvanced::onOutputsClicked(const QModelIndex &index)
 {
-   for (int i = first; i <= last; i++) {
-      auto index = outputsModel_->index(i, 2);
-      auto outputId = outputsModel_->GetOutputId(i);
+   if (!index.isValid()) {
+      return;
+   }
 
-      QPushButton *button = nullptr;
-      if (removeOutputEnabled_) {
-         button = new QPushButton();
-         //button->setFixedSize(30, 16);  // has no effect
-         button->setContentsMargins(0, 0, 0, 0);
+   if (!removeOutputEnabled_) {
+      return;
+   }
 
-         button->setIcon(UiUtils::icon(0xeaf1, QVariantMap{
-            { QLatin1String{ "color" }, QColor{ Qt::white } }
-            // , { QLatin1String{ "scale-factor" }, 0.75 }
-            }));
-      }
-
-      ui_->treeViewOutputs->setIndexWidget(index, button);
-
-      if (removeOutputEnabled_) {
-         connect(button, &QPushButton::clicked, [this, outputId]()
-         {
-            RemoveOutputByRow(outputsModel_->GetRowById(outputId));
-         });
-      }
+   if (outputsModel_->isRemoveColumn(index.column())) {
+      auto outputId = outputsModel_->GetOutputId(index.row());
+      RemoveOutputByRow(outputsModel_->GetRowById(outputId));
    }
 }
 
@@ -555,10 +546,11 @@ void CreateTransactionDialogAdvanced::onRemoveOutput()
 
 void CreateTransactionDialogAdvanced::onOutputRemoved()
 {
-   if (!transactionData_->GetRecipientsCount()) {
-      transactionData_->setTotalFee(0, false);
-      setTxFees();
+   for (const auto &recipId : transactionData_->allRecipientIds()) {
+      UpdateRecipientAmount(recipId, transactionData_->GetRecipientAmount(recipId), false);
    }
+   transactionData_->setTotalFee(0, false);
+   setTxFees();
    enableFeeChanging();
 }
 
@@ -695,6 +687,19 @@ unsigned int CreateTransactionDialogAdvanced::AddRecipient(const bs::Address &ad
    return recipientId;
 }
 
+void CreateTransactionDialogAdvanced::AddRecipients(const std::vector<std::tuple<bs::Address, double, bool>> &recipients)
+{
+   std::vector<std::tuple<unsigned int, QString, double>> modelRecips;
+   for (const auto &recip : recipients) {
+      const auto recipientId = transactionData_->RegisterNewRecipient();
+      transactionData_->UpdateRecipientAddress(recipientId, std::get<0>(recip));
+      transactionData_->UpdateRecipientAmount(recipientId, std::get<1>(recip), std::get<2>(recip));
+      modelRecips.push_back({recipientId, std::get<0>(recip).display(), std::get<1>(recip)});
+   }
+   QMetaObject::invokeMethod(outputsModel_, [this, modelRecips] { outputsModel_->AddRecipients(modelRecips); });
+}
+
+
 // Attempts to remove the change if it's small enough and adds its amount to fees
 bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
 {
@@ -706,11 +711,24 @@ bool CreateTransactionDialogAdvanced::FixRecipientsAmount()
       - transactionData_->GetTotalRecipientsAmount() - totalFee;
    const double newTotalFee = diffMax + totalFee;
 
+   size_t maxOutputSize = 0;
+   for (const auto &recipId : transactionData_->allRecipientIds()) {
+      const auto recipAddr = transactionData_->GetRecipientAddress(recipId);
+      const auto recip = recipAddr.getRecipient(transactionData_->GetRecipientAmount(recipId));
+      if (!recip) {
+         continue;
+      }
+      maxOutputSize = std::max(maxOutputSize, recip->getSize());
+   }
+   if (!maxOutputSize) {
+      maxOutputSize = totalFee / kDustFeePerByte / 2; // fallback if failed to get any recipients size
+   }
+
    if (diffMax < 0) {
       diffMax = 0;
    }
    // The code below tries to eliminate the change address if the change amount is too little (less than half of current fee).
-   if ((diffMax >= 0.00000001) && (diffMax < totalFee / 2)) {
+   if ((diffMax >= 0.00000001) && (diffMax <= (maxOutputSize * kDustFeePerByte / BTCNumericTypes::BalanceDivider))) {
       BSMessageBox question(BSMessageBox::question, tr("Change fee")
          , tr("Your projected change amount %1 is too small as compared to the projected fee."
             " Attempting to keep the change will prevent the transaction from being propagated through"
@@ -933,6 +951,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      selInputs->SetUTXOSelection(txHash.first, txHash.second);
                   }
                }
+               std::vector<std::tuple<bs::Address, double, bool>> recipients;
                for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
                   TxOut out = tx.getTxOutCopy((int)i);
                   const auto addr = bs::Address::fromTxOut(out);
@@ -940,9 +959,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                      SetFixedChangeAddress(addr.display());
                   }
                   else {
-                     AddRecipient(addr.display(), out.getValue() / BTCNumericTypes::BalanceDivider);
+                     recipients.push_back({ addr, out.getValue() / BTCNumericTypes::BalanceDivider, false });
                   }
                   totalVal -= out.getValue();
+               }
+               if (!recipients.empty()) {
+                  AddRecipients(recipients);
                }
                SetPredefinedFee(totalVal);
             };
@@ -962,10 +984,12 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
          selInputs->SetUTXOSelection(utxo.getTxHash(), utxo.getTxOutIndex());
       }
 
+      std::vector<std::tuple<bs::Address, double, bool>> recipients;
       for (const auto &recip : tx.recipients) {
          const auto addr = bs::Address::fromRecipient(recip);
-         AddRecipient(addr.display(), recip->getValue() / BTCNumericTypes::BalanceDivider);
+         recipients.push_back({ addr, recip->getValue() / BTCNumericTypes::BalanceDivider, false });
       }
+      AddRecipients(recipients);
 
       if (!signingContainer_->isOffline() && tx.isValid()) {
          ui_->pushButtonCreate->setEnabled(true);
@@ -1039,7 +1063,6 @@ void CreateTransactionDialogAdvanced::disableOutputsEditing()
    outputsModel_->enableRows(false);
 
    removeOutputEnabled_ = false;
-   onOutputsInserted({}, 0, outputsModel_->rowCount({}) - 1);
 }
 
 void CreateTransactionDialogAdvanced::disableInputSelection()
