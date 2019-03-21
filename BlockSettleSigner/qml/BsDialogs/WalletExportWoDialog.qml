@@ -127,6 +127,7 @@ CustomTitleDialogWindow {
                 onClicked: rejectAnimated()
             }
             CustomButtonPrimary {
+                id: btnAccept
                 enabled: acceptable
                 text: qsTr("CONFIRM")
                 anchors.right: parent.right
