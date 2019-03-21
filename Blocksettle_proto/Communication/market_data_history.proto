@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package Blocksettle.Communication.MarketDataHistory;
 
+import "trade_history.proto";
+
 enum Interval
 {
 	OneYear         = 0;
@@ -61,18 +63,11 @@ message OhlcResponse
     repeated OhlcCandle candles  = 4;
 };
 
-enum ProductType {
-	ProductTypeUnknown = 0;
-	ProductTypeFX = 1;
-	ProductTypeXBT = 2;
-	ProductTypePrivateMarket = 3;
-};
-
 message ProductsListResponse
 {
 	message Product{
 		string product = 1;
-		ProductType type = 2;
+		Blocksettle.Communication.TradeHistory.TradeHistoryTradeType type = 2;
 	}
     repeated Product products = 1;
 };
