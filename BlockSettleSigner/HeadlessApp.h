@@ -73,8 +73,6 @@ private:
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
-   SecureBinaryData                             zmqPubKey_;
-   SecureBinaryData                             zmqPrvKey_;
 
    std::function<void(bool)>   cbReady_ = nullptr;
 };

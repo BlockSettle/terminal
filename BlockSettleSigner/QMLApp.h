@@ -65,7 +65,6 @@ private:
    void settingsConnections();
    void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
 
-   void initZmqKeys();
    void registerQtTypes();
 
    SignerAdapter  *  adapter_;
@@ -80,8 +79,6 @@ private:
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
-   SecureBinaryData                             zmqPubKey_;
-   SecureBinaryData                             zmqPrvKey_;
 
    enum NotificationMode {
       QSystemTray,

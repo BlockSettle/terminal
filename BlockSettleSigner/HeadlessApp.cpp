@@ -18,24 +18,11 @@
 #include "SignerSettings.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqSecuredServerConnection.h"
-#include "ZMQHelperFunctions.h"
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignerSettings> &params)
    : logger_(logger), settings_(params)
 {
-   // Get the ZMQ server public key.
-   if (!bs::network::readZmqKeyFile(params->zmqPubKeyFile(), zmqPubKey_
-      , true, logger)) {
-      throw std::runtime_error("failed to read ZMQ server public key");
-   }
-
-   // Get the ZMQ server private key.
-   if (!bs::network::readZmqKeyFile(params->zmqPrvKeyFile(), zmqPrvKey_
-      , false, logger)) {
-      throw std::runtime_error("failed to read ZMQ server private key");
-   }
-
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
@@ -92,10 +79,6 @@ void HeadlessAppObj::OnlineProcessing()
 
    const ConnectionManager connMgr(logger_);
    connection_ = connMgr.CreateSecuredServerConnection();
-   if (!connection_->SetKeyPair(zmqPubKey_, zmqPrvKey_)) {
-      logger_->error("Failed to establish secure connection");
-      throw std::runtime_error("secure connection problem");
-   }
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
