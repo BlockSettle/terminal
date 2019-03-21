@@ -414,6 +414,20 @@ void ChartWidget::LoadAdditionalPoints(const QCPRange& range) const
 	}
 }
 
+void ChartWidget::pickTicketDateFormat(const QCPRange& range) const
+{
+   const float rangeCoeff = 0.8;
+   if (range.size() < 3 * 24 * 60 * 60 * rangeCoeff) {
+      dateTimeTicker->setDateTimeFormat(QStringLiteral("dd MMM\nHH:mm"));
+   }
+   else if (range.size() < 365 * 24 * 60 * 60 * rangeCoeff) {
+      dateTimeTicker->setDateTimeFormat(QStringLiteral("dd MMM"));
+   }
+   else {
+      dateTimeTicker->setDateTimeFormat(QStringLiteral("MMM yyyy"));
+   }
+}
+
 void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const
 {
    if (candlesticksChart_) {
@@ -689,24 +703,33 @@ void ChartWidget::InitializeCustomPlot()
       this,
       [this](QCPRange newOne, QCPRange old) {
       auto interval = dateRange_.checkedId() == -1 ? 0 : dateRange_.checkedId();
+
+
       if ((newOne.size() > IntervalWidth(interval, candleCountOnScreenLimit) / 1000) && !isDraggingMainPlot) {
          volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(old.upper - IntervalWidth(interval, candleCountOnScreenLimit) / 1000, old.upper);
          ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
       } else {
-         ui_->customPlot->xAxis->setRange(newOne);
+         if (newOne.size() < IntervalWidth(interval, candleViewLimit) / 1000) {
+            volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(old.upper - IntervalWidth(interval, candleViewLimit) / 1000 - 1.0, old.upper);
+            ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
+         } else {
+            ui_->customPlot->xAxis->setRange(newOne);
+         }
       }
+
       LoadAdditionalPoints(newOne);
+      pickTicketDateFormat(newOne);
       rescalePlot();
    });
 
 
    // configure axes of both main and bottom axis rect:
-   QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker(new QCPAxisTickerDateTime);
    dateTimeTicker->setDateTimeSpec(Qt::UTC);
    dateTimeTicker->setDateTimeFormat(QStringLiteral("dd/MM/yy\nHH:mm"));
-   dateTimeTicker->setTickCount(20);
+   dateTimeTicker->setTickCount(17);
    volumeAxisRect_->axis(QCPAxis::atBottom)->setTicker(dateTimeTicker);
-   volumeAxisRect_->axis(QCPAxis::atBottom)->setTickLabelRotation(15);
+   //volumeAxisRect_->axis(QCPAxis::atBottom)->setTickLabelRotation(10);
+   volumeAxisRect_->axis(QCPAxis::atBottom)->setTickLabelFont(QFont(QStringLiteral("Arial"), 9));
    ui_->customPlot->xAxis->setBasePen(Qt::NoPen);
    ui_->customPlot->xAxis->setTickLabels(false);
    ui_->customPlot->xAxis->setTicks(false); // only want vertical grid in main axis rect, so hide xAxis backbone, ticks, and labels

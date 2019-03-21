@@ -65,15 +65,20 @@ protected:
 
 	void LoadAdditionalPoints(const QCPRange& range) const;
 
+   void pickTicketDateFormat(const QCPRange& range) const;
+
 private:
 	std::shared_ptr<ApplicationSettings>			appSettings_;
 	std::shared_ptr<MarketDataProvider>				mdProvider_;
 	std::shared_ptr<MdhsClient>						mdhsClient_;
 	std::shared_ptr<spdlog::logger>					logger_;
+
+   QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker{ new QCPAxisTickerDateTime };
     
 	const int loadDistance{ 15 };
 
    constexpr static int requestLimit{ 100 };
+   constexpr static int candleViewLimit{ 30 };
    constexpr static qint64 candleCountOnScreenLimit{ 3000 };
 
 
