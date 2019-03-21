@@ -562,8 +562,8 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   auto directionCoeff = (currentXPos - lastDragCoordX > 0) ? -1 : 1;
 	   double scalingCoeff = qAbs(currentXPos - startDragCoordX) / ui_->customPlot->size().width();
 	   lastDragCoordX = currentXPos;
-	   double tempCoeff = 5.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
-	   lower_bound += diff / tempCoeff * scalingCoeff * directionCoeff;
+	   double tempCoeff = 10.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
+	   lower_bound += diff / tempCoeff * /*scalingCoeff * */ directionCoeff;
 	   bottomAxis->setRange(lower_bound, upper_bound);
 	   ui_->customPlot->replot();
    }
