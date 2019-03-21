@@ -54,9 +54,9 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
    // workaround dont working here
    // TODO:move "Delete output button"
    // from CreateTransactionDialogAdvanced::onOutputsInserted to model delegate
-//   if (role == Qt::SizeHintRole && index.column() == 2) {
-//      return QSize(50, 16);
-//   }
+  if (role == Qt::SizeHintRole && index.column() == 2) {
+     return QSize(50, 14);
+  }
 
    switch (role) {
    case Qt::TextAlignmentRole:
