@@ -390,6 +390,8 @@ CustomTitleDialogWindow {
                         walletInfo.name = tfName.text
                         walletInfo.desc = tfDesc.text
                         walletInfo.walletId = seed.walletId
+                        walletInfo.rootId = seed.walletId
+
                         isPrimary = cbPrimary.checked
 
                         if (rbPassword.checked) {
