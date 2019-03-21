@@ -924,10 +924,9 @@ bool RFQDealerReply::eventFilter(QObject *watched, QEvent *evt)
 void RFQDealerReply::showCoinControl()
 {
    if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
-      CoinControlDialog(ccCoinSel_, this).exec();
-   }
-   else {
-      CoinControlDialog(transactionData_->GetSelectedInputs(), this).exec();
+      CoinControlDialog(ccCoinSel_, true, this).exec();
+   } else {
+      CoinControlDialog(transactionData_->GetSelectedInputs(), true, this).exec();
    }
 }
 

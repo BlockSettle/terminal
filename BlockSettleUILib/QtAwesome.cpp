@@ -136,7 +136,7 @@ QtAwesome::QtAwesome( QObject* parent )
 }
 
 
-QtAwesome::~QtAwesome()
+QtAwesome::~QtAwesome() noexcept
 {
     delete fontIconPainter_;
 //    delete errorIconPainter_;

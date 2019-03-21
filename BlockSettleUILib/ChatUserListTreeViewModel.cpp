@@ -151,8 +151,6 @@ QVariant ChatUserListTreeViewModel::data(const QModelIndex &index, int role) con
 
    }
    else if (type == ChatUserListTreeViewModel::ItemType::CategoryItem) {
-      const auto &category = item->category();  
-      
       if (role == Qt::DisplayRole) {
          return resolveCategoryDisplay(index);
       }

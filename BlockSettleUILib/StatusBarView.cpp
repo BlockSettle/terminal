@@ -100,7 +100,7 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
    setBalances();
 }
 
-StatusBarView::~StatusBarView()
+StatusBarView::~StatusBarView() noexcept
 {
    estimateLabel_->deleteLater();
    balanceLabel_->deleteLater();

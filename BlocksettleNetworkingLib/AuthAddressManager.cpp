@@ -175,7 +175,7 @@ bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
 
 bool AuthAddressManager::CreateNewAuthAddress()
 {
-   const auto &addr = authWallet_->getNewExtAddress();
+   authWallet_->getNewExtAddress();
    return true;
 }
 

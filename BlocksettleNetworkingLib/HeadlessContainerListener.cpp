@@ -433,7 +433,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       return true;
    }
 
-   const std::string prompt = "Outgoing " + partial ? "Partial " : "" "Transaction";
+   const std::string prompt = std::string("Outgoing ") + (partial ? "Partial " : "" ) + "Transaction";
    return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onPassword, request.applyautosignrules());
 }
 

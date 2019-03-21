@@ -247,7 +247,7 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, this, &TransactionsViewModel::onDelTransactions, Qt::QueuedConnection);
 }
 
-TransactionsViewModel::~TransactionsViewModel()
+TransactionsViewModel::~TransactionsViewModel() noexcept
 {
    stopped_ = true;
    delete rootNode_;

@@ -31,7 +31,7 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
    , confirmedInputs_(confOnly)
 {}
 
-TransactionData::~TransactionData()
+TransactionData::~TransactionData() noexcept
 {
    disableTransactionUpdate();
    changedCallback_ = {};

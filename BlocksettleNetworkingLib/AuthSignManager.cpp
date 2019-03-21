@@ -22,7 +22,7 @@ AuthSignManager::AuthSignManager(const std::shared_ptr<spdlog::logger> &logger
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, &AuthSignManager::onFailed);
 }
 
-AuthSignManager::~AuthSignManager() = default;
+AuthSignManager::~AuthSignManager() noexcept = default;
 
 bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, const QString &desc
    , const SignedCb &onSigned, const SignFailedCb &onSignFailed, int expiration)

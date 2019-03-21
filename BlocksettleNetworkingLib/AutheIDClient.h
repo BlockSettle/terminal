@@ -113,4 +113,4 @@ private:
 };
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)
 
-#endif __AUTH_EID_CLIENT_H__
+#endif // __AUTH_EID_CLIENT_H__
