@@ -150,7 +150,6 @@ protected:
    const QString                              port_;
    const NetworkType                          netType_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
-   bool                                       authPending_ = false;
    std::shared_ptr<ApplicationSettings>       appSettings_;
 
 private:
@@ -200,8 +199,6 @@ public:
    HeadlessContainer::RequestId Send(Blocksettle::Communication::headless::RequestPacket
       , bool updateId = true);
    HeadlessContainer::RequestId newRequestId() { return ++id_; }
-   void resetAuthTicket() { authTicket_.clear(); }
-   bool isAuthenticated() const { return !authTicket_.isNull(); }
    bool hasUI() const { return hasUI_; }
 
 signals:
@@ -217,7 +214,6 @@ private:
    std::shared_ptr<DataConnection>  connection_;
    const NetworkType                netType_;
    HeadlessContainer::RequestId     id_ = 0;
-   SecureBinaryData  authTicket_;
    bool     hasUI_ = false;
 };
 

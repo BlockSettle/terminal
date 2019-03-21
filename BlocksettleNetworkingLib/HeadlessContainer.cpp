@@ -42,33 +42,12 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       emit error(tr("reply id inconsistency"));
       return;
    }
-   if ((packet.type() != headless::AuthenticationRequestType)
-      && (authTicket_.isNull() || (SecureBinaryData(packet.authticket()) != authTicket_))) {
-      if (packet.type() == headless::DisconnectionRequestType) {
-         if (packet.authticket().empty()) {
-            emit authFailed();
-         }
-         return;
-      }
-      if (packet.type() != headless::HeartbeatType) {
-         logger_->error("[HeadlessListener] {} auth ticket mismatch ({} vs {})!", packet.type()
-            , authTicket_.toHexStr(), BinaryData(packet.authticket()).toHexStr());
-         emit error(tr("auth ticket mismatch"));
-      }
-      return;
-   }
 
    if (packet.type() == headless::DisconnectionRequestType) {
       OnDisconnected();
       return;
    }
-
-   if (packet.type() == headless::AuthenticationRequestType) {
-      if (!authTicket_.isNull()) {
-         logger_->error("[HeadlessListener] already authenticated");
-         emit error(tr("already authenticated"));
-         return;
-      }
+   else if (packet.type() == headless::AuthenticationRequestType) {
       headless::AuthenticationReply response;
       if (!response.ParseFromString(packet.data())) {
          logger_->error("[HeadlessListener] failed to parse auth reply");
@@ -490,10 +469,6 @@ HeadlessContainer::RequestId HeadlessContainer::SetUserId(const BinaryData &user
       return 0;
    }
 
-   if (!listener_->isAuthenticated()) {
-      logger_->warn("[HeadlessContainer] setting userid without being authenticated is not allowed");
-      return 0;
-   }
    headless::SetUserIdRequest request;
    if (!userId.isNull()) {
       request.set_userid(userId.toBinStr());
@@ -610,10 +585,6 @@ void HeadlessContainer::setLimits(const std::string &walletId, const SecureBinar
       logger_->error("[HeadlessContainer] no walletId for SetLimits");
       return;
    }
-   if (!listener_->isAuthenticated()) {
-      logger_->warn("[HeadlessContainer] setting limits without being authenticated is not allowed");
-      return;
-   }
    headless::SetLimitsRequest request;
    request.set_rootwalletid(walletId);
    if (!pass.isNull()) {
@@ -689,7 +660,7 @@ HeadlessContainer::RequestId HeadlessContainer::GetInfo(const std::string &rootW
 
 bool HeadlessContainer::isReady() const
 {
-   return (listener_ && listener_->isAuthenticated());
+   return (listener_ != nullptr);
 }
 
 bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
@@ -1040,8 +1011,6 @@ bool RemoteSigner::Start()
          , &RemoteSigner::onConnected, Qt::QueuedConnection);
       connect(listener_.get(), &HeadlessListener::authenticated, this
          , &RemoteSigner::onAuthenticated, Qt::QueuedConnection);
-      connect(listener_.get(), &HeadlessListener::authFailed
-         , [this] { authPending_ = false; });
       connect(listener_.get(), &HeadlessListener::disconnected, this
          , &RemoteSigner::onDisconnected, Qt::QueuedConnection);
       connect(listener_.get(), &HeadlessListener::error, this
@@ -1097,20 +1066,13 @@ bool RemoteSigner::Disconnect()
 void RemoteSigner::Authenticate()
 {
    mutex_.lock();
-
    if (!listener_) {
       mutex_.unlock();
       emit connectionError(tr("listener missing on authenticate"));
       return;
    }
-   if (listener_->isAuthenticated() || authPending_) {
-      mutex_.unlock();
-      return;
-   }
-
    mutex_.unlock();
 
-   authPending_ = true;
    headless::AuthenticationRequest request;
    request.set_nettype((netType_ == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
 
@@ -1136,11 +1098,7 @@ void RemoteSigner::startBIP151Handshake()
 bool RemoteSigner::isOffline() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
-
-   if (!listener_) {
-      return true;
-   }
-   return !listener_->isAuthenticated();
+   return (listener_ == nullptr);
 }
 
 bool RemoteSigner::hasUI() const
