@@ -1151,6 +1151,8 @@ void CreateTransactionDialogAdvanced::setTxFees()
       transactionData_->setTotalFee(ui_->spinBoxFeesManualTotal->value());
    }
 
+   validateAddOutputButton();
+
    if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
       ui_->doubleSpinBoxFeesManualPerByte->setValue(minFeePerByte_);
