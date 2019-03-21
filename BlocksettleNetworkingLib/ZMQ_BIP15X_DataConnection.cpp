@@ -132,10 +132,11 @@ bool ZmqBIP15XDataConnection::send(const string& data)
       FastLock locker(lockSocket_);
       result = zmq_send(dataSocket_.get(), sendData.c_str(), dataLen, 0);
    }
-   if (result != (int)data.size()) {
+   if (result != (int)dataLen) {
       if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-            "data: {}", __func__, connectionName_, zmq_strerror(zmq_errno()));
+            "data: {} (result={}, data size={}", __func__, connectionName_, zmq_strerror(zmq_errno())
+            , result, dataLen);
       }
       return false;
    }

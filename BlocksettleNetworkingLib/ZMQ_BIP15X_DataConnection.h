@@ -11,7 +11,8 @@
 
 #define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
-class ZmqBIP15XDataConnection : public QObject, public ZmqDataConnection {
+class ZmqBIP15XDataConnection : public QObject, public ZmqDataConnection
+{
    Q_OBJECT
 public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
