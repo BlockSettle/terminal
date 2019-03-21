@@ -73,6 +73,7 @@ signals:
    void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
    void authSuccess(const std::string &jwt);
    void failed(const QString &text);
+   void userCancelled();
 
 private:
    struct Result
