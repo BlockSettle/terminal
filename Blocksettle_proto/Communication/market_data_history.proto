@@ -61,7 +61,18 @@ message OhlcResponse
     repeated OhlcCandle candles  = 4;
 };
 
+enum ProductType {
+	ProductTypeUnknown = 0;
+	ProductTypeFX = 1;
+	ProductTypeXBT = 2;
+	ProductTypePrivateMarket = 3;
+};
+
 message ProductsListResponse
 {
-    repeated string products = 1;
+	message Product{
+		string product = 1;
+		ProductType type = 2;
+	}
+    repeated Product products = 1;
 };
