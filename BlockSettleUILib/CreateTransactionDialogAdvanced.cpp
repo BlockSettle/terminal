@@ -330,7 +330,10 @@ void CreateTransactionDialogAdvanced::initUI()
    CreateTransactionDialog::init();
 
    ui_->treeViewInputs->setModel(usedInputsModel_);
-   ui_->treeViewInputs->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewInputs->setColumnWidth(1, 50);
+   ui_->treeViewInputs->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+   ui_->treeViewInputs->header()->setSectionResizeMode(1, QHeaderView::Fixed);
+   ui_->treeViewInputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
    ui_->treeViewOutputs->setModel(outputsModel_);
    ui_->treeViewOutputs->setColumnWidth(2, 30);
