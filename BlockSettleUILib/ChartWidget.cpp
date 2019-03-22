@@ -5,6 +5,7 @@
 #include "MarketDataProvider.h"
 #include "MdhsClient.h"
 #include "market_data_history.pb.h"
+#include "trade_history.pb.h"
 
 const qreal BASE_FACTOR = 1.0;
 
@@ -208,7 +209,8 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
 
    for (const auto& product : response.products())
    {
-      cboModel_->appendRow(new QStandardItem(QString::fromStdString(product)));
+      productTypesMapper[product.product()] = product.type();
+      cboModel_->appendRow(new QStandardItem(QString::fromStdString(product.product())));
    }
 }
 
@@ -356,7 +358,7 @@ void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
    ui_->customPlot->rescaleAxes();
    ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
    ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
-   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
+   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[title_->text().toStdString()]));
    ui_->customPlot->replot();
 
 }
@@ -466,16 +468,15 @@ qreal ChartWidget::IntervalWidth(int interval, int count) const
    }
 }
 
-int ChartWidget::FractionSizeForProduct(const QString &product) const
+int ChartWidget::FractionSizeForProduct(TradeHistoryTradeType type)
 {
-   auto productType = mdhsClient_->GetProductType(product);
-   switch (productType)
+   switch (type)
    {
-   case MdhsClient::ProductTypeFX:
+   case FXTradeType:
       return 4;
-   case MdhsClient::ProductTypeXBT:
+   case XBTTradeType:
       return 2;
-   case MdhsClient::ProductTypePrivateMarket:
+   case PMTradeType:
       return 6;
    default:
       return -1;
@@ -546,7 +547,7 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   newMinPrice = qMax(newMinPrice, 0.0);
 
 	   ui_->customPlot->yAxis2->setRange(newMinPrice, newMaxPrice);
-	   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(title_->text()));
+	   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[title_->text().toStdString()]));
 	   ui_->customPlot->replot();
    }
    else

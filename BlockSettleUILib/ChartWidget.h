@@ -5,6 +5,7 @@
 #include <QButtonGroup>
 #include "CommonTypes.h"
 #include "qcustomplot.h"
+#include "market_data_history.pb.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ChartWidget; }
@@ -20,6 +21,8 @@ class MarketDataProvider;
 class ConnectionManager;
 namespace spdlog { class logger; }
 class MdhsClient;
+
+using namespace Blocksettle::Communication::TradeHistory;
 
 class ChartWidget : public QWidget
 {
@@ -48,7 +51,7 @@ protected:
 	void UpdateChart(const int& interval) const;
 	void InitializeCustomPlot();
 	qreal IntervalWidth(int interval = -1, int count = 1) const;
-	int FractionSizeForProduct(const QString &product) const;
+    static int FractionSizeForProduct(TradeHistoryTradeType type);
 	void ProcessProductsListResponse(const std::string& data);
 	void ProcessOhlcHistoryResponse(const std::string& data);
 
@@ -72,6 +75,8 @@ private:
 	std::shared_ptr<MarketDataProvider>				mdProvider_;
 	std::shared_ptr<MdhsClient>						mdhsClient_;
 	std::shared_ptr<spdlog::logger>					logger_;
+
+   std::map<std::string, TradeHistoryTradeType> productTypesMapper;
 
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker{ new QCPAxisTickerDateTime };
     

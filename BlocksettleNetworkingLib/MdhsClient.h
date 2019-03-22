@@ -5,6 +5,7 @@
 #include <atomic>
 #include <set>
 #include <memory>
+#include "market_data_history.pb.h"
 
 class ApplicationSettings;
 class ConnectionManager;
@@ -32,13 +33,6 @@ class MdhsClient : public QObject
 {
 	Q_OBJECT
 public:
-	//TODO: Move to proto file
-	enum ProductType {
-		ProductTypeUnknown = -1,
-		ProductTypeFX,
-		ProductTypeXBT,
-		ProductTypePrivateMarket
-	};
 	MdhsClient(
 		const std::shared_ptr<ApplicationSettings>& appSettings,
 		const std::shared_ptr<ConnectionManager>& connectionManager,
@@ -53,13 +47,12 @@ public:
 	MdhsClient& operator = (MdhsClient&&) = delete;
 
 	void SendRequest(const MarketDataHistoryRequest& request);
-	const ProductType GetProductType(const QString &product) const;
 
 signals:
 	void DataReceived(const std::string& data);
 
 private:
-	const bool OnDataReceived(const std::string& data);
+	bool OnDataReceived(const std::string& data);
 
 	std::shared_ptr<ApplicationSettings>	appSettings_;
 	std::shared_ptr<ConnectionManager>		connectionManager_;

@@ -28,26 +28,6 @@ const std::string GPB_JPY = "GPB/JPY";
 const std::string GBP_SEK = "GBP/SEK";
 const std::string JPY_SEK = "JPY/SEK";
 
-static const std::map<std::string, MdhsClient::ProductType> PRODUCT_TYPES = {
-	// Private Market
-	{ ANT_XBT, MdhsClient::ProductTypePrivateMarket },
-	{ BLK_XBT, MdhsClient::ProductTypePrivateMarket },
-	{ BSP_XBT, MdhsClient::ProductTypePrivateMarket },
-	{ JAN_XBT, MdhsClient::ProductTypePrivateMarket },
-	{ SCO_XBT, MdhsClient::ProductTypePrivateMarket },
-	// Spot XBT
-	{ XBT_EUR, MdhsClient::ProductTypeXBT },
-	{ XBT_GBP, MdhsClient::ProductTypeXBT },
-	{ XBT_JPY, MdhsClient::ProductTypeXBT },
-	{ XBT_SEK, MdhsClient::ProductTypeXBT },
-	// Spot FX
-	{ EUR_GBP, MdhsClient::ProductTypeFX },
-	{ EUR_JPY, MdhsClient::ProductTypeFX },
-	{ EUR_SEK, MdhsClient::ProductTypeFX },
-	{ GPB_JPY, MdhsClient::ProductTypeFX },
-	{ GBP_SEK, MdhsClient::ProductTypeFX },
-	{ JPY_SEK, MdhsClient::ProductTypeFX }
-};
 
 MdhsClient::MdhsClient(
 	const std::shared_ptr<ApplicationSettings>& appSettings,
@@ -105,15 +85,7 @@ void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
 	}
 }
 
-const MdhsClient::ProductType MdhsClient::GetProductType(const QString &product) const
-{
-	auto found = PRODUCT_TYPES.find(product.toStdString());
-	if (found == PRODUCT_TYPES.end())
-		return MdhsClient::ProductTypeUnknown;
-	return found->second;
-}
-
-const bool MdhsClient::OnDataReceived(const std::string& data)
+bool MdhsClient::OnDataReceived(const std::string& data)
 {
 	emit DataReceived(data);
 	return true;
