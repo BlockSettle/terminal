@@ -298,7 +298,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       originalFeePerByte_ = feePerByte;
       const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
       SetMinimumFee(newMinFee, originalFeePerByte_);
-      advisedFeePerByte_ = newMinFee / tx.getTxWeight();
+      advisedFeePerByte_ = originalFeePerByte_ + 1.0;
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
