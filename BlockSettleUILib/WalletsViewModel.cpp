@@ -587,7 +587,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
       selectedWalletId = defaultWalletId_;
    }
    const auto node = rootNode_->findByWalletId(selectedWalletId);
-   WalletNode *ancestor;
+   WalletNode *ancestor = nullptr;
    if (node != nullptr) {
       ancestor = node->ancestor();
       if (ancestor != nullptr) {
