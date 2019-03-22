@@ -17,7 +17,7 @@ class QSeed : public QObject, public bs::core::wallet::Seed
 
    Q_PROPERTY(QString part1 READ part1)
    Q_PROPERTY(QString part2 READ part2)
-   Q_PROPERTY(QString walletId READ walletId) //see below
+   Q_PROPERTY(QString walletId READ walletId CONSTANT) //see below
    Q_PROPERTY(int networkType READ networkType)
 public:
    enum QNetworkType {

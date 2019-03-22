@@ -50,9 +50,7 @@ namespace bs {
          WalletsManager(WalletsManager&&) = delete;
          WalletsManager& operator = (WalletsManager&&) = delete;
 
-         void setSignContainer(const std::shared_ptr<SignContainer> &container) {
-            signContainer_ = container;
-         }
+         void setSignContainer(const std::shared_ptr<SignContainer> &container);
          void reset();
 
          void syncWallets(const CbProgress &cb = nullptr);

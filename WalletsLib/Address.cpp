@@ -28,41 +28,41 @@ bs::Address::Address(const QByteArray &data, AddressEntryType aet)
    }
 }
 
-bs::Address::Address(const QString &data, Format f, AddressEntryType aet)
+bs::Address::Address(const QString &data, const Format &f, AddressEntryType aet)
    : Address(data.toStdString(), f, aet)
 {}
 
-bs::Address::Address(const std::string& data, Format format, AddressEntryType aet)
-   : BinaryData((uint8_t*)(data.data()), data.size()), aet_(aet)
+bs::Address::Address(const std::string& data, const Format &format, AddressEntryType aet)
+   : BinaryData((uint8_t*)(data.data()), data.size()), format_(format), aet_(aet)
 {
    BinaryData parsedData;
-   if (format == Format::Auto) {
+   if (format_ == Format::Auto) {
       if (data.empty()) {
          return;
       }
       const auto &prefix = data.substr(0, 2);
       if ((prefix == SEGWIT_ADDRESS_MAINNET_HEADER) || (prefix == SEGWIT_ADDRESS_TESTNET_HEADER)) {
-         format = Format::Bech32;
+         format_ = Format::Bech32;
       }
       else {
          try {
             BinaryData base58In(data);
             base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
             parsedData = BtcUtils::base58toScrAddr(base58In);
-            format = Format::Base58;
+            format_ = Format::Base58;
          }
          catch (const std::exception &) {
             try {
                parsedData = BinaryData::CreateFromHex(data);
                if (!parsedData.isNull()) {
-                  format = Format::Hex;
+                  format_ = Format::Hex;
                }
             }
             catch (const std::exception &) {}
          }
       }
    }
-   if (format == Format::Auto) {
+   if (format_ == Format::Auto) {
       throw std::invalid_argument("can't detect input format");
    }
 
@@ -70,7 +70,7 @@ bs::Address::Address(const std::string& data, Format format, AddressEntryType ae
       copyFrom(parsedData);
    }
    else {
-      switch (format) {
+      switch (format_) {
       case Format::Base58:
          try {
             BinaryData base58In(data);
@@ -235,11 +235,14 @@ AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
       else if (prefix == NetworkConfig::getScriptHashPrefix()) {
          return AddressEntryType_P2SH;
       }
-      else if (prefix == SCRIPT_PREFIX_P2WSH) {
-         return AddressEntryType_P2WSH;
-      }
       else if (prefix == SCRIPT_PREFIX_P2WPKH) {
          return AddressEntryType_P2WPKH;
+      }
+   }
+   else if (addr.getSize() == 33) {
+      const auto prefix = addr[0];
+      if (prefix == SCRIPT_PREFIX_P2WSH) {
+         return AddressEntryType_P2WSH;
       }
    }
    else if (addr.getSize() >= 32) {
@@ -444,7 +447,7 @@ size_t bs::Address::getInputSize() const
    switch (getType()) {
    case AddressEntryType_P2PKH:     return 114 + 33;
    case AddressEntryType_P2WSH:     return 41;
-   case AddressEntryType_P2SH:      return 114 + 73 + 40;   //FIXME if it's not true (luckily we normally don't use P2SH)
+   case AddressEntryType_P2SH:      return 22 + 40;   //Treat P2SH only as nested P2SH-P2WPKH
    case AddressEntryType_P2WPKH:    return 40;
    default:       return 0;
    }
@@ -455,6 +458,7 @@ size_t bs::Address::getWitnessDataSize() const
    switch (getType()) {
    case AddressEntryType_P2WSH:     return 34;  //based on getP2WSHOutputScript()
    case AddressEntryType_P2WPKH:    return 108; // Armory's AddressEntry_P2WPKH
+   case AddressEntryType_P2SH:      return 108; //Treat P2SH only as nested P2SH-P2WPKH
    default:       return UINT32_MAX;
    }
 }

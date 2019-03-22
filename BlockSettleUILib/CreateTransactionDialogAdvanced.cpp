@@ -298,7 +298,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       originalFeePerByte_ = feePerByte;
       const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
       SetMinimumFee(newMinFee, originalFeePerByte_);
-      advisedFeePerByte_ = newMinFee / tx.getTxWeight();
+      advisedFeePerByte_ = originalFeePerByte_ + 1.0;
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
@@ -609,10 +609,12 @@ void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addres
 {
    try {
       currentAddress_ = bs::Address(addressString.trimmed());
+      if (currentAddress_.format() == bs::Address::Format::Hex) {
+         currentAddress_.clear();   // P2WSH unprefixed address can resemble TX hash,
+      }                             // so we disable hex format completely
    } catch (...) {
       currentAddress_.clear();
    }
-
    UiUtils::setWrongState(ui_->lineEditAddress, !currentAddress_.isValid());
 
    validateAddOutputButton();
@@ -1150,6 +1152,8 @@ void CreateTransactionDialogAdvanced::setTxFees()
    } else if (itemIndex == itemCount - 1) {
       transactionData_->setTotalFee(ui_->spinBoxFeesManualTotal->value());
    }
+
+   validateAddOutputButton();
 
    if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);
