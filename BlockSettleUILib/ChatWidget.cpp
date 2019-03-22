@@ -179,6 +179,7 @@ ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChatWidget)
    , popup_(nullptr)
+   , needsToStartFirstRoom_(false)
 {
    ui_->setupUi(this);
 
@@ -220,7 +221,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserRemoved,
            this, &ChatWidget::onChatUserRemoved);
    connect(client_.get(), &ChatClient::RoomsAdd,
-           chatUserListLogicPtr_.get(), &ChatUserListLogic::onAddChatRooms);
+           this, &ChatWidget::onAddChatRooms);
 
    connect(client_.get(), &ChatClient::MessagesUpdate, ui_->textEditMessages
                         , &ChatMessagesTextEdit::onMessagesUpdate);
@@ -253,6 +254,16 @@ void ChatWidget::onChatUserRemoved(const ChatUserDataPtr &chatUserDataPtr)
    if (currentChat_ == chatUserDataPtr->userId())
    {
       onUserClicked({});
+   }
+}
+
+void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList) {
+   chatUserListLogicPtr_->addChatRooms(roomList);
+
+   if (roomList.size() > 0 && needsToStartFirstRoom_) {
+      const auto &firstRoom = roomList.at(0);
+      onRoomClicked(firstRoom->getId());
+      needsToStartFirstRoom_ = false;
    }
 }
 
@@ -308,8 +319,9 @@ void ChatWidget::onMessagesUpdated()
 std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
    try {
-     const auto userId = stateCurrent_->login(email, jwt);
-     changeState(State::LoggedIn);
+      const auto userId = stateCurrent_->login(email, jwt);
+      changeState(State::LoggedIn);
+      needsToStartFirstRoom_ = true;
       return userId;
    }
    catch (std::exception& e) {
