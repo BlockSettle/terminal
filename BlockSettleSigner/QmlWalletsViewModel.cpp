@@ -172,6 +172,8 @@ void QmlWalletsViewModel::setWalletsManager(const std::shared_ptr<bs::sync::Wall
    loadWallets();
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletReady, this, &QmlWalletsViewModel::loadWallets);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &QmlWalletsViewModel::loadWallets);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletCreated, this, &QmlWalletsViewModel::loadWallets);
 }
 
 QmlWalletNode *QmlWalletsViewModel::getNode(const QModelIndex &index) const
