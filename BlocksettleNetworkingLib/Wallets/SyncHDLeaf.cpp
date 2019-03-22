@@ -517,9 +517,10 @@ std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryCo
 
 void hd::Leaf::unregisterWallet()
 {
-   addrPrefixedHashes_.clear();
-   addressPool_.clear();
    Wallet::unregisterWallet();
+   if (armory_) {
+      armory_->registerWallet(btcWalletInt_, getWalletIdInt(), {}, [](const std::string &){}, false);
+   }
    btcWalletInt_.reset();
 }
 
