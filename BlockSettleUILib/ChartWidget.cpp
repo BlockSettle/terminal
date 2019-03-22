@@ -572,18 +572,21 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 
 void ChartWidget::rescalePlot()
 {
-	auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
-	auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
-	currentMinPrice = std::numeric_limits<qreal>::max();
-	currentMaxPrice = std::numeric_limits<qreal>::min();
-	for (const auto& it : *candlesticksChart_->data()) {
-		if (it.key >= lower_bound && it.key <= upper_bound) {
-			currentMinPrice = qMin(currentMinPrice, it.low);
-			currentMaxPrice = qMax(currentMaxPrice, it.high);
-		}
-	}
-	ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
-	ui_->customPlot->replot();
+   if (autoScaling) {
+      auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+	   currentMinPrice = std::numeric_limits<qreal>::max();
+	   currentMaxPrice = std::numeric_limits<qreal>::min();
+	   for (const auto& it : *candlesticksChart_->data()) {
+		   if (it.key >= lower_bound && it.key <= upper_bound) {
+			   currentMinPrice = qMin(currentMinPrice, it.low);
+			   currentMaxPrice = qMax(currentMaxPrice, it.high);
+		   }
+	   }
+	   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
+	   ui_->customPlot->replot();
+   }
+
 }
 
 void ChartWidget::OnMousePressed(QMouseEvent* event)
