@@ -609,10 +609,12 @@ void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addres
 {
    try {
       currentAddress_ = bs::Address(addressString.trimmed());
+      if (currentAddress_.format() == bs::Address::Format::Hex) {
+         currentAddress_.clear();   // P2WSH unprefixed address can resemble TX hash,
+      }                             // so we disable hex format completely
    } catch (...) {
       currentAddress_.clear();
    }
-
    UiUtils::setWrongState(ui_->lineEditAddress, !currentAddress_.isValid());
 
    validateAddOutputButton();
