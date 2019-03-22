@@ -259,6 +259,8 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
       }
    };
    adapter_->getDecryptedRootNode(wallet->walletId(), passwordData->password, cbResult);
+
+   return true;
 }
 
 bool WalletsProxy::walletNameExists(const QString &name) const

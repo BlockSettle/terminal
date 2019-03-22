@@ -153,4 +153,8 @@ ApplicationWindow {
         mainWindow.requestActivate()
         dlg.open()
     }
+
+    function raiseWindow() {
+        JsHelper.raiseWindow()
+    }
 }
