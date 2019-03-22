@@ -31,6 +31,13 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
    }
 }
 
+void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &container)
+{
+   signContainer_ = container;
+
+   connect(signContainer_.get(), &SignContainer::HDWalletCreated, this, &WalletsManager::onHDWalletCreated);
+}
+
 WalletsManager::~WalletsManager() noexcept = default;
 
 void WalletsManager::reset()
