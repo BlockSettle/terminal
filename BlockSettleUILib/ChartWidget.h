@@ -42,7 +42,9 @@ protected slots:
 	void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
 	void OnInstrumentChanged(const QString &text);
 	void OnPlotMouseMove(QMouseEvent* event);
-	void rescalePlot();
+   void rescaleCandlesYAxis();
+   void rescaleVolumesYAxis() const;
+   void rescalePlot();
 	void OnMousePressed(QMouseEvent* event);
 	void OnMouseReleased(QMouseEvent* event);
 

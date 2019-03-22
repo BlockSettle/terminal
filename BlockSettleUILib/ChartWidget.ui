@@ -84,6 +84,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="resetBtn">
+        <property name="text">
+         <string>Reset</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="btn1y">
         <property name="maximumSize">
          <size>

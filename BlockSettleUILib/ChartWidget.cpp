@@ -40,6 +40,18 @@ ChartWidget::ChartWidget(QWidget* pParent)
 	   }
 	   setAutoScaleBtnColor();
    });
+
+   connect(ui_->resetBtn, &QPushButton::clicked, [this]() {
+      if (candlesticksChart_->data()->size()) {
+         auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key;
+         volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(new_upper - IntervalWidth(dateRange_.checkedId(), requestLimit) / 1000, new_upper);
+      }
+      if (!autoScaling) {
+         autoScaling = true;
+         rescalePlot();
+         setAutoScaleBtnColor();
+      }
+   });
    // setting up date range radio button group
    dateRange_.addButton(ui_->btn1h, Interval::OneHour);
    dateRange_.addButton(ui_->btn6h, Interval::SixHours);
@@ -564,22 +576,24 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
    }
 }
 
-void ChartWidget::rescalePlot()
+void ChartWidget::rescaleCandlesYAxis()
 {
-   if (autoScaling) {
-      auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
-	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
-	   currentMinPrice = std::numeric_limits<qreal>::max();
-	   currentMaxPrice = std::numeric_limits<qreal>::min();
-	   for (const auto& it : *candlesticksChart_->data()) {
-		   if (it.key >= lower_bound && it.key <= upper_bound) {
-			   currentMinPrice = qMin(currentMinPrice, it.low);
-			   currentMaxPrice = qMax(currentMaxPrice, it.high);
-		   }
-	   }
-	   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
-	   ui_->customPlot->replot();
+   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+   currentMinPrice = std::numeric_limits<qreal>::max();
+   currentMaxPrice = std::numeric_limits<qreal>::min();
+   for (const auto& it : *candlesticksChart_->data()) {
+      if (it.key >= lower_bound && it.key <= upper_bound) {
+         currentMinPrice = qMin(currentMinPrice, it.low);
+         currentMaxPrice = qMax(currentMaxPrice, it.high);
+      }
    }
+   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
+   ui_->customPlot->replot();
+}
+
+void ChartWidget::rescaleVolumesYAxis() const
+{
    auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
    auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
    double maxVolume = volumeChart_->data()->constBegin()->value;
@@ -592,6 +606,14 @@ void ChartWidget::rescalePlot()
       volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
       ui_->customPlot->replot();
    }
+}
+
+void ChartWidget::rescalePlot()
+{
+   if (autoScaling) {
+      rescaleCandlesYAxis();
+   }
+   rescaleVolumesYAxis();
 
 }
 
