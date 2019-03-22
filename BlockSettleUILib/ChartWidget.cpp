@@ -580,6 +580,18 @@ void ChartWidget::rescalePlot()
 	   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
 	   ui_->customPlot->replot();
    }
+   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+   double maxVolume = volumeChart_->data()->constBegin()->value;
+   for (const auto& it : *volumeChart_->data()) {
+      if (it.key >= lower_bound && it.key <= upper_bound) {
+         maxVolume = qMax(maxVolume, it.value);
+      }
+   }
+   if (!qFuzzyCompare(maxVolume, volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper)) {
+      volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
+      ui_->customPlot->replot();
+   }
 
 }
 
