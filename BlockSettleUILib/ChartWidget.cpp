@@ -535,24 +535,18 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 
    if (isDraggingYAxis)
    {
-	   ui_->customPlot->axisRect()->setRangeDrag(ui_->customPlot->yAxis2->orientation());
-
-	   bool minusY = event->y() < dragY;
-	   dragY = event->y();
-
-	   auto margin = qMax(newMaxPrice - newMinPrice, 0.01) / 10;
-	   margin = minusY ? -margin : margin;
-	   newMinPrice -= margin;
-	   newMaxPrice += margin;
-	   newMinPrice = qMax(newMinPrice, 0.0);
-
-	   ui_->customPlot->yAxis2->setRange(newMinPrice, newMaxPrice);
-	   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[title_->text().toStdString()]));
-	   ui_->customPlot->replot();
-   }
-   else
-   {
-	   ui_->customPlot->axisRect()->setRangeDrag(Qt::Horizontal | Qt::Vertical);
+      auto rightAxis = ui_->customPlot->yAxis2;
+      auto currentYPos = event->pos().y();
+      auto lower_bound = rightAxis->range().lower;
+      auto upper_bound = rightAxis->range().upper;
+      auto diff = upper_bound - lower_bound;
+      auto directionCoeff = (currentYPos - lastDragCoord.y() > 0) ? -1 : 1;
+      lastDragCoord.setY(currentYPos);
+      double tempCoeff = 28.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
+      upper_bound -= diff / tempCoeff * directionCoeff;
+      lower_bound += diff / tempCoeff *directionCoeff;
+      rightAxis->setRange(lower_bound, upper_bound);
+      ui_->customPlot->replot();
    }
    if (isDraggingXAxis) {
 	   auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
@@ -560,9 +554,9 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
 	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
 	   auto diff = upper_bound - lower_bound;
-	   auto directionCoeff = (currentXPos - lastDragCoordX > 0) ? -1 : 1;
+	   auto directionCoeff = (currentXPos - lastDragCoord.x() > 0) ? -1 : 1;
 	   double scalingCoeff = qAbs(currentXPos - startDragCoordX) / ui_->customPlot->size().width();
-	   lastDragCoordX = currentXPos;
+	   lastDragCoord.setX(currentXPos);
 	   double tempCoeff = 10.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
 	   lower_bound += diff / tempCoeff * /*scalingCoeff * */ directionCoeff;
 	   bottomAxis->setRange(lower_bound, upper_bound);
@@ -597,6 +591,7 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
 		if (autoScaling) {
 			ui_->autoScaleBtn->animateClick();
 		}
+      ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
 	}
 
 	auto selectXPoint = volumeAxisRect_->axis(QCPAxis::atBottom)->selectTest(event->pos(), false);
@@ -604,9 +599,12 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
 	if (isDraggingXAxis) {
 		ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
 		volumeAxisRect_->axis(QCPAxis::atBottom)->axisRect()->setRangeDrag(volumeAxisRect_->axis(QCPAxis::atBottom)->orientation());
-		lastDragCoordX = event->pos().x();
 		startDragCoordX = event->pos().x();
 	}
+
+   if (isDraggingXAxis || isDraggingYAxis) {
+      lastDragCoord = event->pos();
+   }
 
 	if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
 		isDraggingMainPlot = true;

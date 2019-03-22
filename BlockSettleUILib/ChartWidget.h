@@ -120,7 +120,7 @@ private:
 	bool isDraggingXAxis{ false };
 	bool isDraggingMainPlot{ false };
 
-	qreal lastDragCoordX{ 0.0 };
+	QPoint lastDragCoord;
 	qreal startDragCoordX{ 0.0 };
 
 	quint64 first_timestamp_in_db{ 0 };
