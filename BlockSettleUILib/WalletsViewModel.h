@@ -65,6 +65,7 @@ public:
    virtual void setState(State state) { state_ = state; }
 
    WalletNode *findByWalletId(const std::string &walletId);
+   WalletNode *ancestor();
 
 protected:
    std::string          name_;
