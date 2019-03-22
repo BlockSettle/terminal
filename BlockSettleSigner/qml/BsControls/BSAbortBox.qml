@@ -24,7 +24,7 @@ BSMessageBox {
 
     property variant detailsList: [
         qsTr(""),
-        qsTr("The Wallet will not be created if you don't complete the procedure.\n\nAre you sure you want to abort the Wallet Creation process?"),
+        qsTr("The Wallet will not be created if you don't complete the procedure. Are you sure you want to abort the Wallet Creation process?"),
         qsTr("The Wallet will not be imported if you don't complete the procedure.\n\nAre you sure you want to abort the Wallet Import process?")
     ]
 
