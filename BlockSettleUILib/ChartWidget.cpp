@@ -304,13 +304,16 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
    newMaxPrice = maxPrice;
    newMinPrice = minPrice;
-   volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
+
+
    if (firstPortion) {
 	   first_timestamp_in_db = response.first_stamp_in_db() / 1000;
 		UpdatePlot(interval, maxTimestamp);
+   } else {
+      LoadAdditionalPoints(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
+      rescalePlot();
+      ui_->customPlot->replot();
    }
-
-
 }
 
 void ChartWidget::setAutoScaleBtnColor() const
