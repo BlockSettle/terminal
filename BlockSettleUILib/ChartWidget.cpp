@@ -43,7 +43,7 @@ ChartWidget::ChartWidget(QWidget* pParent)
 
    connect(ui_->resetBtn, &QPushButton::clicked, [this]() {
       if (candlesticksChart_->data()->size()) {
-         auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key;
+         auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + IntervalWidth(dateRange_.checkedId()) / 1000 / 2;
          volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(new_upper - IntervalWidth(dateRange_.checkedId(), requestLimit) / 1000, new_upper);
       }
       if (!autoScaling) {
@@ -368,7 +368,7 @@ void ChartWidget::ModifyCandle()
 void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
 {
    qreal size = IntervalWidth(interval, requestLimit);
-   qreal upper = timestamp + 0.8 * IntervalWidth(interval) / 2;
+   qreal upper = timestamp + IntervalWidth(interval) / 2;
 
    ui_->customPlot->rescaleAxes();
    ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
