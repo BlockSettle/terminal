@@ -195,5 +195,4 @@ message SetInitialPMPriceResponse
 {
    required string   product  = 1;
    required bool     result   = 2;
-   optional string   error    = 3;
 }
