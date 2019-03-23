@@ -141,6 +141,8 @@ private:
    std::unordered_map<std::string, std::string> quoteCcys_;
    mutable std::atomic_flag      quoteCcysLock_ = ATOMIC_FLAG_INIT;
 
+   int64_t celerLoggedInTimestampUtcInMillis_;
+
    bool debugTraffic_;
 };
 
