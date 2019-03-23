@@ -372,9 +372,8 @@ void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
 
    ui_->customPlot->rescaleAxes();
    ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
-   ui_->customPlot->yAxis2->setRange(minPrice, maxPrice);
+   rescaleCandlesYAxis();
    ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[title_->text().toStdString()]));
-   ui_->customPlot->replot();
 
 }
 
@@ -413,16 +412,21 @@ std::pair<qint64, qint64> ChartWidget::GetPlotRange() const
 			 volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper };
 }
 
-void ChartWidget::LoadAdditionalPoints(const QCPRange& range) const
+void ChartWidget::LoadAdditionalPoints(const QCPRange& range) 
 {
 	const auto data = candlesticksChart_->data();
-	if (data->size() && (range.lower - data->constBegin()->key < IntervalWidth(dateRange_.checkedId()) / 1000 * loadDistance) && first_timestamp_in_db < data->constBegin()->key) {
-		OhlcRequest ohlcRequest;
+	if (data->size() && (range.lower - data->constBegin()->key < IntervalWidth(dateRange_.checkedId()) / 1000 * loadDistance) && first_timestamp_in_db + IntervalWidth(OneHour) < data->constBegin()->key) {
+		if (qFuzzyCompare(prevRequestStamp, data->constBegin()->key)) {
+         return;
+		}
+	   OhlcRequest ohlcRequest;
 		auto product = ui_->cboInstruments->currentText();
 		ohlcRequest.set_product(product.toStdString());
 		ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
 		ohlcRequest.set_count(requestLimit);
 		ohlcRequest.set_lesser_then(data->constBegin()->key * 1000);
+
+      prevRequestStamp = data->constBegin()->key;
 
 		MarketDataHistoryRequest request;
 		request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
@@ -581,18 +585,7 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 
 void ChartWidget::rescaleCandlesYAxis()
 {
-   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
-   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
-   currentMinPrice = std::numeric_limits<qreal>::max();
-   currentMaxPrice = std::numeric_limits<qreal>::min();
-   for (const auto& it : *candlesticksChart_->data()) {
-      if (it.key >= lower_bound && it.key <= upper_bound) {
-         currentMinPrice = qMin(currentMinPrice, it.low);
-         currentMaxPrice = qMax(currentMaxPrice, it.high);
-      }
-   }
-   ui_->customPlot->yAxis2->setRange(currentMinPrice, currentMaxPrice);
-   ui_->customPlot->replot();
+   candlesticksChart_->rescaleValueAxis(false, true);
 }
 
 void ChartWidget::rescaleVolumesYAxis() const

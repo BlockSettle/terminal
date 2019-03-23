@@ -68,7 +68,7 @@ protected:
 
    std::pair<qint64, qint64> GetPlotRange() const;
 
-	void LoadAdditionalPoints(const QCPRange& range) const;
+	void LoadAdditionalPoints(const QCPRange& range);
 
    void pickTicketDateFormat(const QCPRange& range) const;
 
@@ -86,7 +86,9 @@ private:
 
    constexpr static int requestLimit{ 100 };
    constexpr static int candleViewLimit{ 30 };
-   constexpr static qint64 candleCountOnScreenLimit{ 3000 };
+   constexpr static qint64 candleCountOnScreenLimit{ 1500 };
+
+   double prevRequestStamp{ 0.0 };
 
 
 	Ui::ChartWidget *ui_;
