@@ -43,6 +43,7 @@ namespace bs {
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
 
             virtual void setChainCode(const BinaryData &) {}
+            virtual void shutdown(void);
 
          protected:
             bool needsCommit() const { return needsCommit_; }
@@ -52,7 +53,6 @@ namespace bs {
             virtual void initLeaf(std::shared_ptr<Leaf> &, const bs::hd::Path &) const;
 
             bs::hd::Path   path_;
-            std::shared_ptr<LMDBEnv>         dbEnv_;
             std::shared_ptr<spdlog::logger>  logger_;
             bool        needsCommit_ = true;
             NetworkType netType_;
@@ -62,6 +62,7 @@ namespace bs {
 
          private:
             BinaryData serialize() const;
+            void copyLeaves(hd::Group*);
 
             static std::shared_ptr<Group> deserialize(
                std::shared_ptr<AssetWallet_Single>, 
@@ -85,6 +86,7 @@ namespace bs {
             wallet::Type type() const override { return wallet::Type::Authentication; }
 
             void setChainCode(const BinaryData &) override;
+            void shutdown(void) override;
 
          protected:
             bool addLeaf(const std::shared_ptr<Leaf> &) override;

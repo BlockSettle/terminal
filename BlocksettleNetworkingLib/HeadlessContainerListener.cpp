@@ -876,7 +876,7 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
             password = mergeKeys(password, pwdData[i].password);
          }
       }
-      const auto woWallet = wallet->createWatchingOnly(password);
+      const auto woWallet = wallet->createWatchingOnly();
       if (!woWallet) {
          CreateHDWalletResponse(clientId, id, "failed to create watching-only copy");
          return false;

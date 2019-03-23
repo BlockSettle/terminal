@@ -282,9 +282,10 @@ namespace bs {
 
          virtual SecureBinaryData getPublicKeyFor(const bs::Address &) = 0;
          virtual SecureBinaryData getPubChainedKeyFor(const bs::Address &addr) { return getPublicKeyFor(addr); }
-         virtual bool eraseFile() { return false; }
 
-
+         //shutdown db containers, typically prior to deleting the wallet file
+         virtual void shutdown(void) = 0;
+         virtual std::string getFilename(void) const = 0;
 
       protected:
          virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;

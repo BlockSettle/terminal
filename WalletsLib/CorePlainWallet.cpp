@@ -481,26 +481,22 @@ KeyPair PlainWallet::getKeyPairFor(const bs::Address &addr, const SecureBinaryDa
    return { plainAsset->privKey(), plainAsset->publicKey() };
 }
 
-bool PlainWallet::eraseFile()
+void PlainWallet::shutdown()
 {
-   if (dbFilename_.empty()) {
-      return true;
-   }
-   if (dbEnv_) {
+   if (db_ != nullptr)
+   {
       db_->close();
-      dbEnv_->close();
-      db_.reset();
+      db_ = nullptr;
    }
-   bool rc = true;
-   QFile walletFile(QString::fromStdString(dbFilename_));
-   if (walletFile.exists()) {
-      rc = walletFile.remove();
 
-      QFile lockFile(QString::fromStdString(dbFilename_ + "-lock"));
-      rc &= lockFile.remove();
+   if (dbEnv_ != nullptr)
+   {
+      dbEnv_->close();
+      dbEnv_ = nullptr;
    }
-   return rc;
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 class PlainResolver : public ResolverFeed
 {
@@ -565,6 +561,8 @@ std::shared_ptr<ResolverFeed> PlainWallet::getResolver() const
    }
    return std::make_shared<PlainSigningResolver>(assetByAddr_);
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 std::pair<bs::Address, std::shared_ptr<PlainAsset>> PlainAsset::deserialize(BinaryDataRef value)
 {

@@ -93,6 +93,7 @@ void hd::Node::initFromSeed()
    if (!btc_hdnode_from_seed(seed_.getPtr(), (int)seed_.getSize(), &node_)) {
       throw std::runtime_error("creation of bip32 node failed");
    }
+   //why is the chaincode reset?
    memset(node_.chain_code, 0, sizeof(node_.chain_code));
    btc_hdnode_fill_public_key(&node_);
 }

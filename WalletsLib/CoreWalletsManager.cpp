@@ -297,10 +297,17 @@ bool WalletsManager::deleteWalletFile(const WalletPtr &wallet)
    }
 
    if (!isHDLeaf) {
-      if (!wallet->eraseFile()) {
-         logger_->error("Failed to remove wallet file for {}", wallet->name());
-         return false;
+      auto filename = wallet->getFilename();
+      if (filename.size() > 0)
+      {
+         wallet->shutdown();
+         if (std::remove(filename.c_str()) != 0)
+         {
+            logger_->error("Failed to remove wallet file for {}", wallet->name());
+            return false;
+         }
       }
+
       if (wallet == settlementWallet_) {
          settlementWallet_ = nullptr;
       }

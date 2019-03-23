@@ -17,6 +17,10 @@ namespace bs {
 
          class Wallet
          {
+         private:
+
+            Wallet(void) {}
+
          public:
 
             //init from seed
@@ -48,7 +52,7 @@ namespace bs {
             Wallet(Wallet&&) = delete;
             Wallet& operator = (Wallet&&) = delete;
 
-            std::shared_ptr<hd::Wallet> createWatchingOnly(const SecureBinaryData &password) const;
+            std::shared_ptr<hd::Wallet> createWatchingOnly(void) const;
             bool isWatchingOnly() const;
             bool isPrimary() const;
             NetworkType networkType() const { return netType_; }
@@ -67,6 +71,7 @@ namespace bs {
             std::string description() const { return desc_; }
 
             void createStructure();
+            void shutdown();
             bool eraseFile();
             void copyToFile(const std::string& filename);
 

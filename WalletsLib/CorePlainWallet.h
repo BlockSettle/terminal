@@ -89,10 +89,11 @@ namespace bs {
          SecureBinaryData getPublicKeyFor(const bs::Address &) override;
          KeyPair getKeyPairFor(const bs::Address &, const SecureBinaryData &password);
 
-         bool eraseFile() override;
          bool isWatchingOnly() const { return true; }
          NetworkType networkType(void) const { return netType_; }
 
+         void shutdown(void);
+         std::string getFilename(void) const { return dbFilename_; }
       protected:
          std::shared_ptr<LMDBEnv> getDBEnv() { return dbEnv_; }
          LMDB *getDB() { return db_.get(); }

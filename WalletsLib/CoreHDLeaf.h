@@ -49,14 +49,20 @@ namespace bs {
             std::vector<bs::Address> getPooledAddressList() const override;
             std::vector<bs::Address> getExtAddressList() const override;
             std::vector<bs::Address> getIntAddressList() const override;
+            
             size_t getExtAddressCount() const override;
+            size_t getUsedAddressCount() const override;
+
             size_t getIntAddressCount() const override;
             bool isExternalAddress(const Address &) const override;
             bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
             bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
             bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
             std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
+                        
             std::string getAddressIndex(const bs::Address &) override;
+            bs::hd::Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
+            bs::hd::Path::Elem addressIndex(const bs::Address &addr) const;
             bool addressIndexExists(const std::string &index) const override;
             
             //index as asset derivation id
@@ -74,6 +80,9 @@ namespace bs {
             BinaryData serialize() const;
 
             static std::pair<BinaryData, bs::hd::Path> deserialize(const BinaryData &ser);
+
+            void shutdown(void);
+            std::string getFilename(void) const;
 
          protected:
             void reset();
@@ -108,6 +117,7 @@ namespace bs {
             const NetworkType netType_;
 
          private:
+            std::shared_ptr<AssetWallet_Single> walletPtr_;
             std::shared_ptr<::AddressAccount> accountPtr_;
             std::function<std::shared_ptr<ResolverFeed>(void)> getResolverLambda_;
 
@@ -117,8 +127,6 @@ namespace bs {
 
             std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
                , AddressEntryType ae_type = AddressEntryType_Default);
-            bs::hd::Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
-            bs::hd::Path::Elem addressIndex(const bs::Address &addr) const;
             void topUpAddressPool(size_t count = 0);
             bs::hd::Path::Elem getLastAddrPoolIndex() const;
          };

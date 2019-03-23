@@ -191,20 +191,41 @@ std::string hd::Wallet::getFileName(const std::string &dir) const
    return (dir + "/" + fileNamePrefix(isWatchingOnly()) + walletId() + "_wallet.lmdb");
 }
 
+void hd::Wallet::shutdown()
+{
+   for (auto& groupPair : groups_)
+      groupPair.second->shutdown();
+
+   for (auto& leafPair : leaves_)
+      leafPair.second->shutdown();
+
+   if (db_ != nullptr)
+   {
+      db_->close();
+      delete db_;
+      db_ = nullptr;
+   }
+   dbEnv_.reset();
+
+   walletPtr_->shutdown();
+}
+
 bool hd::Wallet::eraseFile()
 {
-   auto& fname = walletPtr_->getDbFilename();
+   auto fname = walletPtr_->getDbFilename();
+   shutdown();
+
    if (fname.size() == 0)
       return true;
 
    bool rc = true;
-   QFile walletFile(QString::fromStdString(fname));
-   if (walletFile.exists()) {
-      rc = walletFile.remove();
+   if (std::remove(fname.c_str()) != 0)
+      rc = false;
 
-      QFile lockFile(QString::fromStdString(fname + "-lock"));
-      rc &= lockFile.remove();
-   }
+   fname.append("-lock");
+   if (std::remove(fname.c_str()) != 0)
+      rc = false;
+
    return rc;
 }
 
@@ -354,29 +375,50 @@ std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
    return watchingOnly ? "bip44wo_" : "bip44_";
 }
 
-std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly(const SecureBinaryData &password) const
+std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly() const
 {
-   throw WalletException("not implemented");
-   return nullptr;
-   //TODO: rework this
-   /*if (walletPtr_->isWatchingOnly()) {
-      LOG(logger_, info, "[Wallet::CreateWatchingOnly] {} already watching-only", walletId());
-      return nullptr;
+   //fork WO copy of armory wallet
+   auto woFilename = AssetWallet::forkWathcingOnly(walletPtr_->getDbFilename());
+
+   //instantiate empty core::hd::Wallet
+   std::shared_ptr<hd::Wallet> woCopy(new hd::Wallet());
+
+   //populate with this wallet's meta data
+   woCopy->name_ = name_;
+   woCopy->desc_ = desc_;
+   woCopy->netType_ = netType_;
+   woCopy->logger_ = logger_;
+
+   //setup the armory wallet ptr and dbs
+   woCopy->walletPtr_ = std::dynamic_pointer_cast<AssetWallet_Single>(
+      AssetWallet::loadMainWalletFromFile(woFilename));
+   woCopy->dbEnv_ = woCopy->walletPtr_->getDbEnv();
+   woCopy->db_ = new LMDB(woCopy->dbEnv_.get(), BS_WALLET_DBNAME);
+
+   //init wo blocksettle meta data db
+   woCopy->initializeDB();
+
+   //copy group and leaf structure
+   for (auto& groupPair : groups_)
+   {
+      auto newGroup = std::make_shared<hd::Group>(
+         woCopy->walletPtr_,
+         groupPair.second->path(), netType_,
+         logger_);
+
+      newGroup->copyLeaves(groupPair.second.get());
+      woCopy->addGroup(newGroup);
    }
-   auto woWallet = std::make_shared<hd::Wallet>(walletId(), netType_
-                                                , name_
-                                                , logger_, desc_);
-   for (const auto &group : groups_) {
-      woWallet->addGroup(group.second);
-   }
-   return woWallet;*/
+
+   //commit to disk
+   woCopy->writeGroupsToDB();
+
+   return woCopy;
 }
 
 bool hd::Wallet::isWatchingOnly() const
 {
-   auto mainAccID = walletPtr_->getMainAccountID();
-   auto accPtr = walletPtr_->getAccountRoot(mainAccID);
-   return accPtr->hasPrivateKey();
+   return walletPtr_->isWatchingOnly();
 }
 
 static bool nextCombi(std::vector<int> &a , const int n, const int m)

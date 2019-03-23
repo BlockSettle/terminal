@@ -52,7 +52,7 @@ std::vector<std::shared_ptr<bs::core::Wallet>> hd::Group::getAllLeaves() const
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem)
 {
-   //groups are always hardened
+   //leafs are always hardened
    elem |= 0x80000000;
    if (getLeaf(elem) != nullptr) {
       return nullptr;
@@ -60,10 +60,17 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem)
 
    auto pathLeaf = path_;
    pathLeaf.append(elem);
-   auto result = newLeaf();
-   initLeaf(result, pathLeaf);
-   addLeaf(result);
-   return result;
+   try
+   {
+      auto result = newLeaf();
+      initLeaf(result, pathLeaf);
+      addLeaf(result);
+      return result;
+   }
+   catch (std::exception&)
+   {
+      return nullptr;
+   }
 }
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(const std::string &key)
@@ -238,6 +245,29 @@ void hd::Group::deserialize(BinaryDataRef value)
    }
 }
 
+void hd::Group::shutdown()
+{
+   for (auto& leafPair : leaves_)
+      leafPair.second->shutdown();
+
+   walletPtr_ = nullptr;
+}
+
+void hd::Group::copyLeaves(hd::Group* from)
+{
+   for (auto& leafPair : from->leaves_)
+   {
+      auto newLeaf = std::make_shared<hd::Leaf>(
+         netType_, logger_, leafPair.second->type_);
+      newLeaf->init(
+         walletPtr_, 
+         leafPair.second->accountPtr_->getID(), 
+         leafPair.second->path_);
+
+      addLeaf(newLeaf);
+   }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(std::shared_ptr<AssetWallet_Single> walletPtr,
@@ -297,6 +327,14 @@ void hd::AuthGroup::serializeLeaves(BinaryWriter &bw) const
       bw.put_uint32_t(LEAF_KEY);
       bw.put_BinaryData(leaf.second->serialize());
    }
+}
+
+void hd::AuthGroup::shutdown()
+{
+   for (auto& leafPair : tempLeaves_)
+      leafPair.second->shutdown();
+
+   hd::Group::shutdown();
 }
 
 

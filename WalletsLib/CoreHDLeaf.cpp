@@ -40,6 +40,7 @@ void hd::Leaf::init(
    auto accPtr = walletPtr->getAccountForID(addrAccId);
    accountPtr_ = accPtr;
    db_ = new LMDB(accountPtr_->getDbEnv().get(), BS_WALLET_DBNAME);
+   walletPtr_ = walletPtr;
 
    auto lbd = [walletPtr](void)->std::shared_ptr<ResolverFeed>
    {
@@ -283,7 +284,7 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
       //assetID: BIP32 root ID (4 bytes) | BIP32 node id (4 bytes) | asset index (4 bytes)
       BinaryRefReader brr(assetIDPair.first);
       brr.get_uint32_t(); //skip root id
-      auto nodeid = brr.get_uint32_t();
+      auto nodeid = brr.get_uint32_t(BE);
       auto indexid = brr.get_uint32_t(BE);
 
       bs::hd::Path addrPath = path_;
@@ -339,6 +340,8 @@ bool hd::Leaf::addressIndexExists(const std::string &index) const
 bs::Address hd::Leaf::getAddressByIndex(
    unsigned id, bool extInt, AddressEntryType aet) const
 {
+   //extInt: true for external/outer account, false for internal/inner account
+
    auto assetPtr = accountPtr_->getAssetForID(id, extInt);
    auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
    if (assetSingle == nullptr)
@@ -408,7 +411,7 @@ std::shared_ptr<ResolverFeed> hd::Leaf::getResolver() const
 bool hd::Leaf::isWatchingOnly() const
 {
    auto rootPtr = accountPtr_->getOutterAssetRoot();
-   return rootPtr->hasPrivateKey();
+   return !rootPtr->hasPrivateKey();
 }
 
 bool hd::Leaf::hasExtOnlyAddresses() const
@@ -438,8 +441,14 @@ std::vector<bs::Address> hd::Leaf::getExtAddressList() const
 
 size_t hd::Leaf::getExtAddressCount() const
 {
-   return accountPtr_->getOuterAccount()->getAssetCount();
+   return accountPtr_->getOuterAccount()->getHighestUsedIndex();
 }
+
+size_t hd::Leaf::getUsedAddressCount() const
+{
+   return getExtAddressCount();
+}
+
 
 std::vector<bs::Address> hd::Leaf::getIntAddressList() const
 {
@@ -476,6 +485,25 @@ size_t hd::Leaf::getIntAddressCount() const
    return iter->second->getAssetCount();
 }
 
+std::string hd::Leaf::getFilename() const
+{
+   if (walletPtr_ == nullptr)
+      throw WalletException("uninitialized wallet");
+   return walletPtr_->getDbFilename();
+}
+
+void hd::Leaf::shutdown()
+{
+   if (db_ != nullptr)
+   {
+      db_->close();
+      delete db_;
+      db_ = nullptr;
+   }
+
+   walletPtr_ = nullptr;
+   accountPtr_ = nullptr;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
