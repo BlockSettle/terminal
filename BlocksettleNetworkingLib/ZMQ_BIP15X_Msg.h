@@ -38,7 +38,14 @@
 #define ZMQ_MSGTYPE_AUTH_REPLY                22
 #define ZMQ_MSGTYPE_AUTH_PROPOSE              23
 
-#define ZMQ_MESSAGE_PACKET_SIZE 1500
+// NOTE: ZMQ will blast out the message in one packet. This won't work with
+// Ethernet but is okay for local connections in memory (loopback). This code
+// needs to enable fragmentation, as seen in Armory's WebSockets code. Once
+// that's done, this can be set back to 1500 to properly enable network
+// connections.
+#define ZMQ_MESSAGE_PACKET_SIZE 65000
+
+
 #define ZMQ_CALLBACK_ID 0xFFFFFFFD
 #define ZMQ_AEAD_HANDSHAKE_ID 0xFFFFFFFC
 #define ZMQ_MAGIC_WORD 0x56E1
