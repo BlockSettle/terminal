@@ -56,6 +56,7 @@ signals:
    void xbtSpent(const qint64 value, bool autoSign);
    void autoSignActivated(const std::string &walletId);
    void autoSignDeactivated(const std::string &walletId);
+   void customDialogRequest(const QString &dialogName, const QVariant &data);
 
 private:
    void setCallbacks();

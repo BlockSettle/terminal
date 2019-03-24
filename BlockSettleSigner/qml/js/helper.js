@@ -194,3 +194,12 @@ function saveTextFile(fileUrl, text) {
     request.send(text);
     return request.status;
 }
+
+function isSelectedWalletHdRoot(walletsView) {
+    var isRoot = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.IsHDRootRole)
+    return ((typeof(isRoot) != "undefined") && isRoot)
+}
+//function isAnyWallet(walletsView) {
+//    var walletId = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole)
+//    return ((typeof(walletId) != "undefined") && walletId.length)
+//}

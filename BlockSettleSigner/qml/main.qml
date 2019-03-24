@@ -4,12 +4,14 @@ import QtQuick.Layouts 1.3
 import QtQuick.Window 2.1
 import Qt.labs.settings 1.0
 
+import com.blocksettle.WalletsProxy 1.0
 import com.blocksettle.TXInfo 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.WalletsViewModel 1.0
 import com.blocksettle.NsWallet.namespace 1.0
 
 import "StyledControls"
@@ -156,5 +158,73 @@ ApplicationWindow {
 
     function raiseWindow() {
         JsHelper.raiseWindow()
+    }
+
+    function createNewWalletDialog(data) {
+        var newSeed = qmlFactory.createSeed(signerSettings.testNet)
+
+        // allow user to save wallet seed lines and then prompt him to enter them for verification
+        var dlgNewSeed = Qt.createComponent("BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
+        dlgNewSeed.seed = newSeed
+        dlgNewSeed.accepted.connect(function() {
+            // let user set a password or Auth eID and also name and desc. for the new wallet
+            var dlgCreateWallet = Qt.createComponent("BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
+            dlgCreateWallet.primaryWalletExists = walletsProxy.primaryWalletExists
+
+            dlgCreateWallet.seed = newSeed
+            dlgCreateWallet.open();
+        })
+        dlgNewSeed.open()
+    }
+
+    function importWalletDialog(data) {
+        var dlgImp = Qt.createComponent("BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
+        dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
+        dlgImp.open()
+    }
+
+    function backupWalletDialog(walletId) {
+        var dlg = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
+        dlg.targetDir = signerSettings.dirDocuments
+        dlg.open()
+    }
+
+    function deleteWalletDialog(walletId) {
+        var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
+        dlg.rootName = walletsProxy.getRootWalletName(walletId)
+
+        dlg.accepted.connect(function() {
+            if (dlg.backup) {
+                var dlgBkp = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
+                dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
+                dlgBkp.targetDir = signerSettings.dirDocuments
+                dlgBkp.accepted.connect(function() {
+                    if (walletsProxy.deleteWallet(walletId)) {
+                        JsHelper.messageBox(BSMessageBox.Type.Success
+                                            , qsTr("Wallet")
+                                            , qsTr("Wallet successfully deleted.")
+                                            , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletName).arg(walletId))
+                    }
+                })
+                dlgBkp.open()
+            }
+            else {
+                if (walletsProxy.deleteWallet(walletId)) {
+                    JsHelper.messageBox(BSMessageBox.Type.Success
+                                        , qsTr("Wallet")
+                                        , qsTr("Wallet successfully deleted.")
+                                        , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
+                }
+            }
+        })
+        dlg.open()
+    }
+
+    function manageEncryptionDialog(walletId) {
+        var dlg = Qt.createComponent("BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
+        dlg.open()
     }
 }

@@ -22,15 +22,7 @@ import "js/helper.js" as JsHelper
 Item {
     id: view
 
-    function isHdRoot() {
-        var isRoot = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.IsHDRootRole)
-        return ((typeof(isRoot) != "undefined") && isRoot)
-    }
-    function isAnyWallet() {
-        var walletId = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole)
-        return ((typeof(walletId) != "undefined") && walletId.length)
-    }
-
+    property alias walletsView: walletsView_
     Connections {
         target: walletsProxy
         onWalletError: {
@@ -40,17 +32,17 @@ Item {
         }
     }
     Connections {
-        target: walletsView.model
+        target: walletsView_.model
         onModelReset: {
             // when model resetted selectionChanged signal is not emitted
             // button states needs to be updated after model reset, this emitted signal will do that
-            var idx = walletsView.model.index(-1,-1);
-            walletsView.selection.currentChanged(idx, idx)
+            var idx = walletsView_.model.index(-1,-1);
+            walletsView_.selection.currentChanged(idx, idx)
         }
     }
 
     function getCurrentWalletInfo() {
-        return qmlFactory.createWalletInfo(walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole))
+        return qmlFactory.createWalletInfo(walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole))
     }
 
     ScrollView {
@@ -100,9 +92,10 @@ Item {
                                     dlgNewSeed.open()
                                 }
                                 else {
-                                    var dlgImp = Qt.createComponent("BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
-                                    dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
-                                    dlgImp.open()
+                                    importWalletDialog()
+//                                    var dlgImp = Qt.createComponent("BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
+//                                    dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
+//                                    dlgImp.open()
                                 }
                             })
                             dlgNew.open()
@@ -112,7 +105,7 @@ Item {
                     CustomButtonPrimary {
                         Layout.fillWidth: true
                         text: qsTr("Manage Encryption")
-                        enabled: isHdRoot()
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
                             var dlg = Qt.createComponent("BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
                             dlg.walletInfo = getCurrentWalletInfo()
@@ -122,20 +115,17 @@ Item {
 
                     CustomButtonPrimary {
                         Layout.fillWidth: true
-                        enabled: isHdRoot()
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         text: qsTr("Delete Wallet")
                         onClicked: {
-                            var walletId = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole)
-                            var walletName = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.NameRole)
+                            var walletId = walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole)
                             var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
-                            dlg.walletId = walletId
-                            dlg.walletName = walletName
-                            dlg.isRootWallet = isHdRoot()
+                            dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
                             dlg.rootName = walletsProxy.getRootWalletName(dlg.walletId)
                             dlg.accepted.connect(function() {
                                 if (dlg.backup) {
                                     var dlgBkp = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-                                    dlgBkp.walletInfo = getCurrentWalletInfo()
+                                    dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
                                     dlgBkp.targetDir = signerSettings.dirDocuments
                                     dlgBkp.accepted.connect(function() {
                                         if (walletsProxy.deleteWallet(walletId)) {
@@ -163,7 +153,7 @@ Item {
                     CustomButtonPrimary {
                         Layout.fillWidth: true
                         text: qsTr("Backup Private Key")
-                        enabled: isHdRoot()
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
                             var dlg = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
                             dlg.walletInfo = getCurrentWalletInfo()
@@ -175,7 +165,7 @@ Item {
                     CustomButtonPrimary {
                         Layout.fillWidth: true
                         text: qsTr("Export WO Wallet")
-                        enabled: isHdRoot()
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
                             var dlg = Qt.createComponent("BsDialogs/WalletExportWoDialog.qml").createObject(mainWindow)
                             dlg.walletInfo = getCurrentWalletInfo()
@@ -206,7 +196,7 @@ Item {
             }
 
             WalletsView {
-                id: walletsView
+                id: walletsView_
                 implicitWidth: view.width
                 implicitHeight: view.height - rowButtons.height - header.height - colWallets.spacing * 3
             }

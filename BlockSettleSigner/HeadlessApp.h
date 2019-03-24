@@ -42,7 +42,8 @@ public:
       , const std::function<void(const BinaryData &)> &cbCancelTxSign
       , const std::function<void(int64_t, bool)> &cbXbtSpent
       , const std::function<void(const std::string &)> &cbAsAct
-      , const std::function<void(const std::string &)> &cbAsDeact);
+      , const std::function<void(const std::string &)> &cbAsDeact
+      , const std::function<void(const QString &, const QVariant &)> &cbCustomDialog);
 
    std::shared_ptr<bs::sync::WalletsManager> getWalletsManager() const;
    void reloadWallets(const std::string &, const std::function<void()> &);

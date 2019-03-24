@@ -51,8 +51,11 @@ void SignerAdapter::setCallbacks()
    const auto &cbAutoSignDeactivated = [this](const std::string &walletId) {
       emit autoSignDeactivated(walletId);
    };
+   const auto &cbCustomDialog = [this](const QString &dialogName, const QVariant &data) {
+      emit customDialogRequest(dialogName, data);
+   };
    app_->setCallbacks(cbPeerConnected, cbPeerDisconnected, cbPwd, cbTxSigned, cbCancelTxSign
-      , cbXbtSpent, cbAutoSignActivated, cbAutoSignDeactivated);
+      , cbXbtSpent, cbAutoSignActivated, cbAutoSignDeactivated, cbCustomDialog);
 }
 
 void SignerAdapter::signTxRequest(const bs::core::wallet::TXSignRequest &txReq

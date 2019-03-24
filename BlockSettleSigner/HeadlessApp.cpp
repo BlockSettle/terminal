@@ -278,19 +278,19 @@ void HeadlessAppObj::passwordReceived(const std::string &walletId
    }
 }
 
-void HeadlessAppObj::setCallbacks(
-   const std::function<void(const std::string &)> &cbPeerConn
+void HeadlessAppObj::setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
    , const std::function<void(const std::string &)> &cbPeerDisconn
    , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
    , const std::function<void(const BinaryData &)> &cbTxSigned
    , const std::function<void(const BinaryData &)> &cbCancelTxSign
    , const std::function<void(int64_t, bool)> &cbXbtSpent
    , const std::function<void(const std::string &)> &cbAsAct
-   , const std::function<void(const std::string &)> &cbAsDeact)
+   , const std::function<void(const std::string &)> &cbAsDeact
+   , const std::function<void(const QString &, const QVariant &)> &cbCustomDialog)
 {
    if (listener_) {
       listener_->setCallbacks(cbPeerConn, cbPeerDisconn, cbPwd, cbTxSigned
-         , cbCancelTxSign, cbXbtSpent, cbAsAct, cbAsDeact);
+          , cbCancelTxSign, cbXbtSpent, cbAsAct, cbAsDeact, cbCustomDialog);
    }
    else {
       logger_->error("[{}] attempting to set callbacks on uninited listener", __func__);
