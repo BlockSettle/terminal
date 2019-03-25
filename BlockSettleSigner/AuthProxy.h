@@ -61,6 +61,7 @@ public:
 signals:
    void succeeded(const QString &encKey, const SecureBinaryData &password) const;
    void failed(const QString &text) const;
+   void userCancelled() const;
 
 private:
    std::shared_ptr<AutheIDClient> autheIDClient_;

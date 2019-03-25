@@ -22,6 +22,10 @@ add_definitions(-DNOMINMAX)
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
 
+IF (APPLE)
+   add_definitions(-DMDB_USE_POSIX_SEM=1)
+ENDIF(APPLE)
+
 IF (PRODUCTION_BUILD)
    add_definitions(-DPRODUCTION_BUILD)
 ENDIF (PRODUCTION_BUILD)
@@ -55,7 +59,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 13 )
-SET(BS_VERSION_PATCH 3 )
+SET(BS_VERSION_PATCH 6 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
