@@ -48,6 +48,7 @@ void AuthSignWalletObject::connectToServer()
    connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](const QString &text){
       emit failed(text);
    });
+   connect(autheIDClient_.get(), &AutheIDClient::userCancelled, this, &AuthSignWalletObject::userCancelled);
 }
 
 void AuthSignWalletObject::signWallet(AutheIDClient::RequestType requestType, bs::hd::WalletInfo *walletInfo)
