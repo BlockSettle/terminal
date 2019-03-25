@@ -111,19 +111,7 @@ QString SignerSettings::getExportWalletsDir() const
    if (!result.isEmpty()) {
       return result;
    }
-
-   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-   const auto commonRoot = dir + QDir::separator() + QLatin1String("..") + QDir::separator()
-      + QLatin1String("..") + QDir::separator() + appDirName;
-
-   if (testNet()) {
-      result = commonRoot + QDir::separator() + testnetSubdir;
-   }
-   else {
-      result = commonRoot;
-   }
-
-   return QDir::cleanPath(result);
+   return dirDocuments();
 }
 
 QVariant SignerSettings::get(Setting set) const
