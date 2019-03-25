@@ -298,7 +298,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       originalFeePerByte_ = feePerByte;
       const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
       SetMinimumFee(newMinFee, originalFeePerByte_);
-      advisedFeePerByte_ = newMinFee / tx.getTxWeight();
+      advisedFeePerByte_ = originalFeePerByte_ + 1.0;
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
@@ -330,7 +330,10 @@ void CreateTransactionDialogAdvanced::initUI()
    CreateTransactionDialog::init();
 
    ui_->treeViewInputs->setModel(usedInputsModel_);
-   ui_->treeViewInputs->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->treeViewInputs->setColumnWidth(1, 50);
+   ui_->treeViewInputs->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+   ui_->treeViewInputs->header()->setSectionResizeMode(1, QHeaderView::Fixed);
+   ui_->treeViewInputs->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
    ui_->treeViewOutputs->setModel(outputsModel_);
    ui_->treeViewOutputs->setColumnWidth(2, 30);
@@ -606,10 +609,12 @@ void CreateTransactionDialogAdvanced::onAddressTextChanged(const QString& addres
 {
    try {
       currentAddress_ = bs::Address(addressString.trimmed());
+      if (currentAddress_.format() == bs::Address::Format::Hex) {
+         currentAddress_.clear();   // P2WSH unprefixed address can resemble TX hash,
+      }                             // so we disable hex format completely
    } catch (...) {
       currentAddress_.clear();
    }
-
    UiUtils::setWrongState(ui_->lineEditAddress, !currentAddress_.isValid());
 
    validateAddOutputButton();
@@ -1147,6 +1152,8 @@ void CreateTransactionDialogAdvanced::setTxFees()
    } else if (itemIndex == itemCount - 1) {
       transactionData_->setTotalFee(ui_->spinBoxFeesManualTotal->value());
    }
+
+   validateAddOutputButton();
 
    if (FixRecipientsAmount()) {
       ui_->comboBoxFeeSuggestions->setCurrentIndex(itemCount - 1);

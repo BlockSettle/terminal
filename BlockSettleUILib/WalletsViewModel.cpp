@@ -34,6 +34,15 @@ WalletNode *WalletNode::findByWalletId(const std::string &walletId)
    return nullptr;
 }
 
+WalletNode *WalletNode::ancestor()
+{
+   if (parent_ == nullptr) {
+      return this;
+   }
+
+   return parent_->ancestor();
+}
+
 class WalletRootNode : public WalletNode
 {
 public:
@@ -568,24 +577,39 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
    }
    endResetModel();
 
+   if (defaultWalletId_.empty()) {
+      const auto &defWallet = walletsManager_->getDefaultWallet();
+      defaultWalletId_ = defWallet ? defWallet->walletId() : std::string{};
+   }
+   
    QModelIndexList selection;
-   if (selectedWalletId.empty()) {
+   if (selectedWalletId.empty() || selectedWalletId == "empty") {
       selectedWalletId = defaultWalletId_;
    }
    const auto node = rootNode_->findByWalletId(selectedWalletId);
+   WalletNode *ancestor = nullptr;
    if (node != nullptr) {
-      selection.push_back(createIndex(node->row(), 0, static_cast<void*>(node)));
+      ancestor = node->ancestor();
+      if (ancestor != nullptr) {
+         selection.push_back(createIndex(ancestor->row(), 0, static_cast<void*>(ancestor)));
+      }
    }
    
    if (treeView != nullptr) {
-      for (int i = 0; i < rowCount(); i++) {
-         treeView->expand(index(i, 0));
+      if (ancestor == nullptr) {
+         for (int i = 0; i < rowCount(); i++) {
+            treeView->expand(index(i, 0));
+         }
       }
+
       if (!selection.empty()) {
          treeView->setCurrentIndex(selection[0]);
          treeView->selectionModel()->select(selection[0], QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-         treeView->expand(selection[0]);
          treeView->scrollTo(selection[0]);
+
+         if (ancestor == nullptr) {
+            treeView->expand(selection[0]);
+         }
       }
    }
    emit updateAddresses();

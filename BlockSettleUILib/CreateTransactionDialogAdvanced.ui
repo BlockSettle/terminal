@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>920</width>
-    <height>641</height>
+    <height>659</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -437,6 +437,18 @@
               <property name="rootIsDecorated">
                <bool>false</bool>
               </property>
+              <property name="itemsExpandable">
+               <bool>false</bool>
+              </property>
+              <property name="headerHidden">
+               <bool>false</bool>
+              </property>
+              <attribute name="headerVisible">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="headerStretchLastSection">
+               <bool>false</bool>
+              </attribute>
              </widget>
             </item>
            </layout>
@@ -1084,13 +1096,13 @@
                </sizepolicy>
               </property>
               <property name="suffix">
-               <string> s/b</string>
+               <string extracomment="satoshi per byte"> s/b</string>
               </property>
               <property name="maximum">
                <double>99999.990000000005239</double>
               </property>
               <property name="singleStep">
-               <double>10.000000000000000</double>
+               <double>1.000000000000000</double>
               </property>
              </widget>
             </item>

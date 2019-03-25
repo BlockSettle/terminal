@@ -108,7 +108,7 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 
    default: break;
    }
-   return { -1, false };
+   return { -1, false, false };
 }
 
 

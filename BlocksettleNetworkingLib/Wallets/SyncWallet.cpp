@@ -613,7 +613,9 @@ void Wallet::unregisterWallet()
    zcListCallbacks_.clear();
    historyCache_.clear();
 
-   registerWallet();
+   if (armory_) {
+      armory_->registerWallet(btcWallet_, walletId(), {}, [](const std::string &){}, false);
+   }
    btcWallet_.reset();
 }
 

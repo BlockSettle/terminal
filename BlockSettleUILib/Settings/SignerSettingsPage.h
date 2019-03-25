@@ -36,6 +36,7 @@ private:
    void showZmqPubKey(bool);
    void showOfflineDir(bool);
    void showLimits(bool);
+   void showTwoWayAuth(bool);
 
 private:
    std::unique_ptr<Ui::SignerSettingsPage> ui_;

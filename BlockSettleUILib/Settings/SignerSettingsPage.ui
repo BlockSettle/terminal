@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>535</width>
-    <height>451</height>
+    <height>472</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -87,7 +87,7 @@
        <number>0</number>
       </property>
       <item>
-       <layout class="QFormLayout" name="formLayout">
+       <layout class="QFormLayout" name="formLayoutConnectionParams">
         <item row="0" column="0">
          <widget class="QLabel" name="labelMode">
           <property name="minimumSize">
@@ -190,7 +190,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="4" column="0">
          <widget class="QWidget" name="widgetZmqLabel" native="true">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -221,7 +221,7 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QLabel" name="labelZmqPubKey">
+            <widget class="QLabel" name="labelZmqSignerPubKey">
              <property name="text">
               <string>Signer public key</string>
              </property>
@@ -261,7 +261,7 @@
           </layout>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="4" column="1">
          <widget class="QWidget" name="widgetZmqComboBox" native="true">
           <layout class="QHBoxLayout" name="layoutOfflineDir_2">
            <property name="spacing">
@@ -302,7 +302,7 @@
           </layout>
          </widget>
         </item>
-        <item row="4" column="0">
+        <item row="5" column="0">
          <widget class="QWidget" name="horizontalWidget_2" native="true">
           <property name="minimumSize">
            <size>
@@ -357,7 +357,7 @@
           </layout>
          </widget>
         </item>
-        <item row="4" column="1">
+        <item row="5" column="1">
          <widget class="QWidget" name="widgetZmqContent" native="true">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -420,7 +420,7 @@
           </layout>
          </widget>
         </item>
-        <item row="6" column="0">
+        <item row="7" column="0">
          <widget class="QWidget" name="horizontalWidget" native="true">
           <property name="minimumSize">
            <size>
@@ -475,7 +475,7 @@
           </layout>
          </widget>
         </item>
-        <item row="6" column="1">
+        <item row="7" column="1">
          <widget class="QWidget" name="widgetOfflineDir" native="true">
           <layout class="QHBoxLayout" name="layoutOfflineDir">
            <property name="spacing">
@@ -529,6 +529,87 @@
             </widget>
            </item>
           </layout>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QWidget" name="widgetTwoWayAuth" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <property name="spacing">
+            <number>3</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="labelZmqPubKey_2">
+             <property name="text">
+              <string>Two-way authentication</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="labelZmqPubKeyHint_2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>10</width>
+               <height>15</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>10</width>
+               <height>15</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>A Z85-encoded key (40 bytes) used to connect to the signer. Choose between a file with the key, or manually entering the key.</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">image: url(&quot;:/resources/notification_info@2x.png&quot;);</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QCheckBox" name="checkBoxTwoWayAuth">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
          </widget>
         </item>
        </layout>
@@ -628,9 +709,9 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLabel" name="label_2">
+         <widget class="QLabel" name="labelZmqTerminalPubKeyValue">
           <property name="text">
-           <string>47c634ngnasdfnc348fnhe3399ffgf5dgbfge386784bc235t847575c7yf</string>
+           <string/>
           </property>
           <property name="whiteLabel" stdset="0">
            <bool>true</bool>

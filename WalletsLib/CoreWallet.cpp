@@ -223,8 +223,7 @@ static std::vector<UTXO> decorateUTXOs(const std::vector<UTXO> &inUTXOs)
       const bs::Address recipAddr(utxo.getRecipientScrAddr());
       utxo.txinRedeemSizeBytes_ = recipAddr.getInputSize();
       utxo.witnessDataSizeBytes_ = recipAddr.getWitnessDataSize();
-      utxo.isInputSW_ = ((recipAddr.getType() == AddressEntryType_P2WPKH)
-         || (recipAddr.getType() == AddressEntryType_P2WSH)) ? true : false;
+      utxo.isInputSW_ = (recipAddr.getWitnessDataSize() != UINT32_MAX);
    }
    return inputUTXOs;
 }

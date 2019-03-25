@@ -249,7 +249,8 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
       return;
    }
 
-   if (reply.status() == rp::RP_CANCELLED) {
+   if (reply.status() == rp::RP_CANCELLED || reply.status() == rp::USER_CANCELLED) {
+      emit userCancelled();
       return;
    }
 

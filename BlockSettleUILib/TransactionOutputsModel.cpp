@@ -54,9 +54,9 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
    // workaround dont working here
    // TODO:move "Delete output button"
    // from CreateTransactionDialogAdvanced::onOutputsInserted to model delegate
-//   if (role == Qt::SizeHintRole && index.column() == 2) {
-//      return QSize(50, 16);
-//   }
+  if (role == Qt::SizeHintRole && index.column() == 2) {
+     return QSize(50, 14);
+  }
 
    switch (role) {
    case Qt::TextAlignmentRole:
@@ -64,8 +64,7 @@ QVariant TransactionOutputsModel::data(const QModelIndex & index, int role) cons
    case Qt::DisplayRole:
       return getRowData(index.column(), outputs_[index.row()]);
    case Qt::DecorationRole:
-      if (index.column() == ColumnRemove && rowsEnabled_)
-         return removeIcon_;
+      return getImageData(index.column());
    case Qt::TextColorRole:
       return rowsEnabled_ ? QVariant{} : QColor(Qt::gray);
    }
@@ -140,6 +139,15 @@ QVariant TransactionOutputsModel::getRowData(int column, const OutputRow& output
    }
 
    return QVariant{};
+}
+
+QVariant TransactionOutputsModel::getImageData(const int column) const
+{
+   if (column == ColumnRemove && rowsEnabled_) {
+      return removeIcon_;
+   }
+
+   return QVariant{};  
 }
 
 QVariant TransactionOutputsModel::headerData(int section, Qt::Orientation orientation, int role) const

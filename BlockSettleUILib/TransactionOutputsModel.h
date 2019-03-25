@@ -49,6 +49,7 @@ private:
 
 private:
    QVariant getRowData(int column, const OutputRow& outputRow) const;
+   QVariant getImageData(const int column) const;
 
 private:
    std::vector<OutputRow> outputs_;

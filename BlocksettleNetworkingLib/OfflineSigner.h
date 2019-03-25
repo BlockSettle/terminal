@@ -69,8 +69,8 @@ public:
       , bool , bool , bool ) override { return 0; }
 
 protected:
-   virtual QStringList args() const;
-   virtual QString pidFileName() const;
+   QStringList args() const override;
+   QString pidFileName() const override;
 };
 
 

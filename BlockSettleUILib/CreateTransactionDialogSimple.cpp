@@ -132,22 +132,18 @@ QLabel* CreateTransactionDialogSimple::changeLabel() const
 
 void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressString)
 {
+   bool addrStateOk = true;
    try {
-      bs::Address address{addressString.trimmed()};
-      transactionData_->UpdateRecipientAddress(recipientId_, address);
-      if (address.isValid()) {
-         ui_->pushButtonMax->setEnabled(true);
-         UiUtils::setWrongState(ui_->lineEditAddress, false);
-         return;
-      } else {
-         UiUtils::setWrongState(ui_->lineEditAddress, true);
+      bs::Address address{ addressString.trimmed() };
+      addrStateOk = address.isValid() && (address.format() != bs::Address::Format::Hex);
+      if (addrStateOk) {
+         transactionData_->UpdateRecipientAddress(recipientId_, address);
       }
-   } catch(...) {
-      UiUtils::setWrongState(ui_->lineEditAddress, true);
+   } catch (...) {
+      addrStateOk = false;
    }
-
-   ui_->pushButtonMax->setEnabled(false);
-   transactionData_->ResetRecipientAddress(recipientId_);
+   UiUtils::setWrongState(ui_->lineEditAddress, !addrStateOk);
+   ui_->pushButtonMax->setEnabled(addrStateOk);
 }
 
 void CreateTransactionDialogSimple::onXBTAmountChanged(const QString &text)

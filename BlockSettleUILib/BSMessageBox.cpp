@@ -168,7 +168,7 @@ MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)
                        "You may then attach a password or your Auth eID account to the wallet."
                        "<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. "
                        "Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store."
-                       "<br><br>For more information, please consult:<br><a href=\"http://pubb.blocksettle.com/PDF/AutheID%20Getting%20Started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a>.")
+                       "<br><br>For more information, please consult:<br><a href=\"https://autheid.com/\"><span style=\"color:white;\">Getting Started With Auth eID</span></a>.")
                   , parent) {
    // use rich text because of the hyperlink
    setLabelTextFormat(Qt::RichText);

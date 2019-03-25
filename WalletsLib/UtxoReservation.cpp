@@ -81,6 +81,7 @@ bs::UtxoReservation::UtxoReservation()
 // Singleton reservation.
 void bs::UtxoReservation::init()
 {
+   assert(!utxoResInstance_);
    utxoResInstance_ = std::make_shared<bs::UtxoReservation>();
 }
 

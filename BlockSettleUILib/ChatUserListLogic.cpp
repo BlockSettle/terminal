@@ -98,7 +98,7 @@ void ChatUserListLogic::onUserHaveNewMessageChanged(const QString &userId, const
    NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });
 }
 
-void ChatUserListLogic::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)
+void ChatUserListLogic::addChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)
 {
    for (const std::shared_ptr<Chat::ChatRoomData>  &room : roomList)
    {
