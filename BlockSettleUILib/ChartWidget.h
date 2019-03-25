@@ -92,38 +92,37 @@ private:
 
    double prevRequestStamp{ 0.0 };
 
+   Ui::ChartWidget *ui_;
+   QButtonGroup dateRange_;
+   QStandardItemModel *cboModel_;
+   QCPTextElement *title_;
+   QCPTextElement *info_;
+   QCPFinancial *candlesticksChart_;
+   QCPBars *volumeChart_;
+   QCPAxisRect *volumeAxisRect_;
 
-	Ui::ChartWidget *ui_;
-    QButtonGroup dateRange_;
-    QStandardItemModel *cboModel_;
-    QCPTextElement *title_;
-    QCPTextElement *info_;
-    QCPFinancial *candlesticksChart_;
-    QCPBars *volumeChart_;
-    QCPAxisRect *volumeAxisRect_;
+   double lastHigh_;
+   double lastLow_;
+   double lastClose_;
+   double currentTimestamp_;
 
-	double lastHigh;
-	double lastLow;
-	double lastClose;
-	double currentTimestamp;
+   bool autoScaling_{ true };
 
-	bool autoScaling{ true };
+   qreal currentMinPrice_{ 0 };
+   qreal currentMaxPrice_{ 0 };
 
-	qreal currentMinPrice{ 0 };
-	qreal currentMaxPrice{ 0 };
+   int timerId_;
+   int lastInterval_;
+   int dragY_;
 
-	int timerId;
-	int lastInterval;
-	int dragY;
+   bool isDraggingYAxis_;
+   bool isDraggingXAxis_{ false };
+   bool isDraggingMainPlot_{ false };
 
-	bool isDraggingYAxis;
-	bool isDraggingXAxis{ false };
-	bool isDraggingMainPlot{ false };
+   QPoint lastDragCoord_;
+   qreal startDragCoordX_{ 0.0 };
 
-	QPoint lastDragCoord;
-	qreal startDragCoordX{ 0.0 };
-
-	quint64 first_timestamp_in_db{ 0 };
+   quint64 firstTimestampInDb_{ 0 };
 };
 
 #endif // CHARTWIDGET_H
