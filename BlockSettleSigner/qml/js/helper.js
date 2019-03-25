@@ -83,6 +83,10 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
         authProgress.rejectAnimated()
         authObject.destroy()
     })
+    authObject.userCancelled.connect(function() {
+        authProgress.rejectAnimated()
+        authObject.destroy()
+    })
 }
 
 function removeEidDevice (index, walletInfo, onSuccess) {

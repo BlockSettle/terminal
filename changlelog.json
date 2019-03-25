@@ -1,6 +1,14 @@
 {
-   "latest_version" : "0.13.5",
+   "latest_version" : "0.13.6",
    "changes" : [
+      {
+         "version_string" : "0.13.6",
+         "previous_version" : "0.13.5",
+         "improvements" :
+         [
+            "untracked changes"
+         ]
+      },
       {
          "version_string" : "0.13.5",
          "previous_version" : "0.13.4",
