@@ -42,7 +42,11 @@ Item {
     }
 
     function getCurrentWalletInfo() {
-        return qmlFactory.createWalletInfo(walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole))
+        return qmlFactory.createWalletInfo(getCurrentWalletId())
+    }
+
+    function getCurrentWalletId() {
+        return walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole)
     }
 
     ScrollView {
@@ -68,28 +72,30 @@ Item {
                     width: parent.width
 
                     CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("New Wallet")
+                        //Layout.fillWidth: true
+                        width: 150
+                        text: qsTr("New")
                         onClicked: {
                             // let user create a new wallet or import one from file
                             var dlgNew = Qt.createComponent("BsDialogs/WalletNewDialog.qml").createObject(mainWindow)
                             dlgNew.accepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.NewWallet) {
-                                    // TODO rename signerSettings.testNet -> signerSettings.isTestNet
-                                    var newSeed = qmlFactory.createSeed(signerSettings.testNet)
+                                    createNewWalletDialog()
+//                                    // TODO rename signerSettings.testNet -> signerSettings.isTestNet
+//                                    var newSeed = qmlFactory.createSeed(signerSettings.testNet)
 
-                                    // allow user to save wallet seed lines and then prompt him to enter them for verification
-                                    var dlgNewSeed = Qt.createComponent("BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
-                                    dlgNewSeed.seed = newSeed
-                                    dlgNewSeed.accepted.connect(function() {
-                                        // let user set a password or Auth eID and also name and desc. for the new wallet
-                                        var dlgCreateWallet = Qt.createComponent("BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
-                                        dlgCreateWallet.primaryWalletExists = walletsProxy.primaryWalletExists
+//                                    // allow user to save wallet seed lines and then prompt him to enter them for verification
+//                                    var dlgNewSeed = Qt.createComponent("BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
+//                                    dlgNewSeed.seed = newSeed
+//                                    dlgNewSeed.accepted.connect(function() {
+//                                        // let user set a password or Auth eID and also name and desc. for the new wallet
+//                                        var dlgCreateWallet = Qt.createComponent("BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
+//                                        dlgCreateWallet.primaryWalletExists = walletsProxy.primaryWalletExists
 
-                                        dlgCreateWallet.seed = newSeed
-                                        dlgCreateWallet.open();
-                                    })
-                                    dlgNewSeed.open()
+//                                        dlgCreateWallet.seed = newSeed
+//                                        dlgCreateWallet.open();
+//                                    })
+//                                    dlgNewSeed.open()
                                 }
                                 else {
                                     importWalletDialog()
@@ -103,75 +109,83 @@ Item {
                     }
 
                     CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("Manage Encryption")
+                        //Layout.fillWidth: true
+                        width: 150
+
+                        text: qsTr("Manage")
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
-                            var dlg = Qt.createComponent("BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
-                            dlg.walletInfo = getCurrentWalletInfo()
-                            dlg.open()
+                            manageEncryptionDialog(getCurrentWalletId())
+//                            var dlg = Qt.createComponent("BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
+//                            dlg.walletInfo = getCurrentWalletInfo()
+//                            dlg.open()
                         }
                     }
 
                     CustomButtonPrimary {
-                        Layout.fillWidth: true
+                        //Layout.fillWidth: true
+                        width: 150
+                        text: qsTr("Export")
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
-                        text: qsTr("Delete Wallet")
+                        onClicked: {
+                            backupWalletDialog(getCurrentWalletId())
+//                            var dlg = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
+//                            dlg.walletInfo = getCurrentWalletInfo()
+//                            dlg.targetDir = signerSettings.dirDocuments
+//                            dlg.open()
+                        }
+                    }
+
+                    CustomButtonPrimary {
+                        //Layout.fillWidth: true
+                        width: 150
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
+                        text: qsTr("Delete")
                         onClicked: {
                             var walletId = walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole)
-                            var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
-                            dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
-                            dlg.rootName = walletsProxy.getRootWalletName(dlg.walletId)
-                            dlg.accepted.connect(function() {
-                                if (dlg.backup) {
-                                    var dlgBkp = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-                                    dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
-                                    dlgBkp.targetDir = signerSettings.dirDocuments
-                                    dlgBkp.accepted.connect(function() {
-                                        if (walletsProxy.deleteWallet(walletId)) {
-                                            JsHelper.messageBox(BSMessageBox.Type.Success
-                                                                , qsTr("Wallet")
-                                                                , qsTr("Wallet successfully deleted.")
-                                                                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletName).arg(walletId))
-                                        }
-                                    })
-                                    dlgBkp.open()
-                                }
-                                else {
-                                    if (walletsProxy.deleteWallet(walletId)) {
-                                        JsHelper.messageBox(BSMessageBox.Type.Success
-                                                            , qsTr("Wallet")
-                                                            , qsTr("Wallet successfully deleted.")
-                                                            , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
-                                    }
-                                }
-                            })
-                            dlg.open()
+                            deleteWalletDialog(walletId)
+//                            var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
+//                            dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
+//                            dlg.rootName = walletsProxy.getRootWalletName(dlg.walletId)
+//                            dlg.accepted.connect(function() {
+//                                if (dlg.backup) {
+//                                    var dlgBkp = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
+//                                    dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
+//                                    dlgBkp.targetDir = signerSettings.dirDocuments
+//                                    dlgBkp.accepted.connect(function() {
+//                                        if (walletsProxy.deleteWallet(walletId)) {
+//                                            JsHelper.messageBox(BSMessageBox.Type.Success
+//                                                                , qsTr("Wallet")
+//                                                                , qsTr("Wallet successfully deleted.")
+//                                                                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletName).arg(walletId))
+//                                        }
+//                                    })
+//                                    dlgBkp.open()
+//                                }
+//                                else {
+//                                    if (walletsProxy.deleteWallet(walletId)) {
+//                                        JsHelper.messageBox(BSMessageBox.Type.Success
+//                                                            , qsTr("Wallet")
+//                                                            , qsTr("Wallet successfully deleted.")
+//                                                            , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
+//                                    }
+//                                }
+//                            })
+//                            dlg.open()
                         }
                     }
 
-                    CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("Backup Private Key")
-                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
-                        onClicked: {
-                            var dlg = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-                            dlg.walletInfo = getCurrentWalletInfo()
-                            dlg.targetDir = signerSettings.dirDocuments
-                            dlg.open()
-                        }
-                    }
 
-                    CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("Export WO Wallet")
-                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
-                        onClicked: {
-                            var dlg = Qt.createComponent("BsDialogs/WalletExportWoDialog.qml").createObject(mainWindow)
-                            dlg.walletInfo = getCurrentWalletInfo()
-                            dlg.open()
-                        }
-                    }
+//                    CustomButtonPrimary {
+//                        Layout.fillWidth: true
+//                        text: qsTr("Export WO Wallet")
+//                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
+//                        onClicked: {
+//                            var dlg = Qt.createComponent("BsDialogs/WalletExportWoDialog.qml").createObject(mainWindow)
+//                            dlg.walletInfo = getCurrentWalletInfo()
+//                            dlg.open()
+//                        }
+//                    }
                 }
             }
 

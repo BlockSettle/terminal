@@ -205,7 +205,7 @@ ApplicationWindow {
                         JsHelper.messageBox(BSMessageBox.Type.Success
                                             , qsTr("Wallet")
                                             , qsTr("Wallet successfully deleted.")
-                                            , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletName).arg(walletId))
+                                            , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletInfo.name).arg(walletId))
                     }
                 })
                 dlgBkp.open()
@@ -215,7 +215,7 @@ ApplicationWindow {
                     JsHelper.messageBox(BSMessageBox.Type.Success
                                         , qsTr("Wallet")
                                         , qsTr("Wallet successfully deleted.")
-                                        , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
+                                        , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletInfo.name).arg(walletId))
                 }
             }
         })

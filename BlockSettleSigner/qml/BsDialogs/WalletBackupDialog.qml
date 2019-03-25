@@ -31,7 +31,7 @@ CustomTitleDialogWindow {
     width: 400
     height: 495
 
-    title: qsTr("Backup Private Key for Wallet %1").arg(walletInfo.name)
+    title: qsTr("Export")
     rejectable: true
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
