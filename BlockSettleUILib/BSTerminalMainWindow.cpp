@@ -1500,8 +1500,8 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumSize(600, 150);
-         box->setMaximumSize(600, 150);
+         box->setMinimumWidth(600);
+         box->setMinimumHeight(150);
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1526,8 +1526,8 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumSize(600, 150);
-         box->setMaximumSize(600, 150);
+         box->setMinimumWidth(600);
+         box->setMinimumHeight(150);
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);
