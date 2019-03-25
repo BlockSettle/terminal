@@ -400,7 +400,7 @@ void BSTerminalMainWindow::LoadWallets()
             }
          }
       });
-      QTimer::singleShot(5000, this, [this](){
+      QTimer::singleShot(100, this, [this](){
          if (!initialWalletCreateDialogShown_ && !armoryKeyDialogShown_) {
             if (walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
                initialWalletCreateDialogShown_ = true;
@@ -487,19 +487,19 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       signerHost = QLatin1String("127.0.0.1");
    }
 
-   if (signerPubKey.isNull()) {
-      const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
+//   if (signerPubKey.isNull()) {
+//      const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
 
-      if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
-         BSMessageBox(BSMessageBox::messageBoxType::warning
-            , tr("Signer Local Connection")
-            , tr("Could not load local signer key.")
-            , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
-            , this).exec();
-         return retPtr;
-      }
-   }
+//      if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
+//         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
+//         BSMessageBox(BSMessageBox::messageBoxType::warning
+//            , tr("Signer Local Connection")
+//            , tr("Could not load local signer key.")
+//            , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
+//            , this).exec();
+//         return retPtr;
+//      }
+//   }
 
    retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey,
       runMode, signerHost, connectionManager_);
