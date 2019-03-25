@@ -66,6 +66,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    , ui_(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
 {
+   bs::UtxoReservation::init();
+
    UiUtils::SetupLocale();
 
    ui_->setupUi(this);
@@ -382,8 +384,6 @@ void BSTerminalMainWindow::setupIcon()
 void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
-
-   bs::UtxoReservation::init();
 
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
