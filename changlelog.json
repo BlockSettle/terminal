@@ -1,6 +1,28 @@
 {
-   "latest_version" : "0.13.4",
+   "latest_version" : "0.13.6",
    "changes" : [
+      {
+         "version_string" : "0.13.6",
+         "previous_version" : "0.13.5",
+         "improvements" :
+         [
+            "untracked changes"
+         ]
+      },
+      {
+         "version_string" : "0.13.5",
+         "previous_version" : "0.13.4",
+         "improvements" :
+         [
+            "Context menu for unsettled trades"
+         ],
+         "bug_fixes" :
+         [
+            "Logo replaced",
+            "Armory startup path fixed",
+            "Armory settings"
+         ]
+      },
       {
          "version_string" : "0.13.4",
          "previous_version" : "0.13.3",

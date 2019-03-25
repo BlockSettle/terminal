@@ -23,11 +23,40 @@ CustomTitleDialogWindow {
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign
 
-    title: qsTr("Wallet Password Confirmation")
+    title: qsTr("Sign Transaction")
     rejectable: true
+    width: 500
 
-    function clickConfirmBtn(){
+    function clickConfirmBtn() {
         btnConfirm.clicked()
+    }
+
+    function init() {
+        if (walletInfo.encType !== NsWallet.Auth) {
+            return
+        }
+
+        btnConfirm.visible = false
+        btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
+
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo)
+
+        authSign.succeeded.connect(function(encKey, password) {
+            passwordData.encType = NsWallet.Auth
+            passwordData.encKey = encKey
+            passwordData.binaryPassword = password
+            acceptAnimated()
+        });
+        authSign.failed.connect(function(errorText) {
+            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
+                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
+            mb.accepted.connect(function() { rejectAnimated() })
+        })
+        authSign.userCancelled.connect(function() {
+            cancelledByUser = true
+            rejectAnimated()
+        })
     }
 
     Connections {
@@ -88,24 +117,42 @@ CustomTitleDialogWindow {
                 Layout.alignment: Qt.AlignRight
             }
 
-            CustomLabel {
-                Layout.fillWidth: true
-                text: qsTr("Receiving Address(es)")
-                verticalAlignment: Text.AlignTop
-                Layout.fillHeight: true
-            }
-            ColumnLayout{
-                spacing: 0
-                Layout.leftMargin: 0
-                Layout.rightMargin: 0
-                Repeater {
-                    model: txInfo.recvAddresses
-                    CustomLabelValue {
-                        text: modelData
-                        Layout.alignment: Qt.AlignRight
+            RowLayout {
+                Layout.columnSpan: 2
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                    text: qsTr("Receiving Address(es)")
+                    //verticalAlignment: Text.AlignTop
+                    Layout.alignment: Qt.AlignTop
+                    Layout.fillHeight: true
+                }
+                ColumnLayout{
+                    spacing: 0
+                    Layout.leftMargin: 0
+                    Layout.rightMargin: 0
+                    Repeater {
+                        Layout.alignment: Qt.AlignTop
+                        model: txInfo.recvAddresses
+
+                        Rectangle {
+                            color: "transparent"
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            implicitWidth: labelTxWalletId.width
+                            Layout.alignment: Qt.AlignLeft
+
+                            CustomLabelValue {
+                                id: labelTxWalletId
+                                text: modelData
+                                Layout.alignment: Qt.AlignLeft
+                            }
+                        }
                     }
                 }
+
             }
+
 
             CustomLabel {
                 Layout.fillWidth: true
@@ -161,32 +208,42 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 Layout.fillWidth: true
-                text: walletInfo.encType !== NsWallet.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
+                //text: walletInfo.encType !== NsWallet.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
+                text: qsTr("Decrypt Wallet")
                 Layout.preferredHeight: 25
             }
         }
 
         RowLayout {
-            spacing: 5
+            spacing: 25
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
 
+//            CustomLabel {
+//                visible: prompt.length
+//                Layout.minimumWidth: 110
+//                Layout.preferredWidth: 110
+//                Layout.maximumWidth: 110
+//                Layout.fillWidth: true
+//                text: prompt
+//                elide: Label.ElideRight
+//            }
+
             CustomLabel {
-                visible: prompt.length
+                visible: walletInfo.encType === NsWallet.Password
                 Layout.minimumWidth: 110
                 Layout.preferredWidth: 110
                 Layout.maximumWidth: 110
                 Layout.fillWidth: true
-                text: prompt
-                elide: Label.ElideRight
+                text: qsTr("Password")
             }
 
             CustomPasswordTextInput {
                 id: tfPassword
                 visible: walletInfo.encType === NsWallet.Password
                 focus: true
-                placeholderText: qsTr("Password")
+                //placeholderText: qsTr("Password")
                 Layout.fillWidth: true
                 Keys.onEnterPressed: {
                     if (btnConfirm.enabled) btnConfirm.onClicked()
@@ -227,11 +284,11 @@ CustomTitleDialogWindow {
                 signal expired()
             }
 
-            CustomLabel {
-                text: qsTr("On completion just press [Enter] or [Return]")
-                visible: walletInfo.encType !== NsWallet.Auth
-                Layout.fillWidth: true
-            }
+//            CustomLabel {
+//                text: qsTr("On completion just press [Enter] or [Return]")
+//                visible: walletInfo.encType !== NsWallet.Auth
+//                Layout.fillWidth: true
+//            }
             CustomLabelValue {
                 text: qsTr("%1 seconds left").arg(timer.timeLeft.toFixed((0)))
                 Layout.fillWidth: true
@@ -252,15 +309,20 @@ CustomTitleDialogWindow {
 
     cFooterItem: RowLayout {
         CustomButtonBar {
+            id: barFooter
             Layout.fillWidth: true
 
             CustomButton {
+                id: btnCancel
                 text: qsTr("Cancel")
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
                     cancelledByUser = true
                     rejectAnimated()
+                    if (authSign) {
+                        authSign.cancel()
+                    }
                 }
             }
 
@@ -277,13 +339,6 @@ CustomTitleDialogWindow {
                         acceptAnimated()
                     }
                     else if (walletInfo.encType === NsWallet.Auth) {
-                        JsHelper.requesteIdAuth(AutheIDClient.SignWallet
-                                                , walletInfo
-                                                , function(pd){
-                                                    passwordData = pd
-                                                    acceptAnimated()
-                                                })
-
                     }
                     else {
                         passwordData.encType = NsWallet.Unencrypted

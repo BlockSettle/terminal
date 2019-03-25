@@ -27,7 +27,7 @@ CustomTitleDialogWindow {
 
         CustomLabelValue{
             Layout.fillWidth: true
-            text: qsTr("For guidance, please consult the  <a href=\"http://pubb.blocksettle.com/PDF/AutheID%20Getting%20Started.pdf\">Getting Started Guide</a>")
+            text: qsTr("For guidance, please consult the <a href=\"https://autheid.com/\">Getting Started Guide</a>")
         }
     }
 

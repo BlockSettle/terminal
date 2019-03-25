@@ -229,7 +229,7 @@ CustomDialog {
                 Layout.fillWidth: true
 
                 CustomLabel {
-                    text: "Enable Auth eID at first"
+                    text: "Auth eID disabled"
                     color: BSStyle.textColor
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
@@ -266,7 +266,7 @@ CustomDialog {
                 Layout.fillWidth: true
 
                 CustomLabel {
-                    text: "Enable Auth eID at first"
+                    text: "Auth eID disabled"
                     color: BSStyle.textColor
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop

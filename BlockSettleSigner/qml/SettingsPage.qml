@@ -14,6 +14,31 @@ Item {
         title: qsTr("Select wallets directory")
     }
 
+    Rectangle {
+        id: rectHelp
+
+        width: labelHelp.width
+        height: labelHelp.height
+        z: 1
+        color: "black"
+        visible: twoway_help_mouse_area.containsMouse
+
+
+        CustomLabel {
+            id: labelHelp
+            text: qsTr("Two way authentication")
+            padding: 5
+
+            Component.onCompleted: {
+                if (labelHelp.paintedWidth > 500) {
+                    labelHelp.width = 500
+                }
+            }
+        }
+    }
+
+
+
     ScrollView {
         anchors.fill: parent
         id: settingsView
@@ -147,6 +172,50 @@ Item {
 //                    down = checked
 //                }
             }
+
+            RowLayout {
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    text: qsTr("Two-way authentication")
+                }
+
+                Image {
+                    id: twoway_help_image
+                    Layout.maximumWidth: 10
+                    Layout.maximumHeight: 10
+
+                    source: "qrc:/resources/notification_info.png"
+                    MouseArea {
+                        id: twoway_help_mouse_area
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onHoveredChanged: {
+                            rectHelp.x = rectHelp.mapFromItem(twoway_help_image, 0, 0).x + 15
+                            rectHelp.y = rectHelp.mapFromItem(twoway_help_image, 0, 0).y - 10
+                        }
+                    }
+                }
+
+                CustomLabel {
+                    id: twoway_help_label
+                    //visible: twoway_help_mouse_area.containsMouse
+                    Layout.fillWidth: true
+                }
+
+
+                CustomSwitch {
+                    Layout.alignment: Qt.AlignRight
+                    checked: true
+                    onClicked: {
+
+                    }
+                }
+            }
+
 
             RowLayout {
                 id: row4

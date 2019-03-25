@@ -35,6 +35,10 @@ add_definitions(-DNOMINMAX)
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)
 
+IF (APPLE)
+   add_definitions(-DMDB_USE_POSIX_SEM=1)
+ENDIF(APPLE)
+
 IF (PRODUCTION_BUILD)
    add_definitions(-DPRODUCTION_BUILD)
 ENDIF (PRODUCTION_BUILD)
@@ -68,7 +72,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 13 )
-SET(BS_VERSION_PATCH 4 )
+SET(BS_VERSION_PATCH 6 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -823,6 +827,16 @@ IF(BSTERMINAL_SHARED_LIBS)
    IF(APPLE AND NOT UNIX)
    ENDIF()
  
+ELSE() # Static version
+   IF(WIN32)
+      set(COPY_SHARED_LIBS_NAME CopySharedLibs)
+      add_custom_target(${COPY_SHARED_LIBS_NAME} ALL)
+      
+      # libzmq
+      STRING(REPLACE ".lib" ".dll" ZMQ_LIB_DLL ${ZMQ_LIB})
+      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${ZMQ_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${ZMQ_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
+   ENDIF()
 ENDIF()
 
 

@@ -30,7 +30,7 @@ public:
    ~QmlPdfBackup() noexcept override = default;
 
    void paint(QPainter *painter) override;
-   void componentComplete();
+   void componentComplete() override;
 
    qreal preferedHeight() const;
 
