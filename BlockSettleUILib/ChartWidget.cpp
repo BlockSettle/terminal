@@ -25,8 +25,6 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , lastLow(0.0)
    , lastClose(0.0)
    , currentTimestamp(0.0)
-   , maxPrice(0.0)
-   , minPrice(0.0)
    , timerId(0)
    , lastInterval(-1)
    , dragY(0)
@@ -106,7 +104,6 @@ ChartWidget::~ChartWidget() {
 
 // Populate combo box with existing instruments comeing from mdProvider
 void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString &security, bs::network::MDFields mdFields) {
-   auto cbo = ui_->cboInstruments;
    if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) // Celer disconnected
    {
       cboModel_->clear();
@@ -249,34 +246,15 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    if (product != QString::fromStdString(response.product()) || interval != response.interval())
       return;
 
-   OhlcCandle lastCandle;
 
-   maxPrice = 0.0;
-   minPrice = -1.0;
-
-   qreal maxVolume = 0.0;
    qreal maxTimestamp = -1.0;
 
    for (int i = response.candles_size() - 1; i >= 0; --i)
    {
       auto candle = response.candles(i);
-      maxPrice = qMax(maxPrice, candle.high());
-      minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
-      maxVolume = qMax(maxVolume, candle.volume());
       maxTimestamp = qMax(maxTimestamp, static_cast<qreal>(candle.timestamp()));
 
       bool isLast = (i == 0);
-
-      if (isLast)
-      {
-         if (lastHigh != 0.0 && lastLow != 0.0 && lastClose != 0.0)
-         {
-            candle.set_high(lastHigh);
-            candle.set_low(lastLow);
-            candle.set_close(lastClose);
-         }
-         lastCandle = candle;
-      }
 
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
       qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
@@ -286,24 +264,12 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
          , candle.low()
          , candle.close()
          , candle.volume());
-
-      lastHigh = candle.high();
-      lastLow = candle.low();
-      lastClose = candle.close();
+      if (firstPortion && isLast) {
+         lastHigh = candle.high();
+         lastLow = candle.low();
+         lastClose = candle.close();
+      }
    }
-
-   qDebug("Min price: %f, Max price: %f, Max volume: %f", minPrice, maxPrice, maxVolume);
-
-   currentMinPrice = minPrice;
-   currentMaxPrice = maxPrice;
-
-   auto margin = qMax(maxPrice - minPrice, 0.01) / 10;
-   minPrice -= margin;
-   maxPrice += margin;
-   minPrice = qMax(minPrice, 0.0);
-
-   newMaxPrice = maxPrice;
-   newMinPrice = minPrice;
 
 
    if (firstPortion) {
@@ -337,9 +303,6 @@ void ChartWidget::AddNewCandle()
    candle.set_timestamp(currentTimestamp);
    candle.set_volume(0.0);
 
-   maxPrice = qMax(maxPrice, candle.high());
-   minPrice = minPrice == -1.0 ? candle.low() : qMin(minPrice, candle.low());
-
    AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
    qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
       , QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
@@ -370,7 +333,6 @@ void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
    qreal size = IntervalWidth(interval, requestLimit);
    qreal upper = timestamp + IntervalWidth(interval) / 2;
 
-   ui_->customPlot->rescaleAxes();
    ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
    rescaleCandlesYAxis();
    ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[title_->text().toStdString()]));
@@ -585,7 +547,15 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 
 void ChartWidget::rescaleCandlesYAxis()
 {
+   auto old = ui_->customPlot->yAxis2->range();
    candlesticksChart_->rescaleValueAxis(false, true);
+   auto range = ui_->customPlot->yAxis2->range();
+   const double margin = 0.15;
+   if (old != range) {
+      range.lower -= range.size() * margin;
+      range.upper += range.size() * margin;
+      ui_->customPlot->yAxis2->setRange(range);
+   }
 }
 
 void ChartWidget::rescaleVolumesYAxis() const

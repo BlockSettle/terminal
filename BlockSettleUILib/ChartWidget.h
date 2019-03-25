@@ -107,12 +107,6 @@ private:
 
 	bool autoScaling{ true };
 
-	qreal maxPrice;
-	qreal minPrice;
-
-	qreal newMaxPrice;
-	qreal newMinPrice;
-
 	qreal currentMinPrice{ 0 };
 	qreal currentMaxPrice{ 0 };
 
