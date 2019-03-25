@@ -19,6 +19,7 @@ enum CLIRequestType
    GetRequestsStatType = 14;
    GetPendingSettlementsInfo = 15;
    CreateCelerUserType = 16;
+   SetInitialPMPriceType = 17;
 }
 
 enum ArmoryConnectionState
@@ -181,4 +182,17 @@ message CreateCelerUserResponse
    required bool     create_user_result = 1;
    required string   user_email = 2;
    optional string   error_message = 3;
+}
+
+message SetInitialPMPriceRequest
+{
+   required string product       = 1;
+   required double bid_price     = 2;
+   required double offer_price   = 3;
+}
+
+message SetInitialPMPriceResponse
+{
+   required string   product  = 1;
+   required bool     result   = 2;
 }
