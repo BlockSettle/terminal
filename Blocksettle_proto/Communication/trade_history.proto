@@ -16,6 +16,7 @@ enum TradeHistoryRequestType
    LoadBuySellTradePricesOnProductRequestType   = 2;
    LoadSnapshotRequestType                      = 3;
    LoadPMProductsListRequestType                = 4;
+   LoadInitialPMPriceRequestType                = 5;
 }
 
 enum TradeHistoryResponseType
@@ -29,6 +30,8 @@ enum TradeHistoryResponseType
    // updates from TH server side
    TradeHistoryUpdateType                       = 5;
    TradeHistoryNewCCProductUpdateType           = 6;
+
+   LoadInitialPMPriceResponseType               = 7;
 }
 
 message TradeHistoryRequest
@@ -133,4 +136,17 @@ message TradeHistoryServerUpdate
 message TradeHistoryNewCCProductUpdate
 {
    string                  product = 1;
+}
+
+message LoadInitialPMPriceRequest
+{
+   string                  product = 1;
+}
+
+message LoadInitialPMPriceResponse
+{
+   string product       = 1;
+   bool   price_set     = 2;
+   double bid_price     = 3;
+   double offer_price   = 4;
 }
