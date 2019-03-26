@@ -49,11 +49,11 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    Qt5::Core
    Qt5::Widgets
    Qt5::Gui
-   Qt5::DBus
    Qt5::Network
    Qt5::PrintSupport
    Qt5::Core
    Qt5::Svg
+   Qt5::DBus
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
    )
