@@ -37,52 +37,56 @@ public:
               , const std::shared_ptr<spdlog::logger>&);
 
 protected slots:
-	void OnDataReceived(const std::string& data);
-	void OnDateRangeChanged(int id);
-	void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
-	void OnInstrumentChanged(const QString &text);
-	void OnPlotMouseMove(QMouseEvent* event);
+   void OnDataReceived(const std::string& data);
+   void OnDateRangeChanged(int id);
+   void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
+   void OnInstrumentChanged(const QString &text);
+   void OnPlotMouseMove(QMouseEvent* event);
    void rescaleCandlesYAxis();
    void rescaleVolumesYAxis() const;
    void rescalePlot();
-	void OnMousePressed(QMouseEvent* event);
-	void OnMouseReleased(QMouseEvent* event);
+   void OnMousePressed(QMouseEvent* event);
+   void OnMouseReleased(QMouseEvent* event);
+   void OnAutoScaleBtnClick();
+   void OnResetBtnClick();
+   bool isBeyondUpperLimit(QCPRange newRange, int interval);
+   bool isBeyondLowerLimit(QCPRange newRange, int interval);
+   void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
 
 protected:
-	void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
-	void UpdateChart(const int& interval) const;
-	void InitializeCustomPlot();
-	qreal IntervalWidth(int interval = -1, int count = 1) const;
-    static int FractionSizeForProduct(TradeHistoryTradeType type);
-	void ProcessProductsListResponse(const std::string& data);
-	void ProcessOhlcHistoryResponse(const std::string& data);
+   void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
+   void UpdateChart(const int& interval) const;
+   void InitializeCustomPlot();
+   qreal IntervalWidth(int interval = -1, int count = 1) const;
+   static int FractionSizeForProduct(TradeHistoryTradeType type);
+   void ProcessProductsListResponse(const std::string& data);
+   void ProcessOhlcHistoryResponse(const std::string& data);
 
-	void setAutoScaleBtnColor() const;
+   void setAutoScaleBtnColor() const;
 
-	void AddNewCandle();
-	void ModifyCandle();
-	void UpdatePlot(const int& interval, const qint64& timestamp);
+   void AddNewCandle();
+   void ModifyCandle();
+   void UpdatePlot(const int& interval, const qint64& timestamp);
 
-	void timerEvent(QTimerEvent* event);
-	std::chrono::seconds getTimerInterval() const;
+   void timerEvent(QTimerEvent* event);
+   std::chrono::seconds getTimerInterval() const;
+   bool needLoadNewData(const QCPRange& range, QSharedPointer<QCPFinancialDataContainer> data) const;
 
-   std::pair<qint64, qint64> GetPlotRange() const;
-
-	void LoadAdditionalPoints(const QCPRange& range);
+   void LoadAdditionalPoints(const QCPRange& range);
 
    void pickTicketDateFormat(const QCPRange& range) const;
 
 private:
-	std::shared_ptr<ApplicationSettings>			appSettings_;
-	std::shared_ptr<MarketDataProvider>				mdProvider_;
-	std::shared_ptr<MdhsClient>						mdhsClient_;
-	std::shared_ptr<spdlog::logger>					logger_;
+   std::shared_ptr<ApplicationSettings>			appSettings_;
+   std::shared_ptr<MarketDataProvider>				mdProvider_;
+   std::shared_ptr<MdhsClient>						mdhsClient_;
+   std::shared_ptr<spdlog::logger>					logger_;
 
    std::map<std::string, TradeHistoryTradeType> productTypesMapper;
 
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker{ new QCPAxisTickerDateTime };
-    
-	const int loadDistance{ 15 };
+
+   const int loadDistance{ 15 };
 
    constexpr static int requestLimit{ 100 };
    constexpr static int candleViewLimit{ 30 };

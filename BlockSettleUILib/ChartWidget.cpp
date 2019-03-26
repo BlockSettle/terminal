@@ -31,25 +31,9 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , isDraggingYAxis_(false) {
    ui_->setupUi(this);
    setAutoScaleBtnColor();
-   connect(ui_->autoScaleBtn, &QPushButton::clicked, [this]() {
-	   if (autoScaling_ = !autoScaling_)
-	   {
-		   rescalePlot();
-	   }
-	   setAutoScaleBtnColor();
-   });
+   connect(ui_->autoScaleBtn, &QPushButton::clicked, this, &ChartWidget::OnAutoScaleBtnClick);
 
-   connect(ui_->resetBtn, &QPushButton::clicked, [this]() {
-      if (candlesticksChart_->data()->size()) {
-         auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + IntervalWidth(dateRange_.checkedId()) / 1000 / 2;
-         volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(new_upper - IntervalWidth(dateRange_.checkedId(), requestLimit) / 1000, new_upper);
-      }
-      if (!autoScaling_) {
-         autoScaling_ = true;
-         rescalePlot();
-         setAutoScaleBtnColor();
-      }
-   });
+   connect(ui_->resetBtn, &QPushButton::clicked, this, &ChartWidget::OnResetBtnClick);
    // setting up date range radio button group
    dateRange_.addButton(ui_->btn1h, Interval::OneHour);
    dateRange_.addButton(ui_->btn6h, Interval::SixHours);
@@ -114,34 +98,30 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
    {
       for (const auto& field : mdFields)
       {
-		 if (field.type == bs::network::MDField::PriceLast)
-		 {
-			 if (field.value == lastClose_)
-				 return;
-			 else
-				 lastClose_ = field.value;
+         if (field.type == bs::network::MDField::PriceLast)
+         {
+            if (field.value == lastClose_)
+               return;
+            else
+               lastClose_ = field.value;
 
-			 if (lastClose_ > lastHigh_)
-				 lastHigh_ = lastClose_;
+            if (lastClose_ > lastHigh_)
+               lastHigh_ = lastClose_;
 
-			 if (lastClose_ < lastLow_)
-				 lastLow_ = lastClose_;
-		 }
+            if (lastClose_ < lastLow_)
+               lastLow_ = lastClose_;
+         }
 
-		 if (field.type == bs::network::MDField::MDTimestamp)
-		 {
-			 currentTimestamp_ = field.value;
-			 timerId_ = startTimer(getTimerInterval());
-		 }
+         if (field.type == bs::network::MDField::MDTimestamp)
+         {
+            currentTimestamp_ = field.value;
+            timerId_ = startTimer(getTimerInterval());
+         }
       }
    }
 
    ModifyCandle();
 
-   //if (cboModel_->findItems(security).isEmpty())
-   //{
-   //   cboModel_->appendRow(new QStandardItem(security));
-   //}
 }
 
 void ChartWidget::UpdateChart(const int& interval) const
@@ -250,7 +230,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    qreal maxTimestamp = -1.0;
 
    for (auto it : response.candles()) {
-      
+
    }
 
    for (int i = 0; i < response.candles_size(); i++)
@@ -266,7 +246,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
          }
       }
       lastCandle_ = candle;
-      
+
 
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
       qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
@@ -285,9 +265,10 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 
    if (firstPortion) {
-	   firstTimestampInDb_ = response.first_stamp_in_db() / 1000;
-		UpdatePlot(interval, maxTimestamp);
-   } else {
+      firstTimestampInDb_ = response.first_stamp_in_db() / 1000;
+      UpdatePlot(interval, maxTimestamp);
+   }
+   else {
       LoadAdditionalPoints(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
       rescalePlot();
       ui_->customPlot->replot();
@@ -296,12 +277,9 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 void ChartWidget::setAutoScaleBtnColor() const
 {
-	if (autoScaling_) {
-		ui_->autoScaleBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(36,124,172)"));
-	}
-	else {
-		ui_->autoScaleBtn->setStyleSheet(QStringLiteral("background-color: transparent; border: none; color: rgb(255, 255, 255)"));
-	}
+   QString color = QStringLiteral("background-color: transparent; border: none; color: %1").
+   arg(autoScaling_ ? QStringLiteral("rgb(36,124,172)") : QStringLiteral("rgb(255, 255, 255)"));
+   ui_->autoScaleBtn->setStyleSheet(color);
 }
 
 void ChartWidget::AddNewCandle()
@@ -380,33 +358,34 @@ std::chrono::seconds ChartWidget::getTimerInterval() const
    return timerInterval;
 }
 
-std::pair<qint64, qint64> ChartWidget::GetPlotRange() const
+bool ChartWidget::needLoadNewData(const QCPRange& range, const QSharedPointer<QCPFinancialDataContainer> data) const
 {
-	return { volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower,
-			 volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper };
+   return data->size() &&
+      (range.lower - data->constBegin()->key < IntervalWidth(dateRange_.checkedId()) / 1000 * loadDistance)
+      && firstTimestampInDb_ + IntervalWidth(OneHour) < data->constBegin()->key;
 }
 
-void ChartWidget::LoadAdditionalPoints(const QCPRange& range) 
+void ChartWidget::LoadAdditionalPoints(const QCPRange& range)
 {
-	const auto data = candlesticksChart_->data();
-	if (data->size() && (range.lower - data->constBegin()->key < IntervalWidth(dateRange_.checkedId()) / 1000 * loadDistance) && firstTimestampInDb_ + IntervalWidth(OneHour) < data->constBegin()->key) {
-		if (qFuzzyCompare(prevRequestStamp, data->constBegin()->key)) {
+   const auto data = candlesticksChart_->data();
+   if (needLoadNewData(range, data)) {
+      if (qFuzzyCompare(prevRequestStamp, data->constBegin()->key)) {
          return;
-		}
-	   OhlcRequest ohlcRequest;
-		auto product = ui_->cboInstruments->currentText();
-		ohlcRequest.set_product(product.toStdString());
-		ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
-		ohlcRequest.set_count(requestLimit);
-		ohlcRequest.set_lesser_then(data->constBegin()->key * 1000);
+      }
+      OhlcRequest ohlcRequest;
+      auto product = ui_->cboInstruments->currentText();
+      ohlcRequest.set_product(product.toStdString());
+      ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
+      ohlcRequest.set_count(requestLimit);
+      ohlcRequest.set_lesser_then(data->constBegin()->key * 1000);
 
       prevRequestStamp = data->constBegin()->key;
 
-		MarketDataHistoryRequest request;
-		request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
-		request.set_request(ohlcRequest.SerializeAsString());
-		mdhsClient_->SendRequest(request);
-	}
+      MarketDataHistoryRequest request;
+      request.set_request_type(MarketDataHistoryMessageType::OhlcHistoryType);
+      request.set_request(ohlcRequest.SerializeAsString());
+      mdhsClient_->SendRequest(request);
+   }
 }
 
 void ChartWidget::pickTicketDateFormat(const QCPRange& range) const
@@ -478,21 +457,20 @@ int ChartWidget::FractionSizeForProduct(TradeHistoryTradeType type)
 
 // Handles changes of date range.
 void ChartWidget::OnDateRangeChanged(int interval) {
-	if (lastInterval_ != interval)
-	{
-		lastInterval_ = interval;
-		qDebug() << "clicked" << interval;
-		UpdateChart(interval);
-	}
+   if (lastInterval_ != interval)
+   {
+      lastInterval_ = interval;
+      UpdateChart(interval);
+   }
 }
 
 void ChartWidget::OnInstrumentChanged(const QString &text) {
    if (title_ != nullptr)
    {
-	   if (text != title_->text())
-	   {
-		   UpdateChart(dateRange_.checkedId());
-	   }
+      if (text != title_->text())
+      {
+         UpdateChart(dateRange_.checkedId());
+      }
    }
 }
 
@@ -523,7 +501,7 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
    } else 
    {
       info_->setText({});
-	  ui_->customPlot->replot();
+      ui_->customPlot->replot();
    }
 
    if (isDraggingYAxis_)
@@ -537,23 +515,23 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       lastDragCoord_.setY(currentYPos);
       double tempCoeff = 28.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
       upper_bound -= diff / tempCoeff * directionCoeff;
-      lower_bound += diff / tempCoeff *directionCoeff;
+      lower_bound += diff / tempCoeff * directionCoeff;
       rightAxis->setRange(lower_bound, upper_bound);
       ui_->customPlot->replot();
    }
    if (isDraggingXAxis_) {
-	   auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
-	   auto currentXPos = event->pos().x();
-	   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
-	   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
-	   auto diff = upper_bound - lower_bound;
-	   auto directionCoeff = (currentXPos - lastDragCoord_.x() > 0) ? -1 : 1;
-	   double scalingCoeff = qAbs(currentXPos - startDragCoordX_) / ui_->customPlot->size().width();
-	   lastDragCoord_.setX(currentXPos);
-	   double tempCoeff = 10.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
-	   lower_bound += diff / tempCoeff * /*scalingCoeff * */ directionCoeff;
-	   bottomAxis->setRange(lower_bound, upper_bound);
-	   ui_->customPlot->replot();
+      auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
+      auto currentXPos = event->pos().x();
+      auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+      auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+      auto diff = upper_bound - lower_bound;
+      auto directionCoeff = (currentXPos - lastDragCoord_.x() > 0) ? -1 : 1;
+      double scalingCoeff = qAbs(currentXPos - startDragCoordX_) / ui_->customPlot->size().width();
+      lastDragCoord_.setX(currentXPos);
+      double tempCoeff = 10.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
+      lower_bound += diff / tempCoeff * /*scalingCoeff * */ directionCoeff;
+      bottomAxis->setRange(lower_bound, upper_bound);
+      ui_->customPlot->replot();
    }
 }
 
@@ -569,7 +547,7 @@ void ChartWidget::rescaleCandlesYAxis()
       if (!QCPRange::validRange(newRange)) // likely due to range being zero
       {
          double center = (newRange.lower + newRange.upper)*0.5; // upper and lower should be equal anyway, but just to make sure, incase validRange returned false for other reason
-         newRange.lower = center - candlesticksChart_->valueAxis()->range().size() * margin / 2.0 ;
+         newRange.lower = center - candlesticksChart_->valueAxis()->range().size() * margin / 2.0;
          newRange.upper = center + candlesticksChart_->valueAxis()->range().size() * margin / 2.0;
       } else {
          auto old = candlesticksChart_->valueAxis()->range();
@@ -610,38 +588,93 @@ void ChartWidget::rescalePlot()
 
 void ChartWidget::OnMousePressed(QMouseEvent* event)
 {
-	auto select = ui_->customPlot->yAxis2->selectTest(event->pos(), false);
-	isDraggingYAxis_ = select != -1.0;
-	if (isDraggingYAxis_) {
-		if (autoScaling_) {
-			ui_->autoScaleBtn->animateClick();
-		}
+   auto select = ui_->customPlot->yAxis2->selectTest(event->pos(), false);
+   isDraggingYAxis_ = select != -1.0;
+   if (isDraggingYAxis_) {
+      if (autoScaling_) {
+         ui_->autoScaleBtn->animateClick();
+      }
       ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
-	}
+   }
 
-	auto selectXPoint = volumeAxisRect_->axis(QCPAxis::atBottom)->selectTest(event->pos(), false);
-	isDraggingXAxis_ = selectXPoint != -1.0;
-	if (isDraggingXAxis_) {
-		ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
-		volumeAxisRect_->axis(QCPAxis::atBottom)->axisRect()->setRangeDrag(volumeAxisRect_->axis(QCPAxis::atBottom)->orientation());
-		startDragCoordX_ = event->pos().x();
-	}
+   auto selectXPoint = volumeAxisRect_->axis(QCPAxis::atBottom)->selectTest(event->pos(), false);
+   isDraggingXAxis_ = selectXPoint != -1.0;
+   if (isDraggingXAxis_) {
+      ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
+      volumeAxisRect_->axis(QCPAxis::atBottom)->axisRect()->setRangeDrag(volumeAxisRect_->axis(QCPAxis::atBottom)->orientation());
+      startDragCoordX_ = event->pos().x();
+   }
 
    if (isDraggingXAxis_ || isDraggingYAxis_) {
       lastDragCoord_ = event->pos();
    }
 
-	if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
-		isDraggingMainPlot_ = true;
-	}
+   if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
+      isDraggingMainPlot_ = true;
+   }
 }
 
 void ChartWidget::OnMouseReleased(QMouseEvent* event)
 {
-	isDraggingYAxis_ = false;
-	isDraggingXAxis_ = false;
-	isDraggingMainPlot_ = false;
-	ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
+   isDraggingYAxis_ = false;
+   isDraggingXAxis_ = false;
+   isDraggingMainPlot_ = false;
+   ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
+}
+
+void ChartWidget::OnAutoScaleBtnClick()
+{
+   if (autoScaling_ = !autoScaling_)
+   {
+      rescalePlot();
+   }
+   setAutoScaleBtnColor();
+}
+
+void ChartWidget::OnResetBtnClick()
+{
+   if (candlesticksChart_->data()->size()) {
+      auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + IntervalWidth(dateRange_.checkedId()) / 1000 / 2;
+      volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(new_upper - IntervalWidth(dateRange_.checkedId(), requestLimit) / 1000, new_upper);
+   }
+   if (!autoScaling_) {
+      autoScaling_ = true;
+      rescalePlot();
+      setAutoScaleBtnColor();
+   }
+}
+
+bool ChartWidget::isBeyondUpperLimit(QCPRange newRange, int interval)
+{
+   return (newRange.size() > IntervalWidth(interval, candleCountOnScreenLimit) / 1000) && !isDraggingMainPlot_;
+}
+
+bool ChartWidget::isBeyondLowerLimit(QCPRange newRange, int interval)
+{
+   return newRange.size() < IntervalWidth(interval, candleViewLimit) / 1000;
+}
+
+void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
+{
+   auto interval = dateRange_.checkedId() == -1 ? 0 : dateRange_.checkedId();
+
+   if (isBeyondUpperLimit(newRange, interval)) {
+      volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(oneRange.upper - IntervalWidth(interval, candleCountOnScreenLimit) / 1000, oneRange.upper);
+      ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
+   }
+   else {
+      if (isBeyondLowerLimit(newRange, interval)) {
+         volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(oneRange.upper - IntervalWidth(interval, candleViewLimit) / 1000 - 1.0, oneRange.upper);
+         ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
+      }
+      else {
+         ui_->customPlot->xAxis->setRange(newRange);
+      }
+   }
+
+   LoadAdditionalPoints(newRange);
+   pickTicketDateFormat(newRange);
+   rescalePlot();
 }
 
 void ChartWidget::InitializeCustomPlot()
@@ -728,27 +761,7 @@ void ChartWidget::InitializeCustomPlot()
    connect(volumeAxisRect_->axis(QCPAxis::atBottom),
       qOverload<const QCPRange&, const QCPRange&>(&QCPAxis::rangeChanged),
       this,
-      [this](QCPRange newOne, QCPRange old) {
-      auto interval = dateRange_.checkedId() == -1 ? 0 : dateRange_.checkedId();
-
-
-      if ((newOne.size() > IntervalWidth(interval, candleCountOnScreenLimit) / 1000) && !isDraggingMainPlot_) {
-         volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(old.upper - IntervalWidth(interval, candleCountOnScreenLimit) / 1000, old.upper);
-         ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
-      } else {
-         if (newOne.size() < IntervalWidth(interval, candleViewLimit) / 1000) {
-            volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(old.upper - IntervalWidth(interval, candleViewLimit) / 1000 - 1.0, old.upper);
-            ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
-         } else {
-            ui_->customPlot->xAxis->setRange(newOne);
-         }
-      }
-
-      LoadAdditionalPoints(newOne);
-      pickTicketDateFormat(newOne);
-      rescalePlot();
-   });
-
+      &ChartWidget::OnVolumeAxisRangeChanged);
 
    // configure axes of both main and bottom axis rect:
    dateTimeTicker->setDateTimeSpec(Qt::UTC);
