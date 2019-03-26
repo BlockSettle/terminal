@@ -93,14 +93,7 @@ bool ZmqDataConnection::openConnection(const std::string& host
       return false;
    }
 
-   int result = zmq_connect(tempDataSocket.get(), endpoint.c_str());
-   if (result != 0) {
-      if (logger_) {
-         logger_->error("[{}] failed to connect socket to {}", __func__
-            , endpoint);
-      }
-      return false;
-   }
+   int result = 0;
 
    // get socket id
    result = zmq_getsockopt(tempDataSocket.get(), ZMQ_IDENTITY, buf, &buf_size);
@@ -171,6 +164,15 @@ bool ZmqDataConnection::openConnection(const std::string& host
       }
 
       monSocket_ = std::move(tempMonSocket);
+   }
+
+   result = zmq_connect(tempDataSocket.get(), endpoint.c_str());
+   if (result != 0) {
+      if (logger_) {
+         logger_->error("[{}] failed to connect socket to {}", __func__
+            , endpoint);
+      }
+      return false;
    }
 
    // ok, move temp data to members
@@ -302,6 +304,9 @@ void ZmqDataConnection::listenFunction()
       if (monSocket_ && (poll_items[ZmqDataConnection::MonitorSocketIndex].revents & ZMQ_POLLIN)) {
          switch (bs::network::get_monitor_event(monSocket_.get())) {
          case ZMQ_EVENT_CONNECTED:
+         // NOTE: for ZMQ based connections this event might better suited than ZMQ_EVENT_CONNECTED
+         // but they always came in pairs
+         //case ZMQ_EVENT_HANDSHAKE_SUCCEEDED:
             if (!isConnected_) {
                notifyOnConnected();
                isConnected_ = true;
@@ -313,6 +318,8 @@ void ZmqDataConnection::listenFunction()
                notifyOnDisconnected();
                isConnected_ = false;
             }
+            break;
+         default:
             break;
          }
       }
