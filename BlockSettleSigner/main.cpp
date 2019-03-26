@@ -299,15 +299,13 @@ static int QMLApp(int argc, char **argv)
 
    try {
       HeadlessAppObj appObj(logger, settings);
-      SignerAdapter adapter(logger, &appObj);
       QObject::connect(&appObj, &HeadlessAppObj::finished, &app
          , &QCoreApplication::quit);
       QTimer::singleShot(0, &appObj, &HeadlessAppObj::Start);
 
+      SignerAdapter adapter(logger, settings->netType());
       QQmlApplicationEngine engine;
-      QMLAppObj qmlAppObj(&adapter, logger, settings, engine.rootContext());
-      QObject::connect(&qmlAppObj, &QMLAppObj::loadingComplete, &splashScreen
-         , &QSplashScreen::close);
+      QMLAppObj qmlAppObj(&adapter, logger, settings, &splashScreen, engine.rootContext());
       QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
       engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));

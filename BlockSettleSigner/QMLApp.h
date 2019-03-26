@@ -21,6 +21,7 @@ class OfflineProcessor;
 class QmlWalletsViewModel;
 class QQmlContext;
 class QMLStatusUpdater;
+class QSplashScreen;
 class QSystemTrayIcon;
 class SignerAdapter;
 class SignerSettings;
@@ -35,13 +36,12 @@ class QMLAppObj : public QObject
 
 public:
    QMLAppObj(SignerAdapter *, const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<SignerSettings> &, QQmlContext *);
+      , const std::shared_ptr<SignerSettings> &, QSplashScreen *, QQmlContext *);
 
    void Start();
    void SetRootObject(QObject *);
 
 signals:
-   void loadingComplete();
    void cancelSignTx(const QString &txId);
 
 private slots:
@@ -71,7 +71,8 @@ private:
    SignerAdapter  *  adapter_;
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<SignerSettings>  settings_;
-   QQmlContext                *     ctxt_;
+   QSplashScreen              *     splashScreen_ = nullptr;
+   QQmlContext                *     ctxt_ = nullptr;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;

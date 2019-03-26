@@ -15,10 +15,12 @@
 #include "InprocSigner.h"
 #include "OfflineProcessor.h"
 #include "SignerAdapter.h"
+#include "SignerAdapterListener.h"
 #include "SignerSettings.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqSecuredServerConnection.h"
 #include "ZMQHelperFunctions.h"
+#include "CelerStreamServerConnection.h"
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignerSettings> &params)
@@ -37,6 +39,16 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    }
 
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
+
+   const auto zmqContext = std::make_shared<ZmqContext>(logger);
+   const auto adapterConn = std::make_shared<CelerStreamServerConnection>(logger, zmqContext);
+   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger, walletsMgr_);
+
+   if (!adapterConn->BindConnection("127.0.0.1", "23457", adapterLsn_.get())) {
+      logger_->error("Failed to bind adapter connection");
+      throw std::runtime_error("failed to bind adapter socket");
+   }
+
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
 
@@ -114,6 +126,8 @@ void HeadlessAppObj::OnlineProcessing()
 
 void HeadlessAppObj::OfflineProcessing()
 {
+   std::cerr << "CLI interface is not supported now\n";
+#if 0
    const auto cbCLI = [this](const std::shared_ptr<bs::sync::Wallet> &wallet) -> SecureBinaryData {
       std::cout << "Enter password for wallet " << wallet->name();
       if (!wallet->description().empty()) {
@@ -136,6 +150,7 @@ void HeadlessAppObj::OfflineProcessing()
       offlineProc_->ProcessFiles(settings_->requestFiles());
       emit finished();
    }
+#endif   //0
 }
 
 void HeadlessAppObj::setConsoleEcho(bool enable) const
@@ -163,16 +178,6 @@ void HeadlessAppObj::setConsoleEcho(bool enable) const
    }
    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 #endif
-}
-
-std::shared_ptr<bs::sync::WalletsManager> HeadlessAppObj::getWalletsManager() const
-{
-   auto inprocSigner = std::make_shared<InprocSigner>(walletsMgr_, logger_
-      , settings_->getWalletsDir().toStdString(), settings_->netType());
-   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(logger_, nullptr, nullptr);
-   inprocSigner->Start();
-   syncMgr->setSignContainer(inprocSigner);
-   return syncMgr;
 }
 
 void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::function<void()> &cb)
@@ -205,62 +210,6 @@ void HeadlessAppObj::reconnect(const std::string &listenAddr, const std::string 
    settings_->setListenAddress(QString::fromStdString(listenAddr));  // won't be any QString trans-
    settings_->setPort(QString::fromStdString(port));  // formations once SignerSettings are split, too
    setOnline(true);
-}
-
-void HeadlessAppObj::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
-   , const SecureBinaryData &password, const std::function<void(const BinaryData &)> &cb)
-{
-   const auto wallet = walletsMgr_->getWalletById(txReq.walletId);
-   if (!wallet) {
-      cb({});
-      return;
-   }
-   const auto signedTX = wallet->signTXRequest(txReq, password);
-   cb(signedTX);
-}
-
-void HeadlessAppObj::createWatchingOnlyWallet(const std::string &walletId, const SecureBinaryData &password
-   , std::string path, const std::function<void(bool)> &cb)
-{
-   const auto hdWallet = walletsMgr_->getHDWalletById(walletId);
-   if (!hdWallet) {
-      cb(false);
-      return;
-   }
-   const auto woWallet = hdWallet->createWatchingOnly(password);
-   if (!woWallet) {
-      logger_->error("[{}] failed to create watching-only wallet for id {}", __func__, walletId);
-      cb(false);
-      return;
-   }
-#if !defined (Q_OS_WIN)
-   if (path.find('/') != 0) {
-      path = "/" + path;
-   }
-#endif
-   try {
-      woWallet->saveToDir(path);
-      cb(true);
-   } catch (const std::exception &e) {
-      logger_->error("[WalletsProxy] failed to save watching-only wallet to {}: {}", path, e.what());
-      cb(false);
-   }
-}
-
-void HeadlessAppObj::getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
-   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
-{
-   const auto hdWallet = walletsMgr_->getHDWalletById(walletId);
-   if (!hdWallet) {
-      cb(SecureBinaryData{}, SecureBinaryData("wallet not found"));
-      return;
-   }
-   const auto decrypted = hdWallet->getRootNode(password);
-   if (!decrypted) {
-      cb(SecureBinaryData{}, SecureBinaryData("failed to decrypt root node"));
-      return;
-   }
-   cb(decrypted->privateKey(), decrypted->chainCode());
 }
 
 void HeadlessAppObj::setLimits(SignContainer::Limits limits)

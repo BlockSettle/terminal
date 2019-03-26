@@ -21,6 +21,7 @@ namespace bs {
 }
 class HeadlessContainerListener;
 class OfflineProcessor;
+class SignerAdapterListener;
 class SignerSettings;
 class ZmqSecuredServerConnection;
 
@@ -44,16 +45,9 @@ public:
       , const std::function<void(const std::string &)> &cbAsAct
       , const std::function<void(const std::string &)> &cbAsDeact);
 
-   std::shared_ptr<bs::sync::WalletsManager> getWalletsManager() const;
    void reloadWallets(const std::string &, const std::function<void()> &);
    void reconnect(const std::string &listenAddr, const std::string &port);
    void setOnline(bool);
-   void signTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
-      , const std::function<void(const BinaryData &)> &);
-   void createWatchingOnlyWallet(const std::string &walletId, const SecureBinaryData &password
-      , std::string path, const std::function<void(bool result)> &);
-   void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
-      , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
    void setLimits(SignContainer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
 
@@ -75,6 +69,7 @@ private:
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    SecureBinaryData                             zmqPubKey_;
    SecureBinaryData                             zmqPrvKey_;
+   std::shared_ptr<SignerAdapterListener>       adapterLsn_;
 
    std::function<void(bool)>   cbReady_ = nullptr;
 };
