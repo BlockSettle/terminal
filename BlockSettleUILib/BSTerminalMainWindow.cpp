@@ -1535,7 +1535,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                "New Key: %4")
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
-                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                                    .arg(server.armoryDBKey)
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
          box->setMinimumSize(600, 150);
