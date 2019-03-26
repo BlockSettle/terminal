@@ -5,7 +5,9 @@
 #include <QString>
 #include <QPixmap>
 
+QT_BEGIN_NAMESPACE
 class QPrinter;
+QT_END_NAMESPACE
 
 //
 // WalletBackupPdfWriter

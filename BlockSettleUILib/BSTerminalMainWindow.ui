@@ -159,6 +159,11 @@
         <string>DEALING</string>
        </attribute>
       </widget>
+      <widget class="ChartWidget" name="widgetChart">
+       <attribute name="title">
+        <string>CHARTS</string>
+       </attribute>
+      </widget>
       <widget class="WalletsWidget" name="widgetWallets">
        <attribute name="title">
         <string>WALLETS</string>
@@ -195,7 +200,7 @@
      <x>0</x>
      <y>0</y>
      <width>997</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -594,6 +599,12 @@
    <class>ExplorerWidget</class>
    <extends>QWidget</extends>
    <header>ExplorerWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ChartWidget</class>
+   <extends>QWidget</extends>
+   <header>ChartWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
