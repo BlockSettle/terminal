@@ -99,6 +99,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { celerPort,               SettingDef(QString()) },
       { mdServerHost,            SettingDef(QString()) },
       { mdServerPort,            SettingDef(QString()) },
+      { mdhsHost,                SettingDef(QString()) },
+      { mdhsPort,                SettingDef(QString()) },
       { chatServerHost,          SettingDef(QString()) },
       { chatServerPort,          SettingDef(QString()) },
       { chatServerPubKey,        SettingDef(QString(), QLatin1String("@:2IFYqVXa}+eRpKW9Q310j4cB%%nKe8$-v6bSOg")) },
@@ -382,12 +384,12 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 
 #ifndef NDEBUG
    if (parser.isSet(chatServerIPName)) {
-	   QString vcip = parser.value(chatServerIPName);
-	   set(chatServerHost, vcip);
+      QString vcip = parser.value(chatServerIPName);
+      set(chatServerHost, vcip);
    }
    if (parser.isSet(chatServerPortName)) {
-	   int vcp = parser.value(chatServerPortName).toInt();
-	   set(chatServerPort, vcp);
+      int vcp = parser.value(chatServerPortName).toInt();
+      set(chatServerPort, vcp);
    }
 #endif // NDEBUG
 
