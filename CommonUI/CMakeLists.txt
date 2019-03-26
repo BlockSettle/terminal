@@ -33,4 +33,5 @@ TARGET_LINK_LIBRARIES(${COMMON_UI_LIB_NAME}
    Qt5::Gui
    Qt5::Network
    Qt5::PrintSupport
+   Qt5::DBus
    )

@@ -12,7 +12,7 @@ class WebsocketsSettings(Configurator):
         self._version = '3.1.0'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
-        self._script_revision = '1'
+        self._script_revision = '2'
 
         self._ssl_settings = OpenSslSettings(settings)
 
@@ -34,27 +34,55 @@ class WebsocketsSettings(Configurator):
     def config(self):
         command = ['cmake',
                    os.path.join(self._project_settings.get_sources_dir(), self._package_name + '-' + self._version),
-                   '-DLWS_WITH_SHARED=OFF',
                    '-DLWS_WITHOUT_SERVER=OFF',
                    '-DLWS_WITHOUT_TESTAPPS=ON',
                    '-DLWS_WITHOUT_TEST_SERVER=ON',
                    '-DLWS_WITHOUT_TEST_PING=ON',
-                   '-DLWS_WITHOUT_TEST_CLIENT=ON',
-                   '-G',
-                   self._project_settings.get_cmake_generator()]
+                   '-DLWS_WITHOUT_TEST_CLIENT=ON']
+
+        # for static lib
+        if self._project_settings.on_windows() and self._project_settings.get_link_mode() != 'shared':
+            if self._project_settings.get_build_mode() == 'debug':
+                command.append('-DCMAKE_C_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+            else:
+                command.append('-DCMAKE_C_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+
+        if self._project_settings.on_linux():
+            command.append('-DLWS_WITH_STATIC=ON')
+            command.append('-DLWS_WITH_SHARED=ON')
+            
+        if self._project_settings.on_windows():
+            if self._project_settings.get_link_mode() == 'shared':
+                command.append('-DLWS_WITH_STATIC=OFF')
+                command.append('-DLWS_WITH_SHARED=ON')
+            else:
+                command.append('-DLWS_WITH_SHARED=OFF')
+                command.append('-DLWS_WITH_STATIC=ON')
+
+        command.append('-G')
+        command.append(self._project_settings.get_cmake_generator())
 
         env_vars = os.environ.copy()
         env_vars['OPENSSL_ROOT_DIR'] = self._ssl_settings.get_install_dir()
         env_vars['OPENSSL_INCLUDE_DIR'] = os.path.join(self._ssl_settings.get_install_dir(), 'include')
 
+        print(command)
         result = subprocess.call(command, env=env_vars)
         return result == 0
 
     def make_windows(self):
-        command = ['devenv',
+        project_name = 'websockets'
+        if self._project_settings.get_link_mode() == 'shared':
+            project_name = 'websockets_shared'
+
+        
+        command = ['msbuild',
                    self.get_solution_file(),
-                   '/build',
-                   self.get_win_build_configuration()]
+                   '/t:' + project_name,
+                   '/p:Configuration=' + self.get_win_build_configuration(),
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         print('Start building libwebsockets')
         print(' '.join(command))
@@ -72,14 +100,26 @@ class WebsocketsSettings(Configurator):
             return 'Debug'
 
     def install_win(self):
-        lib_dir = os.path.join(self.get_build_dir(), 'lib', self.get_win_build_configuration())
-        include_dir = os.path.join(self.get_build_dir(), 'include')
-
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
-        self.filter_copy(lib_dir, install_lib_dir, '.lib')
+        lib_dir = os.path.join(self.get_build_dir(), 'lib', self.get_win_build_configuration())
+        # get includes from unpacked dir because cmake have bug during copying includes to build dir
+        include_dir = os.path.join(self.get_unpacked_sources_dir(), 'include')
         self.filter_copy(include_dir, install_include_dir)
+        # set once more build dir to copy generated includes
+        include_dir = os.path.join(self.get_build_dir(), 'include')
+
+        # copy libs
+        if self._project_settings.get_link_mode() == 'shared':
+            output_dir = os.path.join(self.get_build_dir(), 'lib', self.get_win_build_configuration())
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.lib')
+            output_dir = os.path.join(self.get_build_dir(), 'bin', self.get_win_build_configuration())
+            self.filter_copy(output_dir, os.path.join(self.get_install_dir(), 'lib'), '.dll', False)
+        else:
+            self.filter_copy(lib_dir, install_lib_dir, '.lib')
+
+        self.filter_copy(include_dir, install_include_dir, None, False)
 
         return True
 
@@ -96,7 +136,10 @@ class WebsocketsSettings(Configurator):
         install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
         install_include_dir = os.path.join(self.get_install_dir(), 'include')
 
+        if self._project_settings.get_link_mode() == 'shared':
+            self.filter_copy(lib_dir, install_lib_dir, '.so')
         self.filter_copy(lib_dir, install_lib_dir, '.a')
+            
         self.filter_copy(include_dir, install_include_dir)
 
         return True

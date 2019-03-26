@@ -13,6 +13,7 @@ class LibBTC(Configurator):
         self.mpir = MPIRSettings(settings)
         self._version = 'd5a25cb138532167d1475a1270e53a917d1f2156'
         self._package_name = 'libbtc'
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/sergey-chernikov/' + self._package_name + '/archive/%s.zip' % self._version
 
@@ -20,7 +21,7 @@ class LibBTC(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_install_dir(self):
         return os.path.join(self._project_settings.get_common_build_dir(), 'libbtc')
@@ -33,26 +34,32 @@ class LibBTC(Configurator):
 
     def config(self):
         command = ['cmake',
-                   self.get_unpacked_sources_dir(),
-                   '-DGMP_INSTALL_DIR=' + self.mpir.get_install_dir(),
-                   '-G',
-                   self._project_settings.get_cmake_generator()]
+                self.get_unpacked_sources_dir()]
 
-        if self._project_settings.on_windows():
-            command.append('-DCMAKE_CXX_FLAGS_DEBUG=/MTd')
-            command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT')
+        # for static lib
+        if self._project_settings.on_windows() and self._project_settings.get_link_mode() != 'shared':
+            if self._project_settings.get_build_mode() == 'debug':
+                command.append('-DCMAKE_C_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+            else:
+                command.append('-DCMAKE_C_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE=/MT /O2 /Ob2 /D NDEBUG')
 
+        command.append('-DGMP_INSTALL_DIR=' + self.mpir.get_install_dir())
+        command.append('-G')
+        command.append(self._project_settings.get_cmake_generator())
+
+        print(command)
         result = subprocess.call(command)
 
         return result == 0
 
     def make_windows(self):
-        command = ['devenv',
+        command = ['msbuild',
                    self.get_solution_file(),
-                   '/build',
-                   self.get_win_build_configuration(),
-                   '/project',
-                   self._package_name]
+                   '/t:' + self._package_name,
+                   '/p:Configuration=' + self.get_win_build_configuration(),
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         print(' '.join(command))
 

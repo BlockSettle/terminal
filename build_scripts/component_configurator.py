@@ -4,6 +4,7 @@ import shutil
 import tarfile
 import zipfile
 import subprocess
+from pathlib import Path
 
 requests.packages.urllib3.disable_warnings()
 
@@ -21,7 +22,7 @@ class Configurator:
                 build_dir = self.get_build_dir()
                 self.remove_fs_object(build_dir)
 
-                os.makedirs(build_dir)
+                os.makedirs(build_dir, exist_ok=True)
 
                 os.chdir(build_dir)
 
@@ -190,14 +191,16 @@ class Configurator:
     def filter_copy(self, src, dst, file_extension=None, cleanupDst=True):
         if cleanupDst:
             self.remove_fs_object(dst)
-            os.makedirs(dst)
+        # Don't rise error if directory exist!
+        os.makedirs(dst, exist_ok=True)
 
         for name in os.listdir(src):
             src_name = os.path.join(src, name)
             dst_name = os.path.join(dst, name)
+            src_suffixes = Path(src_name).suffixes
 
             if os.path.isfile(src_name):
-                if not file_extension or src_name.endswith(file_extension):
+                if not file_extension or src_suffixes and src_suffixes[0].startswith(file_extension):
                     shutil.copy(src_name, dst_name)
             else:
                 self.filter_copy(src_name, dst_name, file_extension, cleanupDst)
