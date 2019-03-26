@@ -57,7 +57,8 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
 
    connect(adapter_, &SignerAdapter::customDialogRequest, this, [this](const QString &dialogName, const QVariant &data){
-      QMetaObject::invokeMethod(rootObj_, dialogName.toLatin1(), Q_ARG(QVariant, data));
+      QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
+                                , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
    });
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());

@@ -18,6 +18,7 @@ import "BsStyles"
 import "BsControls"
 import "BsDialogs"
 import "js/helper.js" as JsHelper
+import "js/qmlDialogs.js" as QmlDialogs
 
 Item {
     id: view
@@ -80,7 +81,7 @@ Item {
                             var dlgNew = Qt.createComponent("BsDialogs/WalletNewDialog.qml").createObject(mainWindow)
                             dlgNew.accepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.NewWallet) {
-                                    createNewWalletDialog()
+                                    QmlDialogs.createNewWalletDialog()
 //                                    // TODO rename signerSettings.testNet -> signerSettings.isTestNet
 //                                    var newSeed = qmlFactory.createSeed(signerSettings.testNet)
 
@@ -98,7 +99,7 @@ Item {
 //                                    dlgNewSeed.open()
                                 }
                                 else {
-                                    importWalletDialog()
+                                    QmlDialogs.importWalletDialog()
 //                                    var dlgImp = Qt.createComponent("BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
 //                                    dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
 //                                    dlgImp.open()
@@ -115,7 +116,7 @@ Item {
                         text: qsTr("Manage")
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
-                            manageEncryptionDialog(getCurrentWalletId())
+                            QmlDialogs.manageEncryptionDialog(getCurrentWalletId())
 //                            var dlg = Qt.createComponent("BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
 //                            dlg.walletInfo = getCurrentWalletInfo()
 //                            dlg.open()
@@ -128,7 +129,7 @@ Item {
                         text: qsTr("Export")
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
-                            backupWalletDialog(getCurrentWalletId())
+                            QmlDialogs.backupWalletDialog(getCurrentWalletId())
 //                            var dlg = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
 //                            dlg.walletInfo = getCurrentWalletInfo()
 //                            dlg.targetDir = signerSettings.dirDocuments
@@ -143,7 +144,7 @@ Item {
                         text: qsTr("Delete")
                         onClicked: {
                             var walletId = walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole)
-                            deleteWalletDialog(walletId)
+                            QmlDialogs.deleteWalletDialog(walletId)
 //                            var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
 //                            dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
 //                            dlg.rootName = walletsProxy.getRootWalletName(dlg.walletId)
