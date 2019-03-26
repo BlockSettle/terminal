@@ -559,14 +559,26 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 
 void ChartWidget::rescaleCandlesYAxis()
 {
-   auto old = ui_->customPlot->yAxis2->range();
-   candlesticksChart_->rescaleValueAxis(false, true);
-   auto range = ui_->customPlot->yAxis2->range();
-   const double margin = 0.15;
-   if (old != range) {
-      range.lower -= range.size() * margin;
-      range.upper += range.size() * margin;
-      ui_->customPlot->yAxis2->setRange(range);
+   bool foundRange = false;
+   auto keyRange = candlesticksChart_->keyAxis()->range();
+   keyRange.upper += IntervalWidth(dateRange_.checkedId()) / 1000 / 2;
+   keyRange.lower -= IntervalWidth(dateRange_.checkedId()) / 1000 / 2;
+   auto newRange = candlesticksChart_->getValueRange(foundRange, QCP::sdBoth, keyRange);
+   if (foundRange) {
+      const double margin = 0.15;
+      if (!QCPRange::validRange(newRange)) // likely due to range being zero
+      {
+         double center = (newRange.lower + newRange.upper)*0.5; // upper and lower should be equal anyway, but just to make sure, incase validRange returned false for other reason
+         newRange.lower = center - candlesticksChart_->valueAxis()->range().size() * margin / 2.0 ;
+         newRange.upper = center + candlesticksChart_->valueAxis()->range().size() * margin / 2.0;
+      } else {
+         auto old = candlesticksChart_->valueAxis()->range();
+         if (old != newRange) {
+            newRange.lower -= newRange.size() * margin;
+            newRange.upper += newRange.size() * margin;
+         }
+      }
+      candlesticksChart_->valueAxis()->setRange(newRange);
    }
 }
 
