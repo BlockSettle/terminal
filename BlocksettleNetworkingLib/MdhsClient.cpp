@@ -50,8 +50,10 @@ void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
       activeCommands_.erase(command);
    });
 
-   FastLock locker(lockCommands_);
-   activeCommands_.emplace(command);
+   {
+      FastLock locker(lockCommands_);
+      activeCommands_.emplace(command);
+   }
 
    if (!command->ExecuteRequest(
       appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
