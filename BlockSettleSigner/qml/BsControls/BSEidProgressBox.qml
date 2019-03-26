@@ -48,7 +48,7 @@ CustomTitleDialogWindow {
                 id: labelText_
                 text: centralText
                 lineHeight: 1.5
-                padding: 15
+                padding: 0
                 Layout.preferredWidth: root.width
                 horizontalAlignment: Text.AlignHCenter
                 color: BSStyle.dialogTitleWhiteColor
