@@ -21,13 +21,11 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , connection_(conn), logger_(logger), walletsMgr_(walletsMgr)
 {
    app_->setReadyCallback([this](bool result) {
-      signer::ReadyEvent evt;
-      evt.set_ready(result);
-      sendData(signer::HeadlessReadyType, evt.SerializeAsString());
-
+      ready_ = result;
       if (result) {
          setCallbacks();
       }
+      onReady();
    });
 }
 
@@ -42,6 +40,9 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    }
    bool rc = false;
    switch (packet.type()) {
+   case::signer::HeadlessReadyType:
+      rc = onReady();
+      break;
    case signer::SignTxRequestType:
       rc = onSignTxReq(packet.data(), packet.id());
       break;
@@ -65,6 +66,9 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
       break;
    case signer::PasswordReceivedType:
       rc = onPasswordReceived(packet.data());
+      break;
+   case signer::RequestCloseType:
+      rc = onRequestClose();
       break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
@@ -164,6 +168,16 @@ bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &d
    }
 
    return connection_->SendDataToAllClients(packet.SerializeAsString());
+}
+
+bool SignerAdapterListener::onReady(int cur, int total)
+{
+   signer::ReadyEvent evt;
+   evt.set_ready(ready_);
+   evt.set_cur_wallet(cur);
+   evt.set_total_wallets(total);
+   sendData(signer::HeadlessReadyType, evt.SerializeAsString());
+   return true;
 }
 
 bool SignerAdapterListener::onSignTxReq(const std::string &data, SignContainer::RequestId reqId)
@@ -390,5 +404,12 @@ bool SignerAdapterListener::onPasswordReceived(const std::string &data)
       return false;
    }
    app_->passwordReceived(request.wallet_id(), request.password(), request.cancelled_by_user());
+   return true;
+}
+
+bool SignerAdapterListener::onRequestClose()
+{
+   logger_->info("[SignerAdapterListener::{}] closing on interface request", __func__);
+   app_->close();
    return true;
 }

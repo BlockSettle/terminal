@@ -24,6 +24,7 @@ class SignerAdapter : public QObject
 
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &, NetworkType);
+   ~SignerAdapter() override;
 
    SignerAdapter(const SignerAdapter&) = delete;
    SignerAdapter& operator = (const SignerAdapter&) = delete;

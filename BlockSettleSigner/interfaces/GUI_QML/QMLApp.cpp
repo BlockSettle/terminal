@@ -112,6 +112,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
 void QMLAppObj::onReady()
 {
+   logger_->debug("[{}]", __func__);
    walletsMgr_ = adapter_->getWalletsManager();
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &QMLAppObj::onWalletsSynced);
 
@@ -123,7 +124,7 @@ void QMLAppObj::onReady()
 
 void QMLAppObj::onWalletsSynced()
 {
-   logger_->debug("[QMLAppObj::{}]", __func__);
+   logger_->debug("[{}]", __func__);
    if (splashScreen_) {
       splashScreen_->close();
       splashScreen_ = nullptr;

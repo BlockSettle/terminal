@@ -29,6 +29,8 @@ public:
       , const std::shared_ptr<bs::core::WalletsManager> &);
    ~SignerAdapterListener() noexcept override;
 
+   bool onReady(int cur = 0, int total = 0);
+
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnClientConnected(const std::string &clientId) override;
@@ -47,12 +49,14 @@ private:
    bool onGetDecryptedNode(const std::string &data, SignContainer::RequestId);
    bool onSetLimits(const std::string &data);
    bool onPasswordReceived(const std::string &data);
+   bool onRequestClose();
 
 private:
    HeadlessAppObj *  app_;
    std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
+   bool  ready_ = false;
 };
 
 #endif // SIGNER_ADAPTER_LISTENER_H

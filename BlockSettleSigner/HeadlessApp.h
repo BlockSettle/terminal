@@ -15,12 +15,9 @@ namespace bs {
    namespace core {
       class WalletsManager;
    }
-   namespace sync {
-      class WalletsManager;
-   }
 }
 class HeadlessContainerListener;
-class OfflineProcessor;
+class QProcess;
 class SignerAdapterListener;
 class SignerSettings;
 class ZmqSecuredServerConnection;
@@ -34,7 +31,7 @@ public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<SignerSettings> &);
 
-   void Start();
+   void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
    void setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
       , const std::function<void(const std::string &)> &cbPeerDisconn
@@ -50,28 +47,27 @@ public:
    void setOnline(bool);
    void setLimits(SignContainer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+   void close();
 
 signals:
-   void started();
    void finished();
 
 private:
-   void OnlineProcessing();
-   void OfflineProcessing();
+   void startInterface();
+   void onlineProcessing();
 
-   void setConsoleEcho(bool enable) const;
+private:
 
    std::shared_ptr<spdlog::logger>  logger_;
    const std::shared_ptr<SignerSettings>        settings_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
-   std::shared_ptr<OfflineProcessor>            offlineProc_;
    SecureBinaryData                             zmqPubKey_;
    SecureBinaryData                             zmqPrvKey_;
    std::shared_ptr<SignerAdapterListener>       adapterLsn_;
-
-   std::function<void(bool)>   cbReady_ = nullptr;
+   std::shared_ptr<QProcess>  guiProcess_;
+   std::function<void(bool)>  cbReady_ = nullptr;
 };
 
 #endif // __HEADLESS_APP_H__

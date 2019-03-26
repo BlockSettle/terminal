@@ -23,10 +23,11 @@ public:
 
    void OnConnected() override {
       logger_->debug("[SignerInterfaceListener] connected");
+      send(signer::HeadlessReadyType, "");
    }
 
    void OnDisconnected() override {
-      logger_->debug("[SignerInterfaceListener] connected");
+      logger_->debug("[SignerInterfaceListener] disconnected");
    }
 
    void OnError(DataConnectionError errorCode) override {
@@ -100,11 +101,11 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       logger_->error("[SignerInterfaceListener::{}] failed to parse packet", __func__);
       return;
    }
-   if (packet.data().empty()) {
-      logger_->error("[SignerInterfaceListener::{}] error processing request {}/{}"
+/*   if (packet.data().empty()) {
+      logger_->error("[SignerInterfaceListener::{}] error processing type {} id {}"
          , __func__, packet.type(), packet.id());
       return;
-   }
+   }*/
 
    switch (packet.type()) {
    case signer::HeadlessReadyType:
@@ -163,10 +164,11 @@ void SignerInterfaceListener::onReady(const std::string &data)
       return;
    }
    if (evt.ready()) {
-      emit parent_->ready();
+      QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
    }
    else {
-      logger_->info("[SignerInterfaceListener::{}] received 'non-ready' event", __func__);
+      logger_->info("[SignerInterfaceListener::{}] received 'non-ready' event {} of {}"
+         , __func__, evt.cur_wallet(), evt.total_wallets());
    }
 }
 
@@ -179,10 +181,10 @@ void SignerInterfaceListener::onPeerConnected(const std::string &data, bool conn
    }
    const auto ip = QString::fromStdString(evt.ip_address());
    if (connected) {
-      emit parent_->peerConnected(ip);
+      QMetaObject::invokeMethod(parent_, [this, ip] { emit parent_->peerConnected(ip); });
    }
    else {
-      emit parent_->peerDisconnected(ip);
+      QMetaObject::invokeMethod(parent_, [this, ip] { emit parent_->peerDisconnected(ip); });
    }
 }
 
@@ -194,7 +196,8 @@ void SignerInterfaceListener::onPasswordRequested(const std::string &data)
       return;
    }
    if (evt.auto_sign()) {
-      emit parent_->autoSignRequiresPwd(evt.wallet_id());
+      QMetaObject::invokeMethod(parent_, [this, evt] {
+         emit parent_->autoSignRequiresPwd(evt.wallet_id()); });
       return;
    }
    bs::core::wallet::TXSignRequest txReq;
@@ -215,7 +218,9 @@ void SignerInterfaceListener::onPasswordRequested(const std::string &data)
       txReq.change.index = evt.change().index();
       txReq.change.value = evt.change().value();
    }
-   emit parent_->requestPassword(txReq, QString::fromStdString(evt.prompt()));
+   QMetaObject::invokeMethod(parent_, [this, txReq, evt] {
+      emit parent_->requestPassword(txReq, QString::fromStdString(evt.prompt()));
+   });
 }
 
 void SignerInterfaceListener::onTxSigned(const std::string &data, SignContainer::RequestId reqId)
@@ -226,7 +231,9 @@ void SignerInterfaceListener::onTxSigned(const std::string &data, SignContainer:
       return;
    }
    if (!evt.tx_hash().empty()) {
-      emit parent_->cancelTxSign(evt.tx_hash());
+      QMetaObject::invokeMethod(parent_, [this, evt] {
+         emit parent_->cancelTxSign(evt.tx_hash());
+      });
       return;
    }
    const BinaryData tx(evt.tx());
@@ -245,7 +252,7 @@ void SignerInterfaceListener::onTxSigned(const std::string &data, SignContainer:
             , __func__, reqId);
       }
    }
-   emit parent_->txSigned(tx);
+   QMetaObject::invokeMethod(parent_, [this, tx] { emit parent_->txSigned(tx); });
 }
 
 void SignerInterfaceListener::onXbtSpent(const std::string &data)
@@ -255,7 +262,9 @@ void SignerInterfaceListener::onXbtSpent(const std::string &data)
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   emit parent_->xbtSpent(evt.value(), evt.auto_sign());
+   QMetaObject::invokeMethod(parent_, [this, evt] {
+      emit parent_->xbtSpent(evt.value(), evt.auto_sign());
+   });
 }
 
 void SignerInterfaceListener::onAutoSignActType(const std::string &data)
@@ -266,10 +275,10 @@ void SignerInterfaceListener::onAutoSignActType(const std::string &data)
       return;
    }
    if (evt.activated()) {
-      emit parent_->autoSignActivated(evt.wallet_id());
+      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignActivated(evt.wallet_id()); });
    }
    else {
-      emit parent_->autoSignDeactivated(evt.wallet_id());
+      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignDeactivated(evt.wallet_id()); });
    }
 }
 
@@ -525,6 +534,11 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, Netw
    }
 
    signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
+}
+
+SignerAdapter::~SignerAdapter()
+{
+   listener_->send(signer::RequestCloseType, "");
 }
 
 std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()

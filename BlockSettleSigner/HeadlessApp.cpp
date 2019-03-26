@@ -5,6 +5,9 @@
 #include <unistd.h>
 #endif
 #include <functional>
+#include <QCoreApplication>
+#include <QFile>
+#include <QProcess>
 #include <spdlog/spdlog.h>
 #include "SignerVersion.h"
 #include "ConnectionManager.h"
@@ -12,15 +15,13 @@
 #include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
-#include "InprocSigner.h"
-#include "OfflineProcessor.h"
-#include "SignerAdapter.h"
 #include "SignerAdapterListener.h"
 #include "SignerSettings.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqSecuredServerConnection.h"
 #include "ZMQHelperFunctions.h"
 #include "CelerStreamServerConnection.h"
+
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<SignerSettings> &params)
@@ -52,13 +53,16 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
 
-void HeadlessAppObj::Start()
+void HeadlessAppObj::start()
 {
+   startInterface();
+
    logger_->debug("[{}] loading {} wallets from dir <{}>", __func__
       , settings_->watchingOnly() ? "watching-only" : "full"
       , settings_->getWalletsDir().toStdString());
    const auto &cbProgress = [this](int cur, int total) {
       logger_->debug("Loading wallet {} of {}", cur, total);
+      adapterLsn_->onReady(cur, total);
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString()
       , settings_->watchingOnly(), cbProgress);
@@ -75,27 +79,32 @@ void HeadlessAppObj::Start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
-   if (settings_->offline()) {
-      if (settings_->watchingOnly()) {
-         logger_->critical("[{}] offline mode doesn't support watching-only wallets", __func__);
-         emit finished();
-         if (cbReady_) {
-            cbReady_(false);
-         }
-         return;
-      }
-      OfflineProcessing();
-   }
-   else {
-      OnlineProcessing();
-   }
+   onlineProcessing();
    if (cbReady_) {
       cbReady_(true);
    }
-   emit started();
 }
 
-void HeadlessAppObj::OnlineProcessing()
+void HeadlessAppObj::startInterface()
+{
+   QString guiPath = QCoreApplication::applicationDirPath()
+      + QLatin1String("/bs_signer_gui");
+#ifdef Q_OS_WIN
+   guiPath += QLatin1String(".exe");
+#endif
+   if (!QFile::exists(guiPath)) {
+      logger_->error("[HeadlessAppObj::{}] {} doesn't exist"
+         , __func__, guiPath.toStdString());
+      return;
+   }
+   QStringList args;
+   logger_->debug("[HeadlessAppObj::{}] process path: {} {}", __func__
+      , guiPath.toStdString(), args.join(QLatin1Char(' ')).toStdString());
+   guiProcess_ = std::make_shared<QProcess>();
+   guiProcess_->start(guiPath, args);
+}
+
+void HeadlessAppObj::onlineProcessing()
 {
    logger_->debug("Using command socket {}:{}, network {}"
       , settings_->listenAddress().toStdString()
@@ -124,10 +133,9 @@ void HeadlessAppObj::OnlineProcessing()
    }
 }
 
+#if 0
 void HeadlessAppObj::OfflineProcessing()
 {
-   std::cerr << "CLI interface is not supported now\n";
-#if 0
    const auto cbCLI = [this](const std::shared_ptr<bs::sync::Wallet> &wallet) -> SecureBinaryData {
       std::cout << "Enter password for wallet " << wallet->name();
       if (!wallet->description().empty()) {
@@ -150,7 +158,6 @@ void HeadlessAppObj::OfflineProcessing()
       offlineProc_->ProcessFiles(settings_->requestFiles());
       emit finished();
    }
-#endif   //0
 }
 
 void HeadlessAppObj::setConsoleEcho(bool enable) const
@@ -179,6 +186,7 @@ void HeadlessAppObj::setConsoleEcho(bool enable) const
    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 #endif
 }
+#endif   //0
 
 void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::function<void()> &cb)
 {
@@ -196,7 +204,7 @@ void HeadlessAppObj::setOnline(bool value)
    }
    logger_->info("[{}] changing online state to {}", __func__, value);
    if (value) {
-      OnlineProcessing();
+      onlineProcessing();
    }
    else {
       connection_.reset();
@@ -244,4 +252,9 @@ void HeadlessAppObj::setCallbacks(
    else {
       logger_->error("[{}] attempting to set callbacks on uninited listener", __func__);
    }
+}
+
+void HeadlessAppObj::close()
+{
+   QMetaObject::invokeMethod(this, [this] { emit finished(); });
 }
