@@ -12,6 +12,7 @@ class ProtobufSettings(Configurator):
         self._version = '3.6.1'
         self._package_name = 'protobuf-' + self._version
         self._package_name_url = 'protobuf-cpp-' + self._version
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/protocolbuffers/protobuf/releases/download/v' + \
             self._version + '/' + self._package_name_url + '.tar.gz'
@@ -20,7 +21,7 @@ class ProtobufSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url

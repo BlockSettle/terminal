@@ -9,6 +9,7 @@ class ZeroMQSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '4.3.1'
+        self._script_revision = '1'
 
         if settings.on_windows():
             self._package_name = 'libzmq-' + self._version
@@ -23,7 +24,7 @@ class ZeroMQSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url

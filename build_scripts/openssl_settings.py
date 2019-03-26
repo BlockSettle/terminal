@@ -14,6 +14,7 @@ class OpenSslSettings(Configurator):
         self._patch_ver = '1a'
         self._version = self._major_ver + '_' + self._minor_ver + '_' + self._patch_ver
         self._package_name = 'openssl-OpenSSL_' + self._version
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/openssl/openssl/archive/OpenSSL_' + self._version + '.tar.gz'
 
@@ -21,7 +22,7 @@ class OpenSslSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url

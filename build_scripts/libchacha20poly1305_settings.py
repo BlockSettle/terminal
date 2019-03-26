@@ -13,6 +13,7 @@ class LibChaCha20Poly1305Settings(Configurator):
         Configurator.__init__(self, settings)
         self._version = '2e8241cbcd607f4ed90e7fc932869daa7239d2a0'
         self._package_name = 'chacha20poly1305'
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/sergey-chernikov/chacha20poly1305/archive/' + self._version + '.zip'
 
@@ -20,7 +21,7 @@ class LibChaCha20Poly1305Settings(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url

@@ -11,6 +11,7 @@ class LibQREncode(Configurator):
         Configurator.__init__(self, settings)
         self._version = '13b159f9d9509b0c9f5ca0df7a144638337ddb15'
         self._package_name = 'libqrencode'
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/fukuchi/libqrencode/archive/' + self._version + '.zip'
 
@@ -18,7 +19,7 @@ class LibQREncode(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url

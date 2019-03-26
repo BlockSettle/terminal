@@ -13,6 +13,7 @@ class LibBTC(Configurator):
         self.mpir = MPIRSettings(settings)
         self._version = 'd5a25cb138532167d1475a1270e53a917d1f2156'
         self._package_name = 'libbtc'
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/sergey-chernikov/' + self._package_name + '/archive/%s.zip' % self._version
 
@@ -20,7 +21,7 @@ class LibBTC(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_install_dir(self):
         return os.path.join(self._project_settings.get_common_build_dir(), 'libbtc')

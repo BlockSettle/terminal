@@ -12,6 +12,7 @@ class BotanSettings(Configurator):
         Configurator.__init__(self, settings)
         self._version = '2.9.0'
         self._package_name = 'botan'
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/randombit/botan/archive/' + self._version + '.zip'
 
@@ -19,7 +20,7 @@ class BotanSettings(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url
