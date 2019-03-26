@@ -88,7 +88,7 @@ private:
    constexpr static int candleViewLimit{ 30 };
    constexpr static qint64 candleCountOnScreenLimit{ 1500 };
 
-   Blocksettle::Communication::MarketDataHistory::OhlcCandle lastNonEmptyCandle;
+   Blocksettle::Communication::MarketDataHistory::OhlcCandle lastCandle_;
 
    double prevRequestStamp{ 0.0 };
 

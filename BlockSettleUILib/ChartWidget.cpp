@@ -249,6 +249,10 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
    qreal maxTimestamp = -1.0;
 
+   for (auto it : response.candles()) {
+      
+   }
+
    for (int i = 0; i < response.candles_size(); i++)
    {
       auto candle = response.candles(i);
@@ -256,14 +260,14 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
       bool isLast = (i == 0);
 
-      if (!qFuzzyIsNull(candle.volume())) {
-         lastNonEmptyCandle = candle;
-      } else {
-         candle.set_open(lastNonEmptyCandle.open());
-         candle.set_close(lastNonEmptyCandle.close());
-         candle.set_high(lastNonEmptyCandle.high());
-         candle.set_low(lastNonEmptyCandle.low());
+      if (lastCandle_.timestamp() - candle.timestamp() != IntervalWidth(interval) && candlesticksChart_->data()->size()) {
+         for (int j = 0; j < (lastCandle_.timestamp() - candle.timestamp()) / IntervalWidth(interval) - 1; j++) {
+            AddDataPoint(lastCandle_.close(), lastCandle_.close(), lastCandle_.close(), lastCandle_.close(), lastCandle_.timestamp() - IntervalWidth(interval) * (j + 1), 0);
+         }
       }
+      lastCandle_ = candle;
+      
+
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
       qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
          , QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
