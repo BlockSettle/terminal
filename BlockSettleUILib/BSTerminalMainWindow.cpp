@@ -459,26 +459,6 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
    auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
    const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
-   SecureBinaryData signerPubKey;
-
-   if (runMode == SignContainer::OpMode::Remote) {
-      const auto pubKeyString = applicationSettings_->get<std::string>(ApplicationSettings::zmqRemoteSignerPubKey);
-      if (pubKeyString.empty()) {
-         BSMessageBox(BSMessageBox::messageBoxType::warning
-            , tr("Signer Remote Connection")
-            , tr("Remote signer public key is unavailable.")
-            , tr("Remote signer public key is unavailable."
-               " Transaction signing is not available."
-               " Please import the signer's public key (Settings -> Signer) "
-               "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
-            , this).exec();
-         return retPtr;
-      }
-
-      if (!bs::network::readZmqKeyString(QByteArray::fromStdString(pubKeyString), signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load remote signer key");
-      }
-   }
 
    if ((runMode == SignContainer::OpMode::Local)
       && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
@@ -492,22 +472,8 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       signerHost = QLatin1String("127.0.0.1");
    }
 
-   if (signerPubKey.isNull()) {
-      const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
-
-      if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
-         BSMessageBox(BSMessageBox::messageBoxType::warning
-            , tr("Signer Local Connection")
-            , tr("Could not load local signer key.")
-            , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
-            , this).exec();
-         return retPtr;
-      }
-   }
-
-   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey,
-      runMode, signerHost, connectionManager_);
+   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
+      , signerHost, connectionManager_);
    return retPtr;
 }
 
@@ -810,13 +776,13 @@ void BSTerminalMainWindow::connectArmory()
 {
    ArmorySettings currentArmorySettings = armoryServersProvider_->getArmorySettings();
    armoryServersProvider_->setConnectedArmorySettings(currentArmorySettings);
-   armory_->setupConnection(currentArmorySettings, [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
+   armory_->setupConnection(currentArmorySettings
+      , [this](const BinaryData& srvPubKey, const std::string& srvIPPort) {
       std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
       std::future<bool> futureObj = promiseObj->get_future();
       QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
-                                , Q_ARG(BinaryData, srvPubKey)
-                                , Q_ARG(std::string, srvIPPort)
-                                , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
+         , Q_ARG(BinaryData, srvPubKey), Q_ARG(std::string, srvIPPort)
+         , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
       bool result = futureObj.get();
 
       // stop armory connection loop if server key was rejected

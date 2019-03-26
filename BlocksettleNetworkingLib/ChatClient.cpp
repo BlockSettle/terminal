@@ -42,7 +42,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    qRegisterMetaType<std::shared_ptr<Chat::ChatRoomData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::ChatRoomData>>>();
 
-   chatDb_ = std::make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
+   chatDb_ = make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
    if (!chatDb_->loadKeys(pubKeys_)) {
       throw std::runtime_error("failed to load chat public keys");
    }
