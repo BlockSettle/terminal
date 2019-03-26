@@ -80,6 +80,7 @@ private:
    void InitPortfolioView();
    void InitWalletsView();
    void InitChatView();
+   void InitChartsView();
 
    void InitOTP();
 
