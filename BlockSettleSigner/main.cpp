@@ -202,18 +202,23 @@ static int HeadlessApp(int argc, char **argv)
    return 0;
 }
 
-#if defined (Q_OS_WIN)
+#ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
-#elif defined (Q_OS_MAC)
+#endif // USE_QWindowsIntegrationPlugin
+
+#ifdef USE_QCocoaIntegrationPlugin
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
-#elif defined (Q_OS_LINUX)
+#endif // USE_QCocoaIntegrationPlugin
+
+#ifdef USE_QXcbIntegrationPlugin
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
-#endif
+#endif // USE_QXcbIntegrationPlugin
 
+#ifdef STATIC_BUILD
 Q_IMPORT_PLUGIN(QICOPlugin)
 
 Q_IMPORT_PLUGIN(QtQuick2Plugin)
@@ -227,6 +232,7 @@ Q_IMPORT_PLUGIN(QtQuickLayoutsPlugin)
 Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
+#endif // STATIC_BUILD
 
 /*class SignerApplication : public QApplication
 {
@@ -340,7 +346,12 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
-   btc_ecc_start(); // Initialize libbtc.
+   // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
+   // Armory setting designed to allow the ArmoryDB server to not have to verify
+   // clients. Prevents us from having to import tons of keys into the server.
+   btc_ecc_start();
+   startupBIP151CTX();
+   startupBIP150CTX(4, true);
 
    if (isHeadlessMode(argc, argv)) {
       return HeadlessApp(argc, argv);

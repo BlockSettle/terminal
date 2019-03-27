@@ -21,19 +21,25 @@
 
 #include "btc/ecc.h"
 
-#if defined (Q_OS_WIN)
+#ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
-#elif defined (Q_OS_MAC)
+#endif // USE_QWindowsIntegrationPlugin
+
+#ifdef USE_QCocoaIntegrationPlugin
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
-#elif defined (Q_OS_LINUX)
+#endif // USE_QCocoaIntegrationPlugin
+
+#ifdef USE_QXcbIntegrationPlugin
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
-#endif
+#endif // USE_QXcbIntegrationPlugin
 
+#ifdef STATIC_BUILD
 Q_IMPORT_PLUGIN(QSQLiteDriverPlugin)
 Q_IMPORT_PLUGIN(QICOPlugin)
+#endif // STATIC_BUILD
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(BinaryData)
