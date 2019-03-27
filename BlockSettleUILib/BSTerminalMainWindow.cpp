@@ -4,7 +4,6 @@
 
 #include <QApplication>
 #include <QCloseEvent>
-#include <QDebug>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QShortcut>
@@ -776,13 +775,12 @@ void BSTerminalMainWindow::connectArmory()
 {
    ArmorySettings currentArmorySettings = armoryServersProvider_->getArmorySettings();
    armoryServersProvider_->setConnectedArmorySettings(currentArmorySettings);
-   armory_->setupConnection(currentArmorySettings
-      , [this](const BinaryData& srvPubKey, const std::string& srvIPPort) {
-      std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
+   armory_->setupConnection(currentArmorySettings, [this](const BinaryData& srvPubKey, const std::string& srvIPPort) {
+      auto promiseObj = std::make_shared<std::promise<bool>>();
       std::future<bool> futureObj = promiseObj->get_future();
-      QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
-         , Q_ARG(BinaryData, srvPubKey), Q_ARG(std::string, srvIPPort)
-         , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
+      QMetaObject::invokeMethod(this, [this, srvPubKey, srvIPPort, promiseObj] {
+         showArmoryServerPrompt(srvPubKey, srvIPPort, promiseObj);
+      });
       bool result = futureObj.get();
 
       // stop armory connection loop if server key was rejected
