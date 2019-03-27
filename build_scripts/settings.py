@@ -4,8 +4,9 @@ import subprocess
 
 
 class Settings:
-    def __init__(self, build_mode):
+    def __init__(self, build_mode, link_mode):
         self._build_mode = build_mode
+        self._link_mode = link_mode
         self._is_server_build = False
 
         self._project_root = os.getcwd()
@@ -15,7 +16,10 @@ class Settings:
         self._downloads_dir = os.path.join(self._3rdparty_dir, 'downloads')
         self._sources_dir = os.path.join(self._downloads_dir, 'unpacked_sources')
 
-        self._common_build_dir = os.path.join(self._3rdparty_dir, build_mode)
+        if link_mode == 'shared':
+            self._common_build_dir = os.path.join(self._3rdparty_dir, build_mode + '-' + link_mode)
+        else:
+            self._common_build_dir = os.path.join(self._3rdparty_dir, build_mode)
 
         self._is_windows = False
         self._is_linux = False
@@ -57,6 +61,9 @@ class Settings:
 
     def get_build_mode(self):
         return self._build_mode
+
+    def get_link_mode(self):
+        return self._link_mode
 
     def on_windows(self):
         return self._is_windows

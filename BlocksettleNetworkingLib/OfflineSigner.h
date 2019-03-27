@@ -25,8 +25,7 @@ public:
    OfflineSigner(const std::shared_ptr<spdlog::logger> &
       , const QString &homeDir, NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager> &
-      , const std::shared_ptr<ApplicationSettings> &
-      , const SecureBinaryData& pubKey);
+      , const std::shared_ptr<ApplicationSettings> &);
    ~OfflineSigner() noexcept = default;
 
    OfflineSigner(const OfflineSigner&) = delete;
