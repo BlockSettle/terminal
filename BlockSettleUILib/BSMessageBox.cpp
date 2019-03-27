@@ -35,7 +35,6 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
    ui_->labelTitle->setText(text);
    ui_->labelText->setText(description);
    setType(mbType);
-   resize(width(), 0);
 
    if (details.isEmpty()) {
       ui_->pushButtonShowDetails->hide();

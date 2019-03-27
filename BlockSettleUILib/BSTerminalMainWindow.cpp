@@ -4,7 +4,6 @@
 
 #include <QApplication>
 #include <QCloseEvent>
-#include <QDebug>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QShortcut>
@@ -405,7 +404,7 @@ void BSTerminalMainWindow::LoadWallets()
             }
          }
       });
-      QTimer::singleShot(5000, this, [this](){
+      QTimer::singleShot(100, this, [this](){
          if (!initialWalletCreateDialogShown_ && !armoryKeyDialogShown_) {
             if (walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
                initialWalletCreateDialogShown_ = true;
@@ -776,13 +775,12 @@ void BSTerminalMainWindow::connectArmory()
 {
    ArmorySettings currentArmorySettings = armoryServersProvider_->getArmorySettings();
    armoryServersProvider_->setConnectedArmorySettings(currentArmorySettings);
-   armory_->setupConnection(currentArmorySettings
-      , [this](const BinaryData& srvPubKey, const std::string& srvIPPort) {
-      std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
+   armory_->setupConnection(currentArmorySettings, [this](const BinaryData& srvPubKey, const std::string& srvIPPort) {
+      auto promiseObj = std::make_shared<std::promise<bool>>();
       std::future<bool> futureObj = promiseObj->get_future();
-      QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
-         , Q_ARG(BinaryData, srvPubKey), Q_ARG(std::string, srvIPPort)
-         , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
+      QMetaObject::invokeMethod(this, [this, srvPubKey, srvIPPort, promiseObj] {
+         showArmoryServerPrompt(srvPubKey, srvIPPort, promiseObj);
+      });
       bool result = futureObj.get();
 
       // stop armory connection loop if server key was rejected
@@ -1478,8 +1476,8 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumSize(600, 150);
-         box->setMaximumSize(600, 150);
+         box->setMinimumWidth(600);
+         box->setMinimumHeight(150);
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1504,8 +1502,8 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(server.armoryDBKey)
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumSize(600, 150);
-         box->setMaximumSize(600, 150);
+         box->setMinimumWidth(600);
+         box->setMinimumHeight(150);
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);
