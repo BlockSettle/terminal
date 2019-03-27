@@ -10,7 +10,8 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include "HeadlessApp.h"
-#include "SignerSettings.h"
+#include "HeadlessSettings.h"
+#include "LogManager.h"
 #include "ZMQHelperFunctions.h"
 #include "zmq.h"
 
@@ -102,7 +103,7 @@ bool generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
 //      Logger (std::shared_ptr<spdlog::logger>)
 // OUT: None
 // RET: True is success, false if not
-bool buildZMQConnFiles(std::shared_ptr<SignerSettings> inSettings
+bool buildZMQConnFiles(std::shared_ptr<HeadlessSettings> inSettings
    , std::shared_ptr<spdlog::logger> inLogger) {
    QFileInfo pubFileInfo(inSettings->zmqPubKeyFile());
    QFileInfo prvFileInfo(inSettings->zmqPrvKeyFile());
@@ -155,13 +156,19 @@ static int HeadlessApp(int argc, char **argv)
    app.setOrganizationDomain(QLatin1String("blocksettle.com"));
    app.setOrganizationName(QLatin1String("BlockSettle"));
 
-   const auto settings = std::make_shared<SignerSettings>(app.arguments());
-   auto logger = spdlog::basic_logger_mt("app_logger"
-      , settings->logFileName().toStdString());
-   // [date time.miliseconds] [level](thread id): text
-   logger->set_pattern("%D %H:%M:%S.%e (%t)[%L]: %v");
-   logger->set_level(spdlog::level::debug);
-   logger->flush_on(spdlog::level::debug);
+   bs::LogManager logMgr;
+   auto loggerStdout = logMgr.logger("settings");
+
+   const auto settings = std::make_shared<HeadlessSettings>(loggerStdout);
+   if (!settings->loadSettings(app.arguments())) {
+      loggerStdout->error("Failed to load settings");
+      return EXIT_FAILURE;
+   }
+   auto logger = loggerStdout;
+   if (!settings->logFile().empty()) {
+      logMgr.add(bs::LogConfig{ settings->logFile(), "%D %H:%M:%S.%e (%t)[%L]: %v", "" });
+      logger = logMgr.logger();
+   }
 
    logger->info("Starting BS Signer...");
    try {

@@ -15,8 +15,8 @@
 #include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
+#include "HeadlessSettings.h"
 #include "SignerAdapterListener.h"
-#include "SignerSettings.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqSecuredServerConnection.h"
 #include "ZMQHelperFunctions.h"
@@ -24,7 +24,7 @@
 
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<SignerSettings> &params)
+   , const std::shared_ptr<HeadlessSettings> &params)
    : logger_(logger), settings_(params)
 {
    // Get the ZMQ server public key.
@@ -57,17 +57,16 @@ void HeadlessAppObj::start()
 {
    startInterface();
 
-   logger_->debug("[{}] loading {} wallets from dir <{}>", __func__
-      , settings_->watchingOnly() ? "watching-only" : "full"
-      , settings_->getWalletsDir().toStdString());
+   logger_->debug("[{}] loading wallets from dir <{}>", __func__
+      , settings_->getWalletsDir());
    const auto &cbProgress = [this](int cur, int total) {
       logger_->debug("Loading wallet {} of {}", cur, total);
       adapterLsn_->onReady(cur, total);
    };
-   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir().toStdString()
+   walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
       , settings_->watchingOnly(), cbProgress);
    if (!settings_->watchingOnly() && !walletsMgr_->getSettlementWallet()) {
-      if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir().toStdString())) {
+      if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir())) {
          logger_->error("Failed to create Settlement wallet");
       }
    }
@@ -87,8 +86,19 @@ void HeadlessAppObj::start()
 
 void HeadlessAppObj::startInterface()
 {
-   QString guiPath = QCoreApplication::applicationDirPath()
-      + QLatin1String("/bs_signer_gui");
+   if (settings_->runMode() == HeadlessSettings::RunMode::headless) {
+      logger_->debug("[HeadlessAppObj::{}] no interface in headless mode", __func__);
+      return;
+   }
+   QString guiPath = QCoreApplication::applicationDirPath();
+   if (settings_->runMode() == HeadlessSettings::RunMode::QmlGui) {
+      guiPath += QLatin1String("/bs_signer_gui");
+   }
+   else {
+      logger_->warn("[HeadlessAppObj::{}] run mode {} is not supported, yet"
+         , __func__, (int)settings_->runMode());
+      return;
+   }
 #ifdef Q_OS_WIN
    guiPath += QLatin1String(".exe");
 #endif
@@ -107,8 +117,7 @@ void HeadlessAppObj::startInterface()
 void HeadlessAppObj::onlineProcessing()
 {
    logger_->debug("Using command socket {}:{}, network {}"
-      , settings_->listenAddress().toStdString()
-      , settings_->port().toStdString()
+      , settings_->listenAddress(), settings_->listenPort()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
    const ConnectionManager connMgr(logger_);
@@ -120,15 +129,13 @@ void HeadlessAppObj::onlineProcessing()
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
-         , walletsMgr_, settings_->getWalletsDir().toStdString()
-         , settings_->netType());
+         , walletsMgr_, settings_->getWalletsDir(), settings_->netType());
    }
    listener_->SetLimits(settings_->limits());
-   if (!connection_->BindConnection(settings_->listenAddress().toStdString()
-      , settings_->port().toStdString(), listener_.get())) {
+   if (!connection_->BindConnection(settings_->listenAddress()
+      , settings_->listenPort(), listener_.get())) {
       logger_->error("Failed to bind to {}:{}"
-         , settings_->listenAddress().toStdString()
-         , settings_->port().toStdString());
+         , settings_->listenAddress(), settings_->listenPort());
       throw std::runtime_error("failed to bind listening socket");
    }
 }
@@ -193,7 +200,7 @@ void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::fun
    walletsMgr_->reset();
    walletsMgr_->loadWallets(settings_->netType(), walletsDir
       , settings_->watchingOnly(), [](int, int) {});
-   settings_->setWalletsDir(QString::fromStdString(walletsDir));
+//   settings_->setWalletsDir(walletsDir);
    cb();
 }
 
@@ -215,8 +222,8 @@ void HeadlessAppObj::setOnline(bool value)
 void HeadlessAppObj::reconnect(const std::string &listenAddr, const std::string &port)
 {
    setOnline(false);
-   settings_->setListenAddress(QString::fromStdString(listenAddr));  // won't be any QString trans-
-   settings_->setPort(QString::fromStdString(port));  // formations once SignerSettings are split, too
+//   settings_->setListenAddress(QString::fromStdString(listenAddr));  // won't be any QString trans-
+//   settings_->setPort(QString::fromStdString(port));  // formations once SignerSettings are split, too
    setOnline(true);
 }
 

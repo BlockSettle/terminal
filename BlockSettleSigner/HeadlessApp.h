@@ -19,7 +19,7 @@ namespace bs {
 class HeadlessContainerListener;
 class QProcess;
 class SignerAdapterListener;
-class SignerSettings;
+class HeadlessSettings;
 class ZmqSecuredServerConnection;
 
 
@@ -29,7 +29,7 @@ class HeadlessAppObj : public QObject
 
 public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<SignerSettings> &);
+      , const std::shared_ptr<HeadlessSettings> &);
 
    void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
@@ -59,7 +59,7 @@ private:
 private:
 
    std::shared_ptr<spdlog::logger>  logger_;
-   const std::shared_ptr<SignerSettings>        settings_;
+   const std::shared_ptr<HeadlessSettings>      settings_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<ZmqSecuredServerConnection>  connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;

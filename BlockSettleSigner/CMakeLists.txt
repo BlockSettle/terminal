@@ -5,19 +5,17 @@ configure_file(SignerVersion.h.in SignerVersion.h)
 SET(SOURCES
    main.cpp
    HeadlessApp.cpp
+   HeadlessSettings.cpp
    SignerAdapterListener.cpp
-   SignerSettings.cpp
 )
 
 SET(HEADERS
    HeadlessApp.h
+   HeadlessSettings.h
    SignerAdapterListener.h
-   SignerSettings.h
 )
 
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
-INCLUDE_DIRECTORIES( ${COMMON_UI_LIB_INCLUDE_DIR} )
-INCLUDE_DIRECTORIES( ${BLOCKSETTLE_UI_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BS_NETWORK_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BS_COMMON_ENUMS_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BS_COMMUNICATION_INCLUDE_DIR} )
@@ -53,16 +51,12 @@ ELSE ()
 ENDIF ()
 
 TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
-   ${BLOCKSETTLE_UI_LIBRARY_NAME}
    ${BS_NETWORK_LIB_NAME}
    ${CPP_WALLET_LIB_NAME}
    ${CRYPTO_LIB_NAME}
    ${BOTAN_LIB}
    ${ZMQ_LIB}
-   ${WS_LIB}
-   ${QRENCODE_LIB}
    ${QT_LINUX_LIBS}
-   ${QT_QUICK_LIBS}
    Qt5::Network
    Qt5::Core
    ${OS_SPECIFIC_LIBS}

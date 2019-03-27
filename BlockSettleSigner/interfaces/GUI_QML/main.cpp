@@ -74,7 +74,7 @@ static int QMLApp(int argc, char **argv)
    std::shared_ptr<spdlog::logger> logger;
    try {
       logger = spdlog::basic_logger_mt("app_logger"
-         , settings->logFileName().toStdString() + ".gui");
+         , settings->logFileName().toStdString());
       // [date time.miliseconds] [level](thread id): text
       logger->set_pattern("%D %H:%M:%S.%e [%L](%t): %v");
       logger->set_level(spdlog::level::debug);
