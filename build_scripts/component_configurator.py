@@ -4,7 +4,6 @@ import shutil
 import tarfile
 import zipfile
 import subprocess
-from pathlib import Path
 
 requests.packages.urllib3.disable_warnings()
 
