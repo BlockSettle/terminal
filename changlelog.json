@@ -1,6 +1,14 @@
 {
-   "latest_version" : "0.13.6",
+   "latest_version" : "0.14.1",
    "changes" : [
+      {
+         "version_string" : "0.14.1",
+         "previous_version" : "0.13.6",
+         "improvements" :
+         [
+            "Switch to BIP150/151 for signer conneciton"
+         ]
+      },
       {
          "version_string" : "0.13.6",
          "previous_version" : "0.13.5",

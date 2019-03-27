@@ -80,7 +80,7 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings):
    elif os.path.isdir(build_dir):
       shutil.rmtree(build_dir)
 
-   os.makedirs(build_dir, exist_ok=True)
+   os.makedirs(build_dir)
    os.chdir(build_dir)
 
    command = []
