@@ -588,8 +588,7 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
    order.status = mapBtcOrderStatus(response.orderstatus());
    order.pendingStatus = response.info();
 
-   if (!resync && (response.createdtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)
-               && (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)) {
+   if (!resync && response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
 
       switch(order.status)
       {
@@ -621,7 +620,6 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
    }
 
    if (!resync && (response.orderstatus() == FILLED) 
-               && (response.createdtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)
                && (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)) {
 
       emit quoteOrderFilled(response.quoteid());
@@ -643,7 +641,6 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
 
    order.status = mapFxOrderStatus(response.orderstatus());
    if (!resync && (order.status == Order::Failed)
-               && (response.createdtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)
                && (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)) {
 
       emit orderFailed(response.quoteid(), response.info());
