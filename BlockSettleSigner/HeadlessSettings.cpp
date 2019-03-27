@@ -125,6 +125,10 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
       walletsDir_ = parser.value(walletsDirName).toStdString();
    }
 
+   if (parser.isSet(headlessName)) {
+      headless_ = true;
+   }
+
    if (parser.isSet(mainnetName)) {
       testNet_ = false;
    } else if (parser.isSet(testnetName)) {

@@ -87,7 +87,7 @@ void HeadlessAppObj::start()
 void HeadlessAppObj::startInterface()
 {
    if (settings_->runMode() == HeadlessSettings::RunMode::headless) {
-      logger_->debug("[HeadlessAppObj::{}] no interface in headless mode", __func__);
+      logger_->debug("[{}] no interface in headless mode", __func__);
       return;
    }
    QString guiPath = QCoreApplication::applicationDirPath();
@@ -95,7 +95,7 @@ void HeadlessAppObj::startInterface()
       guiPath += QLatin1String("/bs_signer_gui");
    }
    else {
-      logger_->warn("[HeadlessAppObj::{}] run mode {} is not supported, yet"
+      logger_->warn("[{}] run mode {} is not supported, yet"
          , __func__, (int)settings_->runMode());
       return;
    }
@@ -103,12 +103,12 @@ void HeadlessAppObj::startInterface()
    guiPath += QLatin1String(".exe");
 #endif
    if (!QFile::exists(guiPath)) {
-      logger_->error("[HeadlessAppObj::{}] {} doesn't exist"
+      logger_->error("[{}] {} doesn't exist"
          , __func__, guiPath.toStdString());
       return;
    }
    QStringList args;
-   logger_->debug("[HeadlessAppObj::{}] process path: {} {}", __func__
+   logger_->debug("[{}] process path: {} {}", __func__
       , guiPath.toStdString(), args.join(QLatin1Char(' ')).toStdString());
    guiProcess_ = std::make_shared<QProcess>();
    guiProcess_->start(guiPath, args);
