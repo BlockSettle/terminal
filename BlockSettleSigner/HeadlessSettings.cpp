@@ -74,6 +74,7 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
       listenPort_ = ini.value(QStringLiteral("ListenPort"), QString::fromStdString(listenPort_)).toString().toStdString();
       zmqPubFile_ = ini.value(QStringLiteral("ZMQPubKey"), zmqPubFile_).toString();
       zmqPrvFile_ = ini.value(QStringLiteral("ZMQPrvKey"), zmqPrvFile_).toString();
+      trustedTerminals_ = ini.value(QStringLiteral("TrustedTerminals")).toStringList();
    }
 
    QCommandLineParser parser;

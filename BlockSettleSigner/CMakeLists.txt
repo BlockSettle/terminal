@@ -60,7 +60,6 @@ TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
    ${QT_LINUX_LIBS}
    Qt5::Network
    Qt5::Core
-   Qt5::DBus
    ${OPENSSL_LIBS}
 )
 

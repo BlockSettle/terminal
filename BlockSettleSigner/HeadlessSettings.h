@@ -27,6 +27,7 @@ public:
    std::string listenAddress() const { return listenAddress_; }
    std::string listenPort() const { return listenPort_; }
    std::string logFile() const { return logFile_; }
+   QStringList trustedTerminals() const { return trustedTerminals_; }
 
    enum class RunMode {
       headless,
@@ -47,8 +48,9 @@ private:
    std::string walletsDir_;
    std::string listenAddress_ = "0.0.0.0";
    std::string listenPort_ = "23456";
-   QString zmqPubFile_;
-   QString zmqPrvFile_;
+   QString     zmqPubFile_;
+   QString     zmqPrvFile_;
+   QStringList trustedTerminals_;
 };
 
 
