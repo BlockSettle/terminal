@@ -580,6 +580,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
    if (treeView != nullptr) {
       for (int i = 0; i < rowCount(); i++) {
          treeView->expand(index(i, 0));
+      }
 
       if (!selection.empty()) {
          treeView->setCurrentIndex(selection[0]);
