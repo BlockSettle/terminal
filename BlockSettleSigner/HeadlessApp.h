@@ -21,7 +21,9 @@ class QProcess;
 class SignerAdapterListener;
 class HeadlessSettings;
 class ZmqSecuredServerConnection;
-
+class OfflineProcessor;
+class SignerSettings;
+class ZmqBIP15XServerConnection;
 
 class HeadlessAppObj : public QObject
 {
@@ -61,7 +63,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    const std::shared_ptr<HeadlessSettings>      settings_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
-   std::shared_ptr<ZmqSecuredServerConnection>  connection_;
+   std::shared_ptr<ZmqBIP15XServerConnection> connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    SecureBinaryData                             zmqPubKey_;
    SecureBinaryData                             zmqPrvKey_;

@@ -74,6 +74,7 @@ private:
    QSplashScreen              *     splashScreen_ = nullptr;
    QQmlContext                *     ctxt_ = nullptr;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
+   std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
    std::shared_ptr<WalletsProxy>                walletsProxy_;

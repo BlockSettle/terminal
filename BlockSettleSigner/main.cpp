@@ -12,6 +12,7 @@
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "LogManager.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 #include "ZMQHelperFunctions.h"
 #include "zmq.h"
 
@@ -225,7 +226,12 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
-   btc_ecc_start(); // Initialize libbtc.
+   // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
+   // Armory setting designed to allow the ArmoryDB server to not have to verify
+   // clients. Prevents us from having to import tons of keys into the server.
+   btc_ecc_start();
+   startupBIP151CTX();
+   startupBIP150CTX(4, true);
 
    return HeadlessApp(argc, argv);
 }

@@ -140,7 +140,6 @@ ApplicationWindow {
 
         var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
         dlg.walletInfo = walletInfo
-
         dlg.prompt = prompt
         dlg.txInfo = txInfo
 
@@ -152,6 +151,8 @@ ApplicationWindow {
         })
         mainWindow.requestActivate()
         dlg.open()
+
+        dlg.init()
     }
 
     function raiseWindow() {
