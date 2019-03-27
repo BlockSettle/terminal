@@ -4,7 +4,7 @@ import subprocess
 
 
 class Settings:
-    def __init__(self, build_mode, link_mode):
+    def __init__(self, build_mode, link_mode='static'):
         self._build_mode = build_mode
         self._link_mode = link_mode
         self._is_server_build = False
