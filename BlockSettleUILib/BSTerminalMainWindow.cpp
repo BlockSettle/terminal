@@ -4,7 +4,6 @@
 
 #include <QApplication>
 #include <QCloseEvent>
-#include <QDebug>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QShortcut>
@@ -66,6 +65,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    , ui_(new Ui::BSTerminalMainWindow())
    , applicationSettings_(settings)
 {
+   bs::UtxoReservation::init();
+
    UiUtils::SetupLocale();
 
    ui_->setupUi(this);
@@ -132,6 +133,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    connectSigner();
    connectArmory();
 
+   InitChartsView();
    aboutDlg_ = std::make_shared<AboutDialog>(applicationSettings_->get<QString>(ApplicationSettings::ChangeLog_Base_Url), this);
    auto aboutDlgCb = [this] (int tab) {
       return [this, tab]() {
@@ -199,20 +201,24 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
          applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
          applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
       }
+     if (!settings.mdhs.host.empty()) {
+        applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
+        applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
+     }
 #ifndef NDEBUG
-	  QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
-	  QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
-	  if (!settings.chat.host.empty()) {
-		  if (chost.isEmpty())
-			applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-		  if (cport.isEmpty())
-			applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-	  }
+     QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
+     QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
+     if (!settings.chat.host.empty()) {
+        if (chost.isEmpty())
+         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+        if (cport.isEmpty())
+         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+     }
 #else
-	  if (!settings.chat.host.empty()) {
-		  applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-		  applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-	  }
+     if (!settings.chat.host.empty()) {
+        applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+        applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+     }
 #endif // NDEBUG
    };
 
@@ -383,8 +389,6 @@ void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
 
-   bs::UtxoReservation::init();
-
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
@@ -400,7 +404,7 @@ void BSTerminalMainWindow::LoadWallets()
             }
          }
       });
-      QTimer::singleShot(5000, this, [this](){
+      QTimer::singleShot(100, this, [this](){
          if (!initialWalletCreateDialogShown_ && !armoryKeyDialogShown_) {
             if (walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
                initialWalletCreateDialogShown_ = true;
@@ -454,26 +458,6 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
    auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
    const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
-   SecureBinaryData signerPubKey;
-
-   if (runMode == SignContainer::OpMode::Remote) {
-      const auto pubKeyString = applicationSettings_->get<std::string>(ApplicationSettings::zmqRemoteSignerPubKey);
-      if (pubKeyString.empty()) {
-         BSMessageBox(BSMessageBox::messageBoxType::warning
-            , tr("Signer Remote Connection")
-            , tr("Remote signer public key is unavailable.")
-            , tr("Remote signer public key is unavailable."
-               " Transaction signing is not available."
-               " Please import the signer's public key (Settings -> Signer) "
-               "and restart the BlockSettle Terminal in order to establish a remote signer connection.")
-            , this).exec();
-         return retPtr;
-      }
-
-      if (!bs::network::readZmqKeyString(QByteArray::fromStdString(pubKeyString), signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load remote signer key");
-      }
-   }
 
    if ((runMode == SignContainer::OpMode::Local)
       && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
@@ -487,22 +471,8 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       signerHost = QLatin1String("127.0.0.1");
    }
 
-   if (signerPubKey.isNull()) {
-      const auto pubKeyPath = applicationSettings_->get<QString>(ApplicationSettings::zmqLocalSignerPubKeyFilePath);
-
-      if (!bs::network::readZmqKeyFile(pubKeyPath, signerPubKey, true, logMgr_->logger())) {
-         logMgr_->logger()->warn("[BSTerminalMainWindow::InitSigningContainer] failed to load local signer key");
-         BSMessageBox(BSMessageBox::messageBoxType::warning
-            , tr("Signer Local Connection")
-            , tr("Could not load local signer key.")
-            , tr("BS terminal is missing connection encryption key for local signer process. File expected to be at %1").arg(pubKeyPath)
-            , this).exec();
-         return retPtr;
-      }
-   }
-
-   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, signerPubKey,
-      runMode, signerHost, connectionManager_);
+   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
+      , signerHost, connectionManager_);
    return retPtr;
 }
 
@@ -660,6 +630,8 @@ void BSTerminalMainWindow::InitPortfolioView()
    ui_->widgetPortfolio->init(applicationSettings_, mdProvider_, portfolioModel_,
                              signContainer_, armory_, logMgr_->logger("ui"),
                              walletsMgr_);
+
+
 }
 
 void BSTerminalMainWindow::InitWalletsView()
@@ -673,6 +645,11 @@ void BSTerminalMainWindow::InitChatView()
    ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
+}
+
+void BSTerminalMainWindow::InitChartsView()
+{
+    ui_->widgetChart->init(applicationSettings_, mdProvider_, connectionManager_, logMgr_->logger("ui"));
 }
 
 // Initialize widgets related to transactions.
@@ -798,13 +775,12 @@ void BSTerminalMainWindow::connectArmory()
 {
    ArmorySettings currentArmorySettings = armoryServersProvider_->getArmorySettings();
    armoryServersProvider_->setConnectedArmorySettings(currentArmorySettings);
-   armory_->setupConnection(currentArmorySettings, [this](const BinaryData& srvPubKey, const std::string& srvIPPort){
-      std::shared_ptr<std::promise<bool>> promiseObj = std::make_shared<std::promise<bool>>();
+   armory_->setupConnection(currentArmorySettings, [this](const BinaryData& srvPubKey, const std::string& srvIPPort) {
+      auto promiseObj = std::make_shared<std::promise<bool>>();
       std::future<bool> futureObj = promiseObj->get_future();
-      QMetaObject::invokeMethod(this, "showArmoryServerPrompt", Qt::QueuedConnection
-                                , Q_ARG(BinaryData, srvPubKey)
-                                , Q_ARG(std::string, srvIPPort)
-                                , Q_ARG(std::shared_ptr<std::promise<bool>>, promiseObj));
+      QMetaObject::invokeMethod(this, [this, srvPubKey, srvIPPort, promiseObj] {
+         showArmoryServerPrompt(srvPubKey, srvIPPort, promiseObj);
+      });
       bool result = futureObj.get();
 
       // stop armory connection loop if server key was rejected
@@ -1500,8 +1476,8 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumSize(600, 150);
-         box->setMaximumSize(600, 150);
+         box->setMinimumWidth(600);
+         box->setMinimumHeight(150);
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1523,11 +1499,11 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                "New Key: %4")
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
-                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
+                                    .arg(server.armoryDBKey)
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumSize(600, 150);
-         box->setMaximumSize(600, 150);
+         box->setMinimumWidth(600);
+         box->setMinimumHeight(150);
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);

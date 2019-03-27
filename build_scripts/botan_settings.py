@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import shutil
 import subprocess
+import sys
 
 from component_configurator import Configurator
 
@@ -11,6 +12,7 @@ class BotanSettings(Configurator):
         Configurator.__init__(self, settings)
         self._version = '2.9.0'
         self._package_name = 'botan'
+        self._script_revision = '1'
 
         self._package_url = 'https://github.com/randombit/botan/archive/' + self._version + '.zip'
 
@@ -18,7 +20,7 @@ class BotanSettings(Configurator):
         return self._package_name + '-' + self._version
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -30,20 +32,30 @@ class BotanSettings(Configurator):
         return True
 
     def config(self):
-        command = ['python',
+        command = [sys.executable,
                    self.get_unpacked_sources_dir() + '/configure.py',
                    '--disable-modules=pkcs11',
-                   '--without-documentation',
-                   '--disable-shared-library',
-                   '--prefix=' + self.get_install_dir(),
-        ]
+                   '--without-documentation']
+
+        if self._project_settings.get_link_mode() == 'static':
+            command.append('--disable-shared-library')
+        else:
+            command.append('--enable-shared-library')
+
+        command.append('--prefix=' + self.get_install_dir())
 
         if self._project_settings.on_windows():
             self._build_tool = [os.path.join(self._project_settings.get_common_build_dir(), 'Jom/bin/jom.exe')]
-            if self._project_settings.get_build_mode() == 'release':
-                command.append('--msvc-runtime=MT')
+            if self._project_settings.get_link_mode() == 'static':
+                if self._project_settings.get_build_mode() == 'release':
+                    command.append('--msvc-runtime=MT')
+                else:
+                    command.append('--msvc-runtime=MTd')
             else:
-                command.append('--msvc-runtime=MTd')
+                if self._project_settings.get_build_mode() == 'release':
+                    command.append('--msvc-runtime=MD')
+                else:
+                    command.append('--msvc-runtime=MDd')
         else:
             self._build_tool = ['make', '-j', str(multiprocessing.cpu_count())]
             if self._project_settings.get_build_mode() == 'release':

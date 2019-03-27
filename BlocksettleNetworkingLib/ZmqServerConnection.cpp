@@ -7,7 +7,8 @@
 #include <spdlog/spdlog.h>
 #include <zmq.h>
 
-ZmqServerConnection::ZmqServerConnection(const std::shared_ptr<spdlog::logger>& logger
+ZmqServerConnection::ZmqServerConnection(
+   const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context)
    : logger_(logger)
    , context_(context)
@@ -33,7 +34,7 @@ bool ZmqServerConnection::isActive() const
 
 // it is long but straight forward, just init all the objects
 // if ok - move temp objects to members
-// if failed - it is all on stack and smart pointers 
+// if failed - it is all on stack and smart pointers
 //  that will take care of closing and cleaning up
 bool ZmqServerConnection::BindConnection(const std::string& host , const std::string& port
    , ServerConnectionListener* listener)
@@ -42,8 +43,8 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    assert(listener != nullptr);
 
    if (isActive()) {
-      logger_->error("[ZmqServerConnection::openConnection] connection active. You should close it first: {}."
-         , connectionName_);
+      logger_->error("[{}] connection active. You should close it first: {}."
+         , __func__, connectionName_);
       return false;
    }
 
@@ -52,20 +53,20 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    // create stream socket ( connected to server )
    ZmqContext::sock_ptr tempDataSocket = CreateDataSocket();
    if (tempDataSocket == nullptr) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to create data socket socket {}"
+      logger_->error("[{}] failed to create data socket socket {}", __func__
          , tempConnectionName);
       return false;
    }
 
    if (!ConfigDataSocket(tempDataSocket)) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to config data socket {}"
+      logger_->error("[{}] failed to config data socket {}", __func__
          , tempConnectionName);
       return false;
    }
 
    ZmqContext::sock_ptr tempMonSocket = context_->CreateMonitorSocket();
    if (tempMonSocket == nullptr) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to open monitor socket {}"
+      logger_->error("[{}] failed to open monitor socket {}", __func__
          , tempConnectionName);
       return false;
    }
@@ -73,7 +74,7 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    int lingerPeriod = 0;
    int result = zmq_setsockopt(tempMonSocket.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod));
    if (result != 0) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to config monitor socket on {}"
+      logger_->error("[{}] failed to config monitor socket on {}", __func__
          , tempConnectionName);
       return false;
    }
@@ -83,14 +84,14 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    result = zmq_socket_monitor(tempDataSocket.get(), monitorConnectionName_.c_str(),
       ZMQ_EVENT_ALL);
    if (result != 0) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to create monitor {}"
+      logger_->error("[{}] failed to create monitor {}", __func__
          , tempConnectionName);
       return false;
    }
 
    result = zmq_connect(tempMonSocket.get(), monitorConnectionName_.c_str());
    if (result != 0) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to connect to monitor {}"
+      logger_->error("[{}] failed to connect to monitor {}", __func__
          , tempConnectionName);
       return false;
    }
@@ -98,13 +99,13 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    // connect socket to server ( connection state will be changed in listen thread )
    std::string endpoint = ZmqContext::CreateConnectionEndpoint(zmqTransport_, host, port);
    if (endpoint.empty()) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to generate connection address");
+      logger_->error("[{}] failed to generate connection address", __func__);
       return false;
    }
 
    result = zmq_bind(tempDataSocket.get(), endpoint.c_str());
    if (result != 0) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to bind socket to {} : {}"
+      logger_->error("[{}] failed to bind socket to {} : {}", __func__
          , endpoint, zmq_strerror(zmq_errno()));
       return false;
    }
@@ -114,29 +115,29 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    // create master and slave paired sockets to control connection and resend data
    ZmqContext::sock_ptr tempThreadMasterSocket = context_->CreateInternalControlSocket();
    if (tempThreadMasterSocket == nullptr) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to create ThreadMasterSocket socket {}"
-         , tempConnectionName);
+      logger_->error("[{}] failed to create ThreadMasterSocket socket {}"
+         , __func__, tempConnectionName);
       return false;
    }
 
    result = zmq_bind(tempThreadMasterSocket.get(), controlEndpoint.c_str());
    if (result != 0) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to bind ThreadMasterSocket socket {}"
-         , tempConnectionName);
+      logger_->error("[{}] failed to bind ThreadMasterSocket socket {}"
+         , __func__, tempConnectionName);
       return false;
    }
 
    ZmqContext::sock_ptr tempThreadSlaveSocket = context_->CreateInternalControlSocket();
    if (tempThreadSlaveSocket == nullptr) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to create ThreadSlaveSocket socket {}"
-         , tempConnectionName);
+      logger_->error("[{}] failed to create ThreadSlaveSocket socket {}"
+         , __func__, tempConnectionName);
       return false;
    }
 
    result = zmq_connect(tempThreadSlaveSocket.get(), controlEndpoint.c_str());
    if (result != 0) {
-      logger_->error("[ZmqServerConnection::openConnection] failed to connect ThreadSlaveSocket socket {}"
-         , tempConnectionName);
+      logger_->error("[{}] failed to connect ThreadSlaveSocket socket {}"
+         , __func__, tempConnectionName);
       return false;
    }
 
@@ -152,8 +153,7 @@ bool ZmqServerConnection::BindConnection(const std::string& host , const std::st
    // and start thread
    listenThread_ = std::thread(&ZmqServerConnection::listenFunction, this);
 
-   logger_->debug("[ZmqServerConnection::openConnection] starting connection for {}"
-      , connectionName_);
+   logger_->debug("[{}] starting connection for {}", __func__, connectionName_);
 
    return true;
 }
@@ -171,8 +171,7 @@ void ZmqServerConnection::listenFunction()
    poll_items[ZmqServerConnection::MonitorSocketIndex].socket = monSocket_.get();
    poll_items[ZmqServerConnection::MonitorSocketIndex].events = ZMQ_POLLIN;
 
-   logger_->debug("[ZmqServerConnection::listenFunction] poll thread started for {}"
-      , connectionName_);
+   logger_->debug("[{}] poll thread started for {}", __func__, connectionName_);
 
    int result;
 
@@ -183,11 +182,11 @@ void ZmqServerConnection::listenFunction()
       if (result == -1) {
          errorCount++;
          if ((zmq_errno() != EINTR) || (errorCount > 10)) {
-            logger_->error("[ZmqServerConnection::listenFunction] poll failed for {} : {}"
+            logger_->error("[{}] poll failed for {} : {}", __func__
                , connectionName_, zmq_strerror(zmq_errno()));
             break;
          } else {
-            logger_->debug("[ZmqServerConnection::listenFunction] interrupted");
+            logger_->debug("[{}] interrupted", __func__);
             continue;
          }
       }
@@ -199,7 +198,7 @@ void ZmqServerConnection::listenFunction()
 
          int recv_result = zmq_msg_recv(&command, poll_items[ZmqServerConnection::ControlSocketIndex].socket, ZMQ_DONTWAIT);
          if (recv_result == -1) {
-            logger_->error("[ZmqServerConnection::listenFunction] failed to recv command on {} : {}"
+            logger_->error("[{}] failed to recv command on {} : {}", __func__
                , connectionName_, zmq_strerror(zmq_errno()));
             break;
          }
@@ -210,7 +209,7 @@ void ZmqServerConnection::listenFunction()
          } else if (command_code == ZmqServerConnection::CommandStop) {
             break;
          } else {
-            logger_->error("[ZmqServerConnection::listenFunction] unexpected command code {} for {}"
+            logger_->error("[{}] unexpected command code {} for {}", __func__
                , command_code, connectionName_);
             break;
          }
@@ -218,8 +217,8 @@ void ZmqServerConnection::listenFunction()
 
       if (poll_items[ZmqServerConnection::DataSocketIndex].revents & ZMQ_POLLIN) {
          if (!ReadFromDataSocket()) {
-            logger_->error("[ZmqServerConnection::listenFunction] failed to read from data socket on {}"
-               , connectionName_);
+            logger_->error("[{}] failed to read from data socket on {}"
+               , __func__, connectionName_);
             break;
          }
       }
@@ -229,10 +228,10 @@ void ZmqServerConnection::listenFunction()
          switch (bs::network::get_monitor_event(monSocket_.get(), &sock)) {
             case ZMQ_EVENT_ACCEPTED :
             {
-               const auto ip = bs::network::peerAddressString(sock);
-               connectedPeers_.emplace(std::make_pair(sock, ip));
+               std::string cliIP = bs::network::peerAddressString(sock);
+               connectedPeers_.emplace(std::make_pair(sock, cliIP));
                if (listener_) {
-                  listener_->OnPeerConnected(ip);
+                  listener_->OnPeerConnected(cliIP);
                }
             }
                break;
@@ -258,18 +257,18 @@ void ZmqServerConnection::listenFunction()
    dataSocket_ = context_->CreateNullSocket();
    monSocket_ = context_->CreateNullSocket();
 
-   logger_->debug("[ZmqServerConnection::listenFunction] poll thread stopped for {}", connectionName_);
+   logger_->debug("[{}] poll thread stopped for {}", __func__, connectionName_);
 }
 
 void ZmqServerConnection::stopServer()
 {
    if (!isActive()) {
-      logger_->debug("[ZmqServerConnection::stopServer] connection already stopped {}"
+      logger_->debug("[{}] connection already stopped {}", __func__
          , connectionName_);
       return;
    }
 
-   logger_->debug("[ZmqServerConnection::stopServer] stopping {}", connectionName_);
+   logger_->debug("[{}] stopping {}", __func__, connectionName_);
 
    int command = ZmqServerConnection::CommandStop;
    int result = 0;
@@ -280,7 +279,7 @@ void ZmqServerConnection::stopServer()
    }
 
    if (result == -1) {
-      logger_->error("[ZmqServerConnection::stopServer] failed to send stop comamnd for {} : {}"
+      logger_->error("[{}] failed to send stop comamnd for {} : {}", __func__
          , connectionName_, zmq_strerror(zmq_errno()));
       return;
    }
@@ -299,7 +298,7 @@ bool ZmqServerConnection::SendDataCommand()
    }
 
    if (result == -1) {
-      logger_->error("[ZmqServerConnection::SendDataCommand] failed to send data comamnd for {} : {}"
+      logger_->error("[{}] failed to send data command for {} : {}", __func__
          , connectionName_, zmq_strerror(zmq_errno()));
    }
 
@@ -360,7 +359,7 @@ void ZmqServerConnection::SendDataToDataSocket()
    for (const auto &dataPacket : pendingData) {
       int result = zmq_send(dataSocket_.get(), dataPacket.clientId.c_str(), dataPacket.clientId.size(), ZMQ_SNDMORE);
       if (result != dataPacket.clientId.size()) {
-         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send client id {}"
+         logger_->error("[{}] {} failed to send client id {}", __func__
             , connectionName_, zmq_strerror(zmq_errno()));
          if (dataPacket.cb) {
             dataPacket.cb(dataPacket.clientId, dataPacket.data, false);
@@ -370,7 +369,7 @@ void ZmqServerConnection::SendDataToDataSocket()
 
       result = zmq_send(dataSocket_.get(), dataPacket.data.data(), dataPacket.data.size(), (dataPacket.sendMore ? ZMQ_SNDMORE : 0));
       if (result != dataPacket.data.size()) {
-         logger_->error("[ZmqServerConnection::SendDataToDataSocket] {} failed to send data frame {} to {}"
+         logger_->error("[{}] {} failed to send data frame {} to {}", __func__
             , connectionName_, zmq_strerror(zmq_errno()), dataPacket.clientId);
          if (dataPacket.cb) {
             dataPacket.cb(dataPacket.clientId, dataPacket.data, false);
@@ -392,7 +391,7 @@ bool ZmqServerConnection::SetZMQTransport(ZMQTransport transport)
       zmqTransport_ = transport;
       return true;
    default:
-      logger_->error("[ZmqServerConnection::SetZMQTransport] undefined transport");
+      logger_->error("[{}] undefined transport", __func__);
       return false;
    }
 }
@@ -401,14 +400,14 @@ bool ZmqServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr &dataSocke
 {
    int immediate = immediate_ ? 1 : 0;
    if (zmq_setsockopt(dataSocket.get(), ZMQ_IMMEDIATE, &immediate, sizeof(immediate)) != 0) {
-      logger_->error("[ZmqServerConnection::ConfigDataSocket] {} failed to set immediate flag: {}"
+      logger_->error("[{}] {} failed to set immediate flag: {}", __func__
          , connectionName_, zmq_strerror(zmq_errno()));
       return false;
    }
 
    if (!identity_.empty()) {
       if (zmq_setsockopt(dataSocket.get(), ZMQ_IDENTITY, identity_.c_str(), identity_.size()) != 0) {
-         logger_->error("[ZmqServerConnection::ConfigDataSocket] {} failed to set server identity {}"
+         logger_->error("[{}] {} failed to set server identity {}", __func__
             , connectionName_, zmq_strerror(zmq_errno()));
          return false;
       }
@@ -416,7 +415,7 @@ bool ZmqServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr &dataSocke
 
    int lingerPeriod = 0;
    if (zmq_setsockopt(dataSocket.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod)) != 0) {
-      logger_->error("[ZmqServerConnection::ConfigDataSocket] {} failed to set linger interval {}: {}"
+      logger_->error("[{}] {} failed to set linger interval {}: {}", __func__
          , connectionName_, lingerPeriod, zmq_strerror(zmq_errno()));
       return false;
    }

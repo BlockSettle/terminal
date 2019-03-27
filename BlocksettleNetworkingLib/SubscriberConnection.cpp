@@ -185,12 +185,6 @@ void SubscriberConnection::stopListen()
       listenThread_.join();
    }
 
-   auto tempListener = listener_;
-   listener_ = nullptr;
-   if (isConnected_ && tempListener) {
-      tempListener->OnDisconnected();
-   }
-
    return;
 }
 

@@ -97,6 +97,11 @@ void TransactionDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &arm
 void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
                                                          const bool& firstPass)
 {
+   if (!armory_) {
+      logger_->error("[TransactionDetailsWidget::populateTransactionWidget] armory is not initialized.");
+      return;
+   }
+
    // In case we've been here earlier, clear all the text.
    if (firstPass) {
       clear();

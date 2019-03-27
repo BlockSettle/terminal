@@ -190,11 +190,14 @@ class Configurator:
     def filter_copy(self, src, dst, file_extension=None, cleanupDst=True):
         if cleanupDst:
             self.remove_fs_object(dst)
+
+        if not os.path.isdir(dst):
             os.makedirs(dst)
 
         for name in os.listdir(src):
             src_name = os.path.join(src, name)
             dst_name = os.path.join(dst, name)
+            src_suffixes = Path(src_name).suffixes
 
             if os.path.isfile(src_name):
                 if not file_extension or src_name.endswith(file_extension):

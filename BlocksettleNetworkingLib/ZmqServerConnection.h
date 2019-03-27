@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <deque>
+#include <QStringList>
 #include <thread>
 #include <unordered_map>
 
@@ -28,7 +29,6 @@ public:
    ZmqServerConnection(ZmqServerConnection&&) = delete;
    ZmqServerConnection& operator = (ZmqServerConnection&&) = delete;
 
-public:
    bool BindConnection(const std::string& host, const std::string& port
       , ServerConnectionListener* listener) override;
 
@@ -56,7 +56,6 @@ protected:
    virtual bool QueueDataToSend(const std::string& clientId, const std::string& data
       , const SendResultCb &cb, bool sendMore);
 
-protected:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<ZmqContext>      context_;
 
@@ -66,7 +65,7 @@ protected:
    ZmqContext::sock_ptr             dataSocket_;
    ZmqContext::sock_ptr             monSocket_;
 
-   std::unordered_map<std::string, std::string> clientInfo_;
+   std::unordered_map<std::string, std::string> clientInfo_; // ClientID & related string
 
 private:
    void stopServer();
@@ -96,24 +95,16 @@ private:
    bool SendDataCommand();
    void SendDataToDataSocket();
 
-private:
    std::thread                      listenThread_;
-
    std::atomic_flag                 controlSocketLockFlag_ = ATOMIC_FLAG_INIT;
-
    ZmqContext::sock_ptr             threadMasterSocket_;
    ZmqContext::sock_ptr             threadSlaveSocket_;
-
    ServerConnectionListener*        listener_;
-
    std::atomic_flag                 dataQueueLock_ = ATOMIC_FLAG_INIT;
    std::deque<DataToSend>           dataQueue_;
-
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
    std::unordered_map<int, std::string> connectedPeers_;
-
    std::string                      monitorConnectionName_;
-
    bool        immediate_{ false };
    std::string identity_;
 };

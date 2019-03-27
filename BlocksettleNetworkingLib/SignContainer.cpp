@@ -21,12 +21,11 @@ SignContainer::SignContainer(const std::shared_ptr<spdlog::logger> &logger, OpMo
 
 std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , const SecureBinaryData& pubKey
    , SignContainer::OpMode runMode, const QString &host
    , const std::shared_ptr<ConnectionManager>& connectionManager)
 {
    if (connectionManager == nullptr) {
-      logger->error("[CreateSigner] need connection manager to create signer");
+      logger->error("[{}] need connection manager to create signer", __func__);
       return nullptr;
    }
 
@@ -37,19 +36,19 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    {
    case SignContainer::OpMode::Local:
       return std::make_shared<LocalSigner>(logger, appSettings->GetHomeDir()
-         , netType, port, connectionManager, appSettings, pubKey, runMode
+         , netType, port, connectionManager, appSettings, runMode
          , appSettings->get<double>(ApplicationSettings::autoSignSpendLimit));
 
    case SignContainer::OpMode::Remote:
       return std::make_shared<RemoteSigner>(logger, host, port, netType
-         , connectionManager, appSettings, pubKey);
+         , connectionManager, appSettings);
 
    case SignContainer::OpMode::Offline:
       return std::make_shared<OfflineSigner>(logger, appSettings->GetHomeDir()
-         , netType, port, connectionManager, appSettings, pubKey);
+         , netType, port, connectionManager, appSettings);
 
    default:
-      logger->error("[CreateSigner] Unknown signer run mode {}", (int)runMode);
+      logger->error("[{}] Unknown signer run mode {}", __func__, (int)runMode);
       break;
    }
    return nullptr;

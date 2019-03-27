@@ -9,6 +9,7 @@ class ZeroMQSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
         self._version = '4.3.1'
+        self._script_revision = '1'
 
         if settings.on_windows():
             self._package_name = 'libzmq-' + self._version
@@ -23,7 +24,7 @@ class ZeroMQSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version
+        return self._version + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -57,6 +58,19 @@ class ZeroMQSettings(Configurator):
         command.append('cmake')
         command.append(self.get_unpacked_sources_dir())
         command.append('-DZMQ_BUILD_TESTS=OFF')
+
+        if self._project_settings.get_link_mode() == 'shared':
+            command.append('-DBUILD_STATIC=OFF')
+
+        # for static lib
+        if self._project_settings.on_windows() and self._project_settings.get_link_mode() != 'shared':
+            if self._project_settings.get_build_mode() == 'debug':
+                command.append('-DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
+                command.append('-DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1"')
+            else:
+                command.append('-DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
+                command.append('-DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /Ob2 /D NDEBUG"')
+                
         command.append('-G')
         command.append(self._project_settings.get_cmake_generator())
 
@@ -89,12 +103,11 @@ class ZeroMQSettings(Configurator):
         return os.path.join('ZeroMQ.sln')
 
     def make_windows(self):
-        command = ['devenv',
+        command = ['msbuild',
                    self.get_solution_file(),
-                   '/build',
-                   self.get_win_configuration(),
-                   '/project',
-                   'libzmq']
+                   '/t:libzmq',
+                   '/p:Configuration=' + self.get_win_configuration(),
+                   '/p:CL_MPCount=' + str(max(1, multiprocessing.cpu_count() - 1))]
 
         result = subprocess.call(command)
 
