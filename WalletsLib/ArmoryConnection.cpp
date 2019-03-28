@@ -178,7 +178,7 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings
          bdv_ = AsyncClient::BlockDataViewer::getNewBDV(settings.armoryDBIp.toStdString()
             , std::to_string(settings.armoryDBPort)
             , settings.dataDir.toStdString()
-            , false
+            , true // enable ephemeralPeers, because we manage armory keys ourself
             , cbRemote_);
 
          if (!bdv_) {
@@ -187,13 +187,6 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings
             std::this_thread::sleep_for(std::chrono::seconds(10));
             continue;
          }
-
-         try {
-            for (const auto &x : bsBIP150PubKeys_) {
-               bdv_->addPublicKey(x);
-            }
-         }
-         catch (...) {}
 
          bdv_->setCheckServerKeyPromptLambda(bip150PromptUserRoutine);
 
