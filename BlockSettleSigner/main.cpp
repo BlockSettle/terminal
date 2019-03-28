@@ -91,8 +91,8 @@ bool generateCurveZMQKeyPairFiles(std::shared_ptr<spdlog::logger> inLogger
 
    if (inLogger) {
       inLogger->info("[{}] CurveZMQ files written.", __func__);
-      inLogger->info("[{}] Public key file - {}", pubFilePath.toStdString());
-      inLogger->info("[{}] Private key file - {}", prvFilePath.toStdString());
+      inLogger->info("[{}] Public key file - {}", __func__, pubFilePath.toStdString());
+      inLogger->info("[{}] Private key file - {}", __func__, prvFilePath.toStdString());
    }
 
    return true;
