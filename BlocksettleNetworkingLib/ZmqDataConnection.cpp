@@ -94,17 +94,6 @@ bool ZmqDataConnection::openConnection(const std::string& host
    }
 
    int result = 0;
-
-   // get socket id
-   result = zmq_getsockopt(tempDataSocket.get(), ZMQ_IDENTITY, buf, &buf_size);
-   if (result != 0) {
-      if (logger_) {
-         logger_->error("[{}] failed to get socket Id {}", __func__
-            , tempConnectionName);
-      }
-      return false;
-   }
-
    std::string controlEndpoint = std::string("inproc://") + tempConnectionName;
 
    // create master and slave paired sockets to control connection and resend data
@@ -171,6 +160,16 @@ bool ZmqDataConnection::openConnection(const std::string& host
       if (logger_) {
          logger_->error("[{}] failed to connect socket to {}", __func__
             , endpoint);
+      }
+      return false;
+   }
+
+   // get socket id
+   result = zmq_getsockopt(tempDataSocket.get(), ZMQ_IDENTITY, buf, &buf_size);
+   if (result != 0) {
+      if (logger_) {
+         logger_->error("[{}] failed to get socket Id {}", __func__
+            , tempConnectionName);
       }
       return false;
    }

@@ -124,9 +124,7 @@ bool ZmqStreamServerConnection::SendDataToClient(const std::string& clientId, co
 
 bool ZmqStreamServerConnection::SendDataToAllClients(const std::string& data, const SendResultCb &cb)
 {
-   logger_->debug("[ZmqStreamServerConnection::SendDataToAllClients] start sending");
-
-   int successCount = 0;
+   unsigned int successCount = 0;
 
    FastLock locker(connectionsLockFlag_);
    for (auto & it : activeConnections_) {
@@ -138,11 +136,7 @@ bool ZmqStreamServerConnection::SendDataToAllClients(const std::string& data, co
          cb(it.first, data, result);
       }
    }
-
-   logger_->debug("[ZmqStreamServerConnection::SendDataToAllClients] done sending {} out of {}"
-      , successCount, activeConnections_.size());
-
-   return true;
+   return (successCount == activeConnections_.size());
 }
 
 ZmqStreamServerConnection::server_connection_ptr

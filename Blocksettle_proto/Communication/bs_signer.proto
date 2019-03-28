@@ -1,0 +1,201 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.signer;
+
+
+enum PacketType
+{
+   HeadlessReadyType = 0;
+   PeerConnectedType = 1;
+   PeerDisconnectedType = 2;
+   PasswordRequestType = 3;
+   TxSignedType = 4;
+   CancelTxSignType = 5;
+   XbtSpentType = 6;
+   AutoSignActType = 7;
+   SignTxRequestType = 8;
+   SyncWalletInfoType = 9;
+   SyncHDWalletType = 10;
+   SyncWalletType = 11;
+   CreateWOType = 12;
+   GetDecryptedNodeType = 13;
+   SetLimitsType = 14;
+   PasswordReceivedType = 15;
+   RequestCloseType = 16;
+}
+
+message Packet
+{
+   uint32      id         = 1;
+   PacketType  type       = 2;
+   bytes       data       = 3;
+}
+
+
+message ReadyEvent
+{
+   bool  ready = 1;
+   int32 cur_wallet = 2;
+   int32 total_wallets = 3;
+}
+
+message PeerEvent
+{
+   string ip_address = 1;
+}
+
+message PasswordEvent
+{
+   message Change {
+      bytes    address = 1;
+      string   index = 2;
+      uint64   value = 3;
+   }
+
+   bool   auto_sign = 1;
+   string prompt = 2;
+   string wallet_id = 3;
+   repeated bytes inputs = 4;
+   repeated bytes recipients = 5;
+   uint64         fee = 6;
+   bool           RBF = 7;
+   Change         change = 8;
+}
+
+message TxSignEvent
+{
+   oneof data {
+      bytes  tx = 1;
+      bytes  tx_hash = 2;
+   }
+}
+
+message XbtSpentEvent
+{
+   int64 value = 1;
+   bool  auto_sign = 2;
+}
+
+message AutoSignActEvent
+{
+   bool   activated = 1;
+   string wallet_id = 2;
+}
+
+
+message SignTxRequest
+{
+   PasswordEvent tx_request = 1;
+   bytes password = 2;
+}
+
+
+// Slightly simplified structures from headless.proto
+enum WalletFormat
+{
+   WalletFormatUnknown    = 0;
+   WalletFormatHD         = 1;
+   WalletFormatSettlement = 2;
+}
+
+message SyncWalletInfoResponse
+{
+   message WalletInfo {
+      WalletFormat format = 1;
+      string id = 2;
+      string name = 3;
+      string description = 4;
+   }
+   repeated WalletInfo wallets = 1;
+}
+
+
+message SyncWalletRequest
+{
+   string wallet_id = 1;
+}
+
+message SyncHDWalletResponse
+{
+   message Leaf {
+      string id = 1;
+      uint32 index = 2;
+   }
+   message Group {
+      uint32 type = 1;
+      repeated Leaf leaves = 2;
+   }
+
+   string wallet_id = 1;
+   repeated Group groups = 2;
+}
+
+enum EncryptionType
+{
+   EncryptionTypeUnencrypted = 0;
+   EncryptionTypePassword    = 1;
+   EncryptionTypeAutheID     = 2;
+}
+
+message SyncWalletResponse
+{
+   string wallet_id = 1;
+   repeated EncryptionType encryption_types = 2;
+   repeated bytes encryption_keys = 3;
+   uint32 key_rank_m = 4;
+   uint32 key_rank_n = 5;
+
+   message Address {
+      string index = 1;
+      string address = 2;
+   }
+   repeated Address   addresses = 6;
+}
+
+
+message DecryptWalletRequest
+{
+   string wallet_id = 1;
+   bytes  password = 2;
+   bool   cancelled_by_user = 3;
+}
+
+message CreateWatchingOnlyResponse
+{
+   message Address {
+      string index = 1;
+      uint32 aet = 2;
+   }
+   message Leaf {
+      string id = 1;
+      uint32 index = 2;
+      bytes  public_key = 3;
+      bytes  chain_code = 4;
+      repeated Address addresses = 5;
+   }
+   message Group {
+      uint32 type = 1;
+      repeated Leaf leaves = 2;
+   }
+
+   string wallet_id = 1;
+   string name = 2;
+   string description = 3;
+   repeated Group groups = 4;
+}
+
+message DecryptedNodeResponse
+{
+   string wallet_id = 1;
+   bytes  private_key = 2;
+   bytes  chain_code = 3;
+}
+
+message SetLimitsRequest
+{
+   string wallet_id = 1;
+   uint64 auto_sign_satoshis = 2;
+   uint64 manual_satoshis = 3;
+   uint32 auto_sign_time = 4;
+   uint32 password_keep_in_mem = 5;
+}

@@ -59,6 +59,7 @@ public:
    using SettingsParam = TemplSettingsParam<QString>;
    using IntSettingsNoCheckParam = TemplSettingsParam<int>;
    using BoolSettingsParam = TemplSettingsParam<bool>;
+   using DoubleSettingsParam = TemplSettingsParam<double>;
 
    class IntSettingsParam : public IntSettingsNoCheckParam {
    protected:
@@ -74,10 +75,11 @@ public:
 
    SettingsParam SettingsFile;
 
-   SettingsParser(const std::shared_ptr<spdlog::logger>& logger);
+   SettingsParser(const std::shared_ptr<spdlog::logger> &
+      , const std::string &settingsFile = {});
    ~SettingsParser() noexcept = default;
 
-   bool LoadSettings(const QStringList& argList);
+   virtual bool LoadSettings(const QStringList& argList);
 
 protected:
    template<class T>

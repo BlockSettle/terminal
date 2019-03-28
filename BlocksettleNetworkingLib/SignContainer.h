@@ -78,6 +78,31 @@ namespace bs {
          std::vector<TxCommentData> txComments;
       };
 
+      struct WatchingOnlyWallet
+      {
+         struct Address {
+            std::string index;
+            AddressEntryType  aet;
+         };
+         struct Leaf {
+            std::string          id;
+            bs::hd::Path::Elem   index;
+            BinaryData           publicKey;
+            BinaryData           chainCode;
+            std::vector<Address> addresses;
+         };
+         struct Group {
+            bs::hd::CoinType  type;
+            std::vector<Leaf> leaves;
+         };
+
+         NetworkType netType = NetworkType::Invalid;
+         std::string id;
+         std::string name;
+         std::string description;
+         std::vector<Group>   groups;
+      };
+
    }  //namespace sync
 }
 
