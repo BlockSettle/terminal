@@ -1,6 +1,8 @@
 #ifndef __QML_APP_H__
 #define __QML_APP_H__
 
+#include "SecureBinaryData.h"
+
 #include <memory>
 #include <unordered_set>
 #include <QObject>
@@ -13,22 +15,28 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   namespace core {
+      namespace wallet {
+         struct TXSignRequest;
+      }
+   }
 }
 namespace spdlog {
    class logger;
 }
+
+class DBusNotification;
 class OfflineProcessor;
+class QmlFactory;
+class QMLStatusUpdater;
 class QmlWalletsViewModel;
 class QQmlContext;
-class QMLStatusUpdater;
 class QSplashScreen;
 class QSystemTrayIcon;
 class SignerAdapter;
 class SignerSettings;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
-class DBusNotification;
-class QmlFactory;
 
 class QMLAppObj : public QObject
 {
