@@ -38,7 +38,7 @@ CustomTitleDialogWindow {
     property bool authNoticeShown: false
 
     title: qsTr("Import Wallet")
-    width: 400
+    width: 450
     height: 470
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
@@ -59,7 +59,6 @@ CustomTitleDialogWindow {
 
     cContentItem: ColumnLayout {
         id: mainLayout
-        spacing: 10
 
         ColumnLayout {
             id: selectLayout
@@ -120,8 +119,6 @@ CustomTitleDialogWindow {
                     visible: rbPaperBackup.checked
                     rowSpacing: 0
                     columnSpacing: 0
-                    Layout.margins: 5
-                    //sectionHeaderTxt: qsTr("Enter Root Private Key")
                     line1LabelTxt: qsTr("Root Key Line 1")
                     line2LabelTxt: qsTr("Root Key Line 2")
                     onEntryComplete: {

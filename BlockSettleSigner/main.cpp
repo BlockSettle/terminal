@@ -10,6 +10,8 @@
 #include <QFileInfo>
 #include <QStandardPaths>
 #include <QDir>
+#include <QFontDatabase>
+#include <QQmlContext>
 #include <memory>
 #include <iostream>
 #include <btc/ecc.h>
@@ -311,6 +313,9 @@ static int QMLApp(int argc, char **argv)
       QTimer::singleShot(0, &appObj, &HeadlessAppObj::Start);
 
       QQmlApplicationEngine engine;
+      const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+      engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
+
       QMLAppObj qmlAppObj(&adapter, logger, settings, engine.rootContext());
       QObject::connect(&qmlAppObj, &QMLAppObj::loadingComplete, &splashScreen
          , &QSplashScreen::close);
