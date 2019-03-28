@@ -1,12 +1,14 @@
 #include "SignerAdapter.h"
 #include <spdlog/spdlog.h>
+#include <QFile>
+#include <QStandardPaths>
 #include "CelerClientConnection.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
 #include "HeadlessApp.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
-#include "ZmqDataConnection.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include "bs_signer.pb.h"
 
@@ -16,14 +18,17 @@ class SignerInterfaceListener : public DataConnectionListener
 {
 public:
    SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<DataConnection> &conn, SignerAdapter *parent)
+      , const std::shared_ptr<ZmqBIP15XDataConnection> &conn, SignerAdapter *parent)
       : logger_(logger), connection_(conn), parent_(parent) {}
 
    void OnDataReceived(const std::string &) override;
 
    void OnConnected() override {
       logger_->debug("[SignerInterfaceListener] connected");
-      send(signer::HeadlessReadyType, "");
+      connection_->startBIP151Handshake([this] {
+         logger_->debug("[SignerInterfaceListener] BIP151 handshake complete");
+         send(signer::HeadlessReadyType, "");
+      });
    }
 
    void OnDisconnected() override {
@@ -82,7 +87,7 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<DataConnection>  connection_;
+   std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
    SignerAdapter  *  parent_;
    SignContainer::RequestId   seq_ = 1;
    std::map<SignContainer::RequestId, std::function<void(const BinaryData &)>>      cbSignReqs_;
@@ -526,8 +531,16 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, Netw
    : QObject(nullptr), logger_(logger), netType_(netType)
 {
    const auto zmqContext = std::make_shared<ZmqContext>(logger);
-   auto adapterConn = std::make_shared<CelerClientConnection<ZmqDataConnection>>(logger);
+   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true, true);
    adapterConn->SetContext(zmqContext);
+   {
+      const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+      QFile pubKeyFile(dir + QLatin1String("/interface.pub"));
+      if (!pubKeyFile.open(QIODevice::WriteOnly)) {
+         throw std::runtime_error("Failed to create public key file");
+      }
+      pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
+   }
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
    if (!adapterConn->openConnection("127.0.0.1", "23457", listener_.get())) {
       throw std::runtime_error("adapter connection failed");

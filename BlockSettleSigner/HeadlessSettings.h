@@ -21,13 +21,13 @@ public:
    bool testNet() const { return testNet_; }
    SignContainer::Limits limits() const;
    std::string getWalletsDir() const;
-   QString zmqPubKeyFile() const { return zmqPubFile_; }
-   QString zmqPrvKeyFile() const { return zmqPrvFile_; }
    bool watchingOnly() const { return watchOnly_; }
    std::string listenAddress() const { return listenAddress_; }
    std::string listenPort() const { return listenPort_; }
+   std::string interfacePort() const { return interfacePort_; }
    std::string logFile() const { return logFile_; }
    QStringList trustedTerminals() const { return trustedTerminals_; }
+   QStringList trustedInterfaces() const;
 
    enum class RunMode {
       headless,
@@ -48,8 +48,7 @@ private:
    std::string walletsDir_;
    std::string listenAddress_ = "0.0.0.0";
    std::string listenPort_ = "23456";
-   QString     zmqPubFile_;
-   QString     zmqPrvFile_;
+   std::string interfacePort_ = "23457";
    QStringList trustedTerminals_;
 };
 
