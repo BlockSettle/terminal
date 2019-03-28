@@ -1,6 +1,7 @@
 #ifndef __ZMQ_BIP15X_DATACONNECTION_H__
 #define __ZMQ_BIP15X_DATACONNECTION_H__
 
+#include <functional>
 #include <QObject>
 #include <spdlog/spdlog.h>
 #include "ArmoryServersProvider.h"
@@ -16,6 +17,8 @@ class ZmqBIP15XDataConnection : public QObject, public ZmqDataConnection
    Q_OBJECT
 public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
+      , const bool& ephemeralPeers = false, bool monitored = false);
+   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
       , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
       , bool monitored);
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;
@@ -23,19 +26,21 @@ public:
    ZmqBIP15XDataConnection(ZmqBIP15XDataConnection&&) = delete;
    ZmqBIP15XDataConnection& operator= (ZmqBIP15XDataConnection&&) = delete;
 
-   bool startBIP151Handshake();
-   bool handshakeCompleted() {
-      return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
-   }
-
    // Overridden functions from ZmqDataConnection.
    bool send(const std::string& data) override;
    bool closeConnection() override;
+   bool startBIP151Handshake(const std::function<void()> &cbCompleted = nullptr);
+
+   SecureBinaryData getOwnPubKey() const;
 
 signals:
    void bip15XCompleted(); // BIP 150 & 151 handshakes completed.
 
 protected:
+   bool handshakeCompleted() {
+      return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
+   }
+
    // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
    ZmqContext::sock_ptr CreateDataSocket() override;
@@ -57,6 +62,7 @@ private:
    std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
+   std::function<void()>   cbCompleted_ = nullptr;
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__
