@@ -70,6 +70,15 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case signer::RequestCloseType:
       rc = onRequestClose();
       break;
+   case signer::ReloadWalletsType:
+      rc = onReloadWallets(packet.data(), packet.id());
+      break;
+   case signer::ReconnectTerminalType:
+      rc = onReconnect(packet.data());
+      break;
+   case signer::AutoSignActType:
+      rc = onAutoSignRequest(packet.data());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -411,5 +420,50 @@ bool SignerAdapterListener::onRequestClose()
 {
    logger_->info("[SignerAdapterListener::{}] closing on interface request", __func__);
    app_->close();
+   return true;
+}
+
+bool SignerAdapterListener::onReloadWallets(const std::string &data, SignContainer::RequestId reqId)
+{
+   signer::ReloadWalletsRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   app_->reloadWallets(request.path(), [this, reqId] {
+      sendData(signer::ReloadWalletsType, "", reqId);
+   });
+   return true;
+}
+
+bool SignerAdapterListener::onReconnect(const std::string &data)
+{
+   signer::ReconnectRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   if (request.listen_address().empty() || request.listen_port().empty()) {
+      app_->setOnline(request.online());
+   }
+   else {
+      app_->reconnect(request.listen_address(), request.listen_port());
+   }
+   return true;
+}
+
+bool SignerAdapterListener::onAutoSignRequest(const std::string &data)
+{
+   signer::AutoSignActEvent request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   if (request.activated() && !request.wallet_id().empty()) {
+      app_->addPendingAutoSignReq(request.wallet_id());
+   }
+   else {
+      app_->deactivateAutoSign();
+   }
    return true;
 }

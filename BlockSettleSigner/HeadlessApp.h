@@ -49,6 +49,8 @@ public:
    void setOnline(bool);
    void setLimits(SignContainer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+   void deactivateAutoSign();
+   void addPendingAutoSignReq(const std::string &walletId);
    void close();
 
 signals:
