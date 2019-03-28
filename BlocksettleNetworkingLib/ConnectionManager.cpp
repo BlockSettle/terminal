@@ -131,7 +131,7 @@ std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataC
    bool monitored) const
 {
    auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
-      , *(armoryServers_.get()), false, monitored);
+      , false, monitored);
    connection->SetContext(zmqContext_);
 
    return connection;
