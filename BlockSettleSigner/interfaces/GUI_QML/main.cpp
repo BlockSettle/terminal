@@ -10,6 +10,8 @@
 #include <QFileInfo>
 #include <QStandardPaths>
 #include <QDir>
+#include <QFontDatabase>
+#include <QQmlContext>
 #include <memory>
 #include <iostream>
 #include <btc/ecc.h>
@@ -95,6 +97,9 @@ static int QMLApp(int argc, char **argv)
    try {
       SignerAdapter adapter(logger, settings->netType());
       QQmlApplicationEngine engine;
+      const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+      engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
+
       QMLAppObj qmlAppObj(&adapter, logger, settings, &splashScreen, engine.rootContext());
       QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
