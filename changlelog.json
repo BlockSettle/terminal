@@ -1,6 +1,19 @@
 {
-   "latest_version" : "0.14.1",
+   "latest_version" : "0.14.2",
+   "release_date" : "28 March 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.2",
+         "previous_version" : "0.14.1",
+         "improvements" :
+         [
+            "Split signer process and signer UI"
+         ],
+         "bug_fixes" :
+         [
+            "Fix connection to MDHS"
+         ]
+      },
       {
          "version_string" : "0.14.1",
          "previous_version" : "0.13.6",
