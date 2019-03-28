@@ -188,6 +188,20 @@ void ArmoryConnection::setupConnection(const ArmorySettings &settings
             continue;
          }
 
+         // There is a problem with armory keys: we must delete old keys before importing them
+         // (AuthorizedPeers does not replace them, see AuthorizedPeers::addPeer for details).
+         // Because we manage keys using bip150PromptUserRoutine callback this cause a problem
+         // when Armory key changes (it will NOT be replaced despite we accept it trough the callback).
+         // If we don't add keys there it works fine.
+#if 0
+         try {
+            for (const auto &x : bsBIP150PubKeys_) {
+               bdv_->addPublicKey(x);
+            }
+         }
+         catch (...) {}
+#endif
+
          bdv_->setCheckServerKeyPromptLambda(bip150PromptUserRoutine);
 
          connected = bdv_->connectToRemote();
