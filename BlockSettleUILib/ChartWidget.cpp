@@ -70,10 +70,6 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
 
-   MarketDataHistoryRequest request;
-   request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
-   mdhsClient_->SendRequest(request);
-
    // initialize charts
    InitializeCustomPlot();
 
@@ -90,8 +86,17 @@ ChartWidget::~ChartWidget() {
 void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString &security, bs::network::MDFields mdFields) {
    if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) // Celer disconnected
    {
+      isProductListInitialized_ = false;
       cboModel_->clear();
+      title_->setText(QStringLiteral());
       return;
+   }
+   else if (!isProductListInitialized_)
+   {
+      isProductListInitialized_ = true;
+      MarketDataHistoryRequest request;
+      request.set_request_type(MarketDataHistoryMessageType::ProductsListType);
+      mdhsClient_->SendRequest(request);
    }
 
    if (title_->text() == security)

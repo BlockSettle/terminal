@@ -82,6 +82,7 @@ private:
    std::shared_ptr<MdhsClient>						mdhsClient_;
    std::shared_ptr<spdlog::logger>					logger_;
 
+   bool                                         isProductListInitialized_{ false };
    std::map<std::string, TradeHistoryTradeType> productTypesMapper;
 
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker{ new QCPAxisTickerDateTime };
