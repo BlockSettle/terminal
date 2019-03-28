@@ -71,6 +71,9 @@ public:
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb) {
       cbDecryptNode_[reqId] = cb;
    }
+   void setReloadWalletsCb(SignContainer::RequestId reqId, const std::function<void()> &cb) {
+      cbReloadWallets_[reqId] = cb;
+   }
 
 private:
    void onReady(const std::string &data);
@@ -78,12 +81,13 @@ private:
    void onPasswordRequested(const std::string &data);
    void onTxSigned(const std::string &data, SignContainer::RequestId);
    void onXbtSpent(const std::string &data);
-   void onAutoSignActType(const std::string &data);
+   void onAutoSignActivate(const std::string &data);
    void onSyncWalletInfo(const std::string &data, SignContainer::RequestId);
    void onSyncHDWallet(const std::string &data, SignContainer::RequestId);
    void onSyncWallet(const std::string &data, SignContainer::RequestId);
    void onCreateWO(const std::string &data, SignContainer::RequestId);
    void onDecryptedKey(const std::string &data, SignContainer::RequestId);
+   void onReloadWallets(SignContainer::RequestId);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -97,6 +101,7 @@ private:
    std::map<SignContainer::RequestId, std::function<void(const bs::sync::WatchingOnlyWallet &)>>   cbWO_;
    std::map<SignContainer::RequestId
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
+   std::map<SignContainer::RequestId, std::function<void()>>   cbReloadWallets_;
 };
 
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
@@ -133,7 +138,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       onXbtSpent(packet.data());
       break;
    case signer::AutoSignActType:
-      onAutoSignActType(packet.data());
+      onAutoSignActivate(packet.data());
       break;
    case signer::SyncWalletInfoType:
       onSyncWalletInfo(packet.data(), packet.id());
@@ -149,6 +154,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       break;
    case signer::GetDecryptedNodeType:
       onDecryptedKey(packet.data(), packet.id());
+      break;
+   case signer::ReloadWalletsType:
+      onReloadWallets(packet.id());
       break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
@@ -272,7 +280,7 @@ void SignerInterfaceListener::onXbtSpent(const std::string &data)
    });
 }
 
-void SignerInterfaceListener::onAutoSignActType(const std::string &data)
+void SignerInterfaceListener::onAutoSignActivate(const std::string &data)
 {
    signer::AutoSignActEvent evt;
    if (!evt.ParseFromString(data)) {
@@ -422,6 +430,18 @@ void SignerInterfaceListener::onDecryptedKey(const std::string &data, SignContai
    }
    itCb->second(response.private_key(), response.chain_code());
    cbDecryptNode_.erase(itCb);
+}
+
+void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
+{
+   const auto &itCb = cbReloadWallets_.find(reqId);
+   if (itCb == cbReloadWallets_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   itCb->second();
+   cbReloadWallets_.erase(itCb);
 }
 
 
@@ -593,17 +613,26 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
 
 void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function<void()> &cb)
 {
-//   app_->reloadWallets(walletsDir.toStdString(), cb);  //TODO later - maybe not needed at all
+   signer::ReloadWalletsRequest request;
+   request.set_path(walletsDir.toStdString());
+   const auto reqId = listener_->send(signer::ReloadWalletsType, request.SerializeAsString());
+   listener_->setReloadWalletsCb(reqId, cb);
 }
 
 void SignerAdapter::setOnline(bool value)
 {
-//   app_->setOnline(value);  //TODO later - maybe not needed at all
+   signer::ReconnectRequest request;
+   request.set_online(value);
+   listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
 }
 
 void SignerAdapter::reconnect(const QString &address, const QString &port)
 {
-//   app_->reconnect(address.toStdString(), port.toStdString());  //TODO later
+   signer::ReconnectRequest request;
+   request.set_online(true);
+   request.set_listen_address(address.toStdString());
+   request.set_listen_port(port.toStdString());
+   listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
 }
 
 void SignerAdapter::setLimits(SignContainer::Limits limits)
@@ -628,10 +657,15 @@ void SignerAdapter::passwordReceived(const std::string &walletId
 
 void SignerAdapter::addPendingAutoSignReq(const std::string &walletId)
 {
-   //TODO later
+   signer::AutoSignActEvent request;
+   request.set_activated(true);
+   request.set_wallet_id(walletId);
+   listener_->send(signer::AutoSignActType, request.SerializeAsString());
 }
 
 void SignerAdapter::deactivateAutoSign()
 {
-   //TODO later
+   signer::AutoSignActEvent request;
+   request.set_activated(false);
+   listener_->send(signer::AutoSignActType, request.SerializeAsString());
 }

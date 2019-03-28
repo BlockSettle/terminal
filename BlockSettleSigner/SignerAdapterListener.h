@@ -50,6 +50,9 @@ private:
    bool onSetLimits(const std::string &data);
    bool onPasswordReceived(const std::string &data);
    bool onRequestClose();
+   bool onReloadWallets(const std::string &data, SignContainer::RequestId);
+   bool onReconnect(const std::string &data);
+   bool onAutoSignRequest(const std::string &data);
 
 private:
    HeadlessAppObj *  app_;

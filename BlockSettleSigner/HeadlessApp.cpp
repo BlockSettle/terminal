@@ -275,3 +275,17 @@ void HeadlessAppObj::close()
 {
    QMetaObject::invokeMethod(this, [this] { emit finished(); });
 }
+
+void HeadlessAppObj::deactivateAutoSign()
+{
+   if (listener_) {
+      listener_->deactivateAutoSign();
+   }
+}
+
+void HeadlessAppObj::addPendingAutoSignReq(const std::string &walletId)
+{
+   if (listener_) {
+      listener_->addPendingAutoSignReq(walletId);
+   }
+}
