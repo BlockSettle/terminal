@@ -1,15 +1,20 @@
 #ifdef WIN32
-#include <windows.h>
+   #include <windows.h>
 #else
-#include <termios.h>
-#include <unistd.h>
-#endif
+   #include <termios.h>
+   #include <unistd.h>
+#endif // WIN32
+
 #include <functional>
+
 #include <QCoreApplication>
+#include <QDir>
 #include <QFile>
 #include <QProcess>
+
 #include <spdlog/spdlog.h>
-#include "SignerVersion.h"
+
+#include "CelerStreamServerConnection.h"
 #include "ConnectionManager.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
@@ -17,10 +22,10 @@
 #include "HeadlessContainerListener.h"
 #include "HeadlessSettings.h"
 #include "SignerAdapterListener.h"
+#include "SignerVersion.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ZmqSecuredServerConnection.h"
 #include "ZMQHelperFunctions.h"
-#include "CelerStreamServerConnection.h"
+#include "ZmqSecuredServerConnection.h"
 
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
@@ -90,18 +95,26 @@ void HeadlessAppObj::startInterface()
       logger_->debug("[{}] no interface in headless mode", __func__);
       return;
    }
-   QString guiPath = QCoreApplication::applicationDirPath();
-   if (settings_->runMode() == HeadlessSettings::RunMode::QmlGui) {
-      guiPath += QLatin1String("/bs_signer_gui");
-   }
-   else {
+
+   if ((settings_->runMode() != HeadlessSettings::RunMode::QmlGui)) {
       logger_->warn("[{}] run mode {} is not supported, yet"
          , __func__, (int)settings_->runMode());
       return;
    }
+
+#ifdef Q_OS_MACOS
+   QString guiPath = QDir(QCoreApplication::applicationDirPath())
+      .absoluteFilePath(QLatin1String("Blocksettle Signer GUI.app/Contents/MacOS/Blocksettle Signer GUI"));
+#else
+   QString guiPath = QCoreApplication::applicationDirPath();
+
+   guiPath += QLatin1String("/bs_signer_gui");
+
 #ifdef Q_OS_WIN
    guiPath += QLatin1String(".exe");
-#endif
+#endif //Q_OS_WIN
+#endif //Q_OS_MACOS
+
    if (!QFile::exists(guiPath)) {
       logger_->error("[{}] {} doesn't exist"
          , __func__, guiPath.toStdString());
