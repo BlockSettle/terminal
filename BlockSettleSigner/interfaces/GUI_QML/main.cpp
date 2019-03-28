@@ -19,8 +19,7 @@
 #include "SignerAdapter.h"
 #include "SignerSettings.h"
 #include "QMLApp.h"
-#include "ZMQHelperFunctions.h"
-#include "zmq.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
@@ -120,6 +119,8 @@ int main(int argc, char** argv)
    qRegisterMetaType<BinaryData>();
 
    btc_ecc_start(); // Initialize libbtc.
+   startupBIP151CTX();
+   startupBIP150CTX(4, true);
 
    return QMLApp(argc, argv);
 }

@@ -1,5 +1,6 @@
 #include <QCommandLineParser>
 #include <QDir>
+#include <QFile>
 #include <QSettings>
 #include <QStandardPaths>
 #include <spdlog/spdlog.h>
@@ -54,8 +55,6 @@ HeadlessSettings::HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger
    const auto writableDir = logDir.path().toStdString();
 
    logFile_ = writableDir + "/bs_signer.log";
-   zmqPubFile_ = QString::fromStdString(writableDir + "/zmq_conn_srv.pub");
-   zmqPrvFile_ = QString::fromStdString(writableDir + "/zmq_conn_srv.prv");
 }
 
 bool HeadlessSettings::loadSettings(const QStringList &args)
@@ -72,8 +71,6 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
       logFile_ = ini.value(QStringLiteral("LogFileName"), QString::fromStdString(logFile_)).toString().toStdString();
       listenAddress_ = ini.value(QStringLiteral("ListenAddress"), QString::fromStdString(listenAddress_)).toString().toStdString();
       listenPort_ = ini.value(QStringLiteral("ListenPort"), QString::fromStdString(listenPort_)).toString().toStdString();
-      zmqPubFile_ = ini.value(QStringLiteral("ZMQPubKey"), zmqPubFile_).toString();
-      zmqPrvFile_ = ini.value(QStringLiteral("ZMQPrvKey"), zmqPrvFile_).toString();
       trustedTerminals_ = ini.value(QStringLiteral("TrustedTerminals")).toStringList();
    }
 
@@ -82,8 +79,6 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
    parser.addHelpOption();
    parser.addOption({ listenName, listenHelp, QObject::tr("ip/host") });
    parser.addOption({ portName, portHelp, QObject::tr("port") });
-   parser.addOption({ zmqPubKeyName, zmqPubKeyHelp, QObject::tr("key") });
-   parser.addOption({ zmqPrvKeyName, zmqPrvKeyHelp, QObject::tr("key") });
    parser.addOption({ logName, logHelp, QObject::tr("log") });
    parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
@@ -100,22 +95,6 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
 
    if (parser.isSet(portName)) {
       listenPort_ = parser.value(portName).toStdString();
-   }
-
-   if (parser.isSet(zmqPubKeyName)) {
-      if (parser.value(zmqPubKeyName).length() != 40) {
-         logger_->error("invalid ZMQ connection pub key size");
-         return false;
-      }
-      zmqPubFile_ = parser.value(zmqPubKeyName);
-   }
-
-   if (parser.isSet(zmqPrvKeyName)) {
-      if (parser.value(zmqPrvKeyName).length() != 40) {
-         logger_->error("invalid ZMQ connection prv key size");
-         return false;
-      }
-      zmqPrvFile_ = parser.value(zmqPrvKeyName);
    }
 
    if (parser.isSet(logName)) {
@@ -207,3 +186,16 @@ SignContainer::Limits HeadlessSettings::limits() const
    return result;
 }
 
+QStringList HeadlessSettings::trustedInterfaces() const
+{
+   QStringList result;
+   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+   QFile pubKeyFile(dir + QLatin1String("/interface.pub"));
+   if (pubKeyFile.exists()) {
+      if (pubKeyFile.open(QIODevice::ReadOnly)) {
+         const auto data = pubKeyFile.readAll();
+         result << QString::fromStdString("local:" + data.toStdString());
+      }
+   }
+   return result;
+}

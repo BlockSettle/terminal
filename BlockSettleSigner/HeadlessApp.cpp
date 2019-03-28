@@ -11,6 +11,7 @@
 #include <QDir>
 #include <QFile>
 #include <QProcess>
+#include <QStandardPaths>
 
 #include <spdlog/spdlog.h>
 
@@ -24,36 +25,36 @@
 #include "SignerAdapterListener.h"
 #include "SignerVersion.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ZMQHelperFunctions.h"
-#include "ZmqSecuredServerConnection.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &params)
    : logger_(logger), settings_(params)
 {
-   // Get the ZMQ server public key.
-   if (!bs::network::readZmqKeyFile(params->zmqPubKeyFile(), zmqPubKey_
-      , true, logger)) {
-      throw std::runtime_error("failed to read ZMQ server public key");
-   }
-
-   // Get the ZMQ server private key.
-   if (!bs::network::readZmqKeyFile(params->zmqPrvKeyFile(), zmqPrvKey_
-      , false, logger)) {
-      throw std::runtime_error("failed to read ZMQ server private key");
-   }
-
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
-   const auto zmqContext = std::make_shared<ZmqContext>(logger);
-   const auto adapterConn = std::make_shared<CelerStreamServerConnection>(logger, zmqContext);
-   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger, walletsMgr_);
+   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
+   const auto &cbTrustedClients = [this] {
+      return settings_->trustedInterfaces();
+   };
+   const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
+      , zmqContext, cbTrustedClients);
+   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_);
 
-   if (!adapterConn->BindConnection("127.0.0.1", "23457", adapterLsn_.get())) {
+   if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
+      , adapterLsn_.get())) {
       logger_->error("Failed to bind adapter connection");
       throw std::runtime_error("failed to bind adapter socket");
    }
+
+   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+   QFile pubKeyFile(dir + QLatin1String("/headless.pub"));
+   if (!pubKeyFile.open(QIODevice::WriteOnly)) {
+      throw std::runtime_error("Failed to open public key file for writing");
+   }
+   logger_->debug("[{}] creating pubkey file in {}", __func__, pubKeyFile.fileName().toStdString());
+   pubKeyFile.write(adapterConn->getOwnPubKey().toHexStr().c_str());
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
