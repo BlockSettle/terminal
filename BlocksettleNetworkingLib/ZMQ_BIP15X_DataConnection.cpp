@@ -12,13 +12,11 @@ using namespace std;
 // The constructor to use.
 //
 // INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
-//         Server info. (const ArmoryServersProvider&) (REMOVE?)
 //         Ephemeral peer usage. Not recommended. (const bool&)
 // OUTPUT: None
 ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    const shared_ptr<spdlog::logger>& logger
-   , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
-   , bool monitored)
+   , const bool& ephemeralPeers, bool monitored)
    : ZmqDataConnection(logger, monitored)
 {
    string datadir =
@@ -150,8 +148,9 @@ bool ZmqBIP15XDataConnection::send(const string& data)
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XDataConnection::startBIP151Handshake()
+bool ZmqBIP15XDataConnection::startBIP151Handshake(const std::function<void()> &cbCompleted)
 {
+   cbCompleted_ = cbCompleted;
    ZmqBIP15XMsg msg;
    BinaryData nullPayload;
 
@@ -256,10 +255,6 @@ void ZmqBIP15XDataConnection::ProcessIncomingData()
 
    // Pass the final data up the chain.
    auto&& outMsg = inMsg.getSingleBinaryMessage();
-   if (outMsg.getSize() == 0) {
-      logger_->error("[{}] - Incoming packet is empty", __func__);
-      return;
-   }
    ZmqDataConnection::notifyOnData(outMsg.toBinStr());
 }
 
@@ -495,6 +490,9 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(const ZmqBIP15XMsg& msgObj)
       bip151Connection_->bip150HandshakeRekey();
       outKeyTimePoint_ = chrono::system_clock::now();
       emit bip15XCompleted();
+      if (cbCompleted_) {
+         cbCompleted_();
+      }
 
       break;
    }
@@ -526,4 +524,11 @@ void ZmqBIP15XDataConnection::promptUser(const BinaryDataRef& newKey
    else {
       serverPubkeyProm_->set_value(true);
    }
+}
+
+SecureBinaryData ZmqBIP15XDataConnection::getOwnPubKey() const
+{
+   const auto pubKey = authPeers_->getOwnPublicKey();
+   return SecureBinaryData(pubKey.pubkey, pubKey.compressed
+      ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
 }

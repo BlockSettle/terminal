@@ -1,6 +1,7 @@
 #ifndef __ZMQ_BIP15X_SERVERCONNECTION_H__
 #define __ZMQ_BIP15X_SERVERCONNECTION_H__
 
+#include <functional>
 #include <QString>
 #include <spdlog/spdlog.h>
 #include "AuthorizedPeers.h"
@@ -32,6 +33,9 @@ public:
       , const std::shared_ptr<ZmqContext>& context
       , const QStringList& trustedClients, const uint64_t& id
       , const bool& ephemeralPeers);
+   ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<ZmqContext> &
+      , const std::function<QStringList()> &cbTrustedClients);
    ZmqBIP15XServerConnection(const ZmqBIP15XServerConnection&) = delete;
    ZmqBIP15XServerConnection& operator= (const ZmqBIP15XServerConnection&) = delete;
    ZmqBIP15XServerConnection(ZmqBIP15XServerConnection&&) = delete;
@@ -40,6 +44,14 @@ public:
    // Overridden functions from ServerConnection.
    bool SendDataToClient(const std::string& clientId, const std::string& data
       , const SendResultCb& cb = nullptr) override;
+   bool SendDataToAllClients(const std::string&, const SendResultCb &cb = nullptr) override;
+
+   SecureBinaryData getOwnPubKey() const;
+
+protected:
+   // Overridden functions from ZmqServerConnection.
+   ZmqContext::sock_ptr CreateDataSocket() override;
+   bool ReadFromDataSocket() override;
 
    void resetBIP151Connection(const std::string& clientID);
    void setBIP151Connection(const std::string& clientID);
@@ -47,11 +59,6 @@ public:
       return (checkConn.bip150HandshakeCompleted_ &&
          checkConn.bip151HandshakeCompleted_);
    }
-
-protected:
-   // Overridden functions from ZmqServerConnection.
-   ZmqContext::sock_ptr CreateDataSocket() override;
-   bool ReadFromDataSocket() override;
 
 private:
    void ProcessIncomingData(const std::string& encData
@@ -63,7 +70,7 @@ private:
 
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
-   const uint64_t id_;
-   QStringList trustedClients_;
+   uint64_t id_;
+   std::function<QStringList()>  cbTrustedClients_;
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

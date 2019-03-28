@@ -51,7 +51,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , const QStringList& trustedClients, const uint64_t& id
    , const bool& ephemeralPeers)
    : ZmqServerConnection(logger, context), id_(id)
-   , trustedClients_(trustedClients)
 {
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
@@ -64,6 +63,22 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    else {
       authPeers_ = make_shared<AuthorizedPeers>();
    }
+
+   cbTrustedClients_ = [trustedClients]() -> QStringList {
+      return trustedClients;
+   };
+}
+
+ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
+   const std::shared_ptr<spdlog::logger>& logger
+   , const std::shared_ptr<ZmqContext>& context
+   , const std::function<QStringList()> &cbTrustedClients)
+   : ZmqServerConnection(logger, context)
+   , cbTrustedClients_(cbTrustedClients)
+{
+   authPeers_ = make_shared<AuthorizedPeers>();
+   BinaryData bdID = CryptoPRNG::generateRandom(8);
+   id_ = READ_UINT64_LE(bdID.getPtr());
 }
 
 // Create the data socket.
@@ -146,6 +161,18 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    return QueueDataToSend(clientId, sendStr, cb, false);
 }
 
+bool ZmqBIP15XServerConnection::SendDataToAllClients(const std::string& data, const SendResultCb &cb)
+{
+   unsigned int successCount = 0;
+
+   for (const auto &it : socketConnMap_) {
+      if (SendDataToClient(it.first, data, cb)) {
+         successCount++;
+      }
+   }
+   return (successCount == socketConnMap_.size());
+}
+
 // The function that processes raw ZMQ connection data. It processes the BIP
 // 150/151 handshake (if necessary) and decrypts the raw data.
 //
@@ -217,10 +244,6 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData_
    }
 
    auto&& outMsg = msgObj.getSingleBinaryMessage();
-   if (outMsg.getSize() == 0) {
-      logger_->error("[{}] - Incoming packet is empty", __func__);
-      return;
-   }
 
    // Pass the final data up the chain.
    notifyListenerOnData(clientID, outMsg.toBinStr());
@@ -499,8 +522,9 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(
 void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
 {
    if (socketConnMap_[clientID] == nullptr) {
+      assert(cbTrustedClients_);
       auto lbds = getAuthPeerLambda();
-      for (auto b : trustedClients_) {
+      for (auto b : cbTrustedClients_()) {
          const auto colonIndex = b.indexOf(QLatin1Char(':'));
          if (colonIndex < 0) {
             logger_->error("[{}] Trusted client list is malformed (for {})."
@@ -557,4 +581,11 @@ AuthPeersLambdas ZmqBIP15XServerConnection::getAuthPeerLambda()
    };
 
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
+}
+
+SecureBinaryData ZmqBIP15XServerConnection::getOwnPubKey() const
+{
+   const auto pubKey = authPeers_->getOwnPublicKey();
+   return SecureBinaryData(pubKey.pubkey, pubKey.compressed
+      ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
 }
