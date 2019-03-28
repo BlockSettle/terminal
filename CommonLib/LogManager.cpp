@@ -3,6 +3,8 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 
+#include <QDir>
+
 using namespace bs;
 
 static const std::string catDefault = "_default_";
@@ -105,6 +107,15 @@ std::shared_ptr<spdlog::logger> LogManager::create(const LogConfig &config)
 std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr<spdlog::logger> &logger, const LogConfig &config)
 {
    std::shared_ptr<spdlog::logger> result;
+
+   if (!config.fileName.empty()) {
+      QDir dirObject;
+      auto logFilePath = QFileInfo(QString::fromStdString(config.fileName)).absolutePath();
+      std::string filePathString = logFilePath.toStdString();
+      if (!dirObject.exists(logFilePath)) {
+         dirObject.mkpath(logFilePath);
+      }
+   }
 
    if (logger) {
       auto sinks = logger->sinks();

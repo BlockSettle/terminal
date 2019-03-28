@@ -781,11 +781,13 @@ void BSTerminalMainWindow::connectArmory()
       QMetaObject::invokeMethod(this, [this, srvPubKey, srvIPPort, promiseObj] {
          showArmoryServerPrompt(srvPubKey, srvIPPort, promiseObj);
       });
-      bool result = futureObj.get();
 
+      bool result = futureObj.get();
       // stop armory connection loop if server key was rejected
-      armory_->needsBreakConnectionLoop_.store(!result);
-      armory_->setState(ArmoryConnection::State::Canceled);
+      if (!result) {
+         armory_->needsBreakConnectionLoop_.store(true);
+         armory_->setState(ArmoryConnection::State::Canceled);
+      }
       return result;
    });
 }
@@ -1476,8 +1478,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumWidth(600);
-         box->setMinimumHeight(150);
+         box->setMinimumWidth(650);
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1502,8 +1503,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(server.armoryDBKey)
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumWidth(600);
-         box->setMinimumHeight(150);
+         box->setMinimumWidth(650);
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);
