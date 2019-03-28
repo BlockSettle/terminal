@@ -1,32 +1,36 @@
+#include "AutheIDClient.h"
+#include "AuthProxy.h"
+#include "ConnectionManager.h"
+#include "CoreWalletsManager.h"
+#include "EasyEncValidator.h"
+#include "OfflineProcessor.h"
+#include "PasswordConfirmValidator.h"
+#include "PdfBackupQmlPrinter.h"
+#include "QMLApp.h"
+#include "QmlFactory.h"
+#include "QMLStatusUpdater.h"
+#include "QmlWalletsViewModel.h"
+#include "QPasswordData.h"
+#include "QSeed.h"
+#include "QWalletInfo.h"
+#include "SignerAdapter.h"
+#include "SignerSettings.h"
+#include "SignerVersion.h"
+#include "TXInfo.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "WalletsProxy.h"
+#include "ZMQHelperFunctions.h"
+#include "ZmqSecuredServerConnection.h"
+
 #include <functional>
+
 #include <QtQml>
 #include <QQmlContext>
 #include <QGuiApplication>
+#include <QSplashScreen>
+
 #include <spdlog/spdlog.h>
-#include "SignerVersion.h"
-#include "ConnectionManager.h"
-#include "AuthProxy.h"
-#include "AutheIDClient.h"
-#include "CoreWalletsManager.h"
-#include "QMLApp.h"
-#include "QMLStatusUpdater.h"
-#include "QmlWalletsViewModel.h"
-#include "OfflineProcessor.h"
-#include "SignerAdapter.h"
-#include "SignerSettings.h"
-#include "TXInfo.h"
-#include "WalletsProxy.h"
-#include "ZmqSecuredServerConnection.h"
-#include "EasyEncValidator.h"
-#include "PasswordConfirmValidator.h"
-#include "PdfBackupQmlPrinter.h"
-#include "QmlFactory.h"
-#include "QWalletInfo.h"
-#include "QSeed.h"
-#include "QPasswordData.h"
-#include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "ZMQHelperFunctions.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -37,9 +41,9 @@ Q_DECLARE_METATYPE(bs::wallet::TXInfo)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
 QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<SignerSettings> &params, QQmlContext *ctxt)
+   , const std::shared_ptr<SignerSettings> &params, QSplashScreen *spl, QQmlContext *ctxt)
    : QObject(nullptr), adapter_(adapter), logger_(logger), settings_(params)
-   , ctxt_(ctxt), notifMode_(QSystemTray)
+   , splashScreen_(spl), ctxt_(ctxt), notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
 #endif // BS_USE_DBUS
@@ -80,7 +84,10 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
-         emit loadingComplete();
+         if (splashScreen_) {
+            splashScreen_->close();
+            splashScreen_ = nullptr;
+         }
       }
    });
 
@@ -108,6 +115,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
 void QMLAppObj::onReady()
 {
+   logger_->debug("[{}]", __func__);
    walletsMgr_ = adapter_->getWalletsManager();
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &QMLAppObj::onWalletsSynced);
 
@@ -115,14 +123,17 @@ void QMLAppObj::onReady()
       logger_->debug("Syncing wallet {} of {}", cur, total);
    };
    walletsMgr_->syncWallets(cbProgress);
-
-   walletsModel_->setWalletsManager(walletsMgr_);
-   qmlFactory_->setWalletsManager(walletsMgr_);
 }
 
 void QMLAppObj::onWalletsSynced()
 {
-   emit loadingComplete();
+   logger_->debug("[{}]", __func__);
+   if (splashScreen_) {
+      splashScreen_->close();
+      splashScreen_ = nullptr;
+   }
+   walletsModel_->setWalletsManager(walletsMgr_);
+   qmlFactory_->setWalletsManager(walletsMgr_);
 }
 
 void QMLAppObj::settingsConnections()
