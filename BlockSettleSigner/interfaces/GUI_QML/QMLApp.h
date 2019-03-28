@@ -6,6 +6,8 @@
 #include <QObject>
 #include <QSystemTrayIcon>
 
+#include "CoreWallet.h"
+
 namespace bs {
    namespace wallet {
       class QPasswordData;
