@@ -13,6 +13,45 @@ const QColor BACKGROUND_COLOR = QColor(28, 40, 53);
 const QColor FOREGROUND_COLOR = QColor(Qt::white);
 const QColor VOLUME_COLOR     = QColor(32, 159, 223);
 
+ComboBoxDelegate::ComboBoxDelegate(QObject *parent)
+   :QItemDelegate(parent)
+{
+}
+
+void ComboBoxDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+   if (index.data(Qt::AccessibleDescriptionRole).toString() == QLatin1String("separator"))
+   {
+      painter->setPen(Qt::gray);
+      painter->drawLine(option.rect.left(), option.rect.center().y(), option.rect.right(), option.rect.center().y());
+   }
+   else if (index.data(Qt::AccessibleDescriptionRole).toString() == QLatin1String("parent"))
+   {
+      QStyleOptionViewItem parentOption = option;
+      parentOption.state |= QStyle::State_Enabled;
+      QItemDelegate::paint(painter, parentOption, index);
+   }
+   else if (index.data(Qt::AccessibleDescriptionRole).toString() == QLatin1String("child")) {
+      QStyleOptionViewItem childOption = option;
+      int indent = option.fontMetrics.width(QString(4, QChar::fromLatin1(' ')));
+      childOption.rect.adjust(indent, 0, 0, 0);
+      childOption.textElideMode = Qt::ElideNone;
+      QItemDelegate::paint(painter, childOption, index);
+   }
+   else
+   {
+      QItemDelegate::paint(painter, option, index);
+   }
+}
+
+QSize ComboBoxDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+   QString type = index.data(Qt::AccessibleDescriptionRole).toString();
+   if (type == QLatin1String("separator"))
+      return QSize(0, 10);
+   return QItemDelegate::sizeHint(option, index);
+}
+
 ChartWidget::ChartWidget(QWidget* pParent)
    : QWidget(pParent)
    , ui_(new Ui::ChartWidget)
@@ -46,15 +85,9 @@ ChartWidget::ChartWidget(QWidget* pParent)
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked),
            this, &ChartWidget::OnDateRangeChanged);
 
-   connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
-           this, &ChartWidget::OnInstrumentChanged);
-
-   // sort model for instruments combo box
    cboModel_ = new QStandardItemModel(this);
-   auto proxy = new QSortFilterProxyModel();
-   proxy->setSourceModel(cboModel_);
-   proxy->sort(0);
-   ui_->cboInstruments->setModel(proxy);
+   ui_->cboInstruments->setItemDelegate(new ComboBoxDelegate);
+   ui_->cboInstruments->setModel(cboModel_);
 }
 
 void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
@@ -139,7 +172,7 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 
 void ChartWidget::UpdateChart(const int& interval) const
 {
-   auto product = ui_->cboInstruments->currentText();
+   auto product = getCurrentProductName();
    if (product.isEmpty())
       return;
    if (title_) {
@@ -208,12 +241,21 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
       logger_->error("can't parse response from mdhs: {}", data);
       return;
    }
-
+   std::map<TradeHistoryTradeType, std::vector<std::string>> tempMap;
    for (const auto& product : response.products())
    {
+      tempMap[product.type()].push_back(product.product());
       productTypesMapper[product.product()] = product.type();
-      cboModel_->appendRow(new QStandardItem(QString::fromStdString(product.product())));
    }
+   for (const auto& mapElement: tempMap) {
+      AddParentItem(cboModel_, ProductTypeToString(mapElement.first));
+      for (const auto& name : mapElement.second) {
+         AddChildItem(cboModel_, QString::fromStdString(name));
+      }
+   }
+   connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
+      this, &ChartWidget::OnInstrumentChanged);
+   ui_->cboInstruments->setCurrentIndex(1); //to prevent automatic selection of parent item
 }
 
 void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
@@ -233,7 +275,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
    bool firstPortion = candlesticksChart_->data()->size() == 0;
 
-   auto product = ui_->cboInstruments->currentText();
+   auto product = getCurrentProductName();
    auto interval = dateRange_.checkedId();
 
    if (product != QString::fromStdString(response.product()) || interval != response.interval())
@@ -386,7 +428,7 @@ void ChartWidget::LoadAdditionalPoints(const QCPRange& range)
          return;
       }
       OhlcRequest ohlcRequest;
-      auto product = ui_->cboInstruments->currentText();
+      auto product = getCurrentProductName();
       ohlcRequest.set_product(product.toStdString());
       ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
       ohlcRequest.set_count(requestLimit);
@@ -413,6 +455,29 @@ void ChartWidget::pickTicketDateFormat(const QCPRange& range) const
    else {
       dateTimeTicker->setDateTimeFormat(QStringLiteral("MMM yyyy"));
    }
+}
+
+QString ChartWidget::getCurrentProductName() const
+{
+   return ui_->cboInstruments->currentText().simplified().replace(QStringLiteral(" "), QStringLiteral(""));
+}
+
+void ChartWidget::AddParentItem(QStandardItemModel* model, const QString& text)
+{
+   QStandardItem* item = new QStandardItem(text);
+   item->setFlags(item->flags() & ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable));
+   item->setData(QStringLiteral("parent"), Qt::AccessibleDescriptionRole);
+   QFont font = item->font();
+   font.setBold( true );
+   item->setFont(font);
+   model->appendRow(item);
+}
+
+void ChartWidget::AddChildItem(QStandardItemModel* model, const QString& text)
+{
+   QStandardItem* item = new QStandardItem(text + QString(4, QChar::fromLatin1(' ')));
+   item->setData(QStringLiteral("child"), Qt::AccessibleDescriptionRole);
+   model->appendRow(item);
 }
 
 void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const
@@ -688,6 +753,16 @@ void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
    LoadAdditionalPoints(newRange);
    pickTicketDateFormat(newRange);
    rescalePlot();
+}
+
+QString ChartWidget::ProductTypeToString(TradeHistoryTradeType type)
+{
+   switch (type) { 
+   case FXTradeType: return QStringLiteral("FXT");  
+   case XBTTradeType: return QStringLiteral("XBT"); 
+   case PMTradeType: return QStringLiteral("PM"); 
+   default: return QStringLiteral("");
+   }
 }
 
 void ChartWidget::InitializeCustomPlot()

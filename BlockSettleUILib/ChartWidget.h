@@ -24,6 +24,19 @@ class MdhsClient;
 
 using namespace Blocksettle::Communication::TradeHistory;
 
+#include <QItemDelegate>
+#include <QPainter>
+
+class ComboBoxDelegate : public QItemDelegate
+{
+   Q_OBJECT
+public:
+   explicit ComboBoxDelegate(QObject *parent = 0);
+protected:
+   void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+   QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
+};
+
 class ChartWidget : public QWidget
 {
     Q_OBJECT
@@ -52,6 +65,7 @@ protected slots:
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
+   static QString ProductTypeToString(TradeHistoryTradeType type);
 
    void OnLoadingNetworkSettings();
    void OnMDConnecting();
@@ -82,6 +96,10 @@ protected:
    void LoadAdditionalPoints(const QCPRange& range);
 
    void pickTicketDateFormat(const QCPRange& range) const;
+private:
+   QString getCurrentProductName() const;
+   void AddParentItem(QStandardItemModel * model, const QString& text);
+   void AddChildItem(QStandardItemModel* model, const QString& text);
 
 private:
    std::shared_ptr<ApplicationSettings>			appSettings_;
