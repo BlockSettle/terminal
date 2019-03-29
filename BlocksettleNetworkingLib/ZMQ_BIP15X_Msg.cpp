@@ -9,7 +9,7 @@ using namespace std;
 // INPUT:  None
 // OUTPUT: None
 // RETURN: None
-void ZmqBIP15XMsg::reset()
+void ZmqBIP15XMsgPartial::reset()
 {
    packets_.clear();
    id_ = UINT32_MAX;
@@ -22,7 +22,7 @@ void ZmqBIP15XMsg::reset()
 // INPUT:  The raw data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XMsg::parsePacket(const BinaryDataRef& dataRef)
+bool ZmqBIP15XMsgPartial::parsePacket(const BinaryDataRef& dataRef)
 {
    if (dataRef.getSize() == 0)
       return false;
@@ -80,7 +80,7 @@ bool ZmqBIP15XMsg::parsePacket(const BinaryDataRef& dataRef)
 // INPUT:  The raw data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XMsg::parseSinglePacket(const BinaryDataRef& bdr)
+bool ZmqBIP15XMsgPartial::parseSinglePacket(const BinaryDataRef& bdr)
 {
    /*
    uint32_t msgid
@@ -110,7 +110,7 @@ bool ZmqBIP15XMsg::parseSinglePacket(const BinaryDataRef& bdr)
 // INPUT:  The raw data header. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XMsg::parseFragmentedMessageHeader(
+bool ZmqBIP15XMsgPartial::parseFragmentedMessageHeader(
    const BinaryDataRef& bdr)
 {
    /*
@@ -144,7 +144,7 @@ bool ZmqBIP15XMsg::parseFragmentedMessageHeader(
 // INPUT:  The raw data header. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XMsg::parseMessageFragment(const BinaryDataRef& bdr)
+bool ZmqBIP15XMsgPartial::parseMessageFragment(const BinaryDataRef& bdr)
 {
    /*
    uint32_t msgid
@@ -177,7 +177,7 @@ bool ZmqBIP15XMsg::parseMessageFragment(const BinaryDataRef& bdr)
 // INPUT:  The raw data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XMsg::parseMessageWithoutId(const BinaryDataRef& bdr)
+bool ZmqBIP15XMsgPartial::parseMessageWithoutId(const BinaryDataRef& bdr)
 {
    /*
    uint8_t type
@@ -197,6 +197,70 @@ bool ZmqBIP15XMsg::parseMessageWithoutId(const BinaryDataRef& bdr)
    return true;
 }
 
+// Get the entire, reconstructed message.
+//
+// INPUT:  None
+// OUTPUT: The message data. (BinaryData*)
+// RETURN: None
+void ZmqBIP15XMsgPartial::getMessage(BinaryData* msgPtr) const
+{
+   if (!isReady())
+   {
+      return;
+   }
+
+   if (packets_.size() == 1)
+   {
+      auto& dataRef = packets_.begin()->second;
+      msgPtr->append(dataRef);
+   }
+   else
+   {
+      ZmqBIP15XMessageCodec::reconstructFragmentedMessage(packets_, msgPtr);
+   }
+}
+
+// Construct a serialized message.
+//
+// INPUT:  The data. (const vector<uint8_t>&)
+//         The BIP151Connection object. (BIP151Connection*)
+//         The message type. (uint8_t)
+//         The message ID. (uint32_t)
+// OUTPUT: None
+// RETURN: None
+void ZmqBIP15XSerializedMessage::construct(const vector<uint8_t>& data,
+   BIP151Connection* connPtr, uint8_t type, uint32_t id)
+{
+   packets_ = move(
+      ZmqBIP15XMessageCodec::serialize(data, connPtr, type, id));
+}
+
+// Construct a serialized message.
+//
+// INPUT:  The data. (const BinaryDataRef&)
+//         The BIP151Connection object. (BIP151Connection*)
+//         The message type. (uint8_t)
+//         The message ID. (uint32_t)
+// OUTPUT: None
+// RETURN: None
+void ZmqBIP15XSerializedMessage::construct(const BinaryDataRef& data,
+   BIP151Connection* connPtr, uint8_t type, uint32_t id)
+{
+   packets_ = move(
+      ZmqBIP15XMessageCodec::serialize(data, connPtr, type, id));
+}
+
+// Get the next fragmented packet in the serialized message.
+//
+// INPUT:  None
+// OUTPUT: None
+// RETURN: The next fragment. (const BinaryData&)
+const BinaryData& ZmqBIP15XSerializedMessage::getNextPacket() const
+{
+   auto& val = packets_[index_++];
+   return val;
+}
+
 // Create a single packet with no ID.
 //
 // INPUT:  The raw payload. (const BinaryDataRef&)
@@ -204,7 +268,7 @@ bool ZmqBIP15XMsg::parseMessageWithoutId(const BinaryDataRef& bdr)
 //         The packet type. (uint8_t)
 // OUTPUT: None
 // RETURN: A vector with the packets. Will usually have only one entry.
-vector<BinaryData> ZmqBIP15XMsg::serializePacketWithoutId(
+vector<BinaryData> ZmqBIP15XMessageCodec::serializePacketWithoutId(
    const BinaryDataRef& payload, BIP151Connection* connPtr, uint8_t type)
 {
    /***
@@ -220,7 +284,7 @@ vector<BinaryData> ZmqBIP15XMsg::serializePacketWithoutId(
       throw runtime_error("payload is too large to serialize");
    }
 
-   //skip LWS_PRE, copy in packet size
+   // Copy in packet size.
    memcpy(plainText.getPtr(), &size, 4);
    size += 4;
 
@@ -244,7 +308,15 @@ vector<BinaryData> ZmqBIP15XMsg::serializePacketWithoutId(
    return result;
 }
 
-vector<BinaryData> ZmqBIP15XMsg::serialize(const vector<uint8_t>& payload
+// Packet serialization frontend.
+//
+// INPUT:  The raw payload. (const vector<uint8_t>&)
+//         The BIP 150/151 handshake data. (BIP151Connection*)
+//         The packet type. (uint8_t)
+//         Message type. (uint32_t)
+// OUTPUT: None
+// RETURN: A vector with the packets. Will usually have only one entry.
+vector<BinaryData> ZmqBIP15XMessageCodec::serialize(const vector<uint8_t>& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id)
 {
    BinaryDataRef bdr;
@@ -262,7 +334,7 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const vector<uint8_t>& payload
 //         Message type. (uint32_t)
 // OUTPUT: None
 // RETURN: A vector with the packets. Will usually have only one entry.
-vector<BinaryData> ZmqBIP15XMsg::serialize(const string& payload
+vector<BinaryData> ZmqBIP15XMessageCodec::serialize(const string& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id)
 {
    BinaryDataRef bdr((uint8_t*)payload.c_str(), payload.size());
@@ -282,7 +354,7 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const string& payload
 //         Message type. Usually 0. (uint32_t)
 // OUTPUT: None
 // RETURN: A vector with the packets. Will usually have only one entry.
-vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
+vector<BinaryData> ZmqBIP15XMessageCodec::serialize(const BinaryDataRef& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id)
 {
    //is this payload carrying a msgid?
@@ -293,7 +365,7 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
    /***
    Fragmented packet seralization
 
-   If the payload is less than (WEBSOCKET_MESSAGE_PACKET_SIZE - 9 - LWS_PRE -
+   If the payload is less than (WEBSOCKET_MESSAGE_PACKET_SIZE - 9  -
    POLY1305MACLEN), use:
     Single packet header:
      uint32_t packet size
@@ -354,7 +426,7 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
       encryptAndAdd(plainText);
    }
    else {
-/*      //2 extra bytes for fragment count
+      //2 extra bytes for fragment count
       uint32_t headerRoom = payloadRoom - 2;
       size_t leftOver = dataLen - headerRoom;
 
@@ -376,7 +448,7 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
       if (fragmentCount > 65535)
          throw runtime_error("payload too large for serialization");
 
-      BinaryData headerPacket(WEBSOCKET_MESSAGE_PACKET_SIZE);
+      BinaryData headerPacket(ZMQ_MESSAGE_PACKET_SIZE);
 
       //-2 for fragment count
       size_t pos = payloadRoom - 2;
@@ -384,14 +456,14 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
       //+4 to shave off payload size, +1 for type
       headerRoom = payloadRoom + 5;
 
-      memcpy(headerPacket.getPtr() + LWS_PRE, &headerRoom, 4);
-      headerPacket.getPtr()[LWS_PRE + 4] = WS_MSGTYPE_FRAGMENTEDPACKET_HEADER;
-      memcpy(headerPacket.getPtr() + LWS_PRE + 5, &id, 4);
-      memcpy(headerPacket.getPtr() + LWS_PRE + 9, &fragmentCount, 2);
-      memcpy(headerPacket.getPtr() + LWS_PRE + 11, payload.getPtr(), pos);
+      memcpy(headerPacket.getPtr() , &headerRoom, 4);
+      headerPacket.getPtr()[4] = ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER;
+      memcpy(headerPacket.getPtr() + 5, &id, 4);
+      memcpy(headerPacket.getPtr() + 9, &fragmentCount, 2);
+      memcpy(headerPacket.getPtr() + 11, payload.getPtr(), pos);
       encryptAndAdd(headerPacket);
 
-      size_t fragmentOverhead = 10 + LWS_PRE + POLY1305MACLEN;
+      size_t fragmentOverhead = 10 + POLY1305MACLEN;
       for (unsigned i = 1; i < fragmentCount; i++)
       {
          if (i == 253)
@@ -399,18 +471,18 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
 
          //figure out data size
          size_t dataSize = min(
-            WEBSOCKET_MESSAGE_PACKET_SIZE - fragmentOverhead,
+            ZMQ_MESSAGE_PACKET_SIZE - fragmentOverhead,
             dataLen - pos);
 
          BinaryData fragmentPacket(dataSize + fragmentOverhead);
          uint32_t packetSize =
-            dataSize + fragmentOverhead - LWS_PRE - POLY1305MACLEN - 4;
+            dataSize + fragmentOverhead  - POLY1305MACLEN - 4;
 
-         memcpy(fragmentPacket.getPtr() + LWS_PRE, &packetSize, 4);
-         fragmentPacket.getPtr()[LWS_PRE + 4] = WS_MSGTYPE_FRAGMENTEDPACKET_FRAGMENT;
-         memcpy(fragmentPacket.getPtr() + LWS_PRE + 5, &id, 4);
+         memcpy(fragmentPacket.getPtr() , &packetSize, 4);
+         fragmentPacket.getPtr()[4] = ZMQ_MSGTYPE_FRAGMENTEDPACKET_FRAGMENT;
+         memcpy(fragmentPacket.getPtr()  + 5, &id, 4);
 
-         size_t offset = LWS_PRE + 9;
+         size_t offset = + 9;
          if (i < 253)
          {
             uint8_t fragID = i;
@@ -429,11 +501,54 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
          pos += dataSize;
 
          encryptAndAdd(fragmentPacket);
-      }*/
+      }
    }
 
    return result;
 }
+
+// Get the message ID.
+//
+// INPUT:  The message. (const BinaryDataRef&)
+// OUTPUT: None
+// RETURN: The message ID. (uint32_t)
+uint32_t ZmqBIP15XMessageCodec::getMessageId(const BinaryDataRef& packet)
+{
+   //sanity check
+   if (packet.getSize() < 7)
+   {
+      return UINT32_MAX;
+   }
+
+   return *(uint32_t*)(packet.getPtr() + 5);
+}
+
+// A frontend that takes packets and reconstructed the fragmented message.
+//
+// INPUT:  The packet collection. (const map<uint16_t, BinaryDataRef>&)
+// OUTPUT: The reconstructed message. (BinaryData*)
+// RETURN: True if success, false if failure.
+bool ZmqBIP15XMessageCodec::reconstructFragmentedMessage(
+   const map<uint16_t, BinaryDataRef>& payloadMap,
+   BinaryData* msg)
+{
+   //this method expects packets in order
+
+   if (payloadMap.size() == 0)
+   {
+      return false;
+   }
+
+   //create a zero copy stream from each packet
+   for (auto& data_pair : payloadMap)
+   {
+      auto& dataRef = data_pair.second;
+      msg->append(dataRef);
+   }
+
+   return true;
+}
+
 
 // Function indicating if a packet is ready to send. Meant primarily for
 // fragmented packets.
@@ -441,7 +556,7 @@ vector<BinaryData> ZmqBIP15XMsg::serialize(const BinaryDataRef& payload
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if ready, false if not.
-bool ZmqBIP15XMsg::isReady() const
+bool ZmqBIP15XMsgPartial::isReady() const
 {
    return packets_.size() == packetCount_;
 }
@@ -451,7 +566,7 @@ bool ZmqBIP15XMsg::isReady() const
 // INPUT:  The packet data. (const BinaryDataRef&)
 // OUTPUT: None
 // RETURN: The packet type. (uint8_t)
-uint8_t ZmqBIP15XMsg::getPacketType(const BinaryDataRef& bdr)
+uint8_t ZmqBIP15XMsgPartial::getPacketType(const BinaryDataRef& bdr)
 {
    if (bdr.getSize() < 5) {
       throw runtime_error("packet is too small to be a serialized fragment");
@@ -465,7 +580,7 @@ uint8_t ZmqBIP15XMsg::getPacketType(const BinaryDataRef& bdr)
 // INPUT:  None
 // OUTPUT: None
 // RETURN: The packet data. (BinaryDataRef)
-BinaryDataRef ZmqBIP15XMsg::getSingleBinaryMessage() const
+BinaryDataRef ZmqBIP15XMsgPartial::getSingleBinaryMessage() const
 {
    if (packetCount_ != 1 || !isReady()) {
       return BinaryDataRef();

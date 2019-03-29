@@ -22,10 +22,13 @@ public:
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
    std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
+   uint32_t msgID_ = 0;
+   ZmqBIP15XMsgFragments currentReadMessage_;
 };
 
 // The class establishing ZMQ sockets and establishing BIP 150/151 handshakes
-// before encrypting/decrypting the on-the-wire data using BIP 150/151.
+// before encrypting/decrypting the on-the-wire data using BIP 150/151. Used by
+// the server in a connection.
 class ZmqBIP15XServerConnection : public ZmqServerConnection
 {
 public:
@@ -63,13 +66,14 @@ protected:
 private:
    void ProcessIncomingData(const std::string& encData
       , const std::string& clientID);
-   bool processAEADHandshake(const BinaryData& msgObj
+   bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj
       , const std::string& clientID);
    void promptUser(const BinaryDataRef& newKey, const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda();
 
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
+   BinaryData leftOverData_;
    uint64_t id_;
    std::function<QStringList()>  cbTrustedClients_;
 };
