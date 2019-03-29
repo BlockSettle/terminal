@@ -17,7 +17,7 @@ ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
    QAction *addUserToContactsAction = searchPopupMenu_->addAction(QObject::tr("Add to contacts"));
    addUserToContactsAction->setStatusTip(QObject::tr("Click to add user to contact list"));
    connect(addUserToContactsAction, &QAction::triggered,
-      [this](bool) { emit addUserToContacts(ui_->chatSearchPopupLabel->text()); }
+      [this](bool) { emit sendFriendRequest(ui_->chatSearchPopupLabel->text()); }
    );
 }
 

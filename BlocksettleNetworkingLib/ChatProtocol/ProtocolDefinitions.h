@@ -23,9 +23,12 @@ namespace Chat
    ,   RequestAskForPublicKey
    ,   RequestSendOwnPublicKey
    ,   RequestChangeMessageStatus
-   ,   RequestContactsAction
+   ,   RequestContactsActionDirect
+   ,   RequestContactsActionServer
    ,   RequestChatroomsList
    ,   RequestSendRoomMessage
+   ,   RequestContactsList
+   ,   RequestSearchUsers
    };
 
 
@@ -42,15 +45,39 @@ namespace Chat
    ,   ResponsePendingMessage
    ,   ResponseSendMessage
    ,   ResponseChangeMessageStatus
-   ,   ResponseContactsAction
+   ,   ResponseContactsActionDirect
+   ,   ResponseContactsActionServer
    ,   ResponseChatroomsList
    ,   ResponseRoomMessages
+   ,   ResponseContactsList
+   ,   ResponseSearchUsers
    };
    
    enum class ContactsAction {
       Accept,
       Reject,
-      Request
+      Request,
+   };
+
+   enum class ContactStatus {
+      Accepted,
+      Rejected,
+   };
+
+   enum class UserStatus {
+       Online,
+       Offline
+   };
+
+   enum class ContactsActionServer {
+       AddContactRecord,
+       RemoveContactRecord,
+       UpdateContactRecord
+   };
+
+   enum class ContactsActionServerResult {
+       Success,
+       Failed
    };
    
    static const QString VersionKey   = QStringLiteral("version");
@@ -77,15 +104,21 @@ namespace Chat
    static const QString MessageIdKey = QStringLiteral("message_id");
    static const QString ClientMessageIdKey = QStringLiteral("client_message_id");
    static const QString MessageResultKey = QStringLiteral("message_result");
-   static const QString MessageStateDeltaMaskKey = QStringLiteral("message_state_delta_mask");
+   static const QString ContactIdKey = QStringLiteral("contact_id");
    static const QString MessageStateKey = QStringLiteral("message_state");
    static const QString ContactActionKey = QStringLiteral("contacts_action");
+   static const QString ContactActionResultKey = QStringLiteral("contacts_action_result");
+   static const QString ContactActionResultMessageKey = QStringLiteral("contacts_action_result_message");
+   static const QString ContactStatusKey = QStringLiteral("contact_status");
    static const QString RoomKeyKey = QStringLiteral("room_id");
    static const QString RoomTitleKey = QStringLiteral("room_title");
    static const QString RoomOwnerIdKey = QStringLiteral("room_owner_id");
    static const QString RoomIsPrivateKey = QStringLiteral("room_is_private");
    static const QString RoomSendUserUpdatesKey = QStringLiteral("room_send_user_updates");
    static const QString RoomDisplayUserListKey = QStringLiteral("room_display_user_list");
+   static const QString UserIdKey = QStringLiteral("user_id");
+   static const QString SearchIdPatternKey = QStringLiteral("search_id_pattern");
+   static const QString UserStatusKey = QStringLiteral("user_status");
 
 
    template <typename T>

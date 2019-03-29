@@ -1509,6 +1509,7 @@ ChatUserListTreeViewStyle {
     qproperty-color_room: #00c8f8;
     qproperty-color_user_online: #00c8f8;
     qproperty-color_incoming_friend_request: #ffa834;
+    qproperty-color_outgoing_friend_request: #A0BC5D;
     qproperty-color_user_default: #c0c0c0; }
 
 ChatMessagesTextEditStyle {

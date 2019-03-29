@@ -2,7 +2,8 @@
 
 #include "ResponseObjects/AskForPublicKeyResponse.h"
 #include "ResponseObjects/ChatroomsListResponse.h"
-#include "ResponseObjects/ContactsActionResponse.h"
+#include "ResponseObjects/ContactsActionResponseDirect.h"
+#include "ResponseObjects/ContactsActionResponseServer.h"
 #include "ResponseObjects/HeartbeatPongResponse.h"
 #include "ResponseObjects/ListResponse.h"
 #include "ResponseObjects/LoginResponse.h"
@@ -13,5 +14,7 @@
 #include "ResponseObjects/SendOwnPublicKeyResponse.h"
 #include "ResponseObjects/UsersListResponse.h"
 #include "ResponseObjects/RoomMessagesResponse.h"
+#include "ResponseObjects/ContactsListResponse.h"
+#include "ResponseObjects/SearchUsersResponse.h"
 
 #include "ResponseHandler.h"

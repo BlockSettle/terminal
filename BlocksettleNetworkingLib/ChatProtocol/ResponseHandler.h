@@ -9,10 +9,13 @@ namespace Chat {
    class LoginResponse;
    class SendMessageResponse;
    class MessageChangeStatusResponse;
-   class ContactsActionResponse;
+   class ContactsActionResponseDirect;
+   class ContactsActionResponseServer;
+   class ContactsListResponse;
    class ChatroomsListResponse;
    class SendRoomMessageResponse;
    class RoomMessagesResponse;
+   class SearchUsersResponse;
    
    class ResponseHandler
    {
@@ -32,9 +35,13 @@ namespace Chat {
       
       virtual void OnSendMessageResponse(const SendMessageResponse&) = 0;
       virtual void OnMessageChangeStatusResponse(const MessageChangeStatusResponse&) = 0;
-      virtual void OnContactsActionResponse(const ContactsActionResponse&) = 0;
+      virtual void OnContactsActionResponseDirect(const ContactsActionResponseDirect&) = 0;
+      virtual void OnContactsActionResponseServer(const ContactsActionResponseServer&) = 0;
+      virtual void OnContactsListResponse(const ContactsListResponse&) = 0;
       
       virtual void OnChatroomsList(const ChatroomsListResponse&) = 0;
       virtual void OnRoomMessages(const RoomMessagesResponse&) = 0;
+
+      virtual void OnSearchUsersResponse(const SearchUsersResponse&) = 0;
    };
 }

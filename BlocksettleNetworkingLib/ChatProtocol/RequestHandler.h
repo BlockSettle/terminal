@@ -11,10 +11,13 @@ namespace Chat {
    class OnlineUsersRequest;
    class MessagesRequest;
    class MessageChangeStatusRequest;
-   class ContactActionRequest;
+   class ContactActionRequestDirect;
+   class ContactActionRequestServer;
+   class ContactsListRequest;
    class ChatroomsListRequest;
    class PendingMessagesResponse;
    class SendRoomMessageRequest;
+   class SearchUsersRequest;
    
    class RequestHandler
    {
@@ -36,10 +39,13 @@ namespace Chat {
       
       virtual void OnRequestChangeMessageStatus(const MessageChangeStatusRequest &) = 0;
       
-      virtual void OnRequestContactsAction(const ContactActionRequest &) = 0;
+      virtual void OnRequestContactsActionDirect(const ContactActionRequestDirect &) = 0;
+      virtual void OnRequestContactsActionServer(const ContactActionRequestServer &) = 0;
+      virtual void OnRequestContactsList(const ContactsListRequest &) = 0;
       
       virtual void OnRequestChatroomsList(const ChatroomsListRequest &) = 0;
       
       virtual void OnSendRoomMessage(const SendRoomMessageRequest& ) = 0;
+      virtual void OnSearchUsersRequest(const SearchUsersRequest& ) = 0;
    };
 }

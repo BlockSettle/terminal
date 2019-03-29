@@ -9,6 +9,7 @@
 #include <tuple>
 #include <QTextTable>
 #include <QImage>
+#include <QMenu>
 
 namespace Chat {
    class MessageData;
@@ -55,11 +56,13 @@ public:
 
 public:
    void setOwnUserId(const std::string &userId) { ownUserId_ = QString::fromStdString(userId); }
+   void switchToChat(const QString& chatId, bool isGroupRoom = false);
    
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
    void rowsInserted();
    void userHaveNewMessageChanged(const QString &userId, const bool &haveNewMessage, const bool &isInCurrentChat);
+   void sendFriendRequest(const QString &userID);
 
 protected:
    enum class Column {
@@ -75,7 +78,6 @@ protected:
 
    
 public slots:
-   void onSwitchToChat(const QString& chatId);
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
@@ -97,10 +99,15 @@ private:
    void insertLoadMore();
    void loadMore();
    QString toHtmlText(const QString &text);
+   QString toHtmlUsername(const QString &username);
 
    QTextTableFormat tableFormat;
    QTextTable *table;
    ChatMessagesTextEditStyle internalStyle_;
+
+   QMenu *userMenu_;
+   QString username_;
+   bool isGroupRoom_;
 
    QImage statusImageOffline_;
    QImage statusImageConnecting_;

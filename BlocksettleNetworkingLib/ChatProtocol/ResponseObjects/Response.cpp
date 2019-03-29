@@ -12,46 +12,55 @@ using namespace Chat;
 #include "LoginResponse.h"
 #include "SendMessageResponse.h"
 #include "MessageChangeStatusResponse.h"
-#include "ContactsActionResponse.h"
+#include "ContactsActionResponseDirect.h"
+#include "ContactsActionResponseServer.h"
 #include "ChatroomsListResponse.h"
 #include "PendingMessagesResponse.h"
 #include "RoomMessagesResponse.h"
+#include "ContactsListResponse.h"
+#include "SearchUsersResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-       { "ResponseError"              ,   ResponseType::ResponseError              }
-   ,   { "ResponseHeartbeatPong"      ,   ResponseType::ResponseHeartbeatPong      }
-   ,   { "ResponseLogin"              ,   ResponseType::ResponseLogin              }
-   ,   { "ResponseMessages"           ,   ResponseType::ResponseMessages           }
-   ,   { "ResponseSuccess"            ,   ResponseType::ResponseSuccess            }
-   ,   { "ResponseUsersList"          ,   ResponseType::ResponseUsersList          }
-   ,   { "ResponseAskForPublicKey"    ,   ResponseType::ResponseAskForPublicKey    }
-   ,   { "ResponseSendOwnPublicKey"   ,   ResponseType::ResponseSendOwnPublicKey   }
-   ,   { "ResponsePendingMessage"     ,   ResponseType::ResponsePendingMessage     }
-   ,   { "ResponseSendMessage"        ,   ResponseType::ResponseSendMessage        }
-   ,   { "ResponseChangeMessageStatus",   ResponseType::ResponseChangeMessageStatus}
-   ,   { "ResponseContactsAction"     ,   ResponseType::ResponseContactsAction     }
-   ,   { "ResponseChatroomsList"      ,   ResponseType::ResponseChatroomsList      }
-   ,   { "ResponseRoomMessages"       ,   ResponseType::ResponseRoomMessages       }
+       { "ResponseError"               ,   ResponseType::ResponseError               }
+   ,   { "ResponseHeartbeatPong"       ,   ResponseType::ResponseHeartbeatPong       }
+   ,   { "ResponseLogin"               ,   ResponseType::ResponseLogin               }
+   ,   { "ResponseMessages"            ,   ResponseType::ResponseMessages            }
+   ,   { "ResponseSuccess"             ,   ResponseType::ResponseSuccess             }
+   ,   { "ResponseUsersList"           ,   ResponseType::ResponseUsersList           }
+   ,   { "ResponseAskForPublicKey"     ,   ResponseType::ResponseAskForPublicKey     }
+   ,   { "ResponseSendOwnPublicKey"    ,   ResponseType::ResponseSendOwnPublicKey    }
+   ,   { "ResponsePendingMessage"      ,   ResponseType::ResponsePendingMessage      }
+   ,   { "ResponseSendMessage"         ,   ResponseType::ResponseSendMessage         }
+   ,   { "ResponseChangeMessageStatus" ,   ResponseType::ResponseChangeMessageStatus }
+   ,   { "ResponseContactsActionDirect",   ResponseType::ResponseContactsActionDirect}
+   ,   { "ResponseContactsActionServer",   ResponseType::ResponseContactsActionServer}
+   ,   { "ResponseChatroomsList"       ,   ResponseType::ResponseChatroomsList       }
+   ,   { "ResponseRoomMessages"        ,   ResponseType::ResponseRoomMessages        }
+   ,   { "ResponseContactsList"        ,   ResponseType::ResponseContactsList        }
+   ,   { "ResponseSearchUsers"         ,   ResponseType::ResponseSearchUsers         }
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-       { ResponseType::ResponseError              ,  "ResponseError"              }
-   ,   { ResponseType::ResponseHeartbeatPong      ,  "ResponseHeartbeatPong"      }
-   ,   { ResponseType::ResponseLogin              ,  "ResponseLogin"              }
-   ,   { ResponseType::ResponseMessages           ,  "ResponseMessages"           }
-   ,   { ResponseType::ResponseSuccess            ,  "ResponseSuccess"            }
-   ,   { ResponseType::ResponseUsersList          ,  "ResponseUsersList"          }
-   ,   { ResponseType::ResponseAskForPublicKey    ,  "ResponseAskForPublicKey"    }
-   ,   { ResponseType::ResponseSendOwnPublicKey   ,  "ResponseSendOwnPublicKey"   }
-   ,   { ResponseType::ResponsePendingMessage     ,  "ResponsePendingMessage"     }
-   ,   { ResponseType::ResponseSendMessage        ,  "ResponseSendMessage"        }
-   ,   { ResponseType::ResponseChangeMessageStatus,  "ResponseChangeMessageStatus"}
-   ,   { ResponseType::ResponseContactsAction     ,  "ResponseContactsAction"     }
-   ,   { ResponseType::ResponseChatroomsList      ,  "ResponseChatroomsList"      }
-   ,   { ResponseType::ResponseRoomMessages       ,  "ResponseRoomMessages"       }
+       { ResponseType::ResponseError               ,  "ResponseError"               }
+   ,   { ResponseType::ResponseHeartbeatPong       ,  "ResponseHeartbeatPong"       }
+   ,   { ResponseType::ResponseLogin               ,  "ResponseLogin"               }
+   ,   { ResponseType::ResponseMessages            ,  "ResponseMessages"            }
+   ,   { ResponseType::ResponseSuccess             ,  "ResponseSuccess"             }
+   ,   { ResponseType::ResponseUsersList           ,  "ResponseUsersList"           }
+   ,   { ResponseType::ResponseAskForPublicKey     ,  "ResponseAskForPublicKey"     }
+   ,   { ResponseType::ResponseSendOwnPublicKey    ,  "ResponseSendOwnPublicKey"    }
+   ,   { ResponseType::ResponsePendingMessage      ,  "ResponsePendingMessage"      }
+   ,   { ResponseType::ResponseSendMessage         ,  "ResponseSendMessage"         }
+   ,   { ResponseType::ResponseChangeMessageStatus ,  "ResponseChangeMessageStatus" }
+   ,   { ResponseType::ResponseContactsActionDirect,  "ResponseContactsActionDirect"}
+   ,   { ResponseType::ResponseContactsActionServer,  "ResponseContactsActionServer"}
+   ,   { ResponseType::ResponseChatroomsList       ,  "ResponseChatroomsList"       }
+   ,   { ResponseType::ResponseRoomMessages        ,  "ResponseRoomMessages"        }
+   ,   { ResponseType::ResponseContactsList        ,  "ResponseContactsList"        }
+   ,   { ResponseType::ResponseSearchUsers         ,  "ResponseSearchUsers"         }
 };
 
 template <typename T>
@@ -112,13 +121,22 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       case ResponseType::ResponseChangeMessageStatus:
          return MessageChangeStatusResponse::fromJSON(jsonData);
       
-      case ResponseType::ResponseContactsAction:
-         return ContactsActionResponse::fromJSON(jsonData);
+      case ResponseType::ResponseContactsActionDirect:
+         return ContactsActionResponseDirect::fromJSON(jsonData);
+
+      case ResponseType::ResponseContactsActionServer:
+         return ContactsActionResponseServer::fromJSON(jsonData);
       
       case ResponseType::ResponseChatroomsList:
          return ChatroomsListResponse::fromJSON(jsonData);
       case ResponseType::ResponseRoomMessages:
          return RoomMessagesResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseContactsList:
+         return ContactsListResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseSearchUsers:
+         return SearchUsersResponse::fromJSON(jsonData);
 
       default:
          break;

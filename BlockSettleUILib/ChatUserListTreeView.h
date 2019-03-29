@@ -16,6 +16,8 @@ class ChatUserListTreeViewStyle : public QWidget
               WRITE setColorUserOnline)
    Q_PROPERTY(QColor color_incoming_friend_request READ colorIncomingFriendRequest
               WRITE setColorIncomingFriendRequest)
+   Q_PROPERTY(QColor color_outgoing_friend_request READ colorOutgoingFriendRequest
+              WRITE setColorOutgoinggFriendRequest)
    Q_PROPERTY(QColor color_user_default READ colorUserDefault
               WRITE setColorUserDefault)
     
@@ -66,14 +68,26 @@ public:
    {
       colorUserDefault_ = colorUserDefault;
    }
-    
+
+   QColor colorOutgoingFriendRequest() const
+   {
+      return colorOutgoingFriendRequest_;
+   }
+
+public slots:
+   void setColorOutgoinggFriendRequest(QColor color_outgoing_friend_request)
+   {
+      colorOutgoingFriendRequest_ = color_outgoing_friend_request;
+   }
+
 private:
    QColor colorRoom_;
    QColor colorUserOnline_;
    QColor colorIncomingFriendRequest_;
    QColor colorUserDefault_;
+   QColor colorOutgoingFriendRequest_;
 };
-
+class BSContextMenu;
 class ChatUserListTreeViewDelegate : public QStyledItemDelegate
 {
    Q_OBJECT
@@ -102,10 +116,13 @@ public:
 signals:
    void userClicked(const QString &userId);
    void roomClicked(const QString &roomId);
+   void acceptFriendRequest(const QString &userId);
+   void declineFriendRequest(const QString &userId);
 
 public slots:
    void onChatUserDataListChanged(const ChatUserDataListPtr &chatUserDataListPtr);
    void onChatRoomDataListChanged(const Chat::ChatRoomDataListPtr &roomsDataList);
+   void onCustomContextMenu(const QPoint &);
 
 private slots:
    void onUserListItemClicked(const QModelIndex &index);
@@ -113,6 +130,7 @@ private slots:
 private:
    ChatUserListTreeViewModel *chatUserListModel_;
    ChatUserListTreeViewStyle internalStyle_;
+   BSContextMenu* contextMenu_;
 
 };
 
