@@ -13,8 +13,8 @@ class QtSettings(Configurator):
         Configurator.__init__(self, settings)
         self.jom = JomSettings(settings)
         self.openssl = OpenSslSettings(settings)
-        self._release = '5.11'
-        self._version = self._release + '.3'
+        self._release = '5.12'
+        self._version = self._release + '.2'
         self._package_name = 'qt-everywhere-src-' + self._version
         self._script_revision = '5'
 
@@ -27,7 +27,7 @@ class QtSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version + self._script_revision
+        return self._version + '_' + self._script_revision
 
     def get_url(self):
         return self._package_url
