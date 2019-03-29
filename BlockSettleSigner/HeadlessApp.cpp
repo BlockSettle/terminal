@@ -260,7 +260,7 @@ void HeadlessAppObj::setCallbacks(const std::function<void(const std::string &)>
    , const std::function<void(int64_t, bool)> &cbXbtSpent
    , const std::function<void(const std::string &)> &cbAsAct
    , const std::function<void(const std::string &)> &cbAsDeact
-   , const std::function<void(const QString &, const QVariant &)> &cbCustomDialog)
+   , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog)
 {
    if (listener_) {
       listener_->setCallbacks(cbPeerConn, cbPeerDisconn, cbPwd, cbTxSigned

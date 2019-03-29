@@ -43,7 +43,7 @@ public:
       , const std::function<void(int64_t, bool)> &cbXbtSpent
       , const std::function<void(const std::string &)> &cbAsAct
       , const std::function<void(const std::string &)> &cbAsDeact
-      , const std::function<void(const QString &, const QVariant &)> &cbCustomDialog);
+      , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog);
 
    void reloadWallets(const std::string &, const std::function<void()> &);
    void reconnect(const std::string &listenAddr, const std::string &port);
