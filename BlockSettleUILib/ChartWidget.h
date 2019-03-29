@@ -53,6 +53,13 @@ protected slots:
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
 
+   void OnLoadingNetworkSettings();
+   void OnMDConnecting();
+   void OnMDConnected();
+   void OnMDDisconnecting();
+   void OnMDDisconnected();
+   void ChangeMDSubscriptionState();
+
 protected:
    void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
    void UpdateChart(const int& interval) const;

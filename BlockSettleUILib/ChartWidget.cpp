@@ -70,6 +70,14 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
 
+   connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this, &ChartWidget::ChangeMDSubscriptionState);
+
+   connect(mdProvider.get(), &MarketDataProvider::WaitingForConnectionDetails, this, &ChartWidget::OnLoadingNetworkSettings);
+   connect(mdProvider.get(), &MarketDataProvider::StartConnecting, this, &ChartWidget::OnMDConnecting);
+   connect(mdProvider.get(), &MarketDataProvider::Connected, this, &ChartWidget::OnMDConnected);
+   connect(mdProvider.get(), &MarketDataProvider::Disconnecting, this, &ChartWidget::OnMDDisconnecting);
+   connect(mdProvider.get(), &MarketDataProvider::Disconnected, this, &ChartWidget::OnMDDisconnected);
+
    // initialize charts
    InitializeCustomPlot();
 
@@ -797,3 +805,47 @@ void ChartWidget::InitializeCustomPlot()
 
    // make zoomable
 }
+
+void ChartWidget::OnLoadingNetworkSettings()
+{
+   ui_->pushButtonMDConnection->setText(tr("Connecting"));
+   ui_->pushButtonMDConnection->setEnabled(false);
+   ui_->pushButtonMDConnection->setToolTip(tr("Waiting for connection details"));
+}
+
+void ChartWidget::OnMDConnecting()
+{
+   ui_->pushButtonMDConnection->setText(tr("Connecting"));
+   ui_->pushButtonMDConnection->setEnabled(false);
+   ui_->pushButtonMDConnection->setToolTip(QString{});
+}
+
+void ChartWidget::OnMDConnected()
+{
+   ui_->pushButtonMDConnection->setText(tr("Disconnect"));
+   ui_->pushButtonMDConnection->setEnabled(true);
+}
+
+void ChartWidget::OnMDDisconnecting()
+{
+   ui_->pushButtonMDConnection->setText(tr("Disconnecting"));
+   ui_->pushButtonMDConnection->setEnabled(false);
+}
+
+void ChartWidget::OnMDDisconnected()
+{
+   ui_->pushButtonMDConnection->setText(tr("Subscribe"));
+   ui_->pushButtonMDConnection->setEnabled(true);
+}
+
+void ChartWidget::ChangeMDSubscriptionState()
+{
+   if (mdProvider_->IsConnectionActive()) {
+      mdProvider_->DisconnectFromMDSource();
+   }
+   else {
+      mdProvider_->SubscribeToMD();
+   }
+}
+
+
