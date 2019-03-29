@@ -130,6 +130,10 @@ void HeadlessAppObj::startInterface()
 
 void HeadlessAppObj::onlineProcessing()
 {
+   if (connection_) {
+      logger_->debug("[{}] already online", __func__);
+      return;
+   }
    logger_->debug("Using command socket {}:{}, network {}"
       , settings_->listenAddress(), settings_->listenPort()
       , (settings_->testNet() ? "testnet" : "mainnet"));

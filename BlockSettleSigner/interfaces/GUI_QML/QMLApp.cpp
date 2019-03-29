@@ -250,6 +250,7 @@ void QMLAppObj::onOfflineChanged()
 void QMLAppObj::onWalletsDirChanged()
 {
    adapter_->reloadWallets(settings_->getWalletsDir(), [this] {
+      walletsMgr_->reset();
       walletsMgr_->syncWallets();
    });
 }
