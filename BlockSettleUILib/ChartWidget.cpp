@@ -758,6 +758,13 @@ bool ChartWidget::isBeyondLowerLimit(QCPRange newRange, int interval)
    return newRange.size() < IntervalWidth(interval, candleViewLimit) / 1000;
 }
 
+bool ChartWidget::isBeyondRightLimit(QCPRange newRange, int interval)
+{
+   return candlesticksChart_->data()->size() && newRange.upper > candlesticksChart_
+                                                                 ->data()->at(candlesticksChart_->data()->size() - 1)->
+                                                                 key + IntervalWidth(interval) / 1000 / 2;
+}
+
 void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
 {
    auto interval = dateRange_.checkedId() == -1 ? 0 : dateRange_.checkedId();
@@ -774,6 +781,10 @@ void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
       else {
          ui_->customPlot->xAxis->setRange(newRange);
       }
+   }
+   if (isBeyondRightLimit(newRange, interval)) {
+      auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + IntervalWidth(interval) / 1000 / 2 - 1.0;
+      ui_->customPlot->xAxis->setRange(new_upper - newRange.size(), new_upper);
    }
 
    LoadAdditionalPoints(newRange);

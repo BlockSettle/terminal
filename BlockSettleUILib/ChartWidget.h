@@ -66,6 +66,7 @@ protected slots:
    void OnResetBtnClick();
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
+   bool isBeyondRightLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
    static QString ProductTypeToString(TradeHistoryTradeType type);
    void SetupCrossfire();
