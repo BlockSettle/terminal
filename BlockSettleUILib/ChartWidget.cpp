@@ -700,6 +700,19 @@ void ChartWidget::OnMouseReleased(QMouseEvent* event)
    ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
 }
 
+void ChartWidget::OnWheelScroll(QWheelEvent* event)
+{
+   auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
+   auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
+   auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
+   auto diff = upper_bound - lower_bound;
+   auto directionCoeff = event->angleDelta().y() < 0 ? -1 : 1;
+   double tempCoeff = 120.0 / qAbs(event->angleDelta().y()) * 10; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
+   lower_bound += diff / tempCoeff *  directionCoeff;
+   bottomAxis->setRange(lower_bound, upper_bound);
+   ui_->customPlot->replot();
+}
+
 void ChartWidget::OnAutoScaleBtnClick()
 {
    if (autoScaling_ = !autoScaling_)
@@ -872,11 +885,12 @@ void ChartWidget::InitializeCustomPlot()
    volumeAxisRect_->setMarginGroup(QCP::msLeft|QCP::msRight, group);
 
    //make draggable horizontally
-   ui_->customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+   ui_->customPlot->setInteractions(QCP::iRangeDrag);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
    connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnMousePressed);
    connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnMouseReleased);
+   connect(ui_->customPlot, &QCustomPlot::mouseWheel, this, &ChartWidget::OnWheelScroll);
 
    // make zoomable
 }

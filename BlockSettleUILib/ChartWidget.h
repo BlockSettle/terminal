@@ -60,6 +60,7 @@ protected slots:
    void rescalePlot();
    void OnMousePressed(QMouseEvent* event);
    void OnMouseReleased(QMouseEvent* event);
+   void OnWheelScroll(QWheelEvent* event);
    void OnAutoScaleBtnClick();
    void OnResetBtnClick();
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
