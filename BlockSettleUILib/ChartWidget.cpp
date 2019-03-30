@@ -69,9 +69,12 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , dragY_(0)
    , isDraggingYAxis_(false) {
    ui_->setupUi(this);
+   horLine = new QCPItemLine(ui_->customPlot);
+   vertLine = new QCPItemLine(ui_->customPlot);
    setAutoScaleBtnColor();
    connect(ui_->autoScaleBtn, &QPushButton::clicked, this, &ChartWidget::OnAutoScaleBtnClick);
 
+   setMouseTracking(true);
    connect(ui_->resetBtn, &QPushButton::clicked, this, &ChartWidget::OnResetBtnClick);
    // setting up date range radio button group
    dateRange_.addButton(ui_->btn1h, Interval::OneHour);
@@ -84,6 +87,7 @@ ChartWidget::ChartWidget(QWidget* pParent)
    dateRange_.addButton(ui_->btn1y, Interval::OneYear);
    connect(&dateRange_, qOverload<int>(&QButtonGroup::buttonClicked),
            this, &ChartWidget::OnDateRangeChanged);
+
 
    cboModel_ = new QStandardItemModel(this);
    ui_->cboInstruments->setItemDelegate(new ComboBoxDelegate);
@@ -337,6 +341,16 @@ void ChartWidget::setAutoScaleBtnColor() const
    ui_->autoScaleBtn->setStyleSheet(color);
 }
 
+void ChartWidget::DrawCrossfire(QMouseEvent* event)
+{
+   vertLine->start->setCoords(qMin(event->pos().x(), volumeAxisRect_->right() + 1), 0);
+   vertLine->end->setCoords(qMin(event->pos().x(), volumeAxisRect_->right() + 1), volumeAxisRect_->bottom());
+   horLine->start->setCoords(0, qMin(event->pos().y(), volumeAxisRect_->bottom()));
+   horLine->end->setCoords(volumeAxisRect_->right(), qMin(event->pos().y(), volumeAxisRect_->bottom()));
+   vertLine->setVisible(true);
+   horLine->setVisible(true);
+}
+
 void ChartWidget::AddNewCandle()
 {
    const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
@@ -557,29 +571,22 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
    if (info_ == nullptr)
       return;
 
-   if (auto plottable = ui_->customPlot->plottableAt(event->localPos()))
-   {
-      double x = event->localPos().x();
-      double width = 0.8 * IntervalWidth(dateRange_.checkedId()) / 1000;
-      double timestamp = ui_->customPlot->xAxis->pixelToCoord(x) + width / 2;
+   DrawCrossfire(event);
+
+   double x = event->localPos().x();
+   double width = 0.8 * IntervalWidth(dateRange_.checkedId()) / 1000;
+   double timestamp = ui_->customPlot->xAxis->pixelToCoord(x) + width / 2;
+   if (!candlesticksChart_->data()->size() || timestamp > candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key || timestamp < candlesticksChart_->data()->at(0)->key) {
+      info_->setText({});
+   } else {
       auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp);
       auto volumeValue = *volumeChart_->data()->findBegin(timestamp);
-      /*auto date = QDateTime::fromMSecsSinceEpoch(timestamp * 1000).toUTC();
-      qDebug() << "Position:" << event->pos() << event->localPos()
-               << "Item at:"  << QString::number(timestamp, 'f') << date
-               << ohlcValue.key << ohlcValue.open << ohlcValue.high
-               << ohlcValue.low << ohlcValue.close << volumeValue.value;*/
       info_->setText(tr("O: %1   H: %2   L: %3   C: %4   Volume: %5")
                      .arg(ohlcValue.open, 0, 'g', -1)
                      .arg(ohlcValue.high, 0, 'g', -1)
                      .arg(ohlcValue.low, 0, 'g', -1)
                      .arg(ohlcValue.close, 0, 'g', -1)
                      .arg(volumeValue.value, 0, 'g', -1));
-	  ui_->customPlot->replot();
-   } else 
-   {
-      info_->setText({});
-      ui_->customPlot->replot();
    }
 
    if (isDraggingYAxis_)
@@ -595,7 +602,6 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       upper_bound -= diff / tempCoeff * directionCoeff;
       lower_bound += diff / tempCoeff * directionCoeff;
       rightAxis->setRange(lower_bound, upper_bound);
-      ui_->customPlot->replot();
    }
    if (isDraggingXAxis_) {
       auto bottomAxis = volumeAxisRect_->axis(QCPAxis::atBottom);
@@ -609,8 +615,15 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       double tempCoeff = 10.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
       lower_bound += diff / tempCoeff * /*scalingCoeff * */ directionCoeff;
       bottomAxis->setRange(lower_bound, upper_bound);
-      ui_->customPlot->replot();
    }
+   ui_->customPlot->replot();
+}
+
+void ChartWidget::leaveEvent(QEvent* event)
+{
+   vertLine->setVisible(false);
+   horLine->setVisible(false);
+   ui_->customPlot->replot();
 }
 
 void ChartWidget::rescaleCandlesYAxis()
@@ -778,8 +791,30 @@ QString ChartWidget::ProductTypeToString(TradeHistoryTradeType type)
    }
 }
 
+void ChartWidget::SetupCrossfire()
+{
+   QPen pen(Qt::white, 1, Qt::PenStyle::DashLine);
+   QVector<qreal> dashes;
+   qreal space = 8;
+   dashes << 4 << space;
+   pen.setDashPattern(dashes);
+
+   vertLine->start->setType(QCPItemPosition::ptAbsolute);
+   vertLine->end->setType(QCPItemPosition::ptAbsolute);
+   vertLine->setPen(pen);
+   vertLine->setClipToAxisRect(false);
+
+   horLine->start->setType(QCPItemPosition::ptAbsolute);
+   horLine->end->setType(QCPItemPosition::ptAbsolute);
+   horLine->setPen(pen);
+   horLine->setClipToAxisRect(false);
+}
+
 void ChartWidget::InitializeCustomPlot()
 {
+
+   SetupCrossfire();
+
    QBrush bgBrush(BACKGROUND_COLOR);
    ui_->customPlot->setBackground(bgBrush);
 
@@ -891,8 +926,6 @@ void ChartWidget::InitializeCustomPlot()
    connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnMousePressed);
    connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnMouseReleased);
    connect(ui_->customPlot, &QCustomPlot::mouseWheel, this, &ChartWidget::OnWheelScroll);
-
-   // make zoomable
 }
 
 void ChartWidget::OnLoadingNetworkSettings()

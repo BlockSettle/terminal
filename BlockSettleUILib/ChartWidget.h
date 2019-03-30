@@ -55,6 +55,7 @@ protected slots:
    void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void OnInstrumentChanged(const QString &text);
    void OnPlotMouseMove(QMouseEvent* event);
+   void leaveEvent(QEvent* event) override;
    void rescaleCandlesYAxis();
    void rescaleVolumesYAxis() const;
    void rescalePlot();
@@ -67,6 +68,7 @@ protected slots:
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
    static QString ProductTypeToString(TradeHistoryTradeType type);
+   void SetupCrossfire();
 
    void OnLoadingNetworkSettings();
    void OnMDConnecting();
@@ -85,6 +87,8 @@ protected:
    void ProcessOhlcHistoryResponse(const std::string& data);
 
    void setAutoScaleBtnColor() const;
+
+   void DrawCrossfire(QMouseEvent* event);
 
    void AddNewCandle();
    void ModifyCandle();
@@ -131,6 +135,9 @@ private:
    QCPFinancial *candlesticksChart_;
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;
+
+   QCPItemLine* horLine;
+   QCPItemLine* vertLine;
 
    double lastHigh_;
    double lastLow_;
