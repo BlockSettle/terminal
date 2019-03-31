@@ -2,11 +2,16 @@
 #define __TEST_ENV_H__
 
 #include <memory>
+#include <string>
 #include <gtest/gtest.h>
 #include "BlockchainMonitor.h"
 #include "MockAssetMgr.h"
 #include "MockAuthAddrMgr.h"
-
+#include "RegtestController.h"
+#include "Server.h"
+#include "gtest/NodeUnitTest.h"
+#include "BlockDataManagerConfig.h"
+#include "BDM_mainthread.h"
 
 namespace spdlog {
    class logger;
@@ -25,6 +30,28 @@ class ConnectionManager;
 class MarketDataProvider;
 class QuoteProvider;
 
+struct ArmoryInstance
+{
+   /*in process supernode db running off of spoofed unit test network node*/
+
+   std::string blkdir_;
+   std::string homedir_;
+   std::string ldbdir_;
+   int port_;
+
+   std::shared_ptr<NodeUnitTest> nodePtr_;
+
+   BlockDataManagerConfig config_;
+
+   BlockDataManagerThread* theBDMt_;
+   LMDBBlockDatabase* iface_;
+
+   ArmoryInstance();
+   ~ArmoryInstance(void);
+
+   void mineNewBlock(const BinaryData& addr);
+};
+
 class TestEnv : public testing::Environment
 {
 public:
@@ -33,7 +60,8 @@ public:
    void TearDown() override;
 
    static std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
-   static std::shared_ptr<ArmoryObject> armory() { return armory_; }
+   static std::shared_ptr<ArmoryConnection> armoryConnection() { return armoryConnection_; }
+   static std::shared_ptr<ArmoryInstance> armoryInstance() { return armoryInstance_; }
    static std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
    static std::shared_ptr<MockAuthAddrMgr> authAddrMgr() { return authAddrMgr_; }
    static std::shared_ptr<BlockchainMonitor> blockMonitor() { return blockMonitor_; }
@@ -58,7 +86,8 @@ private:
    static std::shared_ptr<QuoteProvider>        quoteProvider_;
    static std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;
    static std::shared_ptr<spdlog::logger>       logger_;
-   static std::shared_ptr<ArmoryObject>     armory_;
+   static std::shared_ptr<ArmoryConnection>     armoryConnection_;
+   static std::shared_ptr<ArmoryInstance>       armoryInstance_;
 };
 
 #endif // __TEST_ENV_H__
