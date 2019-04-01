@@ -166,7 +166,7 @@ void SignerAdapterListener::setCallbacks()
       signer::CustomDialogRequest evt;
       evt.set_dialogname(dialogName);
       evt.set_variantdata(data);
-      sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString())
+      sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
    };
    app_->setCallbacks(cbPeerConnected, cbPeerDisconnected, cbPwd, cbTxSigned, cbCancelTxSign
       , cbXbtSpent, cbAutoSignActivated, cbAutoSignDeactivated, cbCustomDialog);

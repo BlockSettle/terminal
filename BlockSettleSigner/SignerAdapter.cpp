@@ -1,5 +1,6 @@
 #include "SignerAdapter.h"
 #include <spdlog/spdlog.h>
+#include <QDataStream>
 #include <QFile>
 #include <QStandardPaths>
 #include "CelerClientConnection.h"
@@ -450,9 +451,23 @@ void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
 
 void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignContainer::RequestId)
 {
+   signer::CustomDialogRequest evt;
+   if (!evt.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
 
+   // deserialize variant data
+   QByteArray ba = QByteArray::fromStdString(evt.variantdata());
+   QDataStream stream(&ba, QIODevice::ReadOnly);
+   QVariant variantData;
+   stream >> variantData;
+
+
+   QMetaObject::invokeMethod(parent_, [this, evt, variantData] {
+      emit parent_->customDialogRequest(QString::fromStdString(evt.dialogname()), variantData);
+   });
 }
-
 
 class SignAdapterContainer : public SignContainer
 {
@@ -493,6 +508,7 @@ public:
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) override { return 0; }
+   RequestId customDialogRequest(SignerUiDefs::SignerDialog signerDialog, const QVariant &data = QVariant()) override  { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

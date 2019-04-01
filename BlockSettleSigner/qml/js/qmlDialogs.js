@@ -2,6 +2,7 @@
 
 function customDialogRequest(dialogName, data) {
     var dlg = eval(dialogName)(data)
+    JsHelper.raiseWindow()
     return dlg
 }
 

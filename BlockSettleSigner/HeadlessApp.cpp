@@ -92,16 +92,27 @@ void HeadlessAppObj::start()
 
 void HeadlessAppObj::startInterface()
 {
-   if (settings_->runMode() == HeadlessSettings::RunMode::headless) {
+   QStringList args;
+   switch (settings_->runMode()) {
+   case SignerUiDefs::SignerRunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
       return;
+   case SignerUiDefs::SignerRunMode::cli:
+      logger_->warn("[{}] cli run mode is not supported yet"
+         , __func__);
+      return;
+   case SignerUiDefs::SignerRunMode::lightgui:
+      logger_->debug("[{}] starting lightgui", __func__);
+      args << QLatin1String("--guimode") << QLatin1String("lightgui");
+      break;
+   case SignerUiDefs::SignerRunMode::fullgui:
+      logger_->debug("[{}] starting fullgui", __func__);
+      args << QLatin1String("--guimode") << QLatin1String("fullgui");
+      break;
+   default:
+      break;
    }
 
-   if ((settings_->runMode() != HeadlessSettings::RunMode::QmlGui)) {
-      logger_->warn("[{}] run mode {} is not supported, yet"
-         , __func__, (int)settings_->runMode());
-      return;
-   }
 
 #ifdef Q_OS_MACOS
    QString guiPath = QDir(QCoreApplication::applicationDirPath())
@@ -121,7 +132,6 @@ void HeadlessAppObj::startInterface()
          , __func__, guiPath.toStdString());
       return;
    }
-   QStringList args;
    logger_->debug("[{}] process path: {} {}", __func__
       , guiPath.toStdString(), args.join(QLatin1Char(' ')).toStdString());
    guiProcess_ = std::make_shared<QProcess>();

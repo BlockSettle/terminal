@@ -4,6 +4,7 @@
 #include "BtcDefinitions.h"
 #include "SettingsParser.h"
 #include "SignContainer.h"
+#include "SignerUiDefs.h"
 
 namespace spdlog {
    class logger;
@@ -11,6 +12,7 @@ namespace spdlog {
 
 class HeadlessSettings
 {
+   Q_GADGET
 public:
    HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger);
    ~HeadlessSettings() noexcept = default;
@@ -29,20 +31,13 @@ public:
    QStringList trustedTerminals() const { return trustedTerminals_; }
    QStringList trustedInterfaces() const;
 
-   enum class RunMode {
-      headless,
-      QmlGui,
-      LightGui,
-      CLI
-   };
-   RunMode runMode() const;
+   SignerUiDefs::SignerRunMode runMode() const { return runMode_; }
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
 
    bool     testNet_ = false;
    bool     watchOnly_ = false;
-   bool     headless_ = false;
    double   autoSignSpendLimit_ = 0;
    std::string logFile_;
    std::string walletsDir_;
@@ -50,6 +45,7 @@ private:
    std::string listenPort_ = "23456";
    std::string interfacePort_ = "23457";
    QStringList trustedTerminals_;
+   SignerUiDefs::SignerRunMode runMode_;
 };
 
 

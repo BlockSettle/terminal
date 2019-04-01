@@ -71,7 +71,10 @@ static int QMLApp(int argc, char **argv)
    splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
    splashScreen.show();
 
-   const auto settings = std::make_shared<SignerSettings>(app.arguments());
+   const auto settings = std::make_shared<SignerSettings>();
+   if (!settings->loadSettings(app.arguments())) {
+      return EXIT_FAILURE;
+   }
    std::shared_ptr<spdlog::logger> logger;
    try {
       logger = spdlog::basic_logger_mt("app_logger"
@@ -103,7 +106,17 @@ static int QMLApp(int argc, char **argv)
       QMLAppObj qmlAppObj(&adapter, logger, settings, &splashScreen, engine.rootContext());
       QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
-      engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
+      switch (settings->runMode()) {
+      case SignerUiDefs::SignerRunMode::fullgui:
+         engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
+         break;
+      case SignerUiDefs::SignerRunMode::lightgui:
+         engine.load(QUrl(QStringLiteral("qrc:/qml/mainLight.qml")));
+         break;
+      default:
+         return EXIT_FAILURE;
+      }
+
       if (engine.rootObjects().isEmpty()) {
          throw std::runtime_error("Failed to load main QML file");
       }
