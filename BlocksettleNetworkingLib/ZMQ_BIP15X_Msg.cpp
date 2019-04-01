@@ -55,6 +55,11 @@ bool ZmqBIP15XMsgPartial::parsePacket(const BinaryDataRef& dataRef)
       return parseMessageFragment(dataSlice);
    }
 
+   case ZMQ_MSGTYPE_HEARTBEAT:
+      type_ = msgType;
+      packetCount_ = 0;
+      return true;
+
    case ZMQ_MSGTYPE_AEAD_SETUP:
    case ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY:
    case ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY_CHILD:
@@ -358,7 +363,7 @@ vector<BinaryData> ZmqBIP15XMessageCodec::serialize(const BinaryDataRef& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id)
 {
    //is this payload carrying a msgid?
-   if (type > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
+   if ((type > ZMQ_MSGTYPE_AEAD_THRESHOLD) || (type == ZMQ_MSGTYPE_HEARTBEAT)) {
       return serializePacketWithoutId(payload, connPtr, type);
    }
 

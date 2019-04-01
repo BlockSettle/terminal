@@ -2,7 +2,9 @@
 #define __ZMQ_BIP15X_DATACONNECTION_H__
 
 #include <functional>
+#include <QDateTime>
 #include <QObject>
+#include <QTimer>
 #include <spdlog/spdlog.h>
 #include "ArmoryServersProvider.h"
 #include "AuthorizedPeers.h"
@@ -36,6 +38,9 @@ public:
 signals:
    void bip15XCompleted(); // BIP 150 & 151 handshakes completed.
 
+private slots:
+   void onHeartbeatTimer();
+
 protected:
    bool handshakeCompleted() {
       return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
@@ -45,6 +50,7 @@ protected:
    void onRawDataReceived(const std::string& rawData) override;
    ZmqContext::sock_ptr CreateDataSocket() override;
    bool recvData() override;
+   void sendHeartbeat();
 
 private:
    void ProcessIncomingData(BinaryData& payload);
@@ -65,6 +71,9 @@ private:
    bool bip151HandshakeCompleted_ = false;
    uint32_t msgID_ = 0;
    std::function<void()>   cbCompleted_ = nullptr;
+   const int   heartbeatInterval_ = 10000;
+   QDateTime   lastHeartbeat_;
+   QTimer      heartbeatTimer_;
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

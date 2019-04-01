@@ -74,6 +74,10 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    // similar but data connections will only connect to one machine at a time.
    auto lbds = getAuthPeerLambda();
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
+
+   heartbeatTimer_.setInterval(1000);
+   connect(&heartbeatTimer_, &QTimer::timeout, this, &ZmqBIP15XDataConnection::onHeartbeatTimer);
+   heartbeatTimer_.start();
 }
 
 // Get lambda functions related to authorized peers. Copied from Armory.
@@ -177,7 +181,47 @@ bool ZmqBIP15XDataConnection::send(const string& data)
       return false;
    }
 
+   lastHeartbeat_ = QDateTime::currentDateTime();
    return true;
+}
+
+void ZmqBIP15XDataConnection::sendHeartbeat()
+{
+   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} invalid state: {}"
+         , __func__, connectionName_, (int)bip151Connection_->getBIP150State());
+      return;
+   }
+   ZmqBIP15XSerializedMessage msg;
+   BIP151Connection* connPtr = nullptr;
+   if (bip151HandshakeCompleted_) {
+      connPtr = bip151Connection_.get();
+   }
+   msg.construct(BinaryDataRef{}, connPtr, ZMQ_MSGTYPE_HEARTBEAT);
+   const auto sendData = msg.getNextPacket().toBinStr();
+   const auto dataLen = sendData.size();
+
+   int result = -1;
+   {
+      FastLock locker(lockSocket_);
+      result = zmq_send(dataSocket_.get(), sendData.c_str(), dataLen, 0);
+   }
+   if (result != (int)dataLen) {
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+         "data: {} (result={}, data size={}", __func__, connectionName_
+         , zmq_strerror(zmq_errno()), result, dataLen);
+   }
+   else {
+      lastHeartbeat_ = QDateTime::currentDateTime();
+   }
+}
+
+void ZmqBIP15XDataConnection::onHeartbeatTimer()
+{
+   if (lastHeartbeat_.msecsTo(QDateTime::currentDateTime())
+      >= heartbeatInterval_) {
+      sendHeartbeat();
+   }
 }
 
 // Kick off the BIP 151 handshake. This is the first function to call once the

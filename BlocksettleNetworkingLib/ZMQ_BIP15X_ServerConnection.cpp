@@ -67,6 +67,8 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    cbTrustedClients_ = [trustedClients]() -> QStringList {
       return trustedClients;
    };
+
+   heartbeatThread();
 }
 
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
@@ -79,6 +81,47 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    authPeers_ = make_shared<AuthorizedPeers>();
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    id_ = READ_UINT64_LE(bdID.getPtr());
+
+   heartbeatThread();
+}
+
+ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
+{
+   hbThreadRunning_ = false;
+   hbCondVar_.notify_one();
+   hbThread_.join();
+}
+
+void ZmqBIP15XServerConnection::heartbeatThread()
+{
+   const auto &heartbeatProc = [this] {
+      while (hbThreadRunning_) {
+         {
+            std::unique_lock<std::mutex> lock(hbMutex_);
+            hbCondVar_.wait_for(lock, std::chrono::seconds{ 1 });
+            if (!hbThreadRunning_) {
+               break;
+            }
+         }
+         const auto curTime = std::chrono::steady_clock::now();
+         std::vector<std::string> timedOutClients;
+         for (const auto &hbTime : lastHeartbeats_) {
+            const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - hbTime.second);
+            if (diff.count() > heartbeatInterval_) {
+               timedOutClients.push_back(hbTime.first);
+            }
+         }
+         for (const auto &client : timedOutClients) {
+            logger_->debug("[ZmqBIP15XServerConnection] client {} timed out"
+               , BinaryData(client).toHexStr());
+            lastHeartbeats_.erase(client);
+            resetBIP151Connection(client);
+            notifyListenerOnDisconnectedClient(client);
+         }
+      }
+   };
+   hbThreadRunning_ = true;
+   hbThread_ = std::thread(heartbeatProc);
 }
 
 // Create the data socket.
@@ -213,8 +256,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    , const string& clientID)
 {
    // Backstop in case the callbacks haven't been used.
-   if (socketConnMap_[clientID] == nullptr)
-   {
+   if (socketConnMap_[clientID] == nullptr) {
       setBIP151Connection(clientID);
    }
 
@@ -222,32 +264,28 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    // If decryption "failed" due to fragmentation, put the pieces together.
    // (Unlikely but we need to plan for it.)
-   if (leftOverData_.getSize() != 0)
-   {
+   if (leftOverData_.getSize() != 0) {
       leftOverData_.append(payload);
       payload = move(leftOverData_);
       leftOverData_.clear();
    }
 
    const auto &connData = socketConnMap_[clientID];
-   if (!connData)
-   {
+   if (!connData) {
       logger_->error("[{}] failed to find connection data for client {}"
          , __func__, BinaryData(clientID).toHexStr());
       return;
    }
 
    // Decrypt only if the BIP 151 handshake is complete.
-   if (connData->bip151HandshakeCompleted_)
-   {
+   if (connData->bip151HandshakeCompleted_) {
       //decrypt packet
       auto result = socketConnMap_[clientID]->encData_->decryptPacket(
          payload.getPtr(), payload.getSize(),
          payload.getPtr(), payload.getSize());
 
       // Failure isn't necessarily a problem if we're dealing with fragments.
-      if (result != 0)
-      {
+      if (result != 0) {
          // If decryption "fails" but the result indicates fragmentation, save
          // the fragment and wait before doing anything, otherwise treat it as a
          // legit error.
@@ -272,22 +310,18 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       socketConnMap_[clientID]->currentReadMessage_.insertDataAndGetRef(payload);
    auto result =
       socketConnMap_[clientID]->currentReadMessage_.message_.parsePacket(payloadRef);
-   if (!result)
-   {
-      if (logger_)
-      {
+   if (!result) {
+      if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
             "(connection {})", __func__, connectionName_);
       }
-
       socketConnMap_[clientID]->currentReadMessage_.reset();
       return;
    }
 
    // Fragmented messages may not be marked as fragmented when decrypted but may
    // still be a fragment. That's fine. Just wait for the other fragments.
-   if (!socketConnMap_[clientID]->currentReadMessage_.message_.isReady())
-   {
+   if (!socketConnMap_[clientID]->currentReadMessage_.message_.isReady()) {
       return;
    }
 
@@ -296,13 +330,10 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    // If we're still handshaking, take the next step. (No fragments allowed.)
    if (socketConnMap_[clientID]->currentReadMessage_.message_.getType() >
-      ZMQ_MSGTYPE_AEAD_THRESHOLD)
-   {
+      ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(
-         socketConnMap_[clientID]->currentReadMessage_.message_, clientID))
-      {
-         if (logger_)
-         {
+         socketConnMap_[clientID]->currentReadMessage_.message_, clientID)) {
+         if (logger_) {
             logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
@@ -313,16 +344,21 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       return;
    }
 
+   if (socketConnMap_[clientID]->currentReadMessage_.message_.getType()
+      == ZMQ_MSGTYPE_HEARTBEAT) {
+      lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
+      socketConnMap_[clientID]->currentReadMessage_.reset();
+      return;
+   }
+
    // We can now safely obtain the full message.
    BinaryData outMsg;
    socketConnMap_[clientID]->currentReadMessage_.message_.getMessage(&outMsg);
 
    // We shouldn't get here but just in case....
    if (socketConnMap_[clientID]->encData_->getBIP150State() !=
-      BIP150State::SUCCESS)
-   {
-      if (logger_)
-      {
+      BIP150State::SUCCESS) {
+      if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
       }
@@ -345,6 +381,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    // Pass the final data up the chain.
    notifyListenerOnData(clientID, outMsg.toBinStr());
+   lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
    socketConnMap_[clientID]->currentReadMessage_.reset();
 }
 
@@ -642,27 +679,23 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
       auto lbds = getAuthPeerLambda();
       for (auto b : cbTrustedClients_()) {
          const auto colonIndex = b.indexOf(QLatin1Char(':'));
-         if (colonIndex < 0)
-         {
+         if (colonIndex < 0) {
             logger_->error("[{}] Trusted client list is malformed (for {})."
                , __func__, b.toStdString());
             return;
          }
          const auto keyName = b.left(colonIndex).toStdString();
          SecureBinaryData inKey = READHEX(b.mid(colonIndex + 1).toStdString());
-         if (inKey.isNull())
-         {
+         if (inKey.isNull()) {
             logger_->error("[{}] Trusted client key for {} is malformed."
                , __func__, keyName);
             return;
          }
 
-         try
-         {
+         try {
             authPeers_->addPeer(inKey, vector<string>{ keyName });
          }
-         catch (const std::exception &e)
-         {
+         catch (const std::exception &e) {
             logger_->error("[{}] Trusted client key {} [{}] for {} is malformed: {}"
                , __func__, inKey.toHexStr(), inKey.getSize(), keyName, e.what());
             return;
@@ -671,9 +704,9 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
 
       socketConnMap_[clientID] = make_unique<ZmqBIP15XPerConnData>();
       socketConnMap_[clientID]->encData_ = make_unique<BIP151Connection>(lbds);
+      notifyListenerOnNewConnection(clientID);
    }
-   else
-   {
+   else {
       BinaryData hexID(clientID);
       logger_->error("[{}] Client ID {} already exists.", __func__
          , hexID.toHexStr());
