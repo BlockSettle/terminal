@@ -30,6 +30,7 @@ public:
 
    virtual std::string login(const std::string& email, const std::string& jwt) = 0;
    virtual void logout() = 0;
+   virtual void onLoggedOut() { }
    virtual void onSendButtonClicked() = 0;
    virtual void onUserClicked(const QString& userId) = 0;
    virtual void onMessagesUpdated() = 0;
@@ -96,6 +97,9 @@ public:
 
    void logout() override {
       chat_->client_->logout();
+   }
+
+   void onLoggedOut() override {
       chat_->changeState(ChatWidget::LoggedOut);
    }
 
@@ -203,6 +207,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    chatUserListLogicPtr_->init(client_, logger);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
+   connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
 
    // connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
 
@@ -388,6 +393,11 @@ bool ChatWidget::hasUnreadMessages()
    } else {
       return false;
    }
+}
+
+void ChatWidget::onLoggedOut()
+{
+   stateCurrent_->onLoggedOut();
 }
 
 void ChatWidget::onSearchUserReturnPressed()

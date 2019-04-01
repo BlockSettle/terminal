@@ -45,6 +45,8 @@ public:
    std::string login(const std::string& email, const std::string& jwt);
    void logout();
    bool hasUnreadMessages();
+public slots:
+   void onLoggedOut();
 
 private slots:
    void onSendButtonClicked();

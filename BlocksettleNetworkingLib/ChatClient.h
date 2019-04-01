@@ -98,6 +98,7 @@ signals:
    void ConnectionError(int errorCode);
 
    void LoginFailed();
+   void LoggedOut();
    void UsersReplace(const std::vector<std::string>& users);
    void UsersAdd(const std::vector<std::string>& users);
    void UsersDel(const std::vector<std::string>& users);
