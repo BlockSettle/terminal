@@ -42,12 +42,13 @@ public:
    ChatClient& operator = (ChatClient&&) = delete;
 
    std::string loginToServer(const std::string& email, const std::string& jwt);
-   void logout();
+   void logout(bool send = true);
 
    void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
    void OnUsersList(const Chat::UsersListResponse &) override;
    void OnMessages(const Chat::MessagesResponse &) override;
    void OnLoginReturned(const Chat::LoginResponse &) override;
+   void OnLogoutResponse(const Chat::LogoutResponse &) override;
    void OnSendMessageResponse(const Chat::SendMessageResponse& ) override;
    void OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse&) override;
    void OnContactsActionResponseDirect(const Chat::ContactsActionResponseDirect&) override;

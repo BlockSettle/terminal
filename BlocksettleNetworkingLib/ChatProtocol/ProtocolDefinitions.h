@@ -51,6 +51,7 @@ namespace Chat
    ,   ResponseRoomMessages
    ,   ResponseContactsList
    ,   ResponseSearchUsers
+   ,   ResponseLogout
    };
    
    enum class ContactsAction {

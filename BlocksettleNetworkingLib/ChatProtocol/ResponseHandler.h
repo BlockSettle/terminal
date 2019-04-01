@@ -16,6 +16,7 @@ namespace Chat {
    class SendRoomMessageResponse;
    class RoomMessagesResponse;
    class SearchUsersResponse;
+   class LogoutResponse;
    
    class ResponseHandler
    {
@@ -32,6 +33,7 @@ namespace Chat {
       virtual void OnSendOwnPublicKey(const SendOwnPublicKeyResponse &) = 0;
    
       virtual void OnLoginReturned(const LoginResponse &) = 0;
+      virtual void OnLogoutResponse(const LogoutResponse &) = 0;
       
       virtual void OnSendMessageResponse(const SendMessageResponse&) = 0;
       virtual void OnMessageChangeStatusResponse(const MessageChangeStatusResponse&) = 0;

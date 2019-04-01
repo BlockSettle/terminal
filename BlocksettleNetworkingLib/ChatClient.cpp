@@ -106,6 +106,12 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
    }
 }
 
+void ChatClient::OnLogoutResponse(const Chat::LogoutResponse & response)
+{
+   logger_->debug("[ChatClient::OnLogoutResponse]: Server sent logout response with data: {}", response.getData());
+   logout(false);
+}
+
 void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response)
 {
    QJsonDocument json(response.toJson());
@@ -303,7 +309,7 @@ void ChatClient::OnSearchUsersResponse(const Chat::SearchUsersResponse & respons
                   );
 }
 
-void ChatClient::logout()
+void ChatClient::logout(bool send)
 {
    loggedIn_ = false;
 
@@ -312,8 +318,10 @@ void ChatClient::logout()
       return;
    }
 
-   auto request = std::make_shared<Chat::LogoutRequest>("", currentUserId_, "");
-   sendRequest(request);
+   if (send) {
+      auto request = std::make_shared<Chat::LogoutRequest>("", currentUserId_, "");
+      sendRequest(request);
+   }
 
    currentUserId_.clear();
    connection_.reset();
