@@ -398,6 +398,7 @@ bool ChatWidget::hasUnreadMessages()
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
+   emit LogOut();
 }
 
 void ChatWidget::onSearchUserReturnPressed()

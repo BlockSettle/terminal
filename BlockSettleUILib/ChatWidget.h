@@ -65,6 +65,7 @@ private slots:
 
 signals:
    void LoginFailed();
+   void LogOut();
 
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
