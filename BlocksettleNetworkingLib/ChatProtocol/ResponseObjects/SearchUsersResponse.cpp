@@ -6,11 +6,11 @@ SearchUsersResponse::SearchUsersResponse(std::vector<std::string> dataList)
 {
    usersList_.reserve(dataList_.size());
    for (const auto& userData : dataList_){
-      usersList_.push_back(ChatUserData::fromJSON(userData));
+      usersList_.push_back(UserData::fromJSON(userData));
    }
 }
 
-SearchUsersResponse::SearchUsersResponse(std::vector<std::shared_ptr<ChatUserData> > usersList)
+SearchUsersResponse::SearchUsersResponse(std::vector<std::shared_ptr<UserData> > usersList)
    : ListResponse(ResponseType::ResponseSearchUsers, {})
    , usersList_(usersList)
 {
@@ -32,7 +32,7 @@ void SearchUsersResponse::handle(ResponseHandler & handler)
    handler.OnSearchUsersResponse(*this);
 }
 
-const std::vector<std::shared_ptr<ChatUserData> > &SearchUsersResponse::getUsersList() const
+const std::vector<std::shared_ptr<UserData> > &SearchUsersResponse::getUsersList() const
 {
    return usersList_;
 }

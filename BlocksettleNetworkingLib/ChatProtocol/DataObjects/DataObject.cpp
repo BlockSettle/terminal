@@ -4,9 +4,9 @@
 #include <map>
 
 #include "MessageData.h"
-#include "ChatRoomData.h"
+#include "RoomData.h"
 #include "ContactRecordData.h"
-#include "ChatUserData.h"
+#include "UserData.h"
 
 namespace Chat {
    
@@ -15,17 +15,17 @@ namespace Chat {
    static std::map<std::string, DataObject::Type> DataObjectTypeFromString
    {
           { "MessageData" , DataObject::Type::MessageData }
-      ,   { "ChatRoomData", DataObject::Type::ChatRoomData}
+      ,   { "RoomData", DataObject::Type::RoomData}
       ,   { "ContactRecordData", DataObject::Type::ContactRecordData}
-      ,   { "ChatUserData", DataObject::Type::ChatUserData}
+      ,   { "UserData", DataObject::Type::UserData}
    };
    
    static std::map<DataObject::Type, std::string> DataObjectTypeToString
    {
           { DataObject::Type::MessageData , "MessageData"   }
-      ,   { DataObject::Type::ChatRoomData, "ChatRoomData" }
+      ,   { DataObject::Type::RoomData, "RoomData" }
       ,   { DataObject::Type::ContactRecordData, "ContactRecordData" }
-      ,   { DataObject::Type::ChatUserData, "ChatUserData" }
+      ,   { DataObject::Type::UserData, "UserData" }
    };
    
    DataObject::DataObject(DataObject::Type type)
@@ -61,12 +61,12 @@ namespace Chat {
       switch (dataType) {
          case DataObject::Type::MessageData:
             return MessageData::fromJSON(jsonData);
-         case DataObject::Type::ChatRoomData:
-            return ChatRoomData::fromJSON(jsonData);
+         case DataObject::Type::RoomData:
+            return RoomData::fromJSON(jsonData);
          case DataObject::Type::ContactRecordData:
             return ContactRecordData::fromJSON(jsonData);
-         case DataObject::Type::ChatUserData:
-            return ChatUserData::fromJSON(jsonData);
+         case DataObject::Type::UserData:
+            return UserData::fromJSON(jsonData);
       }
       
       return nullptr;

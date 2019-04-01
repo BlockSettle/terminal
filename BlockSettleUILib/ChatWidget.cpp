@@ -236,6 +236,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    connect(client_.get(), &ChatClient::MessagesUpdate, ui_->textEditMessages
                         , &ChatMessagesTextEdit::onMessagesUpdate);
+   connect(client_.get(), &ChatClient::RoomMessagesUpdate, ui_->textEditMessages
+                        , &ChatMessagesTextEdit::onRoomMessagesUpdate);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::rowsInserted,
            this, &ChatWidget::onMessagesUpdated);
    
@@ -248,9 +250,13 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
    
+   connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataChanged,
+           ui_->treeViewUsers, &ChatUserListTreeView::onChatUserDataChanged);
    connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
            ui_->treeViewUsers, &ChatUserListTreeView::onChatUserDataListChanged);
 
+   connect(chatUserListLogicPtr_->chatUserModelPtr().get(), &ChatUserModel::chatRoomDataChanged,
+           ui_->treeViewUsers, &ChatUserListTreeView::onChatRoomDataChanged);
    connect(chatUserListLogicPtr_->chatUserModelPtr().get(), &ChatUserModel::chatRoomDataListChanged,
            ui_->treeViewUsers, &ChatUserListTreeView::onChatRoomDataListChanged);
 
@@ -270,25 +276,25 @@ void ChatWidget::onChatUserRemoved(const ChatUserDataPtr &chatUserDataPtr)
    }
 }
 
-void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)
+void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList)
 {
    chatUserListLogicPtr_->addChatRooms(roomList);
 
    if (roomList.size() > 0 && needsToStartFirstRoom_) {
+      ui_->treeViewUsers->selectFirstRoom();
       const auto &firstRoom = roomList.at(0);
       onRoomClicked(firstRoom->getId());
       needsToStartFirstRoom_ = false;
    }
 }
 
-void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::ChatUserData>>& users)
+void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
 {
    if (users.size() < 1) {
       return;
    }
 
-   std::shared_ptr<Chat::ChatUserData> firstUser = users.at(0);
-   qDebug()<<"searchResult:"<<firstUser->getUserId()<<","<<users.size();
+   std::shared_ptr<Chat::UserData> firstUser = users.at(0);
    popup_->setText(firstUser->getUserId());
    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
    popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);

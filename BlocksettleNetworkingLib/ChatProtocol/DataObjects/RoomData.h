@@ -3,7 +3,7 @@
 
 namespace Chat {
    
-   class ChatRoomData : public DataObject
+   class RoomData : public DataObject
    {
    public:
       class UserRecord {
@@ -19,7 +19,7 @@ namespace Chat {
          bool isAdmin_;
       };
       
-      ChatRoomData(const QString& roomId, 
+      RoomData(const QString& roomId, 
                const QString& ownerId,
                const QString& roomTitle = QLatin1String("noname room"),
                const QString& roomKey = QLatin1String(""),
@@ -53,9 +53,9 @@ namespace Chat {
       // DataObject interface
    public:
       QJsonObject toJson() const;
-      static std::shared_ptr<ChatRoomData> fromJSON(const std::string& jsonData);
+      static std::shared_ptr<RoomData> fromJSON(const std::string& jsonData);
    };
 
-   using ChatRoomDataPtr = std::shared_ptr<ChatRoomData>;
-   using ChatRoomDataListPtr = QList<ChatRoomDataPtr>;
+   using RoomDataPtr = std::shared_ptr<RoomData>;
+   using RoomDataListPtr = QList<RoomDataPtr>;
 }

@@ -26,7 +26,7 @@ public:
 
    ChatUserModelPtr chatUserModelPtr() const;
 
-   void addChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList);
+   void addChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
 
 signals:
 

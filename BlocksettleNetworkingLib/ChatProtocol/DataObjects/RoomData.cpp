@@ -1,9 +1,9 @@
-#include "ChatRoomData.h"
+#include "RoomData.h"
 #include "../ProtocolDefinitions.h"
 using namespace Chat;
 
-ChatRoomData::ChatRoomData(const QString& roomId, const QString& ownerId, const QString& roomTitle, const QString& roomKey, bool isPrivate, bool sendUserUpdates, bool displayUserList)
-   : DataObject (DataObject::Type::ChatRoomData)
+RoomData::RoomData(const QString& roomId, const QString& ownerId, const QString& roomTitle, const QString& roomKey, bool isPrivate, bool sendUserUpdates, bool displayUserList)
+   : DataObject (DataObject::Type::RoomData)
    , id_(roomId)
    , ownerId_(ownerId)
    , title_(roomTitle)
@@ -14,31 +14,31 @@ ChatRoomData::ChatRoomData(const QString& roomId, const QString& ownerId, const 
    , haveNewMessage_(false)
 {}
 
-QString ChatRoomData::getId() {return id_;}
+QString RoomData::getId() {return id_;}
 
-QString ChatRoomData::getOwnerId() {return ownerId_;}
+QString RoomData::getOwnerId() {return ownerId_;}
 
-QString ChatRoomData::getTitle() {return title_;}
+QString RoomData::getTitle() {return title_;}
 
-QString ChatRoomData::getRoomKey() {return roomKey_; }
+QString RoomData::getRoomKey() {return roomKey_; }
 
-bool ChatRoomData::isPrivate() {return isPrivate_;}
+bool RoomData::isPrivate() {return isPrivate_;}
 
-bool ChatRoomData::sendUserUpdates() {return sendUserUpdates_;}
+bool RoomData::sendUserUpdates() {return sendUserUpdates_;}
 
-bool ChatRoomData::displayUserList() {return displayUserList_;}
+bool RoomData::displayUserList() {return displayUserList_;}
 
-bool ChatRoomData::haveNewMessage() const
+bool RoomData::haveNewMessage() const
 {
    return haveNewMessage_;
 }
 
-void ChatRoomData::setHaveNewMessage(bool haveNewMessage)
+void RoomData::setHaveNewMessage(bool haveNewMessage)
 {
    haveNewMessage_ = haveNewMessage;
 }
 
-QJsonObject ChatRoomData::toJson() const
+QJsonObject RoomData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
    
@@ -53,7 +53,7 @@ QJsonObject ChatRoomData::toJson() const
    return data;
 }
 
-std::shared_ptr<ChatRoomData> ChatRoomData::fromJSON(const std::string& jsonData)
+std::shared_ptr<RoomData> RoomData::fromJSON(const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
    
@@ -65,5 +65,5 @@ std::shared_ptr<ChatRoomData> ChatRoomData::fromJSON(const std::string& jsonData
    bool sendUserUpdates = data[RoomSendUserUpdatesKey].toBool();
    bool displayUserList = data[RoomDisplayUserListKey].toBool();
    
-   return std::make_shared<ChatRoomData>(id, ownerId, title, roomKey, isPrivate, sendUserUpdates, displayUserList);
+   return std::make_shared<RoomData>(id, ownerId, title, roomKey, isPrivate, sendUserUpdates, displayUserList);
 }

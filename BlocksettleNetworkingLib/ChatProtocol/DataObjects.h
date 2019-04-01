@@ -1,6 +1,6 @@
 #pragma once
 
 #include "DataObjects/MessageData.h"
-#include "DataObjects/ChatRoomData.h"
+#include "DataObjects/RoomData.h"
 #include "DataObjects/ContactRecordData.h"
-#include "DataObjects/ChatUserData.h"
+#include "DataObjects/UserData.h"

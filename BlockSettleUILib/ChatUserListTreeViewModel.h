@@ -40,8 +40,12 @@ public:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
+   void setChatUserData(const ChatUserDataPtr &chatUserDataPtr);
+   void setChatRoomData(const Chat::RoomDataPtr &chatRoomDataPtr);
    void setChatUserDataList(const ChatUserDataListPtr &chatUserDataListPtr);
-   void setChatRoomDataList(const Chat::ChatRoomDataListPtr &roomsDataList);
+   void setChatRoomDataList(const Chat::RoomDataListPtr &roomsDataList);
+
+   void selectFirstRoom();
 
 private:
    ChatUserListTreeItem *rootItem_;

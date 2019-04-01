@@ -19,7 +19,7 @@ NotificationCenter::NotificationCenter(const std::shared_ptr<ApplicationSettings
    qRegisterMetaType<bs::ui::NotifyMessage>("NotifyMessage");
 
    addResponder(std::make_shared<NotificationTabResponder>(mainWinUi, appSettings, this));
-   addResponder(std::make_shared<NotificationTrayIconResponder>(trayIcon, appSettings, this));
+   addResponder(std::make_shared<NotificationTrayIconResponder>(mainWinUi, trayIcon, appSettings, this));
 }
 
 void NotificationCenter::createInstance(const std::shared_ptr<ApplicationSettings> &appSettings, const Ui::BSTerminalMainWindow *ui
@@ -70,8 +70,8 @@ void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMess
 {
    if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
       const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
-      const bool isInCurrentChat = msg[1].toBool();
-      const bool hasUnreadMessages = msg[2].toBool();
+      const bool isInCurrentChat = msg[2].toBool();
+      const bool hasUnreadMessages = msg[3].toBool();
 
       if (hasUnreadMessages) {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
@@ -112,9 +112,10 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 }
 
 
-NotificationTrayIconResponder::NotificationTrayIconResponder(const std::shared_ptr<QSystemTrayIcon> &trayIcon
+NotificationTrayIconResponder::NotificationTrayIconResponder(const Ui::BSTerminalMainWindow *mainWinUi
+   , const std::shared_ptr<QSystemTrayIcon> &trayIcon
    , const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
-   : NotificationResponder(parent), trayIcon_(trayIcon), appSettings_(appSettings)
+   : NotificationResponder(parent), mainWinUi_(mainWinUi), trayIcon_(trayIcon), appSettings_(appSettings)
    , notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Terminal"), this))
@@ -142,6 +143,11 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    QString title, text;
    int msecs = 10000;
    newVersionMessage_ = false;
+   bool isInCurrentChat;
+   bool hasUnreadMessages;
+   
+   const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
+   const bool isChatTab = mainWinUi_->tabWidget->currentIndex() == chatIndex;
 
    switch (nt) {
    case bs::ui::NotifyType::BlockchainTX:
@@ -192,6 +198,22 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       text = tr("Click this message to download it from BlockSettle's official site");
       msecs = 30000;
       newVersionMessage_ = true;
+      break;
+
+   case bs::ui::NotifyType::UpdateUnreadMessage:
+      isInCurrentChat = msg[2].toBool();
+      hasUnreadMessages = msg[3].toBool();
+
+      if (!hasUnreadMessages && !isInCurrentChat) {
+         return;
+      }
+
+      if (isChatTab && QApplication::activeWindow()) {
+         return;
+      }
+
+      title = msg[0].toString();
+      text = msg[1].toString();
       break;
 
    default: return;

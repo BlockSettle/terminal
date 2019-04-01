@@ -7,12 +7,12 @@ namespace Chat {
     {
     public:
        SearchUsersResponse(std::vector<std::string> dataList);
-       SearchUsersResponse(std::vector<std::shared_ptr<ChatUserData>> usersList);
+       SearchUsersResponse(std::vector<std::shared_ptr<UserData>> usersList);
        static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
        void handle(ResponseHandler&) override;
-       const std::vector<std::shared_ptr<ChatUserData>>& getUsersList() const;
+       const std::vector<std::shared_ptr<UserData>>& getUsersList() const;
     private:
-       std::vector<std::shared_ptr<ChatUserData>> usersList_;
+       std::vector<std::shared_ptr<UserData>> usersList_;
     };
    }
 

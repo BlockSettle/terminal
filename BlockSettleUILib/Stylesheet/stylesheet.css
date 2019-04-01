@@ -1079,7 +1079,7 @@ QTextEdit {
   *[textEditReadOnly="true"]:focus {
     border: none; }
 
-QTextEdit#textEditMessages {
+QTextBrowser#textEditMessages {
   border: none;
   padding: 1px 5px;
   background: transparent;

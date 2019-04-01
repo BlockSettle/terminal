@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QDesktopServices>
+#include <set>
 #include "ChatMessagesTextEdit.h"
 #include "ChatClient.h"
 #include "ChatProtocol/ChatProtocol.h"
@@ -33,7 +34,6 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
 
    connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
 
-   setContextMenuPolicy(Qt::CustomContextMenu);
    userMenu_ = new QMenu(this);
    QAction *addUserToContactsAction = userMenu_->addAction(QObject::tr("Add to contacts"));
    addUserToContactsAction->setStatusTip(QObject::tr("Click to add user to contact list"));
@@ -310,7 +310,7 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 {
    if (isFirstFetch) {
       for (const auto &msg : messages) {
-         if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
+         if (msg->getSenderId() == currentChatId_) {
             messagesToLoadMore_.push_back(msg);
          }
          else {
@@ -348,7 +348,7 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
    }
    else {
       for (const auto &msg : messages) {
-         if ((msg->getSenderId() == currentChatId_) || (msg->getReceiverId() == currentChatId_)) {
+         if (msg->getSenderId() == currentChatId_) {
             insertMessage(msg);
             
             emit userHaveNewMessageChanged(msg->getSenderId(), false, true);
@@ -358,6 +358,65 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 
             emit userHaveNewMessageChanged(msg->getSenderId(), true, false);
          }
+      }
+   }
+
+   emit rowsInserted();
+}
+
+void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages, bool isFirstFetch)
+{
+   if (isFirstFetch) {
+      for (const auto &msg : messages) {
+         if (msg->getReceiverId() == currentChatId_) {
+            messagesToLoadMore_.push_back(msg);
+         }
+         else {
+            messages_[msg->getReceiverId()].push_back(msg);
+         }
+      }
+
+      if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) { 
+         /* display certain count of messages and thus remove the displayed messages from the messagesToLoadMore */
+
+         // add "load more" hyperlink text
+         insertLoadMore();
+         
+         // display last messages
+         unsigned long i = 0;
+         for (const auto &msg: messagesToLoadMore_) {
+            if (i >= messagesToLoadMore_.size() - FIRST_FETCH_MESSAGES_SIZE) {
+               insertMessage(msg);
+            }
+
+            i++;
+         }
+
+         // remove the messages shown
+         for (i = 0; i < FIRST_FETCH_MESSAGES_SIZE; i++) {
+            messagesToLoadMore_.pop_back();
+         }
+      } else { // flush all messages
+         for (const auto &msg: messagesToLoadMore_) {
+            insertMessage(msg);
+         }
+
+         messagesToLoadMore_.clear();
+      }
+   }
+   else {
+      std::set<QString> receivers;
+      for (const auto &msg : messages) {
+         receivers.insert(msg->getReceiverId());
+         if (msg->getReceiverId() == currentChatId_) {
+            insertMessage(msg);
+         }
+         else {
+            messages_[msg->getReceiverId()].push_back(msg);
+         }
+      }
+      for (const QString& recv : receivers) {
+         emit userHaveNewMessageChanged(recv, recv != currentChatId_, recv == currentChatId_);
       }
    }
 

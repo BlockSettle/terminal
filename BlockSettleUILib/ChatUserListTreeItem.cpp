@@ -19,7 +19,7 @@ ChatUserListTreeItem::ChatUserListTreeItem(ChatUserDataPtr dataPtr, ChatUserList
    category_ = NoneCategory;
 }
 
-ChatUserListTreeItem::ChatUserListTreeItem(Chat::ChatRoomDataPtr dataPtr, ChatUserListTreeItem *parent)
+ChatUserListTreeItem::ChatUserListTreeItem(Chat::RoomDataPtr dataPtr, ChatUserListTreeItem *parent)
 {
    roomDataPtr_ = dataPtr;
    parentItem_ = parent;
@@ -36,7 +36,7 @@ ChatUserDataPtr ChatUserListTreeItem::userData() const
    return userDataPtr_;
 }
 	
-Chat::ChatRoomDataPtr ChatUserListTreeItem::roomData() const
+Chat::RoomDataPtr ChatUserListTreeItem::roomData() const
 {
    return roomDataPtr_;
 }
@@ -73,7 +73,7 @@ void ChatUserListTreeItem::addUserAsChild(ChatUserDataPtr user)
    childItems_.push_back(treeItem);
 }
     
-void ChatUserListTreeItem::addRoomAsChild(Chat::ChatRoomDataPtr room)
+void ChatUserListTreeItem::addRoomAsChild(Chat::RoomDataPtr room)
 {
    ChatUserListTreeItem *treeItem = new ChatUserListTreeItem(room, this);
    childItems_.push_back(treeItem);

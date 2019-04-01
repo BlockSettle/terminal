@@ -1,26 +1,26 @@
-#include "ChatUserData.h"
+#include "UserData.h"
 
 using namespace Chat;
 
-ChatUserData::ChatUserData(const QString &userId, UserStatus status)
-   :DataObject (DataObject::Type::ChatUserData)
+UserData::UserData(const QString &userId, UserStatus status)
+   :DataObject (DataObject::Type::UserData)
    , userId_(userId)
    , userStatus_(status)
 {
 
 }
 
-QString ChatUserData::getUserId()
+QString UserData::getUserId()
 {
     return userId_;
 }
 
-UserStatus ChatUserData::getUserStatus()
+UserStatus UserData::getUserStatus()
 {
     return userStatus_;
 }
 
-QJsonObject ChatUserData::toJson() const
+QJsonObject UserData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
 
@@ -30,12 +30,12 @@ QJsonObject ChatUserData::toJson() const
    return data;
 }
 
-std::shared_ptr<ChatUserData> ChatUserData::fromJSON(const std::string &jsonData)
+std::shared_ptr<UserData> UserData::fromJSON(const std::string &jsonData)
 {
     QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
     QString userId = data[UserIdKey].toString();
     UserStatus status = static_cast<UserStatus>(data[UserStatusKey].toInt());
 
-    return std::make_shared<ChatUserData>(userId, status);
+    return std::make_shared<UserData>(userId, status);
 }

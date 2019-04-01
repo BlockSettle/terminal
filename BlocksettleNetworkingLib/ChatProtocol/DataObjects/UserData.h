@@ -6,17 +6,17 @@
 
 namespace Chat {
 
-    class ChatUserData : public DataObject
+    class UserData : public DataObject
     {
     public:
-       ChatUserData(const QString& userId, UserStatus status);
+       UserData(const QString& userId, UserStatus status);
 
        QString getUserId();
        UserStatus getUserStatus();
 
     public:
        QJsonObject toJson() const override;
-       static std::shared_ptr<ChatUserData> fromJSON(const std::string& jsonData);
+       static std::shared_ptr<UserData> fromJSON(const std::string& jsonData);
 
     private:
        QString userId_;

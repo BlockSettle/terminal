@@ -106,7 +106,7 @@ class NotificationTrayIconResponder : public NotificationResponder
 {
    Q_OBJECT
 public:
-   NotificationTrayIconResponder(const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
+   NotificationTrayIconResponder(const Ui::BSTerminalMainWindow *mainWinUi, const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
       , QObject *parent = nullptr);
    
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
@@ -118,6 +118,7 @@ private slots:
 #endif // BS_USE_DBUS
 
 private:
+   const Ui::BSTerminalMainWindow * mainWinUi_;
    std::shared_ptr<QSystemTrayIcon>       trayIcon_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    bool  newVersionMessage_ = false;
