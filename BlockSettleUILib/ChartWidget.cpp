@@ -844,6 +844,9 @@ void ChartWidget::SetupCrossfire()
    dashes << 4 << space;
    pen.setDashPattern(dashes);
 
+   vertLine->setLayer(QStringLiteral("axes"));
+   horLine->setLayer(QStringLiteral("axes"));
+
    vertLine->start->setType(QCPItemPosition::ptAbsolute);
    vertLine->end->setType(QCPItemPosition::ptAbsolute);
    vertLine->setPen(pen);
