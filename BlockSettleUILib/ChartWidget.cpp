@@ -374,7 +374,7 @@ void ChartWidget::AddNewCandle()
 
 void ChartWidget::ModifyCandle()
 {
-   if (!candlesticksChart_->data()) {
+   if (!candlesticksChart_->data()->size()) {
       return;
    }
    const auto& lastCandle = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1);
