@@ -332,6 +332,11 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    }
 }
 
+double ChartWidget::CountOffsetFromRightBorder()
+{
+   return ui_->customPlot->xAxis->pixelToCoord(6) - ui_->customPlot->xAxis->pixelToCoord(0);
+}
+
 void ChartWidget::setAutoScaleBtnColor() const
 {
    QString color = QStringLiteral("background-color: transparent; border: none; color: %1").
@@ -368,8 +373,6 @@ void ChartWidget::AddNewCandle()
       , candle.low()
       , candle.close()
       , candle.volume());
-
-   UpdatePlot(dateRange_.checkedId(), currentTimestamp);
 }
 
 void ChartWidget::ModifyCandle()
@@ -390,10 +393,11 @@ void ChartWidget::ModifyCandle()
 
 void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
 {
-   qreal size = IntervalWidth(interval, requestLimit);
-   qreal upper = timestamp + IntervalWidth(interval) / 2;
+   qreal upper = timestamp / 1000 + IntervalWidth(interval) / 1000 / 2;
+   qreal lower = upper - IntervalWidth(interval, requestLimit) / 1000 - IntervalWidth(interval) / 1000 / 2;
 
-   ui_->customPlot->xAxis->setRange(upper / 1000, size / 1000, Qt::AlignRight);
+   ui_->customPlot->xAxis->setRange(lower, upper);
+   ui_->customPlot->xAxis->setRange(lower - CountOffsetFromRightBorder(), upper + CountOffsetFromRightBorder()); //call setRange second time cause CountOffset relies on current range
    rescaleCandlesYAxis();
    ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[title_->text().toStdString()]));
 
@@ -635,6 +639,22 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       lower_bound += diff / tempCoeff * /*scalingCoeff * */ directionCoeff;
       bottomAxis->setRange(lower_bound, upper_bound);
    }
+   if (isDraggingMainPlot_)
+   {
+      auto axis = ui_->customPlot->xAxis;
+      const double startPixel = dragStartPos_.x();
+      const double currentPixel = event->pos().x();
+      const double diff = axis->pixelToCoord(startPixel) - axis->pixelToCoord(currentPixel);
+      auto size = candlesticksChart_->data()->size();
+      double upper_bound = size ? candlesticksChart_->data()->at(size - 1)->key : QDateTime::currentSecsSinceEpoch();
+      upper_bound += IntervalWidth(dateRange_.checkedId()) / 1000 / 2  + CountOffsetFromRightBorder();
+      if (dragStartRange_.upper + diff > upper_bound && diff > 0) {
+         dragStartPos_ = event->pos();
+         dragStartRange_ = axis->range();
+      } else {
+         axis->setRange(dragStartRange_.lower + diff, dragStartRange_.upper + diff);
+      }
+   }
    ui_->customPlot->replot();
 }
 
@@ -704,24 +724,26 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
       if (autoScaling_) {
          ui_->autoScaleBtn->animateClick();
       }
-      ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
    }
 
    auto selectXPoint = volumeAxisRect_->axis(QCPAxis::atBottom)->selectTest(event->pos(), false);
    isDraggingXAxis_ = selectXPoint != -1.0;
    if (isDraggingXAxis_) {
-      ui_->customPlot->setInteraction(QCP::iRangeDrag, false);
       volumeAxisRect_->axis(QCPAxis::atBottom)->axisRect()->setRangeDrag(volumeAxisRect_->axis(QCPAxis::atBottom)->orientation());
       startDragCoordX_ = event->pos().x();
    }
 
-   if (isDraggingXAxis_ || isDraggingYAxis_) {
-      lastDragCoord_ = event->pos();
-   }
-
    if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
+      dragStartRange_ = ui_->customPlot->xAxis->range();
+      dragStartPos_ = event->pos();
       isDraggingMainPlot_ = true;
    }
+
+   if (isDraggingXAxis_ || isDraggingYAxis_) {
+      lastDragCoord_ = event->pos();
+      isDraggingMainPlot_ = false;
+   }
+
 }
 
 void ChartWidget::OnMouseReleased(QMouseEvent* event)
@@ -729,7 +751,7 @@ void ChartWidget::OnMouseReleased(QMouseEvent* event)
    isDraggingYAxis_ = false;
    isDraggingXAxis_ = false;
    isDraggingMainPlot_ = false;
-   ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
+   //ui_->customPlot->setInteraction(QCP::iRangeDrag, true);
 }
 
 void ChartWidget::OnWheelScroll(QWheelEvent* event)
@@ -758,7 +780,9 @@ void ChartWidget::OnResetBtnClick()
 {
    if (candlesticksChart_->data()->size()) {
       auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + IntervalWidth(dateRange_.checkedId()) / 1000 / 2;
-      volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(new_upper - IntervalWidth(dateRange_.checkedId(), requestLimit) / 1000, new_upper);
+      QCPRange defaultRange(new_upper - IntervalWidth(dateRange_.checkedId(), requestLimit) / 1000, new_upper);
+      volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(defaultRange);
+      volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(defaultRange.lower - CountOffsetFromRightBorder(), defaultRange.upper + CountOffsetFromRightBorder());
    }
    if (!autoScaling_) {
       autoScaling_ = true;
@@ -777,13 +801,6 @@ bool ChartWidget::isBeyondLowerLimit(QCPRange newRange, int interval)
    return newRange.size() < IntervalWidth(interval, candleViewLimit) / 1000;
 }
 
-bool ChartWidget::isBeyondRightLimit(QCPRange newRange, int interval)
-{
-   return candlesticksChart_->data()->size() && newRange.upper > candlesticksChart_
-                                                                 ->data()->at(candlesticksChart_->data()->size() - 1)->
-                                                                 key + IntervalWidth(interval) / 1000 / 2;
-}
-
 void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
 {
    auto interval = dateRange_.checkedId() == -1 ? 0 : dateRange_.checkedId();
@@ -800,10 +817,6 @@ void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
       else {
          ui_->customPlot->xAxis->setRange(newRange);
       }
-   }
-   if (isBeyondRightLimit(newRange, interval)) {
-      auto new_upper = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + IntervalWidth(interval) / 1000 / 2 - 1.0;
-      ui_->customPlot->xAxis->setRange(new_upper - newRange.size(), new_upper);
    }
 
    LoadAdditionalPoints(newRange);
@@ -949,8 +962,6 @@ void ChartWidget::InitializeCustomPlot()
    ui_->customPlot->axisRect()->setMarginGroup(QCP::msLeft|QCP::msRight, group);
    volumeAxisRect_->setMarginGroup(QCP::msLeft|QCP::msRight, group);
 
-   //make draggable horizontally
-   ui_->customPlot->setInteractions(QCP::iRangeDrag);
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
    connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnMousePressed);

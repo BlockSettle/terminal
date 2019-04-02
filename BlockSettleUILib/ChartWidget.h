@@ -67,7 +67,6 @@ protected slots:
    void OnResetBtnClick();
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
-   bool isBeyondRightLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
    static QString ProductTypeToString(TradeHistoryTradeType type);
    void SetupCrossfire();
@@ -87,6 +86,7 @@ protected:
    static int FractionSizeForProduct(TradeHistoryTradeType type);
    void ProcessProductsListResponse(const std::string& data);
    void ProcessOhlcHistoryResponse(const std::string& data);
+   double CountOffsetFromRightBorder();
 
    void setAutoScaleBtnColor() const;
 
@@ -158,6 +158,8 @@ private:
    bool isDraggingYAxis_;
    bool isDraggingXAxis_{ false };
    bool isDraggingMainPlot_{ false };
+   QCPRange dragStartRange_;
+   QPointF dragStartPos_;
 
    QPoint lastDragCoord_;
    qreal startDragCoordX_{ 0.0 };
