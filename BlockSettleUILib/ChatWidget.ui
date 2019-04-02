@@ -215,11 +215,6 @@
             <property name="expandsOnDoubleClick">
              <bool>true</bool>
             </property>
-            <column>
-             <property name="text">
-              <string notr="true">1</string>
-             </property>
-            </column>
            </widget>
           </item>
           <item>
@@ -466,6 +461,9 @@
               <property name="focusPolicy">
                <enum>Qt::NoFocus</enum>
               </property>
+              <property name="autoFillBackground">
+               <bool>true</bool>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -586,28 +584,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QTreeView" name="treeView_ChatRooms">
-            <property name="indentation">
-             <number>5</number>
+           <widget class="QStackedWidget" name="stackedWidget_2">
+            <property name="lineWidth">
+             <number>0</number>
             </property>
-            <property name="uniformRowHeights">
-             <bool>true</bool>
+            <property name="currentIndex">
+             <number>0</number>
             </property>
-            <property name="sortingEnabled">
-             <bool>true</bool>
-            </property>
-            <property name="animated">
-             <bool>true</bool>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-            <property name="headerHidden">
-             <bool>true</bool>
-            </property>
-            <attribute name="headerVisible">
-             <bool>false</bool>
-            </attribute>
+            <widget class="CreateOTCRequestWidget" name="widgetCreateOTCRequest"/>
            </widget>
           </item>
          </layout>
@@ -639,6 +623,11 @@
    <class>ChatMessagesTextEdit</class>
    <extends>QTextBrowser</extends>
    <header location="global">ChatMessagesTextEdit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CreateOTCRequestWidget</class>
+   <extends>QWidget</extends>
+   <header>createotcrequestwidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

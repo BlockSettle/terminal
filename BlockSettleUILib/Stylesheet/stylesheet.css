@@ -1468,7 +1468,7 @@ QLineEdit#chatSearchLineEdit:focus {
 QLineEdit#chatSearchLineEdit:disabled {
     color: #586266; }
 
-QFrame#usersFrame {
+QFrame#usersFrame, #roomsFrame {
     background-color: #1c2835; }
     
 QFrame#chatSearchPopupFrame {
