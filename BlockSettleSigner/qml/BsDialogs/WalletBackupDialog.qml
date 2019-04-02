@@ -19,16 +19,19 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property string targetDir
     property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
-    property string backupFileName: "backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + backupFileExt
+    property string backupFileName: fullBackupMode
+                                    ? "backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + backupFileExt
+                                    : "wo_backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + ".lmdb"
     property bool   isPrintable: false
     property bool   acceptable: (walletInfo.encType === NsWallet.Unencrypted)
                                     || walletInfo.encType === NsWallet.Auth
                                     || walletDetailsFrame.password.length
 
+    property bool fullBackupMode: tabBar.currentIndex === 0
     width: 400
-    height: 450
+    height: 495
 
-    title: qsTr("Backup Private Key for Wallet %1").arg(walletInfo.name)
+    title: qsTr("Export")
     rejectable: true
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -43,6 +46,33 @@ CustomTitleDialogWindow {
         id: mainLayout
         spacing: 10
 
+        TabBar {
+            id: tabBar
+            spacing: 2
+            height: 35
+
+            Layout.fillWidth: true
+            position: TabBar.Header
+
+            background: Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+            }
+
+            CustomTabButton {
+                id: fullBackupTabButton
+                text: "Full"
+                cText.font.capitalization: Font.MixedCase
+                implicitHeight: 35
+            }
+            CustomTabButton {
+                id: woBackupTabButton
+                text: "Watch-Only"
+                cText.font.capitalization: Font.MixedCase
+                implicitHeight: 35
+            }
+        }
+
         BSWalletDetailsFrame {
             id: walletDetailsFrame
             walletInfo: walletInfo
@@ -53,7 +83,7 @@ CustomTitleDialogWindow {
         }
 
         CustomHeader {
-            text: qsTr("Backup Wallet")
+            text: fullBackupMode ? qsTr("Backup Wallet") : qsTr("Export Watching-Only Copy")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
             Layout.topMargin: 5
@@ -66,6 +96,7 @@ CustomTitleDialogWindow {
             Layout.fillWidth: true
             Layout.leftMargin: 10
             Layout.rightMargin: 10
+            visible: fullBackupMode
 
             CustomLabel {
                 Layout.preferredWidth: 110
@@ -127,7 +158,7 @@ CustomTitleDialogWindow {
                         ldrDirDlg.active = true
                     }
                     ldrDirDlg.startFromFolder = targetDir
-                    ldrDirDlg.item.accepted.connect(function() {
+                    ldrDirDlg.item.bsAccepted.connect(function() {
                         targetDir = ldrDirDlg.dir
                     })
                     ldrDirDlg.item.open();
@@ -165,38 +196,43 @@ CustomTitleDialogWindow {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
-                        if (walletsProxy.backupPrivateKey(walletInfo.walletId
-                                                          , targetDir + "/" + backupFileName
-                                                          , isPrintable
-                                                          , passwordData)) {
-                            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                                         , qsTr("Wallet")
-                                                         , qsTr("Wallet backup was successful.")
-                                                         , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
-                                                         .arg(walletInfo.name)
-                                                         .arg(walletInfo.walletId)
-                                                         .arg(targetDir))
+                        if (fullBackupMode) {
+                            if (walletsProxy.backupPrivateKey(walletInfo.walletId
+                                                              , targetDir + "/" + backupFileName
+                                                              , isPrintable
+                                                              , passwordData)) {
+                                var mb = JsHelper.messageBox(BSMessageBox.Type.Success
+                                                             , qsTr("Wallet")
+                                                             , qsTr("Wallet backup was successful.")
+                                                             , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
+                                                             .arg(walletInfo.name)
+                                                             .arg(walletInfo.walletId)
+                                                             .arg(targetDir))
 
-                            mb.accepted.connect(function(){ acceptAnimated() })
+                                mb.bsAccepted.connect(function(){ acceptAnimated() })
+                            }
                         }
                     }
                     else {
                         JsHelper.requesteIdAuth(AutheIDClient.BackupWallet
                                                 , walletInfo
                                                 , function(passwordData){
-                                                    if (walletsProxy.backupPrivateKey(walletInfo.walletId
-                                                                                      , targetDir + "/" + backupFileName
-                                                                                      , isPrintable
-                                                                                      , passwordData)) {
-                                                        var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                                                                     , qsTr("Wallet")
-                                                                                     , qsTr("Wallet backup was successful.")
-                                                                                     , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
-                                                                                     .arg(walletInfo.name)
-                                                                                     .arg(walletInfo.walletId)
-                                                                                     .arg(targetDir))
+                                                    if (fullBackupMode) {
+                                                        if (walletsProxy.backupPrivateKey(walletInfo.walletId
+                                                                                          , targetDir + "/" + backupFileName
+                                                                                          , isPrintable
+                                                                                          , passwordData)) {
+                                                            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
+                                                                                         , qsTr("Wallet")
+                                                                                         , qsTr("Wallet backup was successful.")
+                                                                                         , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
+                                                                                         .arg(walletInfo.name)
+                                                                                         .arg(walletInfo.walletId)
+                                                                                         .arg(targetDir))
 
-                                                        mb.accepted.connect(function(){ acceptAnimated() })
+                                                            mb.bsAccepted.connect(function(){ acceptAnimated() })
+                                                        }
+
                                                     }
                                                 }) // function(passwordData)
                     }

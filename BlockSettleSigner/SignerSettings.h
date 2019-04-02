@@ -32,7 +32,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
 
 public:
-   SignerSettings(const QStringList &args, const QString &fileName = QLatin1String("signer.ini"));
+   SignerSettings(const QString &fileName = QLatin1String("signer.ini"));
 
    SignerSettings(const SignerSettings&) = delete;
    SignerSettings& operator = (const SignerSettings&) = delete;
@@ -58,6 +58,8 @@ public:
       HideEidInfoBox,
       TrustedTerminals
    };
+
+   bool loadSettings(const QStringList &args);
 
    QString zmqPubKeyFile() const { return get(ZMQPubKey).toString(); }
    QString zmqPrvKeyFile() const { return get(ZMQPrvKey).toString(); }
@@ -85,6 +87,7 @@ public:
    QStringList trustedTerminals() const { return get(TrustedTerminals).toStringList(); }
 
    QString dirDocuments() const;
+   bs::signer::ui::RunMode runMode() const { return runMode_; }
 
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
@@ -130,7 +133,6 @@ private:
    QVariant get(Setting s) const;
    void set(Setting s, const QVariant &val, bool toFile = true);
 
-   void parseArguments(const QStringList &args);
    void settingChanged(Setting, const QVariant &val);
    void setXbtLimit(const double val, Setting);
 
@@ -148,6 +150,7 @@ private:
    std::shared_ptr<QSettings>    backend_;
    std::string    writableDir_;
    QStringList    reqFiles_;
+   bs::signer::ui::RunMode runMode_;
 };
 
 

@@ -59,6 +59,11 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
 
+HeadlessAppObj::~HeadlessAppObj()
+{
+   stopInterface();
+}
+
 void HeadlessAppObj::start()
 {
    startInterface();
@@ -92,16 +97,27 @@ void HeadlessAppObj::start()
 
 void HeadlessAppObj::startInterface()
 {
-   if (settings_->runMode() == HeadlessSettings::RunMode::headless) {
+   QStringList args;
+   switch (settings_->runMode()) {
+   case bs::signer::ui::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
       return;
+   case bs::signer::ui::RunMode::cli:
+      logger_->warn("[{}] cli run mode is not supported yet"
+         , __func__);
+      return;
+   case bs::signer::ui::RunMode::lightgui:
+      logger_->debug("[{}] starting lightgui", __func__);
+      args << QLatin1String("--guimode") << QLatin1String("lightgui");
+      break;
+   case bs::signer::ui::RunMode::fullgui:
+      logger_->debug("[{}] starting fullgui", __func__);
+      args << QLatin1String("--guimode") << QLatin1String("fullgui");
+      break;
+   default:
+      break;
    }
 
-   if ((settings_->runMode() != HeadlessSettings::RunMode::QmlGui)) {
-      logger_->warn("[{}] run mode {} is not supported, yet"
-         , __func__, (int)settings_->runMode());
-      return;
-   }
 
 #ifdef Q_OS_MACOS
    QString guiPath = QDir(QCoreApplication::applicationDirPath())
@@ -121,11 +137,17 @@ void HeadlessAppObj::startInterface()
          , __func__, guiPath.toStdString());
       return;
    }
-   QStringList args;
    logger_->debug("[{}] process path: {} {}", __func__
       , guiPath.toStdString(), args.join(QLatin1Char(' ')).toStdString());
    guiProcess_ = std::make_shared<QProcess>();
    guiProcess_->start(guiPath, args);
+}
+
+void HeadlessAppObj::stopInterface()
+{
+   if (guiProcess_) {
+      guiProcess_->kill();
+   }
 }
 
 void HeadlessAppObj::onlineProcessing()
@@ -256,19 +278,19 @@ void HeadlessAppObj::passwordReceived(const std::string &walletId
    }
 }
 
-void HeadlessAppObj::setCallbacks(
-   const std::function<void(const std::string &)> &cbPeerConn
+void HeadlessAppObj::setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
    , const std::function<void(const std::string &)> &cbPeerDisconn
    , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
    , const std::function<void(const BinaryData &)> &cbTxSigned
    , const std::function<void(const BinaryData &)> &cbCancelTxSign
    , const std::function<void(int64_t, bool)> &cbXbtSpent
    , const std::function<void(const std::string &)> &cbAsAct
-   , const std::function<void(const std::string &)> &cbAsDeact)
+   , const std::function<void(const std::string &)> &cbAsDeact
+   , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog)
 {
    if (listener_) {
       listener_->setCallbacks(cbPeerConn, cbPeerDisconn, cbPwd, cbTxSigned
-         , cbCancelTxSign, cbXbtSpent, cbAsAct, cbAsDeact);
+          , cbCancelTxSign, cbXbtSpent, cbAsAct, cbAsDeact, cbCustomDialog);
    }
    else {
       logger_->error("[{}] attempting to set callbacks on uninited listener", __func__);

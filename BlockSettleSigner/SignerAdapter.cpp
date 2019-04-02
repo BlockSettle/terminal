@@ -1,5 +1,6 @@
 #include "SignerAdapter.h"
 #include <spdlog/spdlog.h>
+#include <QDataStream>
 #include <QFile>
 #include <QStandardPaths>
 #include "CelerClientConnection.h"
@@ -88,6 +89,7 @@ private:
    void onCreateWO(const std::string &data, SignContainer::RequestId);
    void onDecryptedKey(const std::string &data, SignContainer::RequestId);
    void onReloadWallets(SignContainer::RequestId);
+   void onExecCustomDialog(const std::string &data, SignContainer::RequestId);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -157,6 +159,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       break;
    case signer::ReloadWalletsType:
       onReloadWallets(packet.id());
+      break;
+   case signer::ExecCustomDialogRequestType:
+      onExecCustomDialog(packet.data(), packet.id());
       break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
@@ -444,6 +449,25 @@ void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
    cbReloadWallets_.erase(itCb);
 }
 
+void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignContainer::RequestId)
+{
+   signer::CustomDialogRequest evt;
+   if (!evt.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   // deserialize variant data
+   QByteArray ba = QByteArray::fromStdString(evt.variantdata());
+   QDataStream stream(&ba, QIODevice::ReadOnly);
+   QVariantMap variantData;
+   stream >> variantData;
+
+
+   QMetaObject::invokeMethod(parent_, [this, evt, variantData] {
+      emit parent_->customDialogRequest(QString::fromStdString(evt.dialogname()), variantData);
+   });
+}
 
 class SignAdapterContainer : public SignContainer
 {
@@ -484,6 +508,7 @@ public:
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) override { return 0; }
+   RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

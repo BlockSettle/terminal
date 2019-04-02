@@ -124,7 +124,7 @@ CustomDialog {
 
                     onClicked: {
                         var dlg = JsHelper.messageBox(BSMessageBox.Type.Question, "Manage Terminals", "Remove terminal?")
-                        dlg.accepted.connect(function(){
+                        dlg.bsAccepted.connect(function(){
                             signerSettings.trustedTerminals.splice(index, 1)
                         })
                     }

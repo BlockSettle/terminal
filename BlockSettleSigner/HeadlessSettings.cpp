@@ -3,13 +3,15 @@
 #include <QFile>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QMetaEnum>
 #include <spdlog/spdlog.h>
 #include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
 #include "HeadlessSettings.h"
+#include "SignerUiDefs.h"
 
-
+namespace {
 static const QString zmqPubKeyName = QString::fromStdString("zmqpubkey");
 static const QString zmqPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for ZMQ connections");
 
@@ -37,14 +39,15 @@ static const QString mainnetHelp = QObject::tr("Set bitcoin network type to main
 static const QString signName = QString::fromStdString("sign");
 static const QString signHelp = QObject::tr("Sign transaction[s] from request file - auto toggles offline mode (headless mode only)");
 
-static const QString headlessName = QString::fromStdString("headless");
-static const QString headlessHelp = QObject::tr("Run without UI");
+static const QString runModeName = QString::fromStdString("guimode");
+static QString runModeHelp = QObject::tr("GUI run mode [__modes__]");
 
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
 static const QString woName = QString::fromStdString("watchonly");
 static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
+}
 
 
 HeadlessSettings::HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger)
@@ -59,6 +62,14 @@ HeadlessSettings::HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger
 
 bool HeadlessSettings::loadSettings(const QStringList &args)
 {
+   // substitute run modes from RunMode enum to help output
+   QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
+   QStringList runModes;
+   for (int i = 0; i < runModesEnum.keyCount(); ++i) {
+      runModes.append(QString::fromLatin1(runModesEnum.valueToKey(i)));
+   }
+   runModeHelp.replace(QStringLiteral("__modes__"), runModes.join(QStringLiteral("|")));
+
    {
       QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
       logDir.cdUp();
@@ -84,7 +95,7 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
    parser.addOption({ testnetName, testnetHelp });
    parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
-   parser.addOption({ headlessName, headlessHelp });
+   parser.addOption({ runModeName, runModeHelp, runModeName });
    parser.addOption({ woName, woHelp });
 
    parser.process(args);
@@ -105,8 +116,14 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
       walletsDir_ = parser.value(walletsDirName).toStdString();
    }
 
-   if (parser.isSet(headlessName)) {
-      headless_ = true;
+   if (parser.isSet(runModeName)) {
+      int runModeValue = runModesEnum.keyToValue(parser.value(runModeName).toLatin1());
+      if (runModeValue < 0) {
+         return false;
+      }
+      runMode_ = static_cast<bs::signer::ui::RunMode>(runModeValue);
+   } else {
+      runMode_ = bs::signer::ui::RunMode::fullgui;
    }
 
    if (parser.isSet(mainnetName)) {
@@ -141,14 +158,6 @@ NetworkType HeadlessSettings::netType() const
       return NetworkType::TestNet;
    }
    return NetworkType::MainNet;
-}
-
-HeadlessSettings::RunMode HeadlessSettings::runMode() const
-{
-   if (headless_) {
-      return RunMode::headless;
-   }
-   return RunMode::QmlGui;
 }
 
 static const QString testnetSubdir = QLatin1String("testnet3");

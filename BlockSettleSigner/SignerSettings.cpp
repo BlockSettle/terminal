@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QMetaEnum>
 #include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
@@ -32,11 +33,11 @@ static const QString testnetHelp = QObject::tr("Set bitcoin network type to test
 static const QString mainnetName = QString::fromStdString("mainnet");
 static const QString mainnetHelp = QObject::tr("Set bitcoin network type to mainnet");
 
-static const QString signName = QString::fromStdString("sign");
-static const QString signHelp = QObject::tr("Sign transaction[s] from request file - auto toggles offline mode (headless mode only)");
+//static const QString signName = QString::fromStdString("sign");
+//static const QString signHelp = QObject::tr("Sign transaction[s] from request file - auto toggles offline mode (headless mode only)");
 
-static const QString headlessName = QString::fromStdString("headless");
-static const QString headlessHelp = QObject::tr("Run without UI");
+static const QString runModeName = QString::fromStdString("guimode");
+static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
 
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
@@ -45,7 +46,7 @@ static const QString woName = QString::fromStdString("watchonly");
 static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
 
 
-SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
+SignerSettings::SignerSettings(const QString &fileName)
    : QObject(nullptr)
 {
    QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
@@ -72,7 +73,6 @@ SignerSettings::SignerSettings(const QStringList &args, const QString &fileName)
       { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) },
       { TrustedTerminals,  SettingDef(QStringLiteral("TrustedTerminals")) }
    };
-   parseArguments(args);
 }
 
 static const QString testnetSubdir = QLatin1String("testnet3");
@@ -221,8 +221,10 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    }
 }
 
-void SignerSettings::parseArguments(const QStringList &args)
+bool SignerSettings::loadSettings(const QStringList &args)
 {
+   QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
+
    QCommandLineParser parser;
    parser.setApplicationDescription(QObject::tr("BlockSettle Signer"));
    parser.addHelpOption();
@@ -234,9 +236,9 @@ void SignerSettings::parseArguments(const QStringList &args)
    parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
    parser.addOption({ mainnetName, mainnetHelp });
+   parser.addOption({ runModeName, runModeHelp, runModeName });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
-   parser.addOption({ signName, signHelp, QObject::tr("filename") });
-   parser.addOption({ headlessName, headlessHelp });
+   //parser.addOption({ signName, signHelp, QObject::tr("filename") });
    parser.addOption({ woName, woHelp });
 
    parser.process(args);
@@ -289,13 +291,26 @@ void SignerSettings::parseArguments(const QStringList &args)
       }
    }
 
-   if (parser.isSet(signName)) {
-      if (!parser.isSet(headlessName)) {
-         throw std::logic_error("Batch offline signing is possible only in headless mode");
+   if (parser.isSet(runModeName)) {
+      int runModeValue = runModesEnum.keyToValue(parser.value(runModeName).toLatin1());
+      if (runModeValue < 0) {
+         return false;
       }
-      reqFiles_ << parser.value(signName);
-      set(OfflineMode, true, false);
+      runMode_ = static_cast<bs::signer::ui::RunMode>(runModeValue);
+      if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
+         return false;
+      }
+   } else {
+      runMode_ = bs::signer::ui::RunMode::fullgui;
    }
+
+//   if (parser.isSet(signName)) {
+//      if (!parser.isSet(headlessName)) {
+//         throw std::logic_error("Batch offline signing is possible only in headless mode");
+//      }
+//      reqFiles_ << parser.value(signName);
+//      set(OfflineMode, true, false);
+//   }
 
    NetworkConfig config;
    if (testNet()) {
@@ -304,6 +319,8 @@ void SignerSettings::parseArguments(const QStringList &args)
    else {
       config.selectNetwork(NETWORK_MODE_MAINNET);
    }
+
+   return true;
 }
 
 SignContainer::Limits SignerSettings::limits() const

@@ -62,6 +62,7 @@ signals:
    void xbtSpent(const qint64 value, bool autoSign);
    void autoSignActivated(const std::string &walletId);
    void autoSignDeactivated(const std::string &walletId);
+   void customDialogRequest(const QString &dialogName, const QVariantMap &data);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

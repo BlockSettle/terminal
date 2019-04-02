@@ -162,8 +162,14 @@ void SignerAdapterListener::setCallbacks()
    const auto &cbAutoSignDeactivated = [this, cbAutoSign](const std::string &walletId) {
       cbAutoSign(false, walletId);
    };
+   const auto &cbCustomDialog = [this](const std::string &dialogName, const std::string &data) {
+      signer::CustomDialogRequest evt;
+      evt.set_dialogname(dialogName);
+      evt.set_variantdata(data);
+      sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
+   };
    app_->setCallbacks(cbPeerConnected, cbPeerDisconnected, cbPwd, cbTxSigned, cbCancelTxSign
-      , cbXbtSpent, cbAutoSignActivated, cbAutoSignDeactivated);
+      , cbXbtSpent, cbAutoSignActivated, cbAutoSignDeactivated, cbCustomDialog);
 }
 
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
