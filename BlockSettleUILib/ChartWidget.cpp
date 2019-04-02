@@ -702,7 +702,6 @@ void ChartWidget::rescaleVolumesYAxis() const
    }
    if (!qFuzzyCompare(maxVolume, volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper)) {
       volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, maxVolume);
-      volumeAxisRect_->axis(QCPAxis::atRight)->ticker()->setTickOrigin(maxVolume);
       ui_->customPlot->replot();
    }
 }
@@ -921,7 +920,7 @@ void ChartWidget::InitializeCustomPlot()
    volumeAxisRect_->axis(QCPAxis::atRight)->setTickLabelColor(FOREGROUND_COLOR);
    volumeAxisRect_->axis(QCPAxis::atRight)->setTickLength(0, 8);
    volumeAxisRect_->axis(QCPAxis::atRight)->setSubTickLength(0, 4);
-   volumeAxisRect_->axis(QCPAxis::atRight)->ticker()->setTickCount(1);
+   volumeAxisRect_->axis(QCPAxis::atRight)->ticker()->setTickCount(2);
    volumeAxisRect_->axis(QCPAxis::atRight)->setTickLabelFont(ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->labelFont());
 
    volumeAxisRect_->axis(QCPAxis::atBottom)->setBasePen(QPen(FOREGROUND_COLOR));
