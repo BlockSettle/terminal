@@ -285,12 +285,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    if (product != QString::fromStdString(response.product()) || interval != response.interval())
       return;
 
-
    qreal maxTimestamp = -1.0;
-
-   for (auto it : response.candles()) {
-
-   }
 
    for (int i = 0; i < response.candles_size(); i++)
    {
@@ -324,6 +319,9 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 
    if (firstPortion) {
+      if (!response.candles_size()) {
+         maxTimestamp = QDateTime::currentMSecsSinceEpoch();
+      }
       firstTimestampInDb_ = response.first_stamp_in_db() / 1000;
       UpdatePlot(interval, maxTimestamp);
    }
