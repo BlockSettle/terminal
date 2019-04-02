@@ -391,7 +391,7 @@ CustomDialog {
                                                                                                  , oldPwEidData
                                                                                                  , newPasswordData)
                                                             var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, ok, walletInfo)
-                                                            mb.accepted.connect(function(){ acceptAnimated() })
+                                                            mb.bsAccepted.connect(function(){ acceptAnimated() })
                                                         }
                                                         else {
                                                             // change to another eid account
@@ -402,7 +402,7 @@ CustomDialog {
                                                                                                                              , oldPwEidData
                                                                                                                              , newPwEidData)
                                                                                         var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, ok, walletInfo)
-                                                                                        mb.accepted.connect(function(){
+                                                                                        mb.bsAccepted.connect(function(){
                                                                                             //acceptAnimated()
                                                                                             addTabButton.onClicked()
                                                                                         })
@@ -422,7 +422,7 @@ CustomDialog {
                                                             , oldPasswordData
                                                             , newPasswordData)
                                 var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, true, walletInfo)
-                                mb.accepted.connect(function(){ acceptAnimated() })
+                                mb.bsAccepted.connect(function(){ acceptAnimated() })
                             }
                             else {
                                 // new auth is eID
@@ -433,7 +433,7 @@ CustomDialog {
                                                                                          , oldPasswordData
                                                                                          , newPwEidData)
                                                              var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, true, walletInfo)
-                                                             mb.accepted.connect(function(){
+                                                             mb.bsAccepted.connect(function(){
                                                                  //acceptAnimated()
                                                                  addTabButton.onClicked()
                                                              })

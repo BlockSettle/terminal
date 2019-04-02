@@ -13,16 +13,21 @@ CustomDialogWindow {
     property bool abortConfirmation: false
     property int abortBoxType
 
+    ///////////////////
     // suggested to use these functions to close dialog popup with animation
-    //
+    signal bsAccepted()
+    signal bsRejected()
+
     function acceptAnimated(){
-        closeTimer.acceptRet = true
+        bsAccepted()
+        //closeTimer.acceptRet = true
         closeTimer.start()
         closeAnimation.start()
     }
 
     function rejectAnimated(){
-        closeTimer.acceptRet = false
+        bsRejected()
+        //closeTimer.acceptRet = false
         closeTimer.start()
         closeAnimation.start()
     }
@@ -63,28 +68,25 @@ CustomDialogWindow {
         cContentItem.parent = customContentContainer
         cHeaderItem.parent = customHeaderContainer
         cFooterItem.parent = customFooterContainer
-closeChainTimer.start()
-        accepted.connect(function(){
-            console.log("closeChainTimer started")
-
-            closeChainTimer.start() })
-        rejected.connect(function(){
-            console.log("closeChainTimer started")
-            closeChainTimer.start() })
+//        bsAccepted.connect(function(){
+//            console.log("closeChainTimer started")
+//            closeChainTimer.start() })
+//        bsRejected.connect(function(){
+//            console.log("closeChainTimer started")
+//            closeChainTimer.start() })
 
     }
 
-    Timer {
-        id: closeChainTimer
-        interval: 1250
-        running: false
-        repeat: false
-        onTriggered: {
-            console.log("closeChainTimer onTriggered")
-            if (!isNextChainDialogSet) dialogsChainFinished()
-            if (!isNextChainDialogSet) dialogsChainFinished()
-        }
-    }
+//    Timer {
+//        id: closeChainTimer
+//        interval: 1250
+//        running: false
+//        repeat: false
+//        onTriggered: {
+//            console.log("closeChainTimer onTriggered")
+//            if (!isNextChainDialogSet) dialogsChainFinished()
+//        }
+//    }
 
 
     header: Item{}
@@ -102,7 +104,13 @@ closeChainTimer.start()
         from: 0; to: 1
     }
 
-    onAboutToHide: closeAnimation
+    //onAboutToHide: closeAnimation
+    onBsAccepted: closeAnimation
+    onBsRejected: closeAnimation
+
+    onDialogsChainFinished: {            console.log("if (!isNextChainDialogSet) dialogsChainFinished()")
+}
+
     PropertyAnimation {
         id: closeAnimation
         target: root
@@ -114,9 +122,14 @@ closeChainTimer.start()
     Timer {
         // used to close dialog when close animation completed
         id: closeTimer
-        property bool acceptRet
+        //property bool acceptRet
         interval: animationDuration
-        onTriggered: acceptRet? accept() : reject()
+        //onTriggered: acceptRet? accept() : reject()
+        onTriggered: {
+            console.log("closeTimer onTriggered ")
+            if (!isNextChainDialogSet) dialogsChainFinished()
+            reject()
+        }
     }
 
     contentItem: FocusScope {

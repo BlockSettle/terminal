@@ -1,7 +1,7 @@
 function openAbortBox(dialog, abortBoxType) {
     var abortBox = Qt.createComponent("../BsControls/BSAbortBox.qml").createObject(mainWindow)
     abortBox.abortType = abortBoxType
-    abortBox.accepted.connect(function() {dialog.reject()} )
+    abortBox.bsAccepted.connect(function() {dialog.rejectAnimated()} )
     abortBox.open()
 }
 
@@ -57,7 +57,7 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
     authProgress.walletName = walletInfo.name
 
     authProgress.open()
-    authProgress.rejected.connect(function() {
+    authProgress.bsRejected.connect(function() {
         authObject.destroy()
     })
 
@@ -98,7 +98,7 @@ function removeEidDevice (index, walletInfo, onSuccess) {
     authProgress.walletName = walletInfo.name
 
     authProgress.open()
-    authProgress.rejected.connect(function() {
+    authProgress.bsRejected.connect(function() {
         authObject.destroy()
     })
 
@@ -136,7 +136,7 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
     authProgress.walletName = walletInfo.name
 
     authProgress.open()
-    authProgress.rejected.connect(function() {
+    authProgress.bsRejected.connect(function() {
         if (authObject !== undefined) authObject.destroy()
     })
 

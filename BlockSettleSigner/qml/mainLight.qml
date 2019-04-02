@@ -77,10 +77,10 @@ ApplicationWindow {
         dlg.prompt = prompt
         dlg.txInfo = txInfo
 
-        dlg.accepted.connect(function() {
+        dlg.bsAccepted.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, false)
         })
-        dlg.rejected.connect(function() {
+        dlg.bsRejected.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, true)
         })
         mainWindow.requestActivate()
@@ -102,7 +102,7 @@ ApplicationWindow {
 
         dlg.dialogsChainFinished.connect(function(){ hide() })
 
-//        dlg.accepted.connect(function(){ hide() })
-//        dlg.rejected.connect(function(){ hide() })
+//        dlg.bsAccepted.connect(function(){ hide() })
+//        dlg.bsRejected.connect(function(){ hide() })
     }
 }

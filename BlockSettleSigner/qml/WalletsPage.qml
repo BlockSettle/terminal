@@ -79,7 +79,7 @@ Item {
                         onClicked: {
                             // let user create a new wallet or import one from file
                             var dlgNew = Qt.createComponent("BsDialogs/WalletNewDialog.qml").createObject(mainWindow)
-                            dlgNew.accepted.connect(function() {
+                            dlgNew.bsAccepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.NewWallet) {
                                     QmlDialogs.createNewWalletDialog()
 //                                    // TODO rename signerSettings.testNet -> signerSettings.isTestNet
@@ -88,7 +88,7 @@ Item {
 //                                    // allow user to save wallet seed lines and then prompt him to enter them for verification
 //                                    var dlgNewSeed = Qt.createComponent("BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
 //                                    dlgNewSeed.seed = newSeed
-//                                    dlgNewSeed.accepted.connect(function() {
+//                                    dlgNewSeed.bsAccepted.connect(function() {
 //                                        // let user set a password or Auth eID and also name and desc. for the new wallet
 //                                        var dlgCreateWallet = Qt.createComponent("BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
 //                                        dlgCreateWallet.primaryWalletExists = walletsProxy.primaryWalletExists
@@ -148,12 +148,12 @@ Item {
 //                            var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
 //                            dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
 //                            dlg.rootName = walletsProxy.getRootWalletName(dlg.walletId)
-//                            dlg.accepted.connect(function() {
+//                            dlg.bsAccepted.connect(function() {
 //                                if (dlg.backup) {
 //                                    var dlgBkp = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
 //                                    dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
 //                                    dlgBkp.targetDir = signerSettings.dirDocuments
-//                                    dlgBkp.accepted.connect(function() {
+//                                    dlgBkp.bsAccepted.connect(function() {
 //                                        if (walletsProxy.deleteWallet(walletId)) {
 //                                            JsHelper.messageBox(BSMessageBox.Type.Success
 //                                                                , qsTr("Wallet")

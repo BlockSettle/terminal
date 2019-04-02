@@ -158,7 +158,7 @@ CustomTitleDialogWindow {
                         ldrDirDlg.active = true
                     }
                     ldrDirDlg.startFromFolder = targetDir
-                    ldrDirDlg.item.accepted.connect(function() {
+                    ldrDirDlg.item.bsAccepted.connect(function() {
                         targetDir = ldrDirDlg.dir
                     })
                     ldrDirDlg.item.open();
@@ -209,7 +209,7 @@ CustomTitleDialogWindow {
                                                              .arg(walletInfo.walletId)
                                                              .arg(targetDir))
 
-                                mb.accepted.connect(function(){ acceptAnimated() })
+                                mb.bsAccepted.connect(function(){ acceptAnimated() })
                             }
                         }
                     }
@@ -230,7 +230,7 @@ CustomTitleDialogWindow {
                                                                                          .arg(walletInfo.walletId)
                                                                                          .arg(targetDir))
 
-                                                            mb.accepted.connect(function(){ acceptAnimated() })
+                                                            mb.bsAccepted.connect(function(){ acceptAnimated() })
                                                         }
 
                                                     }

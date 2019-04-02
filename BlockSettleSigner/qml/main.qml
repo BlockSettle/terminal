@@ -97,6 +97,10 @@ ApplicationWindow {
         }
     }
 
+    WalletDeleteDialog {
+        visible: true
+    }
+
     footer: TabBar {
         id: tabBar
         currentIndex: swipeView.currentIndex
@@ -146,10 +150,10 @@ ApplicationWindow {
         dlg.prompt = prompt
         dlg.txInfo = txInfo
 
-        dlg.accepted.connect(function() {
+        dlg.bsAccepted.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, false)
         })
-        dlg.rejected.connect(function() {
+        dlg.bsRejected.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, true)
         })
         mainWindow.requestActivate()

@@ -13,7 +13,7 @@ function createNewWalletDialog(data) {
     // allow user to save wallet seed lines and then prompt him to enter them for verification
     var dlgNewSeed = Qt.createComponent("../BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
     dlgNewSeed.seed = newSeed
-    dlgNewSeed.accepted.connect(function() {
+    dlgNewSeed.bsAccepted.connect(function() {
         // let user set a password or Auth eID and also name and desc. for the new wallet
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgCreateWallet.primaryWalletExists = walletsProxy.primaryWalletExists
@@ -47,13 +47,13 @@ function deleteWalletDialog(data) {
     dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
     dlg.rootName = walletsProxy.getRootWalletName(walletId)
 
-    dlg.accepted.connect(function() {
+    dlg.bsAccepted.connect(function() {
         if (dlg.backup) {
             var dlgBkp = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
             dlg.setNextChainDialog(dlgBkp)
             dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
             dlgBkp.targetDir = signerSettings.dirDocuments
-            dlgBkp.accepted.connect(function() {
+            dlgBkp.bsAccepted.connect(function() {
                 if (walletsProxy.deleteWallet(walletId)) {
                     JsHelper.messageBox(BSMessageBox.Type.Success
                                         , qsTr("Wallet")

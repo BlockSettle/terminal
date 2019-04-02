@@ -508,14 +508,14 @@ CustomTitleDialogWindow {
                             var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
                             checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                             checkPasswordDialog.open()
-                            checkPasswordDialog.accepted.connect(function(){
+                            checkPasswordDialog.bsAccepted.connect(function(){
                                 var ok = walletsProxy.createWallet(isPrimary
                                                                , seed
                                                                , walletInfo
                                                                , passwordData)
 
                                 var mb = JsHelper.resultBox(BSResultBox.WalletImport, ok, walletInfo)
-                                if (ok) mb.accepted.connect(acceptAnimated)
+                                if (ok) mb.bsAccepted.connect(acceptAnimated)
                             })
                         }
                         else {
@@ -529,7 +529,7 @@ CustomTitleDialogWindow {
                                                                                         , newPasswordData)
 
                                                          var mb = JsHelper.resultBox(BSResultBox.WalletImport, ok, walletInfo)
-                                                         if (ok) mb.accepted.connect(acceptAnimated)
+                                                         if (ok) mb.bsAccepted.connect(acceptAnimated)
                                                      })
 
                         }
