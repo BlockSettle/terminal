@@ -54,6 +54,7 @@ protected slots:
    void OnDateRangeChanged(int id);
    void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void OnInstrumentChanged(const QString &text);
+   QString GetFormattedStamp(double timestamp);
    void OnPlotMouseMove(QMouseEvent* event);
    void leaveEvent(QEvent* event) override;
    void rescaleCandlesYAxis();

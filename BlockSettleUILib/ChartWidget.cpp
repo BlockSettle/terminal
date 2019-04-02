@@ -566,6 +566,21 @@ void ChartWidget::OnInstrumentChanged(const QString &text) {
    }
 }
 
+QString ChartWidget::GetFormattedStamp(double timestamp)
+{
+   QString resultFormat;
+   switch (static_cast<Interval>(dateRange_.checkedId())) { 
+   case TwelveHours: 
+   case SixHours: 
+   case OneHour:
+      resultFormat = QStringLiteral("dd MMM yy hh:mm");
+      break;
+   default:
+      resultFormat = QStringLiteral("dd MMM yy");
+   }
+   return QDateTime::fromSecsSinceEpoch(timestamp).toString(resultFormat);
+}
+
 void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 {
    if (info_ == nullptr)
@@ -574,19 +589,22 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
    DrawCrossfire(event);
 
    double x = event->localPos().x();
-   double width = 0.8 * IntervalWidth(dateRange_.checkedId()) / 1000;
-   double timestamp = ui_->customPlot->xAxis->pixelToCoord(x) + width / 2;
-   if (!candlesticksChart_->data()->size() || timestamp > candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key || timestamp < candlesticksChart_->data()->at(0)->key) {
+   double width = IntervalWidth(dateRange_.checkedId()) / 1000;
+   double timestamp = ui_->customPlot->xAxis->pixelToCoord(x);
+   if (!candlesticksChart_->data()->size() ||
+      timestamp > candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + width / 2 || 
+      timestamp < candlesticksChart_->data()->at(0)->key - width / 2) {
       info_->setText({});
    } else {
       auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp);
       auto volumeValue = *volumeChart_->data()->findBegin(timestamp);
-      info_->setText(tr("O: %1   H: %2   L: %3   C: %4   Volume: %5")
+      info_->setText(tr("%6   O: %1   H: %2   L: %3   C: %4   Volume: %5")
                      .arg(ohlcValue.open, 0, 'g', -1)
                      .arg(ohlcValue.high, 0, 'g', -1)
                      .arg(ohlcValue.low, 0, 'g', -1)
                      .arg(ohlcValue.close, 0, 'g', -1)
-                     .arg(volumeValue.value, 0, 'g', -1));
+                     .arg(volumeValue.value, 0, 'g', -1)
+                     .arg(GetFormattedStamp(ohlcValue.key)));
    }
 
    if (isDraggingYAxis_)
