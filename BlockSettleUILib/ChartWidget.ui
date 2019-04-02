@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>480</height>
+    <width>771</width>
+    <height>514</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -75,6 +75,13 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonMDConnection">
+        <property name="text">
+         <string>Subscribe</string>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="autoScaleBtn">

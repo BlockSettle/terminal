@@ -6,6 +6,8 @@
 #include "CoreWalletsManager.h"
 #include "WalletEncryption.h"
 #include "ZmqSecuredServerConnection.h"
+#include <QDataStream>
+#include <QDebug>
 
 
 using namespace Blocksettle::Communication;
@@ -33,7 +35,8 @@ void HeadlessContainerListener::setCallbacks(const std::function<void(const std:
    , const std::function<void(const BinaryData &)> &cbCancelTxSign
    , const std::function<void(int64_t, bool)> &cbXbtSpent
    , const std::function<void(const std::string &)> &cbAsAct
-   , const std::function<void(const std::string &)> &cbAsDeact)
+   , const std::function<void(const std::string &)> &cbAsDeact
+   , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog)
 {
    const auto &cbWrapXbtSpent = [this, cbXbtSpent](int64_t value, bool autoSign) {
       onXbtSpent(value, autoSign);
@@ -49,6 +52,7 @@ void HeadlessContainerListener::setCallbacks(const std::function<void(const std:
    cbXbtSpent_ = cbWrapXbtSpent;
    cbAsAct_ = cbAsAct;
    cbAsDeact_ = cbAsDeact;
+   cbCustomDialog_ = cbCustomDialog;
 }
 
 HeadlessContainerListener::~HeadlessContainerListener() noexcept
@@ -248,6 +252,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
 
    case headless::SyncAddressesType:
       return onSyncAddresses(clientId, packet);
+
+   case headless::ExecCustomDialogRequestType:
+      return onExecCustomDialog(clientId, packet);
 
    default:
       logger_->error("[HeadlessContainerListener] unknown request type {}", packet.type());
@@ -1497,4 +1504,25 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
 
    packet.set_data(response.SerializeAsString());
    return sendData(packet.SerializeAsString(), clientId);
+}
+
+bool HeadlessContainerListener::onExecCustomDialog(const std::string &clientId, headless::RequestPacket packet)
+{
+   headless::CustomDialogRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[HeadlessContainerListener] failed to parse CustomDialogRequest");
+      return false;
+   }
+
+   if (cbCustomDialog_) {
+      cbCustomDialog_(request.dialogname(), request.variantdata());
+
+//      QByteArray ba = QByteArray::fromStdString(request.variantdata());
+//      QDataStream ds(&ba, QIODevice::ReadOnly);
+//      QVariant data;
+//      ds >> data;
+
+//      cbCustomDialog_(QString::fromStdString(request.dialogname()), data);
+   }
+   return true;
 }

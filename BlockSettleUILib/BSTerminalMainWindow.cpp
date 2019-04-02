@@ -645,6 +645,7 @@ void BSTerminalMainWindow::InitChatView()
    ui_->widgetChat->init(connectionManager_, applicationSettings_, logMgr_->logger("chat"));
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
+   connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
 }
 
 void BSTerminalMainWindow::InitChartsView()

@@ -325,6 +325,8 @@ void ChatClient::logout(bool send)
 
    currentUserId_.clear();
    connection_.reset();
+
+   emit LoggedOut();
 }
 
 void ChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)

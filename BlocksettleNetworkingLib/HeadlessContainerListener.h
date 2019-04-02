@@ -51,7 +51,8 @@ public:
       , const std::function<void(const BinaryData &)> &cbCancelTxSign
       , const std::function<void(int64_t, bool)> &cbXbtSpent
       , const std::function<void(const std::string &)> &cbAsAct
-      , const std::function<void(const std::string &)> &cbAsDeact);
+      , const std::function<void(const std::string &)> &cbAsDeact
+      , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog);
 
    void passwordReceived(const std::string &walletId
       , const SecureBinaryData &password, bool cancelledByUser);
@@ -96,6 +97,7 @@ private:
    bool onSyncWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncComment(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncAddresses(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onExecCustomDialog(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
 
    bool AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
@@ -160,6 +162,7 @@ private:
    std::function<void(int64_t, bool)> cbXbtSpent_ = nullptr;
    std::function<void(const std::string &)> cbAsAct_ = nullptr;
    std::function<void(const std::string &)> cbAsDeact_ = nullptr;
+   std::function<void(const std::string &, const std::string &)> cbCustomDialog_ = nullptr;
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__

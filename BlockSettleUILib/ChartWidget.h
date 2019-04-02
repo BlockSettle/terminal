@@ -24,6 +24,19 @@ class MdhsClient;
 
 using namespace Blocksettle::Communication::TradeHistory;
 
+#include <QItemDelegate>
+#include <QPainter>
+
+class ComboBoxDelegate : public QItemDelegate
+{
+   Q_OBJECT
+public:
+   explicit ComboBoxDelegate(QObject *parent = 0);
+protected:
+   void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+   QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
+};
+
 class ChartWidget : public QWidget
 {
     Q_OBJECT
@@ -41,17 +54,29 @@ protected slots:
    void OnDateRangeChanged(int id);
    void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void OnInstrumentChanged(const QString &text);
+   QString GetFormattedStamp(double timestamp);
    void OnPlotMouseMove(QMouseEvent* event);
+   void leaveEvent(QEvent* event) override;
    void rescaleCandlesYAxis();
    void rescaleVolumesYAxis() const;
    void rescalePlot();
    void OnMousePressed(QMouseEvent* event);
    void OnMouseReleased(QMouseEvent* event);
+   void OnWheelScroll(QWheelEvent* event);
    void OnAutoScaleBtnClick();
    void OnResetBtnClick();
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
+   static QString ProductTypeToString(TradeHistoryTradeType type);
+   void SetupCrossfire();
+
+   void OnLoadingNetworkSettings();
+   void OnMDConnecting();
+   void OnMDConnected();
+   void OnMDDisconnecting();
+   void OnMDDisconnected();
+   void ChangeMDSubscriptionState();
 
 protected:
    void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
@@ -61,8 +86,11 @@ protected:
    static int FractionSizeForProduct(TradeHistoryTradeType type);
    void ProcessProductsListResponse(const std::string& data);
    void ProcessOhlcHistoryResponse(const std::string& data);
+   double CountOffsetFromRightBorder();
 
    void setAutoScaleBtnColor() const;
+
+   void DrawCrossfire(QMouseEvent* event);
 
    void AddNewCandle();
    void ModifyCandle();
@@ -75,6 +103,10 @@ protected:
    void LoadAdditionalPoints(const QCPRange& range);
 
    void pickTicketDateFormat(const QCPRange& range) const;
+private:
+   QString getCurrentProductName() const;
+   void AddParentItem(QStandardItemModel * model, const QString& text);
+   void AddChildItem(QStandardItemModel* model, const QString& text);
 
 private:
    std::shared_ptr<ApplicationSettings>			appSettings_;
@@ -90,7 +122,7 @@ private:
    const int loadDistance{ 15 };
 
    constexpr static int requestLimit{ 100 };
-   constexpr static int candleViewLimit{ 30 };
+   constexpr static int candleViewLimit{ 60 };
    constexpr static qint64 candleCountOnScreenLimit{ 1500 };
 
    Blocksettle::Communication::MarketDataHistory::OhlcCandle lastCandle_;
@@ -105,6 +137,9 @@ private:
    QCPFinancial *candlesticksChart_;
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;
+
+   QCPItemLine* horLine;
+   QCPItemLine* vertLine;
 
    double lastHigh_;
    double lastLow_;
@@ -123,6 +158,8 @@ private:
    bool isDraggingYAxis_;
    bool isDraggingXAxis_{ false };
    bool isDraggingMainPlot_{ false };
+   QCPRange dragStartRange_;
+   QPointF dragStartPos_;
 
    QPoint lastDragCoord_;
    qreal startDragCoordX_{ 0.0 };

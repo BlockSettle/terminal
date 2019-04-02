@@ -27,6 +27,7 @@ enum RequestType
    SyncWalletType              = 19;
    SyncCommentType             = 20;
    SyncAddressesType           = 21;
+   ExecCustomDialogRequestType = 22;
 }
 
 message RequestPacket
@@ -418,3 +419,11 @@ message SettlWalletResponse
    string name = 2;
    string description = 3;
 }
+
+
+message CustomDialogRequest
+{
+   string dialogName = 1;
+   bytes  variantData = 2;
+}
+
