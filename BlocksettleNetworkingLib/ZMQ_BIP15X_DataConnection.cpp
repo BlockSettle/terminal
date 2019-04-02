@@ -199,9 +199,6 @@ void ZmqBIP15XDataConnection::sendHeartbeat()
 
    uint32_t size = 1;
    BinaryData plainText(4 + size + POLY1305MACLEN);
-   if (plainText.getSize() > ZMQ_MESSAGE_PACKET_SIZE) {
-      throw runtime_error("payload is too large to serialize");
-   }
 
    // Copy in packet size.
    memcpy(plainText.getPtr(), &size, 4);
