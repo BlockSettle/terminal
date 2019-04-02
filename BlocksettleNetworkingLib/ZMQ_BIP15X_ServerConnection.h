@@ -23,6 +23,8 @@ public:
    bool bip151HandshakeCompleted_ = false;
    std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
    uint32_t msgID_ = 0;
+   uint32_t outerRekeyCount_ = 0;
+   uint32_t innerRekeyCount_ = 0;
    ZmqBIP15XMsgFragments currentReadMessage_;
 };
 
