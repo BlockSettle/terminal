@@ -51,7 +51,8 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
    QFile pubKeyFile(dir + QLatin1String("/headless.pub"));
    if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-      throw std::runtime_error("Failed to open public key file for writing");
+      throw std::runtime_error("Failed to open public key file "
+         + pubKeyFile.fileName().toStdString() + " for writing");
    }
    logger_->debug("[{}] creating pubkey file in {}", __func__, pubKeyFile.fileName().toStdString());
    pubKeyFile.write(adapterConn->getOwnPubKey().toHexStr().c_str());

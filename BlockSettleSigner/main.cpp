@@ -21,12 +21,18 @@ Q_DECLARE_METATYPE(BinaryData)
 static int HeadlessApp(int argc, char **argv)
 {
    QCoreApplication app(argc, argv);
-   app.setApplicationName(QLatin1String("blocksettle"));
+   app.setApplicationName(QLatin1String("Signer"));
    app.setOrganizationDomain(QLatin1String("blocksettle.com"));
    app.setOrganizationName(QLatin1String("BlockSettle"));
 
    bs::LogManager logMgr;
    auto loggerStdout = logMgr.logger("settings");
+
+   QDir dir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+   if (!dir.exists()) {
+      loggerStdout->info("Creating missing dir {}", dir.path().toStdString());
+      dir.mkpath(dir.path());
+   }
 
    const auto settings = std::make_shared<HeadlessSettings>(loggerStdout);
    if (!settings->loadSettings(app.arguments())) {
