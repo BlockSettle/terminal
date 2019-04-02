@@ -363,7 +363,7 @@ vector<BinaryData> ZmqBIP15XMessageCodec::serialize(const BinaryDataRef& payload
    , BIP151Connection* connPtr, uint8_t type, uint32_t id)
 {
    //is this payload carrying a msgid?
-   if ((type > ZMQ_MSGTYPE_AEAD_THRESHOLD) || (type == ZMQ_MSGTYPE_HEARTBEAT)) {
+   if (type > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       return serializePacketWithoutId(payload, connPtr, type);
    }
 

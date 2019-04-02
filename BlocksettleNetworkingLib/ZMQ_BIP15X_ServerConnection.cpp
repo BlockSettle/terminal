@@ -329,7 +329,13 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       socketConnMap_[clientID]->currentReadMessage_.message_.getId();
 
    // If we're still handshaking, take the next step. (No fragments allowed.)
-   if (socketConnMap_[clientID]->currentReadMessage_.message_.getType() >
+   if (socketConnMap_[clientID]->currentReadMessage_.message_.getType()
+      == ZMQ_MSGTYPE_HEARTBEAT) {
+      lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
+      socketConnMap_[clientID]->currentReadMessage_.reset();
+      return;
+   }
+   else if (socketConnMap_[clientID]->currentReadMessage_.message_.getType() >
       ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(
          socketConnMap_[clientID]->currentReadMessage_.message_, clientID)) {
@@ -340,13 +346,6 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
          return;
       }
 
-      socketConnMap_[clientID]->currentReadMessage_.reset();
-      return;
-   }
-
-   if (socketConnMap_[clientID]->currentReadMessage_.message_.getType()
-      == ZMQ_MSGTYPE_HEARTBEAT) {
-      lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
       socketConnMap_[clientID]->currentReadMessage_.reset();
       return;
    }

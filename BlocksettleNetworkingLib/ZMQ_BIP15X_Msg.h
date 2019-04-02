@@ -38,7 +38,6 @@
 #define ZMQ_MSGTYPE_SINGLEPACKET              1
 #define ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER   2
 #define ZMQ_MSGTYPE_FRAGMENTEDPACKET_FRAGMENT 3
-#define ZMQ_MSGTYPE_HEARTBEAT                 4
 
 #define ZMQ_MSGTYPE_AEAD_THRESHOLD            10
 #define ZMQ_MSGTYPE_AEAD_SETUP                11
@@ -52,6 +51,8 @@
 #define ZMQ_MSGTYPE_AUTH_CHALLENGE            21
 #define ZMQ_MSGTYPE_AUTH_REPLY                22
 #define ZMQ_MSGTYPE_AUTH_PROPOSE              23
+
+#define ZMQ_MSGTYPE_HEARTBEAT                 30
 
 // NOTE: Due to fragmentation, the maximum message size is (65535 * 1500) =
 // ~98 MiB. Larger messages will have to be split up in other ways.
