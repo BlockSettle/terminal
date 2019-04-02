@@ -192,7 +192,6 @@ void ZmqBIP15XDataConnection::sendHeartbeat()
          , __func__, connectionName_, (int)bip151Connection_->getBIP150State());
       return;
    }
-   ZmqBIP15XSerializedMessage msg;
    BIP151Connection* connPtr = nullptr;
    if (bip151HandshakeCompleted_) {
       connPtr = bip151Connection_.get();
