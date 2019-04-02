@@ -462,10 +462,10 @@ void ChartWidget::pickTicketDateFormat(const QCPRange& range) const
       dateTimeTicker->setDateTimeFormat(QStringLiteral("dd MMM\nHH:mm"));
    }
    else if (range.size() < 365 * 24 * 60 * 60 * rangeCoeff) {
-      dateTimeTicker->setDateTimeFormat(QStringLiteral("dd MMM"));
+      dateTimeTicker->setDateTimeFormat(QStringLiteral("dd MMM\n"));
    }
    else {
-      dateTimeTicker->setDateTimeFormat(QStringLiteral("MMM yyyy"));
+      dateTimeTicker->setDateTimeFormat(QStringLiteral("MMM yyyy\n"));
    }
 }
 
