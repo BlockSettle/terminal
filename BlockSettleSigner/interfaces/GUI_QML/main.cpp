@@ -57,7 +57,7 @@ static int QMLApp(int argc, char **argv)
 {
    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
    QApplication app(argc, argv);
-   app.setApplicationName(QLatin1String("blocksettle"));
+   app.setApplicationName(QLatin1String("Signer"));
    app.setOrganizationDomain(QLatin1String("blocksettle.com"));
    app.setOrganizationName(QLatin1String("BlockSettle"));
    app.setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
