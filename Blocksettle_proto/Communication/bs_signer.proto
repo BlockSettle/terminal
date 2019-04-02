@@ -24,6 +24,7 @@ enum PacketType
    RequestCloseType = 16;
    ReconnectTerminalType = 17;
    ReloadWalletsType = 18;
+   ExecCustomDialogRequestType = 19;
 }
 
 message Packet
@@ -213,4 +214,10 @@ message ReconnectRequest
 message ReloadWalletsRequest
 {
    string path = 1;
+}
+
+message CustomDialogRequest
+{
+   string dialogName = 1;
+   bytes  variantData = 2;
 }

@@ -1064,19 +1064,18 @@
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>35</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>150</width>
+          <width>120</width>
           <height>45</height>
          </size>
         </property>
         <property name="text">
-         <string>Manage
-Encryption</string>
+         <string>Manage</string>
         </property>
         <property name="iconSize">
          <size>
@@ -1092,7 +1091,7 @@ Encryption</string>
       <item alignment="Qt::AlignLeft">
        <widget class="QPushButton" name="backupButton">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1102,19 +1101,18 @@ Encryption</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>35</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>150</width>
+          <width>120</width>
           <height>45</height>
          </size>
         </property>
         <property name="text">
-         <string>Backup
-Private Key</string>
+         <string>Export</string>
         </property>
         <property name="iconSize">
          <size>
@@ -1137,19 +1135,18 @@ Private Key</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>35</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>150</width>
+          <width>120</width>
           <height>45</height>
          </size>
         </property>
         <property name="text">
-         <string>Rescan
-Wallet</string>
+         <string>Rescan</string>
         </property>
         <property name="iconSize">
          <size>
@@ -1175,19 +1172,18 @@ Wallet</string>
         </property>
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>120</width>
           <height>35</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>150</width>
+          <width>120</width>
           <height>45</height>
          </size>
         </property>
         <property name="text">
-         <string>Delete
-Wallet</string>
+         <string>Delete</string>
         </property>
         <property name="iconSize">
          <size>

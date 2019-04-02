@@ -9,6 +9,7 @@
 #include "ZMQHelperFunctions.h"
 
 #include <QCoreApplication>
+#include <QDataStream>
 #include <QDebug>
 #include <QDir>
 #include <QProcess>
@@ -629,6 +630,23 @@ HeadlessContainer::RequestId HeadlessContainer::changePassword(const std::string
    return Send(packet);
 }
 
+SignContainer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
+{
+   // serialize variant data
+   QByteArray ba;
+   QDataStream stream(&ba, QIODevice::WriteOnly);
+   stream << data;
+
+   headless::CustomDialogRequest request;
+   request.set_dialogname(bs::signer::ui::getSignerDialogPath(signerDialog).toStdString());
+   request.set_variantdata(ba.data(), ba.size());
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::ExecCustomDialogRequestType);
+   packet.set_data(request.SerializeAsString());
+   return Send(packet);
+}
+
 HeadlessContainer::RequestId HeadlessContainer::getDecryptedRootKey(const std::string &walletId
    , const SecureBinaryData &password)
 {
@@ -1239,7 +1257,7 @@ QStringList LocalSigner::args() const
    }
 
    QStringList result;
-   result << QLatin1String("--headless");
+   result << QLatin1String("--guimode") << QLatin1String("lightgui");
    switch (netType_) {
    case NetworkType::TestNet:
    case NetworkType::RegTest:
@@ -1257,6 +1275,7 @@ QStringList LocalSigner::args() const
    if (asSpendLimit_ > 0) {
       result << QLatin1String("--auto_sign_spend_limit") << QString::number(asSpendLimit_, 'f', 8);
    }
+
    return result;
 }
 

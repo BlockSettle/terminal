@@ -173,10 +173,10 @@ void NetworkSettingsPage::displayArmorySettings()
       ui_->labelConfChanged->setVisible(false);
    }
 
-   AuthorizedPeers peers(appSettings_->GetDBDir().toStdString(), CLIENT_AUTH_PEER_FILENAME);
+//   AuthorizedPeers peers(appSettings_->GetDBDir().toStdString(), CLIENT_AUTH_PEER_FILENAME);
 
-   BinaryData ownKey(peers.getOwnPublicKey().pubkey, 33);
-   ui_->labelArmoryTerminalKey->setText(QString::fromStdString(ownKey.toHexStr()));
+//   BinaryData ownKey(peers.getOwnPublicKey().pubkey, 33);
+//   ui_->labelArmoryTerminalKey->setText(QString::fromStdString(ownKey.toHexStr()));
 }
 
 void NetworkSettingsPage::displayEnvironmentSettings()
