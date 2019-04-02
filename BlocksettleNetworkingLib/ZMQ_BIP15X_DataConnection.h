@@ -1,10 +1,11 @@
 #ifndef __ZMQ_BIP15X_DATACONNECTION_H__
 #define __ZMQ_BIP15X_DATACONNECTION_H__
 
+#include <condition_variable>
 #include <functional>
-#include <QDateTime>
+#include <mutex>
+#include <thread>
 #include <QObject>
-#include <QTimer>
 #include <spdlog/spdlog.h>
 #include "ArmoryServersProvider.h"
 #include "AuthorizedPeers.h"
@@ -23,6 +24,8 @@ public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
       , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
       , bool monitored);
+   ~ZmqBIP15XDataConnection() noexcept override;
+
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection& operator= (const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection(ZmqBIP15XDataConnection&&) = delete;
@@ -37,9 +40,6 @@ public:
 
 signals:
    void bip15XCompleted(); // BIP 150 & 151 handshakes completed.
-
-private slots:
-   void onHeartbeatTimer();
 
 protected:
    bool handshakeCompleted() {
@@ -72,8 +72,11 @@ private:
    uint32_t msgID_ = 0;
    std::function<void()>   cbCompleted_ = nullptr;
    const int   heartbeatInterval_ = 10000;
-   QDateTime   lastHeartbeat_;
-   QTimer      heartbeatTimer_;
+   std::chrono::system_clock::time_point  lastHeartbeat_;
+   std::atomic_bool        hbThreadRunning_;
+   std::thread             hbThread_;
+   std::mutex              hbMutex_;
+   std::condition_variable hbCondVar_;
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

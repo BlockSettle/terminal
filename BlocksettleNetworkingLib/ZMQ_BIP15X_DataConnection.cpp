@@ -53,6 +53,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    , const bool& ephemeralPeers, bool monitored)
    : ZmqDataConnection(logger, monitored)
 {
+   outKeyTimePoint_ = chrono::system_clock::now();
    currentReadMessage_.reset();
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
@@ -75,9 +76,32 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    auto lbds = getAuthPeerLambda();
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
 
-   heartbeatTimer_.setInterval(1000);
-   connect(&heartbeatTimer_, &QTimer::timeout, this, &ZmqBIP15XDataConnection::onHeartbeatTimer);
-   heartbeatTimer_.start();
+   const auto &heartbeatProc = [this] {
+      while (hbThreadRunning_) {
+         {
+            std::unique_lock<std::mutex> lock(hbMutex_);
+            hbCondVar_.wait_for(lock, std::chrono::seconds{ 1 });
+            if (!hbThreadRunning_) {
+               break;
+            }
+         }
+         const auto curTime = std::chrono::system_clock::now();
+         const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - lastHeartbeat_);
+         if (diff.count() > heartbeatInterval_) {
+            sendHeartbeat();
+         }
+      }
+   };
+   hbThreadRunning_ = true;
+   lastHeartbeat_ = std::chrono::system_clock::now();
+   hbThread_ = std::thread(heartbeatProc);
+}
+
+ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection()
+{
+   hbThreadRunning_ = false;
+   hbCondVar_.notify_one();
+   hbThread_.join();
 }
 
 // Get lambda functions related to authorized peers. Copied from Armory.
@@ -107,48 +131,59 @@ AuthPeersLambdas ZmqBIP15XDataConnection::getAuthPeerLambda() const
 
 // The send function for the data connection. Ideally, this should not be used
 // before the handshake is completed, but it is possible to use at any time.
-// Whether or not the raw data is used, it will be placed in a ZmqBIP15XMsg
-// object.
+// Whether or not the raw data is used, it will be placed in a
+// ZmqBIP15XSerializedMessage object.
 //
 // INPUT:  The data to send. It'll be encrypted here if needed. (const string&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::send(const string& data)
 {
-   string message = data;
 
-   // For now, disable time-based key cycling. This should be re-enabled
-   // eventually. It's an important part of BIP 151.
-   //
    // Check if we need to do a rekey before sending the data.
-/*   bool needsRekey = false;
-   auto rightnow = chrono::system_clock::now();
+   bool needsRekey = false;
+   const auto rightNow = chrono::system_clock::now();
 
-   if (bip151Connection_->rekeyNeeded(message->getSerializedSize())) {
-      needsRekey = true;
-   }
-   else {
-      auto time_sec = chrono::duration_cast<chrono::seconds>(
-         rightnow - outKeyTimePoint_);
-      if (time_sec.count() >= AEAD_REKEY_INVERVAL_SECONDS)
+   if (bip150HandshakeCompleted_)
+   {
+      // Rekey off # of bytes sent or length of time since last rekey.
+      if (bip151Connection_->rekeyNeeded(data.size()))
+      {
          needsRekey = true;
-   }
-
-   if (needsRekey) {
-      BinaryData rekeyData(BIP151PUBKEYSIZE);
-      memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
-
-      ZmqBIP15XMsg rekeyPacket;
-      std::vector<BinaryData> outPacket = rekeyPacket.serialize(rekeyData.getRef()
-         , bip151Connection_.get(), ZMQ_MSGTYPE_AEAD_REKEY, 0);
-
-      if (!send(move(outPacket[0].toBinStr()))) {
-    std::cout << "DEBUG: ZmqBIP15XDataConnection::send - Rekey send failed" << dataLen << std::endl;
       }
-      bip151Connection_->rekeyOuterSession();
-      outKeyTimePoint_ = rightnow;
-      ++outerRekeyCount_;
-   }*/
+      else
+      {
+         auto time_sec = chrono::duration_cast<chrono::seconds>(
+            rightNow - outKeyTimePoint_);
+         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS)
+         {
+            needsRekey = true;
+         }
+      }
+
+      if (needsRekey)
+      {
+         outKeyTimePoint_ = rightNow;
+         BinaryData rekeyData(BIP151PUBKEYSIZE);
+         memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
+
+         ZmqBIP15XSerializedMessage rekeyPacket;
+         rekeyPacket.construct(rekeyData.getRef(), bip151Connection_.get()
+            , ZMQ_MSGTYPE_AEAD_REKEY);
+
+         auto& packet = rekeyPacket.getNextPacket();
+         if (!send(packet.toBinStr()))
+         {
+            if (logger_) {
+               logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+                  "rekey: {} (result={})", __func__, connectionName_
+                  , zmq_strerror(zmq_errno()));
+            }
+         }
+         bip151Connection_->rekeyOuterSession();
+         ++outerRekeyCount_;
+      }
+   }
 
    // Encrypt data here only after the BIP 150 handshake is complete.
    string sendData = data;
@@ -175,13 +210,13 @@ bool ZmqBIP15XDataConnection::send(const string& data)
    if (result != (int)dataLen) {
       if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-            "data: {} (result={}, data size={}", __func__, connectionName_, zmq_strerror(zmq_errno())
-            , result, dataLen);
+            "data: {} (result={}, data size={})", __func__, connectionName_
+            , zmq_strerror(zmq_errno()), result, dataLen);
       }
       return false;
    }
 
-   lastHeartbeat_ = QDateTime::currentDateTime();
+   lastHeartbeat_ = rightNow;    // Each other message sent resets the heartbeat timer
    return true;
 }
 
@@ -226,15 +261,7 @@ void ZmqBIP15XDataConnection::sendHeartbeat()
          , zmq_strerror(zmq_errno()), result, plainText.getSize());
    }
    else {
-      lastHeartbeat_ = QDateTime::currentDateTime();
-   }
-}
-
-void ZmqBIP15XDataConnection::onHeartbeatTimer()
-{
-   if (lastHeartbeat_.msecsTo(QDateTime::currentDateTime())
-      >= heartbeatInterval_) {
-      sendHeartbeat();
+      lastHeartbeat_ = chrono::system_clock::now();
    }
 }
 
@@ -244,7 +271,8 @@ void ZmqBIP15XDataConnection::onHeartbeatTimer()
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XDataConnection::startBIP151Handshake(const std::function<void()> &cbCompleted)
+bool ZmqBIP15XDataConnection::startBIP151Handshake(
+   const std::function<void()> &cbCompleted)
 {
    ZmqBIP15XSerializedMessage msg;
    cbCompleted_ = cbCompleted;
@@ -431,10 +459,11 @@ bool ZmqBIP15XDataConnection::recvData()
 
 // The function processing the BIP 150/151 handshake packets.
 //
-// INPUT:  The handshake packet. (const ZmqBIP15XMsg&)
+// INPUT:  The handshake packet. (const ZmqBIP15XMsgPartial&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XDataConnection::processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj)
+bool ZmqBIP15XDataConnection::processAEADHandshake(
+   const ZmqBIP15XMsgPartial& msgObj)
 {
    // Function used to send data out on the wire.
    auto writeData = [this](BinaryData& payload, uint8_t type, bool encrypt) {
@@ -625,6 +654,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(const ZmqBIP15XMsgPartial& ms
 
       // Rekey.
       bip151Connection_->bip150HandshakeRekey();
+      bip150HandshakeCompleted_ = true;
       outKeyTimePoint_ = chrono::system_clock::now();
       emit bip15XCompleted();
       if (cbCompleted_) {

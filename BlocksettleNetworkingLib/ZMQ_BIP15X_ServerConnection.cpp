@@ -34,6 +34,7 @@ void ZmqBIP15XPerConnData::reset()
    bip150HandshakeCompleted_ = false;
    bip151HandshakeCompleted_ = false;
    currentReadMessage_.reset();
+   outKeyTimePoint_ = chrono::system_clock::now();
 }
 
 // The constructor to use.
@@ -183,8 +184,8 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 
 // The send function for the data connection. Ideally, this should not be used
 // before the handshake is completed, but it is possible to use at any time.
-// Whether or not the raw data is used, it will be placed in a ZmqBIP15XMsg
-// object.
+// Whether or not the raw data is used, it will be placed in a
+// ZmqBIP15XSerializedMessage object.
 //
 // INPUT:  The ZMQ client ID. (const string&)
 //         The data to send. (const string&)
@@ -195,17 +196,59 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    , const string& data, const SendResultCb& cb)
 {
    bool retVal = false;
+   BIP151Connection* connPtr = nullptr;
+   if (socketConnMap_[clientId]->bip151HandshakeCompleted_)
+   {
+      connPtr = socketConnMap_[clientId]->encData_.get();
+   }
+
+   // Check if we need to do a rekey before sending the data.
+   if (socketConnMap_[clientId]->bip150HandshakeCompleted_)
+   {
+      bool needsRekey = false;
+      auto rightNow = chrono::system_clock::now();
+
+      // Rekey off # of bytes sent or length of time since last rekey.
+      if (connPtr->rekeyNeeded(data.size()))
+      {
+         needsRekey = true;
+      }
+      else
+      {
+         auto time_sec = chrono::duration_cast<chrono::seconds>(
+            rightNow - socketConnMap_[clientId]->outKeyTimePoint_);
+         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS)
+         {
+            needsRekey = true;
+         }
+      }
+
+      if (needsRekey)
+      {
+         socketConnMap_[clientId]->outKeyTimePoint_ = rightNow;
+         BinaryData rekeyData(BIP151PUBKEYSIZE);
+         memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
+
+         ZmqBIP15XSerializedMessage rekeyPacket;
+         rekeyPacket.construct(rekeyData.getRef(), connPtr, ZMQ_MSGTYPE_AEAD_REKEY);
+
+         auto& packet = rekeyPacket.getNextPacket();
+         if (!SendDataToClient(clientId, packet.toBinStr(), cb))
+         {
+            logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+               "rekey: {} (result={})", __func__, connectionName_
+               , zmq_strerror(zmq_errno()));
+         }
+         connPtr->rekeyOuterSession();
+         socketConnMap_[clientId]->outerRekeyCount_++;
+      }
+   }
 
    // Encrypt data here if the BIP 150 handshake is complete.
    if (socketConnMap_[clientId]->encData_->getBIP150State() ==
       BIP150State::SUCCESS)
    {
       string sendStr = data;
-      BIP151Connection* connPtr = nullptr;
-      if (socketConnMap_[clientId]->bip151HandshakeCompleted_) {
-         connPtr = socketConnMap_[clientId]->encData_.get();
-      }
-
       const BinaryData payload(data);
       ZmqBIP15XSerializedMessage msg;
       msg.construct(payload.getDataVector(), connPtr
@@ -244,8 +287,10 @@ bool ZmqBIP15XServerConnection::SendDataToAllClients(const std::string& data, co
    unsigned int successCount = 0;
    std::unique_lock<std::mutex> lock(clientsMtx_);
 
-   for (const auto &it : socketConnMap_) {
-      if (SendDataToClient(it.first, data, cb)) {
+   for (const auto &it : socketConnMap_)
+   {
+      if (SendDataToClient(it.first, data, cb))
+      {
          successCount++;
       }
    }
@@ -486,6 +531,7 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
             return false;
          }
 
+         socketConnMap_[clientID]->innerRekeyCount_++;
          break;
       }
 
@@ -625,8 +671,6 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
          //rekey after succesful BIP150 handshake
          socketConnMap_[clientID]->encData_->bip150HandshakeRekey();
          socketConnMap_[clientID]->bip150HandshakeCompleted_ = true;
-         socketConnMap_[clientID]->outKeyTimePoint_ = chrono::system_clock::now();
-
          break;
       }
 
@@ -706,6 +750,7 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
          std::unique_lock<std::mutex> lock(clientsMtx_);
          socketConnMap_[clientID] = make_unique<ZmqBIP15XPerConnData>();
          socketConnMap_[clientID]->encData_ = make_unique<BIP151Connection>(lbds);
+         socketConnMap_[clientID]->outKeyTimePoint_ = chrono::system_clock::now();
       }
       notifyListenerOnNewConnection(clientID);
    }
