@@ -1,7 +1,11 @@
 #ifndef __ZMQ_BIP15X_SERVERCONNECTION_H__
 #define __ZMQ_BIP15X_SERVERCONNECTION_H__
 
+#include <atomic>
+#include <condition_variable>
 #include <functional>
+#include <mutex>
+#include <thread>
 #include <QString>
 #include <spdlog/spdlog.h>
 #include "AuthorizedPeers.h"
@@ -41,6 +45,8 @@ public:
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<ZmqContext> &
       , const std::function<QStringList()> &cbTrustedClients);
+   ~ZmqBIP15XServerConnection() noexcept override;
+
    ZmqBIP15XServerConnection(const ZmqBIP15XServerConnection&) = delete;
    ZmqBIP15XServerConnection& operator= (const ZmqBIP15XServerConnection&) = delete;
    ZmqBIP15XServerConnection(ZmqBIP15XServerConnection&&) = delete;
@@ -73,10 +79,21 @@ private:
    void promptUser(const BinaryDataRef& newKey, const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda();
 
+   void heartbeatThread();
+
+private:
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
    BinaryData leftOverData_;
    uint64_t id_;
+   std::mutex  clientsMtx_;
    std::function<QStringList()>  cbTrustedClients_;
+
+   const int   heartbeatInterval_ = 10000 * 2;   // allow some toleration on heartbeat miss
+   std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;
+   std::atomic_bool        hbThreadRunning_;
+   std::thread             hbThread_;
+   std::mutex              hbMutex_;
+   std::condition_variable hbCondVar_;
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

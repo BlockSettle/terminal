@@ -75,6 +75,33 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    // similar but data connections will only connect to one machine at a time.
    auto lbds = getAuthPeerLambda();
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
+
+   const auto &heartbeatProc = [this] {
+      while (hbThreadRunning_) {
+         {
+            std::unique_lock<std::mutex> lock(hbMutex_);
+            hbCondVar_.wait_for(lock, std::chrono::seconds{ 1 });
+            if (!hbThreadRunning_) {
+               break;
+            }
+         }
+         const auto curTime = std::chrono::system_clock::now();
+         const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - lastHeartbeat_);
+         if (diff.count() > heartbeatInterval_) {
+            sendHeartbeat();
+         }
+      }
+   };
+   hbThreadRunning_ = true;
+   lastHeartbeat_ = std::chrono::system_clock::now();
+   hbThread_ = std::thread(heartbeatProc);
+}
+
+ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection()
+{
+   hbThreadRunning_ = false;
+   hbCondVar_.notify_one();
+   hbThread_.join();
 }
 
 // Get lambda functions related to authorized peers. Copied from Armory.
@@ -115,7 +142,7 @@ bool ZmqBIP15XDataConnection::send(const string& data)
 
    // Check if we need to do a rekey before sending the data.
    bool needsRekey = false;
-   auto rightNow = chrono::system_clock::now();
+   const auto rightNow = chrono::system_clock::now();
 
    if (bip150HandshakeCompleted_)
    {
@@ -189,7 +216,53 @@ bool ZmqBIP15XDataConnection::send(const string& data)
       return false;
    }
 
+   lastHeartbeat_ = rightNow;    // Each other message sent resets the heartbeat timer
    return true;
+}
+
+void ZmqBIP15XDataConnection::sendHeartbeat()
+{
+   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} invalid state: {}"
+         , __func__, connectionName_, (int)bip151Connection_->getBIP150State());
+      return;
+   }
+   BIP151Connection* connPtr = nullptr;
+   if (bip151HandshakeCompleted_) {
+      connPtr = bip151Connection_.get();
+   }
+
+   uint32_t size = 1;
+   BinaryData plainText(4 + size + POLY1305MACLEN);
+
+   // Copy in packet size.
+   memcpy(plainText.getPtr(), &size, 4);
+   size += 4;
+   //type
+   plainText.getPtr()[4] = ZMQ_MSGTYPE_HEARTBEAT;
+
+   //encrypt if possible
+   if (connPtr != nullptr) {
+      connPtr->assemblePacket(plainText.getPtr(), size, plainText.getPtr()
+         , size + POLY1305MACLEN);
+   } else {
+      plainText.resize(size);
+   }
+
+   int result = -1;
+   {
+      FastLock locker(lockSocket_);
+      result = zmq_send(dataSocket_.get(), plainText.getCharPtr()
+         , plainText.getSize(), 0);
+   }
+   if (result != (int)plainText.getSize()) {
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+         "data: {} (result={}, data size={}", __func__, connectionName_
+         , zmq_strerror(zmq_errno()), result, plainText.getSize());
+   }
+   else {
+      lastHeartbeat_ = chrono::system_clock::now();
+   }
 }
 
 // Kick off the BIP 151 handshake. This is the first function to call once the

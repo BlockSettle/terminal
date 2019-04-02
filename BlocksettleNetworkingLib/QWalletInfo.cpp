@@ -283,3 +283,5 @@ void WalletInfo::setName(const QString &name)
    name_ = name;
    emit walletChanged();
 }
+
+#include "moc_SignerUiDefs.cpp"

@@ -55,6 +55,11 @@ bool ZmqBIP15XMsgPartial::parsePacket(const BinaryDataRef& dataRef)
       return parseMessageFragment(dataSlice);
    }
 
+   case ZMQ_MSGTYPE_HEARTBEAT:
+      type_ = msgType;
+      packetCount_ = 0;
+      return true;
+
    case ZMQ_MSGTYPE_AEAD_SETUP:
    case ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY:
    case ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY_CHILD:

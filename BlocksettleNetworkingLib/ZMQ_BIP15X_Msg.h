@@ -52,6 +52,8 @@
 #define ZMQ_MSGTYPE_AUTH_REPLY                22
 #define ZMQ_MSGTYPE_AUTH_PROPOSE              23
 
+#define ZMQ_MSGTYPE_HEARTBEAT                 30
+
 // NOTE: Due to fragmentation, the maximum message size is (65535 * 1500) =
 // ~98 MiB. Larger messages will have to be split up in other ways.
 #define ZMQ_MESSAGE_PACKET_SIZE 1500
