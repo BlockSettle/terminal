@@ -692,6 +692,9 @@ void ChartWidget::rescaleCandlesYAxis()
 
 void ChartWidget::rescaleVolumesYAxis() const
 {
+   if (!volumeChart_->data()->size()) {
+      return;
+   }
    auto lower_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().lower;
    auto upper_bound = volumeAxisRect_->axis(QCPAxis::atBottom)->range().upper;
    double maxVolume = volumeChart_->data()->constBegin()->value;
@@ -966,6 +969,7 @@ void ChartWidget::InitializeCustomPlot()
    connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnMousePressed);
    connect(ui_->customPlot, &QCustomPlot::mouseRelease, this, &ChartWidget::OnMouseReleased);
    connect(ui_->customPlot, &QCustomPlot::mouseWheel, this, &ChartWidget::OnWheelScroll);
+   volumeAxisRect_->axis(QCPAxis::atRight)->setRange(0, 1000);
 }
 
 void ChartWidget::OnLoadingNetworkSettings()
