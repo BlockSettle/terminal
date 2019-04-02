@@ -31,7 +31,7 @@ public:
    QStringList trustedTerminals() const { return trustedTerminals_; }
    QStringList trustedInterfaces() const;
 
-   SignerUiDefs::SignerRunMode runMode() const { return runMode_; }
+   bs::signer::ui::RunMode runMode() const { return runMode_; }
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -45,7 +45,7 @@ private:
    std::string listenPort_ = "23456";
    std::string interfacePort_ = "23457";
    QStringList trustedTerminals_;
-   SignerUiDefs::SignerRunMode runMode_;
+   bs::signer::ui::RunMode runMode_;
 };
 
 

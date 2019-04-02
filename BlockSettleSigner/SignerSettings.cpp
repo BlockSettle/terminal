@@ -223,7 +223,7 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
 
 bool SignerSettings::loadSettings(const QStringList &args)
 {
-   QMetaEnum runModesEnum = QMetaEnum::fromType<SignerUiDefs::SignerRunMode>();
+   QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
 
    QCommandLineParser parser;
    parser.setApplicationDescription(QObject::tr("BlockSettle Signer"));
@@ -296,12 +296,12 @@ bool SignerSettings::loadSettings(const QStringList &args)
       if (runModeValue < 0) {
          return false;
       }
-      runMode_ = static_cast<SignerUiDefs::SignerRunMode>(runModeValue);
-      if (runMode_ != SignerUiDefs::SignerRunMode::fullgui && runMode_ != SignerUiDefs::SignerRunMode::lightgui) {
+      runMode_ = static_cast<bs::signer::ui::RunMode>(runModeValue);
+      if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
          return false;
       }
    } else {
-      runMode_ = SignerUiDefs::SignerRunMode::fullgui;
+      runMode_ = bs::signer::ui::RunMode::fullgui;
    }
 
 //   if (parser.isSet(signName)) {

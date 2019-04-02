@@ -1,6 +1,7 @@
 .import "helper.js" as JsHelper
 
 function customDialogRequest(dialogName, data) {
+    //if (dialogName === "createNewWalletDialog")
     var dlg = eval(dialogName)(data)
     JsHelper.raiseWindow()
     return dlg
@@ -31,15 +32,17 @@ function importWalletDialog(data) {
     return dlgImp
 }
 
-function backupWalletDialog(walletId) {
+function backupWalletDialog(data) {
+    var rootId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-    dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
+    dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
     dlg.targetDir = signerSettings.dirDocuments
     dlg.open()
     return dlg
 }
 
-function deleteWalletDialog(walletId) {
+function deleteWalletDialog(data) {
+    var walletId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
     dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
     dlg.rootName = walletsProxy.getRootWalletName(walletId)
@@ -47,6 +50,7 @@ function deleteWalletDialog(walletId) {
     dlg.accepted.connect(function() {
         if (dlg.backup) {
             var dlgBkp = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
+            dlg.setNextChainDialog(dlgBkp)
             dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
             dlgBkp.targetDir = signerSettings.dirDocuments
             dlgBkp.accepted.connect(function() {
@@ -72,9 +76,10 @@ function deleteWalletDialog(walletId) {
     return dlg
 }
 
-function manageEncryptionDialog(walletId) {
+function manageEncryptionDialog(data) {
+    var rootId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
-    dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
+    dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
     dlg.open()
     return dlg
 }

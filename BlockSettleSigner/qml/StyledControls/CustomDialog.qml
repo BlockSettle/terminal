@@ -41,10 +41,49 @@ CustomDialogWindow {
 
     signal enterPressed()
 
+    ////////////////////////////
+    /// Dialogs chain management
+
+    // if isNextChainDialogSet then listen next dialog for dialogsChainFinished
+    property bool isNextChainDialogSet: false
+
+    // when some dialog call second one we should listen second dialog for finished signal
+    function setNextChainDialog(dialog) {
+        isNextChainDialogSet = true
+        dialog.dialogsChainFinished.connect(function(){ dialogsChainFinished() })
+    }
+
+    // emitted if this dialog finished
+    signal dialogFinished()
+
+    // emitted if this is signle dialog and it finished or if dioalgs chain finished
+    signal dialogsChainFinished()
+
     Component.onCompleted: {
         cContentItem.parent = customContentContainer
         cHeaderItem.parent = customHeaderContainer
         cFooterItem.parent = customFooterContainer
+closeChainTimer.start()
+        accepted.connect(function(){
+            console.log("closeChainTimer started")
+
+            closeChainTimer.start() })
+        rejected.connect(function(){
+            console.log("closeChainTimer started")
+            closeChainTimer.start() })
+
+    }
+
+    Timer {
+        id: closeChainTimer
+        interval: 1250
+        running: false
+        repeat: false
+        onTriggered: {
+            console.log("closeChainTimer onTriggered")
+            if (!isNextChainDialogSet) dialogsChainFinished()
+            if (!isNextChainDialogSet) dialogsChainFinished()
+        }
     }
 
 

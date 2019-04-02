@@ -32,6 +32,8 @@ ApplicationWindow {
 //    minimumWidth: 450
 //    minimumHeight: 600
 
+    Component.onCompleted: { hide() }
+
     background: Rectangle {
         color: BSStyle.backgroundColor
     }
@@ -92,8 +94,15 @@ ApplicationWindow {
     }
 
     function customDialogRequest(dialogName, data) {
+        show()
         var dlg = QmlDialogs.customDialogRequest(dialogName, data)
         mainWindow.width = dlg.width
         mainWindow.height = dlg.height
+        mainWindow.title = dlg.title
+
+        dlg.dialogsChainFinished.connect(function(){ hide() })
+
+//        dlg.accepted.connect(function(){ hide() })
+//        dlg.rejected.connect(function(){ hide() })
     }
 }

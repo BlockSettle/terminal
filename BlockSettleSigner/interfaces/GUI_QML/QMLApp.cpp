@@ -60,7 +60,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
 
-   connect(adapter_, &SignerAdapter::customDialogRequest, this, [this](const QString &dialogName, const QVariant &data){
+   connect(adapter_, &SignerAdapter::customDialogRequest, this, [this](const QString &dialogName, const QVariantMap &data){
       QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
                                 , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
    });

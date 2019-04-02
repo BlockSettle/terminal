@@ -63,7 +63,7 @@ HeadlessSettings::HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger
 bool HeadlessSettings::loadSettings(const QStringList &args)
 {
    // substitute run modes from RunMode enum to help output
-   QMetaEnum runModesEnum = QMetaEnum::fromType<SignerUiDefs::SignerRunMode>();
+   QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
    QStringList runModes;
    for (int i = 0; i < runModesEnum.keyCount(); ++i) {
       runModes.append(QString::fromLatin1(runModesEnum.valueToKey(i)));
@@ -121,9 +121,9 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
       if (runModeValue < 0) {
          return false;
       }
-      runMode_ = static_cast<SignerUiDefs::SignerRunMode>(runModeValue);
+      runMode_ = static_cast<bs::signer::ui::RunMode>(runModeValue);
    } else {
-      runMode_ = SignerUiDefs::SignerRunMode::fullgui;
+      runMode_ = bs::signer::ui::RunMode::fullgui;
    }
 
    if (parser.isSet(mainnetName)) {

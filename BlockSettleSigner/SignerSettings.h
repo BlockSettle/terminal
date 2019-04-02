@@ -87,7 +87,7 @@ public:
    QStringList trustedTerminals() const { return get(TrustedTerminals).toStringList(); }
 
    QString dirDocuments() const;
-   SignerUiDefs::SignerRunMode runMode() const { return runMode_; }
+   bs::signer::ui::RunMode runMode() const { return runMode_; }
 
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
@@ -150,7 +150,7 @@ private:
    std::shared_ptr<QSettings>    backend_;
    std::string    writableDir_;
    QStringList    reqFiles_;
-   SignerUiDefs::SignerRunMode runMode_;
+   bs::signer::ui::RunMode runMode_;
 };
 
 

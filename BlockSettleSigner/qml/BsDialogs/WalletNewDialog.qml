@@ -40,7 +40,7 @@ CustomTitleDialogWindow {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    onClicked: root.close();
+                    onClicked: rejectAnimated();
                 }
             }
 

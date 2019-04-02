@@ -33,6 +33,8 @@ public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<HeadlessSettings> &);
 
+   ~HeadlessAppObj() noexcept;
+
    void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
    void setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
@@ -59,6 +61,7 @@ signals:
 
 private:
    void startInterface();
+   void stopInterface();
    void onlineProcessing();
 
 private:

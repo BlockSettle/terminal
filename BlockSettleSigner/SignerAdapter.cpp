@@ -460,7 +460,7 @@ void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignCo
    // deserialize variant data
    QByteArray ba = QByteArray::fromStdString(evt.variantdata());
    QDataStream stream(&ba, QIODevice::ReadOnly);
-   QVariant variantData;
+   QVariantMap variantData;
    stream >> variantData;
 
 
@@ -508,7 +508,7 @@ public:
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) override { return 0; }
-   RequestId customDialogRequest(SignerUiDefs::SignerDialog signerDialog, const QVariant &data = QVariant()) override  { return 0; }
+   RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

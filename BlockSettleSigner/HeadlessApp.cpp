@@ -59,6 +59,11 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
 
+HeadlessAppObj::~HeadlessAppObj()
+{
+   stopInterface();
+}
+
 void HeadlessAppObj::start()
 {
    startInterface();
@@ -94,18 +99,18 @@ void HeadlessAppObj::startInterface()
 {
    QStringList args;
    switch (settings_->runMode()) {
-   case SignerUiDefs::SignerRunMode::headless:
+   case bs::signer::ui::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
       return;
-   case SignerUiDefs::SignerRunMode::cli:
+   case bs::signer::ui::RunMode::cli:
       logger_->warn("[{}] cli run mode is not supported yet"
          , __func__);
       return;
-   case SignerUiDefs::SignerRunMode::lightgui:
+   case bs::signer::ui::RunMode::lightgui:
       logger_->debug("[{}] starting lightgui", __func__);
       args << QLatin1String("--guimode") << QLatin1String("lightgui");
       break;
-   case SignerUiDefs::SignerRunMode::fullgui:
+   case bs::signer::ui::RunMode::fullgui:
       logger_->debug("[{}] starting fullgui", __func__);
       args << QLatin1String("--guimode") << QLatin1String("fullgui");
       break;
@@ -136,6 +141,13 @@ void HeadlessAppObj::startInterface()
       , guiPath.toStdString(), args.join(QLatin1Char(' ')).toStdString());
    guiProcess_ = std::make_shared<QProcess>();
    guiProcess_->start(guiPath, args);
+}
+
+void HeadlessAppObj::stopInterface()
+{
+   if (guiProcess_) {
+      guiProcess_->kill();
+   }
 }
 
 void HeadlessAppObj::onlineProcessing()

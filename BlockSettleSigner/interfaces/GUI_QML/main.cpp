@@ -107,10 +107,10 @@ static int QMLApp(int argc, char **argv)
       QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
       switch (settings->runMode()) {
-      case SignerUiDefs::SignerRunMode::fullgui:
+      case bs::signer::ui::RunMode::fullgui:
          engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
          break;
-      case SignerUiDefs::SignerRunMode::lightgui:
+      case bs::signer::ui::RunMode::lightgui:
          engine.load(QUrl(QStringLiteral("qrc:/qml/mainLight.qml")));
          break;
       default:
