@@ -21,7 +21,7 @@ public:
    void setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY);
 
 signals:
-   void addUserToContacts(const QString &userID);
+   void sendFriendRequest(const QString &userID);
 
 private slots:
    void showMenu(const QPoint &pos);

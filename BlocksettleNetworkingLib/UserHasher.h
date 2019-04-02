@@ -6,6 +6,7 @@
 
 class UserHasher {
 public:
+   static const unsigned int KeyLength;
    UserHasher(const BinaryData& iv = SecureBinaryData());
    std::shared_ptr<KeyDerivationFunction> getKDF();
    std::string deriveKey(const std::string& rawData);

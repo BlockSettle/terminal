@@ -55,6 +55,14 @@ namespace Chat {
    {
       state_ &= ~(int)state;
    }
+
+   void MessageData::updateState(const int newState)
+   {
+      int mask = ~static_cast<int>(Chat::MessageData::State::Encrypted);
+      int set = mask & newState;
+      int unset = ~(set ^ mask);
+      state_ = (state_ & unset) | set;
+   }
    
    bool MessageData::decrypt(const autheid::PrivateKey& privKey)
    {

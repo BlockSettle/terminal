@@ -1,7 +1,7 @@
 #include "ChatUserListTreeViewModel.h"
+#include <QTreeView>
 
 const QString contactsListDescription = QObject::tr("Contacts");
-const QString allUsersListDescription = QObject::tr("All users");
 const QString publicRoomListDescription = QObject::tr("Public");
 
 ChatUserListTreeViewModel::ChatUserListTreeViewModel(QObject* parent)
@@ -10,7 +10,6 @@ ChatUserListTreeViewModel::ChatUserListTreeViewModel(QObject* parent)
    rootItem_ = new ChatUserListTreeItem();
    rootItem_->addCategoryAsChild(ChatUserListTreeItem::RoomCategory);
    rootItem_->addCategoryAsChild(ChatUserListTreeItem::ContactCategory);
-   rootItem_->addCategoryAsChild(ChatUserListTreeItem::UserCategory);
 }
 
 QString ChatUserListTreeViewModel::resolveCategoryDisplay(const QModelIndex &index) const
@@ -21,9 +20,6 @@ QString ChatUserListTreeViewModel::resolveCategoryDisplay(const QModelIndex &ind
 
       case ChatUserListTreeItem::ContactCategory:
          return contactsListDescription;
-
-      case ChatUserListTreeItem::UserCategory:
-         return allUsersListDescription;
    }
 
    return {};
@@ -161,21 +157,44 @@ QVariant ChatUserListTreeViewModel::data(const QModelIndex &index, int role) con
    return QVariant();
 }
 
+void ChatUserListTreeViewModel::setChatUserData(const ChatUserDataPtr &chatUserDataPtr)
+{
+   ChatUserListTreeItem *contactsItem = rootItem_->child(ChatUserListTreeItem::ContactCategory);
+
+   int i;
+   for (i = 0; i < contactsItem->childCount(); i++) {
+      ChatUserListTreeItem *contactItem = contactsItem->child(i);
+      if (contactItem->userData()->userId() == chatUserDataPtr->userId()) {
+         const auto &index = createIndex(i, 0, contactItem);
+         emit dataChanged(index, index);
+      }
+   }
+}
+
+void ChatUserListTreeViewModel::setChatRoomData(const Chat::RoomDataPtr &chatRoomDataPtr)
+{
+   ChatUserListTreeItem *roomsItem = rootItem_->child(ChatUserListTreeItem::RoomCategory);
+   
+   int i;
+   for (i = 0; i < roomsItem->childCount(); i++) {
+      ChatUserListTreeItem *roomItem = roomsItem->child(i);
+      if (roomItem->roomData()->getId() == chatRoomDataPtr->getId()) {
+         const auto &index = createIndex(i, 0, roomItem);
+         emit dataChanged(index, index);
+      }
+   }
+}
+
 void ChatUserListTreeViewModel::setChatUserDataList(const ChatUserDataListPtr &chatUserDataListPtr)
 {
    beginResetModel();
 
    ChatUserListTreeItem *contactsItem = rootItem_->child(ChatUserListTreeItem::ContactCategory);
-   ChatUserListTreeItem *usersItem = rootItem_->child(ChatUserListTreeItem::UserCategory);
    
    contactsItem->removeChildren();
-   usersItem->removeChildren();
 
    for (const auto &dataPtr : chatUserDataListPtr) {
-      if (dataPtr->userState() == ChatUserData::State::Unknown) {
-         usersItem->addUserAsChild(dataPtr);
-      }
-      else {
+      if (dataPtr->userState() != ChatUserData::State::Unknown) {
          contactsItem->addUserAsChild(dataPtr);
       }
    }
@@ -183,7 +202,7 @@ void ChatUserListTreeViewModel::setChatUserDataList(const ChatUserDataListPtr &c
    endResetModel();
 }
 
-void ChatUserListTreeViewModel::setChatRoomDataList(const Chat::ChatRoomDataListPtr &roomsDataList)
+void ChatUserListTreeViewModel::setChatRoomDataList(const Chat::RoomDataListPtr &roomsDataList)
 {
    beginResetModel();
    
@@ -206,4 +225,17 @@ ChatUserListTreeItem *ChatUserListTreeViewModel::getItem(const QModelIndex &inde
    }
 
    return rootItem_;
+}
+
+void ChatUserListTreeViewModel::selectFirstRoom()
+{
+   ChatUserListTreeItem *roomsItem = rootItem_->child(ChatUserListTreeItem::RoomCategory);
+
+   if (roomsItem->childCount() > 0) {
+      ChatUserListTreeItem *firstRoomItem = roomsItem->child(0);
+      const auto &index = createIndex(0, 0, firstRoomItem);
+
+      const auto treeView = qobject_cast<QTreeView *>(QObject::parent());
+      treeView->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+   }
 }

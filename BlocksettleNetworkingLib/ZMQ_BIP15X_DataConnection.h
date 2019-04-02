@@ -47,8 +47,8 @@ protected:
    bool recvData() override;
 
 private:
-   void ProcessIncomingData();
-   bool processAEADHandshake(const ZmqBIP15XMsg& msgObj);
+   void ProcessIncomingData(BinaryData& payload);
+   bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
    void promptUser(const BinaryDataRef& newKey, const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
 
@@ -58,10 +58,12 @@ private:
    std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;
-   std::string pendingData_;
+   ZmqBIP15XMsgFragments currentReadMessage_;
+   BinaryData leftOverData_;
    std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
+   uint32_t msgID_ = 0;
    std::function<void()>   cbCompleted_ = nullptr;
 };
 

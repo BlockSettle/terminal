@@ -33,32 +33,34 @@ public:
    ChatUserDataPtr getUserByUserId(const QString &userId) const;
    ChatUserDataPtr getUserByUserIdPrefix(const QString &userIdPrefix) const;
    ChatUserDataPtr getUserByEmail(const QString &email) const;
-   std::shared_ptr<Chat::ChatRoomData> getRoomByRoomId(const QString &roomId) const;
+   std::shared_ptr<Chat::RoomData> getRoomByRoomId(const QString &roomId) const;
    
 public:
-   void addRoom(const std::shared_ptr<Chat::ChatRoomData> roomData);
+   void addRoom(const std::shared_ptr<Chat::RoomData> roomData);
    
    bool isChatRoomExist(const QString &roomId) const;
-   QList<std::shared_ptr<Chat::ChatRoomData>> chatRoomDataList() const;
+   QList<std::shared_ptr<Chat::RoomData>> chatRoomDataList() const;
 
 signals:
    void chatUserDataListChanged(const ChatUserDataListPtr &chatUserDataList);
-   void chatRoomDataListChanged(const QList<std::shared_ptr<Chat::ChatRoomData>> &chatRoomDataList);
+   void chatRoomDataListChanged(const QList<std::shared_ptr<Chat::RoomData>> &chatRoomDataList);
 
    void chatUserAdded(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserRemoved(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStatusChanged(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserStateChanged(const ChatUserDataPtr &chatUserDataPtr);
    void chatUserHaveNewMessageChanged(const ChatUserDataPtr &chatUserDataPtr);
-   void chatRoomAdded(const std::shared_ptr<Chat::ChatRoomData> &chatRoomDataPtr);
-   void chatRoomRemoved(const std::shared_ptr<Chat::ChatRoomData>& chatRoomDataPtr);
+   void chatUserDataChanged(const ChatUserDataPtr &chatUserDataPtr);
+   void chatRoomDataChanged(const Chat::RoomDataPtr &chatRoomDataPtr);
+   void chatRoomAdded(const std::shared_ptr<Chat::RoomData> &chatRoomDataPtr);
+   void chatRoomRemoved(const std::shared_ptr<Chat::RoomData>& chatRoomDataPtr);
 
 public slots:
 
 private:
    ChatUserDataListPtr chatUserDataListPtr_;
    std::shared_ptr<UserHasher> hasher_;
-   QList<std::shared_ptr<Chat::ChatRoomData>> chatRoomDataListPtr_;
+   QList<std::shared_ptr<Chat::RoomData>> chatRoomDataListPtr_;
 };
 
 using ChatUserModelPtr = std::shared_ptr<ChatUserModel>;

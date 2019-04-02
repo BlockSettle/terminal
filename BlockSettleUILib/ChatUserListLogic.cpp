@@ -73,17 +73,30 @@ void ChatUserListLogic::onReplaceChatUsers(const UserIdList &userIdList)
    onAddChatUsers(userIdList);
 }
 
-void ChatUserListLogic::onIcomingFriendRequest(const UserIdList &userIdList)
+void ChatUserListLogic::onIncomingFriendRequest(const UserIdList &userIdList)
 {
    for (const std::string &userId : userIdList)
    {
-      QString searchUserId = QString::fromStdString(userId);
-      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr_->getUserByUserId(searchUserId);
+      const QString searchUserId = QString::fromStdString(userId);
+      chatUserModelPtr_->setUserState(searchUserId, ChatUserData::State::IncomingFriendRequest);
+   }
+}
 
-      if (chatUserDataPtr)
-      {
-         chatUserModelPtr_->setUserState(searchUserId, ChatUserData::State::IncomingFriendRequest);
-      }
+void ChatUserListLogic::onFriendRequestAccepted(const UserIdList &userIdList)
+{
+   for (const std::string &userId : userIdList)
+   {
+      const QString searchUserId = QString::fromStdString(userId);
+      chatUserModelPtr_->setUserState(searchUserId, ChatUserData::State::Friend);
+   }
+}
+
+void ChatUserListLogic::onFriendRequestRejected(const UserIdList &userIdList)
+{
+   for (const std::string &userId : userIdList)
+   {
+      const QString searchUserId = QString::fromStdString(userId);
+      chatUserModelPtr_->setUserState(searchUserId, ChatUserData::State::Unknown);
    }
 }
 
@@ -95,14 +108,14 @@ void ChatUserListLogic::onUserHaveNewMessageChanged(const QString &userId, const
    }
 
    bool hasUnreadMessages = chatUserModelPtr_->hasUnreadMessages();
-   NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });
+   NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { userId, tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });
 }
 
-void ChatUserListLogic::addChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList)
+void ChatUserListLogic::addChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList)
 {
-   for (const std::shared_ptr<Chat::ChatRoomData>  &room : roomList)
+   for (const std::shared_ptr<Chat::RoomData>  &room : roomList)
    {
-      std::shared_ptr<Chat::ChatRoomData> chatRoomDataPtr = chatUserModelPtr_->getRoomByRoomId(room->getId());
+      std::shared_ptr<Chat::RoomData> chatRoomDataPtr = chatUserModelPtr_->getRoomByRoomId(room->getId());
       
       // If not found, set online status and add new user
       if (!chatRoomDataPtr)
@@ -135,9 +148,17 @@ void ChatUserListLogic::readUsersFromDB()
    for (const ContactUserData &contactUserData : contactUserDataList)
    {
       ChatUserDataPtr newChatUserData = std::make_shared<ChatUserData>();
-      if (contactUserData.incomingFriendRequest())
+      if (contactUserData.status() == ContactUserData::Status::Incoming)
       {
          newChatUserData->setUserState(ChatUserData::State::IncomingFriendRequest);
+      }
+      else if (contactUserData.status() == ContactUserData::Status::Outgoing)
+      {
+         newChatUserData->setUserState(ChatUserData::State::OutgoingFriendRequest);
+      }
+      else if (contactUserData.status() == ContactUserData::Status::Rejected)
+      {
+         newChatUserData->setUserState(ChatUserData::State::Unknown);
       }
       else
       {

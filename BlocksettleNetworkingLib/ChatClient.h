@@ -42,17 +42,21 @@ public:
    ChatClient& operator = (ChatClient&&) = delete;
 
    std::string loginToServer(const std::string& email, const std::string& jwt);
-   void logout();
+   void logout(bool send = true);
 
    void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
    void OnUsersList(const Chat::UsersListResponse &) override;
    void OnMessages(const Chat::MessagesResponse &) override;
    void OnLoginReturned(const Chat::LoginResponse &) override;
+   void OnLogoutResponse(const Chat::LogoutResponse &) override;
    void OnSendMessageResponse(const Chat::SendMessageResponse& ) override;
    void OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse&) override;
-   void OnContactsActionResponse(const Chat::ContactsActionResponse&) override;
+   void OnContactsActionResponseDirect(const Chat::ContactsActionResponseDirect&) override;
+   void OnContactsActionResponseServer(const Chat::ContactsActionResponseServer&) override;
+   void OnContactsListResponse(const Chat::ContactsListResponse&) override;
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
+   void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -75,10 +79,15 @@ public:
 
    bool getContacts(ContactUserDataList &contactList);
    bool addOrUpdateContact(const QString &userId,
-                           const QString &userName = QStringLiteral(""),
-                           const bool &isIncomingFriendRequest = false);
+                           ContactUserData::Status status,
+                           const QString &userName = QStringLiteral(""));
+   bool removeContact(const QString &userId);
    void sendFriendRequest(const QString &friendUserId);
+   void acceptFriendRequest(const QString &friendUserId);
+   void declineFriendRequest(const QString &friendUserId);
    void sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
+   void sendSearchUsersRequest(const QString& userIdPattern);
+   QString deriveKey(const QString& email) const;
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
@@ -89,14 +98,19 @@ signals:
    void ConnectionError(int errorCode);
 
    void LoginFailed();
+   void LoggedOut();
    void UsersReplace(const std::vector<std::string>& users);
    void UsersAdd(const std::vector<std::string>& users);
    void UsersDel(const std::vector<std::string>& users);
    void IncomingFriendRequest(const std::vector<std::string>& users);
+   void FriendRequestAccepted(const std::vector<std::string>& users);
+   void FriendRequestRejected(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
+   void RoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
    void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
-   void RoomsAdd(const std::vector<std::shared_ptr<Chat::ChatRoomData>>& rooms);
+   void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
+   void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
 
 public slots:
    void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);

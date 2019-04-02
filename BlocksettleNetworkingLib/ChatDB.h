@@ -17,19 +17,26 @@ namespace spdlog {
 class ContactUserData
 {
 public:
+   enum class Status {
+      Friend,
+      Rejected,
+      Incoming,
+      Outgoing
+   };
    QString userName() const { return _userName; }
    void setUserName(const QString &userName) { _userName = userName; }
 
    QString userId() const { return _userId; }
    void setUserId(const QString &userId) { _userId = userId; }
 
-   bool incomingFriendRequest() const { return _incomingFriendRequest; }
-   void setIncomingFriendRequest(bool incomingFriendRequest) { _incomingFriendRequest = incomingFriendRequest; }
+   Status status() const {return status_;}
+   void setStatus(Status status) { status_ = status;}
 
 private:
    QString _userName;
    QString _userId;
-   bool _incomingFriendRequest;
+   Status status_;
+
 };
 
 using ContactUserDataList = std::vector<ContactUserData>;
@@ -67,7 +74,7 @@ public:
 
    bool isContactExist(const QString &userId);
    bool addContact(const ContactUserData &contact);
-   bool removeContact(const ContactUserData &contact);
+   bool removeContact(const QString &userId);
    bool getContacts(ContactUserDataList &contactList);
    bool updateContact(const ContactUserData &contact);
 

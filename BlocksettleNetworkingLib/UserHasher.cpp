@@ -12,6 +12,8 @@ namespace {
                               "0000000000000000"; //salt+24
 }
 
+const unsigned int UserHasher::KeyLength = 12;
+
 UserHasher::UserHasher(const BinaryData& iv)
    : iv_(iv)
 {
@@ -42,5 +44,5 @@ std::string UserHasher::deriveKey(const std::string& rawData)
 {
    SecureBinaryData key =getKDF()->deriveKey(SecureBinaryData(rawData));
    std::vector<uint8_t> keyData(key.getPtr(), key.getPtr() + key.getSize());
-   return bs::zbase32Encode(keyData).substr(0, 12);
+   return bs::zbase32Encode(keyData).substr(0, KeyLength);
 }

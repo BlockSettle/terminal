@@ -6,11 +6,11 @@ namespace Chat {
    {
       roomList_.reserve(dataList_.size());
       for (const auto& roomData: dataList_){
-         roomList_.push_back(ChatRoomData::fromJSON(roomData));
+         roomList_.push_back(RoomData::fromJSON(roomData));
       }
    }
    
-   ChatroomsListResponse::ChatroomsListResponse(std::vector<std::shared_ptr<ChatRoomData>> roomList)
+   ChatroomsListResponse::ChatroomsListResponse(std::vector<std::shared_ptr<RoomData>> roomList)
       : ListResponse (ResponseType::ResponseChatroomsList, {})
       , roomList_(roomList)
    {
@@ -33,7 +33,7 @@ namespace Chat {
       handler.OnChatroomsList(*this);
    }
    
-   const std::vector<std::shared_ptr<ChatRoomData> >&ChatroomsListResponse::getChatRoomList() const
+   const std::vector<std::shared_ptr<RoomData> >&ChatroomsListResponse::getChatRoomList() const
    {
       return roomList_;
    }

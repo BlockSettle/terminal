@@ -9,7 +9,9 @@ namespace Chat {
    public:
       enum class Type {
             MessageData,
-            ChatRoomData
+            RoomData,
+            ContactRecordData,
+            UserData
          };
    protected:
       DataObject(Type type);

@@ -10,6 +10,7 @@
 #include <QApplication>
 #include <QObject>
 #include <QDebug>
+#include "UserHasher.h"
 
 #include <thread>
 #include <spdlog/spdlog.h>
@@ -29,6 +30,7 @@ public:
 
    virtual std::string login(const std::string& email, const std::string& jwt) = 0;
    virtual void logout() = 0;
+   virtual void onLoggedOut() { }
    virtual void onSendButtonClicked() = 0;
    virtual void onUserClicked(const QString& userId) = 0;
    virtual void onMessagesUpdated() = 0;
@@ -95,6 +97,9 @@ public:
 
    void logout() override {
       chat_->client_->logout();
+   }
+
+   void onLoggedOut() override {
       chat_->changeState(ChatWidget::LoggedOut);
    }
 
@@ -128,7 +133,7 @@ public:
       chat_->setIsRoom(false);
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
-      chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_);
       chat_->client_->retrieveUserMessages(chat_->currentChat_);
 
       // load draft
@@ -151,7 +156,7 @@ public:
       chat_->setIsRoom(true);
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
-      chat_->ui_->textEditMessages->onSwitchToChat(chat_->currentChat_);
+      chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_, true);
       chat_->client_->retrieveRoomMessages(chat_->currentChat_);
 
       // load draft
@@ -202,11 +207,16 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    chatUserListLogicPtr_->init(client_, logger);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
+   connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
 
    // connect(ui_->send, &QPushButton::clicked, this, &ChatWidget::onSendButtonClicked);
 
    connect(ui_->treeViewUsers, &ChatUserListTreeView::userClicked, this, &ChatWidget::onUserClicked);
    connect(ui_->treeViewUsers, &ChatUserListTreeView::roomClicked, this, &ChatWidget::onRoomClicked);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::acceptFriendRequest,
+              this, &ChatWidget::onAcceptFriendRequest);
+   connect(ui_->treeViewUsers, &ChatUserListTreeView::declineFriendRequest,
+              this, &ChatWidget::onDeclineFriendRequest);
 
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
@@ -217,14 +227,22 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::UsersDel,
            chatUserListLogicPtr_.get(), &ChatUserListLogic::onRemoveChatUsers);
    connect(client_.get(), &ChatClient::IncomingFriendRequest,
-           chatUserListLogicPtr_.get(), &ChatUserListLogic::onIcomingFriendRequest);
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onIncomingFriendRequest);
+   connect(client_.get(), &ChatClient::FriendRequestAccepted,
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onFriendRequestAccepted);
+   connect(client_.get(), &ChatClient::FriendRequestRejected,
+           chatUserListLogicPtr_.get(), &ChatUserListLogic::onFriendRequestRejected);
    connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserRemoved,
            this, &ChatWidget::onChatUserRemoved);
    connect(client_.get(), &ChatClient::RoomsAdd,
            this, &ChatWidget::onAddChatRooms);
+   connect(client_.get(), &ChatClient::SearchUserListReceived,
+           this, &ChatWidget::onSearchUserListReceived);
 
    connect(client_.get(), &ChatClient::MessagesUpdate, ui_->textEditMessages
                         , &ChatMessagesTextEdit::onMessagesUpdate);
+   connect(client_.get(), &ChatClient::RoomMessagesUpdate, ui_->textEditMessages
+                        , &ChatMessagesTextEdit::onRoomMessagesUpdate);
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::rowsInserted,
            this, &ChatWidget::onMessagesUpdated);
    
@@ -237,14 +255,20 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
    
+   connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataChanged,
+           ui_->treeViewUsers, &ChatUserListTreeView::onChatUserDataChanged);
    connect(chatUserListLogicPtr_.get()->chatUserModelPtr().get(), &ChatUserModel::chatUserDataListChanged,
            ui_->treeViewUsers, &ChatUserListTreeView::onChatUserDataListChanged);
 
+   connect(chatUserListLogicPtr_->chatUserModelPtr().get(), &ChatUserModel::chatRoomDataChanged,
+           ui_->treeViewUsers, &ChatUserListTreeView::onChatRoomDataChanged);
    connect(chatUserListLogicPtr_->chatUserModelPtr().get(), &ChatUserModel::chatRoomDataListChanged,
            ui_->treeViewUsers, &ChatUserListTreeView::onChatRoomDataListChanged);
 
    connect(ui_->textEditMessages, &ChatMessagesTextEdit::userHaveNewMessageChanged, 
            chatUserListLogicPtr_.get(), &ChatUserListLogic::onUserHaveNewMessageChanged);
+   connect(ui_->textEditMessages, &ChatMessagesTextEdit::sendFriendRequest,
+            this, &ChatWidget::onSendFriendRequest);
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
 }
@@ -257,14 +281,29 @@ void ChatWidget::onChatUserRemoved(const ChatUserDataPtr &chatUserDataPtr)
    }
 }
 
-void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::ChatRoomData> >& roomList) {
+void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList)
+{
    chatUserListLogicPtr_->addChatRooms(roomList);
 
    if (roomList.size() > 0 && needsToStartFirstRoom_) {
+      ui_->treeViewUsers->selectFirstRoom();
       const auto &firstRoom = roomList.at(0);
       onRoomClicked(firstRoom->getId());
       needsToStartFirstRoom_ = false;
    }
+}
+
+void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
+{
+   if (users.size() < 1) {
+      return;
+   }
+
+   std::shared_ptr<Chat::UserData> firstUser = users.at(0);
+   popup_->setText(firstUser->getUserId());
+   popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
+   popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
+   popup_->show();  
 }
 
 void ChatWidget::onUserClicked(const QString& userId)
@@ -356,13 +395,19 @@ bool ChatWidget::hasUnreadMessages()
    }
 }
 
+void ChatWidget::onLoggedOut()
+{
+   stateCurrent_->onLoggedOut();
+   emit LogOut();
+}
+
 void ChatWidget::onSearchUserReturnPressed()
 {
    if (!popup_)
    {
       popup_ = new ChatSearchPopup(this);
-      connect(popup_, &ChatSearchPopup::addUserToContacts,
-              this, &ChatWidget::onAddUserToContacts);
+      connect(popup_, &ChatSearchPopup::sendFriendRequest,
+              this, &ChatWidget::onSendFriendRequest);
       qApp->installEventFilter(this);
    }
 
@@ -370,23 +415,32 @@ void ChatWidget::onSearchUserReturnPressed()
    if (userToAdd.isEmpty() || userToAdd.length() < 3) {
       return;
    }
-   
-   auto chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByEmail(userToAdd);
-   if (!chatUserDataPtr) { // email exists?
-      chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByUserIdPrefix(userToAdd); // user ID autocomplete?
-      if (!chatUserDataPtr)
-      {
-         return;
-      }
-   }
-   
-   userToAdd = chatUserDataPtr->userId();
 
-   // qDebug() << userToAdd;
-   popup_->setText(userToAdd);
-   popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
-   popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
-   popup_->show();
+   QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
+   QRegularExpressionMatch match = rx_email.match(userToAdd);
+   if (match.hasMatch()) {
+      userToAdd = client_->deriveKey(userToAdd);
+   } else if (UserHasher::KeyLength < userToAdd.length()) {
+      return; //Initially max key is 12 symbols
+   }
+   client_->sendSearchUsersRequest(userToAdd);
+   
+   // auto chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByEmail(userToAdd);
+   // if (!chatUserDataPtr) { // email exists?
+   //    chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByUserIdPrefix(userToAdd); // user ID autocomplete?
+   //    if (!chatUserDataPtr)
+   //    {
+   //       return;
+   //    }
+   // }
+   
+   // userToAdd = chatUserDataPtr->userId();
+
+   // // qDebug() << userToAdd;
+   // popup_->setText(userToAdd);
+   // popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
+   // popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
+   // popup_->show();
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
@@ -416,7 +470,7 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
    return QWidget::eventFilter(obj, event);
 }
 
-void ChatWidget::onAddUserToContacts(const QString &userId)
+void ChatWidget::onSendFriendRequest(const QString &userId)
 {
    // check if user isn't already in contacts
    ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
@@ -424,10 +478,10 @@ void ChatWidget::onAddUserToContacts(const QString &userId)
    if (chatUserModelPtr && !chatUserModelPtr->isChatUserInContacts(userId))
    {
       // add user to contacts as friend
-      chatUserModelPtr->setUserState(userId, ChatUserData::State::Friend);
+      chatUserModelPtr->setUserState(userId, ChatUserData::State::OutgoingFriendRequest);
       ChatUserDataPtr chatUserDataPtr = chatUserModelPtr->getUserByUserId(userId);
       // save user in DB
-      client_->addOrUpdateContact(chatUserDataPtr->userId(), chatUserDataPtr->userName());
+      client_->addOrUpdateContact(chatUserDataPtr->userId(),ContactUserData::Status::Outgoing, chatUserDataPtr->userName());
       // and send friend request to ChatClient
       client_->sendFriendRequest(chatUserDataPtr->userId());
    }
@@ -435,6 +489,41 @@ void ChatWidget::onAddUserToContacts(const QString &userId)
    popup_->deleteLater();
    popup_ = nullptr;
    qApp->removeEventFilter(this);
+}
+
+void ChatWidget::onAcceptFriendRequest(const QString &userId)
+{
+   // check if user isn't already in contacts
+   ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
+
+   if (chatUserModelPtr && chatUserModelPtr->isChatUserInContacts(userId))
+   {
+      // add user to contacts as friend
+      chatUserModelPtr->setUserState(userId, ChatUserData::State::Friend);
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr->getUserByUserId(userId);
+      // save user in DB
+      client_->addOrUpdateContact(chatUserDataPtr->userId(),ContactUserData::Status::Friend, chatUserDataPtr->userName());
+      // and accept friend request to ChatClient
+      client_->acceptFriendRequest(chatUserDataPtr->userId());
+   }
+}
+
+void ChatWidget::onDeclineFriendRequest(const QString &userId)
+{
+   // check if user isn't already in contacts
+   ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
+
+   if (chatUserModelPtr && chatUserModelPtr->isChatUserInContacts(userId))
+   {
+      // add user to contacts as friend
+      chatUserModelPtr->setUserState(userId, ChatUserData::State::Unknown);
+      ChatUserDataPtr chatUserDataPtr = chatUserModelPtr->getUserByUserId(userId);
+      // remove user in DB
+      //client_->removeContact(chatUserDataPtr->userId());
+      client_->addOrUpdateContact(chatUserDataPtr->userId(),ContactUserData::Status::Rejected, chatUserDataPtr->userName());
+      // and declien friend request to ChatClient
+      client_->declineFriendRequest(chatUserDataPtr->userId());
+   }
 }
 
 void ChatWidget::onRoomClicked(const QString& roomId)

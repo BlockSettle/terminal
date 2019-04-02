@@ -13,10 +13,10 @@ class QtSettings(Configurator):
         Configurator.__init__(self, settings)
         self.jom = JomSettings(settings)
         self.openssl = OpenSslSettings(settings)
-        self._release = '5.11'
-        self._version = self._release + '.3'
+        self._release = '5.12'
+        self._version = self._release + '.2'
         self._package_name = 'qt-everywhere-src-' + self._version
-        self._script_revision = '5'
+        self._script_revision = '6'
 
         if self._project_settings.on_windows():
             self._package_url = 'https://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
@@ -27,7 +27,7 @@ class QtSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version + self._script_revision
+        return self._version + '_' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -84,8 +84,13 @@ class QtSettings(Configurator):
         command.append('-no-feature-vulkan')
 
         # command.append('-no-securetransport')
-        command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
-        command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
+        # Recent script changes somehow broke Linux builds. Use a workaround.
+        if self._project_settings.on_linux():
+            command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'')))
+            command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'')))
+        else:
+            command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
+            command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
 
         if self._project_settings.on_osx():
             command.append('-L/usr/local/opt/mysql@5.7/lib')

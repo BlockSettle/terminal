@@ -637,7 +637,7 @@
   </customwidget>
   <customwidget>
    <class>ChatMessagesTextEdit</class>
-   <extends>QTextEdit</extends>
+   <extends>QTextBrowser</extends>
    <header location="global">ChatMessagesTextEdit.h</header>
   </customwidget>
  </customwidgets>

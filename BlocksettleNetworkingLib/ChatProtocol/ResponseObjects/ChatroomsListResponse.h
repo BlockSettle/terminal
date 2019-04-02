@@ -8,12 +8,12 @@ namespace Chat {
    {
    public:
       ChatroomsListResponse(std::vector<std::string> dataList);
-      ChatroomsListResponse(std::vector<std::shared_ptr<ChatRoomData> > roomList);
+      ChatroomsListResponse(std::vector<std::shared_ptr<RoomData> > roomList);
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       void handle(ResponseHandler&) override;
-      const std::vector<std::shared_ptr<ChatRoomData>>& getChatRoomList() const;
+      const std::vector<std::shared_ptr<RoomData>>& getChatRoomList() const;
    private:
-      std::vector<std::shared_ptr<ChatRoomData>> roomList_;
+      std::vector<std::shared_ptr<RoomData>> roomList_;
    };
    
 }
