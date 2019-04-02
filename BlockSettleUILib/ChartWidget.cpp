@@ -826,7 +826,7 @@ void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
 QString ChartWidget::ProductTypeToString(TradeHistoryTradeType type)
 {
    switch (type) { 
-   case FXTradeType: return QStringLiteral("FXT");  
+   case FXTradeType: return QStringLiteral("FX");  
    case XBTTradeType: return QStringLiteral("XBT"); 
    case PMTradeType: return QStringLiteral("PM"); 
    default: return QStringLiteral("");
