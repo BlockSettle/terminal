@@ -374,6 +374,9 @@ void ChartWidget::AddNewCandle()
 
 void ChartWidget::ModifyCandle()
 {
+   if (!candlesticksChart_->data()) {
+      return;
+   }
    const auto& lastCandle = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1);
    QCPFinancialData candle(*lastCandle);
 
