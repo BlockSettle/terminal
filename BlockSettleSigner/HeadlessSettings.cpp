@@ -12,41 +12,35 @@
 #include "SignerUiDefs.h"
 
 namespace {
-static const QString zmqPubKeyName = QString::fromStdString("zmqpubkey");
-static const QString zmqPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for ZMQ connections");
+   static const QString listenName = QString::fromStdString("listen");
+   static const QString listenHelp = QObject::tr("IP address to listen on");
 
-static const QString zmqPrvKeyName = QString::fromStdString("zmqprvkey");
-static const QString zmqPrvKeyHelp = QObject::tr("Private key file (CurveZMQ) for ZMQ connections");
+   static const QString portName = QString::fromStdString("port");
+   static const QString portHelp = QObject::tr("Specify command port number");
 
-static const QString listenName = QString::fromStdString("listen");
-static const QString listenHelp = QObject::tr("IP address to listen on");
+   static const QString logName = QString::fromStdString("log");
+   static const QString logHelp = QObject::tr("Log file name (relative to temp dir)");
 
-static const QString portName = QString::fromStdString("port");
-static const QString portHelp = QObject::tr("Specify command port number");
+   static const QString walletsDirName = QString::fromStdString("dirwallets");
+   static const QString walletsDirHelp = QObject::tr("Directory where wallets reside");
 
-static const QString logName = QString::fromStdString("log");
-static const QString logHelp = QObject::tr("Log file name (relative to temp dir)");
+   static const QString testnetName = QString::fromStdString("testnet");
+   static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
 
-static const QString walletsDirName = QString::fromStdString("dirwallets");
-static const QString walletsDirHelp = QObject::tr("Directory where wallets reside");
+   static const QString mainnetName = QString::fromStdString("mainnet");
+   static const QString mainnetHelp = QObject::tr("Set bitcoin network type to mainnet");
 
-static const QString testnetName = QString::fromStdString("testnet");
-static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
+   static const QString signName = QString::fromStdString("sign");
+   static const QString signHelp = QObject::tr("Sign transaction[s] from request file - auto toggles offline mode (headless mode only)");
 
-static const QString mainnetName = QString::fromStdString("mainnet");
-static const QString mainnetHelp = QObject::tr("Set bitcoin network type to mainnet");
+   static const QString runModeName = QString::fromStdString("guimode");
+   static QString runModeHelp = QObject::tr("GUI run mode [__modes__]");
 
-static const QString signName = QString::fromStdString("sign");
-static const QString signHelp = QObject::tr("Sign transaction[s] from request file - auto toggles offline mode (headless mode only)");
+   static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
+   static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
-static const QString runModeName = QString::fromStdString("guimode");
-static QString runModeHelp = QObject::tr("GUI run mode [__modes__]");
-
-static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
-static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
-
-static const QString woName = QString::fromStdString("watchonly");
-static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
+   static const QString woName = QString::fromStdString("watchonly");
+   static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
 }
 
 
