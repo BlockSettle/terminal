@@ -197,19 +197,37 @@ void ZmqBIP15XDataConnection::sendHeartbeat()
    if (bip151HandshakeCompleted_) {
       connPtr = bip151Connection_.get();
    }
-   msg.construct(BinaryDataRef{}, connPtr, ZMQ_MSGTYPE_HEARTBEAT);
-   const auto sendData = msg.getNextPacket().toBinStr();
-   const auto dataLen = sendData.size();
+
+   uint32_t size = 1;
+   BinaryData plainText(4 + size + POLY1305MACLEN);
+   if (plainText.getSize() > ZMQ_MESSAGE_PACKET_SIZE) {
+      throw runtime_error("payload is too large to serialize");
+   }
+
+   // Copy in packet size.
+   memcpy(plainText.getPtr(), &size, 4);
+   size += 4;
+   //type
+   plainText.getPtr()[4] = ZMQ_MSGTYPE_HEARTBEAT;
+
+   //encrypt if possible
+   if (connPtr != nullptr) {
+      connPtr->assemblePacket(plainText.getPtr(), size, plainText.getPtr()
+         , size + POLY1305MACLEN);
+   } else {
+      plainText.resize(size);
+   }
 
    int result = -1;
    {
       FastLock locker(lockSocket_);
-      result = zmq_send(dataSocket_.get(), sendData.c_str(), dataLen, 0);
+      result = zmq_send(dataSocket_.get(), plainText.getCharPtr()
+         , plainText.getSize(), 0);
    }
-   if (result != (int)dataLen) {
+   if (result != (int)plainText.getSize()) {
       logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
          "data: {} (result={}, data size={}", __func__, connectionName_
-         , zmq_strerror(zmq_errno()), result, dataLen);
+         , zmq_strerror(zmq_errno()), result, plainText.getSize());
    }
    else {
       lastHeartbeat_ = QDateTime::currentDateTime();
