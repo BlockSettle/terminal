@@ -111,11 +111,16 @@ void ZmqBIP15XServerConnection::heartbeatThread()
                timedOutClients.push_back(hbTime.first);
             }
          }
-         for (const auto &client : timedOutClients) {
+         {
+            std::unique_lock<std::mutex> lock(clientsMtx_);
+            for (const auto &client : timedOutClients) {
+               lastHeartbeats_.erase(client);
+               resetBIP151Connection(client);
+            }
+         }
+         for (const auto &client : timedOutClients) {    // invoke callbacks outside the lock
             logger_->debug("[ZmqBIP15XServerConnection] client {} timed out"
                , BinaryData(client).toHexStr());
-            lastHeartbeats_.erase(client);
-            resetBIP151Connection(client);
             notifyListenerOnDisconnectedClient(client);
          }
       }
@@ -237,6 +242,7 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
 bool ZmqBIP15XServerConnection::SendDataToAllClients(const std::string& data, const SendResultCb &cb)
 {
    unsigned int successCount = 0;
+   std::unique_lock<std::mutex> lock(clientsMtx_);
 
    for (const auto &it : socketConnMap_) {
       if (SendDataToClient(it.first, data, cb)) {
@@ -306,39 +312,34 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    }
 
    // Deserialize packet.
-   auto payloadRef =
-      socketConnMap_[clientID]->currentReadMessage_.insertDataAndGetRef(payload);
-   auto result =
-      socketConnMap_[clientID]->currentReadMessage_.message_.parsePacket(payloadRef);
+   auto payloadRef = connData->currentReadMessage_.insertDataAndGetRef(payload);
+   auto result = connData->currentReadMessage_.message_.parsePacket(payloadRef);
    if (!result) {
       if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
             "(connection {})", __func__, connectionName_);
       }
-      socketConnMap_[clientID]->currentReadMessage_.reset();
+      connData->currentReadMessage_.reset();
       return;
    }
 
    // Fragmented messages may not be marked as fragmented when decrypted but may
    // still be a fragment. That's fine. Just wait for the other fragments.
-   if (!socketConnMap_[clientID]->currentReadMessage_.message_.isReady()) {
+   if (!connData->currentReadMessage_.message_.isReady()) {
       return;
    }
 
-   socketConnMap_[clientID]->msgID_ =
-      socketConnMap_[clientID]->currentReadMessage_.message_.getId();
+   connData->msgID_ = connData->currentReadMessage_.message_.getId();
 
    // If we're still handshaking, take the next step. (No fragments allowed.)
-   if (socketConnMap_[clientID]->currentReadMessage_.message_.getType()
-      == ZMQ_MSGTYPE_HEARTBEAT) {
+   if (connData->currentReadMessage_.message_.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
       lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
-      socketConnMap_[clientID]->currentReadMessage_.reset();
+      connData->currentReadMessage_.reset();
       return;
    }
-   else if (socketConnMap_[clientID]->currentReadMessage_.message_.getType() >
+   else if (connData->currentReadMessage_.message_.getType() >
       ZMQ_MSGTYPE_AEAD_THRESHOLD) {
-      if (!processAEADHandshake(
-         socketConnMap_[clientID]->currentReadMessage_.message_, clientID)) {
+      if (!processAEADHandshake(connData->currentReadMessage_.message_, clientID)) {
          if (logger_) {
             logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
@@ -346,16 +347,16 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
          return;
       }
 
-      socketConnMap_[clientID]->currentReadMessage_.reset();
+      connData->currentReadMessage_.reset();
       return;
    }
 
    // We can now safely obtain the full message.
    BinaryData outMsg;
-   socketConnMap_[clientID]->currentReadMessage_.message_.getMessage(&outMsg);
+   connData->currentReadMessage_.message_.getMessage(&outMsg);
 
    // We shouldn't get here but just in case....
-   if (socketConnMap_[clientID]->encData_->getBIP150State() !=
+   if (connData->encData_->getBIP150State() !=
       BIP150State::SUCCESS) {
       if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
@@ -381,7 +382,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    // Pass the final data up the chain.
    notifyListenerOnData(clientID, outMsg.toBinStr());
    lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
-   socketConnMap_[clientID]->currentReadMessage_.reset();
+   connData->currentReadMessage_.reset();
 }
 
 // The function processing the BIP 150/151 handshake packets.
@@ -701,8 +702,11 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
          }
       }
 
-      socketConnMap_[clientID] = make_unique<ZmqBIP15XPerConnData>();
-      socketConnMap_[clientID]->encData_ = make_unique<BIP151Connection>(lbds);
+      {
+         std::unique_lock<std::mutex> lock(clientsMtx_);
+         socketConnMap_[clientID] = make_unique<ZmqBIP15XPerConnData>();
+         socketConnMap_[clientID]->encData_ = make_unique<BIP151Connection>(lbds);
+      }
       notifyListenerOnNewConnection(clientID);
    }
    else {

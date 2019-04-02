@@ -84,6 +84,7 @@ private:
    std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
    BinaryData leftOverData_;
    uint64_t id_;
+   std::mutex  clientsMtx_;
    std::function<QStringList()>  cbTrustedClients_;
 
    const int   heartbeatInterval_ = 10000 * 2;   // allow some toleration on heartbeat miss
