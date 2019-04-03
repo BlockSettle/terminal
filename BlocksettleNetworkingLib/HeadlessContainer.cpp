@@ -1311,6 +1311,14 @@ bool LocalSigner::Start()
    const auto cmdArgs = args();
    logger_->debug("[HeadlessContainer] starting {} {}"
       , signerAppPath.toStdString(), cmdArgs.join(QLatin1Char(' ')).toStdString());
+
+#ifndef NDEBUG
+   headlessProcess_->setProcessChannelMode(QProcess::MergedChannels);
+   connect(headlessProcess_.get(), &QProcess::readyReadStandardOutput, this, [this](){
+      qDebug().noquote() << headlessProcess_->readAllStandardOutput();
+   });
+#endif
+
    headlessProcess_->start(signerAppPath, cmdArgs);
    if (!headlessProcess_->waitForStarted(5000)) {
       logger_->error("[HeadlessContainer] Failed to start child");
