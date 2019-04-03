@@ -1,7 +1,22 @@
 {
-   "latest_version" : "0.14.3",
-   "release_date" : "02 April 2019",
+   "latest_version" : "0.14.4",
+   "release_date" : "03 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.4",
+         "previous_version" : "0.14.3",
+         "release_date" : "04 April 2019",
+         "improvements" :
+         [
+            "OTC in chat",
+            "ZMQ heartbeats",
+            "BIP151 rekeying",
+            "Unused ZMQ settings removed"
+         ],
+         "bug_fixes" :
+         [
+         ]
+      },
       {
          "version_string" : "0.14.3",
          "previous_version" : "0.14.2",
