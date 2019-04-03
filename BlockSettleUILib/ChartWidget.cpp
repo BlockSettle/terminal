@@ -160,6 +160,7 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 
             if (lastClose_ < lastLow_)
                lastLow_ = lastClose_;
+            ModifyCandle();
          }
 
          if (field.type == bs::network::MDField::MDTimestamp)
@@ -170,7 +171,6 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       }
    }
 
-   ModifyCandle();
 
 }
 
@@ -293,13 +293,13 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       maxTimestamp = qMax(maxTimestamp, candle.timestamp());
 
       bool isLast = (i == 0);
-
-      if (lastCandle_.timestamp() - candle.timestamp() != IntervalWidth(interval) && candlesticksChart_->data()->size()) {
-         for (int j = 0; j < (lastCandle_.timestamp() - candle.timestamp()) / IntervalWidth(interval) - 1; j++) {
+      if (lastCandle_.timestamp() - candle.timestamp() != IntervalWidth(interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp())) && candlesticksChart_->data()->size()) {
+         for (int j = 0; j < (lastCandle_.timestamp() - candle.timestamp()) / IntervalWidth(interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp())) - 1 ; j++) {
             AddDataPoint(lastCandle_.close(), lastCandle_.close(), lastCandle_.close(), lastCandle_.close(), lastCandle_.timestamp() - IntervalWidth(interval) * (j + 1), 0);
          }
       }
       lastCandle_ = candle;
+      qDebug() << "new last: " << lastCandle_.timestamp();
 
 
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
@@ -520,7 +520,7 @@ void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal
    }
 }
 
-quint64 ChartWidget::IntervalWidth(int interval, int count) const
+quint64 ChartWidget::IntervalWidth(int interval, int count, const QDateTime& specialDate) const
 {
    if (interval == -1) {
       return 1;
@@ -528,11 +528,11 @@ quint64 ChartWidget::IntervalWidth(int interval, int count) const
    qreal hour = 3600000;
    switch (static_cast<Interval>(interval)) {
    case Interval::OneYear:
-      return hour * 8760 * count;
+      return hour * (specialDate.isValid() ? specialDate.date().daysInYear() * 24:  8760) * count;
    case Interval::SixMonths:
-      return hour * 4320 * count;
+      return hour * (specialDate.isValid() ? 24 * specialDate.date().daysInMonth() * 6 : 4320) * count;
    case Interval::OneMonth:
-      return hour * 720 * count;
+      return hour * (specialDate.isValid() ? 24 * specialDate.date().daysInMonth() : 720) * count;
    case Interval::OneWeek:
       return hour * 168 * count;
    case Interval::TwentyFourHours:
