@@ -5,6 +5,8 @@
 #include "ApplicationSettings.h"
 #include "ChatSearchPopup.h"
 
+#include "OTCRequestViewModel.h"
+
 #include <QScrollBar>
 #include <QMouseEvent>
 #include <QApplication>
@@ -123,6 +125,8 @@ public:
 
    void onUserClicked(const QString& userId)  override {
 
+      chat_->ui_->stackedWidgetMessages->setCurrentIndex(0);
+
       // save draft
       if (!chat_->currentChat_.isEmpty()) {
          QString messageText = chat_->ui_->input_textEdit->toPlainText();
@@ -146,6 +150,12 @@ public:
    }
    
    void onRoomClicked(const QString& roomId) override {
+      if (roomId == QLatin1Literal("otc_chat")) {
+         chat_->ui_->stackedWidgetMessages->setCurrentIndex(1);
+      } else {
+         chat_->ui_->stackedWidgetMessages->setCurrentIndex(0);
+      }
+
       // save draft
       if (!chat_->currentChat_.isEmpty()) {
          QString messageText = chat_->ui_->input_textEdit->toPlainText();
@@ -192,6 +202,9 @@ ChatWidget::ChatWidget(QWidget *parent)
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
    chatUserListLogicPtr_ = std::make_shared<ChatUserListLogic>(this);
+
+   otcRequestViewModel_ = new OTCRequestViewModel(this);
+   ui_->treeViewOTCRequests->setModel(otcRequestViewModel_);
 
    qRegisterMetaType<std::vector<std::string>>();
 }
