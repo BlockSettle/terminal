@@ -15,12 +15,13 @@ namespace Ui {
 namespace spdlog {
    class logger;
 }
+
 class ChatClient;
 class ConnectionManager;
 class ApplicationSettings;
-
 class ChatWidgetState;
 class ChatSearchPopup;
+class OTCRequestViewModel;
 
 class ChatWidget : public QWidget
 {
@@ -83,6 +84,9 @@ private:
    ChatUserListLogicPtr chatUserListLogicPtr_;
    QMap<QString, QString> draftMessages_;
    bool needsToStartFirstRoom_;
+
+private:
+   OTCRequestViewModel *otcRequestViewModel_ = nullptr;
 
 private:
    bool isRoom();
