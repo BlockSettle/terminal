@@ -434,12 +434,12 @@
                      </property>
                      <property name="minimumSize">
                       <size>
-                       <width>40</width>
+                       <width>20</width>
                        <height>0</height>
                       </size>
                      </property>
                      <property name="text">
-                      <string>Status</string>
+                      <string/>
                      </property>
                     </widget>
                    </item>
@@ -453,7 +453,7 @@
                      </property>
                      <property name="minimumSize">
                       <size>
-                       <width>80</width>
+                       <width>90</width>
                        <height>0</height>
                       </size>
                      </property>
