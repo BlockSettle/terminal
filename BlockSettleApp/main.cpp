@@ -143,7 +143,7 @@ static int GuiApp(int &argc, char** argv)
       QApplication::setPalette(p);
    }
 
-#ifdef QT_DEBUG
+#ifndef NDEBUG
    // Start monitoring to update stylesheet live when file is changed on the disk
    QTimer timer;
    QObject::connect(&timer, &QTimer::timeout, &app, [&app] {
@@ -158,7 +158,7 @@ static int GuiApp(int &argc, char** argv)
    }
 
    QString location = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-#ifdef QT_DEBUG
+#ifndef NDEBUG
    QString userName = QDir::home().dirName();
    QString lockFilePath = location + QLatin1String("/blocksettle-") + userName + QLatin1String(".lock");
 #else

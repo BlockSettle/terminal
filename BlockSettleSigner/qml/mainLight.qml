@@ -101,8 +101,9 @@ ApplicationWindow {
         mainWindow.title = dlg.title
 
         dlg.dialogsChainFinished.connect(function(){ hide() })
-
-//        dlg.bsAccepted.connect(function(){ hide() })
-//        dlg.bsRejected.connect(function(){ hide() })
+        dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+            mainWindow.width = nextDialog.width
+            mainWindow.height = nextDialog.height
+        })
     }
 }
