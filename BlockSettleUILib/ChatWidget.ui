@@ -696,7 +696,7 @@
   <customwidget>
    <class>CreateOTCRequestWidget</class>
    <extends>QWidget</extends>
-   <header>createotcrequestwidget.h</header>
+   <header>CreateOTCRequestWidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
