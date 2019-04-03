@@ -285,12 +285,12 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    if (product != QString::fromStdString(response.product()) || interval != response.interval())
       return;
 
-   qreal maxTimestamp = -1.0;
+   quint64 maxTimestamp = 0;
 
    for (int i = 0; i < response.candles_size(); i++)
    {
       auto candle = response.candles(i);
-      maxTimestamp = qMax(maxTimestamp, static_cast<qreal>(candle.timestamp()));
+      maxTimestamp = qMax(maxTimestamp, candle.timestamp());
 
       bool isLast = (i == 0);
 
@@ -319,8 +319,19 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 
    if (firstPortion) {
+      auto currentCandleTimestamp = GetCandleTimestamp(QDateTime::currentMSecsSinceEpoch(), static_cast<Interval>(interval));
       if (!response.candles_size()) {
-         maxTimestamp = QDateTime::currentMSecsSinceEpoch();
+         AddDataPoint(0, 0, 0, 0, currentCandleTimestamp, 0);
+         maxTimestamp = currentCandleTimestamp;
+      } else {
+         auto currentCandleTimestamp = GetCandleTimestamp(QDateTime::currentMSecsSinceEpoch(), static_cast<Interval>(interval));
+         if (currentCandleTimestamp > maxTimestamp) {
+            auto lastCandle = *(candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1));
+            for (quint64 i = 0; i < (currentCandleTimestamp - maxTimestamp) / IntervalWidth(interval); i++) {
+               AddDataPoint(lastCandle.close, lastCandle.close, lastCandle.close, lastCandle.close, currentCandleTimestamp - IntervalWidth(interval) * i, 0);
+            }
+            maxTimestamp = currentCandleTimestamp;
+         }
       }
       firstTimestampInDb_ = response.first_stamp_in_db() / 1000;
       UpdatePlot(interval, maxTimestamp);
@@ -509,10 +520,10 @@ void ChartWidget::AddDataPoint(const qreal& open, const qreal& high, const qreal
    }
 }
 
-qreal ChartWidget::IntervalWidth(int interval, int count) const
+quint64 ChartWidget::IntervalWidth(int interval, int count) const
 {
    if (interval == -1) {
-      return 1.0;
+      return 1;
    }
    qreal hour = 3600000;
    switch (static_cast<Interval>(interval)) {
@@ -791,6 +802,59 @@ void ChartWidget::OnResetBtnClick()
       rescalePlot();
       setAutoScaleBtnColor();
    }
+}
+
+quint64 ChartWidget::GetCandleTimestamp(const uint64_t& timestamp, const Interval& interval) const
+{
+   QDateTime now = QDateTime::fromMSecsSinceEpoch(timestamp).toUTC();
+   QDateTime result = now;
+   switch (interval) {
+   case Interval::OneYear: {
+      result.setTime(QTime(0, 0));
+      result.setDate(QDate(now.date().year(), 1, 1));
+      break;
+   }
+   case Interval::SixMonths: {
+      int month = now.date().month(); // 1 - January, 12 - December
+      int mod = month % 6;
+      result.setTime(QTime(0, 0));
+      result.setDate(QDate(now.date().year(), month - mod + 1, 1));
+      break;
+   }
+   case Interval::OneMonth: {
+      result.setTime(QTime(0, 0));
+      result.setDate(QDate(now.date().year(), now.date().month(), 1));
+      break;
+   }
+   case Interval::OneWeek: {
+      auto date = now.date();
+      auto start = date.addDays(1 - date.dayOfWeek()); //1 - Monday, 7 - Sunday
+      result.setTime(QTime(0, 0));
+      result.setDate(start);
+      break;
+   }
+   case Interval::TwentyFourHours:
+      result.setTime(QTime(0, 0));
+      break;
+   case Interval::TwelveHours: {
+      int hour = now.time().hour();
+      int mod = hour % 12;
+      result.setTime(QTime(hour - mod, 0));
+      break;
+   }
+   case Interval::SixHours: {
+      int hour = now.time().hour();
+      int mod = hour % 6;
+      result.setTime(QTime(hour - mod, 0));
+      break;
+   }
+   case Interval::OneHour:
+      result.setTime(QTime(now.time().hour(), 0));
+      break;
+   default:
+      break;
+   }
+   return result.toMSecsSinceEpoch();
 }
 
 bool ChartWidget::isBeyondUpperLimit(QCPRange newRange, int interval)
