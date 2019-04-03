@@ -134,8 +134,6 @@ private:
    Ui::ChartWidget *ui_;
    QButtonGroup dateRange_;
    QStandardItemModel *cboModel_;
-   QCPTextElement *title_;
-   QCPTextElement *info_;
    QCPFinancial *candlesticksChart_;
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;

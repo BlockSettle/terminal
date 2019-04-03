@@ -55,8 +55,6 @@ QSize ComboBoxDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 ChartWidget::ChartWidget(QWidget* pParent)
    : QWidget(pParent)
    , ui_(new Ui::ChartWidget)
-   , title_(nullptr)
-   , info_(nullptr)
    , candlesticksChart_(nullptr)
    , volumeChart_(nullptr)
    , volumeAxisRect_(nullptr)
@@ -133,7 +131,6 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
    {
       isProductListInitialized_ = false;
       cboModel_->clear();
-      title_->setText(QStringLiteral());
       return;
    }
    else if (!isProductListInitialized_)
@@ -144,7 +141,7 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       mdhsClient_->SendRequest(request);
    }
 
-   if (title_->text() == security)
+   if (getCurrentProductName() == security)
    {
       for (const auto& field : mdFields)
       {
@@ -179,9 +176,6 @@ void ChartWidget::UpdateChart(const int& interval) const
    auto product = getCurrentProductName();
    if (product.isEmpty())
       return;
-   if (title_) {
-      title_->setText(product);
-   }
    if (!candlesticksChart_ || !volumeChart_) {
       return;
    }
@@ -299,7 +293,6 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
          }
       }
       lastCandle_ = candle;
-      qDebug() << "new last: " << lastCandle_.timestamp();
 
 
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
@@ -410,7 +403,7 @@ void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
    ui_->customPlot->xAxis->setRange(lower, upper);
    ui_->customPlot->xAxis->setRange(lower - CountOffsetFromRightBorder(), upper + CountOffsetFromRightBorder()); //call setRange second time cause CountOffset relies on current range
    rescaleCandlesYAxis();
-   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[title_->text().toStdString()]));
+   ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]));
 
 }
 
@@ -573,12 +566,9 @@ void ChartWidget::OnDateRangeChanged(int interval) {
 }
 
 void ChartWidget::OnInstrumentChanged(const QString &text) {
-   if (title_ != nullptr)
+   if (text != getCurrentProductName())
    {
-      if (text != title_->text())
-      {
-         UpdateChart(dateRange_.checkedId());
-      }
+      UpdateChart(dateRange_.checkedId());
    }
 }
 
@@ -599,8 +589,6 @@ QString ChartWidget::GetFormattedStamp(double timestamp)
 
 void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 {
-   if (info_ == nullptr)
-      return;
 
    DrawCrossfire(event);
 
@@ -610,17 +598,26 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
    if (!candlesticksChart_->data()->size() ||
       timestamp > candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1)->key + width / 2 || 
       timestamp < candlesticksChart_->data()->at(0)->key - width / 2) {
-      info_->setText({});
+      ui_->ohlcLbl->setText({});
    } else {
       auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp);
       auto volumeValue = *volumeChart_->data()->findBegin(timestamp);
-      info_->setText(tr("%6   O: %1   H: %2   L: %3   C: %4   Volume: %5")
-                     .arg(ohlcValue.open, 0, 'g', -1)
-                     .arg(ohlcValue.high, 0, 'g', -1)
-                     .arg(ohlcValue.low, 0, 'g', -1)
-                     .arg(ohlcValue.close, 0, 'g', -1)
-                     .arg(volumeValue.value, 0, 'g', -1)
-                     .arg(GetFormattedStamp(ohlcValue.key)));
+      const auto& color = (ohlcValue.close >= ohlcValue.open ? c_greenColor : c_redColor).name();
+      auto prec = FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]);
+      QString partForm = QStringLiteral("<font color=\"%2\">%1</font>");
+      QString format = QStringLiteral("&nbsp;&nbsp;%1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%2 %3&nbsp;&nbsp;&nbsp;%4 %5&nbsp;&nbsp;&nbsp;%6 %7&nbsp;&nbsp;&nbsp;%8 %9&nbsp;&nbsp;&nbsp;%10 %11")
+         .arg(partForm.arg(GetFormattedStamp(ohlcValue.key)).arg(FOREGROUND_COLOR.name()))
+         .arg(partForm.arg(QStringLiteral("O:")).arg(FOREGROUND_COLOR.name()))
+         .arg(partForm.arg(ohlcValue.open, 0, 'g', prec).arg(color))
+         .arg(partForm.arg(QStringLiteral("H:")).arg(FOREGROUND_COLOR.name()))
+         .arg(partForm.arg(ohlcValue.high, 0, 'g', prec).arg(color))
+         .arg(partForm.arg(QStringLiteral("L:")).arg(FOREGROUND_COLOR.name()))
+         .arg(partForm.arg(ohlcValue.low, 0, 'g', prec).arg(color))
+         .arg(partForm.arg(QStringLiteral("C:")).arg(FOREGROUND_COLOR.name()))
+         .arg(partForm.arg(ohlcValue.close, 0, 'g', prec).arg(color))
+         .arg(partForm.arg(QStringLiteral("Volume:")).arg(FOREGROUND_COLOR.name()))
+         .arg(partForm.arg(volumeValue.value).arg(color));
+      ui_->ohlcLbl->setText(format);
    }
 
    if (isDraggingYAxis_)
@@ -930,19 +927,7 @@ void ChartWidget::InitializeCustomPlot()
    QBrush bgBrush(BACKGROUND_COLOR);
    ui_->customPlot->setBackground(bgBrush);
 
-   //add title
-   title_ = new QCPTextElement(ui_->customPlot);
-   title_->setTextColor(FOREGROUND_COLOR);
-   title_->setFont(QFont(QStringLiteral("sans"), 12));
-   ui_->customPlot->plotLayout()->insertRow(0);
-   ui_->customPlot->plotLayout()->addElement(0, 0, title_);
-   //add info
-   info_ = new QCPTextElement(ui_->customPlot);
-   info_->setTextColor(FOREGROUND_COLOR);
-   info_->setFont(QFont(QStringLiteral("sans"), 10));
-   info_->setTextFlags(Qt::AlignLeft | Qt::AlignVCenter);
-   ui_->customPlot->plotLayout()->insertRow(1);
-   ui_->customPlot->plotLayout()->addElement(1, 0, info_);
+   ui_->ohlcLbl->setFont(QFont(QStringLiteral("sans"), 10));
 
    // create candlestick chart:
    candlesticksChart_ = new QCPFinancial(ui_->customPlot->xAxis, ui_->customPlot->yAxis2);
@@ -967,7 +952,7 @@ void ChartWidget::InitializeCustomPlot()
 
    // create bottom axis rect for volume bar chart:
    volumeAxisRect_ = new QCPAxisRect(ui_->customPlot);
-   ui_->customPlot->plotLayout()->addElement(3, 0, volumeAxisRect_);
+   ui_->customPlot->plotLayout()->addElement(1, 0, volumeAxisRect_);
    volumeAxisRect_->setMaximumSize(QSize(QWIDGETSIZE_MAX, 100));
    volumeAxisRect_->axis(QCPAxis::atBottom)->setLayer(QStringLiteral("axes"));
    volumeAxisRect_->axis(QCPAxis::atBottom)->grid()->setLayer(QStringLiteral("grid"));
