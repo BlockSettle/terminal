@@ -3,7 +3,7 @@ Name "BlockSettle Terminal"
 # General Symbol Definitions
 !define COMPANY "BlockSettle AB"
 !define URL http://blocksettle.com/
-!define VERSION "0.13.5"
+!define VERSION "0.14.3"
 
 # MultiUser Symbol Definitions
 !define MULTIUSER_EXECUTIONLEVEL Highest
@@ -125,6 +125,7 @@ Section "install"
 #	${Endif}
 #	${If} ${SectionIsSelected} ${SEC_SIGN}
             File ..\..\build_terminal\Release\bin\Release\blocksettle_signer.exe
+            File ..\..\build_terminal\Release\bin\Release\bs_signer_gui.exe
 #	${Endif}
         File ..\..\DealerScripts\DealerAutoQuote.qml
         CreateShortcut "$DESKTOP\BlockSettle Terminal.lnk" $INSTDIR\blocksettle.exe
@@ -156,6 +157,7 @@ Section "Uninstall"
     !insertmacro DELETE_SMGROUP_SHORTCUT "BlockSettle Signer"
     Delete /REBOOTOK $INSTDIR\blocksettle.exe
     Delete /REBOOTOK $INSTDIR\blocksettle_signer.exe
+    Delete /REBOOTOK $INSTDIR\bs_signer_gui.exe
     Delete /REBOOTOK $INSTDIR\libzmq-v141-mt-4_3_1.dll
     Delete /REBOOTOK $INSTDIR\msvcp140.dll
     Delete /REBOOTOK $INSTDIR\vcruntime140.dll

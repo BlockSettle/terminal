@@ -13,9 +13,10 @@ ColumnLayout {
     Layout.topMargin: 2 * columnSpacing
     Layout.bottomMargin: 2 * columnSpacing
 
-    property bool acceptableInput: (!keyLinesIdentical &&
-                                   keyLine1.acceptableInput &&
-                                   keyLine2.acceptableInput)
+    property bool acceptableInput: privateRootKeyToCheck.length ? privateRootKey === privateRootKeyToCheck : acceptableLines
+    property bool acceptableLines: (!keyLinesIdentical &&
+                                    keyLine1.acceptableInput &&
+                                    keyLine2.acceptableInput)
 
     property alias line1LabelTxt: keyLine1Label.text
     property alias line2LabelTxt: keyLine2Label.text
@@ -35,27 +36,9 @@ ColumnLayout {
     property string identicalLinesErrorMsg: "Same Code Used in Line 1 and Line 2"
 
     property string  privateRootKey: keyLine1.text + "\n" + keyLine2.text
-
+    property string  privateRootKeyToCheck
     signal entryComplete()
 
-
-//    RowLayout {
-//        spacing: rowSpacing
-//        Layout.fillWidth: true
-//        Layout.leftMargin: 10
-//        Layout.rightMargin: 10
-//        Layout.preferredHeight: 0
-
-//        CustomLabel {
-//            id: sectionHeader
-//            Layout.leftMargin: inputLabelsWidth
-//            Layout.fillWidth: true
-//            //Layout.minimumWidth: inputLabelsWidth
-//            //Layout.preferredWidth: inputLabelsWidth
-//            //Layout.maximumWidth: inputLabelsWidth
-//            //text: qsTr(" ")
-//        }
-//    }
 
     RowLayout {
         spacing: rowSpacing
@@ -77,10 +60,11 @@ ColumnLayout {
             Layout.fillWidth: true
             selectByMouse: true
             activeFocusOnPress: true
+            font: fixedFont
             validator: EasyEncValidator {
-                            id: line1Validator;
-                            name: qsTr("Line 1")
-                        }
+                id: line1Validator;
+                name: qsTr("Line 1")
+            }
             onAcceptableInputChanged: {
                 if (acceptableInput && !keyLine2.acceptableInput) {
                     keyLine2.forceActiveFocus();
@@ -110,17 +94,21 @@ ColumnLayout {
 
         CustomTextInput {
             id: keyLine2
+            font: fixedFont
             Layout.fillWidth: true
-            validator: EasyEncValidator { id: line2Validator; name: qsTr("Line 2") }
+            validator: EasyEncValidator {
+                id: line2Validator
+                name: qsTr("Line 2")
+            }
             selectByMouse: true
             activeFocusOnPress: true
             onAcceptableInputChanged: {
-                if (acceptableInput && !keyLine1.acceptableInput) {
+                if (acceptableLines && !keyLine1.acceptableInput) {
                     keyLine1.forceActiveFocus();
                 }
             }
             onEditingFinished: {
-                if (acceptableInput && keyLine1.acceptableInput) {
+                if (acceptableLines && keyLine1.acceptableInput) {
                     entryComplete()
                 }
             }
@@ -132,7 +120,20 @@ ColumnLayout {
         Layout.leftMargin: 10
         Layout.rightMargin: 10
         CustomLabel {
+            id: lblResult
+            visible: acceptableLines && privateRootKeyToCheck.length
+            topPadding: 1
+            bottomPadding: 1
+            Layout.fillWidth: true
+            Layout.leftMargin: inputLabelsWidth + 5
+            text: privateRootKey === privateRootKeyToCheck ? qsTr("Key is correct") : qsTr("Wrong key")
+            color: privateRootKey === privateRootKeyToCheck ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
+        }
+
+        CustomLabel {
+            id: lblResultLine1
             opacity: keyLine1.validator.statusMsg === "" ? 0.0 : 1.0
+            visible: !acceptableLines || !privateRootKeyToCheck.length
             topPadding: 1
             bottomPadding: 1
             Layout.fillWidth: true
@@ -141,7 +142,9 @@ ColumnLayout {
             color: keyLine1.acceptableInput ? BSStyle.inputsValidColor : BSStyle.inputsInvalidColor
         }
         CustomLabel {
+            id: lblResultLine2
             opacity: keyLine2.validator.statusMsg === "" ? 0.0 : 1.0
+            visible: !acceptableLines || !privateRootKeyToCheck.length
             topPadding: 1
             bottomPadding: 1
             Layout.fillWidth: true

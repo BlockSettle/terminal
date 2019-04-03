@@ -104,7 +104,7 @@ CustomTitleDialogWindow {
                         ldrWoWalletDirDlg.active = true
                     }
                     ldrWoWalletDirDlg.startFromFolder = exportDir
-                    ldrWoWalletDirDlg.item.accepted.connect(function() {
+                    ldrWoWalletDirDlg.item.bsAccepted.connect(function() {
                         exportDir = ldrWoWalletDirDlg.dir
                     })
                     ldrWoWalletDirDlg.item.open();
@@ -143,7 +143,7 @@ CustomTitleDialogWindow {
                                    , qsTr("Watching-Only Wallet exported.")
                                    , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
 
-                        mb.accepted.connect(function(){ acceptAnimated() })
+                        mb.bsAccepted.connect(function(){ acceptAnimated() })
                     }
                     else {
                         JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo
@@ -154,7 +154,7 @@ CustomTitleDialogWindow {
                                            , qsTr("Watching-Only wallet exported.")
                                            , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
 
-                                mb.accepted.connect(function(){ acceptAnimated() })
+                                mb.bsAccepted.connect(function(){ acceptAnimated() })
                             })
                     }
                 }

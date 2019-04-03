@@ -27,8 +27,36 @@ CustomTitleDialogWindow {
     rejectable: true
     width: 500
 
-    function clickConfirmBtn(){
+    function clickConfirmBtn() {
         btnConfirm.clicked()
+    }
+
+    function init() {
+        if (walletInfo.encType !== NsWallet.Auth) {
+            return
+        }
+
+        btnConfirm.visible = false
+        btnCancel.anchors.horizontalCenter = barFooter.horizontalCenter
+
+        authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo)
+
+        authSign.succeeded.connect(function(encKey, password) {
+            passwordData.encType = NsWallet.Auth
+            passwordData.encKey = encKey
+            passwordData.binaryPassword = password
+            acceptAnimated()
+        });
+        authSign.failed.connect(function(errorText) {
+            var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
+                , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
+                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
+            mb.bsAccepted.connect(function() { rejectAnimated() })
+        })
+        authSign.userCancelled.connect(function() {
+            cancelledByUser = true
+            rejectAnimated()
+        })
     }
 
     Connections {
@@ -281,15 +309,20 @@ CustomTitleDialogWindow {
 
     cFooterItem: RowLayout {
         CustomButtonBar {
+            id: barFooter
             Layout.fillWidth: true
 
             CustomButton {
+                id: btnCancel
                 text: qsTr("Cancel")
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
                     cancelledByUser = true
                     rejectAnimated()
+                    if (authSign) {
+                        authSign.cancel()
+                    }
                 }
             }
 
@@ -306,13 +339,6 @@ CustomTitleDialogWindow {
                         acceptAnimated()
                     }
                     else if (walletInfo.encType === NsWallet.Auth) {
-                        JsHelper.requesteIdAuth(AutheIDClient.SignWallet
-                                                , walletInfo
-                                                , function(pd){
-                                                    passwordData = pd
-                                                    acceptAnimated()
-                                                })
-
                     }
                     else {
                         passwordData.encType = NsWallet.Unencrypted

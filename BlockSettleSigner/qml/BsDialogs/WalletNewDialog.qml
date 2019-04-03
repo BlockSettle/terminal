@@ -27,7 +27,7 @@ CustomTitleDialogWindow {
 
         CustomLabelValue{
             Layout.fillWidth: true
-            text: qsTr("For guidance, please consult the <a href=\"https://autheid.com/\">Getting Started Guide</a>")
+            text: qsTr("For guidance, please consult the <a href=\"https://pubb.blocksettle.com/PDF/BlockSettle%20Getting%20Started.pdf\">Getting Started Guide</a>")
         }
     }
 
@@ -40,7 +40,7 @@ CustomTitleDialogWindow {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    onClicked: root.close();
+                    onClicked: rejectAnimated();
                 }
             }
 

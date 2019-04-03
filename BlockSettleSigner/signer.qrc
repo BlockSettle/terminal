@@ -64,5 +64,7 @@
         <file>qml/BsControls/BSResultBox.qml</file>
         <file>qml/BsDialogs/TxSignDialog.qml</file>
         <file>qml/BsDialogs/TerminalKeysDialog.qml</file>
+        <file>qml/js/qmlDialogs.js</file>
+        <file>qml/mainLight.qml</file>
     </qresource>
 </RCC>

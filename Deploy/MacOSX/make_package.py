@@ -52,7 +52,7 @@ def check_signature(appPath):
 def sign_apps(sourcesRoot):
    buildDir = os.path.abspath(os.path.join(sourcesRoot, 'build_terminal', 'Release', 'bin'))
 
-   apps = ['Blocksettle Terminal.app', 'Blocksettle Signer.app']
+   apps = ['Blocksettle Terminal.app', 'Blocksettle Signer GUI.app', 'blocksettle_signer']
 
    for appName in apps:
       appPath = os.path.join(buildDir, appName)

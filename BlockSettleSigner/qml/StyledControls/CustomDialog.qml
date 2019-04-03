@@ -13,16 +13,21 @@ CustomDialogWindow {
     property bool abortConfirmation: false
     property int abortBoxType
 
+    ///////////////////
     // suggested to use these functions to close dialog popup with animation
-    //
+    signal bsAccepted()
+    signal bsRejected()
+
     function acceptAnimated(){
-        closeTimer.acceptRet = true
+        bsAccepted()
+        //closeTimer.acceptRet = true
         closeTimer.start()
         closeAnimation.start()
     }
 
     function rejectAnimated(){
-        closeTimer.acceptRet = false
+        bsRejected()
+        //closeTimer.acceptRet = false
         closeTimer.start()
         closeAnimation.start()
     }
@@ -41,11 +46,47 @@ CustomDialogWindow {
 
     signal enterPressed()
 
+    ////////////////////////////
+    /// Dialogs chain management
+
+    // if isNextChainDialogSet then listen next dialog for dialogsChainFinished
+    property bool isNextChainDialogSet: false
+
+    // when some dialog call second one we should listen second dialog for finished signal
+    function setNextChainDialog(dialog) {
+        isNextChainDialogSet = true
+        dialog.dialogsChainFinished.connect(function(){ dialogsChainFinished() })
+    }
+
+    // emitted if this dialog finished
+    signal dialogFinished()
+
+    // emitted if this is signle dialog and it finished or if dioalgs chain finished
+    signal dialogsChainFinished()
+
     Component.onCompleted: {
         cContentItem.parent = customContentContainer
         cHeaderItem.parent = customHeaderContainer
         cFooterItem.parent = customFooterContainer
+//        bsAccepted.connect(function(){
+//            console.log("closeChainTimer started")
+//            closeChainTimer.start() })
+//        bsRejected.connect(function(){
+//            console.log("closeChainTimer started")
+//            closeChainTimer.start() })
+
     }
+
+//    Timer {
+//        id: closeChainTimer
+//        interval: 1250
+//        running: false
+//        repeat: false
+//        onTriggered: {
+//            console.log("closeChainTimer onTriggered")
+//            if (!isNextChainDialogSet) dialogsChainFinished()
+//        }
+//    }
 
 
     header: Item{}
@@ -63,7 +104,13 @@ CustomDialogWindow {
         from: 0; to: 1
     }
 
-    onAboutToHide: closeAnimation
+    //onAboutToHide: closeAnimation
+    onBsAccepted: closeAnimation
+    onBsRejected: closeAnimation
+
+    onDialogsChainFinished: {            console.log("if (!isNextChainDialogSet) dialogsChainFinished()")
+}
+
     PropertyAnimation {
         id: closeAnimation
         target: root
@@ -75,9 +122,14 @@ CustomDialogWindow {
     Timer {
         // used to close dialog when close animation completed
         id: closeTimer
-        property bool acceptRet
+        //property bool acceptRet
         interval: animationDuration
-        onTriggered: acceptRet? accept() : reject()
+        //onTriggered: acceptRet? accept() : reject()
+        onTriggered: {
+            console.log("closeTimer onTriggered ")
+            if (!isNextChainDialogSet) dialogsChainFinished()
+            reject()
+        }
     }
 
     contentItem: FocusScope {
