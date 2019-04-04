@@ -663,7 +663,6 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       bip151Connection_->bip150HandshakeRekey();
       bip150HandshakeCompleted_ = true;
       outKeyTimePoint_ = chrono::system_clock::now();
-      emit bip15XCompleted();
       if (cbCompleted_) {
          cbCompleted_();
       }

@@ -5,7 +5,6 @@
 #include <functional>
 #include <mutex>
 #include <thread>
-#include <QObject>
 #include <spdlog/spdlog.h>
 #include "ArmoryServersProvider.h"
 #include "AuthorizedPeers.h"
@@ -15,9 +14,8 @@
 
 #define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
-class ZmqBIP15XDataConnection : public QObject, public ZmqDataConnection
+class ZmqBIP15XDataConnection : public ZmqDataConnection
 {
-   Q_OBJECT
 public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
       , const bool& ephemeralPeers = false, bool monitored = false);
@@ -36,9 +34,6 @@ public:
    bool closeConnection() override;
 
    SecureBinaryData getOwnPubKey() const;
-
-signals:
-   void bip15XCompleted(); // BIP 150 & 151 handshakes completed.
 
 protected:
    bool startBIP151Handshake(const std::function<void()> &cbCompleted);
