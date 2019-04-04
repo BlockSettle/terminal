@@ -37,7 +37,7 @@ inline QString getSignerDialogPath(DialogType signerDialog) {
    }
 }
 
-// List of callable Signer dialogs
+// List of signer run modes
 enum class RunMode {
    fullgui,
    lightgui,
