@@ -34,7 +34,6 @@ public:
    // Overridden functions from ZmqDataConnection.
    bool send(const std::string& data) override;
    bool closeConnection() override;
-   bool startBIP151Handshake(const std::function<void()> &cbCompleted = nullptr);
 
    SecureBinaryData getOwnPubKey() const;
 
@@ -42,12 +41,14 @@ signals:
    void bip15XCompleted(); // BIP 150 & 151 handshakes completed.
 
 protected:
+   bool startBIP151Handshake(const std::function<void()> &cbCompleted);
    bool handshakeCompleted() {
       return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
    }
 
    // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
+   void notifyOnConnected() override;
    ZmqContext::sock_ptr CreateDataSocket() override;
    bool recvData() override;
    void sendHeartbeat();

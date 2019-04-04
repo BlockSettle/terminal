@@ -220,6 +220,13 @@ bool ZmqBIP15XDataConnection::send(const string& data)
    return true;
 }
 
+void ZmqBIP15XDataConnection::notifyOnConnected()
+{
+   startBIP151Handshake([this] {
+      ZmqDataConnection::notifyOnConnected();
+   });
+}
+
 void ZmqBIP15XDataConnection::sendHeartbeat()
 {
    if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
