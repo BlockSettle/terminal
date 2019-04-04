@@ -90,6 +90,7 @@ void HeadlessAppObj::start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
+   ready_ = true;
    onlineProcessing();
    if (cbReady_) {
       cbReady_(true);
@@ -153,6 +154,9 @@ void HeadlessAppObj::stopInterface()
 
 void HeadlessAppObj::onlineProcessing()
 {
+   if (!ready_) {
+      return;
+   }
    if (connection_) {
       logger_->debug("[{}] already online", __func__);
       return;

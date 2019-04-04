@@ -26,10 +26,7 @@ public:
 
    void OnConnected() override {
       logger_->debug("[SignerInterfaceListener] connected");
-      connection_->startBIP151Handshake([this] {
-         logger_->debug("[SignerInterfaceListener] BIP151 handshake complete");
-         send(signer::HeadlessReadyType, "");
-      });
+      send(signer::HeadlessReadyType, "");
    }
 
    void OnDisconnected() override {
