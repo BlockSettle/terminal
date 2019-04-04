@@ -53,6 +53,30 @@ Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
 
+// redirect qDebug() to stdout
+// stdout redirected to parent process
+void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QByteArray localMsg = msg.toLocal8Bit();
+    switch (type) {
+    case QtDebugMsg:
+        fprintf(stdout, "GUI QML Debug: %s\r\n", localMsg.constData());
+        break;
+    case QtInfoMsg:
+        fprintf(stdout, "GUI QML Info: %s\r\n", localMsg.constData());
+        break;
+    case QtWarningMsg:
+        fprintf(stderr, "GUI QML Warning: %s\r\n", localMsg.constData());
+        break;
+    case QtCriticalMsg:
+        fprintf(stderr, "GUI QML Critical: %s\r\n", localMsg.constData());
+        break;
+    case QtFatalMsg:
+        fprintf(stderr, "GUI QML Fatal: %s\r\n", localMsg.constData());
+       break;
+    }
+}
+
 static int QMLApp(int argc, char **argv)
 {
    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -75,6 +99,19 @@ static int QMLApp(int argc, char **argv)
    if (!settings->loadSettings(app.arguments())) {
       return EXIT_FAILURE;
    }
+
+#ifndef NDEBUG
+   if (settings->runMode() != bs::signer::ui::RunMode::fullgui) {
+      qInstallMessageHandler(qMessageHandler);
+
+#ifdef Q_OS_WIN
+      // set zero buffer for stdout and stderr
+      setvbuf(stdout, NULL, _IONBF, 0 );
+      setvbuf(stderr, NULL, _IONBF, 0 );
+#endif
+   }
+#endif
+
    std::shared_ptr<spdlog::logger> logger;
    try {
       logger = spdlog::basic_logger_mt("app_logger"
