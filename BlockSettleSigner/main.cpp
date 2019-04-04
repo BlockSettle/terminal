@@ -18,6 +18,31 @@ Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
 
+
+// redirect qDebug() to stdout
+// stdout redirected to parent process
+void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QByteArray localMsg = msg.toLocal8Bit();
+    switch (type) {
+    case QtDebugMsg:
+        fprintf(stdout, "Headless Debug: %s\r\n", localMsg.constData());
+        break;
+    case QtInfoMsg:
+        fprintf(stdout, "Headless Info: %s\r\n", localMsg.constData());
+        break;
+    case QtWarningMsg:
+        fprintf(stderr, "Headless Warning: %s\r\n", localMsg.constData());
+        break;
+    case QtCriticalMsg:
+        fprintf(stderr, "Headless Critical: %s\r\n", localMsg.constData());
+        break;
+    case QtFatalMsg:
+        fprintf(stderr, "Headless Fatal: %s\r\n", localMsg.constData());
+       break;
+    }
+}
+
 static int HeadlessApp(int argc, char **argv)
 {
    QCoreApplication app(argc, argv);
@@ -44,6 +69,16 @@ static int HeadlessApp(int argc, char **argv)
       logMgr.add(bs::LogConfig{ settings->logFile(), "%D %H:%M:%S.%e (%t)[%L]: %v", "" });
       logger = logMgr.logger();
    }
+
+#ifndef NDEBUG
+   qInstallMessageHandler(qMessageHandler);
+
+#ifdef Q_OS_WIN
+   // set zero buffer for stdout and stderr
+   setvbuf(stdout, NULL, _IONBF, 0 );
+   setvbuf(stderr, NULL, _IONBF, 0 );
+#endif
+#endif
 
    logger->info("Starting BS Signer...");
    try {

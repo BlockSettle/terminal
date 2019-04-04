@@ -20,8 +20,8 @@ CustomTitleDialogWindow {
     property string rootName
     property bool   backup: chkBackup.checked
 
-    implicitWidth: 400
-    implicitHeight: 250
+    width: 400
+    height: 250
     focus: true
     title: qsTr("Delete Wallet")
     rejectable: true
@@ -99,5 +99,4 @@ CustomTitleDialogWindow {
             }
         }
     }
-
 }

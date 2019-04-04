@@ -12,6 +12,7 @@
 #include <QFile>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QDebug>
 
 #include <spdlog/spdlog.h>
 
@@ -141,7 +142,14 @@ void HeadlessAppObj::startInterface()
    }
    logger_->debug("[{}] process path: {} {}", __func__
       , guiPath.toStdString(), args.join(QLatin1Char(' ')).toStdString());
+
    guiProcess_ = std::make_shared<QProcess>();
+#ifndef NDEBUG
+   guiProcess_->setProcessChannelMode(QProcess::MergedChannels);
+   connect(guiProcess_.get(), &QProcess::readyReadStandardOutput, this, [this](){
+      qDebug().noquote() << guiProcess_->readAllStandardOutput();
+   });
+#endif
    guiProcess_->start(guiPath, args);
 }
 

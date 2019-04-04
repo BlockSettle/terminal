@@ -97,10 +97,6 @@ ApplicationWindow {
         }
     }
 
-    WalletDeleteDialog {
-        visible: true
-    }
-
     footer: TabBar {
         id: tabBar
         currentIndex: swipeView.currentIndex
