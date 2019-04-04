@@ -39,7 +39,7 @@ namespace bs {
 
          std::shared_ptr<SettlementAddressEntry> newAddress(const BinaryData &settlementId
             , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey
-            , bool persistent = true, const std::string &comment = {});
+            , const std::string &comment = {}, bool persistent = true);
          bool containsAddress(const bs::Address &addr) override;
 
          wallet::Type type() const override { return wallet::Type::Settlement; }

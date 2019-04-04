@@ -41,13 +41,6 @@ void hd::Leaf::init(
    accountPtr_ = accPtr;
    db_ = new LMDB(accountPtr_->getDbEnv().get(), BS_WALLET_DBNAME);
    walletPtr_ = walletPtr;
-
-   auto lbd = [walletPtr](void)->std::shared_ptr<ResolverFeed>
-   {
-      return std::make_shared<ResolverFeed_AssetWalletSingle>(walletPtr);
-   };
-
-   getResolverLambda_ = lbd;
 }
 
 bool hd::Leaf::copyTo(std::shared_ptr<hd::Leaf> &leaf) const
@@ -133,7 +126,7 @@ std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAddr(const BinaryData 
    if (iter == addrMap.end())
       return nullptr;
 
-   auto assetPtr = accountPtr_->getAssetForID(iter->second.first);
+   auto assetPtr = walletPtr_->getAssetForID(iter->second.first);
    auto addrPtr = AddressEntry::instantiate(assetPtr, iter->second.second);
    return addrPtr;
 }
@@ -149,7 +142,8 @@ std::shared_ptr<hd::Node> hd::Leaf::getNodeForAddr(const bs::Address &addr) cons
    if (iter == addrMap.end())
       return nullptr;
 
-   auto assetPtr = accountPtr_->getAssetForID(iter->second.first);
+   auto assetPtr = walletPtr_->getAssetForID(iter->second.first);
+   throw std::runtime_error("deprecated 1");
 
    //TODO: instantiate hd::Node from asset entry
    return nullptr;
@@ -287,7 +281,7 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
       auto nodeid = brr.get_uint32_t(BE);
       auto indexid = brr.get_uint32_t(BE);
 
-      bs::hd::Path addrPath = path_;
+      bs::hd::Path addrPath;
       addrPath.append(nodeid);
       addrPath.append(indexid);
 
@@ -405,7 +399,7 @@ std::pair<BinaryData, bs::hd::Path> hd::Leaf::deserialize(const BinaryData &ser)
 
 std::shared_ptr<ResolverFeed> hd::Leaf::getResolver() const
 {
-   return getResolverLambda_();
+   return std::make_shared<ResolverFeed_AssetWalletSingle>(walletPtr_);
 }
 
 bool hd::Leaf::isWatchingOnly() const
@@ -504,6 +498,12 @@ void hd::Leaf::shutdown()
    walletPtr_ = nullptr;
    accountPtr_ = nullptr;
 }
+
+WalletEncryptionLock hd::Leaf::lockForEncryption(const SecureBinaryData& passphrase)
+{
+   return WalletEncryptionLock(walletPtr_, passphrase);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

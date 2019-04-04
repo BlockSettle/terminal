@@ -116,7 +116,7 @@ void PlainWallet::writeDB()
       }
       dbMeta->close();
 
-      db_ = std::make_shared<LMDB>(dbEnv_.get(), masterID.toBinStr());
+      db_ = std::make_shared<LMDB>(dbEnv_.get(), BS_WALLET_DBNAME);
 
       {
          BinaryWriter bwKey;
@@ -171,77 +171,7 @@ void PlainWallet::writeDB()
 
 void PlainWallet::openDB()
 {
-   BinaryData masterID;
-   unsigned int dbCount = 0;
-
-   auto dbMeta = std::make_shared<LMDB>();
-   dbMeta->open(dbEnv_.get(), WALLETMETA_DBNAME);
-   {
-      LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadOnly);
-      {  //masterID
-         BinaryWriter bwKey;
-         bwKey.put_uint32_t(MASTERID_KEY);
-
-         try {
-            masterID = getDataRefForKey(dbMeta, bwKey.getData());
-            walletId_ = masterID.toBinStr();
-         }
-         catch (NoEntryInWalletException&) {
-            throw std::runtime_error("missing masterID entry");
-         }
-      }
-
-      auto dbIter = dbMeta->begin();
-
-      BinaryWriter bwKey;
-      bwKey.put_uint8_t(WALLETMETA_PREFIX);
-      CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
-
-      dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
-
-      while (dbIter.isValid()) {
-         auto iterkey = dbIter.key();
-         auto itervalue = dbIter.value();
-
-         BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
-         BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
-
-         //check value's advertized size is packet size and strip it
-         BinaryRefReader brrVal(valueBDR);
-         const auto valSize = brrVal.get_var_int();
-         const auto remSize = brrVal.getSizeRemaining();
-         if (valSize != remSize) {
-            throw WalletException("entry val size mismatch: " + std::to_string(valSize) + " vs " + std::to_string(remSize));
-         }
-         try {
-            auto val = brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining());
-            BinaryRefReader brrKey(keyBDR);
-            auto prefix = brrKey.get_uint8_t();
-            if (prefix != WALLETMETA_PREFIX) {
-               throw WalletException("invalid wallet meta prefix");
-            }
-            std::string dbname((char*)brrKey.getCurrPtr(), brrKey.getSizeRemaining());
-            {
-               BinaryRefReader brrVal(val);
-               auto wltType = (WalletMetaType)brrVal.get_uint8_t();
-               if (wltType != WALLET_PREFIX_BYTE) {
-                  throw WalletException("invalid plain wallet meta type");
-               }
-            }
-            walletId_ = brrKey.get_BinaryData((uint32_t)brrKey.getSizeRemaining()).toBinStr();
-
-            dbCount++;
-         }
-         catch (const std::exception &e) {
-            throw WalletException(std::string("metadata reading error: ") + e.what());
-         }
-
-         dbIter.advance();
-      }
-   }
-   dbMeta->close();
-
-   db_ = std::make_shared<LMDB>(dbEnv_.get(), masterID.toBinStr());
+   db_ = std::make_shared<LMDB>(dbEnv_.get(), BS_WALLET_DBNAME);
 }
 
 void PlainWallet::readFromDB()

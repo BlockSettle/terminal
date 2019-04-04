@@ -52,7 +52,7 @@ std::vector<std::shared_ptr<bs::core::Wallet>> hd::Group::getAllLeaves() const
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem)
 {
-   //leafs are always hardened
+   //leaves are always hardened
    elem |= 0x80000000;
    if (getLeaf(elem) != nullptr) {
       return nullptr;
@@ -209,15 +209,11 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
    accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeInternal));
 
    //address types
-   accTypePtr->setAddressTypes({
-      AddressEntryType_P2PKH, AddressEntryType_P2WPKH, 
-      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)
-      });
-
+   accTypePtr->setAddressTypes(getAddressTypeSet());
    accTypePtr->setDefaultAddressType(AddressEntryType_P2WPKH);
 
    //address lookup
-   accTypePtr->setAddressLookup(DERIVATION_LOOKUP);
+   accTypePtr->setAddressLookup(/*DERIVATION_LOOKUP*/ 10);
 
    auto accID = walletPtr_->createBIP32Account(nullptr, pathInt, accTypePtr);
    leaf->init(walletPtr_, accID, path);
@@ -266,6 +262,13 @@ void hd::Group::copyLeaves(hd::Group* from)
 
       addLeaf(newLeaf);
    }
+}
+
+std::set<AddressEntryType> hd::Group::getAddressTypeSet(void) const
+{
+   return { AddressEntryType_P2PKH, AddressEntryType_P2WPKH,
+      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)
+      };
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -337,10 +340,19 @@ void hd::AuthGroup::shutdown()
    hd::Group::shutdown();
 }
 
+std::set<AddressEntryType> hd::AuthGroup::getAddressTypeSet(void) const
+{
+   return { AddressEntryType_P2WPKH };
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::shared_ptr<hd::Leaf> hd::CCGroup::newLeaf() const
 {
    return std::make_shared<hd::CCLeaf>(netType_, logger_);
+}
+
+std::set<AddressEntryType> hd::CCGroup::getAddressTypeSet(void) const
+{
+   return { AddressEntryType_P2WPKH };
 }

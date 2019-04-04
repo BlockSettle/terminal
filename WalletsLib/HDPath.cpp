@@ -53,10 +53,28 @@ void hd::Path::append(Elem elem)
 
 hd::Path::Elem hd::Path::keyToElem(const std::string &key)
 {
+   /***
+   This is weird af.
+   The length restriction is off. It should just fail instead of 
+   silently trimming. The size limit does not allow for the harderning
+   flag (') with 4 character strings.
+   Latin ASCII characters cannot flag the hardening bit but that seems 
+   to be a lucky oversight rather than intentional design.
+
+   I recommend against using this. If you want conversions of strings 
+   into BIP32 nodes, use a hash method to 4 bytes values rather than
+   ASCII to binary conversions.
+
+   Disabling this for now until it is reimplemented with a proper 
+   hash function.
+   ***/
+
+   throw std::runtime_error("hd::Path::keyToElem disabled");
+   
    hd::Path::Elem result = 0;
    const std::string &str = (key.length() > 4) ? key.substr(0, 4) : key;
-   if (str.empty()) {
-      return result;
+   if (str.empty() || str.length() > 4) {
+      throw std::runtime_error("invalid BIP32 string key");
    }
    for (size_t i = 0; i < str.length(); i++) {
       result |= static_cast<hd::Path::Elem>(str[str.length() - 1 - i]) << (i * 8);
@@ -71,12 +89,23 @@ std::string hd::Path::elemToKey(hd::Path::Elem elem)
    if (hardened)
       elem &= ~0x80000000;
    std::string result;
-   for (size_t i = 4; i > 0; i--) {
+
+   /*** 
+   isValidPathElem does not tolerate alphabetical characters, yet path to index conversion
+   generates alphabetical nodes. Path to index conversion then back to path from index is 
+   at least used to pass addresses from CoreHDLeaf to SyncHDLeaf. Therefor this method is
+   not just a pretty printer for BIP32 paths, hence this mismatch in the codec makes no 
+   sense and has been disabled. If you want pretty printing, have an extra method for that
+   and name it accordingly!
+   ***/
+
+/*   for (size_t i = 4; i > 0; i--) {
       unsigned char c = (elem >> (8 * (i - 1))) & 0xff;
       if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')) || ((c >= '0') && (c <= '9'))) {
          result.append(1, c);
       }
-   }
+   }*/
+
    if (result.empty()) {
       result = std::to_string(elem);
    }
@@ -110,9 +139,9 @@ static bool isValidPathElem(const std::string &elem)
    if (elem.empty()) {
       return false;
    }
-   if (elem == "m") {
+   /*if (elem == "m") {
       return true;
-   }
+   }*/
    for (const auto &c : elem) {
       if ((c != '\'') && ((c > '9') || (c < '0'))) {
          return false;
@@ -137,9 +166,21 @@ hd::Path hd::Path::fromString(const std::string &s)
    }
 
    Path result;
-   for (const auto &elem : stringVec) {
-      if ((elem == "m") || !isValidPathElem(elem)) {
+   for (unsigned i = 0; i < stringVec.size(); i++) 
+   {
+      auto elem = stringVec[i];
+      if ((elem == "m") && i == 0)
          continue;
+
+      if (!isValidPathElem(elem)) 
+      {
+         /***
+         BIP32 path codec is crucial to wallet consistency, it should 
+         abort on failures, or at least fail gracefully. Before this 
+         throw, it would just continue on errors. This isn't acceptable 
+         behavior.
+         ***/
+         throw std::runtime_error("invalid element in BIP32 path");
       }
       auto pe = static_cast<Elem>(std::stoul(elem));
       if (elem.find("'") != std::string::npos)

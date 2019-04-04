@@ -18,6 +18,8 @@
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
 
+#define BS_WALLET_DBNAME "bs_wallet_name"
+
 namespace spdlog {
    class logger;
 }
@@ -255,7 +257,9 @@ namespace bs {
          virtual bool setTransactionComment(const BinaryData &txHash, const std::string &comment);
          virtual std::vector<std::pair<BinaryData, std::string>> getAllTxComments() const;
 
-         virtual std::vector<bs::Address> getUsedAddressList() const { return usedAddresses_; }
+         virtual std::vector<bs::Address> getUsedAddressList() const { 
+            return usedAddresses_; 
+         }
          virtual std::vector<bs::Address> getPooledAddressList() const { return {}; }
          virtual std::vector<bs::Address> getExtAddressList() const { return usedAddresses_; }
          virtual std::vector<bs::Address> getIntAddressList() const { return usedAddresses_; }

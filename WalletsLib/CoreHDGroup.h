@@ -44,6 +44,7 @@ namespace bs {
 
             virtual void setChainCode(const BinaryData &) {}
             virtual void shutdown(void);
+            virtual std::set<AddressEntryType> getAddressTypeSet(void) const;
 
          protected:
             bool needsCommit() const { return needsCommit_; }
@@ -74,7 +75,6 @@ namespace bs {
             void deserialize(BinaryDataRef value);
          };
 
-
          class AuthGroup : public Group
          {
          public:
@@ -87,6 +87,7 @@ namespace bs {
 
             void setChainCode(const BinaryData &) override;
             void shutdown(void) override;
+            std::set<AddressEntryType> getAddressTypeSet(void) const override;
 
          protected:
             bool addLeaf(const std::shared_ptr<Leaf> &) override;
@@ -108,6 +109,7 @@ namespace bs {
                : Group(walletPtr, path, netType, logger) {}
 
             wallet::Type type() const override { return wallet::Type::ColorCoin; }
+            std::set<AddressEntryType> getAddressTypeSet(void) const override;
 
          protected:
             std::shared_ptr<Leaf> newLeaf() const override;

@@ -7,8 +7,6 @@
 #include "CoreHDNode.h"
 #include "Accounts.h"
 
-#define BS_WALLET_DBNAME "bs_wallet_name"
-
 namespace spdlog {
    class logger;
 }
@@ -83,6 +81,7 @@ namespace bs {
 
             void shutdown(void);
             std::string getFilename(void) const;
+            WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
 
          protected:
             void reset();
@@ -119,7 +118,6 @@ namespace bs {
          private:
             std::shared_ptr<AssetWallet_Single> walletPtr_;
             std::shared_ptr<::AddressAccount> accountPtr_;
-            std::function<std::shared_ptr<ResolverFeed>(void)> getResolverLambda_;
 
          private:
             bs::Address newAddress(AddressEntryType aet);
