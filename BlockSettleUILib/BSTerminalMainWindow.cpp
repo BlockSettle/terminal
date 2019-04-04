@@ -221,7 +221,6 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
-      logMgr_->logger()->debug("[GetNetworkSettingsFromPuB] received reply of size {}", data.size());
       if (data.empty()) {
          showError(title, tr("Empty reply from BlockSettle server"));
       }
