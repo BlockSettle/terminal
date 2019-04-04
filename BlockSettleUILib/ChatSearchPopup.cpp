@@ -7,6 +7,7 @@
 
 ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
    QWidget(parent),
+   userID_(),
    ui_(new Ui::ChatSearchPopup)
 {
    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
@@ -27,14 +28,23 @@ ChatSearchPopup::~ChatSearchPopup()
    delete ui_;
 }
 
-void ChatSearchPopup::setText(const QString &text)
+void ChatSearchPopup::setUserID(const QString &userID)
 {
-   ui_->chatSearchPopupLabel->setText(text);
+   userID_ = userID;
+   
+   if (userID_.isEmpty()) {
+      ui_->chatSearchPopupLabel->setText(tr("User not found"));
+   }
+   else {
+      ui_->chatSearchPopupLabel->setText(userID_);
+   }
 }
 
 void ChatSearchPopup::showMenu(const QPoint &pos)
 {
-   searchPopupMenu_->exec(mapToGlobal(pos));
+   if (!userID_.isEmpty()) {
+      searchPopupMenu_->exec(mapToGlobal(pos));
+   }
 }
 
 void ChatSearchPopup::setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY)
