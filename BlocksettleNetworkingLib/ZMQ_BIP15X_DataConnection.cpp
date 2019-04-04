@@ -220,6 +220,13 @@ bool ZmqBIP15XDataConnection::send(const string& data)
    return true;
 }
 
+void ZmqBIP15XDataConnection::notifyOnConnected()
+{
+   startBIP151Handshake([this] {
+      ZmqDataConnection::notifyOnConnected();
+   });
+}
+
 void ZmqBIP15XDataConnection::sendHeartbeat()
 {
    if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
@@ -656,7 +663,6 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       bip151Connection_->bip150HandshakeRekey();
       bip150HandshakeCompleted_ = true;
       outKeyTimePoint_ = chrono::system_clock::now();
-      emit bip15XCompleted();
       if (cbCompleted_) {
          cbCompleted_();
       }
