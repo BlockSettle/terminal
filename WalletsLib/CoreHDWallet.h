@@ -56,6 +56,7 @@ namespace bs {
             bool isWatchingOnly() const;
             bool isPrimary() const;
             NetworkType networkType() const { return netType_; }
+            void setExtOnly(void);
 
             std::shared_ptr<Group> getGroup(bs::hd::CoinType ct) const;
             std::shared_ptr<Group> createGroup(bs::hd::CoinType ct);
@@ -90,6 +91,7 @@ namespace bs {
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>              groups_;
             mutable std::map<std::string, std::shared_ptr<bs::core::Wallet>>  leaves_;
             std::shared_ptr<spdlog::logger>     logger_;
+            bool extOnlyFlag_ = false;
 
             std::shared_ptr<AssetWallet_Single> walletPtr_;
             

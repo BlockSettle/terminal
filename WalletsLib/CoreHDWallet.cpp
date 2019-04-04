@@ -157,7 +157,7 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
 
    default:
       result = std::make_shared<Group>(
-         walletPtr_, path, netType_, logger_);
+         walletPtr_, path, netType_, extOnlyFlag_, logger_);
       break;
    }
    addGroup(result);
@@ -265,6 +265,16 @@ void hd::Wallet::initializeDB()
       bwDesc.put_BinaryData(walletDescriptionData);
       putDataToDB(bwKey.getData(), bwDesc.getData());
    }
+
+   {  //ext only flag
+      BinaryWriter bwKey;
+      bwKey.put_uint32_t(WALLET_EXTONLY_KEY);
+
+      BinaryWriter bwDesc;
+      bwDesc.put_uint8_t(1); //flag size
+      bwDesc.put_uint8_t(extOnlyFlag_);
+      putDataToDB(bwKey.getData(), bwDesc.getData());
+   }
 }
 
 void hd::Wallet::readFromDB()
@@ -279,6 +289,7 @@ void hd::Wallet::readFromDB()
 
       name_ = getDataRefForKey(WALLETNAME_KEY).toBinStr();
       desc_ = getDataRefForKey(WALLETDESCRIPTION_KEY).toBinStr();
+      extOnlyFlag_ = (bool)*getDataRefForKey(WALLET_EXTONLY_KEY).getPtr();
    }
 
    {  // groups
@@ -403,7 +414,7 @@ std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly() const
    {
       auto newGroup = std::make_shared<hd::Group>(
          woCopy->walletPtr_,
-         groupPair.second->path(), netType_,
+         groupPair.second->path(), netType_, extOnlyFlag_,
          logger_);
 
       newGroup->copyLeaves(groupPair.second.get());
@@ -479,4 +490,28 @@ void hd::Wallet::copyToFile(const std::string& filename)
 WalletEncryptionLock hd::Wallet::lockForEncryption(const SecureBinaryData& passphrase)
 {
    return WalletEncryptionLock(walletPtr_, passphrase);
+}
+
+void hd::Wallet::setExtOnly()
+{
+   //no point going further if the flag is already set
+   if (extOnlyFlag_)
+      return;
+
+   //cannot flag for ext only if the wallet already has a structure
+   if (groups_.size() > 0 || leaves_.size() > 0)
+      throw WalletException("cannot flag initialized wallet for ext only");
+   
+   extOnlyFlag_ = true;
+   
+   //update flag on disk
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+
+   BinaryWriter bwKey;
+   bwKey.put_uint32_t(WALLET_EXTONLY_KEY);
+
+   BinaryWriter bwDesc;
+   bwDesc.put_uint8_t(1); //flag size
+   bwDesc.put_uint8_t(extOnlyFlag_);
+   putDataToDB(bwKey.getData(), bwDesc.getData());
 }

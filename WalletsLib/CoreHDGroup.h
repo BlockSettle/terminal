@@ -22,7 +22,7 @@ namespace bs {
 
          public:
             Group(std::shared_ptr<AssetWallet_Single>, const bs::hd::Path &path, 
-               NetworkType netType, 
+               NetworkType netType, bool isExtOnly, 
                const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             size_t getNumLeaves() const { return leaves_.size(); }
@@ -57,6 +57,7 @@ namespace bs {
             std::shared_ptr<spdlog::logger>  logger_;
             bool        needsCommit_ = true;
             NetworkType netType_;
+            bool isExtOnly_ = false;
             std::unordered_map<bs::hd::Path::Elem, std::shared_ptr<hd::Leaf>> leaves_;
 
             std::shared_ptr<AssetWallet_Single> walletPtr_;
@@ -106,7 +107,8 @@ namespace bs {
             CCGroup(std::shared_ptr<AssetWallet_Single> walletPtr,
                const bs::hd::Path &path, NetworkType netType,
                const std::shared_ptr<spdlog::logger> &logger)
-               : Group(walletPtr, path, netType, logger) {}
+               : Group(walletPtr, path, netType, true, logger) 
+            {} //CC groups are always ext only
 
             wallet::Type type() const override { return wallet::Type::ColorCoin; }
             std::set<AddressEntryType> getAddressTypeSet(void) const override;

@@ -8,10 +8,11 @@ using namespace bs::core;
 
 
 hd::Group::Group(std::shared_ptr<AssetWallet_Single> walletPtr, 
-   const bs::hd::Path &path, NetworkType netType,
+   const bs::hd::Path &path, NetworkType netType, bool isExtOnly,
    const std::shared_ptr<spdlog::logger> &logger)
    : walletPtr_(walletPtr), path_(path)
-   , netType_(netType), logger_(logger)
+   , netType_(netType), isExtOnly_(isExtOnly)
+   , logger_(logger)
 {}
 
 std::shared_ptr<hd::Leaf> hd::Group::getLeaf(bs::hd::Path::Elem elem) const
@@ -125,6 +126,7 @@ BinaryData hd::Group::serialize() const
    BinaryData path(path_.toString());
    bw.put_var_int(path.getSize());
    bw.put_BinaryData(path);
+   bw.put_uint8_t(isExtOnly_);
 
    serializeLeaves(bw);
 
@@ -166,8 +168,10 @@ std::shared_ptr<hd::Group> hd::Group::deserialize(
 
    case bs::hd::CoinType::Bitcoin_main:
    case bs::hd::CoinType::Bitcoin_test:
+      //use a place holder for isExtOnly (false), set it 
+      //while deserializing db value
       group = std::make_shared<hd::Group>(
-         walletPtr, emptyPath, netType, logger);
+         walletPtr, emptyPath, netType, false, logger);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
@@ -201,12 +205,21 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
    //setup address account
    auto accTypePtr = std::make_shared<AccountType_BIP32_Custom>();
    
-   //nodes
-   accTypePtr->setNodes({ hd::Leaf::addrTypeExternal, hd::Leaf::addrTypeInternal });
-
-   //account IDs
-   accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
-   accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeInternal));
+   //account IDs and nodes
+   if (!isExtOnly_)
+   {
+      accTypePtr->setNodes({ hd::Leaf::addrTypeExternal, hd::Leaf::addrTypeInternal });
+      accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
+      accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeInternal));
+   }
+   else
+   {
+      //ext only address account uses the same asset account for both outer and 
+      //inner chains
+      accTypePtr->setNodes({ hd::Leaf::addrTypeExternal });
+      accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
+      accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
+   }
 
    //address types
    accTypePtr->setAddressTypes(getAddressTypeSet());
@@ -225,6 +238,7 @@ void hd::Group::deserialize(BinaryDataRef value)
    auto len = brrVal.get_var_int();
    const auto strPath = brrVal.get_BinaryData(len).toBinStr();
    path_ = bs::hd::Path::fromString(strPath);
+   isExtOnly_ = (bool)brrVal.get_uint8_t();
 
    while (brrVal.getSizeRemaining() > 4) {
       const auto keyLeaf = brrVal.get_uint32_t();
@@ -276,7 +290,7 @@ std::set<AddressEntryType> hd::Group::getAddressTypeSet(void) const
 hd::AuthGroup::AuthGroup(std::shared_ptr<AssetWallet_Single> walletPtr,
    const bs::hd::Path &path, NetworkType netType,
    const std::shared_ptr<spdlog::logger>& logger)
-   : Group(walletPtr, path, netType, logger)
+   : Group(walletPtr, path, netType, true, logger) //auto wallets are always ext only
 {}
 
 void hd::AuthGroup::setChainCode(const BinaryData &chainCode)

@@ -17,6 +17,7 @@
 
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
+#define WALLET_EXTONLY_KEY      0x00000030
 
 #define BS_WALLET_DBNAME "bs_wallet_name"
 

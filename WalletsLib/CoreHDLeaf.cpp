@@ -410,7 +410,7 @@ bool hd::Leaf::isWatchingOnly() const
 
 bool hd::Leaf::hasExtOnlyAddresses() const
 {
-   return (accountPtr_->getInnerAccountID() != 
+   return (accountPtr_->getInnerAccountID() == 
       accountPtr_->getOuterAccountID());
 }
 
