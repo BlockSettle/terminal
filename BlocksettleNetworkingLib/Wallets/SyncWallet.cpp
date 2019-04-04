@@ -231,20 +231,20 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
       return false;
    }
 
-   auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
+   /*auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
    callbacks.push_back({ obj, cb });
    if (callbacks.size() > 1) {
       return true;
-   }
+   }*/
 
-   const auto &cbTxOutList = [this, val, btcWallet]
+   const auto &cbTxOutList = [this, val, btcWallet, cb]
                              (ReturnMessage<std::vector<UTXO>> txOutList) {
       try {
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
          auto txOutListObj = txOutList.get();
-         const auto &cbProcess = [this, val, btcWallet, txOutListObj] {
+         const auto &cbProcess = [this, val, btcWallet, txOutListObj, cb] {
             std::vector<UTXO> txOutListCopy = txOutListObj;
             if (utxoAdapter_) {
                utxoAdapter_->filter(txOutListCopy);
@@ -264,7 +264,30 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
                   txOutListCopy.resize(cutOffIdx + 1);
                }
             }
-            QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
+
+            cb(txOutListCopy);
+
+            /***
+            QMetaObject::invokeMethod does not trigger in unit tests when Qt is left
+            to autodetect the "connection type". Forcing Qt::DirectConnection will
+            work but will always run the callback in the same thread as the caller, 
+            which I suspect is not the acceptable behavior if the caller is passing 
+            callbacks that can affect the GUI. 
+            
+            Regardless, unless this callback is called from a Qt signal, it would be
+            running from the WebSocketClient callback thread, which would result in
+            potential spendableCallbacks_ access concurency. This design isn't safe
+            under those circumstances. At any rate, Qt'isms ought to be kept outside 
+            of routines that can and should be covered by unit tests, like this one.
+
+            Also, this approach to caching similar calls can result in false positives. 
+            For example, what if the address map changes before the first call to 
+            getSpendableTxOutList completes but before a 2nd one is emited? The 2nd one 
+            would be cached, and miss UTXOs as a result. There is no check for that 
+            condition, therefor the caching should not happen in the first place.
+            ***/
+
+            /*QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
                auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
                for (const auto &cbPairs : callbacks) {
                   if (cbPairs.first) {
@@ -272,7 +295,7 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
                   }
                }
                spendableCallbacks_.erase(btcWallet->walletID());
-            });
+            });*/
          };
 
          cbProcess();
