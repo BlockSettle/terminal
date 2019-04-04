@@ -17,7 +17,7 @@ public:
    explicit ChatSearchPopup(QWidget *parent = nullptr);
    ~ChatSearchPopup();
 
-   void setText(const QString &text);
+   void setUserID(const QString &userID);
    void setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY);
 
 signals:
@@ -29,6 +29,7 @@ private slots:
 private:
    Ui::ChatSearchPopup *ui_;
    QMenu *searchPopupMenu_;
+   QString userID_;
 };
 
 #endif // CHATSEARCHPOPUP_H

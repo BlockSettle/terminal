@@ -308,12 +308,13 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData
 
 void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
 {
-   if (users.size() < 1) {
-      return;
+   if (users.size() > 0) {
+      std::shared_ptr<Chat::UserData> firstUser = users.at(0);
+      popup_->setUserID(firstUser->getUserId());
+   } else {
+      popup_->setUserID(QString());
    }
 
-   std::shared_ptr<Chat::UserData> firstUser = users.at(0);
-   popup_->setText(firstUser->getUserId());
    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
    popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
    popup_->show();  
@@ -437,23 +438,6 @@ void ChatWidget::onSearchUserReturnPressed()
       return; //Initially max key is 12 symbols
    }
    client_->sendSearchUsersRequest(userToAdd);
-   
-   // auto chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByEmail(userToAdd);
-   // if (!chatUserDataPtr) { // email exists?
-   //    chatUserDataPtr = chatUserListLogicPtr_->chatUserModelPtr()->getUserByUserIdPrefix(userToAdd); // user ID autocomplete?
-   //    if (!chatUserDataPtr)
-   //    {
-   //       return;
-   //    }
-   // }
-   
-   // userToAdd = chatUserDataPtr->userId();
-
-   // // qDebug() << userToAdd;
-   // popup_->setText(userToAdd);
-   // popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
-   // popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
-   // popup_->show();
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
