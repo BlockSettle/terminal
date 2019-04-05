@@ -89,7 +89,7 @@ static int HeadlessApp(int argc, char **argv)
       HeadlessAppObj appObj(logger, settings);
       QObject::connect(&appObj, &HeadlessAppObj::finished, &app
                        , &QCoreApplication::quit);
-      QTimer::singleShot(0, &appObj, &HeadlessAppObj::start);
+      appObj.start();
 
       return app.exec();
    }
