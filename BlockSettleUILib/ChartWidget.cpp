@@ -661,7 +661,11 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       auto size = candlesticksChart_->data()->size();
       double upper_bound = size ? candlesticksChart_->data()->at(size - 1)->key : QDateTime::currentSecsSinceEpoch();
       upper_bound += IntervalWidth(dateRange_.checkedId()) / 1000 / 2  + CountOffsetFromRightBorder();
+      double lower_bound = QDateTime(QDate(2009, 1, 3)).toSecsSinceEpoch();
       if (dragStartRange_.upper + diff > upper_bound && diff > 0) {
+         dragStartPos_ = event->pos();
+         dragStartRange_ = axis->range();
+      } else if (dragStartRange_.lower + diff < lower_bound && diff < 0){
          dragStartPos_ = event->pos();
          dragStartRange_ = axis->range();
       } else {
