@@ -11,14 +11,12 @@
 ExplorerWidget::ExplorerWidget(QWidget *parent) :
    TabWithShortcut(parent), expTimer_(new QTimer), ui_(new Ui::ExplorerWidget())
 {
-   // Set up the explorer expiration timer.
-   expTimer_->setSingleShot(true);
-   expTimer_->setTimerType(Qt::PreciseTimer);
-   expTimer_->callOnTimeout(this, &ExplorerWidget::onExpTimeout
-      , Qt::QueuedConnection);
-
    ui_->setupUi(this);
    ui_->searchBox->setReadOnly(true);
+
+   // Set up the explorer expiration timer.
+   expTimer_->setInterval(EXP_TIMEOUT);
+   expTimer_->callOnTimeout(this, &ExplorerWidget::onExpTimeout);
 
    // connection to handle enter key being pressed inside the search box
    connect(ui_->searchBox, &QLineEdit::returnPressed,

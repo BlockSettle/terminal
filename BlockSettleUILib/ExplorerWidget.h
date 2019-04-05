@@ -33,9 +33,9 @@ public:
 
 protected slots:
    void onSearchStarted();
+   void onExpTimeout();
    void onTransactionClicked(QString txId);
    void onAddressClicked(QString addressId);
-   void onExpTimeout();
    void onReset();
 
 private:
