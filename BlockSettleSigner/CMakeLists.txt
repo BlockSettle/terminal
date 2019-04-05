@@ -7,12 +7,14 @@ SET(SOURCES
    HeadlessApp.cpp
    HeadlessSettings.cpp
    SignerAdapterListener.cpp
+   NativeEventFilter.cpp
 )
 
 SET(HEADERS
    HeadlessApp.h
    HeadlessSettings.h
    SignerAdapterListener.h
+   NativeEventFilter.h
 )
 
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )

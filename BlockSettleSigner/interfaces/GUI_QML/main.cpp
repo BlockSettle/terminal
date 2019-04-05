@@ -93,7 +93,10 @@ static int QMLApp(int argc, char **argv)
    const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
    QSplashScreen splashScreen(splashImage);
    splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
+#ifdef NDEBUG
+   // don't show slash screen on debug
    splashScreen.show();
+#endif
 
    const auto settings = std::make_shared<SignerSettings>();
    if (!settings->loadSettings(app.arguments())) {
@@ -101,15 +104,13 @@ static int QMLApp(int argc, char **argv)
    }
 
 #ifndef NDEBUG
-   if (settings->runMode() != bs::signer::ui::RunMode::fullgui) {
-      qInstallMessageHandler(qMessageHandler);
+   qInstallMessageHandler(qMessageHandler);
 
 #ifdef Q_OS_WIN
-      // set zero buffer for stdout and stderr
-      setvbuf(stdout, NULL, _IONBF, 0 );
-      setvbuf(stderr, NULL, _IONBF, 0 );
+   // set zero buffer for stdout and stderr
+   setvbuf(stdout, NULL, _IONBF, 0 );
+   setvbuf(stderr, NULL, _IONBF, 0 );
 #endif
-   }
 #endif
 
    std::shared_ptr<spdlog::logger> logger;
