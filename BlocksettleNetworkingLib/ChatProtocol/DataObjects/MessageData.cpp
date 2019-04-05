@@ -66,7 +66,9 @@ namespace Chat {
       QByteArray local_nonce = QByteArray::fromBase64(data[Nonce].toString().toLocal8Bit());
       autheid::SecureBytes nonce(local_nonce.begin(), local_nonce.end());
    
-      return std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
+      std::shared_ptr<MessageData> msg = std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
+      msg->setNonce(nonce);
+      return msg;
    }
    
    void MessageData::setFlag(const State state)
