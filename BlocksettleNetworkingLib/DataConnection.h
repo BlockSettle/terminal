@@ -43,7 +43,7 @@ protected:
    virtual void onRawDataReceived(const std::string& rawData) = 0;
 
    void notifyOnData(const std::string& data);
-   void notifyOnConnected();
+   virtual void notifyOnConnected();
    void notifyOnDisconnected();
    void notifyOnError(DataConnectionListener::DataConnectionError errorCode);
 

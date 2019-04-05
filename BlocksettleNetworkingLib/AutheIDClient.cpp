@@ -268,19 +268,19 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
        return;
    }
 
-   if (reply.enc_secure_result().empty() || reply.device_id().empty()) {
+   if (reply.device_key_enc().empty() || reply.device_id().empty()) {
       emit failed(tr("Cancelled"));
       return;
    }
 
-   autheid::SecureBytes secureReplyData = autheid::decryptData(reply.enc_secure_result().data()
-      , reply.enc_secure_result().size(), authKeys_.first);
+   autheid::SecureBytes secureReplyData = autheid::decryptData(reply.device_key_enc().data()
+      , reply.device_key_enc().size(), authKeys_.first);
    if (secureReplyData.empty()) {
       emit failed(tr("Decrypt failed"));
       return;
    }
 
-   rp::GetResultResponse::SecureResult secureReply;
+   rp::GetResultResponse::DeviceKeyResult secureReply;
    if (!secureReply.ParseFromArray(secureReplyData.data(), int(secureReplyData.size()))) {
       emit failed(tr("Invalid secure reply"));
       return;

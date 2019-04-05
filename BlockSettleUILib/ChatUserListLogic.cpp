@@ -103,12 +103,14 @@ void ChatUserListLogic::onFriendRequestRejected(const UserIdList &userIdList)
 void ChatUserListLogic::onUserHaveNewMessageChanged(const QString &userId, const bool &haveNewMessage, const bool &isInCurrentChat) 
 {
    const auto &changed = chatUserModelPtr_->setUserHaveNewMessage(userId, haveNewMessage);
-   if (!changed) {
+
+   if (changed) {
+      bool hasUnreadMessages = chatUserModelPtr_->hasUnreadMessages();
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { userId, tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });  
+   }
+   else {
       chatUserModelPtr_->setRoomHaveNewMessage(userId, haveNewMessage);
    }
-
-   bool hasUnreadMessages = chatUserModelPtr_->hasUnreadMessages();
-   NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, { userId, tr("New message"), QVariant(isInCurrentChat), QVariant(hasUnreadMessages) });
 }
 
 void ChatUserListLogic::addChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList)

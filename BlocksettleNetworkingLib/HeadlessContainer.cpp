@@ -1035,8 +1035,6 @@ bool RemoteSigner::Start()
          , &RemoteSigner::onConnError, Qt::QueuedConnection);
       connect(listener_.get(), &HeadlessListener::PacketReceived, this
          , &RemoteSigner::onPacketReceived, Qt::QueuedConnection);
-      connect(connection_.get(), &ZmqBIP15XDataConnection::bip15XCompleted
-         , this, &RemoteSigner::onBIP15XCompleted, Qt::QueuedConnection);
    }
 
    return Connect();
@@ -1100,19 +1098,6 @@ void RemoteSigner::Authenticate()
    Send(packet);
 }
 
-void RemoteSigner::startBIP151Handshake()
-{
-   mutex_.lock();
-   if (!listener_) {
-      mutex_.unlock();
-      emit connectionError(tr("listener missing on authenticate"));
-      return;
-   }
-   mutex_.unlock();
-
-   connection_->startBIP151Handshake();
-}
-
 bool RemoteSigner::isOffline() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
@@ -1128,7 +1113,7 @@ bool RemoteSigner::hasUI() const
 
 void RemoteSigner::onConnected()
 {
-   startBIP151Handshake();
+   Authenticate();
 }
 
 void RemoteSigner::onAuthenticated()
@@ -1137,13 +1122,6 @@ void RemoteSigner::onAuthenticated()
    // app-level data to the signer.
    emit authenticated();
    emit ready();
-}
-
-void RemoteSigner::onBIP15XCompleted()
-{
-   // Once the BIP 150/151 handshake is complete, it's safe to start sending
-   // app-level data to the signer.
-   Authenticate();
 }
 
 void RemoteSigner::onDisconnected()
@@ -1311,6 +1289,14 @@ bool LocalSigner::Start()
    const auto cmdArgs = args();
    logger_->debug("[HeadlessContainer] starting {} {}"
       , signerAppPath.toStdString(), cmdArgs.join(QLatin1Char(' ')).toStdString());
+
+#ifndef NDEBUG
+   headlessProcess_->setProcessChannelMode(QProcess::MergedChannels);
+   connect(headlessProcess_.get(), &QProcess::readyReadStandardOutput, this, [this](){
+      qDebug().noquote() << headlessProcess_->readAllStandardOutput();
+   });
+#endif
+
    headlessProcess_->start(signerAppPath, cmdArgs);
    if (!headlessProcess_->waitForStarted(5000)) {
       logger_->error("[HeadlessContainer] Failed to start child");
