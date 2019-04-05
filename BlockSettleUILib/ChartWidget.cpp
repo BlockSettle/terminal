@@ -284,7 +284,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
    for (int i = 0; i < response.candles_size(); i++)
    {
       auto candle = response.candles(i);
-      maxTimestamp = qMax(maxTimestamp, candle.timestamp());
+      maxTimestamp = qMax(maxTimestamp, static_cast<quint64>(candle.timestamp()));
 
       bool isLast = (i == 0);
       if (candle.timestamp() >=  lastCandle_.timestamp() || lastCandle_.timestamp() - candle.timestamp() < IntervalWidth(interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp()))) {
