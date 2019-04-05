@@ -67,6 +67,11 @@ public:
    MessageBoxBroadcastError(const QString &details, QWidget *parent = nullptr);
 };
 
+class MessageBoxExpTimeout : public BSMessageBox {
+public:
+   MessageBoxExpTimeout(QWidget *parent = nullptr);
+};
+
 class MessageBoxAuthNotice : public BSMessageBox {
 public:
    MessageBoxAuthNotice(QWidget *parent = nullptr);

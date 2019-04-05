@@ -2,16 +2,23 @@
 #include "ui_ExplorerWidget.h"
 #include "UiUtils.h"
 #include "TransactionDetailsWidget.h"
+#include "BSMessageBox.h"
 
 #include <QStringListModel>
 #include <QToolTip>
 
 // Overloaded constuctor. Does basic setup and Qt signal connection.
 ExplorerWidget::ExplorerWidget(QWidget *parent) :
-   TabWithShortcut(parent)
-   , ui_(new Ui::ExplorerWidget())
+   TabWithShortcut(parent), expTimer_(new QTimer), ui_(new Ui::ExplorerWidget())
 {
+   // Set up the explorer expiration timer.
+   expTimer_->setSingleShot(true);
+   expTimer_->setTimerType(Qt::PreciseTimer);
+   expTimer_->callOnTimeout(this, &ExplorerWidget::onExpTimeout
+      , Qt::QueuedConnection);
+
    ui_->setupUi(this);
+   ui_->searchBox->setReadOnly(true);
 
    // connection to handle enter key being pressed inside the search box
    connect(ui_->searchBox, &QLineEdit::returnPressed,
@@ -32,15 +39,20 @@ ExplorerWidget::~ExplorerWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx). Blocks won't
 // be set up for now.
-void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
-                          const std::shared_ptr<spdlog::logger> &inLogger)
+void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<spdlog::logger> &inLogger)
 {
    armory_ = armory;
    logger_ = inLogger;
-
-   ui_->Transaction->init(armory, inLogger);
-   ui_->Address->init(armory, inLogger);
+   expTimer_ = std::make_shared<QTimer>();
+   ui_->Transaction->init(armory, inLogger, expTimer_);
+   ui_->Address->init(armory, inLogger, expTimer_);
 //   ui_->Block->init(armory, inLogger);
+
+   // With Armory and the logger set, we can start accepting text input.
+   ui_->searchBox->setReadOnly(false);
+   ui_->searchBox->setPlaceholderText(QString::fromStdString(
+      "Search for a transaction or address."));
 }
 
 void ExplorerWidget::shortcutActivated(ShortcutType s)
@@ -89,6 +101,7 @@ void ExplorerWidget::onSearchStarted()
       // off address processing and UI loading.
       ui_->Address->setQueryAddr(bsAddress);
       ui_->searchBox->clear();
+      expTimer_->start();
    }
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
@@ -99,6 +112,7 @@ void ExplorerWidget::onSearchStarted()
       BinaryTXID userTXID(READHEX(userStr.toStdString()), true);
       ui_->Transaction->populateTransactionWidget(userTXID);
       ui_->searchBox->clear();
+      expTimer_->start();
    }
    else {
       // This isn't a valid address or 32 byte hex string.
@@ -115,6 +129,14 @@ void ExplorerWidget::onTransactionClicked(QString txId)
    BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
    ui_->stackedWidget->setCurrentIndex(TxPage);
    ui_->Transaction->populateTransactionWidget(terminalTXID);
+   expTimer_->start();
+}
+
+// Function called when the explorer timeout expires. It just lets the user know
+// that the explorer query took too long.
+void ExplorerWidget::onExpTimeout()
+{
+   MessageBoxExpTimeout(this).exec();
 }
 
 // This slot function is called whenever user clicks on an address in
@@ -140,10 +162,13 @@ void ExplorerWidget::onAddressClicked(QString addressId)
    // valid. (It would be very bad if Armory fed up bad addresses!)
    // TO DO: Add a check for wallets that have already been loaded?
    ui_->Address->setQueryAddr(bsAddress);
+
+   expTimer_->start();
 }
 
 void ExplorerWidget::onReset()
 {
+   expTimer_->stop();
    ui_->stackedWidget->setCurrentIndex(BlockPage);
    ui_->searchBox->clear();
 }

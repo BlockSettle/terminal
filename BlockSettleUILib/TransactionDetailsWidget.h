@@ -74,17 +74,18 @@ public:
    explicit TransactionDetailsWidget(QWidget *parent = nullptr);
    ~TransactionDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &armory,
-             const std::shared_ptr<spdlog::logger> &inLogger);
+   void init(const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<spdlog::logger> &inLogger
+      , const std::shared_ptr<QTimer> &inTimer);
 
    void populateTransactionWidget(BinaryTXID rpcTXID,
-                                  const bool& firstPass = true);
+      const bool& firstPass = true);
 
     enum TxTreeColumns {
-       colType = 0,
-       colAddressId,
-       colAmount,
-       colWallet
+      colType = 0,
+      colAddressId,
+      colAmount,
+      colWallet
     };
 
 signals:
@@ -104,8 +105,8 @@ private:
    void setTxGUIValues();
    void clear();
 
-private:
    std::unique_ptr<Ui::TransactionDetailsWidget>   ui_;
+   std::shared_ptr<QTimer>             expTimer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger> logger_;
 
@@ -116,12 +117,10 @@ private:
 
    void processTxData(Tx tx);
 
-   QTreeWidgetItem * createItem(QTreeWidget *tree, QString type,
-                                QString address, QString amount,
-                                QString wallet);
-   QTreeWidgetItem * createItem(QTreeWidgetItem *parentItem, QString type,
-                                QString address, QString amount,
-                                QString wallet);
+   QTreeWidgetItem * createItem(QTreeWidget *tree, QString type
+      , QString address, QString amount, QString wallet);
+   QTreeWidgetItem * createItem(QTreeWidgetItem *parentItem, QString type
+      , QString address, QString amount, QString wallet);
 };
 
 #endif // TRANSACTIONDETAILSWIDGET_H
