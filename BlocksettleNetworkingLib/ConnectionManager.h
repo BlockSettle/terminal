@@ -54,6 +54,7 @@ public:
    std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
       bool monitored = false) const;
    std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XServerConnection() const;
+   std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(bool ephemeral = false) const;
 
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;
 

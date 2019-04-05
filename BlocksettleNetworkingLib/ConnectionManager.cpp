@@ -124,7 +124,14 @@ std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XSer
 {
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
-      , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), false);
+                                                      , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), false);
+}
+
+std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XChatServerConnection(bool ephemeral) const
+{
+   BinaryData bdID = CryptoPRNG::generateRandom(8);
+   return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
+                                                      , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), ephemeral);
 }
 
 std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(

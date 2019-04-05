@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 #include "botan/base64.h"
 
-#include "ZmqSecuredDataConnection.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatDB.h"
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
@@ -56,7 +56,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    heartbeatTimer_.setInterval(30 * 1000);
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
-   heartbeatTimer_.start();
+   //heartbeatTimer_.start();
 }
 
 ChatClient::~ChatClient() noexcept
@@ -76,10 +76,11 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
    //auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
    //currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
    currentUserId_ = hasher_->deriveKey(email);
+   currentJwt_ = jwt;
 
-   connection_ = connectionManager_->CreateSecuredDataConnection();
-   BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
-   connection_->SetServerPublicKey(inSrvPubKey);
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(true);
+   //BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
+   //connection_->SetServerPublicKey(inSrvPubKey);
    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
                             , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
    {
@@ -87,8 +88,7 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
       connection_.reset();
    }
 
-   auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, jwt);
-   sendRequest(loginRequest);
+
 
    return currentUserId_;
 }
@@ -324,6 +324,7 @@ void ChatClient::logout(bool send)
    }
 
    currentUserId_.clear();
+   currentJwt_.clear();
    connection_.reset();
 
    emit LoggedOut();
@@ -468,6 +469,8 @@ void ChatClient::OnDataReceived(const std::string& data)
 void ChatClient::OnConnected()
 {
    logger_->debug("[ChatClient::OnConnected]");
+   auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, currentJwt_);
+   sendRequest(loginRequest);
 }
 
 void ChatClient::OnDisconnected()
