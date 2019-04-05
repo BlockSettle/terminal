@@ -93,7 +93,7 @@ static int QMLApp(int argc, char **argv)
    const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
    QSplashScreen splashScreen(splashImage);
    splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
-#ifndef NDEBUG
+#ifdef NDEBUG
    // don't show slash screen on debug
    splashScreen.show();
 #endif
