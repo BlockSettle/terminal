@@ -79,10 +79,12 @@ protected slots:
    void ChangeMDSubscriptionState();
 
 protected:
+   quint64 GetCandleTimestamp(const uint64_t& timestamp,
+      const Blocksettle::Communication::MarketDataHistory::Interval& interval) const;
    void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
    void UpdateChart(const int& interval) const;
    void InitializeCustomPlot();
-   qreal IntervalWidth(int interval = -1, int count = 1) const;
+   quint64 IntervalWidth(int interval = -1, int count = 1, const QDateTime& specialDate = {}) const;
    static int FractionSizeForProduct(TradeHistoryTradeType type);
    void ProcessProductsListResponse(const std::string& data);
    void ProcessOhlcHistoryResponse(const std::string& data);
@@ -132,8 +134,6 @@ private:
    Ui::ChartWidget *ui_;
    QButtonGroup dateRange_;
    QStandardItemModel *cboModel_;
-   QCPTextElement *title_;
-   QCPTextElement *info_;
    QCPFinancial *candlesticksChart_;
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;
