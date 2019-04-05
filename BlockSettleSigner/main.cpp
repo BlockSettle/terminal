@@ -13,6 +13,7 @@
 #include "HeadlessSettings.h"
 #include "LogManager.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
+#include "NativeEventFilter.h"
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
@@ -49,6 +50,9 @@ static int HeadlessApp(int argc, char **argv)
    app.setApplicationName(QLatin1String("Signer"));
    app.setOrganizationDomain(QLatin1String("blocksettle.com"));
    app.setOrganizationName(QLatin1String("BlockSettle"));
+
+   // fix for accepting terminate() command on windows (listen for WM_CLOSE win event)
+   app.installNativeEventFilter(new NativeEventFilter());
 
    bs::LogManager logMgr;
    auto loggerStdout = logMgr.logger("settings");
