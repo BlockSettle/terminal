@@ -157,7 +157,7 @@
              <locale language="English" country="UnitedStates"/>
             </property>
             <property name="placeholderText">
-             <string>Search...</string>
+             <string>Enter email or email hash</string>
             </property>
            </widget>
           </item>
