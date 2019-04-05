@@ -413,6 +413,12 @@ bool ZmqServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr &dataSocke
       }
    }
 
+   if (zmq_setsockopt(dataSocket.get(), ZMQ_SNDTIMEO, &sendTimeoutInMs_, sizeof(sendTimeoutInMs_)) != 0) {
+      logger_->error("[{}] {} failed to set send timeout {}", __func__
+         , connectionName_, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
    int lingerPeriod = 0;
    if (zmq_setsockopt(dataSocket.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod)) != 0) {
       logger_->error("[{}] {} failed to set linger interval {}: {}", __func__
