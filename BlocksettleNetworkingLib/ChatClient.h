@@ -136,6 +136,7 @@ private:
    QTimer            heartbeatTimer_;
 
    std::string       currentUserId_;
+   std::string       currentJwt_;
    std::atomic_bool  loggedIn_{ false };
 
    autheid::PrivateKey  ownPrivKey_;
