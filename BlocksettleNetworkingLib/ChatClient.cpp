@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 #include "botan/base64.h"
 
-#include "ZmqSecuredDataConnection.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatDB.h"
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
@@ -56,7 +56,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    heartbeatTimer_.setInterval(30 * 1000);
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
-   heartbeatTimer_.start();
+   //heartbeatTimer_.start();
 }
 
 ChatClient::~ChatClient() noexcept
@@ -77,9 +77,9 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
    //currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
    currentUserId_ = hasher_->deriveKey(email);
 
-   connection_ = connectionManager_->CreateSecuredDataConnection();
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
    BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
-   connection_->SetServerPublicKey(inSrvPubKey);
+   //connection_->SetServerPublicKey(inSrvPubKey);
    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
                             , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
    {
