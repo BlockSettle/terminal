@@ -18,7 +18,7 @@ class ContactUserData
 {
 public:
    enum class Status {
-      Friend,
+      Friend = 0,
       Rejected,
       Incoming,
       Outgoing
@@ -77,6 +77,7 @@ public:
    bool removeContact(const QString &userId);
    bool getContacts(ContactUserDataList &contactList);
    bool updateContact(const ContactUserData &contact);
+   bool getContact(const QString& userId, ContactUserData& contact);
 
 private:
    bool createMissingTables();

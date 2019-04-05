@@ -345,7 +345,8 @@ bool ChatDB::isContactExist(const QString &userId)
       logger_->error("[ChatDB::isContactExist] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
-   query.bindValue(QString::fromStdString(":user_id"), userId);
+   query.bindValue(QLatin1String(":user_id"), userId);
+
    if (!query.exec()) {
       logger_->error("[ChatDB::isContactExist] failed to exec query: {}", query.lastError().text().toStdString());
       return false;
@@ -361,16 +362,22 @@ bool ChatDB::isContactExist(const QString &userId)
 bool ChatDB::addContact(const ContactUserData &contact)
 {
    if (isContactExist(contact.userId())) {
-      return false;
+      return true;
    }
 
-   QSqlQuery query(QLatin1String(
-      "INSERT INTO contacts(user_id, user_name, status) VALUES(?, ?, ?);"), db_);
-   query.bindValue(0, contact.userId());
-   query.bindValue(1, contact.userName());
-   query.bindValue(2, static_cast<int>(contact.status()));
+   QSqlQuery query(db_);
+   query.prepare(QLatin1String("INSERT INTO contacts(user_id, user_name, status) VALUES(:user_id, :user_name, :status)"));
+
+   query.bindValue(QLatin1String(":user_id"), contact.userId());
+   query.bindValue(QLatin1String(":user_name"), contact.userName());
+   query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
 
    if (!query.exec()) {
+      QString last_error = query.lastError().text();
+      QString executed_query = query.executedQuery();
+      QString error = query.lastError().databaseText();
+      QString error1 = query.lastError().driverText();
+      QString error2 = query.lastError().nativeErrorCode();
       logger_->error("[ChatDB::addContact] failed to insert new contact.");
       return false;
    }
@@ -381,11 +388,11 @@ bool ChatDB::addContact(const ContactUserData &contact)
 bool ChatDB::removeContact(const QString &userId)
 {
    if (!isContactExist(userId)) {
-      return false;
+      return true;
    }
 
    QSqlQuery query(QLatin1String(
-      "DELETE FROM contacts WHERE user_id=:user_id;"), db_);
+      "DELETE FROM contacts WHERE user_id=?;"), db_);
    query.bindValue(0, userId);
 
    if (!query.exec()) {
@@ -421,17 +428,44 @@ bool ChatDB::getContacts(ContactUserDataList &contactList)
 bool ChatDB::updateContact(const ContactUserData &contact)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=:user_name, status=:status WHERE user_id=:user_id;"))) {
+   if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=?, status=? WHERE user_id=?;"))) {
       logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
-   query.bindValue(QString::fromStdString(":user_id"), contact.userId());
-   query.bindValue(QString::fromStdString(":user_name"), contact.userName());
-   query.bindValue(QString::fromStdString(":status"), static_cast<int>(contact.status()));
+
+   query.bindValue(0, contact.userName());
+   query.bindValue(1, static_cast<int>(contact.status()));
+   query.bindValue(2, contact.userId());
+
    if (!query.exec()) {
       logger_->error("[ChatDB::updateContact] failed to exec query: {}", query.lastError().text().toStdString());
       return false;
    }
 
    return true;
+}
+
+bool ChatDB::getContact(const QString& userId, ContactUserData& contact)
+{
+   QSqlQuery query(db_);
+   if (!query.prepare(QLatin1String("SELECT user_id, user_name, status FROM contacts WHERE user_id=?;"))) {
+      logger_->error("[ChatDB::getContact] failed to prepare query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+
+   query.bindValue(0, userId);
+
+   if (!query.exec()) {
+      logger_->error("[ChatDB::getContact] failed to exec query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+
+   if (query.next()) {
+      contact.setUserId(query.value(0).toString());
+      contact.setUserName(query.value(1).toString());
+      contact.setStatus(static_cast<ContactUserData::Status>(query.value(2).toInt()));
+      return true;
+   }
+
+   return false;
 }

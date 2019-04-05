@@ -21,12 +21,14 @@ namespace Chat {
          Encrypted = 2,
          Acknowledged = 4,
          Read = 8,
-         Sent = 16
+         Sent = 16,
+		 Encrypted_AEAD = 32
       };
    
-      MessageData(const QString &sender, const QString &receiver
-         , const QString &id, const QDateTime &dateTime
-         , const QString& messageData, int state = (int)State::Undefined);
+      MessageData(const QString &sender, const QString &receiver,
+         const QString &id, const QDateTime &dateTime,
+         const QString& messageData, 
+         int state = (int)State::Undefined);
       QString getSenderId() const { return senderId_; }
       QString getReceiverId() const { return receiverId_; }
       QString getId() const { return id_; }
@@ -36,12 +38,15 @@ namespace Chat {
       QJsonObject toJson() const;
       //std::string toJsonString() const;
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
+      void setNonce(const autheid::SecureBytes &);
    
       void setFlag(const State);
       void unsetFlag(const State);
       void updateState(const int newState);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
+      bool encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey);
+      bool decrypt_aead(const autheid::PublicKey& senderPubKey, const autheid::PrivateKey& privKey);
       
       //Set ID for message, returns old ID that was replaced
       QString setId(const QString& id);
@@ -53,5 +58,6 @@ namespace Chat {
       QDateTime dateTime_;
       QString messageData_;
       int state_;
+      autheid::SecureBytes nonce_;
    };
 }
