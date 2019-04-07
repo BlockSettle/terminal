@@ -373,12 +373,7 @@ bool ChatDB::addContact(const ContactUserData &contact)
    query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
 
    if (!query.exec()) {
-      QString last_error = query.lastError().text();
-      QString executed_query = query.executedQuery();
-      QString error = query.lastError().databaseText();
-      QString error1 = query.lastError().driverText();
-      QString error2 = query.lastError().nativeErrorCode();
-      logger_->error("[ChatDB::addContact] failed to insert new contact.");
+      logger_->error("[ChatDB::addContact] failed to insert new contact: {}", query.lastError().text().toStdString());
       return false;
    }
 

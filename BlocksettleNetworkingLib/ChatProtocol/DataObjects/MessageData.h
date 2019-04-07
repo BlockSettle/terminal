@@ -7,11 +7,13 @@
 #include <QDateTime>
 #include <QJsonObject>
 
-
+#include <disable_warnings.h>
 #include "autheid_utils.h"
+#include <spdlog/spdlog.h>
+#include <enable_warnings.h>
 
 namespace Chat {
-   
+
    class MessageData : public DataObject
    {
    public:
@@ -22,7 +24,7 @@ namespace Chat {
          Acknowledged = 4,
          Read = 8,
          Sent = 16,
-		 Encrypted_AEAD = 32
+         Encrypted_AEAD = 32
       };
    
       MessageData(const QString &sender, const QString &receiver,
@@ -36,17 +38,17 @@ namespace Chat {
       QString getMessageData() const { return messageData_; }
       int getState() const { return state_; }
       QJsonObject toJson() const;
-      //std::string toJsonString() const;
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
       void setNonce(const autheid::SecureBytes &);
-   
+      QString getNonce() const;
+
       void setFlag(const State);
       void unsetFlag(const State);
       void updateState(const int newState);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
-      bool encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey);
-      bool decrypt_aead(const autheid::PublicKey& senderPubKey, const autheid::PrivateKey& privKey);
+      bool encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const std::shared_ptr<spdlog::logger>& logger);
+      bool decrypt_aead(const autheid::PublicKey& senderPubKey, const autheid::PrivateKey& privKey, const std::shared_ptr<spdlog::logger>& logger);
       
       //Set ID for message, returns old ID that was replaced
       QString setId(const QString& id);

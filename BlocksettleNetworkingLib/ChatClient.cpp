@@ -426,7 +426,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
       }
       else {
          if (msg->getState() & (int)Chat::MessageData::State::Encrypted_AEAD) {
-            if (!msg->decrypt_aead(itPublicKey->second, ownPrivKey_)) {
+            if (!msg->decrypt_aead(itPublicKey->second, ownPrivKey_, logger_)) {
                logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
                msg->setFlag(Chat::MessageData::State::Invalid);
             }
@@ -517,9 +517,6 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       QDateTime::currentDateTimeUtc(), message);
    auto result = std::make_shared<Chat::MessageData>(messageData);
 
-   // TODO remove
-   qDebug() << "userId:" << messageData.getReceiverId();
-
    if (!chatDb_->isContactExist(messageData.getReceiverId()))
    {
       // make friend request before sending direct message. Enqueue the message to be sent, once our friend request accepted.
@@ -567,9 +564,9 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    // TODO:
    // when chatserver_contacts branch ready
    // check is user online, if not encrypt by ecies
-   if (!messageData.encrypt_aead(itPub->second, ownPrivKey_)) {
-      logger_->error("[ChatClient::sendMessage] failed to encrypt message {}"
-         , messageData.getId().toStdString());
+   if (!messageData.encrypt_aead(itPub->second, ownPrivKey_, logger_)) {
+      logger_->error("[ChatClient::sendMessage] failed to encrypt by aead {}" , messageData.getId().toStdString());
+      return result;
    }
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", messageData.toJsonString());
