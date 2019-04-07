@@ -148,12 +148,14 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       {
          if (field.type == bs::network::MDField::PriceLast)
          {
-            auto lastCandle = candlesticksChart_->data()->end() - 1;
-            lastCandle->high = qMax(lastCandle->high, field.value);
-            lastCandle->low = qMin(lastCandle->low, field.value);
-            if (!qFuzzyCompare(lastCandle->close, field.value)) {
-               lastCandle->close = field.value;
-               ui_->customPlot->replot();
+            if (!candlesticksChart_->data()->isEmpty()) {
+               auto lastCandle = candlesticksChart_->data()->end() - 1;
+               lastCandle->high = qMax(lastCandle->high, field.value);
+               lastCandle->low = qMin(lastCandle->low, field.value);
+               if (!qFuzzyCompare(lastCandle->close, field.value)) {
+                  lastCandle->close = field.value;
+                  ui_->customPlot->replot();
+               }
             }
          }
 
