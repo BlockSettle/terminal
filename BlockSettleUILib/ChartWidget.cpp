@@ -592,8 +592,8 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       timestamp < candlesticksChart_->data()->at(0)->key - width / 2) {
       ui_->ohlcLbl->setText({});
    } else {
-      auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp);
-      auto volumeValue = *volumeChart_->data()->findBegin(timestamp);
+      auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp + width / 2);
+      auto volumeValue = *volumeChart_->data()->findBegin(timestamp + width / 2);
       const auto& color = (ohlcValue.close >= ohlcValue.open ? c_greenColor : c_redColor).name();
       auto prec = FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]);
       QString partForm = QStringLiteral("<font color=\"%2\">%1</font>");
