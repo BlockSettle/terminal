@@ -413,12 +413,6 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
          continue;
       }
 
-      // TODO remove
-      qDebug() << "userId:" << msg->getSenderId();
-
-      msg->setFlag(Chat::MessageData::State::Acknowledged);
-      chatDb_->add(*msg);
-
       const auto& itPublicKey = pubKeys_.find(msg->getSenderId());
       if (itPublicKey == pubKeys_.end()) {
          logger_->error("Can't find public key for sender {}", msg->getSenderId().toStdString());
@@ -429,6 +423,13 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
             if (!msg->decrypt_aead(itPublicKey->second, ownPrivKey_, logger_)) {
                logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
                msg->setFlag(Chat::MessageData::State::Invalid);
+            }
+            else {
+               // if decrypted encrypt by eis and save in db
+               auto localEncMsg = *msg;
+               localEncMsg.setFlag(Chat::MessageData::State::Acknowledged);
+               localEncMsg.encrypt(appSettings_->GetAuthKeys().second);
+               chatDb_->add(localEncMsg);
             }
          }
          else {
@@ -558,7 +559,9 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    auto localEncMsg = messageData;
    if (!localEncMsg.encrypt(appSettings_->GetAuthKeys().second)) {
       logger_->error("[ChatClient::sendMessage] failed to encrypt by local key");
+      return result;
    }
+
    chatDb_->add(localEncMsg);
 
    // TODO:
