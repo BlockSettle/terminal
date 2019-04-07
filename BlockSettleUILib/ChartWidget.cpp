@@ -61,8 +61,7 @@ ChartWidget::ChartWidget(QWidget* pParent)
    , lastHigh_(0.0)
    , lastLow_(0.0)
    , lastClose_(0.0)
-   , currentTimestamp_(0.0)
-   , timerId_(0)
+   , currentTimestamp_(0)
    , lastInterval_(-1)
    , dragY_(0)
    , isDraggingYAxis_(false) {
@@ -104,6 +103,9 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
 
    connect(mdhsClient_.get(), &MdhsClient::DataReceived, this, &ChartWidget::OnDataReceived);
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, this, &ChartWidget::OnMdUpdated);
+   connect(mdProvider_.get(), &MarketDataProvider::OnNewFXTrade, this, &ChartWidget::OnNewXBTorFXTrade);
+   connect(mdProvider_.get(), &MarketDataProvider::OnNewPMTrade, this, &ChartWidget::OnNewPMTrade);
+   connect(mdProvider_.get(), &MarketDataProvider::OnNewXBTTrade, this, &ChartWidget::OnNewXBTorFXTrade);
 
    connect(ui_->pushButtonMDConnection, &QPushButton::clicked, this, &ChartWidget::ChangeMDSubscriptionState);
 
@@ -121,7 +123,6 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
 }
 
 ChartWidget::~ChartWidget() {
-   killTimer(timerId_);
    delete ui_;
 }
 
@@ -133,7 +134,7 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       cboModel_->clear();
       return;
    }
-   else if (!isProductListInitialized_)
+   if (!isProductListInitialized_)
    {
       isProductListInitialized_ = true;
       MarketDataHistoryRequest request;
@@ -147,23 +148,19 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       {
          if (field.type == bs::network::MDField::PriceLast)
          {
-            if (field.value == lastClose_)
-               return;
-            else
-               lastClose_ = field.value;
-
-            if (lastClose_ > lastHigh_)
-               lastHigh_ = lastClose_;
-
-            if (lastClose_ < lastLow_)
-               lastLow_ = lastClose_;
-            ModifyCandle();
+            auto lastCandle = candlesticksChart_->data()->end() - 1;
+            lastCandle->high = qMax(lastCandle->high, field.value);
+            lastCandle->low = qMin(lastCandle->low, field.value);
+            if (!qFuzzyCompare(lastCandle->close, field.value)) {
+               lastCandle->close = field.value;
+               ui_->customPlot->replot();
+            }
          }
 
          if (field.type == bs::network::MDField::MDTimestamp)
          {
             currentTimestamp_ = field.value;
-            timerId_ = startTimer(getTimerInterval());
+            CheckToAddNewCandle(currentTimestamp_);
          }
       }
    }
@@ -317,18 +314,22 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 
    if (firstPortion) {
-      auto currentCandleTimestamp = GetCandleTimestamp(QDateTime::currentMSecsSinceEpoch(), static_cast<Interval>(interval));
-      if (!response.candles_size()) {
-         AddDataPoint(0, 0, 0, 0, currentCandleTimestamp, 0);
-         maxTimestamp = currentCandleTimestamp;
+      if (!qFuzzyIsNull(currentTimestamp_)) {
+         newestCandleTimestamp_ = GetCandleTimestamp(currentTimestamp_, static_cast<Interval>(interval));
       } else {
-         auto currentCandleTimestamp = GetCandleTimestamp(QDateTime::currentMSecsSinceEpoch(), static_cast<Interval>(interval));
-         if (currentCandleTimestamp > maxTimestamp) {
+         logger_->warn("Data from mdhs came before MD update, or MD send wrong current timestamp");
+         newestCandleTimestamp_ = GetCandleTimestamp(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch(), static_cast<Interval>(interval));
+      }
+      if (!response.candles_size()) {
+         AddDataPoint(0, 0, 0, 0, newestCandleTimestamp_, 0);
+         maxTimestamp = newestCandleTimestamp_;
+      } else {
+         if (newestCandleTimestamp_ > maxTimestamp) {
             auto lastCandle = *(candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1));
-            for (quint64 i = 0; i < (currentCandleTimestamp - maxTimestamp) / IntervalWidth(interval); i++) {
-               AddDataPoint(lastCandle.close, lastCandle.close, lastCandle.close, lastCandle.close, currentCandleTimestamp - IntervalWidth(interval) * i, 0);
+            for (quint64 i = 0; i < (newestCandleTimestamp_ - maxTimestamp) / IntervalWidth(interval); i++) {
+               AddDataPoint(lastCandle.close, lastCandle.close, lastCandle.close, lastCandle.close, newestCandleTimestamp_ - IntervalWidth(interval) * i, 0);
             }
-            maxTimestamp = currentCandleTimestamp;
+            maxTimestamp = newestCandleTimestamp_;
          }
       }
       firstTimestampInDb_ = response.first_stamp_in_db() / 1000;
@@ -344,6 +345,21 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 double ChartWidget::CountOffsetFromRightBorder()
 {
    return ui_->customPlot->xAxis->pixelToCoord(6) - ui_->customPlot->xAxis->pixelToCoord(0);
+}
+
+void ChartWidget::CheckToAddNewCandle(qint64 stamp)
+{
+   if (stamp <= newestCandleTimestamp_ + IntervalWidth(dateRange_.checkedId()) || !volumeChart_->data()->size()) {
+      return;
+   }
+   auto candleStamp = GetCandleTimestamp(stamp, static_cast<Interval>(dateRange_.checkedId()));
+   auto lastCandle = *(candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1));
+   for (quint64 i = 0; i < (candleStamp - newestCandleTimestamp_) / IntervalWidth(dateRange_.checkedId()); i++) {
+      AddDataPoint(lastCandle.close, lastCandle.close, lastCandle.close, lastCandle.close, candleStamp - IntervalWidth(dateRange_.checkedId()) * i, 0);
+   }
+   newestCandleTimestamp_ = candleStamp;
+   AddDataPoint(lastClose_, lastClose_, lastClose_, lastClose_, newestCandleTimestamp_, 0);
+   ui_->customPlot->replot();
 }
 
 void ChartWidget::setAutoScaleBtnColor() const
@@ -410,35 +426,6 @@ void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
    rescaleCandlesYAxis();
    ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]));
 
-}
-
-void ChartWidget::timerEvent(QTimerEvent* event)
-{
-   killTimer(timerId_);
-
-   timerId_ = startTimer(getTimerInterval());
-
-   AddNewCandle();
-}
-
-std::chrono::seconds ChartWidget::getTimerInterval() const
-{
-   auto currentTime = QDateTime::fromMSecsSinceEpoch(static_cast<qint64> (currentTimestamp_)).time();
-
-   auto timerInterval = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::milliseconds ((int) IntervalWidth(dateRange_.checkedId())));
-   if (currentTime.second() != std::chrono::seconds(0).count())
-   {
-      if (currentTime.minute() != std::chrono::minutes(0).count())
-      {
-         auto currentSeconds = currentTime.minute() * 60 + currentTime.second();
-         auto diff = timerInterval.count() - currentSeconds;
-         timerInterval = std::chrono::seconds(diff);
-      }
-   }
-
-   qDebug() << "timer will start after " << timerInterval.count() << " seconds";
-
-   return timerInterval;
 }
 
 bool ChartWidget::needLoadNewData(const QCPRange& range, const QSharedPointer<QCPFinancialDataContainer> data) const
@@ -1073,6 +1060,49 @@ void ChartWidget::ChangeMDSubscriptionState()
    else {
       mdProvider_->SubscribeToMD();
    }
+}
+
+void ChartWidget::OnNewXBTorFXTrade(const bs::network::new_trade& trade)
+{
+   if (trade.product_name != getCurrentProductName().toStdString() ||
+      !candlesticksChart_->data()->size() ||
+      !volumeChart_->data()->size()) {
+      return;
+   }
+
+   auto lastVolume = volumeChart_->data()->end() - 1;
+   lastVolume->value += trade.amount;
+   auto lastCandle = candlesticksChart_->data()->end() - 1;
+
+   lastCandle->high = qMax(lastCandle->high, trade.price);
+   lastCandle->low = qMin(lastCandle->low, trade.price);
+   if (!qFuzzyCompare(lastCandle->close, trade.price)) {
+      lastCandle->close = trade.price;
+      ui_->customPlot->replot();
+   }
+   CheckToAddNewCandle(trade.timestamp);
+   //TODO: Combine with OnNewPMTrade method if there will be no difference in handling values
+}
+
+void ChartWidget::OnNewPMTrade(const bs::network::new_pm_trade& trade)
+{
+   if (trade.product_name != getCurrentProductName().toStdString() ||
+      !candlesticksChart_->data()->size() ||
+      !volumeChart_->data()->size()) {
+      return;
+   }
+
+   auto lastVolume = volumeChart_->data()->end() - 1;
+   lastVolume->value += trade.amount;
+   auto lastCandle = candlesticksChart_->data()->end() - 1;
+
+   lastCandle->high = qMax(lastCandle->high, trade.price);
+   lastCandle->low = qMin(lastCandle->low, trade.price);
+   if (!qFuzzyCompare(lastCandle->close, trade.price)) {
+      lastCandle->close = trade.price;
+      ui_->customPlot->replot();
+   }
+   CheckToAddNewCandle(trade.timestamp);
 }
 
 
