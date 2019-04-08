@@ -79,8 +79,8 @@ protected slots:
    void ChangeMDSubscriptionState();
 
    void OnNewTrade(const std::string& productName, uint64_t timestamp, double price, double amount);
-   void OnNewXBTorFXTrade(const bs::network::new_trade& trade);
-   void OnNewPMTrade(const bs::network::new_pm_trade& trade);
+   void OnNewXBTorFXTrade(const bs::network::NewTrade& trade);
+   void OnNewPMTrade(const bs::network::NewPMTrade& trade);
 
 protected:
    quint64 GetCandleTimestamp(const uint64_t& timestamp,

@@ -1075,12 +1075,12 @@ void ChartWidget::OnNewTrade(const std::string& productName, uint64_t timestamp,
    CheckToAddNewCandle(timestamp);
 }
 
-void ChartWidget::OnNewXBTorFXTrade(const bs::network::new_trade& trade)
+void ChartWidget::OnNewXBTorFXTrade(const bs::network::NewTrade& trade)
 {
-   OnNewTrade(trade.product_name, trade.timestamp, trade.price, trade.amount);
+   OnNewTrade(trade.product, trade.timestamp, trade.price, trade.amount);
 }
 
-void ChartWidget::OnNewPMTrade(const bs::network::new_pm_trade& trade)
+void ChartWidget::OnNewPMTrade(const bs::network::NewPMTrade& trade)
 {
-   OnNewTrade(trade.product_name, trade.timestamp, trade.price, trade.amount);
+   OnNewTrade(trade.product, trade.timestamp, trade.price, trade.amount);
 }
