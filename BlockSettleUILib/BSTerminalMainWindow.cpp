@@ -54,8 +54,6 @@
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ZMQ_BIP15X_DataConnection.h"
-#include "ZmqContext.h"
 
 #include <spdlog/spdlog.h>
 
@@ -179,9 +177,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
       return;
    }
 
-   const auto zmqContext = std::make_shared<ZmqContext>(logMgr_->logger());
-   const auto connection = std::make_shared<ZmqBIP15XDataConnection>(logMgr_->logger(), true, true);
-   connection->SetContext(zmqContext);
+   const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
 
    Blocksettle::Communication::RequestPacket reqPkt;
    reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);

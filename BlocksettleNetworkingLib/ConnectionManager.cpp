@@ -134,11 +134,9 @@ std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XCha
                                                       , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), ephemeral);
 }
 
-std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(
-   bool monitored) const
-{
-   auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
-      , true, monitored);
+std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection() const
+{  // This connection should be always monitored - as it relies on connection event
+   auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_, true, true);
    connection->SetContext(zmqContext_);
 
    return connection;

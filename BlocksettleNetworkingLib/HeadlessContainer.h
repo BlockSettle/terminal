@@ -25,7 +25,6 @@ namespace bs {
 }
 
 class ApplicationSettings;
-//class ArmoryServersProvider;
 class ConnectionManager;
 class DataConnection;
 class HeadlessListener;

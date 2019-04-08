@@ -1017,7 +1017,7 @@ bool RemoteSigner::Start()
       return true;
    }
 
-   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(true);
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
    if (opMode() == OpMode::RemoteInproc) {
       connection_->SetZMQTransport(ZMQTransport::InprocTransport);
    }
