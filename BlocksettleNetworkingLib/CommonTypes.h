@@ -397,6 +397,8 @@ Q_DECLARE_METATYPE(bs::network::QuoteNotification)
 Q_DECLARE_METATYPE(bs::network::MDField)
 Q_DECLARE_METATYPE(bs::network::MDFields)
 Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
+Q_DECLARE_METATYPE(bs::network::NewTrade)
+Q_DECLARE_METATYPE(bs::network::NewPMTrade)
 
 
 #endif //__BS_COMMON_TYPES_H__
