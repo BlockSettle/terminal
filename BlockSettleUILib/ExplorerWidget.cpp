@@ -9,7 +9,8 @@
 // Overloaded constuctor. Does basic setup and Qt signal connection.
 ExplorerWidget::ExplorerWidget(QWidget *parent) :
    TabWithShortcut(parent)
-   , ui_(new Ui::ExplorerWidget())
+ , ui_(new Ui::ExplorerWidget())
+ , transactionHistoryPosition_(-1)
 {
    ui_->setupUi(this);
 
@@ -23,9 +24,13 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    connect(ui_->Transaction, &TransactionDetailsWidget::addressClicked,
            this, &ExplorerWidget::onAddressClicked);
    connect(ui_->btnSearch, &QPushButton::clicked,
-      this, &ExplorerWidget::onSearchStarted);
+           this, &ExplorerWidget::onSearchStarted);
    connect(ui_->btnReset, &QPushButton::clicked,
-      this, &ExplorerWidget::onReset);
+           this, &ExplorerWidget::onReset);
+   connect(ui_->btnBack, &QPushButton::clicked,
+           this, &ExplorerWidget::onBackButtonClicked);
+   connect(ui_->btnForward, &QPushButton::clicked,
+           this, &ExplorerWidget::onForwardButtonClicked);
 }
 
 ExplorerWidget::~ExplorerWidget() = default;
@@ -93,11 +98,9 @@ void ExplorerWidget::onSearchStarted()
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
       // String is a valid 32 byte hex string, so we may proceed.
-      ui_->stackedWidget->setCurrentIndex(TxPage);
-
-      // Pass the Tx hash to the Tx widget and populate the fields.
-      BinaryTXID userTXID(READHEX(userStr.toStdString()), true);
-      ui_->Transaction->populateTransactionWidget(userTXID);
+      clearTransactionHistory();
+      pushTransactionHistory(userStr);
+      setTransaction(userStr);
       ui_->searchBox->clear();
    }
    else {
@@ -112,9 +115,9 @@ void ExplorerWidget::onSearchStarted()
 // address details page or any other page.
 void ExplorerWidget::onTransactionClicked(QString txId)
 {
-   BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
-   ui_->stackedWidget->setCurrentIndex(TxPage);
-   ui_->Transaction->populateTransactionWidget(terminalTXID);
+   truncateTransactionHistory();
+   pushTransactionHistory(txId);
+   setTransaction(txId);
 }
 
 // This slot function is called whenever user clicks on an address in
@@ -146,4 +149,71 @@ void ExplorerWidget::onReset()
 {
    ui_->stackedWidget->setCurrentIndex(BlockPage);
    ui_->searchBox->clear();
+   clearTransactionHistory();
+}
+
+void ExplorerWidget::onBackButtonClicked()
+{
+   if (transactionHistoryPosition_ > 0) {
+      --transactionHistoryPosition_;
+      const auto txId = transactionHistory_.at(static_cast<size_t>(transactionHistoryPosition_));
+      setTransaction(QString::fromStdString(txId));
+   }
+}
+
+void ExplorerWidget::onForwardButtonClicked()
+{
+   if (transactionHistoryPosition_ < static_cast<int>(transactionHistory_.size()) - 1) {
+      ++transactionHistoryPosition_;
+      const auto txId = transactionHistory_.at(static_cast<size_t>(transactionHistoryPosition_));
+      setTransaction(QString::fromStdString(txId));
+   }
+}
+
+bool ExplorerWidget::canGoBack() const
+{
+   return transactionHistoryPosition_ > 0;
+}
+
+bool ExplorerWidget::canGoForward() const
+{
+   return transactionHistoryPosition_ < static_cast<int>(transactionHistory_.size()) - 1;
+}
+
+void ExplorerWidget::setTransaction(QString txId)
+{
+   ui_->btnBack->setEnabled(canGoBack());
+   ui_->btnForward->setEnabled(canGoForward());
+
+   ui_->stackedWidget->setCurrentIndex(TxPage);
+   // Pass the Tx hash to the Tx widget and populate the fields.
+   BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
+   ui_->Transaction->populateTransactionWidget(terminalTXID);
+}
+
+void ExplorerWidget::pushTransactionHistory(QString txId)
+{
+   if (txId.isEmpty())
+      return;
+   auto lastId = transactionHistory_.empty() ? std::string() : transactionHistory_.back();
+   if (txId.toStdString() == lastId)
+      return;
+   transactionHistory_.push_back(txId.toStdString());
+   transactionHistoryPosition_ = static_cast<int>(transactionHistory_.size()) - 1;
+}
+
+void ExplorerWidget::truncateTransactionHistory(int position)
+{
+   int pos = position >= 0 ? position : transactionHistoryPosition_;
+   while (static_cast<int>(transactionHistory_.size()) - 1 > pos) {
+      transactionHistory_.pop_back();
+   }
+}
+
+void ExplorerWidget::clearTransactionHistory()
+{
+   transactionHistoryPosition_ = -1;
+   truncateTransactionHistory();
+   ui_->btnBack->setEnabled(canGoBack());
+   ui_->btnForward->setEnabled(canGoForward());
 }
