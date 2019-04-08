@@ -78,6 +78,7 @@ protected slots:
    void OnMDDisconnected();
    void ChangeMDSubscriptionState();
 
+   void OnNewTrade(const std::string& productName, uint64_t timestamp, double price, double amount);
    void OnNewXBTorFXTrade(const bs::network::new_trade& trade);
    void OnNewPMTrade(const bs::network::new_pm_trade& trade);
 

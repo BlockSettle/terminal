@@ -166,8 +166,6 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
          }
       }
    }
-
-
 }
 
 void ChartWidget::UpdateChart(const int& interval) const
@@ -298,7 +296,6 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
       lastCandle_ = candle;
 
-
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
       qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
          , QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
@@ -313,7 +310,6 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
          lastClose_ = candle.close();
       }
    }
-
 
    if (firstPortion) {
       if (!qFuzzyIsNull(currentTimestamp_)) {
@@ -583,7 +579,6 @@ QString ChartWidget::GetFormattedStamp(double timestamp)
 
 void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 {
-
    DrawCrossfire(event);
 
    double x = event->localPos().x();
@@ -721,7 +716,6 @@ void ChartWidget::rescalePlot()
       rescaleCandlesYAxis();
    }
    rescaleVolumesYAxis();
-
 }
 
 void ChartWidget::OnMousePressed(QMouseEvent* event)
@@ -751,7 +745,6 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
       lastDragCoord_ = event->pos();
       isDraggingMainPlot_ = false;
    }
-
 }
 
 void ChartWidget::OnMouseReleased(QMouseEvent* event)
@@ -919,7 +912,6 @@ void ChartWidget::SetupCrossfire()
 
 void ChartWidget::InitializeCustomPlot()
 {
-
    SetupCrossfire();
 
    QBrush bgBrush(BACKGROUND_COLOR);
@@ -988,7 +980,6 @@ void ChartWidget::InitializeCustomPlot()
    connect(ui_->customPlot->xAxis, SIGNAL(rangeChanged(QCPRange))
            , volumeAxisRect_->axis(QCPAxis::atBottom), SLOT(setRange(QCPRange)));
 
-
    connect(volumeAxisRect_->axis(QCPAxis::atBottom),
       qOverload<const QCPRange&, const QCPRange&>(&QCPAxis::rangeChanged),
       this,
@@ -1013,7 +1004,6 @@ void ChartWidget::InitializeCustomPlot()
    QCPMarginGroup *group = new QCPMarginGroup(ui_->customPlot);
    ui_->customPlot->axisRect()->setMarginGroup(QCP::msLeft|QCP::msRight, group);
    volumeAxisRect_->setMarginGroup(QCP::msLeft|QCP::msRight, group);
-
 
    connect(ui_->customPlot, &QCustomPlot::mouseMove, this, &ChartWidget::OnPlotMouseMove);
    connect(ui_->customPlot, &QCustomPlot::mousePress, this, &ChartWidget::OnMousePressed);
@@ -1064,47 +1054,33 @@ void ChartWidget::ChangeMDSubscriptionState()
    }
 }
 
-void ChartWidget::OnNewXBTorFXTrade(const bs::network::new_trade& trade)
+void ChartWidget::OnNewTrade(const std::string& productName, uint64_t timestamp, double price, double amount)
 {
-   if (trade.product_name != getCurrentProductName().toStdString() ||
+   if (productName != getCurrentProductName().toStdString() ||
       !candlesticksChart_->data()->size() ||
       !volumeChart_->data()->size()) {
       return;
    }
 
    auto lastVolume = volumeChart_->data()->end() - 1;
-   lastVolume->value += trade.amount;
+   lastVolume->value += amount;
    auto lastCandle = candlesticksChart_->data()->end() - 1;
 
-   lastCandle->high = qMax(lastCandle->high, trade.price);
-   lastCandle->low = qMin(lastCandle->low, trade.price);
-   if (!qFuzzyCompare(lastCandle->close, trade.price)) {
-      lastCandle->close = trade.price;
+   lastCandle->high = qMax(lastCandle->high, price);
+   lastCandle->low = qMin(lastCandle->low, price);
+   if (!qFuzzyCompare(lastCandle->close, price)) {
+      lastCandle->close = price;
       ui_->customPlot->replot();
    }
-   CheckToAddNewCandle(trade.timestamp);
-   //TODO: Combine with OnNewPMTrade method if there will be no difference in handling values
+   CheckToAddNewCandle(timestamp);
+}
+
+void ChartWidget::OnNewXBTorFXTrade(const bs::network::new_trade& trade)
+{
+   OnNewTrade(trade.product_name, trade.timestamp, trade.price, trade.amount);
 }
 
 void ChartWidget::OnNewPMTrade(const bs::network::new_pm_trade& trade)
 {
-   if (trade.product_name != getCurrentProductName().toStdString() ||
-      !candlesticksChart_->data()->size() ||
-      !volumeChart_->data()->size()) {
-      return;
-   }
-
-   auto lastVolume = volumeChart_->data()->end() - 1;
-   lastVolume->value += trade.amount;
-   auto lastCandle = candlesticksChart_->data()->end() - 1;
-
-   lastCandle->high = qMax(lastCandle->high, trade.price);
-   lastCandle->low = qMin(lastCandle->low, trade.price);
-   if (!qFuzzyCompare(lastCandle->close, trade.price)) {
-      lastCandle->close = trade.price;
-      ui_->customPlot->replot();
-   }
-   CheckToAddNewCandle(trade.timestamp);
+   OnNewTrade(trade.product_name, trade.timestamp, trade.price, trade.amount);
 }
-
-
