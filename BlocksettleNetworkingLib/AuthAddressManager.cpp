@@ -751,9 +751,7 @@ bool AuthAddressManager::SendGetBSAddressListRequest()
 
 bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
-   const auto connection = connectionManager_->CreateSecuredDataConnection();
-   BinaryData inSrvPubKey(settings_->get<std::string>(ApplicationSettings::pubBridgePubKey));
-   connection->SetServerPublicKey(inSrvPubKey);
+   const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
    auto command = std::make_shared<RequestReplyCommand>(name, connection, logger_);
 
    command->SetReplyCallback([command, this](const std::string& data) {
@@ -778,8 +776,7 @@ bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::s
 
    if (!command->ExecuteRequest(settings_->get<std::string>(ApplicationSettings::pubBridgeHost)
          , settings_->get<std::string>(ApplicationSettings::pubBridgePort)
-         , data))
-   {
+         , data, true)) {
       logger_->error("[AuthAddressManager::SubmitRequestToPB] failed to send request {}", name);
       FastLock locker(lockCommands_);
       activeCommands_.erase(command);
