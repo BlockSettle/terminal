@@ -367,6 +367,23 @@ namespace bs {
 
       const std::string XbtCurrency = "XBT";
 
+      // fx and xbt
+      struct NewTrade
+      {
+         std::string product;
+         double      price;
+         double      amount;
+         uint64_t    timestamp;
+      };
+
+      struct NewPMTrade
+      {
+         double      price;
+         uint64_t    amount;
+         std::string product;
+         uint64_t    timestamp;
+      };
+
    }  //namespace network
 }  //namespace bs
 

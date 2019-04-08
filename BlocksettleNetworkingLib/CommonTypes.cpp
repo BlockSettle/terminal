@@ -19,6 +19,8 @@ public:
       qRegisterMetaType<bs::network::MDField>("MDField");
       qRegisterMetaType<bs::network::MDFields>("MDFields");
       qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
+      qRegisterMetaType<bs::network::NewTrade>("NewTrade");
+      qRegisterMetaType<bs::network::NewPMTrade>("NewPMTrade");
       qRegisterMetaType<bs::PayoutSigner::Type>();
    }
 

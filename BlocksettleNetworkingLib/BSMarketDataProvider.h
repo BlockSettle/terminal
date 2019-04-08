@@ -50,6 +50,11 @@ private:
    void OnFullSnapshot(const std::string& data);
    void OnIncrementalUpdate(const std::string& data);
 
+   void OnNewTradeUpdate(const std::string& data);
+   void OnNewFXTradeUpdate(const std::string& data);
+   void OnNewXBTTradeUpdate(const std::string& data);
+   void OnNewPMTradeUpdate(const std::string& data);
+
    void OnProductSnapshot(const bs::network::Asset::Type& assetType
       , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
       , double timestamp);
