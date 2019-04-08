@@ -619,6 +619,7 @@ ELSE(WIN32)
 
       IF(BSTERMINAL_SHARED_LIBS)
          SET( TMP_LIBS
+            libQt5XcbQpa.a
             libQt5ServiceSupport.a
             libQt5ThemeSupport.a
             libQt5EventDispatcherSupport.a
@@ -659,6 +660,7 @@ ELSE(WIN32)
             XCB::XCB
             xkbcommon-x11
             xkbcommon
+            xcb-xinput
             dbus-1
             ${ZLIB_LIBRARIES}
             png
@@ -727,6 +729,7 @@ ELSE(WIN32)
             XCB::XCB
             xkbcommon-x11
             xkbcommon
+            xcb-xinput
             dbus-1
             ${ZLIB_LIBRARIES}
             png
