@@ -132,6 +132,7 @@ public:
    bool Disconnect() override;
    bool isOffline() const override;
    bool hasUI() const override;
+   SecureBinaryData getOwnPubKey() const { return connection_->getOwnPubKey(); }
 
 protected slots:
    void onAuthenticated();
