@@ -113,6 +113,11 @@ void PortfolioWidget::shortcutActivated(ShortcutType s)
 
 }
 
+void PortfolioWidget::setAuthorized(bool authorized)
+{
+   ui_->widgetMarketData->setAuthorized(authorized);
+}
+
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {
    if (filter_) {

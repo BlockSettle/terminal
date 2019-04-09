@@ -97,7 +97,7 @@ void MarketDataWidget::OnMDConnecting()
 void MarketDataWidget::OnMDConnected()
 {
    ui_->pushButtonMDConnection->setText(tr("Disconnect"));
-   ui_->pushButtonMDConnection->setEnabled(true);
+   ui_->pushButtonMDConnection->setEnabled(!authorized_);
 }
 
 void MarketDataWidget::OnMDDisconnecting()
@@ -109,7 +109,7 @@ void MarketDataWidget::OnMDDisconnecting()
 void MarketDataWidget::OnMDDisconnected()
 {
    ui_->pushButtonMDConnection->setText(tr("Subscribe"));
-   ui_->pushButtonMDConnection->setEnabled(true);
+   ui_->pushButtonMDConnection->setEnabled(!authorized_);
 }
 
 void MarketDataWidget::ChangeMDSubscriptionState()
@@ -124,6 +124,12 @@ void MarketDataWidget::ChangeMDSubscriptionState()
 TreeViewWithEnterKey* MarketDataWidget::view() const
 {
    return ui_->treeViewMarketData;
+}
+
+void MarketDataWidget::setAuthorized(bool authorized)
+{
+   ui_->pushButtonMDConnection->setEnabled(!authorized);
+   authorized_ = authorized;
 }
 
 void MarketDataWidget::onMDRejected(const std::string &security, const std::string &reason)

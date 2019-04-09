@@ -170,6 +170,14 @@ void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
    }
 }
 
+void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
+{
+   // Update authorized state for some widgets
+   ui_->widgetPortfolio->setAuthorized(authorized);
+   ui_->widgetRFQ->setAuthorized(authorized);
+   ui_->widgetChart->setAuthorized(authorized);
+}
+
 void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
 {
    if (networkSettings_.isSet) {
@@ -1038,6 +1046,7 @@ void BSTerminalMainWindow::onReadyToLogin()
       currentUserLogin_ = loginDialog.getUsername();
       auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
       setLoginButtonText(currentUserLogin_);
+      setWidgetsAuthorized(true);
 
 #ifndef PRODUCTION_BUILD
       // TODO: uncomment this section once we have armory connection
@@ -1048,6 +1057,8 @@ void BSTerminalMainWindow::onReadyToLogin()
          // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
       // }
 #endif
+   } else {
+      setWidgetsAuthorized(false);
    }
 }
 
@@ -1061,6 +1072,8 @@ void BSTerminalMainWindow::onLogout()
    }
    
    setLoginButtonText(loginButtonText_);
+
+   setWidgetsAuthorized(false);
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()

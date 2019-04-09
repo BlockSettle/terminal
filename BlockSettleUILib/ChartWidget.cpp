@@ -122,6 +122,12 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    ui_->btn1h->click();
 }
 
+void ChartWidget::setAuthorized(bool authorized)
+{
+   ui_->pushButtonMDConnection->setEnabled(!authorized);
+   authorized_ = authorized;
+}
+
 ChartWidget::~ChartWidget() {
    delete ui_;
 }
@@ -1040,7 +1046,7 @@ void ChartWidget::OnMDConnecting()
 void ChartWidget::OnMDConnected()
 {
    ui_->pushButtonMDConnection->setText(tr("Disconnect"));
-   ui_->pushButtonMDConnection->setEnabled(true);
+   ui_->pushButtonMDConnection->setEnabled(!authorized_);
 }
 
 void ChartWidget::OnMDDisconnecting()
@@ -1052,7 +1058,7 @@ void ChartWidget::OnMDDisconnecting()
 void ChartWidget::OnMDDisconnected()
 {
    ui_->pushButtonMDConnection->setText(tr("Subscribe"));
-   ui_->pushButtonMDConnection->setEnabled(true);
+   ui_->pushButtonMDConnection->setEnabled(!authorized_);
 }
 
 void ChartWidget::ChangeMDSubscriptionState()
