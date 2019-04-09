@@ -79,6 +79,9 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case signer::AutoSignActType:
       rc = onAutoSignRequest(packet.data());
       break;
+   case signer::ChangePasswordRequestType:
+      rc = onChangePassword(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -472,4 +475,43 @@ bool SignerAdapterListener::onAutoSignRequest(const std::string &data)
       app_->deactivateAutoSign();
    }
    return true;
+}
+
+bool SignerAdapterListener::onChangePassword(const std::string &data, SignContainer::RequestId reqId)
+{
+   signer::ChangePasswordResponse response;
+
+   signer::ChangePasswordRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerContainerListener] failed to parse ChangePasswordRequest");
+      response.set_success(false);
+      response.set_rootwalletid(std::string());
+      sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
+      return false;
+   }
+   const auto &wallet = walletsMgr_->getHDWalletById(request.rootwalletid());
+   if (!wallet) {
+      logger_->error("[SignerContainerListener] failed to find wallet for id {}", request.rootwalletid());
+      response.set_success(false);
+      response.set_rootwalletid(request.rootwalletid());
+      sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
+      return false;
+   }
+   std::vector<bs::wallet::PasswordData> pwdData;
+   for (int i = 0; i < request.newpassword_size(); ++i) {
+      const auto &pwd = request.newpassword(i);
+      pwdData.push_back({ BinaryData::CreateFromHex(pwd.password())
+                          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
+   }
+   bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
+
+   bool result = wallet->changePassword(pwdData, keyRank
+                                        , BinaryData::CreateFromHex(request.oldpassword())
+                                        , request.addnew(), request.removeold(), request.dryrun());
+
+
+   response.set_success(result);
+   response.set_rootwalletid(request.rootwalletid());
+   logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}", __func__, request.rootwalletid(), result);
+   return sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
 }

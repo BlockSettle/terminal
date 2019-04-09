@@ -53,6 +53,7 @@ private:
    bool onReloadWallets(const std::string &data, SignContainer::RequestId);
    bool onReconnect(const std::string &data);
    bool onAutoSignRequest(const std::string &data);
+   bool onChangePassword(const std::string &data, SignContainer::RequestId);
 
 private:
    HeadlessAppObj *  app_;
