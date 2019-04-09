@@ -25,10 +25,10 @@ public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
    ~AddressDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &armory,
-             const std::shared_ptr<spdlog::logger> &inLogger);
+   void init(const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<spdlog::logger> &inLogger
+      , const std::shared_ptr<QTimer> &inTimer);
    void setQueryAddr(const bs::Address& inAddrVal);
-   void loadTransactions();
    void clear();
 
    enum AddressTreeColumns {
@@ -55,6 +55,7 @@ private:
    void setOutputColor(QTreeWidgetItem *item);
    void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
    void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
+   void loadTransactions();
 
 private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
@@ -77,7 +78,7 @@ private:
    std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
-
+   std::shared_ptr<QTimer>             expTimer_;
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
 };
