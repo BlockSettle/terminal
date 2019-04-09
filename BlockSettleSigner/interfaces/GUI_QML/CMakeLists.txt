@@ -12,6 +12,8 @@ LIST(APPEND SOURCES
    ../../QmlFactory.cpp
    ../../QMLStatusUpdater.cpp
    ../../SignerAdapter.cpp
+   ../../SignerAdapterContainer.cpp
+   ../../SignerInterfaceListener.cpp
    ../../SignerSettings.cpp
    ../../TXInfo.cpp
    ../../WalletsProxy.cpp
@@ -26,6 +28,8 @@ LIST(APPEND HEADERS
    ../../QmlFactory.h
    ../../QMLStatusUpdater.h
    ../../SignerAdapter.h
+   ../../SignerAdapterContainer.h
+   ../../SignerInterfaceListener.h
    ../../SignerSettings.h
    ../../TXInfo.h
    ../../WalletsProxy.h
