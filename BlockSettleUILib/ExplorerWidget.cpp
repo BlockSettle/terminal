@@ -16,6 +16,7 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
 
    // Set up the explorer expiration timer.
    expTimer_->setInterval(EXP_TIMEOUT);
+   expTimer_->setSingleShot(true);
    expTimer_->callOnTimeout(this, &ExplorerWidget::onExpTimeout);
 
    // connection to handle enter key being pressed inside the search box
@@ -42,7 +43,6 @@ void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
 {
    armory_ = armory;
    logger_ = inLogger;
-   expTimer_ = std::make_shared<QTimer>();
    ui_->Transaction->init(armory, inLogger, expTimer_);
    ui_->Address->init(armory, inLogger, expTimer_);
 //   ui_->Block->init(armory, inLogger);
