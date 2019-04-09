@@ -154,6 +154,8 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
                lastCandle->low = qMin(lastCandle->low, field.value);
                if (!qFuzzyCompare(lastCandle->close, field.value)) {
                   lastCandle->close = field.value;
+                  UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(QCursor::pos().x()));
+                  rescalePlot();
                   ui_->customPlot->replot();
                }
             }
@@ -577,6 +579,29 @@ QString ChartWidget::GetFormattedStamp(double timestamp)
    return QDateTime::fromSecsSinceEpoch(timestamp).toString(resultFormat);
 }
 
+void ChartWidget::UpdateOHLCInfo(double width, double timestamp)
+{
+   auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp + width / 2);
+   auto volumeValue = *volumeChart_->data()->findBegin(timestamp + width / 2);
+   //ohlcValue.close >= ohlcValue.open ? c_greenColor : c_redColor
+   const auto& color = VOLUME_COLOR.name();
+   auto prec = FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]);
+   QString partForm = QStringLiteral("<font color=\"%2\">%1</font>");
+   QString format = QStringLiteral("&nbsp;&nbsp;%1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%2 %3&nbsp;&nbsp;&nbsp;%4 %5&nbsp;&nbsp;&nbsp;%6 %7&nbsp;&nbsp;&nbsp;%8 %9&nbsp;&nbsp;&nbsp;%10 %11")
+                    .arg(partForm.arg(GetFormattedStamp(ohlcValue.key)).arg(FOREGROUND_COLOR.name()))
+                    .arg(partForm.arg(QStringLiteral("O:")).arg(FOREGROUND_COLOR.name()))
+                    .arg(partForm.arg(ohlcValue.open, 0, 'f', prec).arg(color))
+                    .arg(partForm.arg(QStringLiteral("H:")).arg(FOREGROUND_COLOR.name()))
+                    .arg(partForm.arg(ohlcValue.high, 0, 'f', prec).arg(color))
+                    .arg(partForm.arg(QStringLiteral("L:")).arg(FOREGROUND_COLOR.name()))
+                    .arg(partForm.arg(ohlcValue.low, 0, 'f', prec).arg(color))
+                    .arg(partForm.arg(QStringLiteral("C:")).arg(FOREGROUND_COLOR.name()))
+                    .arg(partForm.arg(ohlcValue.close, 0, 'f', prec).arg(color))
+                    .arg(partForm.arg(QStringLiteral("Volume:")).arg(FOREGROUND_COLOR.name()))
+                    .arg(partForm.arg(volumeValue.value).arg(color));
+   ui_->ohlcLbl->setText(format);
+}
+
 void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
 {
    DrawCrossfire(event);
@@ -589,24 +614,7 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       timestamp < candlesticksChart_->data()->at(0)->key - width / 2) {
       ui_->ohlcLbl->setText({});
    } else {
-      auto ohlcValue = *candlesticksChart_->data()->findBegin(timestamp + width / 2);
-      auto volumeValue = *volumeChart_->data()->findBegin(timestamp + width / 2);
-      const auto& color = (ohlcValue.close >= ohlcValue.open ? c_greenColor : c_redColor).name();
-      auto prec = FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]);
-      QString partForm = QStringLiteral("<font color=\"%2\">%1</font>");
-      QString format = QStringLiteral("&nbsp;&nbsp;%1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%2 %3&nbsp;&nbsp;&nbsp;%4 %5&nbsp;&nbsp;&nbsp;%6 %7&nbsp;&nbsp;&nbsp;%8 %9&nbsp;&nbsp;&nbsp;%10 %11")
-         .arg(partForm.arg(GetFormattedStamp(ohlcValue.key)).arg(FOREGROUND_COLOR.name()))
-         .arg(partForm.arg(QStringLiteral("O:")).arg(FOREGROUND_COLOR.name()))
-         .arg(partForm.arg(ohlcValue.open, 0, 'g', prec).arg(color))
-         .arg(partForm.arg(QStringLiteral("H:")).arg(FOREGROUND_COLOR.name()))
-         .arg(partForm.arg(ohlcValue.high, 0, 'g', prec).arg(color))
-         .arg(partForm.arg(QStringLiteral("L:")).arg(FOREGROUND_COLOR.name()))
-         .arg(partForm.arg(ohlcValue.low, 0, 'g', prec).arg(color))
-         .arg(partForm.arg(QStringLiteral("C:")).arg(FOREGROUND_COLOR.name()))
-         .arg(partForm.arg(ohlcValue.close, 0, 'g', prec).arg(color))
-         .arg(partForm.arg(QStringLiteral("Volume:")).arg(FOREGROUND_COLOR.name()))
-         .arg(partForm.arg(volumeValue.value).arg(color));
-      ui_->ohlcLbl->setText(format);
+      UpdateOHLCInfo(width, timestamp);
    }
 
    if (isDraggingYAxis_)
@@ -1065,11 +1073,12 @@ void ChartWidget::OnNewTrade(const std::string& productName, uint64_t timestamp,
    auto lastVolume = volumeChart_->data()->end() - 1;
    lastVolume->value += amount;
    auto lastCandle = candlesticksChart_->data()->end() - 1;
-
    lastCandle->high = qMax(lastCandle->high, price);
    lastCandle->low = qMin(lastCandle->low, price);
    if (!qFuzzyCompare(lastCandle->close, price)) {
       lastCandle->close = price;
+      UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(QCursor::pos().x()));
+      rescalePlot();
       ui_->customPlot->replot();
    }
    CheckToAddNewCandle(timestamp);
