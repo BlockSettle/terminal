@@ -391,9 +391,11 @@ CustomDialog {
                                                                                         , newPasswordData
                                                                                         , function(result){
                                                                                             var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                                            mb.bsAccepted.connect(function(){
-                                                                                                acceptAnimated()
-                                                                                            })
+                                                                                            if (result) {
+                                                                                                mb.bsAccepted.connect(function(){
+                                                                                                    acceptAnimated()
+                                                                                                })
+                                                                                            }
                                                                                         })
                                                         }
                                                         else {
@@ -406,10 +408,11 @@ CustomDialog {
                                                                                                                     , newPwEidData
                                                                                                                     , function(result){
                                                                                                                         var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                                                                        mb.bsAccepted.connect(function(){
-                                                                                                                            //acceptAnimated()
-                                                                                                                            addTabButton.onClicked()
-                                                                                                                        })
+                                                                                                                        if (result) {
+                                                                                                                            mb.bsAccepted.connect(function(){
+                                                                                                                                addTabButton.onClicked()
+                                                                                                                            })
+                                                                                                                        }
                                                                                                                     })
                                                                                     }) // function(new passwordData)
 
@@ -428,9 +431,11 @@ CustomDialog {
                                                             , newPasswordData
                                                             , function(result){
                                                                 var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                mb.bsAccepted.connect(function(){
-                                                                    acceptAnimated()
-                                                                })
+                                                                if (result) {
+                                                                    mb.bsAccepted.connect(function(){
+                                                                        acceptAnimated()
+                                                                    })
+                                                                }
                                                             })
                             }
                             else {
@@ -443,10 +448,11 @@ CustomDialog {
                                                                                          , newPwEidData
                                                                                          , function(result){
                                                                                              var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                                             mb.bsAccepted.connect(function(){
-                                                                                                 //acceptAnimated()
-                                                                                                 addTabButton.onClicked()
-                                                                                             })
+                                                                                             if (result) {
+                                                                                                 mb.bsAccepted.connect(function(){
+                                                                                                     addTabButton.onClicked()
+                                                                                                 })
+                                                                                             }
                                                                                          })
                                                          })
                             }

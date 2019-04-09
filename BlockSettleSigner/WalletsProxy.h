@@ -88,6 +88,7 @@ private:
    bool primaryWalletExists() const;
    std::shared_ptr<bs::sync::hd::Wallet> getRootForId(const QString &walletId) const;
    QStringList walletNames() const;
+   Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

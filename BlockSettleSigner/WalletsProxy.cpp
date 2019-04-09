@@ -78,20 +78,16 @@ void WalletsProxy::changePassword(const QString &walletId
    }
 
    const auto &cbChangePwdResult = [this, walletId, jsCallback](bool result) {
-      QJSValue jsCallbackCopy = jsCallback;
+      QJSValueList args;
+      args << QJSValue(result);
 
-      if (jsCallback.isCallable()) {
-          QJSValueList args;
-          args << QJSValue(result);
-          jsCallbackCopy.call();
-      }
+      QMetaObject::invokeMethod(this, "invokeJsCallBack", Qt::QueuedConnection
+                                , Q_ARG(QJSValue, jsCallback)
+                                , Q_ARG(QJSValueList, args));
 
       if (result) {
          emit walletsMgr_.get()->walletChanged();
       }
-//      else {
-//         emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
-//      }
    };
 
    adapter_->changePassword(walletId.toStdString(), { *newPasswordData }, { 1, 1 }
@@ -359,6 +355,16 @@ QStringList WalletsProxy::walletNames() const
       result.push_back(QString::fromStdString(wallet->name()));
    }
    return result;
+}
+
+QJSValue WalletsProxy::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
+{
+   if (jsCallback.isCallable()) {
+      return jsCallback.call(args);
+   }
+   else {
+      return QJSValue();
+   }
 }
 
 int WalletsProxy::indexOfWalletId(const QString &walletId) const

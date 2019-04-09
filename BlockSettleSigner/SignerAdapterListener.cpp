@@ -512,5 +512,6 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, SignContai
 
    response.set_success(result);
    response.set_rootwalletid(request.rootwalletid());
+   logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}", __func__, request.rootwalletid(), result);
    return sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
 }

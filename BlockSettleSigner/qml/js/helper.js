@@ -20,7 +20,6 @@ function messageBox(type, title, text, details, parent) {
 }
 
 function resultBox(type, result, walletInfo) {
-    if (!result) return false   // only succeed result boxes used at the moment. Error shown directly from walletsProxy
     var messageBox_ = Qt.createComponent("../BsControls/BSResultBox.qml").createObject(mainWindow)
 
     messageBox_.walletInfo = walletInfo
