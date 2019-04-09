@@ -68,7 +68,8 @@ bool WalletsProxy::primaryWalletExists() const
 
 void WalletsProxy::changePassword(const QString &walletId
                                   , bs::wallet::QPasswordData *oldPasswordData
-                                  , bs::wallet::QPasswordData *newPasswordData)
+                                  , bs::wallet::QPasswordData *newPasswordData
+                                  , const QJSValue &jsCallback)
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
@@ -76,13 +77,21 @@ void WalletsProxy::changePassword(const QString &walletId
       return;
    }
 
-   const auto &cbChangePwdResult = [this, walletId](bool result) {
+   const auto &cbChangePwdResult = [this, walletId, jsCallback](bool result) {
+      QJSValue jsCallbackCopy = jsCallback;
+
+      if (jsCallback.isCallable()) {
+          QJSValueList args;
+          args << QJSValue(result);
+          jsCallbackCopy.call();
+      }
+
       if (result) {
          emit walletsMgr_.get()->walletChanged();
       }
-      else {
-         emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
-      }
+//      else {
+//         emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
+//      }
    };
 
    adapter_->changePassword(walletId.toStdString(), { *newPasswordData }, { 1, 1 }
