@@ -25,8 +25,9 @@ CustomTitleDialogWindow {
 
     title: curPage == 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
 
-    width: curPage == 1 ? mainWindow.width * 0.8 : 470
-    height: curPage == 1 ? mainWindow.height * 0.98 : 265
+    property bool fullScreenMode: true
+    width: fullScreenMode ? 640 : (curPage == 1 ? mainWindow.width * 0.8 : 470)
+    height: fullScreenMode ? 800 : (curPage == 1 ? mainWindow.height * 0.98 : 265)
 
     abortConfirmation: true
     abortBoxType: BSAbortBox.WalletCreation

@@ -13,10 +13,36 @@
 #include "HeadlessSettings.h"
 #include "LogManager.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
+#include "NativeEventFilter.h"
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
+
+
+// redirect qDebug() to stdout
+// stdout redirected to parent process
+void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QByteArray localMsg = msg.toLocal8Bit();
+    switch (type) {
+    case QtDebugMsg:
+        fprintf(stdout, "Headless Debug: %s\r\n", localMsg.constData());
+        break;
+    case QtInfoMsg:
+        fprintf(stdout, "Headless Info: %s\r\n", localMsg.constData());
+        break;
+    case QtWarningMsg:
+        fprintf(stderr, "Headless Warning: %s\r\n", localMsg.constData());
+        break;
+    case QtCriticalMsg:
+        fprintf(stderr, "Headless Critical: %s\r\n", localMsg.constData());
+        break;
+    case QtFatalMsg:
+        fprintf(stderr, "Headless Fatal: %s\r\n", localMsg.constData());
+       break;
+    }
+}
 
 static int HeadlessApp(int argc, char **argv)
 {
@@ -24,6 +50,9 @@ static int HeadlessApp(int argc, char **argv)
    app.setApplicationName(QLatin1String("Signer"));
    app.setOrganizationDomain(QLatin1String("blocksettle.com"));
    app.setOrganizationName(QLatin1String("BlockSettle"));
+
+   // fix for accepting terminate() command on windows (listen for WM_CLOSE win event)
+   app.installNativeEventFilter(new NativeEventFilter());
 
    bs::LogManager logMgr;
    auto loggerStdout = logMgr.logger("settings");
@@ -45,12 +74,22 @@ static int HeadlessApp(int argc, char **argv)
       logger = logMgr.logger();
    }
 
+#ifndef NDEBUG
+   qInstallMessageHandler(qMessageHandler);
+
+#ifdef Q_OS_WIN
+   // set zero buffer for stdout and stderr
+   setvbuf(stdout, NULL, _IONBF, 0 );
+   setvbuf(stderr, NULL, _IONBF, 0 );
+#endif
+#endif
+
    logger->info("Starting BS Signer...");
    try {
       HeadlessAppObj appObj(logger, settings);
       QObject::connect(&appObj, &HeadlessAppObj::finished, &app
                        , &QCoreApplication::quit);
-      QTimer::singleShot(0, &appObj, &HeadlessAppObj::start);
+      appObj.start();
 
       return app.exec();
    }

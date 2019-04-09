@@ -72,7 +72,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 14 )
-SET(BS_VERSION_PATCH 3 )
+SET(BS_VERSION_PATCH 6 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -619,6 +619,7 @@ ELSE(WIN32)
 
       IF(BSTERMINAL_SHARED_LIBS)
          SET( TMP_LIBS
+            libQt5XcbQpa.a
             libQt5ServiceSupport.a
             libQt5ThemeSupport.a
             libQt5EventDispatcherSupport.a
@@ -659,6 +660,7 @@ ELSE(WIN32)
             XCB::XCB
             xkbcommon-x11
             xkbcommon
+            xcb-xinput
             dbus-1
             ${ZLIB_LIBRARIES}
             png
@@ -727,6 +729,7 @@ ELSE(WIN32)
             XCB::XCB
             xkbcommon-x11
             xkbcommon
+            xcb-xinput
             dbus-1
             ${ZLIB_LIBRARIES}
             png

@@ -74,6 +74,7 @@ private:
    std::shared_ptr<SignerAdapterListener>       adapterLsn_;
    std::shared_ptr<QProcess>  guiProcess_;
    std::function<void(bool)>  cbReady_ = nullptr;
+   bool ready_ = false;
 };
 
 #endif // __HEADLESS_APP_H__

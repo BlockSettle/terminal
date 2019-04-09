@@ -83,9 +83,22 @@ ApplicationWindow {
         dlg.bsRejected.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, true)
         })
+
+        mainWindow.width = dlg.width
+        mainWindow.height = dlg.height
+        mainWindow.title = dlg.title
+        if (typeof dlg.qmlTitleVisible !== "undefined") dlg.qmlTitleVisible = false
+
+        show()
+
+        dlg.dialogsChainFinished.connect(function(){ hide() })
+        dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+            mainWindow.width = nextDialog.width
+            mainWindow.height = nextDialog.height
+        })
+
         mainWindow.requestActivate()
         dlg.open()
-
         dlg.init()
     }
 
@@ -99,10 +112,12 @@ ApplicationWindow {
         mainWindow.width = dlg.width
         mainWindow.height = dlg.height
         mainWindow.title = dlg.title
+        if (typeof dlg.qmlTitleVisible !== "undefined") dlg.qmlTitleVisible = false
 
         dlg.dialogsChainFinished.connect(function(){ hide() })
-
-//        dlg.bsAccepted.connect(function(){ hide() })
-//        dlg.bsRejected.connect(function(){ hide() })
+        dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+            mainWindow.width = nextDialog.width
+            mainWindow.height = nextDialog.height
+        })
     }
 }
