@@ -49,6 +49,8 @@ public:
               , const std::shared_ptr<ConnectionManager>&
               , const std::shared_ptr<spdlog::logger>&);
 
+    void setAuthorized(bool authorized);
+
 protected slots:
    void OnDataReceived(const std::string& data);
    void OnDateRangeChanged(int id);
@@ -169,6 +171,7 @@ private:
    qreal startDragCoordX_{ 0.0 };
 
    quint64 firstTimestampInDb_{ 0 };
+   bool authorized_{ false };
 };
 
 #endif // CHARTWIDGET_H

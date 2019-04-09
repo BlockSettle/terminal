@@ -85,6 +85,11 @@ void RFQRequestWidget::shortcutActivated(ShortcutType s)
    }
 }
 
+void RFQRequestWidget::setAuthorized(bool authorized)
+{
+   ui_->widgetMarketData->setAuthorized(authorized);
+}
+
 void RFQRequestWidget::initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings)
 {

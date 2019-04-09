@@ -1049,6 +1049,10 @@ void BSTerminalMainWindow::onReadyToLogin()
       // }
 #endif
    }
+   // Update authorized state for some widgets
+   ui_->widgetPortfolio->setAuthorized(currentUserLogin_ != loginButtonText_);
+   ui_->widgetRFQ->setAuthorized(currentUserLogin_ != loginButtonText_);
+   ui_->widgetChart->setAuthorized(currentUserLogin_ != loginButtonText_);
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1061,6 +1065,10 @@ void BSTerminalMainWindow::onLogout()
    }
    
    setLoginButtonText(loginButtonText_);
+   // Update authorized state for some widgets to true
+   ui_->widgetPortfolio->setAuthorized(false);
+   ui_->widgetRFQ->setAuthorized(false);
+   ui_->widgetChart->setAuthorized(false);
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()
@@ -1084,6 +1092,10 @@ void BSTerminalMainWindow::onUserLoggedIn()
    walletsMgr_->setUserId(userId);
 
    setLoginButtonText(currentUserLogin_);
+   // Update authorized state for some widgets to false
+   ui_->widgetPortfolio->setAuthorized(true);
+   ui_->widgetRFQ->setAuthorized(true);
+   ui_->widgetChart->setAuthorized(true);
 
    if (!mdProvider_->IsConnectionActive()) {
       mdProvider_->SubscribeToMD();
