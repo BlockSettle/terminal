@@ -209,9 +209,9 @@ Item {
 
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
-                    checked: true
+                    checked: signerSettings.twoWayAuth
                     onClicked: {
-
+                        signerSettings.twoWayAuth = checked
                     }
                 }
             }

@@ -30,6 +30,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString autoSignWallet READ autoSignWallet WRITE setAutoSignWallet NOTIFY autoSignWalletChanged)
    Q_PROPERTY(bool hideEidInfoBox READ hideEidInfoBox WRITE setHideEidInfoBox NOTIFY hideEidInfoBoxChanged)
    Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
+   Q_PROPERTY(bool twoWayAuth READ twoWayAuth WRITE setTwoWayAuth NOTIFY twoWayAuthChanged)
 
 public:
    SignerSettings(const QString &fileName = QLatin1String("signer.ini"));
@@ -56,7 +57,8 @@ public:
       LimitAutoSignTime,
       LimitManualPwKeep,
       HideEidInfoBox,
-      TrustedTerminals
+      TrustedTerminals,
+      TwoWayAuth
    };
 
    bool loadSettings(const QStringList &args);
@@ -85,6 +87,7 @@ public:
    SignContainer::Limits limits() const;
    bool hideEidInfoBox() const { return get(HideEidInfoBox).toBool(); }
    QStringList trustedTerminals() const { return get(TrustedTerminals).toStringList(); }
+   bool twoWayAuth() const { return get(TwoWayAuth).toBool(); }
 
    QString dirDocuments() const;
    bs::signer::ui::RunMode runMode() const { return runMode_; }
@@ -105,6 +108,7 @@ public:
    void setLimitManualPwKeepStr(const QString &val) { set(LimitManualPwKeep, intervalStrToSeconds(val)); }
    void setHideEidInfoBox(bool val) { set(HideEidInfoBox, val); }
    void setTrustedTerminals(const QStringList &val) { set(TrustedTerminals, val); }
+   void setTwoWayAuth(bool val) { set(TwoWayAuth, val); }
 
    void reset(Setting s, bool toFile = true);     // Reset setting to default value
 
@@ -128,6 +132,7 @@ signals:
    void zmqPrvKeyFileChanged();
    void zmqPubKeyFileChanged();
    void trustedTerminalsChanged();
+   void twoWayAuthChanged();
 
 private:
    QVariant get(Setting s) const;
