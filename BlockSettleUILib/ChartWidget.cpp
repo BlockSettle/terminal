@@ -1035,7 +1035,7 @@ void ChartWidget::OnMDConnecting()
 void ChartWidget::OnMDConnected()
 {
    ui_->pushButtonMDConnection->setText(tr("Disconnect"));
-   ui_->pushButtonMDConnection->setEnabled(/*true && */!authorized_);
+   ui_->pushButtonMDConnection->setEnabled(!authorized_);
 }
 
 void ChartWidget::OnMDDisconnecting()
@@ -1047,7 +1047,7 @@ void ChartWidget::OnMDDisconnecting()
 void ChartWidget::OnMDDisconnected()
 {
    ui_->pushButtonMDConnection->setText(tr("Subscribe"));
-   ui_->pushButtonMDConnection->setEnabled(/*true && */!authorized_);
+   ui_->pushButtonMDConnection->setEnabled(!authorized_);
 }
 
 void ChartWidget::ChangeMDSubscriptionState()
