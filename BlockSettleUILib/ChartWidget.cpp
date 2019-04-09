@@ -154,7 +154,7 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
                lastCandle->low = qMin(lastCandle->low, field.value);
                if (!qFuzzyCompare(lastCandle->close, field.value)) {
                   lastCandle->close = field.value;
-                  UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(QCursor::pos().x()));
+                  UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));
                   rescalePlot();
                   ui_->customPlot->replot();
                }
@@ -183,7 +183,6 @@ void ChartWidget::UpdateChart(const int& interval) const
    qreal width = 0.8 * IntervalWidth(interval) / 1000;
    candlesticksChart_->setWidth(width);
    volumeChart_->setWidth(width);
-   const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
    OhlcRequest ohlcRequest;
    ohlcRequest.set_product(product.toStdString());
    ohlcRequest.set_interval(static_cast<Interval>(interval));
@@ -358,6 +357,10 @@ void ChartWidget::CheckToAddNewCandle(qint64 stamp)
       AddDataPoint(lastCandle.close, lastCandle.close, lastCandle.close, lastCandle.close, candleStamp - IntervalWidth(dateRange_.checkedId()) * i, 0);
    }
    newestCandleTimestamp_ = candleStamp;
+   auto upper = ui_->customPlot->xAxis->range().upper;
+   if (upper + IntervalWidth(dateRange_.checkedId()) / 1000 > newestCandleTimestamp_ / 1000) {
+      ui_->customPlot->xAxis->moveRange(IntervalWidth(dateRange_.checkedId()) / 1000);
+   }
    AddDataPoint(lastClose_, lastClose_, lastClose_, lastClose_, newestCandleTimestamp_, 0);
    ui_->customPlot->replot();
 }
@@ -1077,7 +1080,7 @@ void ChartWidget::OnNewTrade(const std::string& productName, uint64_t timestamp,
    lastCandle->low = qMin(lastCandle->low, price);
    if (!qFuzzyCompare(lastCandle->close, price)) {
       lastCandle->close = price;
-      UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(QCursor::pos().x()));
+      UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));
       rescalePlot();
       ui_->customPlot->replot();
    }
