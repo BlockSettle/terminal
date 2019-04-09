@@ -176,8 +176,6 @@ public:
    virtual RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) = 0;
    virtual RequestId GetInfo(const std::string &rootWalletId) = 0;
    virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
-   virtual RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) = 0;
    virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
    virtual RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) = 0;
 

@@ -20,14 +20,13 @@ enum RequestType
    GetHDWalletInfoRequestType  = 12;
    DisconnectionRequestType    = 13;
    SignTXMultiRequestType      = 14;
-   ChangePasswordRequestType   = 15;
-   CancelSignTxRequestType     = 16;
-   SyncWalletInfoType          = 17;
-   SyncHDWalletType            = 18;
-   SyncWalletType              = 19;
-   SyncCommentType             = 20;
-   SyncAddressesType           = 21;
-   ExecCustomDialogRequestType = 22;
+   CancelSignTxRequestType     = 15;
+   SyncWalletInfoType          = 16;
+   SyncHDWalletType            = 17;
+   SyncWalletType              = 18;
+   SyncCommentType             = 19;
+   SyncAddressesType           = 20;
+   ExecCustomDialogRequestType = 21;
 }
 
 message RequestPacket
@@ -270,25 +269,6 @@ message SignTXMultiRequest
 {
    repeated string   walletIds = 1;
    bytes             signerState = 2;
-}
-
-
-message ChangePasswordRequest
-{
-   string   rootWalletId = 1;
-   string   oldPassword = 2;
-   repeated PasswordData newPassword = 3;
-   uint32   rankM = 4;
-   uint32   rankN = 5;
-   bool     addNew = 6;
-   bool     removeOld = 8;
-   bool     dryRun = 7;
-}
-
-message ChangePasswordResponse
-{
-   string   rootWalletId = 1;
-   bool     success = 2;
 }
 
 
