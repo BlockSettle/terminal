@@ -1078,7 +1078,7 @@ void ChartWidget::OnNewTrade(const std::string& productName, uint64_t timestamp,
    auto lastCandle = candlesticksChart_->data()->end() - 1;
    lastCandle->high = qMax(lastCandle->high, price);
    lastCandle->low = qMin(lastCandle->low, price);
-   if (!qFuzzyCompare(lastCandle->close, price)) {
+   if (!qFuzzyCompare(lastCandle->close, price) || !qFuzzyIsNull(amount)) {
       lastCandle->close = price;
       UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));
       rescalePlot();
