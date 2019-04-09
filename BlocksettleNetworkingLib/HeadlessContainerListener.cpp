@@ -166,7 +166,6 @@ bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::hea
       case headless::CreateHDWalletRequestType:
       case headless::GetRootKeyRequestType:
       case headless::SetLimitsRequestType:
-      case headless::ChangePasswordRequestType:
          return false;
       default:    break;
       }
@@ -230,9 +229,6 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
 
    case headless::GetHDWalletInfoRequestType:
       return onGetHDWalletInfo(clientId, packet);
-
-   case headless::ChangePasswordRequestType:
-      return onChangePassword(clientId, packet);
 
    case headless::DisconnectionRequestType:
       emit OnClientDisconnected(clientId);
@@ -1109,60 +1105,6 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
 
    if (!sendData(packet.SerializeAsString(), clientId)) {
       logger_->error("[HeadlessContainerListener] failed to send response GetHDWalletInfo packet");
-   }
-}
-
-bool HeadlessContainerListener::onChangePassword(const std::string &clientId
-   , headless::RequestPacket &packet)
-{
-   headless::ChangePasswordRequest request;
-   if (!request.ParseFromString(packet.data())) {
-      logger_->error("[HeadlessContainerListener] failed to parse ChangePasswordRequest");
-      ChangePasswordResponse(clientId, packet.id(), {}, false);
-      return false;
-   }
-   const auto &wallet = walletsMgr_->getHDWalletById(request.rootwalletid());
-   if (!wallet) {
-      logger_->error("[HeadlessContainerListener] failed to find wallet for id {}", request.rootwalletid());
-      ChangePasswordResponse(clientId, packet.id(), request.rootwalletid(), false);
-      return false;
-   }
-   std::vector<bs::wallet::PasswordData> pwdData;
-   for (int i = 0; i < request.newpassword_size(); ++i) {
-      const auto &pwd = request.newpassword(i);
-      pwdData.push_back({ BinaryData::CreateFromHex(pwd.password())
-         , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
-   }
-   bs::wallet::KeyRank keyRank = {request.rankm(), request.rankn()};
-
-   bool result = wallet->changePassword(pwdData, keyRank
-      , BinaryData::CreateFromHex(request.oldpassword())
-      , request.addnew(), request.removeold(), request.dryrun());
-
-   if (!result) {
-      logger_->error("[HeadlessContainerListener] failed to change password for wallet {}", request.rootwalletid());
-      ChangePasswordResponse(clientId, packet.id(), request.rootwalletid(), false);
-      return false;
-   }
-   logger_->info("Changed password for wallet {} (id: {})", wallet->name(), wallet->walletId());
-   ChangePasswordResponse(clientId, packet.id(), request.rootwalletid(), true);
-   return true;
-}
-
-void HeadlessContainerListener::ChangePasswordResponse(const std::string &clientId, unsigned int id
-   , const std::string &walletId, bool ok)
-{
-   headless::ChangePasswordResponse response;
-   response.set_rootwalletid(walletId);
-   response.set_success(ok);
-
-   headless::RequestPacket packet;
-   packet.set_id(id);
-   packet.set_type(headless::ChangePasswordRequestType);
-   packet.set_data(response.SerializeAsString());
-
-   if (!sendData(packet.SerializeAsString(), clientId)) {
-      logger_->error("[HeadlessContainerListener] failed to send ChangePassword response");
    }
 }
 

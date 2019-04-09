@@ -63,9 +63,6 @@ public:
       , bool , const bs::core::wallet::Seed &, const std::vector<bs::wallet::PasswordData> & = {}, bs::wallet::KeyRank  = { 0, 0 }) override { return 0; }
    RequestId getDecryptedRootKey(const std::string &, const SecureBinaryData & = {}) override { return 0; }
    void setLimits(const std::string &, const SecureBinaryData &, bool ) override {}
-   RequestId changePassword(const std::string &, const std::vector<bs::wallet::PasswordData> &
-      , bs::wallet::KeyRank, const SecureBinaryData &
-      , bool , bool , bool ) override { return 0; }
 
 protected:
    QStringList args() const override;

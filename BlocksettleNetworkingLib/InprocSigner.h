@@ -61,9 +61,9 @@ public:
       , const SecureBinaryData &password = {}) override { return 0; }
    RequestId GetInfo(const std::string &) override;
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
-   RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank, const SecureBinaryData &oldPass
-      , bool addNew, bool removeOld, bool dryRun) override;
+//   RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
+//      , bs::wallet::KeyRank, const SecureBinaryData &oldPass
+//      , bool addNew, bool removeOld, bool dryRun);
    void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) override;
    RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
 

@@ -279,24 +279,6 @@ void hd::Wallet::onScanComplete(const std::string &leafId)
    }
 }
 
-void hd::Wallet::changePassword(const std::function<void(bool)> &cb, const std::vector<bs::wallet::PasswordData> &newPass
-   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
-{
-   if (signContainer_) {
-      const auto reqId = signContainer_->changePassword(walletId(), newPass, keyRank, oldPass, addNew, removeOld, dryRun);
-      if (reqId) {
-         emit metaDataChanged();
-         cb(true);
-      }
-      else {
-         cb(false);
-      }
-   }
-   else {
-      cb(false);
-   }
-}
-
 bool hd::Wallet::isPrimary() const
 {
    if ((getGroup(bs::hd::CoinType::BlockSettle_Auth) != nullptr)
