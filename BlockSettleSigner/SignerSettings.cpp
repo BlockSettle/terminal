@@ -71,7 +71,8 @@ SignerSettings::SignerSettings(const QString &fileName)
       { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
       { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
       { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) },
-      { TrustedTerminals,  SettingDef(QStringLiteral("TrustedTerminals")) }
+      { TrustedTerminals,  SettingDef(QStringLiteral("TrustedTerminals")) },
+      { TwoWayAuth,        SettingDef(QStringLiteral("TwoWayAuth"), false) }
    };
 }
 
@@ -216,6 +217,9 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
       break;
    case TrustedTerminals:
       emit trustedTerminalsChanged();
+      break;
+   case TwoWayAuth:
+      emit twoWayAuthChanged();
       break;
    default: break;
    }
