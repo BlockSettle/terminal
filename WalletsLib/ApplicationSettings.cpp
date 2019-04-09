@@ -120,7 +120,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { defaultAuthAddr,         SettingDef(QLatin1String("DefaultAuthAddress")) },
       { bsPublicKey,             SettingDef(QString(), QLatin1String("022aa8719eadf13ba5bbced2848fb492a4118087b200fdde8ec68a2f5d105b36fa")) },
       { logDefault,              SettingDef(QLatin1String("LogFile"), QStringList() << LogFileName << QString() << QString() << QLatin1String("trace")) },
-      { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QString()) },
+      { logMessages,             SettingDef(QLatin1String("LogMsgFile"), QStringList() << LogMsgFileName << QLatin1String("message") << QLatin1String("%C/%m/%d %H:%M:%S.%e [%L]: %v") << QString()<< QLatin1String("trace")) },
       { ccFileName,              SettingDef(QString(), AppendToWritableDir(CCFileName))},
       { txCacheFileName,         SettingDef(QString(), AppendToWritableDir(TxCacheFileName)) },
       { nbBackupFilesKeep,       SettingDef(QString(), 10) },
@@ -638,7 +638,7 @@ bs::LogLevel ApplicationSettings::parseLogLevel(QString level) const
    if (level.contains(QLatin1String("crit"))) {
       return bs::LogLevel::crit;
    }
-   return bs::LogLevel::off;
+   return bs::LogLevel::debug;
 }
 
 std::pair<autheid::PrivateKey, autheid::PublicKey> ApplicationSettings::GetAuthKeys()

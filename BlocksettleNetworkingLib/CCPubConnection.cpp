@@ -37,23 +37,21 @@ bool CCPubConnection::LoadCCDefinitionsFromPub()
 
 bool CCPubConnection::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
-   const auto connection = connectionManager_->CreateSecuredDataConnection();
-   BinaryData inSrvPubKey(GetPuBKey());
-   connection->SetServerPublicKey(inSrvPubKey);
-   auto command = std::make_shared<RequestReplyCommand>(name, connection, logger_);
+   const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
+   cmdPuB_ = std::make_shared<RequestReplyCommand>(name, connection, logger_);
 
-   command->SetReplyCallback([command, this](const std::string& data) {
+   cmdPuB_->SetReplyCallback([this](const std::string& data) {
       OnDataReceived(data);
-      command->CleanupCallbacks();
+      cmdPuB_->CleanupCallbacks();
       return true;
    });
 
-   command->SetErrorCallback([command, this](const std::string& message) {
-      logger_->error("[CCPubConnection::{}] error callback: {}", command->GetName(), message);
-      command->CleanupCallbacks();
+   cmdPuB_->SetErrorCallback([this](const std::string& message) {
+      logger_->error("[CCPubConnection::{}] error callback: {}", cmdPuB_->GetName(), message);
+      cmdPuB_->CleanupCallbacks();
    });
 
-   if (!command->ExecuteRequest(GetPuBHost(), GetPuBPort(), data)) {
+   if (!cmdPuB_->ExecuteRequest(GetPuBHost(), GetPuBPort(), data, true)) {
       logger_->error("[CCPubConnection::SubmitRequestToPB] failed to send request {}", name);
       return false;
    }

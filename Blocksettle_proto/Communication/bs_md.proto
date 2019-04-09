@@ -22,8 +22,9 @@ message MDSnapshot
 
 enum UpdateType
 {
-   FullSnapshotType        = 0;
-   IncrementalUpdateType   = 1;
+   FullSnapshotType              = 0;
+   IncrementalUpdateType         = 1;
+   NewSettledTreadeUpdateType    = 2;
 };
 
 message UpdateHeader
@@ -31,3 +32,32 @@ message UpdateHeader
    UpdateType  type        = 1;
    bytes       data        = 2;
 };
+
+enum MDTradeType
+{
+   FXTradeType    = 0;
+   XBTTradeType   = 1;
+   PMTradeType    = 2;
+}
+
+message MDTradeRecord
+{
+   double   price       = 1;
+   double   amount      = 2;
+   string   product     = 3;
+   uint64   timestamp   = 4;
+}
+
+message MDPMTradeRecord
+{
+   double   price       = 1;
+   uint64   amount      = 2;
+   string   product     = 3;
+   uint64   timestamp   = 4;
+}
+
+message NewTradeUpdate
+{
+   MDTradeType trade_type  = 1;
+   bytes       trade       = 2;
+}

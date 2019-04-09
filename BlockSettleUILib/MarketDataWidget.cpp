@@ -5,6 +5,8 @@
 #include "MarketDataModel.h"
 #include "TreeViewWithEnterKey.h"
 
+constexpr int EMPTY_COLUMN_WIDTH = 0;
+
 
 MarketDataWidget::MarketDataWidget(QWidget* parent)
    : QWidget(parent)
@@ -49,6 +51,8 @@ void MarketDataWidget::init(const std::shared_ptr<ApplicationSettings> &appSetti
    ui_->treeViewMarketData->setHeader(mdHeader_.get());
    ui_->treeViewMarketData->header()->setSortIndicator(
       static_cast<int>(MarketDataModel::MarketDataColumns::First), Qt::AscendingOrder);
+   ui_->treeViewMarketData->header()->resizeSection(static_cast<int>(MarketDataModel::MarketDataColumns::EmptyColumn),
+                                                    EMPTY_COLUMN_WIDTH);
 
    connect(marketDataModel_, &QAbstractItemModel::rowsInserted, [this]() {
       if (mdHeader_ != nullptr) {
@@ -180,6 +184,8 @@ void MarketDataWidget::resizeAndExpand()
 {
    ui_->treeViewMarketData->expandAll();
    ui_->treeViewMarketData->resizeColumnToContents(0);
+   ui_->treeViewMarketData->header()->resizeSection(static_cast<int>(MarketDataModel::MarketDataColumns::EmptyColumn),
+                                                    EMPTY_COLUMN_WIDTH);
 }
 
 void MarketDataWidget::onHeaderStateChanged(bool state)
@@ -187,6 +193,8 @@ void MarketDataWidget::onHeaderStateChanged(bool state)
    filteredView_ = state;
    marketDataModel_->setHeaderData(0, Qt::Horizontal, state ? tr("Filtered view") : tr("Visibility selection"));
    ui_->treeViewMarketData->resizeColumnToContents(0);
+   ui_->treeViewMarketData->header()->resizeSection(static_cast<int>(MarketDataModel::MarketDataColumns::EmptyColumn),
+                                                    EMPTY_COLUMN_WIDTH);
 
    if (state && (appSettings_ != nullptr)) {
       const auto settings = marketDataModel_->getVisibilitySettings();

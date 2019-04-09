@@ -54,6 +54,7 @@ public:
 
    virtual void onStateEnter() override {
       chat_->logger_->debug("Set user name {}", "<empty>");
+      chat_->ui_->input_textEdit->setEnabled(false);
    }
 
    std::string login(const std::string& email, const std::string& jwt) override {
@@ -86,7 +87,9 @@ class ChatWidgetStateLoggedIn : public ChatWidgetState {
 public:
    ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedIn) {}
 
-   void onStateEnter() override {}
+   void onStateEnter() override {
+      chat_->ui_->input_textEdit->setEnabled(true);
+   }
 
    void onStateExit() override {
       chat_->onUserClicked({});
