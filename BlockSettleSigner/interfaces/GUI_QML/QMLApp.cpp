@@ -20,8 +20,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WalletsProxy.h"
-#include "ZMQHelperFunctions.h"
-#include "ZmqSecuredServerConnection.h"
 
 #include <functional>
 
@@ -100,13 +98,6 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 
-   connect(settings_.get(), &SignerSettings::zmqPubKeyFileChanged, [this](){
-      initZmqKeys();
-   });
-   connect(settings_.get(), &SignerSettings::zmqPrvKeyFileChanged, [this](){
-      initZmqKeys();
-   });
-
 #ifdef BS_USE_DBUS
    if (dbus_->isValid()) {
       notifMode_ = Freedesktop;
@@ -153,54 +144,7 @@ void QMLAppObj::settingsConnections()
 
 void QMLAppObj::Start()
 {
-   initZmqKeys();
-
    trayIcon_->show();
-}
-
-void QMLAppObj::initZmqKeys()
-{
-   // Get the ZMQ server public key.
-   SecureBinaryData tempPubKey;
-   SecureBinaryData tempPrvKey;
-
-   bool isZmqPubKeyOk = bs::network::readZmqKeyFile(settings_->zmqPubKeyFile()
-                                                    , zmqPubKey_
-                                                    , true
-                                                    , logger_);
-   bool isZmqPrvKeyOk = bs::network::readZmqKeyFile(settings_->zmqPrvKeyFile()
-                                                    , zmqPrvKey_
-                                                    , true
-                                                    , logger_);
-   QString errorString;
-   if (!isZmqPubKeyOk)  {
-      errorString.append(QStringLiteral("Failed to read ZMQ server public key\n"));
-   }
-   if (!isZmqPrvKeyOk)  {
-      errorString.append(QStringLiteral("Failed to read ZMQ server private key"));
-   }
-
-   QString detailsString;
-   if (!isZmqPubKeyOk)  {
-      detailsString.append(QStringLiteral("Public key: ") + settings_->zmqPubKeyFile() + QStringLiteral("\n\n"));
-   }
-   if (!isZmqPrvKeyOk)  {
-      detailsString.append(QStringLiteral("Private key: ") + settings_->zmqPrvKeyFile());
-   }
-
-   if (!isZmqPubKeyOk || !isZmqPrvKeyOk) {
-      QMetaObject::invokeMethod(this, [this, errorString, detailsString](){
-         QMetaObject::invokeMethod(rootObj_, "messageBoxCritical"
-                                   , Q_ARG(QVariant, QStringLiteral("Error"))
-                                   , Q_ARG(QVariant, QVariant::fromValue(errorString))
-                                   , Q_ARG(QVariant, QVariant::fromValue(detailsString)));
-      },
-      Qt::QueuedConnection);
-   }
-
-   // reset connection
-   disconnect();
-   onOfflineChanged();
 }
 
 void QMLAppObj::registerQtTypes()
