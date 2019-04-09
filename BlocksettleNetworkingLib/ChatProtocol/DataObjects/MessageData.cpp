@@ -69,10 +69,10 @@ namespace Chat {
       if (!(state_ & (int)State::Encrypted)) {
          return false;
       }
-      const auto message_bytes = QByteArray::fromBase64(messageData_.toLocal8Bit());
+      const auto message_bytes = QByteArray::fromBase64(messageData_.toUtf8());
       const auto decryptedData = autheid::decryptData(
          message_bytes.data(), message_bytes.size(), privKey);
-      messageData_ = QString::fromLocal8Bit((char*)decryptedData.data(), decryptedData.size());
+      messageData_ = QString::fromUtf8((char*)decryptedData.data(), decryptedData.size());
       state_ &= ~(int)State::Encrypted;
       return true;
    }
@@ -82,7 +82,7 @@ namespace Chat {
       if (state_ & (int)State::Encrypted) {
          return false;
       }
-      const QByteArray message_bytes = messageData_.toLocal8Bit();
+      const QByteArray message_bytes = messageData_.toUtf8();
       auto data = autheid::encryptData(message_bytes.data(), size_t(message_bytes.size()), pubKey);
       messageData_ = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(data.data()), int(data.size())).toBase64());
       state_ |= (int)State::Encrypted;
