@@ -91,6 +91,7 @@ private:
 
    bool showStartupDialog();
    void LoadCCDefinitionsFromPuB();
+   void setWidgetsAuthorized(bool authorized);
 
 signals:
    void readyToLogin();

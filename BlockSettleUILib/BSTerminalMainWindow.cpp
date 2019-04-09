@@ -170,6 +170,14 @@ void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
    }
 }
 
+void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
+{
+   // Update authorized state for some widgets
+   ui_->widgetPortfolio->setAuthorized(authorized);
+   ui_->widgetRFQ->setAuthorized(authorized);
+   ui_->widgetChart->setAuthorized(authorized);
+}
+
 void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
 {
    if (networkSettings_.isSet) {
@@ -1038,6 +1046,7 @@ void BSTerminalMainWindow::onReadyToLogin()
       currentUserLogin_ = loginDialog.getUsername();
       auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
       setLoginButtonText(currentUserLogin_);
+      setWidgetsAuthorized(true);
 
 #ifndef PRODUCTION_BUILD
       // TODO: uncomment this section once we have armory connection
@@ -1048,11 +1057,9 @@ void BSTerminalMainWindow::onReadyToLogin()
          // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
       // }
 #endif
+   } else {
+      setWidgetsAuthorized(false);
    }
-   // Update authorized state for some widgets
-   ui_->widgetPortfolio->setAuthorized(currentUserLogin_ != loginButtonText_);
-   ui_->widgetRFQ->setAuthorized(currentUserLogin_ != loginButtonText_);
-   ui_->widgetChart->setAuthorized(currentUserLogin_ != loginButtonText_);
 }
 
 void BSTerminalMainWindow::onLogout()
@@ -1065,10 +1072,8 @@ void BSTerminalMainWindow::onLogout()
    }
    
    setLoginButtonText(loginButtonText_);
-   // Update authorized state for some widgets to true
-   ui_->widgetPortfolio->setAuthorized(false);
-   ui_->widgetRFQ->setAuthorized(false);
-   ui_->widgetChart->setAuthorized(false);
+
+   setWidgetsAuthorized(false);
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()
@@ -1092,10 +1097,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
    walletsMgr_->setUserId(userId);
 
    setLoginButtonText(currentUserLogin_);
-   // Update authorized state for some widgets to false
-   ui_->widgetPortfolio->setAuthorized(true);
-   ui_->widgetRFQ->setAuthorized(true);
-   ui_->widgetChart->setAuthorized(true);
 
    if (!mdProvider_->IsConnectionActive()) {
       mdProvider_->SubscribeToMD();
