@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "CoreWallet.h"
-#include "SignContainer.h"
+#include "SignerDefs.h"
 #include "ServerConnectionListener.h"
 
 #include "bs_signer.pb.h"
@@ -39,18 +39,18 @@ protected:
 private:
    void setCallbacks();
    bool sendData(Blocksettle::Communication::signer::PacketType, const std::string &data
-      , SignContainer::RequestId reqId = 0);
+      , bs::signer::RequestId reqId = 0);
 
-   bool onSignTxReq(const std::string &data, SignContainer::RequestId);
-   bool onSyncWalletInfo(SignContainer::RequestId);
-   bool onSyncHDWallet(const std::string &data, SignContainer::RequestId);
-   bool onSyncWallet(const std::string &data, SignContainer::RequestId);
-   bool onCreateWO(const std::string &data, SignContainer::RequestId);
-   bool onGetDecryptedNode(const std::string &data, SignContainer::RequestId);
+   bool onSignTxReq(const std::string &data, bs::signer::RequestId);
+   bool onSyncWalletInfo(bs::signer::RequestId);
+   bool onSyncHDWallet(const std::string &data, bs::signer::RequestId);
+   bool onSyncWallet(const std::string &data, bs::signer::RequestId);
+   bool onCreateWO(const std::string &data, bs::signer::RequestId);
+   bool onGetDecryptedNode(const std::string &data, bs::signer::RequestId);
    bool onSetLimits(const std::string &data);
    bool onPasswordReceived(const std::string &data);
    bool onRequestClose();
-   bool onReloadWallets(const std::string &data, SignContainer::RequestId);
+   bool onReloadWallets(const std::string &data, bs::signer::RequestId);
    bool onReconnect(const std::string &data);
    bool onAutoSignRequest(const std::string &data);
 

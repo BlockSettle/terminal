@@ -8,7 +8,7 @@ QStringList TXInfo::recvAddresses() const
 {
    QStringList result;
    for (const auto &recip : txReq_.recipients) {
-      result.push_back(bs::Address::fromRecipient(recip).display());
+      result.push_back(QString::fromStdString(bs::Address::fromRecipient(recip).display()));
    }
    return result;
 }

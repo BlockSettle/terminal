@@ -2,19 +2,29 @@ PROJECT( ${SIGNER_APP_NAME} )
 
 configure_file(SignerVersion.h.in SignerVersion.h)
 
+SET(BSNetwork ${BLOCK_SETTLE_ROOT}/common/BlocksettleNetworkingLib)
+
 SET(SOURCES
    main.cpp
    HeadlessApp.cpp
    HeadlessSettings.cpp
    SignerAdapterListener.cpp
-   NativeEventFilter.cpp
+   ${BSNetwork}/ActiveStreamClient.cpp
+   ${BSNetwork}/IdStringGenerator.cpp
+   ${BSNetwork}/HeadlessContainerListener.cpp
+   ${BSNetwork}/MessageHolder.cpp
+   ${BSNetwork}/ZmqContext.cpp
+   ${BSNetwork}/ZmqHelperFunctions.cpp
+   ${BSNetwork}/ZmqServerConnection.cpp
+   ${BSNetwork}/ZmqStreamServerConnection.cpp
+   ${BSNetwork}/ZMQ_BIP15X_ServerConnection.cpp
+   ${BSNetwork}/ZMQ_BIP15X_Msg.cpp
 )
 
 SET(HEADERS
    HeadlessApp.h
    HeadlessSettings.h
    SignerAdapterListener.h
-   NativeEventFilter.h
 )
 
 INCLUDE_DIRECTORIES( ${COMMON_LIB_INCLUDE_DIR} )
@@ -30,24 +40,15 @@ INCLUDE_DIRECTORIES( ${BS_TERMINAL_API_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${MARKET_ENUMS_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${BOTAN_INCLUDE_DIR} )
 
-IF ( APPLE )
-   ADD_EXECUTABLE(${SIGNER_APP_NAME} ${SOURCES} ${HEADERS})
-ELSEIF ( WIN32 )
-   ADD_EXECUTABLE(${SIGNER_APP_NAME} WIN32 ${SOURCES} ${HEADERS} blocksettle.rc)
-ELSE ()
-   ADD_EXECUTABLE(${SIGNER_APP_NAME} ${SOURCES} ${HEADERS})
-ENDIF ()
+ADD_EXECUTABLE(${SIGNER_APP_NAME} ${SOURCES} ${HEADERS})
 
+#   ${BS_NETWORK_LIB_NAME}
 TARGET_LINK_LIBRARIES( ${SIGNER_APP_NAME}
-   ${BS_NETWORK_LIB_NAME}
    ${CPP_WALLET_LIB_NAME}
    ${CRYPTO_LIB_NAME}
    ${BOTAN_LIB}
    ${ZMQ_LIB}
    ${OS_SPECIFIC_LIBS}
-   ${QT_LINUX_LIBS}
-   Qt5::Network
-   Qt5::Core
    ${OPENSSL_LIBS}
 )
 

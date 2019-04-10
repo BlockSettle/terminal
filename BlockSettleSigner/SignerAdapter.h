@@ -4,7 +4,7 @@
 #include <memory>
 #include <QObject>
 #include "CoreWallet.h"
-#include "SignContainer.h"
+#include "SignerDefs.h"
 
 namespace bs {
    namespace sync {
@@ -36,7 +36,7 @@ public:
 
    void setOnline(bool);
    void reconnect(const QString &address, const QString &port);
-   void setLimits(SignContainer::Limits);
+   void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
 
    void signTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password

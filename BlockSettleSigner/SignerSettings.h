@@ -3,7 +3,8 @@
 
 #include <QStringList>
 #include <QVariant>
-#include "SignContainer.h"
+#include "SignerDefs.h"
+#include "SignerUiDefs.h"
 
 class QSettings;
 
@@ -82,7 +83,7 @@ public:
    int limitManualPwKeep() const { return get(LimitManualPwKeep).toInt(); }
    QString limitManualPwKeepStr() const { return secondsToIntervalStr(limitManualPwKeep()); }
    QStringList requestFiles() const { return reqFiles_; }
-   SignContainer::Limits limits() const;
+   bs::signer::Limits limits() const;
    bool hideEidInfoBox() const { return get(HideEidInfoBox).toBool(); }
    QStringList trustedTerminals() const { return get(TrustedTerminals).toStringList(); }
 

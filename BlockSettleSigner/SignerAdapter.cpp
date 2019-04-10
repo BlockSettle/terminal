@@ -7,6 +7,7 @@
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
 #include "HeadlessApp.h"
+#include "SignContainer.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -37,7 +38,7 @@ public:
       logger_->debug("[SignerInterfaceListener] error {}", errorCode);
    }
 
-   SignContainer::RequestId send(signer::PacketType pt, const std::string &data) {
+   bs::signer::RequestId send(signer::PacketType pt, const std::string &data) {
       const auto reqId = seq_++;
       signer::Packet packet;
       packet.set_id(reqId);
@@ -49,27 +50,27 @@ public:
       return reqId;
    }
 
-   void setTxSignCb(SignContainer::RequestId reqId, const std::function<void(const BinaryData &)> &cb) {
+   void setTxSignCb(bs::signer::RequestId reqId, const std::function<void(const BinaryData &)> &cb) {
       cbSignReqs_[reqId] = cb;
    }
-   void setWalleteInfoCb(SignContainer::RequestId reqId
+   void setWalleteInfoCb(bs::signer::RequestId reqId
       , const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb) {
       cbWalletInfo_[reqId] = cb;
    }
-   void setHDWalletDataCb(SignContainer::RequestId reqId, const std::function<void(bs::sync::HDWalletData)> &cb) {
+   void setHDWalletDataCb(bs::signer::RequestId reqId, const std::function<void(bs::sync::HDWalletData)> &cb) {
       cbHDWalletData_[reqId] = cb;
    }
-   void setWalletDataCb(SignContainer::RequestId reqId, const std::function<void(bs::sync::WalletData)> &cb) {
+   void setWalletDataCb(bs::signer::RequestId reqId, const std::function<void(bs::sync::WalletData)> &cb) {
       cbWalletData_[reqId] = cb;
    }
-   void setWatchOnlyCb(SignContainer::RequestId reqId, const std::function<void(const bs::sync::WatchingOnlyWallet &)> &cb) {
+   void setWatchOnlyCb(bs::signer::RequestId reqId, const std::function<void(const bs::sync::WatchingOnlyWallet &)> &cb) {
       cbWO_[reqId] = cb;
    }
-   void setDecryptNodeCb(SignContainer::RequestId reqId
+   void setDecryptNodeCb(bs::signer::RequestId reqId
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb) {
       cbDecryptNode_[reqId] = cb;
    }
-   void setReloadWalletsCb(SignContainer::RequestId reqId, const std::function<void()> &cb) {
+   void setReloadWalletsCb(bs::signer::RequestId reqId, const std::function<void()> &cb) {
       cbReloadWallets_[reqId] = cb;
    }
 
@@ -77,30 +78,30 @@ private:
    void onReady(const std::string &data);
    void onPeerConnected(const std::string &data, bool connected);
    void onPasswordRequested(const std::string &data);
-   void onTxSigned(const std::string &data, SignContainer::RequestId);
+   void onTxSigned(const std::string &data, bs::signer::RequestId);
    void onXbtSpent(const std::string &data);
    void onAutoSignActivate(const std::string &data);
-   void onSyncWalletInfo(const std::string &data, SignContainer::RequestId);
-   void onSyncHDWallet(const std::string &data, SignContainer::RequestId);
-   void onSyncWallet(const std::string &data, SignContainer::RequestId);
-   void onCreateWO(const std::string &data, SignContainer::RequestId);
-   void onDecryptedKey(const std::string &data, SignContainer::RequestId);
-   void onReloadWallets(SignContainer::RequestId);
-   void onExecCustomDialog(const std::string &data, SignContainer::RequestId);
+   void onSyncWalletInfo(const std::string &data, bs::signer::RequestId);
+   void onSyncHDWallet(const std::string &data, bs::signer::RequestId);
+   void onSyncWallet(const std::string &data, bs::signer::RequestId);
+   void onCreateWO(const std::string &data, bs::signer::RequestId);
+   void onDecryptedKey(const std::string &data, bs::signer::RequestId);
+   void onReloadWallets(bs::signer::RequestId);
+   void onExecCustomDialog(const std::string &data, bs::signer::RequestId);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
    SignerAdapter  *  parent_;
-   SignContainer::RequestId   seq_ = 1;
-   std::map<SignContainer::RequestId, std::function<void(const BinaryData &)>>      cbSignReqs_;
-   std::map<SignContainer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfo_;
-   std::map<SignContainer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletData_;
-   std::map<SignContainer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletData_;
-   std::map<SignContainer::RequestId, std::function<void(const bs::sync::WatchingOnlyWallet &)>>   cbWO_;
-   std::map<SignContainer::RequestId
+   bs::signer::RequestId   seq_ = 1;
+   std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbSignReqs_;
+   std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfo_;
+   std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletData_;
+   std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletData_;
+   std::map<bs::signer::RequestId, std::function<void(const bs::sync::WatchingOnlyWallet &)>>   cbWO_;
+   std::map<bs::signer::RequestId
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
-   std::map<SignContainer::RequestId, std::function<void()>>   cbReloadWallets_;
+   std::map<bs::signer::RequestId, std::function<void()>>   cbReloadWallets_;
 };
 
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
@@ -238,7 +239,7 @@ void SignerInterfaceListener::onPasswordRequested(const std::string &data)
    });
 }
 
-void SignerInterfaceListener::onTxSigned(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::TxSignEvent evt;
    if (!evt.ParseFromString(data)) {
@@ -297,7 +298,7 @@ void SignerInterfaceListener::onAutoSignActivate(const std::string &data)
    }
 }
 
-void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletInfoResponse response;
    if (!response.ParseFromString(data)) {
@@ -322,7 +323,7 @@ void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, SignCont
    cbWalletInfo_.erase(itCb);
 }
 
-void SignerInterfaceListener::onSyncHDWallet(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncHDWalletResponse response;
    if (!response.ParseFromString(data)) {
@@ -349,7 +350,7 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, SignContai
    cbHDWalletData_.erase(itCb);
 }
 
-void SignerInterfaceListener::onSyncWallet(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletResponse response;
    if (!response.ParseFromString(data)) {
@@ -379,7 +380,7 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, SignContaine
    cbWalletData_.erase(itCb);
 }
 
-void SignerInterfaceListener::onCreateWO(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::CreateWatchingOnlyResponse response;
    if (!response.ParseFromString(data)) {
@@ -417,7 +418,7 @@ void SignerInterfaceListener::onCreateWO(const std::string &data, SignContainer:
    cbWO_.erase(itCb);
 }
 
-void SignerInterfaceListener::onDecryptedKey(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onDecryptedKey(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptedNodeResponse response;
    if (!response.ParseFromString(data)) {
@@ -434,7 +435,7 @@ void SignerInterfaceListener::onDecryptedKey(const std::string &data, SignContai
    cbDecryptNode_.erase(itCb);
 }
 
-void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
+void SignerInterfaceListener::onReloadWallets(bs::signer::RequestId reqId)
 {
    const auto &itCb = cbReloadWallets_.find(reqId);
    if (itCb == cbReloadWallets_.end()) {
@@ -446,7 +447,7 @@ void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
    cbReloadWallets_.erase(itCb);
 }
 
-void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignContainer::RequestId)
+void SignerInterfaceListener::onExecCustomDialog(const std::string &data, bs::signer::RequestId)
 {
    signer::CustomDialogRequest evt;
    if (!evt.ParseFromString(data)) {
@@ -475,37 +476,37 @@ public:
    {}
    ~SignAdapterContainer() noexcept = default;
 
-   RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
    , bool keepDuplicatedRecipients = false) override;
-   RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
+   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) override { return 0; }
-   RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
+   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
       , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override {
       return 0;
    }
-   RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
+   bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
 
    void SendPassword(const std::string &walletId, const PasswordType &password,
       bool cancelledByUser) override {}
-   RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
+   bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
 
-   RequestId SetUserId(const BinaryData &) override { return 0; }
-   RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
+   bs::signer::RequestId SetUserId(const BinaryData &) override { return 0; }
+   bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
-   RequestId createHDWallet(const std::string &name, const std::string &desc
+   bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override {
       return 0;
    }
-   RequestId DeleteHDRoot(const std::string &rootWalletId) override { return 0; }
-   RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
-   RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
-   RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
+   bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override { return 0; }
+   bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
+   bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
+   bs::signer::RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
-   RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
+   bs::signer::RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) override { return 0; }
-   RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
+   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;
@@ -521,7 +522,7 @@ private:
    std::shared_ptr<SignerInterfaceListener>  listener_;
 };
 
-SignContainer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txReq
+bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txReq
    , bool autoSign, TXSignMode mode, const PasswordType& password, bool keepDuplicatedRecipients)
 {
    signer::SignTxRequest request;
@@ -657,7 +658,7 @@ void SignerAdapter::reconnect(const QString &address, const QString &port)
    listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
 }
 
-void SignerAdapter::setLimits(SignContainer::Limits limits)
+void SignerAdapter::setLimits(bs::signer::Limits limits)
 {
    signer::SetLimitsRequest request;
    request.set_auto_sign_satoshis(limits.autoSignSpendXBT);

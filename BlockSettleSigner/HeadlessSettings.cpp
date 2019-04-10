@@ -1,17 +1,12 @@
-#include <QCommandLineParser>
-#include <QDir>
-#include <QFile>
-#include <QSettings>
-#include <QStandardPaths>
-#include <QMetaEnum>
 #include <spdlog/spdlog.h>
 #include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
 #include "HeadlessSettings.h"
-#include "SignerUiDefs.h"
+#include "INIReader.h"
+#include "SystemFileUtils.h"
 
-namespace {
+/*namespace {
    static const QString listenName = QString::fromStdString("listen");
    static const QString listenHelp = QObject::tr("IP address to listen on");
 
@@ -41,30 +36,35 @@ namespace {
 
    static const QString woName = QString::fromStdString("watchonly");
    static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
-}
+}*/
 
 
 HeadlessSettings::HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
 {
-   QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-   logDir.cdUp();
-   const auto writableDir = logDir.path().toStdString();
+   const auto writableDir = SystemFilePaths::appDataLocation();
 
    logFile_ = writableDir + "/bs_signer.log";
+   logFile_ = "bs_signer.log";
 }
 
-bool HeadlessSettings::loadSettings(const QStringList &args)
+bool HeadlessSettings::loadSettings(int argc, char **argv)
 {
-   // substitute run modes from RunMode enum to help output
-   QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
-   QStringList runModes;
-   for (int i = 0; i < runModesEnum.keyCount(); ++i) {
-      runModes.append(QString::fromLatin1(runModesEnum.valueToKey(i)));
+   const std::string iniFileName = "signer.ini";
+   INIReader iniReader(iniFileName);
+   if (iniReader.ParseError() != 0) {
+      return false;
    }
-   runModeHelp.replace(QStringLiteral("__modes__"), runModes.join(QStringLiteral("|")));
 
-   {
+   watchOnly_ = iniReader.GetBoolean("General", "WatchinOnly", false);
+   testNet_ = iniReader.GetBoolean("General", "TestNet", false);
+   walletsDir_ = iniReader.Get("General", "WalletsDir", walletsDir_);
+   logFile_ = iniReader.Get("General", "LogFileName", logFile_);
+   listenAddress_ = iniReader.Get("General", "ListenAddress", listenAddress_);
+   listenPort_ = iniReader.Get("General", "ListenPort", listenPort_);
+   trustedTerminals_.push_back(iniReader.Get("General", "TrustedTerminals", ""));
+
+/*   {
       QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
       logDir.cdUp();
       const auto writableDir = logDir.path();
@@ -135,7 +135,7 @@ bool HeadlessSettings::loadSettings(const QStringList &args)
       if (val > 0) {
          autoSignSpendLimit_ = val;
       }
-   }
+   }*/
 
    NetworkConfig config;
    if (testNet()) {
@@ -154,51 +154,36 @@ NetworkType HeadlessSettings::netType() const
    return NetworkType::MainNet;
 }
 
-static const QString testnetSubdir = QLatin1String("testnet3");
-#if defined (Q_OS_WIN)
-static const QString appDirName = QLatin1String("Blocksettle");
-#elif defined (Q_OS_OSX)
-static const QString appDirName = QLatin1String("Blocksettle");
-#elif defined (Q_OS_LINUX)
-static const QString appDirName = QLatin1String(".blocksettle");
-#endif
-
 std::string HeadlessSettings::getWalletsDir() const
 {
    if (!walletsDir_.empty()) {
       return walletsDir_;
    }
-   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-   const auto commonRoot = dir + QDir::separator() + QLatin1String("..") + QDir::separator()
-      + QLatin1String("..") + QDir::separator() + appDirName;
+   const auto commonRoot = SystemFilePaths::appDataLocation();
+   const std::string testnetSubdir = "testnet3";
 
-   QString result;
-   if (testNet()) {
-      result = commonRoot + QDir::separator() + testnetSubdir;
-   } else {
-      result = commonRoot;
-   }
-   result += QDir::separator() + QLatin1String("signer");
-   return QDir::cleanPath(result).toStdString();
+   std::string result = testNet() ? commonRoot + "/" + testnetSubdir : commonRoot;
+   result += "/signer";
+   return result;
 }
 
-SignContainer::Limits HeadlessSettings::limits() const
+bs::signer::Limits HeadlessSettings::limits() const
 {
-   SignContainer::Limits result;
+   bs::signer::Limits result;
    result.autoSignSpendXBT = autoSignSpendLimit_ * BTCNumericTypes::BalanceDivider;
    return result;
 }
 
-QStringList HeadlessSettings::trustedInterfaces() const
+std::vector<std::string> HeadlessSettings::trustedInterfaces() const
 {
-   QStringList result;
-   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+   std::vector<std::string> result;
+/*   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
    QFile pubKeyFile(dir + QLatin1String("/interface.pub"));
    if (pubKeyFile.exists()) {
       if (pubKeyFile.open(QIODevice::ReadOnly)) {
          const auto data = pubKeyFile.readAll();
          result << QString::fromStdString("local:" + data.toStdString());
       }
-   }
+   }*/
    return result;
 }

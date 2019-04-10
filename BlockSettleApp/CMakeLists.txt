@@ -54,6 +54,7 @@ TARGET_LINK_LIBRARIES( ${BLOCKSETTLE_APP_NAME}
    Qt5::Core
    Qt5::Svg
    Qt5::DBus
+   ${QT_LIBS}
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
    )

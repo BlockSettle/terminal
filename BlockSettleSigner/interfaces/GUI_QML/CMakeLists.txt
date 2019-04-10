@@ -93,6 +93,7 @@ TARGET_LINK_LIBRARIES(${PROJ_NAME}
    Qt5::Network
    Qt5::PrintSupport
    Qt5::Core
+   ${QT_LIBS}
    ${OS_SPECIFIC_LIBS}
    ${OPENSSL_LIBS}
 )

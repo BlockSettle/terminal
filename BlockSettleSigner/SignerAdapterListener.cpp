@@ -173,7 +173,7 @@ void SignerAdapterListener::setCallbacks()
 }
 
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
-   , SignContainer::RequestId reqId)
+   , bs::signer::RequestId reqId)
 {
    signer::Packet packet;
    packet.set_type(pt);
@@ -195,7 +195,7 @@ bool SignerAdapterListener::onReady(int cur, int total)
    return true;
 }
 
-bool SignerAdapterListener::onSignTxReq(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SignTxRequest request;
    if (!request.ParseFromString(data)) {
@@ -240,7 +240,7 @@ bool SignerAdapterListener::onSignTxReq(const std::string &data, SignContainer::
    return false;
 }
 
-bool SignerAdapterListener::onSyncWalletInfo(SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSyncWalletInfo(bs::signer::RequestId reqId)
 {
    signer::SyncWalletInfoResponse response;
    for (size_t i = 0; i < walletsMgr_->getHDWalletsCount(); ++i) {
@@ -262,7 +262,7 @@ bool SignerAdapterListener::onSyncWalletInfo(SignContainer::RequestId reqId)
    return sendData(signer::SyncWalletInfoType, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onSyncHDWallet(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSyncHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -290,7 +290,7 @@ bool SignerAdapterListener::onSyncHDWallet(const std::string &data, SignContaine
    return false;
 }
 
-bool SignerAdapterListener::onSyncWallet(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -325,7 +325,7 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, SignContainer:
    return false;
 }
 
-bool SignerAdapterListener::onCreateWO(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -368,7 +368,7 @@ bool SignerAdapterListener::onCreateWO(const std::string &data, SignContainer::R
    return sendData(signer::CreateWOType, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -402,7 +402,7 @@ bool SignerAdapterListener::onSetLimits(const std::string &data)
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   SignContainer::Limits limits;
+   bs::signer::Limits limits;
    limits.autoSignSpendXBT = request.auto_sign_satoshis();
    limits.manualSpendXBT = request.manual_satoshis();
    limits.autoSignTimeS = request.auto_sign_time();
@@ -429,7 +429,7 @@ bool SignerAdapterListener::onRequestClose()
    return true;
 }
 
-bool SignerAdapterListener::onReloadWallets(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onReloadWallets(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::ReloadWalletsRequest request;
    if (!request.ParseFromString(data)) {

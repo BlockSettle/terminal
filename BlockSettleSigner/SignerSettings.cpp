@@ -323,9 +323,9 @@ bool SignerSettings::loadSettings(const QStringList &args)
    return true;
 }
 
-SignContainer::Limits SignerSettings::limits() const
+bs::signer::Limits SignerSettings::limits() const
 {
-   return SignContainer::Limits {
+   return bs::signer::Limits {
       (uint64_t)get(LimitAutoSignXBT).toULongLong(),
       (uint64_t)get(LimitManualXBT).toULongLong(),
       get(LimitAutoSignTime).toInt(),
