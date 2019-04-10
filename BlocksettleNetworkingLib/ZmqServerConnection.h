@@ -6,7 +6,6 @@
 
 #include <atomic>
 #include <deque>
-#include <QStringList>
 #include <thread>
 #include <unordered_map>
 

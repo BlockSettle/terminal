@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "ApplicationSettings.h"
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "CelerClient.h"
 #include "QWalletInfo.h"
 #include "SignContainer.h"
@@ -133,7 +133,7 @@ private:
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
-   std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ArmoryObject>          armory_;
 
    std::shared_ptr<RequestReplyCommand>   cmdPuBSettings_;
 

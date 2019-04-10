@@ -20,7 +20,7 @@
 
 ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<AssetManager> &assetMgr
-      , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryObject> &armory
       , const EasyCoDec::Data& seedData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &appSettings

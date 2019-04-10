@@ -373,7 +373,7 @@ void RFQTicketXBT::fillRecvAddresses()
    if (recvWallet_) {
       ui_->receivingAddressComboBox->addItem(tr("Auto Create"));
       for (auto addr : recvWallet_->getExtAddressList()) {
-         ui_->receivingAddressComboBox->addItem(addr.display());
+         ui_->receivingAddressComboBox->addItem(QString::fromStdString(addr.display()));
       }
       ui_->receivingAddressComboBox->setEnabled(true);
       ui_->receivingAddressComboBox->setCurrentIndex(0);

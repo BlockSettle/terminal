@@ -146,12 +146,12 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       SubmitAddrForInitialDistributionRequest addressRequest;
       if (!addressRequest.ParseFromString(invisibleData.toBinStr())) {
          logger_->error("[CCFileManager::SubmitAddressToPuB] failed to parse original request");
-         emit CCSubmitFailed(address.display(), tr("Failed to parse original request"));
+         emit CCSubmitFailed(QString::fromStdString(address.display()), tr("Failed to parse original request"));
          return;
       }
       if (addressRequest.prefixedaddress() != address.display<std::string>()) {
          logger_->error("[CCFileManager::SubmitAddressToPuB] CC address mismatch");
-         emit CCSubmitFailed(address.display(), tr("CC address mismatch"));
+         emit CCSubmitFailed(QString::fromStdString(address.display()), tr("CC address mismatch"));
          return;
       }
 
@@ -162,16 +162,16 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
 
       logger_->debug("[CCFileManager::SubmitAddressToPuB] submitting addr {}", address.display<std::string>());
       if (SubmitRequestToPB("submit_cc_addr", request.SerializeAsString())) {
-         emit CCInitialSubmitted(address.display());
+         emit CCInitialSubmitted(QString::fromStdString(address.display()));
       }
       else {
-         emit CCSubmitFailed(address.display(), tr("Failed to send to PB"));
+         emit CCSubmitFailed(QString::fromStdString(address.display()), tr("Failed to send to PB"));
       }
    };
 
    const auto &cbSignFailed = [this, address](const QString &text) {
       logger_->error("[CCFileManager::SubmitAddressToPuB] failed to sign data: {}", text.toStdString());
-      emit CCSubmitFailed(address.display(), text);
+      emit CCSubmitFailed(QString::fromStdString(address.display()), text);
    };
 
    SubmitAddrForInitialDistributionRequest addressRequest;
@@ -215,7 +215,7 @@ void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)
 
    logger_->debug("[CCFileManager::ProcessSubmitAddrResponse] {} succeeded", addr.display<std::string>());
 
-   emit CCAddressSubmitted(addr.display());
+   emit CCAddressSubmitted(QString::fromStdString(addr.display()));
 }
 
 bool CCFileManager::LoadFromFile(const std::string &path)

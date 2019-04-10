@@ -1,6 +1,5 @@
 #include "Address.h"
 #include "BlockDataManagerConfig.h"
-#include <QString>
 #include <bech32.h>
 
 
@@ -20,7 +19,7 @@ bs::Address::Address(const BinaryDataRef &data, AddressEntryType aet)
    }
 }
 
-bs::Address::Address(const QByteArray &data, AddressEntryType aet)
+/*!bs::Address::Address(const QByteArray &data, AddressEntryType aet)
    : BinaryData((uint8_t*)(data.data()), data.size()), aet_(aet)
 {
    if (aet == AddressEntryType_Default) {
@@ -30,7 +29,7 @@ bs::Address::Address(const QByteArray &data, AddressEntryType aet)
 
 bs::Address::Address(const QString &data, const Format &f, AddressEntryType aet)
    : Address(data.toStdString(), f, aet)
-{}
+{}*/
 
 bs::Address::Address(const std::string& data, const Format &format, AddressEntryType aet)
    : BinaryData((uint8_t*)(data.data()), data.size()), format_(format), aet_(aet)
@@ -314,10 +313,10 @@ namespace bs {
       return result;
    }
 
-   template<> QString Address::display(Format format) const
+/*!   template<> QString Address::display(Format format) const
    {
       return QString::fromStdString(display<std::string>(format));
-   }
+   }*/
 }
 
 BinaryData bs::Address::prefixed() const

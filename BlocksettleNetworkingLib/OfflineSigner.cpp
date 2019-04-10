@@ -41,7 +41,7 @@ QString OfflineSigner::pidFileName() const
    return QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QLatin1String("/bs_offline.pid");
 }
 
-SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
+bs::signer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
    bool, TXSignMode, const PasswordType&, bool)
 {
    if (!txSignReq.isValid()) {

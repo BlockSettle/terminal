@@ -6,7 +6,6 @@
 #include <functional>
 #include <mutex>
 #include <thread>
-#include <QString>
 #include <spdlog/spdlog.h>
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
@@ -40,11 +39,11 @@ class ZmqBIP15XServerConnection : public ZmqServerConnection
 public:
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
-      , const QStringList& trustedClients, const uint64_t& id
+      , const std::vector<std::string>& trustedClients, const uint64_t& id
       , const bool& ephemeralPeers);
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<ZmqContext> &
-      , const std::function<QStringList()> &cbTrustedClients);
+      , const std::function<std::vector<std::string>()> &cbTrustedClients);
    ~ZmqBIP15XServerConnection() noexcept override;
 
    ZmqBIP15XServerConnection(const ZmqBIP15XServerConnection&) = delete;
@@ -87,7 +86,7 @@ private:
    BinaryData leftOverData_;
    uint64_t id_;
    std::mutex  clientsMtx_;
-   std::function<QStringList()>  cbTrustedClients_;
+   std::function<std::vector<std::string>()> cbTrustedClients_;
 
    const int   heartbeatInterval_ = 10000 * 2;   // allow some toleration on heartbeat miss
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;

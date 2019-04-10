@@ -51,12 +51,12 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
    signContainer_->syncWallet(walletId(), cbProcess);
 }
 
-void hd::Leaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
+void hd::Leaf::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 {
    bs::sync::Wallet::setArmory(armory);
    if (armory_) {
-      connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &hd::Leaf::onZeroConfReceived, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::refresh, this, &hd::Leaf::onRefresh, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &hd::Leaf::onZeroConfReceived, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryObject::refresh, this, &hd::Leaf::onRefresh, Qt::QueuedConnection);
    }
 }
 
@@ -491,7 +491,7 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesInt() const
    return result;
 }
 
-std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
    setArmory(armory);
 
@@ -894,7 +894,7 @@ bool hd::Leaf::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>
          } catch (const std::exception &e) {
             if (logger_ != nullptr) {
                logger_->error("[hd::Leaf::getAddrTxN] Return data error - {} ", \
-                  "- Address {}", e.what(), addr.display().toStdString());
+                  "- Address {}", e.what(), addr.display());
             }
          }
          if (!updateAddrTxN_) {
@@ -1255,11 +1255,12 @@ void hd::CCLeaf::setData(const std::string &data)
    checker_ = std::make_shared<TxAddressChecker>(bs::Address(data), armory_);
 }
 
-void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
+void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 {
    hd::Leaf::setArmory(armory);
    if (armory_) {
-      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
+      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this
+         , SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
    }
    if (checker_ && armory) {
       checker_->setArmory(armory);

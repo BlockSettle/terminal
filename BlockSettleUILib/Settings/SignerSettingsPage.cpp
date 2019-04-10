@@ -60,18 +60,6 @@ void SignerSettingsPage::onZmqPubKeySel()
    if (file.isEmpty()) {
       return;
    }
-
-   SecureBinaryData zmqSignerPubKey;
-   if (!bs::network::readZmqKeyFile(file, zmqSignerPubKey, true)) {
-      BSMessageBox info(BSMessageBox::critical, tr("Import ZMQ key failed")
-         , tr("Failed to parse ZMQ public key from file")
-         , QStringLiteral(""), this);
-      info.exec();
-      return;
-   }
-
-   ui_->lineEditRemoteZmqPubKey->setText(QString::fromStdString(zmqSignerPubKey.toBinStr()));
-   ui_->lineEditZmqKeyPath->setText(file);
 }
 
 void SignerSettingsPage::onModeChanged(int index)

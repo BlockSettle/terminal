@@ -182,7 +182,7 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<AuthAddressManager> &authMgr
-   , const std::shared_ptr<ArmoryConnection> &armory)
+   , const std::shared_ptr<ArmoryObject> &armory)
 {
    logger_ = logger;
    walletsManager_ = manager;
@@ -332,7 +332,7 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
    const auto index = addressSortFilterModel_->mapToSource(ui_->treeViewAddresses->indexAt(p));
    const auto addressIndex = addressModel_->index(index.row(), static_cast<int>(AddressListModel::ColumnAddress));
    try {
-      curAddress_ = bs::Address(addressModel_->data(addressIndex, AddressListModel::Role::AddressRole).toString());
+      curAddress_ = bs::Address(addressModel_->data(addressIndex, AddressListModel::Role::AddressRole).toString().toStdString());
    }
    catch (const std::exception &) {
       curAddress_.clear();
@@ -617,7 +617,7 @@ void WalletsWidget::showError(const QString &text) const
 
 void WalletsWidget::onCopyAddress()
 {
-   qApp->clipboard()->setText(curAddress_.display());
+   qApp->clipboard()->setText(QString::fromStdString(curAddress_.display()));
 }
 
 void WalletsWidget::onEditAddrComment()
@@ -627,7 +627,7 @@ void WalletsWidget::onEditAddrComment()
    }
    bool isOk = false;
    const auto comment = QInputDialog::getText(this, tr("Edit Comment")
-      , tr("Enter new comment for address %1:").arg(curAddress_.display())
+      , tr("Enter new comment for address %1:").arg(QString::fromStdString(curAddress_.display()))
       , QLineEdit::Normal, QString::fromStdString(curWallet_->getAddressComment(curAddress_)), &isOk);
    if (isOk) {
       if (!curWallet_->setAddressComment(curAddress_, comment.toStdString())) {

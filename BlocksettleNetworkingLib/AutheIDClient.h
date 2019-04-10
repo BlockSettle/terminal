@@ -2,6 +2,7 @@
 #define __AUTH_EID_CLIENT_H__
 
 #include <QObject>
+#include <QNetworkAccessManager>
 
 #include <functional>
 

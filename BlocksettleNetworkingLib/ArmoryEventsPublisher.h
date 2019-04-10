@@ -1,7 +1,7 @@
 #ifndef __ARMORY_EVENTS_PUBLISHER_H__
 #define __ARMORY_EVENTS_PUBLISHER_H__
 
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 
 #include <memory>
 #include <string>
@@ -30,11 +30,11 @@ public:
    ArmoryEventsPublisher(ArmoryEventsPublisher&&) = delete;
    ArmoryEventsPublisher& operator = (ArmoryEventsPublisher&&) = delete;
 
-   bool ConnectToArmoryConnection(const std::shared_ptr<ArmoryConnection>& armoryConnection);
-   void DisconnectFromArmoryConnection();
+   bool connectToArmory(const std::shared_ptr<ArmoryObject>& armoryConnection);
+   void disconnectFromArmory();
 
 private:
-   bool IsConnectedToArmory() const;
+   bool isConnectedToArmory() const;
 
 private slots:
    void onNewBlock(unsigned int height) const;
@@ -43,7 +43,7 @@ private slots:
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<PublisherConnection>   publisher_;
-   std::shared_ptr<ArmoryConnection>      armoryConnection_ = nullptr;
+   std::shared_ptr<ArmoryObject>          armory_ = nullptr;
 };
 
 #endif // __ARMORY_EVENTS_PUBLISHER_H__

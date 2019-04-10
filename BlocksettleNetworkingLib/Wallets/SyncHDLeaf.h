@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
 
@@ -94,8 +94,8 @@ namespace bs {
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
 
-            void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
-            std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+            void setArmory(const std::shared_ptr<ArmoryObject> &) override;
+            std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryObject> &armory = nullptr
                , bool asNew = false) override;
             void unregisterWallet() override;
 
@@ -288,7 +288,7 @@ namespace bs {
             QString displaySymbol() const override;
             bool isTxValid(const BinaryData &) const override;
 
-            void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
+            void setArmory(const std::shared_ptr<ArmoryObject> &) override;
 
          private slots:
             void onZeroConfReceived(const std::vector<bs::TXEntry>) override;

@@ -1,7 +1,7 @@
 #ifndef BS_CORE_HD_WALLET_H__
 #define BS_CORE_HD_WALLET_H__
 
-#include<memory>
+#include <memory>
 #include "CoreHDGroup.h"
 #include "CoreHDLeaf.h"
 #include "CoreHDNode.h"

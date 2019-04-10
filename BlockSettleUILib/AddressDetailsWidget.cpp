@@ -28,13 +28,13 @@ AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
 AddressDetailsWidget::~AddressDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
-void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
+void AddressDetailsWidget::init(const std::shared_ptr<ArmoryObject> &armory,
                                 const std::shared_ptr<spdlog::logger> &inLogger)
 {
    armory_ = armory;
    logger_ = inLogger;
 
-   connect(armory_.get(), &ArmoryConnection::refresh, this
+   connect(armory_.get(), &ArmoryObject::refresh, this
            , &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
 }
 
@@ -56,7 +56,7 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
       dummyWallets_[regId] = dummyWallet;
    }
 
-   ui_->addressId->setText(inAddrVal.display());
+   ui_->addressId->setText(QString::fromStdString(inAddrVal.display()));
 }
 
 // The function that gathers all the data to place in the UI.

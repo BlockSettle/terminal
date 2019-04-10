@@ -15,7 +15,7 @@ namespace bs {
       class Wallet;
    }
 }
-class ArmoryConnection;
+class ArmoryObject;
 class SignContainer;
 class TransactionData;
 
@@ -27,7 +27,7 @@ public:
    DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
       , const std::string &quoteReqId, uint64_t lotSize, const bs::Address &genAddr, const std::string &ownRecvAddr
       , const std::shared_ptr<TransactionData> &, const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &, bool autoSign);
+      , const std::shared_ptr<ArmoryObject> &, bool autoSign);
    ~DealerCCSettlementContainer() override;
 
    bool accept(const SecureBinaryData &password = {}) override;

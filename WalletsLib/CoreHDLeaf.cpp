@@ -146,14 +146,14 @@ bs::Address hd::Leaf::getRandomChangeAddress(AddressEntryType aet)
       } else if (extAddresses_.size() == 1) {
          return extAddresses_[0];
       }
-      return extAddresses_[qrand() % extAddresses_.size()];
+      return extAddresses_[rand() % extAddresses_.size()];
    }
    else {
       if (!lastIntIdx_) {
          return getNewChangeAddress(aet);
       }
       else {
-         return intAddresses_[qrand() % intAddresses_.size()];
+         return intAddresses_[rand() % intAddresses_.size()];
       }
    }
 }
@@ -367,8 +367,8 @@ void hd::Leaf::topUpAddressPool(size_t nbIntAddresses, size_t nbExtAddresses)
 {
    const size_t nbPoolInt = nbIntAddresses ? 0 : getLastAddrPoolIndex(addrTypeInternal) - lastIntIdx_ + 1;
    const size_t nbPoolExt = nbExtAddresses ? 0 : getLastAddrPoolIndex(addrTypeExternal) - lastExtIdx_ + 1;
-   nbIntAddresses = qMax(nbIntAddresses, intAddressPoolSize_);
-   nbExtAddresses = qMax(nbExtAddresses, extAddressPoolSize_);
+   nbIntAddresses = std::max<size_t>(nbIntAddresses, intAddressPoolSize_);
+   nbExtAddresses = std::max<size_t>(nbExtAddresses, extAddressPoolSize_);
 
    for (const auto aet : poolAET_) {
       if (nbPoolInt < (intAddressPoolSize_ / 4)) {
@@ -648,10 +648,10 @@ bool hd::Leaf::deserialize(const BinaryData &ser, Nodes rootNodes)
       if (!addr.isNull()) {
          const auto actualIdx = addrPath.get(-1);
          if (addrPath.get(0) == addrTypeExternal) {
-            lastExtIdx_ = qMax(lastExtIdx_, actualIdx + 1);
+            lastExtIdx_ = std::max<uint32_t>(lastExtIdx_, actualIdx + 1);
          }
          else {
-            lastIntIdx_ = qMax(lastIntIdx_, actualIdx + 1);
+            lastIntIdx_ = std::max<uint32_t>(lastIntIdx_, actualIdx + 1);
          }
       }
    }
@@ -797,7 +797,7 @@ void hd::AuthLeaf::setChainCode(const BinaryData &chainCode)
       for (const auto &addr : tempAddresses_) {
          const auto &path = addr.second.first;
          createAddress(path, addr.first, addr.second.second);
-         lastExtIdx_ = qMax(lastExtIdx_, path.get(-1) + 1);
+         lastExtIdx_ = std::max<uint32_t>(lastExtIdx_, path.get(-1) + 1);
       }
       const auto poolAddresses = generateAddresses(addrTypeExternal, lastExtIdx_, 5, AddressEntryType_P2WPKH);
       for (const auto &addr : poolAddresses) {

@@ -8,7 +8,7 @@
 
 WalletImporter::WalletImporter(const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<AuthAddressManager> &authMgr
    , const CbScanReadLast &cbr, const CbScanWriteLast &cbw)
    : QObject(nullptr), signingContainer_(container), walletsMgr_(walletsMgr), armory_(armory)

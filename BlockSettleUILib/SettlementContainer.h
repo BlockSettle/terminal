@@ -5,11 +5,9 @@
 #include <string>
 #include <QObject>
 #include <QTimer>
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
-
-class ArmoryConnection;
 
 namespace bs {
 
@@ -17,7 +15,7 @@ namespace bs {
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory);
+      explicit SettlementContainer(const std::shared_ptr<ArmoryObject> &);
       ~SettlementContainer() override = default;
 
       virtual bool accept(const SecureBinaryData &password = {}) = 0;
@@ -59,7 +57,7 @@ namespace bs {
       virtual void zcReceived(const std::vector<bs::TXEntry>) {}
 
    protected:
-      std::shared_ptr<ArmoryConnection>   armory_;
+      std::shared_ptr<ArmoryObject>   armory_;
 
    private:
       QTimer   timer_;

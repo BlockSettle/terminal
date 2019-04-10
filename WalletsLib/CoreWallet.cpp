@@ -432,28 +432,8 @@ bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
       return getNewChangeAddress(aet);
    }
    const auto &addresses = getUsedAddressList();
-   return addresses[qrand() % addresses.size()];
+   return addresses[rand() % addresses.size()];
 }
-
-/*bool Wallet::isSegWitInput(const UTXO& input)
-{
-   return input.isSegWit() || isSegWitScript(input.getScript());
-}
-
-bool Wallet::isSegWitScript(const BinaryData &script)
-{
-//   const auto scrType = BtcUtils::getTxOutScriptType(script);
-   switch (getAddrTypeForAddr(BtcUtils::getTxOutRecipientAddr(script))) {
-      case AddressEntryType_P2WPKH:
-      case AddressEntryType_P2WSH:
-      case AddressEntryType_P2SH:
-         return true;
-      case AddressEntryType_Default:   // fallback for script not from our wallet
-      default: break;                  // fallback for incorrectly deserialized wallet
-   }
-   return false;
-}
-*/
 
 Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinaryData &password,
                              bool keepDuplicatedRecipients)

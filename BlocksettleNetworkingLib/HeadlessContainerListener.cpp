@@ -4,10 +4,8 @@
 #include "ConnectionManager.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "ServerConnection.h"
 #include "WalletEncryption.h"
-#include "ZmqSecuredServerConnection.h"
-#include <QDataStream>
-#include <QDebug>
 
 
 using namespace Blocksettle::Communication;
@@ -93,7 +91,7 @@ bool HeadlessContainerListener::sendData(const std::string &data, const std::str
    return sentOk;
 }
 
-void HeadlessContainerListener::SetLimits(const SignContainer::Limits &limits)
+void HeadlessContainerListener::SetLimits(const bs::signer::Limits &limits)
 {
    limits_ = limits;
 }
@@ -235,7 +233,7 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
       return onChangePassword(clientId, packet);
 
    case headless::DisconnectionRequestType:
-      emit OnClientDisconnected(clientId);
+//!      emit OnClientDisconnected(clientId);
       break;
 
    case headless::SyncWalletInfoType:

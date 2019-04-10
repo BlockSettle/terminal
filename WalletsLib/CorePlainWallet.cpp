@@ -1,5 +1,4 @@
 #include "CorePlainWallet.h"
-#include <QFile>
 #include <spdlog/spdlog.h>
 #include "SystemFileUtils.h"
 #include "Wallets.h"
@@ -327,11 +326,11 @@ void PlainWallet::loadFromFile(const std::string &filename)
    if (filename.empty()) {
       throw std::invalid_argument("no file name provided");
    }
-   if (!SystemFileUtils::IsValidFilePath(filename)) {
+   if (!SystemFileUtils::isValidFilePath(filename)) {
       throw std::invalid_argument("Invalid file path: " + filename);
    }
 
-   if (!SystemFileUtils::FileExist(filename)) {
+   if (!SystemFileUtils::fileExist(filename)) {
       throw std::runtime_error("Wallet file does not exist");
    }
 
@@ -492,12 +491,9 @@ bool PlainWallet::eraseFile()
       db_.reset();
    }
    bool rc = true;
-   QFile walletFile(QString::fromStdString(dbFilename_));
-   if (walletFile.exists()) {
-      rc = walletFile.remove();
-
-      QFile lockFile(QString::fromStdString(dbFilename_ + "-lock"));
-      rc &= lockFile.remove();
+   if (SystemFileUtils::fileExist(dbFilename_)) {
+      rc &= SystemFileUtils::rmFile(dbFilename_);
+      rc &= SystemFileUtils::rmFile(dbFilename_ + "-lock");
    }
    return rc;
 }

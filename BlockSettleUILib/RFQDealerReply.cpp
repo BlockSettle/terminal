@@ -269,7 +269,7 @@ void RFQDealerReply::updateRecvAddresses()
    ui_->comboBoxRecvAddr->addItem(tr("Auto Create"));
    if (curWallet_ != nullptr) {
       for (const auto &addr : curWallet_->getExtAddressList()) {
-         ui_->comboBoxRecvAddr->addItem(addr.display());
+         ui_->comboBoxRecvAddr->addItem(QString::fromStdString(addr.display()));
       }
    }
 }

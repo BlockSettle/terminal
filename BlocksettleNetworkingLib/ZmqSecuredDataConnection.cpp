@@ -11,23 +11,19 @@ ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog:
                                                    , bool monitored)
  : ZmqDataConnection(logger, monitored)
 {
-   std::pair<SecureBinaryData, SecureBinaryData> inKeyPair;
-   int result = bs::network::getCurveZMQKeyPair(inKeyPair);
-   if (result == -1) {
-      if (logger_) {
-         logger_->error("[ZmqSecuredDataConnection::{}] failed to generate key "
-            "pair: {}", __func__, zmq_strerror(zmq_errno()));
-      }
-      return;
+   char pubKey[41];
+   char privKey[41];
+   if (zmq_curve_keypair(pubKey, privKey) != 0) {
+      throw std::runtime_error("failed to generate CurveZMQ key pair");
    }
 
-   publicKey_ = inKeyPair.first;
-   privateKey_ = inKeyPair.second;
+   publicKey_ = SecureBinaryData(pubKey);
+   privateKey_ = SecureBinaryData(privKey);
 }
 
 bool ZmqSecuredDataConnection::SetServerPublicKey(const BinaryData& key)
 {
-   if (key.getSize() != CURVEZMQPUBKEYBUFFERSIZE) {
+   if (key.getSize() != 40) {
       if (logger_) {
          logger_->error("[ZmqSecuredDataConnection::{}] invalid length of "
             "server public key ({} bytes).", __func__, key.getSize());

@@ -15,8 +15,7 @@
 #include "SignContainer.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ZmqSecuredDataConnection.h"
-
+#include "ZMQ_BIP15X_DataConnection.h"
 
 using namespace Blocksettle::Communication;
 
@@ -569,13 +568,13 @@ void AuthAddressManager::ProcessConfirmAuthAddressSubmit(const std::string &resp
 
    const bs::Address address(response.address());
    if (response.has_errormsg()) {
-      emit AuthAddrSubmitError(address.display(), QString::fromStdString(response.errormsg()));
+      emit AuthAddrSubmitError(QString::fromStdString(address.display()), QString::fromStdString(response.errormsg()));
    }
    else {
       SubmitToCeler(address);
       SetState(address, AddressVerificationState::Submitted);
       emit AddressListUpdated();
-      emit AuthAddrSubmitSuccess(address.display());
+      emit AuthAddrSubmitSuccess(QString::fromStdString(address.display()));
    }
 }
 
@@ -593,7 +592,7 @@ void AuthAddressManager::ProcessCancelAuthSubmitResponse(const std::string& resp
    } else {
       SetState(address, AddressVerificationState::NotSubmitted);
       emit AddressListUpdated();
-      emit AuthAddressSubmitCancelled(address.display());
+      emit AuthAddressSubmitCancelled(QString::fromStdString(address.display()));
    }
 }
 
@@ -641,7 +640,7 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
 
       auto defaultAuthAddrStr = settings_->get<QString>(ApplicationSettings::defaultAuthAddr);
       if (!defaultAuthAddrStr.isEmpty()) {
-         defaultAddr_ = bs::Address(defaultAuthAddrStr);
+         defaultAddr_ = bs::Address(defaultAuthAddrStr.toStdString());
       }
 
       if (defaultAddr_.isNull()) {
@@ -837,14 +836,14 @@ void AuthAddressManager::SetState(const bs::Address &addr, AddressVerificationSt
    states_[addr.prefixed()] = state;
 
    if (state == AddressVerificationState::PendingVerification) {
-      emit NeedVerify(addr.display());
+      emit NeedVerify(QString::fromStdString(addr.display()));
    }
    else if ((state == AddressVerificationState::Verified) && (prevState == AddressVerificationState::VerificationSubmitted)) {
-      emit AddrStateChanged(addr.display(), tr("Verified"));
+      emit AddrStateChanged(QString::fromStdString(addr.display()), tr("Verified"));
    }
    else if (((state == AddressVerificationState::Revoked) || (state == AddressVerificationState::RevokedByBS))
       && (prevState == AddressVerificationState::Verified)) {
-      emit AddrStateChanged(addr.display(), tr("Revoked"));
+      emit AddrStateChanged(QString::fromStdString(addr.display()), tr("Revoked"));
    }
 }
 

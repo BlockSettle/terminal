@@ -13,7 +13,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const bs::network::Order &order, const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<QuoteProvider> &quoteProvider, const std::shared_ptr<TransactionData> &txData
    , const std::unordered_set<std::string> &bsAddresses, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
+   , const std::shared_ptr<ArmoryObject> &armory, bool autoSign)
    : bs::SettlementContainer(armory), order_(order)
    , weSell_((order.side == bs::network::Side::Buy) ^ (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)

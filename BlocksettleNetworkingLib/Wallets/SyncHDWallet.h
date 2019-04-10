@@ -67,8 +67,8 @@ namespace bs {
             void changePassword(const std::function<void(bool)> &, const std::vector<bs::wallet::PasswordData> &newPass
                , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun);
 
-            void registerWallet(const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
-            void setArmory(const std::shared_ptr<ArmoryConnection> &);
+            void registerWallet(const std::shared_ptr<ArmoryObject> &, bool asNew = false);
+            void setArmory(const std::shared_ptr<ArmoryObject> &);
             bool startRescan(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr, const cb_scan_write_last &cbw = nullptr);
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
@@ -96,7 +96,7 @@ namespace bs {
             mutable QMutex    mtxGroups_;
             BinaryData        userId_;
             SignContainer  *  signContainer_;
-            std::shared_ptr<ArmoryConnection>   armory_;
+            std::shared_ptr<ArmoryObject>       armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
             std::vector<SecureBinaryData>          encryptionKeys_;
