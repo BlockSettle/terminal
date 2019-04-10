@@ -154,7 +154,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) },
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
-      { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys")) }
+      { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys")) },
+      { twoWayAuth,                       SettingDef(QLatin1String("TwoWayAuth"), false) }
    };
 }
 
