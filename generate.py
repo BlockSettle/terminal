@@ -27,11 +27,12 @@ from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
 
-def generate_project(build_mode, build_production):
-   project_settings = Settings(build_mode)
+def generate_project(build_mode, link_mode, build_production, hide_warnings):
+   project_settings = Settings(build_mode, link_mode)
 
    print('Build mode        : {} ( {} )'.format(project_settings.get_build_mode(), ('Production' if build_production else 'Development')))
    print('Build mode        : ' + project_settings.get_build_mode())
+   print('Link mode         : ' + project_settings.get_link_mode())
    print('CMake generator   : ' + project_settings.get_cmake_generator())
    print('Download path     : ' + os.path.abspath(project_settings.get_downloads_dir()))
    print('Install dir       : ' + os.path.abspath(project_settings.get_common_build_dir()))
@@ -43,16 +44,16 @@ def generate_project(build_mode, build_production):
    required_3rdparty += [
       ProtobufSettings(project_settings),
       OpenSslSettings(project_settings),
-      QtSettings(project_settings),
       SpdlogSettings(project_settings),
       ZeroMQSettings(project_settings),
       LibQREncode(project_settings),
       MPIRSettings(project_settings),
-      LibBTC(project_settings),
-      LibChaCha20Poly1305Settings(project_settings),
+      LibBTC(project_settings),                             # static
+      LibChaCha20Poly1305Settings(project_settings),        # static
       WebsocketsSettings(project_settings),
       BotanSettings(project_settings),
-      ]
+      QtSettings(project_settings)
+   ]
 
    for component in required_3rdparty:
       if not component.config_component():
@@ -64,7 +65,10 @@ def generate_project(build_mode, build_production):
    os.chdir(project_settings.get_project_root())
 
    generated_dir = os.path.join(os.getcwd(), 'generated_proto')
-   build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode)
+   if link_mode == 'shared':
+      build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode + '-' + link_mode)
+   else:
+      build_dir = os.path.join(os.getcwd(), 'terminal.' + build_mode)
 
    if os.path.isfile(generated_dir):
       os.remove(generated_dir)
@@ -89,7 +93,7 @@ def generate_project(build_mode, build_production):
    if build_mode == 'debug':
       command.append('-DCMAKE_BUILD_TYPE=Debug')
       if project_settings._is_windows:
-         command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1')
+         command.append('-DCMAKE_CXX_FLAGS_DEBUG=/D_DEBUG -DBUILD_MT_RELEASE=OFF /MTd /Zi /Ob0 /Od /RTC1')
          command.append('-DCMAKE_CONFIGURATION_TYPES=Debug')
    else:
       command.append('-DCMAKE_BUILD_TYPE=Release')
@@ -99,6 +103,9 @@ def generate_project(build_mode, build_production):
 
    if build_production:
       command.append('-DPRODUCTION_BUILD=1')
+
+   if project_settings.get_link_mode() == 'shared':
+      command.append('-DBSTERMINAL_SHARED_LIBS=ON')
 
    # to remove cmake 3.10 dev warnings
    command.append('-Wno-dev')
@@ -125,6 +132,17 @@ if __name__ == '__main__':
                              action='store_true',
                              dest='build_production',
                              default=False)
+   input_parser.add_argument('link_mode',
+                             help='Linking library type used by the project generator [ static | shared ]',
+                             nargs='?',
+                             action='store',
+                             default='static',
+                             choices=['static', 'shared'])
+   input_parser.add_argument('-hide-warnings',
+                             help='Hide warnings in external sources',
+                             action='store_true',
+                             dest='hide_warnings',
+                             default=False)
    args = input_parser.parse_args()
 
-   sys.exit(generate_project(args.build_mode, args.build_production))
+   sys.exit(generate_project(args.build_mode, args.link_mode, args.build_production, args.hide_warnings))

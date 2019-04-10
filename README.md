@@ -1,5 +1,5 @@
 # Supported runtime platforms
-- Linux ([Ubuntu](https://www.ubuntu.com/) 16.04 LTS/18.04 LTS/18.10)
+- Linux - [Ubuntu](https://www.ubuntu.com/) (16.04 LTS/18.04 LTS/18.10/19.04)
 - [macOS](https://www.apple.com/macos/) (10.12 or higher)
 - [Windows](https://www.microsoft.com/en-us/windows) (Windows 7 or higher)
 
@@ -15,7 +15,7 @@
  1. Download and install the Community version of [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/), which is the minimum supported compiler. When prompted during installation, you will only need the C and C++ build tools.
 
  2. Install the following binaries.
-- [Python](https://www.python.org/downloads/windows/). Download the latest 2.7 version. (This will eventually change to the latest 3.x version.)
+- [Python](https://www.python.org/downloads/windows/). Download the latest 3.x version. (2.7 is still supported as of Mar. 2019 but support will be dropped eventually.)
 - [cmake](https://cmake.org/download/). Select the win64-x64 installer.
 - [MySQL Connector](https://dev.mysql.com/downloads/windows/installer/). The smaller, web-based installer is acceptable but either installer is acceptable. In the installer, install both the "Connector/C" and "Connector/C++" options. No other options are required.
 - [YASM](https://yasm.tortall.net/Download.html). Download the Win64 VS2010 ZIP archive and unpack it to `C:\Program Files\yasm`.
@@ -29,7 +29,7 @@
  5. Click the Start button and select the `x64 Native Tools Command Prompt for VS 2017` program. You may have to type the name until the option appears. It is *critical* that you type `x64` and *not* `x86`.
 
 ## Ubuntu
- 1. Open Software Updates -> Ubuntu Software -> set "Source Code" checkbox (required for qt5-default).
+ 1. Open Software Updates -> Ubuntu Software. Set the "Source Code" checkbox (required for `qt5-default`).
 
  2. Execute the following commands.
 
@@ -61,17 +61,16 @@
  5. Create a symbolic link for glibtoolize. This requires sudo access and is probably not strictly necessary. It makes Autotools much happier, though, and should be harmless otherwise.
 
 		sudo ln -s /usr/local/bin/glibtoolize /usr/local/bin/libtoolize
-		
- 6. MPIR library may fail to build on latest CPU's like Intel 7xxx. It's possible to apply workaround in case of VMWare VM used. Add to virtual machine configuration (.vmx file) following strings:
+
+ 6. MPIR library may fail to build on certain CPUs (e.g., Intel's 7xxx series. It's possible to apply a workaround when using a VMWare VM. Change the "Virtualize Intel VT-X/EPT or AMD-V/RVI" checkbox in the VM configuration GUI. In addition, add the following lines to the appropriate virtual machine configuration (.vmx file):
  		
 		cpuid.1.edx = "10111111111010111111101111111011"
 		cpuid.1.eax = "00000000000000110100011010101001"
-Also try to set/unset "Virtualize Intel VT-X/EPT or AMD-V/RVI" checkbox in virtual machine configuration.
 
 # Build instructions for all platforms
- 1. Use `pip` to install the `wget` and `requests` Python packages. Note that, on Linux and macOS, the `pip` binary might actually need to be the `pip2` binary as long as Python 2.7 is being used to run the build script.
+ 1. Use `pip` to install the `wget` and `requests` Python packages. Note that, on Linux and macOS, the `pip` binary might actually need to be the `pip3` binary if Python 2.7 and 3.x are both on the system.
 
-		pip install wget requests
+		pip install wget requests pathlib
 
  2. Clone the BlockSettle Terminal repo. If asked for your GitHub user/pass, get in touch with the devs and confirm that you have proper access to the repos (`terminal` and the submodules). If you continue to have access issues, confirm whether or not you use 2FA. If you do, you need to use a [Personal Access Token](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/) as your password. The PAT should be separate from any other PATs in case the build machine is compromised; the PAT can be revoked without breaking uncompromised PATs.
 
@@ -93,7 +92,12 @@ Also try to set/unset "Virtualize Intel VT-X/EPT or AMD-V/RVI" checkbox in virtu
 
  7. Assuming the code compiles and links successfully, from the BlockSettle Terminal root directory, go to the `build_terminal` subdirectory. From there, go to the `Release/bin` or `Debug/bin` subdirectories to find the generated binaries. Linux and Windows binaries may be executed directly. On macOS, the user will either have to double-click on the appropriate app or type `open -a Blocksettle\ Terminal` from the command line. If the macOS version needs to have command line arguments passed, the easiest thing to do is to go directly to the actual executable. The binary to execute will be in the `BlockSettle Terminal.app/Contents/MacOS/` subdirectory.
 
- 8. (**WINDOWS ONLY**) A one-time step is required upon the first compilation. Go to `DEV_3RD_ROOT/release/ZeroMQ/lib` and copy the libzmq DLL file to same directory as the BlockSettle Terminal binary. The DLL need only be copied once but it'll have to be re-copied whenever `libzmq` is updated. This will eventually be automated. For now, the build script occasionally crashes when attempting to automate this process.
+ 8. When pulling code, the submodules may be updated, or new submodules may be added. Run the following commands to ensure that the submodules are properly updated.
+
+		git submodule init  (Required *only* if a new submodule has been added.)
+		git submodult update
+
+ 9. (**WINDOWS ONLY**) A one-time step is required upon the first compilation. Go to `DEV_3RD_ROOT/release/ZeroMQ/lib` and copy the libzmq DLL file to same directory as the BlockSettle Terminal binary. The DLL need only be copied once but it'll have to be re-copied whenever `libzmq` is updated. This will eventually be automated. For now, the build script occasionally crashes when attempting to automate this process.
 
 # Miscellaneous
 ## Terminal prerequisites
@@ -118,4 +122,4 @@ By default, the prerequisites are downloaded and installed in the `3rd` subdirec
 
 - Linux (Ubuntu) - In ~/.bashrc, export the variable to the desired location. (Example: `export DEV_3RD_ROOT="$HOME/Projects/BlockSettle-alt-location/3rd"`)
 - Windows - Add the `DEV_3RD_ROOT` variable to the Windows system environment, similar to the manner in which the `PATH` variable was accessed in the [Windows platform-specific prerequisites](#windows) section.
-- macOS -  In ~/.bash\_profile, export the variable to the desired location. (Example: `export DEV_3RD_ROOT="$HOME/Projects/BlockSettle-alt-location/3rd"`)
+- macOS - In ~/.bash\_profile, export the variable to the desired location. (Example: `export DEV_3RD_ROOT="$HOME/Projects/BlockSettle-alt-location/3rd"`)

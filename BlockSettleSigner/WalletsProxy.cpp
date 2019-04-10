@@ -68,7 +68,8 @@ bool WalletsProxy::primaryWalletExists() const
 
 void WalletsProxy::changePassword(const QString &walletId
                                   , bs::wallet::QPasswordData *oldPasswordData
-                                  , bs::wallet::QPasswordData *newPasswordData)
+                                  , bs::wallet::QPasswordData *newPasswordData
+                                  , const QJSValue &jsCallback)
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
@@ -76,16 +77,21 @@ void WalletsProxy::changePassword(const QString &walletId
       return;
    }
 
-   const auto &cbChangePwdResult = [this, walletId](bool result) {
+   const auto &cbChangePwdResult = [this, walletId, jsCallback](bool result) {
+      QJSValueList args;
+      args << QJSValue(result);
+
+      QMetaObject::invokeMethod(this, "invokeJsCallBack", Qt::QueuedConnection
+                                , Q_ARG(QJSValue, jsCallback)
+                                , Q_ARG(QJSValueList, args));
+
       if (result) {
          emit walletsMgr_.get()->walletChanged();
       }
-      else {
-         emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
-      }
    };
-   wallet->changePassword(cbChangePwdResult, { *newPasswordData }, { 1, 1 }
-      , oldPasswordData->password, false, false, false);
+
+   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }, { 1, 1 }
+                          , oldPasswordData->password, false, false, false, cbChangePwdResult);
 }
 
 void WalletsProxy::addEidDevice(const QString &walletId
@@ -120,8 +126,8 @@ void WalletsProxy::addEidDevice(const QString &walletId
          emit walletError(walletId, tr("Failed to add new device"));
       }
    };
-   wallet->changePassword(cbChangePwdResult, { *newPasswordData }
-      , encryptionRank, oldPasswordData->password, true, false, false);
+   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }
+      , encryptionRank, oldPasswordData->password, true, false, false, cbChangePwdResult);
 }
 
 void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswordData *oldPasswordData, int removedIndex)
@@ -177,8 +183,8 @@ void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
       }
    };
 
-   wallet->changePassword(cbChangePwdResult, newPasswordData, encryptionRank
-      , oldPasswordData->password, false, true, false);
+   adapter_->changePassword(walletId.toStdString(), newPasswordData, encryptionRank
+      , oldPasswordData->password, false, true, false, cbChangePwdResult);
 }
 
 QString WalletsProxy::getWoWalletFile(const QString &walletId) const
@@ -188,13 +194,40 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
 
 void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path, bs::wallet::QPasswordData *passwordData) const
 {
-   const auto &cbResult = [this, walletId](bool result) {
-      if (!result) {
-         logger_->error("[WalletsProxy] failed to create watching-only wallet for id {}", walletId.toStdString());
+   const auto &cbResult = [this, walletId, path](const bs::sync::WatchingOnlyWallet &wo) {
+      if (wo.id.empty()) {
+         logger_->error("[WalletsProxy] failed to create WO wallet for id {}", wo.id);
          emit walletError(walletId, tr("Failed to create watching-only wallet for %1").arg(walletId));
+         return;
+      }
+      bs::core::hd::Wallet woWallet(wo.id, wo.netType, false, wo.name, logger_
+         , wo.description);
+      for (const auto &groupEntry : wo.groups) {
+         auto group = woWallet.createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
+         for (const auto &leafEntry : groupEntry.leaves) {
+            auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
+               , leafEntry.chainCode, wo.netType);
+            auto leaf = group->createLeaf(leafEntry.index, pubNode);
+            if (!leaf) {
+               logger_->error("[WalletsProxy] failed to create WO leaf {} for {}"
+                  , leafEntry.index, wo.id);
+               continue;
+            }
+            for (const auto &addr : leafEntry.addresses) {
+               leaf->createAddressWithIndex(addr.index, true, addr.aet);
+            }
+         }
+      }
+      try {
+         woWallet.saveToDir(path.toStdString());
+      }
+      catch (const std::exception &e) {
+         logger_->error("[WalletsProxy] failed to save WO wallet for {}: {}", wo.id, e.what());
+         emit walletError(walletId, tr("Failed to save watching-only wallet for %1 to %2: %3")
+            .arg(walletId).arg(path).arg(QLatin1String(e.what())));
       }
    };
-   adapter_->createWatchingOnlyWallet(walletId, passwordData->password, path, cbResult);
+   adapter_->createWatchingOnlyWallet(walletId, passwordData->password, cbResult);
 }
 
 bool WalletsProxy::backupPrivateKey(const QString &walletId
@@ -322,6 +355,16 @@ QStringList WalletsProxy::walletNames() const
       result.push_back(QString::fromStdString(wallet->name()));
    }
    return result;
+}
+
+QJSValue WalletsProxy::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
+{
+   if (jsCallback.isCallable()) {
+      return jsCallback.call(args);
+   }
+   else {
+      return QJSValue();
+   }
 }
 
 int WalletsProxy::indexOfWalletId(const QString &walletId) const

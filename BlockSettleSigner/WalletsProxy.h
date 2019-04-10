@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <QObject>
+#include <QJSValue>
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
@@ -41,7 +42,8 @@ public:
 
    Q_INVOKABLE void changePassword(const QString &walletId
                                    , bs::wallet::QPasswordData *oldPasswordData
-                                   , bs::wallet::QPasswordData *newPasswordData);
+                                   , bs::wallet::QPasswordData *newPasswordData
+                                   , const QJSValue &jsCallback);
 
    Q_INVOKABLE void addEidDevice(const QString &walletId
                                    , bs::wallet::QPasswordData *oldPasswordData
@@ -86,6 +88,7 @@ private:
    bool primaryWalletExists() const;
    std::shared_ptr<bs::sync::hd::Wallet> getRootForId(const QString &walletId) const;
    QStringList walletNames() const;
+   Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

@@ -1,5 +1,4 @@
 module jsHelpers
 
 JsHelper 1.0 helper.js
-
-
+QmlDialogs 1.0 qmlDialogs.js

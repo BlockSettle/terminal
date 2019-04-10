@@ -18,19 +18,12 @@ import "BsStyles"
 import "BsControls"
 import "BsDialogs"
 import "js/helper.js" as JsHelper
+import "js/qmlDialogs.js" as QmlDialogs
 
 Item {
     id: view
 
-    function isHdRoot() {
-        var isRoot = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.IsHDRootRole)
-        return ((typeof(isRoot) != "undefined") && isRoot)
-    }
-    function isAnyWallet() {
-        var walletId = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole)
-        return ((typeof(walletId) != "undefined") && walletId.length)
-    }
-
+    property alias walletsView: walletsView_
     Connections {
         target: walletsProxy
         onWalletError: {
@@ -40,17 +33,19 @@ Item {
         }
     }
     Connections {
-        target: walletsView.model
+        target: walletsView_.model
         onModelReset: {
             // when model resetted selectionChanged signal is not emitted
             // button states needs to be updated after model reset, this emitted signal will do that
-            var idx = walletsView.model.index(-1,-1);
-            walletsView.selection.currentChanged(idx, idx)
+            var idx = walletsView_.model.index(-1,-1);
+            walletsView_.selection.currentChanged(idx, idx)
         }
     }
 
-    function getCurrentWalletInfo() {
-        return qmlFactory.createWalletInfo(walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole))
+    function getCurrentWalletIdData() {
+        var data = {}
+        data["rootId"] = walletsView_.model.data(walletsView_.selection.currentIndex, WalletsModel.WalletIdRole)
+        return data
     }
 
     ScrollView {
@@ -76,33 +71,18 @@ Item {
                     width: parent.width
 
                     CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("New Wallet")
+                        width: 150
+                        text: qsTr("New")
                         onClicked: {
                             // let user create a new wallet or import one from file
                             var dlgNew = Qt.createComponent("BsDialogs/WalletNewDialog.qml").createObject(mainWindow)
-                            dlgNew.accepted.connect(function() {
+                            dlgNew.bsAccepted.connect(function() {
                                 if (dlgNew.type === WalletNewDialog.WalletType.NewWallet) {
-                                    // TODO rename signerSettings.testNet -> signerSettings.isTestNet
-                                    var newSeed = qmlFactory.createSeed(signerSettings.testNet)
-
-                                    // allow user to save wallet seed lines and then prompt him to enter them for verification
-                                    var dlgNewSeed = Qt.createComponent("BsDialogs/WalletNewSeedDialog.qml").createObject(mainWindow)
-                                    dlgNewSeed.seed = newSeed
-                                    dlgNewSeed.accepted.connect(function() {
-                                        // let user set a password or Auth eID and also name and desc. for the new wallet
-                                        var dlgCreateWallet = Qt.createComponent("BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
-                                        dlgCreateWallet.primaryWalletExists = walletsProxy.primaryWalletExists
-
-                                        dlgCreateWallet.seed = newSeed
-                                        dlgCreateWallet.open();
-                                    })
-                                    dlgNewSeed.open()
+                                    var dlgNewSeed = QmlDialogs.createNewWalletDialog()
+                                    dlgNewSeed.fullScreenMode = false
                                 }
                                 else {
-                                    var dlgImp = Qt.createComponent("BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
-                                    dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
-                                    dlgImp.open()
+                                    QmlDialogs.importWalletDialog()
                                 }
                             })
                             dlgNew.open()
@@ -110,76 +90,32 @@ Item {
                     }
 
                     CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("Manage Encryption")
-                        enabled: isHdRoot()
+                        width: 150
+
+                        text: qsTr("Manage")
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
-                            var dlg = Qt.createComponent("BsDialogs/WalletManageEncryptionDialog.qml").createObject(mainWindow)
-                            dlg.walletInfo = getCurrentWalletInfo()
-                            dlg.open()
+                            QmlDialogs.manageEncryptionDialog(getCurrentWalletIdData())
                         }
                     }
 
                     CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        enabled: isHdRoot()
-                        text: qsTr("Delete Wallet")
+                        //Layout.fillWidth: true
+                        width: 150
+                        text: qsTr("Export")
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         onClicked: {
-                            var walletId = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.WalletIdRole)
-                            var walletName = walletsView.model.data(walletsView.selection.currentIndex, WalletsModel.NameRole)
-                            var dlg = Qt.createComponent("BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
-                            dlg.walletId = walletId
-                            dlg.walletName = walletName
-                            dlg.isRootWallet = isHdRoot()
-                            dlg.rootName = walletsProxy.getRootWalletName(dlg.walletId)
-                            dlg.accepted.connect(function() {
-                                if (dlg.backup) {
-                                    var dlgBkp = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-                                    dlgBkp.walletInfo = getCurrentWalletInfo()
-                                    dlgBkp.targetDir = signerSettings.dirDocuments
-                                    dlgBkp.accepted.connect(function() {
-                                        if (walletsProxy.deleteWallet(walletId)) {
-                                            JsHelper.messageBox(BSMessageBox.Type.Success
-                                                                , qsTr("Wallet")
-                                                                , qsTr("Wallet successfully deleted.")
-                                                                , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletName).arg(walletId))
-                                        }
-                                    })
-                                    dlgBkp.open()
-                                }
-                                else {
-                                    if (walletsProxy.deleteWallet(walletId)) {
-                                        JsHelper.messageBox(BSMessageBox.Type.Success
-                                                            , qsTr("Wallet")
-                                                            , qsTr("Wallet successfully deleted.")
-                                                            , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletName).arg(dlg.walletId))
-                                    }
-                                }
-                            })
-                            dlg.open()
+                            QmlDialogs.backupWalletDialog(getCurrentWalletIdData())
                         }
                     }
 
                     CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("Backup Private Key")
-                        enabled: isHdRoot()
+                        //Layout.fillWidth: true
+                        width: 150
+                        enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
+                        text: qsTr("Delete")
                         onClicked: {
-                            var dlg = Qt.createComponent("BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-                            dlg.walletInfo = getCurrentWalletInfo()
-                            dlg.targetDir = signerSettings.dirDocuments
-                            dlg.open()
-                        }
-                    }
-
-                    CustomButtonPrimary {
-                        Layout.fillWidth: true
-                        text: qsTr("Export WO Wallet")
-                        enabled: isHdRoot()
-                        onClicked: {
-                            var dlg = Qt.createComponent("BsDialogs/WalletExportWoDialog.qml").createObject(mainWindow)
-                            dlg.walletInfo = getCurrentWalletInfo()
-                            dlg.open()
+                            QmlDialogs.deleteWalletDialog(getCurrentWalletIdData())
                         }
                     }
                 }
@@ -206,7 +142,7 @@ Item {
             }
 
             WalletsView {
-                id: walletsView
+                id: walletsView_
                 implicitWidth: view.width
                 implicitHeight: view.height - rowButtons.height - header.height - colWallets.spacing * 3
             }

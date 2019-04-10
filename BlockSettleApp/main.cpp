@@ -21,19 +21,25 @@
 
 #include "btc/ecc.h"
 
-#if defined (Q_OS_WIN)
+#ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
-#elif defined (Q_OS_MAC)
+#endif // USE_QWindowsIntegrationPlugin
+
+#ifdef USE_QCocoaIntegrationPlugin
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
-#elif defined (Q_OS_LINUX)
+#endif // USE_QCocoaIntegrationPlugin
+
+#ifdef USE_QXcbIntegrationPlugin
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
-#endif
+#endif // USE_QXcbIntegrationPlugin
 
+#ifdef STATIC_BUILD
 Q_IMPORT_PLUGIN(QSQLiteDriverPlugin)
 Q_IMPORT_PLUGIN(QICOPlugin)
+#endif // STATIC_BUILD
 
 Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(BinaryData)
@@ -137,7 +143,7 @@ static int GuiApp(int &argc, char** argv)
       QApplication::setPalette(p);
    }
 
-#ifdef QT_DEBUG
+#ifndef NDEBUG
    // Start monitoring to update stylesheet live when file is changed on the disk
    QTimer timer;
    QObject::connect(&timer, &QTimer::timeout, &app, [&app] {
@@ -152,7 +158,7 @@ static int GuiApp(int &argc, char** argv)
    }
 
    QString location = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-#ifdef QT_DEBUG
+#ifndef NDEBUG
    QString userName = QDir::home().dirName();
    QString lockFilePath = location + QLatin1String("/blocksettle-") + userName + QLatin1String(".lock");
 #else

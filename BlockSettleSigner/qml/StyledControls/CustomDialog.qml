@@ -13,16 +13,21 @@ CustomDialogWindow {
     property bool abortConfirmation: false
     property int abortBoxType
 
+    ///////////////////
     // suggested to use these functions to close dialog popup with animation
-    //
+    // dialog will be rejected on animatin finished
+    // or after next dialog in chain will send dialogsChainFinished signal
+    signal bsAccepted()
+    signal bsRejected()
+
     function acceptAnimated(){
-        closeTimer.acceptRet = true
+        bsAccepted()
         closeTimer.start()
         closeAnimation.start()
     }
 
     function rejectAnimated(){
-        closeTimer.acceptRet = false
+        bsRejected()
         closeTimer.start()
         closeAnimation.start()
     }
@@ -41,12 +46,37 @@ CustomDialogWindow {
 
     signal enterPressed()
 
+    ////////////////////////////
+    /// Dialogs chain management
+
+    // if isNextChainDialogSet then listen next dialog for dialogsChainFinished
+    property bool isNextChainDialogSet: false
+    property var  nextChainDialog: ({})
+
+    // when some dialog call second one we should listen second dialog for finished signal
+    function setNextChainDialog(dialog) {
+        isNextChainDialogSet = true
+        nextChainDialog = dialog
+        nextChainDialogChangedOverloaded(dialog)
+        dialog.dialogsChainFinished.connect(function(){
+            dialogsChainFinished()
+            reject()
+        })
+        dialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+            nextChainDialogChangedOverloaded(nextDialog)
+        })
+    }
+
+    signal nextChainDialogChangedOverloaded(var nextDialog)
+
+    // emitted if this is signle dialog and it finished or if dioalgs chain finished
+    signal dialogsChainFinished()
+
     Component.onCompleted: {
         cContentItem.parent = customContentContainer
         cHeaderItem.parent = customHeaderContainer
         cFooterItem.parent = customFooterContainer
     }
-
 
     header: Item{}
     footer: Item{}
@@ -63,7 +93,11 @@ CustomDialogWindow {
         from: 0; to: 1
     }
 
-    onAboutToHide: closeAnimation
+    //onAboutToHide: closeAnimation
+    onBsAccepted: closeAnimation
+    onBsRejected: closeAnimation
+
+
     PropertyAnimation {
         id: closeAnimation
         target: root
@@ -75,9 +109,13 @@ CustomDialogWindow {
     Timer {
         // used to close dialog when close animation completed
         id: closeTimer
-        property bool acceptRet
         interval: animationDuration
-        onTriggered: acceptRet? accept() : reject()
+        onTriggered: {
+            if (!isNextChainDialogSet) {
+                dialogsChainFinished()
+                reject()
+            }
+        }
     }
 
     contentItem: FocusScope {

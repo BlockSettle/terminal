@@ -23,8 +23,7 @@ mkdir -p Ubuntu/usr/bin
 mkdir -p Ubuntu/usr/share/blocksettle
 mkdir -p Ubuntu/lib/x86_64-linux-gnu
 
-cp -f $binary Ubuntu/usr/bin
-cp -f $binpath/blocksettle_signer Ubuntu/usr/bin
+cp -f $binpath/* Ubuntu/usr/bin
 cp -f $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle
 cp -fP $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu
 cp -f $libprotobuf/libprotobuf.la Ubuntu/lib/x86_64-linux-gnu

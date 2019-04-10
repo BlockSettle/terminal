@@ -1,6 +1,8 @@
 #ifndef __QML_APP_H__
 #define __QML_APP_H__
 
+#include "SecureBinaryData.h"
+
 #include <memory>
 #include <unordered_set>
 #include <QObject>
@@ -13,21 +15,28 @@ namespace bs {
    namespace sync {
       class WalletsManager;
    }
+   namespace core {
+      namespace wallet {
+         struct TXSignRequest;
+      }
+   }
 }
 namespace spdlog {
    class logger;
 }
+
+class DBusNotification;
 class OfflineProcessor;
+class QmlFactory;
+class QMLStatusUpdater;
 class QmlWalletsViewModel;
 class QQmlContext;
-class QMLStatusUpdater;
+class QSplashScreen;
 class QSystemTrayIcon;
 class SignerAdapter;
 class SignerSettings;
 class WalletsProxy;
 class ZmqSecuredServerConnection;
-class DBusNotification;
-class QmlFactory;
 
 class QMLAppObj : public QObject
 {
@@ -35,13 +44,12 @@ class QMLAppObj : public QObject
 
 public:
    QMLAppObj(SignerAdapter *, const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<SignerSettings> &, QQmlContext *);
+      , const std::shared_ptr<SignerSettings> &, QSplashScreen *, QQmlContext *);
 
    void Start();
    void SetRootObject(QObject *);
 
 signals:
-   void loadingComplete();
    void cancelSignTx(const QString &txId);
 
 private slots:
@@ -65,13 +73,13 @@ private:
    void settingsConnections();
    void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
 
-   void initZmqKeys();
    void registerQtTypes();
 
    SignerAdapter  *  adapter_;
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<SignerSettings>  settings_;
-   QQmlContext                *     ctxt_;
+   QSplashScreen              *     splashScreen_ = nullptr;
+   QQmlContext                *     ctxt_ = nullptr;
    std::shared_ptr<bs::sync::WalletsManager>    walletsMgr_;
    std::shared_ptr<OfflineProcessor>            offlineProc_;
    std::shared_ptr<QMLStatusUpdater>            statusUpdater_;
@@ -80,8 +88,6 @@ private:
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
    QSystemTrayIcon      *  trayIcon_ = nullptr;
-   SecureBinaryData                             zmqPubKey_;
-   SecureBinaryData                             zmqPrvKey_;
 
    enum NotificationMode {
       QSystemTray,

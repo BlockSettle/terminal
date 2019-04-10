@@ -15,15 +15,15 @@ namespace bs {
    namespace core {
       class WalletsManager;
    }
-   namespace sync {
-      class WalletsManager;
-   }
 }
 class HeadlessContainerListener;
+class QProcess;
+class SignerAdapterListener;
+class HeadlessSettings;
+class ZmqSecuredServerConnection;
 class OfflineProcessor;
 class SignerSettings;
-class ZmqSecuredServerConnection;
-
+class ZmqBIP15XServerConnection;
 
 class HeadlessAppObj : public QObject
 {
@@ -31,9 +31,11 @@ class HeadlessAppObj : public QObject
 
 public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<SignerSettings> &);
+      , const std::shared_ptr<HeadlessSettings> &);
 
-   void Start();
+   ~HeadlessAppObj() noexcept;
+
+   void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
    void setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
       , const std::function<void(const std::string &)> &cbPeerDisconn
@@ -42,41 +44,37 @@ public:
       , const std::function<void(const BinaryData &)> &cbCancelTxSign
       , const std::function<void(int64_t, bool)> &cbXbtSpent
       , const std::function<void(const std::string &)> &cbAsAct
-      , const std::function<void(const std::string &)> &cbAsDeact);
+      , const std::function<void(const std::string &)> &cbAsDeact
+      , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog);
 
-   std::shared_ptr<bs::sync::WalletsManager> getWalletsManager() const;
    void reloadWallets(const std::string &, const std::function<void()> &);
    void reconnect(const std::string &listenAddr, const std::string &port);
    void setOnline(bool);
-   void signTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
-      , const std::function<void(const BinaryData &)> &);
-   void createWatchingOnlyWallet(const std::string &walletId, const SecureBinaryData &password
-      , std::string path, const std::function<void(bool result)> &);
-   void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
-      , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
    void setLimits(SignContainer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+   void deactivateAutoSign();
+   void addPendingAutoSignReq(const std::string &walletId);
+   void close();
 
 signals:
-   void started();
    void finished();
 
 private:
-   void OnlineProcessing();
-   void OfflineProcessing();
+   void startInterface();
+   void stopInterface();
+   void onlineProcessing();
 
-   void setConsoleEcho(bool enable) const;
+private:
 
    std::shared_ptr<spdlog::logger>  logger_;
-   const std::shared_ptr<SignerSettings>        settings_;
+   const std::shared_ptr<HeadlessSettings>      settings_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
-   std::shared_ptr<ZmqSecuredServerConnection>  connection_;
+   std::shared_ptr<ZmqBIP15XServerConnection> connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
-   std::shared_ptr<OfflineProcessor>            offlineProc_;
-   SecureBinaryData                             zmqPubKey_;
-   SecureBinaryData                             zmqPrvKey_;
-
-   std::function<void(bool)>   cbReady_ = nullptr;
+   std::shared_ptr<SignerAdapterListener>       adapterLsn_;
+   std::shared_ptr<QProcess>  guiProcess_;
+   std::function<void(bool)>  cbReady_ = nullptr;
+   bool ready_ = false;
 };
 
 #endif // __HEADLESS_APP_H__

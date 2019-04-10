@@ -1,32 +1,34 @@
+#include "AutheIDClient.h"
+#include "AuthProxy.h"
+#include "ConnectionManager.h"
+#include "CoreWalletsManager.h"
+#include "EasyEncValidator.h"
+#include "OfflineProcessor.h"
+#include "PasswordConfirmValidator.h"
+#include "PdfBackupQmlPrinter.h"
+#include "QMLApp.h"
+#include "QmlFactory.h"
+#include "QMLStatusUpdater.h"
+#include "QmlWalletsViewModel.h"
+#include "QPasswordData.h"
+#include "QSeed.h"
+#include "QWalletInfo.h"
+#include "SignerAdapter.h"
+#include "SignerSettings.h"
+#include "SignerVersion.h"
+#include "TXInfo.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
+#include "WalletsProxy.h"
+
 #include <functional>
+
 #include <QtQml>
 #include <QQmlContext>
 #include <QGuiApplication>
+#include <QSplashScreen>
+
 #include <spdlog/spdlog.h>
-#include "SignerVersion.h"
-#include "ConnectionManager.h"
-#include "AuthProxy.h"
-#include "AutheIDClient.h"
-#include "CoreWalletsManager.h"
-#include "QMLApp.h"
-#include "QMLStatusUpdater.h"
-#include "QmlWalletsViewModel.h"
-#include "OfflineProcessor.h"
-#include "SignerAdapter.h"
-#include "SignerSettings.h"
-#include "TXInfo.h"
-#include "WalletsProxy.h"
-#include "ZmqSecuredServerConnection.h"
-#include "EasyEncValidator.h"
-#include "PasswordConfirmValidator.h"
-#include "PdfBackupQmlPrinter.h"
-#include "QmlFactory.h"
-#include "QWalletInfo.h"
-#include "QSeed.h"
-#include "QPasswordData.h"
-#include "Wallets/SyncHDWallet.h"
-#include "Wallets/SyncWalletsManager.h"
-#include "ZMQHelperFunctions.h"
 
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
@@ -37,9 +39,9 @@ Q_DECLARE_METATYPE(bs::wallet::TXInfo)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
 QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<SignerSettings> &params, QQmlContext *ctxt)
+   , const std::shared_ptr<SignerSettings> &params, QSplashScreen *spl, QQmlContext *ctxt)
    : QObject(nullptr), adapter_(adapter), logger_(logger), settings_(params)
-   , ctxt_(ctxt), notifMode_(QSystemTray)
+   , splashScreen_(spl), ctxt_(ctxt), notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Signer"), this))
 #endif // BS_USE_DBUS
@@ -55,6 +57,11 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
+
+   connect(adapter_, &SignerAdapter::customDialogRequest, this, [this](const QString &dialogName, const QVariantMap &data){
+      QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
+                                , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
+   });
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -80,20 +87,16 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    ctxt_->setContextProperty(QStringLiteral("walletsProxy"), walletsProxy_.get());
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
-         emit loadingComplete();
+         if (splashScreen_) {
+            splashScreen_->close();
+            splashScreen_ = nullptr;
+         }
       }
    });
 
    trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
    connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
    connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
-
-   connect(settings_.get(), &SignerSettings::zmqPubKeyFileChanged, [this](){
-      initZmqKeys();
-   });
-   connect(settings_.get(), &SignerSettings::zmqPrvKeyFileChanged, [this](){
-      initZmqKeys();
-   });
 
 #ifdef BS_USE_DBUS
    if (dbus_->isValid()) {
@@ -108,6 +111,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
 void QMLAppObj::onReady()
 {
+   logger_->debug("[{}]", __func__);
    walletsMgr_ = adapter_->getWalletsManager();
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &QMLAppObj::onWalletsSynced);
 
@@ -115,14 +119,17 @@ void QMLAppObj::onReady()
       logger_->debug("Syncing wallet {} of {}", cur, total);
    };
    walletsMgr_->syncWallets(cbProgress);
-
-   walletsModel_->setWalletsManager(walletsMgr_);
-   qmlFactory_->setWalletsManager(walletsMgr_);
 }
 
 void QMLAppObj::onWalletsSynced()
 {
-   emit loadingComplete();
+   logger_->debug("[{}]", __func__);
+   if (splashScreen_) {
+      splashScreen_->close();
+      splashScreen_ = nullptr;
+   }
+   walletsModel_->setWalletsManager(walletsMgr_);
+   qmlFactory_->setWalletsManager(walletsMgr_);
 }
 
 void QMLAppObj::settingsConnections()
@@ -137,58 +144,13 @@ void QMLAppObj::settingsConnections()
 
 void QMLAppObj::Start()
 {
-   initZmqKeys();
-
    trayIcon_->show();
-}
-
-void QMLAppObj::initZmqKeys()
-{
-   // Get the ZMQ server public key.
-   SecureBinaryData tempPubKey;
-   SecureBinaryData tempPrvKey;
-
-   bool isZmqPubKeyOk = bs::network::readZmqKeyFile(settings_->zmqPubKeyFile()
-                                                    , zmqPubKey_
-                                                    , true
-                                                    , logger_);
-   bool isZmqPrvKeyOk = bs::network::readZmqKeyFile(settings_->zmqPrvKeyFile()
-                                                    , zmqPrvKey_
-                                                    , true
-                                                    , logger_);
-   QString errorString;
-   if (!isZmqPubKeyOk)  {
-      errorString.append(QStringLiteral("Failed to read ZMQ server public key\n"));
-   }
-   if (!isZmqPrvKeyOk)  {
-      errorString.append(QStringLiteral("Failed to read ZMQ server private key"));
-   }
-
-   QString detailsString;
-   if (!isZmqPubKeyOk)  {
-      detailsString.append(QStringLiteral("Public key: ") + settings_->zmqPubKeyFile() + QStringLiteral("\n\n"));
-   }
-   if (!isZmqPrvKeyOk)  {
-      detailsString.append(QStringLiteral("Private key: ") + settings_->zmqPrvKeyFile());
-   }
-
-   if (!isZmqPubKeyOk || !isZmqPrvKeyOk) {
-      QMetaObject::invokeMethod(this, [this, errorString, detailsString](){
-         QMetaObject::invokeMethod(rootObj_, "messageBoxCritical"
-                                   , Q_ARG(QVariant, QStringLiteral("Error"))
-                                   , Q_ARG(QVariant, QVariant::fromValue(errorString))
-                                   , Q_ARG(QVariant, QVariant::fromValue(detailsString)));
-      },
-      Qt::QueuedConnection);
-   }
-
-   // reset connection
-   disconnect();
-   onOfflineChanged();
 }
 
 void QMLAppObj::registerQtTypes()
 {
+   qRegisterMetaType<QJSValueList>("QJSValueList");
+
    qRegisterMetaType<bs::core::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
@@ -234,6 +196,7 @@ void QMLAppObj::onOfflineChanged()
 void QMLAppObj::onWalletsDirChanged()
 {
    adapter_->reloadWallets(settings_->getWalletsDir(), [this] {
+      walletsMgr_->reset();
       walletsMgr_->syncWallets();
    });
 }

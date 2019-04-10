@@ -147,7 +147,7 @@ Item {
                             ldrWalletsDirDlg.active = true
                         }
                         ldrWalletsDirDlg.startFromFolder = Qt.resolvedUrl(signerSettings.walletsDir)
-                        ldrWalletsDirDlg.item.accepted.connect(function() {
+                        ldrWalletsDirDlg.item.bsAccepted.connect(function() {
                             signerSettings.walletsDir = ldrWalletsDirDlg.dir
                         })
                         ldrWalletsDirDlg.item.open();
@@ -209,9 +209,9 @@ Item {
 
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
-                    checked: true
+                    checked: signerSettings.twoWayAuth
                     onClicked: {
-
+                        signerSettings.twoWayAuth = checked
                     }
                 }
             }
@@ -250,7 +250,7 @@ Item {
                     onClicked: {
                         zmqPrivKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPrvKeyFile)
                         zmqPrivKeyDlg.open()
-                        zmqPrivKeyDlg.accepted.connect(function(){
+                        zmqPrivKeyDlg.bsAccepted.connect(function(){
                             signerSettings.zmqPrvKeyFile = JsHelper.fileUrlToPath(zmqPrivKeyDlg.fileUrl)
                         })
                     }
@@ -309,7 +309,7 @@ Item {
                     onClicked: {
                         zmqExportPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
                         zmqExportPubKeyDlg.open()
-                        zmqExportPubKeyDlg.accepted.connect(function(){
+                        zmqExportPubKeyDlg.bsAccepted.connect(function(){
                             var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.zmqPubKeyFile)
                             JsHelper.saveTextFile(zmqExportPubKeyDlg.fileUrl, zmqPubKey)
                         })
@@ -335,7 +335,7 @@ Item {
                     onClicked: {
                         zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
                         zmqPubKeyDlg.open()
-                        zmqPubKeyDlg.accepted.connect(function(){
+                        zmqPubKeyDlg.bsAccepted.connect(function(){
                             signerSettings.zmqPubKeyFile = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
                         })
                     }

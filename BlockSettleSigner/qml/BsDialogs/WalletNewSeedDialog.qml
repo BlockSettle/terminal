@@ -17,13 +17,17 @@ CustomTitleDialogWindow {
 
     property int curPage: 1
     property bool acceptable: (curPage == 1 || seedMatch)
-    property bool seedMatch: false
+    property bool seedMatch: rootKeyInput.acceptableInput
+    // || true  // !!! ONLY FOR TESTING!!!
+
+
     property QSeed seed: QSeed{}
 
     title: curPage == 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
 
-    width: curPage == 1 ? mainWindow.width * 0.8 : 400
-    height: curPage == 1 ? mainWindow.height * 0.98 : 265
+    property bool fullScreenMode: true
+    width: fullScreenMode ? 640 : (curPage == 1 ? mainWindow.width * 0.8 : 470)
+    height: fullScreenMode ? 800 : (curPage == 1 ? mainWindow.height * 0.98 : 265)
 
     abortConfirmation: true
     abortBoxType: BSAbortBox.WalletCreation
@@ -120,20 +124,7 @@ To make sure that you have properly saved your seed, please retype it here.")
             //sectionHeaderVisible: false
             line1LabelTxt: qsTr("Line 1")
             line2LabelTxt: qsTr("Line 2")
-            onAcceptableInputChanged: {
-                if (acceptableInput) {
-                    if ((seed.part1 + "\n" + seed.part2) === privateRootKey) {
-                        seedMatch = true
-                    }
-                    else {
-                        seedMatch = false
-                    }
-                }
-                else {
-                    seedMatch = false
-                }
-                //seedMatch = true  // !!! ONLY FOR TESTING!!!
-            }
+            privateRootKeyToCheck: seed.part1 + "\n" + seed.part2
         }
 
     }
@@ -186,9 +177,6 @@ To make sure that you have properly saved your seed, please retype it here.")
                 visible: curPage == 2
                 onClicked: {
                     curPage = 1
-//                    root.height++
-//                    root.height--
-
                 }
             }
 

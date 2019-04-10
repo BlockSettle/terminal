@@ -27,10 +27,12 @@ ApplicationWindow {
 
     visible: true
     title: qsTr("BlockSettle Signer")
-    width: 800
+    width: 450
     height: 600
-    minimumWidth: 800
-    minimumHeight: 600
+//    minimumWidth: 450
+//    minimumHeight: 600
+
+    Component.onCompleted: { hide() }
 
     background: Rectangle {
         color: BSStyle.backgroundColor
@@ -45,16 +47,6 @@ ApplicationWindow {
     // attached to use from c++
     function messageBoxCritical(title, text, details) {
         return JsHelper.messageBoxCritical(title, text, details)
-    }
-
-    Settings {
-        id: settings
-        category: "GUI"
-        property alias x: mainWindow.x
-        property alias y: mainWindow.y
-        property alias width: mainWindow.width
-        property alias height: mainWindow.height
-        property alias tabIdx: swipeView.currentIndex
     }
 
     InfoBanner {
@@ -75,67 +67,6 @@ ApplicationWindow {
         title: qsTr("Select directory")
     }
 
-    SwipeView {
-        id: swipeView
-        anchors.fill: parent
-        currentIndex: tabBar.currentIndex
-
-        StatusPage {
-            id: dashboardPage
-        }
-
-        SettingsPage {
-            id: settingsPage
-        }
-
-        AutoSignPage {
-            id: autoSignPage
-        }
-
-        WalletsPage {
-            id: walletsPage
-        }
-    }
-
-    footer: TabBar {
-        id: tabBar
-        currentIndex: swipeView.currentIndex
-        height: 50
-        spacing: 2;
-        background: Rectangle {
-            color: "transparent"
-        }
-
-        CustomTabButton {
-            id: btnStatus
-            text: qsTr("Dashboard")
-
-        }
-
-        CustomTabButton {
-            id: btnSettings
-            text: qsTr("Settings")
-
-        }
-
-        CustomTabButton {
-            id: btnAutoSign
-            text: qsTr("Auto-Sign")
-
-        }
-
-        CustomTabButton {
-            id: btnWallets
-            text: qsTr("Wallets")
-
-        }
-    }
-
-    onClosing: {
-        settingsPage.storeSettings();
-        autoSignPage.storeSettings();
-    }
-
     signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
 
     function createTxSignDialog(prompt, txInfo, walletInfo) {
@@ -152,9 +83,22 @@ ApplicationWindow {
         dlg.bsRejected.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, true)
         })
+
+        mainWindow.width = dlg.width
+        mainWindow.height = dlg.height
+        mainWindow.title = dlg.title
+        if (typeof dlg.qmlTitleVisible !== "undefined") dlg.qmlTitleVisible = false
+
+        show()
+
+        dlg.dialogsChainFinished.connect(function(){ hide() })
+        dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+            mainWindow.width = nextDialog.width
+            mainWindow.height = nextDialog.height
+        })
+
         mainWindow.requestActivate()
         dlg.open()
-
         dlg.init()
     }
 
@@ -163,6 +107,17 @@ ApplicationWindow {
     }
 
     function customDialogRequest(dialogName, data) {
-        QmlDialogs.customDialogRequest(dialogName, data)
+        show()
+        var dlg = QmlDialogs.customDialogRequest(dialogName, data)
+        mainWindow.width = dlg.width
+        mainWindow.height = dlg.height
+        mainWindow.title = dlg.title
+        if (typeof dlg.qmlTitleVisible !== "undefined") dlg.qmlTitleVisible = false
+
+        dlg.dialogsChainFinished.connect(function(){ hide() })
+        dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+            mainWindow.width = nextDialog.width
+            mainWindow.height = nextDialog.height
+        })
     }
 }

@@ -1,6 +1,123 @@
 {
-   "latest_version" : "0.13.6",
+   "latest_version" : "0.14.9",
+   "release_date" : "10 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.9",
+         "previous_version" : "0.14.8",
+         "release_date" : "10 April 2019",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Bip15* server connection fixes"
+         ]
+      },
+      {
+         "version_string" : "0.14.8",
+         "previous_version" : "0.14.7",
+         "release_date" : "10 April 2019",
+         "improvements" :
+         [
+            "Two way auth in signer"
+         ],
+         "bug_fixes" :
+         [
+            "Multiple UI fixes"
+         ]
+      },
+      {
+         "version_string" : "0.14.7",
+         "previous_version" : "0.14.6",
+         "release_date" : "09 April 2019",
+         "improvements" :
+         [
+            "Disable unsubscribe from MD when logged in",
+            "Charting improvements"
+         ],
+         "bug_fixes" :
+         [
+            "Bitcoin explorer timeout"
+         ]
+      },
+      {
+         "version_string" : "0.14.6",
+         "previous_version" : "0.14.5",
+         "release_date" : "08 April 2019",
+         "improvements" :
+         [
+            "BIP 151 connection used for all PuB requests"
+         ],
+         "bug_fixes" :
+         [
+            "Charting fixes and improvements"
+         ]
+      },
+      {
+         "version_string" : "0.14.5",
+         "previous_version" : "0.14.4",
+         "release_date" : "04 April 2019",
+         "improvements" :
+         [
+            "debug output redirect from child process",
+            "dialogs invoke updated"
+         ],
+         "bug_fixes" :
+         [
+            "chat fixes"
+         ]
+      },
+      {
+         "version_string" : "0.14.4",
+         "previous_version" : "0.14.3",
+         "release_date" : "03 April 2019",
+         "improvements" :
+         [
+            "OTC in chat",
+            "ZMQ heartbeats",
+            "BIP151 rekeying",
+            "Unused ZMQ settings removed"
+         ],
+         "bug_fixes" :
+         [
+         ]
+      },
+      {
+         "version_string" : "0.14.3",
+         "previous_version" : "0.14.2",
+         "release_date" : "02 April 2019",
+         "improvements" :
+         [
+            "OHLC product list view"
+         ],
+         "bug_fixes" :
+         [
+            "Fix OHLC stuck",
+            "Signer path"
+         ]
+      },
+      {
+         "version_string" : "0.14.2",
+         "previous_version" : "0.14.1",
+         "release_date" : "28 March 2019",
+         "improvements" :
+         [
+            "Split signer process and signer UI"
+         ],
+         "bug_fixes" :
+         [
+            "Fix connection to MDHS"
+         ]
+      },
+      {
+         "version_string" : "0.14.1",
+         "previous_version" : "0.13.6",
+         "improvements" :
+         [
+            "Switch to BIP150/151 for signer conneciton"
+         ]
+      },
       {
          "version_string" : "0.13.6",
          "previous_version" : "0.13.5",

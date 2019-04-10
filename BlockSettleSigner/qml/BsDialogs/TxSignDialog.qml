@@ -17,15 +17,16 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     property string prompt
     property WalletInfo walletInfo: WalletInfo{}
-    property TXInfo txInfo
+    property TXInfo txInfo: TXInfo {}
     property QPasswordData passwordData: QPasswordData{}
     property bool   acceptable: walletInfo.encType === NsWallet.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
-    property AuthSignWalletObject  authSign
+    property AuthSignWalletObject  authSign: AuthSignWalletObject{}
 
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
+    height: 500
 
     function clickConfirmBtn() {
         btnConfirm.clicked()
@@ -51,7 +52,7 @@ CustomTitleDialogWindow {
             var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
                 , qsTr("Wallet"), qsTr("eID request failed with error: \n") + errorText
                 , qsTr("Wallet Name: %1\nWallet ID: %2").arg(walletInfo.name).arg(walletInfo.rootId))
-            mb.accepted.connect(function() { rejectAnimated() })
+            mb.bsAccepted.connect(function() { rejectAnimated() })
         })
         authSign.userCancelled.connect(function() {
             cancelledByUser = true
