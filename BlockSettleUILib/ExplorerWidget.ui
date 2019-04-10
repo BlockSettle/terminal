@@ -199,7 +199,7 @@
             </size>
            </property>
            <property name="placeholderText">
-            <string>search for a transaction or address</string>
+            <string>Cannot search - Waiting for a connection from Armory.</string>
            </property>
           </widget>
          </item>

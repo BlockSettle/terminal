@@ -49,12 +49,15 @@ public:
               , const std::shared_ptr<ConnectionManager>&
               , const std::shared_ptr<spdlog::logger>&);
 
+    void setAuthorized(bool authorized);
+
 protected slots:
    void OnDataReceived(const std::string& data);
    void OnDateRangeChanged(int id);
    void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void OnInstrumentChanged(const QString &text);
    QString GetFormattedStamp(double timestamp);
+   void UpdateOHLCInfo(double width, double timestamp);
    void OnPlotMouseMove(QMouseEvent* event);
    void leaveEvent(QEvent* event) override;
    void rescaleCandlesYAxis();
@@ -169,6 +172,7 @@ private:
    qreal startDragCoordX_{ 0.0 };
 
    quint64 firstTimestampInDb_{ 0 };
+   bool authorized_{ false };
 };
 
 #endif // CHARTWIDGET_H

@@ -3,7 +3,6 @@
 
 #include <string>
 
-
 namespace bs
 {
    namespace network

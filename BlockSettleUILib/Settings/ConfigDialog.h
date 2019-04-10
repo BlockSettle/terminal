@@ -5,6 +5,7 @@
 #include <QDialog>
 #include "ApplicationSettings.h"
 #include "ArmoryServersProvider.h"
+#include "SignContainer.h"
 
 namespace Ui {
    class ConfigDialog;
@@ -18,9 +19,11 @@ public:
    SettingsPage(QWidget *parent) : QWidget(parent) {}
 
    virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings
-                     , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider) {
+                     , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+                     , std::shared_ptr<SignContainer> signContainer) {
       appSettings_ = appSettings;
       armoryServersProvider_ = armoryServersProvider;
+      signContainer_ = signContainer;
       initSettings();
       display();
    }
@@ -37,6 +40,7 @@ signals:
 protected:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
+   std::shared_ptr<SignContainer>         signContainer_;
 };
 
 
@@ -47,6 +51,7 @@ Q_OBJECT
 public:
    ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
      , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+     , std::shared_ptr<SignContainer> signContainer
      , QWidget* parent = nullptr);
    ~ConfigDialog() override;
 
@@ -68,6 +73,8 @@ private:
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::vector<SettingsPage *>            pages_;
    ApplicationSettings::State             prevState_;
+   std::shared_ptr<SignContainer>         signContainer_;
+
 };
 
 #endif

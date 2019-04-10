@@ -7,6 +7,8 @@
 #include <QWidget>
 #include <memory>
 
+#define EXP_TIMEOUT 10000 // Milliseconds
+
 namespace Ui {
    class ExplorerWidget;
 }
@@ -31,6 +33,7 @@ public:
 
 protected slots:
    void onSearchStarted();
+   void onExpTimeout();
    void onTransactionClicked(QString txId);
    void onAddressClicked(QString addressId);
    void onReset();
@@ -49,6 +52,7 @@ private:
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;
    std::shared_ptr<ArmoryObject>       armory_;
+   std::shared_ptr<QTimer>             expTimer_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::vector<std::string>            transactionHistory_;
    int                                 transactionHistoryPosition_;

@@ -31,6 +31,8 @@ public:
 
    TreeViewWithEnterKey* view() const;
 
+   void setAuthorized(bool authorized);
+
 signals:
    void CurrencySelected(const QString& productGroup, const QString& currencyPair
       , const QString& bidPrice, const QString& offerPrice);
@@ -64,6 +66,7 @@ private:
    std::shared_ptr<MDHeader>              mdHeader_;
    bool  filteredView_ = true;
    std::shared_ptr<MarketDataProvider>    mdProvider_;
+   bool authorized_{ false };
 };
 
 #include <QPainter>

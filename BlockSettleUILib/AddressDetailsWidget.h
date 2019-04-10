@@ -25,10 +25,10 @@ public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
    ~AddressDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryObject> &armory,
-             const std::shared_ptr<spdlog::logger> &inLogger);
+   void init(const std::shared_ptr<ArmoryObject> &armory
+      , const std::shared_ptr<spdlog::logger> &inLogger
+      , const std::shared_ptr<QTimer> &inTimer);
    void setQueryAddr(const bs::Address& inAddrVal);
-   void loadTransactions();
    void clear();
 
    enum AddressTreeColumns {
@@ -55,6 +55,7 @@ private:
    void setOutputColor(QTreeWidgetItem *item);
    void getTxData(const std::shared_ptr<AsyncClient::LedgerDelegate> &);
    void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
+   void loadTransactions();
 
 private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
@@ -80,6 +81,7 @@ private:
 
    std::shared_ptr<ArmoryObject>    armory_;
    std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<QTimer>          expTimer_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

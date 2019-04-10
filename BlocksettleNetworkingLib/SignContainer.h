@@ -8,7 +8,6 @@
 #include <QStringList>
 #include <QVariant>
 
-//!#include "ArmoryServersProvider.h"
 #include "CoreWallet.h"
 #include "QWalletInfo.h"
 
@@ -84,8 +83,6 @@ public:
    virtual bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) = 0;
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
    virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
-   virtual bs::signer::RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-      , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun) = 0;
    virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
    virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
       , const QVariantMap &data = QVariantMap()) = 0;

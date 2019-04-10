@@ -14,7 +14,7 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
 // This constructor sets message box type, title, text and description.
 BSMessageBox::BSMessageBox(messageBoxType mbType
    , const QString& title, const QString& text
-   , const QString& description, QWidget* parent) 
+   , const QString& description, QWidget* parent)
    : BSMessageBox(mbType, title, text, description, QString(), parent) {
 }
 
@@ -26,7 +26,7 @@ BSMessageBox::BSMessageBox(messageBoxType mbType
 // details - when specified 'Show Details' buttons shows and when clicked the
 // message box expands to show another text area with a scroll bar
 BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
-   , const QString& text, const QString& description 
+   , const QString& text, const QString& description
    , const QString& details, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::BSMessageBox) {
@@ -133,23 +133,29 @@ void BSMessageBox::setType(messageBoxType type) {
 }
 
 void BSMessageBox::setConfirmButtonText(const QString &text) {
-   ui_->pushButtonOk->setText(text); 
+   ui_->pushButtonOk->setText(text);
 }
 
 void BSMessageBox::setCancelButtonText(const QString &text) {
-   ui_->pushButtonCancel->setText(text); 
+   ui_->pushButtonCancel->setText(text);
 }
 
 MessageBoxCCWalletQuestion::MessageBoxCCWalletQuestion(const QString &ccProduct, QWidget *parent)
    : BSMessageBox(BSMessageBox::question, tr("Private Market Wallet"), tr("Create %1 Wallet").arg(ccProduct)
       , tr("Your wallet does not have a branch in which to hold %1 tokens, would you like to create it?")
-      .arg(ccProduct), parent) { 
+      .arg(ccProduct), parent) {
 }
 
 MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details, QWidget *parent)
    : BSMessageBox(BSMessageBox::critical, tr("Broadcast Failure"),
       tr("Failed to Sign Transaction"), tr("Error occured when signing a transaction.")
       , details, parent) {
+}
+
+MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
+   : BSMessageBox(BSMessageBox::warning, tr("Explorer Timeout"),
+      tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
+      , parent) {
 }
 
 MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)

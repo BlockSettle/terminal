@@ -2,10 +2,12 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
-#include "ZMQHelperFunctions.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
+#ifndef WIN32
+#include <arpa/inet.h>
+#endif
 
 ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog::logger>& logger
                                                    , bool monitored)

@@ -4,7 +4,6 @@
 #include "ConnectionManager.h"
 #include "HeadlessContainer.h"
 #include "OfflineSigner.h"
-#include "ZMQHelperFunctions.h"
 
 #include <QTcpSocket>
 #include <spdlog/spdlog.h>

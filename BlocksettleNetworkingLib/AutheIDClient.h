@@ -110,7 +110,8 @@ private:
 
    std::vector<std::string> knownDeviceIds_;
 
-   std::string baseUrl_;
+   const char *baseUrl_;
+   const char *apiKey_;
 };
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)
 

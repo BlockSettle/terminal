@@ -265,23 +265,23 @@ bs::signer::RequestId InprocSigner::DeleteHDLeaf(const std::string &walletId)
    return 0;
 }
 
-bs::signer::RequestId InprocSigner::changePassword(const std::string &walletId
-   , const std::vector<bs::wallet::PasswordData> &newPass
-   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
-   , bool addNew, bool removeOld, bool dryRun)
-{
-   auto hdWallet = walletsMgr_->getHDWalletById(walletId);
-   if (!hdWallet) {
-      hdWallet = walletsMgr_->getHDRootForLeaf(walletId);
-      if (!hdWallet) {
-         logger_->error("[{}] failed to get wallet by id {}", __func__, walletId);
-         return 0;
-      }
-   }
-   const bool result = hdWallet->changePassword(newPass, keyRank, oldPass, addNew, removeOld, dryRun);
-   emit PasswordChanged(walletId, result);
-   return seqId_++;
-}
+//bs::signer::RequestId InprocSigner::changePassword(const std::string &walletId
+//   , const std::vector<bs::wallet::PasswordData> &newPass
+//   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
+//   , bool addNew, bool removeOld, bool dryRun)
+//{
+//   auto hdWallet = walletsMgr_->getHDWalletById(walletId);
+//   if (!hdWallet) {
+//      hdWallet = walletsMgr_->getHDRootForLeaf(walletId);
+//      if (!hdWallet) {
+//         logger_->error("[{}] failed to get wallet by id {}", __func__, walletId);
+//         return 0;
+//      }
+//   }
+//   const bool result = hdWallet->changePassword(newPass, keyRank, oldPass, addNew, removeOld, dryRun);
+//   emit PasswordChanged(walletId, result);
+//   return seqId_++;
+//}
 
 bs::signer::RequestId InprocSigner::GetInfo(const std::string &walletId)
 {

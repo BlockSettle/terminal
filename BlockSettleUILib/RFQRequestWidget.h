@@ -1,4 +1,4 @@
-#ifndef __RFQ_REQUEST_WIDGET_H__
+﻿#ifndef __RFQ_REQUEST_WIDGET_H__
 #define __RFQ_REQUEST_WIDGET_H__
 
 #include <QWidget>
@@ -54,6 +54,8 @@ public:
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
+
+   void setAuthorized(bool authorized);
 
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
