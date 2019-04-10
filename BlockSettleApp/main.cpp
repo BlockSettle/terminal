@@ -17,7 +17,6 @@
 #include "BSTerminalMainWindow.h"
 #include "EncryptionUtils.h"
 #include "BSMessageBox.h"
-#include "ZMQHelperFunctions.h"
 
 #include "btc/ecc.h"
 
