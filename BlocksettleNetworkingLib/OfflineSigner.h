@@ -4,7 +4,6 @@
 #include <vector>
 #include "HeadlessContainer.h"
 
-
 namespace spdlog {
    class logger;
 }
@@ -16,7 +15,6 @@ namespace bs {
       }
    }
 }
-
 
 class OfflineSigner : public LocalSigner
 {

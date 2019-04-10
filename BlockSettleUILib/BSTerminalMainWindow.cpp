@@ -1070,7 +1070,7 @@ void BSTerminalMainWindow::onLogout()
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();
    }
-   
+
    setLoginButtonText(loginButtonText_);
 
    setWidgetsAuthorized(false);
