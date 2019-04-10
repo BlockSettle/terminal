@@ -64,8 +64,6 @@ private:
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<ZmqBIP15XServerConnection> connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
-   SecureBinaryData                             zmqPubKey_;
-   SecureBinaryData                             zmqPrvKey_;
    std::shared_ptr<SignerAdapterListener>       adapterLsn_;
 //   std::shared_ptr<QProcess>  guiProcess_;
    std::function<void(bool)>  cbReady_ = nullptr;

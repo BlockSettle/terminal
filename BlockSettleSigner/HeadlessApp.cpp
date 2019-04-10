@@ -19,7 +19,6 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
-
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &params)
    : logger_(logger), settings_(params)

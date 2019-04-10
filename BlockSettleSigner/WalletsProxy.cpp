@@ -68,7 +68,8 @@ bool WalletsProxy::primaryWalletExists() const
 
 void WalletsProxy::changePassword(const QString &walletId
                                   , bs::wallet::QPasswordData *oldPasswordData
-                                  , bs::wallet::QPasswordData *newPasswordData)
+                                  , bs::wallet::QPasswordData *newPasswordData
+                                  , const QJSValue &jsCallback)
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
@@ -76,16 +77,21 @@ void WalletsProxy::changePassword(const QString &walletId
       return;
    }
 
-   const auto &cbChangePwdResult = [this, walletId](bool result) {
+   const auto &cbChangePwdResult = [this, walletId, jsCallback](bool result) {
+      QJSValueList args;
+      args << QJSValue(result);
+
+      QMetaObject::invokeMethod(this, "invokeJsCallBack", Qt::QueuedConnection
+                                , Q_ARG(QJSValue, jsCallback)
+                                , Q_ARG(QJSValueList, args));
+
       if (result) {
          emit walletsMgr_.get()->walletChanged();
       }
-      else {
-         emit walletError(walletId, tr("Failed to change wallet password: password is invalid"));
-      }
    };
-   wallet->changePassword(cbChangePwdResult, { *newPasswordData }, { 1, 1 }
-      , oldPasswordData->password, false, false, false);
+
+   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }, { 1, 1 }
+                          , oldPasswordData->password, false, false, false, cbChangePwdResult);
 }
 
 void WalletsProxy::addEidDevice(const QString &walletId
@@ -120,8 +126,8 @@ void WalletsProxy::addEidDevice(const QString &walletId
          emit walletError(walletId, tr("Failed to add new device"));
       }
    };
-   wallet->changePassword(cbChangePwdResult, { *newPasswordData }
-      , encryptionRank, oldPasswordData->password, true, false, false);
+   adapter_->changePassword(walletId.toStdString(), { *newPasswordData }
+      , encryptionRank, oldPasswordData->password, true, false, false, cbChangePwdResult);
 }
 
 void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswordData *oldPasswordData, int removedIndex)
@@ -177,8 +183,8 @@ void WalletsProxy::removeEidDevice(const QString &walletId, bs::wallet::QPasswor
       }
    };
 
-   wallet->changePassword(cbChangePwdResult, newPasswordData, encryptionRank
-      , oldPasswordData->password, false, true, false);
+   adapter_->changePassword(walletId.toStdString(), newPasswordData, encryptionRank
+      , oldPasswordData->password, false, true, false, cbChangePwdResult);
 }
 
 QString WalletsProxy::getWoWalletFile(const QString &walletId) const
@@ -349,6 +355,16 @@ QStringList WalletsProxy::walletNames() const
       result.push_back(QString::fromStdString(wallet->name()));
    }
    return result;
+}
+
+QJSValue WalletsProxy::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
+{
+   if (jsCallback.isCallable()) {
+      return jsCallback.call(args);
+   }
+   else {
+      return QJSValue();
+   }
 }
 
 int WalletsProxy::indexOfWalletId(const QString &walletId) const

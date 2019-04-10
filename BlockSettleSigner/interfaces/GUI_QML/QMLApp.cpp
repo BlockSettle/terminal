@@ -21,8 +21,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WalletsProxy.h"
-#include "ZMQHelperFunctions.h"
-#include "ZmqSecuredServerConnection.h"
 
 #include <functional>
 
@@ -152,6 +150,8 @@ void QMLAppObj::Start()
 
 void QMLAppObj::registerQtTypes()
 {
+   qRegisterMetaType<QJSValueList>("QJSValueList");
+
    qRegisterMetaType<bs::core::wallet::TXSignRequest>();
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
