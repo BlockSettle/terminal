@@ -11,6 +11,7 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "SignerInterfaceListener.h"
+#include "HeadlessContainer.h"
 
 #include "bs_signer.pb.h"
 
@@ -40,6 +41,15 @@ SignContainer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wal
    }
 
    return listener_->send(signer::SignTxRequestType, request.SerializeAsString());
+}
+
+SignContainer::RequestId SignAdapterContainer::createHDWallet(const std::string &name, const std::string &desc
+   , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
+{
+   headless::CreateHDWalletRequest request;
+   HeadlessContainer::makeCreateHDWalletRequest(name, desc, primary, seed, pwdData, keyRank, request);
+   const auto reqId = listener_->send(signer::CreateHDWalletType, request.SerializeAsString());
+   return reqId;
 }
 
 void SignAdapterContainer::syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb)

@@ -44,9 +44,7 @@ public:
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
    RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &
-      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override {
-      return 0;
-   }
+      , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
    RequestId DeleteHDRoot(const std::string &rootWalletId) override { return 0; }
    RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
    RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }

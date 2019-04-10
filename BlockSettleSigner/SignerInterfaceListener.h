@@ -6,7 +6,6 @@
 #include "CoreWallet.h"
 #include "SignContainer.h"
 #include "DataConnectionListener.h"
-
 #include "bs_signer.pb.h"
 
 namespace bs {
@@ -17,6 +16,8 @@ namespace bs {
 namespace spdlog {
    class logger;
 }
+class ZmqBIP15XDataConnection;
+class SignerAdapter;
 
 using namespace Blocksettle::Communication;
 
@@ -24,8 +25,7 @@ class SignerInterfaceListener : public DataConnectionListener
 {
 public:
    SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
-      , const std::shared_ptr<ZmqBIP15XDataConnection> &conn, SignerAdapter *parent)
-      : logger_(logger), connection_(conn), parent_(parent) {}
+      , const std::shared_ptr<ZmqBIP15XDataConnection> &conn, SignerAdapter *parent);
 
    void OnDataReceived(const std::string &) override;
    void OnConnected() override;
