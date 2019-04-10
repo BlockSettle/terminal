@@ -1,7 +1,20 @@
 {
-   "latest_version" : "0.14.7",
-   "release_date" : "09 April 2019",
+   "latest_version" : "0.14.8",
+   "release_date" : "10 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.8",
+         "previous_version" : "0.14.7",
+         "release_date" : "10 April 2019",
+         "improvements" :
+         [
+            "To way auth in signer"
+         ],
+         "bug_fixes" :
+         [
+            "Multiple UI fixes"
+         ]
+      },
       {
          "version_string" : "0.14.7",
          "previous_version" : "0.14.6",
