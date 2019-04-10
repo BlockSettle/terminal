@@ -245,39 +245,42 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    }
 
    // Encrypt data here if the BIP 150 handshake is complete.
-   if (socketConnMap_[clientId]->encData_->getBIP150State() ==
-      BIP150State::SUCCESS)
-   {
-      string sendStr = data;
-      const BinaryData payload(data);
-      ZmqBIP15XSerializedMessage msg;
-      msg.construct(payload.getDataVector(), connPtr
-         , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, socketConnMap_[clientId]->msgID_);
-
-      // Cycle through all packets.
-      while (!msg.isDone())
+   if (socketConnMap_[clientId] && socketConnMap_[clientId]->encData_){
+      if (socketConnMap_[clientId]->encData_->getBIP150State() ==
+         BIP150State::SUCCESS)
       {
-         auto& packet = msg.getNextPacket();
-         if (packet.getSize() == 0) {
-            logger_->error("[ZmqBIP15XServerConnection::{}] failed to "
-               "serialize data (size {})", __func__, data.size());
-            return retVal;
-         }
+         string sendStr = data;
+         const BinaryData payload(data);
+         ZmqBIP15XSerializedMessage msg;
+         msg.construct(payload.getDataVector(), connPtr
+            , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, socketConnMap_[clientId]->msgID_);
 
-         retVal = QueueDataToSend(clientId, packet.toBinStr(), cb, false);
-         if (!retVal)
+         // Cycle through all packets.
+         while (!msg.isDone())
          {
-            logger_->error("[ZmqBIP15XServerConnection::{}] fragment send failed"
-               , __func__, data.size());
-            return retVal;
+            auto& packet = msg.getNextPacket();
+            if (packet.getSize() == 0) {
+               logger_->error("[ZmqBIP15XServerConnection::{}] failed to "
+                  "serialize data (size {})", __func__, data.size());
+               return retVal;
+            }
+
+            retVal = QueueDataToSend(clientId, packet.toBinStr(), cb, false);
+            if (!retVal)
+            {
+               logger_->error("[ZmqBIP15XServerConnection::{}] fragment send failed"
+                  , __func__, data.size());
+               return retVal;
+            }
          }
       }
+      else
+      {
+         // Queue up the untouched data for straight transmission.
+         retVal = QueueDataToSend(clientId, data, cb, false);
+      }
    }
-   else
-   {
-      // Queue up the untouched data for straight transmission.
-      retVal = QueueDataToSend(clientId, data, cb, false);
-   }
+
 
    return retVal;
 }
