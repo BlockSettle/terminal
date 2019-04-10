@@ -124,14 +124,19 @@ std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XSer
 {
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
-      , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), false);
+                                                      , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), false);
 }
 
-std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(
-   bool monitored) const
+std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XChatServerConnection(bool ephemeral) const
 {
-   auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
-      , true, monitored);
+   BinaryData bdID = CryptoPRNG::generateRandom(8);
+   return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
+                                                      , ZMQTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), ephemeral);
+}
+
+std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection() const
+{  // This connection should be always monitored - as it relies on connection event
+   auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_, true, true);
    connection->SetContext(zmqContext_);
 
    return connection;

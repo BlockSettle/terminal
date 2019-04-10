@@ -75,6 +75,9 @@ void BSMarketDataProvider::onDataFromMD(const std::string& data)
    case Blocksettle::Communication::BlocksettleMarketData::IncrementalUpdateType:
       OnIncrementalUpdate(header.data());
       break;
+   case Blocksettle::Communication::BlocksettleMarketData::NewSettledTreadeUpdateType:
+      OnNewTradeUpdate(header.data());
+      break;
    }
 }
 
@@ -177,4 +180,86 @@ void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
    for (int i=0; i < update.cc_products_size(); ++i) {
       OnProductUpdate(bs::network::Asset::Type::PrivateMarket, update.cc_products(i), timestamp);
    }
+}
+
+void BSMarketDataProvider::OnNewTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::NewTradeUpdate update;
+   if (!update.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewTradeUpdate] failed to parse update");
+      return ;
+   }
+
+   switch (update.trade_type()) {
+   case Blocksettle::Communication::BlocksettleMarketData::MDTradeType::FXTradeType:
+      OnNewFXTradeUpdate(update.trade());
+      break;
+   case Blocksettle::Communication::BlocksettleMarketData::MDTradeType::XBTTradeType:
+      OnNewXBTTradeUpdate(update.trade());
+      break;
+   case Blocksettle::Communication::BlocksettleMarketData::MDTradeType::PMTradeType:
+      OnNewPMTradeUpdate(update.trade());
+      break;
+   default:
+      logger_->error("[BSMarketDataProvider::OnNewTradeUpdate] undefined trade type: {}"
+         , static_cast<int>(update.trade_type()));
+      break;
+   }
+}
+
+void BSMarketDataProvider::OnNewFXTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::MDTradeRecord trade_record;
+   if (!trade_record.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewFXTradeUpdate] failed to parse trade");
+      return ;
+   }
+
+   logger_->debug("[BSMarketDataProvider::OnNewFXTradeUpdate] loaded trade: {}"
+      , trade_record.DebugString());
+
+   bs::network::NewTrade trade;
+
+   trade.product = trade_record.product();
+   trade.price = trade_record.price();
+   trade.amount = trade_record.amount();
+   trade.timestamp = trade_record.timestamp();
+
+   emit OnNewFXTrade(trade);
+}
+
+void BSMarketDataProvider::OnNewXBTTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::MDTradeRecord trade_record;
+   if (!trade_record.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewXBTTradeUpdate] failed to parse trade");
+      return ;
+   }
+
+   bs::network::NewTrade trade;
+
+   trade.product = trade_record.product();
+   trade.price = trade_record.price();
+   trade.amount = trade_record.amount();
+   trade.timestamp = trade_record.timestamp();
+
+   emit OnNewXBTTrade(trade);
+}
+
+void BSMarketDataProvider::OnNewPMTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::MDPMTradeRecord trade_record;
+   if (!trade_record.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewPMTradeUpdate] failed to parse trade");
+      return ;
+   }
+
+   bs::network::NewPMTrade trade;
+
+   trade.product = trade_record.product();
+   trade.price = trade_record.price();
+   trade.amount = trade_record.amount();
+   trade.timestamp = trade_record.timestamp();
+
+   emit OnNewPMTrade(trade);
 }

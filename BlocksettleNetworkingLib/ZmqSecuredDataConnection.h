@@ -5,6 +5,9 @@
 #include "ZmqDataConnection.h"
 #include "EncryptionUtils.h"
 
+#define CURVEZMQPUBKEYBUFFERSIZE 40
+#define CURVEZMQPRVKEYBUFFERSIZE 40
+
 class ZmqSecuredDataConnection : public ZmqDataConnection
 {
 public:

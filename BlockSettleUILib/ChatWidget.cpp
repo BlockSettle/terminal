@@ -20,6 +20,9 @@
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
 
+constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
+
+
 class ChatWidgetState {
 public:
     virtual void onStateEnter() {} //Do something special on state appears, by default nothing
@@ -54,6 +57,7 @@ public:
 
    virtual void onStateEnter() override {
       chat_->logger_->debug("Set user name {}", "<empty>");
+      chat_->ui_->input_textEdit->setEnabled(false);
    }
 
    std::string login(const std::string& email, const std::string& jwt) override {
@@ -86,7 +90,9 @@ class ChatWidgetStateLoggedIn : public ChatWidgetState {
 public:
    ChatWidgetStateLoggedIn(ChatWidget* parent) : ChatWidgetState(parent, ChatWidget::LoggedIn) {}
 
-   void onStateEnter() override {}
+   void onStateEnter() override {
+      chat_->ui_->input_textEdit->setEnabled(true);
+   }
 
    void onStateExit() override {
       chat_->onUserClicked({});
@@ -317,7 +323,13 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
 
    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
    popup_->setCustomPosition(ui_->chatSearchLineEdit, 0, 5);
-   popup_->show();  
+   popup_->show();
+   if (users.size() == 0) {
+      QTimer::singleShot(kShowEmptyFoundUserListTimeoutMs, [this] {
+         popup_->hide();
+         ui_->chatSearchLineEdit->setFocus();
+      });
+   }
 }
 
 void ChatWidget::onUserClicked(const QString& userId)

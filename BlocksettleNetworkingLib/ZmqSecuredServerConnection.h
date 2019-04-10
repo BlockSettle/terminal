@@ -5,6 +5,9 @@
 #include "ZmqServerConnection.h"
 #include "EncryptionUtils.h"
 
+#define CURVEZMQPUBKEYBUFFERSIZE 40
+#define CURVEZMQPRVKEYBUFFERSIZE 40
+
 class ZmqSecuredServerConnection : public ZmqServerConnection
 {
 public:
@@ -33,6 +36,8 @@ protected:
 private:
    SecureBinaryData publicKey_;
    SecureBinaryData privateKey_;
+
+   std::string peerAddressString(int socket);
 };
 
 #endif // __ZMQ_SECURED_SERVER_CONNECTION_H__

@@ -107,6 +107,7 @@ private:
    std::string                      monitorConnectionName_;
    bool        immediate_{ false };
    std::string identity_;
+   int sendTimeoutInMs_{ 5000 };
 };
 
 #endif // __ZEROMQ_SERVER_CONNECTION_H__

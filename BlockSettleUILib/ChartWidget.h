@@ -49,12 +49,15 @@ public:
               , const std::shared_ptr<ConnectionManager>&
               , const std::shared_ptr<spdlog::logger>&);
 
+    void setAuthorized(bool authorized);
+
 protected slots:
    void OnDataReceived(const std::string& data);
    void OnDateRangeChanged(int id);
    void OnMdUpdated(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
    void OnInstrumentChanged(const QString &text);
    QString GetFormattedStamp(double timestamp);
+   void UpdateOHLCInfo(double width, double timestamp);
    void OnPlotMouseMove(QMouseEvent* event);
    void leaveEvent(QEvent* event) override;
    void rescaleCandlesYAxis();
@@ -78,15 +81,23 @@ protected slots:
    void OnMDDisconnected();
    void ChangeMDSubscriptionState();
 
+   void OnNewTrade(const std::string& productName, uint64_t timestamp, double price, double amount);
+   void OnNewXBTorFXTrade(const bs::network::NewTrade& trade);
+   void OnNewPMTrade(const bs::network::NewPMTrade& trade);
+
 protected:
+   quint64 GetCandleTimestamp(const uint64_t& timestamp,
+      const Blocksettle::Communication::MarketDataHistory::Interval& interval) const;
    void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
    void UpdateChart(const int& interval) const;
    void InitializeCustomPlot();
-   qreal IntervalWidth(int interval = -1, int count = 1) const;
+   quint64 IntervalWidth(int interval = -1, int count = 1, const QDateTime& specialDate = {}) const;
    static int FractionSizeForProduct(TradeHistoryTradeType type);
    void ProcessProductsListResponse(const std::string& data);
    void ProcessOhlcHistoryResponse(const std::string& data);
    double CountOffsetFromRightBorder();
+
+   void CheckToAddNewCandle(qint64 stamp);
 
    void setAutoScaleBtnColor() const;
 
@@ -96,8 +107,6 @@ protected:
    void ModifyCandle();
    void UpdatePlot(const int& interval, const qint64& timestamp);
 
-   void timerEvent(QTimerEvent* event);
-   std::chrono::seconds getTimerInterval() const;
    bool needLoadNewData(const QCPRange& range, QSharedPointer<QCPFinancialDataContainer> data) const;
 
    void LoadAdditionalPoints(const QCPRange& range);
@@ -132,8 +141,6 @@ private:
    Ui::ChartWidget *ui_;
    QButtonGroup dateRange_;
    QStandardItemModel *cboModel_;
-   QCPTextElement *title_;
-   QCPTextElement *info_;
    QCPFinancial *candlesticksChart_;
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;
@@ -145,13 +152,13 @@ private:
    double lastLow_;
    double lastClose_;
    double currentTimestamp_;
+   quint64 newestCandleTimestamp_;
 
    bool autoScaling_{ true };
 
    qreal currentMinPrice_{ 0 };
    qreal currentMaxPrice_{ 0 };
 
-   int timerId_;
    int lastInterval_;
    int dragY_;
 
@@ -165,6 +172,7 @@ private:
    qreal startDragCoordX_{ 0.0 };
 
    quint64 firstTimestampInDb_{ 0 };
+   bool authorized_{ false };
 };
 
 #endif // CHARTWIDGET_H

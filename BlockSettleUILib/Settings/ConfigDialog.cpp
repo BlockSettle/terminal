@@ -11,11 +11,13 @@
 
 ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+      , std::shared_ptr<SignContainer> signContainer
       , QWidget* parent)
  : QDialog(parent)
  , ui_(new Ui::ConfigDialog)
  , appSettings_(appSettings)
  , armoryServersProvider_(armoryServersProvider)
+ , signContainer_(signContainer)
 {
    ui_->setupUi(this);
 
@@ -28,7 +30,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
    pages_ = {ui_->pageGeneral, ui_->pageNetwork, ui_->pageSigner, ui_->pageDealing };
 
    for (const auto &page : pages_) {
-      page->init(appSettings_, armoryServersProvider_);
+      page->init(appSettings_, armoryServersProvider_, signContainer_);
       connect(page, &SettingsPage::illformedSettings, this, &ConfigDialog::illformedSettings);
    }
 

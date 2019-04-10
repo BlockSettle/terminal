@@ -54,8 +54,6 @@
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ZMQ_BIP15X_DataConnection.h"
-#include "ZmqContext.h"
 
 #include <spdlog/spdlog.h>
 
@@ -172,6 +170,14 @@ void BSTerminalMainWindow::LoadCCDefinitionsFromPuB()
    }
 }
 
+void BSTerminalMainWindow::setWidgetsAuthorized(bool authorized)
+{
+   // Update authorized state for some widgets
+   ui_->widgetPortfolio->setAuthorized(authorized);
+   ui_->widgetRFQ->setAuthorized(authorized);
+   ui_->widgetChart->setAuthorized(authorized);
+}
+
 void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()> &cb)
 {
    if (networkSettings_.isSet) {
@@ -179,9 +185,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
       return;
    }
 
-   const auto zmqContext = std::make_shared<ZmqContext>(logMgr_->logger());
-   const auto connection = std::make_shared<ZmqBIP15XDataConnection>(logMgr_->logger(), true, true);
-   connection->SetContext(zmqContext);
+   const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
 
    Blocksettle::Communication::RequestPacket reqPkt;
    reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
@@ -980,7 +984,7 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 
 void BSTerminalMainWindow::openConfigDialog()
 {
-   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, this);
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signContainer_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
    configDialog.exec();
 
@@ -1042,6 +1046,7 @@ void BSTerminalMainWindow::onReadyToLogin()
       currentUserLogin_ = loginDialog.getUsername();
       auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
       setLoginButtonText(currentUserLogin_);
+      setWidgetsAuthorized(true);
 
 #ifndef PRODUCTION_BUILD
       // TODO: uncomment this section once we have armory connection
@@ -1052,6 +1057,8 @@ void BSTerminalMainWindow::onReadyToLogin()
          // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
       // }
 #endif
+   } else {
+      setWidgetsAuthorized(false);
    }
 }
 
@@ -1063,8 +1070,10 @@ void BSTerminalMainWindow::onLogout()
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();
    }
-   
+
    setLoginButtonText(loginButtonText_);
+
+   setWidgetsAuthorized(false);
 }
 
 void BSTerminalMainWindow::onUserLoggedIn()
@@ -1478,6 +1487,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
          box->setMinimumWidth(650);
+         box->setMaximumWidth(650);
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1503,6 +1513,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
          box->setMinimumWidth(650);
+         box->setMaximumWidth(650);
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);

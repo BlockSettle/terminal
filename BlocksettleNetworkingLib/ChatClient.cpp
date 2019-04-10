@@ -4,7 +4,7 @@
 #include <spdlog/spdlog.h>
 #include "botan/base64.h"
 
-#include "ZmqSecuredDataConnection.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatDB.h"
 #include "ConnectionManager.h"
 #include "ApplicationSettings.h"
@@ -49,6 +49,9 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    qRegisterMetaType<std::shared_ptr<Chat::UserData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::UserData>>>();
 
+   //This is required (with Qt::QueuedConnection), because of ZmqBIP15XDataConnection crashes when delete it from this (callback) thread
+   connect(this, &ChatClient::ForceLogoutSignal, this, &ChatClient::onForceLogoutSignal, Qt::QueuedConnection);
+
    chatDb_ = make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
    if (!chatDb_->loadKeys(pubKeys_)) {
       throw std::runtime_error("failed to load chat public keys");
@@ -59,7 +62,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    heartbeatTimer_.setInterval(30 * 1000);
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
-   heartbeatTimer_.start();
+   //heartbeatTimer_.start();
 }
 
 ChatClient::~ChatClient() noexcept
@@ -76,13 +79,11 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
       return std::string();
    }
 
-   //auto bytesHash = autheid::getSHA256(email.c_str(), email.size());
-   //currentUserId_ = QString::fromStdString(autheid::base64Encode(bytesHash).substr(0, 8)).toLower().toStdString();
    currentUserId_ = hasher_->deriveKey(email);
+   currentJwt_ = jwt;
 
-   connection_ = connectionManager_->CreateSecuredDataConnection();
-   BinaryData inSrvPubKey(appSettings_->get<std::string>(ApplicationSettings::chatServerPubKey));
-   connection_->SetServerPublicKey(inSrvPubKey);
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
+
    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
                             , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
    {
@@ -90,8 +91,7 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
       connection_.reset();
    }
 
-   auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, jwt);
-   sendRequest(loginRequest);
+
 
    return currentUserId_;
 }
@@ -112,7 +112,7 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 void ChatClient::OnLogoutResponse(const Chat::LogoutResponse & response)
 {
    logger_->debug("[ChatClient::OnLogoutResponse]: Server sent logout response with data: {}", response.getData());
-   logout(false);
+   emit ForceLogoutSignal();
 }
 
 void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response)
@@ -124,12 +124,12 @@ void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response
       QString serverId = QString::fromStdString(response.serverMessageId());
       QString receiverId = QString::fromStdString(response.receiverId());
       bool res = chatDb_->syncMessageId(localId, serverId);
-      
+
       logger_->debug("[ChatClient::OnSendMessageResponse]: message id sync: {}", res?"Success":"Failed");
-      
+
       emit MessageIdUpdated(localId, serverId, receiverId);
-      
-      
+
+
    }
 }
 
@@ -149,12 +149,12 @@ void ChatClient::OnMessageChangeStatusResponse(const Chat::MessageChangeStatusRe
                   senderId,
                   receiverId,
                   newStatus);
-   
+
    if (chatDb_->updateMessageStatus(QString::fromStdString(messageId), newStatus)) {
       QString chatId = QString::fromStdString(response.messageSenderId() == currentUserId_
                     ? response.messageReceiverId()
                     : response.messageSenderId());
-      
+
       emit MessageStatusUpdated(QString::fromStdString(messageId), chatId, newStatus);
    }
    return;
@@ -274,7 +274,7 @@ void ChatClient::OnContactsListResponse(const Chat::ContactsListResponse & respo
 void ChatClient::OnChatroomsList(const Chat::ChatroomsListResponse& response)
 {
    QStringList rooms;
-   
+
    std::vector<std::shared_ptr<Chat::RoomData>> roomList = response.getChatRoomList();
    for (auto room : roomList){
       rooms << QString::fromStdString(room->toJsonString());
@@ -339,6 +339,8 @@ void ChatClient::logout(bool send)
    }
 
    currentUserId_.clear();
+   currentJwt_.clear();
+
    connection_.reset();
 
    emit LoggedOut();
@@ -365,6 +367,11 @@ void ChatClient::sendHeartbeat()
 void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message)
 {
    addMessageState(message, Chat::MessageData::State::Read);
+}
+
+void ChatClient::onForceLogoutSignal()
+{
+   logout(false);
 }
 
 void ChatClient::addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state)
@@ -498,11 +505,14 @@ void ChatClient::OnDataReceived(const std::string& data)
 void ChatClient::OnConnected()
 {
    logger_->debug("[ChatClient::OnConnected]");
+   auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, currentJwt_);
+   sendRequest(loginRequest);
 }
 
 void ChatClient::OnDisconnected()
 {
    logger_->debug("[ChatClient::OnDisconnected]");
+   emit ForceLogoutSignal();
 }
 
 void ChatClient::OnError(DataConnectionError errorCode)
@@ -697,7 +707,7 @@ void ChatClient::acceptFriendRequest(const QString &friendUserId)
    auto requestRemote = std::make_shared<Chat::ContactActionRequestServer>("", currentUserId_, friendUserId.toStdString(), Chat::ContactsActionServer::AddContactRecord, Chat::ContactStatus::Accepted, publicKey);
    sendRequest(requestRemote);
 }
-   
+
 void ChatClient::declineFriendRequest(const QString &friendUserId)
 {
    auto request = std::make_shared<Chat::ContactActionRequestDirect>("", currentUserId_, friendUserId.toStdString(), Chat::ContactsAction::Reject, appSettings_->GetAuthKeys().second);

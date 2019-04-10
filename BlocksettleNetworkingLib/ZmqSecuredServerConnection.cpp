@@ -1,11 +1,12 @@
 #include "ZmqSecuredServerConnection.h"
-#include "ZMQHelperFunctions.h"
 #include "FastLock.h"
 #include "MessageHolder.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
-
+#ifndef WIN32
+#include <arpa/inet.h>
+#endif
 
 ZmqSecuredServerConnection::ZmqSecuredServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context)
@@ -48,7 +49,6 @@ bool ZmqSecuredServerConnection::ConfigDataSocket(const ZmqContext::sock_ptr& da
          , connectionName_, zmq_strerror(zmq_errno()));
       return false;
    }
-
    return ZmqServerConnection::ConfigDataSocket(dataSocket);
 }
 
@@ -73,7 +73,7 @@ bool ZmqSecuredServerConnection::ReadFromDataSocket()
 #endif
       size_t sockSize = sizeof(socket);
       if (zmq_getsockopt(dataSocket_.get(), ZMQ_FD, &socket, &sockSize) == 0) {
-         clientInfo_[clientIdStr] = bs::network::peerAddressString(static_cast<int>(socket));
+         clientInfo_[clientIdStr] = peerAddressString(static_cast<int>(socket));
       }
    }
 
@@ -97,4 +97,25 @@ bool ZmqSecuredServerConnection::ReadFromDataSocket()
 bool ZmqSecuredServerConnection::SendDataToClient(const std::string& clientId, const std::string& data, const SendResultCb &cb)
 {
    return QueueDataToSend(clientId, data, cb, false);
+}
+
+// Copied from ZMQHelperFunctions. Placed here to eliminate file dependence.
+std::string ZmqSecuredServerConnection::peerAddressString(int socket)
+{
+#ifdef WIN32
+   SOCKET sock = socket;
+   SOCKADDR_IN peerInfo = { 0 };
+   int peerLen = sizeof(peerInfo);
+#else
+   int sock = socket;
+   sockaddr_in peerInfo = { 0 };
+   socklen_t peerLen = sizeof(peerInfo);
+#endif
+
+   const auto rc = getpeername(sock, (sockaddr*)&peerInfo, &peerLen);
+   if (rc == 0) {
+      return inet_ntoa(peerInfo.sin_addr);
+   } else {
+      return "Not detected";
+   }
 }

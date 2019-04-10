@@ -25,15 +25,20 @@ namespace
    const auto kAuthorizationHeader = "Authorization";
 
    const auto kProtobufType = "application/protobuf";
-   const auto kAuthorizationKey = "Bearer Pj+Q9SsZloftMkmE7EhA8v2Bz1ZC9aOmUkAKTBW9hagJ";
 
-   QNetworkRequest getRequest(const std::string &url)
+   const auto kServerAddrLive = "https://api.autheid.com/v1/requests";
+   const auto kAuthorizationKeyLive = "Bearer live_17ec2nlP5NzHWkEAQUwVpqhN63fiyDPWGc5Z3ZQ8npaf";
+
+   const auto kServerAddrTest = "https://api.staging.autheid.com/v1/requests";
+   const auto kAuthorizationKeyTest = "Bearer live_opnKv0PyeML0WvYm66ka2k29qPPoDjS3rzw13bRJzITY";
+
+   QNetworkRequest getRequest(const char *url, const char *apiKey)
    {
       QNetworkRequest request;
-      request.setUrl(QUrl(QString::fromStdString(url)));
+      request.setUrl(QUrl(QString::fromLatin1(url)));
       request.setRawHeader(kContentTypeHeader, kProtobufType);
       request.setRawHeader(kAcceptHeader, kProtobufType);
-      request.setRawHeader(kAuthorizationHeader, kAuthorizationKey);
+      request.setRawHeader(kAuthorizationHeader, QByteArray(apiKey));
       return request;
    }
 } // namespace
@@ -75,10 +80,12 @@ AutheIDClient::AutheIDClient(const std::shared_ptr<spdlog::logger> &logger
       case ApplicationSettings::EnvConfiguration::UAT:
       case ApplicationSettings::EnvConfiguration::Staging:
       case ApplicationSettings::EnvConfiguration::Custom:
-         baseUrl_ = "https://api.staging.autheid.com/v1/requests";
+         baseUrl_ = kServerAddrTest;
+         apiKey_ = kAuthorizationKeyTest;
          break;
       default:
-         baseUrl_ = "https://api.autheid.com/v1/requests";
+         baseUrl_ = kServerAddrLive;
+         apiKey_ = kAuthorizationKeyLive;
          break;
    }
 }
@@ -90,7 +97,7 @@ AutheIDClient::~AutheIDClient()
 
 void AutheIDClient::createCreateRequest(const std::string &payload, int expiration)
 {
-   QNetworkRequest request = getRequest(baseUrl_);
+   QNetworkRequest request = getRequest(baseUrl_, apiKey_);
 
    QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray::fromStdString(payload));
    processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration] (const Result &result) {
@@ -201,7 +208,7 @@ void AutheIDClient::cancel()
       return;
    }
 
-   QNetworkRequest request = getRequest(fmt::format("{}/{}/cancel", baseUrl_, requestId_));
+   QNetworkRequest request = getRequest(fmt::format("{}/{}/cancel", baseUrl_, requestId_).c_str(), apiKey_);
 
    QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray());
    processNetworkReply(reply, kNetworkTimeoutSeconds, {});
@@ -220,7 +227,7 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
 
    requestId_ = response.request_id();
 
-   QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_));
+   QNetworkRequest request = getRequest(fmt::format("{}/{}", baseUrl_, requestId_).c_str(), apiKey_);
 
    QNetworkReply *reply = connectionManager_->GetNAM()->get(request);
    processNetworkReply(reply, expiration, [this] (const Result &result) {

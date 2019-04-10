@@ -49,6 +49,8 @@ public:
 
    void shortcutActivated(ShortcutType s) override;
 
+   void setAuthorized(bool authorized);
+
 private slots:
    void showTransactionDetails(const QModelIndex& index);
    void showContextMenu(const QPoint& point);

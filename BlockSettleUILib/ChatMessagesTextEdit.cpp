@@ -312,6 +312,7 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
       for (const auto &msg : messages) {
          if (msg->getSenderId() == currentChatId_) {
             messagesToLoadMore_.push_back(msg);
+            emit MessageRead(msg);
          }
          else {
             messages_[msg->getSenderId()].push_back(msg);
@@ -350,6 +351,9 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
       for (const auto &msg : messages) {
          if (msg->getSenderId() == currentChatId_) {
             insertMessage(msg);
+            if (!(msg->getState() & static_cast<int>(Chat::MessageData::State::Read))){
+               emit MessageRead(msg);
+            }
             
             emit userHaveNewMessageChanged(msg->getSenderId(), false, true);
          }

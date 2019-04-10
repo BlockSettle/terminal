@@ -53,19 +53,19 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
          leafIds->insert(leaf->walletId());
       }
       for (const auto &leaf : leaves) {
-         const auto &cbLeafDone = [leafIds, cbDone, id=leaf->walletId()] {
-            leafIds->erase(id);
+         const auto &cbLeafDone = [this, leaf, leafIds, cbDone] {
+            leafIds->erase(leaf->walletId());
+            if (encryptionTypes_.empty()) {
+               encryptionTypes_ = leaf->encryptionTypes();
+               encryptionKeys_ = leaf->encryptionKeys();
+               encryptionRank_ = leaf->encryptionRank();
+               emit metaDataChanged();
+            }
             if (leafIds->empty() && cbDone) {
                cbDone();
             }
          };
          leaf->synchronize(cbLeafDone);
-         if (encryptionTypes_.empty()) {
-            encryptionTypes_ = leaf->encryptionTypes();
-            encryptionKeys_ = leaf->encryptionKeys();
-            encryptionRank_ = leaf->encryptionRank();
-            emit metaDataChanged();
-         }
       }
    };
    signContainer_->syncHDWallet(walletId(), cbProcess);
@@ -276,24 +276,6 @@ void hd::Wallet::onScanComplete(const std::string &leafId)
    scannedLeaves_.erase(leafId);
    if (scannedLeaves_.empty()) {
       emit scanComplete(walletId());
-   }
-}
-
-void hd::Wallet::changePassword(const std::function<void(bool)> &cb, const std::vector<bs::wallet::PasswordData> &newPass
-   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
-{
-   if (signContainer_) {
-      const auto reqId = signContainer_->changePassword(walletId(), newPass, keyRank, oldPass, addNew, removeOld, dryRun);
-      if (reqId) {
-         emit metaDataChanged();
-         cb(true);
-      }
-      else {
-         cb(false);
-      }
-   }
-   else {
-      cb(false);
    }
 }
 

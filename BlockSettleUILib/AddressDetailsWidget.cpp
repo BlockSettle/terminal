@@ -28,11 +28,13 @@ AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
 AddressDetailsWidget::~AddressDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
-void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory,
-                                const std::shared_ptr<spdlog::logger> &inLogger)
+void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<spdlog::logger> &inLogger
+   , const std::shared_ptr<QTimer> &inTimer)
 {
    armory_ = armory;
    logger_ = inLogger;
+   expTimer_ = inTimer;
 
    connect(armory_.get(), &ArmoryConnection::refresh, this
            , &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
@@ -126,6 +128,9 @@ void AddressDetailsWidget::loadTransactions()
       //setOutputColor(item);
       tree->addTopLevelItem(item);
    }
+
+   // It's now safe to stop the query expiration timer. Do it right away.
+   expTimer_->stop();
 
    // Set up the display for total rcv'd/spent.
    ui_->balance->setText(UiUtils::displayAmount(totRcvd - totSpent));

@@ -289,11 +289,11 @@ void ManageEncryptionDialog::continueAddDevice()
 
 void ManageEncryptionDialog::changePassword()
 {
-   //   TODO add to bs::hd::wallet overload for PasswordData
-   std::vector<bs::wallet::PasswordData> pwData;
-   pwData.assign(newPasswordData_.cbegin(), newPasswordData_.cend());
-   signingContainer_->changePassword(wallet_->walletId(), pwData, newKeyRank_
-      , oldKey_, addNew_, removeOld_, false);
+//   //   TODO add to bs::hd::wallet overload for PasswordData
+//   std::vector<bs::wallet::PasswordData> pwData;
+//   pwData.assign(newPasswordData_.cbegin(), newPasswordData_.cend());
+//   signingContainer_->changePassword(wallet_->walletId(), pwData, newKeyRank_
+//      , oldKey_, addNew_, removeOld_, false);
 }
 
 void ManageEncryptionDialog::resetKeys()

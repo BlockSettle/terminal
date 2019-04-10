@@ -6,7 +6,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqSecuredDataConnection.h"
-#include "ZMQHelperFunctions.h"
 
 #include <QCoreApplication>
 #include <QDataStream>
@@ -281,17 +280,6 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
       missingWallets_.insert(response.rootwalletid());
       emit Error(id, response.error());
    }
-}
-
-void HeadlessContainer::ProcessChangePasswordResponse(unsigned int id, const std::string &data)
-{
-   headless::ChangePasswordResponse response;
-   if (!response.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse ChangePassword reply");
-      emit Error(id, "failed to parse");
-      return;
-   }
-   emit PasswordChanged(response.rootwalletid(), response.success());
 }
 
 void HeadlessContainer::ProcessSetLimitsResponse(unsigned int id, const std::string &data)
@@ -597,37 +585,6 @@ void HeadlessContainer::setLimits(const std::string &walletId, const SecureBinar
    packet.set_type(headless::SetLimitsRequestType);
    packet.set_data(request.SerializeAsString());
    Send(packet);
-}
-
-HeadlessContainer::RequestId HeadlessContainer::changePassword(const std::string &walletId
-   , const std::vector<bs::wallet::PasswordData> &newPass, bs::wallet::KeyRank keyRank
-   , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
-{
-   if (walletId.empty()) {
-      logger_->error("[HeadlessContainer] no walletId for ChangePassword");
-      return 0;
-   }
-   headless::ChangePasswordRequest request;
-   request.set_rootwalletid(walletId);
-   if (!oldPass.isNull()) {
-      request.set_oldpassword(oldPass.toHexStr());
-   }
-   for (const auto &pwd : newPass) {
-      auto reqNewPass = request.add_newpassword();
-      reqNewPass->set_password(pwd.password.toHexStr());
-      reqNewPass->set_enctype(static_cast<uint32_t>(pwd.encType));
-      reqNewPass->set_enckey(pwd.encKey.toBinStr());
-   }
-   request.set_rankm(keyRank.first);
-   request.set_rankn(keyRank.second);
-   request.set_addnew(addNew);
-   request.set_removeold(removeOld);
-   request.set_dryrun(dryRun);
-
-   headless::RequestPacket packet;
-   packet.set_type(headless::ChangePasswordRequestType);
-   packet.set_data(request.SerializeAsString());
-   return Send(packet);
 }
 
 SignContainer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
@@ -1017,7 +974,7 @@ bool RemoteSigner::Start()
       return true;
    }
 
-   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(true);
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
    if (opMode() == OpMode::RemoteInproc) {
       connection_->SetZMQTransport(ZMQTransport::InprocTransport);
    }
@@ -1178,10 +1135,6 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       emit UserIdSet();
       break;
 
-   case headless::ChangePasswordRequestType:
-      ProcessChangePasswordResponse(packet.id(), packet.data());
-      break;
-
    case headless::SetLimitsRequestType:
       ProcessSetLimitsResponse(packet.id(), packet.data());
       break;
@@ -1317,7 +1270,6 @@ bool LocalSigner::Start()
          , __func__, pidFileName().toStdString());
    }
    logger_->debug("[LocalSigner::{}] child process started", __func__);
-
 
    // Give the signer a little time to get set up.
    QThread::msleep(250);

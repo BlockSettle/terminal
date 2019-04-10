@@ -19,7 +19,7 @@ namespace Chat {
 }
 
 class ConnectionManager;
-class ZmqSecuredDataConnection;
+class ZmqBIP15XDataConnection;
 class ApplicationSettings;
 class UserHasher;
 
@@ -112,10 +112,12 @@ signals:
    void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
    void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
 
+   void ForceLogoutSignal();
 public slots:
    void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
    
 private slots:
+   void onForceLogoutSignal();
    void sendHeartbeat();
    void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
    void retrySendQueuedMessages(const std::string userId);
@@ -127,7 +129,7 @@ private:
 
    std::unique_ptr<ChatDB>                   chatDb_;
    std::map<QString, autheid::PublicKey>     pubKeys_;
-   std::shared_ptr<ZmqSecuredDataConnection> connection_;
+   std::shared_ptr<ZmqBIP15XDataConnection> connection_;
    std::shared_ptr<UserHasher> hasher_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
@@ -136,6 +138,7 @@ private:
    QTimer            heartbeatTimer_;
 
    std::string       currentUserId_;
+   std::string       currentJwt_;
    std::atomic_bool  loggedIn_{ false };
 
    autheid::PrivateKey  ownPrivKey_;
