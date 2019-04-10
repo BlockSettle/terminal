@@ -4,6 +4,7 @@
 #include "ConnectionManager.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "HeadlessContainer.h"
 #include "WalletEncryption.h"
 #include "ZmqSecuredServerConnection.h"
 #include <QDataStream>
@@ -96,15 +97,6 @@ bool HeadlessContainerListener::sendData(const std::string &data, const std::str
 void HeadlessContainerListener::SetLimits(const SignContainer::Limits &limits)
 {
    limits_ = limits;
-}
-
-static NetworkType mapNetworkType(headless::NetworkType netType)
-{
-   switch (netType) {
-   case headless::MainNetType:   return NetworkType::MainNet;
-   case headless::TestNetType:   return NetworkType::TestNet;
-   default:    return NetworkType::Invalid;
-   }
 }
 
 static std::string toHex(const std::string &binData)
@@ -880,7 +872,7 @@ bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, he
    }
    else if (request.has_wallet()) {
       return CreateHDWallet(clientId, packet.id(), request.wallet()
-         , mapNetworkType(request.wallet().nettype()), pwdData, keyRank);
+         , HeadlessContainer::mapNetworkType(request.wallet().nettype()), pwdData, keyRank);
    }
    else {
       CreateHDWalletResponse(clientId, packet.id(), "unknown request");
