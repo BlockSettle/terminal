@@ -1,5 +1,5 @@
 #include "ZmqServerConnection.h"
-#include "ZMQHelperFunctions.h"
+#include "ZmqHelperFunctions.h"
 
 #include "FastLock.h"
 #include "MessageHolder.h"

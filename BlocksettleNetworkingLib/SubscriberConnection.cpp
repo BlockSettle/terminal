@@ -1,7 +1,7 @@
 #include "SubscriberConnection.h"
 
 #include "MessageHolder.h"
-#include "ZMQHelperFunctions.h"
+#include "ZmqHelperFunctions.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
