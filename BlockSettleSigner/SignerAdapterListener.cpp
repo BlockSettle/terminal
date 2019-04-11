@@ -88,6 +88,9 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case signer::CreateHDWalletType:
       rc = onCreateHDWallet(packet.data(), packet.id());
       break;
+   case signer::DeleteHDWalletType:
+      rc = onDeleteHDWallet(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -551,4 +554,21 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, SignContai
    }
 
    return true;
+}
+
+bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, SignContainer::RequestId)
+{
+   headless::DeleteHDWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   const auto &walletId = request.rootwalletid();
+   const auto &wallet = walletsMgr_->getHDWalletById(walletId);
+   if (!wallet) {
+      logger_->error("[{}] failed to find HD Wallet by id {}", __func__, walletId);
+      return false;
+   }
+   logger_->debug("Deleting HDWallet {}: {}", walletId, wallet->name());
+   return walletsMgr_->deleteWalletFile(wallet);
 }

@@ -52,6 +52,13 @@ SignContainer::RequestId SignAdapterContainer::createHDWallet(const std::string 
    return reqId;
 }
 
+SignContainer::RequestId SignAdapterContainer::DeleteHDRoot(const std::string &rootWalletId) {
+   headless::DeleteHDWalletRequest request;
+   request.set_rootwalletid(rootWalletId);
+   const auto reqId = listener_->send(signer::DeleteHDWalletType, request.SerializeAsString());
+   return reqId;
+}
+
 void SignAdapterContainer::syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb)
 {
    const auto reqId = listener_->send(signer::SyncWalletInfoType, "");

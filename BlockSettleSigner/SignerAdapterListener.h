@@ -56,6 +56,7 @@ private:
    bool onAutoSignRequest(const std::string &data);
    bool onChangePassword(const std::string &data, SignContainer::RequestId);
    bool onCreateHDWallet(const std::string &data, SignContainer::RequestId);
+   bool onDeleteHDWallet(const std::string &data, SignContainer::RequestId);
 
 private:
    HeadlessAppObj *  app_;
