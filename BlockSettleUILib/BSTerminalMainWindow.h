@@ -223,12 +223,16 @@ private:
    void loginWithCeler(const std::string& username, const std::string& password);
    void loginToCeler(const std::string& username, const std::string& password);
 
+   bool goOnlineArmory() const;
+
 private:
    QString           loginButtonText_;
    NetworkSettings   networkSettings_;
    bool readyToRegisterWallets_ = false;
    bool initialWalletCreateDialogShown_ = false;
    bool armoryKeyDialogShown_ = false;
+   bool armoryBDVRegistered_ = false;
+   bool walletsSynched_ = false;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
