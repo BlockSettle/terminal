@@ -155,7 +155,7 @@ void BSMarketDataProvider::OnProductUpdate(const bs::network::Asset::Type& asset
    auto fields = GetMDFields(productInfo);
    if (!fields.empty()) {
       fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), fields);
    }
 }
 
