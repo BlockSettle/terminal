@@ -45,7 +45,7 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
       SystemFileUtils::mkPath(walletsPath);
    }
 
-   const auto fileList = SystemFileUtils::readDir(walletsPath + "/" + "*.lmdb");
+   const auto fileList = SystemFileUtils::readDir(walletsPath, "*.lmdb");
    const size_t totalCount = fileList.size();
    size_t current = 0;
 
@@ -59,9 +59,10 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
             logger_->warn("Can't load more than 1 settlement wallet from {}", file);
             continue;
          }
-         logger_->debug("Loading settlement wallet from {}", file);
+         logger_->debug("Loading settlement wallet from {} ({})", file, (int)netType);
          try {
-            settlementWallet_ = std::make_shared<SettlementWallet>(netType, SystemFileUtils::absolutePath(file));
+            settlementWallet_ = std::make_shared<SettlementWallet>(netType
+               , walletsPath + "/" + file);
 
             current++;
             if (cbProgress) {
@@ -77,7 +78,7 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
       }
       try {
          logger_->debug("Loading BIP44 wallet from {}", file);
-         const auto wallet = std::make_shared<hd::Wallet>(SystemFileUtils::absolutePath(file)
+         const auto wallet = std::make_shared<hd::Wallet>(walletsPath + "/" + file
                                                                , logger_);
          current++;
          if (cbProgress) {
@@ -113,12 +114,12 @@ void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &
          return;
       }
    }
-   const auto &lockFiles = SystemFileUtils::readDir(targetDir + "/" + "*.lmdb-lock");
+   const auto &lockFiles = SystemFileUtils::readDir(targetDir, "*.lmdb-lock");
    for (const auto &file : lockFiles) {
       SystemFileUtils::rmFile(targetDir + "/" + file);
    }
-   const auto files = SystemFileUtils::readDir(targetDir + "/"
-      + hd::Wallet::fileNamePrefix(false) + wallet->walletId() + "_*.lmdb");
+   const auto files = SystemFileUtils::readDir(targetDir
+      , hd::Wallet::fileNamePrefix(false) + wallet->walletId() + "_*.lmdb");
    if (!files.empty() && (files.size() >= (int)nbBackupFilesToKeep_)) {
       for (int i = 0; i <= files.size() - (int)nbBackupFilesToKeep_; i++) {
          logger_->debug("Removing old backup file {}", files[i]);

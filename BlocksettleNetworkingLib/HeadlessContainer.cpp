@@ -1282,12 +1282,24 @@ bool LocalSigner::Stop()
    RemoteSigner::Stop();
 
    if (headlessProcess_) {
+#ifdef Q_OS_WIN
+      if (AttachConsole(headlessProcess_->pid()->dwProcessId)) {
+         SetConsoleCtrlHandler(NULL, TRUE);  // Disable shutdown on Ctrl-C for self
+         GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
+         FreeConsole();
+      }
+      else {
+         headlessProcess_->kill();
+      }
+#else
       headlessProcess_->terminate();
+#endif
       if (!headlessProcess_->waitForFinished(500)) {
          headlessProcess_->close();
       }
+      headlessProcess_.reset();
    }
    return true;
 }
 
-#include "HeadlessContainer.moc"
+//#include "HeadlessContainer.moc"

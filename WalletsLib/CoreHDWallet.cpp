@@ -56,7 +56,6 @@ void hd::Wallet::loadFromFile(const std::string &filename)
    if (!SystemFileUtils::isValidFilePath(filename)) {
       throw std::invalid_argument(std::string("Invalid file path: ") + filename);
    }
-
    if (!SystemFileUtils::fileExist(filename)) {
       throw std::runtime_error("Wallet file does not exist");
    }

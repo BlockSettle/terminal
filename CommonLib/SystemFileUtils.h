@@ -15,12 +15,16 @@ namespace SystemFileUtils {
    std::string absolutePath(const std::string &);
    bool mkPath(const std::string &);
 
-   std::vector<std::string> readDir(const std::string &filter
-      , bool onlyFiles = true);
+   std::vector<std::string> readDir(const std::string &path
+      , const std::string &filter, bool onlyFiles = true);
 }
 
 namespace SystemFilePaths {
    std::string appDataLocation();
+   std::string configDataLocation();
+   std::string applicationDir();
+
+   void setArgV0(const char *);
 }
 
 #endif // __SYSTEM_FILE_UTILS_H__
