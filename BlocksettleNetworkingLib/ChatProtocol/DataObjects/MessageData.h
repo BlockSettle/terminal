@@ -41,13 +41,14 @@ namespace Chat {
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
       void setNonce(const autheid::SecureBytes &);
       QString getNonce() const;
+      size_t getDefaultNonceSize() const;
 
       void setFlag(const State);
       void unsetFlag(const State);
       void updateState(const int newState);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
-      bool encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const std::shared_ptr<spdlog::logger>& logger);
+      bool encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const autheid::SecureBytes &nonce, const std::shared_ptr<spdlog::logger>& logger);
       bool decrypt_aead(const autheid::PublicKey& senderPubKey, const autheid::PrivateKey& privKey, const std::shared_ptr<spdlog::logger>& logger);
       
       //Set ID for message, returns old ID that was replaced

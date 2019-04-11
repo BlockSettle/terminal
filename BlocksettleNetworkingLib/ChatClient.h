@@ -18,6 +18,7 @@ namespace Chat {
    class Request;
 }
 
+
 class ConnectionManager;
 class ZmqBIP15XDataConnection;
 class ApplicationSettings;
@@ -129,8 +130,9 @@ private:
 
    std::unique_ptr<ChatDB>                   chatDb_;
    std::map<QString, autheid::PublicKey>     pubKeys_;
-   std::shared_ptr<ZmqBIP15XDataConnection> connection_;
-   std::shared_ptr<UserHasher> hasher_;
+   std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
+   std::shared_ptr<UserHasher>               hasher_;
+   std::map<QString, autheid::SecureBytes>   userNonces_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
    std::map<QString, std::queue<QString>>    enqueued_messages_;

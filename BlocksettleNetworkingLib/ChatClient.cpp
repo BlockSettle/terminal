@@ -2,7 +2,9 @@
 #include "ChatProtocol/ChatProtocol.h"
 
 #include <spdlog/spdlog.h>
-#include "botan/base64.h"
+#include <botan/bigint.h>
+#include <botan/base64.h>
+#include <botan/auto_rng.h>
 
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatDB.h"
@@ -574,10 +576,29 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
    chatDb_->add(localEncMsg);
 
+   // search active message session for given user
+   const auto userNoncesIterator = userNonces_.find(receiver);
+   autheid::SecureBytes nonce;
+   if (userNoncesIterator == userNonces_.end()) {
+      // generate random nonce
+      Botan::AutoSeeded_RNG rng;
+      userNonces_[receiver] = rng.random_vec(messageData.getDefaultNonceSize());
+      nonce = userNonces_[receiver];
+   }
+   else {
+      // read nonce and increment
+      autheid::SecureBytes temporaryNonce = userNoncesIterator->second;
+      Botan::BigInt bigIntNonce;
+      bigIntNonce.binary_decode(temporaryNonce);
+      bigIntNonce++;
+      nonce = Botan::BigInt::encode_locked(bigIntNonce);
+      userNonces_[receiver] = nonce;
+   }
+
    // TODO:
    // when chatserver_contacts branch ready
    // check is user online, if not encrypt by ecies
-   if (!messageData.encrypt_aead(itPub->second, ownPrivKey_, logger_)) {
+   if (!messageData.encrypt_aead(itPub->second, ownPrivKey_, nonce, logger_)) {
       logger_->error("[ChatClient::sendMessage] failed to encrypt by aead {}" , messageData.getId().toStdString());
       return result;
    }

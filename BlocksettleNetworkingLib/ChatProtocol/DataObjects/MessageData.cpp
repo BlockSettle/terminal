@@ -110,7 +110,7 @@ namespace Chat {
       return true;
    }
 
-   bool MessageData::encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const std::shared_ptr<spdlog::logger>& logger)
+   bool MessageData::encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const autheid::SecureBytes &nonce, const std::shared_ptr<spdlog::logger>& logger)
    {
       if ((state_ & (int)State::Encrypted_AEAD))
       {
@@ -146,8 +146,7 @@ namespace Chat {
          return false;
       }
 
-      // generate random nonce
-      nonce_ = rng.random_vec(NONCE_SIZE);
+      nonce_ = nonce;
 
       try {
          encryptor->start(nonce_);
@@ -255,5 +254,10 @@ namespace Chat {
    QString MessageData::getNonce() const
    {
       return QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(nonce_.data()), int(nonce_.size())).toBase64());
+   }
+
+   size_t MessageData::getDefaultNonceSize() const
+   {
+      return NONCE_SIZE;
    }
 }
