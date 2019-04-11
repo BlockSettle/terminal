@@ -29,6 +29,7 @@ enum PacketType
 
    // Uses messages from headless
    CreateHDWalletType = 21;
+   DeleteHDWalletType = 22;
 }
 
 message Packet
