@@ -3,6 +3,8 @@
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
+#include "HeadlessSettings.h"
+#include "HeadlessContainer.h"
 #include "HeadlessContainerListener.h"
 #include "ServerConnection.h"
 
@@ -16,9 +18,10 @@ static std::string toHex(const std::string &binData)
 SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , const std::shared_ptr<ServerConnection> &conn
    , const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr)
+   , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
+   , const std::shared_ptr<HeadlessSettings> &settings)
    : ServerConnectionListener(), app_(app)
-   , connection_(conn), logger_(logger), walletsMgr_(walletsMgr)
+   , connection_(conn), logger_(logger), walletsMgr_(walletsMgr), settings_(settings)
 {
    app_->setReadyCallback([this](bool result) {
       ready_ = result;
@@ -81,6 +84,12 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
       break;
    case signer::ChangePasswordRequestType:
       rc = onChangePassword(packet.data(), packet.id());
+      break;
+   case signer::CreateHDWalletType:
+      rc = onCreateHDWallet(packet.data(), packet.id());
+      break;
+   case signer::DeleteHDWalletType:
+      rc = onDeleteHDWallet(packet.data(), packet.id());
       break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
@@ -514,4 +523,52 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, SignContai
    response.set_rootwalletid(request.rootwalletid());
    logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}", __func__, request.rootwalletid(), result);
    return sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
+}
+
+bool SignerAdapterListener::onCreateHDWallet(const std::string &data, SignContainer::RequestId)
+{
+   headless::CreateHDWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   std::vector<bs::wallet::PasswordData> pwdData;
+   for (int i = 0; i < request.password_size(); ++i) {
+      const auto pwd = request.password(i);
+      pwdData.push_back({BinaryData::CreateFromHex(pwd.password())
+         , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
+   }
+   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() };
+
+   std::shared_ptr<bs::core::hd::Wallet> wallet;
+   try {
+      const auto &w = request.wallet();
+      auto netType = HeadlessContainer::mapNetworkType(w.nettype());
+      auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
+         : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());
+      wallet = walletsMgr_->createWallet(w.name(), w.description()
+         , seed, settings_->getWalletsDir(), w.primary(), pwdData, keyRank);
+   }
+   catch (const std::exception &e) {
+      return false;
+   }
+
+   return true;
+}
+
+bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, SignContainer::RequestId)
+{
+   headless::DeleteHDWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   const auto &walletId = request.rootwalletid();
+   const auto &wallet = walletsMgr_->getHDWalletById(walletId);
+   if (!wallet) {
+      logger_->error("[{}] failed to find HD Wallet by id {}", __func__, walletId);
+      return false;
+   }
+   logger_->debug("Deleting HDWallet {}: {}", walletId, wallet->name());
+   return walletsMgr_->deleteWalletFile(wallet);
 }
