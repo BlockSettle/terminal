@@ -125,6 +125,7 @@ public:
       rememberLoginUserName,
       armoryServers,
       defaultArmoryServersKeys,
+      twoWayAuth,
       _last
    };
 
