@@ -27,20 +27,27 @@ Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
 
-#if defined (Q_OS_WIN)
+#ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
-#elif defined (Q_OS_MAC)
+#endif // USE_QWindowsIntegrationPlugin
+
+#ifdef USE_QCocoaIntegrationPlugin
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
-#elif defined (Q_OS_LINUX)
+#endif // USE_QCocoaIntegrationPlugin
+
+#ifdef USE_QXcbIntegrationPlugin
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
-Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
-#endif
+#endif // USE_QXcbIntegrationPlugin
+
+#ifdef STATIC_BUILD
+   #if defined (Q_OS_LINUX)
+   Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
+   #endif
 
 Q_IMPORT_PLUGIN(QICOPlugin)
-
 Q_IMPORT_PLUGIN(QtQuick2Plugin)
 Q_IMPORT_PLUGIN(QtQuick2DialogsPlugin)
 Q_IMPORT_PLUGIN(QtQuick2DialogsPrivatePlugin)
@@ -52,6 +59,8 @@ Q_IMPORT_PLUGIN(QtQuickLayoutsPlugin)
 Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
+
+#endif // STATIC_BUILD
 
 // redirect qDebug() to stdout
 // stdout redirected to parent process
