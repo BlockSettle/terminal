@@ -593,3 +593,39 @@ BinaryDataRef ZmqBIP15XMsgPartial::getSingleBinaryMessage() const
 
    return packets_.begin()->second;
 }
+
+// Reset a partial message.
+//
+// INPUT:  None
+// OUTPUT: None
+// RETURN: None
+void ZmqBIP15XMsgFragments::reset(void)
+{
+   packets_.clear();
+   message_.reset();
+}
+
+// Insert data into a partial message.
+//
+// INPUT:  The data to insert. (BinaryData&)
+// OUTPUT: None
+// RETURN: A reference to the packet data. (BinaryDataRef)
+BinaryDataRef ZmqBIP15XMsgFragments::insertDataAndGetRef(BinaryData& data)
+{
+   auto&& data_pair = std::make_pair(counter_++, std::move(data));
+   auto iter = packets_.insert(std::move(data_pair));
+   return iter.first->second.getRef();
+}
+
+// Erase the last packet in a partial message.
+//
+// INPUT:  None
+// OUTPUT: None
+// RETURN: None
+void ZmqBIP15XMsgFragments::eraseLast(void)
+{
+   if (counter_ == 0)
+      return;
+
+   packets_.erase(counter_--);
+}
