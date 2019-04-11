@@ -11,6 +11,7 @@
 #  include <glob.h>
 #endif
 #include <algorithm>
+#include <string.h>
 #include <sys/stat.h>
 #include <fstream>
 

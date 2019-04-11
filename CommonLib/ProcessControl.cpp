@@ -3,6 +3,7 @@
 #  include <unistd.h>
 #  include <signal.h>
 #endif
+#include <string.h>
 
 
 ProcessControl::~ProcessControl()
@@ -22,7 +23,7 @@ bool ProcessControl::kill()
    }
 #else
    if (pid_ > 0) {
-      const auto rc = kill(pid_, SIGINT);
+      const auto rc = ::kill(pid_, SIGINT);
       pid_ = 0;
       return (rc == 0);
    }
