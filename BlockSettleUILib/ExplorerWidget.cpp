@@ -4,6 +4,7 @@
 #include "TransactionDetailsWidget.h"
 #include "BSMessageBox.h"
 
+#include <QMouseEvent>
 #include <QStringListModel>
 #include <QToolTip>
 
@@ -12,7 +13,7 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    TabWithShortcut(parent)
    , expTimer_(new QTimer)
    , ui_(new Ui::ExplorerWidget())
-   , transactionHistoryPosition_(-1)
+   , searchHistoryPosition_(-1)
 {
    ui_->setupUi(this);
    ui_->searchBox->setReadOnly(true);
@@ -24,7 +25,7 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
 
    // connection to handle enter key being pressed inside the search box
    connect(ui_->searchBox, &QLineEdit::returnPressed,
-           this, &ExplorerWidget::onSearchStarted);
+           this, [this](){ onSearchStarted(true); });
    // connection to handle user clicking on TXID inside address details page
    connect(ui_->Address, &AddressDetailsWidget::transactionClicked,
            this, &ExplorerWidget::onTransactionClicked);
@@ -32,7 +33,7 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    connect(ui_->Transaction, &TransactionDetailsWidget::addressClicked,
            this, &ExplorerWidget::onAddressClicked);
    connect(ui_->btnSearch, &QPushButton::clicked,
-           this, &ExplorerWidget::onSearchStarted);
+           this, [this](){ onSearchStarted(true); });
    connect(ui_->btnReset, &QPushButton::clicked,
            this, &ExplorerWidget::onReset);
    connect(ui_->btnBack, &QPushButton::clicked,
@@ -69,8 +70,17 @@ void ExplorerWidget::shortcutActivated(ShortcutType s)
    }
 }
 
+void ExplorerWidget::mousePressEvent(QMouseEvent *event)
+{
+   if (event->button() == Qt::BackButton && ui_->btnBack->isEnabled()) {
+      onBackButtonClicked();
+   } else if (event->button() == Qt::ForwardButton && ui_->btnForward->isEnabled()) {
+      onForwardButtonClicked();
+   }
+}
+
 // The function called when the user uses the search bar (Tx or address).
-void ExplorerWidget::onSearchStarted()
+void ExplorerWidget::onSearchStarted(bool saveToHistory)
 {
    const QString& userStr = ui_->searchBox->text();
    if (userStr.isEmpty()) {
@@ -106,13 +116,17 @@ void ExplorerWidget::onSearchStarted()
       // off address processing and UI loading.
       ui_->Address->setQueryAddr(bsAddress);
       ui_->searchBox->clear();
+      if (saveToHistory) {
+         pushTransactionHistory(userStr);
+      }
       expTimer_->start();
    }
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
       // String is a valid 32 byte hex string, so we may proceed.
-      clearTransactionHistory();
-      pushTransactionHistory(userStr);
+      if (saveToHistory) {
+         pushTransactionHistory(userStr);
+      }
       setTransaction(userStr);
       ui_->searchBox->clear();
       expTimer_->start();
@@ -123,15 +137,21 @@ void ExplorerWidget::onSearchStarted()
                          tr("This is not a valid address or transaction ID."),
                          ui_->searchBox);
    }
+
+   ui_->btnBack->setEnabled(canGoBack());
+   ui_->btnForward->setEnabled(canGoForward());
 }
 
 // This slot function is called whenever user clicks on a transaction in
 // address details page or any other page.
 void ExplorerWidget::onTransactionClicked(QString txId)
 {
-   truncateTransactionHistory();
+   truncateSearchHistory();
    pushTransactionHistory(txId);
    setTransaction(txId);
+
+   ui_->btnBack->setEnabled(canGoBack());
+   ui_->btnForward->setEnabled(canGoForward());
 }
 
 // Function called when the explorer timeout expires. It just lets the user know
@@ -164,6 +184,11 @@ void ExplorerWidget::onAddressClicked(QString addressId)
    // valid. (It would be very bad if Armory fed up bad addresses!)
    // TO DO: Add a check for wallets that have already been loaded?
    ui_->Address->setQueryAddr(bsAddress);
+   truncateSearchHistory();
+   pushTransactionHistory(addressId);
+
+   ui_->btnBack->setEnabled(canGoBack());
+   ui_->btnForward->setEnabled(canGoForward());
 
    expTimer_->start();
 }
@@ -173,71 +198,68 @@ void ExplorerWidget::onReset()
    expTimer_->stop();
    ui_->stackedWidget->setCurrentIndex(BlockPage);
    ui_->searchBox->clear();
-   clearTransactionHistory();
 }
 
 void ExplorerWidget::onBackButtonClicked()
 {
-   if (transactionHistoryPosition_ > 0) {
-      --transactionHistoryPosition_;
-      const auto txId = transactionHistory_.at(static_cast<size_t>(transactionHistoryPosition_));
-      setTransaction(QString::fromStdString(txId));
+   if (searchHistoryPosition_ > 0) {
+      --searchHistoryPosition_;
+      const auto itemId = searchHistory_.at(static_cast<size_t>(searchHistoryPosition_));
+      ui_->searchBox->setText(QString::fromStdString(itemId));
+      onSearchStarted(false);
    }
 }
 
 void ExplorerWidget::onForwardButtonClicked()
 {
-   if (transactionHistoryPosition_ < static_cast<int>(transactionHistory_.size()) - 1) {
-      ++transactionHistoryPosition_;
-      const auto txId = transactionHistory_.at(static_cast<size_t>(transactionHistoryPosition_));
-      setTransaction(QString::fromStdString(txId));
-   }
+   if (searchHistoryPosition_ < static_cast<int>(searchHistory_.size()) - 1) {
+      ++searchHistoryPosition_;
+      const auto itemId = searchHistory_.at(static_cast<size_t>(searchHistoryPosition_));
+      ui_->searchBox->setText(QString::fromStdString(itemId));
+      onSearchStarted(false);   }
 }
 
 bool ExplorerWidget::canGoBack() const
 {
-   return transactionHistoryPosition_ > 0;
+   return searchHistoryPosition_ > 0;
 }
 
 bool ExplorerWidget::canGoForward() const
 {
-   return transactionHistoryPosition_ < static_cast<int>(transactionHistory_.size()) - 1;
+   return searchHistoryPosition_ < static_cast<int>(searchHistory_.size()) - 1;
 }
 
 void ExplorerWidget::setTransaction(QString txId)
 {
-   ui_->btnBack->setEnabled(canGoBack());
-   ui_->btnForward->setEnabled(canGoForward());
-
    ui_->stackedWidget->setCurrentIndex(TxPage);
    // Pass the Tx hash to the Tx widget and populate the fields.
    BinaryTXID terminalTXID(READHEX(txId.toStdString()), true);
    ui_->Transaction->populateTransactionWidget(terminalTXID);
 }
 
-void ExplorerWidget::pushTransactionHistory(QString txId)
+void ExplorerWidget::pushTransactionHistory(QString itemId)
 {
-   if (txId.isEmpty())
+   if (itemId.isEmpty())
       return;
-   auto lastId = transactionHistory_.empty() ? std::string() : transactionHistory_.back();
-   if (txId.toStdString() == lastId)
+   auto lastId = searchHistory_.empty() ? std::string() : searchHistory_.back();
+   if (itemId.toStdString() == lastId)
       return;
-   transactionHistory_.push_back(txId.toStdString());
-   transactionHistoryPosition_ = static_cast<int>(transactionHistory_.size()) - 1;
+   searchHistory_.push_back(itemId.toStdString());
+   searchHistoryPosition_ = static_cast<int>(searchHistory_.size()) - 1;
 }
 
-void ExplorerWidget::truncateTransactionHistory(int position)
+void ExplorerWidget::truncateSearchHistory(int position)
 {
-   int pos = position >= 0 ? position : transactionHistoryPosition_;
-   while (static_cast<int>(transactionHistory_.size()) - 1 > pos) {
-      transactionHistory_.pop_back();
+   int pos = position >= 0 ? position : searchHistoryPosition_;
+   while (static_cast<int>(searchHistory_.size()) - 1 > pos) {
+      searchHistory_.pop_back();
    }
 }
 
-void ExplorerWidget::clearTransactionHistory()
+void ExplorerWidget::clearSearchHistory()
 {
-   transactionHistoryPosition_ = -1;
-   truncateTransactionHistory();
+   searchHistoryPosition_ = -1;
+   truncateSearchHistory();
    ui_->btnBack->setEnabled(canGoBack());
    ui_->btnForward->setEnabled(canGoForward());
 }
