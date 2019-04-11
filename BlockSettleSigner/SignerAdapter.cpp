@@ -2,12 +2,8 @@
 #include <spdlog/spdlog.h>
 #include <QDataStream>
 #include <QFile>
-#include <QStandardPaths>
-#include "CelerClientConnection.h"
-#include "DataConnection.h"
-#include "DataConnectionListener.h"
-#include "HeadlessApp.h"
 #include "SignContainer.h"
+#include "SystemFileUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -25,10 +21,10 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, Netw
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true, true);
    adapterConn->SetContext(zmqContext);
    {
-      const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-      QFile pubKeyFile(dir + QLatin1String("/interface.pub"));
+      const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";
+      QFile pubKeyFile(QString::fromStdString(pubKeyFileName));
       if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-         throw std::runtime_error("Failed to create public key file");
+         throw std::runtime_error("failed to create public key file " + pubKeyFileName);
       }
       pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
    }

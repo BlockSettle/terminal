@@ -1,5 +1,9 @@
-#include <memory>
+#include <atomic>
+#include <condition_variable>
 #include <iostream>
+#include <memory>
+#include <mutex>
+#include <signal.h>
 #include <btc/ecc.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -7,19 +11,23 @@
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "LogManager.h"
+#include "SystemFileUtils.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
+static std::mutex mainLoopMtx;
+static std::condition_variable mainLoopCV;
+static std::atomic_bool mainLoopRunning{ true };
 
 static int HeadlessApp(int argc, char **argv)
 {
    bs::LogManager logMgr;
    auto loggerStdout = logMgr.logger("settings");
 
-/*   QDir dir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-   if (!dir.exists()) {
-      loggerStdout->info("Creating missing dir {}", dir.path().toStdString());
-      dir.mkpath(dir.path());
-   }*/
+   const auto dir = SystemFilePaths::appDataLocation();
+   if (!SystemFileUtils::pathExist(dir)) {
+      loggerStdout->info("Creating missing dir {}", dir);
+      SystemFileUtils::mkPath(dir);
+   }
 
    const auto settings = std::make_shared<HeadlessSettings>(loggerStdout);
    if (!settings->loadSettings(argc, argv)) {
@@ -45,8 +53,9 @@ static int HeadlessApp(int argc, char **argv)
       HeadlessAppObj appObj(logger, settings);
       appObj.start();
 
-      while (true) {
-         std::this_thread::sleep_for(std::chrono::seconds(1));
+      while (mainLoopRunning) {
+         std::unique_lock<std::mutex> lock(mainLoopMtx);
+         mainLoopCV.wait_for(lock, std::chrono::seconds{ 1 });
       }
    }
    catch (const std::exception &e) {
@@ -59,8 +68,37 @@ static int HeadlessApp(int argc, char **argv)
    return 0;
 }
 
+#ifdef WIN32
+BOOL WINAPI consoleHandler(DWORD signal)
+{
+   mainLoopRunning = false;
+   mainLoopCV.notify_one();
+   return TRUE;
+}
+#else    // WIN32
+void sigHandler(int signum, siginfo_t *, void *)
+{
+   mainLoopRunning = false;
+   mainLoopCV.notify_one();
+}
+#endif   // WIN32
+
 int main(int argc, char** argv)
 {
+#ifdef WIN32
+   SetConsoleCtrlHandler(consoleHandler, TRUE);
+#else
+   struct sigaction act;
+   memset(&act, 0, sizeof(act));
+   act.sa_sigaction = sigHandler;
+   act.sa_flags = SA_SIGINFO;
+
+   sigaction(SIGINT, &act, NULL);
+   sigaction(SIGTERM, &act, NULL);
+#endif
+
+   SystemFilePaths::setArgV0(argv[0]);
+
    // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
    // Armory setting designed to allow the ArmoryDB server to not have to verify
    // clients. Prevents us from having to import tons of keys into the server.

@@ -393,6 +393,7 @@ IF(WIN32)
       dwmapi
       netapi32
       crypt32
+      shlwapi
       userenv
       version
       UxTheme

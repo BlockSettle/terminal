@@ -5,6 +5,7 @@
 #include <memory>
 #include "CoreWallet.h"
 #include "EncryptionUtils.h"
+#include "ProcessControl.h"
 #include "SignerDefs.h"
 
 namespace spdlog {
@@ -23,13 +24,14 @@ class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
 
+
 class HeadlessAppObj
 {
 public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<HeadlessSettings> &);
 
-   ~HeadlessAppObj() noexcept;
+   ~HeadlessAppObj() noexcept = default;
 
    void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
@@ -54,7 +56,6 @@ public:
 
 private:
    void startInterface();
-   void stopInterface();
    void onlineProcessing();
 
 private:
@@ -65,7 +66,7 @@ private:
    std::shared_ptr<ZmqBIP15XServerConnection> connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<SignerAdapterListener>       adapterLsn_;
-//   std::shared_ptr<QProcess>  guiProcess_;
+   ProcessControl             guiProcess_;
    std::function<void(bool)>  cbReady_ = nullptr;
    bool ready_ = false;
 };
