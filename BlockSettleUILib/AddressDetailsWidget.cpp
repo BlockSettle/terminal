@@ -28,7 +28,7 @@ AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
 AddressDetailsWidget::~AddressDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
-void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
+void AddressDetailsWidget::init(const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
    , const std::shared_ptr<QTimer> &inTimer)
 {
@@ -36,7 +36,7 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    logger_ = inLogger;
    expTimer_ = inTimer;
 
-   connect(armory_.get(), &ArmoryConnection::refresh, this
+   connect(armory_.get(), &ArmoryObject::refresh, this
            , &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
 }
 
@@ -58,7 +58,7 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
       dummyWallets_[regId] = dummyWallet;
    }
 
-   ui_->addressId->setText(inAddrVal.display());
+   ui_->addressId->setText(QString::fromStdString(inAddrVal.display()));
 }
 
 // The function that gathers all the data to place in the UI.
@@ -295,7 +295,7 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> 
    if (!wallet->getLedgerDelegateForAddress(addr, cbLedgerDelegate)) {
       logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
                      "get ledger delegate for wallet ID {} - address {}"
-                     , wallet->walletId(), addr.display<std::string>());
+                     , wallet->walletId(), addr.display());
    }
 }
 

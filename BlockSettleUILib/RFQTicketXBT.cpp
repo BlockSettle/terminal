@@ -247,7 +247,7 @@ void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sy
    const auto &ccProduct = getProduct().toStdString();
    group->addLeaf(leaf);
 
-   leaf->setData(assetManager_->getCCGenesisAddr(ccProduct).display<std::string>());
+   leaf->setData(assetManager_->getCCGenesisAddr(ccProduct).display());
    leaf->setData(assetManager_->getCCLotSize(ccProduct));
 
    ui_->comboBoxCCWallets->clear();
@@ -373,7 +373,7 @@ void RFQTicketXBT::fillRecvAddresses()
    if (recvWallet_) {
       ui_->receivingAddressComboBox->addItem(tr("Auto Create"));
       for (auto addr : recvWallet_->getExtAddressList()) {
-         ui_->receivingAddressComboBox->addItem(addr.display());
+         ui_->receivingAddressComboBox->addItem(QString::fromStdString(addr.display()));
       }
       ui_->receivingAddressComboBox->setEnabled(true);
       ui_->receivingAddressComboBox->setCurrentIndex(0);
@@ -694,7 +694,7 @@ void RFQTicketXBT::submitButtonClicked()
          transactionData_->ReserveUtxosFor(rfq.quantity, rfq.requestId);
       }
    } else if (rfq.assetType == bs::network::Asset::PrivateMarket) {
-      rfq.receiptAddress = recvAddress().display<std::string>();
+      rfq.receiptAddress = recvAddress().display();
 
       if (rfq.side == bs::network::Side::Sell) {
          const auto wallet = transactionData_->getSigningWallet();

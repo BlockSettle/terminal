@@ -2,19 +2,18 @@
 #include <spdlog/spdlog.h>
 #include <btc/ecc.h>
 #include "enable_warnings.h"
-#include <QDateTime>
-#include <QDir>
+#include <ctime>
 #include "BIP150_151.h"
 #include "CoreWalletsManager.h"
 #include "CoreHDWallet.h"
 #include "CorePlainWallet.h"
+#include "SystemFileUtils.h"
 
 using namespace bs::core;
 
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger, unsigned int nbBackups)
    : logger_(logger), nbBackupFilesToKeep_(nbBackups)
-{
-}
+{}
 
 WalletsManager::~WalletsManager() noexcept
 {
@@ -41,33 +40,29 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
    if (walletsPath.empty()) {
       return;
    }
-   QDir walletsDir(QString::fromStdString(walletsPath));
-
-   if (!walletsDir.exists()) {
+   if (!SystemFileUtils::pathExist(walletsPath)) {
       logger_->debug("Creating wallets path {}", walletsPath);
-      walletsDir.mkpath(QString::fromStdString(walletsPath));
+      SystemFileUtils::mkPath(walletsPath);
    }
 
-   QStringList filesFilter{QString::fromStdString("*.lmdb")};
-   auto fileList = walletsDir.entryList(filesFilter, QDir::Files);
-
+   const auto fileList = SystemFileUtils::readDir(walletsPath, "*.lmdb");
    const size_t totalCount = fileList.size();
    size_t current = 0;
 
-   for (const auto& file : fileList) {
-      QFileInfo fileInfo(walletsDir.absoluteFilePath(file));
-      if (file.startsWith(QString::fromStdString(SettlementWallet::fileNamePrefix()))) {
+   for (const auto &file : fileList) {
+      if (file.find(SettlementWallet::fileNamePrefix()) == 0) {
          if (wo) {
             logger_->info("[{}] ignoring settlement wallet in watching-only mode", __func__);
             continue;
          }
          if (settlementWallet_) {
-            logger_->warn("Can't load more than 1 settlement wallet from {}", file.toStdString());
+            logger_->warn("Can't load more than 1 settlement wallet from {}", file);
             continue;
          }
-         logger_->debug("Loading settlement wallet from {}", file.toStdString());
+         logger_->debug("Loading settlement wallet from {} ({})", file, (int)netType);
          try {
-            settlementWallet_ = std::make_shared<SettlementWallet>(netType, fileInfo.absoluteFilePath().toStdString());
+            settlementWallet_ = std::make_shared<SettlementWallet>(netType
+               , walletsPath + "/" + file);
 
             current++;
             if (cbProgress) {
@@ -78,12 +73,12 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
             logger_->error("Failed to load settlement wallet: {}", e.what());
          }
       }
-      if (!isWalletFile(file.toStdString())) {
+      if (!isWalletFile(file)) {
          continue;
       }
       try {
-         logger_->debug("Loading BIP44 wallet from {}", file.toStdString());
-         const auto wallet = std::make_shared<hd::Wallet>(fileInfo.absoluteFilePath().toStdString()
+         logger_->debug("Loading BIP44 wallet from {}", file);
+         const auto wallet = std::make_shared<hd::Wallet>(walletsPath + "/" + file
                                                                , logger_);
          current++;
          if (cbProgress) {
@@ -113,29 +108,29 @@ void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &
       logger_->info("No need to backup watching-only wallet {}", wallet->name());
       return;
    }
-   const QString backupDir = QString::fromStdString(targetDir);
-   QDir dirBackup(backupDir);
-   if (!dirBackup.exists()) {
-      if (!dirBackup.mkpath(backupDir)) {
+   if (!SystemFileUtils::pathExist(targetDir)) {
+      if (!SystemFileUtils::mkPath(targetDir)) {
          logger_->error("Failed to create backup directory {}", targetDir);
          return;
       }
    }
-   const auto &lockFiles = dirBackup.entryList(QStringList{ QLatin1String("*.lmdb-lock") });
+   const auto &lockFiles = SystemFileUtils::readDir(targetDir, "*.lmdb-lock");
    for (const auto &file : lockFiles) {
-      QFile::remove(backupDir + QDir::separator() + file);
+      SystemFileUtils::rmFile(targetDir + "/" + file);
    }
-   auto files = dirBackup.entryList(QStringList{ QString::fromStdString(
-      hd::Wallet::fileNamePrefix(false) + wallet->walletId() + "_*.lmdb" )});
+   const auto files = SystemFileUtils::readDir(targetDir
+      , hd::Wallet::fileNamePrefix(false) + wallet->walletId() + "_*.lmdb");
    if (!files.empty() && (files.size() >= (int)nbBackupFilesToKeep_)) {
       for (int i = 0; i <= files.size() - (int)nbBackupFilesToKeep_; i++) {
-         logger_->debug("Removing old backup file {}", files[i].toStdString());
-         QFile::remove(backupDir + QDir::separator() + files[i]);
+         logger_->debug("Removing old backup file {}", files[i]);
+         SystemFileUtils::rmFile(targetDir + "/" + files[i]);
       }
    }
-   const auto curTime = QDateTime::currentDateTime().toLocalTime().toString(QLatin1String("yyyyMMddHHmmss"));
+   const auto tm = std::time(nullptr);
+   char tmStr[32];
+   std::strftime(tmStr, sizeof(tmStr), "%Y%j%H%M%S", std::localtime(&tm));
    const auto backupFile = targetDir + "/" + hd::Wallet::fileNamePrefix(false)
-      + wallet->walletId()  + "_" + curTime.toStdString() + ".lmdb";
+      + wallet->walletId()  + "_" + tmStr + ".lmdb";
    wallet->copyToFile(backupFile);
 }
 

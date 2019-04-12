@@ -8,7 +8,7 @@
 
 WalletImporter::WalletImporter(const std::shared_ptr<SignContainer> &container
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<AuthAddressManager> &authMgr
    , const CbScanReadLast &cbr, const CbScanWriteLast &cbw)
    : QObject(nullptr), signingContainer_(container), walletsMgr_(walletsMgr), armory_(armory)
@@ -94,7 +94,7 @@ void WalletImporter::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
 
       const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
       group->addLeaf(leaf);
-      leaf->setData(assetMgr_->getCCGenesisAddr(cc).display<std::string>());
+      leaf->setData(assetMgr_->getCCGenesisAddr(cc).display());
       leaf->setData(assetMgr_->getCCLotSize(cc));
 
       if (createCCWalletReqs_.empty()) {

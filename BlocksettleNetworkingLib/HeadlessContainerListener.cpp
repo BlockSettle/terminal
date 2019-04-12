@@ -4,11 +4,8 @@
 #include "ConnectionManager.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "HeadlessContainer.h"
+#include "ServerConnection.h"
 #include "WalletEncryption.h"
-#include "ZmqSecuredServerConnection.h"
-#include <QDataStream>
-#include <QDebug>
 
 
 using namespace Blocksettle::Communication;
@@ -94,7 +91,7 @@ bool HeadlessContainerListener::sendData(const std::string &data, const std::str
    return sentOk;
 }
 
-void HeadlessContainerListener::SetLimits(const SignContainer::Limits &limits)
+void HeadlessContainerListener::SetLimits(const bs::signer::Limits &limits)
 {
    limits_ = limits;
 }
@@ -112,7 +109,6 @@ void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId)
 {
    logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
-//   emit clientDisconnected(clientId);
 }
 
 void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, const std::string &data)
@@ -223,7 +219,6 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
       return onGetHDWalletInfo(clientId, packet);
 
    case headless::DisconnectionRequestType:
-      emit OnClientDisconnected(clientId);
       break;
 
    case headless::SyncWalletInfoType:
@@ -438,7 +433,7 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
 
       const auto authKeys = authWallet->getKeyPairFor(authAddr, pass);
       if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
-         logger_->error("[HeadlessContainerListener] failed to get priv/pub keys for {}", authAddr.display<std::string>());
+         logger_->error("[HeadlessContainerListener] failed to get priv/pub keys for {}", authAddr.display());
          SignTXResponse(clientId, id, reqType, "no auth priv/pub keys found");
          passwords_.erase(authWallet->walletId());
          passwords_.erase(rootWalletId);
@@ -851,6 +846,15 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    return true;
 }
 
+static NetworkType mapNetworkType(headless::NetworkType netType)
+{
+   switch (netType) {
+   case headless::MainNetType:   return NetworkType::MainNet;
+   case headless::TestNetType:   return NetworkType::TestNet;
+   default:                      return NetworkType::Invalid;
+   }
+}
+
 bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, headless::RequestPacket &packet)
 {
    headless::CreateHDWalletRequest request;
@@ -872,7 +876,7 @@ bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, he
    }
    else if (request.has_wallet()) {
       return CreateHDWallet(clientId, packet.id(), request.wallet()
-         , HeadlessContainer::mapNetworkType(request.wallet().nettype()), pwdData, keyRank);
+         , mapNetworkType(request.wallet().nettype()), pwdData, keyRank);
    }
    else {
       CreateHDWalletResponse(clientId, packet.id(), "unknown request");
@@ -1320,7 +1324,7 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, Blocks
          const auto index = wallet->getAddressIndex(addr);
          const auto comment = wallet->getAddressComment(addr);
          auto addrData = response.add_addresses();
-         addrData->set_address(addr.display<std::string>());
+         addrData->set_address(addr.display());
          addrData->set_index(index);
          if (!comment.empty()) {
             addrData->set_comment(comment);
@@ -1329,7 +1333,7 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, Blocks
       for (const auto &addr : wallet->getPooledAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
          auto addrData = response.add_addrpool();
-         addrData->set_address(addr.display<std::string>());
+         addrData->set_address(addr.display());
          addrData->set_index(index);
       }
       for (const auto &txComment : wallet->getAllTxComments()) {
@@ -1415,7 +1419,7 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
       if (address.isValid() && index.empty()) {
 //         wallet->addAddress(address);
          logger_->info("[{}] can't add address {} to wallet {}", __func__
-            , address.display<std::string>(), wallet->walletId());
+            , address.display(), wallet->walletId());
          continue;
       }
       else {
@@ -1427,7 +1431,7 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
          }
       }
       auto addrData = response.add_addresses();
-      addrData->set_address(address.display<std::string>());
+      addrData->set_address(address.display());
       addrData->set_index(indexData.index());
    }
 

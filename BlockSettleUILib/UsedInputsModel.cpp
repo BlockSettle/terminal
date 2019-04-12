@@ -75,7 +75,7 @@ void UsedInputsModel::updateInputs(const std::vector<UTXO>& usedInputs)
 
    for (const auto& utx : usedInputs) {
       const auto address = bs::Address::fromUTXO(utx);
-      const auto addrStr = address.display<std::string>();
+      const auto addrStr = address.display();
 
       auto it = loadedInputs.find(addrStr);
       if (it == loadedInputs.end()) {

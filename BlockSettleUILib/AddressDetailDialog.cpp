@@ -79,7 +79,7 @@ public:
 AddressDetailDialog::AddressDetailDialog(const bs::Address& address
                                      , const std::shared_ptr<bs::sync::Wallet> &wallet
                          , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
-                               , const std::shared_ptr<ArmoryConnection> &armory
+                               , const std::shared_ptr<ArmoryObject> &armory
                                  , const std::shared_ptr<spdlog::logger> &logger
                                          , QWidget* parent)
    : QDialog(parent)
@@ -106,7 +106,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
 
    ui_->labelWallenName->setText(QString::fromStdString(wallet_->name()));
 
-   const auto addressString = address.display();
+   const auto addressString = QString::fromStdString(address.display());
    ui_->labelAddress->setText(addressString);
 
    const auto addrIndex = wallet_->getAddressIndex(address);
@@ -211,7 +211,7 @@ void AddressDetailDialog::onError()
 
 void AddressDetailDialog::onCopyClicked() const
 {
-   QApplication::clipboard()->setText(address_.display());
+   QApplication::clipboard()->setText(QString::fromStdString(address_.display()));
 }
 
 void AddressDetailDialog::onInputAddrContextMenu(const QPoint &pos)

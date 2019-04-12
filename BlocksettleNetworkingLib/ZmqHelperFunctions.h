@@ -2,9 +2,6 @@
 #define __ZMQ_HELPER_FUNCTIONS_H__
 
 #include <string>
-#include <QString>
-#include <spdlog/spdlog.h>
-#include "EncryptionUtils.h"
 
 namespace bs
 {

@@ -221,7 +221,7 @@ void hd::Wallet::setUserId(const BinaryData &userId)
    }
 }
 
-void hd::Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
+void hd::Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 {
    armory_ = armory;
    for (const auto &leaf : getLeaves()) {
@@ -229,7 +229,7 @@ void hd::Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-void hd::Wallet::registerWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+void hd::Wallet::registerWallet(const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
    for (const auto &leaf : getLeaves()) {
       leaf->registerWallet(armory, asNew);

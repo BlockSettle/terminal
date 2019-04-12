@@ -1,5 +1,4 @@
 #include "CoreHDWallet.h"
-#include <QFile>
 #include <bech32/ref/c++/segwit_addr.h>
 #include <spdlog/spdlog.h>
 #include "SystemFileUtils.h"
@@ -54,11 +53,10 @@ void hd::Wallet::initNew(const wallet::Seed &seed)
 
 void hd::Wallet::loadFromFile(const std::string &filename)
 {
-   if (!SystemFileUtils::IsValidFilePath(filename)) {
+   if (!SystemFileUtils::isValidFilePath(filename)) {
       throw std::invalid_argument(std::string("Invalid file path: ") + filename);
    }
-
-   if (!SystemFileUtils::FileExist(filename)) {
+   if (!SystemFileUtils::fileExist(filename)) {
       throw std::runtime_error("Wallet file does not exist");
    }
 
@@ -211,12 +209,9 @@ bool hd::Wallet::eraseFile()
       db_ = nullptr;
    }
    bool rc = true;
-   QFile walletFile(QString::fromStdString(dbFilename_));
-   if (walletFile.exists()) {
-      rc = walletFile.remove();
-
-      QFile lockFile(QString::fromStdString(dbFilename_ + "-lock"));
-      rc &= lockFile.remove();
+   if (SystemFileUtils::fileExist(dbFilename_)) {
+      rc &= SystemFileUtils::rmFile(dbFilename_);
+      rc &= SystemFileUtils::rmFile(dbFilename_ + "-lock");
    }
    return rc;
 }

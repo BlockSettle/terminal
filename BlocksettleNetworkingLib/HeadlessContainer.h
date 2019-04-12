@@ -46,33 +46,33 @@ public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
    ~HeadlessContainer() noexcept = default;
 
-   RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) override;
-   RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
+   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) override;
-   RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
+   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
       , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override;
 
-   RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
+   bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
    void SendPassword(const std::string &walletId, const PasswordType &password,
       bool cancelledByUser) override;
 
-   RequestId CancelSignTx(const BinaryData &txId) override;
+   bs::signer::RequestId CancelSignTx(const BinaryData &txId) override;
 
-   RequestId SetUserId(const BinaryData &) override;
-   RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
+   bs::signer::RequestId SetUserId(const BinaryData &) override;
+   bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override;
-   RequestId createHDWallet(const std::string &name, const std::string &desc
+   bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &seed
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
-   RequestId DeleteHDRoot(const std::string &rootWalletId) override;
-   RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
-   RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override;
-   RequestId GetInfo(const std::string &rootWalletId) override;
+   bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
+   bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
+   bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override;
+   bs::signer::RequestId GetInfo(const std::string &rootWalletId) override;
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override;
-   RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
+   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
 
    void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) override;
 
@@ -91,11 +91,11 @@ public:
    bool isWalletOffline(const std::string &walletId) const override;
 
 protected:
-   RequestId Send(Blocksettle::Communication::headless::RequestPacket, bool incSeqNo = true);
+   bs::signer::RequestId Send(Blocksettle::Communication::headless::RequestPacket, bool incSeqNo = true);
    void ProcessSignTXResponse(unsigned int id, const std::string &data);
    void ProcessPasswordRequest(const std::string &data);
    void ProcessCreateHDWalletResponse(unsigned int id, const std::string &data);
-   RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
+   bs::signer::RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
    void ProcessGetRootKeyResponse(unsigned int id, const std::string &data);
    void ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data);
    void ProcessSetLimitsResponse(unsigned int id, const std::string &data);
@@ -107,12 +107,12 @@ protected:
 
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
-   std::set<RequestId>                 signRequests_;
-   std::map<SignContainer::RequestId, std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)>>   cbSettlWalletMap_;
-   std::map<SignContainer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfoMap_;
-   std::map<SignContainer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
-   std::map<SignContainer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
-   std::map<SignContainer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
+   std::set<bs::signer::RequestId>     signRequests_;
+   std::map<bs::signer::RequestId, std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)>>   cbSettlWalletMap_;
+   std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfoMap_;
+   std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
+   std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
+   std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
 };
 
 bool KillHeadlessProcess();
@@ -199,9 +199,9 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
-   HeadlessContainer::RequestId Send(Blocksettle::Communication::headless::RequestPacket
+   bs::signer::RequestId Send(Blocksettle::Communication::headless::RequestPacket
       , bool updateId = true);
-   HeadlessContainer::RequestId newRequestId() { return ++id_; }
+   bs::signer::RequestId newRequestId() { return ++id_; }
    bool hasUI() const { return hasUI_; }
 
 signals:
@@ -216,7 +216,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<DataConnection>  connection_;
    const NetworkType                netType_;
-   HeadlessContainer::RequestId     id_ = 0;
+   bs::signer::RequestId            id_ = 0;
    bool     hasUI_ = false;
 };
 

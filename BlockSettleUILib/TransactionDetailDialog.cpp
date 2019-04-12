@@ -243,7 +243,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
    QStringList items;
    items << addressType;
    items << valueStr;
-   const auto displayedAddress = addr.display();
+   const auto displayedAddress = QString::fromStdString(addr.display());
    if (walletName.isEmpty()) {
       items << displayedAddress;
    }

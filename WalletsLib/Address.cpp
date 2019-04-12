@@ -1,6 +1,5 @@
 #include "Address.h"
 #include "BlockDataManagerConfig.h"
-#include <QString>
 #include <bech32.h>
 
 
@@ -20,7 +19,7 @@ bs::Address::Address(const BinaryDataRef &data, AddressEntryType aet)
    }
 }
 
-bs::Address::Address(const QByteArray &data, AddressEntryType aet)
+/*!bs::Address::Address(const QByteArray &data, AddressEntryType aet)
    : BinaryData((uint8_t*)(data.data()), data.size()), aet_(aet)
 {
    if (aet == AddressEntryType_Default) {
@@ -30,7 +29,7 @@ bs::Address::Address(const QByteArray &data, AddressEntryType aet)
 
 bs::Address::Address(const QString &data, const Format &f, AddressEntryType aet)
    : Address(data.toStdString(), f, aet)
-{}
+{}*/
 
 bs::Address::Address(const std::string& data, const Format &format, AddressEntryType aet)
    : BinaryData((uint8_t*)(data.data()), data.size()), format_(format), aet_(aet)
@@ -254,70 +253,63 @@ AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
    return AddressEntryType_Default;
 }
 
-namespace bs {
-   template<> std::string Address::display(Format format) const
+std::string bs::Address::display(Format format) const
+{
+   if (!isProperHash()) {
+      return {};
+   }
+
+   const auto fullAddress = prefixed();
+   std::string result;
+
+   switch (format)
    {
-      if (!isProperHash()) {
+   case Base58:
+      try {
+         result = BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
+         break;
+      }
+      catch (const std::exception &) {
          return {};
       }
 
-      const auto fullAddress = prefixed();
-      std::string result;
+   case Hex:
+      return fullAddress.toHexStr();
 
-      switch (format)
-      {
-      case Base58:
-         try {
-            result = BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
-            break;
-         }
-         catch (const std::exception &) {
-            return {};
-         }
+   case Bech32:
+      try {
+         result = BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
+         break;
+      }
+      catch (const std::exception &) {
+         return {};
+      }
 
-      case Hex:
-         return fullAddress.toHexStr();
+   case Auto:
+      switch (aet_) {
+      case AddressEntryType_P2SH:
+      case AddressEntryType_P2PKH:
+         result = BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
+         break;
 
-      case Bech32:
-         try {
-            result = BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
-            break;
-         }
-         catch (const std::exception &) {
-            return {};
-         }
-
-      case Auto:
-         switch (aet_) {
-         case AddressEntryType_P2SH:
-         case AddressEntryType_P2PKH:
-            result = BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
-            break;
-
-         case AddressEntryType_P2WPKH:
-         case AddressEntryType_P2WSH:
-            result = BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
-            break;
-
-         default:
-            return fullAddress.toHexStr();
-         }
+      case AddressEntryType_P2WPKH:
+      case AddressEntryType_P2WSH:
+         result = BtcUtils::scrAddrToSegWitAddress(unprefixed()).toBinStr();
          break;
 
       default:
-         throw std::logic_error("unsupported address format");
+         return fullAddress.toHexStr();
       }
+      break;
 
-      if (*result.rbegin() == 0) {
-         result.resize(result.size() - 1);
-      }
-      return result;
+   default:
+      throw std::logic_error("unsupported address format");
    }
 
-   template<> QString Address::display(Format format) const
-   {
-      return QString::fromStdString(display<std::string>(format));
+   if (*result.rbegin() == 0) {
+      result.resize(result.size() - 1);
    }
+   return result;
 }
 
 BinaryData bs::Address::prefixed() const

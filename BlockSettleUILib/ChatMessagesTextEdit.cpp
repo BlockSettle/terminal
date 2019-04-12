@@ -2,7 +2,6 @@
 #include <QDesktopServices>
 #include <set>
 #include "ChatMessagesTextEdit.h"
-#include "ChatClient.h"
 #include "ChatProtocol/ChatProtocol.h"
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
@@ -128,6 +127,16 @@ QImage ChatMessagesTextEdit::statusImage(const int &row)
    }
    
    return statusImage;
+}
+
+void ChatMessagesTextEdit::mousePressEvent(QMouseEvent *ev)
+{
+   // make focus to the widget to allow use default shortcuts (like ctrl+c) from keyboard
+   if (!this->hasFocus())
+      this->setFocus();
+
+   // proceed default mouse press behaviour
+   QTextBrowser::mousePressEvent(ev);
 }
 
 void ChatMessagesTextEdit::switchToChat(const QString& chatId, bool isGroupRoom)

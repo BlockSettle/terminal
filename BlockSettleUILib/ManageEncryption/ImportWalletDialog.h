@@ -21,7 +21,7 @@ namespace bs {
    }
 }
 class ApplicationSettings;
-class ArmoryConnection;
+class ArmoryObject;
 class AssetManager;
 class AuthAddressManager;
 class SignContainer;
@@ -37,7 +37,7 @@ public:
       , const std::shared_ptr<SignContainer> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<ArmoryObject> &
       , const EasyCoDec::Data& walletData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &
@@ -73,7 +73,7 @@ private:
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ArmoryObject>    armory_;
    std::shared_ptr<WalletImporter>  walletImporter_;
    std::shared_ptr<spdlog::logger> logger_;
    bs::core::wallet::Seed  walletSeed_;

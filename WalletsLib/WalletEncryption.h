@@ -1,7 +1,7 @@
 #ifndef WALLET_ENCRYPTION_H
 #define WALLET_ENCRYPTION_H
 
-#include <QObject>
+//!#include <QObject>
 
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
@@ -9,14 +9,12 @@
 
 namespace bs {
    namespace wallet {
-   Q_NAMESPACE
 
       enum EncryptionType : uint8_t {
          Unencrypted,
          Password,
          Auth
       };
-      Q_ENUM_NS(EncryptionType)
 
       //! first - required number of keys, second - total number of keys
       using KeyRank = std::pair<unsigned int, unsigned int>;

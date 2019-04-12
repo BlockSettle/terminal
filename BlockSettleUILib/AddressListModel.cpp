@@ -74,7 +74,7 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
    }
    else {
       row.comment = QString::fromStdString(wallet->getAddressComment(addr));
-      row.displayedAddress = addr.display();
+      row.displayedAddress = QString::fromStdString(addr.display());
       row.walletName = QString::fromStdString(wallet->shortName());
       row.walletId = QString::fromStdString(wallet->walletId());
       row.isExternal = wallet->isExternalAddress(addr);

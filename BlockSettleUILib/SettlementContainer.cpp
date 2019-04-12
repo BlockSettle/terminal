@@ -3,10 +3,10 @@
 
 using namespace bs;
 
-SettlementContainer::SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory)
+SettlementContainer::SettlementContainer(const std::shared_ptr<ArmoryObject> &armory)
    : QObject(nullptr), armory_(armory)
 {
-   connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &SettlementContainer::zcReceived, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &SettlementContainer::zcReceived, Qt::QueuedConnection);
 }
 
 void SettlementContainer::startTimer(const unsigned int durationSeconds)

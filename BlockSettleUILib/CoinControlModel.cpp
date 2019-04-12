@@ -465,13 +465,13 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       const UTXO& input = selectedInputs->GetTransaction(i);
       bool isSelected = selectedInputs->IsTransactionSelected(i);
       const auto address = bs::Address::fromUTXO(input);
-      const auto addrStr = address.display<std::string>();
+      const auto addrStr = address.display();
 
       auto addressIt = addressNodes_.find(addrStr);
       AddressNode *addressNode = nullptr;
 
       if (addressIt == addressNodes_.end()) {
-         addressNode = new AddressNode(address.display()
+         addressNode = new AddressNode(QString::fromStdString(address.display())
             , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
          root_->appendChildrenNode(addressNode);
          addressNodes_.emplace(addrStr, addressNode);
@@ -488,13 +488,13 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       for (size_t i = 0; i < cpfpList.size(); i++) {
          const auto &input = cpfpList[i];
          const auto address = bs::Address::fromUTXO(input);
-         const auto addrStr = address.display<std::string>();
+         const auto addrStr = address.display();
          AddressNode *addressNode = nullptr;
          const auto itAddr = cpfpNodes_.find(addrStr);
 
          if (itAddr == cpfpNodes_.end()) {
             const int row = cpfpNodes_.size();
-            addressNode = new AddressNode(address.display()
+            addressNode = new AddressNode(QString::fromStdString(address.display())
                , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
             cpfp_->appendChildrenNode(addressNode);
             cpfpNodes_[addrStr] = addressNode;

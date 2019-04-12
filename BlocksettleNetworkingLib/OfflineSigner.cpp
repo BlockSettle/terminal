@@ -41,7 +41,7 @@ QString OfflineSigner::pidFileName() const
    return QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QLatin1String("/bs_offline.pid");
 }
 
-SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
+bs::signer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
    bool, TXSignMode, const PasswordType&, bool)
 {
    if (!txSignReq.isValid()) {
@@ -56,7 +56,7 @@ SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TX
       auto input = request.add_inputs();
       input->set_utxo(utxo.serialize().toBinStr());
       const auto addr = bs::Address::fromUTXO(utxo);
-      input->mutable_address()->set_address(addr.display<std::string>());
+      input->mutable_address()->set_address(addr.display());
    }
 
    for (const auto &recip : txSignReq.recipients) {
@@ -72,7 +72,7 @@ SignContainer::RequestId OfflineSigner::signTXRequest(const bs::core::wallet::TX
 
    if (txSignReq.change.value) {
       auto change = request.mutable_change();
-      change->mutable_address()->set_address(txSignReq.change.address.display<std::string>());
+      change->mutable_address()->set_address(txSignReq.change.address.display());
       change->mutable_address()->set_index(txSignReq.change.index);
       change->set_value(txSignReq.change.value);
    }

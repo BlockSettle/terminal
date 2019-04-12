@@ -12,7 +12,6 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#include <QObject>
 #include "AsyncClient.h"
 #include "AuthAddress.h"
 
@@ -29,9 +28,8 @@ class ArmoryConnection;
 // once we could connect to a super node we should not wait for refresh signals from armory
 // we could just get info for address.
 // Probably this could be saved for users if they want to use own armory but not in supernode mode
-class AddressVerificator : public QObject
+class AddressVerificator
 {
-   Q_OBJECT
 public:
    using verification_callback = std::function<void (const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)>;
 
@@ -63,9 +61,6 @@ public:
    void GetVerificationInputs(std::function<void(std::vector<UTXO>)>) const;
    void GetRevokeInputs(std::function<void(std::vector<UTXO>)>) const;
 
-private slots:
-   void OnRefresh(std::vector<BinaryData> ids);
-
 private:
    bool startCommandQueue();
    bool stopCommandQueue();
@@ -80,11 +75,11 @@ private:
 
    ExecutionCommand CreateBSAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state);
 
-private:
+   void onRefresh(std::vector<BinaryData> ids);
+
    bool AddressWasRegistered(const std::shared_ptr<AuthAddress>& address) const;
    bool RegisterUserAddress(const std::shared_ptr<AuthAddress>& address);
 
-private:
    void ValidateAddress(const std::shared_ptr<AddressVerificationData>& state);
    void doValidateAddress(const std::shared_ptr<AddressVerificationData>& state);
    void CheckBSAddressState(const std::shared_ptr<AddressVerificationData>& state);
@@ -131,6 +126,8 @@ private:
    std::shared_ptr<AsyncClient::BtcWallet>   internalWallet_;
 
    std::map<BinaryData, unsigned int> addressRetries_;
+
+   unsigned int reqId_ = 0;
 };
 
 #endif // __AUTH_ADDRESS_VERIFICATOR_H__

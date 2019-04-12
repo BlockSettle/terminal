@@ -269,7 +269,7 @@ void RFQDealerReply::updateRecvAddresses()
    ui_->comboBoxRecvAddr->addItem(tr("Auto Create"));
    if (curWallet_ != nullptr) {
       for (const auto &addr : curWallet_->getExtAddressList()) {
-         ui_->comboBoxRecvAddr->addItem(addr.display());
+         ui_->comboBoxRecvAddr->addItem(QString::fromStdString(addr.display()));
       }
    }
 }
@@ -764,7 +764,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    auto qn = new bs::network::QuoteNotification(qrn, authKey, price, txData);
 
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
-      qn->receiptAddress = getRecvAddress().display<std::string>();
+      qn->receiptAddress = getRecvAddress().display();
       qn->reqAuthKey = qrn.requestorRecvAddress;
 
       auto wallet = transData->getSigningWallet();
@@ -851,7 +851,9 @@ void RFQDealerReply::disableAutoSign()
 {
    auto walletId = ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString();
    ui_->checkBoxAutoSign->setChecked(false);
-   emit autoSignActivated({}, walletId, false);
+   if (!walletId.isEmpty()) {
+      emit autoSignActivated({}, walletId, false);
+   }
    updateAutoSignState();
 }
 
@@ -1205,7 +1207,7 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
    }
    group->addLeaf(leaf, true);
 
-   leaf->setData(assetManager_->getCCGenesisAddr(baseProduct_).display<std::string>());
+   leaf->setData(assetManager_->getCCGenesisAddr(baseProduct_).display());
    leaf->setData(assetManager_->getCCLotSize(baseProduct_));
 
    ccWallet_ = leaf;
@@ -1243,8 +1245,7 @@ void RFQDealerReply::onCelerDisconnected()
    ui_->checkBoxAQ->setEnabled(false);
    ui_->checkBoxAQ->setCheckState(Qt::Unchecked);
    ui_->groupBoxAutoSign->setEnabled(false);
-   updateAutoSignState(); // update child control state
    aqStateChanged(Qt::Unchecked);
-   emit autoSignActivated({}, ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString(), false);
+   disableAutoSign();
    logger_->info("Disabled auto-quoting due to Celer disconnection");
 }

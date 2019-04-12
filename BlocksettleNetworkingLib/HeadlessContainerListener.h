@@ -8,8 +8,7 @@
 #include "CoreWallet.h"
 #include "EncryptionUtils.h"
 #include "ServerConnectionListener.h"
-#include "SignContainer.h"
-
+#include "SignerDefs.h"
 #include "headless.pb.h"
 
 namespace spdlog {
@@ -40,7 +39,7 @@ public:
       , const bool &backupEnabled = true);
    ~HeadlessContainerListener() noexcept override;
 
-   void SetLimits(const SignContainer::Limits &limits);
+   void SetLimits(const bs::signer::Limits &limits);
 
    bool disconnect(const std::string &clientId = {});
 
@@ -134,7 +133,7 @@ private:
    const std::string                   walletsPath_;
    const std::string                   backupPath_;
    const NetworkType                   netType_;
-   SignContainer::Limits               limits_;
+   bs::signer::Limits                  limits_;
    const bool                          watchingOnly_;
    std::unordered_set<std::string>     connectedClients_;
 

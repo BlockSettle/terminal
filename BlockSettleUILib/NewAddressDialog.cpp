@@ -51,7 +51,7 @@ NewAddressDialog::~NewAddressDialog() = default;
 
 void NewAddressDialog::displayAddress()
 {
-   const auto dispAddress = address_.display();
+   const auto dispAddress = QString::fromStdString(address_.display());
    ui_->lineEditNewAddress->setText(dispAddress);
    const QString addrURI = QLatin1String("bitcoin:") + dispAddress;
    ui_->labelQRCode->setPixmap(UiUtils::getQRCode(addrURI, 128));
@@ -59,7 +59,7 @@ void NewAddressDialog::displayAddress()
 
 void NewAddressDialog::copyToClipboard()
 {
-   QApplication::clipboard()->setText(address_.display());
+   QApplication::clipboard()->setText(QString::fromStdString(address_.display()));
 }
 
 void NewAddressDialog::onClose()

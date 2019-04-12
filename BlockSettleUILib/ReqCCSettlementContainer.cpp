@@ -11,7 +11,7 @@
 static const unsigned int kWaitTimeoutInSec = 30;
 
 ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const bs::network::RFQ &rfq, const bs::network::Quote &quote

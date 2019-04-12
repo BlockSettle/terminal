@@ -6,7 +6,7 @@
 #include "Wallets/SyncWalletsManager.h"
 
 
-StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
+StatusBarView::StatusBarView(const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
    , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &celerClient
    , const std::shared_ptr<SignContainer> &container, QStatusBar *parent)
@@ -72,11 +72,11 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryConnection> &armory
 
    SetLoggedOutStatus();
 
-   connect(armory_.get(), &ArmoryConnection::prepareConnection, this, &StatusBarView::onPrepareArmoryConnection, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryObject::prepareConnection, this, &StatusBarView::onPrepareArmoryConnection, Qt::QueuedConnection);
    connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this
       , SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
-   connect(armory_.get(), &ArmoryConnection::progress, this, &StatusBarView::onArmoryProgress, Qt::QueuedConnection);
-   connect(armory_.get(), &ArmoryConnection::connectionError, this, &StatusBarView::onArmoryError, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryObject::progress, this, &StatusBarView::onArmoryProgress, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryObject::connectionError, this, &StatusBarView::onArmoryError, Qt::QueuedConnection);
 
    connect(assetManager_.get(), &AssetManager::totalChanged, this, &StatusBarView::updateBalances);
    connect(assetManager_.get(), &AssetManager::securitiesChanged, this, &StatusBarView::updateBalances);

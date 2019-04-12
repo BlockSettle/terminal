@@ -3,8 +3,6 @@
 
 #include <string>
 
-#include <QByteArray>
-
 #include "Addresses.h"
 #include "BinaryData.h"
 #include "BTCNumericTypes.h"
@@ -26,8 +24,6 @@ namespace bs {
       Address(AddressEntryType aet = AddressEntryType_Default) : BinaryData(), aet_(aet) {}
       Address(const BinaryData &data, AddressEntryType aet = AddressEntryType_Default);
       Address(const BinaryDataRef &data, AddressEntryType aet = AddressEntryType_Default);
-      Address(const QByteArray &data, AddressEntryType aet = AddressEntryType_Default);
-      Address(const QString &data, const Format &f = Auto, AddressEntryType aet = AddressEntryType_Default);
       Address(const std::string &data, const Format &f = Auto, AddressEntryType aet = AddressEntryType_Default);
 
       bool operator==(const Address &) const;
@@ -39,7 +35,7 @@ namespace bs {
       Format format() const { return format_; }
       bool isValid() const;
       void clear();
-      template<typename TRetVal = QString> TRetVal display(Format format = Auto) const;
+      std::string display(Format format = Auto) const;
       BinaryData prefixed() const;
       BinaryData unprefixed() const;
       BinaryData id() const;

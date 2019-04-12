@@ -76,6 +76,7 @@ protected:
    QString data(const int &row, const Column &column);
    QImage statusImage(const int &row);
 
+   virtual void mousePressEvent(QMouseEvent *ev) override;
    
 public slots:
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);

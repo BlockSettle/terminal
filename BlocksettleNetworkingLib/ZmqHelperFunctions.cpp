@@ -1,6 +1,4 @@
-#include <QFile>
-
-#include "ZMQHelperFunctions.h"
+#include "ZmqHelperFunctions.h"
 #include "MessageHolder.h"
 
 #ifndef WIN32

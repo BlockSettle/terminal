@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include <QDir>
+//!#include <QDir>
 #include <spdlog/spdlog.h>
 
 #include "ArmoryConnection.h"

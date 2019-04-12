@@ -177,7 +177,7 @@ bool Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> c
          catch (const std::exception &e) {
             if (logger_ != nullptr) {
                logger_->error("[bs::sync::Wallet::getAddrTxN] Return data error - {} ", \
-                  "- Address {}", e.what(), addr.display().toStdString());
+                  "- Address {}", e.what(), addr.display());
             }
          }
 
@@ -570,7 +570,7 @@ QString Wallet::displayTxValue(int64_t val) const
    return QLocale().toString(val / BTCNumericTypes::BalanceDivider, 'f', BTCNumericTypes::default_precision);
 }
 
-void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
+void Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 {
    if (!armory_ && (armory != nullptr)) {
       armory_ = armory;
@@ -584,7 +584,7 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
    setArmory(armory);
 
@@ -846,7 +846,7 @@ int Wallet::addAddress(const bs::Address &addr, const std::string &index, Addres
          aet = addr.getType();
          idxCopy = getAddressIndex(addr);
          if (idxCopy.empty()) {
-            idxCopy = addr.display<std::string>();
+            idxCopy = addr.display();
          }
       }
       signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
