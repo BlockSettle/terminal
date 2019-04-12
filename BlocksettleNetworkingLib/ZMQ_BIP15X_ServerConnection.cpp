@@ -2,6 +2,7 @@
 
 #include "ZMQ_BIP15X_ServerConnection.h"
 #include "MessageHolder.h"
+#include "SystemFileUtils.h"
 
 using namespace std;
 
@@ -51,13 +52,11 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , const bool& ephemeralPeers)
    : ZmqServerConnection(logger, context), id_(id)
 {
-   string datadir = "";
-//!      QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
+   string datadir = SystemFilePaths::appDataLocation();
    string filename(SERVER_AUTH_PEER_FILENAME);
 
    // In general, load the client key from a special Armory wallet file.
-   if (!ephemeralPeers)
-   {
+   if (!ephemeralPeers) {
        authPeers_ = make_shared<AuthorizedPeers>(datadir, filename);
    }
    else {
