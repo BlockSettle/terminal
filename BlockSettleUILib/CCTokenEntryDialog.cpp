@@ -70,7 +70,8 @@ void CCTokenEntryDialog::tokenChanged()
          if (qry.exec() == QDialog::Accepted) {
             const auto priWallet = walletsMgr_->getPrimaryWallet();
             if (!priWallet->getGroup(bs::hd::CoinType::BlockSettle_CC)) {
-               priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
+               //cc wallet is always ext only
+               priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
             }
             bs::hd::Path path;
             path.append(bs::hd::purpose | 0x80000000);

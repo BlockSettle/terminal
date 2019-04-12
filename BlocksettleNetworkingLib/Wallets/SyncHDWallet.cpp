@@ -33,7 +33,7 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
    }
    const auto &cbProcess = [this, cbDone](HDWalletData data) {
       for (const auto &grpData : data.groups) {
-         auto group = createGroup(grpData.type);
+         auto group = createGroup(grpData.type, grpData.extOnly);
          if (!group) {
             LOG(logger_, error, "[hd::Wallet::synchronize] failed to create group {}", (uint32_t)grpData.type);
             continue;
@@ -131,7 +131,7 @@ std::shared_ptr<bs::sync::Wallet> hd::Wallet::getLeaf(const std::string &id) con
    return itLeaf->second;
 }
 
-std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
+std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct, bool isExtOnly)
 {
    std::shared_ptr<hd::Group> result;
    result = getGroup(ct);
@@ -143,17 +143,17 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
    switch (ct) {
    case bs::hd::CoinType::BlockSettle_Auth:
       result = std::make_shared<hd::AuthGroup>(path, name_, desc_, signContainer_
-         , logger_, extOnlyAddresses_);
+         , logger_, isExtOnly);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
       result = std::make_shared<hd::CCGroup>(path, name_, desc_,signContainer_
-         , logger_, extOnlyAddresses_);
+         , logger_, isExtOnly);
       break;
 
    default:
       result = std::make_shared<hd::Group>(path, name_, hd::Group::nameForType(ct)
-         , desc_, signContainer_, logger_, extOnlyAddresses_);
+         , desc_, signContainer_, logger_, isExtOnly);
       break;
    }
    addGroup(result);

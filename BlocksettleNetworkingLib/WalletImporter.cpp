@@ -92,7 +92,8 @@ void WalletImporter::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
       const auto cc = createCCWalletReqs_[id];
       createCCWalletReqs_.erase(id);
 
-      const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
+      //cc wallet is always ext only
+      const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
       group->addLeaf(leaf);
       leaf->setData(assetMgr_->getCCGenesisAddr(cc).display<std::string>());
       leaf->setData(assetMgr_->getCCLotSize(cc));

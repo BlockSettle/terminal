@@ -44,10 +44,12 @@ namespace bs {
          struct Leaf {
             std::string          id;
             bs::hd::Path::Elem   index;
+            bool extOnly;
          };
          struct Group {
             bs::hd::CoinType  type;
             std::vector<Leaf> leaves;
+            bool extOnly;
          };
          std::vector<Group>   groups;
       };

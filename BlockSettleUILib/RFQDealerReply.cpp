@@ -1202,7 +1202,8 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
    const auto &priWallet = walletsManager_->getPrimaryWallet();
    auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    if (!group) {
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC);
+      //CC wallets always are ext only
+      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    group->addLeaf(leaf, true);
 

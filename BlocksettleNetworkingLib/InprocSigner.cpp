@@ -316,9 +316,12 @@ void InprocSigner::syncHDWallet(const std::string &id, const std::function<void(
       for (const auto &group : hdWallet->getGroups()) {
          bs::sync::HDWalletData::Group groupData;
          groupData.type = static_cast<bs::hd::CoinType>(group->index());
+         groupData.extOnly = group->isExtOnly();
 
          for (const auto &leaf : group->getLeaves()) {
-            groupData.leaves.push_back({ leaf->walletId(), leaf->index() });
+            //ext only needs to be reflected on headless signer
+            groupData.leaves.push_back(
+               { leaf->walletId(), leaf->index(), leaf->hasExtOnlyAddresses() });
          }
          result.groups.push_back(groupData);
       }

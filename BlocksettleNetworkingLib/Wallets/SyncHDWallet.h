@@ -45,7 +45,7 @@ namespace bs {
             NetworkType networkType() const { return netType_; }
 
             std::shared_ptr<Group> getGroup(bs::hd::CoinType ct) const;
-            std::shared_ptr<Group> createGroup(bs::hd::CoinType ct);
+            std::shared_ptr<Group> createGroup(bs::hd::CoinType ct, bool isExtOnly);
             void addGroup(const std::shared_ptr<Group> &group);
             size_t getNumGroups() const { return groups_.size(); }
             std::vector<std::shared_ptr<Group>> getGroups() const;
@@ -90,7 +90,6 @@ namespace bs {
             const std::string walletId_;
             const std::string name_, desc_;
             NetworkType    netType_ = NetworkType::MainNet;
-            bool           extOnlyAddresses_ = false;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
             mutable QMutex    mtxGroups_;

@@ -45,6 +45,7 @@ namespace bs {
             virtual void setChainCode(const BinaryData &) {}
             virtual void shutdown(void);
             virtual std::set<AddressEntryType> getAddressTypeSet(void) const;
+            bool isExtOnly(void) const { return isExtOnly_; }
 
          protected:
             bool needsCommit() const { return needsCommit_; }

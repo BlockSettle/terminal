@@ -324,7 +324,8 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, const std::sha
       const auto cc = createCCWalletReqs_[id];
       createCCWalletReqs_.erase(id);
 
-      const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
+      //cc wallets are always ext only
+      const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
       group->addLeaf(leaf);
 
       if (createCCWalletReqs_.empty()) {

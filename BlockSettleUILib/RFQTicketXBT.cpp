@@ -242,7 +242,8 @@ void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sy
    const auto &priWallet = walletsManager_->getPrimaryWallet();
    auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    if (!group) {
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC);
+      //cc wallets are always ext only
+      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    const auto &ccProduct = getProduct().toStdString();
    group->addLeaf(leaf);

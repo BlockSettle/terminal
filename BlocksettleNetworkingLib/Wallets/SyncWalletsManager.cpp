@@ -261,7 +261,9 @@ WalletsManager::WalletPtr WalletsManager::getDefaultWallet() const
    const auto &priWallet = getPrimaryWallet();
    if (priWallet) {
       const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
-      result = group ? group->getLeaf(0) : nullptr;
+      
+      //all leaf paths are always hardened
+      result = group ? group->getLeaf(0x80000000) : nullptr;
    }
    return result;
 }
@@ -277,7 +279,8 @@ WalletsManager::WalletPtr WalletsManager::getCCWallet(const std::string &cc)
    const auto &priWallet = getPrimaryWallet();
    auto ccGroup = priWallet->getGroup(bs::hd::CoinType::BlockSettle_CC);
    if (ccGroup == nullptr) {
-      ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
+      //cc wallet is always ext only
+      ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
    }
    return ccGroup->getLeaf(cc);
 }

@@ -255,7 +255,9 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
             continue;
          }
          const auto grpType = static_cast<bs::hd::CoinType>(grpPath.get((int)grpPath.length() - 1));
-         auto group = wallet->createGroup(grpType);
+
+         throw std::runtime_error("need to carry ext only for headless signer sync message");
+         auto group = wallet->createGroup(grpType, false);
 
          for (int j = 0; j < response.wallet().leaves_size(); j++) {
             const auto responseLeaf = response.wallet().leaves(j);
