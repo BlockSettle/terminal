@@ -47,6 +47,10 @@ function raiseWindow() {
     mainWindow.flags &= ~Qt.WindowStaysOnTopHint
 }
 
+function hideWindow() {
+    mainWindow.hide()
+}
+
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
     var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo)
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);

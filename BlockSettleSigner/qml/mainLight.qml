@@ -25,14 +25,19 @@ import "js/qmlDialogs.js" as QmlDialogs
 ApplicationWindow {
     id: mainWindow
 
-    visible: true
+    visible: false
     title: qsTr("BlockSettle Signer")
     width: 450
     height: 600
 //    minimumWidth: 450
 //    minimumHeight: 600
 
-    Component.onCompleted: { hide() }
+    property var currentDialog: ({})
+
+    Component.onCompleted: {
+        hide()
+        qmlFactory.installEventFilterToObj(mainWindow)
+    }
 
     background: Rectangle {
         color: BSStyle.backgroundColor
@@ -105,17 +110,25 @@ ApplicationWindow {
     function raiseWindow() {
         JsHelper.raiseWindow()
     }
+    function hideWindow() {
+        JsHelper.hideWindow()
+    }
 
     function customDialogRequest(dialogName, data) {
-        show()
-        var dlg = QmlDialogs.customDialogRequest(dialogName, data)
-        mainWindow.width = dlg.width
-        mainWindow.height = dlg.height
-        mainWindow.title = dlg.title
-        if (typeof dlg.qmlTitleVisible !== "undefined") dlg.qmlTitleVisible = false
+        // close previous dialog
+        if (typeof currentDialog.close !== "undefined") {
+            currentDialog.close()
+        }
 
-        dlg.dialogsChainFinished.connect(function(){ hide() })
-        dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+        show()
+        currentDialog = QmlDialogs.customDialogRequest(dialogName, data)
+        mainWindow.width = currentDialog.width
+        mainWindow.height = currentDialog.height
+        mainWindow.title = currentDialog.title
+        if (typeof currentDialog.qmlTitleVisible !== "undefined") currentDialog.qmlTitleVisible = false
+
+        currentDialog.dialogsChainFinished.connect(function(){ hide() })
+        currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
             mainWindow.width = nextDialog.width
             mainWindow.height = nextDialog.height
         })

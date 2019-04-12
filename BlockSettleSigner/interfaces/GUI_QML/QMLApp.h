@@ -49,6 +49,9 @@ public:
    void Start();
    void SetRootObject(QObject *);
 
+   void raiseQmlWindow();
+   void hideQmlWindow();
+
 signals:
    void cancelSignTx(const QString &txId);
 

@@ -87,7 +87,13 @@ public:
    Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
                                                              , bs::hd::WalletInfo *walletInfo);
 
+   // service functions
    Q_INVOKABLE void setClipboard(const QString &text);
+   Q_INVOKABLE void installEventFilterToObj(QObject *object);
+   bool eventFilter(QObject *object, QEvent *event) override;
+
+signals:
+   void closeEventReceived();
 
 private:
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
