@@ -20,8 +20,8 @@ WalletsManager::~WalletsManager() noexcept
 {
    // These really ought to be called elsewhere, when the appropriate binaries
    // shut down.
-   shutdownBIP151CTX();
-   btc_ecc_stop();
+   /*shutdownBIP151CTX();
+   btc_ecc_stop();*/
 }
 
 void WalletsManager::reset()

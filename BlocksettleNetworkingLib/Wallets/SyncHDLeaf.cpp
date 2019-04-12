@@ -294,6 +294,8 @@ void hd::Leaf::postOnline()
 
 void hd::Leaf::firstInit(bool force)
 {
+   /*unused arg*/
+
    if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
       return;
    }
@@ -311,6 +313,20 @@ void hd::Leaf::firstInit(bool force)
 
 void hd::Leaf::activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &led)
 {
+   /***
+   This is unnecessarely heavy and buggy. Object lifetime seems to be completly ignored, nor 
+   is the caller thread waited upon. Qtisms don't work well in unit tests either, and there is 
+   no requirement for the Qtism in the first place. 
+
+   This code looks like it tries to synchronize address chain use from db with what's in the 
+   wallet. A single call to getBalanceAndCount on the wallet is enough to achieve this, and 
+   there is an example in Armory's WalletManager.cpp.
+   
+   This is disabled for now, will replace with proper code if the feature is actually 
+   useful.
+   ***/
+   return;
+
    std::set<BinaryData> txHashes;
    for (const auto &entry : led) {
       txHashes.insert(entry.getTxHash());
@@ -897,19 +913,26 @@ bool hd::Leaf::getSpendableTxOutList(std::function<void(std::vector<UTXO>)>cb
 {
    auto cbCnt = std::make_shared<std::atomic_uint>(0);
    auto result = std::make_shared<std::vector<UTXO>>();
+   auto mu = std::make_shared<std::mutex>();
 
-   const auto &cbTxOutList = [this, cb, cbCnt, result](std::vector<UTXO> txOutList, uint32_t nbConf) {
-      const auto curHeight = armory_ ? armory_->topBlock() : 0;
-      for (const auto &utxo : txOutList) {
-         const auto &addr = bs::Address::fromUTXO(utxo);
-         const auto &path = getPathForAddress(addr);
-         if (path.length() < 2) {
-            continue;
-         }
-         if (utxo.getNumConfirm(curHeight) >= nbConf) {
-            result->emplace_back(utxo);
+   const auto &cbTxOutList = 
+      [this, cb, cbCnt, result, mu](std::vector<UTXO> txOutList, uint32_t nbConf) 
+   {
+      {
+         std::unique_lock<std::mutex> lock(*mu);
+         const auto curHeight = armory_ ? armory_->topBlock() : 0;
+         for (auto &utxo : txOutList) {
+            const auto &addr = bs::Address::fromUTXO(utxo);
+            const auto &path = getPathForAddress(addr);
+            if (path.length() < 2) {
+               continue;
+            }
+            if (utxo.getNumConfirm(curHeight) >= nbConf) {
+               result->push_back(utxo);
+            }
          }
       }
+
       if (isExtOnly_ || cbCnt->fetch_add(1) > 0) {  // comparing with prev value
          cb(*result);
       }
@@ -1490,19 +1513,18 @@ bool hd::CCLeaf::getAddrBalance(const bs::Address &addr, std::function<void(std:
    if (!lotSizeInSatoshis_ || !validationEnded_ || !Wallet::isBalanceAvailable()) {
       return false;
    }
-   std::vector<uint64_t> xbtBalances;
+
+   /*doesnt seem thread safe, yet addressBalanceMap_ can be changed by other threads*/
+   auto inner = [this, cb, addr](std::vector<uint64_t> xbtBalances)->void
    {
-      const auto itBal = addressBalanceMap_.find(addr.prefixed());
-      if (itBal == addressBalanceMap_.end()) {
-         cb({0,0,0});
-         return true;
+      for (auto &balance : xbtBalances) {
+         balance /= lotSizeInSatoshis_;
       }
-      xbtBalances = itBal->second;
-   }
-   for (auto &balance : xbtBalances) {
-      balance /= lotSizeInSatoshis_;
-   }
-   cb(xbtBalances);
+   
+      cb(xbtBalances);
+   };
+
+   hd::Leaf::getAddrBalance(addr, inner);
    return true;
 }
 

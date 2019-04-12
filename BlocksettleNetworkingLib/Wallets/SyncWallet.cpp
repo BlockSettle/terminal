@@ -239,66 +239,63 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
 
    const auto &cbTxOutList = [this, val, btcWallet, cb]
                              (ReturnMessage<std::vector<UTXO>> txOutList) {
-      try {
+      try 
+      {
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
          auto txOutListObj = txOutList.get();
-         const auto &cbProcess = [this, val, btcWallet, txOutListObj, cb] {
-            std::vector<UTXO> txOutListCopy = txOutListObj;
-            if (utxoAdapter_) {
-               utxoAdapter_->filter(txOutListCopy);
-            }
-            if (val != UINT64_MAX) {
-               uint64_t sum = 0;
-               int cutOffIdx = -1;
-               for (size_t i = 0; i < txOutListCopy.size(); i++) {
-                  const auto &utxo = txOutListCopy[i];
-                  sum += utxo.getValue();
-                  if (sum >= val) {
-                     cutOffIdx = (int)i;
-                     break;
-                  }
-               }
-               if (cutOffIdx >= 0) {
-                  txOutListCopy.resize(cutOffIdx + 1);
+         std::vector<UTXO> txOutListCopy = txOutListObj;
+         if (utxoAdapter_) {
+            utxoAdapter_->filter(txOutListCopy);
+         }
+         if (val != UINT64_MAX) {
+            uint64_t sum = 0;
+            int cutOffIdx = -1;
+            for (size_t i = 0; i < txOutListCopy.size(); i++) {
+               const auto &utxo = txOutListCopy[i];
+               sum += utxo.getValue();
+               if (sum >= val) {
+                  cutOffIdx = (int)i;
+                  break;
                }
             }
+            if (cutOffIdx >= 0) {
+               txOutListCopy.resize(cutOffIdx + 1);
+            }
+         }
 
-            cb(txOutListCopy);
+         cb(txOutListCopy);
 
-            /***
-            QMetaObject::invokeMethod does not trigger in unit tests when Qt is left
-            to autodetect the "connection type". Forcing Qt::DirectConnection will
-            work but will always run the callback in the same thread as the caller, 
-            which I suspect is not the acceptable behavior if the caller is passing 
-            callbacks that can affect the GUI. 
-            
-            Regardless, unless this callback is called from a Qt signal, it would be
-            running from the WebSocketClient callback thread, which would result in
-            potential spendableCallbacks_ access concurency. This design isn't safe
-            under those circumstances. At any rate, Qt'isms ought to be kept outside 
-            of routines that can and should be covered by unit tests, like this one.
+         /***
+         QMetaObject::invokeMethod does not trigger in unit tests when Qt is left
+         to autodetect the "connection type". Forcing Qt::DirectConnection will
+         work but will always run the callback in the same thread as the caller,
+         which I suspect is not the acceptable behavior if the caller is passing
+         callbacks that can affect the GUI.
 
-            Also, this approach to caching similar calls can result in false positives. 
-            For example, what if the address map changes before the first call to 
-            getSpendableTxOutList completes but before a 2nd one is emited? The 2nd one 
-            would be cached, and miss UTXOs as a result. There is no check for that 
-            condition, therefor the caching should not happen in the first place.
-            ***/
+         Regardless, unless this callback is called from a Qt signal, it would be
+         running from the WebSocketClient callback thread, which would result in
+         potential spendableCallbacks_ access concurency. This design isn't safe
+         under those circumstances. At any rate, Qt'isms ought to be kept outside
+         of routines that can and should be covered by unit tests, like this one.
 
-            /*QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
-               auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
-               for (const auto &cbPairs : callbacks) {
-                  if (cbPairs.first) {
-                        cbPairs.second(txOutListCopy);
-                  }
+         Also, this approach to caching similar calls can result in false positives.
+         For example, what if the address map changes before the first call to
+         getSpendableTxOutList completes but before a 2nd one is emited? The 2nd one
+         would be cached, and miss UTXOs as a result. There is no check for that
+         condition, therefor the caching should not happen in the first place.
+         ***/
+
+         /*QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
+            auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
+            for (const auto &cbPairs : callbacks) {
+               if (cbPairs.first) {
+                     cbPairs.second(txOutListCopy);
                }
-               spendableCallbacks_.erase(btcWallet->walletID());
-            });*/
-         };
-
-         cbProcess();
+            }
+            spendableCallbacks_.erase(btcWallet->walletID());
+         });*/
       }
       catch (const std::exception &e) {
          if (logger_ != nullptr) {

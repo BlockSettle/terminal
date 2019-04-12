@@ -68,7 +68,7 @@ std::string hd::Leaf::walletId() const
 
 bool hd::Leaf::containsAddress(const bs::Address &addr)
 {
-   return (getAddressIndexForAddr(addr) != UINT32_MAX);
+   return (addressIndex(addr) != UINT32_MAX);
 }
 
 bool hd::Leaf::containsHiddenAddress(const bs::Address &addr) const
@@ -251,6 +251,13 @@ std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAsset(std::shared_ptr<
 
 bs::hd::Path::Elem hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) const
 {
+   /***
+   Do not use this method as it may drop the address entry type if a hash is
+   passed without the address prefix
+   ***/
+
+   throw std::runtime_error("deprecated 3");
+
    Address addrObj(addr);
    auto path = getPathForAddress(addrObj);
    if (path.length() == 0)
