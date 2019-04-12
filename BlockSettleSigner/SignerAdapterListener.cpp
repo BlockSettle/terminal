@@ -4,7 +4,6 @@
 #include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
-#include "HeadlessContainer.h"
 #include "HeadlessContainerListener.h"
 #include "ServerConnection.h"
 
