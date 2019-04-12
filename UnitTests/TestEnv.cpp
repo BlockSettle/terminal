@@ -8,29 +8,16 @@
 #include "TestEnv.h"
 
 #include "ApplicationSettings.h"
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "ArmorySettings.h"
 #include "AuthAddressManager.h"
+#include "BS_regtest.h"
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
 #include "QuoteProvider.h"
 #include "UiUtils.h"
-
-
-std::shared_ptr<ApplicationSettings> TestEnv::appSettings_;
-std::shared_ptr<ArmoryConnection> TestEnv::armoryConnection_;
-std::shared_ptr<ArmoryInstance> TestEnv::armoryInstance_;
-std::shared_ptr<MockAssetManager> TestEnv::assetMgr_;
-std::shared_ptr<MockAuthAddrMgr> TestEnv::authAddrMgr_;
-std::shared_ptr<BlockchainMonitor> TestEnv::blockMonitor_;
-std::shared_ptr<CelerClient> TestEnv::celerConn_;
-std::shared_ptr<ConnectionManager> TestEnv::connMgr_;
-std::shared_ptr<spdlog::logger> TestEnv::logger_;
-std::shared_ptr<MarketDataProvider> TestEnv::mdProvider_;
-std::shared_ptr<QuoteProvider> TestEnv::quoteProvider_;
-std::shared_ptr<bs::core::WalletsManager> TestEnv::walletsMgr_;
 
 const BinaryData testnetGenesisBlock = READHEX("0100000000000000000000000000000000000\
 000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51\
@@ -41,14 +28,10 @@ e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0f
 5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec\
 112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000");
 
+std::shared_ptr<spdlog::logger> StaticLogger::loggerPtr = nullptr;
+
 TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 {
-   std::srand(std::time(nullptr));
-
-   btc_ecc_start();
-   startupBIP151CTX();
-   startupBIP150CTX(4, true);
-
    QStandardPaths::setTestModeEnabled(true);
    logger_ = logger;
    UiUtils::SetupLocale();
@@ -58,7 +41,7 @@ TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 
    /*   appSettings_->set(ApplicationSettings::armoryDbIp, QLatin1String("localhost"));
    appSettings_->set(ApplicationSettings::armoryDbPort, 19001);*/
-   appSettings_->set(ApplicationSettings::armoryDbIp, QLatin1String("193.138.218.38"));
+   appSettings_->set(ApplicationSettings::armoryDbIp, QLatin1String("127.0.0.1"));
    appSettings_->set(ApplicationSettings::armoryDbPort, 82);
    appSettings_->set(ApplicationSettings::initialized, true);
    if (!appSettings_->LoadApplicationSettings({ QLatin1String("unit_tests") })) {
@@ -68,37 +51,38 @@ TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger_, 0);
 }
 
-void TestEnv::TearDown()
+void TestEnv::shutdown()
 {
-   logger_->debug("BS unit tests finished");
+   if(appSettings_ != nullptr)
+      QDir(appSettings_->GetHomeDir()).removeRecursively();
+
+   logger_->debug("test done");
    logger_->flush();
    mdProvider_ = nullptr;
    quoteProvider_ = nullptr;
-   walletsMgr_ = nullptr;
    authAddrMgr_ = nullptr;
    celerConn_ = nullptr;
 
-   QDir(appSettings_->GetHomeDir()).removeRecursively();
-   QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
-
-   armoryConnection_ = nullptr;
    armoryInstance_ = nullptr;
+   armoryConnection_ = nullptr;
    assetMgr_ = nullptr;
    connMgr_ = nullptr;
    appSettings_ = nullptr;
+
+   walletsMgr_ = nullptr;
+
+   QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
 }
 
 void TestEnv::requireArmory()
 {
-   if (regtestControl_) {
-      return;
-   }
-
    //init armorydb
-   armoryInstance_ = std::make_shared<ArmoryInstance>();
-   regtestControl_ = std::make_shared<RegtestController>(BS_REGTEST_HOST, BS_REGTEST_PORT, BS_REGTEST_AUTH_COOKIE);
+   if (armoryInstance_ != nullptr)
+      return;
 
-   armoryConnection_ = std::make_shared<ArmoryConnection>(logger_, "tx_cache");
+   armoryInstance_ = std::make_shared<ArmoryInstance>();
+
+   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "tx_cache");
    ArmorySettings settings;
    settings.runLocally = false;
    settings.socketType = TestEnv::appSettings()->GetArmorySocketType();
@@ -127,9 +111,6 @@ void TestEnv::requireArmory()
 
 void TestEnv::requireAssets()
 {
-   if (authAddrMgr_ && assetMgr_) {
-      return;
-   }
    requireArmory();
    authAddrMgr_ = std::make_shared<MockAuthAddrMgr>(logger_, armoryConnection_);
 
@@ -160,6 +141,7 @@ ArmoryInstance::ArmoryInstance()
    NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
    BlockDataManagerConfig::setServiceType(SERVICE_WEBSOCKET);
    BlockDataManagerConfig::setDbType(ARMORY_DB_SUPER);
+   BlockDataManagerConfig::setOperationMode(OPERATION_UNITTEST);
    auto& magicBytes = NetworkConfig::getMagicBytes();
 
    //create block file with testnet genesis block
@@ -190,7 +172,6 @@ ArmoryInstance::ArmoryInstance()
    config_.listenPort_ = port_ss.str();
 
    //setup bip151 context
-   startupBIP151CTX();
    startupBIP150CTX(4, true);
 
    //setup auth
@@ -247,7 +228,15 @@ ArmoryInstance::~ArmoryInstance()
    DBUtils::removeDirectory(ldbdir_);
 }
 
-void ArmoryInstance::mineNewBlock(const BinaryData& addr)
+std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(
+   ScriptRecipient* rec, unsigned count)
 {
-   nodePtr_->mineNewBlock(addr);
+   return nodePtr_->mineNewBlock(count, rec);
+}
+
+void ArmoryInstance::pushZC(const BinaryData& zc)
+{
+   std::vector<BinaryData> zcVec;
+   zcVec.push_back(zc);
+   nodePtr_->pushZC(zcVec);
 }

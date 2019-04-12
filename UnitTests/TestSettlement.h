@@ -10,6 +10,7 @@
 #include "Address.h"
 #include "BlockchainMonitor.h"
 #include "SettlementMonitor.h"
+#include "TestEnv.h"
 
 
 namespace bs {
@@ -44,6 +45,9 @@ protected:
    bool waitForPayIn(double timeoutInSec = 30) { return BlockchainMonitor::waitForFlag(receivedPayIn_, timeoutInSec); }
    bool waitForPayOut(double timeoutInSec = 30) { return BlockchainMonitor::waitForFlag(receivedPayOut_, timeoutInSec); }
    bool waitForSettlWallet(double timeoutInSec = 10) { return BlockchainMonitor::waitForFlag(settlWalletReady_, timeoutInSec); }
+   
+   void mineBlocks(unsigned count);
+   void sendTo(uint64_t value, bs::Address& addr);
 
 protected:
    const size_t   nbParties_ = 2;
@@ -65,6 +69,18 @@ private:
    std::atomic_bool  settlWalletReady_;
    QMutex            mtxWalletId_;
    std::set<QString> walletsReady_;
+   std::shared_ptr<TestEnv> envPtr_;
+
+   SecureBinaryData coinbasePrivKey_ =
+      READHEX("0102030405060708090A0B0C0D0E0F1112131415161718191A1B1C1D1E1F");
+   BinaryData coinbasePubKey_;
+   BinaryData coinbaseScrAddr_;
+   std::shared_ptr<ResolverCoinbase> coinbaseFeed_;
+
+   std::map<unsigned, BinaryData> coinbaseHashes_;
+   unsigned coinbaseCounter_ = 0;
+
+   SecureBinaryData passphrase_;
 
 private:
    void onWalletReady(const QString &id);

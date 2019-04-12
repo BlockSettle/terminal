@@ -10,10 +10,48 @@
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
 #include "TestEnv.h"
+#include "RegtestController.h"
 #include "TransactionData.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 
+using std::make_unique;
+
+void TestSettlement::mineBlocks(unsigned count)
+{
+   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   Recipient_P2PKH coinbaseRecipient(coinbaseScrAddr_, 50 * COIN);
+   auto&& cbMap = envPtr_->armoryInstance()->mineNewBlock(&coinbaseRecipient, count);
+   coinbaseHashes_.insert(cbMap.begin(), cbMap.end());
+   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + count);
+}
+
+void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
+{
+   //create spender
+   auto iter = coinbaseHashes_.begin();
+   for (unsigned i = 0; i < coinbaseCounter_; i++)
+      ++iter;
+   ++coinbaseCounter_;
+
+   Recipient_P2PKH coinbaseRecipient(coinbaseScrAddr_, 50 * COIN);
+   auto fullUtxoScript = coinbaseRecipient.getSerializedScript();
+   auto utxoScript = fullUtxoScript.getSliceCopy(9, fullUtxoScript.getSize() - 9);
+   UTXO utxo(50 * COIN, iter->first, 0, 0, iter->second, utxoScript);
+   auto spendPtr = std::make_shared<ScriptSpender>(utxo);
+
+   //craft tx off of a single utxo
+   Signer signer;
+
+   signer.addSpender(spendPtr);
+
+   signer.addRecipient(addr.getRecipient(value));
+   signer.setFeed(coinbaseFeed_);
+
+   //sign & send
+   signer.sign();
+   envPtr_->armoryInstance()->pushZC(signer.serialize());
+}
 
 TestSettlement::TestSettlement()
    : QObject(nullptr)
@@ -23,68 +61,94 @@ TestSettlement::TestSettlement()
 
 void TestSettlement::SetUp()
 {
-   TestEnv::requireAssets();
-   const auto &cbBalance = [](double balance) {
-      auto curHeight = TestEnv::armory()->topBlock();
-      if (balance < 50) {
-//         TestEnv::regtestControl()->GenerateBlocks(101, [](bool) {});
-         TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 101);
-      }
-   };
-//   TestEnv::regtestControl()->GetBalance(cbBalance);
+   passphrase_ = SecureBinaryData("pass");
+   coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
+   coinbaseScrAddr_ = BtcUtils::getHash160(coinbasePubKey_);
+   coinbaseFeed_ =
+      std::make_shared<ResolverCoinbase>(coinbasePrivKey_, coinbasePubKey_);
 
-   const auto amount = initialTransferAmount_;
+   envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
+   envPtr_->requireAssets();
 
-   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(TestEnv::logger());
+   mineBlocks(101);
+
+   auto logger = envPtr_->logger();
+   const auto amount = initialTransferAmount_ * COIN;
+
+   walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
    walletsMgr_->createSettlementWallet(NetworkType::TestNet, {});
 
    for (size_t i = 0; i < nbParties_; i++) {
-      auto hdWallet = std::make_shared<bs::core::hd::Wallet>("Primary" + std::to_string(i), ""
-         , NetworkType::TestNet, TestEnv::logger(), true);
+      auto hdWallet = std::make_shared<bs::core::hd::Wallet>(
+         "Primary" + std::to_string(i), ""
+         , NetworkType::TestNet, passphrase_
+         , envPtr_->armoryInstance()->homedir_, logger);
+
+      std::shared_ptr<bs::core::hd::Leaf> leaf;
+      bs::Address addr;
       auto grp = hdWallet->createGroup(hdWallet->getXBTGroupType());
-      auto leaf = grp->createLeaf(0);
-      auto addr = leaf->getNewExtAddress(AddressEntryType_P2SH);
+      {
+         auto lock = hdWallet->lockForEncryption(passphrase_);
+         leaf = grp->createLeaf(0);
+         addr = leaf->getNewExtAddress(
+            AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+      }
 
-      const auto &cbSend = [amount, addr](QString result) {
-         TestEnv::logger()->debug("[TestSettlement] sending {} to {}: {}", amount, addr.display()
-            , result.toStdString());
-      };
-//      TestEnv::regtestControl()->SendTo(amount, addr, cbSend);
+      sendTo(amount, addr);
 
-      hdWallet->setChainCode(CryptoPRNG::generateRandom(32));
+      std::shared_ptr<bs::core::hd::Leaf> authLeaf;
+      bs::Address authAddr;
       auto authGrp = hdWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
-      auto authLeaf = authGrp->createLeaf(0);
-      auto authAddr = authLeaf->getNewExtAddress();
+      {
+         auto lock = hdWallet->lockForEncryption(passphrase_);
+         authLeaf = authGrp->createLeaf(0);
+         authAddr = authLeaf->getNewExtAddress();
+      }
 
       walletsMgr_->addWallet(hdWallet);
       signWallet_.emplace_back(leaf);
       authSignWallet_.emplace_back(authLeaf);
       authAddr_.emplace_back(authAddr);
       fundAddr_.emplace_back(addr);
-      TestEnv::logger()->debug("[TestSettlement] {} fundAddr={}, authAddr={}", hdWallet->name()
+      logger->debug("[TestSettlement] {} fundAddr={}, authAddr={}", hdWallet->name()
          , addr.display(), authAddr.display());
    }
 
-   auto inprocSigner = std::make_shared<InprocSigner>(walletsMgr_, TestEnv::logger(), "", NetworkType::TestNet);
+   auto inprocSigner = std::make_shared<InprocSigner>(
+      walletsMgr_, logger, "", NetworkType::TestNet);
    inprocSigner->Start();
-   syncMgr_ = std::make_shared<bs::sync::WalletsManager>(TestEnv::logger()
-      , TestEnv::appSettings(), TestEnv::armory());
+   syncMgr_ = std::make_shared<bs::sync::WalletsManager>(logger
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
    syncMgr_->setSignContainer(inprocSigner);
    syncMgr_->syncWallets();
-   syncMgr_->registerWallets();
 
-   auto curHeight = TestEnv::armory()->topBlock();
-//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
-   TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
-   for (const auto &wallet : syncMgr_->getAllWallets()) {
-      wallet->updateBalances();
-   }
+   auto regIDs = syncMgr_->registerWallets();
+   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+
+   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   mineBlocks(6);
+
+   auto wltCount = syncMgr_->getAllWallets().size();
+   auto promPtr = std::make_shared<std::promise<bool>>();
+   auto fut = promPtr->get_future();
+   auto ctrPtr = std::make_shared<std::atomic<unsigned>>(0);
+      
+
+   auto balLBD = [promPtr, ctrPtr, wltCount](void)->void
+   {
+      if (ctrPtr->fetch_add(1) == wltCount)
+         promPtr->set_value(true);
+   };
+
+   for (const auto &wallet : syncMgr_->getAllWallets())
+      wallet->updateBalances(balLBD);
 
    const auto settlWallet = syncMgr_->getWalletById(walletsMgr_->getSettlementWallet()->walletId());
-   TestEnv::blockMonitor()->waitForWalletReady(settlWallet);
-   settlWallet->updateBalances();
+   settlWallet->updateBalances(balLBD);
    connect(settlWallet.get(), &bs::sync::Wallet::walletReady, this, &TestSettlement::onWalletReady);
    settlementId_ = CryptoPRNG::generateRandom(32);
+
+   fut.wait();
 }
 
 void TestSettlement::TearDown()
