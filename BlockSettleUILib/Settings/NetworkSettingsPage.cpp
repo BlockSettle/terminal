@@ -78,7 +78,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    connect(ui_->pushButtonArmoryServerKeySave, &QPushButton::clicked, this, [this](){
       QString fileName = QFileDialog::getSaveFileName(this
                                    , tr("Save Armory Public Key")
-                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + QStringLiteral("Armory Server Public Key.pub")
                                    , tr("Key files (*.pub)"));
 
       QFile file(fileName);
@@ -93,7 +93,7 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
    connect(ui_->pushButtonArmoryTerminalKeySave, &QPushButton::clicked, this, [this](){
       QString fileName = QFileDialog::getSaveFileName(this
                                    , tr("Save Armory Public Key")
-                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + QStringLiteral("Terminal Public Key.pub")
                                    , tr("Key files (*.pub)"));
 
       QFile file(fileName);
