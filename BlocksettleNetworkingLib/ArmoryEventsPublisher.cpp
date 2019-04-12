@@ -14,30 +14,30 @@ ArmoryEventsPublisher::ArmoryEventsPublisher(const std::shared_ptr<ConnectionMan
 
 ArmoryEventsPublisher::~ArmoryEventsPublisher() noexcept
 {
-   DisconnectFromArmoryConnection();
+   disconnectFromArmory();
 }
 
-bool ArmoryEventsPublisher::IsConnectedToArmory() const
+bool ArmoryEventsPublisher::isConnectedToArmory() const
 {
-   return armoryConnection_ != nullptr;
+   return armory_ != nullptr;
 }
 
-void ArmoryEventsPublisher::DisconnectFromArmoryConnection()
+void ArmoryEventsPublisher::disconnectFromArmory()
 {
-   if (IsConnectedToArmory()) {
+   if (isConnectedToArmory()) {
       logger_->debug("[ArmoryEventsPublisher::DisconnectFromArmoryConnection] disposing armory events publisher");
 
-      disconnect(armoryConnection_.get(), &ArmoryConnection::newBlock, this, &ArmoryEventsPublisher::onNewBlock);
-      disconnect(armoryConnection_.get(), &ArmoryConnection::zeroConfReceived, this, &ArmoryEventsPublisher::onZeroConfReceived);
+      disconnect(armory_.get(), &ArmoryObject::newBlock, this, &ArmoryEventsPublisher::onNewBlock);
+      disconnect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &ArmoryEventsPublisher::onZeroConfReceived);
 
-      armoryConnection_ = nullptr;
+      armory_ = nullptr;
       publisher_ = nullptr;
    }
 }
 
-bool ArmoryEventsPublisher::ConnectToArmoryConnection(const std::shared_ptr<ArmoryConnection>& armoryConnection)
+bool ArmoryEventsPublisher::connectToArmory(const std::shared_ptr<ArmoryObject>& armoryConnection)
 {
-   if (IsConnectedToArmory()) {
+   if (isConnectedToArmory()) {
       logger_->debug("[ArmoryEventsPublisher::ConnectToArmoryConnection] already connected to armory");
       return false;
    }
@@ -52,12 +52,12 @@ bool ArmoryEventsPublisher::ConnectToArmoryConnection(const std::shared_ptr<Armo
       return false;
    }
 
-   armoryConnection_ = armoryConnection;
+   armory_ = armoryConnection;
 
    // subscribe to all armory connection signals
-   connect(armoryConnection.get(), &ArmoryConnection::newBlock
+   connect(armoryConnection.get(), &ArmoryObject::newBlock
       , this, &ArmoryEventsPublisher::onNewBlock, Qt::QueuedConnection);
-   connect(armoryConnection.get(), &ArmoryConnection::zeroConfReceived
+   connect(armoryConnection.get(), &ArmoryObject::zeroConfReceived
       , this, &ArmoryEventsPublisher::onZeroConfReceived, Qt::QueuedConnection);
 
    return true;

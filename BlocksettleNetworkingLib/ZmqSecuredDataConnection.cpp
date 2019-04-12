@@ -25,7 +25,7 @@ ZmqSecuredDataConnection::ZmqSecuredDataConnection(const std::shared_ptr<spdlog:
 
 bool ZmqSecuredDataConnection::SetServerPublicKey(const BinaryData& key)
 {
-   if (key.getSize() != CURVEZMQPUBKEYBUFFERSIZE) {
+   if (key.getSize() != 40) {
       if (logger_) {
          logger_->error("[ZmqSecuredDataConnection::{}] invalid length of "
             "server public key ({} bytes).", __func__, key.getSize());

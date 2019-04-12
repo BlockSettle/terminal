@@ -1,7 +1,7 @@
 #ifndef __SETTLEMENT_MONITOR_H__
 #define __SETTLEMENT_MONITOR_H__
 
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "SettlementAddressEntry.h"
 
 #include <spdlog/spdlog.h>
@@ -132,7 +132,7 @@ namespace bs {
    Q_OBJECT;
    public:
       SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<ArmoryObject> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
          , const std::shared_ptr<spdlog::logger> &);
       SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -163,6 +163,9 @@ namespace bs {
       void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
       void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
       void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
+
+   private:
+      std::shared_ptr<ArmoryObject> armoryObj_;
    };
 
    class SettlementMonitorCb : public SettlementMonitor

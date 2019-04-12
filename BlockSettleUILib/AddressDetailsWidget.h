@@ -2,7 +2,7 @@
 #define __ADDRESSDETAILSWIDGET_H__
 
 #include "Address.h"
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 
 #include <QWidget>
 #include <QItemSelection>
@@ -25,7 +25,7 @@ public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
    ~AddressDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &armory
+   void init(const std::shared_ptr<ArmoryObject> &armory
       , const std::shared_ptr<spdlog::logger> &inLogger
       , const std::shared_ptr<QTimer> &inTimer);
    void setQueryAddr(const bs::Address& inAddrVal);
@@ -78,9 +78,10 @@ private:
    std::unordered_map<std::string, std::shared_ptr<bs::sync::PlainWallet>> dummyWallets_;
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
-   std::shared_ptr<QTimer>             expTimer_;
-   std::shared_ptr<ArmoryConnection>   armory_;
-   std::shared_ptr<spdlog::logger>     logger_;
+
+   std::shared_ptr<ArmoryObject>    armory_;
+   std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<QTimer>          expTimer_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

@@ -2,10 +2,10 @@
 #define __UTXO_RESERVATION_H__
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
-#include <QDateTime>
 #include "TxClasses.h"
 
 
@@ -80,7 +80,7 @@ namespace bs {
       // Wallet ID, unordered set of Reservation IDs
       std::unordered_map<std::string, IdList>      resIdByWalletId_;
       // Reservation ID, time of reservation
-      std::unordered_map<std::string, QDateTime>   reserveTime_;
+      std::unordered_map<std::string, std::chrono::time_point<std::chrono::system_clock>> reserveTime_;
       // Active adapters.
       std::vector<std::shared_ptr<Adapter>>        adapters_;
    };

@@ -2,8 +2,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
-
-#include <QDir>
+#include "SystemFileUtils.h"
 
 using namespace bs;
 
@@ -109,11 +108,13 @@ std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr
    std::shared_ptr<spdlog::logger> result;
 
    if (!config.fileName.empty()) {
-      QDir dirObject;
-      auto logFilePath = QFileInfo(QString::fromStdString(config.fileName)).absolutePath();
-      std::string filePathString = logFilePath.toStdString();
-      if (!dirObject.exists(logFilePath)) {
-         dirObject.mkpath(logFilePath);
+      const auto pSep = config.fileName.find_last_of('/');
+      if (pSep != std::string::npos) {
+         const auto filePath = config.fileName.substr(0, pSep - 1);
+         auto logFilePath = SystemFileUtils::absolutePath(filePath);
+         if (!SystemFileUtils::pathExist(logFilePath)) {
+            SystemFileUtils::mkPath(logFilePath);
+         }
       }
    }
 

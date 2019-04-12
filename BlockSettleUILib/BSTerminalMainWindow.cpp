@@ -400,7 +400,7 @@ void BSTerminalMainWindow::LoadWallets()
       goOnlineArmory();
       updateControlEnabledState();
 
-      connect(armory_.get(), &ArmoryConnection::stateChanged, this, [this](ArmoryConnection::State state) {
+      connect(armory_.get(), &ArmoryObject::stateChanged, this, [this](ArmoryConnection::State state) {
          if (!initialWalletCreateDialogShown_) {
             if (state == ArmoryConnection::State::Connected && walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
                initialWalletCreateDialogShown_ = true;
@@ -769,12 +769,12 @@ void BSTerminalMainWindow::ArmoryIsOffline()
 
 void BSTerminalMainWindow::initArmory()
 {
-   armory_ = std::make_shared<ArmoryConnection>(logMgr_->logger()
+   armory_ = std::make_shared<ArmoryObject>(logMgr_->logger()
       , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName), true);
-   connect(armory_.get(), &ArmoryConnection::txBroadcastError, [](const QString &txHash, const QString &error) {
+   connect(armory_.get(), &ArmoryObject::txBroadcastError, [](const QString &txHash, const QString &error) {
       NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { txHash, error });
    });
-   connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &BSTerminalMainWindow::onZCreceived, Qt::QueuedConnection);
+   connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &BSTerminalMainWindow::onZCreceived, Qt::QueuedConnection);
    connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
 }
 

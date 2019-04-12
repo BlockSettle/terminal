@@ -46,8 +46,8 @@ ExplorerWidget::~ExplorerWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx). Blocks won't
 // be set up for now.
-void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
-   , const std::shared_ptr<spdlog::logger> &inLogger)
+void ExplorerWidget::init(const std::shared_ptr<ArmoryObject> &armory,
+                          const std::shared_ptr<spdlog::logger> &inLogger)
 {
    armory_ = armory;
    logger_ = inLogger;
@@ -95,12 +95,15 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
    bool strIsAddress = false;
    bs::Address bsAddress;
    try {
-      bsAddress = bs::Address(userStr.trimmed(), bs::Address::Format::Base58);
+      bsAddress = bs::Address(userStr.trimmed().toStdString()
+         , bs::Address::Format::Base58);
       strIsAddress = bsAddress.isValid();
    } catch (...) {}
-   if(strIsAddress == false) {
+
+   if (!strIsAddress) {
       try {
-         bsAddress = bs::Address(userStr.trimmed(), bs::Address::Format::Bech32);
+         bsAddress = bs::Address(userStr.trimmed().toStdString()
+            , bs::Address::Format::Bech32);
          strIsAddress = bsAddress.isValid();
       } catch (...) {}
    }
@@ -170,12 +173,15 @@ void ExplorerWidget::onAddressClicked(QString addressId)
    bs::Address bsAddress;
    bool strIsBase58 = false;
    try {
-      bsAddress = bs::Address(addressId.trimmed(), bs::Address::Format::Base58);
+      bsAddress = bs::Address(addressId.trimmed().toStdString()
+         , bs::Address::Format::Base58);
       strIsBase58 = bsAddress.isValid();
    } catch (...) {}
-   if(strIsBase58 == false) {
+
+   if (!strIsBase58) {
       try {
-         bsAddress = bs::Address(addressId.trimmed(), bs::Address::Format::Bech32);
+         bsAddress = bs::Address(addressId.trimmed().toStdString()
+            , bs::Address::Format::Bech32);
          strIsBase58 = bsAddress.isValid();
       } catch (...) {}
    }

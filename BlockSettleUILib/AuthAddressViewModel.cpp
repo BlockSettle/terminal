@@ -29,7 +29,7 @@ QVariant AuthAddressViewModel::data(const QModelIndex &index, int role) const
    if (role == Qt::DisplayRole) {
       switch(static_cast<AuthAddressViewColumns>(index.column())) {
       case AuthAddressViewColumns::ColumnName:
-         return address.display();
+         return QString::fromStdString(address.display());
       case AuthAddressViewColumns::ColumnState:
          switch (authManager_->GetState(address)) {
          case AddressVerificationState::VerificationFailed:

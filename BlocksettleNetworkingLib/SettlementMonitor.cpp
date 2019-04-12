@@ -319,10 +319,11 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
 
 
 bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
- : SettlementMonitor(rtWallet, armory, addr, logger)
+   : SettlementMonitor(rtWallet, armory, addr, logger)
+   , armoryObj_(armory)
 {}
 
 bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -339,9 +340,9 @@ bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
 
 void bs::SettlementMonitorQtSignals::start()
 {
-   connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this
+   connect(armoryObj_.get(), &ArmoryObject::zeroConfReceived, this
       , &bs::SettlementMonitorQtSignals::onZCEvent, Qt::QueuedConnection);
-   connect(armory_.get(), &ArmoryConnection::newBlock, this
+   connect(armoryObj_.get(), &ArmoryObject::newBlock, this
       , &bs::SettlementMonitorQtSignals::onBlockchainEvent, Qt::QueuedConnection);
 
    checkNewEntries();
@@ -349,9 +350,9 @@ void bs::SettlementMonitorQtSignals::start()
 
 void bs::SettlementMonitorQtSignals::stop()
 {
-   disconnect(armory_.get(), &ArmoryConnection::zeroConfReceived, this
+   disconnect(armoryObj_.get(), &ArmoryObject::zeroConfReceived, this
       , &bs::SettlementMonitorQtSignals::onZCEvent);
-   disconnect(armory_.get(), &ArmoryConnection::newBlock, this
+   disconnect(armoryObj_.get(), &ArmoryObject::newBlock, this
       , &bs::SettlementMonitorQtSignals::onBlockchainEvent);
 }
 

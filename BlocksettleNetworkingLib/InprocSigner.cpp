@@ -1,4 +1,5 @@
 #include "InprocSigner.h"
+#include <QTimer>
 #include <spdlog/spdlog.h>
 #include "Address.h"
 #include "CoreSettlementWallet.h"
@@ -48,7 +49,7 @@ bool InprocSigner::Start()
 // All signing code below doesn't include password request support for encrypted wallets - i.e.
 // a password should be passed directly to signing methods
 
-SignContainer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
+bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
    bool, TXSignMode mode, const PasswordType &password, bool)
 {
    if (!txSignReq.isValid()) {
@@ -77,13 +78,13 @@ SignContainer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXS
    return reqId;
 }
 
-SignContainer::RequestId InprocSigner::signPartialTXRequest(const bs::core::wallet::TXSignRequest &txReq
+bs::signer::RequestId InprocSigner::signPartialTXRequest(const bs::core::wallet::TXSignRequest &txReq
    , bool autoSign, const PasswordType &password)
 {
    return signTXRequest(txReq, autoSign, TXSignMode::Partial, password);
 }
 
-SignContainer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+bs::signer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::Address &authAddr, const std::string &settlementId, bool autoSign, const PasswordType &password)
 {
    if (!txSignReq.isValid()) {
@@ -116,13 +117,13 @@ SignContainer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::walle
    return reqId;
 }
 
-SignContainer::RequestId InprocSigner::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &)
+bs::signer::RequestId InprocSigner::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &)
 {
    logger_->info("[{}] currently not supported", __func__);
    return 0;
 }
 
-SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
+bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &path
    , const std::vector<bs::wallet::PasswordData> &pwdData)
 {
    const auto hdWallet = walletsMgr_->getHDWalletById(rootWalletId);
@@ -173,7 +174,7 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
       return 0;
    }
 
-   const RequestId reqId = seqId_++;
+   const bs::signer::RequestId reqId = seqId_++;
    std::shared_ptr<bs::sync::hd::Leaf> hdLeaf;
    switch (groupType) {
    case bs::hd::CoinType::Bitcoin_main:
@@ -195,13 +196,13 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
    return reqId;
 }
 
-SignContainer::RequestId InprocSigner::createHDWallet(const std::string &name, const std::string &desc
+bs::signer::RequestId InprocSigner::createHDWallet(const std::string &name, const std::string &desc
    , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData
    , bs::wallet::KeyRank keyRank)
 {
    try {
       const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, primary, pwdData, keyRank);
-      const RequestId reqId = seqId_++;
+      const bs::signer::RequestId reqId = seqId_++;
       const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->networkType(), wallet->walletId()
          , wallet->name(), wallet->description(), this, logger_);
       QTimer::singleShot(1, [this, reqId, hdWallet] { emit HDWalletCreated(reqId, hdWallet); });
@@ -226,19 +227,19 @@ void InprocSigner::createSettlementWallet(const std::function<void(const std::sh
    }
 }
 
-SignContainer::RequestId InprocSigner::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
+bs::signer::RequestId InprocSigner::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
 {
    return 0;
 }
 
-SignContainer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
+bs::signer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
 {
    walletsMgr_->setChainCode(userId);
    QTimer::singleShot(1, [this] { emit UserIdSet(); });
    return seqId_++;
 }
 
-SignContainer::RequestId InprocSigner::DeleteHDRoot(const std::string &walletId)
+bs::signer::RequestId InprocSigner::DeleteHDRoot(const std::string &walletId)
 {
    const auto wallet = walletsMgr_->getHDWalletById(walletId);
    if (!wallet) {
@@ -251,7 +252,7 @@ SignContainer::RequestId InprocSigner::DeleteHDRoot(const std::string &walletId)
    return 0;
 }
 
-SignContainer::RequestId InprocSigner::DeleteHDLeaf(const std::string &walletId)
+bs::signer::RequestId InprocSigner::DeleteHDLeaf(const std::string &walletId)
 {
    const auto wallet = walletsMgr_->getWalletById(walletId);
    if (!wallet) {
@@ -264,7 +265,7 @@ SignContainer::RequestId InprocSigner::DeleteHDLeaf(const std::string &walletId)
    return 0;
 }
 
-//SignContainer::RequestId InprocSigner::changePassword(const std::string &walletId
+//bs::signer::RequestId InprocSigner::changePassword(const std::string &walletId
 //   , const std::vector<bs::wallet::PasswordData> &newPass
 //   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
 //   , bool addNew, bool removeOld, bool dryRun)
@@ -282,7 +283,7 @@ SignContainer::RequestId InprocSigner::DeleteHDLeaf(const std::string &walletId)
 //   return seqId_++;
 //}
 
-SignContainer::RequestId InprocSigner::GetInfo(const std::string &walletId)
+bs::signer::RequestId InprocSigner::GetInfo(const std::string &walletId)
 {
    auto hdWallet = walletsMgr_->getHDWalletById(walletId);
    if (!hdWallet) {

@@ -5,8 +5,6 @@
 #include "FastLock.h"
 #include "BlockDataManagerConfig.h"
 
-#include <QDateTime>
-
 #include <cassert>
 #include <spdlog/spdlog.h>
 
@@ -45,20 +43,20 @@ struct AddressVerificationData
 
 AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &armory
    , const std::string& walletId, verification_callback callback)
-   : QObject(nullptr)
-   , logger_(logger)
+   : logger_(logger)
    , armory_(armory)
    , walletId_(walletId)
    , userCallback_(callback)
    , stopExecution_(false)
 {
-   connect(armory_.get(), &ArmoryConnection::refresh, this, &AddressVerificator::OnRefresh, Qt::QueuedConnection);
+   reqId_ = armory_->setRefreshCb([this](std::vector<BinaryData> ids, bool) { onRefresh(ids); });
 
    startCommandQueue();
 }
 
 AddressVerificator::~AddressVerificator() noexcept
 {
+   armory_->unsetRefreshCb(reqId_);
    stopCommandQueue();
 }
 
@@ -84,8 +82,7 @@ bool AddressVerificator::stopCommandQueue()
 
 void AddressVerificator::commandQueueThreadFunction()
 {
-   forever
-   {
+   while(true) {
       ExecutionCommand nextCommand;
 
       {
@@ -652,7 +649,7 @@ void AddressVerificator::RegisterAddresses()
    }
 }
 
-void AddressVerificator::OnRefresh(std::vector<BinaryData> ids)
+void AddressVerificator::onRefresh(std::vector<BinaryData> ids)
 {
    const auto &it = std::find(ids.begin(), ids.end(), regId_);
    if (it == ids.end()) {

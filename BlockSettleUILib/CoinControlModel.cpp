@@ -471,7 +471,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       AddressNode *addressNode = nullptr;
 
       if (addressIt == addressNodes_.end()) {
-         addressNode = new AddressNode(address.display()
+         addressNode = new AddressNode(QString::fromStdString(address.display())
             , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), (int)addressNodes_.size(), root_.get());
          root_->appendChildrenNode(addressNode);
          addressNodes_.emplace(addrStr, addressNode);
@@ -494,7 +494,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
 
          if (itAddr == cpfpNodes_.end()) {
             const int row = cpfpNodes_.size();
-            addressNode = new AddressNode(address.display()
+            addressNode = new AddressNode(QString::fromStdString(address.display())
                , QString::fromStdString(selectedInputs->GetWallet()->getAddressComment(input.getRecipientScrAddr())), row, cpfp_.get());
             cpfp_->appendChildrenNode(addressNode);
             cpfpNodes_[addrStr] = addressNode;

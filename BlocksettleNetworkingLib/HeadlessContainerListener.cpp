@@ -4,11 +4,8 @@
 #include "ConnectionManager.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
-#include "HeadlessContainer.h"
+#include "ServerConnection.h"
 #include "WalletEncryption.h"
-#include "ZmqSecuredServerConnection.h"
-#include <QDataStream>
-#include <QDebug>
 
 
 using namespace Blocksettle::Communication;
@@ -94,7 +91,7 @@ bool HeadlessContainerListener::sendData(const std::string &data, const std::str
    return sentOk;
 }
 
-void HeadlessContainerListener::SetLimits(const SignContainer::Limits &limits)
+void HeadlessContainerListener::SetLimits(const bs::signer::Limits &limits)
 {
    limits_ = limits;
 }
@@ -112,7 +109,6 @@ void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId)
 {
    logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
-//   emit clientDisconnected(clientId);
 }
 
 void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, const std::string &data)
@@ -223,7 +219,6 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
       return onGetHDWalletInfo(clientId, packet);
 
    case headless::DisconnectionRequestType:
-      emit OnClientDisconnected(clientId);
       break;
 
    case headless::SyncWalletInfoType:
@@ -851,6 +846,15 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    return true;
 }
 
+static NetworkType mapNetworkType(headless::NetworkType netType)
+{
+   switch (netType) {
+   case headless::MainNetType:   return NetworkType::MainNet;
+   case headless::TestNetType:   return NetworkType::TestNet;
+   default:                      return NetworkType::Invalid;
+   }
+}
+
 bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, headless::RequestPacket &packet)
 {
    headless::CreateHDWalletRequest request;
@@ -872,7 +876,7 @@ bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, he
    }
    else if (request.has_wallet()) {
       return CreateHDWallet(clientId, packet.id(), request.wallet()
-         , HeadlessContainer::mapNetworkType(request.wallet().nettype()), pwdData, keyRank);
+         , mapNetworkType(request.wallet().nettype()), pwdData, keyRank);
    }
    else {
       CreateHDWalletResponse(clientId, packet.id(), "unknown request");

@@ -5,7 +5,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <QString>
 
 AddressVerificationPool::AddressVerificationPool(const std::shared_ptr<spdlog::logger>& logger
    , const std::string& poolId
@@ -25,7 +24,7 @@ bool AddressVerificationPool::SubmitForVerification(const std::shared_ptr<AuthAd
 {
    auto addressString = address->GetChainedAddress().display<std::string>();
 
-   uint pendingVerifications = 0;
+   unsigned int pendingVerifications = 0;
 
    {
       FastLock locker(pendingLockerFlag_);

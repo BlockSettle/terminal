@@ -140,7 +140,8 @@ void CCTokenEntryDialog::accept()
       ui_->pushButtonOk->setEnabled(false);
    }
    else {
-      onCCSubmitFailed(address.display(), tr("Submission to PB failed"));
+      onCCSubmitFailed(QString::fromStdString(address.display())
+         , tr("Submission to PB failed"));
    }
 }
 

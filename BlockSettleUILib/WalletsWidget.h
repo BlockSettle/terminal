@@ -26,7 +26,7 @@ namespace bs {
 class AddressListModel;
 class AddressSortFilterModel;
 class ApplicationSettings;
-class ArmoryConnection;
+class ArmoryObject;
 class AssetManager;
 class AuthAddressManager;
 class QAction;
@@ -51,7 +51,7 @@ public:
       , const std::shared_ptr<ConnectionManager> &connectionManager
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<AuthAddressManager> &
-      , const std::shared_ptr<ArmoryConnection> &);
+      , const std::shared_ptr<ArmoryObject> &);
 
    void setUsername(const QString& username);
 
@@ -104,7 +104,7 @@ private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
    std::shared_ptr<AssetManager>          assetManager_;
    std::shared_ptr<AuthAddressManager>    authMgr_;
-   std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ArmoryObject>          armory_;
    WalletsViewModel        *  walletsModel_;
    AddressListModel        *  addressModel_;
    AddressSortFilterModel  *  addressSortFilterModel_;

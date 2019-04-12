@@ -1,7 +1,7 @@
 #ifndef __TRANSACTIONDETAILSWIDGET_H__
 #define __TRANSACTIONDETAILSWIDGET_H__
 
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "BinaryData.h"
 #include "TxClasses.h"
 #include "spdlog/logger.h"
@@ -74,7 +74,7 @@ public:
    explicit TransactionDetailsWidget(QWidget *parent = nullptr);
    ~TransactionDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &armory
+   void init(const std::shared_ptr<ArmoryObject> &armory
       , const std::shared_ptr<spdlog::logger> &inLogger
       , const std::shared_ptr<QTimer> &inTimer);
 
@@ -106,8 +106,8 @@ private:
    void clear();
 
    std::unique_ptr<Ui::TransactionDetailsWidget>   ui_;
-   std::shared_ptr<QTimer>             expTimer_;
-   std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<ArmoryObject>   armory_;
+   std::shared_ptr<QTimer>         expTimer_;
    std::shared_ptr<spdlog::logger> logger_;
 
    Tx curTx_; // The Tx being analyzed in the widget.

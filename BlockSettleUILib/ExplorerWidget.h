@@ -2,7 +2,7 @@
 #define __EXPLORERWIDGET_H__
 
 #include "TabWithShortcut.h"
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 
 #include <QWidget>
 #include <memory>
@@ -21,8 +21,8 @@ public:
     ExplorerWidget(QWidget *parent = nullptr);
     ~ExplorerWidget() override;
 
-   void init(const std::shared_ptr<ArmoryConnection> &armory
-      , const std::shared_ptr<spdlog::logger> &inLogger);
+   void init(const std::shared_ptr<ArmoryObject> &armory,
+             const std::shared_ptr<spdlog::logger> &inLogger);
    void shortcutActivated(ShortcutType s) override;
 
    enum Page {
@@ -52,8 +52,8 @@ private:
 
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;
+   std::shared_ptr<ArmoryObject>       armory_;
    std::shared_ptr<QTimer>             expTimer_;
-   std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::vector<std::string>            searchHistory_;
    int                                 searchHistoryPosition_;

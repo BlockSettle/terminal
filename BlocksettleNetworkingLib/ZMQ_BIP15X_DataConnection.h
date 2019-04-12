@@ -6,8 +6,8 @@
 #include <mutex>
 #include <thread>
 #include <spdlog/spdlog.h>
-#include "ArmoryServersProvider.h"
 #include "AuthorizedPeers.h"
+#include "ArmoryServersProvider.h"
 #include "BIP150_151.h"
 #include "ZmqDataConnection.h"
 #include "ZMQ_BIP15X_Msg.h"
@@ -19,9 +19,9 @@ class ZmqBIP15XDataConnection : public ZmqDataConnection
 public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
       , const bool& ephemeralPeers = false, bool monitored = false);
-   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
+/*   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
       , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
-      , bool monitored);
+      , bool monitored);*/
    ~ZmqBIP15XDataConnection() noexcept override;
 
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;

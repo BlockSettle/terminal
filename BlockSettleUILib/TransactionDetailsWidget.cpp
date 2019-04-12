@@ -84,7 +84,7 @@ TransactionDetailsWidget::~TransactionDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
 void TransactionDetailsWidget::init(
-   const std::shared_ptr<ArmoryConnection> &armory
+   const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
    , const std::shared_ptr<QTimer> &inTimer)
 {
@@ -92,7 +92,7 @@ void TransactionDetailsWidget::init(
    logger_ = inLogger;
    expTimer_ = inTimer;
 
-   connect(armory_.get(), &ArmoryConnection::newBlock, this
+   connect(armory_.get(), &ArmoryObject::newBlock, this
       , &TransactionDetailsWidget::onNewBlock, Qt::QueuedConnection);
 }
 
@@ -286,7 +286,7 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       }
       else {
          typeStr = QString::fromStdString("Input");
-         addrStr = outAddr.display();
+         addrStr = QString::fromStdString(outAddr.display());
       }
 
       // create a top level item using type, address, amount, wallet values
@@ -334,7 +334,7 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
       }
       else {
          typeStr = QString::fromStdString("Output");
-         addrStr = outAddr.display();
+         addrStr = QString::fromStdString(outAddr.display());
       }
 
       // create a top level item using type, address, amount, wallet values

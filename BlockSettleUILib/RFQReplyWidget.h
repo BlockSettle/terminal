@@ -26,7 +26,7 @@ namespace bs {
    class SettlementAddressEntry;
    class SecurityStatsCollector;
 }
-class ArmoryConnection;
+class ArmoryObject;
 class AssetManager;
 class AuthAddressManager;
 class CelerClient;
@@ -55,7 +55,7 @@ public:
       , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<DialogManager> &dialogManager
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<ArmoryObject> &
       , const std::shared_ptr<ConnectionManager> &connectionManager);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
@@ -97,7 +97,7 @@ private:
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<DialogManager>         dialogManager_;
    std::shared_ptr<SignContainer>         signingContainer_;
-   std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ArmoryObject>          armory_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ConnectionManager>     connectionManager_;
 

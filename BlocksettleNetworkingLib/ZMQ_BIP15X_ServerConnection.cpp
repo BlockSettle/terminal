@@ -1,8 +1,8 @@
 #include <chrono>
-#include <QStandardPaths>
 
 #include "ZMQ_BIP15X_ServerConnection.h"
 #include "MessageHolder.h"
+#include "SystemFileUtils.h"
 
 using namespace std;
 
@@ -48,24 +48,22 @@ void ZmqBIP15XPerConnData::reset()
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
-   , const QStringList& trustedClients, const uint64_t& id
+   , const std::vector<std::string>& trustedClients, const uint64_t& id
    , const bool& ephemeralPeers)
    : ZmqServerConnection(logger, context), id_(id)
 {
-   string datadir =
-      QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
+   string datadir = SystemFilePaths::appDataLocation();
    string filename(SERVER_AUTH_PEER_FILENAME);
 
    // In general, load the client key from a special Armory wallet file.
-   if (!ephemeralPeers)
-   {
+   if (!ephemeralPeers) {
        authPeers_ = make_shared<AuthorizedPeers>(datadir, filename);
    }
    else {
       authPeers_ = make_shared<AuthorizedPeers>();
    }
 
-   cbTrustedClients_ = [trustedClients]() -> QStringList {
+   cbTrustedClients_ = [trustedClients]() -> std::vector<std::string> {
       return trustedClients;
    };
 
@@ -75,7 +73,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
-   , const std::function<QStringList()> &cbTrustedClients)
+   , const std::function<std::vector<std::string>()> &cbTrustedClients)
    : ZmqServerConnection(logger, context)
    , cbTrustedClients_(cbTrustedClients)
 {
@@ -725,14 +723,14 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
       assert(cbTrustedClients_);
       auto lbds = getAuthPeerLambda();
       for (auto b : cbTrustedClients_()) {
-         const auto colonIndex = b.indexOf(QLatin1Char(':'));
-         if (colonIndex < 0) {
+         const auto colonIndex = b.find(':');
+         if (colonIndex == std::string::npos) {
             logger_->error("[{}] Trusted client list is malformed (for {})."
-               , __func__, b.toStdString());
+               , __func__, b);
             return;
          }
-         const auto keyName = b.left(colonIndex).toStdString();
-         SecureBinaryData inKey = READHEX(b.mid(colonIndex + 1).toStdString());
+         const auto keyName = b.substr(0, colonIndex);
+         SecureBinaryData inKey = READHEX(b.substr(colonIndex + 1));
          if (inKey.isNull()) {
             logger_->error("[{}] Trusted client key for {} is malformed."
                , __func__, keyName);

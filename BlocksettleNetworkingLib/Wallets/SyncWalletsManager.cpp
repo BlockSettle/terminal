@@ -15,19 +15,19 @@
 using namespace bs::sync;
 
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ApplicationSettings>& appSettings, const std::shared_ptr<ArmoryConnection> &armory)
+   , const std::shared_ptr<ApplicationSettings>& appSettings, const std::shared_ptr<ArmoryObject> &armory)
    : QObject(nullptr)
    , logger_(logger)
    , appSettings_(appSettings)
    , armory_(armory)
 {
    if (armory_) {
-      connect(armory_.get(), &ArmoryConnection::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::zeroConfInvalidated, this, &WalletsManager::onZeroConfInvalidated, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::txBroadcastError, this, &WalletsManager::onBroadcastZCError, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryObject::zeroConfInvalidated, this, &WalletsManager::onZeroConfInvalidated, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryObject::txBroadcastError, this, &WalletsManager::onBroadcastZCError, Qt::QueuedConnection);
       connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::newBlock, this, &WalletsManager::onNewBlock, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryConnection::refresh, this, &WalletsManager::onRefresh, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryObject::newBlock, this, &WalletsManager::onNewBlock, Qt::QueuedConnection);
+      connect(armory_.get(), &ArmoryObject::refresh, this, &WalletsManager::onRefresh, Qt::QueuedConnection);
    }
 }
 
@@ -806,7 +806,8 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
          break;
 
       case 1:
-         updateTxDescCache(txKey, (*addresses.begin()).display(), (int)addresses.size(), cb);
+         updateTxDescCache(txKey, QString::fromStdString((*addresses.begin()).display())
+            , (int)addresses.size(), cb);
          break;
 
       default:

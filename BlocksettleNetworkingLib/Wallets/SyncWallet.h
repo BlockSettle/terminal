@@ -10,7 +10,7 @@
 #include <QMutex>
 #include <QPointer>
 #include "Address.h"
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "AsyncClient.h"
 #include "Assets.h"
 #include "BtcDefinitions.h"
@@ -84,7 +84,7 @@ namespace bs {
          virtual void setData(const std::string &) {}
          virtual void setData(uint64_t) {}
 
-         virtual void setArmory(const std::shared_ptr<ArmoryConnection> &);
+         virtual void setArmory(const std::shared_ptr<ArmoryObject> &);
          virtual void setUserId(const BinaryData &) {}
 
          bool operator ==(const Wallet &w) const { return (w.walletId() == walletId()); }
@@ -101,7 +101,7 @@ namespace bs {
             , QObject *obj);
          virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
          virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
-         virtual std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+         virtual std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryObject> &armory = nullptr
             , bool asNew = false);
          virtual void unregisterWallet();
          virtual bool getHistoryPage(uint32_t id, std::function<void(const Wallet *wallet
@@ -231,7 +231,7 @@ namespace bs {
          BTCNumericTypes::balance_type spendableBalance_ = 0;
          BTCNumericTypes::balance_type unconfirmedBalance_ = 0;
          BTCNumericTypes::balance_type totalBalance_ = 0;
-         std::shared_ptr<ArmoryConnection>      armory_;
+         std::shared_ptr<ArmoryObject> armory_;
          std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
          std::shared_ptr<spdlog::logger>  logger_; // May need to be set manually.
          mutable std::vector<bs::Address>       usedAddresses_;

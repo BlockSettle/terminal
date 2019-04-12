@@ -594,6 +594,7 @@ BinaryDataRef ZmqBIP15XMsgPartial::getSingleBinaryMessage() const
    return packets_.begin()->second;
 }
 
+
 // Reset a partial message.
 //
 // INPUT:  None

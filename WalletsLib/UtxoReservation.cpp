@@ -57,17 +57,17 @@ static std::shared_ptr<bs::UtxoReservation> utxoResInstance_;
 bs::UtxoReservation::UtxoReservation()
 {
    std::thread([this] {
-      constexpr int secsToExpire = 600;
+      const std::chrono::duration<int> secsToExpire(600);
       std::this_thread::sleep_for(std::chrono::seconds(10));
       if (!utxoResInstance_) {
          return;
       }
-      const auto &curTime = QDateTime::currentDateTime();
+      const auto curTime = std::chrono::system_clock::now();
       std::vector<std::string> expiredResId;
       {
          FastLock lock(flag_);
          for (const auto resIdTime : reserveTime_) {
-            if (resIdTime.second.secsTo(curTime) > secsToExpire) {
+            if ((curTime - resIdTime.second) > secsToExpire) {
                expiredResId.push_back(resIdTime.first);
             }
          }
@@ -126,7 +126,7 @@ void bs::UtxoReservation::reserve(const std::string &walletId
                                   , const std::string &reserveId
                                   , const std::vector<UTXO> &utxos)
 {
-   const auto &curTime = QDateTime::currentDateTime();
+   const auto curTime = std::chrono::system_clock::now();
    FastLock lock(flag_);
    byReserveId_[reserveId] = utxos;
    walletByReserveId_[reserveId] = walletId;

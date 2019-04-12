@@ -119,9 +119,9 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
    emit error(tr("error #%1").arg(QString::number(errorCode)));
 }
 
-HeadlessContainer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
+bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
 {
-   HeadlessContainer::RequestId id = 0;
+   bs::signer::RequestId id = 0;
    if (updateId) {
       id = newRequestId();
       packet.set_id(id);
@@ -185,7 +185,7 @@ bool KillHeadlessProcess()
    return false;
 }
 
-HeadlessContainer::RequestId HeadlessContainer::Send(headless::RequestPacket packet, bool incSeqNo)
+bs::signer::RequestId HeadlessContainer::Send(headless::RequestPacket packet, bool incSeqNo)
 {
    if (!listener_) {
       return 0;
@@ -324,7 +324,7 @@ void HeadlessContainer::ProcessSetLimitsResponse(unsigned int id, const std::str
    emit AutoSignStateChanged(response.rootwalletid(), response.autosignactive(), response.error());
 }
 
-HeadlessContainer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password
    , bool keepDuplicatedRecipients)
 {
@@ -385,7 +385,7 @@ HeadlessContainer::RequestId HeadlessContainer::signTXRequest(const bs::core::wa
    default:    break;
    }
    packet.set_data(request.SerializeAsString());
-   RequestId id = Send(packet);
+   const auto id = Send(packet);
    signRequests_.insert(id);
    return id;
 }
@@ -396,7 +396,7 @@ unsigned int HeadlessContainer::signPartialTXRequest(const bs::core::wallet::TXS
    return signTXRequest(req, autoSign, TXSignMode::Partial, password);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::Address &authAddr, const std::string &settlementId
    , bool autoSign, const PasswordType& password)
 {
@@ -420,12 +420,12 @@ HeadlessContainer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::co
    headless::RequestPacket packet;
    packet.set_type(headless::SignPayoutTXRequestType);
    packet.set_data(request.SerializeAsString());
-   RequestId id = Send(packet);
+   const auto id = Send(packet);
    signRequests_.insert(id);
    return id;
 }
 
-HeadlessContainer::RequestId HeadlessContainer::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &txMultiReq)
+bs::signer::RequestId HeadlessContainer::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &txMultiReq)
 {
    if (!txMultiReq.isValid()) {
       logger_->error("[HeadlessContainer] Invalid TXMultiSignRequest");
@@ -448,12 +448,12 @@ HeadlessContainer::RequestId HeadlessContainer::signMultiTXRequest(const bs::cor
    headless::RequestPacket packet;
    packet.set_type(headless::SignTXMultiRequestType);
    packet.set_data(request.SerializeAsString());
-   RequestId id = Send(packet);
+   const auto id = Send(packet);
    signRequests_.insert(id);
    return id;
 }
 
-HeadlessContainer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txId)
+bs::signer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txId)
 {
    headless::CancelSignTx request;
    request.set_txid(txId.toBinStr());
@@ -482,7 +482,7 @@ void HeadlessContainer::SendPassword(const std::string &walletId, const Password
    Send(packet, false);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::SetUserId(const BinaryData &userId)
+bs::signer::RequestId HeadlessContainer::SetUserId(const BinaryData &userId)
 {
    if (!listener_) {
       logger_->warn("[HeadlessContainer::SetUserId] listener not set yet");
@@ -500,7 +500,7 @@ HeadlessContainer::RequestId HeadlessContainer::SetUserId(const BinaryData &user
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::createHDLeaf(const std::string &rootWalletId
+bs::signer::RequestId HeadlessContainer::createHDLeaf(const std::string &rootWalletId
    , const bs::hd::Path &path, const std::vector<bs::wallet::PasswordData> &pwdData)
 {
    if (rootWalletId.empty() || (path.length() != 3)) {
@@ -524,7 +524,7 @@ HeadlessContainer::RequestId HeadlessContainer::createHDLeaf(const std::string &
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::createHDWallet(const std::string &name
+bs::signer::RequestId HeadlessContainer::createHDWallet(const std::string &name
    , const std::string &desc, bool primary, const bs::core::wallet::Seed &seed
    , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
@@ -537,7 +537,7 @@ HeadlessContainer::RequestId HeadlessContainer::createHDWallet(const std::string
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::DeleteHDRoot(const std::string &rootWalletId)
+bs::signer::RequestId HeadlessContainer::DeleteHDRoot(const std::string &rootWalletId)
 {
    if (rootWalletId.empty()) {
       return 0;
@@ -545,7 +545,7 @@ HeadlessContainer::RequestId HeadlessContainer::DeleteHDRoot(const std::string &
    return SendDeleteHDRequest(rootWalletId, {});
 }
 
-HeadlessContainer::RequestId HeadlessContainer::DeleteHDLeaf(const std::string &leafWalletId)
+bs::signer::RequestId HeadlessContainer::DeleteHDLeaf(const std::string &leafWalletId)
 {
    if (leafWalletId.empty()) {
       return 0;
@@ -553,7 +553,7 @@ HeadlessContainer::RequestId HeadlessContainer::DeleteHDLeaf(const std::string &
    return SendDeleteHDRequest({}, leafWalletId);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId)
+bs::signer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId)
 {
    headless::DeleteHDWalletRequest request;
    if (!rootWalletId.empty()) {
@@ -593,7 +593,7 @@ void HeadlessContainer::setLimits(const std::string &walletId, const SecureBinar
    Send(packet);
 }
 
-SignContainer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
+bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
 {
    // serialize variant data
    QByteArray ba;
@@ -610,7 +610,7 @@ SignContainer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::getDecryptedRootKey(const std::string &walletId
+bs::signer::RequestId HeadlessContainer::getDecryptedRootKey(const std::string &walletId
    , const SecureBinaryData &password)
 {
    headless::GetRootKeyRequest request;
@@ -625,7 +625,7 @@ HeadlessContainer::RequestId HeadlessContainer::getDecryptedRootKey(const std::s
    return Send(packet);
 }
 
-HeadlessContainer::RequestId HeadlessContainer::GetInfo(const std::string &rootWalletId)
+bs::signer::RequestId HeadlessContainer::GetInfo(const std::string &rootWalletId)
 {
    if (rootWalletId.empty()) {
       return 0;
@@ -1091,7 +1091,7 @@ void RemoteSigner::onDisconnected()
 {
    missingWallets_.clear();
 
-   std::set<RequestId> tmpReqs = signRequests_;
+   std::set<bs::signer::RequestId> tmpReqs = signRequests_;
    signRequests_.clear();
 
    for (const auto &id : tmpReqs) {
@@ -1288,12 +1288,24 @@ bool LocalSigner::Stop()
    RemoteSigner::Stop();
 
    if (headlessProcess_) {
+#ifdef Q_OS_WIN
+      if (AttachConsole(headlessProcess_->pid()->dwProcessId)) {
+         SetConsoleCtrlHandler(NULL, TRUE);  // Disable shutdown on Ctrl-C for self
+         GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
+         FreeConsole();
+      }
+      else {
+         headlessProcess_->kill();
+      }
+#else
       headlessProcess_->terminate();
+#endif
       if (!headlessProcess_->waitForFinished(500)) {
          headlessProcess_->close();
       }
+      headlessProcess_.reset();
    }
    return true;
 }
 
-#include "HeadlessContainer.moc"
+//#include "HeadlessContainer.moc"
