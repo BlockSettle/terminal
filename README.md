@@ -82,7 +82,7 @@
 
 		git config credential.helper store  (NB: This command saves the password/PAT for the submodules, and need only be issued once in the project's lifetime. Once successful, don't use it again.)
 		git submodule init
-		git submodult update
+		git submodule update
 
  5. Build the terminal compilation environment. This will involve downloading and compiling all required prerequisite binaries for the terminal, and performing any required environment changes. Note that on Linux and macOS, the `python` binary may actually be `python2`. In addition, the `debug` option is required only when attempting to create a build environment for debug builds. Don't use debug builds unless you're planning to run the code via a debugger, and don't type the brackets.
  
