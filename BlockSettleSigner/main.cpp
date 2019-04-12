@@ -103,6 +103,8 @@ int main(int argc, char** argv)
 
    SystemFilePaths::setArgV0(argv[0]);
 
+   srand(std::time(nullptr));
+
    // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
    // Armory setting designed to allow the ArmoryDB server to not have to verify
    // clients. Prevents us from having to import tons of keys into the server.

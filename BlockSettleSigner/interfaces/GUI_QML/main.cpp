@@ -183,6 +183,8 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
+   srand(std::time(nullptr));
+
    btc_ecc_start(); // Initialize libbtc
    startupBIP151CTX();
    startupBIP150CTX(4, true);
