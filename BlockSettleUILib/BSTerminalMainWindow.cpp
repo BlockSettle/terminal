@@ -1580,8 +1580,8 @@ bool BSTerminalMainWindow::goOnlineArmory() const
    // - The wallet manager has no wallets, including a settlement wallet. (NOTE:
    //   Settlement wallets are auto-generated. A future PR will change that.)
    if (armory_ && !armory_->isOnline() && armoryBDVRegistered_
-      && walletsSynched_ && walletsMgr_ && walletsMgr_->walletsCount()
-      /*&& !walletsMgr_->hasSettlementWallet()*/ == 0) {
+      && walletsSynched_ && walletsMgr_ && walletsMgr_->walletsCount() == 0
+      /*&& !walletsMgr_->hasSettlementWallet()*/) {
       logMgr_->logger()->info("[{}] - Armory connection is going online without "
          "wallets.", __func__);
       return armory_->goOnline();
