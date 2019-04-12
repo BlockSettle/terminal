@@ -934,6 +934,11 @@ void ChartWidget::SetupCrossfire()
    horLine->end->setType(QCPItemPosition::ptAbsolute);
    horLine->setPen(pen);
    horLine->setClipToAxisRect(false);
+
+   if (!ui_->customPlot->rect().contains(mapFromGlobal(QCursor::pos()))) {
+      vertLine->setVisible(false);
+      horLine->setVisible(false);
+   }
 }
 
 void ChartWidget::InitializeCustomPlot()
