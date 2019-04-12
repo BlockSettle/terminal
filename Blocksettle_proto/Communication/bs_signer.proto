@@ -26,6 +26,10 @@ enum PacketType
    ReloadWalletsType = 18;
    ExecCustomDialogRequestType = 19;
    ChangePasswordRequestType   = 20;
+
+   // Uses messages from headless
+   CreateHDWalletType = 21;
+   DeleteHDWalletType = 22;
 }
 
 message Packet
@@ -34,7 +38,6 @@ message Packet
    PacketType  type       = 2;
    bytes       data       = 3;
 }
-
 
 message ReadyEvent
 {
@@ -230,7 +233,6 @@ message PasswordData
    uint32   encType = 2;
    bytes    encKey = 3;
 }
-
 
 message ChangePasswordRequest
 {

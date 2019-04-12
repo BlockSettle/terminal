@@ -663,15 +663,23 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent *event)
       double upper_bound = size ? candlesticksChart_->data()->at(size - 1)->key : QDateTime::currentSecsSinceEpoch();
       upper_bound += IntervalWidth(dateRange_.checkedId()) / 1000 / 2  + CountOffsetFromRightBorder();
       double lower_bound = QDateTime(QDate(2009, 1, 3)).toSecsSinceEpoch();
-      if (dragStartRange_.upper + diff > upper_bound && diff > 0) {
-         dragStartPos_ = event->pos();
-         dragStartRange_ = axis->range();
-      } else if (dragStartRange_.lower + diff < lower_bound && diff < 0){
-         dragStartPos_ = event->pos();
-         dragStartRange_ = axis->range();
+      if (dragStartRangeX_.upper + diff > upper_bound && diff > 0) {
+         dragStartPos_.setX(event->pos().x());
+         dragStartRangeX_ = axis->range();
+      } else if (dragStartRangeX_.lower + diff < lower_bound && diff < 0){
+         dragStartPos_.setX(event->pos().x());
+         dragStartRangeX_ = axis->range();
       } else {
-         axis->setRange(dragStartRange_.lower + diff, dragStartRange_.upper + diff);
+         axis->setRange(dragStartRangeX_.lower + diff, dragStartRangeX_.upper + diff);
       }
+      if (!autoScaling_) {
+         auto axisY = ui_->customPlot->yAxis2;
+         const double startPixelY = dragStartPos_.y();
+         const double currentPixelY = event->pos().y();
+         const double diffY = axisY->pixelToCoord(startPixelY) - axisY->pixelToCoord(currentPixelY);
+         axisY->setRange(dragStartRangeY_.lower + diffY, dragStartRangeY_.upper + diffY);
+      }
+
    }
    ui_->customPlot->replot();
 }
@@ -753,7 +761,8 @@ void ChartWidget::OnMousePressed(QMouseEvent* event)
    }
 
    if (ui_->customPlot->axisRect()->rect().contains(event->pos()) || volumeAxisRect_->rect().contains(event->pos())) {
-      dragStartRange_ = ui_->customPlot->xAxis->range();
+      dragStartRangeX_ = ui_->customPlot->xAxis->range();
+      dragStartRangeY_ = ui_->customPlot->yAxis2->range();
       dragStartPos_ = event->pos();
       isDraggingMainPlot_ = true;
    }

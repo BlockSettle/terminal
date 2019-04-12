@@ -96,15 +96,6 @@ void HeadlessContainerListener::SetLimits(const bs::signer::Limits &limits)
    limits_ = limits;
 }
 
-static NetworkType mapNetworkType(headless::NetworkType netType)
-{
-   switch (netType) {
-   case headless::MainNetType:   return NetworkType::MainNet;
-   case headless::TestNetType:   return NetworkType::TestNet;
-   default:    return NetworkType::Invalid;
-   }
-}
-
 static std::string toHex(const std::string &binData)
 {
    return BinaryData(binData).toHexStr();
@@ -855,6 +846,15 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
       return false;
    }
    return true;
+}
+
+static NetworkType mapNetworkType(headless::NetworkType netType)
+{
+   switch (netType) {
+   case headless::MainNetType:   return NetworkType::MainNet;
+   case headless::TestNetType:   return NetworkType::TestNet;
+   default:                      return NetworkType::Invalid;
+   }
 }
 
 bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, headless::RequestPacket &packet)

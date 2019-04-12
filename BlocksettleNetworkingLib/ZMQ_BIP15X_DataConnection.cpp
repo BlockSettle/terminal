@@ -93,12 +93,12 @@ AuthPeersLambdas ZmqBIP15XDataConnection::getAuthPeerLambda() const
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
 }
 
-// The send function for the data connection. Ideally, this should not be used
-// before the handshake is completed, but it is possible to use at any time.
-// Whether or not the raw data is used, it will be placed in a
-// ZmqBIP15XSerializedMessage object.
+// The send function for the data connection. It can be used at any time after
+// basic ZMQ setup is complete and will handle any required encryption.
 //
-// INPUT:  The data to send. It'll be encrypted here if needed. (const string&)
+// ***Please use this function for sending all data.***
+//
+// INPUT:  The data to send. (const string&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::send(const string& data)
@@ -203,35 +203,12 @@ void ZmqBIP15XDataConnection::sendHeartbeat()
       connPtr = bip151Connection_.get();
    }
 
-   uint32_t size = 1;
-   BinaryData plainText(4 + size + POLY1305MACLEN);
-
-   // Copy in packet size.
-   memcpy(plainText.getPtr(), &size, 4);
-   size += 4;
-   //type
-   plainText.getPtr()[4] = ZMQ_MSGTYPE_HEARTBEAT;
-
-   //encrypt if possible
-   if (connPtr != nullptr) {
-      connPtr->assemblePacket(plainText.getPtr(), size, plainText.getPtr()
-         , size + POLY1305MACLEN);
-   } else {
-      plainText.resize(size);
-   }
-
-   int result = -1;
-   {
-      FastLock locker(lockSocket_);
-      result = zmq_send(dataSocket_.get(), plainText.getCharPtr()
-         , plainText.getSize(), 0);
-   }
-   if (result != (int)plainText.getSize()) {
-      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-         "data: {} (result={}, data size={}", __func__, connectionName_
-         , zmq_strerror(zmq_errno()), result, plainText.getSize());
-   }
-   else {
+   // An error message is already logged elsewhere if the send fails.
+   ZmqBIP15XSerializedMessage msg;
+   BinaryData emptyPayload;
+   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT, 0);
+   auto& packet = msg.getNextPacket();
+   if (send(packet.toBinStr())) {
       lastHeartbeat_ = chrono::system_clock::now();
    }
 }

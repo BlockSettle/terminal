@@ -87,13 +87,15 @@ void SignerSettingsPage::display()
    const auto modeIndex = appSettings_->get<int>(ApplicationSettings::signerRunMode) - 1;
    onModeChanged(modeIndex);
    ui_->comboBoxRunMode->setCurrentIndex(modeIndex);
+   ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::twoWayAuth));
 }
 
 void SignerSettingsPage::reset()
 {
    for (const auto &setting : {ApplicationSettings::signerRunMode, ApplicationSettings::signerHost
       , ApplicationSettings::signerPort, ApplicationSettings::signerOfflineDir
-      , ApplicationSettings::zmqRemoteSignerPubKey, ApplicationSettings::autoSignSpendLimit}) {
+      , ApplicationSettings::zmqRemoteSignerPubKey, ApplicationSettings::autoSignSpendLimit
+      , ApplicationSettings::twoWayAuth}) {
       appSettings_->reset(setting, false);
    }
    display();
@@ -160,5 +162,8 @@ void SignerSettingsPage::apply()
 
    default:    break;
    }
+
+   // first comboBoxRunMode index is '--Select--' placeholder
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
+   appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
 }

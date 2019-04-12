@@ -165,7 +165,8 @@ private:
    bool isDraggingYAxis_;
    bool isDraggingXAxis_{ false };
    bool isDraggingMainPlot_{ false };
-   QCPRange dragStartRange_;
+   QCPRange dragStartRangeX_;
+   QCPRange dragStartRangeY_;
    QPointF dragStartPos_;
 
    QPoint lastDragCoord_;

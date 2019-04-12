@@ -396,6 +396,8 @@ void BSTerminalMainWindow::LoadWallets()
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
+      walletsSynched_ = true;
+      goOnlineArmory();
       updateControlEnabledState();
 
       connect(armory_.get(), &ArmoryObject::stateChanged, this, [this](ArmoryConnection::State state) {
@@ -675,6 +677,8 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
       QMetaObject::invokeMethod(this, "CompleteUIOnlineView", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Connected:
+      armoryBDVRegistered_ = true;
+      goOnlineArmory();
       QMetaObject::invokeMethod(this, "CompleteDBConnection", Qt::QueuedConnection);
       break;
    case ArmoryConnection::State::Offline:
@@ -1558,4 +1562,30 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
 
    connectSigner();
    connectArmory();
+}
+
+// A function that puts Armory online if certain conditions are met. The primary
+// intention is to ensure that a terminal with no wallets can connect to Armory
+// while not interfering with the online process for terminals with wallets.
+//
+// INPUT:  N/A
+// OUTPUT: N/A
+// RETURN: True if online, false if not.
+bool BSTerminalMainWindow::goOnlineArmory() const
+{
+   // Go online under the following conditions:
+   // - The Armory connection isn't already online.
+   // - The Armory BDV is registered.
+   // - The terminal has properly synched the wallet state.
+   // - The wallet manager has no wallets, including a settlement wallet. (NOTE:
+   //   Settlement wallets are auto-generated. A future PR will change that.)
+   if (armory_ && !armory_->isOnline() && armoryBDVRegistered_
+      && walletsSynched_ && walletsMgr_ && walletsMgr_->walletsCount() == 0
+      /*&& !walletsMgr_->hasSettlementWallet()*/) {
+      logMgr_->logger()->info("[{}] - Armory connection is going online without "
+         "wallets.", __func__);
+      return armory_->goOnline();
+   }
+
+   return armory_->isOnline();
 }

@@ -31,8 +31,10 @@ public:
       AddressPage
    };
 
+   void mousePressEvent(QMouseEvent *event) override;
+
 protected slots:
-   void onSearchStarted();
+   void onSearchStarted(bool saveToHistory);
    void onExpTimeout();
    void onTransactionClicked(QString txId);
    void onAddressClicked(QString addressId);
@@ -44,18 +46,17 @@ private:
    bool canGoBack() const;
    bool canGoForward() const;
    void setTransaction(QString txId);
-   void pushTransactionHistory(QString txId);
-   void popTransactionHistory();
-   void truncateTransactionHistory(int position = -1);
-   void clearTransactionHistory();
+   void pushTransactionHistory(QString itemId);
+   void truncateSearchHistory(int position = -1);
+   void clearSearchHistory();
 
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;
    std::shared_ptr<ArmoryObject>       armory_;
    std::shared_ptr<QTimer>             expTimer_;
    std::shared_ptr<spdlog::logger>     logger_;
-   std::vector<std::string>            transactionHistory_;
-   int                                 transactionHistoryPosition_;
+   std::vector<std::string>            searchHistory_;
+   int                                 searchHistoryPosition_;
 };
 
 #endif // EXPLORERWIDGET_H
