@@ -14,6 +14,15 @@
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
 
+SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ZmqBIP15XDataConnection> &conn
+   , SignerAdapter *parent)
+   : logger_(logger)
+   , connection_(conn)
+   , parent_(parent)
+{
+}
+
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
 {
    signer::Packet packet;
@@ -72,6 +81,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       onExecCustomDialog(packet.data(), packet.id());
       break;
    case signer::ChangePasswordRequestType:
+      onChangePassword(packet.data(), packet.id());
+      break;
+   case signer::CreateHDWalletType:
       onChangePassword(packet.data(), packet.id());
       break;
    default:

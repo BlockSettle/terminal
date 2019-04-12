@@ -32,7 +32,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    };
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
       , zmqContext, cbTrustedClients);
-   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_);
+   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
 
    if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
       , adapterLsn_.get())) {

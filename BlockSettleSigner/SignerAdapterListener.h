@@ -19,14 +19,15 @@ namespace bs {
 class HeadlessAppObj;
 class HeadlessContainerListener;
 class ServerConnection;
-
+class HeadlessSettings;
 
 class SignerAdapterListener : public ServerConnectionListener
 {
 public:
    SignerAdapterListener(HeadlessAppObj *, const std::shared_ptr<ServerConnection> &
       , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::core::WalletsManager> &);
+      , const std::shared_ptr<bs::core::WalletsManager> &
+      , const std::shared_ptr<HeadlessSettings> &);
    ~SignerAdapterListener() noexcept override;
 
    bool onReady(int cur = 0, int total = 0);
@@ -54,12 +55,15 @@ private:
    bool onReconnect(const std::string &data);
    bool onAutoSignRequest(const std::string &data);
    bool onChangePassword(const std::string &data, bs::signer::RequestId);
+   bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
+   bool onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
 
 private:
    HeadlessAppObj *  app_;
    std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
+   std::shared_ptr<HeadlessSettings> settings_;
    bool  ready_ = false;
 };
 

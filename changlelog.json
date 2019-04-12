@@ -1,14 +1,40 @@
 {
-   "latest_version" : "0.14.8",
-   "release_date" : "10 April 2019",
+   "latest_version" : "0.14.10",
+   "release_date" : "11 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.10",
+         "previous_version" : "0.14.9",
+         "release_date" : "11 April 2019",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Signer fixes",
+            "Fix wallet delete",
+            "fix BIP rekeying"
+         ]
+      },
+      {
+         "version_string" : "0.14.9",
+         "previous_version" : "0.14.8",
+         "release_date" : "10 April 2019",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Bip15* server connection fixes"
+         ]
+      },
       {
          "version_string" : "0.14.8",
          "previous_version" : "0.14.7",
          "release_date" : "10 April 2019",
          "improvements" :
          [
-            "To way auth in signer"
+            "Two way auth in signer"
          ],
          "bug_fixes" :
          [
