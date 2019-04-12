@@ -2,43 +2,66 @@
 
 #include "ui_CreateOTCRequestWidget.h"
 
+#include <QComboBox>
+#include <QPushButton>
+
 CreateOTCRequestWidget::CreateOTCRequestWidget(QWidget* parent)
    : QWidget{parent}
    , ui_{new Ui::CreateOTCRequestWidget{}}
 {
    ui_->setupUi(this);
-   connect(ui_->btnXBT, &QPushButton::clicked,
-      this, &CreateOTCRequestWidget::onSelectXBT);
-   connect(ui_->btnEUR, &QPushButton::clicked,
-      this, &CreateOTCRequestWidget::onSelectEUR);
-   connect(ui_->btnBuy, &QPushButton::clicked,
-      this, &CreateOTCRequestWidget::onSelectBuy);
-   connect(ui_->btnSell, &QPushButton::clicked,
-      this, &CreateOTCRequestWidget::onSelectSell);
+
+   connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &CreateOTCRequestWidget::OnBuyClicked);
+   connect(ui_->pushButtonSell, &QPushButton::clicked, this, &CreateOTCRequestWidget::OnSellClicked);
+
+   ui_->comboBoxRange->addItem(tr("1-5"), bs::network::OTCRangeID::Range1_5);
+   ui_->comboBoxRange->addItem(tr("5-10"), bs::network::OTCRangeID::Range5_10);
+   ui_->comboBoxRange->addItem(tr("10-50"), bs::network::OTCRangeID::Range10_50);
+   ui_->comboBoxRange->addItem(tr("50-100"), bs::network::OTCRangeID::Range50_100);
+   ui_->comboBoxRange->addItem(tr("100-250"), bs::network::OTCRangeID::Range100_250);
+   ui_->comboBoxRange->addItem(tr("250+"), bs::network::OTCRangeID::Range250plus);
+
+   connect(ui_->comboBoxRange, SIGNAL(activated(int)), this, SLOT(OnRangeSelected(int)));
+
+   connect(ui_->pushButtonSubmit, &QPushButton::pressed, this, &CreateOTCRequestWidget::RequestCreated);
 }
 
 CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
 
-void CreateOTCRequestWidget::onSelectXBT()
+void CreateOTCRequestWidget::OnSellClicked()
 {
-   ui_->btnXBT->setChecked(true);
-   ui_->btnEUR->setChecked(false);
+   ui_->pushButtonBuy->setChecked(false);
+   ui_->pushButtonSell->setChecked(true);
+
+   RequestUpdated();
 }
 
-void CreateOTCRequestWidget::onSelectEUR()
+void CreateOTCRequestWidget::OnBuyClicked()
 {
-   ui_->btnXBT->setChecked(false);
-   ui_->btnEUR->setChecked(true);
+   ui_->pushButtonBuy->setChecked(true);
+   ui_->pushButtonSell->setChecked(false);
+
+   RequestUpdated();
 }
 
-void CreateOTCRequestWidget::onSelectBuy()
+void CreateOTCRequestWidget::RequestUpdated()
+{}
+
+void CreateOTCRequestWidget::OnRangeSelected(int index)
 {
-   ui_->btnBuy->setChecked(true);
-   ui_->btnSell->setChecked(false);
+   RequestUpdated();
 }
 
-void CreateOTCRequestWidget::onSelectSell()
+bs::network::Side::Type CreateOTCRequestWidget::GetSide() const
 {
-   ui_->btnBuy->setChecked(false);
-   ui_->btnSell->setChecked(true);
+   if (ui_->pushButtonSell->isChecked()) {
+      return bs::network::Side::Sell;
+   }
+
+   return bs::network::Side::Buy;
+}
+
+bs::network::OTCRangeID CreateOTCRequestWidget::GetRange() const
+{
+   return static_cast<bs::network::OTCRangeID>(ui_->comboBoxRange->itemData(ui_->comboBoxRange->currentIndex()).toInt());
 }

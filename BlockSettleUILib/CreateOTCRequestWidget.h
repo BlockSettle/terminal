@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <memory>
 
+#include "CommonTypes.h"
+
 namespace Ui {
    class CreateOTCRequestWidget;
 };
@@ -11,15 +13,27 @@ namespace Ui {
 
 class CreateOTCRequestWidget : public QWidget
 {
+Q_OBJECT
+
 public:
    CreateOTCRequestWidget(QWidget* parent = nullptr);
    ~CreateOTCRequestWidget() override;
 
+   bs::network::Side::Type GetSide() const;
+   bs::network::OTCRangeID GetRange() const;
+
 private slots:
-   void onSelectXBT();
-   void onSelectEUR();
-   void onSelectBuy();
-   void onSelectSell();
+
+   void OnSellClicked();
+   void OnBuyClicked();
+
+   void OnRangeSelected(int index);
+
+signals:
+   void RequestCreated();
+
+private:
+   void RequestUpdated();
 
 private:
    std::unique_ptr<Ui::CreateOTCRequestWidget> ui_;
