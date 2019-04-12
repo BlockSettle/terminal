@@ -15,9 +15,6 @@
 
 #include <QDateTime>
 
-// TODO: remove
-#include <QtDebug>
-
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::RoomData>)
@@ -165,9 +162,6 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
    std::string actionString = "<unknown>";
    switch (response.getAction()) {
       case Chat::ContactsAction::Accept: {
-         // TODO remove
-         qDebug() << "userId:" << QString::fromStdString(response.senderId());
-
          actionString = "ContactsAction::Accept";
          QString senderId = QString::fromStdString(response.senderId());
          pubKeys_[senderId] = response.getSenderPublicKey();
@@ -179,9 +173,6 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
       }
       break;
       case Chat::ContactsAction::Reject: {
-         // TODO remove
-         qDebug() << "userId:" << QString::fromStdString(response.senderId());
-
          actionString = "ContactsAction::Reject";
          addOrUpdateContact(QString::fromStdString(response.senderId()), ContactUserData::Status::Rejected);
          //removeContact(QString::fromStdString(response.senderId()));
@@ -593,9 +584,6 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       userNonces_[receiver] = nonce;
    }
 
-   // TODO:
-   // when chatserver_contacts branch ready
-   // check is user online, if not encrypt by ecies
    if (!messageData.encrypt_aead(itPub->second, ownPrivKey_, nonce, logger_)) {
       logger_->error("[ChatClient::sendMessage] failed to encrypt by aead {}" , messageData.getId().toStdString());
       return result;
@@ -687,7 +675,6 @@ bool ChatClient::getContacts(ContactUserDataList &contactList)
 
 bool ChatClient::addOrUpdateContact(const QString &userId, ContactUserData::Status status, const QString &userName)
 {
-   qDebug() << "userId:" << userId;
    ContactUserData contact;
    QString newUserName = userName;
    if (newUserName.isEmpty())
