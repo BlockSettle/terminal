@@ -469,6 +469,7 @@ void WalletsManager::onWalletReady(const QString &walletId)
       }
       if (readyWallets_.size() >= nbWallets) {
          logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
+         armory_->goOnline();
          readyWallets_.clear();
       }
    }
