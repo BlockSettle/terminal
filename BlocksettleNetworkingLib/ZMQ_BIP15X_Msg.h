@@ -52,6 +52,7 @@
 #define ZMQ_MSGTYPE_AUTH_REPLY                22
 #define ZMQ_MSGTYPE_AUTH_PROPOSE              23
 
+// Not part of the standard - Required by ZMQ.
 #define ZMQ_MSGTYPE_HEARTBEAT                 30
 
 // NOTE: Due to fragmentation, the maximum message size is (65535 * 1500) =
