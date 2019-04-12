@@ -161,6 +161,9 @@ ApplicationWindow {
     function raiseWindow() {
         JsHelper.raiseWindow()
     }
+    function hideWindow() {
+        JsHelper.hideWindow()
+    }
 
     function customDialogRequest(dialogName, data) {
         QmlDialogs.customDialogRequest(dialogName, data)

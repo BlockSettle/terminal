@@ -78,6 +78,9 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
+   connect(qmlFactory_.get(), &QmlFactory::closeEventReceived, this, [this](){
+      hideQmlWindow();
+   });
 
    offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter_);
    connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
@@ -225,7 +228,19 @@ void QMLAppObj::SetRootObject(QObject *obj)
       }
    });
    connect(rootObj_, SIGNAL(passwordEntered(QString, bs::wallet::QPasswordData *, bool)),
-      this, SLOT(onPasswordAccepted(QString, bs::wallet::QPasswordData *, bool)));
+           this, SLOT(onPasswordAccepted(QString, bs::wallet::QPasswordData *, bool)));
+}
+
+void QMLAppObj::raiseQmlWindow()
+{
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   QGuiApplication::processEvents();
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+}
+
+void QMLAppObj::hideQmlWindow()
+{
+   QMetaObject::invokeMethod(rootObj_, "hideWindow");
 }
 
 void QMLAppObj::onPasswordAccepted(const QString &walletId
@@ -307,17 +322,13 @@ void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, co
 void QMLAppObj::onSysTrayMsgClicked()
 {
    logger_->debug("Systray message clicked");
-   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
-   QGuiApplication::processEvents();
-   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   raiseQmlWindow();
 }
 
 void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
    if (reason == QSystemTrayIcon::Trigger) {
-      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
-      QGuiApplication::processEvents();
-      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+      raiseQmlWindow();
    }
 }
 
