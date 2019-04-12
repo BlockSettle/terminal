@@ -70,7 +70,7 @@ void CCFileManager::ConnectToCelerClient(const std::shared_ptr<CelerClient> &cel
 
 bool CCFileManager::wasAddressSubmitted(const bs::Address &addr)
 {
-   return celerClient_->IsCCAddressSubmitted(addr.display<std::string>());
+   return celerClient_->IsCCAddressSubmitted(addr.display());
 }
 
 void CCFileManager::FillFrom(Blocksettle::Communication::GetCCGenesisAddressesResponse *resp)
@@ -149,7 +149,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
          emit CCSubmitFailed(QString::fromStdString(address.display()), tr("Failed to parse original request"));
          return;
       }
-      if (addressRequest.prefixedaddress() != address.display<std::string>()) {
+      if (addressRequest.prefixedaddress() != address.display()) {
          logger_->error("[CCFileManager::SubmitAddressToPuB] CC address mismatch");
          emit CCSubmitFailed(QString::fromStdString(address.display()), tr("CC address mismatch"));
          return;
@@ -160,7 +160,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       request.set_requesttype(SubmitCCAddrInitialDistribType);
       request.set_requestdata(data);
 
-      logger_->debug("[CCFileManager::SubmitAddressToPuB] submitting addr {}", address.display<std::string>());
+      logger_->debug("[CCFileManager::SubmitAddressToPuB] submitting addr {}", address.display());
       if (SubmitRequestToPB("submit_cc_addr", request.SerializeAsString())) {
          emit CCInitialSubmitted(QString::fromStdString(address.display()));
       }
@@ -177,7 +177,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
    SubmitAddrForInitialDistributionRequest addressRequest;
    addressRequest.set_username(celerClient_->userName());
    addressRequest.set_networktype(networkType(appSettings_));
-   addressRequest.set_prefixedaddress(address.display<std::string>());
+   addressRequest.set_prefixedaddress(address.display());
    addressRequest.set_bsseed(seed);
 
    return authSignManager_->Sign(addressRequest.SerializeAsString(), tr("Private Market token")
@@ -198,22 +198,22 @@ void CCFileManager::ProcessSubmitAddrResponse(const std::string& responseString)
    if (!response.success()) {
       if (response.has_errormessage()) {
          logger_->error("[CCFileManager::ProcessSubmitAddrResponse] recv address {} rejected: {}"
-            , addr.display<std::string>(), response.errormessage());
+            , addr.display(), response.errormessage());
       }
       else {
-         logger_->error("[CCFileManager::ProcessSubmitAddrResponse] recv address {} rejected", addr.display<std::string>());
+         logger_->error("[CCFileManager::ProcessSubmitAddrResponse] recv address {} rejected", addr.display());
       }
       return;
    }
 
    if (celerClient_->IsConnected()) {
-      if (!celerClient_->SetCCAddressSubmitted(addr.display<std::string>())) {
+      if (!celerClient_->SetCCAddressSubmitted(addr.display())) {
          logger_->warn("[CCFileManager::ProcessSubmitAddrResponse] failed to save address {} request event to Celer's user storage"
-            , addr.display<std::string>());
+            , addr.display());
       }
    }
 
-   logger_->debug("[CCFileManager::ProcessSubmitAddrResponse] {} succeeded", addr.display<std::string>());
+   logger_->debug("[CCFileManager::ProcessSubmitAddrResponse] {} succeeded", addr.display());
 
    emit CCAddressSubmitted(QString::fromStdString(addr.display()));
 }
@@ -278,7 +278,7 @@ bool CCFileManager::SaveToFile(const std::string &path, const std::string &sig)
       const auto secDef = resp.add_ccsecurities();
       secDef->set_securityid(ccDef.securityId);
       secDef->set_product(ccDef.product);
-      secDef->set_genesisaddr(ccDef.genesisAddr.display<std::string>());
+      secDef->set_genesisaddr(ccDef.genesisAddr.display());
       secDef->set_satoshisnb(ccDef.nbSatoshis);
       if (!ccDef.description.empty()) {
          secDef->set_description(ccDef.description);

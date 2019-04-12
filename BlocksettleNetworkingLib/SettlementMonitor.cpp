@@ -14,7 +14,7 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());
 
-   addressString_ = bs::Address{addr->getPrefixedHash()}.display<std::string>();
+   addressString_ = bs::Address{addr->getPrefixedHash()}.display();
 }
 
 bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -24,7 +24,7 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    : rtWallet_(rtWallet)
    , armory_(armory)
    , logger_(logger)
-   , addressString_(addr.display<std::string>())
+   , addressString_(addr.display())
 {
    const auto &addrHashes = addrEntry->supportedAddrHashes();
    ownAddresses_.insert(addrHashes.begin(), addrHashes.end());

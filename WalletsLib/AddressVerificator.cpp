@@ -111,7 +111,7 @@ bool AddressVerificator::SetBSAddressList(const std::unordered_set<std::string>&
 {
    for (const auto &addr : addressList) {
       bs::Address address(addr);
-      logger_->debug("BS address: {}", address.display<std::string>());
+      logger_->debug("BS address: {}", address.display());
       bsAddressList_.emplace(address.prefixed());
    }
    return true;
@@ -123,7 +123,7 @@ bool AddressVerificator::StartAddressVerification(const std::shared_ptr<AuthAddr
 
    if (AddressWasRegistered(addressCopy)) {
       logger_->debug("[AddressVerificator::StartAddressVerification] adding verification command to queue: {}"
-         , addressCopy->GetChainedAddress().display<std::string>());
+         , addressCopy->GetChainedAddress().display());
       if (registered_) {
          AddCommandToQueue(CreateAddressValidationCommand(addressCopy));
       }
@@ -316,7 +316,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
          addressRetries_[prefixedAddress]++;    // reschedule validation since error occured
       }
       else {
-         logger_->error("[AddressVerificator::ValidateAddress] Failed to validate address {}", state->address->GetChainedAddress().display<std::string>());
+         logger_->error("[AddressVerificator::ValidateAddress] Failed to validate address {}", state->address->GetChainedAddress().display());
          state->currentState = AddressVerificationState::VerificationFailed;
          ReturnValidationResult(state);
          addressRetries_.erase(prefixedAddress);
@@ -385,7 +385,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
    if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
       logger_->error("[AddressVerificator::CheckBSAddressState] Could not validate address. Looks like armory is offline.");
       if (state->bsAddressValidationErrorCount >= MaxBSAddressValidationErrorCount) {
-         logger_->error("[AddressVerificator::CheckBSAddressState] marking address as failed to validate {}", state->bsFundingAddress.display<std::string>());
+         logger_->error("[AddressVerificator::CheckBSAddressState] marking address as failed to validate {}", state->bsFundingAddress.display());
          state->currentState = AddressVerificationState::VerificationFailed;
          ReturnValidationResult(state);
       } else {

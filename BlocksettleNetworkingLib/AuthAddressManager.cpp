@@ -84,7 +84,7 @@ bool AuthAddressManager::setup()
       }
       const auto address = addr->GetChainedAddress();
       if (GetState(address) != state) {
-         logger_->info("Address verification {} for {}", to_string(state), address.display<std::string>());
+         logger_->info("Address verification {} for {}", to_string(state), address.display());
          SetState(address, state);
          SetInitialTxHash(address, addr->GetInitialTransactionTxHash());
          SetVerifChangeTxHash(address, addr->GetVerificationChangeTxHash());
@@ -450,7 +450,7 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
    request.set_requestdata(addressRequest.SerializeAsString());
 
    logger_->debug("[AuthAddressManager::SubmitAddressToPublicBridge] submitting address {} => {}"
-      , address.display<std::string>(), address.unprefixed().toHexStr());
+      , address.display(), address.unprefixed().toHexStr());
 
    return SubmitRequestToPB("submit_address", request.SerializeAsString());
 }
@@ -460,7 +460,7 @@ bool AuthAddressManager::ConfirmSubmitForVerification(const bs::Address &address
    ConfirmAuthSubmitRequest request;
 
    request.set_username(celerClient_->userName());
-   request.set_address(address.display<std::string>());
+   request.set_address(address.display());
    request.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
    request.set_scripttype(mapToScriptType(address.getType()));
@@ -490,7 +490,7 @@ bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
    CancelAuthAddressSubmitRequest request;
 
    request.set_username(celerClient_->userName());
-   request.set_address(address.display<std::string>());
+   request.set_address(address.display());
    request.set_userid(celerClient_->userId());
 
    RequestPacket  packet;
@@ -499,7 +499,7 @@ bool AuthAddressManager::CancelSubmitForVerification(const bs::Address &address)
    packet.set_requestdata(request.SerializeAsString());
 
    logger_->debug("[AuthAddressManager::CancelSubmitForVerification] cancel submission of {}"
-      , address.display<std::string>());
+      , address.display());
 
    return SubmitRequestToPB("confirm_submit_auth_addr", packet.SerializeAsString());
 }
@@ -517,7 +517,7 @@ AddressEntryType AuthAddressManager::mapFromScriptType(AddressScriptType scrType
 void AuthAddressManager::SubmitToCeler(const bs::Address &address)
 {
    if (celerClient_->IsConnected()) {
-      const std::string addressString = address.display<std::string>();
+      const std::string addressString = address.display();
       std::unordered_set<std::string> submittedAddresses = celerClient_->GetSubmittedAuthAddressSet();
       if (submittedAddresses.find(addressString) == submittedAddresses.end()) {
          submittedAddresses.emplace(addressString);
@@ -628,7 +628,7 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
       if (authWallet_ != nullptr) {
          for (const auto &addr : authWallet_->getUsedAddressList()) {
             AddAddress(addr);
-            if (submittedAddresses.find(addr.display<std::string>()) != submittedAddresses.end()) {
+            if (submittedAddresses.find(addr.display()) != submittedAddresses.end()) {
                SetState(addr, AddressVerificationState::Submitted);
             }
          }
@@ -647,7 +647,7 @@ void AuthAddressManager::VerifyWalletAddressesFunction()
          logger_->debug("Default auth address not found");
       }
       else {
-         logger_->debug("Default auth address: {}", defaultAddr_.display<std::string>());
+         logger_->debug("Default auth address: {}", defaultAddr_.display());
       }
    }
 

@@ -2,7 +2,6 @@
 #include <QDesktopServices>
 #include <set>
 #include "ChatMessagesTextEdit.h"
-#include "ChatClient.h"
 #include "ChatProtocol/ChatProtocol.h"
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;

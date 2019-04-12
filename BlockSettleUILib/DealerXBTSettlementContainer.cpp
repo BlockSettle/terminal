@@ -66,7 +66,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
       , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
       logger->info("Counterparty's address verification {} for {}"
-         , to_string(state), address->GetChainedAddress().display<std::string>());
+         , to_string(state), address->GetChainedAddress().display());
       cptyAddressState_ = state;
       emit cptyAddressStateChanged(state);
       if (state == AddressVerificationState::Verified) {

@@ -367,7 +367,7 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
 
    if (txSignReq.change.value) {
       auto change = request.mutable_change();
-      change->set_address(txSignReq.change.address.display<std::string>());
+      change->set_address(txSignReq.change.address.display());
       change->set_index(txSignReq.change.index);
       change->set_value(txSignReq.change.value);
    }
@@ -407,7 +407,7 @@ bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wal
    headless::SignPayoutTXRequest request;
    request.set_input(txSignReq.inputs[0].serialize().toBinStr());
    request.set_recipient(txSignReq.recipients[0]->getSerializedScript().toBinStr());
-   request.set_authaddress(authAddr.display<std::string>());
+   request.set_authaddress(authAddr.display());
    request.set_settlementid(settlementId);
    if (autoSign) {
       request.set_applyautosignrules(autoSign);
@@ -694,7 +694,7 @@ void HeadlessContainer::syncAddressComment(const std::string &walletId, const bs
 {
    headless::SyncCommentRequest request;
    request.set_walletid(walletId);
-   request.set_address(addr.display<std::string>());
+   request.set_address(addr.display());
    request.set_comment(comment);
 
    headless::RequestPacket packet;

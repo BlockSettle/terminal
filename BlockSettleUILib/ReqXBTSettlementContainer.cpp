@@ -214,7 +214,7 @@ void ReqXBTSettlementContainer::activate()
    userKeyOk_ = (std::find(list.begin(), list.end(), userAddress) != list.end());
    if (!userKeyOk_) {
       logger_->warn("[ReqXBTSettlementContainer::activate] userAddr {} not found in verified addrs list[{}]"
-         , userAddress.display<std::string>(), list.size());
+         , userAddress.display(), list.size());
       return;
    }
 

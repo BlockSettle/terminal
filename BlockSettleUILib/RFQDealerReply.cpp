@@ -764,7 +764,7 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
    auto qn = new bs::network::QuoteNotification(qrn, authKey, price, txData);
 
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
-      qn->receiptAddress = getRecvAddress().display<std::string>();
+      qn->receiptAddress = getRecvAddress().display();
       qn->reqAuthKey = qrn.requestorRecvAddress;
 
       auto wallet = transData->getSigningWallet();
@@ -1207,7 +1207,7 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
    }
    group->addLeaf(leaf, true);
 
-   leaf->setData(assetManager_->getCCGenesisAddr(baseProduct_).display<std::string>());
+   leaf->setData(assetManager_->getCCGenesisAddr(baseProduct_).display());
    leaf->setData(assetManager_->getCCLotSize(baseProduct_));
 
    ccWallet_ = leaf;
