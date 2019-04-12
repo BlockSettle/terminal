@@ -585,7 +585,7 @@ QString ChartWidget::GetFormattedStamp(double timestamp)
    default:
       resultFormat = QStringLiteral("dd MMM yy");
    }
-   return QDateTime::fromSecsSinceEpoch(timestamp).toString(resultFormat);
+   return QDateTime::fromSecsSinceEpoch(timestamp).toUTC().toString(resultFormat);
 }
 
 void ChartWidget::UpdateOHLCInfo(double width, double timestamp)
