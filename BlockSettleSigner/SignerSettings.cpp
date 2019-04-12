@@ -7,6 +7,7 @@
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
 #include "SignerSettings.h"
+#include "SystemFileUtils.h"
 
 
 static const QString zmqPubKeyName = QString::fromStdString("zmqpubkey");
@@ -49,10 +50,7 @@ static const QString woHelp = QObject::tr("Try to load only watching-only wallet
 SignerSettings::SignerSettings(const QString &fileName)
    : QObject(nullptr)
 {
-   QDir logDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-   logDir.cdUp();
-   writableDir_ = logDir.path().toStdString();
-
+   writableDir_ = SystemFilePaths::appDataLocation();
    backend_ = std::make_shared<QSettings>(QString::fromStdString(writableDir_ + "/") + fileName, QSettings::IniFormat);
 
    settingDefs_ = {

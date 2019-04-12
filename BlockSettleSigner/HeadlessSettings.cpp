@@ -17,7 +17,8 @@ HeadlessSettings::HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger
 
 bool HeadlessSettings::loadSettings(int argc, char **argv)
 {
-   const std::string iniFileName = SystemFilePaths::configDataLocation() + "/signer.ini";
+   const std::string iniFileName = SystemFilePaths::appDataLocation() + "/signer.ini";
+   logger_->debug("Loading settings from {}", iniFileName);
    INIReader iniReader(iniFileName);
    if (iniReader.ParseError() != 0) {
       return false;

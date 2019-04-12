@@ -49,7 +49,9 @@ static int HeadlessApp(int argc, char **argv)
 #endif
 
    logger->info("Starting BS Signer...");
+#ifdef NDEBUG
    try {
+#endif
       HeadlessAppObj appObj(logger, settings);
       appObj.start();
 
@@ -57,6 +59,7 @@ static int HeadlessApp(int argc, char **argv)
          std::unique_lock<std::mutex> lock(mainLoopMtx);
          mainLoopCV.wait_for(lock, std::chrono::seconds{ 1 });
       }
+#ifdef NDEBUG
    }
    catch (const std::exception &e) {
       std::string errMsg = "Failed to start headless process: ";
@@ -65,6 +68,7 @@ static int HeadlessApp(int argc, char **argv)
       std::cerr << errMsg << std::endl;
       return 1;
    }
+#endif
    return 0;
 }
 
