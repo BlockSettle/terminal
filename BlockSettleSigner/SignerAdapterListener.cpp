@@ -138,7 +138,7 @@ void SignerAdapterListener::setCallbacks()
          evt.set_rbf(txReq.RBF);
          if (txReq.change.value) {
             auto change = evt.mutable_change();
-            change->set_address(txReq.change.address.display<std::string>());
+            change->set_address(txReq.change.address.display());
             change->set_index(txReq.change.index);
             change->set_value(txReq.change.value);
          }
@@ -167,10 +167,10 @@ void SignerAdapterListener::setCallbacks()
       evt.set_wallet_id(walletId);
       sendData(signer::AutoSignActType, evt.SerializeAsString());
    };
-   const auto &cbAutoSignActivated = [this, cbAutoSign](const std::string &walletId) {
+   const auto &cbAutoSignActivated = [cbAutoSign](const std::string &walletId) {
       cbAutoSign(true, walletId);
    };
-   const auto &cbAutoSignDeactivated = [this, cbAutoSign](const std::string &walletId) {
+   const auto &cbAutoSignDeactivated = [cbAutoSign](const std::string &walletId) {
       cbAutoSign(false, walletId);
    };
    const auto &cbCustomDialog = [this](const std::string &dialogName, const std::string &data) {
@@ -324,7 +324,7 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::Re
       for (const auto &addr : wallet->getUsedAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
          auto address = response.add_addresses();
-         address->set_address(addr.display<std::string>());
+         address->set_address(addr.display());
          address->set_index(index);
       }
       return sendData(signer::SyncWalletType, response.SerializeAsString(), reqId);
