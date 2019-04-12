@@ -5,6 +5,7 @@
 #include <QObject>
 #include "CoreWallet.h"
 #include "SignerAdapter.h"
+#include "SignContainer.h"
 
 namespace bs {
    namespace sync {
@@ -24,33 +25,33 @@ public:
    {}
    ~SignAdapterContainer() noexcept = default;
 
-   RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
    , bool keepDuplicatedRecipients = false) override;
-   RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
+   bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
       , bool autoSign = false, const PasswordType& password = {}) override { return 0; }
-   RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
+   bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
       , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override {
       return 0;
    }
-   RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
+   bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
 
    void SendPassword(const std::string &walletId, const PasswordType &password,
       bool cancelledByUser) override {}
-   RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
+   bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
 
-   RequestId SetUserId(const BinaryData &) override { return 0; }
-   RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
+   bs::signer::RequestId SetUserId(const BinaryData &) override { return 0; }
+   bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}) override { return 0; }
-   RequestId createHDWallet(const std::string &name, const std::string &desc
+   bs::signer::RequestId createHDWallet(const std::string &name, const std::string &desc
       , bool primary, const bs::core::wallet::Seed &
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
-   RequestId DeleteHDRoot(const std::string &rootWalletId) override;
-   RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
-   RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
-   RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
+   bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
+   bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
+   bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
+   bs::signer::RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
    void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
-   RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
+   bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
    void syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &) override;

@@ -393,13 +393,25 @@ IF(WIN32)
       dwmapi
       netapi32
       crypt32
+      shlwapi
       userenv
       version
       UxTheme
    )
       
+   IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      SET(QT_LIBS
+         ${QT5_LIB_ROOT}/qtlibpngd.lib
+         ${QT5_LIB_ROOT}/Qt5FontDatabaseSupportd.lib
+         ${QT5_LIB_ROOT}/Qt5EventDispatcherSupportd.lib
+         ${QT5_LIB_ROOT}/Qt5ThemeSupportd.lib
+         ${QT5_LIB_ROOT}/Qt5WindowsUIAutomationSupportd.lib
+         ${QT5_LIB_ROOT}/Qt5AccessibilitySupportd.lib
+         ${QT5_LIB_ROOT}/Qt5Chartsd.lib
+      )
+
    IF(NOT BSTERMINAL_SHARED_LIBS)
-      LIST(APPEND OS_SPECIFIC_LIBS
+      LIST(APPEND QT_LIBS
          Qt5::QWindowsIntegrationPlugin
          Qt5::QICOPlugin
          Qt5::QWindowsPrinterSupportPlugin
@@ -407,17 +419,6 @@ IF(WIN32)
       add_definitions(-DUSE_QWindowsIntegrationPlugin)
    ENDIF()
 
-   IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-      SET(QT_LIBS
-         qtlibpngd.lib
-         Qt5FontDatabaseSupportd.lib
-         Qt5EventDispatcherSupportd.lib
-         Qt5ThemeSupportd.lib
-         Qt5WindowsUIAutomationSupportd.lib
-         Qt5AccessibilitySupportd.lib
-         Qt5Chartsd.lib
-      )
-         
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quickd.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgetsd.lib
@@ -429,12 +430,12 @@ IF(WIN32)
          LIST(APPEND OS_SPECIFIC_LIBS
             libcmtd.lib
             libcpmtd.lib
-            ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
          )
          
          LIST(APPEND QT_LIBS
-            qtharfbuzzd.lib
-            qtpcre2d.lib
+            ${QT5_LIB_ROOT}/qtharfbuzzd.lib
+            ${QT5_LIB_ROOT}/qtpcre2d.lib
+            ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
          )
          
          LIST(APPEND QT_QUICK_LIBS
@@ -459,13 +460,14 @@ IF(WIN32)
       
    ELSE()
       SET(QT_LIBS
-         qtlibpng.lib
-         Qt5FontDatabaseSupport.lib
-         Qt5EventDispatcherSupport.lib
-         Qt5ThemeSupport.lib
-         Qt5WindowsUIAutomationSupport.lib
-         Qt5AccessibilitySupport.lib
-         Qt5Charts.lib)
+         ${QT5_LIB_ROOT}/qtlibpng.lib
+         ${QT5_LIB_ROOT}/Qt5FontDatabaseSupport.lib
+         ${QT5_LIB_ROOT}/Qt5EventDispatcherSupport.lib
+         ${QT5_LIB_ROOT}/Qt5ThemeSupport.lib
+         ${QT5_LIB_ROOT}/Qt5WindowsUIAutomationSupport.lib
+         ${QT5_LIB_ROOT}/Qt5AccessibilitySupport.lib
+         ${QT5_LIB_ROOT}/Qt5Charts.lib
+      )
 
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quick.lib
@@ -476,14 +478,14 @@ IF(WIN32)
       
       IF(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND QT_LIBS
-            qtharfbuzz.lib
-            qtpcre2.lib
+            ${QT5_LIB_ROOT}/qtharfbuzz.lib
+            ${QT5_LIB_ROOT}/qtpcre2.lib
+            ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
          )
 
          LIST(APPEND OS_SPECIFIC_LIBS
             libcmt.lib
             libcpmt.lib
-            ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
          )
          
          LIST(APPEND QT_QUICK_LIBS
@@ -532,10 +534,6 @@ ELSE(WIN32)
          "-framework SystemConfiguration"
          "-framework QuartzCore"
          "-framework Metal"
-         Qt5::QCocoaIntegrationPlugin
-         Qt5::PrintSupport
-         Qt5::QICOPlugin
-         Qt5::QCocoaPrinterSupportPlugin
          ${ZLIB_LIBRARIES}
          ${CUPS_LIBRARIES})
 
@@ -543,17 +541,21 @@ ELSE(WIN32)
 
       IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
          SET(QT_LIBS
-            libqtharfbuzz_debug.a
-            libqtpcre2_debug.a
-            libqtlibpng_debug.a
-            libQt5EventDispatcherSupport_debug.a
-            libQt5ThemeSupport_debug.a
-            libQt5FontDatabaseSupport_debug.a
-            libQt5ClipboardSupport_debug.a
-            libQt5GraphicsSupport_debug.a
-            libQt5AccessibilitySupport_debug.a
-            libQt5EdidSupport_debug.a
-            libQt5Charts_debug.a
+            ${QT5_LIB_ROOT}/libqtharfbuzz_debug.a
+            ${QT5_LIB_ROOT}/libqtpcre2_debug.a
+            ${QT5_LIB_ROOT}/libqtlibpng_debug.a
+            ${QT5_LIB_ROOT}/libQt5EventDispatcherSupport_debug.a
+            ${QT5_LIB_ROOT}/libQt5ThemeSupport_debug.a
+            ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport_debug.a
+            ${QT5_LIB_ROOT}/libQt5ClipboardSupport_debug.a
+            ${QT5_LIB_ROOT}/libQt5GraphicsSupport_debug.a
+            ${QT5_LIB_ROOT}/libQt5AccessibilitySupport_debug.a
+            ${QT5_LIB_ROOT}/libQt5EdidSupport_debug.a
+            ${QT5_LIB_ROOT}/libQt5Charts_debug.a
+            Qt5::QCocoaIntegrationPlugin
+            Qt5::PrintSupport
+            Qt5::QICOPlugin
+            Qt5::QCocoaPrinterSupportPlugin
             )
          LIST (APPEND OS_SPECIFIC_LIBS
             ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite_debug.a
@@ -577,19 +579,23 @@ ELSE(WIN32)
          )
       ELSE()
          SET(QT_LIBS
-            libqtharfbuzz.a
-            libqtpcre2.a
-            libqtlibpng.a
-            libQt5EventDispatcherSupport.a
-            libQt5ThemeSupport.a
-            libQt5FontDatabaseSupport.a
-            libQt5ClipboardSupport.a
-            libQt5GraphicsSupport.a
-            libQt5AccessibilitySupport.a
-            libQt5EdidSupport.a
-            libQt5Charts.a
+            ${QT5_LIB_ROOT}/libqtharfbuzz.a
+            ${QT5_LIB_ROOT}/libqtpcre2.a
+            ${QT5_LIB_ROOT}/libqtlibpng.a
+            ${QT5_LIB_ROOT}/libQt5EventDispatcherSupport.a
+            ${QT5_LIB_ROOT}/libQt5ThemeSupport.a
+            ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
+            ${QT5_LIB_ROOT}/libQt5ClipboardSupport.a
+            ${QT5_LIB_ROOT}/libQt5GraphicsSupport.a
+            ${QT5_LIB_ROOT}/libQt5AccessibilitySupport.a
+            ${QT5_LIB_ROOT}/libQt5EdidSupport.a
+            ${QT5_LIB_ROOT}/libQt5Charts.a
+            Qt5::QCocoaIntegrationPlugin
+            Qt5::PrintSupport
+            Qt5::QICOPlugin
+            Qt5::QCocoaPrinterSupportPlugin
             )
-         LIST (APPEND OS_SPECIFIC_LIBS
+         LIST (APPEND QT_LIBS
             ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
          )
          SET(QT_QUICK_LIBS
@@ -660,9 +666,10 @@ ELSE(WIN32)
             ${CMAKE_THREAD_LIBS_INIT} )
 
       ELSE(BSTERMINAL_SHARED_LIBS)
-         SET( QT_LIBS
-            libqtharfbuzz.a
-            libqtpcre2.a )
+         SET(QT_LIBS
+            ${QT5_LIB_ROOT}/libqtharfbuzz.a
+            ${QT5_LIB_ROOT}/libqtpcre2.a
+         )
 
          SET( TMP_LIBS
             libQt5XcbQpa.a
@@ -691,10 +698,13 @@ ELSE(WIN32)
             LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
          ENDFOREACH(lib_name)
 
-         SET( OS_SPECIFIC_LIBS
+         LIST(APPEND QT_LINUX_LIBS
             Qt5::QXcbIntegrationPlugin
             Qt5::QICOPlugin
             Qt5::QCupsPrinterSupportPlugin
+         )
+
+         SET( OS_SPECIFIC_LIBS
             Fontconfig::Fontconfig
             freetype
             X11::XCB
@@ -737,15 +747,7 @@ ELSE(WIN32)
    ENDIF( APPLE )
 ENDIF(WIN32)
 
-FOREACH(lib_name ${QT_LIBS})
-   IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
-      MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
-   ENDIF()
-
-   LIST(INSERT OS_SPECIFIC_LIBS 0 ${QT5_LIB_ROOT}/${lib_name})
-ENDFOREACH(lib_name)
-
-LIST(REMOVE_DUPLICATES OS_SPECIFIC_LIBS)
+LIST(REMOVE_DUPLICATES QT_LIBS)
 
 IF(BSTERMINAL_SHARED_LIBS)
    unset(OPENSSL_USE_STATIC_LIBS)

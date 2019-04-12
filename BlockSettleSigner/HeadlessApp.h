@@ -3,10 +3,10 @@
 
 #include <functional>
 #include <memory>
-#include <QObject>
 #include "CoreWallet.h"
 #include "EncryptionUtils.h"
-#include "SignContainer.h"
+#include "ProcessControl.h"
+#include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -17,7 +17,6 @@ namespace bs {
    }
 }
 class HeadlessContainerListener;
-class QProcess;
 class SignerAdapterListener;
 class HeadlessSettings;
 class ZmqSecuredServerConnection;
@@ -25,15 +24,14 @@ class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
 
-class HeadlessAppObj : public QObject
-{
-   Q_OBJECT
 
+class HeadlessAppObj
+{
 public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<HeadlessSettings> &);
 
-   ~HeadlessAppObj() noexcept;
+   ~HeadlessAppObj() noexcept = default;
 
    void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
@@ -50,18 +48,14 @@ public:
    void reloadWallets(const std::string &, const std::function<void()> &);
    void reconnect(const std::string &listenAddr, const std::string &port);
    void setOnline(bool);
-   void setLimits(SignContainer::Limits);
+   void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
    void deactivateAutoSign();
    void addPendingAutoSignReq(const std::string &walletId);
    void close();
 
-signals:
-   void finished();
-
 private:
    void startInterface();
-   void stopInterface();
    void onlineProcessing();
 
 private:
@@ -72,7 +66,7 @@ private:
    std::shared_ptr<ZmqBIP15XServerConnection> connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<SignerAdapterListener>       adapterLsn_;
-   std::shared_ptr<QProcess>  guiProcess_;
+   ProcessControl             guiProcess_;
    std::function<void(bool)>  cbReady_ = nullptr;
    bool ready_ = false;
 };

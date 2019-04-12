@@ -2,11 +2,8 @@
 #include <spdlog/spdlog.h>
 #include <QDataStream>
 #include <QFile>
-#include <QStandardPaths>
-#include "CelerClientConnection.h"
-#include "DataConnection.h"
-#include "DataConnectionListener.h"
-#include "HeadlessApp.h"
+#include "SignContainer.h"
+#include "SystemFileUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -24,10 +21,10 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, Netw
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true, true);
    adapterConn->SetContext(zmqContext);
    {
-      const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-      QFile pubKeyFile(dir + QLatin1String("/interface.pub"));
+      const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";
+      QFile pubKeyFile(QString::fromStdString(pubKeyFileName));
       if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-         throw std::runtime_error("Failed to create public key file");
+         throw std::runtime_error("failed to create public key file " + pubKeyFileName);
       }
       pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
    }
@@ -105,7 +102,7 @@ void SignerAdapter::reconnect(const QString &address, const QString &port)
    listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
 }
 
-void SignerAdapter::setLimits(SignContainer::Limits limits)
+void SignerAdapter::setLimits(bs::signer::Limits limits)
 {
    signer::SetLimitsRequest request;
    request.set_auto_sign_satoshis(limits.autoSignSpendXBT);
@@ -151,7 +148,7 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
    request.set_removeold(removeOld);
    request.set_dryrun(dryRun);
 
-   SignContainer::RequestId reqId = listener_->send(signer::ChangePasswordRequestType, request.SerializeAsString());
+   const auto reqId = listener_->send(signer::ChangePasswordRequestType, request.SerializeAsString());
    listener_->setChangePwCb(reqId, cb);
 }
 

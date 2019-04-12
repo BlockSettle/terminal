@@ -16,6 +16,7 @@
 #include "SignerAdapter.h"
 #include "SignerSettings.h"
 #include "SignerVersion.h"
+#include "SignerUiDefs.h"
 #include "TXInfo.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"

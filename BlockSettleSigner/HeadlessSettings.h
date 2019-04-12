@@ -1,10 +1,9 @@
 #ifndef __HEADLESS_SETTINGS_H__
 #define __HEADLESS_SETTINGS_H__
 
+#include <memory>
 #include "BtcDefinitions.h"
-#include "SettingsParser.h"
-#include "SignContainer.h"
-#include "SignerUiDefs.h"
+#include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -12,26 +11,25 @@ namespace spdlog {
 
 class HeadlessSettings
 {
-   Q_GADGET
 public:
    HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger);
    ~HeadlessSettings() noexcept = default;
 
-   bool loadSettings(const QStringList &);
+   bool loadSettings(int argc, char **argv);
 
    NetworkType netType() const;
    bool testNet() const { return testNet_; }
-   SignContainer::Limits limits() const;
+   bs::signer::Limits limits() const;
    std::string getWalletsDir() const;
    bool watchingOnly() const { return watchOnly_; }
    std::string listenAddress() const { return listenAddress_; }
    std::string listenPort() const { return listenPort_; }
    std::string interfacePort() const { return interfacePort_; }
    std::string logFile() const { return logFile_; }
-   QStringList trustedTerminals() const { return trustedTerminals_; }
-   QStringList trustedInterfaces() const;
+   std::vector<std::string> trustedTerminals() const { return trustedTerminals_; }
+   std::vector<std::string> trustedInterfaces() const;
 
-   bs::signer::ui::RunMode runMode() const { return runMode_; }
+   bs::signer::RunMode runMode() const { return runMode_; }
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -44,8 +42,8 @@ private:
    std::string listenAddress_ = "0.0.0.0";
    std::string listenPort_ = "23456";
    std::string interfacePort_ = "23457";
-   QStringList trustedTerminals_;
-   bs::signer::ui::RunMode runMode_;
+   std::vector<std::string>   trustedTerminals_;
+   bs::signer::RunMode runMode_;
 };
 
 

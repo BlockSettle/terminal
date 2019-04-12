@@ -105,7 +105,7 @@ void SignerInterfaceListener::OnError(DataConnectionError errorCode) {
    logger_->debug("[SignerInterfaceListener] error {}", errorCode);
 }
 
-SignContainer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data) {
+bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data) {
    const auto reqId = seq_++;
    signer::Packet packet;
    packet.set_id(reqId);
@@ -184,7 +184,7 @@ void SignerInterfaceListener::onPasswordRequested(const std::string &data)
    });
 }
 
-void SignerInterfaceListener::onTxSigned(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::TxSignEvent evt;
    if (!evt.ParseFromString(data)) {
@@ -243,7 +243,7 @@ void SignerInterfaceListener::onAutoSignActivate(const std::string &data)
    }
 }
 
-void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletInfoResponse response;
    if (!response.ParseFromString(data)) {
@@ -268,7 +268,7 @@ void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, SignCont
    cbWalletInfo_.erase(itCb);
 }
 
-void SignerInterfaceListener::onSyncHDWallet(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncHDWalletResponse response;
    if (!response.ParseFromString(data)) {
@@ -295,7 +295,7 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, SignContai
    cbHDWalletData_.erase(itCb);
 }
 
-void SignerInterfaceListener::onSyncWallet(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletResponse response;
    if (!response.ParseFromString(data)) {
@@ -325,7 +325,7 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, SignContaine
    cbWalletData_.erase(itCb);
 }
 
-void SignerInterfaceListener::onCreateWO(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::CreateWatchingOnlyResponse response;
    if (!response.ParseFromString(data)) {
@@ -363,7 +363,7 @@ void SignerInterfaceListener::onCreateWO(const std::string &data, SignContainer:
    cbWO_.erase(itCb);
 }
 
-void SignerInterfaceListener::onDecryptedKey(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onDecryptedKey(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptedNodeResponse response;
    if (!response.ParseFromString(data)) {
@@ -380,7 +380,7 @@ void SignerInterfaceListener::onDecryptedKey(const std::string &data, SignContai
    cbDecryptNode_.erase(itCb);
 }
 
-void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
+void SignerInterfaceListener::onReloadWallets(bs::signer::RequestId reqId)
 {
    const auto &itCb = cbReloadWallets_.find(reqId);
    if (itCb == cbReloadWallets_.end()) {
@@ -392,7 +392,7 @@ void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
    cbReloadWallets_.erase(itCb);
 }
 
-void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignContainer::RequestId)
+void SignerInterfaceListener::onExecCustomDialog(const std::string &data, bs::signer::RequestId)
 {
    signer::CustomDialogRequest evt;
    if (!evt.ParseFromString(data)) {
@@ -412,7 +412,7 @@ void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignCo
    });
 }
 
-void SignerInterfaceListener::onChangePassword(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onChangePassword(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::ChangePasswordResponse response;
    if (!response.ParseFromString(data)) {

@@ -143,7 +143,7 @@ static int QMLApp(int argc, char **argv)
 
    // Go ahead and build the headless connection encryption files, even if we
    // don't use them. If they already exist, we'll leave them alone.
-   logger->info("Starting BS Signer...");
+   logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
    try {
       SignerAdapter adapter(logger, settings->netType());
       QQmlApplicationEngine engine;
@@ -183,7 +183,9 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
-   btc_ecc_start(); // Initialize libbtc.
+   srand(std::time(nullptr));
+
+   btc_ecc_start(); // Initialize libbtc
    startupBIP151CTX();
    startupBIP150CTX(4, true);
 
