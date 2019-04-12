@@ -109,7 +109,6 @@ void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId)
 {
    logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
-//   emit clientDisconnected(clientId);
 }
 
 void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, const std::string &data)
@@ -220,7 +219,6 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
       return onGetHDWalletInfo(clientId, packet);
 
    case headless::DisconnectionRequestType:
-//!      emit OnClientDisconnected(clientId);
       break;
 
    case headless::SyncWalletInfoType:
