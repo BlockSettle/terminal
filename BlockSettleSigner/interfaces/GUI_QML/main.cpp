@@ -62,6 +62,26 @@ Q_IMPORT_PLUGIN(QmlSettingsPlugin)
 
 #endif // STATIC_BUILD
 
+bool skipWarning(const QByteArray &localMsg)
+{
+   const char *skipLines[] = {
+      // Skip until this is resolved: https://bugreports.qt.io/browse/QTBUG-74523
+      "Could not convert argument 2 at",
+      "expression for index@qrc:/qt-project.org/imports/QtQuick/Controls/Private/TreeViewItemDelegateLoader.qml:84",
+      "onCompleted@qrc:/qt-project.org/imports/QtQuick/Controls/Private/BasicTableView.qml:546",
+      "Passing incompatible arguments to C++ functions from JavaScript is dangerous and deprecated.",
+      "This will throw a JavaScript TypeError in future releases of Qt!",
+      "onItemAdded@qrc:/qt-project.org/imports/QtQuick/Controls/Private/BasicTableView.qml:617",
+   };
+
+   for (size_t i = 0; i < sizeof(skipLines) / sizeof(skipLines[0]); ++i) {
+      if (localMsg.indexOf(skipLines[i]) > 0) {
+          return true;
+      }
+   }
+   return false;
+}
+
 // redirect qDebug() to stdout
 // stdout redirected to parent process
 void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
@@ -75,7 +95,9 @@ void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QS
         fprintf(stdout, "GUI QML Info: %s\r\n", localMsg.constData());
         break;
     case QtWarningMsg:
-        fprintf(stderr, "GUI QML Warning: %s\r\n", localMsg.constData());
+        if (!skipWarning(localMsg)) {
+           fprintf(stderr, "GUI QML Warning: %s\r\n", localMsg.constData());
+        }
         break;
     case QtCriticalMsg:
         fprintf(stderr, "GUI QML Critical: %s\r\n", localMsg.constData());
