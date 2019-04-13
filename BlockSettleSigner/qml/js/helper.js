@@ -68,7 +68,7 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
         authProgress.acceptAnimated()
 
         var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = NsWallet.Auth
+        passwordData.encType = QPasswordData.Auth
         passwordData.encKey = encKey_
         passwordData.binaryPassword = password_
 
@@ -109,7 +109,7 @@ function removeEidDevice (index, walletInfo, onSuccess) {
         authProgress.acceptAnimated()
 
         var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = NsWallet.Auth
+        passwordData.encType = QPasswordData.Auth
         passwordData.encKey = encKey_
         passwordData.binaryPassword = password_
 
@@ -147,7 +147,7 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
         authProgress.acceptAnimated()
 
         var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = NsWallet.Auth
+        passwordData.encType = QPasswordData.Auth
         passwordData.encKey = encKey_
         passwordData.binaryPassword = password_
 
