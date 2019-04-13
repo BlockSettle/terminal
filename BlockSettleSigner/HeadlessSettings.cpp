@@ -21,7 +21,7 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    logger_->debug("Loading settings from {}", iniFileName);
    INIReader iniReader(iniFileName);
    if (iniReader.ParseError() != 0) {
-      return false;
+      logger_->warn("Parsing settings file failed: {}", iniFileName);
    }
 
    watchOnly_ = iniReader.GetBoolean("General", "WatchinOnly", false);
