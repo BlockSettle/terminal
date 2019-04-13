@@ -62,24 +62,14 @@ Q_IMPORT_PLUGIN(QmlSettingsPlugin)
 
 #endif // STATIC_BUILD
 
-bool skipWarning(const QByteArray &localMsg)
+bool skipWarning(const QMessageLogContext &context)
 {
-   // Skip until this is resolved: https://bugreports.qt.io/browse/QTBUG-74523
-   const char *skipLines[] = {
-      "Could not convert argument 2 at",
-      "expression for index@qrc:/qt-project.org/imports/QtQuick/Controls/Private/TreeViewItemDelegateLoader.qml:84",
-      "onCompleted@qrc:/qt-project.org/imports/QtQuick/Controls/Private/BasicTableView.qml:546",
-      "Passing incompatible arguments to C++ functions from JavaScript is dangerous and deprecated.",
-      "This will throw a JavaScript TypeError in future releases of Qt!",
-      "onItemAdded@qrc:/qt-project.org/imports/QtQuick/Controls/Private/BasicTableView.qml:617",
-   };
-
-   for (size_t i = 0; i < sizeof(skipLines) / sizeof(skipLines[0]); ++i) {
-      if (localMsg.indexOf(skipLines[i]) > 0) {
-          return true;
-      }
+   if (!context.function) {
+      return false;
    }
-   return false;
+   // Skip some warnings before this is fixed: https://bugreports.qt.io/browse/QTBUG-74523
+   auto skipFunction = "QV4::ReturnedValue CallMethod(const QQmlObjectOrGadget&, int, int, int, int*, QV4::ExecutionEngine*, QV4::CallData*, QMetaObject::Call)";
+   return std::strcmp(context.function, skipFunction) == 0;
 }
 
 // redirect qDebug() to stdout
@@ -95,7 +85,7 @@ void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QS
         fprintf(stdout, "GUI QML Info: %s\r\n", localMsg.constData());
         break;
     case QtWarningMsg:
-        if (!skipWarning(localMsg)) {
+        if (!skipWarning(context)) {
            fprintf(stderr, "GUI QML Warning: %s\r\n", localMsg.constData());
         }
         break;
