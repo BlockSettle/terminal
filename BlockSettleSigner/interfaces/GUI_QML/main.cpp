@@ -64,8 +64,8 @@ Q_IMPORT_PLUGIN(QmlSettingsPlugin)
 
 bool skipWarning(const QByteArray &localMsg)
 {
+   // Skip until this is resolved: https://bugreports.qt.io/browse/QTBUG-74523
    const char *skipLines[] = {
-      // Skip until this is resolved: https://bugreports.qt.io/browse/QTBUG-74523
       "Could not convert argument 2 at",
       "expression for index@qrc:/qt-project.org/imports/QtQuick/Controls/Private/TreeViewItemDelegateLoader.qml:84",
       "onCompleted@qrc:/qt-project.org/imports/QtQuick/Controls/Private/BasicTableView.qml:546",
@@ -168,6 +168,8 @@ static int QMLApp(int argc, char **argv)
    logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
    try {
       SignerAdapter adapter(logger, settings->netType());
+      adapter.setCloseHeadless(settings->closeHeadless());
+
       QQmlApplicationEngine engine;
       const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
       engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
