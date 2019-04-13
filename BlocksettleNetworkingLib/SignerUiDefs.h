@@ -49,11 +49,6 @@ namespace bs {
 
       }  // namespace ui
    }  // namespace signer
-
-   namespace wallet {
-      Q_NAMESPACE
-      Q_ENUM_NS(EncryptionType)
-   }
 }  // namespace bs
 
 #endif
