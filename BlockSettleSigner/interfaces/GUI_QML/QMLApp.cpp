@@ -182,14 +182,6 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-
-   qmlRegisterUncreatableMetaObject(
-     bs::wallet::staticMetaObject, // static meta object
-     "com.blocksettle.NsWallet.namespace",                // import statement (can be any string)
-     1, 0,                          // major and minor version of the import
-     "NsWallet",                 // name in QML (does not have to match C++ name)
-     QStringLiteral("Error: namespace.bs.NsWallet: only enums")            // error in case someone tries to create a MyNamespace object
-   );
 }
 
 void QMLAppObj::onOfflineChanged()

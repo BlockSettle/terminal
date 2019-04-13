@@ -56,6 +56,8 @@ public:
 
    NetworkType netType() const { return netType_; }
 
+   void setCloseHeadless(bool value) { closeHeadless_ = value; }
+
 signals:
    void ready() const;
    void peerConnected(const QString &ip);
@@ -75,6 +77,7 @@ private:
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<SignerInterfaceListener>  listener_;
+   bool closeHeadless_{true};
 };
 
 

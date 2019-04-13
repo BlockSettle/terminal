@@ -20,8 +20,12 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    const std::string iniFileName = SystemFilePaths::appDataLocation() + "/signer.ini";
    logger_->debug("Loading settings from {}", iniFileName);
    INIReader iniReader(iniFileName);
-   if (iniReader.ParseError() != 0) {
-      return false;
+
+   if (SystemFileUtils::fileExist(iniFileName)) {
+      if (iniReader.ParseError() != 0) {
+         logger_->error("Parsing settings file failed: {}", iniFileName);
+         return false;
+      }
    }
 
    watchOnly_ = iniReader.GetBoolean("General", "WatchinOnly", false);

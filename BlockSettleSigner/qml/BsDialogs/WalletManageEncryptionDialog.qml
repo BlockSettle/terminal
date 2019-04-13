@@ -8,7 +8,6 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 import "../BsControls"
 import "../BsStyles"
@@ -22,14 +21,14 @@ CustomDialog {
     property QPasswordData newPasswordData: QPasswordData {}
     property QPasswordData oldPasswordData: QPasswordData {}
 
-    property bool acceptableOld : walletInfo.encType === NsWallet.Password ? walletDetailsFrame.password.length : true
+    property bool acceptableOld : walletInfo.encType === QPasswordData.Password ? walletDetailsFrame.password.length : true
     property bool acceptableNewPw : newPasswordInput.acceptableInput
     property bool acceptableNewAuth : textInputEmail.text.length > 3
     property bool acceptableNew : rbPassword.checked ? acceptableNewPw : acceptableNewAuth
 
     property bool acceptable : {
         if (tabBar.currentIndex === 0) return acceptableOld && acceptableNew
-        if (tabBar.currentIndex === 1) return walletInfo.encType === NsWallet.Auth
+        if (tabBar.currentIndex === 1) return walletInfo.encType === QPasswordData.Auth
         if (tabBar.currentIndex === 2) return false
     }
 
@@ -89,14 +88,14 @@ CustomDialog {
                 }
                 CustomTabButton {
                     id: addTabButton
-                    //enabled: walletInfo.encType === NsWallet.Auth
+                    //enabled: walletInfo.encType === QPasswordData.Auth
                     text: "Add Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
                 }
                 CustomTabButton {
                     id: deleteTabButton
-                    //enabled: walletInfo.encType === NsWallet.Auth
+                    //enabled: walletInfo.encType === QPasswordData.Auth
                     text: "Remove Device"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
@@ -233,7 +232,7 @@ CustomDialog {
                     color: BSStyle.textColor
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    visible: walletInfo.encType !== NsWallet.Auth
+                    visible: walletInfo.encType !== QPasswordData.Auth
                     Layout.preferredWidth: changeEncryptionDialog.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
@@ -245,7 +244,7 @@ CustomDialog {
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
                     wrapMode: Text.WordWrap
-                    color: walletInfo.encType === NsWallet.Auth ? BSStyle.labelsTextColor : BSStyle.labelsTextDisabledColor
+                    color: walletInfo.encType === QPasswordData.Auth ? BSStyle.labelsTextColor : BSStyle.labelsTextDisabledColor
 
                     text: "Add the ability to sign transactions from your other Auth eID devices.\
 \n\n\n Only one signature from one device will be required to sign requests.\
@@ -270,7 +269,7 @@ CustomDialog {
                     color: BSStyle.textColor
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    visible: walletInfo.encType !== NsWallet.Auth
+                    visible: walletInfo.encType !== QPasswordData.Auth
                     Layout.preferredWidth: changeEncryptionDialog.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
@@ -279,7 +278,7 @@ CustomDialog {
 
                 CustomHeader {
                     text: qsTr("Devices")
-                    textColor: walletInfo.encType === NsWallet.Auth ? BSStyle.textColor : BSStyle.labelsTextDisabledColor
+                    textColor: walletInfo.encType === QPasswordData.Auth ? BSStyle.textColor : BSStyle.labelsTextDisabledColor
                     Layout.fillWidth: true
                     Layout.preferredHeight: 25
                     Layout.topMargin: 5
@@ -376,10 +375,10 @@ CustomDialog {
                         if (rbPassword.checked) {
                             // new auth is Password
                             newPasswordData.textPassword = newPasswordInput.password
-                            newPasswordData.encType = NsWallet.Password
+                            newPasswordData.encType = QPasswordData.Password
                         }
 
-                        if (walletInfo.encType === NsWallet.Auth) {
+                        if (walletInfo.encType === QPasswordData.Auth) {
                             // current auth is eID
                             JsHelper.requesteIdAuth(AutheIDClient.DeactivateWallet
                                                     , walletInfo
@@ -422,7 +421,7 @@ CustomDialog {
                         else {
                             // current auth is Password
                             oldPasswordData.textPassword = walletDetailsFrame.password
-                            oldPasswordData.encType = NsWallet.Password
+                            oldPasswordData.encType = QPasswordData.Password
 
                             if (rbPassword.checked) {
                                 // new auth is Password

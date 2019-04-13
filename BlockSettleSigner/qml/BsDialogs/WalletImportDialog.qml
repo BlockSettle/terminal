@@ -10,7 +10,6 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 import "../BsControls"
 import "../StyledControls"
@@ -500,7 +499,7 @@ CustomTitleDialogWindow {
 
                         if (rbPassword.checked) {
                             // password
-                            passwordData.encType = NsWallet.Password
+                            passwordData.encType = QPasswordData.Password
                             passwordData.encKey = ""
                             passwordData.textPassword = newPasswordWithConfirm.password
 
