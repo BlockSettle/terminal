@@ -97,7 +97,9 @@ bool SystemFileUtils::mkPath(const std::string &path)
          break;
       }
       p = p.substr(0, pSep);
-      dirs.push_back(p);
+      if (!p.empty()) {
+         dirs.push_back(p);
+      }
    }
    std::reverse(dirs.begin(), dirs.end());
 
