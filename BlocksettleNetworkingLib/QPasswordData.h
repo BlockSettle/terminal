@@ -16,9 +16,17 @@ namespace wallet {
 class QPasswordData : public QObject, public PasswordData {
    Q_OBJECT
 public:
+   enum QEncryptionType
+   {
+      Unencrypted,
+      Password,
+      Auth,
+   };
+   Q_ENUMS(QEncryptionType)
+
    Q_PROPERTY(QString textPassword READ textPassword WRITE setTextPassword NOTIFY passwordChanged)
    Q_PROPERTY(SecureBinaryData binaryPassword READ binaryPassword WRITE setBinaryPassword NOTIFY passwordChanged)
-   Q_PROPERTY(bs::wallet::EncryptionType encType READ getEncType WRITE setEncType NOTIFY encTypeChanged)
+   Q_PROPERTY(QEncryptionType encType READ getEncType WRITE setEncType NOTIFY encTypeChanged)
    Q_PROPERTY(QString encKey READ getEncKey WRITE setEncKey NOTIFY encKeyChanged)
 
    QPasswordData(QObject *parent = nullptr) : QObject(parent), PasswordData() {}
@@ -30,17 +38,17 @@ public:
 
    QString                 textPassword() const             { return QString::fromStdString(password.toBinStr()); }
    SecureBinaryData        binaryPassword() const           { return password; }
-   EncryptionType          getEncType() const               { return encType; }
+   QEncryptionType         getEncType() const               { return QEncryptionType(encType); }
    QString                 getEncKey() const                { return QString::fromStdString(encKey.toBinStr()); }
 
    void setTextPassword    (const QString &pw)              { password =  SecureBinaryData(pw.toStdString()); emit passwordChanged(); }
    void setBinaryPassword  (const SecureBinaryData &data)   { password =  data; emit passwordChanged(); }
-   void setEncType         (EncryptionType e)               { encType =  e; emit encTypeChanged(e); }
+   void setEncType         (QEncryptionType e)              { encType = EncryptionType(e); emit encTypeChanged(e); }
    void setEncKey          (const QString &e)               { encKey =  SecureBinaryData(e.toStdString()); emit encKeyChanged(e); }
 
 signals:
    void passwordChanged();
-   void encTypeChanged(EncryptionType);
+   void encTypeChanged(QEncryptionType);
    void encKeyChanged(QString);
 };
 
