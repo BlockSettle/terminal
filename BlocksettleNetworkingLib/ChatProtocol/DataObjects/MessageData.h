@@ -20,11 +20,15 @@ namespace Chat {
       enum class State {
          Undefined = 0,
          Invalid = 1,
-         Encrypted = 2,
-         Acknowledged = 4,
-         Read = 8,
-         Sent = 16,
-         Encrypted_AEAD = 32
+         Acknowledged = 2,
+         Read = 4,
+         Sent = 8
+      };
+
+      enum class EncryptionType {
+         Unencrypted = 0,
+         IES = 1,
+         AEAD = 2
       };
    
       MessageData(const QString &sender, const QString &receiver,
@@ -53,6 +57,9 @@ namespace Chat {
       
       //Set ID for message, returns old ID that was replaced
       QString setId(const QString& id);
+
+      MessageData::EncryptionType encryptionType() const;
+      void setEncryptionType(const MessageData::EncryptionType &type);
    
    private:
       QString id_;
@@ -62,5 +69,6 @@ namespace Chat {
       QString messageData_;
       int state_;
       autheid::SecureBytes nonce_;
+      EncryptionType encryptionType_;
    };
 }

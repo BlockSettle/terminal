@@ -188,37 +188,14 @@ bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
 bool ChatDB::updateMessageStatus(const QString& messageId, int ustatus)
 {
    const QString cmd = QLatin1String("UPDATE messages SET"
-                                     " state = state & :unset | :set"
+                                     " state = :state"
                                      " WHERE (id = :mid);");
-   /*
-    * Logic is next:
-    * We have new message status that should be updated
-    * but this message status is for message in the memory
-    * and this message in the memory have unset Encrypted flag
-    * But we can't change this flag in DB, we want to store messages in encrypted state
-    * 
-    * So we have mask that show what flags allowed to be changed
-    * using this mask we extracting flags that should be set (mask & ustatus)
-    * and flags that should be unset (~(set ^ mask))
-    * 
-    * Then we use this flags set and unset for change status in the DB without
-    * pulling status itself from DB
-    * 
-    * So just update status in the message in memory and use this method with updated status
-    * And it will set all flags in DB to updated state except Encrypted
-   */
-   
-    // Mask its allowed for change flags
-   int mask = ~static_cast<int>(Chat::MessageData::State::Encrypted);
-   int set = mask & ustatus;
-   int unset = ~(set ^ mask);
-   
+
    QSqlQuery query(db_);
 
    query.prepare(cmd);
    query.bindValue(QLatin1String(":mid"), messageId);
-   query.bindValue(QLatin1String(":set"), set);
-   query.bindValue(QLatin1String(":unset"), unset);
+   query.bindValue(QLatin1String(":state"), ustatus);
    
    if (!query.exec()) {
       logger_->error("[ChatDB::updateMessageStatus] failed to update message status with server message id: {}; Error: {}\nQuery: {}",
@@ -423,14 +400,14 @@ bool ChatDB::getContacts(ContactUserDataList &contactList)
 bool ChatDB::updateContact(const ContactUserData &contact)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=?, status=? WHERE user_id=?;"))) {
+   if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=:user_name, status=:status WHERE user_id=:user_id;"))) {
       logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
 
-   query.bindValue(0, contact.userName());
-   query.bindValue(1, static_cast<int>(contact.status()));
-   query.bindValue(2, contact.userId());
+   query.bindValue(QLatin1String(":user_name"), contact.userName());
+   query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
+   query.bindValue(QLatin1String(":user_id"), contact.userId());
 
    if (!query.exec()) {
       logger_->error("[ChatDB::updateContact] failed to exec query: {}", query.lastError().text().toStdString());

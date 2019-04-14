@@ -177,8 +177,7 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
          addOrUpdateContact(QString::fromStdString(response.senderId()), ContactUserData::Status::Rejected);
          //removeContact(QString::fromStdString(response.senderId()));
          emit FriendRequestRejected({response.senderId()});
-         // reprocess message again
-         retrySendQueuedMessages(response.senderId());
+         eraseQueuedMessages(response.senderId());
       }
       break;
       case Chat::ContactsAction::Request: {
@@ -286,10 +285,13 @@ void ChatClient::OnRoomMessages(const Chat::RoomMessagesResponse& response)
       msg->setFlag(Chat::MessageData::State::Acknowledged);
       chatDb_->add(*msg);
 
-      if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
+      if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
          if (!msg->decrypt(ownPrivKey_)) {
             logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
             msg->setFlag(Chat::MessageData::State::Invalid);
+         }
+         else {
+            msg->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
          }
       }
       messages.push_back(msg);
@@ -403,7 +405,7 @@ void ChatClient::OnUsersList(const Chat::UsersListResponse &response)
 
 void ChatClient::OnMessages(const Chat::MessagesResponse &response)
 {
-   logger_->debug("Received messages from server: {}", response.getData());
+   logger_->debug("[ChatClient::OnMessages] Received messages from server: {}", response.getData());
    std::vector<std::shared_ptr<Chat::MessageData>> messages;
    for (const auto &msgStr : response.getDataList()) {
       const auto msg = Chat::MessageData::fromJSON(msgStr);
@@ -413,30 +415,31 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
 
       const auto& itPublicKey = pubKeys_.find(msg->getSenderId());
       if (itPublicKey == pubKeys_.end()) {
-         logger_->error("Can't find public key for sender {}", msg->getSenderId().toStdString());
+         logger_->error("[ChatClient::OnMessages] Can't find public key for sender {}", msg->getSenderId().toStdString());
          msg->setFlag(Chat::MessageData::State::Invalid);
       }
       else {
-         if (msg->getState() & (int)Chat::MessageData::State::Encrypted_AEAD) {
+         if (msg->encryptionType() == Chat::MessageData::EncryptionType::AEAD) {
             if (!msg->decrypt_aead(itPublicKey->second, ownPrivKey_, logger_)) {
-               logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
+               logger_->error("[ChatClient::OnMessages] Failed to decrypt msg {}", msg->getId().toStdString());
                msg->setFlag(Chat::MessageData::State::Invalid);
             }
             else {
-               // if decrypted encrypt by eis and save in db
+               // Encrypt by eis and save in db
                auto localEncMsg = *msg;
                localEncMsg.setFlag(Chat::MessageData::State::Acknowledged);
                localEncMsg.encrypt(appSettings_->GetAuthKeys().second);
+               localEncMsg.setEncryptionType(Chat::MessageData::EncryptionType::IES);
                chatDb_->add(localEncMsg);
+               msg->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
             }
          }
          else {
-            logger_->error("This could not happend! Failed to decrypt msg {}", msg->getId().toStdString());
+            logger_->error("[ChatClient::OnMessages] This could not happend! Failed to decrypt msg {}", msg->getId().toStdString());
          }
       }
 
       messages.push_back(msg);
-      //int mask = old_state ^ msg->getState();
       sendUpdateMessageState(msg);
    }
 
@@ -571,17 +574,14 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    if (userNoncesIterator == userNonces_.end()) {
       // generate random nonce
       Botan::AutoSeeded_RNG rng;
-      userNonces_[receiver] = rng.random_vec(messageData.getDefaultNonceSize());
-      nonce = userNonces_[receiver];
+      userNonces_[receiver] = nonce = rng.random_vec(messageData.getDefaultNonceSize());
    }
    else {
       // read nonce and increment
-      autheid::SecureBytes temporaryNonce = userNoncesIterator->second;
       Botan::BigInt bigIntNonce;
-      bigIntNonce.binary_decode(temporaryNonce);
+      bigIntNonce.binary_decode(userNoncesIterator->second);
       bigIntNonce++;
-      nonce = Botan::BigInt::encode_locked(bigIntNonce);
-      userNonces_[receiver] = nonce;
+      userNonces_[receiver] = nonce = Botan::BigInt::encode_locked(bigIntNonce);
    }
 
    if (!messageData.encrypt_aead(itPub->second, ownPrivKey_, nonce, logger_)) {
@@ -640,10 +640,13 @@ void ChatClient::retrieveUserMessages(const QString &userId)
    auto messages = chatDb_->getUserMessages(QString::fromStdString(currentUserId_), userId);
    if (!messages.empty()) {
       for (auto &msg : messages) {
-         if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
+         if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
             if (!msg->decrypt(ownPrivKey_)) {
                logger_->error("Failed to decrypt msg from DB {}", msg->getId().toStdString());
                msg->setFlag(Chat::MessageData::State::Invalid);
+            }
+            else {
+               msg->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
             }
          }
       }
@@ -656,10 +659,13 @@ void ChatClient::retrieveRoomMessages(const QString& roomId)
    auto messages = chatDb_->getRoomMessages(roomId);
    if (!messages.empty()) {
       for (auto &msg : messages) {
-         if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
+         if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
             if (!msg->decrypt(ownPrivKey_)) {
                logger_->error("Failed to decrypt msg from DB {}", msg->getId().toStdString());
                msg->setFlag(Chat::MessageData::State::Invalid);
+            }
+            else {
+               msg->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
             }
          }
       }
@@ -748,4 +754,9 @@ void ChatClient::retrySendQueuedMessages(const std::string userId)
       sendOwnMessage(messages.front(), QString::fromStdString(userId));
       messages.pop();
    }
+}
+
+void ChatClient::eraseQueuedMessages(const std::string userId)
+{
+   enqueued_messages_.erase(QString::fromStdString(userId));
 }

@@ -31,7 +31,8 @@ namespace Chat {
       receiverId_(receiverId),
       dateTime_(dateTime),
       messageData_(messageData), 
-      state_(state)
+      state_(state),
+      encryptionType_(EncryptionType::Unencrypted)
    {
    }
    
@@ -46,6 +47,7 @@ namespace Chat {
       data[StatusKey] = state_;
       data[MessageIdKey] = id_;
       data[Nonce] = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(nonce_.data()), int(nonce_.size())).toBase64());
+      data[EncryptionTypeKey] = static_cast<int>(encryptionType());
       return data;
    }
    
@@ -64,6 +66,7 @@ namespace Chat {
    
       std::shared_ptr<MessageData> msg = std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
       msg->setNonce(nonce);
+      msg->setEncryptionType(static_cast<EncryptionType>(data[EncryptionTypeKey].toInt()));
       return msg;
    }
    
@@ -79,40 +82,37 @@ namespace Chat {
 
    void MessageData::updateState(const int newState)
    {
-      int mask = ~static_cast<int>(Chat::MessageData::State::Encrypted);
-      int set = mask & newState;
-      int unset = ~(set ^ mask);
-      state_ = (state_ & unset) | set;
+      state_ = newState;
    }
    
    bool MessageData::decrypt(const autheid::PrivateKey& privKey)
    {
-      if (!(state_ & (int)State::Encrypted)) {
+      if (encryptionType_ != EncryptionType::IES) {
          return false;
       }
       const auto message_bytes = QByteArray::fromBase64(messageData_.toUtf8());
       const auto decryptedData = autheid::decryptData(
          message_bytes.data(), message_bytes.size(), privKey);
       messageData_ = QString::fromUtf8((char*)decryptedData.data(), decryptedData.size());
-      state_ &= ~(int)State::Encrypted;
+      encryptionType_ = EncryptionType::Unencrypted;
       return true;
    }
    
    bool MessageData::encrypt(const autheid::PublicKey& pubKey)
    {
-      if (state_ & (int)State::Encrypted) {
+      if (encryptionType_ != EncryptionType::Unencrypted) {
          return false;
       }
       const QByteArray message_bytes = messageData_.toUtf8();
       auto data = autheid::encryptData(message_bytes.data(), size_t(message_bytes.size()), pubKey);
       messageData_ = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(data.data()), int(data.size())).toBase64());
-      state_ |= (int)State::Encrypted;
+      encryptionType_ == EncryptionType::IES;
       return true;
    }
 
    bool MessageData::encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const autheid::SecureBytes &nonce, const std::shared_ptr<spdlog::logger>& logger)
    {
-      if ((state_ & (int)State::Encrypted_AEAD))
+      if (encryptionType_ != EncryptionType::Unencrypted)
       {
          return false;
       }
@@ -170,14 +170,14 @@ namespace Chat {
       }
 
       messageData_ = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encrypted_data.data()), int(encrypted_data.size())).toBase64());
-      state_ |= (int)State::Encrypted_AEAD;
+      encryptionType_ == EncryptionType::AEAD;
 
       return true;
    }
 
    bool MessageData::decrypt_aead(const autheid::PublicKey& senderPubKey, const autheid::PrivateKey& ownPrivKey, const std::shared_ptr<spdlog::logger>& logger)
    {
-      if (!(state_ & (int)State::Encrypted_AEAD))
+      if (encryptionType_ != EncryptionType::AEAD)
       {
          return false;
       }
@@ -234,7 +234,7 @@ namespace Chat {
       }
 
       messageData_ = QString::fromLocal8Bit((char*)decrypted_data.data(), (int)decrypted_data.size());
-      state_ &= ~(int)State::Encrypted_AEAD;
+      encryptionType_ == EncryptionType::Unencrypted;
 
       return true;
    }
@@ -259,5 +259,15 @@ namespace Chat {
    size_t MessageData::getDefaultNonceSize() const
    {
       return NONCE_SIZE;
+   }
+
+   MessageData::EncryptionType MessageData::encryptionType() const
+   {
+      return encryptionType_;
+   }
+
+   void MessageData::setEncryptionType(const MessageData::EncryptionType &type)
+   {
+      encryptionType_ = type;
    }
 }

@@ -122,6 +122,7 @@ private slots:
    void sendHeartbeat();
    void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
    void retrySendQueuedMessages(const std::string userId);
+   void eraseQueuedMessages(const std::string userId);
 
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;

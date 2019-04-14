@@ -121,6 +121,7 @@ namespace Chat
    static const QString SearchIdPatternKey = QStringLiteral("search_id_pattern");
    static const QString UserStatusKey = QStringLiteral("user_status");
    static const QString Nonce = QStringLiteral("nonce");
+   static const QString EncryptionTypeKey = QStringLiteral("encryption_type");
 
 
    template <typename T>
