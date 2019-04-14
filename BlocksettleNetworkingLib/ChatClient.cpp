@@ -565,6 +565,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       logger_->error("[ChatClient::sendMessage] failed to encrypt by local key");
       return result;
    }
+   localEncMsg.setEncryptionType(Chat::MessageData::EncryptionType::IES);
 
    chatDb_->add(localEncMsg);
 
@@ -588,6 +589,8 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       logger_->error("[ChatClient::sendMessage] failed to encrypt by aead {}" , messageData.getId().toStdString());
       return result;
    }
+
+   messageData.setEncryptionType(Chat::MessageData::EncryptionType::AEAD);
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", messageData.toJsonString());
    sendRequest(request);
