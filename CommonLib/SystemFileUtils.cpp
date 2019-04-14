@@ -18,8 +18,13 @@
 namespace SystemFilePaths {
    static const std::string kAppDir = "blocksettle";
 #ifndef WIN32
+#ifdef __APPLE__
+   static const std::string kDataDir = "Library/Application Support";
+   static const std::string kConfigDir = "Library/Application Support";
+#else
    static const std::string kDataDir = ".local/share";
    static const std::string kConfigDir = ".config";
+#endif
 #endif
 }
 
@@ -92,7 +97,9 @@ bool SystemFileUtils::mkPath(const std::string &path)
          break;
       }
       p = p.substr(0, pSep);
-      dirs.push_back(p);
+      if (!p.empty()) {
+         dirs.push_back(p);
+      }
    }
    std::reverse(dirs.begin(), dirs.end());
 
