@@ -82,6 +82,7 @@ std::string SystemFileUtils::absolutePath(const std::string &path)
    return path;
 }
 
+#include <iostream>
 bool SystemFileUtils::mkPath(const std::string &path)
 {
    std::vector<std::string> dirs = { path };
@@ -101,6 +102,9 @@ bool SystemFileUtils::mkPath(const std::string &path)
          continue;
       }
 #ifdef WIN32
+      if ((dir.size() == 2) && (dir[1] == ':')) {
+         continue;
+      }
       if (_mkdir(dir.c_str()) != 0) {
          return false;
       }

@@ -110,7 +110,7 @@ std::shared_ptr<spdlog::logger> LogManager::createOrAppend(const std::shared_ptr
    if (!config.fileName.empty()) {
       const auto pSep = config.fileName.find_last_of('/');
       if (pSep != std::string::npos) {
-         const auto filePath = config.fileName.substr(0, pSep - 1);
+         const auto filePath = config.fileName.substr(0, pSep);
          auto logFilePath = SystemFileUtils::absolutePath(filePath);
          if (!SystemFileUtils::pathExist(logFilePath)) {
             SystemFileUtils::mkPath(logFilePath);
