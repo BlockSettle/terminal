@@ -62,6 +62,16 @@ Q_IMPORT_PLUGIN(QmlSettingsPlugin)
 
 #endif // STATIC_BUILD
 
+bool skipWarning(const QMessageLogContext &context)
+{
+   if (!context.function) {
+      return false;
+   }
+   // Skip some warnings before this is fixed: https://bugreports.qt.io/browse/QTBUG-74523
+   auto skipFunction = "QV4::ReturnedValue CallMethod(const QQmlObjectOrGadget&, int, int, int, int*, QV4::ExecutionEngine*, QV4::CallData*, QMetaObject::Call)";
+   return std::strcmp(context.function, skipFunction) == 0;
+}
+
 // redirect qDebug() to stdout
 // stdout redirected to parent process
 void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
@@ -75,7 +85,9 @@ void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QS
         fprintf(stdout, "GUI QML Info: %s\r\n", localMsg.constData());
         break;
     case QtWarningMsg:
-        fprintf(stderr, "GUI QML Warning: %s\r\n", localMsg.constData());
+        if (!skipWarning(context)) {
+           fprintf(stderr, "GUI QML Warning: %s\r\n", localMsg.constData());
+        }
         break;
     case QtCriticalMsg:
         fprintf(stderr, "GUI QML Critical: %s\r\n", localMsg.constData());
@@ -146,6 +158,8 @@ static int QMLApp(int argc, char **argv)
    logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
    try {
       SignerAdapter adapter(logger, settings->netType());
+      adapter.setCloseHeadless(settings->closeHeadless());
+
       QQmlApplicationEngine engine;
       const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
       engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);

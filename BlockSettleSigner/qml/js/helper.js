@@ -47,6 +47,10 @@ function raiseWindow() {
     mainWindow.flags &= ~Qt.WindowStaysOnTopHint
 }
 
+function hideWindow() {
+    mainWindow.hide()
+}
+
 function requesteIdAuth (requestType, walletInfo, onSuccess) {
     var authObject = qmlFactory.createAutheIDSignObject(requestType, walletInfo)
     var authProgress = Qt.createComponent("../BsControls/BSEidProgressBox.qml").createObject(mainWindow);
@@ -64,7 +68,7 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
         authProgress.acceptAnimated()
 
         var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = NsWallet.Auth
+        passwordData.encType = QPasswordData.Auth
         passwordData.encKey = encKey_
         passwordData.binaryPassword = password_
 
@@ -105,7 +109,7 @@ function removeEidDevice (index, walletInfo, onSuccess) {
         authProgress.acceptAnimated()
 
         var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = NsWallet.Auth
+        passwordData.encType = QPasswordData.Auth
         passwordData.encKey = encKey_
         passwordData.binaryPassword = password_
 
@@ -143,7 +147,7 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
         authProgress.acceptAnimated()
 
         var passwordData = qmlFactory.createPasswordData()
-        passwordData.encType = NsWallet.Auth
+        passwordData.encType = QPasswordData.Auth
         passwordData.encKey = encKey_
         passwordData.binaryPassword = password_
 

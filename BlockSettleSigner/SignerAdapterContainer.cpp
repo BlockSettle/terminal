@@ -34,7 +34,7 @@ bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet
    evt->set_rbf(txReq.RBF);
    if (txReq.change.value) {
       auto change = evt->mutable_change();
-      change->set_address(txReq.change.address.display<std::string>());
+      change->set_address(txReq.change.address.display());
       change->set_index(txReq.change.index);
       change->set_value(txReq.change.value);
    }

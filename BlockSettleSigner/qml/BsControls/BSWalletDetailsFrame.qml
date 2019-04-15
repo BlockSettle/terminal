@@ -7,7 +7,6 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 import "../StyledControls"
 
@@ -71,7 +70,7 @@ ColumnLayout {
 
     CustomHeader {
         text: qsTr("Enter Password")
-        visible: walletInfo.encType === NsWallet.Password
+        visible: walletInfo.encType === QPasswordData.Password
         Layout.fillWidth: true
         Layout.preferredHeight: 25
         Layout.topMargin: 5
@@ -86,7 +85,7 @@ ColumnLayout {
         Layout.rightMargin: 10
 
         CustomLabel {
-            visible: walletInfo.encType === NsWallet.Password
+            visible: walletInfo.encType === QPasswordData.Password
             elide: Label.ElideRight
             text: qsTr("Password")
             wrapMode: Text.WordWrap
@@ -97,7 +96,7 @@ ColumnLayout {
         }
         CustomPasswordTextInput {
             id: passwordInput
-            visible: walletInfo.encType === NsWallet.Password
+            visible: walletInfo.encType === QPasswordData.Password
             focus: true
             //placeholderText: qsTr("Old Password")
             Layout.fillWidth: true
@@ -116,12 +115,12 @@ ColumnLayout {
         CustomLabel {
             id: labelAuth
             Layout.preferredWidth: 110
-            visible: walletInfo.encType === NsWallet.Auth
+            visible: walletInfo.encType === QPasswordData.Auth
             text: qsTr("Encryption")
         }
         CustomLabel {
             id: labelAuthStatus
-            visible: walletInfo.encType === NsWallet.Auth
+            visible: walletInfo.encType === QPasswordData.Auth
             text: "Auth eID"
         }
     }

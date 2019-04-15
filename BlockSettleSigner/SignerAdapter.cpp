@@ -38,7 +38,9 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, Netw
 
 SignerAdapter::~SignerAdapter()
 {
-   listener_->send(signer::RequestCloseType, "");
+   if (closeHeadless_) {
+      listener_->send(signer::RequestCloseType, "");
+   }
 }
 
 std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()

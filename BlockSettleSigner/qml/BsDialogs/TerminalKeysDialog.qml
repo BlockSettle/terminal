@@ -8,7 +8,6 @@ import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 import "../BsControls"
 import "../BsStyles"

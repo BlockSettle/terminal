@@ -72,7 +72,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 14 )
-SET(BS_VERSION_PATCH 10 )
+SET(BS_VERSION_PATCH 11 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
@@ -619,7 +619,9 @@ ELSE(WIN32)
       FIND_PACKAGE( Threads REQUIRED )
       FIND_PACKAGE( X11 REQUIRED )
       FIND_PACKAGE( X11_XCB REQUIRED )
-      FIND_PACKAGE( XCB COMPONENTS XKB RENDERUTIL SYNC XFIXES XINERAMA RANDR RENDER IMAGE SHM KEYSYMS ICCCM SHAPE REQUIRED )
+      FIND_PACKAGE( XCB REQUIRED
+         COMPONENTS XKB RENDERUTIL SYNC XFIXES XINERAMA RANDR RENDER IMAGE SHM KEYSYMS ICCCM SHAPE
+         OPTIONAL_COMPONENTS XINPUT )
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
@@ -651,22 +653,9 @@ ELSE(WIN32)
             SM
             ICE
             Xrender
-            XCB::XKB
-            XCB::RENDERUTIL
-            XCB::SYNC
-            XCB::XFIXES
-            XCB::XINERAMA
-            XCB::RANDR
-            XCB::RENDER
-            XCB::IMAGE
-            XCB::SHM
-            XCB::KEYSYMS
-            XCB::ICCCM
-            XCB::SHAPE
-            XCB::XCB
+            ${XCB_LIBRARIES}
             xkbcommon-x11
             xkbcommon
-            xcb-xinput
             dbus-1
             ${ZLIB_LIBRARIES}
             png
@@ -724,22 +713,9 @@ ELSE(WIN32)
             SM
             ICE
             Xrender
-            XCB::XKB
-            XCB::RENDERUTIL
-            XCB::SYNC
-            XCB::XFIXES
-            XCB::XINERAMA
-            XCB::RANDR
-            XCB::RENDER
-            XCB::IMAGE
-            XCB::SHM
-            XCB::KEYSYMS
-            XCB::ICCCM
-            XCB::SHAPE
-            XCB::XCB
+            ${XCB_LIBRARIES}
             xkbcommon-x11
             xkbcommon
-            xcb-xinput
             dbus-1
             ${ZLIB_LIBRARIES}
             png

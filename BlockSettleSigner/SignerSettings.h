@@ -92,6 +92,7 @@ public:
 
    QString dirDocuments() const;
    bs::signer::ui::RunMode runMode() const { return runMode_; }
+   bool closeHeadless() const { return closeHeadless_; }
 
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
@@ -157,6 +158,7 @@ private:
    std::string    writableDir_;
    QStringList    reqFiles_;
    bs::signer::ui::RunMode runMode_;
+   bool closeHeadless_{true};
 };
 
 

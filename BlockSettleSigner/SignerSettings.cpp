@@ -9,7 +9,6 @@
 #include "SignerSettings.h"
 #include "SystemFileUtils.h"
 
-
 static const QString zmqPubKeyName = QString::fromStdString("zmqpubkey");
 static const QString zmqPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for ZMQ connections");
 
@@ -46,6 +45,8 @@ static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in X
 static const QString woName = QString::fromStdString("watchonly");
 static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
 
+static const QString closeHeadlessName = QString::fromStdString("close_headless");
+static const QString closeHeadlessHelp = QString::fromStdString("Shutdown headless process after signer GUI exit");
 
 SignerSettings::SignerSettings(const QString &fileName)
    : QObject(nullptr)
@@ -242,6 +243,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    //parser.addOption({ signName, signHelp, QObject::tr("filename") });
    parser.addOption({ woName, woHelp });
+   parser.addOption({ closeHeadlessName, closeHeadlessHelp, QLatin1String("true") });
 
    parser.process(args);
 
@@ -320,6 +322,10 @@ bool SignerSettings::loadSettings(const QStringList &args)
    }
    else {
       config.selectNetwork(NETWORK_MODE_MAINNET);
+   }
+
+   if (parser.isSet(closeHeadlessName)) {
+      closeHeadless_ = QVariant::fromValue(parser.value(closeHeadlessName)).toBool();
    }
 
    return true;
