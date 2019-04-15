@@ -503,7 +503,7 @@ CustomTitleDialogWindow {
                                 mb.bsAccepted.connect(acceptAnimated)
                             } else {
                                 JsHelper.messageBox(BSMessageBox.Type.Critical
-                                    , qsTr("Import Failed"), qsTr("Create wallet failed with error: \n") + errorMsg)
+                                    , qsTr("Import Failed"), qsTr("Import wallet failed with error: \n") + errorMsg)
                             }
                         }
 
