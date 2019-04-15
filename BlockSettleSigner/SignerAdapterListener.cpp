@@ -533,7 +533,7 @@ static NetworkType mapNetworkType(Blocksettle::Communication::headless::NetworkT
    }
 }
 
-bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId)
+bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    headless::CreateHDWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -558,10 +558,13 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
          , seed, settings_->getWalletsDir(), w.primary(), pwdData, keyRank);
    }
    catch (const std::exception &e) {
-      return false;
+      headless::CreateHDWalletResponse response;
+      response.set_error(e.what());
+      return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);;
    }
 
-   return true;
+   headless::CreateHDWalletResponse response;
+   return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);
 }
 
 bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer::RequestId)

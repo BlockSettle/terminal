@@ -36,6 +36,8 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       return;
    }*/
 
+   logger_->debug("new data: {}", signer::PacketType_Name(packet.type()));
+
    switch (packet.type()) {
    case signer::HeadlessReadyType:
       onReady(packet.data());
@@ -84,7 +86,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       onChangePassword(packet.data(), packet.id());
       break;
    case signer::CreateHDWalletType:
-      onChangePassword(packet.data(), packet.id());
+      onCreateHDWallet(packet.data(), packet.id());
       break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
@@ -92,20 +94,26 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    }
 }
 
-void SignerInterfaceListener::OnConnected() {
+void SignerInterfaceListener::OnConnected()
+{
    logger_->debug("[SignerInterfaceListener] connected");
    send(signer::HeadlessReadyType, "");
 }
 
-void SignerInterfaceListener::OnDisconnected() {
+void SignerInterfaceListener::OnDisconnected()
+{
    logger_->debug("[SignerInterfaceListener] disconnected");
 }
 
-void SignerInterfaceListener::OnError(DataConnectionError errorCode) {
+void SignerInterfaceListener::OnError(DataConnectionError errorCode)
+{
    logger_->debug("[SignerInterfaceListener] error {}", errorCode);
 }
 
-bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data) {
+bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
+{
+   logger_->debug("send packet {}", signer::PacketType_Name(pt));
+
    const auto reqId = seq_++;
    signer::Packet packet;
    packet.set_id(reqId);
@@ -427,4 +435,22 @@ void SignerInterfaceListener::onChangePassword(const std::string &data, bs::sign
    }
    itCb->second(response.success());
    cbChangePwReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   headless::CreateHDWalletResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbCreateHDWalletReqs_.find(reqId);
+   if (itCb == cbCreateHDWalletReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   bool success = response.error().empty();
+   itCb->second(success, response.error());
+   cbCreateHDWalletReqs_.erase(itCb);
 }
