@@ -219,6 +219,11 @@ message DeleteHDWalletRequest
    }
 }
 
+message DeleteHDWalletResponse
+{
+   bool     success = 1;
+   string   error = 2;
+}
 
 message GetRootKeyRequest
 {
