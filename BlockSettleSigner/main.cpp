@@ -26,7 +26,10 @@ static int HeadlessApp(int argc, char **argv)
    const auto dir = SystemFilePaths::appDataLocation();
    if (!SystemFileUtils::pathExist(dir)) {
       loggerStdout->info("Creating missing dir {}", dir);
-      SystemFileUtils::mkPath(dir);
+      if (!SystemFileUtils::mkPath(dir)) {
+         loggerStdout->error("Failed to create path {} - exitting", dir);
+         exit(1);
+      }
    }
 
    const auto settings = std::make_shared<HeadlessSettings>(loggerStdout);
