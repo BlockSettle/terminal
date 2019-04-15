@@ -159,6 +159,7 @@ void QMLAppObj::registerQtTypes()
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
+   qRegisterMetaType<AuthSignWalletObject>("AuthSignWalletObject");
 
    qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
       "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
@@ -168,9 +169,9 @@ void QMLAppObj::registerQtTypes()
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
-   qmlRegisterUncreatableType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject",
-      QStringLiteral("Cannot create a AuthSignWalletObject instance"));
 
+
+   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");

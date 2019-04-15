@@ -9,6 +9,16 @@
 #include "AuthProxy.h"
 
 
+AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ApplicationSettings> &settings
+   , const std::shared_ptr<ConnectionManager> &connectionManager
+   , QObject *parent)
+   : logger_(logger)
+   , settings_(settings)
+   , connectionManager_(connectionManager)
+{
+}
+
 void AuthSignWalletObject::cancel()
 {
    if (autheIDClient_) {
@@ -16,25 +26,17 @@ void AuthSignWalletObject::cancel()
    }
 }
 
-AuthObject::AuthObject(std::shared_ptr<spdlog::logger> logger, QObject *parent)
-   : QObject(parent), logger_(logger)
-{
-}
-
-void AuthObject::setStatus(const QString &status)
+void AuthSignWalletObject::setStatus(const QString &status)
 {
    status_ = tr("Auth status: %1").arg(status);
    emit statusChanged();
 }
 
-AuthSignWalletObject::AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<ApplicationSettings> &settings
-   , const std::shared_ptr<ConnectionManager> &connectionManager
-   , QObject *parent)
-   : AuthObject(logger, parent)
-   , settings_(settings)
-   , connectionManager_(connectionManager)
+AuthSignWalletObject::AuthSignWalletObject(const AuthSignWalletObject &other)
+   : QObject(nullptr)
 {
+   settings_ = other.settings_;
+   connectionManager_ = other.connectionManager_;
 }
 
 void AuthSignWalletObject::connectToServer()
