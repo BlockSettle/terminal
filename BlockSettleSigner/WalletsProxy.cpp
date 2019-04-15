@@ -345,6 +345,7 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
 
          if (success) {
             // This should reload QmlWalletsViewModel
+            walletsMgr_->reset();
             walletsMgr_->syncWallets();
          }
       });
