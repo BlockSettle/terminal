@@ -6,23 +6,6 @@
 
 using namespace std;
 
-// DESIGN NOTE: The BIP151Connection objects need to be attached to specific
-// connections, and they need to be set up and torn down as clients connect and
-// disconnect. Due to ZMQ peculiarities, this is more difficult than it should
-// be. The data socket doesn't supply any external information. So, a client ID
-// from a MessageHolder object is ideal. It's derived from a monitor socket,
-// which is accurate in knowing when a client has connected or disconnected.
-// Unfortunately, there doesn't seem to be a good way to get the client ID when
-// getting a data packet. The only solution that seems to work for now is to get
-// the client IP addresses associated with the connections and work off that.
-// This isn't ideal - the monitor sockets don't give the port, which means
-// multiple connections behind the same IP address require a workaround - but
-// this is a start until a better solution can be devised. Ideally,
-// OnClientConnected() could potentially be triggered in the listener, which
-// could then pass the ID back down here via a callback and into clientInfo_. As
-// is, the code takes a similar but different tack by associating the IP address
-// with the BIP151Connection object (socketConnMap_).
-
 // A call resetting the encryption-related data for individual connections.
 //
 // INPUT:  None
@@ -233,7 +216,7 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
          auto& packet = rekeyPacket.getNextPacket();
          if (!SendDataToClient(clientId, packet.toBinStr(), cb))
          {
-            logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+            logger_->error("[ZmqBIP15XServerConnection::{}] {} failed to send "
                "rekey: {} (result={})", __func__, connectionName_
                , zmq_strerror(zmq_errno()));
          }
@@ -362,7 +345,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    auto result = connData->currentReadMessage_.message_.parsePacket(payloadRef);
    if (!result) {
       if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
+         logger_->error("[ZmqBIP15XServerConnection::{}] Deserialization failed "
             "(connection {})", __func__, connectionName_);
       }
       connData->currentReadMessage_.reset();
@@ -387,7 +370,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(connData->currentReadMessage_.message_, clientID)) {
          if (logger_) {
-            logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
+            logger_->error("[ZmqBIP15XServerConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
          return;
@@ -405,7 +388,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    if (connData->encData_->getBIP150State() !=
       BIP150State::SUCCESS) {
       if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
+         logger_->error("[ZmqBIP15XServerConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
       }
       return;

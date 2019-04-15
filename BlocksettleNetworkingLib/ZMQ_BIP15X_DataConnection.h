@@ -29,11 +29,11 @@ public:
    ZmqBIP15XDataConnection(ZmqBIP15XDataConnection&&) = delete;
    ZmqBIP15XDataConnection& operator= (ZmqBIP15XDataConnection&&) = delete;
 
-   // Overridden functions from ZmqDataConnection.
-   bool send(const std::string& data) override;
-   bool closeConnection() override;
-
    SecureBinaryData getOwnPubKey() const;
+
+   // Overridden functions from ZmqDataConnection.
+   bool send(const std::string& data) override; // Send data from outside class.
+   bool closeConnection() override;
 
 protected:
    bool startBIP151Handshake(const std::function<void()> &cbCompleted);
@@ -41,23 +41,27 @@ protected:
       return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
    }
 
+   // Use to send a packet that this class has generated.
+   bool sendPacket(const std::string& data);
+
    // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
    void notifyOnConnected() override;
    ZmqContext::sock_ptr CreateDataSocket() override;
    bool recvData() override;
-   void sendHeartbeat();
+   void triggerHeartbeat();
 
 private:
    void ProcessIncomingData(BinaryData& payload);
    bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
    void promptUser(const BinaryDataRef& newKey, const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
+   void rekeyIfNeeded(const size_t& dataSize);
 
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::shared_ptr<BIP151Connection> bip151Connection_;
-   std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
+   std::chrono::time_point<std::chrono::steady_clock> outKeyTimePoint_;
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;
    ZmqBIP15XMsgFragments currentReadMessage_;
@@ -67,8 +71,8 @@ private:
    bool bip151HandshakeCompleted_ = false;
    uint32_t msgID_ = 0;
    std::function<void()>   cbCompleted_ = nullptr;
-   const int   heartbeatInterval_ = 10000;
-   std::chrono::system_clock::time_point  lastHeartbeat_;
+   const int   heartbeatInterval_ = 30000;
+   std::chrono::steady_clock::time_point  lastHeartbeat_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;
    std::mutex              hbMutex_;

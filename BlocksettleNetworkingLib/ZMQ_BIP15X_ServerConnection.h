@@ -88,7 +88,7 @@ private:
    std::mutex  clientsMtx_;
    std::function<std::vector<std::string>()> cbTrustedClients_;
 
-   const int   heartbeatInterval_ = 10000 * 2;   // allow some toleration on heartbeat miss
+   const int   heartbeatInterval_ = 30000 * 2;   // allow some toleration on heartbeat miss
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;
