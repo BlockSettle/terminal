@@ -352,6 +352,9 @@ std::string PlainWallet::getFileName(const std::string &dir) const
 
 void PlainWallet::saveToDir(const std::string &targetDir)
 {
+   if (!SystemFileUtils::pathExist(targetDir)) {
+      SystemFileUtils::mkPath(targetDir);
+   }
    const auto masterID = BinaryData(walletId());
    saveToFile(getFileName(targetDir));
 }

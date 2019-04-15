@@ -846,7 +846,7 @@ int Wallet::addAddress(const bs::Address &addr, const std::string &index, Addres
          aet = addr.getType();
          idxCopy = getAddressIndex(addr);
          if (idxCopy.empty()) {
-            idxCopy = addr.display<std::string>();
+            idxCopy = addr.display();
          }
       }
       signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});

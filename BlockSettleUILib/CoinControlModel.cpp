@@ -465,7 +465,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       const UTXO& input = selectedInputs->GetTransaction(i);
       bool isSelected = selectedInputs->IsTransactionSelected(i);
       const auto address = bs::Address::fromUTXO(input);
-      const auto addrStr = address.display<std::string>();
+      const auto addrStr = address.display();
 
       auto addressIt = addressNodes_.find(addrStr);
       AddressNode *addressNode = nullptr;
@@ -488,7 +488,7 @@ void CoinControlModel::loadInputs(const std::shared_ptr<SelectedTransactionInput
       for (size_t i = 0; i < cpfpList.size(); i++) {
          const auto &input = cpfpList[i];
          const auto address = bs::Address::fromUTXO(input);
-         const auto addrStr = address.display<std::string>();
+         const auto addrStr = address.display();
          AddressNode *addressNode = nullptr;
          const auto itAddr = cpfpNodes_.find(addrStr);
 

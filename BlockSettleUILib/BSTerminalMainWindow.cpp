@@ -408,14 +408,6 @@ void BSTerminalMainWindow::LoadWallets()
             }
          }
       });
-      QTimer::singleShot(100, this, [this](){
-         if (!initialWalletCreateDialogShown_ && !armoryKeyDialogShown_) {
-            if (walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
-               initialWalletCreateDialogShown_ = true;
-               QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection, Q_ARG(bool, true));
-            }
-         }
-      });
 
       if (readyToRegisterWallets_) {
          readyToRegisterWallets_ = false;
@@ -1183,7 +1175,7 @@ void BSTerminalMainWindow::createAuthWallet()
 void BSTerminalMainWindow::onAuthMgrConnComplete()
 {
    if (celerConnection_->tradingAllowed()) {
-      if (!walletsMgr_->hasPrimaryWallet() && !createWallet(true)) {
+      if (!walletsMgr_->hasPrimaryWallet()) {
          return;
       }
       if (!walletsMgr_->hasSettlementWallet()) {

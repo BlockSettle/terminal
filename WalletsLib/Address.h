@@ -35,7 +35,7 @@ namespace bs {
       Format format() const { return format_; }
       bool isValid() const;
       void clear();
-      template<typename TRetVal = std::string> TRetVal display(Format format = Auto) const;
+      std::string display(Format format = Auto) const;
       BinaryData prefixed() const;
       BinaryData unprefixed() const;
       BinaryData id() const;

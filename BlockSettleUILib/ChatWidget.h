@@ -6,6 +6,7 @@
 #include <QScopedPointer>
 
 #include "ChatUserListLogic.h"
+#include "CommonTypes.h"
 
 #include <memory>
 
@@ -63,6 +64,11 @@ private slots:
    void onDeclineFriendRequest(const QString &userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
+
+   void OnOTCRequestCreated();
+   void DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range);
+
+   void OnOTCResponseCreated();
 
 signals:
    void LoginFailed();

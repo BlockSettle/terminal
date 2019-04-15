@@ -433,7 +433,7 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
 
       const auto authKeys = authWallet->getKeyPairFor(authAddr, pass);
       if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
-         logger_->error("[HeadlessContainerListener] failed to get priv/pub keys for {}", authAddr.display<std::string>());
+         logger_->error("[HeadlessContainerListener] failed to get priv/pub keys for {}", authAddr.display());
          SignTXResponse(clientId, id, reqType, "no auth priv/pub keys found");
          passwords_.erase(authWallet->walletId());
          passwords_.erase(rootWalletId);
@@ -1324,7 +1324,7 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, Blocks
          const auto index = wallet->getAddressIndex(addr);
          const auto comment = wallet->getAddressComment(addr);
          auto addrData = response.add_addresses();
-         addrData->set_address(addr.display<std::string>());
+         addrData->set_address(addr.display());
          addrData->set_index(index);
          if (!comment.empty()) {
             addrData->set_comment(comment);
@@ -1333,7 +1333,7 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, Blocks
       for (const auto &addr : wallet->getPooledAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
          auto addrData = response.add_addrpool();
-         addrData->set_address(addr.display<std::string>());
+         addrData->set_address(addr.display());
          addrData->set_index(index);
       }
       for (const auto &txComment : wallet->getAllTxComments()) {
@@ -1419,7 +1419,7 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
       if (address.isValid() && index.empty()) {
 //         wallet->addAddress(address);
          logger_->info("[{}] can't add address {} to wallet {}", __func__
-            , address.display<std::string>(), wallet->walletId());
+            , address.display(), wallet->walletId());
          continue;
       }
       else {
@@ -1431,7 +1431,7 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
          }
       }
       auto addrData = response.add_addresses();
-      addrData->set_address(address.display<std::string>());
+      addrData->set_address(address.display());
       addrData->set_index(indexData.index());
    }
 

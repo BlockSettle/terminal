@@ -103,7 +103,7 @@ bs::signer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::
    }
    const auto authKeys = authWallet->getKeyPairFor(authAddr, password);
    if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
-      logger_->error("[{}] failed to get priv/pub keys for {}", __func__, authAddr.display<std::string>());
+      logger_->error("[{}] failed to get priv/pub keys for {}", __func__, authAddr.display());
       return 0;
    }
 

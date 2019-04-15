@@ -2,8 +2,10 @@
 #include <QDesktopServices>
 #include <set>
 #include "ChatMessagesTextEdit.h"
-#include "ChatClient.h"
 #include "ChatProtocol/ChatProtocol.h"
+#include <QApplication>
+#include <QClipboard>
+#include <QMimeData>
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
@@ -128,6 +130,78 @@ QImage ChatMessagesTextEdit::statusImage(const int &row)
    }
    
    return statusImage;
+}
+
+void ChatMessagesTextEdit::mousePressEvent(QMouseEvent *ev)
+{
+   // make focus to the widget to allow use default shortcuts (like ctrl+c) from keyboard
+   if (!this->hasFocus())
+      this->setFocus();
+
+   // proceed default mouse press behaviour
+   QTextBrowser::mousePressEvent(ev);
+}
+
+void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
+{
+   textCursor_ = cursorForPosition(e->pos());
+   
+   // keep selection
+   if (textCursor().hasSelection()) {
+      textCursor_.setPosition(textCursor().selectionStart(), QTextCursor::MoveAnchor);
+      textCursor_.setPosition(textCursor().selectionEnd(), QTextCursor::KeepAnchor);
+   }
+
+   setTextCursor(textCursor_);
+   QString text = textCursor_.block().text();
+
+   // create custom context menu
+   if (text.length() > 0 || textCursor_.hasSelection()) {
+      QMenu contextMenu(this);
+
+      QAction copyAction(tr("Copy"), this);
+      QAction copyLinkLocationAction(tr("Copy Link Location"), this);
+      QAction selectAllAction(tr("Select All"), this);
+
+      connect(&copyAction, SIGNAL(triggered()), this, SLOT(copyActionTriggered()));
+      connect(&copyLinkLocationAction, SIGNAL(triggered()), this, SLOT(copyLinkLocationActionTriggered()));
+      connect(&selectAllAction, SIGNAL(triggered()), this, SLOT(selectAllActionTriggered()));
+
+      contextMenu.addAction(&copyAction);
+
+      // show Copy Link Location only when it needed
+      anchor_ = this->anchorAt(e->pos());
+      if (!anchor_.isEmpty()) {
+         contextMenu.addAction(&copyLinkLocationAction);
+      }
+
+      contextMenu.addSeparator();
+      contextMenu.addAction(&selectAllAction);
+
+      contextMenu.exec(e->globalPos());
+   }
+}
+
+void ChatMessagesTextEdit::copyActionTriggered()
+{
+   if (textCursor_.hasSelection()) {
+      QApplication::clipboard()->setMimeData(this->createMimeDataFromSelection());
+   }
+   else {
+      QTextDocument doc;
+      doc.setHtml(textCursor_.block().text());
+      QApplication::clipboard()->setText(doc.toPlainText());
+   }
+}
+
+void ChatMessagesTextEdit::copyLinkLocationActionTriggered()
+{
+   QApplication::clipboard()->setText(anchor_);
+}
+
+void ChatMessagesTextEdit::selectAllActionTriggered()
+{
+   this->selectAll();
 }
 
 void ChatMessagesTextEdit::switchToChat(const QString& chatId, bool isGroupRoom)

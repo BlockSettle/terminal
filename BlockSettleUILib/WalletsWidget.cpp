@@ -341,7 +341,7 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
    curWallet_ = walletsManager_->getWalletByAddress(curAddress_);
 
    if (!curWallet_) {
-      logger_->warn("Failed to find wallet for address {}", curAddress_.display<std::string>());
+      logger_->warn("Failed to find wallet for address {}", curAddress_.display());
       return;
    }
    auto contextMenu = new QMenu(this);

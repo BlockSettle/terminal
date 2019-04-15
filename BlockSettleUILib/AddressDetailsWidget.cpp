@@ -295,7 +295,7 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> 
    if (!wallet->getLedgerDelegateForAddress(addr, cbLedgerDelegate)) {
       logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
                      "get ledger delegate for wallet ID {} - address {}"
-                     , wallet->walletId(), addr.display<std::string>());
+                     , wallet->walletId(), addr.display());
    }
 }
 

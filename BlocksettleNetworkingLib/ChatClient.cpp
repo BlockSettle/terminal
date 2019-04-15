@@ -64,9 +64,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 
 ChatClient::~ChatClient() noexcept
 {
-   if (loggedIn_) {
-      logout();
-   }
+   // Let's not call anything here as this could cause crash
 }
 
 std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt)

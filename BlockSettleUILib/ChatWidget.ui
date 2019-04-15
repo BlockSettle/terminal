@@ -318,7 +318,7 @@
             <item>
              <widget class="QStackedWidget" name="stackedWidgetMessages">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QFrame" name="page_6">
                <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -595,6 +595,18 @@
        </item>
        <item>
         <widget class="QFrame" name="roomsFrame">
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>250</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
@@ -615,40 +627,7 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QLabel" name="label">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>OTC</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-            <property name="headerLabel" stdset="0">
-             <bool>true</bool>
-            </property>
-            <property name="headerPanel" stdset="0">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QStackedWidget" name="stackedWidget_2">
+           <widget class="QStackedWidget" name="stackedWidgetOTC">
             <property name="lineWidth">
              <number>0</number>
             </property>
@@ -656,6 +635,9 @@
              <number>0</number>
             </property>
             <widget class="CreateOTCRequestWidget" name="widgetCreateOTCRequest"/>
+            <widget class="CreateOTCResponseWidget" name="widgetCreateOTCResponse"/>
+            <widget class="OTCNegotiationRequestWidget" name="widgetNegotiateRequest"/>
+            <widget class="OTCNegotiationResponseWidget" name="widgetNegotiateResponse"/>
            </widget>
           </item>
          </layout>
@@ -697,6 +679,24 @@
    <class>CreateOTCRequestWidget</class>
    <extends>QWidget</extends>
    <header>CreateOTCRequestWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CreateOTCResponseWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">CreateOTCResponseWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCNegotiationResponseWidget</class>
+   <extends>QWidget</extends>
+   <header>OTCNegotiationResponseWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCNegotiationRequestWidget</class>
+   <extends>QWidget</extends>
+   <header>OTCNegotiationRequestWidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

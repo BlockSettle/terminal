@@ -204,11 +204,43 @@ void ZmqBIP15XDataConnection::sendHeartbeat()
    }
 
    // An error message is already logged elsewhere if the send fails.
-   ZmqBIP15XSerializedMessage msg;
+// The following code is temporarily disabled while some issues are sorted out.
+/*   ZmqBIP15XSerializedMessage msg;
    BinaryData emptyPayload;
-   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT, 0);
+   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT, msgID_);
    auto& packet = msg.getNextPacket();
-   if (send(packet.toBinStr())) {
+   if (send(packet.toBinStr())) {*/
+///////////// The following code should be removed once heartbeat rekey errors are solved.
+   uint32_t size = 1;
+   BinaryData plainText(4 + size + POLY1305MACLEN);
+
+   // Copy in packet size.
+   memcpy(plainText.getPtr(), &size, 4);
+   size += 4;
+   //type
+   plainText.getPtr()[4] = ZMQ_MSGTYPE_HEARTBEAT;
+
+   //encrypt if possible
+   if (connPtr != nullptr) {
+      connPtr->assemblePacket(plainText.getPtr(), size, plainText.getPtr()
+         , size + POLY1305MACLEN);
+   } else {
+      plainText.resize(size);
+   }
+
+   int result = -1;
+   {
+      FastLock locker(lockSocket_);
+      result = zmq_send(dataSocket_.get(), plainText.getCharPtr()
+         , plainText.getSize(), 0);
+   }
+   if (result != (int)plainText.getSize()) {
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+         "data: {} (result={}, data size={}", __func__, connectionName_
+         , zmq_strerror(zmq_errno()), result, plainText.getSize());
+   }
+   else {
+///////////// The code above be removed once heartbeat errors are gone.
       lastHeartbeat_ = chrono::system_clock::now();
    }
 }
