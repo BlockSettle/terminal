@@ -36,8 +36,6 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       return;
    }*/
 
-   logger_->debug("new data: {}", signer::PacketType_Name(packet.type()));
-
    switch (packet.type()) {
    case signer::HeadlessReadyType:
       onReady(packet.data());
@@ -51,6 +49,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::PasswordRequestType:
       onPasswordRequested(packet.data());
       break;
+   case signer::CancelTxSignType:
    case signer::TxSignedType:
    case signer::SignTxRequestType:
       onTxSigned(packet.data(), packet.id());
