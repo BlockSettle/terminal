@@ -115,7 +115,17 @@ Item {
                         enabled: JsHelper.isSelectedWalletHdRoot(walletsView_)
                         text: qsTr("Delete")
                         onClicked: {
-                            QmlDialogs.deleteWalletDialog(getCurrentWalletIdData())
+                            var callback = function(success, errorMsg) {
+                                if (success) {
+                                    var mb = JsHelper.messageBox(BSMessageBox.Type.Critical
+                                        , "Delete Wallet"
+                                        , "Success")
+                                    mb.bsAccepted.connect(function() { acceptAnimated() })
+                                } else {
+                                }
+                            }
+
+                            QmlDialogs.deleteWalletDialog(getCurrentWalletIdData(), callback)
                         }
                     }
                 }

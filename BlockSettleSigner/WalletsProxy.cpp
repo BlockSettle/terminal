@@ -86,7 +86,7 @@ void WalletsProxy::changePassword(const QString &walletId
                                 , Q_ARG(QJSValueList, args));
 
       if (result) {
-         emit walletsMgr_.get()->walletChanged();
+         onWalletsChanged();
       }
    };
 
@@ -325,7 +325,8 @@ void WalletsProxy::createWallet(bool isPrimary
          invokeJsCallBack(jsCallback, args);
 
          if (success) {
-            emit walletsMgr_.get()->walletChanged();
+            // This should reload QmlWalletsViewModel
+            walletsMgr_->syncWallets();
          }
       });
    };
@@ -334,18 +335,22 @@ void WalletsProxy::createWallet(bool isPrimary
       , *seed, isPrimary, { *passwordData }, { 1, 1 }, cb);
 }
 
-bool WalletsProxy::deleteWallet(const QString &walletId)
+void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallback)
 {
-   bool ok = false;
-   const auto &rootWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
-   if (rootWallet) {
-      ok = walletsMgr_->deleteWallet(rootWallet);
-   }
+   auto cb = [this, jsCallback] (bool success, const std::string &error) {
+      QMetaObject::invokeMethod(this, [this, success, error, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(success) << QString::fromStdString(error);
+         invokeJsCallBack(jsCallback, args);
 
-   if (!ok) emit walletError(walletId, tr("Failed to find wallet with id %1").arg(walletId));
+         if (success) {
+            // This should reload QmlWalletsViewModel
+            walletsMgr_->syncWallets();
+         }
+      });
+   };
 
-   emit walletsMgr_.get()->walletChanged();
-   return ok;
+   adapter_->deleteWallet(walletId.toStdString(), cb);
 }
 
 QStringList WalletsProxy::walletNames() const

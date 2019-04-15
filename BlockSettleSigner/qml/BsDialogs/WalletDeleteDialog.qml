@@ -9,7 +9,9 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.QPasswordData 1.0
 
+import "../BsControls"
 import "../StyledControls"
+import "../js/helper.js" as JsHelper
 
 CustomTitleDialogWindow {
     id: root
@@ -93,7 +95,31 @@ CustomTitleDialogWindow {
                 enabled: chkConfirm.checked
 
                 onClicked: {
-                    acceptAnimated()
+                    var deleteCallback = function(success, errorMsg) {
+                        if (success) {
+                            var mb = JsHelper.messageBox(BSMessageBox.Type.Info
+                                , qsTr("Wallet deleted")
+                                , qsTr("Wallet was successfully deleted"))
+                            mb.bsAccepted.connect(acceptAnimated)
+                        } else {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Error"), qsTr("Delete wallet failed: \n") + errorMsg)
+                        }
+                    }
+
+                    if (backup) {
+                        var dlgBkp = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
+                        dlgBkp.setNextChainDialog(root)
+                        dlgBkp.walletInfo = walletInfo
+                        dlgBkp.targetDir = signerSettings.dirDocuments
+                        dlgBkp.bsAccepted.connect(function() {
+                            walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)
+                        })
+                        dlgBkp.open()
+                    }
+                    else {
+                        walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)
+                    }
                 }
             }
         }

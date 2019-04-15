@@ -159,6 +159,14 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
    listener_->setCreateHDWalletCb(reqId, cb);
 }
 
+void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::function<void (bool, const std::string &)> &cb)
+{
+   headless::DeleteHDWalletRequest request;
+   request.set_rootwalletid(rootWalletId);
+   const auto reqId = listener_->send(signer::DeleteHDWalletType, request.SerializeAsString());
+   listener_->setDeleteHDWalletCb(reqId, cb);
+}
+
 void SignerAdapter::changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
      , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
      , bool addNew, bool removeOld, bool dryRun

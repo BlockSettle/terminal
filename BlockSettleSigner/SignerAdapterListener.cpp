@@ -567,7 +567,7 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
    return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer::RequestId)
+bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    headless::DeleteHDWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -578,8 +578,21 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    const auto &wallet = walletsMgr_->getHDWalletById(walletId);
    if (!wallet) {
       logger_->error("[{}] failed to find HD Wallet by id {}", __func__, walletId);
-      return false;
+
+      headless::DeleteHDWalletResponse response;
+      response.set_error(fmt::format("Can't find wallet {}", request.rootwalletid()));
+      return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
    }
+
    logger_->debug("Deleting HDWallet {}: {}", walletId, wallet->name());
-   return walletsMgr_->deleteWalletFile(wallet);
+
+   bool result = walletsMgr_->deleteWalletFile(wallet);
+
+   headless::DeleteHDWalletResponse response;
+   response.set_success(result);
+   if (!result) {
+      response.set_error("Unknown error");
+   }
+
+   return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
 }
