@@ -77,6 +77,7 @@ protected:
    QImage statusImage(const int &row);
 
    virtual void mousePressEvent(QMouseEvent *ev) override;
+   virtual void contextMenuEvent(QContextMenuEvent *e);
    
 public slots:
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);
@@ -85,7 +86,11 @@ public slots:
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
    void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
    void urlActivated(const QUrl &link);
-
+   
+private slots:
+   void copyActionTriggered();
+   void copyLinkLocationActionTriggered();
+   void selectAllActionTriggered();
 
 private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
@@ -115,6 +120,9 @@ private:
    QImage statusImageConnecting_;
    QImage statusImageOnline_;
    QImage statusImageRead_;
+
+   QTextCursor textCursor_;
+   QString anchor_;
 };
 
 #endif
