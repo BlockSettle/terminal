@@ -88,6 +88,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::CreateHDWalletType:
       onCreateHDWallet(packet.data(), packet.id());
       break;
+   case signer::DeleteHDWalletType:
+      onDeleteHDWallet(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -453,4 +456,21 @@ void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::sign
    bool success = response.error().empty();
    itCb->second(success, response.error());
    cbCreateHDWalletReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onDeleteHDWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   headless::DeleteHDWalletResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbDeleteHDWalletReqs_.find(reqId);
+   if (itCb == cbDeleteHDWalletReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   itCb->second(response.success(), response.error());
+   cbDeleteHDWalletReqs_.erase(itCb);
 }

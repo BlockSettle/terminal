@@ -38,7 +38,7 @@ public:
                                  , bs::hd::WalletInfo *
                                  , bs::wallet::QPasswordData *, const QJSValue &jsCallback);
 
-   Q_INVOKABLE bool deleteWallet(const QString &walletId);
+   Q_INVOKABLE void deleteWallet(const QString &walletId, const QJSValue &jsCallback);
 
    Q_INVOKABLE void changePassword(const QString &walletId
                                    , bs::wallet::QPasswordData *oldPasswordData
