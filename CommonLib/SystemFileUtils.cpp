@@ -87,7 +87,6 @@ std::string SystemFileUtils::absolutePath(const std::string &path)
    return path;
 }
 
-#include <iostream>
 bool SystemFileUtils::mkPath(const std::string &path)
 {
    std::vector<std::string> dirs = { path };
