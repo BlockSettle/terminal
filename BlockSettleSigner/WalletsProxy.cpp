@@ -307,30 +307,31 @@ QString WalletsProxy::defaultBackupLocation() const
       QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-bool WalletsProxy::createWallet(bool isPrimary
+void WalletsProxy::createWallet(bool isPrimary
                                 , bs::wallet::QSeed *seed
                                 , bs::hd::WalletInfo *walletInfo
-                                , bs::wallet::QPasswordData *passwordData)
+                                , bs::wallet::QPasswordData *passwordData
+                                , const QJSValue &jsCallback)
 {
    if (seed->networkType() == bs::wallet::QSeed::Invalid) {
       emit walletError({}, tr("Failed to create wallet with invalid seed"));
-      return false;
+      return;
    }
 
-   try {
-      walletsMgr_->createWallet(walletInfo->name().toStdString()
-                              , walletInfo->desc().toStdString()
-                              , *seed
-                              , isPrimary
-                              , { *passwordData }
-                              , { 1, 1 });
-   }
-   catch (const std::exception &e) {
-      logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
-      emit walletError({}, tr("Failed to create wallet: %1").arg(QLatin1String(e.what())));
-      return false;
-   }
-   return true;
+   auto cb = [this, jsCallback] (bool success, const std::string &msg) {
+      QMetaObject::invokeMethod(this, [this, success, msg, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(success) << QString::fromStdString(msg);
+         invokeJsCallBack(jsCallback, args);
+
+         if (success) {
+            emit walletsMgr_.get()->walletChanged();
+         }
+      });
+   };
+
+   adapter_->createWallet(walletInfo->name().toStdString(), walletInfo->desc().toStdString()
+      , *seed, isPrimary, { *passwordData }, { 1, 1 }, cb);
 }
 
 bool WalletsProxy::deleteWallet(const QString &walletId)

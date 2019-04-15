@@ -42,45 +42,11 @@ bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet
    return listener_->send(signer::SignTxRequestType, request.SerializeAsString());
 }
 
-
-static void makeCreateHDWalletRequest(const std::string &name, const std::string &desc, bool primary
-   , const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank
-   , headless::CreateHDWalletRequest &request)
-{
-   if (!pwdData.empty()) {
-      request.set_rankm(keyRank.first);
-      request.set_rankn(keyRank.second);
-   }
-   for (const auto &pwd : pwdData) {
-      auto reqPwd = request.add_password();
-      reqPwd->set_password(pwd.password.toHexStr());
-      reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
-      reqPwd->set_enckey(pwd.encKey.toBinStr());
-   }
-   auto wallet = request.mutable_wallet();
-   wallet->set_name(name);
-   wallet->set_description(desc);
-   wallet->set_nettype((seed.networkType() == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
-   if (primary) {
-      wallet->set_primary(true);
-   }
-   if (!seed.empty()) {
-      if (seed.hasPrivateKey()) {
-         wallet->set_privatekey(seed.privateKey().toBinStr());
-         wallet->set_chaincode(seed.chainCode().toBinStr());
-      } else if (!seed.seed().isNull()) {
-         wallet->set_seed(seed.seed().toBinStr());
-      }
-   }
-}
-
 bs::signer::RequestId SignAdapterContainer::createHDWallet(const std::string &name, const std::string &desc
    , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
 {
-   headless::CreateHDWalletRequest request;
-   makeCreateHDWalletRequest(name, desc, primary, seed, pwdData, keyRank, request);
-   const auto reqId = listener_->send(signer::CreateHDWalletType, request.SerializeAsString());
-   return reqId;
+   // not implemented, use SignAdaptor directly
+   return 0;
 }
 
 bs::signer::RequestId SignAdapterContainer::DeleteHDRoot(const std::string &rootWalletId) {

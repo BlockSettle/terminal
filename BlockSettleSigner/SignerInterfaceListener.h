@@ -60,6 +60,9 @@ public:
    void setChangePwCb(bs::signer::RequestId reqId, const std::function<void(bool)> &cb) {
       cbChangePwReqs_[reqId] = cb;
    }
+   void setCreateHDWalletCb(bs::signer::RequestId reqId, const std::function<void(bool success, const std::string& errorMsg)> &cb) {
+      cbCreateHDWalletReqs_[reqId] = cb;
+   }
 
 private:
    void onReady(const std::string &data);
@@ -76,6 +79,7 @@ private:
    void onReloadWallets(bs::signer::RequestId);
    void onExecCustomDialog(const std::string &data, bs::signer::RequestId);
    void onChangePassword(const std::string &data, bs::signer::RequestId);
+   void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -91,6 +95,7 @@ private:
       , std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)>>   cbDecryptNode_;
    std::map<bs::signer::RequestId, std::function<void()>>   cbReloadWallets_;
    std::map<bs::signer::RequestId, std::function<void(bool success)>> cbChangePwReqs_;
+   std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbCreateHDWalletReqs_;
 };
 
 

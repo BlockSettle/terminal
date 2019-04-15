@@ -39,6 +39,10 @@ public:
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
 
+   void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
+      , bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
+      , bs::wallet::KeyRank keyRank, const std::function<void(bool, const std::string&)> &cb);
+
    void changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
       , bool addNew, bool removeOld, bool dryRun

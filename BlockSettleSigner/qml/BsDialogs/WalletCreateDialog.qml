@@ -261,13 +261,16 @@ CustomTitleDialogWindow {
                             passwordData.encKey = ""
                             passwordData.textPassword = newPasswordWithConfirm.password
 
-                            ok =  walletsProxy.createWallet(isPrimary
+                            var callback = function(success, errorMsg){
+                                var mb = JsHelper.resultBox(BSResultBox.WalletCreate, ok, walletInfo)
+                                if (ok) mb.bsAccepted.connect(acceptAnimated)
+                            }
+
+                            walletsProxy.createWallet(isPrimary
                                                             , seed
                                                             , walletInfo
-                                                            , passwordData)
-
-                            var mb = JsHelper.resultBox(BSResultBox.WalletCreate, ok, walletInfo)
-                            if (ok) mb.bsAccepted.connect(acceptAnimated)
+                                                            , passwordData
+                                                            , callback)
                         })
                     }
                     else {

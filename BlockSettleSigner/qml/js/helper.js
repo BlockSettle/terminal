@@ -13,7 +13,7 @@ function messageBox(type, title, text, details, parent) {
     messageBox_.customText = text
     if (details !== undefined) messageBox_.customDetails = details
     messageBox_.parent = parent
-    if (type !==BSMessageBox.Type.Question) messageBox_.cancelButtonVisible = false
+    if (type !== BSMessageBox.Type.Question) messageBox_.cancelButtonVisible = false
     messageBox_.open()
 
     return messageBox_
