@@ -294,6 +294,13 @@ void HeadlessAppObj::close()
    exit(0);
 }
 
+void HeadlessAppObj::walletsListUpdated()
+{
+   if (listener_) {
+      listener_->walletsListUpdated();
+   }
+}
+
 void HeadlessAppObj::deactivateAutoSign()
 {
    if (listener_) {
