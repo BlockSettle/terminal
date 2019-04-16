@@ -103,8 +103,8 @@ IF( WIN32 )
       SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
       SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
    ELSE()
-      SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-      SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+      SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /Zl /O2 /Ob2 /DNDEBUG")
+      SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_DEBUG -DBUILD_MT_RELEASE=OFF /MTd /Zi /Zl /Ob0 /Od /RTC1")
    ENDIF()
    # Speedup compilation
    add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
@@ -418,10 +418,12 @@ IF(WIN32)
       )
 
       IF(NOT BSTERMINAL_SHARED_LIBS)
-         LIST(APPEND OS_SPECIFIC_LIBS
-            libcmtd.lib
-            libcpmtd.lib
-         )
+      # Don't need to include - these libs included implicitly
+      # Todo: consider to use libucrt to replace libcmt
+#         LIST(APPEND OS_SPECIFIC_LIBS
+#            libcmtd.lib
+#            libcpmtd.lib
+#         )
 
          LIST(APPEND QT_LIBS
             ${QT5_LIB_ROOT}/qtharfbuzzd.lib
@@ -473,11 +475,12 @@ IF(WIN32)
             ${QT5_LIB_ROOT}/qtpcre2.lib
             ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlite.lib
          )
-
-         LIST(APPEND OS_SPECIFIC_LIBS
-            libcmt.lib
-            libcpmt.lib
-         )
+      # Don't need to include - these libs included implicitly
+      # Todo: consider to use libucrt to replace libcmt
+#         LIST(APPEND OS_SPECIFIC_LIBS
+#            libcmt.lib
+#            libcpmt.lib
+#         )
 
          LIST(APPEND QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugin.lib
