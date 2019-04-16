@@ -398,7 +398,7 @@ IF(WIN32)
       version
       UxTheme
    )
-      
+
    IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
       SET(QT_LIBS
          ${QT5_LIB_ROOT}/qtlibpngd.lib
@@ -410,34 +410,25 @@ IF(WIN32)
          ${QT5_LIB_ROOT}/Qt5Chartsd.lib
       )
 
-   IF(NOT BSTERMINAL_SHARED_LIBS)
-      LIST(APPEND QT_LIBS
-         Qt5::QWindowsIntegrationPlugin
-         Qt5::QICOPlugin
-         Qt5::QWindowsPrinterSupportPlugin
-      )
-      add_definitions(-DUSE_QWindowsIntegrationPlugin)
-   ENDIF()
-
       SET(QT_QUICK_LIBS
          ${QT5_LIB_ROOT}/Qt5Quickd.lib
          ${QT5_LIB_ROOT}/Qt5QuickWidgetsd.lib
          ${QT5_LIB_ROOT}/Qt5QuickControls2d.lib
          ${QT5_LIB_ROOT}/Qt5QuickTemplates2d.lib
       )
-      
+
       IF(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS
             libcmtd.lib
             libcpmtd.lib
          )
-         
+
          LIST(APPEND QT_LIBS
             ${QT5_LIB_ROOT}/qtharfbuzzd.lib
             ${QT5_LIB_ROOT}/qtpcre2d.lib
             ${QT5_PLUGINS_ROOT}/sqldrivers/qsqlited.lib
          )
-         
+
          LIST(APPEND QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugind.lib
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
@@ -451,14 +442,14 @@ IF(WIN32)
             ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
             ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
          )
-      ELSE()
+      ELSE(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS
             msvcrtd.lib
             msvcprtd.lib
          )
-      ENDIF()
-      
-   ELSE()
+      ENDIF(NOT BSTERMINAL_SHARED_LIBS)
+
+   ELSE(CMAKE_BUILD_TYPE STREQUAL "Debug")
       SET(QT_LIBS
          ${QT5_LIB_ROOT}/qtlibpng.lib
          ${QT5_LIB_ROOT}/Qt5FontDatabaseSupport.lib
@@ -475,7 +466,7 @@ IF(WIN32)
          ${QT5_LIB_ROOT}/Qt5QuickControls2.lib
          ${QT5_LIB_ROOT}/Qt5QuickTemplates2.lib
       )
-      
+
       IF(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND QT_LIBS
             ${QT5_LIB_ROOT}/qtharfbuzz.lib
@@ -487,7 +478,7 @@ IF(WIN32)
             libcmt.lib
             libcpmt.lib
          )
-         
+
          LIST(APPEND QT_QUICK_LIBS
             ${QT5_QML_ROOT}/QtQml/Models.2/modelsplugin.lib
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
@@ -501,14 +492,23 @@ IF(WIN32)
             ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
             ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
          )
-      ELSE()
+      ELSE(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS
             msvcrt.lib
             msvcprt.lib
          )
-      ENDIF()
-      
+      ENDIF(NOT BSTERMINAL_SHARED_LIBS)
+
    ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+
+   IF(NOT BSTERMINAL_SHARED_LIBS)
+      LIST(APPEND QT_LIBS
+         Qt5::QWindowsIntegrationPlugin
+         Qt5::QICOPlugin
+         Qt5::QWindowsPrinterSupportPlugin
+      )
+      add_definitions(-DUSE_QWindowsIntegrationPlugin)
+   ENDIF()
 ELSE(WIN32)
    FIND_PACKAGE( ZLIB )
    IF ( NOT ZLIB_FOUND )
@@ -754,7 +754,7 @@ IF(BSTERMINAL_SHARED_LIBS)
    remove_definitions(-DSTATIC_BUILD)
 
    IF(WIN32)
-      # Add new project only for copying libraries 
+      # Add new project only for copying libraries
       set(COPY_SHARED_LIBS_NAME CopySharedLibs)
       add_custom_target(${COPY_SHARED_LIBS_NAME} ALL)
 
@@ -781,12 +781,12 @@ IF(BSTERMINAL_SHARED_LIBS)
       STRING(REPLACE ".lib" ".dll" QRENCODE_LIB_DLL ${QRENCODE_LIB})
       add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${QRENCODE_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${QRENCODE_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-         
+
       # websockets
       STRING(REPLACE ".lib" ".dll" WS_LIB_DLL ${WS_LIB})
       add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${WS_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${WS_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-         
+
       string(REGEX REPLACE "([0-9])\.([0-9])\.([0-9]\.*)" "\\1;\\2" VERSION_MATCHES ${OPENSSL_VERSION})
       list(GET VERSION_MATCHES 0 version_major)
       list(GET VERSION_MATCHES 1 version_minor)
@@ -807,12 +807,12 @@ IF(BSTERMINAL_SHARED_LIBS)
 
    IF(APPLE AND NOT UNIX)
    ENDIF()
- 
+
 ELSE() # Static version
    IF(WIN32)
       set(COPY_SHARED_LIBS_NAME CopySharedLibs)
       add_custom_target(${COPY_SHARED_LIBS_NAME} ALL)
-      
+
       # libzmq
       STRING(REPLACE ".lib" ".dll" ZMQ_LIB_DLL ${ZMQ_LIB})
       add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
