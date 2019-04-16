@@ -45,8 +45,9 @@ bool ProcessControl::run(const std::string &program, const std::vector<std::stri
       params += arg;
    }
    char cmdLine[MAX_PATH];
-   memcpy(cmdLine, params.c_str(), params.size());
-   cmdLine[params.size()] = 0;
+   memcpy(cmdLine, (program + " " + params).c_str()
+      , params.size() + program.size() + 1);
+   cmdLine[params.size() + program.size() + 1] = 0;
    STARTUPINFO si;
    PROCESS_INFORMATION pi;
    ZeroMemory(&si, sizeof(si));

@@ -1289,7 +1289,8 @@ bool LocalSigner::Stop()
 
    if (headlessProcess_) {
 #ifdef Q_OS_WIN
-      if (AttachConsole(headlessProcess_->pid()->dwProcessId)) {
+      const auto pid = headlessProcess_->pid();
+      if (pid && AttachConsole(pid->dwProcessId)) {
          SetConsoleCtrlHandler(NULL, TRUE);  // Disable shutdown on Ctrl-C for self
          GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
          FreeConsole();
