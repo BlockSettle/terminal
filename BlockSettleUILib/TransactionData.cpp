@@ -279,7 +279,8 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
    if ((feePerByte_ == 0) && totalFee_) {
       const double availableBalance = GetTransactionSummary().availableBalance - \
          GetTransactionSummary().balanceToSpend;
-      const double totalFee = totalFee_ / BTCNumericTypes::BalanceDivider;
+      double totalFee = (totalFee_ < minTotalFee_) ? minTotalFee_ / BTCNumericTypes::BalanceDivider
+         : totalFee_ / BTCNumericTypes::BalanceDivider;
       if (availableBalance > totalFee) {
          maxAmount_ = availableBalance - totalFee;
       }
@@ -321,8 +322,11 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
       // satoshis higher than is strictly required by Core but that's okay.
       // If truly required, the fee can be tweaked later.
       try {
-         const double fee = coinSelection_->getFeeForMaxVal(payment.size_, feePerByte_
+         double fee = coinSelection_->getFeeForMaxVal(payment.size_, feePerByte_
             , transactions) / BTCNumericTypes::BalanceDivider;
+         if (fee < minTotalFee_ / BTCNumericTypes::BalanceDivider) {
+            fee = minTotalFee_ / BTCNumericTypes::BalanceDivider;
+         }
 
          const double availableBalance = GetTransactionSummary().availableBalance - \
             GetTransactionSummary().balanceToSpend;

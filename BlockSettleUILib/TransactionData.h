@@ -73,6 +73,7 @@ public:
    std::shared_ptr<bs::sync::Wallet> getSigningWallet() const { return signWallet_; }
    void setFeePerByte(float feePerByte);
    void setTotalFee(uint64_t fee, bool overrideFeePerByte = true);
+   void setMinTotalFee(uint64_t fee) { minTotalFee_ = fee; }
    float feePerByte() const;
    uint64_t totalFee() const;
 
@@ -150,6 +151,7 @@ private:
 
    float       feePerByte_;
    uint64_t    totalFee_ = 0;
+   uint64_t    minTotalFee_ = 0;
    mutable double maxAmount_ = 0;
    // recipients
    unsigned int nextId_;
