@@ -11,6 +11,7 @@
 #include "autheid_utils.h"
 #include <spdlog/spdlog.h>
 #include <enable_warnings.h>
+#include <SecureBinaryData.h>
 
 namespace Chat {
 
@@ -43,7 +44,7 @@ namespace Chat {
       int getState() const { return state_; }
       QJsonObject toJson() const;
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
-      void setNonce(const autheid::SecureBytes &);
+      void setNonce(const Botan::SecureVector<uint8_t> &);
       QString getNonce() const;
       size_t getDefaultNonceSize() const;
 
@@ -52,8 +53,8 @@ namespace Chat {
       void updateState(const int newState);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
-      bool encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const autheid::SecureBytes &nonce, const std::shared_ptr<spdlog::logger>& logger);
-      bool decrypt_aead(const autheid::PublicKey& senderPubKey, const autheid::PrivateKey& privKey, const std::shared_ptr<spdlog::logger>& logger);
+      bool encrypt_aead(const BinaryData& receiverPubKey, const SecureBinaryData& ownPrivKey, const Botan::SecureVector<uint8_t> &nonce, const std::shared_ptr<spdlog::logger>& logger);
+      bool decrypt_aead(const BinaryData& senderPubKey, const SecureBinaryData& privKey, const std::shared_ptr<spdlog::logger>& logger);
       
       //Set ID for message, returns old ID that was replaced
       QString setId(const QString& id);
@@ -68,7 +69,7 @@ namespace Chat {
       QDateTime dateTime_;
       QString messageData_;
       int state_;
-      autheid::SecureBytes nonce_;
+      Botan::SecureVector<uint8_t> nonce_;
       EncryptionType encryptionType_;
    };
 }

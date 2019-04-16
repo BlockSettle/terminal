@@ -62,7 +62,7 @@ namespace Chat {
       QString id =  data[MessageIdKey].toString();
       const int state = data[StatusKey].toInt();
       QByteArray local_nonce = QByteArray::fromBase64(data[Nonce].toString().toLocal8Bit());
-      autheid::SecureBytes nonce(local_nonce.begin(), local_nonce.end());
+      Botan::SecureVector<uint8_t> nonce(local_nonce.begin(), local_nonce.end());
    
       std::shared_ptr<MessageData> msg = std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
       msg->setNonce(nonce);
@@ -110,7 +110,7 @@ namespace Chat {
       return true;
    }
 
-   bool MessageData::encrypt_aead(const autheid::PublicKey& receiverPubKey, const autheid::PrivateKey& ownPrivKey, const autheid::SecureBytes &nonce, const std::shared_ptr<spdlog::logger>& logger)
+   bool MessageData::encrypt_aead(const BinaryData& receiverPubKey, const SecureBinaryData& ownPrivKey, const Botan::SecureVector<uint8_t> &nonce, const std::shared_ptr<spdlog::logger>& logger)
    {
       if (encryptionType_ != EncryptionType::Unencrypted)
       {
@@ -119,14 +119,14 @@ namespace Chat {
 
       // Botan variant of public key
       Botan::EC_Group kDomain(EC_GROUP);
-      Botan::PointGFp receiverPublicKeyValue = kDomain.OS2ECP(receiverPubKey.data(), receiverPubKey.size());
+      Botan::PointGFp receiverPublicKeyValue = kDomain.OS2ECP(receiverPubKey.getPtr(), receiverPubKey.getSize());
       Botan::ECDH_PublicKey receiverPublicKeyDecoded(kDomain, receiverPublicKeyValue);
 
       Botan::AutoSeeded_RNG rng;
 
       // Botan variant of private key
       Botan::BigInt privateKeyValue;
-      privateKeyValue.binary_decode(ownPrivKey);
+      privateKeyValue.binary_decode(ownPrivKey.getPtr(), ownPrivKey.getSize());
       Botan::ECDH_PrivateKey privateKeyDecoded(rng, kDomain, privateKeyValue);
       privateKeyValue.clear();
 
@@ -142,7 +142,7 @@ namespace Chat {
       }
       catch (Botan::Exception& e)
       {
-         logger->error("Invalid symmetric key {}", e.what());
+         logger->error("[MessageData::{}] Invalid symmetric key {}", __func__, e.what());
          return false;
       }
 
@@ -152,12 +152,12 @@ namespace Chat {
          encryptor->start(nonce_);
       }
       catch (Botan::Exception &e) {
-         logger->error("Invalid nonce {}", e.what());
+         logger->error("[MessageData::{}] Invalid nonce {}", __func__, e.what());
          return false;
       }
 
-      const QByteArray message_bytes = messageData_.toLocal8Bit();
-      autheid::SecureBytes encrypted_data(message_bytes.begin(), message_bytes.end());
+      const QByteArray message_bytes = messageData_.toUtf8();
+      Botan::SecureVector<uint8_t> encrypted_data(message_bytes.begin(), message_bytes.end());
 
       try
       {
@@ -165,7 +165,7 @@ namespace Chat {
       }
       catch (Botan::Exception &e)
       {
-         logger->error("Can't encrypt message {}", e.what());
+         logger->debug("[MessageData::{}] Encryption message failed {}", __func__, e.what());
          return false;
       }
 
@@ -175,7 +175,7 @@ namespace Chat {
       return true;
    }
 
-   bool MessageData::decrypt_aead(const autheid::PublicKey& senderPubKey, const autheid::PrivateKey& ownPrivKey, const std::shared_ptr<spdlog::logger>& logger)
+   bool MessageData::decrypt_aead(const BinaryData& senderPubKey, const SecureBinaryData& ownPrivKey, const std::shared_ptr<spdlog::logger>& logger)
    {
       if (encryptionType_ != EncryptionType::AEAD)
       {
@@ -183,13 +183,13 @@ namespace Chat {
       }
 
       Botan::EC_Group kDomain(EC_GROUP);
-      Botan::PointGFp senderPublicKeyValue = kDomain.OS2ECP(senderPubKey.data(), senderPubKey.size());
+      Botan::PointGFp senderPublicKeyValue = kDomain.OS2ECP(senderPubKey.getPtr(), senderPubKey.getSize());
       Botan::ECDH_PublicKey senderPublicKeyDecoded(kDomain, senderPublicKeyValue);
 
       Botan::AutoSeeded_RNG rng;
 
       Botan::BigInt privateKeyValue;
-      privateKeyValue.binary_decode(ownPrivKey);
+      privateKeyValue.binary_decode(ownPrivKey.getPtr(), ownPrivKey.getSize());
       Botan::ECDH_PrivateKey privateKeyDecoded(rng, kDomain, privateKeyValue);
       privateKeyValue.clear();
 
@@ -204,7 +204,7 @@ namespace Chat {
       }
       catch (Botan::Exception& e)
       {
-         logger->error("Invalid symmetric key {}", e.what());
+         logger->error("[MessageData::{}] Invalid symmetric key {}", __func__, e.what());
          return false;
       }
 
@@ -212,16 +212,16 @@ namespace Chat {
          decryptor->start(nonce_);
       }
       catch (Botan::Exception &e) {
-         logger->error("Invalid nonce {}", e.what());
+         logger->error("[MessageData::{}] Invalid nonce {}", __func__, e.what());
          return false;
       }
 
-      const QByteArray message_bytes = QByteArray::fromBase64(messageData_.toLocal8Bit());
-      autheid::SecureBytes decrypted_data(message_bytes.begin(), message_bytes.end());
+      const QByteArray message_bytes = QByteArray::fromBase64(messageData_.toLatin1());
+      Botan::SecureVector<uint8_t> decrypted_data(message_bytes.begin(), message_bytes.end());
 
       if (decrypted_data.size() < decryptor->minimum_final_size())
       {
-         logger->error("Data to decryption have wrong size!");
+         logger->error("[MessageData::{}] Decryption data size ({}) is less than the anticipated size ({})", __func__, decrypted_data.size(), decryptor->minimum_final_size());
          return false;
       }
 
@@ -229,11 +229,11 @@ namespace Chat {
          decryptor->finish(decrypted_data);
       }
       catch (Botan::Exception&e) {
-         logger->error("Can't decrypt message {}", e.what());
+         logger->debug("[MessageData::{}] Decryption message failed {}", __func__, e.what());
          return false;
       }
 
-      messageData_ = QString::fromLocal8Bit((char*)decrypted_data.data(), (int)decrypted_data.size());
+      messageData_ = QString::fromUtf8((char*)decrypted_data.data(), (int)decrypted_data.size());
       encryptionType_ == EncryptionType::Unencrypted;
 
       return true;
@@ -246,7 +246,7 @@ namespace Chat {
       return oldId;
    }
 
-   void MessageData::setNonce(const autheid::SecureBytes &nonce)
+   void MessageData::setNonce(const Botan::SecureVector<uint8_t> &nonce)
    {
       nonce_ = nonce;
    }

@@ -405,7 +405,7 @@ void ChatClient::OnUsersList(const Chat::UsersListResponse &response)
 
 void ChatClient::OnMessages(const Chat::MessagesResponse &response)
 {
-   logger_->debug("[ChatClient::OnMessages] Received messages from server: {}", response.getData());
+   logger_->debug("[ChatClient::{}] Received messages from server: {}", __func__, response.getData());
    std::vector<std::shared_ptr<Chat::MessageData>> messages;
    for (const auto &msgStr : response.getDataList()) {
       const auto msg = Chat::MessageData::fromJSON(msgStr);
@@ -415,13 +415,15 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
 
       const auto& itPublicKey = pubKeys_.find(msg->getSenderId());
       if (itPublicKey == pubKeys_.end()) {
-         logger_->error("[ChatClient::OnMessages] Can't find public key for sender {}", msg->getSenderId().toStdString());
+         logger_->error("[ChatClient::{}] Can't find public key for sender {}", __func__, msg->getSenderId().toStdString());
          msg->setFlag(Chat::MessageData::State::Invalid);
       }
       else {
          if (msg->encryptionType() == Chat::MessageData::EncryptionType::AEAD) {
-            if (!msg->decrypt_aead(itPublicKey->second, ownPrivKey_, logger_)) {
-               logger_->error("[ChatClient::OnMessages] Failed to decrypt msg {}", msg->getId().toStdString());
+            BinaryData remotePublicKey(itPublicKey->second.data(), itPublicKey->second.size());
+            SecureBinaryData localPrivateKey(ownPrivKey_.data(), ownPrivKey_.size());
+            if (!msg->decrypt_aead(remotePublicKey, localPrivateKey, logger_)) {
+               logger_->error("[ChatClient::{}] Failed to decrypt msg.", __func__);
                msg->setFlag(Chat::MessageData::State::Invalid);
             }
             else {
@@ -435,7 +437,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
             }
          }
          else {
-            logger_->error("[ChatClient::OnMessages] This could not happend! Failed to decrypt msg {}", msg->getId().toStdString());
+            logger_->error("[ChatClient::{}] This could not happend! Failed to decrypt msg.", __func__);
          }
       }
 
@@ -585,7 +587,9 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       userNonces_[receiver] = nonce = Botan::BigInt::encode_locked(bigIntNonce);
    }
 
-   if (!messageData.encrypt_aead(itPub->second, ownPrivKey_, nonce, logger_)) {
+   BinaryData remotePublicKey(itPub->second.data(), itPub->second.size());
+   SecureBinaryData localPrivateKey(ownPrivKey_.data(), ownPrivKey_.size());
+   if (!messageData.encrypt_aead(remotePublicKey, localPrivateKey, nonce, logger_)) {
       logger_->error("[ChatClient::sendMessage] failed to encrypt by aead {}" , messageData.getId().toStdString());
       return result;
    }
