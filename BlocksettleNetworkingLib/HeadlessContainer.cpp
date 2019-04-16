@@ -1168,6 +1168,11 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       ProcessSyncAddresses(packet.id(), packet.data());
       break;
 
+   case headless::WalletsListUpdatedType:
+      logger_->debug("received WalletsListUpdatedType message");
+      emit walletsListUpdated();
+      break;
+
    default:
       logger_->warn("[HeadlessContainer] Unknown packet type: {}", packet.type());
       break;
