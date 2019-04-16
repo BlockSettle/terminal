@@ -58,6 +58,7 @@ public:
    void activateAutoSign(const std::string &clientId, const std::string &walletId, const SecureBinaryData &password);
    void deactivateAutoSign(const std::string &clientId = {}, const std::string &walletId = {}, const std::string &reason = {});
    void addPendingAutoSignReq(const std::string &walletId);
+   void walletsListUpdated();
 
 protected:
    bool isAutoSignActive(const std::string &walletId) const;

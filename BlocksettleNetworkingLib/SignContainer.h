@@ -122,6 +122,8 @@ signals:
    void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);
    void AutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
+   // Notified from remote/local signer when wallets list is updated
+   void walletsListUpdated();
 
 protected:
    std::shared_ptr<spdlog::logger> logger_;

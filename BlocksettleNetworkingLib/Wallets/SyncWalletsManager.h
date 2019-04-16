@@ -138,6 +138,7 @@ namespace bs {
          void onStateChanged(ArmoryConnection::State);
          void onWalletImported(const std::string &walletId);
          void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
+         void onWalletsListUpdated();
 
       private:
          bool empty() const { return (wallets_.empty() && !settlementWallet_); }

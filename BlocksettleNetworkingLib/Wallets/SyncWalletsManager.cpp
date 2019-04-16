@@ -36,6 +36,7 @@ void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &cont
    signContainer_ = container;
 
    connect(signContainer_.get(), &SignContainer::HDWalletCreated, this, &WalletsManager::onHDWalletCreated);
+   connect(signContainer_.get(), &SignContainer::walletsListUpdated, this, &WalletsManager::onWalletsListUpdated);
 }
 
 WalletsManager::~WalletsManager() noexcept = default;
@@ -900,6 +901,12 @@ void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
    newWallet->synchronize([] {});
    adoptNewWallet(newWallet);
    emit walletCreated(newWallet);
+}
+
+void WalletsManager::onWalletsListUpdated()
+{
+   reset();
+   syncWallets();
 }
 
 void WalletsManager::adoptNewWallet(const HDWalletPtr &wallet)
