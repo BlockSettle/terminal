@@ -108,6 +108,10 @@ void HeadlessAppObj::startInterface()
       break;
    }
 
+   if (settings_->testNet()) {
+      args.push_back("--testnet");
+   }
+
    std::string guiPath = SystemFilePaths::applicationDir() + "/bs_signer_gui";
 #ifdef WIN32
    guiPath += ".exe";

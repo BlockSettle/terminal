@@ -115,7 +115,7 @@ ApplicationWindow {
 
     function customDialogRequest(dialogName, data) {
         // close previous dialog
-        if (typeof currentDialog.close !== "undefined") {
+        if (currentDialog && typeof currentDialog.close !== "undefined") {
             currentDialog.close()
         }
 
