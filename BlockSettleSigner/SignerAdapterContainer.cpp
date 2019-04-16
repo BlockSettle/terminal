@@ -16,7 +16,7 @@
 
 using namespace Blocksettle::Communication;
 
-SignContainer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txReq
+bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txReq
    , bool autoSign, TXSignMode mode, const PasswordType& password, bool keepDuplicatedRecipients)
 {
    signer::SignTxRequest request;
@@ -34,12 +34,26 @@ SignContainer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wal
    evt->set_rbf(txReq.RBF);
    if (txReq.change.value) {
       auto change = evt->mutable_change();
-      change->set_address(txReq.change.address.display<std::string>());
+      change->set_address(txReq.change.address.display());
       change->set_index(txReq.change.index);
       change->set_value(txReq.change.value);
    }
 
    return listener_->send(signer::SignTxRequestType, request.SerializeAsString());
+}
+
+bs::signer::RequestId SignAdapterContainer::createHDWallet(const std::string &name, const std::string &desc
+   , bool primary, const bs::core::wallet::Seed &seed, const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
+{
+   // not implemented, use SignAdaptor directly
+   return 0;
+}
+
+bs::signer::RequestId SignAdapterContainer::DeleteHDRoot(const std::string &rootWalletId) {
+   headless::DeleteHDWalletRequest request;
+   request.set_rootwalletid(rootWalletId);
+   const auto reqId = listener_->send(signer::DeleteHDWalletType, request.SerializeAsString());
+   return reqId;
 }
 
 void SignAdapterContainer::syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb)

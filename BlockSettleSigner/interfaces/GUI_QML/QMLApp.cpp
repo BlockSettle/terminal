@@ -16,6 +16,7 @@
 #include "SignerAdapter.h"
 #include "SignerSettings.h"
 #include "SignerVersion.h"
+#include "SignerUiDefs.h"
 #include "TXInfo.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -78,6 +79,9 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
+   connect(qmlFactory_.get(), &QmlFactory::closeEventReceived, this, [this](){
+      hideQmlWindow();
+   });
 
    offlineProc_ = std::make_shared<OfflineProcessor>(logger_, adapter_);
    connect(offlineProc_.get(), &OfflineProcessor::requestPassword, this, &QMLAppObj::onOfflinePassword);
@@ -155,6 +159,7 @@ void QMLAppObj::registerQtTypes()
    qRegisterMetaType<AutheIDClient::RequestType>("AutheIDClient::RequestType");
    qRegisterMetaType<bs::wallet::EncryptionType>("EncryptionType");
    qRegisterMetaType<bs::wallet::QSeed>("QSeed");
+   qRegisterMetaType<AuthSignWalletObject>("AuthSignWalletObject");
 
    qmlRegisterUncreatableType<QmlWalletsViewModel>("com.blocksettle.WalletsViewModel", 1, 0,
       "WalletsModel", QStringLiteral("Cannot create a WalletsViewModel instance"));
@@ -164,9 +169,9 @@ void QMLAppObj::registerQtTypes()
       "WalletsProxy", QStringLiteral("Cannot create a WalletesProxy instance"));
    qmlRegisterUncreatableType<AutheIDClient>("com.blocksettle.AutheIDClient", 1, 0,
       "AutheIDClient", QStringLiteral("Cannot create a AutheIDClient instance"));
-   qmlRegisterUncreatableType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject",
-      QStringLiteral("Cannot create a AuthSignWalletObject instance"));
 
+
+   qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
@@ -178,14 +183,6 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-
-   qmlRegisterUncreatableMetaObject(
-     bs::wallet::staticMetaObject, // static meta object
-     "com.blocksettle.NsWallet.namespace",                // import statement (can be any string)
-     1, 0,                          // major and minor version of the import
-     "NsWallet",                 // name in QML (does not have to match C++ name)
-     QStringLiteral("Error: namespace.bs.NsWallet: only enums")            // error in case someone tries to create a MyNamespace object
-   );
 }
 
 void QMLAppObj::onOfflineChanged()
@@ -225,7 +222,19 @@ void QMLAppObj::SetRootObject(QObject *obj)
       }
    });
    connect(rootObj_, SIGNAL(passwordEntered(QString, bs::wallet::QPasswordData *, bool)),
-      this, SLOT(onPasswordAccepted(QString, bs::wallet::QPasswordData *, bool)));
+           this, SLOT(onPasswordAccepted(QString, bs::wallet::QPasswordData *, bool)));
+}
+
+void QMLAppObj::raiseQmlWindow()
+{
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   QGuiApplication::processEvents();
+   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+}
+
+void QMLAppObj::hideQmlWindow()
+{
+   QMetaObject::invokeMethod(rootObj_, "hideWindow");
 }
 
 void QMLAppObj::onPasswordAccepted(const QString &walletId
@@ -307,17 +316,13 @@ void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, co
 void QMLAppObj::onSysTrayMsgClicked()
 {
    logger_->debug("Systray message clicked");
-   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
-   QGuiApplication::processEvents();
-   QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   raiseQmlWindow();
 }
 
 void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
    if (reason == QSystemTrayIcon::Trigger) {
-      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
-      QGuiApplication::processEvents();
-      QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+      raiseQmlWindow();
    }
 }
 

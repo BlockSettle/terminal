@@ -8,7 +8,6 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 import "../StyledControls"
 import "../BsControls"
@@ -19,7 +18,7 @@ CustomTitleDialogWindow {
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
     property QPasswordData passwordData: QPasswordData{}
-    property bool   acceptable: walletInfo.encType === NsWallet.Password ? tfPassword.text : true
+    property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
 
@@ -33,7 +32,7 @@ CustomTitleDialogWindow {
     }
 
     function init() {
-        if (walletInfo.encType !== NsWallet.Auth) {
+        if (walletInfo.encType !== QPasswordData.Auth) {
             return
         }
 
@@ -43,7 +42,7 @@ CustomTitleDialogWindow {
         authSign = qmlFactory.createAutheIDSignObject(AutheIDClient.SignWallet, walletInfo)
 
         authSign.succeeded.connect(function(encKey, password) {
-            passwordData.encType = NsWallet.Auth
+            passwordData.encType = QPasswordData.Auth
             passwordData.encKey = encKey
             passwordData.binaryPassword = password
             acceptAnimated()
@@ -71,7 +70,7 @@ CustomTitleDialogWindow {
     }
 
 //    onWalletInfoChanged: {
-//        if (walletInfo.encType === NsWallet.Auth) btnConfirm.clicked()
+//        if (walletInfo.encType === QPasswordData.Auth) btnConfirm.clicked()
 //    }
 
 
@@ -209,7 +208,7 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 Layout.fillWidth: true
-                //text: walletInfo.encType !== NsWallet.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
+                //text: walletInfo.encType !== QPasswordData.Auth ? qsTr("Password Confirmation") : qsTr("Press Continue to start eID Auth")
                 text: qsTr("Decrypt Wallet")
                 Layout.preferredHeight: 25
             }
@@ -232,7 +231,7 @@ CustomTitleDialogWindow {
 //            }
 
             CustomLabel {
-                visible: walletInfo.encType === NsWallet.Password
+                visible: walletInfo.encType === QPasswordData.Password
                 Layout.minimumWidth: 110
                 Layout.preferredWidth: 110
                 Layout.maximumWidth: 110
@@ -242,7 +241,7 @@ CustomTitleDialogWindow {
 
             CustomPasswordTextInput {
                 id: tfPassword
-                visible: walletInfo.encType === NsWallet.Password
+                visible: walletInfo.encType === QPasswordData.Password
                 focus: true
                 //placeholderText: qsTr("Password")
                 Layout.fillWidth: true
@@ -256,7 +255,7 @@ CustomTitleDialogWindow {
 
             CustomLabel {
                 id: labelAuth
-                visible: walletInfo.encType === NsWallet.Auth
+                visible: walletInfo.encType === QPasswordData.Auth
                 text: authSign.status
             }
         }
@@ -287,7 +286,7 @@ CustomTitleDialogWindow {
 
 //            CustomLabel {
 //                text: qsTr("On completion just press [Enter] or [Return]")
-//                visible: walletInfo.encType !== NsWallet.Auth
+//                visible: walletInfo.encType !== QPasswordData.Auth
 //                Layout.fillWidth: true
 //            }
             CustomLabelValue {
@@ -329,20 +328,20 @@ CustomTitleDialogWindow {
 
             CustomButtonPrimary {
                 id: btnConfirm
-                text: walletInfo.encType === NsWallet.Password ? qsTr("CONFIRM") : qsTr("Continue")
+                text: walletInfo.encType === QPasswordData.Password ? qsTr("CONFIRM") : qsTr("Continue")
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable
                 onClicked: {
-                    if (walletInfo.encType === NsWallet.Password) {
+                    if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text
-                        passwordData.encType = NsWallet.Password
+                        passwordData.encType = QPasswordData.Password
                         acceptAnimated()
                     }
-                    else if (walletInfo.encType === NsWallet.Auth) {
+                    else if (walletInfo.encType === QPasswordData.Auth) {
                     }
                     else {
-                        passwordData.encType = NsWallet.Unencrypted
+                        passwordData.encType = QPasswordData.Unencrypted
                         acceptAnimated()
                     }
                 }

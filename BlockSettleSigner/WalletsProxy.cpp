@@ -86,7 +86,7 @@ void WalletsProxy::changePassword(const QString &walletId
                                 , Q_ARG(QJSValueList, args));
 
       if (result) {
-         emit walletsMgr_.get()->walletChanged();
+         onWalletsChanged();
       }
    };
 
@@ -307,44 +307,51 @@ QString WalletsProxy::defaultBackupLocation() const
       QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-bool WalletsProxy::createWallet(bool isPrimary
+void WalletsProxy::createWallet(bool isPrimary
                                 , bs::wallet::QSeed *seed
                                 , bs::hd::WalletInfo *walletInfo
-                                , bs::wallet::QPasswordData *passwordData)
+                                , bs::wallet::QPasswordData *passwordData
+                                , const QJSValue &jsCallback)
 {
    if (seed->networkType() == bs::wallet::QSeed::Invalid) {
       emit walletError({}, tr("Failed to create wallet with invalid seed"));
-      return false;
+      return;
    }
 
-   try {
-      walletsMgr_->createWallet(walletInfo->name().toStdString()
-                              , walletInfo->desc().toStdString()
-                              , *seed
-                              , isPrimary
-                              , { *passwordData }
-                              , { 1, 1 });
-   }
-   catch (const std::exception &e) {
-      logger_->error("[WalletsProxy] failed to create wallet: {}", e.what());
-      emit walletError({}, tr("Failed to create wallet: %1").arg(QLatin1String(e.what())));
-      return false;
-   }
-   return true;
+   auto cb = [this, jsCallback] (bool success, const std::string &msg) {
+      QMetaObject::invokeMethod(this, [this, success, msg, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(success) << QString::fromStdString(msg);
+         invokeJsCallBack(jsCallback, args);
+
+         if (success) {
+            // This should reload QmlWalletsViewModel
+            walletsMgr_->syncWallets();
+         }
+      });
+   };
+
+   adapter_->createWallet(walletInfo->name().toStdString(), walletInfo->desc().toStdString()
+      , *seed, isPrimary, { *passwordData }, { 1, 1 }, cb);
 }
 
-bool WalletsProxy::deleteWallet(const QString &walletId)
+void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallback)
 {
-   bool ok = false;
-   const auto &rootWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
-   if (rootWallet) {
-      ok = walletsMgr_->deleteWallet(rootWallet);
-   }
+   auto cb = [this, jsCallback] (bool success, const std::string &error) {
+      QMetaObject::invokeMethod(this, [this, success, error, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(success) << QString::fromStdString(error);
+         invokeJsCallBack(jsCallback, args);
 
-   if (!ok) emit walletError(walletId, tr("Failed to find wallet with id %1").arg(walletId));
+         if (success) {
+            // This should reload QmlWalletsViewModel
+            walletsMgr_->reset();
+            walletsMgr_->syncWallets();
+         }
+      });
+   };
 
-   emit walletsMgr_.get()->walletChanged();
-   return ok;
+   adapter_->deleteWallet(walletId.toStdString(), cb);
 }
 
 QStringList WalletsProxy::walletNames() const

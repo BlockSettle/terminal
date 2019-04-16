@@ -14,6 +14,15 @@
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
 
+SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<ZmqBIP15XDataConnection> &conn
+   , SignerAdapter *parent)
+   : logger_(logger)
+   , connection_(conn)
+   , parent_(parent)
+{
+}
+
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
 {
    signer::Packet packet;
@@ -40,6 +49,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::PasswordRequestType:
       onPasswordRequested(packet.data());
       break;
+   case signer::CancelTxSignType:
    case signer::TxSignedType:
    case signer::SignTxRequestType:
       onTxSigned(packet.data(), packet.id());
@@ -74,26 +84,38 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::ChangePasswordRequestType:
       onChangePassword(packet.data(), packet.id());
       break;
+   case signer::CreateHDWalletType:
+      onCreateHDWallet(packet.data(), packet.id());
+      break;
+   case signer::DeleteHDWalletType:
+      onDeleteHDWallet(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
    }
 }
 
-void SignerInterfaceListener::OnConnected() {
+void SignerInterfaceListener::OnConnected()
+{
    logger_->debug("[SignerInterfaceListener] connected");
    send(signer::HeadlessReadyType, "");
 }
 
-void SignerInterfaceListener::OnDisconnected() {
+void SignerInterfaceListener::OnDisconnected()
+{
    logger_->debug("[SignerInterfaceListener] disconnected");
 }
 
-void SignerInterfaceListener::OnError(DataConnectionError errorCode) {
+void SignerInterfaceListener::OnError(DataConnectionError errorCode)
+{
    logger_->debug("[SignerInterfaceListener] error {}", errorCode);
 }
 
-SignContainer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data) {
+bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
+{
+   logger_->debug("send packet {}", signer::PacketType_Name(pt));
+
    const auto reqId = seq_++;
    signer::Packet packet;
    packet.set_id(reqId);
@@ -172,7 +194,7 @@ void SignerInterfaceListener::onPasswordRequested(const std::string &data)
    });
 }
 
-void SignerInterfaceListener::onTxSigned(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::TxSignEvent evt;
    if (!evt.ParseFromString(data)) {
@@ -231,7 +253,7 @@ void SignerInterfaceListener::onAutoSignActivate(const std::string &data)
    }
 }
 
-void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletInfoResponse response;
    if (!response.ParseFromString(data)) {
@@ -256,7 +278,7 @@ void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, SignCont
    cbWalletInfo_.erase(itCb);
 }
 
-void SignerInterfaceListener::onSyncHDWallet(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncHDWalletResponse response;
    if (!response.ParseFromString(data)) {
@@ -283,7 +305,7 @@ void SignerInterfaceListener::onSyncHDWallet(const std::string &data, SignContai
    cbHDWalletData_.erase(itCb);
 }
 
-void SignerInterfaceListener::onSyncWallet(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletResponse response;
    if (!response.ParseFromString(data)) {
@@ -313,7 +335,7 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, SignContaine
    cbWalletData_.erase(itCb);
 }
 
-void SignerInterfaceListener::onCreateWO(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::CreateWatchingOnlyResponse response;
    if (!response.ParseFromString(data)) {
@@ -351,7 +373,7 @@ void SignerInterfaceListener::onCreateWO(const std::string &data, SignContainer:
    cbWO_.erase(itCb);
 }
 
-void SignerInterfaceListener::onDecryptedKey(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onDecryptedKey(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptedNodeResponse response;
    if (!response.ParseFromString(data)) {
@@ -368,7 +390,7 @@ void SignerInterfaceListener::onDecryptedKey(const std::string &data, SignContai
    cbDecryptNode_.erase(itCb);
 }
 
-void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
+void SignerInterfaceListener::onReloadWallets(bs::signer::RequestId reqId)
 {
    const auto &itCb = cbReloadWallets_.find(reqId);
    if (itCb == cbReloadWallets_.end()) {
@@ -380,7 +402,7 @@ void SignerInterfaceListener::onReloadWallets(SignContainer::RequestId reqId)
    cbReloadWallets_.erase(itCb);
 }
 
-void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignContainer::RequestId)
+void SignerInterfaceListener::onExecCustomDialog(const std::string &data, bs::signer::RequestId)
 {
    signer::CustomDialogRequest evt;
    if (!evt.ParseFromString(data)) {
@@ -400,7 +422,7 @@ void SignerInterfaceListener::onExecCustomDialog(const std::string &data, SignCo
    });
 }
 
-void SignerInterfaceListener::onChangePassword(const std::string &data, SignContainer::RequestId reqId)
+void SignerInterfaceListener::onChangePassword(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::ChangePasswordResponse response;
    if (!response.ParseFromString(data)) {
@@ -415,4 +437,39 @@ void SignerInterfaceListener::onChangePassword(const std::string &data, SignCont
    }
    itCb->second(response.success());
    cbChangePwReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   headless::CreateHDWalletResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbCreateHDWalletReqs_.find(reqId);
+   if (itCb == cbCreateHDWalletReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   bool success = response.error().empty();
+   itCb->second(success, response.error());
+   cbCreateHDWalletReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onDeleteHDWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   headless::DeleteHDWalletResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbDeleteHDWalletReqs_.find(reqId);
+   if (itCb == cbDeleteHDWalletReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   itCb->second(response.success(), response.error());
+   cbDeleteHDWalletReqs_.erase(itCb);
 }

@@ -1,23 +1,13 @@
 #ifdef WIN32
    #include <windows.h>
 #else
-   #include <termios.h>
    #include <unistd.h>
 #endif // WIN32
 
+#include <fstream>
 #include <functional>
-
-#include <QCoreApplication>
-#include <QDir>
-#include <QFile>
-#include <QProcess>
-#include <QStandardPaths>
-#include <QDebug>
-
 #include <spdlog/spdlog.h>
 
-#include "CelerStreamServerConnection.h"
-#include "ConnectionManager.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
@@ -25,8 +15,10 @@
 #include "HeadlessSettings.h"
 #include "SignerAdapterListener.h"
 #include "SignerVersion.h"
-#include "Wallets/SyncWalletsManager.h"
+#include "SystemFileUtils.h"
+#include "ZmqContext.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
+
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &params)
@@ -40,7 +32,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    };
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
       , zmqContext, cbTrustedClients);
-   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_);
+   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
 
    if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
       , adapterLsn_.get())) {
@@ -48,21 +40,15 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("failed to bind adapter socket");
    }
 
-   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-   QFile pubKeyFile(dir + QLatin1String("/headless.pub"));
-   if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-      throw std::runtime_error("Failed to open public key file "
-         + pubKeyFile.fileName().toStdString() + " for writing");
+   const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/headless.pub";
+   std::ofstream out(pubKeyFileName);
+   if (!out.good()) {
+      throw std::runtime_error("failed to write interface connection pubkey file " + pubKeyFileName);
    }
-   logger_->debug("[{}] creating pubkey file in {}", __func__, pubKeyFile.fileName().toStdString());
-   pubKeyFile.write(adapterConn->getOwnPubKey().toHexStr().c_str());
+   out << adapterConn->getOwnPubKey().toHexStr();
+   out.flush();
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
-}
-
-HeadlessAppObj::~HeadlessAppObj()
-{
-   stopInterface();
 }
 
 void HeadlessAppObj::start()
@@ -72,7 +58,7 @@ void HeadlessAppObj::start()
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
    const auto &cbProgress = [this](int cur, int total) {
-      logger_->debug("Loading wallet {} of {}", cur, total);
+      logger_->debug("Loaded wallet {} of {}", cur, total);
       adapterLsn_->onReady(cur, total);
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
@@ -99,63 +85,55 @@ void HeadlessAppObj::start()
 
 void HeadlessAppObj::startInterface()
 {
-   QStringList args;
+   std::vector<std::string> args;
    switch (settings_->runMode()) {
-   case bs::signer::ui::RunMode::headless:
+   case bs::signer::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
       return;
-   case bs::signer::ui::RunMode::cli:
+   case bs::signer::RunMode::cli:
       logger_->warn("[{}] cli run mode is not supported yet"
          , __func__);
       return;
-   case bs::signer::ui::RunMode::lightgui:
+   case bs::signer::RunMode::lightgui:
       logger_->debug("[{}] starting lightgui", __func__);
-      args << QLatin1String("--guimode") << QLatin1String("lightgui");
+      args.push_back("--guimode");
+      args.push_back("lightgui");
       break;
-   case bs::signer::ui::RunMode::fullgui:
+   case bs::signer::RunMode::fullgui:
       logger_->debug("[{}] starting fullgui", __func__);
-      args << QLatin1String("--guimode") << QLatin1String("fullgui");
+      args.push_back("--guimode");
+      args.push_back("fullgui");
       break;
    default:
       break;
    }
 
+   if (settings_->testNet()) {
+      args.push_back("--testnet");
+   }
 
-#ifdef Q_OS_MACOS
-   QString guiPath = QDir(QCoreApplication::applicationDirPath())
-      .absoluteFilePath(QLatin1String("Blocksettle Signer GUI.app/Contents/MacOS/Blocksettle Signer GUI"));
-#else
-   QString guiPath = QCoreApplication::applicationDirPath();
+   std::string guiPath = SystemFilePaths::applicationDir() + "/bs_signer_gui";
+#ifdef WIN32
+   guiPath += ".exe";
+#endif
 
-   guiPath += QLatin1String("/bs_signer_gui");
-
-#ifdef Q_OS_WIN
-   guiPath += QLatin1String(".exe");
-#endif //Q_OS_WIN
-#endif //Q_OS_MACOS
-
-   if (!QFile::exists(guiPath)) {
+   if (!SystemFileUtils::fileExist(guiPath)) {
       logger_->error("[{}] {} doesn't exist"
-         , __func__, guiPath.toStdString());
+         , __func__, guiPath);
       return;
    }
-   logger_->debug("[{}] process path: {} {}", __func__
-      , guiPath.toStdString(), args.join(QLatin1Char(' ')).toStdString());
+   logger_->debug("[{}] process path: {}", __func__, guiPath);
 
-   guiProcess_ = std::make_shared<QProcess>();
+/*
 #ifndef NDEBUG
    guiProcess_->setProcessChannelMode(QProcess::MergedChannels);
    connect(guiProcess_.get(), &QProcess::readyReadStandardOutput, this, [this](){
       qDebug().noquote() << guiProcess_->readAllStandardOutput();
    });
 #endif
-   guiProcess_->start(guiPath, args);
-}
-
-void HeadlessAppObj::stopInterface()
-{
-   if (guiProcess_) {
-      guiProcess_->kill();
+*/
+   if (!guiProcess_.run(guiPath, args)) {
+      logger_->error("Failed to run {}", guiPath);
    }
 }
 
@@ -172,8 +150,10 @@ void HeadlessAppObj::onlineProcessing()
       , settings_->listenAddress(), settings_->listenPort()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
-   const ConnectionManager connMgr(logger_, settings_->trustedTerminals());
-   connection_ = connMgr.CreateZMQBIP15XServerConnection();
+   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
+   const BinaryData bdID = CryptoPRNG::generateRandom(8);
+   connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
+      , settings_->trustedTerminals(), READ_UINT64_LE(bdID.getPtr()), false);
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
@@ -275,7 +255,7 @@ void HeadlessAppObj::reconnect(const std::string &listenAddr, const std::string 
    setOnline(true);
 }
 
-void HeadlessAppObj::setLimits(SignContainer::Limits limits)
+void HeadlessAppObj::setLimits(bs::signer::Limits limits)
 {
    if (listener_) {
       listener_->SetLimits(limits);
@@ -311,7 +291,7 @@ void HeadlessAppObj::setCallbacks(const std::function<void(const std::string &)>
 
 void HeadlessAppObj::close()
 {
-   QMetaObject::invokeMethod(this, [this] { emit finished(); });
+   exit(0);
 }
 
 void HeadlessAppObj::deactivateAutoSign()

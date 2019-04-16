@@ -27,20 +27,27 @@ Q_DECLARE_METATYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<BinaryData>)
 Q_DECLARE_METATYPE(BinaryData)
 
-#if defined (Q_OS_WIN)
+#ifdef USE_QWindowsIntegrationPlugin
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QWindowsPrinterSupportPlugin)
-#elif defined (Q_OS_MAC)
+#endif // USE_QWindowsIntegrationPlugin
+
+#ifdef USE_QCocoaIntegrationPlugin
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCocoaPrinterSupportPlugin)
-#elif defined (Q_OS_LINUX)
+#endif // USE_QCocoaIntegrationPlugin
+
+#ifdef USE_QXcbIntegrationPlugin
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
-Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
 Q_IMPORT_PLUGIN(QCupsPrinterSupportPlugin)
-#endif
+#endif // USE_QXcbIntegrationPlugin
+
+#ifdef STATIC_BUILD
+   #if defined (Q_OS_LINUX)
+   Q_IMPORT_PLUGIN(QtQuick2PrivateWidgetsPlugin)
+   #endif
 
 Q_IMPORT_PLUGIN(QICOPlugin)
-
 Q_IMPORT_PLUGIN(QtQuick2Plugin)
 Q_IMPORT_PLUGIN(QtQuick2DialogsPlugin)
 Q_IMPORT_PLUGIN(QtQuick2DialogsPrivatePlugin)
@@ -53,26 +60,40 @@ Q_IMPORT_PLUGIN(QtQmlModelsPlugin)
 Q_IMPORT_PLUGIN(QmlFolderListModelPlugin)
 Q_IMPORT_PLUGIN(QmlSettingsPlugin)
 
-// redirect qDebug() to stdout
+#endif // STATIC_BUILD
+
+bool skipWarning(const QMessageLogContext &context)
+{
+   if (!context.function) {
+      return false;
+   }
+   // Skip some warnings before this is fixed: https://bugreports.qt.io/browse/QTBUG-74523
+   auto skipFunction = "QV4::ReturnedValue CallMethod(const QQmlObjectOrGadget&, int, int, int, int*, QV4::ExecutionEngine*, QV4::CallData*, QMetaObject::Call)";
+   return std::strcmp(context.function, skipFunction) == 0;
+}
+
+static std::shared_ptr<spdlog::logger> logger;
+
+// redirect qDebug() to the log
 // stdout redirected to parent process
 void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     QByteArray localMsg = msg.toLocal8Bit();
     switch (type) {
     case QtDebugMsg:
-        fprintf(stdout, "GUI QML Debug: %s\r\n", localMsg.constData());
-        break;
+       logger->debug("[QML] {}", localMsg.constData());
+       break;
     case QtInfoMsg:
-        fprintf(stdout, "GUI QML Info: %s\r\n", localMsg.constData());
-        break;
+       logger->info("[QML] {}", localMsg.constData());
+       break;
     case QtWarningMsg:
-        fprintf(stderr, "GUI QML Warning: %s\r\n", localMsg.constData());
-        break;
+       logger->warn("[QML] {}", localMsg.constData());
+       break;
     case QtCriticalMsg:
-        fprintf(stderr, "GUI QML Critical: %s\r\n", localMsg.constData());
-        break;
+       logger->error("[QML] {}", localMsg.constData());
+       break;
     case QtFatalMsg:
-        fprintf(stderr, "GUI QML Fatal: %s\r\n", localMsg.constData());
+       logger->critical("[QML] {}", localMsg.constData());
        break;
     }
 }
@@ -103,17 +124,6 @@ static int QMLApp(int argc, char **argv)
       return EXIT_FAILURE;
    }
 
-#ifndef NDEBUG
-   qInstallMessageHandler(qMessageHandler);
-
-#ifdef Q_OS_WIN
-   // set zero buffer for stdout and stderr
-   setvbuf(stdout, NULL, _IONBF, 0 );
-   setvbuf(stderr, NULL, _IONBF, 0 );
-#endif
-#endif
-
-   std::shared_ptr<spdlog::logger> logger;
    try {
       logger = spdlog::basic_logger_mt("app_logger"
          , settings->logFileName().toStdString());
@@ -132,11 +142,23 @@ static int QMLApp(int argc, char **argv)
       logger->flush_on(spdlog::level::debug);
    }
 
+#ifndef NDEBUG
+   qInstallMessageHandler(qMessageHandler);
+
+#ifdef Q_OS_WIN
+   // set zero buffer for stdout and stderr
+   setvbuf(stdout, NULL, _IONBF, 0);
+   setvbuf(stderr, NULL, _IONBF, 0);
+#endif
+#endif
+
    // Go ahead and build the headless connection encryption files, even if we
    // don't use them. If they already exist, we'll leave them alone.
-   logger->info("Starting BS Signer...");
+   logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
    try {
       SignerAdapter adapter(logger, settings->netType());
+      adapter.setCloseHeadless(settings->closeHeadless());
+
       QQmlApplicationEngine engine;
       const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
       engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
@@ -174,7 +196,9 @@ int main(int argc, char** argv)
    qRegisterMetaType<std::vector<BinaryData>>();
    qRegisterMetaType<BinaryData>();
 
-   btc_ecc_start(); // Initialize libbtc.
+   srand(std::time(nullptr));
+
+   btc_ecc_start(); // Initialize libbtc
    startupBIP151CTX();
    startupBIP150CTX(4, true);
 

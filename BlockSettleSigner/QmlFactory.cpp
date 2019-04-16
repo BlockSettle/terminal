@@ -1,6 +1,7 @@
 #include "QmlFactory.h"
 #include <QApplication>
 #include <QClipboard>
+#include <QKeyEvent>
 #include <spdlog/spdlog.h>
 #include "AuthProxy.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -102,4 +103,24 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
 void QmlFactory::setClipboard(const QString &text)
 {
    QApplication::clipboard()->setText(text);
+}
+
+void QmlFactory::installEventFilterToObj(QObject *object)
+{
+   if (!object) {
+      return;
+   }
+
+   object->installEventFilter(this);
+}
+
+bool QmlFactory::eventFilter(QObject *object, QEvent *event)
+{
+   if (event->type() == QEvent::Close) {
+      event->accept();
+      emit closeEventReceived();
+      return true;
+   }
+
+   return false;
 }

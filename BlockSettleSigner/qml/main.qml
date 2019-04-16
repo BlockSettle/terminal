@@ -12,7 +12,6 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
 import com.blocksettle.WalletsViewModel 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 import "StyledControls"
 import "BsStyles"
@@ -160,6 +159,9 @@ ApplicationWindow {
 
     function raiseWindow() {
         JsHelper.raiseWindow()
+    }
+    function hideWindow() {
+        JsHelper.hideWindow()
     }
 
     function customDialogRequest(dialogName, data) {

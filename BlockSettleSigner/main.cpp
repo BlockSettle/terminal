@@ -1,10 +1,9 @@
-#include <QCoreApplication>
-#include <QTimer>
-#include <QFileInfo>
-#include <QStandardPaths>
-#include <QDir>
-#include <memory>
+#include <atomic>
+#include <condition_variable>
 #include <iostream>
+#include <memory>
+#include <mutex>
+#include <signal.h>
 #include <btc/ecc.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -12,59 +11,29 @@
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "LogManager.h"
+#include "SystemFileUtils.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
-#include "NativeEventFilter.h"
 
-Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(std::vector<BinaryData>)
-Q_DECLARE_METATYPE(BinaryData)
-
-
-// redirect qDebug() to stdout
-// stdout redirected to parent process
-void qMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
-{
-    QByteArray localMsg = msg.toLocal8Bit();
-    switch (type) {
-    case QtDebugMsg:
-        fprintf(stdout, "Headless Debug: %s\r\n", localMsg.constData());
-        break;
-    case QtInfoMsg:
-        fprintf(stdout, "Headless Info: %s\r\n", localMsg.constData());
-        break;
-    case QtWarningMsg:
-        fprintf(stderr, "Headless Warning: %s\r\n", localMsg.constData());
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "Headless Critical: %s\r\n", localMsg.constData());
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "Headless Fatal: %s\r\n", localMsg.constData());
-       break;
-    }
-}
+static std::mutex mainLoopMtx;
+static std::condition_variable mainLoopCV;
+static std::atomic_bool mainLoopRunning{ true };
 
 static int HeadlessApp(int argc, char **argv)
 {
-   QCoreApplication app(argc, argv);
-   app.setApplicationName(QLatin1String("Signer"));
-   app.setOrganizationDomain(QLatin1String("blocksettle.com"));
-   app.setOrganizationName(QLatin1String("BlockSettle"));
-
-   // fix for accepting terminate() command on windows (listen for WM_CLOSE win event)
-   app.installNativeEventFilter(new NativeEventFilter());
-
    bs::LogManager logMgr;
    auto loggerStdout = logMgr.logger("settings");
 
-   QDir dir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-   if (!dir.exists()) {
-      loggerStdout->info("Creating missing dir {}", dir.path().toStdString());
-      dir.mkpath(dir.path());
+   const auto dir = SystemFilePaths::appDataLocation();
+   if (!SystemFileUtils::pathExist(dir)) {
+      loggerStdout->info("Creating missing dir {}", dir);
+      if (!SystemFileUtils::mkPath(dir)) {
+         loggerStdout->error("Failed to create path {} - exitting", dir);
+         exit(1);
+      }
    }
 
    const auto settings = std::make_shared<HeadlessSettings>(loggerStdout);
-   if (!settings->loadSettings(app.arguments())) {
+   if (!settings->loadSettings(argc, argv)) {
       loggerStdout->error("Failed to load settings");
       return EXIT_FAILURE;
    }
@@ -75,9 +44,7 @@ static int HeadlessApp(int argc, char **argv)
    }
 
 #ifndef NDEBUG
-   qInstallMessageHandler(qMessageHandler);
-
-#ifdef Q_OS_WIN
+#ifdef WIN32
    // set zero buffer for stdout and stderr
    setvbuf(stdout, NULL, _IONBF, 0 );
    setvbuf(stderr, NULL, _IONBF, 0 );
@@ -85,13 +52,17 @@ static int HeadlessApp(int argc, char **argv)
 #endif
 
    logger->info("Starting BS Signer...");
+#ifdef NDEBUG
    try {
+#endif
       HeadlessAppObj appObj(logger, settings);
-      QObject::connect(&appObj, &HeadlessAppObj::finished, &app
-                       , &QCoreApplication::quit);
       appObj.start();
 
-      return app.exec();
+      while (mainLoopRunning) {
+         std::unique_lock<std::mutex> lock(mainLoopMtx);
+         mainLoopCV.wait_for(lock, std::chrono::seconds{ 1 });
+      }
+#ifdef NDEBUG
    }
    catch (const std::exception &e) {
       std::string errMsg = "Failed to start headless process: ";
@@ -100,34 +71,42 @@ static int HeadlessApp(int argc, char **argv)
       std::cerr << errMsg << std::endl;
       return 1;
    }
+#endif
    return 0;
 }
 
-/*class SignerApplication : public QApplication
+#ifdef WIN32
+BOOL WINAPI consoleHandler(DWORD signal)
 {
-public:
-   SignerApplication(int argc, char **argv) : QGuiApplication(argc, argv) {
-      setApplicationName(QLatin1String("blocksettle"));
-      setOrganizationDomain(QLatin1String("blocksettle.com"));
-      setOrganizationName(QLatin1String("blocksettle"));
-      setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
-   }
-
-   bool notify(QObject *receiver, QEvent *e) override {
-      try {
-         return QGuiApplication::notify(receiver, e);
-      }
-      catch (const std::exception &e) {
-      }
-      return false;
-   }
-};*/
+   mainLoopRunning = false;
+   mainLoopCV.notify_one();
+   return TRUE;
+}
+#else    // WIN32
+void sigHandler(int signum, siginfo_t *, void *)
+{
+   mainLoopRunning = false;
+   mainLoopCV.notify_one();
+}
+#endif   // WIN32
 
 int main(int argc, char** argv)
 {
-   qRegisterMetaType<std::string>();
-   qRegisterMetaType<std::vector<BinaryData>>();
-   qRegisterMetaType<BinaryData>();
+#ifdef WIN32
+   SetConsoleCtrlHandler(consoleHandler, TRUE);
+#else
+   struct sigaction act;
+   memset(&act, 0, sizeof(act));
+   act.sa_sigaction = sigHandler;
+   act.sa_flags = SA_SIGINFO;
+
+   sigaction(SIGINT, &act, NULL);
+   sigaction(SIGTERM, &act, NULL);
+#endif
+
+   SystemFilePaths::setArgV0(argv[0]);
+
+   srand(std::time(nullptr));
 
    // Initialize libbtc, BIP 150, and BIP 151. 150 uses the proprietary "public"
    // Armory setting designed to allow the ArmoryDB server to not have to verify

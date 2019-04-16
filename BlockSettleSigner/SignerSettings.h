@@ -3,7 +3,8 @@
 
 #include <QStringList>
 #include <QVariant>
-#include "SignContainer.h"
+#include "SignerDefs.h"
+#include "SignerUiDefs.h"
 
 class QSettings;
 
@@ -84,13 +85,14 @@ public:
    int limitManualPwKeep() const { return get(LimitManualPwKeep).toInt(); }
    QString limitManualPwKeepStr() const { return secondsToIntervalStr(limitManualPwKeep()); }
    QStringList requestFiles() const { return reqFiles_; }
-   SignContainer::Limits limits() const;
+   bs::signer::Limits limits() const;
    bool hideEidInfoBox() const { return get(HideEidInfoBox).toBool(); }
    QStringList trustedTerminals() const { return get(TrustedTerminals).toStringList(); }
    bool twoWayAuth() const { return get(TwoWayAuth).toBool(); }
 
    QString dirDocuments() const;
    bs::signer::ui::RunMode runMode() const { return runMode_; }
+   bool closeHeadless() const { return closeHeadless_; }
 
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
@@ -156,6 +158,7 @@ private:
    std::string    writableDir_;
    QStringList    reqFiles_;
    bs::signer::ui::RunMode runMode_;
+   bool closeHeadless_{true};
 };
 
 

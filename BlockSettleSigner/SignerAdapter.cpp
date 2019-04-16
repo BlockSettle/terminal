@@ -2,11 +2,8 @@
 #include <spdlog/spdlog.h>
 #include <QDataStream>
 #include <QFile>
-#include <QStandardPaths>
-#include "CelerClientConnection.h"
-#include "DataConnection.h"
-#include "DataConnectionListener.h"
-#include "HeadlessApp.h"
+#include "SignContainer.h"
+#include "SystemFileUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
@@ -24,10 +21,10 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, Netw
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true, true);
    adapterConn->SetContext(zmqContext);
    {
-      const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-      QFile pubKeyFile(dir + QLatin1String("/interface.pub"));
+      const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";
+      QFile pubKeyFile(QString::fromStdString(pubKeyFileName));
       if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-         throw std::runtime_error("Failed to create public key file");
+         throw std::runtime_error("failed to create public key file " + pubKeyFileName);
       }
       pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
    }
@@ -41,7 +38,9 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, Netw
 
 SignerAdapter::~SignerAdapter()
 {
-   listener_->send(signer::RequestCloseType, "");
+   if (closeHeadless_) {
+      listener_->send(signer::RequestCloseType, "");
+   }
 }
 
 std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
@@ -105,7 +104,7 @@ void SignerAdapter::reconnect(const QString &address, const QString &port)
    listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
 }
 
-void SignerAdapter::setLimits(SignContainer::Limits limits)
+void SignerAdapter::setLimits(bs::signer::Limits limits)
 {
    signer::SetLimitsRequest request;
    request.set_auto_sign_satoshis(limits.autoSignSpendXBT);
@@ -123,6 +122,49 @@ void SignerAdapter::passwordReceived(const std::string &walletId
    request.set_password(password.toBinStr());
    request.set_cancelled_by_user(cancelledByUser);
    listener_->send(signer::PasswordReceivedType, request.SerializeAsString());
+}
+
+void SignerAdapter::createWallet(const std::string &name, const std::string &desc
+   , bs::core::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
+   , bs::wallet::KeyRank keyRank, const std::function<void(bool, const std::string&)> &cb)
+{
+   headless::CreateHDWalletRequest request;
+
+   if (!pwdData.empty()) {
+      request.set_rankm(keyRank.first);
+      request.set_rankn(keyRank.second);
+   }
+   for (const auto &pwd : pwdData) {
+      auto reqPwd = request.add_password();
+      reqPwd->set_password(pwd.password.toHexStr());
+      reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
+      reqPwd->set_enckey(pwd.encKey.toBinStr());
+   }
+   auto wallet = request.mutable_wallet();
+   wallet->set_name(name);
+   wallet->set_description(desc);
+   wallet->set_nettype((seed.networkType() == NetworkType::TestNet) ? headless::TestNetType : headless::MainNetType);
+   if (primary) {
+      wallet->set_primary(true);
+   }
+   if (!seed.empty()) {
+      if (seed.hasPrivateKey()) {
+         wallet->set_privatekey(seed.privateKey().toBinStr());
+         wallet->set_chaincode(seed.chainCode().toBinStr());
+      } else if (!seed.seed().isNull()) {
+         wallet->set_seed(seed.seed().toBinStr());
+      }
+   }
+   const auto reqId = listener_->send(signer::CreateHDWalletType, request.SerializeAsString());
+   listener_->setCreateHDWalletCb(reqId, cb);
+}
+
+void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::function<void (bool, const std::string &)> &cb)
+{
+   headless::DeleteHDWalletRequest request;
+   request.set_rootwalletid(rootWalletId);
+   const auto reqId = listener_->send(signer::DeleteHDWalletType, request.SerializeAsString());
+   listener_->setDeleteHDWalletCb(reqId, cb);
 }
 
 void SignerAdapter::changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
@@ -151,7 +193,7 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
    request.set_removeold(removeOld);
    request.set_dryrun(dryRun);
 
-   SignContainer::RequestId reqId = listener_->send(signer::ChangePasswordRequestType, request.SerializeAsString());
+   const auto reqId = listener_->send(signer::ChangePasswordRequestType, request.SerializeAsString());
    listener_->setChangePwCb(reqId, cb);
 }
 

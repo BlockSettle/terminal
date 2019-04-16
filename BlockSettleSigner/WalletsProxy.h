@@ -34,11 +34,11 @@ class WalletsProxy : public QObject
 public:
    WalletsProxy(const std::shared_ptr<spdlog::logger> &, SignerAdapter *);
 
-   Q_INVOKABLE bool createWallet(bool isPrimary, bs::wallet::QSeed *
+   Q_INVOKABLE void createWallet(bool isPrimary, bs::wallet::QSeed *
                                  , bs::hd::WalletInfo *
-                                 , bs::wallet::QPasswordData *);
+                                 , bs::wallet::QPasswordData *, const QJSValue &jsCallback);
 
-   Q_INVOKABLE bool deleteWallet(const QString &walletId);
+   Q_INVOKABLE void deleteWallet(const QString &walletId, const QJSValue &jsCallback);
 
    Q_INVOKABLE void changePassword(const QString &walletId
                                    , bs::wallet::QPasswordData *oldPasswordData

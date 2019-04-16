@@ -161,7 +161,7 @@ QString OfflineProcessor::parsedText(int reqId) const
             const auto address = bs::Address::fromUTXO(utxo);
             const auto &wallet = walletsMgr->getWalletByAddress(address);
             result += tr("%1Input%2: %3 from %4@%5\n").arg(prefix).arg(inputIdx)
-               .arg(displayXbt(utxo.getValue())).arg(address.display())
+               .arg(displayXbt(utxo.getValue())).arg(QString::fromStdString(address.display()))
                .arg(wallet ? QString::fromStdString(wallet->name()) : tr("<External>"));
          }
          for (int i = 0; i < req.request.recipients.size(); i++) {
@@ -170,13 +170,13 @@ QString OfflineProcessor::parsedText(int reqId) const
             const auto address = bs::Address::fromRecipient(recipient);
             const auto &wallet = walletsMgr->getWalletByAddress(address);
             result += tr("%1Output%2: %3 to %4@%5\n").arg(prefix).arg(recipIdx)
-               .arg(displayXbt(recipient->getValue())).arg(address.display())
+               .arg(displayXbt(recipient->getValue())).arg(QString::fromStdString(address.display()))
                .arg(wallet ? QString::fromStdString(wallet->name()) : tr("<External>"));
          }
          if (req.request.change.value) {
             const auto &wallet = walletsMgr->getWalletByAddress(req.request.change.address);
             result += tr("%1Change: %2 to %3@%4\n").arg(prefix).arg(displayXbt(req.request.change.value))
-               .arg(req.request.change.address.display())
+               .arg(QString::fromStdString(req.request.change.address.display()))
                .arg(wallet ? QString::fromStdString(wallet->name()) : tr("<External>"));
          }
          result += tr("%1Fee: %2%3").arg(prefix).arg(displayXbt(req.request.fee))

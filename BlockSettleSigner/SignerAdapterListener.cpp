@@ -3,6 +3,7 @@
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
 #include "HeadlessApp.h"
+#include "HeadlessSettings.h"
 #include "HeadlessContainerListener.h"
 #include "ServerConnection.h"
 
@@ -16,9 +17,10 @@ static std::string toHex(const std::string &binData)
 SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , const std::shared_ptr<ServerConnection> &conn
    , const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr)
+   , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
+   , const std::shared_ptr<HeadlessSettings> &settings)
    : ServerConnectionListener(), app_(app)
-   , connection_(conn), logger_(logger), walletsMgr_(walletsMgr)
+   , connection_(conn), logger_(logger), walletsMgr_(walletsMgr), settings_(settings)
 {
    app_->setReadyCallback([this](bool result) {
       ready_ = result;
@@ -82,6 +84,12 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case signer::ChangePasswordRequestType:
       rc = onChangePassword(packet.data(), packet.id());
       break;
+   case signer::CreateHDWalletType:
+      rc = onCreateHDWallet(packet.data(), packet.id());
+      break;
+   case signer::DeleteHDWalletType:
+      rc = onDeleteHDWallet(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -130,7 +138,7 @@ void SignerAdapterListener::setCallbacks()
          evt.set_rbf(txReq.RBF);
          if (txReq.change.value) {
             auto change = evt.mutable_change();
-            change->set_address(txReq.change.address.display<std::string>());
+            change->set_address(txReq.change.address.display());
             change->set_index(txReq.change.index);
             change->set_value(txReq.change.value);
          }
@@ -159,10 +167,10 @@ void SignerAdapterListener::setCallbacks()
       evt.set_wallet_id(walletId);
       sendData(signer::AutoSignActType, evt.SerializeAsString());
    };
-   const auto &cbAutoSignActivated = [this, cbAutoSign](const std::string &walletId) {
+   const auto &cbAutoSignActivated = [cbAutoSign](const std::string &walletId) {
       cbAutoSign(true, walletId);
    };
-   const auto &cbAutoSignDeactivated = [this, cbAutoSign](const std::string &walletId) {
+   const auto &cbAutoSignDeactivated = [cbAutoSign](const std::string &walletId) {
       cbAutoSign(false, walletId);
    };
    const auto &cbCustomDialog = [this](const std::string &dialogName, const std::string &data) {
@@ -176,7 +184,7 @@ void SignerAdapterListener::setCallbacks()
 }
 
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
-   , SignContainer::RequestId reqId)
+   , bs::signer::RequestId reqId)
 {
    signer::Packet packet;
    packet.set_type(pt);
@@ -198,7 +206,7 @@ bool SignerAdapterListener::onReady(int cur, int total)
    return true;
 }
 
-bool SignerAdapterListener::onSignTxReq(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SignTxRequest request;
    if (!request.ParseFromString(data)) {
@@ -243,7 +251,7 @@ bool SignerAdapterListener::onSignTxReq(const std::string &data, SignContainer::
    return false;
 }
 
-bool SignerAdapterListener::onSyncWalletInfo(SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSyncWalletInfo(bs::signer::RequestId reqId)
 {
    signer::SyncWalletInfoResponse response;
    for (size_t i = 0; i < walletsMgr_->getHDWalletsCount(); ++i) {
@@ -265,7 +273,7 @@ bool SignerAdapterListener::onSyncWalletInfo(SignContainer::RequestId reqId)
    return sendData(signer::SyncWalletInfoType, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onSyncHDWallet(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSyncHDWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -293,7 +301,7 @@ bool SignerAdapterListener::onSyncHDWallet(const std::string &data, SignContaine
    return false;
 }
 
-bool SignerAdapterListener::onSyncWallet(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SyncWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -316,7 +324,7 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, SignContainer:
       for (const auto &addr : wallet->getUsedAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
          auto address = response.add_addresses();
-         address->set_address(addr.display<std::string>());
+         address->set_address(addr.display());
          address->set_index(index);
       }
       return sendData(signer::SyncWalletType, response.SerializeAsString(), reqId);
@@ -328,7 +336,7 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, SignContainer:
    return false;
 }
 
-bool SignerAdapterListener::onCreateWO(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -371,7 +379,7 @@ bool SignerAdapterListener::onCreateWO(const std::string &data, SignContainer::R
    return sendData(signer::CreateWOType, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptWalletRequest request;
    if (!request.ParseFromString(data)) {
@@ -405,7 +413,7 @@ bool SignerAdapterListener::onSetLimits(const std::string &data)
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   SignContainer::Limits limits;
+   bs::signer::Limits limits;
    limits.autoSignSpendXBT = request.auto_sign_satoshis();
    limits.manualSpendXBT = request.manual_satoshis();
    limits.autoSignTimeS = request.auto_sign_time();
@@ -432,7 +440,7 @@ bool SignerAdapterListener::onRequestClose()
    return true;
 }
 
-bool SignerAdapterListener::onReloadWallets(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onReloadWallets(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::ReloadWalletsRequest request;
    if (!request.ParseFromString(data)) {
@@ -477,7 +485,7 @@ bool SignerAdapterListener::onAutoSignRequest(const std::string &data)
    return true;
 }
 
-bool SignerAdapterListener::onChangePassword(const std::string &data, SignContainer::RequestId reqId)
+bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::ChangePasswordResponse response;
 
@@ -514,4 +522,77 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, SignContai
    response.set_rootwalletid(request.rootwalletid());
    logger_->info("[SignerAdapterListener::{}] password changed for wallet {} with result {}", __func__, request.rootwalletid(), result);
    return sendData(signer::ChangePasswordRequestType, response.SerializeAsString(), reqId);
+}
+
+static NetworkType mapNetworkType(Blocksettle::Communication::headless::NetworkType netType)
+{
+   switch (netType) {
+   case Blocksettle::Communication::headless::MainNetType:   return NetworkType::MainNet;
+   case Blocksettle::Communication::headless::TestNetType:   return NetworkType::TestNet;
+   default:                      return NetworkType::Invalid;
+   }
+}
+
+bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   headless::CreateHDWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   std::vector<bs::wallet::PasswordData> pwdData;
+   for (int i = 0; i < request.password_size(); ++i) {
+      const auto pwd = request.password(i);
+      pwdData.push_back({BinaryData::CreateFromHex(pwd.password())
+         , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
+   }
+   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() };
+
+   std::shared_ptr<bs::core::hd::Wallet> wallet;
+   try {
+      const auto &w = request.wallet();
+      auto netType = mapNetworkType(w.nettype());
+      auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
+         : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());
+      wallet = walletsMgr_->createWallet(w.name(), w.description()
+         , seed, settings_->getWalletsDir(), w.primary(), pwdData, keyRank);
+   }
+   catch (const std::exception &e) {
+      headless::CreateHDWalletResponse response;
+      response.set_error(e.what());
+      return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);;
+   }
+
+   headless::CreateHDWalletResponse response;
+   return sendData(signer::CreateHDWalletType, response.SerializeAsString(), reqId);
+}
+
+bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   headless::DeleteHDWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   const auto &walletId = request.rootwalletid();
+   const auto &wallet = walletsMgr_->getHDWalletById(walletId);
+   if (!wallet) {
+      logger_->error("[{}] failed to find HD Wallet by id {}", __func__, walletId);
+
+      headless::DeleteHDWalletResponse response;
+      response.set_error(fmt::format("Can't find wallet {}", request.rootwalletid()));
+      return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
+   }
+
+   logger_->debug("Deleting HDWallet {}: {}", walletId, wallet->name());
+
+   bool result = walletsMgr_->deleteWalletFile(wallet);
+
+   headless::DeleteHDWalletResponse response;
+   response.set_success(result);
+   if (!result) {
+      response.set_error("Unknown error");
+   }
+
+   return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
 }

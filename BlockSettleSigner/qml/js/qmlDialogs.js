@@ -46,32 +46,6 @@ function deleteWalletDialog(data) {
     var dlg = Qt.createComponent("../BsDialogs/WalletDeleteDialog.qml").createObject(mainWindow)
     dlg.walletInfo = qmlFactory.createWalletInfo(walletId)
     dlg.rootName = walletsProxy.getRootWalletName(walletId)
-
-    dlg.bsAccepted.connect(function() {
-        if (dlg.backup) {
-            var dlgBkp = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
-            dlg.setNextChainDialog(dlgBkp)
-            dlgBkp.walletInfo = qmlFactory.createWalletInfo(walletId)
-            dlgBkp.targetDir = signerSettings.dirDocuments
-            dlgBkp.bsAccepted.connect(function() {
-                if (walletsProxy.deleteWallet(walletId)) {
-                    JsHelper.messageBox(BSMessageBox.Type.Success
-                                        , qsTr("Wallet")
-                                        , qsTr("Wallet successfully deleted.")
-                                        , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletInfo.name).arg(walletId))
-                }
-            })
-            dlgBkp.open()
-        }
-        else {
-            if (walletsProxy.deleteWallet(walletId)) {
-                JsHelper.messageBox(BSMessageBox.Type.Success
-                                    , qsTr("Wallet")
-                                    , qsTr("Wallet successfully deleted.")
-                                    , qsTr("Wallet Name: %1\nWallet ID: %2").arg(dlg.walletInfo.name).arg(walletId))
-            }
-        }
-    })
     dlg.open()
     return dlg
 }

@@ -4,7 +4,7 @@
 #include <memory>
 #include <QObject>
 #include "CoreWallet.h"
-#include "SignContainer.h"
+#include "SignerDefs.h"
 
 namespace bs {
    namespace sync {
@@ -36,8 +36,14 @@ public:
 
    void setOnline(bool);
    void reconnect(const QString &address, const QString &port);
-   void setLimits(SignContainer::Limits);
+   void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+
+   void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
+      , bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
+      , bs::wallet::KeyRank keyRank, const std::function<void(bool, const std::string&)> &cb);
+
+   void deleteWallet(const std::string &rootWalletId, const std::function<void(bool, const std::string&)> &cb);
 
    void changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
@@ -55,6 +61,8 @@ public:
    void deactivateAutoSign();
 
    NetworkType netType() const { return netType_; }
+
+   void setCloseHeadless(bool value) { closeHeadless_ = value; }
 
 signals:
    void ready() const;
@@ -75,6 +83,7 @@ private:
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<SignerInterfaceListener>  listener_;
+   bool closeHeadless_{true};
 };
 
 

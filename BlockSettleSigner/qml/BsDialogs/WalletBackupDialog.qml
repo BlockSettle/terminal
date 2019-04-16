@@ -7,7 +7,6 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 import "../StyledControls"
 import "../BsControls"
@@ -23,8 +22,8 @@ CustomTitleDialogWindow {
                                     ? "backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + backupFileExt
                                     : "wo_backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + ".lmdb"
     property bool   isPrintable: false
-    property bool   acceptable: (walletInfo.encType === NsWallet.Unencrypted)
-                                    || walletInfo.encType === NsWallet.Auth
+    property bool   acceptable: (walletInfo.encType === QPasswordData.Unencrypted)
+                                    || walletInfo.encType === QPasswordData.Auth
                                     || walletDetailsFrame.password.length
 
     property bool fullBackupMode: tabBar.currentIndex === 0
@@ -192,7 +191,7 @@ CustomTitleDialogWindow {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
-                    if (walletInfo.encType === NsWallet.Password) {
+                    if (walletInfo.encType === QPasswordData.Password) {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 

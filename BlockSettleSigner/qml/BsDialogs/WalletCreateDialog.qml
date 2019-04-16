@@ -9,7 +9,6 @@ import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
-import com.blocksettle.NsWallet.namespace 1.0
 
 
 import "../BsControls"
@@ -250,7 +249,15 @@ CustomTitleDialogWindow {
                     walletInfo.rootId = seed.walletId
                     isPrimary = cbPrimary.checked
 
-                    var ok = false
+                    var createCallback = function(success, errorMsg) {
+                        if (success) {
+                            var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
+                            mb.bsAccepted.connect(acceptAnimated)
+                        } else {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Import Failed"), qsTr("Create wallet failed with error: \n") + errorMsg)
+                        }
+                    }
 
                     if (rbPassword.checked) {
                         // auth password
@@ -258,32 +265,17 @@ CustomTitleDialogWindow {
                         checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
                         checkPasswordDialog.open()
                         checkPasswordDialog.bsAccepted.connect(function(){
-                            passwordData.encType = NsWallet.Password
+                            passwordData.encType = QPasswordData.Password
                             passwordData.encKey = ""
                             passwordData.textPassword = newPasswordWithConfirm.password
-
-                            ok =  walletsProxy.createWallet(isPrimary
-                                                            , seed
-                                                            , walletInfo
-                                                            , passwordData)
-
-                            var mb = JsHelper.resultBox(BSResultBox.WalletCreate, ok, walletInfo)
-                            if (ok) mb.bsAccepted.connect(acceptAnimated)
+                            walletsProxy.createWallet(isPrimary, seed, walletInfo, passwordData, createCallback)
                         })
                     }
                     else {
                         // auth eID
-                        JsHelper.activateeIdAuth(textInputEmail.text
-                                                 , walletInfo
-                                                 , function(newPasswordData){
-                                                     ok = walletsProxy.createWallet(isPrimary
-                                                                                    , seed
-                                                                                    , walletInfo
-                                                                                    , newPasswordData)
-
-                                                     var mb = JsHelper.resultBox(BSResultBox.WalletCreate, ok, walletInfo)
-                                                     if (ok) mb.bsAccepted.connect(acceptAnimated)
-                                                 })
+                        JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, function(newPasswordData) {
+                            walletsProxy.createWallet(isPrimary, seed, walletInfo, newPasswordData, createCallback)
+                        })
                     }
                 }
             }

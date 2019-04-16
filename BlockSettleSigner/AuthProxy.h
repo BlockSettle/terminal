@@ -18,35 +18,18 @@ namespace spdlog {
 }
 
 
-class AuthObject : public QObject
+class AuthSignWalletObject : public QObject
 {
    Q_OBJECT
    Q_PROPERTY(QString status READ status NOTIFY statusChanged)
-
-public:
-   AuthObject(std::shared_ptr<spdlog::logger> logger, QObject *parent = nullptr);
-
-signals:
-   void statusChanged();
-
-protected:
-   QString status() const { return status_; }
-   void setStatus(const QString &);
-   std::shared_ptr<spdlog::logger> logger_;
-
-private:
-   QString status_;
-};
-
-class AuthSignWalletObject : public AuthObject
-{
-   Q_OBJECT
-
 public:
    AuthSignWalletObject(const std::shared_ptr<spdlog::logger> &
                         , const std::shared_ptr<ApplicationSettings> &
                         , const std::shared_ptr<ConnectionManager> &
                         , QObject *parent = nullptr);
+
+   AuthSignWalletObject(QObject *parent = nullptr) : QObject(parent) {}
+   AuthSignWalletObject(const AuthSignWalletObject &other);
 
    void connectToServer();
 
@@ -59,14 +42,24 @@ public:
    Q_INVOKABLE void cancel();
 
 signals:
+   void statusChanged();
+
    void succeeded(const QString &encKey, const SecureBinaryData &password) const;
    void failed(const QString &text) const;
    void userCancelled() const;
+
+
+public:
+   QString status() const { return status_; }
+   void setStatus(const QString &status);
+   std::shared_ptr<spdlog::logger> logger_;
 
 private:
    std::shared_ptr<AutheIDClient> autheIDClient_;
    std::shared_ptr<ApplicationSettings> settings_;
    std::shared_ptr<ConnectionManager> connectionManager_;
+
+   QString status_;
 };
 
 
