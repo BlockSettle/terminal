@@ -35,14 +35,8 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    listenAddress_ = iniReader.Get("General", "ListenAddress", listenAddress_);
    listenPort_ = iniReader.Get("General", "ListenPort", listenPort_);
    autoSignSpendLimit_ = iniReader.GetReal("Limits", "AutoSign\\XBT", 0);
+   trustedTerminals_ = iniReader.GetStringList("General", "TrustedTerminals");
 
-   auto termKey = iniReader.Get("General", "TrustedTerminals", "");
-   if (!termKey.empty()) {
-      if ((*(termKey.begin()) == '"') && (*(termKey.rbegin()) == '"')) {
-         termKey = termKey.substr(1, termKey.length() - 2);
-      }
-      trustedTerminals_.push_back(termKey);
-   }
 
    cxxopts::Options options("BlockSettle Signer", "Headless Signer process");
    std::string guiMode;
