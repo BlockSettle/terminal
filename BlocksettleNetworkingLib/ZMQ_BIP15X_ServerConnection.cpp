@@ -17,7 +17,7 @@ void ZmqBIP15XPerConnData::reset()
    bip150HandshakeCompleted_ = false;
    bip151HandshakeCompleted_ = false;
    currentReadMessage_.reset();
-   outKeyTimePoint_ = chrono::system_clock::now();
+   outKeyTimePoint_ = chrono::steady_clock::now();
 }
 
 // The constructor to use.
@@ -187,7 +187,7 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    if (socketConnMap_[clientId]->bip150HandshakeCompleted_)
    {
       bool needsRekey = false;
-      auto rightNow = chrono::system_clock::now();
+      auto rightNow = chrono::steady_clock::now();
 
       // Rekey off # of bytes sent or length of time since last rekey.
       if (connPtr->rekeyNeeded(data.size()))
@@ -734,7 +734,7 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
          std::unique_lock<std::mutex> lock(clientsMtx_);
          socketConnMap_[clientID] = make_unique<ZmqBIP15XPerConnData>();
          socketConnMap_[clientID]->encData_ = make_unique<BIP151Connection>(lbds);
-         socketConnMap_[clientID]->outKeyTimePoint_ = chrono::system_clock::now();
+         socketConnMap_[clientID]->outKeyTimePoint_ = chrono::steady_clock::now();
       }
       notifyListenerOnNewConnection(clientID);
    }
