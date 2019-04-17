@@ -5,7 +5,6 @@
 #include "BtcUtils.h"
 #include "cxxopts.hpp"
 #include "HeadlessSettings.h"
-#include "INIReader.h"
 #include "SystemFileUtils.h"
 
 
@@ -35,7 +34,9 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    listenAddress_ = iniReader.Get("General", "ListenAddress", listenAddress_);
    listenPort_ = iniReader.Get("General", "ListenPort", listenPort_);
    autoSignSpendLimit_ = iniReader.GetReal("Limits", "AutoSign\\XBT", 0);
-   trustedTerminals_ = iniReader.GetStringList("General", "TrustedTerminals");
+
+   std::string trustedTerminalsString = iniReader.Get("General", "TrustedTerminals", "");
+   trustedTerminals_ = iniStringToStringList(trustedTerminalsString);
 
 
    cxxopts::Options options("BlockSettle Signer", "Headless Signer process");
@@ -127,4 +128,30 @@ std::vector<std::string> HeadlessSettings::trustedInterfaces() const
       result.push_back(ss.str());
    }
    return result;
+}
+
+std::vector<std::string> HeadlessSettings::iniStringToStringList(std::string valstr) const
+{
+   // workaround for https://bugreports.qt.io/browse/QTBUG-51237
+   if (valstr == "@Invalid()")
+      return std::vector<std::string>();
+
+   if (!valstr.empty()) {
+      std::vector<std::string> values;
+      std::string delimiter = ",";
+
+      size_t pos = 0;
+      std::string token;
+      while ((pos = valstr.find(delimiter)) != std::string::npos) {
+         token = valstr.substr(0, pos);
+         values.push_back(token);
+         valstr.erase(0, pos + delimiter.length());
+      }
+      values.push_back(valstr);
+
+      return values;
+   }
+   else {
+      return std::vector<std::string>();
+   }
 }
