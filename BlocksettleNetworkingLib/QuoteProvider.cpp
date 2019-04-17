@@ -619,11 +619,8 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
       logger_->debug("[FxOrderSnapshot] {}", response.DebugString());
    }
 
-   if (!resync && (response.orderstatus() == FILLED) 
-               && (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)) {
-
+   if (!resync && (response.orderstatus() == FILLED)) {
       emit quoteOrderFilled(response.quoteid());
-
    }
 
    Order order;
@@ -640,11 +637,9 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
    order.assetType = bs::network::Asset::SpotFX;
 
    order.status = mapFxOrderStatus(response.orderstatus());
-   if (!resync && (order.status == Order::Failed)
-               && (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_)) {
 
+   if (!resync && (order.status == Order::Failed)) {
       emit orderFailed(response.quoteid(), response.info());
-
    }
 
    emit orderUpdated(order);
