@@ -607,7 +607,7 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
 
 void SignerAdapterListener::walletsListUpdated()
 {
-   logger_->debug("send walletsListUpdated");
+   logger_->debug("[{}]", __func__);
    app_->walletsListUpdated();
    sendData(signer::WalletsListUpdatedType, {});
 }

@@ -214,7 +214,7 @@ void SignerAdapter::deactivateAutoSign()
 
 void SignerAdapter::walletsListUpdated()
 {
-   logger_->debug("recv walletsListUpdated");
+   logger_->debug("[{}]", __func__);
    walletsMgr_->reset();
    walletsMgr_->syncWallets();
 }
