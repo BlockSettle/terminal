@@ -37,8 +37,10 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    autoSignSpendLimit_ = iniReader.GetReal("Limits", "AutoSign\\XBT", 0);
 
    std::string trustedTerminalsString = iniReader.Get("General", "TrustedTerminals", "");
+   if ((*trustedTerminalsString.begin() == '"') && ((*trustedTerminalsString.rbegin() == '"'))) {
+      trustedTerminalsString = trustedTerminalsString.substr(1, trustedTerminalsString.length() - 2);
+   }
    trustedTerminals_ = iniStringToStringList(trustedTerminalsString);
-
 
    cxxopts::Options options("BlockSettle Signer", "Headless Signer process");
    std::string guiMode;
