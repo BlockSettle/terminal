@@ -211,3 +211,10 @@ void SignerAdapter::deactivateAutoSign()
    request.set_activated(false);
    listener_->send(signer::AutoSignActType, request.SerializeAsString());
 }
+
+void SignerAdapter::walletsListUpdated()
+{
+   logger_->debug("[{}]", __func__);
+   walletsMgr_->reset();
+   walletsMgr_->syncWallets();
+}

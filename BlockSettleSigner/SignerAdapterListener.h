@@ -58,12 +58,14 @@ private:
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    bool onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
 
+   void walletsListUpdated();
+
 private:
    HeadlessAppObj *  app_;
    std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
-   std::shared_ptr<HeadlessSettings> settings_;
+   std::shared_ptr<HeadlessSettings>   settings_;
    bool  ready_ = false;
 };
 

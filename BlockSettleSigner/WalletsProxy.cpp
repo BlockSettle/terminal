@@ -323,11 +323,6 @@ void WalletsProxy::createWallet(bool isPrimary
          QJSValueList args;
          args << QJSValue(success) << QString::fromStdString(msg);
          invokeJsCallBack(jsCallback, args);
-
-         if (success) {
-            // This should reload QmlWalletsViewModel
-            walletsMgr_->syncWallets();
-         }
       });
    };
 
@@ -342,12 +337,6 @@ void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallb
          QJSValueList args;
          args << QJSValue(success) << QString::fromStdString(error);
          invokeJsCallBack(jsCallback, args);
-
-         if (success) {
-            // This should reload QmlWalletsViewModel
-            walletsMgr_->reset();
-            walletsMgr_->syncWallets();
-         }
       });
    };
 
