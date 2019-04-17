@@ -556,6 +556,8 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
          : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());
       wallet = walletsMgr_->createWallet(w.name(), w.description()
          , seed, settings_->getWalletsDir(), w.primary(), pwdData, keyRank);
+
+      app_->walletsListUpdated();
    }
    catch (const std::exception &e) {
       headless::CreateHDWalletResponse response;
@@ -587,6 +589,9 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    logger_->debug("Deleting HDWallet {}: {}", walletId, wallet->name());
 
    bool result = walletsMgr_->deleteWalletFile(wallet);
+   if (result) {
+      app_->walletsListUpdated();
+   }
 
    headless::DeleteHDWalletResponse response;
    response.set_success(result);

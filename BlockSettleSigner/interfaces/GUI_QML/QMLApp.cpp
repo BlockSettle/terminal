@@ -139,7 +139,6 @@ void QMLAppObj::onWalletsSynced()
 void QMLAppObj::settingsConnections()
 {
    connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
-   connect(settings_.get(), &SignerSettings::walletsDirChanged, this, &QMLAppObj::onWalletsDirChanged);
    connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLAppObj::onListenSocketChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
@@ -188,14 +187,6 @@ void QMLAppObj::registerQtTypes()
 void QMLAppObj::onOfflineChanged()
 {
    adapter_->setOnline(!settings_->offline());
-}
-
-void QMLAppObj::onWalletsDirChanged()
-{
-   adapter_->reloadWallets(settings_->getWalletsDir(), [this] {
-      walletsMgr_->reset();
-      walletsMgr_->syncWallets();
-   });
 }
 
 void QMLAppObj::onListenSocketChanged()

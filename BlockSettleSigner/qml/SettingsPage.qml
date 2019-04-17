@@ -112,48 +112,50 @@ Item {
                 }
             }
 
-            RowLayout {
-                id: row3
-                Layout.topMargin: 5
-                Layout.fillWidth: true
-                Layout.rightMargin: 10
-                Layout.leftMargin: 10
+            // Does not work anymore
+            // New message type to headless signer would be needed
+//            RowLayout {
+//                id: row3
+//                Layout.topMargin: 5
+//                Layout.fillWidth: true
+//                Layout.rightMargin: 10
+//                Layout.leftMargin: 10
 
-                CustomLabel {
-                    text: qsTr("Wallets directory")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
-                }
+//                CustomLabel {
+//                    text: qsTr("Wallets directory")
+//                    Layout.minimumWidth: 125
+//                    Layout.preferredWidth: 125
+//                    Layout.maximumWidth: 125
+//                }
 
-                CustomLabel {
-                    Layout.alignment: Qt.AlignLeft
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                    text: signerSettings.walletsDir
-                    color: BSStyle.textColor
+//                CustomLabel {
+//                    Layout.alignment: Qt.AlignLeft
+//                    Layout.fillWidth: true
+//                    wrapMode: Text.Wrap
+//                    text: signerSettings.walletsDir
+//                    color: BSStyle.textColor
 
-                }
+//                }
 
-                CustomButton {
-                    text: qsTr("Select")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
-                    Layout.rightMargin: 6
-                    onClicked: {
-                        if (!ldrWalletsDirDlg.item) {
-                            ldrWalletsDirDlg.active = true
-                        }
-                        ldrWalletsDirDlg.startFromFolder = Qt.resolvedUrl(signerSettings.walletsDir)
-                        ldrWalletsDirDlg.item.bsAccepted.connect(function() {
-                            signerSettings.walletsDir = ldrWalletsDirDlg.dir
-                        })
-                        ldrWalletsDirDlg.item.open();
-                    }
-                }
-            }
+//                CustomButton {
+//                    text: qsTr("Select")
+//                    Layout.minimumWidth: 80
+//                    Layout.preferredWidth: 80
+//                    Layout.maximumWidth: 80
+//                    Layout.maximumHeight: 26
+//                    Layout.rightMargin: 6
+//                    onClicked: {
+//                        if (!ldrWalletsDirDlg.item) {
+//                            ldrWalletsDirDlg.active = true
+//                        }
+//                        ldrWalletsDirDlg.startFromFolder = Qt.resolvedUrl(signerSettings.walletsDir)
+//                        ldrWalletsDirDlg.item.bsAccepted.connect(function() {
+//                            signerSettings.walletsDir = ldrWalletsDirDlg.dir
+//                        })
+//                        ldrWalletsDirDlg.item.open();
+//                    }
+//                }
+//            }
 
             CustomHeader {
                 id: btnNetwork
