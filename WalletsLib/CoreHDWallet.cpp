@@ -798,7 +798,8 @@ void hd::Wallet::updatePersistence()
 {
    if (db_) {
       initDB();
-      writeToDB();
+      // Force update because otherwise removed nodes would be still in the file
+      writeToDB(true);
    }
 }
 
