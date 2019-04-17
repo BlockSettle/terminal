@@ -6,6 +6,7 @@
 #include "cxxopts.hpp"
 #include "HeadlessSettings.h"
 #include "SystemFileUtils.h"
+#include "INIReader.h"
 
 
 HeadlessSettings::HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger)

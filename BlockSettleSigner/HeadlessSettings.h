@@ -4,7 +4,6 @@
 #include <memory>
 #include "BtcDefinitions.h"
 #include "SignerDefs.h"
-#include "INIReader.h"
 
 namespace spdlog {
    class logger;
