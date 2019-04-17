@@ -64,6 +64,8 @@ public:
 
    void setCloseHeadless(bool value) { closeHeadless_ = value; }
 
+   void walletsListUpdated();
+
 signals:
    void ready() const;
    void peerConnected(const QString &ip);
