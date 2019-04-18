@@ -20,10 +20,28 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    , ui_{new Ui::SignerSettingsPage{}}
 {
    ui_->setupUi(this);
+   ui_->lineEditSignerKey->hide();
 
    connect(ui_->comboBoxRunMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignerSettingsPage::runModeChanged);
    connect(ui_->pushButtonOfflineDir, &QPushButton::clicked, this, &SignerSettingsPage::onOfflineDirSel);
    connect(ui_->spinBoxAsSpendLimit, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &SignerSettingsPage::onAsSpendLimitChanged);
+
+   connect(ui_->comboBoxSignerKeyImportType, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
+      ui_->lineEditSignerKey->setVisible(index == 1);
+      ui_->lineEditSignerKeyPath->setVisible(index == 0);
+      ui_->pushButtonSignerKey->setVisible(index == 0);
+   });
+
+   connect(ui_->pushButtonSignerKey, &QPushButton::clicked, [this](){
+      QString fileName = QFileDialog::getOpenFileName(this
+                                   , tr("Open Signer Public Key")
+                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                   , tr("Key files (*.pub)"));
+
+      if (!fileName.isEmpty()) {
+         ui_->lineEditSignerKeyPath->setText(fileName);
+      }
+   });
 }
 
 SignerSettingsPage::~SignerSettingsPage() = default;
@@ -52,7 +70,7 @@ void SignerSettingsPage::onModeChanged(int index)
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
       showOfflineDir(false);
       showLimits(true);
-      showTwoWayAuth(false);
+      showSignerKeySettings(false);
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
       ui_->formLayoutConnectionParams->setSpacing(3);
       break;
@@ -64,7 +82,7 @@ void SignerSettingsPage::onModeChanged(int index)
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
       showOfflineDir(false);
       showLimits(false);
-      showTwoWayAuth(true);
+      showSignerKeySettings(true);
       ui_->formLayoutConnectionParams->setSpacing(6);
       break;
 
@@ -74,7 +92,7 @@ void SignerSettingsPage::onModeChanged(int index)
       showOfflineDir(true);
       ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
       showLimits(false);
-      showTwoWayAuth(false);
+      showSignerKeySettings(false);
       ui_->formLayoutConnectionParams->setSpacing(0);
       break;
 
@@ -127,10 +145,13 @@ void SignerSettingsPage::showLimits(bool show)
    onAsSpendLimitChanged(ui_->spinBoxAsSpendLimit->value());
 }
 
-void SignerSettingsPage::showTwoWayAuth(bool show)
+void SignerSettingsPage::showSignerKeySettings(bool show)
 {
    ui_->widgetTwoWayAuth->setVisible(show);
    ui_->checkBoxTwoWayAuth->setVisible(show);
+   ui_->widgetSignerKeyLabel->setVisible(show);
+   ui_->widgetSignerKeyComboBox->setVisible(show);
+   ui_->widgetSignerKeyContent->setVisible(show);
 }
 
 void SignerSettingsPage::onAsSpendLimitChanged(double value)
@@ -166,4 +187,20 @@ void SignerSettingsPage::apply()
    // first comboBoxRunMode index is '--Select--' placeholder
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
    appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
+
+   // save signer key from file or from line input
+   QString signerKey;
+   if (ui_->comboBoxSignerKeyImportType->currentIndex() == 0) {
+      QFile file(ui_->lineEditSignerKeyPath->text());
+      if (file.open(QIODevice::ReadOnly)) {
+         signerKey = QString::fromLatin1(file.readAll());
+      }
+   }
+   else {
+      signerKey = ui_->lineEditSignerKey->text();
+   }
+
+   if (!signerKey.isEmpty()) {
+      appSettings_->set(ApplicationSettings::zmqRemoteSignerPubKey, signerKey);
+   }
 }
