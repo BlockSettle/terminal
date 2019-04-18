@@ -517,6 +517,9 @@ bool SignerAdapterListener::onChangePassword(const std::string &data, bs::signer
                                         , BinaryData::CreateFromHex(request.oldpassword())
                                         , request.addnew(), request.removeold(), request.dryrun());
 
+   if (result) {
+      walletsListUpdated();
+   }
 
    response.set_success(result);
    response.set_rootwalletid(request.rootwalletid());
@@ -556,6 +559,8 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
          : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());
       wallet = walletsMgr_->createWallet(w.name(), w.description()
          , seed, settings_->getWalletsDir(), w.primary(), pwdData, keyRank);
+
+      walletsListUpdated();
    }
    catch (const std::exception &e) {
       headless::CreateHDWalletResponse response;
@@ -587,6 +592,9 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    logger_->debug("Deleting HDWallet {}: {}", walletId, wallet->name());
 
    bool result = walletsMgr_->deleteWalletFile(wallet);
+   if (result) {
+      walletsListUpdated();
+   }
 
    headless::DeleteHDWalletResponse response;
    response.set_success(result);
@@ -595,4 +603,11 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    }
 
    return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
+}
+
+void SignerAdapterListener::walletsListUpdated()
+{
+   logger_->debug("[{}]", __func__);
+   app_->walletsListUpdated();
+   sendData(signer::WalletsListUpdatedType, {});
 }

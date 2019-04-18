@@ -24,8 +24,8 @@ static const QString portHelp = QObject::tr("Specify command port number");
 static const QString logName = QString::fromStdString("log");
 static const QString logHelp = QObject::tr("Log file name (relative to temp dir)");
 
-static const QString walletsDirName = QString::fromStdString("dirwallets");
-static const QString walletsDirHelp = QObject::tr("Directory where wallets reside");
+//static const QString walletsDirName = QString::fromStdString("dirwallets");
+//static const QString walletsDirHelp = QObject::tr("Directory where wallets reside");
 
 static const QString testnetName = QString::fromStdString("testnet");
 static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
@@ -58,7 +58,7 @@ SignerSettings::SignerSettings(const QString &fileName)
       { OfflineMode,       SettingDef(QStringLiteral("Offline"), false)},
       { WatchingOnly,      SettingDef(QStringLiteral("WatchingOnly"), false)},
       { TestNet,           SettingDef(QStringLiteral("TestNet"), false) },
-      { WalletsDir,        SettingDef(QStringLiteral("WalletsDir")) },
+      //{ WalletsDir,        SettingDef(QStringLiteral("WalletsDir")) },
       { AutoSignWallet,    SettingDef(QStringLiteral("AutoSignWallet")) },
       { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_gui_signer.log")) },
       { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
@@ -73,36 +73,6 @@ SignerSettings::SignerSettings(const QString &fileName)
       { TrustedTerminals,  SettingDef(QStringLiteral("TrustedTerminals")) },
       { TwoWayAuth,        SettingDef(QStringLiteral("TwoWayAuth"), false) }
    };
-}
-
-static const QString testnetSubdir = QLatin1String("testnet3");
-#if defined (Q_OS_WIN)
-static const QString appDirName = QLatin1String("Blocksettle");
-#elif defined (Q_OS_OSX)
-static const QString appDirName = QLatin1String("Blocksettle");
-#elif defined (Q_OS_LINUX)
-static const QString appDirName = QLatin1String(".blocksettle");
-#endif
-
-QString SignerSettings::getWalletsDir() const
-{
-   QString result = get(WalletsDir).toString();
-   if (!result.isEmpty()) {
-      return result;
-   }
-
-   const auto dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-   const auto commonRoot = dir + QDir::separator() + QLatin1String("..") + QDir::separator()
-      + QLatin1String("..") + QDir::separator() + appDirName;
-
-   if (testNet()) {
-      result = commonRoot + QDir::separator() + testnetSubdir;
-   }
-   else {
-      result = commonRoot;
-   }
-   result += QDir::separator() + QLatin1String("signer");
-   return QDir::cleanPath(result);
 }
 
 QString SignerSettings::getExportWalletsDir() const
@@ -178,13 +148,9 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
       break;
    case TestNet:
       emit testNetChanged();
-      emit walletsDirChanged();
       break;
    case WatchingOnly:
       emit woChanged();
-      break;
-   case WalletsDir:
-      emit walletsDirChanged();
       break;
    case AutoSignWallet:
       emit autoSignWalletChanged();
@@ -236,7 +202,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
    parser.addOption({ zmqPubKeyName, zmqPubKeyHelp, QObject::tr("key") });
    parser.addOption({ zmqPrvKeyName, zmqPrvKeyHelp, QObject::tr("key") });
    parser.addOption({ logName, logHelp, QObject::tr("log") });
-   parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
+   //parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
    parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ runModeName, runModeHelp, runModeName });
@@ -273,9 +239,9 @@ bool SignerSettings::loadSettings(const QStringList &args)
       set(LogFileName, QString::fromStdString(writableDir_ + "/") + parser.value(logName), false);
    }
 
-   if (parser.isSet(walletsDirName)) {
-      set(WalletsDir, parser.value(walletsDirName), false);
-   }
+//   if (parser.isSet(walletsDirName)) {
+//      set(WalletsDir, parser.value(walletsDirName), false);
+//   }
 
    if (parser.isSet(mainnetName)) {
       set(TestNet, false, false);
@@ -360,16 +326,6 @@ void SignerSettings::setZmqPrvKeyFile(const QString &file)
       return;
    }
    set(SignerPrvKey, file);
-}
-
-void SignerSettings::setWalletsDir(const QString &val)
-{
-#if defined (Q_OS_WIN)
-   set(WalletsDir, val);
-#else
-   const auto dir = val.startsWith(QLatin1Char('/')) ? val : QLatin1String("/") + val;
-   set(WalletsDir, dir);
-#endif
 }
 
 void SignerSettings::setExportWalletsDir(const QString &val)

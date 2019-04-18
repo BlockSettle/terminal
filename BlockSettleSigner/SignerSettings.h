@@ -15,7 +15,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(bool offline READ offline WRITE setOffline NOTIFY offlineChanged)
    Q_PROPERTY(bool testNet READ testNet WRITE setTestNet NOTIFY testNetChanged)
    Q_PROPERTY(bool watchingOnly READ watchingOnly WRITE setWatchingOnly NOTIFY woChanged)
-   Q_PROPERTY(QString walletsDir READ getWalletsDir WRITE setWalletsDir NOTIFY walletsDirChanged)
+   //Q_PROPERTY(QString walletsDir READ getWalletsDir WRITE setWalletsDir NOTIFY walletsDirChanged)
    Q_PROPERTY(QString exportWalletsDir READ getExportWalletsDir WRITE setExportWalletsDir NOTIFY exportWalletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
@@ -45,7 +45,6 @@ public:
       OfflineMode,
       TestNet,
       WatchingOnly,
-      WalletsDir,
       ExportWalletsDir,
       AutoSignWallet,
       LogFileName,
@@ -97,7 +96,6 @@ public:
    void setOffline(const bool val = true) { set(OfflineMode, val); }
    void setTestNet(const bool val) { set(TestNet, val); }
    void setWatchingOnly(const bool val) { set(WatchingOnly, val); }
-   void setWalletsDir(const QString &);
    void setExportWalletsDir(const QString &);
    void setAutoSignWallet(const QString &val) { set(AutoSignWallet, val); }
    void setListenAddress(const QString &val) { set(ListenAddress, val); }
@@ -121,7 +119,6 @@ signals:
    void offlineChanged();
    void testNetChanged();
    void woChanged();
-   void walletsDirChanged();
    void exportWalletsDirChanged();
    void listenSocketChanged();
    void limitManualXbtChanged();
