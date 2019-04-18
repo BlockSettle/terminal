@@ -127,6 +127,11 @@ void ChatUserListTreeView::selectFirstRoom()
    chatUserListModel_->selectFirstRoom();
 }
 
+void ChatUserListTreeView::highlightUserItem(const QString& userId)
+{   
+   chatUserListModel_->highlightUserItem(userId);
+}   
+
 void ChatUserListTreeView::onChatUserDataChanged(const ChatUserDataPtr &chatUserDataPtr)
 {
    chatUserListModel_->setChatUserData(chatUserDataPtr);

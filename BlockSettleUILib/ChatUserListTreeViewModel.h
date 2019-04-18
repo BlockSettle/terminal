@@ -46,6 +46,7 @@ public:
    void setChatRoomDataList(const Chat::RoomDataListPtr &roomsDataList);
 
    void selectFirstRoom();
+   void highlightUserItem(const QString& userId);
 
 private:
    ChatUserListTreeItem *rootItem_;

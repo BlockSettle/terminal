@@ -436,10 +436,21 @@ bool ChatWidget::hasUnreadMessages()
    }
 }
 
+void ChatWidget::switchToChat(const QString& chatId)
+{
+   onUserClicked(chatId);
+   ui_->treeViewUsers->highlightUserItem(chatId);
+}
+
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
    emit LogOut();
+}
+
+void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &chatId)
+{
+   switchToChat(chatId);
 }
 
 void ChatWidget::onSearchUserReturnPressed()

@@ -114,6 +114,7 @@ public:
    ChatUserListTreeViewModel *chatUserListModel() const;
 
    void selectFirstRoom();
+   void highlightUserItem(const QString& userId);
 
 signals:
    void userClicked(const QString &userId);

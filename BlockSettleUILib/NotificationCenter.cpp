@@ -28,6 +28,11 @@ void NotificationCenter::createInstance(const std::shared_ptr<ApplicationSetting
    globalInstance = std::make_shared<NotificationCenter>(appSettings, ui, trayIcon, parent);
 }
 
+NotificationCenter *NotificationCenter::instance()
+{
+   return globalInstance.get();
+}
+
 void NotificationCenter::destroyInstance()
 {
    globalInstance = nullptr;
@@ -121,7 +126,7 @@ NotificationTrayIconResponder::NotificationTrayIconResponder(const Ui::BSTermina
    , dbus_(new DBusNotification(tr("BlockSettle Terminal"), this))
 #endif
 {
-   connect(trayIcon_.get(), &QSystemTrayIcon::messageClicked, this, &NotificationTrayIconResponder::newVersionMessageClicked);
+   connect(trayIcon_.get(), &QSystemTrayIcon::messageClicked, this, &NotificationTrayIconResponder::messageClicked);
 
 #ifdef BS_USE_DBUS
    if(dbus_->isValid()) {
@@ -143,6 +148,8 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    QString title, text;
    int msecs = 10000;
    newVersionMessage_ = false;
+   newChatMessage_ = false;
+   newChatId_ = QString();
    bool isInCurrentChat;
    bool hasUnreadMessages;
    
@@ -214,6 +221,8 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 
       title = msg[0].toString();
       text = msg[1].toString();
+      newChatMessage_ = true;
+      newChatId_ = title;
       break;
 
    default: return;
@@ -231,7 +240,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 #endif // BS_USE_DBUS
 }
 
-void NotificationTrayIconResponder::newVersionMessageClicked()
+void NotificationTrayIconResponder::messageClicked()
 {
    if (newVersionMessage_) {
       const auto url = appSettings_->get<std::string>(ApplicationSettings::Binaries_Dl_Url);
@@ -260,6 +269,13 @@ void NotificationTrayIconResponder::newVersionMessageClicked()
       BSMessageBox mb(BSMessageBox::warning, title, tr("Shell execution is not supported on this platform, yet"));
       mb.exec();
 #endif
+   }
+   else if (newChatMessage_) {
+      if (!newChatId_.isNull() && globalInstance != NULL) {
+         emit globalInstance->newChatMessageClick(newChatId_);
+         mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
+         mainWinUi_->tabWidget->activateWindow();
+      }
    }
 }
 
