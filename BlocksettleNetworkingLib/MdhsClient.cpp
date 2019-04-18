@@ -21,7 +21,7 @@ MdhsClient::MdhsClient(
 {
 }
 
-MdhsClient::~MdhsClient()
+MdhsClient::~MdhsClient() noexcept
 {
    FastLock locker(lockCommands_);
    for (auto &cmd : activeCommands_) {

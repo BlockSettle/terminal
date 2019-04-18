@@ -326,32 +326,9 @@ namespace bs {
          double   value;
          QString  desc;
 
-         static Type fromCeler(com::celertech::marketdata::api::enums::marketdataentrytype::MarketDataEntryType mdType) {
-            switch (mdType)
-            {
-            case com::celertech::marketdata::api::enums::marketdataentrytype::BID:       return PriceBid;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::OFFER:     return PriceOffer;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::MID_PRICE: return PriceMid;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::TRADE:     return PriceLast;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::OPEN:      return PriceOpen;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::CLOSE:     return PriceClose;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::HIGH:      return PriceHigh;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::LOW:       return PriceLow;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::TOTALTRADEDVOL:  return TurnOverQty;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::SETTLEMENT:return PriceSettlement;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::VWAP:      return VWAP;
-            default:       return Unknown;
-            }
-         }
+         static Type fromCeler(com::celertech::marketdata::api::enums::marketdataentrytype::MarketDataEntryType mdType);
 
-         static MDField get(const MDFields &fields, Type type) {
-            for (const auto field : fields) {
-               if (field.type == type) {
-                  return field;
-               }
-            }
-            return { Unknown, 0, QString() };
-         }
+         static MDField get(const MDFields &fields, Type type);
       };
 
 

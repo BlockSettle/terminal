@@ -17,6 +17,7 @@ enum TradeHistoryRequestType
    LoadSnapshotRequestType                      = 3;
    LoadPMProductsListRequestType                = 4;
    LoadInitialPMPriceRequestType                = 5;
+   LoadEODPricesRequestType                     = 6;
 }
 
 enum TradeHistoryResponseType
@@ -32,6 +33,7 @@ enum TradeHistoryResponseType
    TradeHistoryNewCCProductUpdateType           = 6;
 
    LoadInitialPMPriceResponseType               = 7;
+   LoadEODPricesResponseType                    = 8;
 }
 
 message TradeHistoryRequest
@@ -149,4 +151,30 @@ message LoadInitialPMPriceResponse
    bool   price_set     = 2;
    double bid_price     = 3;
    double offer_price   = 4;
+}
+
+message LoadEODPricesRequest
+{
+   uint32 year    = 1;
+   uint32 month   = 2;
+   uint32 day     = 3;
+}
+
+message EODPrice
+{
+   string product = 1;
+   double price   = 2;
+}
+
+message EODSnapshot
+{
+   repeated EODPrice fx_prices      = 3;
+   repeated EODPrice xbt_prices     = 4;
+   repeated EODPrice pm_prices      = 5;
+}
+
+message LoadEODPricesResponse
+{
+   bytes             snapshot       = 1;
+   string            debug_message  = 2;
 }
