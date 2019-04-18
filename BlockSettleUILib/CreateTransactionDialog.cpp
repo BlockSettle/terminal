@@ -318,10 +318,11 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
    pendingTXSignId_ = 0;
    QString detailedText;
 
-   if (signedTX.getSize() >= kTransactionWeightLimit) {
+   const Tx tx(signedTX);
+   if (tx.isInitialized() && (tx.getTxWeight() >= kTransactionWeightLimit)) {
       BSMessageBox mBox(BSMessageBox::question, tr("Oversized Transaction")
          , tr("Transaction size limit %1 exceeded: %2. Do you still want to send this transaction?")
-            .arg(QString::number(kTransactionWeightLimit)).arg(QString::number(signedTX.getSize()))
+            .arg(QString::number(kTransactionWeightLimit)).arg(QString::number(tx.getTxWeight()))
          , this);
       if (mBox.exec() != QDialog::Accepted) {
          stopBroadcasting();
