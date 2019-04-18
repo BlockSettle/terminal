@@ -237,7 +237,7 @@ Item {
                     Layout.alignment: Qt.AlignLeft
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: signerSettings.zmqPrvKeyFile
+                    text: signerSettings.signerPrvKey
                     color: BSStyle.textColor
 
                 }
@@ -250,10 +250,10 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        zmqPrivKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPrvKeyFile)
+                        zmqPrivKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPrvKey)
                         zmqPrivKeyDlg.open()
                         zmqPrivKeyDlg.bsAccepted.connect(function(){
-                            signerSettings.zmqPrvKeyFile = JsHelper.fileUrlToPath(zmqPrivKeyDlg.fileUrl)
+                            signerSettings.signerPrvKey = JsHelper.fileUrlToPath(zmqPrivKeyDlg.fileUrl)
                         })
                     }
                     FileDialog {
@@ -283,7 +283,7 @@ Item {
                     Layout.alignment: Qt.AlignLeft
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: signerSettings.zmqPubKeyFile
+                    text: signerSettings.signerPubKey
                     color: BSStyle.textColor
 
                 }
@@ -296,7 +296,7 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.zmqPubKeyFile)
+                        var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.signerPubKey)
                         qmlFactory.setClipboard(zmqPubKey)
                         btnZmqKeyCopy.text = qsTr("Copied")
                     }
@@ -309,17 +309,17 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        zmqExportPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
-                        zmqExportPubKeyDlg.open()
-                        zmqExportPubKeyDlg.bsAccepted.connect(function(){
-                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.zmqPubKeyFile)
-                            JsHelper.saveTextFile(zmqExportPubKeyDlg.fileUrl, zmqPubKey)
+                        exportSignerPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
+                        exportSignerPubKeyDlg.open()
+                        exportSignerPubKeyDlg.accepted.connect(function(){
+                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.signerPubKey)
+                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, zmqPubKey)
                         })
                     }
                     FileDialog {
-                        id: zmqExportPubKeyDlg
+                        id: exportSignerPubKeyDlg
                         visible: false
-                        title: "Select ZMQ Public Key"
+                        title: "Save Signer Public Key"
                         selectFolder: false
                         selectExisting: false
                         nameFilters: [ "Key files (*.pub)", "All files (*)" ]
@@ -335,10 +335,10 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.zmqPubKeyFile)
+                        zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
                         zmqPubKeyDlg.open()
                         zmqPubKeyDlg.bsAccepted.connect(function(){
-                            signerSettings.zmqPubKeyFile = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
+                            signerSettings.signerPubKey = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
                         })
                     }
                     FileDialog {

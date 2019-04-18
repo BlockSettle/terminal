@@ -63,8 +63,8 @@ SignerSettings::SignerSettings(const QString &fileName)
       { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_gui_signer.log")) },
       { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
       { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
-      { ZMQPubKey,         SettingDef(QStringLiteral("ZMQPubKey"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.pub")) },
-      { ZMQPrvKey,         SettingDef(QStringLiteral("ZMQPrvKey"), QString::fromStdString(writableDir_ + "/zmq_conn_srv.prv")) },
+      { SignerPubKey,         SettingDef(QStringLiteral("SignerPubKey"), QString::fromStdString(writableDir_ + "/headless.pub")) },
+      { SignerPrvKey,         SettingDef(QStringLiteral("SignerPrvKey"), QString::fromStdString(writableDir_ + "/headless.prv")) },
       { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
@@ -159,11 +159,11 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    case ListenPort:
       emit listenSocketChanged();
       break;
-   case ZMQPubKey:
-      emit zmqPubKeyFileChanged();
+   case SignerPubKey:
+      emit signerPubKeyChanged();
       break;
-   case ZMQPrvKey:
-      emit zmqPrvKeyFileChanged();
+   case SignerPrvKey:
+      emit signerPrvKeyChanged();
       break;
    case LimitManualXBT:
       emit limitManualXbtChanged();
@@ -225,14 +225,14 @@ bool SignerSettings::loadSettings(const QStringList &args)
       if (parser.value(zmqPubKeyName).length() != 40) {
          throw std::runtime_error("invalid ZMQ connection pub key size");
       }
-      set(ZMQPubKey, parser.value(zmqPubKeyName), false);
+      set(SignerPubKey, parser.value(zmqPubKeyName), false);
    }
 
    if (parser.isSet(zmqPrvKeyName)) {
       if (parser.value(zmqPrvKeyName).length() != 40) {
          throw std::runtime_error("invalid ZMQ connection prv key size");
       }
-      set(ZMQPrvKey, parser.value(zmqPrvKeyName), false);
+      set(SignerPrvKey, parser.value(zmqPrvKeyName), false);
    }
 
    if (parser.isSet(logName)) {
@@ -314,18 +314,18 @@ QString SignerSettings::dirDocuments() const
 
 void SignerSettings::setZmqPubKeyFile(const QString &file)
 {
-   if (file == get(ZMQPubKey).toString()) {
+   if (file == get(SignerPubKey).toString()) {
       return;
    }
-   set(ZMQPubKey, file);
+   set(SignerPubKey, file);
 }
 
 void SignerSettings::setZmqPrvKeyFile(const QString &file)
 {
-   if (file == get(ZMQPrvKey).toString()) {
+   if (file == get(SignerPrvKey).toString()) {
       return;
    }
-   set(ZMQPrvKey, file);
+   set(SignerPrvKey, file);
 }
 
 void SignerSettings::setExportWalletsDir(const QString &val)
