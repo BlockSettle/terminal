@@ -19,8 +19,8 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString exportWalletsDir READ getExportWalletsDir WRITE setExportWalletsDir NOTIFY exportWalletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
-   Q_PROPERTY(QString zmqPubKeyFile READ zmqPubKeyFile WRITE setZmqPubKeyFile NOTIFY zmqPubKeyFileChanged)
-   Q_PROPERTY(QString zmqPrvKeyFile READ zmqPrvKeyFile WRITE setZmqPrvKeyFile NOTIFY zmqPrvKeyFileChanged)
+   Q_PROPERTY(QString signerPubKey READ signerPubKey WRITE setZmqPubKeyFile NOTIFY signerPubKeyChanged)
+   Q_PROPERTY(QString signerPrvKey READ signerPrvKey WRITE setZmqPrvKeyFile NOTIFY signerPrvKeyChanged)
    Q_PROPERTY(bool autoSignUnlimited READ autoSignUnlimited NOTIFY limitAutoSignXbtChanged)
    Q_PROPERTY(bool manualSignUnlimited READ manualSignUnlimited NOTIFY limitManualXbtChanged)
    Q_PROPERTY(double limitManualXbt READ limitManualXbt WRITE setLimitManualXbt NOTIFY limitManualXbtChanged)
@@ -51,8 +51,8 @@ public:
       LogFileName,
       ListenAddress,
       ListenPort,
-      ZMQPubKey,
-      ZMQPrvKey,
+      SignerPubKey,
+      SignerPrvKey,
       LimitManualXBT,
       LimitAutoSignXBT,
       LimitAutoSignTime,
@@ -64,8 +64,8 @@ public:
 
    bool loadSettings(const QStringList &args);
 
-   QString zmqPubKeyFile() const { return get(ZMQPubKey).toString(); }
-   QString zmqPrvKeyFile() const { return get(ZMQPrvKey).toString(); }
+   QString signerPubKey() const { return get(SignerPubKey).toString(); }
+   QString signerPrvKey() const { return get(SignerPrvKey).toString(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
    QString logFileName() const { return get(LogFileName).toString(); }
@@ -131,8 +131,8 @@ signals:
    void dirDocumentsChanged();
    void autoSignWalletChanged();
    void hideEidInfoBoxChanged();
-   void zmqPrvKeyFileChanged();
-   void zmqPubKeyFileChanged();
+   void signerPrvKeyChanged();
+   void signerPubKeyChanged();
    void trustedTerminalsChanged();
    void twoWayAuthChanged();
 
