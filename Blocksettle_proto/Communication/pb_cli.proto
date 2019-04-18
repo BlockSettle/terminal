@@ -57,22 +57,25 @@ message CLIResponsePacket
 
 message PBStatusResponse
 {
-   required bool ConnectedToCeler = 1;
-   required bool ConnectedToGenoa = 2;
-   required bool CelerMerchantConnected = 3;
-   required bool CelerPiggyBankConnected = 4;
+   required bool ConnectedToCeler         = 1;
+   required bool ConnectedToGenoa         = 2;
+   required bool CelerMerchantConnected   = 3;
+   required bool CelerPiggyBankConnected  = 4;
    required bool CelerStaticDataConnected = 5;
 
-   required string PBVersion = 6;
+   required string PBVersion              = 6;
 
-   optional string GenoaVersion = 7;
-   optional string BlocksettleVersion = 8;
-   optional string UnifyVersion = 9;
-   optional string LandfallVersion = 10;
+   optional string GenoaVersion           = 7;
+   optional string BlocksettleVersion     = 8;
+   optional string UnifyVersion           = 9;
+   optional string LandfallVersion        = 10;
 
    required ArmoryConnectionState armoryConnectionState = 12;
-   required string uptime = 13;
-   required uint64 uptime_seconds = 14;
+
+   required string uptime           = 13;
+   required uint64 uptime_seconds   = 14;
+
+   required bool ConnectedToMD      = 15;
 }
 
 message ErrorMessage
