@@ -1,5 +1,7 @@
 #include <spdlog/spdlog.h>
 #include <fstream>
+
+#include "BIP150_151.h"
 #include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
@@ -46,16 +48,26 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    std::string guiMode;
    options.add_options()
       ("h,help", "Print help")
-      ("a,listen", "IP address to listen on", cxxopts::value<std::string>(listenAddress_)->default_value(listenAddress_))
-      ("p,port", "Listen port for terminal connections", cxxopts::value<std::string>(listenPort_)->default_value(listenPort_))
-      ("l,log", "Log file name", cxxopts::value<std::string>(logFile_)->default_value(logFile_))
-      ("d,dirwallets", "Directory where wallets reside", cxxopts::value<std::string>(walletsDir_))
-      ("testnet", "Set bitcoin network type to testnet", cxxopts::value<bool>()->default_value("false"))
-      ("mainnet", "Set bitcoin network type to mainnet", cxxopts::value<bool>()->default_value("true"))
-      ("watchonly", "Try to load only watching-only wallets", cxxopts::value<bool>(watchOnly_))
+      ("a,listen", "IP address to listen on"
+         , cxxopts::value<std::string>(listenAddress_)->default_value(listenAddress_))
+      ("p,port", "Listen port for terminal connections"
+         , cxxopts::value<std::string>(listenPort_)->default_value(listenPort_))
+      ("l,log", "Log file name"
+         , cxxopts::value<std::string>(logFile_)->default_value(logFile_))
+      ("d,dirwallets", "Directory where wallets reside"
+         , cxxopts::value<std::string>(walletsDir_))
+      ("terminal_id_key", "Set terminal BIP 150 ID key"
+         , cxxopts::value<std::string>(termIDKeyStr_)->default_value(termIDKeyStr_))
+      ("testnet", "Set bitcoin network type to testnet"
+         , cxxopts::value<bool>()->default_value("false"))
+      ("mainnet", "Set bitcoin network type to mainnet"
+         , cxxopts::value<bool>()->default_value("true"))
+      ("watchonly", "Try to load only watching-only wallets"
+         , cxxopts::value<bool>(watchOnly_))
       ("auto_sign_spend_limit", "Spend limit expressed in XBT for auto-sign operations"
          , cxxopts::value<double>(autoSignSpendLimit_))
-      ("g,guimode", "GUI run mode", cxxopts::value<std::string>(guiMode)->default_value("fullgui"))
+      ("g,guimode", "GUI run mode"
+         , cxxopts::value<std::string>(guiMode)->default_value("fullgui"))
       ;
 
    const auto result = options.parse(argc, argv);
@@ -97,6 +109,32 @@ NetworkType HeadlessSettings::netType() const
       return NetworkType::TestNet;
    }
    return NetworkType::MainNet;
+}
+
+bool HeadlessSettings::getTermIDKeyBin(BinaryData& keyBuf)
+{
+   bool retVal = false;
+   keyBuf.resize(BIP151PUBKEYSIZE);
+   if (termIDKeyStr_.empty()) {
+      logger_->error("[{}] No terminal BIP 150 ID key is available.", __func__);
+      return retVal;
+   }
+
+   // Make sure the key is a valid public key.
+   keyBuf = READHEX(termIDKeyStr_);
+   if (keyBuf.getSize() != BIP151PUBKEYSIZE) {
+      logger_->error("[{}] Terminal BIP 150 ID key is not {} bytes).", __func__
+         , BIP151PUBKEYSIZE);
+      return retVal;
+   }
+   if (!(CryptoECDSA().VerifyPublicKeyValid(keyBuf))) {
+      logger_->error("[{}] Terminal BIP 150 ID key ({}) is not a valid "
+         "secp256k1 compressed public key.", __func__, termIDKeyStr_);
+      return retVal;
+   }
+
+   retVal = true;
+   return retVal;
 }
 
 std::string HeadlessSettings::getWalletsDir() const

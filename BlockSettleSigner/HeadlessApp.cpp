@@ -145,10 +145,28 @@ void HeadlessAppObj::onlineProcessing()
       , settings_->listenAddress(), settings_->listenPort()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
+   // Set up the connection with the terminal.
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    const BinaryData bdID = CryptoPRNG::generateRandom(8);
+   std::vector<std::string> trustedTerms;
+   if (settings_->getTermIDKeyStr().empty()) {
+      trustedTerms = settings_->trustedTerminals();
+   }
+   else {
+      BinaryData termIDKey;
+      if (!(settings_->getTermIDKeyBin(termIDKey))) {
+         logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
+            "ID key", __func__);
+      }
+      if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
+         logger_->error("[{}] Signer unable to add the terminal BIP 150 ID key "
+            "({})", __func__, termIDKey.toHexStr());
+      }
+      std::string trustedTermStr = "127.0.0.1:" + settings_->getTermIDKeyStr();
+      trustedTerms.push_back(trustedTermStr);
+   }
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , settings_->trustedTerminals(), READ_UINT64_LE(bdID.getPtr()), false);
+      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false);
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
