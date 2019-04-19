@@ -89,6 +89,10 @@ ChartWidget::ChartWidget(QWidget* pParent)
    cboModel_ = new QStandardItemModel(this);
    ui_->cboInstruments->setItemDelegate(new ComboBoxDelegate);
    ui_->cboInstruments->setModel(cboModel_);
+
+   //uncomment when there will we enought data
+   ui_->btn1y->hide();
+   ui_->btn6m->hide();
 }
 
 void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
@@ -431,7 +435,8 @@ void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
    qreal lower = upper - IntervalWidth(interval, requestLimit) / 1000 - IntervalWidth(interval) / 1000 / 2;
 
    ui_->customPlot->xAxis->setRange(lower, upper);
-   ui_->customPlot->xAxis->setRange(lower - CountOffsetFromRightBorder(), upper + CountOffsetFromRightBorder()); //call setRange second time cause CountOffset relies on current range
+   auto margin = IntervalWidth(dateRange_.checkedId()) / 1000 * 0.5;
+   ui_->customPlot->xAxis->setRange(lower - margin, upper + margin);
    rescaleCandlesYAxis();
    ui_->customPlot->yAxis2->setNumberPrecision(FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]));
 
