@@ -89,6 +89,10 @@ ChartWidget::ChartWidget(QWidget* pParent)
    cboModel_ = new QStandardItemModel(this);
    ui_->cboInstruments->setItemDelegate(new ComboBoxDelegate);
    ui_->cboInstruments->setModel(cboModel_);
+
+   //uncomment when there will we enought data
+   ui_->btn1y->hide();
+   ui_->btn6m->hide();
 }
 
 void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
