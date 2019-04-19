@@ -317,6 +317,15 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
    pendingTXSignId_ = 0;
    QString detailedText;
 
+   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
+   if (error.empty() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
+      BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
+         , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
+         , this).exec();
+      accept();
+      return;
+   }
+
    try {
       const Tx tx(signedTX);
       if (tx.isInitialized() && (tx.getTxWeight() >= kTransactionWeightLimit)) {
@@ -330,18 +339,13 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
          }
       }
    }
-   catch (...) {}  // likely an offline TX was saved
+   catch (const std::exception &e) {
+      MessageBoxBroadcastError(tr("Invalid signed transaction: %1").arg(QLatin1String(e.what())), this).exec();
+      stopBroadcasting();
+      return;
+   }
 
    if (error.empty()) {
-      const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-      if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId)) {   // Offline signing
-         BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
-            , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
-            , this).exec();
-         accept();
-         return;
-      }
-
       if (armory_->broadcastZC(signedTX)) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
