@@ -219,6 +219,11 @@ bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::Req
          , __func__, request.tx_request().wallet_id());
       return false;
    }
+   if (wallet->isWatchingOnly()) {
+      logger_->error("[SignerAdapterListener::{}] can't sign with watching-only wallet {}"
+         , __func__, request.tx_request().wallet_id());
+      return false;
+   }
    bs::core::wallet::TXSignRequest txReq;
    txReq.walletId = request.tx_request().wallet_id();
    for (int i = 0; i < request.tx_request().inputs_size(); ++i) {

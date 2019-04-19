@@ -28,7 +28,6 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       }
    }
 
-   watchOnly_ = iniReader.GetBoolean("General", "WatchinOnly", false);
    testNet_ = iniReader.GetBoolean("General", "TestNet", false);
    walletsDir_ = iniReader.Get("General", "WalletsDir", walletsDir_);
    logFile_ = iniReader.Get("General", "LogFileName", logFile_);
@@ -52,7 +51,6 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       ("d,dirwallets", "Directory where wallets reside", cxxopts::value<std::string>(walletsDir_))
       ("testnet", "Set bitcoin network type to testnet", cxxopts::value<bool>()->default_value("false"))
       ("mainnet", "Set bitcoin network type to mainnet", cxxopts::value<bool>()->default_value("true"))
-      ("watchonly", "Try to load only watching-only wallets", cxxopts::value<bool>(watchOnly_))
       ("auto_sign_spend_limit", "Spend limit expressed in XBT for auto-sign operations"
          , cxxopts::value<double>(autoSignSpendLimit_))
       ("g,guimode", "GUI run mode", cxxopts::value<std::string>(guiMode)->default_value("fullgui"))

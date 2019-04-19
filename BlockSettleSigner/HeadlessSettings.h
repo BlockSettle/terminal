@@ -21,7 +21,6 @@ public:
    bool testNet() const { return testNet_; }
    bs::signer::Limits limits() const;
    std::string getWalletsDir() const;
-   bool watchingOnly() const { return watchOnly_; }
    std::string listenAddress() const { return listenAddress_; }
    std::string listenPort() const { return listenPort_; }
    std::string interfacePort() const { return interfacePort_; }
@@ -40,7 +39,6 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
 
    bool     testNet_ = false;
-   bool     watchOnly_ = false;
    double   autoSignSpendLimit_ = 0;
    std::string logFile_;
    std::string walletsDir_;
