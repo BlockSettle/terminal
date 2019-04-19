@@ -48,6 +48,7 @@ namespace sync {
       std::string name;
       std::string description;
       NetworkType netType;
+      bool        watchOnly;
    };
 
    struct HDWalletData

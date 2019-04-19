@@ -37,7 +37,6 @@ public:
    enum class OpMode {
       Local = 1,
       Remote,
-      Offline,
       // RemoteInproc - should be used for testing only, when you need to have signer and listener
       // running in same process and could not use TCP for any reason
       RemoteInproc,
@@ -102,6 +101,9 @@ public:
    virtual bool isReady() const { return true; }
    virtual bool isOffline() const { return true; }
    virtual bool isWalletOffline(const std::string &) const { return true; }
+
+   virtual void setTargetDir(const QString& targetDir) {}
+   virtual QString targetDir() const { return QString(); }
 
 signals:
    void connected();

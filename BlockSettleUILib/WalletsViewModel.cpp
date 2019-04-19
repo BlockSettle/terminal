@@ -549,7 +549,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
       rootNode_->add(hdNode);
       hdNode->addGroups(hdWallet->getGroups());
       if (signContainer_) {
-         if ((signContainer_->opMode() == SignContainer::OpMode::Offline) || signContainer_->isOffline()) {
+         if (signContainer_->isOffline() || signContainer_->isWalletOffline(hdWallet->walletId())) {
             hdNode->setState(WalletNode::State::Offline);
          }
          else {
