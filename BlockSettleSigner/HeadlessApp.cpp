@@ -63,11 +63,6 @@ void HeadlessAppObj::start()
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
       , settings_->watchingOnly(), cbProgress);
-   if (!settings_->watchingOnly() && !walletsMgr_->getSettlementWallet()) {
-      if (!walletsMgr_->createSettlementWallet(settings_->netType(), settings_->getWalletsDir())) {
-         logger_->error("Failed to create Settlement wallet");
-      }
-   }
 
    if (walletsMgr_->empty()) {
       logger_->warn("No wallets loaded");
@@ -292,6 +287,13 @@ void HeadlessAppObj::setCallbacks(const std::function<void(const std::string &)>
 void HeadlessAppObj::close()
 {
    exit(0);
+}
+
+void HeadlessAppObj::walletsListUpdated()
+{
+   if (listener_) {
+      listener_->walletsListUpdated();
+   }
 }
 
 void HeadlessAppObj::deactivateAutoSign()

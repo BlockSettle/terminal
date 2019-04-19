@@ -65,7 +65,6 @@ private slots:
    void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void onAutoSignPwdRequested(const std::string &walletId);
    void onOfflineChanged();
-   void onWalletsDirChanged();
    void onListenSocketChanged();
    void onLimitsChanged();
    void onSysTrayMsgClicked();

@@ -32,6 +32,11 @@ public:
    bs::signer::RunMode runMode() const { return runMode_; }
 
 private:
+   // since INIReader doesn't support stringlist settings, iniStringToStringList do that
+   // valstr is a string taken from INI file, and contains comma separated values.
+   std::vector<std::string> iniStringToStringList(std::string valstr) const;
+
+private:
    std::shared_ptr<spdlog::logger>  logger_;
 
    bool     testNet_ = false;

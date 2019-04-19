@@ -90,6 +90,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::DeleteHDWalletType:
       onDeleteHDWallet(packet.data(), packet.id());
       break;
+   case signer::WalletsListUpdatedType:
+      parent_->walletsListUpdated();
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;

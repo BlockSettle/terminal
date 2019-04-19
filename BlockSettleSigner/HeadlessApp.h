@@ -53,6 +53,7 @@ public:
    void deactivateAutoSign();
    void addPendingAutoSignReq(const std::string &walletId);
    void close();
+   void walletsListUpdated();
 
 private:
    void startInterface();
