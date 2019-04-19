@@ -1,7 +1,23 @@
 {
-   "latest_version" : "0.14.13",
-   "release_date" : "16 April 2019",
+   "latest_version" : "0.14.14",
+   "release_date" : "19 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.14",
+         "previous_version" : "0.14.13",
+         "release_date" : "19 April 2019",
+         "improvements" :
+         [
+            "TX weight warning"
+         ],
+         "bug_fixes" :
+         [
+            "Settings loading",
+            "Fee fixes"
+         ],
+         "revision" : "3a9159f7",
+         "common_revision" : "a87c5791"
+      },
       {
          "version_string" : "0.14.13",
          "previous_version" : "0.14.12",
