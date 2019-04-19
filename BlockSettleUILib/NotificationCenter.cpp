@@ -133,7 +133,7 @@ NotificationTrayIconResponder::NotificationTrayIconResponder(const Ui::BSTermina
       notifMode_ = Freedesktop;
 
       disconnect(trayIcon_.get(), &QSystemTrayIcon::messageClicked,
-         this, &NotificationTrayIconResponder::newVersionMessageClicked);
+         this, &NotificationTrayIconResponder::messageClicked);
       connect(dbus_, &DBusNotification::actionInvoked,
          this, &NotificationTrayIconResponder::notificationAction);
    }
@@ -284,7 +284,7 @@ void NotificationTrayIconResponder::notificationAction(const QString &action)
 {
    if (action == c_newVersionAction) {
       newVersionMessage_ = true;
-      newVersionMessageClicked();
+      messageClicked();
    }
 }
 #endif // BS_USE_DBUS
