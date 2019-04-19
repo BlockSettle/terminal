@@ -45,7 +45,7 @@
        <number>5</number>
       </property>
       <property name="leftMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="topMargin">
        <number>0</number>
@@ -350,13 +350,13 @@
              <widget class="QComboBox" name="comboBoxRange">
               <property name="minimumSize">
                <size>
-                <width>150</width>
+                <width>140</width>
                 <height>0</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>150</width>
+                <width>140</width>
                 <height>16777215</height>
                </size>
               </property>
