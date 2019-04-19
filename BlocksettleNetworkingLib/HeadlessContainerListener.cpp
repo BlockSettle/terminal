@@ -1203,6 +1203,7 @@ bool HeadlessContainerListener::onSyncWalletInfo(const std::string &clientId, Bl
       walletData->set_name(hdWallet->name());
       walletData->set_description(hdWallet->description());
       walletData->set_nettype(mapFrom(hdWallet->networkType()));
+      walletData->set_watching_only(hdWallet->isWatchingOnly());
    }
    const auto settlWallet = walletsMgr_->getSettlementWallet();
    if (settlWallet) {
@@ -1211,6 +1212,7 @@ bool HeadlessContainerListener::onSyncWalletInfo(const std::string &clientId, Bl
       walletData->set_id(settlWallet->walletId());
       walletData->set_name(settlWallet->name());
       walletData->set_nettype(mapFrom(settlWallet->networkType()));
+      walletData->set_watching_only(true);
    }
 
    packet.set_data(response.SerializeAsString());
@@ -1228,6 +1230,7 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, Bloc
    headless::SyncHDWalletResponse response;
    const auto hdWallet = walletsMgr_->getHDWalletById(request.walletid());
    if (hdWallet) {
+      response.set_walletid(hdWallet->walletId());
       for (const auto &group : hdWallet->getGroups()) {
          auto groupData = response.add_groups();
          groupData->set_type(group->index());

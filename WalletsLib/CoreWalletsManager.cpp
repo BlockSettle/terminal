@@ -35,7 +35,7 @@ void WalletsManager::reset()
 }
 
 void WalletsManager::loadWallets(NetworkType netType, const std::string &walletsPath
-   , bool wo, const CbProgress &cbProgress)
+   , const CbProgress &cbProgress)
 {
    if (walletsPath.empty()) {
       return;
@@ -51,10 +51,6 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
 
    for (const auto &file : fileList) {
       if (file.find(SettlementWallet::fileNamePrefix()) == 0) {
-         if (wo) {
-            logger_->info("[{}] ignoring settlement wallet in watching-only mode", __func__);
-            continue;
-         }
          if (settlementWallet_) {
             logger_->warn("Can't load more than 1 settlement wallet from {}", file);
             continue;
@@ -86,11 +82,6 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
          }
          if ((netType != NetworkType::Invalid) && (netType != wallet->networkType())) {
             logger_->warn("[{}] Network type mismatch: loading {}, wallet has {}", __func__, (int)netType, (int)wallet->networkType());
-         }
-         if (wo != wallet->isWatchingOnly()) {
-            logger_->warn("[{}] watching-only state mismatch, required: {}, wallet: {} - skipping", __func__
-               , wo, wallet->isWatchingOnly());
-            continue;
          }
 
          saveWallet(wallet);

@@ -295,6 +295,7 @@ message SyncWalletInfoResponse
       string name = 3;
       string description = 4;
       NetworkType netType = 5;
+      bool watching_only = 6;
    }
    repeated WalletInfo wallets = 1;
 }

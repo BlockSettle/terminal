@@ -105,8 +105,10 @@ protected:
    void ProcessSyncAddresses(unsigned int id, const std::string &data);
    void ProcessSettlWalletCreate(unsigned int id, const std::string &data);
 
+protected:
    std::shared_ptr<HeadlessListener>   listener_;
    std::unordered_set<std::string>     missingWallets_;
+   std::unordered_set<std::string>     woWallets_;
    std::set<bs::signer::RequestId>     signRequests_;
    std::map<bs::signer::RequestId, std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)>>   cbSettlWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfoMap_;
@@ -137,6 +139,13 @@ public:
    bool hasUI() const override;
    SecureBinaryData getOwnPubKey() const { return connection_->getOwnPubKey(); }
 
+   void setTargetDir(const QString& targetDir) override;
+   QString targetDir() const override;
+
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
+   , bool keepDuplicatedRecipients = false) override;
+
 protected slots:
    void onAuthenticated();
    void onConnected();
@@ -147,6 +156,8 @@ protected slots:
 private:
    void ConnectHelper();
    void Authenticate();
+
+   bs::signer::RequestId signOffline(const bs::core::wallet::TXSignRequest &txSignReq);
 
 protected:
    const QString                              host_;

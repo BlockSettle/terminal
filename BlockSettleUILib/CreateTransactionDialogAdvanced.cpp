@@ -5,7 +5,6 @@
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
-#include "OfflineSigner.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -996,7 +995,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       }
       AddRecipients(recipients);
 
-      if (!signingContainer_->isOffline() && tx.isValid()) {
+      if (!signContainer_->isOffline() && tx.isValid()) {
          ui_->pushButtonCreate->setEnabled(true);
       }
    }
