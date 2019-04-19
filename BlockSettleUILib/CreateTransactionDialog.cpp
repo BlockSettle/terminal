@@ -40,6 +40,7 @@ const std::map<unsigned int, QString> feeLevels = {
    { 10, QObject::tr("1 hour 40 minutes") },
    { 20, QObject::tr("3 hours 20 minutes") }
 };
+const size_t kTransactionWeightLimit = 400000;
 
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
@@ -316,6 +317,18 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
 
    pendingTXSignId_ = 0;
    QString detailedText;
+
+   const Tx tx(signedTX);
+   if (tx.isInitialized() && (tx.getTxWeight() >= kTransactionWeightLimit)) {
+      BSMessageBox mBox(BSMessageBox::question, tr("Oversized Transaction")
+         , tr("Transaction size limit %1 exceeded: %2. Do you still want to send this transaction?")
+            .arg(QString::number(kTransactionWeightLimit)).arg(QString::number(tx.getTxWeight()))
+         , this);
+      if (mBox.exec() != QDialog::Accepted) {
+         stopBroadcasting();
+         return;
+      }
+   }
 
    if (error.empty()) {
       if (signer_->isOffline()) {   // Offline signing
