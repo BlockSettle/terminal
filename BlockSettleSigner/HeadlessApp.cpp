@@ -62,7 +62,7 @@ void HeadlessAppObj::start()
       adapterLsn_->onReady(cur, total);
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
-      , settings_->watchingOnly(), cbProgress);
+      , cbProgress);
 
    if (walletsMgr_->empty()) {
       logger_->warn("No wallets loaded");
@@ -240,7 +240,7 @@ void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::fun
 {
    walletsMgr_->reset();
    walletsMgr_->loadWallets(settings_->netType(), walletsDir
-      , settings_->watchingOnly(), [](int, int) {});
+      , [](int, int) {});
 //   settings_->setWalletsDir(walletsDir);
    cb();
 }
