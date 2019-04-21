@@ -253,13 +253,13 @@
                 <widget class="QPushButton" name="pushButtonBuy">
                  <property name="minimumSize">
                   <size>
-                   <width>100</width>
+                   <width>70</width>
                    <height>30</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>100</width>
+                   <width>70</width>
                    <height>30</height>
                   </size>
                  </property>
@@ -281,13 +281,13 @@
                 <widget class="QPushButton" name="pushButtonSell">
                  <property name="minimumSize">
                   <size>
-                   <width>100</width>
+                   <width>70</width>
                    <height>30</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>100</width>
+                   <width>70</width>
                    <height>30</height>
                   </size>
                  </property>
