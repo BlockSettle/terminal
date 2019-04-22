@@ -59,6 +59,35 @@ static int HeadlessApp(int argc, char **argv)
       appObj.start();
 
       while (mainLoopRunning) {
+#ifdef WIN32
+         MSG msg;
+         BOOL bRet = GetMessage(&msg, NULL, 0, 0 );
+         logger->info("GetMessage ret:{}, msg:{}", bRet, msg.message);
+
+         if (bRet == -1) {
+            // handle the error and exit
+            mainLoopRunning = false;
+            mainLoopCV.notify_one();
+         }
+         else if (bRet == 0) {
+            // handle normal exit
+            // WM_QUIT message force GetMessage to return 0
+            mainLoopRunning = false;
+            mainLoopCV.notify_one();
+         }
+         else {
+            // normally no events come here since app has no any window.
+            // No need to run TranslateMessage and DispatchMessage
+            // TranslateMessage(&msg);
+            // DispatchMessage(&msg);
+
+            if (msg.message == WM_CLOSE) {
+               mainLoopRunning = false;
+               mainLoopCV.notify_one();
+            }
+         }
+#endif
+
          std::unique_lock<std::mutex> lock(mainLoopMtx);
          mainLoopCV.wait_for(lock, std::chrono::seconds{ 1 });
       }
@@ -75,14 +104,7 @@ static int HeadlessApp(int argc, char **argv)
    return 0;
 }
 
-#ifdef WIN32
-BOOL WINAPI consoleHandler(DWORD signal)
-{
-   mainLoopRunning = false;
-   mainLoopCV.notify_one();
-   return TRUE;
-}
-#else    // WIN32
+#ifndef WIN32
 void sigHandler(int signum, siginfo_t *, void *)
 {
    mainLoopRunning = false;
@@ -92,9 +114,7 @@ void sigHandler(int signum, siginfo_t *, void *)
 
 int main(int argc, char** argv)
 {
-#ifdef WIN32
-   SetConsoleCtrlHandler(consoleHandler, TRUE);
-#else
+#ifndef WIN32
    struct sigaction act;
    memset(&act, 0, sizeof(act));
    act.sa_sigaction = sigHandler;
