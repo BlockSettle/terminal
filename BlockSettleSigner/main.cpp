@@ -58,22 +58,20 @@ static int HeadlessApp(int argc, char **argv)
       HeadlessAppObj appObj(logger, settings);
       appObj.start();
 
-      while (mainLoopRunning) {
 #ifdef WIN32
+      while (mainLoopRunning) {
          MSG msg;
          BOOL bRet = GetMessage(&msg, NULL, 0, 0 );
          logger->info("GetMessage ret:{}, msg:{}", bRet, msg.message);
 
          if (bRet == -1) {
             // handle the error and exit
-            mainLoopRunning = false;
-            mainLoopCV.notify_one();
+            break;
          }
          else if (bRet == 0) {
             // handle normal exit
             // WM_QUIT message force GetMessage to return 0
-            mainLoopRunning = false;
-            mainLoopCV.notify_one();
+            break;
          }
          else {
             // normally no events come here since app has no any window.
@@ -82,15 +80,17 @@ static int HeadlessApp(int argc, char **argv)
             // DispatchMessage(&msg);
 
             if (msg.message == WM_CLOSE) {
-               mainLoopRunning = false;
-               mainLoopCV.notify_one();
+               break;
             }
          }
-#endif
-
+      }
+#else
+      while (mainLoopRunning) {
          std::unique_lock<std::mutex> lock(mainLoopMtx);
          mainLoopCV.wait_for(lock, std::chrono::seconds{ 1 });
       }
+#endif // WIN32
+
 #ifdef NDEBUG
    }
    catch (const std::exception &e) {
