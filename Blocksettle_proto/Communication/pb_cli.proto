@@ -4,22 +4,23 @@ package Blocksettle.Communication.pbcli;
 
 enum CLIRequestType
 {
-   ErrorMessageType = 1;
-   GetStatusMessageType = 2;
-   LoadUTXOMessageType = 3;
-   CheckAuthAddressMessageType = 4;
-   ReloadWalletMessageType = 5;
-   SendCCTokenMessageType = 6;
-   AuthVerificationTransactionType = 8;
-   AuthRevokeTransactionType = 9;
-   CCDistributionTransactionType = 10;
-   AuthVerificationRejectedType = 11;
-   FundCCGenAddrType = 12;
-   FundCCGATransactionType = 13;
-   GetRequestsStatType = 14;
-   GetPendingSettlementsInfo = 15;
-   CreateCelerUserType = 16;
-   SetInitialPMPriceType = 17;
+   ErrorMessageType                 = 1;
+   GetStatusMessageType             = 2;
+   LoadUTXOMessageType              = 3;
+   CheckAuthAddressMessageType      = 4;
+   ReloadWalletMessageType          = 5;
+   SendCCTokenMessageType           = 6;
+   AuthVerificationTransactionType  = 8;
+   AuthRevokeTransactionType        = 9;
+   CCDistributionTransactionType    = 10;
+   AuthVerificationRejectedType     = 11;
+   FundCCGenAddrType                = 12;
+   FundCCGATransactionType          = 13;
+   GetRequestsStatType              = 14;
+   GetPendingSettlementsInfo        = 15;
+   CreateCelerUserType              = 16;
+   SetInitialPMPriceType            = 17;
+   DisablePMProductType             = 18;
 }
 
 enum ArmoryConnectionState
@@ -198,4 +199,16 @@ message SetInitialPMPriceResponse
 {
    required string   product  = 1;
    required bool     result   = 2;
+}
+
+message DisablePMProductRequest
+{
+   required string   product = 1;
+}
+
+message DisablePMProductResponse
+{
+   required string   product  = 1;
+   required bool     result   = 2;
+   optional string   message  = 3;
 }
