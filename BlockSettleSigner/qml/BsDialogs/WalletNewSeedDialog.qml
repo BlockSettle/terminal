@@ -23,11 +23,11 @@ CustomTitleDialogWindow {
 
     property QSeed seed: QSeed{}
 
-    title: curPage == 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
+    title: curPage === 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
 
     property bool fullScreenMode: true
-    width: fullScreenMode ? 640 : (curPage == 1 ? mainWindow.width * 0.8 : 470)
-    height: fullScreenMode ? 800 : (curPage == 1 ? mainWindow.height * 0.98 : 265)
+    width: curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.8) : 470
+    height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.98) : 265
 
     abortConfirmation: true
     abortBoxType: BSAbortBox.WalletCreation
@@ -39,6 +39,13 @@ CustomTitleDialogWindow {
     onSeedChanged: {
         // need to update object since bindings working only for basic types
         pdf.seed = seed
+    }
+
+    onCurPageChanged: {
+        // Bindings not working here for some reason
+        var w = curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.8) : 470
+        var h = curPage === 1 ? (fullScreenMode ? 800 : mainWindow.width * 0.98) : 265
+        sizeChanged(w, h)
     }
 
     BSMessageBox {
@@ -87,9 +94,6 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
         ScrollView {
             Layout.alignment: Qt.AlignCenter
             Layout.preferredWidth: mainLayout.width * 0.95
-            //            Layout.preferredHeight: root.height - (headerText.height+5) - label.height -
-            //                                    rowButtons.height - mainLayout.spacing * 3
-            //Layout.preferredHeight: root.height * 0.5
             Layout.fillHeight: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AlwaysOn
