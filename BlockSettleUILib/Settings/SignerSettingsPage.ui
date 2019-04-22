@@ -122,11 +122,6 @@
             <string extracomment="Signer process is started manually on local or remote computer">Remote</string>
            </property>
           </item>
-          <item>
-           <property name="text">
-            <string extracomment="Signing works in manual mode via files">Offline</string>
-           </property>
-          </item>
          </widget>
         </item>
         <item row="1" column="0">

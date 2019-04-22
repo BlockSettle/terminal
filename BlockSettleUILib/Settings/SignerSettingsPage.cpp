@@ -11,7 +11,6 @@
 enum RunModeIndex {
    Local = 0,
    Remote,
-   Offline
 };
 
 
@@ -68,7 +67,8 @@ void SignerSettingsPage::onModeChanged(int index)
       showHost(false);
       showPort(true);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
-      showOfflineDir(false);
+      showOfflineDir(true);
+      ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
       showLimits(true);
       showSignerKeySettings(false);
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
@@ -80,20 +80,11 @@ void SignerSettingsPage::onModeChanged(int index)
       ui_->lineEditHost->setText(appSettings_->get<QString>(ApplicationSettings::signerHost));
       showPort(true);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
-      showOfflineDir(false);
-      showLimits(false);
-      showSignerKeySettings(true);
-      ui_->formLayoutConnectionParams->setSpacing(6);
-      break;
-
-   case Offline:
-      showHost(false);
-      showPort(false);
       showOfflineDir(true);
       ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
       showLimits(false);
-      showSignerKeySettings(false);
-      ui_->formLayoutConnectionParams->setSpacing(0);
+      showSignerKeySettings(true);
+      ui_->formLayoutConnectionParams->setSpacing(6);
       break;
 
    default:    break;
@@ -177,12 +168,10 @@ void SignerSettingsPage::apply()
       appSettings_->set(ApplicationSettings::signerPort, ui_->spinBoxPort->value());
       break;
 
-   case Offline:
-      appSettings_->set(ApplicationSettings::signerOfflineDir, ui_->labelOfflineDir->text());
-      break;
-
    default:    break;
    }
+
+   appSettings_->set(ApplicationSettings::signerOfflineDir, ui_->labelOfflineDir->text());
 
    // first comboBoxRunMode index is '--Select--' placeholder
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
