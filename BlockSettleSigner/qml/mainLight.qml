@@ -130,6 +130,17 @@ ApplicationWindow {
         currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
             mainWindow.width = nextDialog.width
             mainWindow.height = nextDialog.height
+
+            nextDialog.sizeChanged.connect(function(w, h){
+                mainWindow.width = w
+                mainWindow.height = h
+            })
         })
+
+        currentDialog.sizeChanged.connect(function(w, h){
+            mainWindow.width = w
+            mainWindow.height = h
+        })
+
     }
 }

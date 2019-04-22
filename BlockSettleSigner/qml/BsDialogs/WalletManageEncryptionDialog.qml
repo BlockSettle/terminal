@@ -162,6 +162,11 @@ CustomDialog {
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
+                                        sizeChanged(noticeEidDialog.width, noticeEidDialog.height)
+
+                                        noticeEidDialog.closed.connect(function(){
+                                            sizeChanged(root.width, root.height)
+                                        })
                                         noticeEidDialog.open()
                                     }
                                 }
