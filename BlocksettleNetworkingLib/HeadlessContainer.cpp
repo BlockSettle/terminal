@@ -18,6 +18,88 @@
 #include <spdlog/spdlog.h>
 #include "signer.pb.h"
 
+constexpr int kKillTimeout = 5000;
+constexpr int kStartTimeout = 5000;
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <tlhelp32.h>
+#define TERM_SUCCESS_CLEAN 0
+#define TERM_SUCCESS_KILL 1
+#define TERM_FAILED 2
+
+#ifndef MAKEULONGLONG
+#define MAKEULONGLONG(ldw, hdw) ((ULONGLONG(hdw) << 32) | ((ldw) & 0xFFFFFFFF))
+#endif
+
+#ifndef MAXULONGLONG
+#define MAXULONGLONG ((ULONGLONG)~((ULONGLONG)0))
+#endif
+
+static DWORD WINAPI GetWinMainThreadId(DWORD dwProcID)
+{
+   DWORD dwMainThreadID = 0;
+   ULONGLONG ullMinCreateTime = MAXULONGLONG;
+
+   HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+   if (hThreadSnap != INVALID_HANDLE_VALUE) {
+      THREADENTRY32 th32;
+      th32.dwSize = sizeof(THREADENTRY32);
+      BOOL bOK = TRUE;
+      for (bOK = Thread32First(hThreadSnap, &th32); bOK;
+           bOK = Thread32Next(hThreadSnap, &th32)) {
+         if (th32.th32OwnerProcessID == dwProcID) {
+            HANDLE hThread = OpenThread(THREAD_QUERY_INFORMATION, TRUE, th32.th32ThreadID);
+            if (hThread) {
+               FILETIME afTimes[4] = {0};
+               if (GetThreadTimes(hThread,
+                                  &afTimes[0], &afTimes[1], &afTimes[2], &afTimes[3])) {
+                  ULONGLONG ullTest = MAKEULONGLONG(afTimes[0].dwLowDateTime,
+                        afTimes[0].dwHighDateTime);
+                  if (ullTest && ullTest < ullMinCreateTime) {
+                     ullMinCreateTime = ullTest;
+                     dwMainThreadID = th32.th32ThreadID; // let it be main... :)
+                  }
+               }
+               CloseHandle(hThread);
+            }
+         }
+      }
+      CloseHandle(hThreadSnap);
+   }
+
+   return dwMainThreadID;
+}
+
+static DWORD WINAPI TerminateWinApp(DWORD dwPID, DWORD dwTimeout)
+{
+   HANDLE   hProc ;
+   DWORD   dwRet ;
+
+   hProc = OpenProcess(SYNCHRONIZE|PROCESS_TERMINATE, FALSE, dwPID);
+   if (hProc == NULL) {
+      return TERM_FAILED ;
+   }
+
+   PostThreadMessage(GetWinMainThreadId(dwPID), WM_QUIT, 0, 0);
+
+
+   // Wait on the handle. If it signals, great. If it times out,
+   // then you kill it.
+   if(WaitForSingleObject(hProc, dwTimeout) != WAIT_OBJECT_0) {
+      dwRet = (TerminateProcess(hProc, 0) ? TERM_SUCCESS_KILL : TERM_FAILED);
+   }
+   else {
+      dwRet = TERM_SUCCESS_CLEAN ;
+   }
+
+   CloseHandle(hProc) ;
+
+   return dwRet;
+}
+
+#endif // Q_OS_WIN
+
 using namespace Blocksettle::Communication;
 Q_DECLARE_METATYPE(headless::RequestPacket)
 Q_DECLARE_METATYPE(std::shared_ptr<bs::sync::hd::Leaf>)
@@ -142,15 +224,19 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
 }
 
-static void killProcess(int pid)
+static int killProcess(int pid, int timeout)
 {
 #ifdef Q_OS_WIN
-   HANDLE hProc;
-   hProc = ::OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-   ::TerminateProcess(hProc, 0);
-   ::CloseHandle(hProc);
+   DWORD dRet = TerminateWinApp((DWORD)pid, timeout);
+   return dRet;
+
+//   HANDLE hProc;
+//   hProc = ::OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+//   ::TerminateProcess(hProc, 0);
+//   ::CloseHandle(hProc);
 #else    // !Q_OS_WIN
    QProcess::execute(QLatin1String("kill"), { QString::number(pid) });
+   return 0;
 #endif   // Q_OS_WIN
 }
 
@@ -173,7 +259,7 @@ bool KillHeadlessProcess()
             qDebug() << "[HeadlessContainer] invalid PID" << pid <<"in" << pidFN;
          }
          else {
-            killProcess(pid);
+            killProcess(pid, kKillTimeout);
             qDebug() << "[HeadlessContainer] killed previous headless process with PID" << pid;
             return true;
          }
@@ -1369,7 +1455,7 @@ bool LocalSigner::Start()
 #endif
 
    headlessProcess_->start(signerAppPath, cmdArgs);
-   if (!headlessProcess_->waitForStarted(5000)) {
+   if (!headlessProcess_->waitForStarted(kStartTimeout)) {
       logger_->error("[HeadlessContainer] Failed to start child");
       headlessProcess_.reset();
       emit ready();
@@ -1401,19 +1487,12 @@ bool LocalSigner::Stop()
 
    if (headlessProcess_) {
 #ifdef Q_OS_WIN
-      const auto pid = headlessProcess_->pid();
-      if (pid && AttachConsole(pid->dwProcessId)) {
-         SetConsoleCtrlHandler(NULL, TRUE);  // Disable shutdown on Ctrl-C for self
-         GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
-         FreeConsole();
-      }
-      else {
-         headlessProcess_->kill();
-      }
+      int ret = killProcess(headlessProcess_->processId(), kKillTimeout);
+      logger_->info("Local headless process terminated with code {}", ret);
 #else
       headlessProcess_->terminate();
 #endif
-      if (!headlessProcess_->waitForFinished(500)) {
+      if (!headlessProcess_->waitForFinished(kKillTimeout)) {
          headlessProcess_->close();
       }
       headlessProcess_.reset();
