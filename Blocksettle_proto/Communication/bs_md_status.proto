@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.MDStatus;
+
+enum MDStatusServerRequestType
+{
+   GetStatusRequestType = 0;
+}
+
+message MDStatusRequestHeader
+{
+   MDStatusServerRequestType request_type = 1;
+}
+
+enum MDSTatusResponseType
+{
+   GetStatusResponseType = 0;
+}
+
+message MDStatusResponseHeader
+{
+   MDSTatusResponseType response_type = 1;
+   bytes                response_data = 2;
+}
+
+message MDStatusServerStatus
+{
+   bool connected_to_seb      = 1;
+   bool connected_to_bitavg   = 2;
+   bool connected_to_th       = 3;
+
+   // FX stream timeouts
+   // timeout - time interval since last pair received. in ms
+   uint64 eur_gbp_timeout = 4;
+   uint64 eur_sek_timeout = 5;
+   uint64 gbp_sek_timeout = 6;
+   uint64 eur_jpy_timeout = 7;
+   uint64 gbp_jpy_timeout = 8;
+   uint64 jpy_sek_timeout = 9;
+   uint64 eur_usd_timeout = 10;
+
+   bool eur_gbp_from_xbt = 11;
+   bool eur_sek_from_xbt = 12;
+   bool gbp_sek_from_xbt = 13;
+   bool eur_jpy_from_xbt = 14;
+   bool gbp_jpy_from_xbt = 15;
+   bool jpy_sek_from_xbt = 16;
+   bool eur_usd_from_xbt = 17;
+
+   // XBT stream timeouts
+   uint64 xbt_gbp_timeout = 18;
+   uint64 xbt_eur_timeout = 19;
+   uint64 xbt_sek_timeout = 20;
+   uint64 xbt_jpy_timeout = 21;
+   uint64 xbt_usd_timeout = 22;
+}

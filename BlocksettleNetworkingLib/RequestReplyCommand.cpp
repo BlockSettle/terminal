@@ -101,11 +101,10 @@ void RequestReplyCommand::OnDataReceived(const std::string& data)
 
 void RequestReplyCommand::OnConnected()
 {
-   logger_->debug("[RequestReplyCommand::OnConnected]");
    if (executeOnConnect_) {
       if (!connection_->send(requestData_)) {
          std::string errorMessage = name_ + ": failed to send request";
-         logger_->error("{}", errorMessage);
+         logger_->error("[RequestReplyCommand::OnConnected] {}", errorMessage);
          if (!dropResult_ && errorCallback_) {
             errorCallback_(errorMessage);
          }
