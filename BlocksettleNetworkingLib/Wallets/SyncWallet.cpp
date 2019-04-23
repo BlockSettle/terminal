@@ -860,4 +860,9 @@ void Wallet::newAddresses(const std::vector<std::pair<std::string, AddressEntryT
    if (signContainer_) {
       signContainer_->syncNewAddresses(walletId(), inData, cb);
    }
+   else {
+      if (logger_) {
+         logger_->warn("[{}] no signer set", __func__);
+      }
+   }
 }
