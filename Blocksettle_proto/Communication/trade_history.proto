@@ -34,6 +34,7 @@ enum TradeHistoryResponseType
 
    LoadInitialPMPriceResponseType               = 7;
    LoadEODPricesResponseType                    = 8;
+   DisabledCCProductUpdateType                  = 9;
 }
 
 message TradeHistoryRequest
@@ -136,6 +137,11 @@ message TradeHistoryServerUpdate
 }
 
 message TradeHistoryNewCCProductUpdate
+{
+   string                  product = 1;
+}
+
+message DisabledCCProductUpdate
 {
    string                  product = 1;
 }

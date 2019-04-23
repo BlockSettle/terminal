@@ -82,8 +82,6 @@ private:
    void InitChatView();
    void InitChartsView();
 
-   void InitOTP();
-
    void UpdateMainWindowAppearence();
 
    bool isMDLicenseAccepted() const;
