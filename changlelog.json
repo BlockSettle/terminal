@@ -1,7 +1,23 @@
 {
-   "latest_version" : "0.14.14",
-   "release_date" : "19 April 2019",
+   "latest_version" : "0.14.15",
+   "release_date" : "22 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.15",
+         "previous_version" : "0.14.14",
+         "release_date" : "22 April 2019",
+         "improvements" :
+         [
+            "Remove offline signer settings"
+         ],
+         "bug_fixes" :
+         [
+            "WO wallet loading",
+            "Minor UI fixes and improvements"
+         ],
+         "revision" : "46de3e7e",
+         "common_revision" : "d9522e79"
+      },
       {
          "version_string" : "0.14.14",
          "previous_version" : "0.14.13",
