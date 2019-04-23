@@ -104,6 +104,7 @@ void MarketDataWidget::OnMDDisconnecting()
 {
    ui_->pushButtonMDConnection->setText(tr("Disconnecting"));
    ui_->pushButtonMDConnection->setEnabled(false);
+   mdProvider_->UnsubscribeFromMD();
 }
 
 void MarketDataWidget::OnMDDisconnected()

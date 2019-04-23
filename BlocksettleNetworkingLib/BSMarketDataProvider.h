@@ -42,6 +42,7 @@ public:
 
 protected:
    bool StartMDConnection() override;
+   void StopMDConnection() override;
 
 private:
    void onDataFromMD(const std::string& data);
