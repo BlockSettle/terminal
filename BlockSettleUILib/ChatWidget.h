@@ -6,6 +6,7 @@
 #include <QScopedPointer>
 
 #include "ChatUserListLogic.h"
+#include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
 
 #include <memory>
@@ -24,7 +25,7 @@ class ChatWidgetState;
 class ChatSearchPopup;
 class OTCRequestViewModel;
 
-class ChatWidget : public QWidget
+class ChatWidget : public QWidget, public ViewItemWatcher
 {
    Q_OBJECT
 
@@ -103,6 +104,24 @@ private:
    void changeState(ChatWidget::State state);
 
    bool eventFilter(QObject * obj, QEvent * event) override;
+
+   // ViewItemWatcher interface
+public:
+   void onElementSelected(CategoryElement *element) override;
+
+   // ViewItemWatcher interface
+public:
+   void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
+
+   // ViewItemWatcher interface
+public:
+   void onElementUpdated(CategoryElement *element) override;
 };
+
+
+
+
+
+
 
 #endif // CHAT_WIDGET_H

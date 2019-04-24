@@ -10,6 +10,7 @@
 #include <QTextTable>
 #include <QImage>
 #include <QMenu>
+#include "ChatClientUserView.h"
 
 namespace Chat {
    class MessageData;
@@ -46,7 +47,7 @@ private:
    QColor colorWhite_;
 };
 
-class ChatMessagesTextEdit : public QTextBrowser
+class ChatMessagesTextEdit : public QTextBrowser, public ViewItemWatcher
 {
    Q_OBJECT
 
@@ -57,6 +58,8 @@ public:
 public:
    void setOwnUserId(const std::string &userId) { ownUserId_ = QString::fromStdString(userId); }
    void switchToChat(const QString& chatId, bool isGroupRoom = false);
+   void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
+
    
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
@@ -98,6 +101,7 @@ private:
    MessagesHistory messagesToLoadMore_;
    QString   currentChatId_;
    QString   ownUserId_;
+   std::shared_ptr<ChatItemActionsHandler> handler_;
    
 private:
    std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
@@ -107,6 +111,7 @@ private:
    void loadMore();
    QString toHtmlText(const QString &text);
    QString toHtmlUsername(const QString &username);
+   QString toHtmlInvalid(const QString &text);
 
    QTextTableFormat tableFormat;
    QTextTable *table;
@@ -121,8 +126,19 @@ private:
    QImage statusImageOnline_;
    QImage statusImageRead_;
 
+   // ViewItemWatcher interface
+public:
+   void onElementSelected(CategoryElement *element) override;
+   void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
+   void onElementUpdated(CategoryElement *element) override;
    QTextCursor textCursor_;
    QString anchor_;
 };
+
+
+
+
+
+
 
 #endif

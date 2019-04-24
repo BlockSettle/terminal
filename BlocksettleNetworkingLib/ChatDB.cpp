@@ -188,37 +188,14 @@ bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
 bool ChatDB::updateMessageStatus(const QString& messageId, int ustatus)
 {
    const QString cmd = QLatin1String("UPDATE messages SET"
-                                     " state = state & :unset | :set"
+                                     " state = :state"
                                      " WHERE (id = :mid);");
-   /*
-    * Logic is next:
-    * We have new message status that should be updated
-    * but this message status is for message in the memory
-    * and this message in the memory have unset Encrypted flag
-    * But we can't change this flag in DB, we want to store messages in encrypted state
-    * 
-    * So we have mask that show what flags allowed to be changed
-    * using this mask we extracting flags that should be set (mask & ustatus)
-    * and flags that should be unset (~(set ^ mask))
-    * 
-    * Then we use this flags set and unset for change status in the DB without
-    * pulling status itself from DB
-    * 
-    * So just update status in the message in memory and use this method with updated status
-    * And it will set all flags in DB to updated state except Encrypted
-   */
-   
-    // Mask its allowed for change flags
-   int mask = ~static_cast<int>(Chat::MessageData::State::Encrypted);
-   int set = mask & ustatus;
-   int unset = ~(set ^ mask);
-   
+
    QSqlQuery query(db_);
 
    query.prepare(cmd);
    query.bindValue(QLatin1String(":mid"), messageId);
-   query.bindValue(QLatin1String(":set"), set);
-   query.bindValue(QLatin1String(":unset"), unset);
+   query.bindValue(QLatin1String(":state"), ustatus);
    
    if (!query.exec()) {
       logger_->error("[ChatDB::updateMessageStatus] failed to update message status with server message id: {}; Error: {}\nQuery: {}",
@@ -345,7 +322,8 @@ bool ChatDB::isContactExist(const QString &userId)
       logger_->error("[ChatDB::isContactExist] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
-   query.bindValue(QString::fromStdString(":user_id"), userId);
+   query.bindValue(QLatin1String(":user_id"), userId);
+
    if (!query.exec()) {
       logger_->error("[ChatDB::isContactExist] failed to exec query: {}", query.lastError().text().toStdString());
       return false;
@@ -361,17 +339,18 @@ bool ChatDB::isContactExist(const QString &userId)
 bool ChatDB::addContact(const ContactUserData &contact)
 {
    if (isContactExist(contact.userId())) {
-      return false;
+      return true;
    }
 
-   QSqlQuery query(QLatin1String(
-      "INSERT INTO contacts(user_id, user_name, status) VALUES(?, ?, ?);"), db_);
-   query.bindValue(0, contact.userId());
-   query.bindValue(1, contact.userName());
-   query.bindValue(2, static_cast<int>(contact.status()));
+   QSqlQuery query(db_);
+   query.prepare(QLatin1String("INSERT INTO contacts(user_id, user_name, status) VALUES(:user_id, :user_name, :status)"));
+
+   query.bindValue(QLatin1String(":user_id"), contact.userId());
+   query.bindValue(QLatin1String(":user_name"), contact.userName());
+   query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
 
    if (!query.exec()) {
-      logger_->error("[ChatDB::addContact] failed to insert new contact.");
+      logger_->error("[ChatDB::addContact] failed to insert new contact: {}", query.lastError().text().toStdString());
       return false;
    }
 
@@ -381,11 +360,11 @@ bool ChatDB::addContact(const ContactUserData &contact)
 bool ChatDB::removeContact(const QString &userId)
 {
    if (!isContactExist(userId)) {
-      return false;
+      return true;
    }
 
    QSqlQuery query(QLatin1String(
-      "DELETE FROM contacts WHERE user_id=:user_id;"), db_);
+      "DELETE FROM contacts WHERE user_id=?;"), db_);
    query.bindValue(0, userId);
 
    if (!query.exec()) {
@@ -425,9 +404,11 @@ bool ChatDB::updateContact(const ContactUserData &contact)
       logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
-   query.bindValue(QString::fromStdString(":user_id"), contact.userId());
-   query.bindValue(QString::fromStdString(":user_name"), contact.userName());
-   query.bindValue(QString::fromStdString(":status"), static_cast<int>(contact.status()));
+
+   query.bindValue(QLatin1String(":user_name"), contact.userName());
+   query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
+   query.bindValue(QLatin1String(":user_id"), contact.userId());
+
    if (!query.exec()) {
       logger_->error("[ChatDB::updateContact] failed to exec query: {}", query.lastError().text().toStdString());
       return false;
@@ -435,3 +416,29 @@ bool ChatDB::updateContact(const ContactUserData &contact)
 
    return true;
 }
+
+bool ChatDB::getContact(const QString& userId, ContactUserData& contact)
+{
+   QSqlQuery query(db_);
+   if (!query.prepare(QLatin1String("SELECT user_id, user_name, status FROM contacts WHERE user_id=?;"))) {
+      logger_->error("[ChatDB::getContact] failed to prepare query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+
+   query.bindValue(0, userId);
+
+   if (!query.exec()) {
+      logger_->error("[ChatDB::getContact] failed to exec query: {}", query.lastError().text().toStdString());
+      return false;
+   }
+
+   if (query.next()) {
+      contact.setUserId(query.value(0).toString());
+      contact.setUserName(query.value(1).toString());
+      contact.setStatus(static_cast<ContactUserData::Status>(query.value(2).toInt()));
+      return true;
+   }
+
+   return false;
+}
+

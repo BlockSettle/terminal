@@ -18,7 +18,7 @@ class ContactUserData
 {
 public:
    enum class Status {
-      Friend,
+      Friend = 0,
       Rejected,
       Incoming,
       Outgoing
@@ -77,6 +77,12 @@ public:
    bool removeContact(const QString &userId);
    bool getContacts(ContactUserDataList &contactList);
    bool updateContact(const ContactUserData &contact);
+   bool getContact(const QString& userId, ContactUserData& contact);
+
+//   bool insertContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
+//   bool removeContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
+//   bool updateContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
+//   std::vector<std::shared_ptr<Chat::ContactRecordData>> getContactRecordList(const QString userdId);
 
 private:
    bool createMissingTables();

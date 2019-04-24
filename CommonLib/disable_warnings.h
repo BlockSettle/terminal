@@ -10,6 +10,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4100)
 #pragma warning(disable : 4996)
+#pragma warning(disable : 4250)
 #endif
 
 #if defined(__GNUC__)
