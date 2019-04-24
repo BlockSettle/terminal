@@ -17,7 +17,12 @@ enum TradeHistoryRequestType
    LoadSnapshotRequestType                      = 3;
    LoadPMProductsListRequestType                = 4;
    LoadInitialPMPriceRequestType                = 5;
+   // LoadEODPricesRequestType - send DateContainer as payload to get EOD for a single date
+   // response LoadEODPricesResponse
    LoadEODPricesRequestType                     = 6;
+   // LoadEODSnapshotRequestType - send DateContainer as payload to get EOD for all days since that date
+   // response EODSnapshotResponse
+   LoadEODSnapshotRequestType                   = 7;
 }
 
 enum TradeHistoryResponseType
@@ -35,6 +40,10 @@ enum TradeHistoryResponseType
    LoadInitialPMPriceResponseType               = 7;
    LoadEODPricesResponseType                    = 8;
    DisabledCCProductUpdateType                  = 9;
+   // EODSavedUpdateType - payload is EODSavedUpdate
+   EODSavedUpdateType                           = 10;
+   // EODSnapshotResponseType - payload is EODSnapshotResponse
+   EODSnapshotResponseType                      = 11;
 }
 
 message TradeHistoryRequest
@@ -159,13 +168,6 @@ message LoadInitialPMPriceResponse
    double offer_price   = 4;
 }
 
-message LoadEODPricesRequest
-{
-   uint32 year    = 1;
-   uint32 month   = 2;
-   uint32 day     = 3;
-}
-
 message EODPrice
 {
    string product = 1;
@@ -183,4 +185,24 @@ message LoadEODPricesResponse
 {
    bytes             snapshot       = 1;
    string            debug_message  = 2;
+}
+
+message DateContainer
+{
+   uint32 year    = 1;
+   uint32 month   = 2;
+   uint32 day     = 3;
+}
+
+message EODSavedUpdate
+{
+   DateContainer  date       = 1;
+   bytes          snapshot   = 2;
+}
+
+message EODSnapshotResponse
+{
+   DateContainer           since_date     = 1;
+   repeated EODSavedUpdate eod            = 2;
+   string                  debug_message  = 3;
 }
