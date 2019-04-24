@@ -159,11 +159,6 @@
         <string>DEALING</string>
        </attribute>
       </widget>
-      <widget class="ChartWidget" name="widgetChart">
-       <attribute name="title">
-        <string>CHARTS</string>
-       </attribute>
-      </widget>
       <widget class="WalletsWidget" name="widgetWallets">
        <attribute name="title">
         <string>WALLETS</string>
@@ -183,6 +178,11 @@
       <widget class="ExplorerWidget" name="widgetExplorer">
        <attribute name="title">
         <string>EXPLORER</string>
+       </attribute>
+      </widget>
+      <widget class="ChartWidget" name="widgetChart">
+       <attribute name="title">
+        <string>CHARTS</string>
        </attribute>
       </widget>
       <widget class="ChatWidget" name="widgetChat">
