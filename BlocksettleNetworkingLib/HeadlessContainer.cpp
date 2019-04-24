@@ -1292,6 +1292,7 @@ bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSign
    if (isWalletOffline(txSignReq.walletId)) {
       return signOffline(txSignReq);
    }
+   return HeadlessContainer::signTXRequest(txSignReq, autoSign, mode, password, keepduplicatedrecipients);
 }
 
 bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRequest &txSignReq)
