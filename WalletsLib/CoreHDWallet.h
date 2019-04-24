@@ -74,6 +74,7 @@ namespace bs {
             void createStructure();
             void shutdown();
             bool eraseFile();
+            const std::string& getFileName(void) const;
             void copyToFile(const std::string& filename);
 
             bool changePassword(const SecureBinaryData& newPass);
@@ -89,7 +90,6 @@ namespace bs {
             std::string    name_, desc_;
             NetworkType    netType_ = NetworkType::Invalid;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>              groups_;
-            mutable std::map<std::string, std::shared_ptr<bs::core::Wallet>>  leaves_;
             std::shared_ptr<spdlog::logger>     logger_;
             bool extOnlyFlag_ = false;
 
@@ -103,7 +103,6 @@ namespace bs {
             void initNew(const wallet::Seed &, 
                const SecureBinaryData& passphrase, const std::string& folder);
             void loadFromFile(const std::string &filename);
-            std::string getFileName(const std::string &dir) const;
             void putDataToDB(const BinaryData& key, const BinaryData& data);
             BinaryDataRef getDataRefForKey(LMDB* db, const BinaryData& key) const;
             BinaryDataRef getDataRefForKey(uint32_t key) const;

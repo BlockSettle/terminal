@@ -26,8 +26,9 @@ namespace bs {
                const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             size_t getNumLeaves() const { return leaves_.size(); }
-            std::shared_ptr<hd::Leaf> getLeaf(bs::hd::Path::Elem) const;
-            std::shared_ptr<hd::Leaf> getLeaf(const std::string &key) const;
+            std::shared_ptr<hd::Leaf> getLeafByPath(bs::hd::Path::Elem) const;
+            std::shared_ptr<hd::Leaf> getLeafByPath(const std::string &key) const;
+            std::shared_ptr<hd::Leaf> getLeafById(const std::string &id) const;
             std::vector<std::shared_ptr<hd::Leaf>> getLeaves() const;
             std::vector<std::shared_ptr<bs::core::Wallet>> getAllLeaves() const;
             std::shared_ptr<Leaf> createLeaf(bs::hd::Path::Elem);

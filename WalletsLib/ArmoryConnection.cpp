@@ -279,8 +279,25 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
    if (!wallet) {
       wallet = std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
    }
+   
    const auto &regId = wallet->registerAddresses(addrVec, asNew);
-   if (!isOnline_) {
+   
+   {
+      std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
+      registrationCallbacks_[regId] = cb;
+   }
+   
+   return regId;
+
+   /***
+   This triggering of the registration callback does not work in any case. The code 
+   needs to wait on the DB refresh signal, as it isn't guaranteed to happen right 
+   away, like with a fullnode (for home setups). Even with a supernode, the server may
+   not process the registration request as soon as it receives it (busy with another
+   task). That delay is enough to introduce false positives.
+   ***/
+
+   /*if (!isOnline_) {
       preOnlineRegIds_[regId] = cb;
    }
    else {
@@ -292,8 +309,7 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
             cb(regId);
          }
       }
-   }
-   return regId;
+   }*/
 }
 
 bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletIDs
@@ -705,24 +721,29 @@ bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &
 
 void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
 {
-   if (!preOnlineRegIds_.empty()) {
-      for (const auto &id : ids) {
-         const auto regIdIt = preOnlineRegIds_.find(id.toBinStr());
-         if (regIdIt != preOnlineRegIds_.end()) {
-            logger_->debug("[{}] found preOnline registration id: {}", __func__
-                           , id.toBinStr());
-            const auto regId = regIdIt->first;
-            const auto cb = regIdIt->second;
-            if (cbInMainThread_) {
-               QMetaObject::invokeMethod(this, [cb, regId]{ cb(regId); });
-            }
-            else {
+   {
+      std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
+      if (!registrationCallbacks_.empty())
+      {
+         for (const auto &id : ids)
+         {
+            const auto regIdIt = registrationCallbacks_.find(id.toBinStr());
+            if (regIdIt != registrationCallbacks_.end())
+            {
+               logger_->debug("[{}] found preOnline registration id: {}", __func__
+                  , id.toBinStr());
+               const auto regId = regIdIt->first;
+               const auto cb = regIdIt->second;
+               registrationCallbacks_.erase(regIdIt);
+
+               //return as soon as possible from this callback, this isn't meant
+               //to cascade operations from
                cb(regId);
             }
-            preOnlineRegIds_.erase(regIdIt);
          }
       }
    }
+
    const bool online = (state_ == ArmoryConnection::State::Ready);
    if (logger_->level() <= spdlog::level::debug) {
       std::string idString;

@@ -163,7 +163,7 @@ SignContainer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalle
 
       const auto leafIndex = path.get(2);
       std::shared_ptr<bs::core::hd::Leaf> leaf; // = group->createLeaf(leafIndex, leafNode);
-      if (!leaf || !(leaf = group->getLeaf(leafIndex))) {
+      if (!leaf || !(leaf = group->getLeafByPath(leafIndex))) {
          logger_->error("[{}] failed to create/get leaf {}", __func__, path.toString());
          return 0;
       }
@@ -341,6 +341,9 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
       result.encryptionKeys = wallet->encryptionKeys();
       result.encryptionRank = wallet->encryptionRank();
       result.netType = wallet->networkType();
+      
+      result.highestExtIndex_ = wallet->getExtAddressCount();
+      result.highestIntIndex_ = wallet->getIntAddressCount();
 
       for (const auto &addr : wallet->getUsedAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
@@ -394,22 +397,32 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
    , bool persistent)
 {
    std::vector<std::pair<bs::Address, std::string>> result;
-   result.reserve(inData.size());
    const auto wallet = walletsMgr_->getWalletById(walletId);
-   if (wallet) {
-      for (const auto &in : inData) {
-         std::string index;
-         try {
-            const bs::Address addr(in.first);
-            if (addr.isValid()) {
-               index = wallet->getAddressIndex(addr);
-            }
-         } catch (const std::exception &) {}
-         if (index.empty()) {
-            index = in.first;
-         }
-         //result.push_back({ wallet->createAddressWithIndex(in.first, persistent, in.second), in.first });
-      }
+   if (wallet == nullptr)
+   {
+      cb(result);
+      return;
    }
+
+   result.reserve(inData.size());
+   for (const auto &in : inData)
+   {
+      std::string index;
+      try
+      {
+         const bs::Address addr(in.first);
+         if (addr.isValid())
+            index = wallet->getAddressIndex(addr);
+      }
+      catch (const std::exception&)
+      {
+      }
+
+      if (index.empty())
+         index = in.first;
+
+      result.push_back({ wallet->synchronizeUsedAddressChain(in.first, in.second), in.first });
+   }
+
    cb(result);
 }

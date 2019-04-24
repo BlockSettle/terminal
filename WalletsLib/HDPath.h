@@ -32,7 +32,7 @@ namespace bs {
          void clear();
          bool isAbolute() const { return isAbsolute_; }
 
-         std::string toString(bool alwaysAbsolute = true) const;
+         std::string toString() const;
 
          bool isHardened(size_t index) const;
 

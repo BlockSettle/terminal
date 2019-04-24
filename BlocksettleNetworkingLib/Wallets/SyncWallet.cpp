@@ -92,7 +92,16 @@ bool Wallet::setTransactionComment(const BinaryData &txOrHash, const std::string
 
 bool Wallet::isBalanceAvailable() const
 {
-   return (armory_ != nullptr) && (armory_->state() == ArmoryConnection::State::Ready) && (btcWallet_ != nullptr);
+   /***
+   This isn't a valid test at all, it does not check for wallet registration status.
+
+   EDIT: added the registration check
+   ***/
+   return (
+      armory_ != nullptr) && 
+      (armory_->state() == ArmoryConnection::State::Ready) && 
+      (btcWallet_ != nullptr &&
+      isRegistered());
 }
 
 BTCNumericTypes::balance_type Wallet::getSpendableBalance() const
@@ -597,6 +606,7 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConn
    if (armory_) {
       const auto &cbRegister = [this](const std::string &) {
          logger_->debug("Wallet ready: {}", walletId());
+         this->setRegistered();
          emit walletReady(QString::fromStdString(walletId()));
       };
       const auto regId = armory_->registerWallet(btcWallet_, walletId(), getAddrHashes(), cbRegister, asNew);

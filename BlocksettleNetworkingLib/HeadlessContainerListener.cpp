@@ -816,7 +816,7 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
          }
          const auto leafIndex = path.get(2);
          auto leaf = nullptr;
-         if (!leaf || (leaf != group->getLeaf(leafIndex))) {
+         if (!leaf || (leaf != group->getLeafByPath(leafIndex))) {
             logger_->error("[HeadlessContainerListener] failed to create/get leaf {}", path.toString());
             CreateHDWalletResponse(clientId, id, "failed to create leaf");
             return;

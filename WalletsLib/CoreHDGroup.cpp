@@ -15,20 +15,31 @@ hd::Group::Group(std::shared_ptr<AssetWallet_Single> walletPtr,
    , logger_(logger)
 {}
 
-std::shared_ptr<hd::Leaf> hd::Group::getLeaf(bs::hd::Path::Elem elem) const
+std::shared_ptr<hd::Leaf> hd::Group::getLeafByPath(bs::hd::Path::Elem elem) const
 {
    //leafs are always hardened
    elem |= 0x80000000;
    const auto itLeaf = leaves_.find(elem);
-   if (itLeaf == leaves_.end()) {
+   if (itLeaf == leaves_.end())
       return nullptr;
-   }
+
    return itLeaf->second;
 }
 
-std::shared_ptr<hd::Leaf> hd::Group::getLeaf(const std::string &key) const
+std::shared_ptr<hd::Leaf> hd::Group::getLeafByPath(const std::string &key) const
 {
-   return getLeaf(bs::hd::Path::keyToElem(key));
+   return getLeafByPath(bs::hd::Path::keyToElem(key));
+}
+
+std::shared_ptr<hd::Leaf> hd::Group::getLeafById(const std::string &id) const
+{
+   for (auto& leaf : leaves_)
+   {
+      if (leaf.second->walletId() == id)
+         return leaf.second;
+   }
+
+   return nullptr;
 }
 
 std::vector<std::shared_ptr<hd::Leaf>> hd::Group::getLeaves() const
@@ -55,7 +66,7 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem)
 {
    //leaves are always hardened
    elem |= 0x80000000;
-   if (getLeaf(elem) != nullptr) {
+   if (getLeafByPath(elem) != nullptr) {
       return nullptr;
    }
 
@@ -88,7 +99,7 @@ bool hd::Group::addLeaf(const std::shared_ptr<hd::Leaf> &leaf)
 
 bool hd::Group::deleteLeaf(const bs::hd::Path::Elem &elem)
 {
-   const auto &leaf = getLeaf(elem);
+   const auto &leaf = getLeafByPath(elem);
    if (leaf == nullptr) {
       return false;
    }
@@ -208,17 +219,17 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
    //account IDs and nodes
    if (!isExtOnly_)
    {
-      accTypePtr->setNodes({ hd::Leaf::addrTypeExternal, hd::Leaf::addrTypeInternal });
-      accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
-      accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeInternal));
+      accTypePtr->setNodes({ hd::Leaf::addrTypeExternal_, hd::Leaf::addrTypeInternal_ });
+      accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal_));
+      accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeInternal_));
    }
    else
    {
       //ext only address account uses the same asset account for both outer and 
       //inner chains
-      accTypePtr->setNodes({ hd::Leaf::addrTypeExternal });
-      accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
-      accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal));
+      accTypePtr->setNodes({ hd::Leaf::addrTypeExternal_ });
+      accTypePtr->setOuterAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal_));
+      accTypePtr->setInnerAccountID(WRITE_UINT32_BE(hd::Leaf::addrTypeExternal_));
    }
 
    //address types
@@ -240,11 +251,12 @@ void hd::Group::deserialize(BinaryDataRef value)
    path_ = bs::hd::Path::fromString(strPath);
    isExtOnly_ = (bool)brrVal.get_uint8_t();
 
-   while (brrVal.getSizeRemaining() > 4) {
+   while (brrVal.getSizeRemaining() > 4) 
+   {
       const auto keyLeaf = brrVal.get_uint32_t();
-      if (keyLeaf != LEAF_KEY) {
+      if (keyLeaf != LEAF_KEY)
          throw WalletException("failed to read BIP44 leaf");
-      }
+
       len = brrVal.get_var_int();
       const auto serLeaf = brrVal.get_BinaryData(len);
       auto leafPair = hd::Leaf::deserialize(serLeaf);

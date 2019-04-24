@@ -228,11 +228,17 @@ void hd::Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-void hd::Wallet::registerWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::vector<std::string> hd::Wallet::registerWallet(
+   const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
-   for (const auto &leaf : getLeaves()) {
-      leaf->registerWallet(armory, asNew);
+   std::vector<std::string> result;
+   for (const auto &leaf : getLeaves()) 
+   {
+      auto&& regIDs = leaf->registerWallet(armory, asNew);
+      result.insert(result.end(), regIDs.begin(), regIDs.end());
    }
+
+   return result;
 }
 
 bool hd::Wallet::startRescan(const hd::Wallet::cb_scan_notify &cb, const cb_scan_read_last &cbr

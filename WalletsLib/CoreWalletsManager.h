@@ -39,7 +39,7 @@ namespace bs {
          void loadWallets(NetworkType, const std::string &walletsPath, bool wo = false, const CbProgress &cb = nullptr);
          void backupWallet(const HDWalletPtr &, const std::string &targetDir) const;
 
-         bool empty() const { return wallets_.empty(); }
+         bool empty() const { return hdWallets_.empty(); }
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
 
@@ -64,10 +64,7 @@ namespace bs {
          void addWallet(const HDWalletPtr &);
 
       private:
-         void addWallet(const WalletPtr &);
-
          bool isWalletFile(const std::string &fileName) const;
-         void saveWallet(const WalletPtr &, NetworkType);
          void saveWallet(const HDWalletPtr &);
          void eraseWallet(const WalletPtr &);
 
@@ -76,11 +73,11 @@ namespace bs {
 
          const unsigned int                  nbBackupFilesToKeep_;
          std::unordered_map<std::string, HDWalletPtr> hdWallets_;
-         std::unordered_map<std::string, WalletPtr>   wallets_;
+         //std::unordered_map<std::string, WalletPtr>   wallets_;
          std::unordered_set<std::string>     walletNames_;
-         std::vector<BinaryData>             walletsId_;
+         //std::vector<BinaryData>             walletsId_;
          std::vector<std::string>            hdWalletsId_;
-         BinaryData                          chainCode_;
+         //BinaryData                          chainCode_;
          std::shared_ptr<SettlementWallet>   settlementWallet_;
       };
 

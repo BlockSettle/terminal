@@ -119,12 +119,12 @@ void hd::Path::append(const std::string &key)
    append(keyToElem(key));
 }
 
-std::string hd::Path::toString(bool alwaysAbsolute) const
+std::string hd::Path::toString() const
 {
-   if (path_.empty()) {
-      return {};
-   }
-   std::string result = (alwaysAbsolute || isAbsolute_) ? "m/" : "";
+   if (path_.empty())
+      throw std::runtime_error("empty path");
+
+   std::string result = isAbsolute_ ? "m/" : "";
    for (size_t i = 0; i < path_.size(); i++) 
    {
       result.append(elemToKey(path_[i]));

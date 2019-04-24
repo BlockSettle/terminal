@@ -30,6 +30,13 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       encryptionRank_ = data.encryptionRank;
       netType_ = data.netType;
 
+      if (data.highestExtIndex_ == UINT32_MAX ||
+         data.highestIntIndex_ == UINT32_MAX)
+         throw WalletException("unintialized addr chain use index");
+
+      lastExtIdx_ = data.highestExtIndex_;
+      lastIntIdx_ = data.highestIntIndex_;
+
       for (const auto &addr : data.addresses) {
          addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
@@ -489,16 +496,26 @@ std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryCo
    if (armory_) {
       const auto addrsExt = getAddrHashesExt();
       std::vector<std::string> regIds;
-      const auto &cbEmpty = [](const std::string &) {};
+      auto notif_count = std::make_shared<unsigned>(0);
+      const auto &cbRegistered = [this, notif_count](const std::string &)
+      {
+         if (!this->isExtOnly_)
+         {
+            if ((*notif_count)++ == 0)
+               return;
+         }
+
+         this->setRegistered();
+      };
 
       regIdExt_ = armory_->registerWallet(btcWallet_, walletId()
-         , addrsExt, cbEmpty, asNew);
+         , addrsExt, cbRegistered, asNew);
       regIds.push_back(regIdExt_);
 
       if (!isExtOnly_) {
          const auto addrsInt = getAddrHashesInt();
          regIdInt_ = armory_->registerWallet(btcWalletInt_
-            , getWalletIdInt(), addrsInt, cbEmpty, asNew);
+            , getWalletIdInt(), addrsInt, cbRegistered, asNew);
          regIds.push_back(regIdInt_);
       }
       return regIds;
@@ -534,31 +551,33 @@ bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
 bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb, bool signal)
 {
    const bool isInternal = (key.path.get(-2) == addrTypeInternal);
-   if (isInternal && isExtOnly_) {
+   if (isInternal && isExtOnly_)
       return {};
-   }
-   bs::Address result;
 
+   bs::Address result;
    AddrPoolKey keyCopy = key;
-   if (key.aet == AddressEntryType_Default) {
+   if (key.aet == AddressEntryType_Default)
       keyCopy.aet = defaultAET_;
-   }
+
    const auto addrPoolIt = addressPool_.find(keyCopy);
-   if (addrPoolIt != addressPool_.end()) {
+   if (addrPoolIt != addressPool_.end()) 
+   {
       result = std::move(addrPoolIt->second);
       addressPool_.erase(addrPoolIt->first);
       poolByAddr_.erase(result);
    }
-   else {
-      const auto &cbPool = [this, cb, keyCopy] {
+   else 
+   {
+      const auto &cbPool = [this, cb, keyCopy] 
+      {
          const auto addrPoolIt = addressPool_.find(keyCopy);
-         if (addrPoolIt != addressPool_.end()) {
+         if (addrPoolIt != addressPool_.end()) 
+         {
             const auto addr = addrPoolIt->second;
             addressPool_.erase(addrPoolIt->first);
             poolByAddr_.erase(addr);
-            if (cb) {
+            if (cb)
                cb(addr);
-            }
          }
       };
       topUpAddressPool(cbPool);
@@ -584,31 +603,40 @@ void hd::Leaf::topUpAddressPool(const std::function<void()> &cb, size_t nbIntAdd
    nbExtAddresses = qMax(nbExtAddresses, extAddressPoolSize_);
 
    std::vector<std::pair<std::string, AddressEntryType>> request;
-   for (const auto aet : poolAET_) {
-      if (!isExtOnly_ && (nbPoolInt < (intAddressPoolSize_ / 2))) {
-         for (bs::hd::Path::Elem i = lastIntIdx_; i < lastIntIdx_ + nbIntAddresses; i++) {
-            bs::hd::Path addrPath({ addrTypeExternal, i });
+   for (const auto aet : poolAET_) 
+   {
+      if (!isExtOnly_ && (nbPoolInt < (intAddressPoolSize_ / 2))) 
+      {
+         for (bs::hd::Path::Elem i = lastIntIdx_; i < lastIntIdx_ + nbIntAddresses; i++) 
+         {
+            bs::hd::Path addrPath({ addrTypeInternal, i });
             request.push_back({ addrPath.toString(), aet });
          }
       }
-      if (nbPoolExt < (extAddressPoolSize_ / 2)) {
-         for (bs::hd::Path::Elem i = lastExtIdx_; i < lastExtIdx_ + nbExtAddresses; i++) {
+      
+      if (nbPoolExt < (extAddressPoolSize_ / 2)) 
+      {
+         for (bs::hd::Path::Elem i = lastExtIdx_; i < lastExtIdx_ + nbExtAddresses; i++) 
+         {
             bs::hd::Path addrPath({ addrTypeExternal, i });
             request.push_back({ addrPath.toString(), aet });
          }
       }
    }
 
-   const auto &cbAddrs = [this, cb](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
-      for (const auto &addr : addrs) {
+   const auto &cbAddrs = [this, cb](const std::vector<std::pair<bs::Address, std::string>> &addrs) 
+   {
+      for (const auto &addr : addrs) 
+      {
          const auto path = bs::hd::Path::fromString(addr.second);
          addressPool_[{path, addr.first.getType()}] = addr.first;
          poolByAddr_[addr.first] = { path, addr.first.getType() };
       }
-      if (cb) {
+
+      if (cb)
          cb();
-      }
    };
+
    newAddresses(request, cbAddrs, false);
 }
 
@@ -1023,7 +1051,7 @@ bool hd::Leaf::getHistoryPage(uint32_t id, std::function<void(const Wallet *wall
 
 std::string hd::Leaf::getAddressIndex(const bs::Address &addr)
 {
-   return getPathForAddress(addr).toString(false);
+   return getPathForAddress(addr).toString();
 }
 
 bool hd::Leaf::isExternalAddress(const bs::Address &addr) const

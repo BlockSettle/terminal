@@ -107,32 +107,27 @@ size_t hd::Wallet::getNumLeaves() const
 
 std::vector<std::shared_ptr<bs::core::Wallet>> hd::Wallet::getLeaves() const
 {
-   const auto nbLeaves = getNumLeaves();
-   if (leaves_.size() != nbLeaves) {
-      leaves_.clear();
-      for (const auto &group : groups_) {
-         const auto &groupLeaves = group.second->getAllLeaves();
-         for (const auto &leaf : groupLeaves) {
-            leaves_[leaf->walletId()] = leaf;
-         }
-      }
+   std::vector<std::shared_ptr<bs::core::Wallet>> leaves;
+   for (const auto &group : groups_) 
+   {
+      const auto &groupLeaves = group.second->getAllLeaves();
+      for (const auto &leaf : groupLeaves) 
+         leaves.push_back(leaf);
    }
 
-   std::vector<std::shared_ptr<bs::core::Wallet>> result;
-   result.reserve(leaves_.size());
-   for (const auto &leaf : leaves_) {
-      result.emplace_back(leaf.second);
-   }
-   return result;
+   return leaves;
 }
 
 std::shared_ptr<bs::core::Wallet> hd::Wallet::getLeaf(const std::string &id) const
 {
-   const auto &itLeaf = leaves_.find(id);
-   if (itLeaf == leaves_.end()) {
-      return nullptr;
+   for (const auto &group : groups_)
+   {
+      auto leafPtr = group.second->getLeafById(id);
+      if (leafPtr != nullptr)
+         return leafPtr;
    }
-   return itLeaf->second;
+
+   return nullptr;
 }
 
 std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
@@ -186,18 +181,10 @@ void hd::Wallet::createStructure()
    writeGroupsToDB();
 }
 
-std::string hd::Wallet::getFileName(const std::string &dir) const
-{
-   return (dir + "/" + fileNamePrefix(isWatchingOnly()) + walletId() + "_wallet.lmdb");
-}
-
 void hd::Wallet::shutdown()
 {
    for (auto& groupPair : groups_)
       groupPair.second->shutdown();
-
-   for (auto& leafPair : leaves_)
-      leafPair.second->shutdown();
 
    if (db_ != nullptr)
    {
@@ -212,7 +199,7 @@ void hd::Wallet::shutdown()
 
 bool hd::Wallet::eraseFile()
 {
-   auto fname = walletPtr_->getDbFilename();
+   auto fname = getFileName();
    shutdown();
 
    if (fname.size() == 0)
@@ -227,6 +214,13 @@ bool hd::Wallet::eraseFile()
       rc = false;
 
    return rc;
+}
+
+const std::string& hd::Wallet::getFileName() const
+{
+   if (walletPtr_ == nullptr)
+      throw WalletException("wallet is not initialized, cannot return filename");
+   return walletPtr_->getDbFilename();
 }
 
 void hd::Wallet::initializeDB()
@@ -279,7 +273,9 @@ void hd::Wallet::initializeDB()
 
 void hd::Wallet::readFromDB()
 {
-   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadOnly);
+   //this needs to be a readwrite because initializing a leaf results 
+   //in opening a db name
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
    {  //header data
       auto typeBdr = getDataRefForKey(WALLETTYPE_KEY);
@@ -295,14 +291,13 @@ void hd::Wallet::readFromDB()
    {  // groups
       auto dbIter = db_->begin();
 
-      //TODO:: use dedicated key for groups, do not mix the custom bs wallet data
-      //with the main armory wallet content
       BinaryWriter bwKey;
       bwKey.put_uint8_t(BS_GROUP_PREFIX);
       CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
 
       dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
-      while (dbIter.isValid()) {
+      while (dbIter.isValid()) 
+      {
          
          auto iterkey = dbIter.key();
          auto itervalue = dbIter.value();
@@ -316,18 +311,19 @@ void hd::Wallet::readFromDB()
 
          BinaryRefReader brrVal(valueBDR);
          auto valsize = brrVal.get_var_int();
-         if (valsize != brrVal.getSizeRemaining()) {
+         if (valsize != brrVal.getSizeRemaining())
             throw WalletException("entry val size mismatch");
-         }
-         try {
+         
+         try 
+         {
             const auto group = hd::Group::deserialize(walletPtr_,
                keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
                  , name_, desc_, netType_, logger_);
-            if (group != nullptr) {
+            if (group != nullptr)
                addGroup(group);
-            }
          }
-         catch (const std::exception &) { }
+         catch (const std::exception& e) 
+         {}
 
          dbIter.advance();
       }
@@ -499,7 +495,7 @@ void hd::Wallet::setExtOnly()
       return;
 
    //cannot flag for ext only if the wallet already has a structure
-   if (groups_.size() > 0 || leaves_.size() > 0)
+   if (getNumLeaves() > 0)
       throw WalletException("cannot flag initialized wallet for ext only");
    
    extOnlyFlag_ = true;

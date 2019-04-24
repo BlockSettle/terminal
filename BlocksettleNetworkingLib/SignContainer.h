@@ -74,6 +74,9 @@ namespace bs {
          std::pair<unsigned int, unsigned int>  encryptionRank{ 0,0 };
          NetworkType netType = NetworkType::Invalid;
 
+         unsigned highestExtIndex_ = UINT32_MAX;
+         unsigned highestIntIndex_ = UINT32_MAX;
+
          std::vector<AddressData>   addresses;
          std::vector<AddressData>   addrPool;
          std::vector<TxCommentData> txComments;

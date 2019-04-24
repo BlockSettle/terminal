@@ -561,22 +561,29 @@ bool WalletsManager::deleteWallet(const HDWalletPtr &wallet)
    return result;
 }
 
-void WalletsManager::registerWallets()
+std::vector<std::string> WalletsManager::registerWallets()
 {
+   std::vector<std::string> result;
    if (!armory_) {
-      return;
+      return result;
    }
    if (empty()) {
       logger_->debug("Going online before wallets are added");
       armory_->goOnline();
-      return;
+      return result;
    }
-   for (auto &it : wallets_) {
-      it.second->registerWallet(armory_);
+   for (auto &it : wallets_) 
+   {
+      auto&& ids = it.second->registerWallet(armory_);
+      result.insert(result.end(), ids.begin(), ids.end());
    }
-   if (settlementWallet_) {
-       settlementWallet_->registerWallet(armory_);
+   if (settlementWallet_) 
+   {
+      auto&& ids = settlementWallet_->registerWallet(armory_);
+      result.insert(result.end(), ids.begin(), ids.end());
    }
+
+   return result;
 }
 
 void WalletsManager::unregisterWallets()
@@ -591,6 +598,16 @@ void WalletsManager::unregisterWallets()
 
 void WalletsManager::updateWallets(bool force)
 {
+   /***
+   This code is triggered without checking if the wallets are actually
+   registered. Such a common event as NewBlock will trigger this, while
+   the trigger itself is a Qt signal connected to WalletsManager. In 
+   other words, there is not even an attempt to check that the underlying
+   wallets are registered, as adding a new wallet object to the 
+   WalletsManager object while online but before registering said wallet 
+   will trigger a DB side "unknown wallet" error from this call, which
+   may or may not be handled gracefully on this end.
+   ***/
    for (auto &it : wallets_) {
       it.second->firstInit(force);
    }

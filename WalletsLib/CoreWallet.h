@@ -265,9 +265,9 @@ namespace bs {
          virtual std::vector<bs::Address> getExtAddressList() const { return usedAddresses_; }
          virtual std::vector<bs::Address> getIntAddressList() const { return usedAddresses_; }
          virtual bool isExternalAddress(const Address &) const { return true; }
-         virtual size_t getUsedAddressCount() const { return usedAddresses_.size(); }
-         virtual size_t getExtAddressCount() const { return usedAddresses_.size(); }
-         virtual size_t getIntAddressCount() const { return usedAddresses_.size(); }
+         virtual unsigned getUsedAddressCount() const { return usedAddresses_.size(); }
+         virtual unsigned getExtAddressCount() const { return usedAddresses_.size(); }
+         virtual unsigned getIntAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getWalletAddressCount() const { return addrCount_; }
 
          virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
@@ -276,6 +276,16 @@ namespace bs {
          virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
+
+         /***
+         Used to keep track of sync wallet used address index increments on the 
+         Armory wallet side
+         ***/
+         virtual bs::Address synchronizeUsedAddressChain(
+            const std::string&, AddressEntryType)
+         {
+            throw WalletException("illegal method");
+         }
 
          virtual std::shared_ptr<ResolverFeed> getResolver(void) const = 0;
 

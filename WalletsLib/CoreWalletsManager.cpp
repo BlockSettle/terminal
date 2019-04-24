@@ -26,10 +26,8 @@ WalletsManager::~WalletsManager() noexcept
 
 void WalletsManager::reset()
 {
-   wallets_.clear();
    hdWallets_.clear();
    walletNames_.clear();
-   walletsId_.clear();
    hdWalletsId_.clear();
    settlementWallet_.reset();
 }
@@ -172,7 +170,7 @@ WalletsManager::WalletPtr WalletsManager::getAuthWallet() const
    if (!group) {
       return nullptr;
    }
-   return group->getLeaf(0u);
+   return group->getLeafByPath(0u);
 }
 
 WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
@@ -185,25 +183,11 @@ WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
    return nullptr;
 }
 
-void WalletsManager::saveWallet(const WalletPtr &newWallet, NetworkType netType)
-{
-   addWallet(newWallet);
-}
-
-void WalletsManager::addWallet(const WalletPtr &wallet)
-{
-   walletsId_.emplace_back(wallet->walletId());
-   wallets_.emplace(wallet->walletId(), wallet);
-}
-
 void WalletsManager::saveWallet(const HDWalletPtr &wallet)
 {
    hdWalletsId_.emplace_back(wallet->walletId());
    hdWallets_[wallet->walletId()] = wallet;
    walletNames_.insert(wallet->name());
-   for (const auto &leaf : wallet->getLeaves()) {
-      addWallet(leaf);
-   }
 }
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(const unsigned int index) const
@@ -235,12 +219,13 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::st
 
 WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walletId) const
 {
-   if (!wallets_.empty()) {
-      const auto &walletIt = wallets_.find(walletId);
-      if (walletIt != wallets_.end()) {
-         return walletIt->second;
-      }
+   for (const auto &hdWallet : hdWallets_)
+   {
+      auto leafPtr = hdWallet.second->getLeaf(walletId);
+      if (leafPtr != nullptr)
+         return leafPtr;
    }
+
    if (settlementWallet_ && (settlementWallet_->walletId() == walletId)) {
       return settlementWallet_;
    }
@@ -249,31 +234,35 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
 
 WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &addr) const
 {
-   const auto &address = addr.unprefixed();
+   for (const auto wallet : hdWallets_)
    {
-      for (const auto wallet : wallets_) {
-         if (wallet.second && (wallet.second->containsAddress(address)
-            || wallet.second->containsHiddenAddress(address))) {
-            return wallet.second;
+      for (auto& group : wallet.second->getGroups())
+      {
+         for (auto& leafPtr : group->getAllLeaves())
+         {
+            if (leafPtr && (leafPtr->containsAddress(addr) ||
+               leafPtr->containsHiddenAddress(addr)))
+               return leafPtr;
          }
       }
    }
-   if ((settlementWallet_ != nullptr) && settlementWallet_->containsAddress(address)) {
+
+   if ((settlementWallet_ != nullptr) && settlementWallet_->containsAddress(addr))
       return settlementWallet_;
-   }
+
    return nullptr;
 }
 
 void WalletsManager::eraseWallet(const WalletPtr &wallet)
 {
-   if (!wallet) {
+   /*if (!wallet) {
       return;
    }
    const auto itId = std::find(walletsId_.begin(), walletsId_.end(), wallet->walletId());
    if (itId != walletsId_.end()) {
       walletsId_.erase(itId);
    }
-   wallets_.erase(wallet->walletId());
+   wallets_.erase(wallet->walletId());*/
 }
 
 bool WalletsManager::deleteWalletFile(const WalletPtr &wallet)

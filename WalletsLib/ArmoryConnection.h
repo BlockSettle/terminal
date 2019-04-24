@@ -172,7 +172,9 @@ private:
    std::shared_ptr<QProcess>  armoryProcess_;
 
    std::atomic_bool              isOnline_;
-   std::unordered_map<std::string, std::function<void(const std::string &)>>  preOnlineRegIds_;
+   std::unordered_map<
+      std::string, std::function<void(const std::string &)>> registrationCallbacks_;
+   std::mutex registrationCallbacksMutex_;
 
    mutable std::atomic_flag      txCbLock_ = ATOMIC_FLAG_INIT;
    std::map<BinaryData, std::vector<std::function<void(Tx)>>>   txCallbacks_;

@@ -219,6 +219,9 @@ namespace bs {
             , uint32_t id, std::function<void(const Wallet *wallet
                , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
+         bool isRegistered(void) const { return isRegistered_; }
+         void setRegistered(void) { isRegistered_ = true; }
+
       protected:
          std::string       walletName_;
          SignContainer  *  signContainer_;
@@ -259,6 +262,7 @@ namespace bs {
 
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
          std::atomic_bool  heartbeatRunning_ = { false };
+         bool isRegistered_ = false;
       };
 
 

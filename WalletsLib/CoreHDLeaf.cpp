@@ -38,9 +38,19 @@ void hd::Leaf::init(
 
    reset();
    auto accPtr = walletPtr->getAccountForID(addrAccId);
+   if (accPtr == nullptr)
+      throw WalletException("invalid account id");
+
    accountPtr_ = accPtr;
    db_ = new LMDB(accountPtr_->getDbEnv().get(), BS_WALLET_DBNAME);
    walletPtr_ = walletPtr;
+
+   auto&& addrMap = accountPtr_->getUsedAddressMap();
+   for (auto& addrPair : addrMap)
+   {
+      bs::Address bsAddr(addrPair.second->getHash(), addrPair.second->getType());
+      usedAddresses_.emplace_back(bsAddr);
+   }
 }
 
 bool hd::Leaf::copyTo(std::shared_ptr<hd::Leaf> &leaf) const
@@ -302,7 +312,7 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 
 std::string hd::Leaf::getAddressIndex(const bs::Address &addr)
 {
-   return getPathForAddress(addr).toString(false);
+   return getPathForAddress(addr).toString();
 }
 
 bool hd::Leaf::isExternalAddress(const bs::Address &addr) const
@@ -311,7 +321,7 @@ bool hd::Leaf::isExternalAddress(const bs::Address &addr) const
    if (path.length() < 2) {
       return false;
    }
-   return (path.get(-2) == addrTypeExternal);
+   return (path.get(-2) == addrTypeExternal_);
 }
 
 bool hd::Leaf::addressIndexExists(const std::string &index) const
@@ -343,12 +353,26 @@ bs::Address hd::Leaf::getAddressByIndex(
 {
    //extInt: true for external/outer account, false for internal/inner account
 
-   auto assetPtr = accountPtr_->getAssetForID(id, extInt);
-   auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
-   if (assetSingle == nullptr)
-      throw AssetException("unexpected asset type");
+   BinaryWriter accBw;
+   accBw.put_uint32_t(0);
+   if (extInt)
+      accBw.put_BinaryData(accountPtr_->getOuterAccountID());
+   else
+      accBw.put_BinaryData(accountPtr_->getInnerAccountID());
+   accBw.put_uint32_t(id, BE);
 
-   return bs::Address::fromPubKey(assetSingle->getPubKey()->getCompressedKey(), aet);
+   auto addrPtr = accountPtr_->getAddressEntryForID(accBw.getDataRef());
+   if (aet == AddressEntryType_Default)
+   {
+      if (addrPtr->getType() != accountPtr_->getAddressType())
+         throw AccountException("type mismatch for instantiated address");
+   }
+   else if (addrPtr->getType() != aet)
+   {
+      throw AccountException("type mismatch for instantiated address");
+   }
+
+   return bs::Address(addrPtr->getHash(), aet);
 }
 
 bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex() const
@@ -366,9 +390,8 @@ BinaryData hd::Leaf::serialize() const
    bw.put_uint32_t(2);   
 
    //address account id
-   BinaryData index(walletId());
-   bw.put_var_int(index.getSize());
-   bw.put_BinaryData(index);
+   bw.put_var_int(accountPtr_->getID().getSize());
+   bw.put_BinaryData(accountPtr_->getID());
 
    //path
    bw.put_var_int(path_.length());
@@ -440,12 +463,12 @@ std::vector<bs::Address> hd::Leaf::getExtAddressList() const
    return addrVec;
 }
 
-size_t hd::Leaf::getExtAddressCount() const
+unsigned hd::Leaf::getExtAddressCount() const
 {
-   return accountPtr_->getOuterAccount()->getHighestUsedIndex();
+   return accountPtr_->getOuterAccount()->getHighestUsedIndex() + 1;
 }
 
-size_t hd::Leaf::getUsedAddressCount() const
+unsigned hd::Leaf::getUsedAddressCount() const
 {
    return getExtAddressCount();
 }
@@ -475,7 +498,7 @@ std::vector<bs::Address> hd::Leaf::getIntAddressList() const
    return addrVec;
 }
 
-size_t hd::Leaf::getIntAddressCount() const
+unsigned hd::Leaf::getIntAddressCount() const
 {
    auto& accID = accountPtr_->getInnerAccountID();
    auto& accMap = accountPtr_->getAccountMap();
@@ -483,7 +506,7 @@ size_t hd::Leaf::getIntAddressCount() const
    if (iter == accMap.end())
       throw WalletException("invalid inner account id");
 
-   return iter->second->getAssetCount();
+   return iter->second->getHighestUsedIndex() + 1;
 }
 
 std::string hd::Leaf::getFilename() const
@@ -511,6 +534,92 @@ WalletEncryptionLock hd::Leaf::lockForEncryption(const SecureBinaryData& passphr
    return WalletEncryptionLock(walletPtr_, passphrase);
 }
 
+bs::Address hd::Leaf::synchronizeUsedAddressChain(
+   const std::string& index, AddressEntryType aeType)
+{
+   //decode index to path
+   auto&& path = bs::hd::Path::fromString(index);
+
+   //does path belong to our leaf?
+   if (path.isAbolute())
+   {
+      if (path.length() != path_.length() - 2)
+         throw AccountException("address path does not belong to leaf");
+
+      //compare path base
+      for (int i = 0; i < path_.length() - 2; i++)
+      {
+         if (path.get(i) != path_.get(i))
+            throw AccountException("address path differs from leaf path");
+      }
+
+      //shorten path to non hardened elements
+      bs::hd::Path pathShort;
+      for (int i = 0; i < 2; i++)
+         pathShort.append(path.get(2 - i));
+
+      path = pathShort;
+   }
+
+   //is it internal or external?
+   bool ext = true;
+   auto elem = path.get(-2);
+   if (elem == addrTypeInternal_)
+      ext = false;
+   else if (elem != addrTypeExternal_)
+      throw AccountException("invalid address path");
+
+   //is the path ahead of the underlying Armory wallet used index?
+   unsigned topIndex;
+   if (ext)
+      topIndex = getExtAddressCount() - 1;
+   else
+      topIndex = getIntAddressCount() - 1;
+   unsigned addrIndex = path.get(-1);
+
+   bs::Address result;
+   int gap; //do not change to unsigned, gap needs to be signed
+   if (topIndex != UINT32_MAX && addrIndex <= topIndex)
+      gap = -1;
+   else
+      gap = addrIndex - topIndex; //this is correct wrt to result sign
+
+   if (gap <= 0)
+   {
+      //already created this address, grab it, check the type matches
+      result = getAddressByIndex(addrIndex, ext, aeType);
+   }
+   else
+   {
+      std::shared_ptr<AddressEntry> addrPtr;
+      if (ext)
+      {
+         //pull new addresses to fill the gap, using the default type
+         for (int i = 1; i < gap; i++)
+            getNewExtAddress();
+
+         //pull the new address using the requested type
+         result = getNewExtAddress(aeType);
+      }
+      else
+      {
+         for (int i = 1; i < gap; i++)
+            getNewIntAddress();
+         
+         result = getNewIntAddress(aeType);
+      }
+   }
+
+   //sanity check: index and type should match request
+   if (aeType != AddressEntryType_Default && result.getType() != aeType)
+      throw AccountException("did not get expected address entry type");
+
+   auto resultIndex = addressIndex(result);
+   if(resultIndex != addrIndex)
+      throw AccountException("did not get expected address index");
+
+   return result;
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

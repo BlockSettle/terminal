@@ -48,10 +48,10 @@ namespace bs {
             std::vector<bs::Address> getExtAddressList() const override;
             std::vector<bs::Address> getIntAddressList() const override;
             
-            size_t getExtAddressCount() const override;
-            size_t getUsedAddressCount() const override;
+            unsigned getExtAddressCount() const override;
+            unsigned getUsedAddressCount() const override;
+            unsigned getIntAddressCount() const override;
 
-            size_t getIntAddressCount() const override;
             bool isExternalAddress(const Address &) const override;
             bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
             bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
@@ -62,7 +62,10 @@ namespace bs {
             bs::hd::Path::Elem getAddressIndexForAddr(const BinaryData &addr) const;
             bs::hd::Path::Elem addressIndex(const bs::Address &addr) const;
             bool addressIndexExists(const std::string &index) const override;
-            
+  
+            bs::Address synchronizeUsedAddressChain(
+               const std::string&, AddressEntryType) override;
+
             //index as asset derivation id
             //bool as external (true) or interal (false)
             bs::Address getAddressByIndex(unsigned, bool, 
@@ -105,8 +108,8 @@ namespace bs {
             LMDB* getDB() { return db_; }
 
          protected:
-            static const bs::hd::Path::Elem  addrTypeExternal = 0u;
-            static const bs::hd::Path::Elem  addrTypeInternal = 1u;
+            static const bs::hd::Path::Elem  addrTypeExternal_ = 0u;
+            static const bs::hd::Path::Elem  addrTypeInternal_ = 1u;
 
             mutable std::string     walletId_, walletIdInt_;
             wallet::Type            type_;

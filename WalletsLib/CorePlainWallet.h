@@ -81,7 +81,7 @@ namespace bs {
          bs::Address getNewExtAddress(AddressEntryType) override { return {}; }
          bs::Address getNewIntAddress(AddressEntryType) override { return {}; }
 
-         size_t getUsedAddressCount() const override { return usedAddresses_.size(); }
+         unsigned getUsedAddressCount() const override { return usedAddresses_.size(); }
          std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;
