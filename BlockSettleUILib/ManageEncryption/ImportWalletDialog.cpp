@@ -73,7 +73,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    const auto &cbw = [appSettings] (const std::string &walletId, unsigned int idx) {
       appSettings->SetWalletScanIndex(walletId, idx);
    };
-   walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager, armory
+   walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager.get(), armory
       , assetMgr, authMgr, cbr, cbw);
 
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);

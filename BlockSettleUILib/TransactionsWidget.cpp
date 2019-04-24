@@ -267,7 +267,7 @@ void TransactionsWidget::init(const std::shared_ptr<bs::sync::WalletsManager> &w
    logger_ = logger;
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsWidget::walletsChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsWidget::walletsChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { walletsChanged(); });
 }
 
 void TransactionsWidget::SetTransactionsModel(const std::shared_ptr<TransactionsViewModel>& model)

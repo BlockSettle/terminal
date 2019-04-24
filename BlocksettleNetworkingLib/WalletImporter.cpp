@@ -7,7 +7,7 @@
 
 
 WalletImporter::WalletImporter(const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , bs::sync::WalletsManager *walletsMgr
    , const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<AssetManager> &assetMgr, const std::shared_ptr<AuthAddressManager> &authMgr
    , const CbScanReadLast &cbr, const CbScanWriteLast &cbw)
@@ -54,14 +54,14 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
    }
    createWalletReq_ = 0;
 
-   const auto &ccList = assetMgr_->privateShares();
+   const auto &ccList = assetMgr_ ? assetMgr_->privateShares() : std::vector<std::string>{};
    rootWallet_ = newWallet;
    rootWallet_->setArmory(armory_);
    walletsMgr_->adoptNewWallet(newWallet);
 
    pwdData_.resize(keyRank_.first);
 
-   if (rootWallet_->isPrimary()) {
+   if (rootWallet_->isPrimary() && authMgr_) {
       authMgr_->CreateAuthWallet(pwdData_, false);
    }
    if (!rootWallet_->isPrimary() || ccList.empty()) {
@@ -94,8 +94,10 @@ void WalletImporter::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
 
       const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
       group->addLeaf(leaf);
-      leaf->setData(assetMgr_->getCCGenesisAddr(cc).display());
-      leaf->setData(assetMgr_->getCCLotSize(cc));
+      if (assetMgr_) {
+         leaf->setData(assetMgr_->getCCGenesisAddr(cc).display());
+         leaf->setData(assetMgr_->getCCLotSize(cc));
+      }
 
       if (createCCWalletReqs_.empty()) {
          if (armory_->state() == ArmoryConnection::State::Ready) {

@@ -105,7 +105,7 @@ namespace bs {
 
       signals:
          void walletChanged();
-         void walletDeleted();
+         void walletDeleted(std::string walletId);
          void walletCreated(HDWalletPtr);
          void walletsReady();
          void walletsSynchronized();
@@ -166,6 +166,8 @@ namespace bs {
 
          BTCNumericTypes::balance_type getBalanceSum(
             const std::function<BTCNumericTypes::balance_type(const WalletPtr &)> &) const;
+
+         void startWalletRescan(const HDWalletPtr &);
 
       private:
          std::shared_ptr<SignContainer>         signContainer_;

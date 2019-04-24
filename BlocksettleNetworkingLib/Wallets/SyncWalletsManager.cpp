@@ -70,15 +70,14 @@ void WalletsManager::syncWallets(const CbProgress &cb)
                cb(total - walletIds->size(), total);
             }
             if (walletIds->empty()) {
-               logger_->debug("[WalletsManager::{}] all wallets synchronized"
-                  , __func__);
+               logger_->debug("[WalletsManager::syncWallets] all wallets synchronized");
                emit walletsSynchronized();
                emit walletChanged();
             }
          };
 
-         logger_->debug("[WalletsManager::{}] syncing wallet {} ({} {})"
-            , __func__, info.id, info.name, (int)info.format);
+         logger_->debug("[WalletsManager::syncWallets] syncing wallet {} ({} {})"
+            , info.id, info.name, (int)info.format);
          switch (info.format) {
          case bs::sync::WalletFormat::HD: {
             try {
@@ -93,16 +92,16 @@ void WalletsManager::syncWallets(const CbProgress &cb)
                }
             }
             catch (const std::exception &e) {
-               logger_->error("[WalletsManager::{}] failed to create HD wallet "
-                  "{}: {}", __func__, info.id, e.what());
+               logger_->error("[WalletsManager::syncWallets] failed to create HD wallet "
+                  "{}: {}", info.id, e.what());
                cbDone();
             }
             break;
          }
          case bs::sync::WalletFormat::Settlement: {
             if (settlementWallet_) {
-               logger_->error("[WalletsManager::{}] more than one settlement "
-                  "wallet is not supported", __func__);
+               logger_->error("[WalletsManager::syncWallets] more than one settlement "
+                  "wallet is not supported");
                cbDone();
             }
             else {
@@ -118,16 +117,15 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          }
          default:
             cbDone();
-            logger_->info("[WalletsManager::{}] - wallet format {} is not "
-               "supported yet", __func__, (int)info.format);
+            logger_->info("[WalletsManager::syncWallets] wallet format {} is not "
+               "supported yet", (int)info.format);
             break;
          }
       }
-      logger_->debug("[WalletsManager::{}] - initial wallets synchronized"
-         , __func__);
+      logger_->debug("[WalletsManager::syncWallets] initial wallets synchronized");
    };
    if (!signContainer_) {
-      logger_->error("[WalletsManager::{}] - signer is not set - aborting"
+      logger_->error("[WalletsManager::{}] signer is not set - aborting"
          , __func__);
       return;
    }
@@ -536,7 +534,6 @@ bool WalletsManager::deleteWallet(const WalletPtr &wallet)
       authAddressWallet_ = nullptr;
       emit authWalletChanged();
    }
-   emit walletDeleted();
    emit walletBalanceUpdated(wallet->walletId());
    return true;
 }
@@ -574,7 +571,7 @@ bool WalletsManager::deleteWallet(const HDWalletPtr &wallet)
       authAddressWallet_.reset();
       emit authWalletChanged();
    }
-   emit walletDeleted();
+   emit walletDeleted(wallet->walletId());
    emit walletBalanceUpdated(wallet->walletId());
    return result;
 }
@@ -903,10 +900,51 @@ void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
    emit walletCreated(newWallet);
 }
 
+void WalletsManager::startWalletRescan(const HDWalletPtr &hdWallet)
+{
+   const auto &cbr = [this](const std::string &walletId) -> unsigned int {
+      return 0;
+   };
+   const auto &cbw = [this](const std::string &walletId, unsigned int idx) {
+      appSettings_->SetWalletScanIndex(walletId, idx);
+   };
+
+   if (armory_->state() == ArmoryConnection::State::Ready) {
+      hdWallet->startRescan([this](bs::sync::hd::Group *grp, bs::hd::Path::Elem wallet, bool isValid) {
+         logger_->debug("[WalletsManager::startWalletRescan] finished scan of {}: {}", wallet, isValid);
+      }, cbr, cbw);
+   }
+   else {
+      logger_->error("[{}] invalid Armory state {}", __func__, (int)armory_->state());
+   }
+}
+
 void WalletsManager::onWalletsListUpdated()
 {
+   std::set<std::string> hdWalletIds;
+   hdWalletIds.insert(hdWalletsId_.cbegin(), hdWalletsId_.cend());
+   const auto &cbSyncWallets = [this, hdWalletIds](int cur, int total) {
+      if (cur < total) {
+         return;
+      }
+      for (const auto &hdWalletId : hdWalletsId_) {
+         if (hdWalletIds.find(hdWalletId) == hdWalletIds.end()) {
+            const auto hdWallet = hdWallets_[hdWalletId];
+            QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletCreated(hdWallet); });
+            logger_->debug("[WalletsManager::onWalletsListUpdated] found new wallet {} "
+               "- starting address scan for it", hdWalletId);
+            startWalletRescan(hdWallet);
+         }
+      }
+      for (const auto &hdWalletId : hdWalletIds) {
+         if (std::find(hdWalletsId_.cbegin(), hdWalletsId_.cend(), hdWalletId) == hdWalletsId_.cend()) {
+            QMetaObject::invokeMethod(this, [this, hdWalletId] { emit walletDeleted(hdWalletId); });
+         }
+      }
+      registerWallets();
+   };
    reset();
-   syncWallets();
+   syncWallets(cbSyncWallets);
 }
 
 void WalletsManager::adoptNewWallet(const HDWalletPtr &wallet)
