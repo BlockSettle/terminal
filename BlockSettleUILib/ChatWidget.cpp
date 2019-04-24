@@ -439,13 +439,13 @@ void ChatWidget::onLoginFailed()
 
 void ChatWidget::logout()
 {
-   ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
-   if (chatUserModelPtr)   
-      chatUserModelPtr->resetModel();
+//   ChatUserModelPtr chatUserModelPtr = chatUserListLogicPtr_->chatUserModelPtr();
+//   if (chatUserModelPtr)
+//      chatUserModelPtr->resetModel();
 
-   ui_->input_textEdit->setText(QLatin1Literal(""));
+//   ui_->input_textEdit->setText(QLatin1Literal(""));
 
-   return stateCurrent_->logout(); //test
+   return stateCurrent_->logout();
 }
 
 bool ChatWidget::hasUnreadMessages()
