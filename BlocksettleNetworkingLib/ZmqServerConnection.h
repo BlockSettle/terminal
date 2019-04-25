@@ -46,6 +46,7 @@ protected:
 
    void notifyListenerOnNewConnection(const std::string& clientId);
    void notifyListenerOnDisconnectedClient(const std::string& clientId);
+   void notifyListenerOnClientError(const std::string& clientId, const std::string &error);
 
    virtual ZmqContext::sock_ptr CreateDataSocket() = 0;
    virtual bool ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket);
