@@ -27,6 +27,8 @@ enum RequestType
    SyncCommentType             = 19;
    SyncAddressesType           = 20;
    ExecCustomDialogRequestType = 21;
+   // Sent from headless signer when wallet added, removed or changed somehow (request body is empty)
+   WalletsListUpdatedType      = 22;
 }
 
 message RequestPacket
@@ -219,6 +221,11 @@ message DeleteHDWalletRequest
    }
 }
 
+message DeleteHDWalletResponse
+{
+   bool     success = 1;
+   string   error = 2;
+}
 
 message GetRootKeyRequest
 {
@@ -288,6 +295,7 @@ message SyncWalletInfoResponse
       string name = 3;
       string description = 4;
       NetworkType netType = 5;
+      bool watching_only = 6;
    }
    repeated WalletInfo wallets = 1;
 }

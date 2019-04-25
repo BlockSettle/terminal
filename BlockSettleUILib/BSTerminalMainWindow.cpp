@@ -149,6 +149,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    ui_->widgetTransactions->setAppSettings(applicationSettings_);
 
    UpdateMainWindowAppearence();
+   setWidgetsAuthorized(false);
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
@@ -642,6 +643,10 @@ void BSTerminalMainWindow::InitChatView()
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
+
+   if (NotificationCenter::instance() != NULL)
+      connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick, 
+              ui_->widgetChat, &ChatWidget::onNewChatMessageTrayNotificationClicked);
 }
 
 void BSTerminalMainWindow::InitChartsView()

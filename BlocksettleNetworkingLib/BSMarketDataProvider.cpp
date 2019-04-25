@@ -8,9 +8,11 @@
 #include <vector>
 
 BSMarketDataProvider::BSMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::shared_ptr<spdlog::logger>& logger)
+      , const std::shared_ptr<spdlog::logger>& logger
+      , bool receiveUSD)
  : MarketDataProvider(logger)
  , connectionManager_{connectionManager}
+ , receiveUSD_{receiveUSD}
 {
 }
 
@@ -42,6 +44,18 @@ bool BSMarketDataProvider::StartMDConnection()
    return true;
 }
 
+void BSMarketDataProvider::StopMDConnection()
+{
+   emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
+
+   if (mdConnection_ != nullptr) {
+      mdConnection_->stopListen();
+      mdConnection_ = nullptr;
+   }
+
+   emit Disconnected();
+}
+
 bool BSMarketDataProvider::IsConnectionActive() const
 {
    return mdConnection_ != nullptr;
@@ -54,7 +68,8 @@ bool BSMarketDataProvider::DisconnectFromMDSource()
    }
    emit Disconnecting();
 
-   mdConnection_->stopListen();
+   if (mdConnection_ != nullptr)
+      mdConnection_->stopListen();
 
    return true;
 }
@@ -136,11 +151,17 @@ void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
    double timestamp = static_cast<double>(snapshot.timestamp());
 
    for (int i=0; i < snapshot.fx_products_size(); ++i) {
-      OnProductSnapshot(bs::network::Asset::Type::SpotFX, snapshot.fx_products(i), timestamp);
+      const auto& productInfo = snapshot.fx_products(i);
+      if ((productInfo.product_name() != "EUR/USD") || receiveUSD_) {
+         OnProductSnapshot(bs::network::Asset::Type::SpotFX, productInfo, timestamp);
+      }
    }
 
    for (int i=0; i < snapshot.xbt_products_size(); ++i) {
-      OnProductSnapshot(bs::network::Asset::Type::SpotXBT, snapshot.xbt_products(i), timestamp);
+      const auto& productInfo = snapshot.fx_products(i);
+      if ((productInfo.product_name() != "XBT/USD") || receiveUSD_) {
+         OnProductSnapshot(bs::network::Asset::Type::SpotXBT, productInfo, timestamp);
+      }
    }
 
    for (int i=0; i < snapshot.cc_products_size(); ++i) {
@@ -170,11 +191,17 @@ void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
    double timestamp = static_cast<double>(update.timestamp());
 
    for (int i=0; i < update.fx_products_size(); ++i) {
-      OnProductUpdate(bs::network::Asset::Type::SpotFX, update.fx_products(i), timestamp);
+      const auto& productInfo = update.fx_products(i);
+      if ((productInfo.product_name() != "EUR/USD") || receiveUSD_) {
+         OnProductUpdate(bs::network::Asset::Type::SpotFX, productInfo, timestamp);
+      }
    }
 
    for (int i=0; i < update.xbt_products_size(); ++i) {
-      OnProductUpdate(bs::network::Asset::Type::SpotXBT, update.xbt_products(i), timestamp);
+      const auto& productInfo = update.xbt_products(i);
+      if ((productInfo.product_name() != "XBT/USD") || receiveUSD_) {
+         OnProductUpdate(bs::network::Asset::Type::SpotXBT, productInfo, timestamp);
+      }
    }
 
    for (int i=0; i < update.cc_products_size(); ++i) {

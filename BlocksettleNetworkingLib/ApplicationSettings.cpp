@@ -21,7 +21,7 @@ static const QString appDirName = QLatin1String("Blocksettle");
 static const QString bitcoinDirName = QLatin1String("Bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("/usr/bin/ArmoryDB");
 #elif defined (Q_OS_LINUX)
-static const QString appDirName = QLatin1String(".blocksettle");
+static const QString appDirName = QLatin1String("blocksettle");
 static const QString bitcoinDirName = QLatin1String(".bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("/usr/bin/ArmoryDB");
 #endif

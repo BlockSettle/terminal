@@ -30,6 +30,11 @@ void MarketDataProvider::SubscribeToMD()
    emit UserWantToConnectToMD();
 }
 
+void MarketDataProvider::UnsubscribeFromMD()
+{
+   StopMDConnection();
+}
+
 void MarketDataProvider::MDLicenseAccepted()
 {
    if (host_.empty() || port_.empty()) {

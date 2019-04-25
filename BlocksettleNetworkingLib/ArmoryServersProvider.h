@@ -34,7 +34,7 @@ public:
    bool add(const ArmoryServer &server);
    bool replace(int index, const ArmoryServer &server);
    bool remove(int index);
-   void setupServer(int index);
+   void setupServer(int index, bool needUpdate=true);
 
    void addKey(const QString &address, int port, const QString &key);
    void addKey(const std::string &srvIPPort, const BinaryData &srvPubKey);

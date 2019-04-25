@@ -31,12 +31,14 @@ public:
    void SetConnectionSettings(const std::string &host, const std::string &port);
 
    void SubscribeToMD();
+   void UnsubscribeFromMD();
    virtual bool DisconnectFromMDSource() { return true; }
 
    virtual bool IsConnectionActive() const { return false; }
 
 protected:
    virtual bool StartMDConnection() { return true; }
+   virtual void StopMDConnection() { }
 
 public slots:
    void MDLicenseAccepted();

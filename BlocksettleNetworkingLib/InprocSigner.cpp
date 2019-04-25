@@ -39,7 +39,7 @@ bool InprocSigner::Start()
       const auto &cbLoadProgress = [this](int cur, int total) {
          logger_->debug("[InprocSigner::Start] loading wallets: {} of {}", cur, total);
       };
-      walletsMgr_->loadWallets(netType_, walletsPath_, false, cbLoadProgress);
+      walletsMgr_->loadWallets(netType_, walletsPath_, cbLoadProgress);
    }
    inited_ = true;
    emit ready();
@@ -305,12 +305,12 @@ void InprocSigner::syncWalletInfo(const std::function<void(std::vector<bs::sync:
    for (size_t i = 0; i < walletsMgr_->getHDWalletsCount(); ++i) {
       const auto hdWallet = walletsMgr_->getHDWallet(i);
       result.push_back({ bs::sync::WalletFormat::HD, hdWallet->walletId(), hdWallet->name()
-         , hdWallet->description(), hdWallet->networkType() });
+         , hdWallet->description(), hdWallet->networkType(), hdWallet->isWatchingOnly() });
    }
    const auto settlWallet = walletsMgr_->getSettlementWallet();
    if (settlWallet) {
       result.push_back({ bs::sync::WalletFormat::Settlement, settlWallet->walletId(), settlWallet->name()
-         , settlWallet->description(), settlWallet->networkType() });
+         , settlWallet->description(), settlWallet->networkType(), true });
    }
    cb(result);
 }

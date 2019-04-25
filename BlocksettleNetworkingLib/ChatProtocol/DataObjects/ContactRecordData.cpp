@@ -55,3 +55,8 @@ std::shared_ptr<ContactRecordData> ContactRecordData::fromJSON(const std::string
 
    return std::make_shared<ContactRecordData>(userId, contactId, status, publicKey);
 }
+
+void ContactRecordData::setStatus(const ContactStatus &status)
+{
+   status_ = status;
+}

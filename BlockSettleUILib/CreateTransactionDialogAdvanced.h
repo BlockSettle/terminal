@@ -140,6 +140,8 @@ private:
 
    void disableChangeAddressSelecting();
 
+   void fixFeePerByte();
+
 private:
    std::unique_ptr<Ui::CreateTransactionDialogAdvanced> ui_;
 

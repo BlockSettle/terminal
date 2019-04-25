@@ -182,7 +182,12 @@ void SubscriberConnection::stopListen()
    if (std::this_thread::get_id() == listenThread_.get_id()) {
       listenThread_.detach();
    } else {
-      listenThread_.join();
+      try {
+         listenThread_.join();
+      }
+      catch (const std::exception &e) {
+         logger_->error("[{}] failed to join thread: {}", __func__, e.what());
+      }
    }
 
    return;

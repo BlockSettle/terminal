@@ -230,7 +230,7 @@ bool ArmoryServersProvider::remove(int index)
    }
 }
 
-void ArmoryServersProvider::setupServer(int index)
+void ArmoryServersProvider::setupServer(int index, bool needUpdate)
 {
    QList<ArmoryServer> srvList = servers();
    if (index >= 0 && index < srvList.size()) {
@@ -241,7 +241,8 @@ void ArmoryServersProvider::setupServer(int index)
       appSettings_->set(ApplicationSettings::netType, static_cast<int>(server.netType));
       appSettings_->set(ApplicationSettings::runArmoryLocally, server.runLocally);
 
-      emit dataChanged();
+      if (needUpdate)
+         emit dataChanged();
    }
 }
 

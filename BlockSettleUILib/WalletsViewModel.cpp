@@ -283,7 +283,7 @@ WalletsViewModel::WalletsViewModel(const std::shared_ptr<bs::sync::WalletsManage
    rootNode_ = std::make_shared<WalletNode>(this, WalletNode::Type::Root);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &WalletsViewModel::onWalletChanged);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &WalletsViewModel::onWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { onWalletChanged(); });
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &WalletsViewModel::onWalletChanged);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::newWalletAdded, this, &WalletsViewModel::onNewWalletAdded);
@@ -549,7 +549,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
       rootNode_->add(hdNode);
       hdNode->addGroups(hdWallet->getGroups());
       if (signContainer_) {
-         if ((signContainer_->opMode() == SignContainer::OpMode::Offline) || signContainer_->isOffline()) {
+         if (signContainer_->isOffline() || signContainer_->isWalletOffline(hdWallet->walletId())) {
             hdNode->setState(WalletNode::State::Offline);
          }
          else {

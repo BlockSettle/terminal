@@ -5,7 +5,6 @@
 #include "ArmoryConnection.h"
 #include "BSMessageBox.h"
 #include "CoinControlDialog.h"
-#include "OfflineSigner.h"
 #include "SelectAddressDialog.h"
 #include "SelectedTransactionInputs.h"
 #include "SignContainer.h"
@@ -297,7 +296,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       const float feePerByte = (float)totalVal / (float)tx.getTxWeight();
       originalFeePerByte_ = feePerByte;
       const uint64_t newMinFee = originalFee_ + tx.getTxWeight();
-      SetMinimumFee(newMinFee, originalFeePerByte_);
+      SetMinimumFee(newMinFee, originalFeePerByte_ + 1.0);
       advisedFeePerByte_ = originalFeePerByte_ + 1.0;
       populateFeeList();
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
@@ -566,6 +565,7 @@ void CreateTransactionDialogAdvanced::RemoveOutputByRow(int row)
 
 void CreateTransactionDialogAdvanced::onTransactionUpdated()
 {
+   fixFeePerByte();
    CreateTransactionDialog::onTransactionUpdated();
 
    // If RBF is active, prevent the inputs from being changed. It may be
@@ -845,6 +845,8 @@ void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePer
 
    ui_->doubleSpinBoxFeesManualPerByte->setMinimum(feePerByte);
    ui_->spinBoxFeesManualTotal->setMinimum(qRound(totalFee));
+
+   transactionData_->setMinTotalFee(minTotalFee_);
 }
 
 // currentIndex isn't being used. We should use it or lose it.
@@ -993,7 +995,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
       }
       AddRecipients(recipients);
 
-      if (!signingContainer_->isOffline() && tx.isValid()) {
+      if (!signContainer_->isOffline() && tx.isValid()) {
          ui_->pushButtonCreate->setEnabled(true);
       }
    }
@@ -1140,6 +1142,34 @@ void CreateTransactionDialogAdvanced::updateManualFeeControls()
    }
 }
 
+void CreateTransactionDialogAdvanced::fixFeePerByte()
+{
+   const auto txVirtSize = transactionData_->GetTransactionSummary().txVirtSize;
+   if (!txVirtSize) {
+      return;
+   }
+
+   // Any time the TX is adjusted under RBF, the minimum fee is adjusted.
+   if (isRBF_) {
+      const uint64_t newMinFee = originalFee_ + txVirtSize;
+      SetMinimumFee(newMinFee, originalFeePerByte_);
+   }
+
+   // If the new fee is less than the minimum required fee, increase the fee.
+   const auto totalFee = txVirtSize * transactionData_->feePerByte();
+   if ((minTotalFee_ > 0) && (totalFee > 0) && (totalFee <= minTotalFee_)) {
+      const float newFPB = (minTotalFee_ + 1) / txVirtSize;
+      if (std::abs(transactionData_->feePerByte() - newFPB) > 0.01) {
+         transactionData_->setFeePerByte(newFPB);
+         if (ui_->comboBoxFeeSuggestions->currentIndex() == (ui_->comboBoxFeeSuggestions->count() - 2)) {
+            QMetaObject::invokeMethod(this, [this, newFPB] {
+               ui_->doubleSpinBoxFeesManualPerByte->setValue(newFPB);
+            });
+         }
+      }
+   }
+}
+
 void CreateTransactionDialogAdvanced::setTxFees()
 {
    const int itemIndex = ui_->comboBoxFeeSuggestions->currentIndex();
@@ -1149,8 +1179,13 @@ void CreateTransactionDialogAdvanced::setTxFees()
       CreateTransactionDialog::feeSelectionChanged(itemIndex);
    } else if (itemIndex == itemCount - 2) {
       transactionData_->setFeePerByte(float(ui_->doubleSpinBoxFeesManualPerByte->value()));
+      fixFeePerByte();
    } else if (itemIndex == itemCount - 1) {
-      transactionData_->setTotalFee(ui_->spinBoxFeesManualTotal->value());
+      uint64_t fee = ui_->spinBoxFeesManualTotal->value();
+      if ((minTotalFee_ > 0) && (fee < minTotalFee_)) {
+         fee = minTotalFee_;
+      }
+      transactionData_->setTotalFee(fee);
    }
 
    validateAddOutputButton();

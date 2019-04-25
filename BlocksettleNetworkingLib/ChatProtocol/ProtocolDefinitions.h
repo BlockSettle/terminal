@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include <QObject>
 #include <QJsonValue>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -63,6 +64,8 @@ namespace Chat
    enum class ContactStatus {
       Accepted,
       Rejected,
+      Incoming,
+      Outgoing
    };
 
    enum class UserStatus {
@@ -156,5 +159,7 @@ namespace Chat
    std::string publicKeyToString(const autheid::PublicKey &k);
 
 } //namespace Chat
+
+Q_DECLARE_METATYPE(Chat::UserStatus)
 
 

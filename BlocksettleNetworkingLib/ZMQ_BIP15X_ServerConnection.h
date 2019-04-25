@@ -24,7 +24,7 @@ public:
    std::unique_ptr<BIP151Connection> encData_;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
-   std::chrono::time_point<std::chrono::system_clock> outKeyTimePoint_;
+   std::chrono::time_point<std::chrono::steady_clock> outKeyTimePoint_;
    uint32_t msgID_ = 0;
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;
@@ -88,7 +88,7 @@ private:
    std::mutex  clientsMtx_;
    std::function<std::vector<std::string>()> cbTrustedClients_;
 
-   const int   heartbeatInterval_ = 10000 * 2;   // allow some toleration on heartbeat miss
+   const int   heartbeatInterval_ = 30000 * 2;   // allow some toleration on heartbeat miss
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;

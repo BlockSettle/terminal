@@ -30,6 +30,9 @@ enum PacketType
    // Uses messages from headless
    CreateHDWalletType = 21;
    DeleteHDWalletType = 22;
+
+   // Sent from headless signer when wallet added, removed or changed somehow (request body is empty)
+   WalletsListUpdatedType = 23;
 }
 
 message Packet

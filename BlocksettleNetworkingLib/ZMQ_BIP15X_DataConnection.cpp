@@ -7,6 +7,8 @@
 
 using namespace std;
 
+#define HEARTBEAT_PACKET_SIZE 23
+
 // The constructor to use.
 //
 // INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
@@ -17,7 +19,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    , const bool& ephemeralPeers, bool monitored)
    : ZmqDataConnection(logger, monitored)
 {
-   outKeyTimePoint_ = chrono::system_clock::now();
+   outKeyTimePoint_ = chrono::steady_clock::now();
    currentReadMessage_.reset();
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
@@ -49,15 +51,17 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
                break;
             }
          }
-         const auto curTime = std::chrono::system_clock::now();
-         const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - lastHeartbeat_);
+         const auto curTime = std::chrono::steady_clock::now();
+         const auto diff =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+            curTime - lastHeartbeat_);
          if (diff.count() > heartbeatInterval_) {
-            sendHeartbeat();
+            triggerHeartbeat();
          }
       }
    };
    hbThreadRunning_ = true;
-   lastHeartbeat_ = std::chrono::system_clock::now();
+   lastHeartbeat_ = std::chrono::steady_clock::now();
    hbThread_ = std::thread(heartbeatProc);
 }
 
@@ -93,25 +97,22 @@ AuthPeersLambdas ZmqBIP15XDataConnection::getAuthPeerLambda() const
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
 }
 
-// The send function for the data connection. It can be used at any time after
-// basic ZMQ setup is complete and will handle any required encryption.
+// A function that handles any required rekeys before data is sent.
 //
-// ***Please use this function for sending all data.***
+// ***This function must be called before any data is sent on the wire.***
 //
-// INPUT:  The data to send. (const string&)
-// OUTPUT: None
-// RETURN: True if success, false if failure.
-bool ZmqBIP15XDataConnection::send(const string& data)
+// INPUT:  N/A
+// OUTPUT: N/A
+// RETURN: N/A
+void ZmqBIP15XDataConnection::rekeyIfNeeded(const size_t& dataSize)
 {
-
-   // Check if we need to do a rekey before sending the data.
    bool needsRekey = false;
-   const auto rightNow = chrono::system_clock::now();
+   const auto rightNow = chrono::steady_clock::now();
 
    if (bip150HandshakeCompleted_)
    {
       // Rekey off # of bytes sent or length of time since last rekey.
-      if (bip151Connection_->rekeyNeeded(data.size()))
+      if (bip151Connection_->rekeyNeeded(dataSize))
       {
          needsRekey = true;
       }
@@ -136,7 +137,7 @@ bool ZmqBIP15XDataConnection::send(const string& data)
             , ZMQ_MSGTYPE_AEAD_REKEY);
 
          auto& packet = rekeyPacket.getNextPacket();
-         if (!send(packet.toBinStr()))
+         if (!sendPacket(packet.toBinStr()))
          {
             if (logger_) {
                logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
@@ -148,40 +149,70 @@ bool ZmqBIP15XDataConnection::send(const string& data)
          ++outerRekeyCount_;
       }
    }
+}
 
-   // Encrypt data here only after the BIP 150 handshake is complete.
+// An internal send function to be used when this class constructs a packet. The
+// packet must already be encrypted (if required) and ready to be sent.
+//
+// ***Please use this function for sending all data from inside this class.***
+//
+// INPUT:  The data to send. (const string&)
+//         Flag for encryption usage. True by default. (const bool&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
+bool ZmqBIP15XDataConnection::sendPacket(const string& data)
+{
+   int result = -1;
+   const auto rightNow = chrono::steady_clock::now();
+
+   {
+      FastLock locker(lockSocket_);
+      result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
+   }
+   if (result != (int)data.size()) {
+      if (logger_) {
+         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+            "data: {} (result={}, data size={})", __func__, connectionName_
+            , zmq_strerror(zmq_errno()), result, data.size());
+      }
+      return false;
+   }
+
+   lastHeartbeat_ = rightNow; // Reset the heartbeat timer, as data was sent.
+   return true;
+}
+
+// The inherited send function for the data connection. It is intended to be
+// used only for raw data that has not yet been encrypted or placed in a packet.
+//
+// ***Please use this function for sending all data from outside this class.***
+//
+// INPUT:  The data to send. (const string&)
+//         Flag for encryption usage. True by default. (const bool&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
+bool ZmqBIP15XDataConnection::send(const string& data)
+{
+   // If we need to rekey, do it before encrypting the data.
+   rekeyIfNeeded(data.size());
+
+   // Encrypt data here only after the BIP 150 handshake is complete, and if
+   // the incoming encryption flag is true.
    string sendData = data;
-   size_t dataLen = sendData.size();
    if (bip151Connection_->getBIP150State() == BIP150State::SUCCESS) {
       ZmqBIP15XSerializedMessage msg;
       BIP151Connection* connPtr = nullptr;
       if (bip151HandshakeCompleted_) {
          connPtr = bip151Connection_.get();
       }
+
       BinaryData payload(data);
       msg.construct(payload.getDataVector(), connPtr
          , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, msgID_);
       sendData = msg.getNextPacket().toBinStr();
-      dataLen = sendData.size();
    }
 
-   // Now, we can send the data.
-   int result = -1;
-   {
-      FastLock locker(lockSocket_);
-      result = zmq_send(dataSocket_.get(), sendData.c_str(), dataLen, 0);
-   }
-   if (result != (int)dataLen) {
-      if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-            "data: {} (result={}, data size={})", __func__, connectionName_
-            , zmq_strerror(zmq_errno()), result, dataLen);
-      }
-      return false;
-   }
-
-   lastHeartbeat_ = rightNow;    // Each other message sent resets the heartbeat timer
-   return true;
+   return sendPacket(sendData);
 }
 
 void ZmqBIP15XDataConnection::notifyOnConnected()
@@ -191,7 +222,13 @@ void ZmqBIP15XDataConnection::notifyOnConnected()
    });
 }
 
-void ZmqBIP15XDataConnection::sendHeartbeat()
+// A function that is used to trigger heartbeats. Required because ZMQ is unable
+// to tell, via a data socket connection, when a client has disconnected.
+//
+// INPUT:  N/A
+// OUTPUT: N/A
+// RETURN: N/A
+void ZmqBIP15XDataConnection::triggerHeartbeat()
 {
    if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
       logger_->error("[ZmqBIP15XDataConnection::{}] {} invalid state: {}"
@@ -203,45 +240,19 @@ void ZmqBIP15XDataConnection::sendHeartbeat()
       connPtr = bip151Connection_.get();
    }
 
-   // An error message is already logged elsewhere if the send fails.
-// The following code is temporarily disabled while some issues are sorted out.
-/*   ZmqBIP15XSerializedMessage msg;
+   // If a rekey is needed, rekey before encrypting. Estimate the size of the
+   // final packet first in order to get the # of bytes transmitted.
+   rekeyIfNeeded(HEARTBEAT_PACKET_SIZE);
+
+   ZmqBIP15XSerializedMessage msg;
    BinaryData emptyPayload;
-   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT, msgID_);
+   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT
+      , msgID_);
    auto& packet = msg.getNextPacket();
-   if (send(packet.toBinStr())) {*/
-///////////// The following code should be removed once heartbeat rekey errors are solved.
-   uint32_t size = 1;
-   BinaryData plainText(4 + size + POLY1305MACLEN);
 
-   // Copy in packet size.
-   memcpy(plainText.getPtr(), &size, 4);
-   size += 4;
-   //type
-   plainText.getPtr()[4] = ZMQ_MSGTYPE_HEARTBEAT;
-
-   //encrypt if possible
-   if (connPtr != nullptr) {
-      connPtr->assemblePacket(plainText.getPtr(), size, plainText.getPtr()
-         , size + POLY1305MACLEN);
-   } else {
-      plainText.resize(size);
-   }
-
-   int result = -1;
-   {
-      FastLock locker(lockSocket_);
-      result = zmq_send(dataSocket_.get(), plainText.getCharPtr()
-         , plainText.getSize(), 0);
-   }
-   if (result != (int)plainText.getSize()) {
-      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-         "data: {} (result={}, data size={}", __func__, connectionName_
-         , zmq_strerror(zmq_errno()), result, plainText.getSize());
-   }
-   else {
-///////////// The code above be removed once heartbeat errors are gone.
-      lastHeartbeat_ = chrono::system_clock::now();
+   // An error message is already logged elsewhere if the send fails.
+   if (sendPacket(packet.toBinStr()), false) {
+      lastHeartbeat_ = chrono::steady_clock::now();
    }
 }
 
@@ -261,7 +272,7 @@ bool ZmqBIP15XDataConnection::startBIP151Handshake(
    msg.construct(nullPayload.getDataVector(), nullptr, ZMQ_MSGTYPE_AEAD_SETUP,
       0);
    auto& packet = msg.getNextPacket();
-   return send(packet.toBinStr());
+   return sendPacket(packet.toBinStr());
 }
 
 // The function that handles raw data coming in from the socket. The data may or
@@ -455,7 +466,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 
       msg.construct(payload.getDataVector(), connPtr, type, 0);
       auto& packet = msg.getNextPacket();
-      send(packet.toBinStr());
+      sendPacket(packet.toBinStr());
    };
 
    // Read the message, get the type, and process as needed. Code mostly copied
@@ -635,7 +646,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       // Rekey.
       bip151Connection_->bip150HandshakeRekey();
       bip150HandshakeCompleted_ = true;
-      outKeyTimePoint_ = chrono::system_clock::now();
+      outKeyTimePoint_ = chrono::steady_clock::now();
       if (cbCompleted_) {
          cbCompleted_();
       }

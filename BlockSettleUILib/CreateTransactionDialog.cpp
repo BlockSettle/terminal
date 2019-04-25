@@ -18,8 +18,8 @@
 
 #include "Address.h"
 #include "ArmoryConnection.h"
-#include "CoinControlDialog.h"
 #include "BSMessageBox.h"
+#include "CoinControlDialog.h"
 #include "OfflineSigner.h"
 #include "SignContainer.h"
 #include "TransactionData.h"
@@ -40,6 +40,7 @@ const std::map<unsigned int, QString> feeLevels = {
    { 10, QObject::tr("1 hour 40 minutes") },
    { 20, QObject::tr("3 hours 20 minutes") }
 };
+const size_t kTransactionWeightLimit = 400000;
 
 CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager>& walletManager
@@ -48,7 +49,7 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    : QDialog(parent)
    , armory_(armory)
    , walletsManager_(walletManager)
-   , signingContainer_(container)
+   , signContainer_(container)
    , loadFeeSuggestions_(loadFeeSuggestions)
    , logger_(logger)
 {
@@ -96,11 +97,10 @@ void CreateTransactionDialog::init()
    connect(comboBoxFeeSuggestions(), SIGNAL(activated(int)), this, SLOT(feeSelectionChanged(int)));
    connect(comboBoxWallets(), SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
 
-   if (signingContainer_) {
-      connect(signingContainer_.get(), &SignContainer::TXSigned, this, &CreateTransactionDialog::onTXSigned);
-      connect(signingContainer_.get(), &SignContainer::disconnected, this, &CreateTransactionDialog::updateCreateButtonText);
-      connect(signingContainer_.get(), &SignContainer::authenticated, this, &CreateTransactionDialog::onSignerAuthenticated);
-      signer_ = signingContainer_;
+   if (signContainer_) {
+      connect(signContainer_.get(), &SignContainer::TXSigned, this, &CreateTransactionDialog::onTXSigned);
+      connect(signContainer_.get(), &SignContainer::disconnected, this, &CreateTransactionDialog::updateCreateButtonText);
+      connect(signContainer_.get(), &SignContainer::authenticated, this, &CreateTransactionDialog::onSignerAuthenticated);
    }
    updateCreateButtonText();
    lineEditAddress()->setFocus();
@@ -108,18 +108,19 @@ void CreateTransactionDialog::init()
 
 void CreateTransactionDialog::updateCreateButtonText()
 {
-   if (!signer_) {
+   if (!signContainer_) {
       pushButtonCreate()->setEnabled(false);
       return;
    }
    if (HaveSignedImportedTransaction()) {
       pushButtonCreate()->setText(tr("Broadcast"));
-      if (signer_->isOffline() || (signer_->opMode() == SignContainer::OpMode::Offline)) {
+      if (signContainer_->isOffline()) {
          pushButtonCreate()->setEnabled(false);
       }
       return;
    }
-   if (signer_->isOffline() || (signer_->opMode() == SignContainer::OpMode::Offline)) {
+   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
+   if (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId)) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       selectedWalletChanged(-1);
@@ -151,8 +152,8 @@ void CreateTransactionDialog::reject()
          return;
       }
 
-      if (txReq_.isValid() && signer_) {
-         signer_->CancelSignTx(txReq_.serializeState());
+      if (txReq_.isValid() && signContainer_) {
+         signContainer_->CancelSignTx(txReq_.serializeState());
       }
    }
 
@@ -249,12 +250,11 @@ void CreateTransactionDialog::selectedWalletChanged(int, bool resetInputs, const
    }
    const auto currentWallet = walletsManager_->getWalletById(UiUtils::getSelectedWalletId(comboBoxWallets()));
    const auto rootWallet = walletsManager_->getHDRootForLeaf(currentWallet->walletId());
-   if (signingContainer_->isWalletOffline(currentWallet->walletId())
-      || !rootWallet || signingContainer_->isWalletOffline(rootWallet->walletId())) {
+   if (signContainer_->isWalletOffline(currentWallet->walletId())
+      || !rootWallet || signContainer_->isWalletOffline(rootWallet->walletId())) {
       pushButtonCreate()->setText(tr("Export"));
    } else {
       pushButtonCreate()->setText(tr("Broadcast"));
-      signer_ = signingContainer_;
    }
    if ((transactionData_->getWallet() != currentWallet) || resetInputs) {
       transactionData_->setWallet(currentWallet, armory_->topBlock(), resetInputs, cbInputsReset);
@@ -317,15 +317,35 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
    pendingTXSignId_ = 0;
    QString detailedText;
 
-   if (error.empty()) {
-      if (signer_->isOffline()) {   // Offline signing
-         BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
-            , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
-            , this).exec();
-         accept();
-         return;
-      }
+   const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
+   if (error.empty() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
+      BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
+         , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
+         , this).exec();
+      accept();
+      return;
+   }
 
+   try {
+      const Tx tx(signedTX);
+      if (tx.isInitialized() && (tx.getTxWeight() >= kTransactionWeightLimit)) {
+         BSMessageBox mBox(BSMessageBox::question, tr("Oversized Transaction")
+            , tr("Transaction size limit %1 exceeded: %2. Do you still want to send this transaction?")
+            .arg(QString::number(kTransactionWeightLimit)).arg(QString::number(tx.getTxWeight()))
+            , this);
+         if (mBox.exec() != QDialog::Accepted) {
+            stopBroadcasting();
+            return;
+         }
+      }
+   }
+   catch (const std::exception &e) {
+      MessageBoxBroadcastError(tr("Invalid signed transaction: %1").arg(QLatin1String(e.what())), this).exec();
+      stopBroadcasting();
+      return;
+   }
+
+   if (error.empty()) {
       if (armory_->broadcastZC(signedTX)) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
@@ -387,24 +407,19 @@ bool CreateTransactionDialog::CreateTransaction()
    QString text;
    QString detailedText;
 
-   if (!signer_) {
+   if (!signContainer_) {
       BSMessageBox(BSMessageBox::critical, tr("Error")
          , tr("Signer is invalid - unable to send transaction"), this).exec();
       return false;
    }
 
-   if (signer_->isOffline()) {
-      auto offlineSigner = std::dynamic_pointer_cast<OfflineSigner>(signer_);
-      if (!offlineSigner) {
-         logger_->error("[{}] failed to cast to offline signer", __func__);
-         return false;
-      }
+   if (signContainer_->isWalletOffline(transactionData_->getWallet()->walletId())) {
       const auto txDir = QFileDialog::getExistingDirectory(this, tr("Select Offline TX destination directory")
-         , offlineSigner->targetDir());
+         , signContainer_->targetDir());
       if (txDir.isNull()) {
          return true;
       }
-      offlineSigner->setTargetDir(txDir);
+      signContainer_->setTargetDir(txDir);
    }
 
    startBroadcasting();
@@ -434,7 +449,7 @@ bool CreateTransactionDialog::CreateTransaction()
          txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
       }
 
-      pendingTXSignId_ = signer_->signTXRequest(txReq_, false,
+      pendingTXSignId_ = signContainer_->signTXRequest(txReq_, false,
          SignContainer::TXSignMode::Full, {}, true);
       if (!pendingTXSignId_) {
          throw std::logic_error("Signer failed to send request");

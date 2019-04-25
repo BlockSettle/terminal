@@ -110,8 +110,7 @@ private:
 protected:
    std::shared_ptr<ArmoryConnection>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
-   std::shared_ptr<SignContainer>   signingContainer_;
-   std::shared_ptr<SignContainer>   signer_;
+   std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<TransactionData> transactionData_;
    std::shared_ptr<spdlog::logger> logger_;
 

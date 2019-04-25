@@ -62,7 +62,7 @@
 #define ZMQ_CALLBACK_ID 0xFFFFFFFD
 #define ZMQ_AEAD_HANDSHAKE_ID 0xFFFFFFFC
 #define ZMQ_MAGIC_WORD 0x56E1
-#define ZMQ_AEAD_REKEY_INVERVAL_SECS 604800 // TEMPORARY (should be 600, or 10 min.)
+#define ZMQ_AEAD_REKEY_INVERVAL_SECS 600
 
 // Class that actually handles the nuts & bolts of message construction.
 class ZmqBIP15XMessageCodec

@@ -105,7 +105,7 @@ namespace bs {
 
       signals:
          void walletChanged();
-         void walletDeleted();
+         void walletDeleted(std::string walletId);
          void walletCreated(HDWalletPtr);
          void walletsReady();
          void walletsSynchronized();
@@ -138,6 +138,7 @@ namespace bs {
          void onStateChanged(ArmoryConnection::State);
          void onWalletImported(const std::string &walletId);
          void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
+         void onWalletsListUpdated();
 
       private:
          bool empty() const { return (wallets_.empty() && !settlementWallet_); }
@@ -165,6 +166,8 @@ namespace bs {
 
          BTCNumericTypes::balance_type getBalanceSum(
             const std::function<BTCNumericTypes::balance_type(const WalletPtr &)> &) const;
+
+         void startWalletRescan(const HDWalletPtr &);
 
       private:
          std::shared_ptr<SignContainer>         signContainer_;

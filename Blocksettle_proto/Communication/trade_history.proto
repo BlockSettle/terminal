@@ -17,6 +17,12 @@ enum TradeHistoryRequestType
    LoadSnapshotRequestType                      = 3;
    LoadPMProductsListRequestType                = 4;
    LoadInitialPMPriceRequestType                = 5;
+   // LoadEODPricesRequestType - send DateContainer as payload to get EOD for a single date
+   // response LoadEODPricesResponse
+   LoadEODPricesRequestType                     = 6;
+   // LoadEODSnapshotRequestType - send DateContainer as payload to get EOD for all days since that date
+   // response EODSnapshotResponse
+   LoadEODSnapshotRequestType                   = 7;
 }
 
 enum TradeHistoryResponseType
@@ -32,6 +38,12 @@ enum TradeHistoryResponseType
    TradeHistoryNewCCProductUpdateType           = 6;
 
    LoadInitialPMPriceResponseType               = 7;
+   LoadEODPricesResponseType                    = 8;
+   DisabledCCProductUpdateType                  = 9;
+   // EODSavedUpdateType - payload is EODSavedUpdate
+   EODSavedUpdateType                           = 10;
+   // EODSnapshotResponseType - payload is EODSnapshotResponse
+   EODSnapshotResponseType                      = 11;
 }
 
 message TradeHistoryRequest
@@ -138,6 +150,11 @@ message TradeHistoryNewCCProductUpdate
    string                  product = 1;
 }
 
+message DisabledCCProductUpdate
+{
+   string                  product = 1;
+}
+
 message LoadInitialPMPriceRequest
 {
    string                  product = 1;
@@ -149,4 +166,43 @@ message LoadInitialPMPriceResponse
    bool   price_set     = 2;
    double bid_price     = 3;
    double offer_price   = 4;
+}
+
+message EODPrice
+{
+   string product = 1;
+   double price   = 2;
+}
+
+message EODSnapshot
+{
+   repeated EODPrice fx_prices      = 3;
+   repeated EODPrice xbt_prices     = 4;
+   repeated EODPrice pm_prices      = 5;
+}
+
+message LoadEODPricesResponse
+{
+   bytes             snapshot       = 1;
+   string            debug_message  = 2;
+}
+
+message DateContainer
+{
+   uint32 year    = 1;
+   uint32 month   = 2;
+   uint32 day     = 3;
+}
+
+message EODSavedUpdate
+{
+   DateContainer  date       = 1;
+   bytes          snapshot   = 2;
+}
+
+message EODSnapshotResponse
+{
+   DateContainer           since_date     = 1;
+   repeated EODSavedUpdate eod            = 2;
+   string                  debug_message  = 3;
 }

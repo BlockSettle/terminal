@@ -37,7 +37,6 @@ public:
    enum class OpMode {
       Local = 1,
       Remote,
-      Offline,
       // RemoteInproc - should be used for testing only, when you need to have signer and listener
       // running in same process and could not use TCP for any reason
       RemoteInproc,
@@ -103,6 +102,9 @@ public:
    virtual bool isOffline() const { return true; }
    virtual bool isWalletOffline(const std::string &) const { return true; }
 
+   virtual void setTargetDir(const QString& targetDir) {}
+   virtual QString targetDir() const { return QString(); }
+
 signals:
    void connected();
    void disconnected();
@@ -122,6 +124,8 @@ signals:
    void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);
    void AutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
+   // Notified from remote/local signer when wallets list is updated
+   void walletsListUpdated();
 
 protected:
    std::shared_ptr<spdlog::logger> logger_;

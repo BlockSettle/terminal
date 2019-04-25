@@ -16,6 +16,89 @@
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/spdlog.h>
+#include "signer.pb.h"
+
+constexpr int kKillTimeout = 5000;
+constexpr int kStartTimeout = 5000;
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <tlhelp32.h>
+#define TERM_SUCCESS_CLEAN 0
+#define TERM_SUCCESS_KILL 1
+#define TERM_FAILED 2
+
+#ifndef MAKEULONGLONG
+#define MAKEULONGLONG(ldw, hdw) ((ULONGLONG(hdw) << 32) | ((ldw) & 0xFFFFFFFF))
+#endif
+
+#ifndef MAXULONGLONG
+#define MAXULONGLONG ((ULONGLONG)~((ULONGLONG)0))
+#endif
+
+static DWORD WINAPI GetWinMainThreadId(DWORD dwProcID)
+{
+   DWORD dwMainThreadID = 0;
+   ULONGLONG ullMinCreateTime = MAXULONGLONG;
+
+   HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+   if (hThreadSnap != INVALID_HANDLE_VALUE) {
+      THREADENTRY32 th32;
+      th32.dwSize = sizeof(THREADENTRY32);
+      BOOL bOK = TRUE;
+      for (bOK = Thread32First(hThreadSnap, &th32); bOK;
+           bOK = Thread32Next(hThreadSnap, &th32)) {
+         if (th32.th32OwnerProcessID == dwProcID) {
+            HANDLE hThread = OpenThread(THREAD_QUERY_INFORMATION, TRUE, th32.th32ThreadID);
+            if (hThread) {
+               FILETIME afTimes[4] = {0};
+               if (GetThreadTimes(hThread,
+                                  &afTimes[0], &afTimes[1], &afTimes[2], &afTimes[3])) {
+                  ULONGLONG ullTest = MAKEULONGLONG(afTimes[0].dwLowDateTime,
+                        afTimes[0].dwHighDateTime);
+                  if (ullTest && ullTest < ullMinCreateTime) {
+                     ullMinCreateTime = ullTest;
+                     dwMainThreadID = th32.th32ThreadID; // let it be main... :)
+                  }
+               }
+               CloseHandle(hThread);
+            }
+         }
+      }
+      CloseHandle(hThreadSnap);
+   }
+
+   return dwMainThreadID;
+}
+
+static DWORD WINAPI TerminateWinApp(DWORD dwPID, DWORD dwTimeout)
+{
+   HANDLE   hProc ;
+   DWORD   dwRet ;
+
+   hProc = OpenProcess(SYNCHRONIZE|PROCESS_TERMINATE, FALSE, dwPID);
+   if (hProc == NULL) {
+      return TERM_FAILED ;
+   }
+
+   PostThreadMessage(GetWinMainThreadId(dwPID), WM_QUIT, 0, 0);
+
+
+   // Wait on the handle. If it signals, great. If it times out,
+   // then you kill it.
+   if(WaitForSingleObject(hProc, dwTimeout) != WAIT_OBJECT_0) {
+      dwRet = (TerminateProcess(hProc, 0) ? TERM_SUCCESS_KILL : TERM_FAILED);
+   }
+   else {
+      dwRet = TERM_SUCCESS_CLEAN ;
+   }
+
+   CloseHandle(hProc) ;
+
+   return dwRet;
+}
+
+#endif // Q_OS_WIN
 
 using namespace Blocksettle::Communication;
 Q_DECLARE_METATYPE(headless::RequestPacket)
@@ -141,15 +224,19 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
 }
 
-static void killProcess(int pid)
+static int killProcess(int pid, int timeout)
 {
 #ifdef Q_OS_WIN
-   HANDLE hProc;
-   hProc = ::OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-   ::TerminateProcess(hProc, 0);
-   ::CloseHandle(hProc);
+   DWORD dRet = TerminateWinApp((DWORD)pid, timeout);
+   return dRet;
+
+//   HANDLE hProc;
+//   hProc = ::OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+//   ::TerminateProcess(hProc, 0);
+//   ::CloseHandle(hProc);
 #else    // !Q_OS_WIN
    QProcess::execute(QLatin1String("kill"), { QString::number(pid) });
+   return 0;
 #endif   // Q_OS_WIN
 }
 
@@ -172,7 +259,7 @@ bool KillHeadlessProcess()
             qDebug() << "[HeadlessContainer] invalid PID" << pid <<"in" << pidFN;
          }
          else {
-            killProcess(pid);
+            killProcess(pid, kKillTimeout);
             qDebug() << "[HeadlessContainer] killed previous headless process with PID" << pid;
             return true;
          }
@@ -646,7 +733,8 @@ bool HeadlessContainer::isReady() const
 
 bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
 {
-   return (missingWallets_.find(walletId) != missingWallets_.end());
+   return ((missingWallets_.find(walletId) != missingWallets_.end())
+      || (woWallets_.find(walletId) != woWallets_.end()));
 }
 
 void HeadlessContainer::createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &cb)
@@ -833,7 +921,10 @@ void HeadlessContainer::ProcessSyncWalletInfo(unsigned int id, const std::string
    for (int i = 0; i < response.wallets_size(); ++i) {
       const auto walletInfo = response.wallets(i);
       result.push_back({ mapFrom(walletInfo.format()), walletInfo.id(), walletInfo.name()
-         , walletInfo.description(), mapFrom(walletInfo.nettype()) });
+         , walletInfo.description(), mapFrom(walletInfo.nettype()), walletInfo.watching_only() });
+      if (walletInfo.watching_only()) {
+         woWallets_.insert(walletInfo.id());
+      }
    }
    itCb->second(result);
    cbWalletInfoMap_.erase(itCb);
@@ -852,6 +943,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
+   const bool isWoRoot = (woWallets_.find(response.walletid()) != woWallets_.end());
    bs::sync::HDWalletData result;
    for (int i = 0; i < response.groups_size(); ++i) {
       const auto groupInfo = response.groups(i);
@@ -859,6 +951,9 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
       group.type = static_cast<bs::hd::CoinType>(groupInfo.type());
       for (int j = 0; j < groupInfo.leaves_size(); ++j) {
          const auto leafInfo = groupInfo.leaves(j);
+         if (isWoRoot) {
+            woWallets_.insert(leafInfo.id());
+         }
          group.leaves.push_back({ leafInfo.id(), leafInfo.index() });
       }
       result.groups.push_back(group);
@@ -1090,6 +1185,7 @@ void RemoteSigner::onAuthenticated()
 void RemoteSigner::onDisconnected()
 {
    missingWallets_.clear();
+   woWallets_.clear();
 
    std::set<bs::signer::RequestId> tmpReqs = signRequests_;
    signRequests_.clear();
@@ -1168,10 +1264,113 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       ProcessSyncAddresses(packet.id(), packet.data());
       break;
 
+   case headless::WalletsListUpdatedType:
+      logger_->debug("received WalletsListUpdatedType message");
+      emit walletsListUpdated();
+      break;
+
    default:
       logger_->warn("[HeadlessContainer] Unknown packet type: {}", packet.type());
       break;
    }
+}
+
+void RemoteSigner::setTargetDir(const QString& targetDir)
+{
+   appSettings_->set(ApplicationSettings::signerOfflineDir, targetDir);
+}
+
+QString RemoteSigner::targetDir() const
+{
+   return appSettings_->get<QString>(ApplicationSettings::signerOfflineDir);
+}
+
+bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+   , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password
+   , bool keepDuplicatedRecipients)
+{
+   if (isWalletOffline(txSignReq.walletId)) {
+      return signOffline(txSignReq);
+   }
+   return HeadlessContainer::signTXRequest(txSignReq, autoSign, mode, password, keepDuplicatedRecipients);
+}
+
+bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRequest &txSignReq)
+{
+   if (!txSignReq.isValid()) {
+      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      return 0;
+   }
+
+   Blocksettle::Storage::Signer::TXRequest request;
+   request.set_walletid(txSignReq.walletId);
+
+   for (const auto &utxo : txSignReq.inputs) {
+      auto input = request.add_inputs();
+      input->set_utxo(utxo.serialize().toBinStr());
+      const auto addr = bs::Address::fromUTXO(utxo);
+      input->mutable_address()->set_address(addr.display());
+   }
+
+   for (const auto &recip : txSignReq.recipients) {
+      request.add_recipients(recip->getSerializedScript().toBinStr());
+   }
+
+   if (txSignReq.fee) {
+      request.set_fee(txSignReq.fee);
+   }
+   if (txSignReq.RBF) {
+      request.set_rbf(true);
+   }
+
+   if (txSignReq.change.value) {
+      auto change = request.mutable_change();
+      change->mutable_address()->set_address(txSignReq.change.address.display());
+      change->mutable_address()->set_index(txSignReq.change.index);
+      change->set_value(txSignReq.change.value);
+   }
+
+   if (!txSignReq.comment.empty()) {
+      request.set_comment(txSignReq.comment);
+   }
+
+   Blocksettle::Storage::Signer::File fileContainer;
+   auto container = fileContainer.add_payload();
+   container->set_type(Blocksettle::Storage::Signer::RequestFileType);
+   container->set_data(request.SerializeAsString());
+
+   const auto timestamp = std::to_string(QDateTime::currentDateTime().toSecsSinceEpoch());
+   const auto targetDir = appSettings_->get<std::string>(ApplicationSettings::signerOfflineDir);
+   const std::string fileName = targetDir + "/" + txSignReq.walletId + "_" + timestamp + ".bin";
+
+   const auto reqId = listener_->newRequestId();
+   QFile f(QString::fromStdString(fileName));
+   if (f.exists()) {
+      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+         emit TXSigned(reqId, {}, "request file " + fileName + " already exists", false);
+      });
+      return reqId;
+   }
+   if (!f.open(QIODevice::WriteOnly)) {
+      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+         emit TXSigned(reqId, {}, "failed to open " + fileName + " for writing", false);
+      });
+      return reqId;
+   }
+
+   const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
+   if (f.write(data) != data.size()) {
+      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+         emit TXSigned(reqId, {}, "failed to write to " + fileName, false);
+      });
+      return reqId;
+   }
+   f.close();
+
+   QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+      emit TXSigned(reqId, fileName, {}, false);
+   });
+   return reqId;
 }
 
 
@@ -1257,7 +1456,7 @@ bool LocalSigner::Start()
 #endif
 
    headlessProcess_->start(signerAppPath, cmdArgs);
-   if (!headlessProcess_->waitForStarted(5000)) {
+   if (!headlessProcess_->waitForStarted(kStartTimeout)) {
       logger_->error("[HeadlessContainer] Failed to start child");
       headlessProcess_.reset();
       emit ready();
@@ -1289,18 +1488,12 @@ bool LocalSigner::Stop()
 
    if (headlessProcess_) {
 #ifdef Q_OS_WIN
-      if (AttachConsole(headlessProcess_->pid()->dwProcessId)) {
-         SetConsoleCtrlHandler(NULL, TRUE);  // Disable shutdown on Ctrl-C for self
-         GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
-         FreeConsole();
-      }
-      else {
-         headlessProcess_->kill();
-      }
+      int ret = killProcess(headlessProcess_->processId(), kKillTimeout);
+      logger_->info("Local headless process terminated with code {}", ret);
 #else
       headlessProcess_->terminate();
 #endif
-      if (!headlessProcess_->waitForFinished(500)) {
+      if (!headlessProcess_->waitForFinished(kKillTimeout)) {
          headlessProcess_->close();
       }
       headlessProcess_.reset();
