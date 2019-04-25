@@ -99,3 +99,12 @@ std::shared_ptr<Chat::UserData> ChatUserElement::getUserData() const
    }
    return nullptr;
 }
+
+std::shared_ptr<Chat::UserData> ChatSearchElement::getUserData() const
+{
+   auto user = std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
+   if (user) {
+      return user;
+   }
+   return nullptr;
+}

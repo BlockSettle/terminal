@@ -96,6 +96,7 @@ public:
    void sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
    void sendSearchUsersRequest(const QString& userIdPattern);
    QString deriveKey(const QString& email) const;
+   void clearSearch();
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);

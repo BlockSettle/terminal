@@ -405,6 +405,8 @@ void ChatClient::OnSearchUsersResponse(const Chat::SearchUsersResponse & respons
    QStringList users;
 
    std::vector<std::shared_ptr<Chat::UserData>> userList = response.getUsersList();
+   model_->insertSearchUserList(userList);
+
    for (auto user : userList){
       users << QString::fromStdString(user->toJsonString());
    }
@@ -924,6 +926,11 @@ void ChatClient::sendSearchUsersRequest(const QString &userIdPattern)
 QString ChatClient::deriveKey(const QString &email) const
 {
    return QString::fromStdString(hasher_->deriveKey(email.toStdString()));
+}
+
+void ChatClient::clearSearch()
+{
+   model_->clearSearch();
 }
 
 void ChatClient::onActionAddToContacts(const QString& userId)

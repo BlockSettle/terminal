@@ -436,6 +436,7 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
       if (!popup_->rect().contains(pos))
       {
          qApp->removeEventFilter(this);
+         client_->clearSearch();
          popup_->deleteLater();
          popup_ = nullptr;
       }

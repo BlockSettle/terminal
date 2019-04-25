@@ -25,10 +25,12 @@ public:
 
 public:
    void clearModel();
+   void clearSearch();
    bool insertRoomObject(std::shared_ptr<Chat::RoomData> data);
    bool insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline = false);
    bool insertGeneralUserObject(std::shared_ptr<Chat::UserData> data);
    bool insertSearchUserObject(std::shared_ptr<Chat::UserData> data);
+   bool insertSearchUserList(std::vector<std::shared_ptr<Chat::UserData>> userList);
    bool insertRoomMessage(std::shared_ptr<Chat::MessageData> message);
    bool insertContactsMessage(std::shared_ptr<Chat::MessageData> message);
    TreeItem* findChatNode(const std::string& chatId);
@@ -57,8 +59,6 @@ private:
    QVariant roomData(const TreeItem * item, int role) const;
    QVariant contactData(const TreeItem * item, int role) const;
    QVariant userData(const TreeItem * item, int role) const;
-   QVariant categoryNodeData(const TreeItem *item, int role) const;
-   QVariant categoryElementData(TreeItem *item, int role) const;
 
 private:
    std::shared_ptr<RootItem> root_;

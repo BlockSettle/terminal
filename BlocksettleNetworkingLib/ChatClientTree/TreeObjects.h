@@ -45,7 +45,7 @@ class ChatSearchElement : public CategoryElement {
 public:
    ChatSearchElement(std::shared_ptr<Chat::UserData> data)
       : CategoryElement(TreeItem::NodeType::SearchElement, TreeItem::NodeType::NoDataNode, data){}
-
+   std::shared_ptr<Chat::UserData> getUserData() const;
 };
 
 class ChatUserElement : public CategoryElement {

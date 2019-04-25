@@ -10,6 +10,8 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
 
    root_->insertItem(new CategoryItem(TreeItem::NodeType::RoomsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::ContactsElement));
+   root_->insertItem(new CategoryItem(TreeItem::NodeType::AllUsersElement));
+   root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
 
 }
 
@@ -18,6 +20,24 @@ void ChatClientDataModel::clearModel()
    beginResetModel();
    root_->clear();
    endResetModel();
+}
+
+void ChatClientDataModel::clearSearch()
+{
+   TreeItem * search = root_->findCategoryNodeWith(TreeItem::NodeType::SearchElement);
+
+   if (!search) {
+      return;
+   }
+
+   int first = 0;
+   int last = search->getChildren().size() > 0
+              ? static_cast<int>(search->getChildren().size() - 1)
+              : 0;
+
+   beginRemoveRows(createIndex(search->selfIndex(), 0, search), first, last);
+   root_->clearSearch();
+   endRemoveRows();
 }
 
 bool ChatClientDataModel::insertRoomObject(std::shared_ptr<Chat::RoomData> data)
@@ -50,6 +70,28 @@ bool ChatClientDataModel::insertSearchUserObject(std::shared_ptr<Chat::UserData>
    bool res = root_->insertSearchUserObject(data);
    endResetModel();
    return res;
+}
+
+bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat::UserData> > userList)
+{
+   TreeItem * search = root_->findCategoryNodeWith(TreeItem::NodeType::SearchElement);
+
+   if (!search) {
+      return false;
+   }
+   QModelIndex index = createIndex(search->selfIndex(), 0, search);
+   int first = search->getChildren().size() > 0
+               ? search->getChildren().size() - 1
+               : 0;
+   int last = search->getChildren().size() + userList.size() - 1;
+
+   beginInsertRows(index, first, last);
+   for (auto user : userList){
+      root_->insertSearchUserObject(user);
+   }
+   endInsertRows();
+
+   return true;
 }
 
 bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
@@ -208,19 +250,6 @@ QVariant ChatClientDataModel::data(const QModelIndex &index, int role) const
       default:
          return QVariant();
    }
-
-   switch (item->getType()) {
-      case TreeItem::NodeType::CategoryNode:
-         return  categoryNodeData(item, role);
-      case TreeItem::NodeType::SearchElement:
-      case TreeItem::NodeType::RoomsElement:
-      case TreeItem::NodeType::ContactsElement:
-      case TreeItem::NodeType::AllUsersElement:
-         return categoryElementData(item, role);
-      default:
-         return QVariant();
-   }
-
 }
 
 void ChatClientDataModel::onItemChanged(TreeItem *item)
@@ -276,88 +305,27 @@ QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
 
 QVariant ChatClientDataModel::userData(const TreeItem *item, int role) const
 {
+   std::shared_ptr<Chat::UserData> user = nullptr;
    if (item->getType() == TreeItem::NodeType::AllUsersElement) {
       const ChatUserElement * user_element = static_cast<const ChatUserElement*>(item);
-      auto user = user_element->getUserData();
-
-      if (!user) {
-         return QVariant();
-      }
-
-      switch (role) {
-         case UserIdRole:
-            return user->getUserId();
-         case UserOnlineStatusRole:
-            return QVariant::fromValue(user->getUserStatus());
-         default:
-            return QVariant();
-      }
+      user = user_element->getUserData();
+   } else if (item->getType() == TreeItem::NodeType::SearchElement) {
+      const ChatSearchElement * search_element = static_cast<const ChatSearchElement*>(item);
+      user = search_element->getUserData();
    }
-}
 
-QVariant ChatClientDataModel::categoryNodeData(const TreeItem* item, int role) const
-{
-   if (role != Qt::DisplayRole) {
+   if (!user) {
       return QVariant();
    }
 
-   switch(item->getAcceptType()){
-      case TreeItem::NodeType::RoomsElement:
-         return QLatin1String("Chat rooms");
-      case TreeItem::NodeType::ContactsElement:
-         return QLatin1String("Contacts");
-      case TreeItem::NodeType::AllUsersElement:
-         return QLatin1String("AllUsers");
-      case TreeItem::NodeType::SearchElement:
-         return QLatin1String("Search");
+   switch (role) {
+      case UserIdRole:
+         return user->getUserId();
+      case UserOnlineStatusRole:
+         return QVariant::fromValue(user->getUserStatus());
       default:
-         return QLatin1String("<unknown>");
+         return QVariant();
    }
-}
-
-QVariant ChatClientDataModel::categoryElementData(TreeItem * item, int role) const
-{
-   CategoryElement* element = static_cast<CategoryElement*>(item);
-   switch(element->getType()){
-      case TreeItem::NodeType::RoomsElement:{
-         std::shared_ptr<Chat::RoomData> data = std::dynamic_pointer_cast<Chat::RoomData>(element->getDataObject());
-         if (role == Qt::DisplayRole){
-            return data->getTitle();
-         }
-      } break;
-      case TreeItem::NodeType::ContactsElement:{
-         std::shared_ptr<Chat::ContactRecordData> data = std::dynamic_pointer_cast<Chat::ContactRecordData>(element->getDataObject());
-         if (role == Qt::DisplayRole){
-            return data->getContactId();
-         } /*else if (role == Qt::TextColorRole){
-            ChatContactElement* contact = static_cast<ChatContactElement*>(element);
-            switch (data->getContactStatus()) {
-               case Chat::ContactStatus::Accepted:
-                  if (contact->getOnlineStatus() == ChatContactElement::OnlineStatus::Online){
-                     return 0x00c8f8;
-                  }
-                  return 0xffffff;
-               case Chat::ContactStatus::Rejected:
-                  return 0xff0000;
-               case Chat::ContactStatus::Incoming:
-                  return 0xffa834;
-               case Chat::ContactStatus::Outgoing:
-                  return 0xA0BC5D;
-
-            }
-         }*/
-
-      } break;
-      case TreeItem::NodeType::AllUsersElement:{
-         std::shared_ptr<Chat::UserData> data = std::dynamic_pointer_cast<Chat::UserData>(element->getDataObject());
-         if (role == Qt::DisplayRole){
-            return data->getUserId();
-         }
-      } break;
-      default:
-         return QLatin1String("<unknown>");
-   }
-   return QVariant();
 }
 
 Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
