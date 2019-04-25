@@ -28,45 +28,56 @@ hd::Wallet::~Wallet() = default;
 
 void hd::Wallet::synchronize(const std::function<void()> &cbDone)
 {
-   if (!signContainer_) {
+   if (!signContainer_)
       return;
-   }
-   const auto &cbProcess = [this, cbDone](HDWalletData data) {
-      for (const auto &grpData : data.groups) {
+
+   const auto &cbProcess = [this, cbDone](HDWalletData data) 
+   {
+      for (const auto &grpData : data.groups) 
+      {
          auto group = createGroup(grpData.type, grpData.extOnly);
-         if (!group) {
+         if (!group) 
+         {
             LOG(logger_, error, "[hd::Wallet::synchronize] failed to create group {}", (uint32_t)grpData.type);
             continue;
          }
-         for (const auto &leafData : grpData.leaves) {
+
+         for (const auto &leafData : grpData.leaves) 
+         {
             auto leaf = group->createLeaf(leafData.index, leafData.id);
-            if (!leaf) {
+            if (!leaf) 
+            {
                LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{} with id {}"
                   , (uint32_t)grpData.type, leafData.index, leafData.id);
                continue;
             }
          }
       }
+
       const auto leaves = getLeaves();
       auto leafIds = std::make_shared<std::set<std::string>>();
-      for (const auto &leaf : leaves) {
+      for (const auto &leaf : leaves)
          leafIds->insert(leaf->walletId());
-      }
-      for (const auto &leaf : leaves) {
-         const auto &cbLeafDone = [leafIds, cbDone, id=leaf->walletId()] {
+
+      for (const auto &leaf : leaves) 
+      {
+         const auto &cbLeafDone = [leafIds, cbDone, id=leaf->walletId()] 
+         {
             leafIds->erase(id);
-            if (leafIds->empty() && cbDone) {
+            if (leafIds->empty() && cbDone)
                cbDone();
-            }
          };
+
          leaf->synchronize(cbLeafDone);
-         if (encryptionTypes_.empty()) {
+         if (encryptionTypes_.empty()) 
+         {
             encryptionTypes_ = leaf->encryptionTypes();
             encryptionKeys_ = leaf->encryptionKeys();
             encryptionRank_ = leaf->encryptionRank();
          }
       }
    };
+
    signContainer_->syncHDWallet(walletId(), cbProcess);
 }
 

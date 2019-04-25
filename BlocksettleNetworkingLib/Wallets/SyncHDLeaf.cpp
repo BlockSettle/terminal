@@ -24,7 +24,8 @@ hd::Leaf::~Leaf() = default;
 
 void hd::Leaf::synchronize(const std::function<void()> &cbDone)
 {
-   const auto &cbProcess = [this, cbDone](bs::sync::WalletData data) {
+   const auto &cbProcess = [this, cbDone](bs::sync::WalletData data) 
+   {
       encryptionTypes_ = data.encryptionTypes;
       encryptionKeys_ = data.encryptionKeys;
       encryptionRank_ = data.encryptionRank;
@@ -37,22 +38,27 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       lastExtIdx_ = data.highestExtIndex_;
       lastIntIdx_ = data.highestIntIndex_;
 
-      for (const auto &addr : data.addresses) {
+      for (const auto &addr : data.addresses) 
+      {
          addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
       }
-      for (const auto &addr : data.addrPool) {  //addPool normally won't contain comments
+
+      for (const auto &addr : data.addrPool) 
+      {  
+         //addPool normally won't contain comments
          const auto path = bs::hd::Path::fromString(addr.index);
          addressPool_[{ path, addr.address.getType() }] = addr.address;
          poolByAddr_[addr.address] = { path, addr.address.getType() };
       }
-      for (const auto &txComment : data.txComments) {
+
+      for (const auto &txComment : data.txComments) 
          setTransactionComment(txComment.txHash, txComment.comment, false);
-      }
-      if (cbDone) {
+
+      if (cbDone)
          cbDone();
-      }
    };
+
    signContainer_->syncWallet(walletId(), cbProcess);
 }
 
@@ -559,28 +565,38 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb,
    if (key.aet == AddressEntryType_Default)
       keyCopy.aet = defaultAET_;
 
-   const auto addrPoolIt = addressPool_.find(keyCopy);
-   if (addrPoolIt != addressPool_.end()) 
-   {
-      result = std::move(addrPoolIt->second);
-      addressPool_.erase(addrPoolIt->first);
-      poolByAddr_.erase(result);
-   }
-   else 
-   {
-      const auto &cbPool = [this, cb, keyCopy] 
+   auto swapKey = [this, &result, &keyCopy](void)->bool
+   {   
+      const auto addrPoolIt = addressPool_.find(keyCopy);
+      if (addrPoolIt != addressPool_.end())
       {
-         const auto addrPoolIt = addressPool_.find(keyCopy);
-         if (addrPoolIt != addressPool_.end()) 
-         {
-            const auto addr = addrPoolIt->second;
-            addressPool_.erase(addrPoolIt->first);
-            poolByAddr_.erase(addr);
-            if (cb)
-               cb(addr);
-         }
+         result = std::move(addrPoolIt->second);
+         addressPool_.erase(addrPoolIt->first);
+         poolByAddr_.erase(result);
+         return true;
+      }
+
+      return false;
+   };
+
+   if (!swapKey())
+   {
+      auto promPtr = std::make_shared<std::promise<bool>>();
+      auto fut = promPtr->get_future();
+      auto topUpCb = [promPtr](void)
+      {
+         promPtr->set_value(true);
       };
-      topUpAddressPool(cbPool);
+
+      bool extInt = true;
+      if (key.path.get(-2) == addrTypeInternal)
+         extInt = false;
+
+      topUpAddressPool(extInt, topUpCb);
+      fut.wait();
+
+      if (!swapKey())
+         throw std::range_error("did not increase address pool enough");
    }
 
    if (addrToIndex_.find(result.unprefixed()) != addrToIndex_.end()) {
@@ -595,49 +611,40 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb,
    return result;
 }
 
-void hd::Leaf::topUpAddressPool(const std::function<void()> &cb, size_t nbIntAddresses, size_t nbExtAddresses)
+void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
 {
-   const size_t nbPoolInt = nbIntAddresses ? 0 : getLastAddrPoolIndex(addrTypeInternal) - lastIntIdx_ + 1;
-   const size_t nbPoolExt = nbExtAddresses ? 0 : getLastAddrPoolIndex(addrTypeExternal) - lastExtIdx_ + 1;
-   nbIntAddresses = qMax(nbIntAddresses, intAddressPoolSize_);
-   nbExtAddresses = qMax(nbExtAddresses, extAddressPoolSize_);
+   if (!signContainer_)
+      throw std::runtime_error("uninitialized sign container");
 
-   std::vector<std::pair<std::string, AddressEntryType>> request;
-   for (const auto aet : poolAET_) 
+   auto fillUpAddressPoolCallback = [this, cb](
+      const std::vector<std::pair<bs::Address, std::string>>& addrVec)
    {
-      if (!isExtOnly_ && (nbPoolInt < (intAddressPoolSize_ / 2))) 
-      {
-         for (bs::hd::Path::Elem i = lastIntIdx_; i < lastIntIdx_ + nbIntAddresses; i++) 
-         {
-            bs::hd::Path addrPath({ addrTypeInternal, i });
-            request.push_back({ addrPath.toString(), aet });
-         }
-      }
-      
-      if (nbPoolExt < (extAddressPoolSize_ / 2)) 
-      {
-         for (bs::hd::Path::Elem i = lastExtIdx_; i < lastExtIdx_ + nbExtAddresses; i++) 
-         {
-            bs::hd::Path addrPath({ addrTypeExternal, i });
-            request.push_back({ addrPath.toString(), aet });
-         }
-      }
-   }
+      /***
+      This lambda adds the newly generated addresses to the address pool.
 
-   const auto &cbAddrs = [this, cb](const std::vector<std::pair<bs::Address, std::string>> &addrs) 
-   {
-      for (const auto &addr : addrs) 
+      New addresses generated by topUpAddressPool are not instantiated yet,
+      they are only of use for registering the underlying script hashes
+      with the DB, which is why they are only saved in the pool.
+      ***/
+
+      for (const auto &addrPair : addrVec)
       {
-         const auto path = bs::hd::Path::fromString(addr.second);
-         addressPool_[{path, addr.first.getType()}] = addr.first;
-         poolByAddr_[addr.first] = { path, addr.first.getType() };
+         const auto path = bs::hd::Path::fromString(addrPair.second);
+         addressPool_[{ path, addrPair.first.getType() }] = addrPair.first;
+         poolByAddr_[addrPair.first] = { path, addrPair.first.getType() };
       }
 
-      if (cb)
-         cb();
+      //trigger new address registration
+
+      cb();
    };
 
-   newAddresses(request, cbAddrs, false);
+   unsigned lookup = extAddressPoolSize_;
+   if (!extInt)
+      lookup = intAddressPoolSize_;
+
+   signContainer_->extendAddressChain(
+      walletId(), lookup, extInt, fillUpAddressPoolCallback);
 }
 
 hd::Leaf::AddrPoolKey hd::Leaf::getAddressIndexForAddr(const BinaryData &addr) const
@@ -1129,34 +1136,39 @@ void hd::Leaf::onSaveToWallet(const std::vector<PooledAddress> &addresses)
 void hd::Leaf::onScanComplete()
 {
    reset();
+
    const bool hasAddresses = !activeScanAddresses_.empty();
-   if (hasAddresses) {
+   if (hasAddresses) 
+   {
       std::vector<std::pair<std::string, AddressEntryType>> newAddrReq;
       newAddrReq.reserve(activeScanAddresses_.size());
-      for (const auto &addr : activeScanAddresses_) {
+      for (const auto &addr : activeScanAddresses_)
          newAddrReq.push_back({ addr.path.toString(), addr.aet });
-      }
-      const auto &cbAddrsAdded = [this](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
-         for (const auto &addr : addrs) {
+
+      const auto &cbAddrsAdded = 
+         [this](const std::vector<std::pair<bs::Address, std::string>> &addrs) 
+      {
+         for (const auto &addr : addrs)
             addAddress(addr.first, addr.second, addr.first.getType(), false);
-         }
-         topUpAddressPool();
+
+         topUpAddressPool(true);
          registerWallet(armory_, true);
       };
+
       newAddresses(newAddrReq, cbAddrsAdded);
       activeScanAddresses_.clear();
 
       emit addressAdded();
       emit scanComplete(walletId());
-      if (cbScanNotify_) {
+      
+      if (cbScanNotify_)
          cbScanNotify_(index(), hasAddresses);
-      }
    }
-   else {
+   else 
+   {
       emit scanComplete(walletId());
-      if (cbScanNotify_) {
+      if (cbScanNotify_)
          cbScanNotify_(index(), hasAddresses);
-      }
    }
 }
 
@@ -1196,12 +1208,14 @@ bs::Address hd::AuthLeaf::createAddress(const AddrPoolKey &key, const CbAddress 
    return hd::Leaf::createAddress(key, cb, signal);
 }
 
-void hd::AuthLeaf::topUpAddressPool(const std::function<void()> &cb, size_t intAddresses, size_t extAddresses)
+void hd::AuthLeaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
 {
    if (userId_.isNull()) {
       return;
    }
-   hd::Leaf::topUpAddressPool(cb, intAddresses, extAddresses);
+
+   //auth leaf is ext only
+   hd::Leaf::topUpAddressPool(true, cb);
 }
 
 void hd::AuthLeaf::setUserId(const BinaryData &userId)
@@ -1216,7 +1230,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
       createAddress(addr, nullptr, false);
       lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
    }
-   topUpAddressPool();
+   topUpAddressPool(true);
 }
 
 

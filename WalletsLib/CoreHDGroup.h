@@ -31,8 +31,12 @@ namespace bs {
             std::shared_ptr<hd::Leaf> getLeafById(const std::string &id) const;
             std::vector<std::shared_ptr<hd::Leaf>> getLeaves() const;
             std::vector<std::shared_ptr<bs::core::Wallet>> getAllLeaves() const;
-            std::shared_ptr<Leaf> createLeaf(bs::hd::Path::Elem);
-            std::shared_ptr<Leaf> createLeaf(const std::string &key);
+            
+            std::shared_ptr<Leaf> createLeaf(
+               bs::hd::Path::Elem, unsigned lookup = UINT32_MAX);
+            std::shared_ptr<Leaf> createLeaf(
+               const std::string &key, unsigned lookup = UINT32_MAX);
+            
             virtual std::shared_ptr<Leaf> newLeaf() const;
             virtual bool addLeaf(const std::shared_ptr<Leaf> &);
             bool deleteLeaf(const std::shared_ptr<bs::core::Wallet> &);
@@ -53,7 +57,8 @@ namespace bs {
             void committed() { needsCommit_ = false; }
 
             virtual void serializeLeaves(BinaryWriter &) const;
-            virtual void initLeaf(std::shared_ptr<Leaf> &, const bs::hd::Path &) const;
+            virtual void initLeaf(std::shared_ptr<Leaf> &, const bs::hd::Path &, 
+               unsigned lookup = UINT32_MAX) const;
 
             bs::hd::Path   path_;
             std::shared_ptr<spdlog::logger>  logger_;

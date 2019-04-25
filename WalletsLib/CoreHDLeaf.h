@@ -85,6 +85,7 @@ namespace bs {
             void shutdown(void);
             std::string getFilename(void) const;
             WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
+            std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) override;
 
          protected:
             void reset();
@@ -128,7 +129,7 @@ namespace bs {
 
             std::shared_ptr<AddressEntry> getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
                , AddressEntryType ae_type = AddressEntryType_Default);
-            void topUpAddressPool(size_t count = 0);
+            void topUpAddressPool(size_t count, bool intExt);
             bs::hd::Path::Elem getLastAddrPoolIndex() const;
          };
 

@@ -71,7 +71,7 @@ namespace bs {
             std::string name() const { return name_; }
             std::string description() const { return desc_; }
 
-            void createStructure();
+            void createStructure(unsigned lookup = UINT32_MAX);
             void shutdown();
             bool eraseFile();
             const std::string& getFileName(void) const;

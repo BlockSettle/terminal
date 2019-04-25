@@ -222,9 +222,51 @@ std::vector<hd::Leaf::PooledAddress> hd::Leaf::generateAddresses(
    return result;
 }
 
-void hd::Leaf::topUpAddressPool(size_t count)
+void hd::Leaf::topUpAddressPool(size_t count, bool intExt)
 {
-   accountPtr_->extendPublicChain(count);
+   //intExt: true for external, false for internal
+   BinaryData accountID;
+
+   if (intExt)
+      accountID = accountPtr_->getOuterAccountID();
+   else
+      accountID = accountPtr_->getInnerAccountID();
+
+   auto accMap = accountPtr_->getAccountMap();
+   auto iter = accMap.find(accountID);
+   if (iter == accMap.end())
+      throw AccountException("unexpected account id");
+
+   iter->second->extendPublicChain(count);
+}
+
+std::vector<bs::Address> hd::Leaf::extendAddressChain(unsigned count, bool extInt)
+{
+   //get previous hash map
+   auto addrHashMap_orig = accountPtr_->getAddressHashMap();
+
+   //extend
+   topUpAddressPool(count, extInt);
+
+   //get new hash map
+   auto& addrHashMap_new = accountPtr_->getAddressHashMap();
+
+   //get diff
+   std::map<BinaryData, std::pair<BinaryData, AddressEntryType>> diffMap;
+   std::set_difference(
+      addrHashMap_new.begin(), addrHashMap_new.end(),
+      addrHashMap_orig.begin(), addrHashMap_orig.end(),
+      std::inserter(diffMap, diffMap.begin()));
+
+   //convert to address
+   std::vector<bs::Address> result;
+   for (auto& hashPair : diffMap)
+   {
+      bs::Address addr(hashPair.first, hashPair.second.second);
+      result.emplace_back(addr);
+   }
+
+   return result;
 }
 
 std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr

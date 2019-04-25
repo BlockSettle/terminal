@@ -22,19 +22,22 @@ Wallet::~Wallet()
 
 void Wallet::synchronize(const std::function<void()> &cbDone)
 {
-   const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data) {
+   const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data) 
+   {
       netType_ = data.netType;
-      for (const auto &addr : data.addresses) {
+      for (const auto &addr : data.addresses) 
+      {
          addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
       }
-      for (const auto &txComment : data.txComments) {
+
+      for (const auto &txComment : data.txComments)
          setTransactionComment(txComment.txHash, txComment.comment, false);
-      }
-      if (cbDone) {
+
+      if (cbDone)
          cbDone();
-      }
    };
+
    signContainer_->syncWallet(walletId(), cbProcess);
 }
 
@@ -849,29 +852,34 @@ bool Wallet::getLedgerDelegateForAddress(const bs::Address &addr
    return false;
 }
 
-int Wallet::addAddress(const bs::Address &addr, const std::string &index, AddressEntryType aet, bool sync)
+int Wallet::addAddress(
+   const bs::Address &addr, const std::string &index, 
+   AddressEntryType aet, bool sync)
 {
-   if (!addr.isNull()) {
+   if (!addr.isNull())
       usedAddresses_.push_back(addr);
-   }
-   if (sync && signContainer_) {
+
+   if (sync && signContainer_) 
+   {
       std::string idxCopy = index;
-      if (idxCopy.empty() && !addr.isNull()) {
+      if (idxCopy.empty() && !addr.isNull()) 
+      {
          aet = addr.getType();
          idxCopy = getAddressIndex(addr);
-         if (idxCopy.empty()) {
+         if (idxCopy.empty()) 
             idxCopy = addr.display<std::string>();
-         }
       }
+
       signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
    }
+
    return (usedAddresses_.size() - 1);
 }
 
-void Wallet::newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData
-   , const CbAddresses &cb, bool persistent)
+void Wallet::newAddresses(
+   const std::vector<std::pair<std::string, AddressEntryType>> &inData, 
+   const CbAddresses &cb, bool persistent)
 {
-   if (signContainer_) {
+   if (signContainer_)
       signContainer_->syncNewAddresses(walletId(), inData, cb);
-   }
 }

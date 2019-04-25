@@ -66,8 +66,11 @@ namespace bs {
 
             std::vector<bs::Address> getExtAddressList() const override { return extAddresses_; }
             std::vector<bs::Address> getIntAddressList() const override { return intAddresses_; }
+
             size_t getExtAddressCount() const override { return extAddresses_.size(); }
             size_t getIntAddressCount() const override { return intAddresses_.size(); }
+            size_t getAddressPoolSize() const { return addressPool_.size(); }
+
             bool isExternalAddress(const Address &) const override;
             bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
             bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
@@ -140,8 +143,7 @@ namespace bs {
             void activateHiddenAddress(const bs::Address &);
             bs::Address createAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true);
             bs::Address createAddressWithPath(const AddrPoolKey &, bool signal = true);
-            virtual void topUpAddressPool(const std::function<void()> &cb = nullptr
-               , size_t intAddresses = 0, size_t extAddresses = 0);
+            virtual void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr);
             void postOnline();
 
          protected:
@@ -165,7 +167,7 @@ namespace bs {
             bs::hd::Path::Elem  lastIntIdx_ = 0;
             bs::hd::Path::Elem  lastExtIdx_ = 0;
 
-            size_t intAddressPoolSize_ = 100;
+            size_t intAddressPoolSize_ = 20;
             size_t extAddressPoolSize_ = 100;
             std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
 
@@ -240,8 +242,7 @@ namespace bs {
          protected:
             bs::Address createAddress(const AddrPoolKey &, const CbAddress &
                , bool signal = true) override;
-            void topUpAddressPool(const std::function<void()> &cb = nullptr
-               , size_t intAddresses = 0, size_t extAddresses = 0) override;
+            void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
 
          private:
             BinaryData              userId_;

@@ -287,6 +287,15 @@ namespace bs {
             throw WalletException("illegal method");
          }
 
+         /***
+         Called by the sign container in reponse to sync wallet's topUpAddressPool
+         Will result in public address chain extention on the relevant Armory address account
+         ***/
+         virtual std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt)
+         {
+            throw WalletException("illegal method");
+         }
+
          virtual std::shared_ptr<ResolverFeed> getResolver(void) const = 0;
 
          virtual BinaryData signTXRequest(const wallet::TXSignRequest &

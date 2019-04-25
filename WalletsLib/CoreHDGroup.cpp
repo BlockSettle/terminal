@@ -62,20 +62,20 @@ std::vector<std::shared_ptr<bs::core::Wallet>> hd::Group::getAllLeaves() const
    return result;
 }
 
-std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem)
+std::shared_ptr<hd::Leaf> hd::Group::createLeaf(
+   bs::hd::Path::Elem elem, unsigned lookup)
 {
    //leaves are always hardened
    elem |= 0x80000000;
-   if (getLeafByPath(elem) != nullptr) {
+   if (getLeafByPath(elem) != nullptr)
       return nullptr;
-   }
 
    auto pathLeaf = path_;
    pathLeaf.append(elem);
    try
    {
       auto result = newLeaf();
-      initLeaf(result, pathLeaf);
+      initLeaf(result, pathLeaf, lookup);
       addLeaf(result);
       return result;
    }
@@ -85,9 +85,10 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem)
    }
 }
 
-std::shared_ptr<hd::Leaf> hd::Group::createLeaf(const std::string &key)
+std::shared_ptr<hd::Leaf> hd::Group::createLeaf(
+   const std::string &key, unsigned lookup)
 {
-   return createLeaf(bs::hd::Path::keyToElem(key));
+   return createLeaf(bs::hd::Path::keyToElem(key), lookup);
 }
 
 bool hd::Group::addLeaf(const std::shared_ptr<hd::Leaf> &leaf)
@@ -203,7 +204,9 @@ std::shared_ptr<hd::Leaf> hd::Group::newLeaf() const
    return std::make_shared<hd::Leaf>(netType_, logger_, type());
 }
 
-void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &path) const
+void hd::Group::initLeaf(
+   std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &path,
+   unsigned lookup) const
 {
    std::vector<unsigned> pathInt;
    for (unsigned i = 0; i < path.length(); i++)
@@ -237,7 +240,9 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
    accTypePtr->setDefaultAddressType(AddressEntryType_P2WPKH);
 
    //address lookup
-   accTypePtr->setAddressLookup(/*DERIVATION_LOOKUP*/ 10);
+   if (lookup == UINT32_MAX)
+      lookup = DERIVATION_LOOKUP;
+   accTypePtr->setAddressLookup(lookup);
 
    auto accID = walletPtr_->createBIP32Account(nullptr, pathInt, accTypePtr);
    leaf->init(walletPtr_, accID, path);

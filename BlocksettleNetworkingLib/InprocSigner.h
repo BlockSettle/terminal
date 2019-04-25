@@ -76,6 +76,8 @@ public:
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;
+   void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
+      const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
 
    bool isReady() const override { return inited_; }
 

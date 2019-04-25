@@ -426,3 +426,35 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
 
    cb(result);
 }
+
+void InprocSigner::extendAddressChain(
+   const std::string &walletId, unsigned count, bool extInt,
+   const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
+{
+   /***
+   Extend the wallet's account external (extInt == true) or internal 
+   (extInt == false) chain, return the newly created addresses.
+
+   These are not instantiated addresses, but pooled ones. They represent
+   possible address type variations of the newly created assets, a set
+   necessary to properly register the wallet with ArmoryDB.
+   ***/
+
+   std::vector<std::pair<bs::Address, std::string>> result;
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (wallet == nullptr)
+   {
+      cb(result);
+      return;
+   }
+
+   auto&& newAddrVec = wallet->extendAddressChain(count, extInt);
+   for (auto& addr : newAddrVec)
+   {
+      auto&& index = wallet->getAddressIndex(addr);
+      auto addrPair = std::make_pair(addr, index);
+      result.emplace_back(addrPair);
+   }
+
+   cb(result);
+}

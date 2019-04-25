@@ -174,10 +174,10 @@ std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
    return itGroup->second;
 }
 
-void hd::Wallet::createStructure()
+void hd::Wallet::createStructure(unsigned lookup)
 {
    const auto groupXBT = createGroup(getXBTGroupType());
-   groupXBT->createLeaf(0u);
+   groupXBT->createLeaf(0u, lookup);
    writeGroupsToDB();
 }
 
