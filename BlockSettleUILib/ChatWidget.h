@@ -89,7 +89,6 @@ private:
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
-   ChatUserListLogicPtr chatUserListLogicPtr_;
    QMap<QString, QString> draftMessages_;
    bool needsToStartFirstRoom_;
 
