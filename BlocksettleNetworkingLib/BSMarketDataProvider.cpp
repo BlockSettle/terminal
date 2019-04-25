@@ -198,7 +198,7 @@ void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
    }
 
    for (int i=0; i < update.xbt_products_size(); ++i) {
-      const auto& productInfo = update.fx_products(i);
+      const auto& productInfo = update.xbt_products(i);
       if ((productInfo.product_name() != "XBT/USD") || receiveUSD_) {
          OnProductUpdate(bs::network::Asset::Type::SpotXBT, productInfo, timestamp);
       }
