@@ -79,8 +79,8 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
-
-   switch (index.data(Role::ContactOnlineStatusRole).value<OnlineStatus>()) {
+   OnlineStatus status = index.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
+   switch (status) {
       case OnlineStatus::Online:
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
          break;

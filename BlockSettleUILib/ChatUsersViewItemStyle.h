@@ -49,7 +49,7 @@ public slots:
    void setColorUserOnline(QColor colorUserOnline);
    void setColorUserOffline(QColor colorUserOffline);
    void setColorContactOnline(QColor colorContactOnline);
-   void setColorContactOffline(QColor colorContactOnline);
+   void setColorContactOffline(QColor colorContactOffline);
    void setColorContactIncoming(QColor colorContactIncoming);
    void setColorContactOutgoing(QColor colorContactOutgoing);
    void setColorContactRejected(QColor colorContactRejected);

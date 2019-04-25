@@ -41,7 +41,7 @@ QColor ChatUsersViewItemStyle::colorContactOnline() const
 
 QColor ChatUsersViewItemStyle::colorContactOffline() const
 {
-   return colorContactOnline_;
+   return colorContactOffline_;
 }
 
 QColor ChatUsersViewItemStyle::colorContactIncoming() const
@@ -84,9 +84,9 @@ void ChatUsersViewItemStyle::setColorContactOnline(QColor colorContactOnline)
    colorContactOnline_ = colorContactOnline;
 }
 
-void ChatUsersViewItemStyle::setColorContactOffline(QColor colorContactOnline)
+void ChatUsersViewItemStyle::setColorContactOffline(QColor colorContactOffline)
 {
-   colorContactOnline_ = colorContactOnline;
+   colorContactOffline_ = colorContactOffline;
 }
 
 void ChatUsersViewItemStyle::setColorContactIncoming(QColor colorContactIncoming)
