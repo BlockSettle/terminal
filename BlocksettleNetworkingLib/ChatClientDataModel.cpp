@@ -199,6 +199,7 @@ QVariant ChatClientDataModel::data(const QModelIndex &index, int role) const
       case RoomIdRole:
          return roomData(item, role);
       case ContactIdRole:
+      case ContactStatusRole:
       case ContactOnlineStatusRole:
          return contactData(item, role);
       case UserIdRole:
@@ -263,6 +264,8 @@ QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
       switch (role) {
          case ContactIdRole:
             return contact->getContactId();
+         case ContactStatusRole:
+            return QVariant::fromValue(contact->getContactStatus());
          case ContactOnlineStatusRole:
             return QVariant::fromValue(contact_element->getOnlineStatus());
          default:

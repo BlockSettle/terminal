@@ -160,6 +160,7 @@ namespace Chat
 
 } //namespace Chat
 
+Q_DECLARE_METATYPE(Chat::ContactStatus)
 Q_DECLARE_METATYPE(Chat::UserStatus)
 
 

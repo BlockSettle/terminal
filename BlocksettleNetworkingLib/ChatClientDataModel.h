@@ -15,6 +15,7 @@ public:
       RoomTitleRole,
       RoomIdRole,
       ContactIdRole,
+      ContactStatusRole,
       ContactOnlineStatusRole,
       UserIdRole,
       UserOnlineStatusRole

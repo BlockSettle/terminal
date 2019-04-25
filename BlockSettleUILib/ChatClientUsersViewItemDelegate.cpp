@@ -4,6 +4,7 @@
 using NodeType = TreeItem::NodeType;
 using Role = ChatClientDataModel::Role;
 using OnlineStatus = ChatContactElement::OnlineStatus;
+using ContactStatus = Chat::ContactStatus;
 
 ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(const ChatUsersViewItemStyle &itemStyle, QObject *parent)
    : QStyledItemDelegate (parent)
@@ -79,8 +80,28 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
-   OnlineStatus status = index.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
-   switch (status) {
+
+   ContactStatus contactStatus = index.data(Role::ContactStatusRole).value<ContactStatus>();
+   OnlineStatus onlineStatus = index.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
+
+   itemOption.text = index.data(Role::ContactIdRole).toString();
+
+   switch (contactStatus) {
+      case ContactStatus::Accepted:
+         //If accepted need to paint online status in the next switch
+         break;
+      case ContactStatus::Incoming:
+         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactIncoming());
+         return QStyledItemDelegate::paint(painter, itemOption, index);
+      case ContactStatus::Outgoing:
+         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOutgoing());
+         return QStyledItemDelegate::paint(painter, itemOption, index);
+      case ContactStatus::Rejected:
+         itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactRejected());
+         return QStyledItemDelegate::paint(painter, itemOption, index);
+   }
+
+   switch (onlineStatus) {
       case OnlineStatus::Online:
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOnline());
          break;
@@ -88,8 +109,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
          break;
    }
-   itemOption.text = index.data(Role::ContactIdRole).toString();
-   QStyledItemDelegate::paint(painter, itemOption, index);
+   return QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
 void ChatClientUsersViewItemDelegate::paintUserElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
