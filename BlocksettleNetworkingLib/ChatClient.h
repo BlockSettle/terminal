@@ -133,7 +133,7 @@ private:
    std::map<QString, autheid::PublicKey>     pubKeys_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
    std::shared_ptr<UserHasher>               hasher_;
-   std::map<QString, autheid::SecureBytes>   userNonces_;
+   std::map<QString, Botan::SecureVector<uint8_t>>   userNonces_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
    std::map<QString, std::queue<QString>>    enqueued_messages_;

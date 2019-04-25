@@ -539,7 +539,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
       if (contact.status() == ContactUserData::Status::Rejected)
       {
-         logger_->error("[ChatClient::sendOwnMessage] {}", "Receiver in rejected state. Discarding message.");
+         logger_->error("[ChatClient::sendOwnMessage] {}", "Receiver has rejected state. Discarding message.");
          result->setFlag(Chat::MessageData::State::Invalid);
          return result;
       }
@@ -573,18 +573,20 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
    // search active message session for given user
    const auto userNoncesIterator = userNonces_.find(receiver);
-   autheid::SecureBytes nonce;
+   Botan::SecureVector<uint8_t> nonce;
    if (userNoncesIterator == userNonces_.end()) {
       // generate random nonce
       Botan::AutoSeeded_RNG rng;
-      userNonces_[receiver] = nonce = rng.random_vec(messageData.getDefaultNonceSize());
+      nonce = rng.random_vec(messageData.getDefaultNonceSize());
+      userNonces_.emplace_hint(userNoncesIterator, receiver, nonce);
    }
    else {
       // read nonce and increment
       Botan::BigInt bigIntNonce;
       bigIntNonce.binary_decode(userNoncesIterator->second);
       bigIntNonce++;
-      userNonces_[receiver] = nonce = Botan::BigInt::encode_locked(bigIntNonce);
+      nonce = Botan::BigInt::encode_locked(bigIntNonce);
+      userNoncesIterator->second = nonce;
    }
 
    BinaryData remotePublicKey(itPub->second.data(), itPub->second.size());
