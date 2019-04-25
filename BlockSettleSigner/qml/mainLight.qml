@@ -93,8 +93,6 @@ ApplicationWindow {
         mainWindow.title = dlg.title
         if (typeof dlg.qmlTitleVisible !== "undefined") dlg.qmlTitleVisible = false
 
-        show()
-
         dlg.dialogsChainFinished.connect(function(){ hide() })
         dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
             mainWindow.width = nextDialog.width

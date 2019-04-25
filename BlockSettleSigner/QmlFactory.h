@@ -87,6 +87,8 @@ public:
    Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
                                                              , bs::hd::WalletInfo *walletInfo);
 
+   //Q_INVOKABLE QString signerPubKey() const { }
+
    // service functions
    Q_INVOKABLE void setClipboard(const QString &text);
    Q_INVOKABLE void installEventFilterToObj(QObject *object);

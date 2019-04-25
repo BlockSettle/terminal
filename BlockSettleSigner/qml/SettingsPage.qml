@@ -227,7 +227,7 @@ Item {
                 Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("ZMQ Private Key")
+                    text: qsTr("Signer Private Key")
                     Layout.minimumWidth: 125
                     Layout.preferredWidth: 125
                     Layout.maximumWidth: 125
@@ -259,7 +259,7 @@ Item {
                     FileDialog {
                         id: zmqPrivKeyDlg
                         visible: false
-                        title: "Select ZMQ Private Key"
+                        title: "Select Signer Private Key"
                         selectFolder: false
                     }
                 }
@@ -273,7 +273,7 @@ Item {
                 Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("ZMQ Public Key")
+                    text: qsTr("Signer Public Key")
                     Layout.minimumWidth: 125
                     Layout.preferredWidth: 125
                     Layout.maximumWidth: 125
@@ -344,7 +344,7 @@ Item {
                     FileDialog {
                         id: zmqPubKeyDlg
                         visible: false
-                        title: "Select ZMQ Public Key"
+                        title: "Select Signer Public Key"
                         selectFolder: false
                     }
                 }
