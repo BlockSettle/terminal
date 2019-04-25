@@ -64,8 +64,6 @@ private slots:
    void onSearchUserReturnPressed();
    void onChatUserRemoved(const ChatUserDataPtr &);
    void onSendFriendRequest(const QString &userId);
-   void onAcceptFriendRequest(const QString &userId);
-   void onDeclineFriendRequest(const QString &userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
 
