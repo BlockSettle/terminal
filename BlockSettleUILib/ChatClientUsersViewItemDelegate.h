@@ -2,12 +2,13 @@
 #define CHATCLIENTUSERSVIEWITEMDELEGATE_H
 
 #include <QStyledItemDelegate>
+#include "ChatUsersViewItemStyle.h"
 
 class ChatClientUsersViewItemDelegate : public QStyledItemDelegate
 {
    Q_OBJECT
 public:
-   explicit ChatClientUsersViewItemDelegate(QObject *parent = nullptr);
+   explicit ChatClientUsersViewItemDelegate(const ChatUsersViewItemStyle& itemStyle, QObject *parent = nullptr);
 
 signals:
 
@@ -22,6 +23,9 @@ protected:
    void paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const ;
    void paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
    void paintUserElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+
+private:
+   const ChatUsersViewItemStyle& itemStyle_;
 
 };
 

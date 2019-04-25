@@ -1515,3 +1515,16 @@ ChatUserListTreeViewStyle {
 ChatMessagesTextEditStyle {
     qproperty-color_hyperlink: #20709a;
     qproperty-color_white: #ffffff; }
+
+ChatUsersViewItemStyle {
+    qproperty-color_category_item: #c0c0c0;
+    qproperty-color_room: #00c8f8;
+    qproperty-color_user_online: #00c8f8;
+    qproperty-color_user_offline: #c0c0c0;
+    qproperty-color_contact_online: #00c8f8;
+    qproperty-color_contact_offline: #c0c0c0;
+    qproperty-color_contact_incoming: #ffa834;
+    qproperty-color_contact_outgoing: #a0bc5d;
+    qproperty-color_contact_rejected: #c4362f;
+    }
+

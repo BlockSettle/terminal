@@ -309,12 +309,14 @@ void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 
 void ChatWidget::changeState(ChatWidget::State state)
 {
+
+   //Do not add any functionality here, except  states swapping
+
    if (!stateCurrent_) { //In case if we use change state in first time
       stateCurrent_ = std::make_shared<ChatWidgetStateLoggedOut>(this);
       stateCurrent_->onStateEnter();
    } else if (stateCurrent_->type() != state) {
       stateCurrent_->onStateExit();
-
       switch (state) {
       case State::LoggedIn:
          {
@@ -327,7 +329,6 @@ void ChatWidget::changeState(ChatWidget::State state)
          }
          break;
       }
-
       stateCurrent_->onStateEnter();
    }
 }

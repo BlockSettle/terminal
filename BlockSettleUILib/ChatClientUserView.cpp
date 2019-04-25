@@ -128,7 +128,7 @@ ChatClientUserView::ChatClientUserView(QWidget *parent)
 {
    setContextMenuPolicy(Qt::CustomContextMenu);
    connect(this, &QAbstractItemView::customContextMenuRequested, this, &ChatClientUserView::onCustomContextMenu);
-   setItemDelegate(new ChatClientUsersViewItemDelegate(this));
+   setItemDelegate(new ChatClientUsersViewItemDelegate(itemStyle_, this));
 }
 
 void ChatClientUserView::addWatcher(ViewItemWatcher * watcher)
