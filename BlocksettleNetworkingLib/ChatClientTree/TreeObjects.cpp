@@ -2,11 +2,7 @@
 
 std::shared_ptr<Chat::RoomData> ChatRoomElement::getRoomData() const
 {
-   auto room = std::dynamic_pointer_cast<Chat::RoomData>(getDataObject());
-   if (room) {
-      return room;
-   }
-   return nullptr;
+   return std::dynamic_pointer_cast<Chat::RoomData>(getDataObject());
 }
 
 bool ChatRoomElement::isSupported(TreeItem *item) const
