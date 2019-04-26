@@ -24,7 +24,7 @@
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>5</number>
+    <number>0</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -288,6 +288,9 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <property name="spacing">
+           <number>5</number>
+          </property>
           <item>
            <widget class="QComboBox" name="comboBoxXBTWallets">
             <property name="sizePolicy">
@@ -304,7 +307,7 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
+              <width>135</width>
               <height>21</height>
              </size>
             </property>
@@ -423,24 +426,42 @@
    </item>
    <item>
     <widget class="QWidget" name="widgetButtons" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="buttonBar" stdset="0">
+      <bool>true</bool>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
       <property name="spacing">
        <number>5</number>
       </property>
       <property name="leftMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="topMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="rightMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="bottomMargin">
-       <number>0</number>
+       <number>5</number>
       </property>
       <item>
        <widget class="QPushButton" name="pushButtonCancel">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>35</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
         <property name="text">
          <string>PushButton</string>
         </property>
@@ -448,6 +469,15 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonAccept">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>35</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
         <property name="text">
          <string>PushButton</string>
         </property>
@@ -455,7 +485,7 @@
       </item>
      </layout>
     </widget>
-   </item>
+   </item>    
   </layout>
  </widget>
  <resources/>
