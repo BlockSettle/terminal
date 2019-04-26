@@ -376,14 +376,14 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
    // Deserialize packet.
    auto payloadRef = currentReadMessage_.insertDataAndGetRef(payload);
    auto result = currentReadMessage_.message_.parsePacket(payloadRef);
-   if (!result)
-   {
+   if (!result) {
       if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
             "(connection {})", __func__, connectionName_);
       }
 
       currentReadMessage_.reset();
+      notifyOnError(DataConnectionListener::SerializationFailed);
       return;
    }
 
@@ -397,12 +397,13 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
    // If we're still handshaking, take the next step. (No fragments allowed.)
    if (currentReadMessage_.message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD)
    {
-      if (!processAEADHandshake(currentReadMessage_.message_))
-      {
+      if (!processAEADHandshake(currentReadMessage_.message_)) {
          if (logger_) {
             logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
+      
+         notifyOnError(DataConnectionListener::HandshakeFailed);
          return;
       }
 
@@ -420,6 +421,7 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
          logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
       }
+      notifyOnError(DataConnectionListener::HandshakeFailed);
       return;
    }
 
@@ -768,6 +770,7 @@ void ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
             "verified");
          serverPubkeyProm_->set_value(false);
       }
+      notifyOnError(DataConnectionListener::HandshakeFailed);
       return;
    }
 
