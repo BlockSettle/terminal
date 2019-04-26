@@ -1,7 +1,25 @@
 {
-   "latest_version" : "0.14.16",
-   "release_date" : "26 April 2019",
+   "latest_version" : "0.14.17",
+   "release_date" : "27 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.17",
+         "previous_version" : "0.14.16",
+         "release_date" : "27 April 2019",
+         "improvements" :
+         [
+            "Chat tree enhancements"
+         ],
+         "bug_fixes" :
+         [
+            "Signer TX dialog fixes",
+            "WO fixes",
+            "UI fixes",
+            "ZMQ BIP fixes",
+         ],
+         "revision" : "762c3d52",
+         "common_revision" : "3f038999"
+      },
       {
          "version_string" : "0.14.16",
          "previous_version" : "0.14.15",
