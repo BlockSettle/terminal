@@ -13,6 +13,7 @@
 #include "autheid_utils.h"
 #include "UserHasher.h"
 #include "ChatClientDataModel.h"
+#include <QRegularExpression>
 
 #include <QDateTime>
 #include <QDebug>
@@ -24,14 +25,8 @@ Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::RoomData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::UserData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::UserData>>)
 
-//We have current flags
-//We have upladed flags
-//We need to put flags to updated flags
-//But only in places that allowed by mask
-static int syncFlagsByMask(int flags, int uflags, int mask){
-   int set_mask = mask & uflags;
-   int unset_mask = (mask & uflags) ^ mask;
-   return (flags & ~unset_mask) | set_mask;
+namespace {
+   const QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
 }
 
 ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
@@ -987,4 +982,27 @@ void ChatClient::retrySendQueuedMessages(const std::string userId)
 void ChatClient::eraseQueuedMessages(const std::string userId)
 {
    enqueued_messages_.erase(QString::fromStdString(userId));
+}
+
+void ChatClient::onActionSearchUsers(const std::string &text)
+{
+   QString pattern = QString::fromStdString(text);
+
+
+
+   QRegularExpressionMatch match = rx_email.match(pattern);
+   if (match.hasMatch()) {
+      pattern = deriveKey(pattern);
+   } else if (static_cast<int>(UserHasher::KeyLength) < pattern.length()
+              && pattern.length() < 3) {
+      //Initially max key is 12 symbols
+      //and search must be triggerred if pattern have length >= 3
+      return;
+   }
+   sendSearchUsersRequest(pattern);
+}
+
+void ChatClient::onActionResetSearch()
+{
+   model_->clearSearch();
 }

@@ -33,6 +33,7 @@ class ChatClient : public QObject
              , public DataConnectionListener
              , public Chat::ResponseHandler
              , public ChatItemActionsHandler
+             , public ChatSearchActionsHandler
 {
    Q_OBJECT
 
@@ -164,14 +165,11 @@ public:
    void onActionRemoveFromContacts(std::shared_ptr<Chat::ContactRecordData> crecord) override;
    void onActionAcceptContactRequest(std::shared_ptr<Chat::ContactRecordData> crecord) override;
    void onActionRejectContactRequest(std::shared_ptr<Chat::ContactRecordData> crecord) override;
+
+   // ChatSearchActionsHandler interface
+public:
+   void onActionSearchUsers(const std::string &text) override;
+   void onActionResetSearch() override;
 };
-
-
-
-
-
-
-
-
 
 #endif   // CHAT_CLIENT_H

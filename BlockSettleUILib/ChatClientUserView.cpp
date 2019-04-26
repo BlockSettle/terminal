@@ -1,6 +1,7 @@
 #include "ChatClientUserView.h"
 #include "ChatClientTree/TreeObjects.h"
 #include "ChatClientUsersViewItemDelegate.h"
+#include "ChatClientDataModel.h"
 
 #include <QMenu>
 
@@ -264,4 +265,18 @@ void LoggerWatcher::onElementUpdated(CategoryElement *element)
 void LoggerWatcher::onMessageChanged(std::shared_ptr<Chat::MessageData> message)
 {
    qDebug() << "Message changed:\n" << QString::fromStdString(message->toJsonString());
+}
+
+void ChatClientUserView::rowsInserted(const QModelIndex &parent, int start, int end)
+{
+   TreeItem::NodeType type = parent.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>();
+   TreeItem::NodeType supportType = parent.data(ChatClientDataModel::Role::ItemAcceptTypeRole).value<TreeItem::NodeType>();
+
+   if (type == TreeItem::NodeType::CategoryNode)
+      if (supportType == TreeItem::NodeType::SearchElement) {
+         if (!isExpanded(parent)) {
+            expand(parent);
+         }
+      }
+   return QTreeView::rowsInserted(parent, start, end);
 }

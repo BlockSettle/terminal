@@ -247,14 +247,15 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setHandler(client_);
    ui_->textEditMessages->setHandler(client_);
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
+   ui_->chatSearchLineEdit->setActionsHandler(client_);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
-   connect(client_.get(), &ChatClient::SearchUserListReceived,
-           this, &ChatWidget::onSearchUserListReceived);
-   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
+//   connect(client_.get(), &ChatClient::SearchUserListReceived,
+//           this, &ChatWidget::onSearchUserListReceived);
+   //connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
    changeState(State::LoggedOut); //Initial state is LoggedOut
 }
 

@@ -55,7 +55,13 @@ protected slots:
    // QAbstractItemView interface
 protected slots:
    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles) override;
+
+   // QAbstractItemView interface
+protected slots:
+   void rowsInserted(const QModelIndex &parent, int start, int end) override;
 };
+
+
 
 
 
