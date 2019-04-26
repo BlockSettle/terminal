@@ -20,6 +20,7 @@ enum MarketDataHistoryMessageType
 {
 	ProductsListType = 0;
 	OhlcHistoryType  = 1;
+	EoDPriceType     = 2;
 };
 
 message MarketDataHistoryRequest
@@ -61,6 +62,14 @@ message OhlcResponse
     Interval            interval = 2;
 	uint64     first_stamp_in_db = 3;
     repeated OhlcCandle candles  = 4;
+};
+
+message EodPrice
+{
+	string product   = 1;
+	Interval interval = 2;
+	uint64 timestamp = 3;
+	double price     = 4;
 };
 
 message ProductsListResponse
