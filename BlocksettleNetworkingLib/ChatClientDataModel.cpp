@@ -26,14 +26,12 @@ void ChatClientDataModel::clearSearch()
 {
    TreeItem * search = root_->findCategoryNodeWith(TreeItem::NodeType::SearchElement);
 
-   if (!search) {
+   if (!search || search->getChildren().empty()) {
       return;
    }
 
-   int first = 0;
-   int last = search->getChildren().size() > 0
-              ? static_cast<int>(search->getChildren().size() - 1)
-              : 0;
+   int first = search->getChildren().front()->selfIndex();
+   int last = search->getChildren().back()->selfIndex();
 
    beginRemoveRows(createIndex(search->selfIndex(), 0, search), first, last);
    root_->clearSearch();
@@ -74,16 +72,22 @@ bool ChatClientDataModel::insertSearchUserObject(std::shared_ptr<Chat::UserData>
 
 bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat::UserData> > userList)
 {
+   if (userList.empty()) {
+      return false;
+   }
    TreeItem * search = root_->findCategoryNodeWith(TreeItem::NodeType::SearchElement);
 
    if (!search) {
       return false;
    }
+
    QModelIndex index = createIndex(search->selfIndex(), 0, search);
-   int first = search->getChildren().size() > 0
-               ? search->getChildren().size() - 1
-               : 0;
-   int last = search->getChildren().size() + userList.size() - 1;
+
+   int first = search->getChildren().empty()
+               ? 0
+               : search->getChildren().back()->selfIndex();
+
+   int last = first + static_cast<int>(userList.size()) - 1;
 
    beginInsertRows(index, first, last);
    for (auto user : userList){
