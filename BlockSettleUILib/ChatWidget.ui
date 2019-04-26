@@ -679,6 +679,8 @@
    <class>ChatClientUserView</class>
    <extends>QTreeView</extends>
    <header>ChatClientUserView.h</header>
+  </customwidget>
+  <customwidget>
    <class>CreateOTCResponseWidget</class>
    <extends>QWidget</extends>
    <header location="global">CreateOTCResponseWidget.h</header>
