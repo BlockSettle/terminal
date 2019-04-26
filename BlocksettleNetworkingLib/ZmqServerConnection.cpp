@@ -327,6 +327,13 @@ void ZmqServerConnection::notifyListenerOnDisconnectedClient(const std::string& 
    clientInfo_.erase(clientId);
 }
 
+void ZmqServerConnection::notifyListenerOnClientError(const std::string& clientId, const std::string &error)
+{
+   if (listener_) {
+      listener_->onClientError(clientId, error);
+   }
+}
+
 std::string ZmqServerConnection::GetClientInfo(const std::string &clientId) const
 {
    const auto &it = clientInfo_.find(clientId);

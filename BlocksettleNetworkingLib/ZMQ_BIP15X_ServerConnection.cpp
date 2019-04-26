@@ -307,8 +307,9 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    const auto &connData = socketConnMap_[clientID];
    if (!connData) {
-      logger_->error("[{}] failed to find connection data for client {}"
+      logger_->error("[ZmqBIP15XServerConnection::{}] failed to find connection data for client {}"
          , __func__, BinaryData(clientID).toHexStr());
+      notifyListenerOnClientError(clientID, "missing connection data");
       return;
    }
 
@@ -324,17 +325,15 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
          // If decryption "fails" but the result indicates fragmentation, save
          // the fragment and wait before doing anything, otherwise treat it as a
          // legit error.
-         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1)
-         {
+         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1) {
             leftOverData_ = move(payload);
-            return;
          }
-         else
-         {
-            logger_->error("[{}] Packet decryption failed - Error {}", __func__
-               , result);
-            return;
+         else {
+            logger_->error("[ZmqBIP15XServerConnection::{}] Packet decryption failed - Error {}"
+               , __func__, result);
+            notifyListenerOnClientError(clientID, "packet decryption failed");
          }
+         return;
       }
 
       payload.resize(payload.getSize() - POLY1305MACLEN);
@@ -349,6 +348,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
             "(connection {})", __func__, connectionName_);
       }
       connData->currentReadMessage_.reset();
+      notifyListenerOnClientError(clientID, "deserialization failed");
       return;
    }
 
@@ -391,6 +391,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
          logger_->error("[ZmqBIP15XServerConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
       }
+      notifyListenerOnClientError(clientID, "encryption handshake failure");
       return;
    }
 
