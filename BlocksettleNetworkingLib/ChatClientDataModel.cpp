@@ -207,18 +207,23 @@ QModelIndex ChatClientDataModel::parent(const QModelIndex &child) const
 
 int ChatClientDataModel::rowCount(const QModelIndex &parent) const
 {
-   TreeItem *parentItem;
+   TreeItem *parentItem = nullptr;
    if (parent.column() > 0) {
       return 0;
    }
 
    if (!parent.isValid()) {
       parentItem = root_.get();
+      //return root_->notEmptyChildrenCount();
    } else {
       parentItem = static_cast<TreeItem*>(parent.internalPointer());
    }
 
-   return static_cast<int>(parentItem->getChildren().size());
+   if (parentItem) {
+      return static_cast<int>(parentItem->getChildren().size());
+   }
+
+   return 0;
 }
 
 int ChatClientDataModel::columnCount(const QModelIndex &parent) const

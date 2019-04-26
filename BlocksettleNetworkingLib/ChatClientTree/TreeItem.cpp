@@ -40,6 +40,15 @@ int TreeItem::selfIndex() const
    return 0;
 }
 
+int TreeItem::notEmptyChildrenCount()
+{
+   int count = 0;
+   std::for_each(children_.begin(), children_.end(), [&count](TreeItem * child) {
+      count += child->getChildren().size() > 0 ? 1 : 0;
+   });
+   return count;
+}
+
 void TreeItem::deleteChildren()
 {
    for (auto child : children_) {
