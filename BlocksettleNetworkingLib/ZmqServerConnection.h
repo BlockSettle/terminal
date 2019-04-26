@@ -99,7 +99,7 @@ private:
    std::atomic_flag                 controlSocketLockFlag_ = ATOMIC_FLAG_INIT;
    ZmqContext::sock_ptr             threadMasterSocket_;
    ZmqContext::sock_ptr             threadSlaveSocket_;
-   ServerConnectionListener*        listener_;
+   ServerConnectionListener*        listener_{nullptr};
    std::atomic_flag                 dataQueueLock_ = ATOMIC_FLAG_INIT;
    std::deque<DataToSend>           dataQueue_;
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
