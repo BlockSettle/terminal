@@ -456,11 +456,51 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
    const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
 
-   if ((runMode == SignContainer::OpMode::Local)
+   // These callbacks will only be used for remote signers. Note the code below,
+   // where a local signer is eventually marked as remote. We'll work around
+   // this by defining the callbacks when the signer is initially marked remote.
+   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB = nullptr;
+   ZmqBIP15XDataConnection::invokeCB ourInvokeCB = nullptr;
+
+   bool ephemeralDataConnKeys = true;
+   if (runMode == SignContainer::OpMode::Remote) {
+      ephemeralDataConnKeys = false;
+
+      // Define the callback that will be used to determine if the signer's BIP
+      // 150 identity key, if it has changed, will be accepted. It needs strings
+      // for the old and new keys, and a promise to set once the user decides.
+      ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
+         , std::shared_ptr<std::promise<bool>> newKeyProm)->void {
+         QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm] {
+            BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+               , tr("Server identity key has changed")
+               , tr("Do you wish to import the new server identity key?")
+               , tr("Old Key: %1\nNew Key: %2")
+               .arg(QString::fromStdString(oldKey))
+               .arg(QString::fromStdString(newKey))
+               , this);
+
+            const bool answer = (box->exec() == QDialog::Accepted);
+            box->deleteLater();
+
+            if (answer) {
+               newKeyProm->set_value(true);
+            }
+            else {
+               newKeyProm->set_value(false);
+            }
+         });
+      };
+   }
+   else if ((runMode == SignContainer::OpMode::Local)
       && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
-      if (BSMessageBox(BSMessageBox::messageBoxType::question, tr("Signer Local Connection")
-         , tr("Another Signer (or some other program occupying port %1) is running. Would you like to continue connecting to it?").arg(signerPort)
-         , tr("If you wish to continue using GUI signer running on the same host, just select Remote Signer in settings and configure local connection")
+      if (BSMessageBox(BSMessageBox::messageBoxType::question
+         , tr("Signer Local Connection")
+         , tr("Another Signer (or some other program occupying port %1) is "
+         "running. Would you like to continue connecting to it?").arg(signerPort)
+         , tr("If you wish to continue using GUI signer running on the same "
+         "host, just select Remote Signer in settings and configure local "
+         "connection")
          , this).exec() == QDialog::Rejected) {
          return retPtr;
       }
@@ -469,7 +509,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    }
 
    retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-      , signerHost, connectionManager_);
+      , signerHost, connectionManager_, ephemeralDataConnKeys, ourNewKeyCB);
    return retPtr;
 }
 
@@ -645,7 +685,7 @@ void BSTerminalMainWindow::InitChatView()
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
 
    if (NotificationCenter::instance() != NULL)
-      connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick, 
+      connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick,
               ui_->widgetChat, &ChatWidget::onNewChatMessageTrayNotificationClicked);
 }
 

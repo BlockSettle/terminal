@@ -46,6 +46,7 @@ protected:
 
    void notifyListenerOnNewConnection(const std::string& clientId);
    void notifyListenerOnDisconnectedClient(const std::string& clientId);
+   void notifyListenerOnClientError(const std::string& clientId, const std::string &error);
 
    virtual ZmqContext::sock_ptr CreateDataSocket() = 0;
    virtual bool ConfigDataSocket(const ZmqContext::sock_ptr& dataSocket);
@@ -98,7 +99,7 @@ private:
    std::atomic_flag                 controlSocketLockFlag_ = ATOMIC_FLAG_INIT;
    ZmqContext::sock_ptr             threadMasterSocket_;
    ZmqContext::sock_ptr             threadSlaveSocket_;
-   ServerConnectionListener*        listener_;
+   ServerConnectionListener*        listener_{nullptr};
    std::atomic_flag                 dataQueueLock_ = ATOMIC_FLAG_INIT;
    std::deque<DataToSend>           dataQueue_;
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;

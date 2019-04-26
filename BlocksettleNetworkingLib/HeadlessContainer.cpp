@@ -1061,21 +1061,30 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &host, const QString &port, NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<ApplicationSettings>& appSettings
-   , OpMode opMode)
+   , OpMode opMode
+   , const bool ephemeralDataConnKeys
+   , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
    , connectionManager_{connectionManager}
    , appSettings_{appSettings}
-{}
+   , cbNewKey_{inNewKeyCB}
+   , ephemeralDataConnKeys_(ephemeralDataConnKeys)
+{
+   // Create connection upfront in order to grab some required data early.
+   connection_ =
+      connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_);
+   connection_->setCBs(cbNewKey_);
+}
 
 // Establish the remote connection to the signer.
 bool RemoteSigner::Start()
 {
-   if (connection_) {
+   // If we've already connected, don't do more setup.
+   if (headlessConnFinished_) {
       return true;
    }
 
-   connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
    if (opMode() == OpMode::RemoteInproc) {
       connection_->SetZMQTransport(ZMQTransport::InprocTransport);
    }
@@ -1106,6 +1115,7 @@ bool RemoteSigner::Stop()
 bool RemoteSigner::Connect()
 {
    QtConcurrent::run(this, &RemoteSigner::ConnectHelper);
+   headlessConnFinished_ = true;
    return true;
 }
 
@@ -1378,12 +1388,14 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , SignContainer::OpMode mode, double asSpendLimit)
+   , SignContainer::OpMode mode
+   , const bool ephemeralDataConnKeys
+   , double asSpendLimit
+   , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-   , connectionManager, appSettings, mode)
-   , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
-{
-}
+      , connectionManager, appSettings, mode, ephemeralDataConnKeys, inNewKeyCB)
+      , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
+{}
 
 QStringList LocalSigner::args() const
 {
@@ -1402,15 +1414,21 @@ QStringList LocalSigner::args() const
    case NetworkType::MainNet:
       result << QString::fromStdString("--mainnet");
       break;
-   default: break;
+   default:
+      break;
    }
 
+   // Among many other things, send the signer the terminal's BIP 150 ID key.
+   // Processes reading keys from the disk are subject to attack.
    result << QLatin1String("--listen") << QLatin1String("127.0.0.1");
    result << QLatin1String("--port") << port_;
    result << QLatin1String("--dirwallets") << walletsCopyDir;
    if (asSpendLimit_ > 0) {
-      result << QLatin1String("--auto_sign_spend_limit") << QString::number(asSpendLimit_, 'f', 8);
+      result << QLatin1String("--auto_sign_spend_limit")
+         << QString::number(asSpendLimit_, 'f', 8);
    }
+   result << QLatin1String("--terminal_id_key")
+      << QString::fromStdString(connection_->getOwnPubKey().toHexStr());
 
    return result;
 }

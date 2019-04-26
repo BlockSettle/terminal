@@ -26,5 +26,12 @@ public:
    virtual void onActionRejectContactRequest(std::shared_ptr<Chat::ContactRecordData> crecord) = 0;
 };
 
+class ChatSearchActionsHandler {
+public:
+   virtual ~ChatSearchActionsHandler() = default;
+   virtual void onActionSearchUsers(const std::string& pattern) = 0;
+   virtual void onActionResetSearch() = 0;
+};
+
 
 #endif // CHATHANDLEINTERFACES_H

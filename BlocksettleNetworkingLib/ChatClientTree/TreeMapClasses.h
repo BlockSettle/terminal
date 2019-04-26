@@ -26,6 +26,7 @@ class RootItem : public TreeItem {
    ChatContactElement *findContactNode(const std::string& contactId);
    std::shared_ptr<Chat::MessageData> findMessageItem(const std::string& chatId, const std::string& messgeId);
    void clear();
+   void clearSearch();
    std::string currentUser() const;
    void setCurrentUser(const std::string &currentUser);
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
@@ -34,6 +35,7 @@ class RootItem : public TreeItem {
 private:
    bool insertMessageNode(TreeMessageNode * messageNode);
    bool insertNode(TreeItem* item);
+   TreeItem* findCategoryNodeWith(TreeItem::NodeType type);
    std::string currentUser_;
 };
 

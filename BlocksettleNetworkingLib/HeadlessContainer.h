@@ -128,7 +128,9 @@ public:
       , const QString &port, NetworkType netType
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , OpMode opMode = OpMode::Remote);
+      , OpMode opMode = OpMode::Remote
+      , const bool ephemeralDataConnKeys = true
+      , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
    ~RemoteSigner() noexcept = default;
 
    bool Start() override;
@@ -163,12 +165,15 @@ protected:
    const QString                              host_;
    const QString                              port_;
    const NetworkType                          netType_;
+   const bool                                 ephemeralDataConnKeys_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
    std::shared_ptr<ApplicationSettings>       appSettings_;
+   const ZmqBIP15XDataConnection::cbNewKey cbNewKey_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
    mutable std::mutex   mutex_;
+   bool headlessConnFinished_ = false;
 };
 
 class LocalSigner : public RemoteSigner
@@ -180,7 +185,9 @@ public:
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
       , SignContainer::OpMode mode = OpMode::Local
-      , double asSpendLimit = 0);
+      , const bool ephemeralDataConnKeys = false
+      , double asSpendLimit = 0
+      , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
    ~LocalSigner() noexcept = default;
 
    bool Start() override;

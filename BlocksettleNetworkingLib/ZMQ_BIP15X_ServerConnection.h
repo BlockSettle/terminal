@@ -56,7 +56,10 @@ public:
       , const SendResultCb& cb = nullptr) override;
    bool SendDataToAllClients(const std::string&, const SendResultCb &cb = nullptr) override;
 
-   SecureBinaryData getOwnPubKey() const;
+   bool getClientIDCookie(BinaryData& cookieBuf, const std::string& cookieName);
+   void enableClientCookieUsage() { useClientIDCookie_ = true; }
+   BinaryData getOwnPubKey() const;
+   void addAuthPeer(const BinaryData& inKey, const std::string& keyName);
 
 protected:
    // Overridden functions from ZmqServerConnection.
@@ -75,18 +78,18 @@ private:
       , const std::string& clientID);
    bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj
       , const std::string& clientID);
-   void promptUser(const BinaryDataRef& newKey, const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda();
-
+   bool genBIPIDCookie();
    void heartbeatThread();
 
-private:
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
    BinaryData leftOverData_;
+   bool bipIDCookieExists_ = false;
    uint64_t id_;
    std::mutex  clientsMtx_;
    std::function<std::vector<std::string>()> cbTrustedClients_;
+   bool useClientIDCookie_ = false;
 
    const int   heartbeatInterval_ = 30000 * 2;   // allow some toleration on heartbeat miss
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;

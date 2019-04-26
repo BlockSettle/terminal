@@ -6,6 +6,10 @@
 
 using namespace std;
 
+static const std::string kLocalAddrV4 = "127.0.0.1";
+static const std::string kClientCookieName = "clientID";
+static const std::string kIDCookieName = "serverID";
+
 // A call resetting the encryption-related data for individual connections.
 //
 // INPUT:  None
@@ -50,6 +54,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
       return trustedClients;
    };
 
+   genBIPIDCookie();
    heartbeatThread();
 }
 
@@ -64,6 +69,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    id_ = READ_UINT64_LE(bdID.getPtr());
 
+   genBIPIDCookie();
    heartbeatThread();
 }
 
@@ -72,6 +78,18 @@ ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
    hbThreadRunning_ = false;
    hbCondVar_.notify_one();
    hbThread_.join();
+
+   // If it exists, delete the identity cookie.
+   if (bipIDCookieExists_) {
+      const string absCookiePath =
+         SystemFilePaths::appDataLocation() + "/" + kIDCookieName;
+      if (SystemFileUtils::fileExist(absCookiePath)) {
+         if (!SystemFileUtils::rmFile(absCookiePath)) {
+            logger_->error("[{}] Unable to delete server identity cookie ({})."
+               , __func__, absCookiePath);
+         }
+      }
+   }
 }
 
 void ZmqBIP15XServerConnection::heartbeatThread()
@@ -307,8 +325,9 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    const auto &connData = socketConnMap_[clientID];
    if (!connData) {
-      logger_->error("[{}] failed to find connection data for client {}"
+      logger_->error("[ZmqBIP15XServerConnection::{}] failed to find connection data for client {}"
          , __func__, BinaryData(clientID).toHexStr());
+      notifyListenerOnClientError(clientID, "missing connection data");
       return;
    }
 
@@ -324,17 +343,15 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
          // If decryption "fails" but the result indicates fragmentation, save
          // the fragment and wait before doing anything, otherwise treat it as a
          // legit error.
-         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1)
-         {
+         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1) {
             leftOverData_ = move(payload);
-            return;
          }
-         else
-         {
-            logger_->error("[{}] Packet decryption failed - Error {}", __func__
-               , result);
-            return;
+         else {
+            logger_->error("[ZmqBIP15XServerConnection::{}] Packet decryption failed - Error {}"
+               , __func__, result);
+            notifyListenerOnClientError(clientID, "packet decryption failed");
          }
+         return;
       }
 
       payload.resize(payload.getSize() - POLY1305MACLEN);
@@ -349,6 +366,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
             "(connection {})", __func__, connectionName_);
       }
       connData->currentReadMessage_.reset();
+      notifyListenerOnClientError(clientID, "deserialization failed");
       return;
    }
 
@@ -373,6 +391,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
             logger_->error("[ZmqBIP15XServerConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
+         notifyListenerOnClientError(clientID, "handshake failed");
          return;
       }
 
@@ -391,6 +410,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
          logger_->error("[ZmqBIP15XServerConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
       }
+      notifyListenerOnClientError(clientID, "encryption handshake failure");
       return;
    }
 
@@ -449,6 +469,25 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
       {
       case ZMQ_MSGTYPE_AEAD_SETUP:
       {
+         // If it's a local connection, get a cookie with the server's key.
+         if (useClientIDCookie_) {
+            // Read the cookie with the key to check.
+            BinaryData cookieKey(static_cast<size_t>(BTC_ECKEY_COMPRESSED_LENGTH));
+            if (!getClientIDCookie(cookieKey, kClientCookieName)) {
+               notifyListenerOnClientError(clientID, "missing client cookie");
+               return false;
+            }
+            else {
+               // Add the host and the key to the list of verified peers. Be sure
+               // to erase any old keys first.
+               vector<string> keyName;
+               string localAddrV4 = kLocalAddrV4 + ":23457";
+               keyName.push_back(localAddrV4);
+               authPeers_->eraseName(localAddrV4);
+               authPeers_->addPeer(cookieKey, keyName);
+            }
+         }
+
          //send pubkey message
          if (!writeToClient(ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY,
             socketConnMap_[clientID]->encData_->getOwnPubKey(), false))
@@ -527,7 +566,7 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
          {
             //failed to init handshake, kill connection
             logger_->error("[processHandshake] BIP 150/151 handshake process "
-               "failed - AUTH_ENCINIT processing failed");
+               "failed - AEAD_ENCINIT processing failed");
             return false;
          }
 
@@ -773,7 +812,94 @@ AuthPeersLambdas ZmqBIP15XServerConnection::getAuthPeerLambda()
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
 }
 
-SecureBinaryData ZmqBIP15XServerConnection::getOwnPubKey() const
+// Generate a cookie with the signer's identity public key.
+//
+// INPUT:  N/A
+// OUTPUT: N/A
+// RETURN: True if success, false if failure.
+bool ZmqBIP15XServerConnection::genBIPIDCookie()
+{
+   const string absCookiePath = SystemFilePaths::appDataLocation() + "/"
+      + kIDCookieName;
+   if (SystemFileUtils::fileExist(absCookiePath)) {
+      if (!SystemFileUtils::rmFile(absCookiePath)) {
+         logger_->error("[{}] Unable to delete server identity cookie ({}). "
+            "Will not write a new cookie.", __func__, absCookiePath);
+         return false;
+      }
+   }
+
+   // Ensure that we only write the compressed key.
+   ofstream cookieFile(absCookiePath, ios::out | ios::binary);
+   const BinaryData ourIDKey = getOwnPubKey();
+   if (ourIDKey.getSize() != BTC_ECKEY_COMPRESSED_LENGTH) {
+      logger_->error("[{}] Server identity key ({}) is uncompressed. Will not "
+         "write the identity cookie.", __func__, absCookiePath);
+      return false;
+   }
+
+   logger_->debug("[{}] Writing a new server identity cookie ({}).", __func__
+      ,  absCookiePath);
+   cookieFile.write(getOwnPubKey().getCharPtr(), BTC_ECKEY_COMPRESSED_LENGTH);
+   cookieFile.close();
+   bipIDCookieExists_ = true;
+
+   return true;
+}
+
+void ZmqBIP15XServerConnection::addAuthPeer(const BinaryData& inKey
+   , const std::string& keyName)
+{
+   if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
+      logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
+         , __func__,  inKey.toHexStr(), keyName);
+      return;
+   }
+   authPeers_->addPeer(inKey, vector<string>{ keyName });
+}
+
+// Get the client's identity public key. Intended for use with local clients.
+//
+// INPUT:  The accompanying key IP:Port or name. (const string)
+// OUTPUT: The buffer that will hold the compressed ID key. (BinaryData)
+// RETURN: True if success, false if failure.
+bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf
+   , const string& cookieName)
+{
+   if (!useClientIDCookie_) {
+      logger_->error("[{}] Client identity cookie requested despite not being "
+         "available.", __func__);
+      return false;
+   }
+
+   const string absCookiePath = SystemFilePaths::appDataLocation() + "/"
+      + cookieName;
+   if (!SystemFileUtils::fileExist(absCookiePath)) {
+      logger_->error("[{}] Client identity cookie ({}) doesn't exist. Unable "
+         "to verify server identity.", __func__, absCookiePath);
+      return false;
+   }
+
+   // Ensure that we only read a compressed key.
+   ifstream cookieFile(absCookiePath, ios::in | ios::binary);
+   cookieFile.read(cookieBuf.getCharPtr(), BIP151PUBKEYSIZE);
+   cookieFile.close();
+   if (!(CryptoECDSA().VerifyPublicKeyValid(cookieBuf))) {
+      logger_->error("[{}] Client identity key ({}) isn't a valid compressed "
+         "key. Unable to verify server identity.", __func__
+         , cookieBuf.toBinStr());
+      return false;
+   }
+
+   return true;
+}
+
+// Get the server's compressed BIP 150 identity public key.
+//
+// INPUT:  N/A
+// OUTPUT: N/A
+// RETURN: A buffer with the compressed ECDSA ID pub key. (BinaryData)
+BinaryData ZmqBIP15XServerConnection::getOwnPubKey() const
 {
    const auto pubKey = authPeers_->getOwnPublicKey();
    return SecureBinaryData(pubKey.pubkey, pubKey.compressed
