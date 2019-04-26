@@ -8,7 +8,7 @@ class ChatClientUsersViewItemDelegate : public QStyledItemDelegate
 {
    Q_OBJECT
 public:
-   explicit ChatClientUsersViewItemDelegate(const ChatUsersViewItemStyle& itemStyle, QObject *parent = nullptr);
+   explicit ChatClientUsersViewItemDelegate(QObject *parent = nullptr);
 
 signals:
 
@@ -25,7 +25,7 @@ protected:
    void paintUserElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
 private:
-   const ChatUsersViewItemStyle& itemStyle_;
+   ChatUsersViewItemStyle itemStyle_;
 
 };
 

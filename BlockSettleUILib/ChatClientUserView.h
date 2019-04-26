@@ -45,7 +45,6 @@ private:
    std::shared_ptr<ChatItemActionsHandler> handler_;
    QLabel * label_;
    ChatUsersContextMenu* contextMenu_;
-   ChatUsersViewItemStyle itemStyle_;
 
 
    // QAbstractItemView interface

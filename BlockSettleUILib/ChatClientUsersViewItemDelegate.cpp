@@ -6,9 +6,8 @@ using Role = ChatClientDataModel::Role;
 using OnlineStatus = ChatContactElement::OnlineStatus;
 using ContactStatus = Chat::ContactStatus;
 
-ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(const ChatUsersViewItemStyle &itemStyle, QObject *parent)
+ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QObject *parent)
    : QStyledItemDelegate (parent)
-   , itemStyle_(itemStyle)
 {
 
 }
