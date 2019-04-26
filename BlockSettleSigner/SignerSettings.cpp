@@ -9,12 +9,6 @@
 #include "SignerSettings.h"
 #include "SystemFileUtils.h"
 
-//static const QString zmqPubKeyName = QString::fromStdString("zmqpubkey");
-//static const QString zmqPubKeyHelp = QObject::tr("Public key file (CurveZMQ) for ZMQ connections");
-
-//static const QString zmqPrvKeyName = QString::fromStdString("zmqprvkey");
-//static const QString zmqPrvKeyHelp = QObject::tr("Private key file (CurveZMQ) for ZMQ connections");
-
 static const QString listenName = QString::fromStdString("listen");
 static const QString listenHelp = QObject::tr("IP address to listen on");
 
@@ -191,8 +185,6 @@ bool SignerSettings::loadSettings(const QStringList &args)
    parser.addHelpOption();
    parser.addOption({ listenName, listenHelp, QObject::tr("ip/host") });
    parser.addOption({ portName, portHelp, QObject::tr("port") });
-//   parser.addOption({ zmqPubKeyName, zmqPubKeyHelp, QObject::tr("key") });
-//   parser.addOption({ zmqPrvKeyName, zmqPrvKeyHelp, QObject::tr("key") });
    parser.addOption({ logName, logHelp, QObject::tr("log") });
    //parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
@@ -213,27 +205,9 @@ bool SignerSettings::loadSettings(const QStringList &args)
       set(ListenPort, parser.value(portName), false);
    }
 
-//   if (parser.isSet(zmqPubKeyName)) {
-//      if (parser.value(zmqPubKeyName).length() != 40) {
-//         throw std::runtime_error("invalid ZMQ connection pub key size");
-//      }
-//      set(SignerPubKey, parser.value(zmqPubKeyName), false);
-//   }
-
-//   if (parser.isSet(zmqPrvKeyName)) {
-//      if (parser.value(zmqPrvKeyName).length() != 40) {
-//         throw std::runtime_error("invalid ZMQ connection prv key size");
-//      }
-//      set(SignerPrvKey, parser.value(zmqPrvKeyName), false);
-//   }
-
    if (parser.isSet(logName)) {
       set(LogFileName, QString::fromStdString(writableDir_ + "/") + parser.value(logName), false);
    }
-
-//   if (parser.isSet(walletsDirName)) {
-//      set(WalletsDir, parser.value(walletsDirName), false);
-//   }
 
    if (parser.isSet(mainnetName)) {
       set(TestNet, false, false);
@@ -303,22 +277,6 @@ QString SignerSettings::dirDocuments() const
 {
    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
-
-//void SignerSettings::setZmqPubKeyFile(const QString &file)
-//{
-//   if (file == get(SignerPubKey).toString()) {
-//      return;
-//   }
-//   set(SignerPubKey, file);
-//}
-
-//void SignerSettings::setZmqPrvKeyFile(const QString &file)
-//{
-//   if (file == get(SignerPrvKey).toString()) {
-//      return;
-//   }
-//   set(SignerPrvKey, file);
-//}
 
 void SignerSettings::setExportWalletsDir(const QString &val)
 {
