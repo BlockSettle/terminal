@@ -3,20 +3,27 @@
 
 #include "FastLock.h"
 #include "MessageHolder.h"
+#include "SystemFileUtils.h"
+#include "EncryptionUtils.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "BIP150_151.h"
 
 using namespace std;
 
+static const std::string kLocalAddrV4 = "127.0.0.1";
+static const std::string kServerCookieName = "serverID";
+static const std::string kIDCookieName = "clientID";
 #define HEARTBEAT_PACKET_SIZE 23
 
 // The constructor to use.
 //
 // INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
 //         Ephemeral peer usage. Not recommended. (const bool&)
+//         A flag for a monitored socket. (const bool&)
 // OUTPUT: None
 ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
-   const shared_ptr<spdlog::logger>& logger
-   , const bool& ephemeralPeers, bool monitored)
+   const shared_ptr<spdlog::logger>& logger, const bool& ephemeralPeers
+   , const bool& monitored, const bool& genIDCookie)
    : ZmqDataConnection(logger, monitored)
 {
    outKeyTimePoint_ = chrono::steady_clock::now();
@@ -41,6 +48,10 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    // similar but data connections will only connect to one machine at a time.
    auto lbds = getAuthPeerLambda();
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
+   if (genIDCookie) {
+      genBIPIDCookie();
+      bipIDCookieExists_ = true;
+   }
 
    const auto &heartbeatProc = [this] {
       while (hbThreadRunning_) {
@@ -70,6 +81,18 @@ ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection()
    hbThreadRunning_ = false;
    hbCondVar_.notify_one();
    hbThread_.join();
+
+   // If it exists, delete the identity cookie.
+   if (bipIDCookieExists_) {
+      const string absCookiePath =
+         SystemFilePaths::appDataLocation() + "/" + kIDCookieName;
+      if (SystemFileUtils::fileExist(absCookiePath)) {
+         if (!SystemFileUtils::rmFile(absCookiePath)) {
+            logger_->error("[{}] Unable to delete client identity cookie ({})."
+               , __func__, absCookiePath);
+         }
+      }
+   }
 }
 
 // Get lambda functions related to authorized peers. Copied from Armory.
@@ -333,6 +356,11 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::closeConnection()
 {
+   // If a future obj is still waiting, satisfy it to prevent lockup. This
+   // shouldn't happen here but it's an emergency fallback.
+   if (serverPubkeyProm_) {
+      serverPubkeyProm_->set_value(false);
+   }
    currentReadMessage_.reset();
    return ZmqDataConnection::closeConnection();
 }
@@ -480,13 +508,33 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       //init server promise
       serverPubkeyProm_ = make_shared<promise<bool>>();
 
+      // If it's a local connection, get a cookie with the server's key.
+      if (useServerIDCookie_) {
+         // Read the cookie with the key to check.
+         BinaryData cookieKey(static_cast<size_t>(BTC_ECKEY_COMPRESSED_LENGTH));
+         if (!getServerIDCookie(cookieKey, kServerCookieName)) {
+            return false;
+         }
+         else {
+            // Add the host and the key to the list of verified peers. Be sure
+            // to erase any old keys first.
+            vector<string> keyName;
+            string localAddrV4 = kLocalAddrV4 + ":23456";
+            keyName.push_back(localAddrV4);
+            authPeers_->eraseName(localAddrV4);
+            authPeers_->addPeer(cookieKey, keyName);
+         }
+      }
+
       //compute server name
       stringstream ss;
       ss << hostAddr_ << ":" << hostPort_;
 
+      // If we don't have the key already, we may ask the the user if they wish
+      // to continue. (Remote signer only.)
       if (!bip151Connection_->havePublicKey(msgbdr, ss.str())) {
          //we don't have this key, call user prompt lambda
-         promptUser(msgbdr, ss.str());
+         verifyNewIDKey(msgbdr, ss.str());
       }
       else {
          //set server key promise
@@ -539,13 +587,21 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
          return false;
       }
 
-      //have we seen the server's pubkey?
+      // Do we need to check the server's ID key?
       if (serverPubkeyProm_ != nullptr) {
          //if so, wait on the promise
          auto serverProm = serverPubkeyProm_;
          auto fut = serverProm->get_future();
          fut.wait();
-         serverPubkeyProm_.reset();
+
+         if (fut.get()) {
+            serverPubkeyProm_.reset();
+         }
+         else {
+            logger_->error("[processHandshake] BIP 150/151 handshake process "
+               "failed - AEAD_ENCACK - Server public key not verified");
+            return false;
+         }
       }
 
       //bip151 handshake completed, time for bip150
@@ -662,30 +718,168 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
    return true;
 }
 
-// If the user is presented with a new server identity key, ask what they want.
-void ZmqBIP15XDataConnection::promptUser(const BinaryDataRef& newKey
+// Set the callback to be used when asking if the user wishes to accept BIP 150
+// identity keys from a server. See the design notes in the header for details.
+//
+// INPUT:  The callback that will ask the user to confirm the new key. (std::function)
+// OUTPUT: N/A
+// RETURN: N/A
+void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
+   // Set callbacks only if callbacks actually exist.
+   if (inNewKeyCB) {
+      cbNewKey_ = inNewKeyCB;
+      useServerIDCookie_ = false;
+   }
+}
+
+// Add an authorized peer's BIP 150 identity key manually.
+//
+// INPUT:  The authorized key. (const BinaryData)
+//         The server IP address (or host name) and port. (const string)
+// OUTPUT: N/A
+// RETURN: N/A
+void ZmqBIP15XDataConnection::addAuthPeer(const BinaryData& inKey
+   , const std::string& keyName)
+{
+   if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
+      logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
+         , __func__,  inKey.toHexStr(), keyName);
+      return;
+   }
+   authPeers_->addPeer(inKey, vector<string>{ keyName });
+}
+
+// If the user is presented with a new remote server ID key it doesn't already
+// know about, verify the key. A promise will also be used in case any functions
+// are waiting on verification results.
+//
+// INPUT:  The key to verify. (const BinaryDataRef)
+//         The server IP address (or host name) and port. (const string)
+// OUTPUT: N/A
+// RETURN: N/A
+void ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
    , const string& srvAddrPort)
 {
-   // TO DO: Insert a user prompt. For now, just approve the key and add it to
-   // the set of approved keys. This needs to be fixed ASAP!
+   if (useServerIDCookie_) {
+      // If we get here, it's because the cookie add failed or the cookie was
+      // incorrect. Satisfy the promise to prevent lockup.
+      if (serverPubkeyProm_) {
+         logger_->error("[processHandshake] Server ID key cookie could not be "
+            "verified");
+         serverPubkeyProm_->set_value(false);
+      }
+      return;
+   }
+
+   // Check to see if we've already verified the key. If not, fire the
+   // callback allowing the user to verify the new key.
    auto authPeerNameMap = authPeers_->getPeerNameMap();
    auto authPeerNameSearch = authPeerNameMap.find(srvAddrPort);
    if (authPeerNameSearch == authPeerNameMap.end()) {
       logger_->info("[{}] New key ({}) for server [{}] arrived.", __func__
          , newKey.toHexStr(), srvAddrPort);
+
+      // Ask the user if they wish to accept the new identity key.
+      BinaryData oldKey(authPeerNameSearch->second.pubkey, BIP151PUBKEYSIZE);
+      cbNewKey_(oldKey.toHexStr(), newKey.toHexStr(), serverPubkeyProm_);
+
+      //have we seen the server's pubkey?
+      if (serverPubkeyProm_ != nullptr) {
+         //if so, wait on the promise
+         auto serverProm = serverPubkeyProm_;
+         auto fut = serverProm->get_future();
+         fut.wait();
+         serverPubkeyProm_.reset();
+      }
+
+      // Add the key. Old keys aren't deleted automatically. Do it to be safe.
       vector<string> keyName;
       keyName.push_back(srvAddrPort);
+      authPeers_->eraseName(srvAddrPort);
       authPeers_->addPeer(newKey.copy(), keyName);
-      serverPubkeyProm_->set_value(true);
-   }
-   else {
-      serverPubkeyProm_->set_value(true);
+      logger_->info("[{}] Server at {} has had its identity key (0x{}) "
+         "replaced with (0x{}). Connection accepted.", __func__, srvAddrPort
+         , oldKey.toHexStr(), newKey.toHexStr());
    }
 }
 
-SecureBinaryData ZmqBIP15XDataConnection::getOwnPubKey() const
+// Get the signer's identity public key. Intended for use with local signers.
+//
+// INPUT:  The accompanying key IP:Port or name. (const string)
+// OUTPUT: The buffer that will hold the compressed ID key. (BinaryData)
+// RETURN: True if success, false if failure.
+bool ZmqBIP15XDataConnection::getServerIDCookie(BinaryData& cookieBuf
+   , const string& cookieName)
+{
+   if (!useServerIDCookie_) {
+      return false;
+   }
+
+   const string absCookiePath = SystemFilePaths::appDataLocation() + "/"
+      + cookieName;
+   if (!SystemFileUtils::fileExist(absCookiePath)) {
+      logger_->error("[{}] Server identity cookie ({}) doesn't exist. Unable "
+         "to verify server identity.", __func__, absCookiePath);
+      return false;
+   }
+
+   // Ensure that we only read a compressed key.
+   ifstream cookieFile(absCookiePath, ios::in | ios::binary);
+   cookieFile.read(cookieBuf.getCharPtr(), BIP151PUBKEYSIZE);
+   cookieFile.close();
+   if (!(CryptoECDSA().VerifyPublicKeyValid(cookieBuf))) {
+      logger_->error("[{}] Server identity key ({}) isn't a valid compressed "
+         "key. Unable to verify server identity.", __func__
+         , cookieBuf.toBinStr());
+      return false;
+   }
+
+   return true;
+}
+
+// Generate a cookie with the client's identity public key.
+//
+// INPUT:  N/A
+// OUTPUT: N/A
+// RETURN: True if success, false if failure.
+bool ZmqBIP15XDataConnection::genBIPIDCookie()
+{
+   const string absCookiePath = SystemFilePaths::appDataLocation() + "/"
+      + kIDCookieName;
+   if (SystemFileUtils::fileExist(absCookiePath)) {
+      if (!SystemFileUtils::rmFile(absCookiePath)) {
+         logger_->error("[{}] Unable to delete client identity cookie ({}). "
+            "Will not write a new cookie.", __func__, absCookiePath);
+         return false;
+      }
+   }
+
+   // Ensure that we only write the compressed key.
+   ofstream cookieFile(absCookiePath, ios::out | ios::binary);
+   const BinaryData ourIDKey = getOwnPubKey();
+   if (ourIDKey.getSize() != BTC_ECKEY_COMPRESSED_LENGTH) {
+      logger_->error("[{}] Client identity key ({}) is uncompressed. Will not "
+         "write the identity cookie.", __func__, absCookiePath);
+      return false;
+   }
+
+   logger_->debug("[{}] Writing a new client identity cookie ({}).", __func__
+      ,  absCookiePath);
+   cookieFile.write(getOwnPubKey().getCharPtr(), BTC_ECKEY_COMPRESSED_LENGTH);
+   cookieFile.close();
+   bipIDCookieExists_ = true;
+
+   return true;
+}
+
+// Get the client's compressed BIP 150 identity public key.
+//
+// INPUT:  N/A
+// OUTPUT: N/A
+// RETURN: A buffer with the compressed ECDSA ID pub key. (BinaryData)
+BinaryData ZmqBIP15XDataConnection::getOwnPubKey() const
 {
    const auto pubKey = authPeers_->getOwnPublicKey();
-   return SecureBinaryData(pubKey.pubkey, pubKey.compressed
+   return BinaryData(pubKey.pubkey, pubKey.compressed
       ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
 }

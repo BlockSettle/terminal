@@ -49,8 +49,10 @@ public:
    std::shared_ptr<ZmqSecuredServerConnection>  CreateSecuredServerConnection() const;
    std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
       bool monitored = false) const;
-   std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection() const;
-   std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(bool ephemeral = false) const;
+   std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
+      bool ephemeral = true) const;
+   std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(
+      bool ephemeral = false) const;
 
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;
 
