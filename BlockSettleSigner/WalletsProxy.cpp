@@ -2,6 +2,7 @@
 #include <QVariant>
 #include <QPixmap>
 #include <QStandardPaths>
+#include <QMetaMethod>
 
 #include <spdlog/spdlog.h>
 
@@ -28,12 +29,18 @@ void WalletsProxy::setWalletsManager()
 {
    walletsMgr_ = adapter_->getWalletsManager();
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this, &WalletsProxy::onWalletsChanged);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] { walletsSynchronized_ = true; });
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
+      walletsSynchronized_ = true;
+      onWalletsChanged();
+   });
 }
 
 void WalletsProxy::onWalletsChanged()
 {
-   emit walletsChanged();
+   // thread safe replacement of
+   // emit walletsChanged();
+   QMetaMethod walletsChangedSignal = QMetaMethod::fromSignal(&WalletsProxy::walletsChanged);
+   walletsChangedSignal.invoke(this, Qt::QueuedConnection);
 }
 
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getRootForId(const QString &walletId) const

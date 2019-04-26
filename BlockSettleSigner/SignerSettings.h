@@ -19,8 +19,6 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString exportWalletsDir READ getExportWalletsDir WRITE setExportWalletsDir NOTIFY exportWalletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
-   Q_PROPERTY(QString signerPubKey READ signerPubKey WRITE setZmqPubKeyFile NOTIFY signerPubKeyChanged)
-   Q_PROPERTY(QString signerPrvKey READ signerPrvKey WRITE setZmqPrvKeyFile NOTIFY signerPrvKeyChanged)
    Q_PROPERTY(QString serverIDKeyStr READ serverIDKeyStr WRITE setServerIDKeyStr NOTIFY serverIDKeyStrChanged)
    Q_PROPERTY(bool autoSignUnlimited READ autoSignUnlimited NOTIFY limitAutoSignXbtChanged)
    Q_PROPERTY(bool manualSignUnlimited READ manualSignUnlimited NOTIFY limitManualXbtChanged)
@@ -51,8 +49,6 @@ public:
       LogFileName,
       ListenAddress,
       ListenPort,
-      SignerPubKey,
-      SignerPrvKey,
       ServerIDKeyStr,
       LimitManualXBT,
       LimitAutoSignXBT,
@@ -65,8 +61,6 @@ public:
 
    bool loadSettings(const QStringList &args);
 
-   QString signerPubKey() const { return get(SignerPubKey).toString(); }
-   QString signerPrvKey() const { return get(SignerPrvKey).toString(); }
    QString serverIDKeyStr() const { return get(ServerIDKeyStr).toString(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
@@ -133,8 +127,6 @@ signals:
    void dirDocumentsChanged();
    void autoSignWalletChanged();
    void hideEidInfoBoxChanged();
-   void signerPrvKeyChanged();
-   void signerPubKeyChanged();
    void serverIDKeyStrChanged();
    void trustedTerminalsChanged();
    void twoWayAuthChanged();
