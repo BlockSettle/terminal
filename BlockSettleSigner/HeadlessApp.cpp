@@ -32,6 +32,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    };
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
       , zmqContext, cbTrustedClients);
+   adapterConn->enableClientCookieUsage(); // We need a cookie from the client.
    adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
 
    if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
@@ -39,14 +40,6 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       logger_->error("Failed to bind adapter connection");
       throw std::runtime_error("failed to bind adapter socket");
    }
-
-   const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/headless.pub";
-   std::ofstream out(pubKeyFileName);
-   if (!out.good()) {
-      throw std::runtime_error("failed to write interface connection pubkey file " + pubKeyFileName);
-   }
-   out << adapterConn->getOwnPubKey().toHexStr();
-   out.flush();
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
@@ -81,6 +74,7 @@ void HeadlessAppObj::start()
 void HeadlessAppObj::startInterface()
 {
    std::vector<std::string> args;
+   BinaryData serverIDKey(BIP151PUBKEYSIZE);
    switch (settings_->runMode()) {
    case bs::signer::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
@@ -95,9 +89,12 @@ void HeadlessAppObj::startInterface()
       args.push_back("lightgui");
       break;
    case bs::signer::RunMode::fullgui:
+      serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting fullgui", __func__);
       args.push_back("--guimode");
       args.push_back("fullgui");
+      args.push_back("--server_id_key");
+      args.push_back(serverIDKey.toHexStr());
       break;
    default:
       break;
@@ -150,10 +147,28 @@ void HeadlessAppObj::onlineProcessing()
       , settings_->listenAddress(), settings_->listenPort()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
+   // Set up the connection with the terminal.
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    const BinaryData bdID = CryptoPRNG::generateRandom(8);
+   std::vector<std::string> trustedTerms;
+   if (settings_->getTermIDKeyStr().empty()) {
+      trustedTerms = settings_->trustedTerminals();
+   }
+   else {
+      BinaryData termIDKey;
+      if (!(settings_->getTermIDKeyBin(termIDKey))) {
+         logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
+            "ID key", __func__);
+      }
+      if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
+         logger_->error("[{}] Signer unable to add the terminal BIP 150 ID key "
+            "({})", __func__, termIDKey.toHexStr());
+      }
+      std::string trustedTermStr = "127.0.0.1:" + settings_->getTermIDKeyStr();
+      trustedTerms.push_back(trustedTermStr);
+   }
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , settings_->trustedTerminals(), READ_UINT64_LE(bdID.getPtr()), false);
+      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false);
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_

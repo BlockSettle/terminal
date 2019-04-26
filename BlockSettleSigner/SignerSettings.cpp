@@ -3,6 +3,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QMetaEnum>
+#include "BIP150_151.h"
 #include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
 #include "BtcUtils.h"
@@ -33,6 +34,9 @@ static const QString mainnetHelp = QObject::tr("Set bitcoin network type to main
 static const QString runModeName = QString::fromStdString("guimode");
 static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
 
+static const QString srvIDKeyName = QString::fromStdString("server_id_key");
+static QString srvIDKeyHelp = QObject::tr("The server's compressed BIP 150 ID key (hex)");
+
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
@@ -57,6 +61,7 @@ SignerSettings::SignerSettings(const QString &fileName)
       { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_gui_signer.log")) },
       { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
       { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
+      { ServerIDKeyStr,    SettingDef(QStringLiteral("ServerIDKeyStr")) },
       { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
@@ -176,6 +181,25 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    }
 }
 
+// Get the server BIP 150 ID key. Intended only for when the key is passed in
+// via a CL arg.
+//
+// INPUT:  N/A
+// OUTPUT: A buffer containing the binary key. (BinaryData)
+// RETURN: True is success, false if failure.
+bool SignerSettings::getSrvIDKeyBin(BinaryData& keyBuf)
+{
+   if (!verifyServerIDKey()) {
+      return false;
+   }
+
+   // Make sure the key is a valid public key.
+   keyBuf.resize(BIP151PUBKEYSIZE);
+   keyBuf = READHEX(serverIDKeyStr().toStdString());
+
+   return true;
+}
+
 bool SignerSettings::loadSettings(const QStringList &args)
 {
    QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
@@ -190,6 +214,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
    parser.addOption({ testnetName, testnetHelp });
    parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ runModeName, runModeHelp, runModeName });
+   parser.addOption({ srvIDKeyName, srvIDKeyHelp, srvIDKeyName });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    //parser.addOption({ signName, signHelp, QObject::tr("filename") });
    parser.addOption({ woName, woHelp });
@@ -240,6 +265,10 @@ bool SignerSettings::loadSettings(const QStringList &args)
       runMode_ = bs::signer::ui::RunMode::fullgui;
    }
 
+   if (parser.isSet(srvIDKeyName)) {
+      set(ServerIDKeyStr, parser.value(srvIDKeyName), false);
+   }
+
 //   if (parser.isSet(signName)) {
 //      if (!parser.isSet(headlessName)) {
 //         throw std::logic_error("Batch offline signing is possible only in headless mode");
@@ -276,6 +305,14 @@ bs::signer::Limits SignerSettings::limits() const
 QString SignerSettings::dirDocuments() const
 {
    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+}
+
+void SignerSettings::setServerIDKeyStr(const QString& inKeyStr)
+{
+   if (inKeyStr == get(ServerIDKeyStr).toString()) {
+      return;
+   }
+   set(ServerIDKeyStr, inKeyStr);
 }
 
 void SignerSettings::setExportWalletsDir(const QString &val)
@@ -354,4 +391,29 @@ int SignerSettings::intervalStrToSeconds(const QString &s)
       }
    }
    return result;
+}
+
+// Get the server BIP 150 ID key. Intended only for when the key is passed in
+// via a CL arg.
+//
+// INPUT:  N/A
+// OUTPUT: A buffer containing the binary key. (BinaryData)
+// RETURN: True is success, false if failure.
+bool SignerSettings::verifyServerIDKey()
+{
+   BinaryData keyBuf(BIP151PUBKEYSIZE);
+   if (serverIDKeyStr().toStdString().empty()) {
+      return false;
+   }
+
+   // Make sure the key is a valid public key.
+   keyBuf = READHEX(serverIDKeyStr().toStdString());
+   if (keyBuf.getSize() != BIP151PUBKEYSIZE) {
+      return false;
+   }
+   if (!(CryptoECDSA().VerifyPublicKeyValid(keyBuf))) {
+      return false;
+   }
+
+   return true;
 }

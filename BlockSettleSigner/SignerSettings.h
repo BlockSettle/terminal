@@ -19,6 +19,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString exportWalletsDir READ getExportWalletsDir WRITE setExportWalletsDir NOTIFY exportWalletsDirChanged)
    Q_PROPERTY(QString listenAddress READ listenAddress WRITE setListenAddress NOTIFY listenSocketChanged)
    Q_PROPERTY(QString listenPort READ port WRITE setPort NOTIFY listenSocketChanged)
+   Q_PROPERTY(QString serverIDKeyStr READ serverIDKeyStr WRITE setServerIDKeyStr NOTIFY serverIDKeyStrChanged)
    Q_PROPERTY(bool autoSignUnlimited READ autoSignUnlimited NOTIFY limitAutoSignXbtChanged)
    Q_PROPERTY(bool manualSignUnlimited READ manualSignUnlimited NOTIFY limitManualXbtChanged)
    Q_PROPERTY(double limitManualXbt READ limitManualXbt WRITE setLimitManualXbt NOTIFY limitManualXbtChanged)
@@ -48,6 +49,7 @@ public:
       LogFileName,
       ListenAddress,
       ListenPort,
+      ServerIDKeyStr,
       LimitManualXBT,
       LimitAutoSignXBT,
       LimitAutoSignTime,
@@ -59,6 +61,7 @@ public:
 
    bool loadSettings(const QStringList &args);
 
+   QString serverIDKeyStr() const { return get(ServerIDKeyStr).toString(); }
    QString listenAddress() const { return get(ListenAddress).toString(); }
    QString port() const { return get(ListenPort).toString(); }
    QString logFileName() const { return get(LogFileName).toString(); }
@@ -66,6 +69,7 @@ public:
    NetworkType netType() const { return (testNet() ? NetworkType::TestNet : NetworkType::MainNet); }
    bool watchingOnly() const { return get(WatchingOnly).toBool(); }
    QString getWalletsDir() const;
+   bool getSrvIDKeyBin(BinaryData& keyBuf);
    QString getExportWalletsDir() const;
    QString autoSignWallet() const { return get(AutoSignWallet).toString(); }
    bool offline() const { return get(OfflineMode).toBool(); }
@@ -96,6 +100,7 @@ public:
    void setPort(const QString &val) { set(ListenPort, val); }
    void setZmqPubKeyFile(const QString &file);
    void setZmqPrvKeyFile(const QString &file);
+   void setServerIDKeyStr(const QString& inKeyStr);
    void setLimitManualXbt(const double val) { setXbtLimit(val, LimitManualXBT); }
    void setLimitAutoSignXbt(const double val) { setXbtLimit(val, LimitAutoSignXBT); }
    void setLimitAutoSignTimeStr(const QString &val) { set(LimitAutoSignTime, intervalStrToSeconds(val)); }
@@ -122,6 +127,7 @@ signals:
    void dirDocumentsChanged();
    void autoSignWalletChanged();
    void hideEidInfoBoxChanged();
+   void serverIDKeyStrChanged();
    void trustedTerminalsChanged();
    void twoWayAuthChanged();
 
@@ -131,6 +137,7 @@ private:
 
    void settingChanged(Setting, const QVariant &val);
    void setXbtLimit(const double val, Setting);
+   bool verifyServerIDKey();
 
    struct SettingDef {
       QString  path;

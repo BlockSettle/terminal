@@ -24,6 +24,8 @@ public:
    std::string listenAddress() const { return listenAddress_; }
    std::string listenPort() const { return listenPort_; }
    std::string interfacePort() const { return interfacePort_; }
+   std::string getTermIDKeyStr() const { return termIDKeyStr_; }
+   bool getTermIDKeyBin(BinaryData& keyBuf);
    std::string logFile() const { return logFile_; }
    std::vector<std::string> trustedTerminals() const { return trustedTerminals_; }
    std::vector<std::string> trustedInterfaces() const;
@@ -42,6 +44,7 @@ private:
    double   autoSignSpendLimit_ = 0;
    std::string logFile_;
    std::string walletsDir_;
+   std::string termIDKeyStr_;
    std::string listenAddress_ = "0.0.0.0";
    std::string listenPort_ = "23456";
    std::string interfacePort_ = "23457";

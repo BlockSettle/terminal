@@ -5,6 +5,7 @@
 #include "CoreWallet.h"
 #include "SignerDefs.h"
 #include "ServerConnectionListener.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
 #include "bs_signer.pb.h"
 
@@ -24,11 +25,14 @@ class HeadlessSettings;
 class SignerAdapterListener : public ServerConnectionListener
 {
 public:
-   SignerAdapterListener(HeadlessAppObj *, const std::shared_ptr<ServerConnection> &
-      , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::core::WalletsManager> &
-      , const std::shared_ptr<HeadlessSettings> &);
+   SignerAdapterListener(HeadlessAppObj *app
+      , const std::shared_ptr<ZmqBIP15XServerConnection> &conn
+      , const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
+      , const std::shared_ptr<HeadlessSettings> &settings);
    ~SignerAdapterListener() noexcept override;
+
+   std::shared_ptr<ZmqBIP15XServerConnection> getServerConn() const { return connection_; }
 
    bool onReady(int cur = 0, int total = 0);
 
@@ -62,7 +66,7 @@ private:
 
 private:
    HeadlessAppObj *  app_;
-   std::shared_ptr<ServerConnection>   connection_;
+   std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<HeadlessSettings>   settings_;

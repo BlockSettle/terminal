@@ -156,7 +156,13 @@ static int QMLApp(int argc, char **argv)
    // don't use them. If they already exist, we'll leave them alone.
    logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
    try {
-      SignerAdapter adapter(logger, settings->netType());
+      BinaryData srvIDKey(BIP151PUBKEYSIZE);
+      if (!(settings->getSrvIDKeyBin(srvIDKey))) {
+         logger->error("[{}] Unable to obtain server identity key from the "
+            "command line. Functionality may be limited.", __func__);
+      }
+
+      SignerAdapter adapter(logger, settings->netType(), &srvIDKey);
       adapter.setCloseHeadless(settings->closeHeadless());
 
       QQmlApplicationEngine engine;
