@@ -107,9 +107,14 @@ void HeadlessAppObj::startInterface()
       args.push_back("--testnet");
    }
 
+#ifdef __APPLE__
+   std::string guiPath = SystemFilePaths::applicationDir()
+      + "/Blocksettle Signer Gui.app/Contents/MacOS/Blocksettle Signer GUI";
+#else
    std::string guiPath = SystemFilePaths::applicationDir() + "/bs_signer_gui";
 #ifdef WIN32
    guiPath += ".exe";
+#endif
 #endif
 
    if (!SystemFileUtils::fileExist(guiPath)) {
