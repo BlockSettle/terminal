@@ -121,37 +121,35 @@ CustomTitleDialogWindow {
                     Layout.alignment: Qt.AlignLeft
                     clip: true
 
-                        ColumnLayout{
-                            spacing: 0
-                            anchors.fill: parent
-                            Layout.margins: 0
+                    ColumnLayout{
+                        spacing: 0
+                        anchors.fill: parent
+                        Layout.margins: 0
+                        Layout.alignment: Qt.AlignTop
+
+                        Repeater {
+                            id: addressRepeater
                             Layout.alignment: Qt.AlignTop
+                            model: txInfo.recvAddresses
 
-                            Repeater {
-                                id: addressRepeater
-                                Layout.alignment: Qt.AlignTop
-                                model: txInfo.recvAddresses
+                            Rectangle {
+                                id: addressRect
+                                color: "transparent"
+                                Layout.fillWidth: true
+                                height: 20
 
-                                Rectangle {
-                                    id: addressRect
-                                    color: "transparent"
-                                    Layout.fillWidth: true
-                                    height: 20
-
-                                    CustomLabelValue {
-                                        id: labelTxWalletId
-                                        text: modelData
-                                        anchors.fill: parent
-                                        horizontalAlignment: Text.AlignRight
-                                        verticalAlignment: Text.AlignTop
-                                        font: fixedFont
-                                    }
+                                CustomLabelValue {
+                                    id: labelTxWalletId
+                                    text: modelData
+                                    anchors.fill: parent
+                                    horizontalAlignment: Text.AlignRight
+                                    verticalAlignment: Text.AlignTop
+                                    font: fixedFont
                                 }
                             }
                         }
-
+                    }
                 }
-
             }
 
 
@@ -304,10 +302,6 @@ CustomTitleDialogWindow {
                 to: 120
                 value: timer.timeLeft
             }
-        }
-
-        Rectangle {
-            Layout.fillHeight: true
         }
     }
 
