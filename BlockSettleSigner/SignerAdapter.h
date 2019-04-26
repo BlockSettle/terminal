@@ -23,7 +23,8 @@ class SignerAdapter : public QObject
    friend class SignerInterfaceListener;
 
 public:
-   SignerAdapter(const std::shared_ptr<spdlog::logger> &, NetworkType);
+   SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+      , const NetworkType netType, const BinaryData* inSrvIDKey = nullptr);
    ~SignerAdapter() override;
 
    SignerAdapter(const SignerAdapter&) = delete;

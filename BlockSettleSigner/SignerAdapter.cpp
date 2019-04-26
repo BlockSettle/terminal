@@ -14,12 +14,22 @@
 
 using namespace Blocksettle::Communication;
 
-SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, NetworkType netType)
+SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+   , const NetworkType netType, const BinaryData* inSrvIDKey)
    : QObject(nullptr), logger_(logger), netType_(netType)
 {
    const auto zmqContext = std::make_shared<ZmqContext>(logger);
-   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true, true);
+
+   // When creating the client connection, we need to generate a cookie for the
+   // server connection in order to enable verification. We also need to add
+   // the key we got on the command line to the list of trusted keys.
+   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true
+      , true, true);
    adapterConn->SetContext(zmqContext);
+   if (inSrvIDKey) {
+      adapterConn->addAuthPeer(*inSrvIDKey, "127.0.0.1:23457");
+   }
+
    {
       const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";
       QFile pubKeyFile(QString::fromStdString(pubKeyFileName));

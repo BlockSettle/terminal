@@ -108,6 +108,12 @@ NetworkType HeadlessSettings::netType() const
    return NetworkType::MainNet;
 }
 
+// Get the terminal (client) BIP 150 ID key. Intended only for when the key is
+// passed in via a CL arg.
+//
+// INPUT:  N/A
+// OUTPUT: A buffer containing the binary key. (BinaryData)
+// RETURN: True is success, false if failure.
 bool HeadlessSettings::getTermIDKeyBin(BinaryData& keyBuf)
 {
    bool retVal = false;

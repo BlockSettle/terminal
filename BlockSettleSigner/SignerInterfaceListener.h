@@ -33,6 +33,7 @@ public:
    void OnError(DataConnectionError errorCode) override;
 
    bs::signer::RequestId send(signer::PacketType pt, const std::string &data);
+   std::shared_ptr<ZmqBIP15XDataConnection> getDataConnection() { return connection_; }
 
    void setTxSignCb(bs::signer::RequestId reqId, const std::function<void(const BinaryData &)> &cb) {
       cbSignReqs_[reqId] = cb;
