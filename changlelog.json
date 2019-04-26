@@ -1,7 +1,23 @@
 {
-   "latest_version" : "0.14.15",
-   "release_date" : "22 April 2019",
+   "latest_version" : "0.14.16",
+   "release_date" : "26 April 2019",
    "changes" : [
+      {
+         "version_string" : "0.14.16",
+         "previous_version" : "0.14.15",
+         "release_date" : "26 April 2019",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "WO wallet loading",
+            "Minor UI fixes and improvements",
+            "XBT MD prices fix"
+         ],
+         "revision" : "1511ae97",
+         "common_revision" : "096b178c"
+      },
       {
          "version_string" : "0.14.15",
          "previous_version" : "0.14.14",
