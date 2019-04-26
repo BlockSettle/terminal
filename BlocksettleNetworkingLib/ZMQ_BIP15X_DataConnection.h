@@ -92,6 +92,7 @@ private:
    void rekeyIfNeeded(const size_t& dataSize);
 
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
+   bool  serverPubkeySignalled_ = false;
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::shared_ptr<BIP151Connection> bip151Connection_;
    std::chrono::time_point<std::chrono::steady_clock> outKeyTimePoint_;
