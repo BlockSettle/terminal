@@ -43,9 +43,9 @@ int TreeItem::selfIndex() const
 int TreeItem::notEmptyChildrenCount()
 {
    int count = 0;
-   std::for_each(children_.begin(), children_.end(), [&count](TreeItem * child) {
-      count += child->getChildren().size() > 0 ? 1 : 0;
-   });
+   for (const auto & child : children_){
+       count += child->getChildren().size() > 0 ? 1 : 0;
+   }
    return count;
 }
 
