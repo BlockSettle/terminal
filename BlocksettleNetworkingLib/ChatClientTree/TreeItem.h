@@ -43,6 +43,7 @@ class TreeItem : public QObject {
    virtual bool insertItem(TreeItem* item);
    int selfIndex() const;
    std::vector<TreeItem*> getChildren(){ return children_;}
+   int notEmptyChildrenCount();
 
 signals:
    void itemChanged(TreeItem*);

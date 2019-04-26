@@ -5,11 +5,9 @@
 #include <QLabel>
 #include <QDebug>
 #include "ChatHandleInterfaces.h"
-
+#include "ChatUsersViewItemStyle.h"
 
 class LoggerWatcher : public ViewItemWatcher {
-
-
    // ViewItemWatcher interface
 public:
    void onElementSelected(CategoryElement *element) override;
@@ -20,15 +18,12 @@ public:
    void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
 };
 
-
-
-
-
 namespace Chat {
     class MessageData;
    }
 
 class ChatUsersContextMenu;
+class ChatUsersViewItemStyle;
 class ChatClientUserView : public QTreeView
 {
    Q_OBJECT
@@ -59,7 +54,13 @@ protected slots:
    // QAbstractItemView interface
 protected slots:
    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles) override;
+
+   // QAbstractItemView interface
+protected slots:
+   void rowsInserted(const QModelIndex &parent, int start, int end) override;
 };
+
+
 
 
 

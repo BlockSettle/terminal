@@ -184,6 +184,14 @@ void RootItem::clear()
    currentUser_.clear();
 }
 
+void RootItem::clearSearch()
+{
+   for (auto child : children_) {
+      if (child->getAcceptType() == TreeItem::NodeType::SearchElement)
+         child->deleteChildren();
+   }
+}
+
 std::string RootItem::currentUser() const
 {
    return currentUser_;
@@ -218,6 +226,8 @@ bool RootItem::insertNode(TreeItem * item)
    TreeItem * supportChild = findSupportChild(item);
    if (supportChild) {
       return supportChild->insertItem(item);
+   } else {
+
    }
    return false;
 
@@ -229,7 +239,20 @@ bool RootItem::insertNode(TreeItem * item)
 //   if (it != children_.end()){
 //      return (*it)->insertItem(item);
 //   }
-//   return false;
+   //   return false;
+}
+
+TreeItem *RootItem::findCategoryNodeWith(TreeItem::NodeType type)
+{
+   auto found = std::find_if(children_.begin(), children_.end(),
+                                       [type](TreeItem* child){
+      return child->getAcceptType() == type;
+   });
+
+   if (found != children_.end()) {
+      return *found;
+   }
+   return nullptr;
 }
 
 
