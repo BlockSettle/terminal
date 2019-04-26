@@ -358,8 +358,9 @@ bool ZmqBIP15XDataConnection::closeConnection()
 {
    // If a future obj is still waiting, satisfy it to prevent lockup. This
    // shouldn't happen here but it's an emergency fallback.
-   if (serverPubkeyProm_) {
+   if (serverPubkeyProm_ && !serverPubkeySignalled_) {
       serverPubkeyProm_->set_value(false);
+      serverPubkeySignalled_ = true;
    }
    currentReadMessage_.reset();
    return ZmqDataConnection::closeConnection();
@@ -538,7 +539,13 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       }
       else {
          //set server key promise
-         serverPubkeyProm_->set_value(true);
+         if (serverPubkeyProm_ && !serverPubkeySignalled_) {
+            serverPubkeyProm_->set_value(true);
+            serverPubkeySignalled_ = true;
+         }
+         else {
+            logger_->warn("[processHandshake] server public key was already set");
+         }
       }
 
       break;
@@ -590,12 +597,12 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       // Do we need to check the server's ID key?
       if (serverPubkeyProm_ != nullptr) {
          //if so, wait on the promise
-         auto serverProm = serverPubkeyProm_;
-         auto fut = serverProm->get_future();
+         auto fut = serverPubkeyProm_->get_future();
          fut.wait();
 
          if (fut.get()) {
             serverPubkeyProm_.reset();
+            serverPubkeySignalled_ = false;
          }
          else {
             logger_->error("[processHandshake] BIP 150/151 handshake process "
@@ -763,10 +770,10 @@ void ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
    if (useServerIDCookie_) {
       // If we get here, it's because the cookie add failed or the cookie was
       // incorrect. Satisfy the promise to prevent lockup.
-      if (serverPubkeyProm_) {
-         logger_->error("[processHandshake] Server ID key cookie could not be "
-            "verified");
+      logger_->error("[{}] Server ID key cookie could not be verified", __func__);
+      if (serverPubkeyProm_ && !serverPubkeySignalled_) {
          serverPubkeyProm_->set_value(false);
+         serverPubkeySignalled_ = true;
       }
       return;
    }
@@ -780,16 +787,17 @@ void ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
          , newKey.toHexStr(), srvAddrPort);
 
       // Ask the user if they wish to accept the new identity key.
-      BinaryData oldKey(authPeerNameSearch->second.pubkey, BIP151PUBKEYSIZE);
+      BinaryData oldKey; // there shouldn't be any old key, at least in authPeerNameSearch
       cbNewKey_(oldKey.toHexStr(), newKey.toHexStr(), serverPubkeyProm_);
+      serverPubkeySignalled_ = true;
 
       //have we seen the server's pubkey?
       if (serverPubkeyProm_ != nullptr) {
          //if so, wait on the promise
-         auto serverProm = serverPubkeyProm_;
-         auto fut = serverProm->get_future();
+         auto fut = serverPubkeyProm_->get_future();
          fut.wait();
          serverPubkeyProm_.reset();
+         serverPubkeySignalled_ = false;
       }
 
       // Add the key. Old keys aren't deleted automatically. Do it to be safe.
