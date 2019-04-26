@@ -21,6 +21,7 @@ CustomTitleDialogWindow {
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+    property int addressRowHeight: 24
 
     title: qsTr("Sign Transaction")
     rejectable: true
@@ -69,24 +70,13 @@ CustomTitleDialogWindow {
         }
     }
 
-//    onWalletInfoChanged: {
-//        if (walletInfo.encType === QPasswordData.Auth) btnConfirm.clicked()
-//    }
-
-
     cContentItem: ColumnLayout {
         spacing: 10
-
-        CustomLabel {
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-            visible: !txInfo.nbInputs && walletInfo.name.length
-            text: qsTr("Wallet %1").arg(walletInfo.name)
-        }
+        Layout.alignment: Qt.AlignTop
 
         GridLayout {
             id: gridDashboard
-            visible: txInfo.nbInputs
+            //visible: txInfo.nbInputs
             columns: 2
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -119,38 +109,47 @@ CustomTitleDialogWindow {
 
             RowLayout {
                 Layout.columnSpan: 2
+                Layout.fillWidth: true
 
                 CustomLabel {
-                    Layout.fillWidth: true
                     text: qsTr("Receiving Address(es)")
-                    //verticalAlignment: Text.AlignTop
                     Layout.alignment: Qt.AlignTop
-                    Layout.fillHeight: true
                 }
-                ColumnLayout{
-                    spacing: 0
-                    Layout.leftMargin: 0
-                    Layout.rightMargin: 0
-                    Repeater {
+                ScrollView {
+                    Layout.preferredHeight: txInfo.recvAddresses.length < 5 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 4
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignLeft
+                    clip: true
+
+                    ColumnLayout{
+                        spacing: 0
+                        anchors.fill: parent
+                        Layout.margins: 0
                         Layout.alignment: Qt.AlignTop
-                        model: txInfo.recvAddresses
 
-                        Rectangle {
-                            color: "transparent"
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            implicitWidth: labelTxWalletId.width
-                            Layout.alignment: Qt.AlignLeft
+                        Repeater {
+                            id: addressRepeater
+                            Layout.alignment: Qt.AlignTop
+                            model: txInfo.recvAddresses
 
-                            CustomLabelValue {
-                                id: labelTxWalletId
-                                text: modelData
-                                Layout.alignment: Qt.AlignLeft
+                            Rectangle {
+                                id: addressRect
+                                color: "transparent"
+                                Layout.fillWidth: true
+                                height: 20
+
+                                CustomLabelValue {
+                                    id: labelTxWalletId
+                                    text: modelData
+                                    anchors.fill: parent
+                                    horizontalAlignment: Text.AlignRight
+                                    verticalAlignment: Text.AlignTop
+                                    font: fixedFont
+                                }
                             }
                         }
                     }
                 }
-
             }
 
 
@@ -304,7 +303,6 @@ CustomTitleDialogWindow {
                 value: timer.timeLeft
             }
         }
-
     }
 
     cFooterItem: RowLayout {

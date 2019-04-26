@@ -11,7 +11,7 @@ CustomDialog {
     cHeaderItem: RowLayout {
         CustomHeaderPanel {
             Layout.fillWidth: true
-            Layout.preferredHeight: 40
+            Layout.preferredHeight: qmlTitleVisible ? 40 : 0
             text: root.title
             visible: qmlTitleVisible
         }
