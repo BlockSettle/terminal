@@ -42,11 +42,7 @@ bool ChatRoomElement::isSupported(TreeItem *item) const
 
 std::shared_ptr<Chat::ContactRecordData> ChatContactElement::getContactData() const
 {
-   auto crecord = std::dynamic_pointer_cast<Chat::ContactRecordData>(getDataObject());
-   if (crecord) {
-      return crecord;
-   }
-   return nullptr;
+   return std::dynamic_pointer_cast<Chat::ContactRecordData>(getDataObject());
 }
 
 bool ChatContactElement::isSupported(TreeItem *item) const
@@ -93,18 +89,10 @@ void ChatContactElement::setOnlineStatus(const OnlineStatus &onlineStatus)
 
 std::shared_ptr<Chat::UserData> ChatUserElement::getUserData() const
 {
-   auto user = std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
-   if (user) {
-      return user;
-   }
-   return nullptr;
+   return std::dynamic_pointer_cast<Chat::UserData>(getDataObject());;
 }
 
 std::shared_ptr<Chat::UserData> ChatSearchElement::getUserData() const
 {
-   auto user = std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
-   if (user) {
-      return user;
-   }
-   return nullptr;
+   return std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
 }
