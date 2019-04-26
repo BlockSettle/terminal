@@ -44,6 +44,7 @@ class ChartWidget : public QWidget
 public:
     explicit ChartWidget(QWidget* pParent = nullptr);
     ~ChartWidget();
+    void SendEoDRequest();
     void init(const std::shared_ptr<ApplicationSettings>&
               , const std::shared_ptr<MarketDataProvider>&
               , const std::shared_ptr<ConnectionManager>&
@@ -89,12 +90,13 @@ protected:
    quint64 GetCandleTimestamp(const uint64_t& timestamp,
       const Blocksettle::Communication::MarketDataHistory::Interval& interval) const;
    void AddDataPoint(const qreal& open, const qreal& high, const qreal& low, const qreal& close, const qreal& timestamp, const qreal& volume) const;
-   void UpdateChart(const int& interval) const;
+   void UpdateChart(const int& interval);
    void InitializeCustomPlot();
    quint64 IntervalWidth(int interval = -1, int count = 1, const QDateTime& specialDate = {}) const;
    static int FractionSizeForProduct(TradeHistoryTradeType type);
    void ProcessProductsListResponse(const std::string& data);
    void ProcessOhlcHistoryResponse(const std::string& data);
+   void ProcessEodResponse(const std::string& data);
    double CountOffsetFromRightBorder();
 
    void CheckToAddNewCandle(qint64 stamp);
@@ -129,6 +131,9 @@ private:
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker{ new QCPAxisTickerDateTime };
 
    const int loadDistance{ 15 };
+
+   bool EodUpdated{ false };
+   bool EodRequestSended{ false };
 
    constexpr static int requestLimit{ 100 };
    constexpr static int candleViewLimit{ 60 };

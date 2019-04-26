@@ -136,6 +136,21 @@ ChartWidget::~ChartWidget() {
    delete ui_;
 }
 
+void ChartWidget::SendEoDRequest()
+{
+   OhlcRequest ohlcRequest;
+   ohlcRequest.set_product(getCurrentProductName().toStdString());
+   ohlcRequest.set_interval(static_cast<Interval>(dateRange_.checkedId()));
+   ohlcRequest.set_count(1);
+   ohlcRequest.set_lesser_then(-1);
+
+   MarketDataHistoryRequest request;
+   request.set_request_type(MarketDataHistoryMessageType::EoDPriceType);
+   request.set_request(ohlcRequest.SerializeAsString());
+   mdhsClient_->SendRequest(request);
+   EodRequestSended = true;
+}
+
 // Populate combo box with existing instruments comeing from mdProvider
 void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString &security, bs::network::MDFields mdFields) {
    if ((assetType == bs::network::Asset::Undefined) && security.isEmpty()) // Celer disconnected
@@ -152,36 +167,54 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
       mdhsClient_->SendRequest(request);
    }
 
-   if (getCurrentProductName() == security)
+   for (const auto& field : mdFields)
    {
-      for (const auto& field : mdFields)
+      if (field.type == bs::network::MDField::PriceLast && getCurrentProductName() == security)
       {
-         if (field.type == bs::network::MDField::PriceLast)
-         {
-            if (!candlesticksChart_->data()->isEmpty()) {
-               auto lastCandle = candlesticksChart_->data()->end() - 1;
-               lastCandle->high = qMax(lastCandle->high, field.value);
-               lastCandle->low = qMin(lastCandle->low, field.value);
-               if (!qFuzzyCompare(lastCandle->close, field.value)) {
-                  lastCandle->close = field.value;
-                  UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));
-                  rescalePlot();
-                  ui_->customPlot->replot();
-               }
+         if (!candlesticksChart_->data()->isEmpty()) {
+            auto lastCandle = candlesticksChart_->data()->end() - 1;
+            lastCandle->high = qMax(lastCandle->high, field.value);
+            lastCandle->low = qMin(lastCandle->low, field.value);
+            if (!qFuzzyCompare(lastCandle->close, field.value)) {
+               lastCandle->close = field.value;
+               UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));
+               rescalePlot();
+               ui_->customPlot->replot();
             }
          }
+      }
 
-         if (field.type == bs::network::MDField::MDTimestamp)
-         {
-            currentTimestamp_ = field.value;
-            CheckToAddNewCandle(currentTimestamp_);
+      if (field.type == bs::network::MDField::MDTimestamp)
+      {
+         currentTimestamp_ = field.value;
+         CheckToAddNewCandle(currentTimestamp_);
+         auto date = QDateTime::fromMSecsSinceEpoch(currentTimestamp_, Qt::TimeSpec::UTC).time();
+         if (!EodUpdated
+            && !EodRequestSended
+            &&date.hour() == 0
+            && date.minute() == 0
+            && date.second() > 5
+            ) {
+            SendEoDRequest();
+            QTimer::singleShot(5000, [this]()
+            {
+               if (!EodUpdated) {
+                  SendEoDRequest();
+               }
+            });
+         }
+         if (date.hour() != 0) {
+            EodUpdated = false;
+            EodRequestSended = false;
          }
       }
    }
 }
 
-void ChartWidget::UpdateChart(const int& interval) const
+void ChartWidget::UpdateChart(const int& interval) 
 {
+   EodUpdated = false;
+   EodRequestSended = false;
    auto product = getCurrentProductName();
    if (product.isEmpty())
       return;
@@ -227,6 +260,9 @@ void ChartWidget::OnDataReceived(const std::string& data)
    case MarketDataHistoryMessageType::OhlcHistoryType:
       ProcessOhlcHistoryResponse(response.response());
       break;
+   case MarketDataHistoryMessageType::EoDPriceType: {
+      ProcessEodResponse(response.response());
+   }break;
    default:
       logger_->error("[ApiServerConnectionListener::OnDataReceived] undefined message type");
       break;
@@ -349,6 +385,30 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       rescalePlot();
       ui_->customPlot->replot();
    }
+}
+
+void ChartWidget::ProcessEodResponse(const std::string& data)
+{
+   EodRequestSended = false;
+   EodPrice eodPrice;
+   eodPrice.ParseFromString(data);
+   if (getCurrentProductName().toStdString() != eodPrice.product()) {
+      return;
+   }
+   if (candlesticksChart_->data()->size() < 2) {
+      return;
+   }
+   auto delta = dateRange_.checkedId() <= Interval::OneWeek ? 2 : 1; //should we update last or pre-last candle
+   auto lastCandle = candlesticksChart_->data()->end() - delta;
+   lastCandle->high = qMax(lastCandle->high, eodPrice.price());
+   lastCandle->low = qMin(lastCandle->low, eodPrice.price());
+   if (!qFuzzyCompare(lastCandle->close, eodPrice.price())) {
+      lastCandle->close = eodPrice.price();
+      UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000, ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));
+      rescalePlot();
+      ui_->customPlot->replot();
+   }
+   EodUpdated = true;
 }
 
 double ChartWidget::CountOffsetFromRightBorder()
@@ -568,6 +628,7 @@ void ChartWidget::OnDateRangeChanged(int interval) {
    {
       lastInterval_ = interval;
       UpdateChart(interval);
+
    }
 }
 
