@@ -219,12 +219,11 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
       break;
       case Chat::ContactsAction::Request: {
          actionString = "ContactsAction::Request";
-         QString senderId = QString::fromStdString(response.senderId());
          QString userId = QString::fromStdString(response.receiverId());
          QString contactId = QString::fromStdString(response.senderId());
          autheid::PublicKey pk = response.getSenderPublicKey();
-         pubKeys_[senderId] = response.getSenderPublicKey();
-         chatDb_->addKey(senderId, response.getSenderPublicKey());
+         pubKeys_[contactId] = response.getSenderPublicKey();
+         chatDb_->addKey(contactId, response.getSenderPublicKey());
 
          auto contactNode = model_->findContactNode(response.senderId());
          if (contactNode){
@@ -235,13 +234,13 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
          } else {
             auto contact = std::make_shared<Chat::ContactRecordData>(userId, contactId, Chat::ContactStatus::Incoming, pk);
             model_->insertContactObject(contact, true);
-            addOrUpdateContact(senderId, ContactUserData::Status::Incoming);
-            auto requestS = std::make_shared<Chat::ContactActionRequestServer>("", currentUserId_, userId.toStdString(), Chat::ContactsActionServer::AddContactRecord, Chat::ContactStatus::Incoming, pk);
+            addOrUpdateContact(contactId, ContactUserData::Status::Incoming);
+            auto requestS = std::make_shared<Chat::ContactActionRequestServer>("", currentUserId_, contactId.toStdString(), Chat::ContactsActionServer::AddContactRecord, Chat::ContactStatus::Incoming, pk);
             sendRequest(requestS);
          }
 
          //addOrUpdateContact(QString::fromStdString(response.senderId()), QStringLiteral(""), true);
-         emit IncomingFriendRequest({senderId.toStdString()});
+         emit IncomingFriendRequest({contactId.toStdString()});
       }
       break;
    }
