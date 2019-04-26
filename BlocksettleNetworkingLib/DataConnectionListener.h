@@ -8,8 +8,10 @@ class DataConnectionListener
 public:
    enum DataConnectionError
    {
+      UndefinedSocketError,
       HostNotFoundError,
-      UndefinedSocketError
+      HandshakeFailed,
+      SerializationFailed
    };
 
 public:

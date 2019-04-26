@@ -391,6 +391,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
             logger_->error("[ZmqBIP15XServerConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
+         notifyListenerOnClientError(clientID, "handshake failed");
          return;
       }
 
@@ -473,6 +474,7 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
             // Read the cookie with the key to check.
             BinaryData cookieKey(static_cast<size_t>(BTC_ECKEY_COMPRESSED_LENGTH));
             if (!getClientIDCookie(cookieKey, kClientCookieName)) {
+               notifyListenerOnClientError(clientID, "missing client cookie");
                return false;
             }
             else {
@@ -865,7 +867,7 @@ bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf
    , const string& cookieName)
 {
    if (!useClientIDCookie_) {
-      logger_->error("[{}] Server identity cookie requested despite not being "
+      logger_->error("[{}] Client identity cookie requested despite not being "
          "available.", __func__);
       return false;
    }
@@ -873,7 +875,7 @@ bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf
    const string absCookiePath = SystemFilePaths::appDataLocation() + "/"
       + cookieName;
    if (!SystemFileUtils::fileExist(absCookiePath)) {
-      logger_->error("[{}] Server identity cookie ({}) doesn't exist. Unable "
+      logger_->error("[{}] Client identity cookie ({}) doesn't exist. Unable "
          "to verify server identity.", __func__, absCookiePath);
       return false;
    }
@@ -883,7 +885,7 @@ bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf
    cookieFile.read(cookieBuf.getCharPtr(), BIP151PUBKEYSIZE);
    cookieFile.close();
    if (!(CryptoECDSA().VerifyPublicKeyValid(cookieBuf))) {
-      logger_->error("[{}] Server identity key ({}) isn't a valid compressed "
+      logger_->error("[{}] Client identity key ({}) isn't a valid compressed "
          "key. Unable to verify server identity.", __func__
          , cookieBuf.toBinStr());
       return false;
