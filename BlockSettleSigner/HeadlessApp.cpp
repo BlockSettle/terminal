@@ -84,9 +84,12 @@ void HeadlessAppObj::startInterface()
          , __func__);
       return;
    case bs::signer::RunMode::lightgui:
+      serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting lightgui", __func__);
       args.push_back("--guimode");
       args.push_back("lightgui");
+      args.push_back("--server_id_key");
+      args.push_back(serverIDKey.toHexStr());
       break;
    case bs::signer::RunMode::fullgui:
       serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
