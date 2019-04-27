@@ -251,9 +251,9 @@ namespace Chat {
       nonce_ = nonce;
    }
 
-   QString MessageData::getNonce() const
+   Botan::SecureVector<uint8_t> MessageData::getNonce() const
    {
-      return QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(nonce_.data()), int(nonce_.size())).toBase64());
+      return nonce_;
    }
 
    size_t MessageData::getDefaultNonceSize() const

@@ -441,4 +441,3 @@ bool ChatDB::getContact(const QString& userId, ContactUserData& contact)
 
    return false;
 }
-

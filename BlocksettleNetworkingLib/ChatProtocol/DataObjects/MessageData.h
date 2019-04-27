@@ -45,7 +45,7 @@ namespace Chat {
       QJsonObject toJson() const;
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
       void setNonce(const Botan::SecureVector<uint8_t> &);
-      QString getNonce() const;
+      Botan::SecureVector<uint8_t> getNonce() const;
       size_t getDefaultNonceSize() const;
 
       void setFlag(const State);

@@ -1,6 +1,7 @@
 #ifndef CHAT_SEARCH_LINE_EDIT_H
 #define CHAT_SEARCH_LINE_EDIT_H
 
+#include <memory>
 #include <QLineEdit>
 
 class ChatSearchActionsHandler;
