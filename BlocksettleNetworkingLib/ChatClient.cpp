@@ -563,17 +563,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
       if (!chatDb_->isContactExist(msg->getSenderId())) {
          continue;
       }
-/*
-<<<<<<< HEAD
-      msg->setFlag(Chat::MessageData::State::Acknowledged);
-      chatDb_->add(*msg);
 
-
-      if (msg->getState() & (int)Chat::MessageData::State::Encrypted) {
-         if (!msg->decrypt(ownPrivKey_)) {
-            logger_->error("Failed to decrypt msg {}", msg->getId().toStdString());
-            msg->setFlag(Chat::MessageData::State::Invalid);
-=======*/
       const auto& itPublicKey = pubKeys_.find(msg->getSenderId());
       if (itPublicKey == pubKeys_.end()) {
          logger_->error("[ChatClient::{}] Can't find public key for sender {}", __func__, msg->getSenderId().toStdString());
@@ -599,7 +589,6 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
          }
          else {
             logger_->error("[ChatClient::{}] This could not happend! Failed to decrypt msg.", __func__);
-//>>>>>>> dev_server_aead_and_bs_dev
          }
       }
 
@@ -702,7 +691,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
       if (contact.status() == ContactUserData::Status::Rejected)
       {
-         logger_->error("[ChatClient::sendOwnMessage] {}", "Receiver in rejected state. Discarding message.");
+         logger_->error("[ChatClient::sendOwnMessage] {}", "Receiver has rejected state. Discarding message.");
          result->setFlag(Chat::MessageData::State::Invalid);
          return result;
       }
@@ -733,29 +722,30 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    localEncMsg.setEncryptionType(Chat::MessageData::EncryptionType::IES);
 
    chatDb_->add(localEncMsg);
-   //auto local_msg = std::make_shared<Chat::MessageData>(localEncMsg);
    model_->insertContactsMessage(result);
 
    // search active message session for given user
    const auto userNoncesIterator = userNonces_.find(receiver);
-   autheid::SecureBytes nonce;
+   Botan::SecureVector<uint8_t> nonce;
    if (userNoncesIterator == userNonces_.end()) {
       // generate random nonce
       Botan::AutoSeeded_RNG rng;
-      userNonces_[receiver] = nonce = rng.random_vec(messageData.getDefaultNonceSize());
+      nonce = rng.random_vec(messageData.getDefaultNonceSize());
+      userNonces_.emplace_hint(userNoncesIterator, receiver, nonce);
    }
    else {
       // read nonce and increment
       Botan::BigInt bigIntNonce;
       bigIntNonce.binary_decode(userNoncesIterator->second);
       bigIntNonce++;
-      userNonces_[receiver] = nonce = Botan::BigInt::encode_locked(bigIntNonce);
+      nonce = Botan::BigInt::encode_locked(bigIntNonce);
+      userNoncesIterator->second = nonce;
    }
 
    BinaryData remotePublicKey(itPub->second.data(), itPub->second.size());
    SecureBinaryData localPrivateKey(ownPrivKey_.data(), ownPrivKey_.size());
    if (!messageData.encrypt_aead(remotePublicKey, localPrivateKey, nonce, logger_)) {
-      logger_->error("[ChatClient::sendMessage] failed to encrypt by aead {}" , messageData.getId().toStdString());
+      logger_->error("[ChatClient::sendMessage] failed to encrypt by aead {}", messageData.getId().toStdString());
       return result;
    }
 
@@ -852,7 +842,6 @@ bool ChatClient::getContacts(ContactUserDataList &contactList)
 {
    return chatDb_->getContacts(contactList);
 }
-
 
 bool ChatClient::addOrUpdateContact(const QString &userId, ContactUserData::Status status, const QString &userName)
 {
