@@ -148,7 +148,7 @@ void ChartWidget::SendEoDRequest()
    request.set_request_type(MarketDataHistoryMessageType::EoDPriceType);
    request.set_request(ohlcRequest.SerializeAsString());
    mdhsClient_->SendRequest(request);
-   EodRequestSended = true;
+   eodRequestSent_ = true;
 }
 
 // Populate combo box with existing instruments comeing from mdProvider
@@ -189,8 +189,8 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
          currentTimestamp_ = field.value;
          CheckToAddNewCandle(currentTimestamp_);
          auto date = QDateTime::fromMSecsSinceEpoch(currentTimestamp_, Qt::TimeSpec::UTC).time();
-         if (!EodUpdated
-            && !EodRequestSended
+         if (!eodUpdated_
+            && !eodRequestSent_
             &&date.hour() == 0
             && date.minute() == 0
             && date.second() > 5
@@ -198,14 +198,14 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
             SendEoDRequest();
             QTimer::singleShot(5000, [this]()
             {
-               if (!EodUpdated) {
+               if (!eodUpdated_) {
                   SendEoDRequest();
                }
             });
          }
          if (date.hour() != 0) {
-            EodUpdated = false;
-            EodRequestSended = false;
+            eodUpdated_ = false;
+            eodRequestSent_ = false;
          }
       }
    }
@@ -213,8 +213,8 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString 
 
 void ChartWidget::UpdateChart(const int& interval) 
 {
-   EodUpdated = false;
-   EodRequestSended = false;
+   eodUpdated_ = false;
+   eodRequestSent_ = false;
    auto product = getCurrentProductName();
    if (product.isEmpty())
       return;
@@ -260,9 +260,11 @@ void ChartWidget::OnDataReceived(const std::string& data)
    case MarketDataHistoryMessageType::OhlcHistoryType:
       ProcessOhlcHistoryResponse(response.response());
       break;
-   case MarketDataHistoryMessageType::EoDPriceType: {
+   case MarketDataHistoryMessageType::EoDPriceType:
+   {
       ProcessEodResponse(response.response());
-   }break;
+   }
+      break;
    default:
       logger_->error("[ApiServerConnectionListener::OnDataReceived] undefined message type");
       break;
@@ -389,7 +391,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
 void ChartWidget::ProcessEodResponse(const std::string& data)
 {
-   EodRequestSended = false;
+   eodRequestSent_ = false;
    EodPrice eodPrice;
    eodPrice.ParseFromString(data);
    if (getCurrentProductName().toStdString() != eodPrice.product()) {
@@ -408,7 +410,7 @@ void ChartWidget::ProcessEodResponse(const std::string& data)
       rescalePlot();
       ui_->customPlot->replot();
    }
-   EodUpdated = true;
+   eodUpdated_ = true;
 }
 
 double ChartWidget::CountOffsetFromRightBorder()

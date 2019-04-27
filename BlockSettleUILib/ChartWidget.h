@@ -132,8 +132,8 @@ private:
 
    const int loadDistance{ 15 };
 
-   bool EodUpdated{ false };
-   bool EodRequestSended{ false };
+   bool eodUpdated_{ false };
+   bool eodRequestSent_{ false };
 
    constexpr static int requestLimit{ 100 };
    constexpr static int candleViewLimit{ 60 };
