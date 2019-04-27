@@ -216,6 +216,8 @@ bool ZmqBIP15XDataConnection::sendPacket(const string& data)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::send(const string& data)
 {
+   bool retVal = false;
+
    // If we need to rekey, do it before encrypting the data.
    rekeyIfNeeded(data.size());
 
@@ -232,10 +234,28 @@ bool ZmqBIP15XDataConnection::send(const string& data)
       BinaryData payload(data);
       msg.construct(payload.getDataVector(), connPtr
          , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, msgID_);
-      sendData = msg.getNextPacket().toBinStr();
+
+      // Cycle through all packets.
+      while (!msg.isDone())
+      {
+         auto& packet = msg.getNextPacket();
+         if (packet.getSize() == 0) {
+            logger_->error("[ZmqBIP15XClientConnection::{}] failed to "
+               "serialize data (size {})", __func__, data.size());
+            return retVal;
+         }
+
+         retVal = sendPacket(packet.toBinStr());
+         if (!retVal)
+         {
+            logger_->error("[ZmqBIP15XServerConnection::{}] fragment send failed"
+               , __func__, data.size());
+            return retVal;
+         }
+      }
    }
 
-   return sendPacket(sendData);
+   return retVal;
 }
 
 void ZmqBIP15XDataConnection::notifyOnConnected()
@@ -301,7 +321,7 @@ bool ZmqBIP15XDataConnection::startBIP151Handshake(
 // The function that handles raw data coming in from the socket. The data may or
 // may not be encrypted.
 //
-// INPUT:  The raw incoming data. It may or may not be encrypted. (const string&)
+// INPUT:  The raw incoming data. (const string&)
 // OUTPUT: None
 // RETURN: None
 void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
@@ -403,7 +423,7 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
             logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
-      
+
          notifyOnError(DataConnectionListener::HandshakeFailed);
          return;
       }

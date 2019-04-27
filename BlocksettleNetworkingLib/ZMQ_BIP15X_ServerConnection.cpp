@@ -92,6 +92,11 @@ ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
    }
 }
 
+// The thread running the server heartbeat.
+//
+// INPUT:  None
+// OUTPUT: None
+// RETURN: None
 void ZmqBIP15XServerConnection::heartbeatThread()
 {
    const auto &heartbeatProc = [this] {
@@ -284,6 +289,13 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    return retVal;
 }
 
+// A send function for the data connection that sends data to all clients,
+// somewhat like multicasting.
+//
+// INPUT:  The data to send. (const string&)
+//         A post-send callback. Optional. (const SendResultCb&)
+// OUTPUT: None
+// RETURN: True if success, false if failure.
 bool ZmqBIP15XServerConnection::SendDataToAllClients(const std::string& data, const SendResultCb &cb)
 {
    unsigned int successCount = 0;
