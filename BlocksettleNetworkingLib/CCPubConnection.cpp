@@ -38,6 +38,28 @@ bool CCPubConnection::LoadCCDefinitionsFromPub()
 bool CCPubConnection::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
    const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
+
+   // Define the callback that will be used to determine if the signer's BIP
+   // 150 identity key, if it has changed, will be accepted. It needs strings
+   // for the old and new keys, and a promise to set once the user decides.
+   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
+      [this](const std::string& oldKey, const std::string& newKey
+      , std::shared_ptr<std::promise<bool>> newKeyProm)->void
+   {
+      // NB: This may need to be altered later. The PuB key should be hard-coded
+      // and respected.
+      ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
+         [this](const std::string& oldKey, const std::string& newKey
+         , std::shared_ptr<std::promise<bool>> newKeyProm)->void
+         {
+            logger_->info("[CCPubConnection::{}] Temporary kludge for "
+               "accepting the public bridge ID key. Need to check against a "
+               "hard-coded value.", __func__);
+            newKeyProm->set_value(true);
+         };
+   };
+   connection->setCBs(ourNewKeyCB);
+
    cmdPuB_ = std::make_shared<RequestReplyCommand>(name, connection, logger_);
 
    cmdPuB_->SetReplyCallback([this](const std::string& data) {

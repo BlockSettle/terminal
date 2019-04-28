@@ -10,7 +10,6 @@
 
 using namespace std;
 
-static const std::string kLocalAddrV4 = "127.0.0.1";
 static const std::string kServerCookieName = "serverID";
 static const std::string kIDCookieName = "clientID";
 #define HEARTBEAT_PACKET_SIZE 23
@@ -542,7 +541,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
             // Add the host and the key to the list of verified peers. Be sure
             // to erase any old keys first.
             vector<string> keyName;
-            string localAddrV4 = kLocalAddrV4 + ":23456";
+            string localAddrV4 = hostAddr_ + ":" + hostPort_;
             keyName.push_back(localAddrV4);
             authPeers_->eraseName(localAddrV4);
             authPeers_->addPeer(cookieKey, keyName);
