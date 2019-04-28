@@ -6,7 +6,7 @@
 
 using namespace std;
 
-static const std::string kLocalAddrV4 = "127.0.0.1";
+//static const std::string kLocalAddrV4 = "127.0.0.1";
 static const std::string kClientCookieName = "clientID";
 static const std::string kIDCookieName = "serverID";
 
@@ -493,9 +493,8 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
                // Add the host and the key to the list of verified peers. Be sure
                // to erase any old keys first.
                vector<string> keyName;
-               string localAddrV4 = kLocalAddrV4 + ":23457";
-               keyName.push_back(localAddrV4);
-               authPeers_->eraseName(localAddrV4);
+               keyName.push_back(clientID);
+               authPeers_->eraseName(clientID);
                authPeers_->addPeer(cookieKey, keyName);
             }
          }
@@ -763,20 +762,20 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
                , __func__, b);
             return;
          }
-         const auto keyName = b.substr(0, colonIndex);
+
          SecureBinaryData inKey = READHEX(b.substr(colonIndex + 1));
          if (inKey.isNull()) {
             logger_->error("[{}] Trusted client key for {} is malformed."
-               , __func__, keyName);
+               , __func__, clientID);
             return;
          }
 
          try {
-            authPeers_->addPeer(inKey, vector<string>{ keyName });
+            authPeers_->addPeer(inKey, vector<string>{ clientID });
          }
          catch (const std::exception &e) {
             logger_->error("[{}] Trusted client key {} [{}] for {} is malformed: {}"
-               , __func__, inKey.toHexStr(), inKey.getSize(), keyName, e.what());
+               , __func__, inKey.toHexStr(), inKey.getSize(), clientID, e.what());
             return;
          }
       }

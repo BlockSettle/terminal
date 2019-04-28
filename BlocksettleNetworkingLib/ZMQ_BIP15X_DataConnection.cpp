@@ -774,6 +774,7 @@ void ZmqBIP15XDataConnection::addAuthPeer(const BinaryData& inKey
          , __func__,  inKey.toHexStr(), keyName);
       return;
    }
+   authPeers_->eraseName(keyName);
    authPeers_->addPeer(inKey, vector<string>{ keyName });
 }
 
