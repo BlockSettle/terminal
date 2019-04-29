@@ -495,11 +495,13 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesInt() const
    return result;
 }
 
-std::vector<std::string> hd::Leaf::registerWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::vector<std::string> hd::Leaf::registerWallet(
+   const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    setArmory(armory);
 
-   if (armory_) {
+   if (armory_) 
+   {
       const auto addrsExt = getAddrHashesExt();
       std::vector<std::string> regIds;
       auto notif_count = std::make_shared<unsigned>(0);
@@ -634,8 +636,25 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          poolByAddr_[addrPair.first] = { path, addrPair.first.getType() };
       }
 
-      //trigger new address registration
+      //register new addresses with db
+      if (armory_)
+      {
+         std::vector<BinaryData> addrHashes;
+         for (auto& addrPair : addrVec)
+            addrHashes.push_back(addrPair.first.prefixed());
 
+         auto promPtr = std::make_shared<std::promise<bool>>();
+         auto fut = promPtr->get_future();
+         auto cbRegistered = [promPtr](const std::string &regId)
+         {
+            promPtr->set_value(true);
+         };
+
+         armory_->registerWallet(btcWallet_, walletId()
+            , addrHashes, cbRegistered, true);
+         fut.wait();
+      }
+      
       cb();
    };
 
