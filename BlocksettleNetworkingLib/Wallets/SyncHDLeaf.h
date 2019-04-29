@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
 
@@ -52,6 +52,7 @@ namespace bs {
             bool hasExtOnlyAddresses() const override { return isExtOnly_; }
             bool hasId(const std::string &) const override;
 
+            BTCNumericTypes::balance_type getSpendableBalance() const override;
             bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
                , QObject *obj, uint64_t val = UINT64_MAX) override;
             bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
@@ -91,8 +92,8 @@ namespace bs {
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
 
-            void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
-            std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
+            void setArmory(const std::shared_ptr<ArmoryObject> &) override;
+            std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryObject> &armory = nullptr
                , bool asNew = false) override;
             void unregisterWallet() override;
 
@@ -183,6 +184,7 @@ namespace bs {
             cb_complete_notify                           cbScanNotify_ = nullptr;
             std::function<void(const std::string &walletId, unsigned int idx)> cbWriteLast_ = nullptr;
             volatile bool activateAddressesInvoked_ = false;
+            BTCNumericTypes::balance_type spendableBalanceCorrection_ = 0;
 
             struct AddrPrefixedHashes {
                std::set<BinaryData> external;
@@ -216,7 +218,8 @@ namespace bs {
             std::set<AddrPoolKey>   activeScanAddresses_;
 
          private:
-            bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
+            bs::Address createAddress(AddressEntryType aet, const CbAddress &cb = nullptr
+               , bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             void onScanComplete();
@@ -281,7 +284,7 @@ namespace bs {
             QString displaySymbol() const override;
             bool isTxValid(const BinaryData &) const override;
 
-            void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
+            void setArmory(const std::shared_ptr<ArmoryObject> &) override;
 
          private slots:
             void onZeroConfReceived(const std::vector<bs::TXEntry>) override;

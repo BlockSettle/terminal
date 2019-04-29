@@ -167,7 +167,7 @@ SecureBinaryData CryptoAES::DecryptCBC(const SecureBinaryData & data,
 
 /////////////////////////////////////////////////////////////////////////////
 SecureBinaryData CryptoECDSA::ComputePublicKey(
-   SecureBinaryData const & cppPrivKey) const
+   SecureBinaryData const & cppPrivKey, bool compressed) const
 {
    btc_key pkey;
    btc_privkey_init(&pkey);
@@ -175,12 +175,24 @@ SecureBinaryData CryptoECDSA::ComputePublicKey(
    btc_privkey_is_valid(&pkey);
 
    btc_pubkey pubkey;
-   SecureBinaryData result(BTC_ECKEY_UNCOMPRESSED_LENGTH);
-
    btc_pubkey_init(&pubkey);
-   btc_pubkey_from_key_uncompressed(&pkey, &pubkey);
-   memcpy(result.getPtr(), pubkey.pubkey, BTC_ECKEY_UNCOMPRESSED_LENGTH);
 
+   SecureBinaryData result;
+   size_t len;
+
+   if (!compressed)
+   {
+      len = BTC_ECKEY_UNCOMPRESSED_LENGTH;
+      btc_pubkey_from_key_uncompressed(&pkey, &pubkey);
+   }
+   else
+   {
+      len = BTC_ECKEY_COMPRESSED_LENGTH;
+      btc_pubkey_from_key(&pkey, &pubkey);
+   }
+
+   result.resize(len);
+   memcpy(result.getPtr(), pubkey.pubkey, len);
    return result;
 }
 

@@ -94,7 +94,7 @@ void SettlementWallet::completeMonitorCreations(const bs::Address &addr
 
 bool SettlementWallet::createTempWalletForAddress(const bs::Address& addr)
 {
-   const auto walletId = addr.display<std::string>();
+   const auto walletId = addr.display();
    const auto settlAddr = getAddressEntryForAddr(addr);
    if (!settlAddr) {
       return false;

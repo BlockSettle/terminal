@@ -2,6 +2,7 @@
 #include "PortfolioWidget.h"
 #include <QSortFilterProxyModel>
 #include <QMenu>
+#include <QClipboard>
 
 #include "ApplicationSettings.h"
 #include "CreateTransactionDialogAdvanced.h"
@@ -58,6 +59,16 @@ PortfolioWidget::PortfolioWidget(QWidget* parent)
    connect(ui_->treeViewUnconfirmedTransactions, &QTreeView::activated, this, &PortfolioWidget::showTransactionDetails);
    ui_->treeViewUnconfirmedTransactions->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
+   actionCopyAddr_ = new QAction(tr("&Copy Address"));
+   connect(actionCopyAddr_, &QAction::triggered, [this]() {
+      qApp->clipboard()->setText(curAddress_);
+   });
+
+   actionCopyTx_ = new QAction(tr("Copy &Transaction Hash"));
+   connect(actionCopyTx_, &QAction::triggered, [this]() {
+      qApp->clipboard()->setText(curTx_);
+   });
+
    actionRBF_ = new QAction(tr("Replace-By-Fee (RBF)"), this);
    connect(actionRBF_, &QAction::triggered, this, &PortfolioWidget::onCreateRBFDialog);
 
@@ -102,6 +113,11 @@ void PortfolioWidget::shortcutActivated(ShortcutType s)
 
 }
 
+void PortfolioWidget::setAuthorized(bool authorized)
+{
+   ui_->widgetMarketData->setAuthorized(authorized);
+}
+
 void PortfolioWidget::showTransactionDetails(const QModelIndex& index)
 {
    if (filter_) {
@@ -120,6 +136,9 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
    }
 
    const auto sourceIndex = filter_->mapToSource(ui_->treeViewUnconfirmedTransactions->indexAt(point));
+   auto addressIndex = model_->index(sourceIndex.row(), static_cast<int>(TransactionsViewModel::Columns::Address));
+   curAddress_ = model_->data(addressIndex).toString();
+
    const auto txNode = model_->getNode(sourceIndex);
    contextMenu_.clear();
    if (!txNode || !txNode->item() || !txNode->item()->initialized) {
@@ -138,6 +157,15 @@ void PortfolioWidget::showContextMenu(const QPoint &point)
       actionCPFP_->setData(sourceIndex);
    } else {
       actionCPFP_->setData(-1);
+   }
+
+   // save transaction id and add context menu for copying it to clipboard
+   curTx_ = QString::fromStdString(txNode->item()->txEntry.txHash.toHexStr(true));
+   contextMenu_.addAction(actionCopyTx_);
+
+   // allow copy address only if there is only 1 address
+   if (txNode->item()->addressCount == 1) {
+      contextMenu_.addAction(actionCopyAddr_);
    }
 
    if (!contextMenu_.isEmpty()) {

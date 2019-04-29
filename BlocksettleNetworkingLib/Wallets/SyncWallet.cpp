@@ -59,6 +59,7 @@ bool Wallet::setAddressComment(const bs::Address &address, const std::string &co
    if (sync && signContainer_) {
       signContainer_->syncAddressComment(walletId(), address, comment);
    }
+   emit addressAdded();
    return true;
 }
 
@@ -188,7 +189,7 @@ bool Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> c
          catch (const std::exception &e) {
             if (logger_ != nullptr) {
                logger_->error("[bs::sync::Wallet::getAddrTxN] Return data error - {} ", \
-                  "- Address {}", e.what(), addr.display().toStdString());
+                  "- Address {}", e.what(), addr.display());
             }
          }
 
@@ -395,33 +396,37 @@ bool Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)
 bool Wallet::getSpendableZCList(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
    , std::function<void(std::vector<UTXO>)> cb, QObject *obj)
 {
-   if (!isBalanceAvailable()) {
+   if (!btcWallet) {
       return false;
    }
 
-   zcListCallbacks_[obj].push_back(cb);
-   if (zcListCallbacks_.size() > 1) {
+   auto &cbList = zcListCallbacks_[btcWallet->walletID()];
+   cbList.push_back({ obj, cb });
+   if (cbList.size() > 1) {
       return true;
    }
-   const auto &cbZCList = [this](ReturnMessage<std::vector<UTXO>> utxos)-> void {
+   const auto &cbZCList = [this, btcWallet](ReturnMessage<std::vector<UTXO>> utxos)-> void {
       try {
          auto inUTXOs = utxos.get();
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
-         const auto &cbProcess = [this, inUTXOs] {
-            QMetaObject::invokeMethod(this, [this, inUTXOs] {
-               for (const auto &cbPairs : zcListCallbacks_) {
-                  if (cbPairs.first) {
-                     for (const auto &cb : cbPairs.second) {
-                        cb(inUTXOs);
-                     }
+         const auto &cbProcess = [this, btcWallet, inUTXOs] {
+            QMetaObject::invokeMethod(this, [this, btcWallet, inUTXOs] {
+               const auto &itCb = zcListCallbacks_.find(btcWallet->walletID());
+               if (itCb == zcListCallbacks_.end()) {
+                  logger_->error("[sync::Wallet::getSpendableZCList] failed to find callback for id {}"
+                     , btcWallet->walletID());
+                  return;
+               }
+               for (const auto &cb : itCb->second) {
+                  if (cb.first) {
+                     cb.second(inUTXOs);
                   }
                }
-               zcListCallbacks_.clear();
+               zcListCallbacks_.erase(itCb);
             });
          };
-
          cbProcess();
       }
       catch (const std::exception &e) {
@@ -588,7 +593,7 @@ QString Wallet::displayTxValue(int64_t val) const
    return QLocale().toString(val / BTCNumericTypes::BalanceDivider, 'f', BTCNumericTypes::default_precision);
 }
 
-void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
+void Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 {
    if (!armory_ && (armory != nullptr)) {
       armory_ = armory;
@@ -602,7 +607,7 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
    }
 }
 
-std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
    setArmory(armory);
 
@@ -632,7 +637,9 @@ void Wallet::unregisterWallet()
    zcListCallbacks_.clear();
    historyCache_.clear();
 
-   registerWallet();
+   if (armory_) {
+      armory_->registerWallet(btcWallet_, walletId(), {}, [](const std::string &){}, false);
+   }
    btcWallet_.reset();
 }
 
@@ -711,7 +718,7 @@ bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> 
       index = getAddressIndex(result);
       return result;
    };
-   const auto &cbChangeAddr = [this, changeAddress, cbNewChangeAddr](std::string &index) {
+   const auto &cbChangeAddr = [changeAddress, cbNewChangeAddr](std::string &index) {
       if (changeAddress.isNull()) {
          return cbNewChangeAddr(index);
       }
@@ -867,7 +874,7 @@ int Wallet::addAddress(
          aet = addr.getType();
          idxCopy = getAddressIndex(addr);
          if (idxCopy.empty()) 
-            idxCopy = addr.display<std::string>();
+            idxCopy = addr.display();
       }
 
       signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
@@ -882,4 +889,9 @@ void Wallet::newAddresses(
 {
    if (signContainer_)
       signContainer_->syncNewAddresses(walletId(), inData, cb);
+   else {
+      if (logger_) {
+         logger_->warn("[{}] no signer set", __func__);
+      }
+   }
 }

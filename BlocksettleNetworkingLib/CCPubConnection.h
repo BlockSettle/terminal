@@ -13,6 +13,7 @@ namespace spdlog {
 }
 
 class ConnectionManager;
+class RequestReplyCommand;
 
 class CCPubConnection : public QObject
 {
@@ -56,6 +57,7 @@ protected:
 
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
+   std::shared_ptr<RequestReplyCommand>   cmdPuB_;
 };
 
 #endif // __CC_PUB_CONNECTION_H__

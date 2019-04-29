@@ -14,7 +14,7 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
 // This constructor sets message box type, title, text and description.
 BSMessageBox::BSMessageBox(messageBoxType mbType
    , const QString& title, const QString& text
-   , const QString& description, QWidget* parent) 
+   , const QString& description, QWidget* parent)
    : BSMessageBox(mbType, title, text, description, QString(), parent) {
 }
 
@@ -26,7 +26,7 @@ BSMessageBox::BSMessageBox(messageBoxType mbType
 // details - when specified 'Show Details' buttons shows and when clicked the
 // message box expands to show another text area with a scroll bar
 BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
-   , const QString& text, const QString& description 
+   , const QString& text, const QString& description
    , const QString& details, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::BSMessageBox) {
@@ -35,12 +35,15 @@ BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
    ui_->labelTitle->setText(text);
    ui_->labelText->setText(description);
    setType(mbType);
+   resize(width(), 0);
 
    if (details.isEmpty()) {
       ui_->pushButtonShowDetails->hide();
+      ui_->verticalWidgetDetails->setMaximumHeight(0);
    } else {
       connect(ui_->pushButtonShowDetails, &QPushButton::clicked, this, &BSMessageBox::onDetailsPressed);
       ui_->labelDetails->setText(details);
+      ui_->verticalWidgetDetails->setMaximumHeight(SHRT_MAX);
    }
    connect(ui_->pushButtonOk, &QPushButton::clicked, this, &BSMessageBox::accept);
    connect(ui_->pushButtonCancel, &QPushButton::clicked, this, &BSMessageBox::reject);
@@ -130,23 +133,29 @@ void BSMessageBox::setType(messageBoxType type) {
 }
 
 void BSMessageBox::setConfirmButtonText(const QString &text) {
-   ui_->pushButtonOk->setText(text); 
+   ui_->pushButtonOk->setText(text);
 }
 
 void BSMessageBox::setCancelButtonText(const QString &text) {
-   ui_->pushButtonCancel->setText(text); 
+   ui_->pushButtonCancel->setText(text);
 }
 
 MessageBoxCCWalletQuestion::MessageBoxCCWalletQuestion(const QString &ccProduct, QWidget *parent)
    : BSMessageBox(BSMessageBox::question, tr("Private Market Wallet"), tr("Create %1 Wallet").arg(ccProduct)
       , tr("Your wallet does not have a branch in which to hold %1 tokens, would you like to create it?")
-      .arg(ccProduct), parent) { 
+      .arg(ccProduct), parent) {
 }
 
 MessageBoxBroadcastError::MessageBoxBroadcastError(const QString &details, QWidget *parent)
    : BSMessageBox(BSMessageBox::critical, tr("Broadcast Failure"),
       tr("Failed to Sign Transaction"), tr("Error occured when signing a transaction.")
       , details, parent) {
+}
+
+MessageBoxExpTimeout::MessageBoxExpTimeout(QWidget *parent)
+   : BSMessageBox(BSMessageBox::warning, tr("Explorer Timeout"),
+      tr("Explorer Timeout"), tr("Armory has timed out. Cannot resolve query.")
+      , parent) {
 }
 
 MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)
@@ -165,7 +174,7 @@ MessageBoxAuthNotice::MessageBoxAuthNotice(QWidget *parent)
                        "You may then attach a password or your Auth eID account to the wallet."
                        "<br><br>Auth eID, like any software, is susceptible to malware, although keyloggers will serve no purpose. "
                        "Please keep your mobile devices up-to-date with the latest software updates, and never install software offered outside your device's app store."
-                       "<br><br>For more information, please consult:<br><a href=\"http://pubb.blocksettle.com/PDF/AutheID%20Getting%20Started.pdf\"><span style=\"color:white;\">Getting Started With Auth eID</span></a>.")
+                       "<br><br>For more information, please consult:<br><a href=\"https://autheid.com/\"><span style=\"color:white;\">Getting Started With Auth eID</span></a>.")
                   , parent) {
    // use rich text because of the hyperlink
    setLabelTextFormat(Qt::RichText);

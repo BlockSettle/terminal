@@ -115,13 +115,13 @@ class TransactionsViewModel : public QAbstractItemModel
 {
 Q_OBJECT
 public:
-    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+    TransactionsViewModel(const std::shared_ptr<ArmoryObject> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent
                           , const std::shared_ptr<bs::sync::Wallet> &defWlt);
-    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
+    TransactionsViewModel(const std::shared_ptr<ArmoryObject> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent = nullptr);
@@ -152,7 +152,7 @@ public:
 private slots:
    void updatePage();
    void refresh();
-   void cleanRefresh();
+   void onWalletDeleted(std::string walletId);
    void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
    void onDelRows(std::vector<int> rows);
 
@@ -206,7 +206,7 @@ private:
    TransactionsViewItem oldestItem_;
    std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
    std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
-   std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<ArmoryObject>       armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;

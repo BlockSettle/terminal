@@ -190,6 +190,8 @@ class Configurator:
     def filter_copy(self, src, dst, file_extension=None, cleanupDst=True):
         if cleanupDst:
             self.remove_fs_object(dst)
+
+        if not os.path.isdir(dst):
             os.makedirs(dst)
 
         for name in os.listdir(src):

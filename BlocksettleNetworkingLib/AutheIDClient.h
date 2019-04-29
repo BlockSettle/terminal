@@ -2,6 +2,7 @@
 #define __AUTH_EID_CLIENT_H__
 
 #include <QObject>
+#include <QNetworkAccessManager>
 
 #include <functional>
 
@@ -62,10 +63,10 @@ public:
    ~AutheIDClient() override;
 
    void start(RequestType requestType, const std::string &email, const std::string &walletId
-      , const std::vector<std::string> &knownDeviceIds);
+      , const std::vector<std::string> &knownDeviceIds, int expiration = 120);
    void sign(const BinaryData &data, const std::string &email
       , const QString &title, const QString &description, int expiration = 30);
-   void authenticate(const std::string& email);
+   void authenticate(const std::string &email, int expiration = 120);
    void cancel();
 
 signals:
@@ -73,6 +74,7 @@ signals:
    void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
    void authSuccess(const std::string &jwt);
    void failed(const QString &text);
+   void userCancelled();
 
 private:
    struct Result
@@ -84,7 +86,7 @@ private:
 
    using ResultCallback = std::function<void(const Result &result)>;
 
-   void requestAuth(const std::string& email);
+   void requestAuth(const std::string& email, int expiration);
    void createCreateRequest(const std::string &payload, int expiration);
    void processCreateReply(const QByteArray &payload, int expiration);
    void processResultReply(const QByteArray &payload);
@@ -95,7 +97,6 @@ private:
 
    QString getAutheIDClientRequestText(RequestType requestType);
    bool isAutheIDClientNewDeviceNeeded(RequestType requestType);
-   int getAutheIDClientTimeout(RequestType requestType);
 
 private:
    std::shared_ptr<spdlog::logger> logger_;
@@ -109,8 +110,9 @@ private:
 
    std::vector<std::string> knownDeviceIds_;
 
-   std::string baseUrl_;
+   const char *baseUrl_;
+   const char *apiKey_;
 };
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)
 
-#endif __AUTH_EID_CLIENT_H__
+#endif // __AUTH_EID_CLIENT_H__

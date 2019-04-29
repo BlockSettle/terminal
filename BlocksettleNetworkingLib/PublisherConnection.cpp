@@ -66,6 +66,13 @@ bool PublisherConnection::InitConnection()
    return true;
 }
 
+
+std::string PublisherConnection::GetCurrentWelcomeMessage() const
+{
+   FastLock locker{welcomeMessageLock_};
+   return   welcomeMessage_;
+}
+
 bool PublisherConnection::SetWelcomeMessage(const std::string& data)
 {
    if (dataSocket_ == nullptr) {
@@ -73,14 +80,20 @@ bool PublisherConnection::SetWelcomeMessage(const std::string& data)
       return false;
    }
 
-   int result = zmq_setsockopt(dataSocket_.get(), ZMQ_XPUB_WELCOME_MSG, data.c_str(), data.size());
-   if (result != 0) {
-      logger_->error("[PublisherConnection::SetWelcomeMessage] failed to set no welcome message: {}"
-         , zmq_strerror(zmq_errno()));
-      return false;
+   {
+      FastLock locker{welcomeMessageLock_};
+      welcomeMessage_ = data;
    }
 
-   return true;
+   int command = PublisherConnection::CommandUpdateWelcomeMessage;
+   int result = 0;
+
+   {
+      FastLock locker{controlSocketLockFlag_};
+      result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+   }
+
+   return result != -1;
 }
 
 bool PublisherConnection::BindPublishingConnection(const std::string& endpoint_name)
@@ -211,6 +224,17 @@ void PublisherConnection::listenFunction()
          auto command_code = command.ToInt();
          if (command_code == PublisherConnection::CommandSend) {
             BroadcastPendingData();
+         } else if (command_code == PublisherConnection::CommandUpdateWelcomeMessage) {
+            std::string welcomeMessageCopy;
+            {
+               FastLock locker{welcomeMessageLock_};
+               welcomeMessageCopy = welcomeMessage_;
+            }
+            int result = zmq_setsockopt(dataSocket_.get(), ZMQ_XPUB_WELCOME_MSG, welcomeMessageCopy.c_str(), welcomeMessageCopy.size());
+            if (result != 0) {
+               logger_->error("[PublisherConnection::SetWelcomeMessage] failed to set no welcome message: {}"
+                  , zmq_strerror(zmq_errno()));
+            }
          } else if (command_code == PublisherConnection::CommandStop) {
             break;
          } else {
@@ -284,7 +308,7 @@ void PublisherConnection::BroadcastPendingData()
    }
 
    for (const auto &data : pendingData) {
-      int result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
+      auto result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
       if (result != data.size()) {
          logger_->error("[PublisherConnection::SendDataToDataSocket] {} failed to send client id {}. {} packets dropped"
             , connectionName_, zmq_strerror(zmq_errno())

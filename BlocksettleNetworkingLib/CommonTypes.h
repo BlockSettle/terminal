@@ -319,38 +319,16 @@ namespace bs {
             PriceBestBid,
             PriceBestOffer,
             DailyVolume,
-            Reject
+            Reject,
+            MDTimestamp
          };
          Type     type;
          double   value;
          QString  desc;
 
-         static Type fromCeler(com::celertech::marketdata::api::enums::marketdataentrytype::MarketDataEntryType mdType) {
-            switch (mdType)
-            {
-            case com::celertech::marketdata::api::enums::marketdataentrytype::BID:       return PriceBid;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::OFFER:     return PriceOffer;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::MID_PRICE: return PriceMid;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::TRADE:     return PriceLast;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::OPEN:      return PriceOpen;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::CLOSE:     return PriceClose;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::HIGH:      return PriceHigh;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::LOW:       return PriceLow;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::TOTALTRADEDVOL:  return TurnOverQty;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::SETTLEMENT:return PriceSettlement;
-            case com::celertech::marketdata::api::enums::marketdataentrytype::VWAP:      return VWAP;
-            default:       return Unknown;
-            }
-         }
+         static Type fromCeler(com::celertech::marketdata::api::enums::marketdataentrytype::MarketDataEntryType mdType);
 
-         static MDField get(const MDFields &fields, Type type) {
-            for (const auto field : fields) {
-               if (field.type == type) {
-                  return field;
-               }
-            }
-            return { Unknown, 0, QString() };
-         }
+         static MDField get(const MDFields &fields, Type type);
       };
 
 
@@ -366,6 +344,45 @@ namespace bs {
 
       const std::string XbtCurrency = "XBT";
 
+      // fx and xbt
+      struct NewTrade
+      {
+         std::string product;
+         double      price;
+         double      amount;
+         uint64_t    timestamp;
+      };
+
+      struct NewPMTrade
+      {
+         double      price;
+         uint64_t    amount;
+         std::string product;
+         uint64_t    timestamp;
+      };
+
+      enum OTCRangeID
+      {
+         Range1_5,
+         Range5_10,
+         Range10_50,
+         Range50_100,
+         Range100_250,
+         Range250plus
+      };
+
+      struct OTCPriceRange
+      {
+         uint64_t lower;
+         uint64_t upper;
+      };
+
+      struct OTCQuantityRange
+      {
+         uint64_t lower;
+         uint64_t upper;
+      };
+
    }  //namespace network
 }  //namespace bs
 
@@ -379,6 +396,8 @@ Q_DECLARE_METATYPE(bs::network::QuoteNotification)
 Q_DECLARE_METATYPE(bs::network::MDField)
 Q_DECLARE_METATYPE(bs::network::MDFields)
 Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
+Q_DECLARE_METATYPE(bs::network::NewTrade)
+Q_DECLARE_METATYPE(bs::network::NewPMTrade)
 
 
 #endif //__BS_COMMON_TYPES_H__

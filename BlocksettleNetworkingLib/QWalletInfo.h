@@ -10,13 +10,14 @@ namespace bs {
       namespace hd {
          class Wallet;
       }
-      class Wallet;
    }
    namespace sync {
       namespace hd {
          class Wallet;
       }
+      class Wallet;
    }
+
 namespace hd {
 
 class WalletInfo : public QObject
@@ -44,15 +45,15 @@ public:
 
    // used in signer
    WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *parent = nullptr);
-   WalletInfo(std::shared_ptr<bs::sync::hd::Wallet> hdWallet, QObject *parent = nullptr);
-   WalletInfo(std::shared_ptr<bs::core::Wallet> wallet
-      , std::shared_ptr<bs::core::hd::Wallet> rootHdWallet, QObject *parent = nullptr);
+   WalletInfo(const std::shared_ptr<bs::sync::hd::Wallet> &, QObject *parent = nullptr);
+   WalletInfo(const std::shared_ptr<bs::sync::Wallet> &wallet
+      , const std::shared_ptr<bs::sync::hd::Wallet> &, QObject *parent = nullptr);
 
    WalletInfo(const WalletInfo &other);
    WalletInfo& operator= (const WalletInfo &other);
 
    static WalletInfo fromDigitalBackup(const QString &filename);
-   void initFromWallet(const bs::core::Wallet *, const std::string &rootId = {});
+   void initFromWallet(const bs::sync::Wallet *, const std::string &rootId = {});
    void initFromRootWallet(const std::shared_ptr<bs::core::hd::Wallet> &);
    void initEncKeys(const std::shared_ptr<bs::core::hd::Wallet> &rootWallet);
    void initFromRootWallet(const std::shared_ptr<bs::sync::hd::Wallet> &);

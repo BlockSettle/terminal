@@ -60,12 +60,8 @@ namespace bs {
             void setUserId(const BinaryData &usedId);
             bool deleteRemotely();
 
-            // addNew: add new encryption key without asking for all old keys (used with multiple Auth eID devices).
-            // removeOld: remove missed keys comparing encKey field without asking for all old keys
-            // (newPass password fields should be empty). Used with multiple Auth eID devices.
-            // dryRun: check that old password valid. No password change happens.
-            void changePassword(const std::function<void(bool)> &, const std::vector<bs::wallet::PasswordData> &newPass
-               , bs::wallet::KeyRank, const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun);
+            void registerWallet(const std::shared_ptr<ArmoryObject> &, bool asNew = false);
+            void setArmory(const std::shared_ptr<ArmoryObject> &);
 
             std::vector<std::string> registerWallet(
                const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
@@ -96,7 +92,7 @@ namespace bs {
             mutable QMutex    mtxGroups_;
             BinaryData        userId_;
             SignContainer  *  signContainer_;
-            std::shared_ptr<ArmoryConnection>   armory_;
+            std::shared_ptr<ArmoryObject>       armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
             std::vector<SecureBinaryData>          encryptionKeys_;

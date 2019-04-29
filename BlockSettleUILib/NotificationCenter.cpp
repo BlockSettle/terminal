@@ -19,13 +19,18 @@ NotificationCenter::NotificationCenter(const std::shared_ptr<ApplicationSettings
    qRegisterMetaType<bs::ui::NotifyMessage>("NotifyMessage");
 
    addResponder(std::make_shared<NotificationTabResponder>(mainWinUi, appSettings, this));
-   addResponder(std::make_shared<NotificationTrayIconResponder>(trayIcon, appSettings, this));
+   addResponder(std::make_shared<NotificationTrayIconResponder>(mainWinUi, trayIcon, appSettings, this));
 }
 
 void NotificationCenter::createInstance(const std::shared_ptr<ApplicationSettings> &appSettings, const Ui::BSTerminalMainWindow *ui
    , const std::shared_ptr<QSystemTrayIcon> &trayIcon, QObject *parent)
 {
    globalInstance = std::make_shared<NotificationCenter>(appSettings, ui, trayIcon, parent);
+}
+
+NotificationCenter *NotificationCenter::instance()
+{
+   return globalInstance.get();
 }
 
 void NotificationCenter::destroyInstance()
@@ -60,12 +65,32 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 {
    mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
    connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
-      mainWinUi_->tabWidget->setTabIcon(index, QIcon());
+      if (index != mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat)) {
+         mainWinUi_->tabWidget->setTabIcon(index, QIcon());
+      }
    });
 }
 
 void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
+   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
+      const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
+      const bool isInCurrentChat = msg[2].toBool();
+      const bool hasUnreadMessages = msg[3].toBool();
+
+      if (hasUnreadMessages) {
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
+      } else {
+         if (mainWinUi_->tabWidget->currentIndex() != chatIndex && isInCurrentChat) {
+            mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
+         } else {
+            mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
+         }
+      }
+      
+      return;
+   }
+
    const auto tabAction = getTabActionFor(nt, msg);
    if ((tabAction.index >= 0) && (mainWinUi_->tabWidget->currentIndex() != tabAction.index)) {
       mainWinUi_->tabWidget->setTabIcon(tabAction.index,
@@ -85,32 +110,30 @@ NotificationTabResponder::TabAction NotificationTabResponder::getTabActionFor(bs
 
    case bs::ui::NotifyType::BlockchainTX:
       return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetTransactions), true, true };
-   
-   case bs::ui::NotifyType::NewChatMessage:
-      return { mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat), true, true };
 
    default: break;
    }
-   return { -1, false };
+   return { -1, false, false };
 }
 
 
-NotificationTrayIconResponder::NotificationTrayIconResponder(const std::shared_ptr<QSystemTrayIcon> &trayIcon
+NotificationTrayIconResponder::NotificationTrayIconResponder(const Ui::BSTerminalMainWindow *mainWinUi
+   , const std::shared_ptr<QSystemTrayIcon> &trayIcon
    , const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
-   : NotificationResponder(parent), trayIcon_(trayIcon), appSettings_(appSettings)
+   : NotificationResponder(parent), mainWinUi_(mainWinUi), trayIcon_(trayIcon), appSettings_(appSettings)
    , notifMode_(QSystemTray)
 #ifdef BS_USE_DBUS
    , dbus_(new DBusNotification(tr("BlockSettle Terminal"), this))
 #endif
 {
-   connect(trayIcon_.get(), &QSystemTrayIcon::messageClicked, this, &NotificationTrayIconResponder::newVersionMessageClicked);
+   connect(trayIcon_.get(), &QSystemTrayIcon::messageClicked, this, &NotificationTrayIconResponder::messageClicked);
 
 #ifdef BS_USE_DBUS
    if(dbus_->isValid()) {
       notifMode_ = Freedesktop;
 
       disconnect(trayIcon_.get(), &QSystemTrayIcon::messageClicked,
-         this, &NotificationTrayIconResponder::newVersionMessageClicked);
+         this, &NotificationTrayIconResponder::messageClicked);
       connect(dbus_, &DBusNotification::actionInvoked,
          this, &NotificationTrayIconResponder::notificationAction);
    }
@@ -125,6 +148,13 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    QString title, text;
    int msecs = 10000;
    newVersionMessage_ = false;
+   newChatMessage_ = false;
+   newChatId_ = QString();
+   bool isInCurrentChat;
+   bool hasUnreadMessages;
+   
+   const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
+   const bool isChatTab = mainWinUi_->tabWidget->currentIndex() == chatIndex;
 
    switch (nt) {
    case bs::ui::NotifyType::BlockchainTX:
@@ -177,6 +207,24 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       newVersionMessage_ = true;
       break;
 
+   case bs::ui::NotifyType::UpdateUnreadMessage:
+      isInCurrentChat = msg[2].toBool();
+      hasUnreadMessages = msg[3].toBool();
+
+      if (!hasUnreadMessages && !isInCurrentChat) {
+         return;
+      }
+
+      if (isChatTab && QApplication::activeWindow()) {
+         return;
+      }
+
+      title = msg[0].toString();
+      text = msg[1].toString();
+      newChatMessage_ = true;
+      newChatId_ = title;
+      break;
+
    default: return;
    }
 
@@ -192,7 +240,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 #endif // BS_USE_DBUS
 }
 
-void NotificationTrayIconResponder::newVersionMessageClicked()
+void NotificationTrayIconResponder::messageClicked()
 {
    if (newVersionMessage_) {
       const auto url = appSettings_->get<std::string>(ApplicationSettings::Binaries_Dl_Url);
@@ -222,6 +270,13 @@ void NotificationTrayIconResponder::newVersionMessageClicked()
       mb.exec();
 #endif
    }
+   else if (newChatMessage_) {
+      if (!newChatId_.isNull() && globalInstance != NULL) {
+         emit globalInstance->newChatMessageClick(newChatId_);
+         mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
+         mainWinUi_->tabWidget->activateWindow();
+      }
+   }
 }
 
 #ifdef BS_USE_DBUS
@@ -229,7 +284,7 @@ void NotificationTrayIconResponder::notificationAction(const QString &action)
 {
    if (action == c_newVersionAction) {
       newVersionMessage_ = true;
-      newVersionMessageClicked();
+      messageClicked();
    }
 }
 #endif // BS_USE_DBUS

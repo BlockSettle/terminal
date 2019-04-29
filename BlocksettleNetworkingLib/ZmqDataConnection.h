@@ -79,7 +79,8 @@ protected:
    std::atomic_flag                 controlSocketLock_ = ATOMIC_FLAG_INIT;
    ZmqContext::sock_ptr             dataSocket_;
    ZmqContext::sock_ptr             monSocket_;
-
+   std::string                      hostAddr_;
+   std::string                      hostPort_;
 private:
    std::string                      socketId_;
 

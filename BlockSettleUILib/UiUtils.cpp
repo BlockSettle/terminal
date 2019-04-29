@@ -198,7 +198,7 @@ void UiUtils::fillAuthAddressesComboBox(QComboBox* comboBox, const std::shared_p
    if (!addrList.empty()) {
       const auto b = comboBox->blockSignals(true);
       for (const auto &address : addrList) {
-         comboBox->addItem(address.display());
+         comboBox->addItem(QString::fromStdString(address.display()));
       }
       comboBox->blockSignals(b);
       QMetaObject::invokeMethod(comboBox, "setCurrentIndex", Q_ARG(int, authAddressManager->getDefaultIndex()));

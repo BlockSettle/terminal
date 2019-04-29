@@ -13,10 +13,10 @@ class QtSettings(Configurator):
         Configurator.__init__(self, settings)
         self.jom = JomSettings(settings)
         self.openssl = OpenSslSettings(settings)
-        self._release = '5.11'
-        self._version = self._release + '.3'
+        self._release = '5.12'
+        self._version = self._release + '.2'
         self._package_name = 'qt-everywhere-src-' + self._version
-        self._script_revision = '4'
+        self._script_revision = '6'
 
         if self._project_settings.on_windows():
             self._package_url = 'https://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
@@ -27,7 +27,7 @@ class QtSettings(Configurator):
         return self._package_name
 
     def get_revision_string(self):
-        return self._version + self._script_revision
+        return self._version + '_' + self._script_revision
 
     def get_url(self):
         return self._package_url
@@ -41,9 +41,13 @@ class QtSettings(Configurator):
     def config(self):
         command = []
 
-        modules_to_skip = ['doc', 'imageformats', 'webchannel', 'webview', 'sensors', 'serialport',
+        modules_to_skip = ['doc', 'webchannel', 'webview', 'sensors', 'serialport',
                            'script', 'multimedia', 'wayland', 'location', 'webglplugin', 'gamepad',
-                           'purchasing', 'canvas3d', 'speech']
+                           'purchasing', 'canvas3d', 'speech', '3d', 'androidextras', 'canvas3d',
+                           'connectivity', 'virtualkeyboard']
+        if self._project_settings.get_link_mode() == 'static':
+            modules_to_skip.append('imageformats')
+
         sql_drivers_to_skip = ['db2', 'oci', 'tds', 'sqlite2', 'odbc', 'ibase', 'psql']
 
         if self._project_settings.on_windows():
@@ -55,6 +59,7 @@ class QtSettings(Configurator):
 
         if self._project_settings.get_build_mode() == 'release':
             command.append('-release')
+            command.append('-no-qml-debug')
         else:
             command.append('-debug')
 
@@ -63,10 +68,14 @@ class QtSettings(Configurator):
         else:
             command.append('-no-dbus')
 
+        if self._project_settings.get_link_mode() == 'static':
+            command.append('-static')
+            command.append('-openssl-linked')
+            if self._project_settings.on_windows():
+                command.append('-static-runtime')
+
         command.append('-confirm-license')
         command.append('-opensource')
-        command.append('-static')
-        command.append('-no-qml-debug')
         command.append('-no-opengl')
         command.append('-qt-pcre')
         command.append('-qt-harfbuzz')
@@ -74,10 +83,14 @@ class QtSettings(Configurator):
         command.append('-sql-mysql')
         command.append('-no-feature-vulkan')
 
-        command.append('-openssl-linked')
         # command.append('-no-securetransport')
-        command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
-        command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
+        # Recent script changes somehow broke Linux builds. Use a workaround.
+        if self._project_settings.on_linux():
+            command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'')))
+            command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'')))
+        else:
+            command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
+            command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
 
         if self._project_settings.on_osx():
             command.append('-L/usr/local/opt/mysql@5.7/lib')
@@ -98,7 +111,6 @@ class QtSettings(Configurator):
             command.append('-no-freetype')
 
         if self._project_settings.on_windows():
-            command.append('-static-runtime')
             command.append('-IC:\Program Files\MySQL\MySQL Connector C 6.1\include')
             command.append('-LC:\Program Files\MySQL\MySQL Connector C 6.1\lib')
 
@@ -133,7 +145,8 @@ class QtSettings(Configurator):
 
         if self._project_settings.on_windows():
             command.append(self.jom.get_executable_path())
-            command.append('mode=static')
+            if self._project_settings.get_link_mode() == 'static':
+                command.append('mode=static')
         else:
             command.append('make')
             command.append('-j')

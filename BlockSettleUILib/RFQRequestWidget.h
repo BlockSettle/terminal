@@ -1,4 +1,4 @@
-#ifndef __RFQ_REQUEST_WIDGET_H__
+﻿#ifndef __RFQ_REQUEST_WIDGET_H__
 #define __RFQ_REQUEST_WIDGET_H__
 
 #include <QWidget>
@@ -19,7 +19,7 @@ namespace bs {
    }
 }
 class ApplicationSettings;
-class ArmoryConnection;
+class ArmoryObject;
 class AssetManager;
 class AuthAddressManager;
 class CelerClient;
@@ -48,12 +48,14 @@ public:
          , const std::shared_ptr<AssetManager>& assetManager
          , const std::shared_ptr<DialogManager> &dialogManager
          , const std::shared_ptr<SignContainer> &
-         , const std::shared_ptr<ArmoryConnection> &
+         , const std::shared_ptr<ArmoryObject> &
          , const std::shared_ptr<ConnectionManager> &connectionManager);
 
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void shortcutActivated(ShortcutType s) override;
+
+   void setAuthorized(bool authorized);
 
 public slots:
    void onRFQSubmit(const bs::network::RFQ& rfq);
@@ -74,7 +76,7 @@ private:
 
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<SignContainer>      signingContainer_;
-   std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<ArmoryObject>       armory_;
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<ConnectionManager>  connectionManager_;
 };

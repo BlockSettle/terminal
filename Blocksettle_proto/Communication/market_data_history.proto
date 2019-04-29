@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.MarketDataHistory;
+
+import "trade_history.proto";
+
+enum Interval
+{
+	OneYear         = 0;
+	SixMonths       = 1;
+	OneMonth        = 2;
+	OneWeek         = 3;
+	TwentyFourHours = 4;
+	TwelveHours     = 5;
+	SixHours        = 6;
+	OneHour         = 7;
+};
+
+enum MarketDataHistoryMessageType
+{
+	ProductsListType = 0;
+	OhlcHistoryType  = 1;
+	EoDPriceType     = 2;
+};
+
+message MarketDataHistoryRequest
+{
+	MarketDataHistoryMessageType request_type = 1;
+	bytes                        request      = 2;
+};
+
+message MarketDataHistoryResponse
+{
+	MarketDataHistoryMessageType response_type = 1;
+	bytes                        response      = 2;
+};
+
+message OhlcRequest
+{
+	string   product  = 1;
+	Interval interval = 2;
+	uint32   count    = 3;
+	int64 lesser_then = 4;
+};
+
+message OhlcCandle
+{
+	uint64 timestamp = 1;
+	uint64 start     = 2;
+	uint64 end       = 3;
+	double open      = 4;
+	double high      = 5;
+	double low       = 6;
+	double close     = 7;
+	uint64 trades    = 8;
+	double volume    = 9;
+};
+
+message OhlcResponse
+{
+    string              product  = 1;
+    Interval            interval = 2;
+	uint64     first_stamp_in_db = 3;
+    repeated OhlcCandle candles  = 4;
+};
+
+message EodPrice
+{
+	string product   = 1;
+	Interval interval = 2;
+	uint64 timestamp = 3;
+	double price     = 4;
+};
+
+message ProductsListResponse
+{
+	message Product{
+		string product = 1;
+		Blocksettle.Communication.TradeHistory.TradeHistoryTradeType type = 2;
+	}
+    repeated Product products = 1;
+};

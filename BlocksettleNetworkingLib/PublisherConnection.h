@@ -24,6 +24,8 @@ public:
    bool InitConnection();
    bool SetWelcomeMessage(const std::string& data);
 
+   std::string GetCurrentWelcomeMessage() const;
+
    // bind to network address. TCP will be used
    bool BindPublishingConnection(const std::string& host, const std::string& port);
    // bind to inproc endpoint
@@ -44,6 +46,7 @@ private:
 
    enum InternalCommandCode {
       CommandSend = 0,
+      CommandUpdateWelcomeMessage,
       CommandStop
    };
 
@@ -69,6 +72,9 @@ private:
    std::atomic_flag                 dataQueueLock_ = ATOMIC_FLAG_INIT;
    std::deque<std::string>          dataQueue_;
    std::string                      connectionName_;
+
+   mutable std::atomic_flag         welcomeMessageLock_ = ATOMIC_FLAG_INIT;
+   std::string                      welcomeMessage_;
 };
 
 #endif // __PUBLISHER_CONNECTION_H__

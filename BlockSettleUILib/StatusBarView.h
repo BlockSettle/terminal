@@ -8,7 +8,7 @@
 #include <QIcon>
 
 #include <memory>
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "CelerClient.h"
 #include "CircleProgressBar.h"
 
@@ -24,7 +24,7 @@ class StatusBarView  : public QObject
 {
    Q_OBJECT
 public:
-   StatusBarView(const std::shared_ptr<ArmoryConnection> &
+   StatusBarView(const std::shared_ptr<ArmoryObject> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &
       , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
@@ -98,7 +98,7 @@ private:
    QPixmap     iconContainerConnecting_;
    QPixmap     iconContainerOnline_;
 
-   std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<ArmoryObject>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::unordered_set<std::string>     importingWallets_;

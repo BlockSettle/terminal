@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package Blocksettle.Communication.BlocksettleMarketData;
+
+message ProductPriceInfo
+{
+   string product_name  = 1;
+   double offer         = 2;
+   double bid           = 3;
+   double last_price    = 4;
+   double volume        = 5;
+}
+
+// contain full info on all products
+message MDSnapshot
+{
+   repeated ProductPriceInfo fx_products  = 1;
+   repeated ProductPriceInfo xbt_products = 2;
+   repeated ProductPriceInfo cc_products  = 3;
+   int64                     timestamp    = 4;
+}
+
+enum UpdateType
+{
+   FullSnapshotType              = 0;
+   IncrementalUpdateType         = 1;
+   NewSettledTreadeUpdateType    = 2;
+};
+
+message UpdateHeader
+{
+   UpdateType  type        = 1;
+   bytes       data        = 2;
+};
+
+enum MDTradeType
+{
+   FXTradeType    = 0;
+   XBTTradeType   = 1;
+   PMTradeType    = 2;
+}
+
+message MDTradeRecord
+{
+   double   price       = 1;
+   double   amount      = 2;
+   string   product     = 3;
+   uint64   timestamp   = 4;
+}
+
+message MDPMTradeRecord
+{
+   double   price       = 1;
+   uint64   amount      = 2;
+   string   product     = 3;
+   uint64   timestamp   = 4;
+}
+
+message NewTradeUpdate
+{
+   MDTradeType trade_type  = 1;
+   bytes       trade       = 2;
+}

@@ -20,13 +20,15 @@ enum RequestType
    GetHDWalletInfoRequestType  = 12;
    DisconnectionRequestType    = 13;
    SignTXMultiRequestType      = 14;
-   ChangePasswordRequestType   = 15;
-   CancelSignTxRequestType     = 16;
-   SyncWalletInfoType          = 17;
-   SyncHDWalletType            = 18;
-   SyncWalletType              = 19;
-   SyncCommentType             = 20;
-   SyncAddressesType           = 21;
+   CancelSignTxRequestType     = 15;
+   SyncWalletInfoType          = 16;
+   SyncHDWalletType            = 17;
+   SyncWalletType              = 18;
+   SyncCommentType             = 19;
+   SyncAddressesType           = 20;
+   ExecCustomDialogRequestType = 21;
+   // Sent from headless signer when wallet added, removed or changed somehow (request body is empty)
+   WalletsListUpdatedType      = 22;
 }
 
 message RequestPacket
@@ -219,6 +221,11 @@ message DeleteHDWalletRequest
    }
 }
 
+message DeleteHDWalletResponse
+{
+   bool     success = 1;
+   string   error = 2;
+}
 
 message GetRootKeyRequest
 {
@@ -272,25 +279,6 @@ message SignTXMultiRequest
 }
 
 
-message ChangePasswordRequest
-{
-   string   rootWalletId = 1;
-   string   oldPassword = 2;
-   repeated PasswordData newPassword = 3;
-   uint32   rankM = 4;
-   uint32   rankN = 5;
-   bool     addNew = 6;
-   bool     removeOld = 8;
-   bool     dryRun = 7;
-}
-
-message ChangePasswordResponse
-{
-   string   rootWalletId = 1;
-   bool     success = 2;
-}
-
-
 enum WalletFormat
 {
    WalletFormatUnknown    = 0;
@@ -307,6 +295,7 @@ message SyncWalletInfoResponse
       string name = 3;
       string description = 4;
       NetworkType netType = 5;
+      bool watching_only = 6;
    }
    repeated WalletInfo wallets = 1;
 }
@@ -418,3 +407,11 @@ message SettlWalletResponse
    string name = 2;
    string description = 3;
 }
+
+
+message CustomDialogRequest
+{
+   string dialogName = 1;
+   bytes  variantData = 2;
+}
+

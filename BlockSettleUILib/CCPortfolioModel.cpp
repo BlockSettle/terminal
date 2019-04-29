@@ -588,9 +588,10 @@ CCPortfolioModel::CCPortfolioModel(const std::shared_ptr<bs::sync::WalletsManage
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &CCPortfolioModel::reloadXBTWalletsList);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &CCPortfolioModel::reloadXBTWalletsList);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &CCPortfolioModel::reloadXBTWalletsList);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &CCPortfolioModel::reloadXBTWalletsList);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, [this](std::string) { reloadXBTWalletsList(); });
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &CCPortfolioModel::reloadXBTWalletsList);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &CCPortfolioModel::updateXBTBalance);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceUpdated, this, &CCPortfolioModel::updateXBTBalance);
 }
 
 int CCPortfolioModel::columnCount(const QModelIndex & parent) const
@@ -720,6 +721,11 @@ int CCPortfolioModel::rowCount(const QModelIndex & parentIndex) const
 std::shared_ptr<AssetManager> CCPortfolioModel::assetManager()
 {
    return assetManager_;
+}
+
+std::shared_ptr<bs::sync::WalletsManager> CCPortfolioModel::walletsManager()
+{
+   return walletsManager_;
 }
 
 bool CCPortfolioModel::hasChildren(const QModelIndex& parentIndex) const

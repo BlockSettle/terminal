@@ -1,5 +1,4 @@
 #include "CorePlainWallet.h"
-#include <QFile>
 #include <spdlog/spdlog.h>
 #include "SystemFileUtils.h"
 #include "Wallets.h"
@@ -257,11 +256,11 @@ void PlainWallet::loadFromFile(const std::string &filename)
    if (filename.empty()) {
       throw std::invalid_argument("no file name provided");
    }
-   if (!SystemFileUtils::IsValidFilePath(filename)) {
+   if (!SystemFileUtils::isValidFilePath(filename)) {
       throw std::invalid_argument("Invalid file path: " + filename);
    }
 
-   if (!SystemFileUtils::FileExist(filename)) {
+   if (!SystemFileUtils::fileExist(filename)) {
       throw std::runtime_error("Wallet file does not exist");
    }
 
@@ -283,6 +282,9 @@ std::string PlainWallet::getFileName(const std::string &dir) const
 
 void PlainWallet::saveToDir(const std::string &targetDir)
 {
+   if (!SystemFileUtils::pathExist(targetDir)) {
+      SystemFileUtils::mkPath(targetDir);
+   }
    const auto masterID = BinaryData(walletId());
    saveToFile(getFileName(targetDir));
 }
@@ -449,7 +451,7 @@ public:
       return itKey->second;
    }
 
-   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey) override {
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData&) override {
       throw std::runtime_error("no privkey");
       return {};
    }

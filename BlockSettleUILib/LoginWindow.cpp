@@ -52,6 +52,7 @@ LoginWindow::LoginWindow(const std::shared_ptr<spdlog::logger> &logger
    autheIDConnection_ = std::make_shared<AutheIDClient>(logger_, settings, connectionManager_);
    connect(autheIDConnection_.get(), &AutheIDClient::authSuccess, this, &LoginWindow::onAutheIDDone);
    connect(autheIDConnection_.get(), &AutheIDClient::failed, this, &LoginWindow::onAutheIDFailed);
+   connect(autheIDConnection_.get(), &AutheIDClient::userCancelled, this, &LoginWindow::setupLoginPage);
 
    connect(ui_->signWithEidButton, &QPushButton::clicked, this, &LoginWindow::accept);
 
@@ -110,7 +111,7 @@ void LoginWindow::accept()
 void LoginWindow::onAuthPressed()
 {
    if (state_ == Login) {
-      autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString());
+      autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString(), kAuthTimeout);
       setupLoginPage();
       timer_.start();
       setupCancelPage();

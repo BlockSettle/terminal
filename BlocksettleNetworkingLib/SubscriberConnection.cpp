@@ -1,7 +1,7 @@
 #include "SubscriberConnection.h"
 
 #include "MessageHolder.h"
-#include "ZMQHelperFunctions.h"
+#include "ZmqHelperFunctions.h"
 
 #include <zmq.h>
 #include <spdlog/spdlog.h>
@@ -179,12 +179,15 @@ void SubscriberConnection::stopListen()
       return;
    }
 
-   listenThread_.join();
-
-   auto tempListener = listener_;
-   listener_ = nullptr;
-   if (isConnected_) {
-      tempListener->OnDisconnected();
+   if (std::this_thread::get_id() == listenThread_.get_id()) {
+      listenThread_.detach();
+   } else {
+      try {
+         listenThread_.join();
+      }
+      catch (const std::exception &e) {
+         logger_->error("[{}] failed to join thread: {}", __func__, e.what());
+      }
    }
 
    return;

@@ -1,0 +1,69 @@
+#ifndef CHATCLIENTUSERVIEW_H
+#define CHATCLIENTUSERVIEW_H
+
+#include <QTreeView>
+#include <QLabel>
+#include <QDebug>
+#include "ChatHandleInterfaces.h"
+#include "ChatUsersViewItemStyle.h"
+
+class LoggerWatcher : public ViewItemWatcher {
+   // ViewItemWatcher interface
+public:
+   void onElementSelected(CategoryElement *element) override;
+
+   // ViewItemWatcher interface
+public:
+   void onElementUpdated(CategoryElement *element) override;
+   void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
+};
+
+namespace Chat {
+    class MessageData;
+   }
+
+class ChatUsersContextMenu;
+class ChatUsersViewItemStyle;
+class ChatClientUserView : public QTreeView
+{
+   Q_OBJECT
+public:
+   ChatClientUserView(QWidget * parent = nullptr);
+   void addWatcher(ViewItemWatcher* watcher);
+   void setActiveChatLabel(QLabel * label);
+   void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
+
+public slots:
+   void onCustomContextMenu(const QPoint &);
+private:
+   void updateDependUI(CategoryElement * element);
+   void notifyCurrentChanged(CategoryElement *element);
+   void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
+   void notifyElementUpdated(CategoryElement *element);
+private:
+   std::list<ViewItemWatcher* > watchers_;
+   std::shared_ptr<ChatItemActionsHandler> handler_;
+   QLabel * label_;
+   ChatUsersContextMenu* contextMenu_;
+
+
+   // QAbstractItemView interface
+protected slots:
+   void currentChanged(const QModelIndex &current, const QModelIndex &previous) override;
+
+   // QAbstractItemView interface
+protected slots:
+   void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles) override;
+
+   // QAbstractItemView interface
+protected slots:
+   void rowsInserted(const QModelIndex &parent, int start, int end) override;
+};
+
+
+
+
+
+
+
+#endif // CHATCLIENTUSERVIEW_H

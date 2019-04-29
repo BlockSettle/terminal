@@ -20,7 +20,7 @@
 
 ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
       , const std::shared_ptr<SignContainer> &container, const std::shared_ptr<AssetManager> &assetMgr
-      , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryConnection> &armory
+      , const std::shared_ptr<AuthAddressManager> &authMgr, const std::shared_ptr<ArmoryObject> &armory
       , const EasyCoDec::Data& seedData
       , const EasyCoDec::Data& chainCodeData
       , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -73,7 +73,7 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    const auto &cbw = [appSettings] (const std::string &walletId, unsigned int idx) {
       appSettings->SetWalletScanIndex(walletId, idx);
    };
-   walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager, armory
+   walletImporter_ = std::make_shared<WalletImporter>(container, walletsManager.get(), armory
       , assetMgr, authMgr, cbr, cbw);
 
    connect(walletImporter_.get(), &WalletImporter::walletCreated, this, &ImportWalletDialog::onWalletCreated);

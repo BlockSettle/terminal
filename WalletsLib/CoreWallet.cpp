@@ -223,8 +223,7 @@ static std::vector<UTXO> decorateUTXOs(const std::vector<UTXO> &inUTXOs)
       const bs::Address recipAddr(utxo.getRecipientScrAddr());
       utxo.txinRedeemSizeBytes_ = recipAddr.getInputSize();
       utxo.witnessDataSizeBytes_ = recipAddr.getWitnessDataSize();
-      utxo.isInputSW_ = ((recipAddr.getType() == AddressEntryType_P2WPKH)
-         || (recipAddr.getType() == AddressEntryType_P2WSH)) ? true : false;
+      utxo.isInputSW_ = (recipAddr.getWitnessDataSize() != UINT32_MAX);
    }
    return inputUTXOs;
 }
@@ -426,26 +425,6 @@ std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const
    }
    return result;
 }
-
-/*bool Wallet::isSegWitInput(const UTXO& input)
-{
-   return input.isSegWit() || isSegWitScript(input.getScript());
-}
-
-bool Wallet::isSegWitScript(const BinaryData &script)
-{
-//   const auto scrType = BtcUtils::getTxOutScriptType(script);
-   switch (getAddrTypeForAddr(BtcUtils::getTxOutRecipientAddr(script))) {
-      case AddressEntryType_P2WPKH:
-      case AddressEntryType_P2WSH:
-      case AddressEntryType_P2SH:
-         return true;
-      case AddressEntryType_Default:   // fallback for script not from our wallet
-      default: break;                  // fallback for incorrectly deserialized wallet
-   }
-   return false;
-}
-*/
 
 Signer Wallet::getSigner(const wallet::TXSignRequest &request,
                              bool keepDuplicatedRecipients)

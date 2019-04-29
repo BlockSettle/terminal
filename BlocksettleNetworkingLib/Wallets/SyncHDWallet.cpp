@@ -13,14 +13,14 @@ using namespace bs::sync;
 
 hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
    , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), netType_(netType), walletId_(walletId), name_(name), desc_(desc)
+   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
    , logger_(logger)
 {}
 
 hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
    , const std::string &desc, SignContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), netType_(netType), walletId_(walletId), name_(name), desc_(desc)
+   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
    , signContainer_(container), logger_(logger)
 {}
 
@@ -69,12 +69,6 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
          };
 
          leaf->synchronize(cbLeafDone);
-         if (encryptionTypes_.empty()) 
-         {
-            encryptionTypes_ = leaf->encryptionTypes();
-            encryptionKeys_ = leaf->encryptionKeys();
-            encryptionRank_ = leaf->encryptionRank();
-         }
       }
    };
 
@@ -231,7 +225,7 @@ void hd::Wallet::setUserId(const BinaryData &userId)
    }
 }
 
-void hd::Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
+void hd::Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 {
    armory_ = armory;
    for (const auto &leaf : getLeaves()) {
@@ -293,14 +287,6 @@ void hd::Wallet::onScanComplete(const std::string &leafId)
    if (scannedLeaves_.empty()) {
       emit scanComplete(walletId());
    }
-}
-
-void hd::Wallet::changePassword(const std::function<void(bool)> &cb, const std::vector<bs::wallet::PasswordData> &newPass, bs::wallet::KeyRank keyRank
-   , const SecureBinaryData &oldPass, bool addNew, bool removeOld, bool dryRun)
-{
-   //stub
-   emit metaDataChanged();
-   cb(true);
 }
 
 bool hd::Wallet::isPrimary() const

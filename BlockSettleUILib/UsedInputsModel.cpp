@@ -35,7 +35,7 @@ void UsedInputsModel::clear()
 QVariant UsedInputsModel::data(const QModelIndex & index, int role) const
 {
    if (role == Qt::SizeHintRole && index.column() == 1) {
-      return QSize(50, 22); // workaround used here
+      return QSize(50, 14); // workaround used here
                             // TODO: move "Delete output button"
                             // from CreateTransactionDialogAdvanced::onOutputsInserted to model delegate
    }
@@ -75,7 +75,7 @@ void UsedInputsModel::updateInputs(const std::vector<UTXO>& usedInputs)
 
    for (const auto& utx : usedInputs) {
       const auto address = bs::Address::fromUTXO(utx);
-      const auto addrStr = address.display<std::string>();
+      const auto addrStr = address.display();
 
       auto it = loadedInputs.find(addrStr);
       if (it == loadedInputs.end()) {

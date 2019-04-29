@@ -32,7 +32,7 @@ namespace bs {
          AuthAddress,
          BroadcastError,
          NewVersion,
-         NewChatMessage,
+         UpdateUnreadMessage,
       };
 
       using NotifyMessage = QList<QVariant>;
@@ -64,11 +64,13 @@ public:
 
    static void createInstance(const std::shared_ptr<ApplicationSettings> &, const Ui::BSTerminalMainWindow *
       , const std::shared_ptr<QSystemTrayIcon> &, QObject *parent = nullptr);
+   static NotificationCenter *instance();
    static void destroyInstance();
    static void notify(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
 
 signals:
    void notifyEndpoint(bs::ui::NotifyType, bs::ui::NotifyMessage);
+   void newChatMessageClick(const QString &chatId);
 
 private:
    void enqueue(bs::ui::NotifyType, const bs::ui::NotifyMessage &);
@@ -106,21 +108,24 @@ class NotificationTrayIconResponder : public NotificationResponder
 {
    Q_OBJECT
 public:
-   NotificationTrayIconResponder(const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
+   NotificationTrayIconResponder(const Ui::BSTerminalMainWindow *mainWinUi, const std::shared_ptr<QSystemTrayIcon> &trayIcon, const std::shared_ptr<ApplicationSettings> &appSettings
       , QObject *parent = nullptr);
    
    void respond(bs::ui::NotifyType, bs::ui::NotifyMessage) override;
 
 private slots:
-   void newVersionMessageClicked();
+   void messageClicked();
 #ifdef BS_USE_DBUS
    void notificationAction(const QString &action);
 #endif // BS_USE_DBUS
 
 private:
+   const Ui::BSTerminalMainWindow * mainWinUi_;
    std::shared_ptr<QSystemTrayIcon>       trayIcon_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    bool  newVersionMessage_ = false;
+   bool  newChatMessage_ = false;
+   QString  newChatId_;
 
    enum NotificationMode {
       QSystemTray,

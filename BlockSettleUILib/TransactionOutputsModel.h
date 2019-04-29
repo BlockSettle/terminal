@@ -2,7 +2,7 @@
 #define __TRANSACTION_OUTPUTS_MODEL_H__
 
 #include <QAbstractTableModel>
-
+#include <tuple>
 #include <vector>
 
 class TransactionOutputsModel : public QAbstractTableModel
@@ -14,11 +14,13 @@ public:
    ~TransactionOutputsModel() noexcept override = default;
 
    void AddRecipient(unsigned int recipientId, const QString& address, double amount);
+   void AddRecipients(const std::vector<std::tuple<unsigned int, QString, double>> &);
    void UpdateRecipientAmount(unsigned int recipientId, double amount);
 
    unsigned int   GetOutputId(int row);
    int            GetRowById(unsigned int id);
    void           RemoveRecipient(int row);
+   bool           isRemoveColumn(int column);
 
    void clear();
    void enableRows(bool flag = true);
@@ -47,10 +49,12 @@ private:
 
 private:
    QVariant getRowData(int column, const OutputRow& outputRow) const;
+   QVariant getImageData(const int column) const;
 
 private:
    std::vector<OutputRow> outputs_;
    bool rowsEnabled_ = true;
+   QIcon removeIcon_;
 };
 
 #endif // __TRANSACTION_OUTPUTS_MODEL_H__

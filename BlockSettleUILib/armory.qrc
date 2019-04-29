@@ -4,7 +4,10 @@
         <file alias="ICON_STATUS_ERROR">resources/status_error.png</file>
         <file alias="ICON_STATUS_ONLINE">resources/status_online.png</file>
         <file alias="ICON_STATUS_CONNECTING">resources/status_connecting.png</file>
-        <file alias="ICON_STATUS_READ">resources/status_read.png</file>
+        <file alias="ICON_MSG_STATUS_OFFLINE">resources/msg_status_offline.png</file>
+        <file alias="ICON_MSG_STATUS_ONLINE">resources/msg_status_online.png</file>
+        <file alias="ICON_MSG_STATUS_CONNECTING">resources/msg_status_connecting.png</file>
+        <file alias="ICON_MSG_STATUS_READ">resources/msg_status_read.png</file>
         <file>resources/preferences-system.png</file>
         <file>resources/preferences-system-network.png</file>
         <file>resources/Raleway/Raleway-Regular.ttf</file>
@@ -56,7 +59,6 @@
         <file>resources/ios-infinity.ttf</file>
         <file>resources/progress-bar-pattern.png</file>
         <file alias="SPLASH_LOGO">resources/splashlogo_splashscreen.png</file>
-        <file alias="SPLASH_LOGO_TESTNET">resources/splashlogo_testnet.png</file>
         <file alias="ICON_BITCOIN">resources/bitcoin-main-net.png</file>
         <file alias="ICON_BITCOIN_2X">resources/bitcoin-main-net@2x.png</file>
         <file alias="ICON_BITCOIN_GRAY">resources/bitcoin-disabled.png</file>

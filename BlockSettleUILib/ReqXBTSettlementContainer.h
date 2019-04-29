@@ -20,7 +20,7 @@ namespace bs {
    }
 }
 class AddressVerificator;
-class ArmoryConnection;
+class ArmoryObject;
 class AssetManager;
 class AuthAddressManager;
 class SignContainer;
@@ -34,7 +34,7 @@ class ReqXBTSettlementContainer : public bs::SettlementContainer
 public:
    ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<AuthAddressManager> &, const std::shared_ptr<AssetManager> &
-      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &
+      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryObject> &
       , const std::shared_ptr<bs::sync::WalletsManager> &, const bs::network::RFQ &
       , const bs::network::Quote &, const std::shared_ptr<TransactionData> &);
    ~ReqXBTSettlementContainer() override;

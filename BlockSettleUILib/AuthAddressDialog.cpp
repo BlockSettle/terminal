@@ -287,7 +287,7 @@ void AuthAddressDialog::onAuthAddressConfirmationRequired(float validationAmount
    if (validationAmount > 0) {
       qry = new BSMessageBox(BSMessageBox::question, qryTitle, qryText
          , tr("Are you sure you wish to submit a new authentication address? Setting up a new Authentication Address"
-            " costs %1 %2.").arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
+            " costs %1 %2").arg(QLatin1String("EUR")).arg(UiUtils::displayCurrencyAmount(validationAmount))
          , tr("BlockSettle will not deduct an amount higher than the Fee Schedule maximum regardless of the"
             " stated cost. Please confirm BlockSettle can debit the Authentication Address fee from your account."), this);
    }
@@ -343,7 +343,8 @@ void AuthAddressDialog::setDefaultAddress()
    auto selectedAddress = GetSelectedAddress();
    if (!selectedAddress.isNull()) {
       defaultAddr_ = selectedAddress;
-      settings_->set(ApplicationSettings::defaultAuthAddr, defaultAddr_.display());
+      settings_->set(ApplicationSettings::defaultAuthAddr
+         , QString::fromStdString(defaultAddr_.display()));
       settings_->SaveSettings();
       model_->setDefaultAddr(defaultAddr_);
       authAddressManager_->setDefault(defaultAddr_);

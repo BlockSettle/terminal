@@ -74,7 +74,7 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
    }
    else {
       row.comment = QString::fromStdString(wallet->getAddressComment(addr));
-      row.displayedAddress = addr.display();
+      row.displayedAddress = QString::fromStdString(addr.display());
       row.walletName = QString::fromStdString(wallet->shortName());
       row.walletId = QString::fromStdString(wallet->walletId());
       row.isExternal = wallet->isExternalAddress(addr);
@@ -131,7 +131,8 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
          row.addrIndex = i;
          row.comment = QString::fromStdString(wallet->getAddressComment(addr));
 
-         addressRows_.emplace_back(std::move(row));
+         if (row.walletName == QLatin1Literal("0"))
+            addressRows_.emplace_back(std::move(row));
       }
    }
 }
@@ -252,7 +253,7 @@ int AddressListModel::columnCount(const QModelIndex &) const
    if (wallets_.size() == 1) {
       return ColumnsNbSingle;
    }
-   return ColumnsNbMultiple;
+   return ColumnsNbSingle;
 }
 
 int AddressListModel::rowCount(const QModelIndex& parent) const

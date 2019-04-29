@@ -25,8 +25,8 @@ public:
       EasyCoDec::Data   chainCode;
    };
 
-   WalletBackupFile(const std::shared_ptr<bs::core::hd::Wallet> &
-      , const EasyCoDec::Data& data
+   WalletBackupFile(const std::string &id, const std::string &name
+      , const std::string &description, const EasyCoDec::Data& data
       , const EasyCoDec::Data& chainCode);
    ~WalletBackupFile() noexcept  = default;
 
@@ -34,7 +34,9 @@ public:
    std::string       Serialize() const;
 
 private:
-   const std::shared_ptr<bs::core::hd::Wallet>  wallet_;
+   std::string id_;
+   std::string name_;
+   std::string description_;
    EasyCoDec::Data data_;
    EasyCoDec::Data chainCode_;
 };

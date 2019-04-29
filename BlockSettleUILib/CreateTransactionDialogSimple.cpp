@@ -35,8 +35,6 @@ void CreateTransactionDialogSimple::initUI()
 
    recipientId_ = transactionData_->RegisterNewRecipient();
 
-   connect(ui_->comboBoxWallets, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedWalletChanged(int)));
-
    connect(ui_->lineEditAddress, &QLineEdit::textEdited, this, &CreateTransactionDialogSimple::onAddressTextChanged);
    connect(ui_->lineEditAmount, &QLineEdit::textChanged, this, &CreateTransactionDialogSimple::onXBTAmountChanged);
 
@@ -134,22 +132,18 @@ QLabel* CreateTransactionDialogSimple::changeLabel() const
 
 void CreateTransactionDialogSimple::onAddressTextChanged(const QString &addressString)
 {
+   bool addrStateOk = true;
    try {
-      bs::Address address{addressString.trimmed()};
-      transactionData_->UpdateRecipientAddress(recipientId_, address);
-      if (address.isValid()) {
-         ui_->pushButtonMax->setEnabled(true);
-         UiUtils::setWrongState(ui_->lineEditAddress, false);
-         return;
-      } else {
-         UiUtils::setWrongState(ui_->lineEditAddress, true);
+      bs::Address address{ addressString.trimmed().toStdString() };
+      addrStateOk = address.isValid() && (address.format() != bs::Address::Format::Hex);
+      if (addrStateOk) {
+         transactionData_->UpdateRecipientAddress(recipientId_, address);
       }
-   } catch(...) {
-      UiUtils::setWrongState(ui_->lineEditAddress, true);
+   } catch (...) {
+      addrStateOk = false;
    }
-
-   ui_->pushButtonMax->setEnabled(false);
-   transactionData_->ResetRecipientAddress(recipientId_);
+   UiUtils::setWrongState(ui_->lineEditAddress, !addrStateOk);
+   ui_->pushButtonMax->setEnabled(addrStateOk);
 }
 
 void CreateTransactionDialogSimple::onXBTAmountChanged(const QString &text)
@@ -206,7 +200,7 @@ bool CreateTransactionDialogSimple::userRequestedAdvancedDialog() const
 std::shared_ptr<CreateTransactionDialogAdvanced> CreateTransactionDialogSimple::CreateAdvancedDialog()
 {
    auto advancedDialog = std::make_shared<CreateTransactionDialogAdvanced>(armory_, walletsManager_
-      , signingContainer_, true, logger_, transactionData_, parentWidget());
+      , signContainer_, true, logger_, transactionData_, parentWidget());
 
    if (!offlineTransactions_.empty()) {
       advancedDialog->SetImportedTransactions(offlineTransactions_);

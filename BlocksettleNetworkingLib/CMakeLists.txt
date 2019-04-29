@@ -5,6 +5,11 @@ PROJECT( ${BS_NETWORK_LIB_NAME} )
 FILE(GLOB SOURCES
    *.cpp
    Wallets/*.cpp
+   ChatProtocol/*.cpp
+   ChatProtocol/DataObjects/*.cpp
+   ChatProtocol/RequestObjects/*.cpp
+   ChatProtocol/ResponseObjects/*.cpp
+   ChatClientTree/*.cpp
 )
 
 IF (DISABLE_CELER)
@@ -40,11 +45,17 @@ IF (DISABLE_CELER)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/QuoteProvider.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/SingleCelerConnectionListener.cpp)
    list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/WalletImporter.cpp)
+   list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/AuthSignManager.cpp)
 ENDIF()
 
 FILE(GLOB HEADERS
    *.h
    Wallets/*.h
+   ChatProtocol/*.h
+   ChatProtocol/DataObjects/*.h
+   ChatProtocol/RequestObjects/*.h
+   ChatProtocol/ResponseObjects/*.h
+   ChatClientTree/*.h
 )
 
 IF (DISABLE_CELER)
@@ -79,6 +90,7 @@ IF (DISABLE_CELER)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/QuoteProvider.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/SingleCelerConnectionListener.h)
    list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/WalletImporter.h)
+   list(REMOVE_ITEM HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/AuthSignManager.h)
 ENDIF()
 
 

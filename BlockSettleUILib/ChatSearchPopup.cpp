@@ -7,34 +7,44 @@
 
 ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
    QWidget(parent),
-   ui(new Ui::ChatSearchPopup)
+   userID_(),
+   ui_(new Ui::ChatSearchPopup)
 {
    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
-   ui->setupUi(this);
-   ui->chatSearchPopupLabel->setContextMenuPolicy(Qt::CustomContextMenu);
-   connect(ui->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
-   _searchPopupMenu = new QMenu(this);
-   QAction *addUserToContactsAction = _searchPopupMenu->addAction(QObject::tr("Add to contacts"));
+   ui_->setupUi(this);
+   ui_->chatSearchPopupLabel->setContextMenuPolicy(Qt::CustomContextMenu);
+   connect(ui_->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
+   searchPopupMenu_ = new QMenu(this);
+   QAction *addUserToContactsAction = searchPopupMenu_->addAction(QObject::tr("Add to contacts"));
    addUserToContactsAction->setStatusTip(QObject::tr("Click to add user to contact list"));
    connect(addUserToContactsAction, &QAction::triggered,
-      [this](bool) { emit addUserToContacts(ui->chatSearchPopupLabel->text()); }
+      [this](bool) { emit sendFriendRequest(ui_->chatSearchPopupLabel->text()); }
    );
 }
 
 ChatSearchPopup::~ChatSearchPopup()
 {
-   _searchPopupMenu->deleteLater();
-   delete ui;
+   searchPopupMenu_->deleteLater();
+   delete ui_;
 }
 
-void ChatSearchPopup::setText(const QString &text)
+void ChatSearchPopup::setUserID(const QString &userID)
 {
-   ui->chatSearchPopupLabel->setText(text);
+   userID_ = userID;
+   
+   if (userID_.isEmpty()) {
+      ui_->chatSearchPopupLabel->setText(tr("User not found"));
+   }
+   else {
+      ui_->chatSearchPopupLabel->setText(userID_);
+   }
 }
 
 void ChatSearchPopup::showMenu(const QPoint &pos)
 {
-   _searchPopupMenu->exec(mapToGlobal(pos));
+   if (!userID_.isEmpty()) {
+      searchPopupMenu_->exec(mapToGlobal(pos));
+   }
 }
 
 void ChatSearchPopup::setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY)

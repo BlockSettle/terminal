@@ -6,10 +6,11 @@
 #include <QSettings>
 #include <spdlog/spdlog.h>
 
-SettingsParser::SettingsParser(const std::shared_ptr<spdlog::logger>& logger)
+SettingsParser::SettingsParser(const std::shared_ptr<spdlog::logger> &logger
+   , const std::string &settingsFile)
    : logger_(logger)
 {
-   addParam(SettingsFile, "settings_file", "", "Path to settings file");
+   addParam(SettingsFile, "settings_file", settingsFile.c_str(), "Path to settings file");
 }
 
 bool SettingsParser::LoadSettings(const QStringList& argList)
@@ -23,7 +24,12 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
          defaultValueHelp = QLatin1String("<empty>");
       }
       QString desc = QString(QLatin1String("%1. Default: %2")).arg(param->desc()).arg(defaultValueHelp);
-      parser.addOption({param->name(), desc, param->name()});
+      if (param->defValue_.type() == QVariant::Type::Bool) {
+         parser.addOption({ param->name(), desc });
+      }
+      else {
+         parser.addOption({ param->name(), desc, param->name() });
+      }
    }
 
    parser.addHelpOption();

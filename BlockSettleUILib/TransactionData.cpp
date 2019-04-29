@@ -31,7 +31,7 @@ TransactionData::TransactionData(const onTransactionChanged &changedCallback
    , confirmedInputs_(confOnly)
 {}
 
-TransactionData::~TransactionData()
+TransactionData::~TransactionData() noexcept
 {
    disableTransactionUpdate();
    changedCallback_ = {};
@@ -198,9 +198,9 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = availableBalance - payment.spendVal_;
          summary_.feePerByte =
@@ -238,19 +238,19 @@ bool TransactionData::UpdateTransactionData()
          summary_.txVirtSize = getVirtSize(selection);
          if (summary_.txVirtSize > kMaxTxStdWeight) {
             if (logger_) {
-               logger_->error("Bad virtual size value {} - using estimateTXVirtSize() as a fallback"
-                  , summary_.txVirtSize);
+               logger_->error("Bad virtual size value {} - set to 0", summary_.txVirtSize);
             }
+            summary_.txVirtSize = 0;
          }
          summary_.totalFee = selection.fee_;
          summary_.feePerByte = selection.fee_byte_;
-         summary_.hasChange = true;   // only maxAmount shouldn't have change   // selection.hasChange_;
+         summary_.hasChange = selection.hasChange_;
          summary_.selectedBalance = UiUtils::amountToBtc(selection.value_);
 
-         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
+/*         if (!selection.hasChange_) {  // sometimes selection calculation is too intelligent - prevent change address removal
             summary_.totalFee = totalFee();
             summary_.feePerByte = feePerByte();
-         }
+         }*/
       }
       summary_.usedTransactions = usedUTXO_.size();
    }
@@ -279,7 +279,8 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
    if ((feePerByte_ == 0) && totalFee_) {
       const double availableBalance = GetTransactionSummary().availableBalance - \
          GetTransactionSummary().balanceToSpend;
-      const double totalFee = totalFee_ / BTCNumericTypes::BalanceDivider;
+      double totalFee = (totalFee_ < minTotalFee_) ? minTotalFee_ / BTCNumericTypes::BalanceDivider
+         : totalFee_ / BTCNumericTypes::BalanceDivider;
       if (availableBalance > totalFee) {
          maxAmount_ = availableBalance - totalFee;
       }
@@ -294,18 +295,19 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
          return 0;
       }
 
-      std::map<unsigned, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      std::map<unsigned int, std::shared_ptr<ScriptRecipient>> recipientsMap;
+      unsigned int recipId = 0;
       for (const auto &recip : recipients_) {
          const auto recipPtr = recip.second->GetScriptRecipient();
          if (!recipPtr || !recipPtr->getValue()) {
             continue;
          }
-         recipientsMap[recip.first] = recipPtr;
+         recipientsMap[recipId++] = recipPtr;
       }
       if (!recipient.isNull()) {
          const auto recipPtr = recipient.getRecipient(0.001);  // spontaneous output amount, shouldn't be 0
          if (recipPtr) {
-            recipientsMap[recipients_.size()] = recipPtr;
+            recipientsMap[recipId++] = recipPtr;
          }
       }
       if (recipientsMap.empty()) {
@@ -320,8 +322,11 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
       // satoshis higher than is strictly required by Core but that's okay.
       // If truly required, the fee can be tweaked later.
       try {
-         const double fee = coinSelection_->getFeeForMaxVal(payment.size_, feePerByte_
+         double fee = coinSelection_->getFeeForMaxVal(payment.size_, feePerByte_
             , transactions) / BTCNumericTypes::BalanceDivider;
+         if (fee < minTotalFee_ / BTCNumericTypes::BalanceDivider) {
+            fee = minTotalFee_ / BTCNumericTypes::BalanceDivider;
+         }
 
          const double availableBalance = GetTransactionSummary().availableBalance - \
             GetTransactionSummary().balanceToSpend;
@@ -409,8 +414,7 @@ std::vector<UTXO> TransactionData::decorateUTXOs(const std::vector<UTXO> &inUTXO
       const bs::Address recipAddr(utxo.getRecipientScrAddr());
       utxo.txinRedeemSizeBytes_ = recipAddr.getInputSize();
       utxo.witnessDataSizeBytes_ = recipAddr.getWitnessDataSize();
-      utxo.isInputSW_ = ((recipAddr.getType() == AddressEntryType_P2WPKH)
-         || (recipAddr.getType() == AddressEntryType_P2WSH)) ? true : false;
+      utxo.isInputSW_ = (recipAddr.getWitnessDataSize() != UINT32_MAX);
    }
 
    return inputUTXOs;

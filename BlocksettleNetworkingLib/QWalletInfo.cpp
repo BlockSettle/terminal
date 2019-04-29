@@ -49,7 +49,7 @@ WalletInfo::WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *
    initEncKeys(hdWallet);
 }
 
-WalletInfo::WalletInfo(std::shared_ptr<bs::sync::hd::Wallet> hdWallet, QObject *parent)
+WalletInfo::WalletInfo(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet, QObject *parent)
 {
    initFromRootWallet(hdWallet);
    initEncKeys(hdWallet);
@@ -60,16 +60,16 @@ WalletInfo::WalletInfo(std::shared_ptr<bs::sync::hd::Wallet> hdWallet, QObject *
    });
 }
 
-WalletInfo::WalletInfo(std::shared_ptr<bs::core::Wallet> wallet, std::shared_ptr<bs::core::hd::Wallet> rootHdWallet, QObject *parent)
+WalletInfo::WalletInfo(const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::shared_ptr<bs::sync::hd::Wallet> &rootHdWallet, QObject *parent)
 {
    initFromWallet(wallet.get(), rootHdWallet->walletId());
    initEncKeys(rootHdWallet);
 
-/*   connect(rootHdWallet.get(), &bs::hd::Wallet::metaDataChanged, this, [this, rootHdWallet](){
+   connect(rootHdWallet.get(), &bs::sync::hd::Wallet::metaDataChanged, this, [this, rootHdWallet](){
       initFromRootWallet(rootHdWallet);
       initEncKeys(rootHdWallet);
-   });*/
-   //FIXME: switch to bs::sync wallets at some point
+   });
 }
 
 WalletInfo::WalletInfo(const WalletInfo &other)
@@ -108,7 +108,7 @@ WalletInfo WalletInfo::fromDigitalBackup(const QString &filename)
    return walletInfo;
 }
 
-void WalletInfo::initFromWallet(const bs::core::Wallet *wallet, const std::string &rootId)
+void WalletInfo::initFromWallet(const bs::sync::Wallet *wallet, const std::string &rootId)
 {
    if (!wallet)
       return;
@@ -283,3 +283,5 @@ void WalletInfo::setName(const QString &name)
    name_ = name;
    emit walletChanged();
 }
+
+#include "moc_SignerUiDefs.cpp"

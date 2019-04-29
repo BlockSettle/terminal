@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "ApplicationSettings.h"
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "CelerClient.h"
 #include "QWalletInfo.h"
 #include "SignContainer.h"
@@ -25,17 +25,18 @@ namespace bs {
 }
 
 class AboutDialog;
+class ArmoryServersProvider;
 class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
-class AuthSignManager;
 class AutheIDClient;
+class AuthSignManager;
+class BSMarketDataProvider;
 class BSTerminalSplashScreen;
 class CCFileManager;
 class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
-class CelerMarketDataProvider;
 class OfflineSigner;
 class QSystemTrayIcon;
 class RequestReplyCommand;
@@ -43,7 +44,6 @@ class StatusBarView;
 class StatusViewBlockListener;
 class TransactionsViewModel;
 class WalletManagementWizard;
-class ArmoryServersProvider;
 
 class BSTerminalMainWindow : public QMainWindow
 {
@@ -80,15 +80,16 @@ private:
    void InitPortfolioView();
    void InitWalletsView();
    void InitChatView();
-
-   void InitOTP();
+   void InitChartsView();
 
    void UpdateMainWindowAppearence();
 
    bool isMDLicenseAccepted() const;
    void saveUserAcceptedMDLicense();
 
+   bool showStartupDialog();
    void LoadCCDefinitionsFromPuB();
+   void setWidgetsAuthorized(bool authorized);
 
 signals:
    void readyToLogin();
@@ -119,7 +120,7 @@ private slots:
    void onArmoryNeedsReconnect();
 
 private:
-   std::unique_ptr<Ui::BSTerminalMainWindow> ui;
+   std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_;
    QAction *action_receive_;
    QAction *action_login_;
@@ -131,7 +132,7 @@ private:
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
-   std::shared_ptr<ArmoryConnection>      armory_;
+   std::shared_ptr<ArmoryObject>          armory_;
 
    std::shared_ptr<RequestReplyCommand>   cmdPuBSettings_;
 
@@ -141,7 +142,7 @@ private:
    std::shared_ptr<CCPortfolioModel>         portfolioModel_;
    std::shared_ptr<ConnectionManager>        connectionManager_;
    std::shared_ptr<CelerClient>              celerConnection_;
-   std::shared_ptr<CelerMarketDataProvider>  mdProvider_;
+   std::shared_ptr<BSMarketDataProvider>     mdProvider_;
    std::shared_ptr<AssetManager>             assetManager_;
    std::shared_ptr<CCFileManager>            ccFileManager_;
    std::shared_ptr<AuthAddressDialog>        authAddrDlg_;
@@ -220,10 +221,16 @@ private:
    void loginWithCeler(const std::string& username, const std::string& password);
    void loginToCeler(const std::string& username, const std::string& password);
 
+   bool goOnlineArmory() const;
+
 private:
    QString           loginButtonText_;
    NetworkSettings   networkSettings_;
-   bool  readyToRegisterWallets_ = false;
+   bool readyToRegisterWallets_ = false;
+   bool initialWalletCreateDialogShown_ = false;
+   bool armoryKeyDialogShown_ = false;
+   bool armoryBDVRegistered_ = false;
+   bool walletsSynched_ = false;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

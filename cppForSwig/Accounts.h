@@ -96,14 +96,19 @@ struct AccountType
 {
 protected:
    const AccountTypeEnum type_;
-   const SecureBinaryData privateRoot_;
-   const SecureBinaryData publicRoot_;
+   SecureBinaryData privateRoot_;
+   SecureBinaryData publicRoot_;
    mutable SecureBinaryData chainCode_;
 
    bool isMain_ = false;
 
    std::set<AddressEntryType> addressTypes_;
    AddressEntryType defaultAddressEntryType_;
+
+protected:
+   AccountType(AccountTypeEnum val) :
+      type_(val)
+   {}
 
 public:
    AccountType(AccountTypeEnum val, 
@@ -191,17 +196,29 @@ public:
 
 ////////////////////
 struct AccountType_BIP32 : public AccountType
-{
+{   
+   friend class AccountType_BIP32_Custom;
 private:
    const std::vector<unsigned> derivationPath_;
-   SecureBinaryData derivedRoot_;
-   SecureBinaryData derivedChaincode_;
-
    unsigned depth_ = 0;
    unsigned leafId_ = 0;
 
+   SecureBinaryData derivedRoot_;
+   SecureBinaryData derivedChaincode_;
+
 private:
    void deriveFromRoot(void);
+
+protected:
+   AccountType_BIP32(
+      AccountTypeEnum type,
+      const std::vector<unsigned>& derivationPath,
+      unsigned depth, unsigned leafId) :
+      AccountType(type),
+      derivationPath_(derivationPath),
+      depth_(depth), leafId_(leafId)
+   {}
+
 
 public:
    AccountType_BIP32(
@@ -302,7 +319,7 @@ public:
          AddressEntryType(AddressEntryType_P2WPKH);
    }
 
-   std::set<unsigned> getNodes(void) const;
+   virtual std::set<unsigned> getNodes(void) const;
    BinaryData getOuterAccountID(void) const;
    BinaryData getInnerAccountID(void) const;
 };
@@ -310,6 +327,19 @@ public:
 ////////////////////
 struct AccountType_BIP32_Custom : public AccountType_BIP32
 {
+   friend class AssetWallet_Single;
+
+private:
+   BinaryData outerAccount_;
+   BinaryData innerAccount_;
+
+   std::set<unsigned> nodes_;
+
+private:
+   void setPrivateKey(const SecureBinaryData&);
+   void setPublicKey(const SecureBinaryData&);
+   void setChaincode(const SecureBinaryData&);
+
 public:
    AccountType_BIP32_Custom(
       SecureBinaryData& privateRoot,
@@ -317,14 +347,45 @@ public:
       SecureBinaryData& chainCode,
       const std::vector<unsigned>& derivationPath,
       unsigned depth, unsigned leafId) :
-      AccountType_BIP32(AccountTypeEnum_BIP32_Custom,
+         AccountType_BIP32(AccountTypeEnum_BIP32_Custom,
          privateRoot, publicRoot, chainCode, derivationPath,
          depth, leafId)
    {}
 
-   std::set<unsigned> getNodes(void) const { return std::set<unsigned>(); }
-   BinaryData getOuterAccountID(void) const { return WRITE_UINT32_BE(0); };
-   BinaryData getInnerAccountID(void) const { return WRITE_UINT32_BE(0); };
+   AccountType_BIP32_Custom(std::vector<unsigned> derPath) :
+      AccountType_BIP32(AccountTypeEnum_BIP32_Custom, derPath, 0, 0)
+   {}
+
+   /***
+   Custom BIP32 accounts can come with or without nodes. Without nodes, 
+   the derivation path is used as is to create a single underlying 
+   AssetAccount. This account id will be UINT32_MAX, and both outer and 
+   inner account will be set to this value (effectively, there will be 
+   no inner account).
+
+   If nodes are set, as with the other BIP32 account types, the AssetAccounts 
+   will be derived from the derivation path + the individual node, and the 
+   AssetAccount IDs will be set to the respective node value (in big endian).
+
+   If you set custom nodes, you need to set custom inner and outer account, 
+   or the main, inner and outer account values for the AddressAccount will be 
+   set to UINT32_MAX at creation. 
+   
+   Any operation that fetches the main account under the hood will then fail, 
+   since UINT32_MAX is a reserved node value that cannot be set by users.
+   ***/
+
+   std::set<unsigned> getNodes(void) const { return nodes_; }
+   BinaryData getOuterAccountID(void) const;
+   BinaryData getInnerAccountID(void) const;
+
+   //set methods
+   void setNodes(const std::set<unsigned>& nodes);
+   void setOuterAccountID(const BinaryData&);
+   void setInnerAccountID(const BinaryData&);
+   void setAddressTypes(const std::set<AddressEntryType>&);
+   void setDefaultAddressType(AddressEntryType);
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -18,6 +18,7 @@
 #include "bitcoin/DownstreamBitcoinTransactionSigningProto.pb.h"
 
 #include <spdlog/spdlog.h>
+#include <chrono>
 
 #include <QDateTime>
 
@@ -119,6 +120,7 @@ QuoteProvider::QuoteProvider(const std::shared_ptr<AssetManager>& assetManager
  , assetManager_(assetManager)
  , dealerPayins_(logger)
  , debugTraffic_(debugTraffic)
+ , celerLoggedInTimestampUtcInMillis_(0)
 {
 }
 
@@ -163,6 +165,9 @@ void QuoteProvider::ConnectToCelerClient(const std::shared_ptr<CelerClient>& cel
 
 void QuoteProvider::onConnectedToCeler()
 {
+   const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+   celerLoggedInTimestampUtcInMillis_ =  timestamp.count();
+
    auto sequence = std::make_shared<CelerFindAllOrdersSequence>(logger_);
    sequence->SetCallback([this](const CelerFindAllOrdersSequence::Messages &msgs) {
       for (const auto &msg : msgs) {
@@ -583,7 +588,8 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
    order.status = mapBtcOrderStatus(response.orderstatus());
    order.pendingStatus = response.info();
 
-   if (!resync) {
+   if (!resync && response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
+
       switch(order.status)
       {
          case Order::Failed:
@@ -593,6 +599,7 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
             CleanupXBTOrder(order);
             break;
       }
+
    }
 
    emit orderUpdated(order);
@@ -630,6 +637,7 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
    order.assetType = bs::network::Asset::SpotFX;
 
    order.status = mapFxOrderStatus(response.orderstatus());
+
    if (!resync && (order.status == Order::Failed)) {
       emit orderFailed(response.quoteid(), response.info());
    }

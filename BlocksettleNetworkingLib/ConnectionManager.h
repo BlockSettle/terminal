@@ -2,11 +2,13 @@
 #define __CONNECTION_MANAGER_H__
 
 #include <memory>
+#include <vector>
 
 namespace spdlog {
    class logger;
 };
 
+class ArmoryServersProvider;
 class DataConnection;
 class PublisherConnection;
 class ServerConnection;
@@ -15,11 +17,17 @@ class ZmqContext;
 class ZmqSecuredDataConnection;
 class ZmqSecuredServerConnection;
 class QNetworkAccessManager;
+class ZmqBIP15XDataConnection;
+class ZmqBIP15XServerConnection;
 
 class ConnectionManager
 {
 public:
    ConnectionManager(const std::shared_ptr<spdlog::logger>& logger);
+   ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
+      , const std::vector<std::string> &zmqTrustedTerminals);
+   ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
+      , std::shared_ptr<ArmoryServersProvider> armoryServers);
    ~ConnectionManager() noexcept;
 
    ConnectionManager(const ConnectionManager&) = delete;
@@ -35,10 +43,16 @@ public:
    std::shared_ptr<ServerConnection>   CreateCelerAPIServerConnection() const;
 
    std::shared_ptr<DataConnection>     CreateCelerClientConnection() const;
-   std::shared_ptr<DataConnection>     CreateGenoaClientConnection(bool monitored = false) const;
+   std::shared_ptr<DataConnection>     CreateGenoaClientConnection(
+      bool monitored = false) const;
 
    std::shared_ptr<ZmqSecuredServerConnection>  CreateSecuredServerConnection() const;
-   std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(bool monitored = false) const;
+   std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
+      bool monitored = false) const;
+   std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
+      bool ephemeral = true) const;
+   std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(
+      bool ephemeral = false) const;
 
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;
 
@@ -55,9 +69,11 @@ private:
 private:
    bool isInitialized_;
 
-   std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<ZmqContext>      zmqContext_;
+   std::shared_ptr<spdlog::logger>        logger_;
+   std::shared_ptr<ZmqContext>            zmqContext_;
    std::shared_ptr<QNetworkAccessManager> nam_;
+   std::shared_ptr<ArmoryServersProvider> armoryServers_;
+   std::vector<std::string>               zmqTrustedTerminals_;
 };
 
 #endif // __CONNECTION_MANAGER_H__

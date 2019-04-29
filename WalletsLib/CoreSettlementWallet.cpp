@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include <QDir>
+//!#include <QDir>
 #include <spdlog/spdlog.h>
 
 #include "ArmoryConnection.h"
@@ -158,7 +158,7 @@ bool SettlementWallet::addressIndexExists(const std::string &index) const
    return (getAddressBySettlementId(binSettlementId) != nullptr);
 }
 
-bs::Address SettlementWallet::createAddressWithIndex(const std::string &index, bool persistent, AddressEntryType aet)
+bs::Address SettlementWallet::createAddressWithIndex(const std::string &index, bool persistent, AddressEntryType )
 {
    if (index.empty()) {
       return {};
@@ -247,7 +247,7 @@ SecureBinaryData SettlementWallet::getPublicKeyFor(const bs::Address &addr)
    return settlAsset ? settlAsset->settlementId() : SecureBinaryData{};
 }
 
-KeyPair SettlementWallet::getKeyPairFor(const bs::Address &addr, const SecureBinaryData &password)
+KeyPair SettlementWallet::getKeyPairFor(const bs::Address &, const SecureBinaryData &)
 {
    return {};
 }

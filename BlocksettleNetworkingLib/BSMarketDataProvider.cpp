@@ -1,6 +1,5 @@
 #include "BSMarketDataProvider.h"
 
-#include "TradeHistory.pb.h"
 #include "ConnectionManager.h"
 #include "SubscriberConnection.h"
 
@@ -9,9 +8,11 @@
 #include <vector>
 
 BSMarketDataProvider::BSMarketDataProvider(const std::shared_ptr<ConnectionManager>& connectionManager
-      , const std::shared_ptr<spdlog::logger>& logger)
+      , const std::shared_ptr<spdlog::logger>& logger
+      , bool receiveUSD)
  : MarketDataProvider(logger)
  , connectionManager_{connectionManager}
+ , receiveUSD_{receiveUSD}
 {
 }
 
@@ -43,6 +44,18 @@ bool BSMarketDataProvider::StartMDConnection()
    return true;
 }
 
+void BSMarketDataProvider::StopMDConnection()
+{
+   emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
+
+   if (mdConnection_ != nullptr) {
+      mdConnection_->stopListen();
+      mdConnection_ = nullptr;
+   }
+
+   emit Disconnected();
+}
+
 bool BSMarketDataProvider::IsConnectionActive() const
 {
    return mdConnection_ != nullptr;
@@ -55,14 +68,15 @@ bool BSMarketDataProvider::DisconnectFromMDSource()
    }
    emit Disconnecting();
 
-   mdConnection_->stopListen();
+   if (mdConnection_ != nullptr)
+      mdConnection_->stopListen();
 
    return true;
 }
 
 void BSMarketDataProvider::onDataFromMD(const std::string& data)
 {
-   Blocksettle::BS_MD::TradeHistoryServer::UpdateHeader header;
+   Blocksettle::Communication::BlocksettleMarketData::UpdateHeader header;
 
    if (!header.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::onDataFromMD] failed to parse header");
@@ -70,11 +84,14 @@ void BSMarketDataProvider::onDataFromMD(const std::string& data)
    }
 
    switch (header.type()) {
-   case Blocksettle::BS_MD::TradeHistoryServer::FullSnapshotType:
+   case Blocksettle::Communication::BlocksettleMarketData::FullSnapshotType:
       OnFullSnapshot(header.data());
       break;
-   case Blocksettle::BS_MD::TradeHistoryServer::IncrementalUpdateType:
+   case Blocksettle::Communication::BlocksettleMarketData::IncrementalUpdateType:
       OnIncrementalUpdate(header.data());
+      break;
+   case Blocksettle::Communication::BlocksettleMarketData::NewSettledTreadeUpdateType:
+      OnNewTradeUpdate(header.data());
       break;
    }
 }
@@ -86,82 +103,190 @@ void BSMarketDataProvider::onConnectedToMD()
 
 void BSMarketDataProvider::onDisconnectedFromMD()
 {
+   emit Disconnecting();
    emit MDUpdate(bs::network::Asset::Undefined, QString(), {});
+
    mdConnection_ = nullptr;
    emit Disconnected();
 }
 
-bs::network::MDFields GetMDFields(const Blocksettle::BS_MD::TradeHistoryServer::ProductHistoryInfo& productInfo)
+bs::network::MDFields GetMDFields(const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo)
 {
    bs::network::MDFields result;
 
-   if (productInfo.has_sell_price()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.sell_price().price(), QString()} );
+   if (!qFuzzyIsNull(productInfo.offer())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.offer(), QString()} );
    }
-   if (productInfo.has_buy_price()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceOffer, productInfo.buy_price().price(), QString()} );
+   if (!qFuzzyIsNull(productInfo.bid())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceBid, productInfo.bid(), QString()} );
    }
-   if (productInfo.has_last_price()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceLast, productInfo.last_price().price(), QString()} );
+   if (!qFuzzyIsNull(productInfo.last_price())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::PriceLast, productInfo.last_price(), QString()} );
    }
-   if (productInfo.has_volume()) {
-      result.emplace_back( bs::network::MDField{ bs::network::MDField::DailyVolume, productInfo.volume().volume(), QString()} );
+   if (!qFuzzyIsNull(productInfo.volume())) {
+      result.emplace_back( bs::network::MDField{ bs::network::MDField::DailyVolume, productInfo.volume(), QString()} );
    }
 
    return result;
 }
 
+void BSMarketDataProvider::OnProductSnapshot(const bs::network::Asset::Type& assetType
+   , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+   , double timestamp)
+{
+   emit MDSecurityReceived(productInfo.product_name(), {assetType});
+   auto fields = GetMDFields(productInfo);
+   fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+   emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), GetMDFields(productInfo));
+}
+
 void BSMarketDataProvider::OnFullSnapshot(const std::string& data)
 {
-   Blocksettle::BS_MD::TradeHistoryServer::FullSnapshot snapshot;
+   Blocksettle::Communication::BlocksettleMarketData::MDSnapshot snapshot;
    if (!snapshot.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::OnFullSnapshot] failed to parse snapshot");
       return ;
    }
 
+   double timestamp = static_cast<double>(snapshot.timestamp());
+
    for (int i=0; i < snapshot.fx_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotFX;
       const auto& productInfo = snapshot.fx_products(i);
-      emit MDSecurityReceived(productInfo.name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+      if ((productInfo.product_name() != "EUR/USD") || receiveUSD_) {
+         OnProductSnapshot(bs::network::Asset::Type::SpotFX, productInfo, timestamp);
+      }
    }
 
    for (int i=0; i < snapshot.xbt_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::SpotXBT;
       const auto& productInfo = snapshot.xbt_products(i);
-      emit MDSecurityReceived(productInfo.name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+      if ((productInfo.product_name() != "XBT/USD") || receiveUSD_) {
+         OnProductSnapshot(bs::network::Asset::Type::SpotXBT, productInfo, timestamp);
+      }
    }
 
    for (int i=0; i < snapshot.cc_products_size(); ++i) {
-      auto assetType = bs::network::Asset::Type::PrivateMarket;
-      const auto& productInfo = snapshot.cc_products(i);
-      emit MDSecurityReceived(productInfo.name(), {assetType});
-      emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+      OnProductSnapshot(bs::network::Asset::Type::PrivateMarket, snapshot.cc_products(i), timestamp);
+   }
+}
+
+void BSMarketDataProvider::OnProductUpdate(const bs::network::Asset::Type& assetType
+   , const Blocksettle::Communication::BlocksettleMarketData::ProductPriceInfo& productInfo
+   , double timestamp)
+{
+   auto fields = GetMDFields(productInfo);
+   if (!fields.empty()) {
+      fields.emplace_back(bs::network::MDField{bs::network::MDField::MDTimestamp, timestamp, {}});
+      emit MDUpdate(assetType, QString::fromStdString(productInfo.product_name()), fields);
    }
 }
 
 void BSMarketDataProvider::OnIncrementalUpdate(const std::string& data)
 {
-   Blocksettle::BS_MD::TradeHistoryServer::IncrementalUpdate update;
+   Blocksettle::Communication::BlocksettleMarketData::MDSnapshot update;
    if (!update.ParseFromString(data)) {
       logger_->error("[BSMarketDataProvider::OnIncrementalUpdate] failed to parse update");
       return ;
    }
 
-   bs::network::Asset::Type assetType;
-   switch(update.group()) {
-   case Blocksettle::BS_MD::TradeHistoryServer::FXProductGroup:
-      assetType = bs::network::Asset::Type::SpotFX;
-      break;
-   case Blocksettle::BS_MD::TradeHistoryServer::XBTProductGroup:
-      assetType = bs::network::Asset::Type::SpotXBT;
-      break;
-   case Blocksettle::BS_MD::TradeHistoryServer::CCProductGroup:
-      assetType = bs::network::Asset::Type::PrivateMarket;
-      break;
+   double timestamp = static_cast<double>(update.timestamp());
+
+   for (int i=0; i < update.fx_products_size(); ++i) {
+      const auto& productInfo = update.fx_products(i);
+      if ((productInfo.product_name() != "EUR/USD") || receiveUSD_) {
+         OnProductUpdate(bs::network::Asset::Type::SpotFX, productInfo, timestamp);
+      }
    }
 
-   const auto& productInfo = update.update_info();
-   emit MDUpdate(assetType, QString::fromStdString(productInfo.name()), GetMDFields(productInfo));
+   for (int i=0; i < update.xbt_products_size(); ++i) {
+      const auto& productInfo = update.xbt_products(i);
+      if ((productInfo.product_name() != "XBT/USD") || receiveUSD_) {
+         OnProductUpdate(bs::network::Asset::Type::SpotXBT, productInfo, timestamp);
+      }
+   }
+
+   for (int i=0; i < update.cc_products_size(); ++i) {
+      OnProductUpdate(bs::network::Asset::Type::PrivateMarket, update.cc_products(i), timestamp);
+   }
+}
+
+void BSMarketDataProvider::OnNewTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::NewTradeUpdate update;
+   if (!update.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewTradeUpdate] failed to parse update");
+      return ;
+   }
+
+   switch (update.trade_type()) {
+   case Blocksettle::Communication::BlocksettleMarketData::MDTradeType::FXTradeType:
+      OnNewFXTradeUpdate(update.trade());
+      break;
+   case Blocksettle::Communication::BlocksettleMarketData::MDTradeType::XBTTradeType:
+      OnNewXBTTradeUpdate(update.trade());
+      break;
+   case Blocksettle::Communication::BlocksettleMarketData::MDTradeType::PMTradeType:
+      OnNewPMTradeUpdate(update.trade());
+      break;
+   default:
+      logger_->error("[BSMarketDataProvider::OnNewTradeUpdate] undefined trade type: {}"
+         , static_cast<int>(update.trade_type()));
+      break;
+   }
+}
+
+void BSMarketDataProvider::OnNewFXTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::MDTradeRecord trade_record;
+   if (!trade_record.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewFXTradeUpdate] failed to parse trade");
+      return ;
+   }
+
+   logger_->debug("[BSMarketDataProvider::OnNewFXTradeUpdate] loaded trade: {}"
+      , trade_record.DebugString());
+
+   bs::network::NewTrade trade;
+
+   trade.product = trade_record.product();
+   trade.price = trade_record.price();
+   trade.amount = trade_record.amount();
+   trade.timestamp = trade_record.timestamp();
+
+   emit OnNewFXTrade(trade);
+}
+
+void BSMarketDataProvider::OnNewXBTTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::MDTradeRecord trade_record;
+   if (!trade_record.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewXBTTradeUpdate] failed to parse trade");
+      return ;
+   }
+
+   bs::network::NewTrade trade;
+
+   trade.product = trade_record.product();
+   trade.price = trade_record.price();
+   trade.amount = trade_record.amount();
+   trade.timestamp = trade_record.timestamp();
+
+   emit OnNewXBTTrade(trade);
+}
+
+void BSMarketDataProvider::OnNewPMTradeUpdate(const std::string& data)
+{
+   Blocksettle::Communication::BlocksettleMarketData::MDPMTradeRecord trade_record;
+   if (!trade_record.ParseFromString(data)) {
+      logger_->error("[BSMarketDataProvider::OnNewPMTradeUpdate] failed to parse trade");
+      return ;
+   }
+
+   bs::network::NewPMTrade trade;
+
+   trade.product = trade_record.product();
+   trade.price = trade_record.price();
+   trade.amount = trade_record.amount();
+   trade.timestamp = trade_record.timestamp();
+
+   emit OnNewPMTrade(trade);
 }
