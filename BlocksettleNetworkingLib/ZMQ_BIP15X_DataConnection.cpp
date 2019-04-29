@@ -248,7 +248,7 @@ bool ZmqBIP15XDataConnection::send(const string& data)
          if (!retVal)
          {
             logger_->error("[ZmqBIP15XServerConnection::{}] fragment send failed"
-               , __func__, data.size());
+               , __func__);
             return retVal;
          }
       }
