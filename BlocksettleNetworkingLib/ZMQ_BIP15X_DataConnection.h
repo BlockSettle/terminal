@@ -14,15 +14,22 @@
 
 #define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
-// DESIGN NOTE: The data connection should have a callback for when unknown
+// DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
-// the new key. This is meant for remote connections.
+// the new key, or otherwise properly handle new keys arriving.
 //
-// In adition, we have cookies that are used for local connections. When the
-// server is invoked, it'll be invoked with the client connection's public BIP
-// 150 ID key. In turn, the server will generate a cookie with its public BIP
-// 150 ID key. The client will read the cookie and get the server key. This
-// allows both sides to verify each other.
+// Cookies are used for local connections, and are the default unless remote
+// callbacks are added. When the server is invoked by a binary containing a
+// client connection, the binary must be invoked with the client connection's
+// public BIP 150 ID key. In turn, the binary with the server connection must
+// generate a cookie with its public BIP 150 ID key. The client will read the
+// cookie and get the server key. This allows both sides to verify each other.
+//
+// When adding authorized keys to a connection, the name needs to be the
+// IP:Port of the server connection. This is the only reliable information
+// available to the connection that can be used to ID who's on the other side.
+// It's okay to use other names in the GUI and elsewhere. However, the IP:Port
+// must be used when searching for keys.
 //
 // The key acceptance functionality is as follows:
 //

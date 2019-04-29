@@ -15,6 +15,19 @@
 
 #define SERVER_AUTH_PEER_FILENAME "server.peers"
 
+// DESIGN NOTES: Cookies are used for local connections. When the client is
+// invoked by a binary containing a server connection, the binary must be
+// invoked with the client connection's public BIP 150 ID key. In turn, the
+// binary with the client connection must generate a cookie with its public BIP
+// 150 ID key. The server will read the cookie and get the client key. This
+// allows both sides to verify each other.
+//
+// When adding authorized keys to a connection, the name needs to be the ZMQ
+// client ID. This is because the ID is the only reliable information that's
+// available and can be used to ID who's on the other side of a connection. It's
+// okay to use other names in the GUI and elsewhere. However, the client ID must
+// be used when searching for keys.
+
 // A struct containing the data required per-connection with clients.
 struct ZmqBIP15XPerConnData
 {
