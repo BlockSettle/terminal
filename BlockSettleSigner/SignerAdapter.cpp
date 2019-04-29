@@ -12,6 +12,9 @@
 #include "SignerAdapterContainer.h"
 #include "SignerInterfaceListener.h"
 
+static const std::string kLocalAddrV4 = "127.0.0.1";
+static const std::string kLocalAddrPort = "23457";
+
 using namespace Blocksettle::Communication;
 
 SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
@@ -27,7 +30,14 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       , true, true);
    adapterConn->SetContext(zmqContext);
    if (inSrvIDKey) {
-      adapterConn->addAuthPeer(*inSrvIDKey, "127.0.0.1:23457");
+      std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
+      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
+
+      // Temporary (?) kludge: Sometimes, the key gets checked with "_1" at the
+      // end of the checked key name. This should be checked and corrected
+      // elsewhere, but for now, add a kludge to keep the code happy.
+      connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort + "_1";
+      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
    }
 
    {
@@ -39,7 +49,8 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
    }
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
-   if (!adapterConn->openConnection("127.0.0.1", "23457", listener_.get())) {
+   if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
+      , listener_.get())) {
       throw std::runtime_error("adapter connection failed");
    }
 
