@@ -188,6 +188,38 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
 
    const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
 
+   // Define the callback that will be used to determine if the signer's BIP
+   // 150 identity key, if it has changed, will be accepted. It needs strings
+   // for the old and new keys, and a promise to set once the user decides.
+   //
+   // NB: This may need to be altered later. The PuB key should be hard-coded
+   // and respected.
+   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
+      [this](const std::string& oldKey, const std::string& newKey
+      , std::shared_ptr<std::promise<bool>> newKeyProm)->void
+      {
+      QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm] {
+         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+            , tr("Server identity key has changed")
+            , tr("Do you wish to import the new server identity key?")
+            , tr("Old Key: %1\nNew Key: %2")
+            .arg(QString::fromStdString(oldKey))
+            .arg(QString::fromStdString(newKey))
+            , this);
+
+         const bool answer = (box->exec() == QDialog::Accepted);
+         box->deleteLater();
+
+         if (answer) {
+            newKeyProm->set_value(true);
+         }
+         else {
+            newKeyProm->set_value(false);
+         }
+      });
+   };
+   connection->setCBs(ourNewKeyCB);
+
    Blocksettle::Communication::RequestPacket reqPkt;
    reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
    reqPkt.set_requestdata("");

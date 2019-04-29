@@ -55,9 +55,9 @@
 // Not part of the standard - Required by ZMQ.
 #define ZMQ_MSGTYPE_HEARTBEAT                 30
 
-// NOTE: Due to fragmentation, the maximum message size is (65535 * 1500) =
-// ~98 MiB. Larger messages will have to be split up in other ways.
-#define ZMQ_MESSAGE_PACKET_SIZE 1500
+// NOTE: ZMQ is message-oriented. We must split up messages in order to play
+// nice with TCP. Max msg size = 65535 * 1400 = ~92 MiB
+#define ZMQ_MESSAGE_PACKET_SIZE 1400
 
 #define ZMQ_CALLBACK_ID 0xFFFFFFFD
 #define ZMQ_AEAD_HANDSHAKE_ID 0xFFFFFFFC

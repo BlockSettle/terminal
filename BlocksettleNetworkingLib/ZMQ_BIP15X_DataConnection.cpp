@@ -10,7 +10,6 @@
 
 using namespace std;
 
-static const std::string kLocalAddrV4 = "127.0.0.1";
 static const std::string kServerCookieName = "serverID";
 static const std::string kIDCookieName = "clientID";
 #define HEARTBEAT_PACKET_SIZE 23
@@ -216,6 +215,8 @@ bool ZmqBIP15XDataConnection::sendPacket(const string& data)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::send(const string& data)
 {
+   bool retVal = false;
+
    // If we need to rekey, do it before encrypting the data.
    rekeyIfNeeded(data.size());
 
@@ -232,10 +233,28 @@ bool ZmqBIP15XDataConnection::send(const string& data)
       BinaryData payload(data);
       msg.construct(payload.getDataVector(), connPtr
          , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, msgID_);
-      sendData = msg.getNextPacket().toBinStr();
+
+      // Cycle through all packets.
+      while (!msg.isDone())
+      {
+         auto& packet = msg.getNextPacket();
+         if (packet.getSize() == 0) {
+            logger_->error("[ZmqBIP15XClientConnection::{}] failed to "
+               "serialize data (size {})", __func__, data.size());
+            return retVal;
+         }
+
+         retVal = sendPacket(packet.toBinStr());
+         if (!retVal)
+         {
+            logger_->error("[ZmqBIP15XServerConnection::{}] fragment send failed"
+               , __func__);
+            return retVal;
+         }
+      }
    }
 
-   return sendPacket(sendData);
+   return retVal;
 }
 
 void ZmqBIP15XDataConnection::notifyOnConnected()
@@ -301,7 +320,7 @@ bool ZmqBIP15XDataConnection::startBIP151Handshake(
 // The function that handles raw data coming in from the socket. The data may or
 // may not be encrypted.
 //
-// INPUT:  The raw incoming data. It may or may not be encrypted. (const string&)
+// INPUT:  The raw incoming data. (const string&)
 // OUTPUT: None
 // RETURN: None
 void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
@@ -403,7 +422,7 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
             logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
          }
-      
+
          notifyOnError(DataConnectionListener::HandshakeFailed);
          return;
       }
@@ -522,7 +541,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
             // Add the host and the key to the list of verified peers. Be sure
             // to erase any old keys first.
             vector<string> keyName;
-            string localAddrV4 = kLocalAddrV4 + ":23456";
+            string localAddrV4 = hostAddr_ + ":" + hostPort_;
             keyName.push_back(localAddrV4);
             authPeers_->eraseName(localAddrV4);
             authPeers_->addPeer(cookieKey, keyName);
@@ -755,6 +774,7 @@ void ZmqBIP15XDataConnection::addAuthPeer(const BinaryData& inKey
          , __func__,  inKey.toHexStr(), keyName);
       return;
    }
+   authPeers_->eraseName(keyName);
    authPeers_->addPeer(inKey, vector<string>{ keyName });
 }
 
