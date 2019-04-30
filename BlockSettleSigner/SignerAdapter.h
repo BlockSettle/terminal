@@ -69,6 +69,7 @@ public:
 
 signals:
    void ready() const;
+   void connectionError() const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
    void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt);

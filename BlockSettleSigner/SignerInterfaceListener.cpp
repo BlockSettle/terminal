@@ -113,6 +113,7 @@ void SignerInterfaceListener::OnDisconnected()
 void SignerInterfaceListener::OnError(DataConnectionError errorCode)
 {
    logger_->debug("[SignerInterfaceListener] error {}", errorCode);
+   QMetaObject::invokeMethod(parent_, [this] { emit parent_->connectionError(); });
 }
 
 bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)

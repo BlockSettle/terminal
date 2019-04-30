@@ -70,7 +70,7 @@ QString WalletsProxy::getRootWalletName(const QString &walletId) const
 
 bool WalletsProxy::primaryWalletExists() const
 {
-   return (walletsMgr_->getPrimaryWallet() != nullptr);
+   return (walletsMgr_ && (walletsMgr_->getPrimaryWallet() != nullptr));
 }
 
 void WalletsProxy::changePassword(const QString &walletId
@@ -320,6 +320,10 @@ void WalletsProxy::createWallet(bool isPrimary
                                 , bs::wallet::QPasswordData *passwordData
                                 , const QJSValue &jsCallback)
 {
+   if (!walletsMgr_) {
+      emit walletError({}, tr("Wallets manager is missing"));
+      return;
+   }
    if (seed->networkType() == bs::wallet::QSeed::Invalid) {
       emit walletError({}, tr("Failed to create wallet with invalid seed"));
       return;
