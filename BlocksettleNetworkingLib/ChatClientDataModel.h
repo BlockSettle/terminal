@@ -62,6 +62,7 @@ private:
 
 private:
    std::shared_ptr<RootItem> root_;
+   void beginChatInsertRows(const TreeItem::NodeType &type);
 };
 
 
