@@ -63,7 +63,8 @@ bool CCPubConnection::SubmitRequestToPB(const std::string &name, const std::stri
    });
 
    cmdPuB_->SetErrorCallback([this](const std::string& message) {
-      logger_->error("[CCPubConnection::SubmitRequestToPB] error callback: {}", cmdPuB_->GetName(), message);
+      logger_->error("[CCPubConnection::SubmitRequestToPB] error callback {}: {}"
+         , cmdPuB_->GetName(), message);
       cmdPuB_->CleanupCallbacks();
       cmdPuB_->resetConnection();
    });
