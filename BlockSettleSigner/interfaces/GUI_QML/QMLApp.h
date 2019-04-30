@@ -36,7 +36,6 @@ class QSystemTrayIcon;
 class SignerAdapter;
 class SignerSettings;
 class WalletsProxy;
-class ZmqSecuredServerConnection;
 
 class QMLAppObj : public QObject
 {

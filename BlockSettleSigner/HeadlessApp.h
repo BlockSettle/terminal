@@ -19,7 +19,6 @@ namespace bs {
 class HeadlessContainerListener;
 class SignerAdapterListener;
 class HeadlessSettings;
-class ZmqSecuredServerConnection;
 class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
