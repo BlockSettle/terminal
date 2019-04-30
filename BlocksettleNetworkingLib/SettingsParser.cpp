@@ -24,12 +24,7 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
          defaultValueHelp = QLatin1String("<empty>");
       }
       QString desc = QString(QLatin1String("%1. Default: %2")).arg(param->desc()).arg(defaultValueHelp);
-      if (param->defValue_.type() == QVariant::Type::Bool) {
-         parser.addOption({ param->name(), desc });
-      }
-      else {
-         parser.addOption({ param->name(), desc, param->name() });
-      }
+      parser.addOption({ param->name(), desc, param->name() });
    }
 
    parser.addHelpOption();
