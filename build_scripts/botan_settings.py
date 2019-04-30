@@ -8,11 +8,12 @@ from component_configurator import Configurator
 
 
 class BotanSettings(Configurator):
-    def __init__(self, settings):
+    def __init__(self, settings, enableSqlite = False):
         Configurator.__init__(self, settings)
-        self._version = '2.9.0'
+        self._version = '2.10.0'
         self._package_name = 'botan'
         self._script_revision = '1'
+        self._enableSqlite = enableSqlite
 
         self._package_url = 'https://github.com/randombit/botan/archive/' + self._version + '.zip'
 
@@ -35,7 +36,11 @@ class BotanSettings(Configurator):
         command = [sys.executable,
                    self.get_unpacked_sources_dir() + '/configure.py',
                    '--disable-modules=pkcs11',
-                   '--without-documentation']
+                   '--without-documentation',
+        ]
+
+        if self._enableSqlite:
+            command += ['--with-sqlite3']
 
         if self._project_settings.get_link_mode() == 'static':
             command.append('--disable-shared-library')

@@ -84,13 +84,7 @@ class QtSettings(Configurator):
         command.append('-no-feature-vulkan')
 
         # command.append('-no-securetransport')
-        # Recent script changes somehow broke Linux builds. Use a workaround.
-        if self._project_settings.on_linux():
-            command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'')))
-            command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'')))
-        else:
-            command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
-            command.append('-L{}'.format(os.path.join(self.openssl.get_install_dir(),'lib')))
+        command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
 
         if self._project_settings.on_osx():
             command.append('-L/usr/local/opt/mysql@5.7/lib')
@@ -129,13 +123,15 @@ class QtSettings(Configurator):
         command.append('-prefix')
         command.append(self.get_install_dir())
 
-        ssllibs_var = '-L{} -llibssl -llibcrypto'.format(os.path.join(self.openssl.get_install_dir(),'lib'))
+        ssllibs_var = '-L{} -lssl -lcrypto'.format(os.path.join(self.openssl.get_install_dir(),'lib'))
+        if self._project_settings.on_linux():
+            ssllibs_var += ' -ldl -lpthread'
         compile_variables = os.environ.copy()
         compile_variables['OPENSSL_LIBS'] = ssllibs_var
 
         result = subprocess.call(command, env=compile_variables)
         if result != 0:
-            print('Configure of QT failed')
+            print('Configure of Qt failed')
             return False
 
         return True
