@@ -23,6 +23,8 @@ class SettingsParser
 public:
    class BaseSettingsParam {
    public:
+      virtual ~BaseSettingsParam() = default;
+
       const QString &name() { return name_; }
       const QString &desc() { return desc_; }
       const QString &defValue() { return desc_; }
@@ -79,7 +81,7 @@ public:
       , const std::string &settingsFile = {});
    ~SettingsParser() noexcept = default;
 
-   virtual bool LoadSettings(const QStringList& argList);
+   bool LoadSettings(const QStringList& argList);
 
 protected:
    template<class T>
