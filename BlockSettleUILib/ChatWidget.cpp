@@ -71,6 +71,7 @@ public:
       chat_->ui_->input_textEdit->setEnabled(false);
       chat_->ui_->chatSearchLineEdit->clear();
       chat_->ui_->chatSearchLineEdit->setEnabled(false);
+      chat_->ui_->labelUserName->setText(QLatin1String("offline"));
    }
 
    std::string login(const std::string& email, const std::string& jwt) override {

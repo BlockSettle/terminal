@@ -241,7 +241,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>OwnUserName</string>
+               <string>offline</string>
               </property>
              </widget>
             </item>
