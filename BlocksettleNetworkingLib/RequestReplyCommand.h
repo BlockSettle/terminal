@@ -50,6 +50,8 @@ public:
    bool GetExecutionResult() const { return result_; }
    void DropResult() { dropResult_ = true; }
 
+   void resetConnection() { connection_.reset(); }
+
 public:
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;

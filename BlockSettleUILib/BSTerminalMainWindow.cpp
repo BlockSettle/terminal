@@ -201,7 +201,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
       QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm] {
          BSMessageBox *box = new BSMessageBox(BSMessageBox::question
             , tr("Server identity key has changed")
-            , tr("Do you wish to import the new server identity key?")
+            , tr("Do you wish to import the new PuB server identity key?")
             , tr("Old Key: %1\nNew Key: %2")
             .arg(QString::fromStdString(oldKey))
             .arg(QString::fromStdString(newKey))
@@ -210,12 +210,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
          const bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
 
-         if (answer) {
-            newKeyProm->set_value(true);
-         }
-         else {
-            newKeyProm->set_value(false);
-         }
+         newKeyProm->set_value(answer);
       });
    };
    connection->setCBs(ourNewKeyCB);
@@ -261,6 +256,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
       if (data.empty()) {
          showError(title, tr("Empty reply from BlockSettle server"));
       }
+      cmdPuBSettings_->resetConnection();
       Blocksettle::Communication::GetNetworkSettingsResponse response;
       if (!response.ParseFromString(data)) {
          showError(title, tr("Invalid reply from BlockSettle server"));
@@ -310,6 +306,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
    cmdPuBSettings_->SetErrorCallback([this, title](const std::string& message) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] error: {}", message);
       showError(title, tr("Failed to obtain network settings from BlockSettle server"));
+      cmdPuBSettings_->resetConnection();
    });
 
    if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)

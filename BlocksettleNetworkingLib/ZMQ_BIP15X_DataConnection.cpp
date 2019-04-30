@@ -459,9 +459,9 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
       break;
    }*/
 
+   currentReadMessage_.reset();
    // Pass the final data up the chain.
    ZmqDataConnection::notifyOnData(inMsg.toBinStr());
-   currentReadMessage_.reset();
 }
 
 // Create the data socket.
@@ -808,6 +808,12 @@ void ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
    if (authPeerNameSearch == authPeerNameMap.end()) {
       logger_->info("[{}] New key ({}) for server [{}] arrived.", __func__
          , newKey.toHexStr(), srvAddrPort);
+
+      if (!cbNewKey_) {
+         logger_->error("[{}] no server key callback is set - aborting handshake", __func__);
+         notifyOnError(DataConnectionListener::HandshakeFailed);
+         return;
+      }
 
       // Ask the user if they wish to accept the new identity key.
       BinaryData oldKey; // there shouldn't be any old key, at least in authPeerNameSearch
