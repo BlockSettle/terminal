@@ -132,49 +132,18 @@ BTCNumericTypes::balance_type Wallet::getTotalBalance() const
    return totalBalance_;
 }
 
-bool Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
+std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
 {
-   /*
-   if (!isBalanceAvailable()) {
-      return false;
-   }
-   static const std::vector<uint64_t> defVal = { 0, 0, 0 };
+   if (!isBalanceAvailable())
+      throw std::runtime_error("uninitialized db connection");
 
-   if (updateAddrBalance_) {
-      const auto &cbAddrBalance = [this]
-         (ReturnMessage<std::map<BinaryData, std::vector<uint64_t>>> balanceMap) {
-         try {
-            const auto bm = balanceMap.get();
-            updateMap<std::map<BinaryData, std::vector<uint64_t>>>(bm, addressBalanceMap_);
-            updateAddrBalance_ = false;
-         }
-         catch(std::exception& e) {
-            if(logger_ != nullptr) {
-               logger_->error("[getAddrBalance (cbAddrBalance)] Return data " \
-                              "error - {}", e.what());
-            }
-         }
+   QMutexLocker lock(&addrMapsMtx_);
 
-         invokeCb<std::vector<uint64_t>>(addressBalanceMap_, cbBal_, defVal);
-      };
+   auto iter = addressBalanceMap_.find(addr.prefixed());
+   if (iter == addressBalanceMap_.end())
+      return {};
 
-      cbBal_[addr].push_back(cb);
-      if (cbBal_.size() == 1) {
-         btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
-      }
-   }
-   else {
-      const auto itBal = addressBalanceMap_.find(addr.id());
-      if (itBal == addressBalanceMap_.end()) {
-         cb(defVal);
-         return true;
-      }
-      cb(itBal->second);
-   }
-   */
-
-   throw std::runtime_error("why is this code repeated in here and SyncHDLeaf?");
-   return false;
+   return iter->second;
 }
 
 bool Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> cb) const
@@ -482,61 +451,6 @@ bool Wallet::getRBFTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &btcW
 bool Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
 {
    return getRBFTxOutList(btcWallet_, cb);
-}
-
-// Public frontend for updating a wallet's balances. Required in part because
-// Armory doesn't declare TXs safe until 6 confs have occurred.
-void Wallet::updateBalances(const std::function<void(std::vector<uint64_t>)> &cb)
-{
-   /*
-   if (!isBalanceAvailable()) {
-      return;
-   }
-   const auto &cbBalances = [this, cb]
-                    (ReturnMessage<std::vector<uint64_t>> balanceVector)->void {
-      try {
-         auto bv = balanceVector.get();
-         if (bv.size() < 4) {
-            return;
-         }
-         const auto totalBalance =
-            static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
-         const auto spendableBalance =
-            static_cast<BTCNumericTypes::balance_type>(bv[1]) / BTCNumericTypes::BalanceDivider;
-         const auto unconfirmedBalance =
-            static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
-         const auto count = bv[3];
-
-         if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
-            || (unconfirmedBalance_ != unconfirmedBalance)) {
-            {
-               QMutexLocker lock(&addrMapsMtx_);
-               updateAddrTxN_ = true;
-               addrCount_ = count;
-            }
-            totalBalance_ = totalBalance;
-            spendableBalance_ = spendableBalance;
-            unconfirmedBalance_ = unconfirmedBalance;
-
-            emit balanceChanged(walletId(), bv);
-         }
-         emit balanceUpdated(walletId(), bv);
-
-         if (cb) {
-            cb(bv);
-         }
-      }
-      catch (const std::exception &e) {
-         if (logger_ != nullptr) {
-            logger_->error("[bs::sync::Wallet::UpdateBalances] Return data error " \
-               "- {}", e.what());
-         }
-      }
-   };
-   btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
-   */
-
-   throw std::runtime_error("why is this code repeated here and in synchdleaf?");
 }
 
 bool Wallet::getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet

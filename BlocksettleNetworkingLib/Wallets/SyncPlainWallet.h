@@ -51,6 +51,13 @@ namespace bs {
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;
 
+         virtual void updateBalances(
+            const std::function<void(void)> &cb = nullptr) override
+         {
+            throw std::runtime_error("reproduce SyncHDLeaf updateBalances code");
+         }
+
+
          bool deleteRemotely() override;
 
       protected:

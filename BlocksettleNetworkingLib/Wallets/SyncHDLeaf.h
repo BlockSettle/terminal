@@ -84,10 +84,11 @@ namespace bs {
 
             int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
 
-            void updateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
-            std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
             bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const override;
             bool getActiveAddressCount(const std::function<void(size_t)> &) const override;
+
+            virtual void updateBalances(
+               const std::function<void(void)> &cb = nullptr) override;
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
@@ -275,8 +276,7 @@ namespace bs {
             BTCNumericTypes::balance_type getSpendableBalance() const override;
             BTCNumericTypes::balance_type getUnconfirmedBalance() const override;
             BTCNumericTypes::balance_type getTotalBalance() const override;
-            bool getAddrBalance(const bs::Address &addr
-               , std::function<void(std::vector<uint64_t>)>) const override;
+            std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const override;
 
             BTCNumericTypes::balance_type getTxBalance(int64_t) const override;
             QString displayTxValue(int64_t val) const override;

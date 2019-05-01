@@ -94,9 +94,9 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    ui_->setupUi(this);
    ui_->labelError->hide();
 
-   wallet_->getAddrBalance(address, [this](std::vector<uint64_t> balanceVec) {
-      QMetaObject::invokeMethod(this, [this, balanceVec] { onAddrBalanceReceived(balanceVec); });
-   });
+   auto balanceVec = wallet_->getAddrBalance(address);
+   QMetaObject::invokeMethod(this, [this, balanceVec] { onAddrBalanceReceived(balanceVec); });
+
    wallet_->getAddrTxN(address, [this](uint32_t txn) {
       QMetaObject::invokeMethod(this, [this, txn] { onAddrTxNReceived(txn); });
    });

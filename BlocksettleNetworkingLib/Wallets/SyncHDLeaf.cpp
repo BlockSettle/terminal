@@ -761,23 +761,33 @@ int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, Addr
    return id;
 }
 
-void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &cb)
+void hd::Leaf::updateBalances(const std::function<void(void)> &cb)
 {
+   /***
+   callback is only used to signify request complition, use the 
+   get methods to grab the individual balances
+   ***/
+
    if (!isBalanceAvailable())
       return;
 
+   auto cbCounter = std::make_shared<std::atomic<unsigned>>(0);
    auto prevBalances = std::make_shared<std::vector<uint64_t>>();
 
-   const auto &cbBalances = [this, cb, prevBalances]
+   unsigned total = 1;
+   if (!isExtOnly_)
+      ++total;
+
+   const auto &cbBalances = [this, cb, prevBalances, cbCounter, total]
       (ReturnMessage<std::vector<uint64_t>> balanceVector)->void
    {
-      try 
+      try
       {
          auto bv = balanceVector.get();
          if (bv.size() < 4)
             return;
 
-         if (prevBalances->size() == 4) 
+         if (prevBalances->size() == 4)
          {
             for (size_t i = 0; i < 4; ++i)
                bv[i] += (*prevBalances)[i];
@@ -785,10 +795,10 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
 
          //lol no
          /*
-         const auto &cbTxOutList = [this, bv] (std::vector<UTXO> inputs) 
+         const auto &cbTxOutList = [this, bv] (std::vector<UTXO> inputs)
          {
             spendableBalanceCorrection_ = 0;
-            for (const auto &input : inputs) 
+            for (const auto &input : inputs)
             {
                if (armory_->getConfirmationsNumber(input.getHeight()) >= kExtConfCount)
                   continue;
@@ -808,10 +818,10 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
                static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
             const auto count = bv[3];
 
-            if ((addrCount_ != count) || 
-               (totalBalance_ != totalBalance) || 
-               (spendableBalance_ != spendableBalance) || 
-               (unconfirmedBalance_ != unconfirmedBalance)) 
+            if ((addrCount_ != count) ||
+               (totalBalance_ != totalBalance) ||
+               (spendableBalance_ != spendableBalance) ||
+               (unconfirmedBalance_ != unconfirmedBalance))
             {
                   {
                      QMutexLocker lock(&addrMapsMtx_);
@@ -843,29 +853,10 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
             static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
          addrCount_ = bv[3];
 
-         if (cb)
-            cb(bv);
-      } 
-      catch (const std::exception &e) 
-      {
-         if (logger_) 
-         {
-            logger_->error("[hd::Leaf::UpdateBalances] Return data error " \
-               "- {}", e.what());
-         }
+         if (cb && cbCounter->fetch_add(1) == total)
+            cb();
       }
-   };
-
-   const auto &cbBalancesExt = [this, cbBalances, prevBalances]
-      (ReturnMessage<std::vector<uint64_t>> balanceVector)->void 
-   {
-      try 
-      {
-         auto bv = balanceVector.get();
-         prevBalances->insert(prevBalances->end(), bv.cbegin(), bv.cend());
-         btcWalletInt_->getBalancesAndCount(armory_->topBlock(), cbBalances);
-      }
-      catch (const std::exception &e) 
+      catch (const std::exception &e)
       {
          if (logger_)
          {
@@ -875,20 +866,37 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
       }
    };
 
-   //grab wallet balance data
-   if (isExtOnly_) 
-      btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
-   else 
-      btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalancesExt);
-
+   const auto &cbBalancesExt = [this, cbBalances, prevBalances, cb]
+      (ReturnMessage<std::vector<uint64_t>> balanceVector)->void
+   {
+      try
+      {
+         auto bv = balanceVector.get();
+         prevBalances->insert(prevBalances->end(), bv.cbegin(), bv.cend());
+         btcWalletInt_->getBalancesAndCount(armory_->topBlock(), cbBalances);
+      }
+      catch (const std::exception &e)
+      {
+         if (logger_)
+         {
+            logger_->error("[hd::Leaf::UpdateBalances] Return data error " \
+               "- {}", e.what());
+         }
+      }
+   };
 
    const auto &cbAddrBalance =
-      [this, cb](ReturnMessage<std::map<BinaryData, std::vector<uint64_t>>> balanceMap)
+      [this, cb, cbCounter, total]
+      (ReturnMessage<std::map<BinaryData, std::vector<uint64_t>>> balanceMap)
    {
       try
       {
          const auto bm = balanceMap.get();
          updateMap<std::map<BinaryData, std::vector<uint64_t>>>(bm, addressBalanceMap_);
+
+         if (cb && cbCounter->fetch_add(1) == total)
+            cb();
+
       }
       catch (std::exception& e)
       {
@@ -902,18 +910,12 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
    btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
    if (!isExtOnly_)
       btcWalletInt_->getAddrBalancesFromDB(cbAddrBalance);
-}
 
-std::vector<uint64_t> hd::Leaf::getAddrBalance(const bs::Address &addr) const
-{
-   if (!isBalanceAvailable())
-      throw std::runtime_error("uninitialized db connection");
-
-   auto iter = addressBalanceMap_.find(addr);
-   if (iter == addressBalanceMap_.end())
-      return { 0, 0, 0 };
-
-   return iter->second;
+   //grab wallet balance data
+   if (isExtOnly_)
+      btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
+   else
+      btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalancesExt);
 }
 
 bool hd::Leaf::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> cb) const
@@ -1606,26 +1608,24 @@ BTCNumericTypes::balance_type hd::CCLeaf::getTotalBalance() const
    return correctBalance(hd::Leaf::getTotalBalance());
 }
 
-bool hd::CCLeaf::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
+std::vector<uint64_t> hd::CCLeaf::getAddrBalance(const bs::Address &addr) const
 {
    if (!lotSizeInSatoshis_ || !validationEnded_ || !Wallet::isBalanceAvailable()) {
-      return false;
+      return {};
    }
 
    /*doesnt seem thread safe, yet addressBalanceMap_ can be changed by other threads*/
-   auto inner = [this, cb, addr](std::vector<uint64_t> xbtBalances)->void
+   auto inner = [this, addr](std::vector<uint64_t>& xbtBalances)->void
    {
       for (auto &balance : xbtBalances) {
          balance /= lotSizeInSatoshis_;
       }
-   
-      cb(xbtBalances);
    };
 
    auto balVec = hd::Leaf::getAddrBalance(addr);
    inner(balVec);
 
-   return true;
+   return balVec;
 }
 
 bool hd::CCLeaf::isTxValid(const BinaryData &txHash) const

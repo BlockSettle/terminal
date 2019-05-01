@@ -92,9 +92,7 @@ namespace bs {
 
          virtual bool containsAddress(const bs::Address &addr) = 0;
          virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
-         virtual bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const;
          virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
-//         virtual BinaryData getRootId() const = 0;
          virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
             , QObject *obj, uint64_t val = UINT64_MAX);
          virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
@@ -108,11 +106,13 @@ namespace bs {
             , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
          virtual bool isBalanceAvailable() const;
-         virtual void updateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr);
          virtual BTCNumericTypes::balance_type getSpendableBalance() const;
          virtual BTCNumericTypes::balance_type getUnconfirmedBalance() const;
          virtual BTCNumericTypes::balance_type getTotalBalance() const;
          virtual void firstInit(bool force = false);
+
+         virtual void updateBalances(const std::function<void(void)> &cb = nullptr) = 0;
+         virtual std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
 
          virtual bool isWatchingOnly() const { return false; }
          virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }

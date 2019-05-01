@@ -351,16 +351,20 @@ void WalletsWidget::onAddressContextMenu(const QPoint &p)
    }
    contextMenu->addAction(actEditComment_);
 
-   const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances) {
+   const auto &cbAddrBalance = [this, p, contextMenu](std::vector<uint64_t> balances) 
+   {
       if ((curWallet_ == walletsManager_->getSettlementWallet()) && walletsManager_->getAuthWallet()
          /*&& (curWallet_->getAddrTxN(curAddress_) == 1)*/ && balances[0]) {
          contextMenu->addAction(actRevokeSettl_);
       }
       emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
    };
-   if (!curWallet_->getAddrBalance(curAddress_, cbAddrBalance)) {
+
+   auto balanceVec = curWallet_->getAddrBalance(curAddress_);
+   if (balanceVec.size() == 0)
       emit showContextMenu(contextMenu, ui_->treeViewAddresses->mapToGlobal(p));
-   }
+   else
+      cbAddrBalance(balanceVec);
 }
 
 void WalletsWidget::onShowContextMenu(QMenu *menu, QPoint where)
