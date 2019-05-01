@@ -400,11 +400,8 @@ void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_S
       return;
    }
 
-   autheid::PublicKey pubKey(reply.user_pub_key().begin(), reply.user_pub_key().end());
-   if (!autheid::verifyData(reply.signature_data().data(), reply.signature_data().size(),
-         reply.sign().data(), reply.sign().size(), pubKey)) {
-      emit failed(tr("Signature validation failed"));
-      return;
-   }
+   // We could verify certificate and signature here if that is needed
+   // Example: https://github.com/autheid/AuthSamples/blob/master/Java/src/main/java/com/autheid/examples/simple/SimpleClient.java
+
    emit signSuccess(reply.signature_data(), sigData.invisible_data(), reply.sign());
 }
