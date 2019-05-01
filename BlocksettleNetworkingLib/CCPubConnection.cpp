@@ -35,7 +35,7 @@ bool CCPubConnection::LoadCCDefinitionsFromPub()
    return SubmitRequestToPB("get_cc_gen_list", request.SerializeAsString());
 }
 
-bool CCPubConnection::SubmitRequestToPB(const std::string& name, const std::string& data)
+bool CCPubConnection::SubmitRequestToPB(const std::string &name, const std::string& data)
 {
    const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
 
@@ -46,17 +46,10 @@ bool CCPubConnection::SubmitRequestToPB(const std::string& name, const std::stri
       [this](const std::string& oldKey, const std::string& newKey
       , std::shared_ptr<std::promise<bool>> newKeyProm)->void
    {
-      // NB: This may need to be altered later. The PuB key should be hard-coded
-      // and respected.
-      ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
-         [this](const std::string& oldKey, const std::string& newKey
-         , std::shared_ptr<std::promise<bool>> newKeyProm)->void
-         {
-            logger_->info("[CCPubConnection::{}] Temporary kludge for "
-               "accepting the public bridge ID key. Need to check against a "
-               "hard-coded value.", __func__);
-            newKeyProm->set_value(true);
-         };
+      logger_->info("[CCPubConnection::SubmitRequestToPB] Temporary kludge for "
+         "accepting the public bridge ID key. Need to check against a "
+         "hard-coded value.", __func__);
+      newKeyProm->set_value(true);
    };
    connection->setCBs(ourNewKeyCB);
 
@@ -65,16 +58,19 @@ bool CCPubConnection::SubmitRequestToPB(const std::string& name, const std::stri
    cmdPuB_->SetReplyCallback([this](const std::string& data) {
       OnDataReceived(data);
       cmdPuB_->CleanupCallbacks();
+      cmdPuB_->resetConnection();
       return true;
    });
 
    cmdPuB_->SetErrorCallback([this](const std::string& message) {
-      logger_->error("[CCPubConnection::{}] error callback: {}", cmdPuB_->GetName(), message);
+      logger_->error("[CCPubConnection::SubmitRequestToPB] error callback {}: {}"
+         , cmdPuB_->GetName(), message);
       cmdPuB_->CleanupCallbacks();
+      cmdPuB_->resetConnection();
    });
 
    if (!cmdPuB_->ExecuteRequest(GetPuBHost(), GetPuBPort(), data, true)) {
-      logger_->error("[CCPubConnection::SubmitRequestToPB] failed to send request {}", name);
+      logger_->error("[CCPubConnection::{}] failed to send request {}", __func__, name);
       return false;
    }
 

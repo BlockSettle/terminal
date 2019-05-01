@@ -21,7 +21,9 @@ RequestReplyCommand::RequestReplyCommand(const std::string& name
 
 RequestReplyCommand::~RequestReplyCommand() noexcept
 {
-   connection_->closeConnection();
+   if (connection_) {
+      connection_->closeConnection();
+   }
 }
 
 void RequestReplyCommand::SetReplyCallback(const data_callback_type& callback)
