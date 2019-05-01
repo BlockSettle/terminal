@@ -343,14 +343,13 @@ void WalletsProxy::createWallet(bool isPrimary
 
 void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallback)
 {
-   auto cb = [this, jsCallback] (bool success, const std::string &error) {
-      QMetaObject::invokeMethod(this, [this, success, error, jsCallback] {
-         QJSValueList args;
-         args << QJSValue(success) << QString::fromStdString(error);
+   auto cb = [this, walletId, jsCallback] (bool success, const std::string &error) {
+      QJSValueList args;
+      args << QJSValue(success) << QString::fromStdString(error);
+      QMetaObject::invokeMethod(this, [this, args, jsCallback] {
          invokeJsCallBack(jsCallback, args);
       });
    };
-
    adapter_->deleteWallet(walletId.toStdString(), cb);
 }
 
