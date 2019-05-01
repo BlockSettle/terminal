@@ -57,16 +57,23 @@ bool CCPubConnection::SubmitRequestToPB(const std::string &name, const std::stri
 
    cmdPuB_->SetReplyCallback([this](const std::string& data) {
       OnDataReceived(data);
-      cmdPuB_->CleanupCallbacks();
-      cmdPuB_->resetConnection();
+
+      // CleanupCallbacks will destroy this functional object (invalidating `this` field).
+      // Make a copy before that to prevent crash.
+      CCPubConnection *thisCopy = this;
+      thisCopy->cmdPuB_->CleanupCallbacks();
+      thisCopy->cmdPuB_->resetConnection();
       return true;
    });
 
    cmdPuB_->SetErrorCallback([this](const std::string& message) {
       logger_->error("[CCPubConnection::SubmitRequestToPB] error callback {}: {}"
          , cmdPuB_->GetName(), message);
-      cmdPuB_->CleanupCallbacks();
-      cmdPuB_->resetConnection();
+
+      // Fix possible crash, see notes above
+      CCPubConnection *thisCopy = this;
+      thisCopy->cmdPuB_->CleanupCallbacks();
+      thisCopy->cmdPuB_->resetConnection();
    });
 
    if (!cmdPuB_->ExecuteRequest(GetPuBHost(), GetPuBPort(), data, true)) {
