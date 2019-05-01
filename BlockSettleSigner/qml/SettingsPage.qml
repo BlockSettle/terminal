@@ -296,7 +296,7 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        qmlFactory.setClipboard(signerSettings.headlessIDKeyStr)
+                        qmlFactory.setClipboard(signerSettings.headlessIDKeyStr())
                         btnZmqKeyCopy.text = qsTr("Copied")
                     }
                 }
@@ -311,8 +311,8 @@ Item {
                         //exportSignerPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
                         exportSignerPubKeyDlg.open()
                         exportSignerPubKeyDlg.accepted.connect(function(){
-                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.signerPubKey)
-                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, signerSettings.headlessIDKeyStr)
+                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.headlessIDKeyStr())
+                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, zmqPubKey)
                         })
                     }
                     FileDialog {

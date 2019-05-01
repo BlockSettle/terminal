@@ -121,12 +121,12 @@ static int QMLApp(int argc, char **argv)
    }
 
    // don't show slash screen on debug
-//#ifdef NDEBUG
-//   if (settings->runMode() == bs::signer::ui::RunMode::fullgui) {
-//      splashScreen.show();
-//   }
-//#endif
-splashScreen.show();
+#ifdef NDEBUG
+   if (settings->runMode() == bs::signer::ui::RunMode::fullgui) {
+      splashScreen.show();
+   }
+#endif
+
    try {
       logger = spdlog::basic_logger_mt("app_logger"
          , settings->logFileName().toStdString());
