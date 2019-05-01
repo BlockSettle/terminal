@@ -71,6 +71,7 @@ public:
       chat_->ui_->input_textEdit->setEnabled(false);
       chat_->ui_->chatSearchLineEdit->clear();
       chat_->ui_->chatSearchLineEdit->setEnabled(false);
+      chat_->ui_->labelUserName->setText(QLatin1String("offline"));
    }
 
    std::string login(const std::string& email, const std::string& jwt) override {
@@ -253,6 +254,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
 
+   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::modelReset, this, &ChatWidget::treeViewUsersModelReset);
+   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::rowsAboutToBeInserted, this, &ChatWidget::treeViewUsersModelRowsAboutToBeInserted);
+   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::rowsInserted, this, &ChatWidget::treeViewUsersModelRowsInserted);
+
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
 //           this, &ChatWidget::onSearchUserListReceived);
    //connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
@@ -306,6 +311,46 @@ void ChatWidget::onUserClicked(const QString& userId)
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
    stateCurrent_->onUsersDeleted(users);
+}
+
+void ChatWidget::treeViewUsersModelReset()
+{
+   // expand all by default
+   ui_->treeViewUsers->expandAll();
+}
+
+void ChatWidget::treeViewUsersModelRowsAboutToBeInserted()
+{
+   // get all indexes
+   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
+                                                                Qt::DisplayRole,
+                                                                QLatin1String("*"),
+                                                                -1,
+                                                                Qt::MatchWildcard|Qt::MatchRecursive);
+   
+   // save expanded indexes
+   expandedIndexes_.clear();
+   for (const auto &index : indexes)
+      if (ui_->treeViewUsers->isExpanded(index))
+         expandedIndexes_.insert(index);
+}
+
+void ChatWidget::treeViewUsersModelRowsInserted()
+{
+   // get all indexes
+   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
+                                                                Qt::DisplayRole,
+                                                                QLatin1String("*"),
+                                                                -1,
+                                                                Qt::MatchWildcard|Qt::MatchRecursive);
+
+    // restore expand and collaps states for all indexes
+   for (const auto &index : indexes) {
+      if (expandedIndexes_.find(index) != expandedIndexes_.end())
+	      ui_->treeViewUsers->expand(index);
+      else
+         ui_->treeViewUsers->collapse(index);
+   }
 }
 
 void ChatWidget::changeState(ChatWidget::State state)

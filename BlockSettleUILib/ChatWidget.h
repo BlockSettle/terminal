@@ -66,6 +66,9 @@ private slots:
    void onSendFriendRequest(const QString &userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
+   void treeViewUsersModelReset();
+   void treeViewUsersModelRowsAboutToBeInserted();
+   void treeViewUsersModelRowsInserted();
 
    void OnOTCRequestCreated();
    void DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range);
@@ -91,6 +94,7 @@ private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
    QMap<QString, QString> draftMessages_;
    bool needsToStartFirstRoom_;
+   std::set<QModelIndex> expandedIndexes_;
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
