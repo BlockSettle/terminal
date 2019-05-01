@@ -52,11 +52,18 @@ class ZmqBIP15XServerConnection : public ZmqServerConnection
 public:
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
-      , const std::vector<std::string>& trustedClients, const uint64_t& id
-      , const bool& ephemeralPeers);
-   ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<ZmqContext> &
-      , const std::function<std::vector<std::string>()> &cbTrustedClients);
+      , const std::vector<std::string>& cbtrustedClients
+      , const uint64_t& id
+      , const bool& ephemeralPeers
+      , const bool& makeServerCookie = false
+      , const bool& readClientCookie = false
+      , const std::string& cookiePath = "");
+   ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ZmqContext>& context
+      , const std::function<std::vector<std::string>()>& cbTrustedClients
+      , const bool& makeServerCookie = false
+      , const bool& readClientCookie = false
+      , const std::string& cookiePath = "");
    ~ZmqBIP15XServerConnection() noexcept override;
 
    ZmqBIP15XServerConnection(const ZmqBIP15XServerConnection&) = delete;
@@ -69,8 +76,8 @@ public:
       , const SendResultCb& cb = nullptr) override;
    bool SendDataToAllClients(const std::string&, const SendResultCb &cb = nullptr) override;
 
-   bool getClientIDCookie(BinaryData& cookieBuf, const std::string& cookieName);
-   void enableClientCookieUsage() { useClientIDCookie_ = true; }
+   bool getClientIDCookie(BinaryData& cookieBuf);
+   std::string getCookiePath() const { return bipIDCookiePath_; }
    BinaryData getOwnPubKey() const;
    void addAuthPeer(const BinaryData& inKey, const std::string& keyName);
 
@@ -102,7 +109,9 @@ private:
    uint64_t id_;
    std::mutex  clientsMtx_;
    std::function<std::vector<std::string>()> cbTrustedClients_;
-   bool useClientIDCookie_ = false;
+   const bool useClientIDCookie_;
+   const bool makeServerIDCookie_;
+   const std::string bipIDCookiePath_;
 
    const int   heartbeatInterval_ = 30000 * 2;   // allow some toleration on heartbeat miss
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;

@@ -124,15 +124,20 @@ std::shared_ptr<ZmqBIP15XServerConnection>
 {
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
-      , zmqTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), ephemeral);
+      , zmqTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), ephemeral, false);
 }
 
 std::shared_ptr<ZmqBIP15XDataConnection>
-   ConnectionManager::CreateZMQBIP15XDataConnection(bool ephemeral) const
+   ConnectionManager::CreateZMQBIP15XDataConnection(bool ephemeral
+   , bool makeClientCookie, bool readServerCookie
+   , const std::string& cookieName) const
 {
    auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
       , ephemeral
-      , true); // Monitor the conn. It relies on a connection event.
+      , true  // Monitor the conn. It relies on a connection event.
+      , makeClientCookie
+      , readServerCookie
+      , cookieName);
    connection->SetContext(zmqContext_);
 
    return connection;

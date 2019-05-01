@@ -6,10 +6,6 @@
 
 using namespace std;
 
-//static const std::string kLocalAddrV4 = "127.0.0.1";
-static const std::string kClientCookieName = "clientID";
-static const std::string kIDCookieName = "serverID";
-
 // A call resetting the encryption-related data for individual connections.
 //
 // INPUT:  None
@@ -36,9 +32,27 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
    , const std::vector<std::string>& trustedClients, const uint64_t& id
-   , const bool& ephemeralPeers)
+   , const bool& ephemeralPeers, const bool& makeServerCookie
+   , const bool& readClientCookie, const std::string& cookiePath)
    : ZmqServerConnection(logger, context), id_(id)
+   , makeServerIDCookie_(makeServerCookie), useClientIDCookie_(readClientCookie)
+   , bipIDCookiePath_(cookiePath)
 {
+   if (makeServerIDCookie_ && readClientCookie) {
+      throw std::runtime_error("Cannot read client ID cookie and create ID " \
+         "cookie at the same time. Connection is incomplete.");
+   }
+
+   if (makeServerIDCookie_ && bipIDCookiePath_.empty()) {
+      throw std::runtime_error("ID cookie creation requested but no name " \
+         "supplied. Connection is incomplete.");
+   }
+
+   if (readClientCookie && bipIDCookiePath_.empty()) {
+      throw std::runtime_error("ID cookie reading requested but no name " \
+         "supplied. Connection is incomplete.");
+   }
+
    string datadir = SystemFilePaths::appDataLocation();
    string filename(SERVER_AUTH_PEER_FILENAME);
 
@@ -54,22 +68,46 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
       return trustedClients;
    };
 
-   genBIPIDCookie();
+   if (makeServerIDCookie_) {
+      genBIPIDCookie();
+   }
    heartbeatThread();
 }
 
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
-   , const std::function<std::vector<std::string>()> &cbTrustedClients)
+   , const std::function<std::vector<std::string>()> &cbTrustedClients
+   , const bool& makeServerCookie, const bool& readClientCookie
+   , const std::string& cookiePath)
    : ZmqServerConnection(logger, context)
-   , cbTrustedClients_(cbTrustedClients)
+   , cbTrustedClients_(cbTrustedClients), makeServerIDCookie_(makeServerCookie)
+   , useClientIDCookie_(readClientCookie), bipIDCookiePath_(cookiePath)
+
+
 {
+   if (makeServerIDCookie_ && readClientCookie) {
+      throw std::runtime_error("Cannot read client ID cookie and create ID " \
+         "cookie at the same time. Connection is incomplete.");
+   }
+
+   if (makeServerIDCookie_ && bipIDCookiePath_.empty()) {
+      throw std::runtime_error("ID cookie creation requested but no name " \
+         "supplied. Connection is incomplete.");
+   }
+
+   if (readClientCookie && bipIDCookiePath_.empty()) {
+      throw std::runtime_error("ID cookie reading requested but no name " \
+         "supplied. Connection is incomplete.");
+   }
+
    authPeers_ = make_shared<AuthorizedPeers>();
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    id_ = READ_UINT64_LE(bdID.getPtr());
 
-   genBIPIDCookie();
+   if (useClientIDCookie_) {
+      genBIPIDCookie();
+   }
    heartbeatThread();
 }
 
@@ -80,13 +118,11 @@ ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
    hbThread_.join();
 
    // If it exists, delete the identity cookie.
-   if (bipIDCookieExists_) {
-      const string absCookiePath =
-         SystemFilePaths::appDataLocation() + "/" + kIDCookieName;
-      if (SystemFileUtils::fileExist(absCookiePath)) {
-         if (!SystemFileUtils::rmFile(absCookiePath)) {
+   if (makeServerIDCookie_) {
+      if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
+         if (!SystemFileUtils::rmFile(bipIDCookiePath_)) {
             logger_->error("[{}] Unable to delete server identity cookie ({})."
-               , __func__, absCookiePath);
+               , __func__, bipIDCookiePath_);
          }
       }
    }
@@ -481,11 +517,11 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
       {
       case ZMQ_MSGTYPE_AEAD_SETUP:
       {
-         // If it's a local connection, get a cookie with the server's key.
+         // If it's a local connection, get a cookie with the client's key.
          if (useClientIDCookie_) {
             // Read the cookie with the key to check.
             BinaryData cookieKey(static_cast<size_t>(BTC_ECKEY_COMPRESSED_LENGTH));
-            if (!getClientIDCookie(cookieKey, kClientCookieName)) {
+            if (!getClientIDCookie(cookieKey)) {
                notifyListenerOnClientError(clientID, "missing client cookie");
                return false;
             }
@@ -830,30 +866,27 @@ AuthPeersLambdas ZmqBIP15XServerConnection::getAuthPeerLambda()
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XServerConnection::genBIPIDCookie()
 {
-   const string absCookiePath = SystemFilePaths::appDataLocation() + "/"
-      + kIDCookieName;
-   if (SystemFileUtils::fileExist(absCookiePath)) {
-      if (!SystemFileUtils::rmFile(absCookiePath)) {
+   if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
+      if (!SystemFileUtils::rmFile(bipIDCookiePath_)) {
          logger_->error("[{}] Unable to delete server identity cookie ({}). "
-            "Will not write a new cookie.", __func__, absCookiePath);
+            "Will not write a new cookie.", __func__, bipIDCookiePath_);
          return false;
       }
    }
 
    // Ensure that we only write the compressed key.
-   ofstream cookieFile(absCookiePath, ios::out | ios::binary);
+   ofstream cookieFile(bipIDCookiePath_, ios::out | ios::binary);
    const BinaryData ourIDKey = getOwnPubKey();
    if (ourIDKey.getSize() != BTC_ECKEY_COMPRESSED_LENGTH) {
       logger_->error("[{}] Server identity key ({}) is uncompressed. Will not "
-         "write the identity cookie.", __func__, absCookiePath);
+         "write the identity cookie.", __func__, bipIDCookiePath_);
       return false;
    }
 
    logger_->debug("[{}] Writing a new server identity cookie ({}).", __func__
-      ,  absCookiePath);
+      ,  bipIDCookiePath_);
    cookieFile.write(getOwnPubKey().getCharPtr(), BTC_ECKEY_COMPRESSED_LENGTH);
    cookieFile.close();
-   bipIDCookieExists_ = true;
 
    return true;
 }
@@ -874,8 +907,7 @@ void ZmqBIP15XServerConnection::addAuthPeer(const BinaryData& inKey
 // INPUT:  The accompanying key IP:Port or name. (const string)
 // OUTPUT: The buffer that will hold the compressed ID key. (BinaryData)
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf
-   , const string& cookieName)
+bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf)
 {
    if (!useClientIDCookie_) {
       logger_->error("[{}] Client identity cookie requested despite not being "
@@ -883,22 +915,20 @@ bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf
       return false;
    }
 
-   const string absCookiePath = SystemFilePaths::appDataLocation() + "/"
-      + cookieName;
-   if (!SystemFileUtils::fileExist(absCookiePath)) {
+   if (!SystemFileUtils::fileExist(bipIDCookiePath_)) {
       logger_->error("[{}] Client identity cookie ({}) doesn't exist. Unable "
-         "to verify server identity.", __func__, absCookiePath);
+         "to verify server identity.", __func__, bipIDCookiePath_);
       return false;
    }
 
    // Ensure that we only read a compressed key.
-   ifstream cookieFile(absCookiePath, ios::in | ios::binary);
+   ifstream cookieFile(bipIDCookiePath_, ios::in | ios::binary);
    cookieFile.read(cookieBuf.getCharPtr(), BIP151PUBKEYSIZE);
    cookieFile.close();
    if (!(CryptoECDSA().VerifyPublicKeyValid(cookieBuf))) {
       logger_->error("[{}] Client identity key ({}) isn't a valid compressed "
          "key. Unable to verify server identity.", __func__
-         , cookieBuf.toBinStr());
+         , cookieBuf.toHexStr());
       return false;
    }
 
