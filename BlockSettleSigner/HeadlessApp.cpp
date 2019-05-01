@@ -46,8 +46,6 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 
 void HeadlessAppObj::start()
 {
-   startInterface();
-
    logger_->debug("[{}] loading wallets from dir <{}>", __func__
       , settings_->getWalletsDir());
    const auto &cbProgress = [this](int cur, int total) {
@@ -69,12 +67,16 @@ void HeadlessAppObj::start()
    if (cbReady_) {
       cbReady_(true);
    }
+
+   startInterface();
 }
 
 void HeadlessAppObj::startInterface()
 {
    std::vector<std::string> args;
    BinaryData serverIDKey(BIP151PUBKEYSIZE);
+   BinaryData headlessIDKey(BIP151PUBKEYSIZE);
+
    switch (settings_->runMode()) {
    case bs::signer::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
@@ -93,10 +95,14 @@ void HeadlessAppObj::startInterface()
       break;
    case bs::signer::RunMode::fullgui:
       serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
+      headlessIDKey = connection_->getOwnPubKey();
       logger_->debug("[{}] starting fullgui", __func__);
       args.push_back("--guimode");
       args.push_back("fullgui");
       args.push_back("--server_id_key");
+      args.push_back(serverIDKey.toHexStr());
+
+      args.push_back("--headless_id_key");
       args.push_back(serverIDKey.toHexStr());
       break;
    default:

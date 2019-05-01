@@ -114,16 +114,19 @@ static int QMLApp(int argc, char **argv)
    const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
    QSplashScreen splashScreen(splashImage);
    splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
-#ifdef NDEBUG
-   // don't show slash screen on debug
-   splashScreen.show();
-#endif
 
    const auto settings = std::make_shared<SignerSettings>();
    if (!settings->loadSettings(app.arguments())) {
       return EXIT_FAILURE;
    }
 
+   // don't show slash screen on debug
+//#ifdef NDEBUG
+//   if (settings->runMode() == bs::signer::ui::RunMode::fullgui) {
+//      splashScreen.show();
+//   }
+//#endif
+splashScreen.show();
    try {
       logger = spdlog::basic_logger_mt("app_logger"
          , settings->logFileName().toStdString());

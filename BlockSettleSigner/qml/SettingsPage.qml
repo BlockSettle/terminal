@@ -219,51 +219,51 @@ Item {
             }
 
 
-            RowLayout {
-                id: row4
-                Layout.topMargin: 5
-                Layout.fillWidth: true
-                Layout.rightMargin: 10
-                Layout.leftMargin: 10
+//            RowLayout {
+//                id: row4
+//                Layout.topMargin: 5
+//                Layout.fillWidth: true
+//                Layout.rightMargin: 10
+//                Layout.leftMargin: 10
 
-                CustomLabel {
-                    text: qsTr("Signer Private Key")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
-                }
+//                CustomLabel {
+//                    text: qsTr("Signer Private Key")
+//                    Layout.minimumWidth: 125
+//                    Layout.preferredWidth: 125
+//                    Layout.maximumWidth: 125
+//                }
 
-                CustomLabel {
-                    Layout.alignment: Qt.AlignLeft
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                    text: signerSettings.signerPrvKey
-                    color: BSStyle.textColor
+//                CustomLabel {
+//                    Layout.alignment: Qt.AlignLeft
+//                    Layout.fillWidth: true
+//                    wrapMode: Text.Wrap
+//                    text: signerSettings.signerPrvKey
+//                    color: BSStyle.textColor
 
-                }
+//                }
 
-                CustomButton {
-                    text: qsTr("Select")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
-                    Layout.rightMargin: 6
-                    onClicked: {
-                        zmqPrivKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPrvKey)
-                        zmqPrivKeyDlg.open()
-                        zmqPrivKeyDlg.bsAccepted.connect(function(){
-                            signerSettings.signerPrvKey = JsHelper.fileUrlToPath(zmqPrivKeyDlg.fileUrl)
-                        })
-                    }
-                    FileDialog {
-                        id: zmqPrivKeyDlg
-                        visible: false
-                        title: "Select Signer Private Key"
-                        selectFolder: false
-                    }
-                }
-            }
+//                CustomButton {
+//                    text: qsTr("Select")
+//                    Layout.minimumWidth: 80
+//                    Layout.preferredWidth: 80
+//                    Layout.maximumWidth: 80
+//                    Layout.maximumHeight: 26
+//                    Layout.rightMargin: 6
+//                    onClicked: {
+//                        zmqPrivKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPrvKey)
+//                        zmqPrivKeyDlg.open()
+//                        zmqPrivKeyDlg.bsAccepted.connect(function(){
+//                            signerSettings.signerPrvKey = JsHelper.fileUrlToPath(zmqPrivKeyDlg.fileUrl)
+//                        })
+//                    }
+//                    FileDialog {
+//                        id: zmqPrivKeyDlg
+//                        visible: false
+//                        title: "Select Signer Private Key"
+//                        selectFolder: false
+//                    }
+//                }
+//            }
 
             RowLayout {
                 id: row5
@@ -296,8 +296,7 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.signerPubKey)
-                        qmlFactory.setClipboard(zmqPubKey)
+                        qmlFactory.setClipboard(signerSettings.headlessIDKeyStr)
                         btnZmqKeyCopy.text = qsTr("Copied")
                     }
                 }
@@ -309,11 +308,11 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        exportSignerPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
+                        //exportSignerPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
                         exportSignerPubKeyDlg.open()
                         exportSignerPubKeyDlg.accepted.connect(function(){
                             var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.signerPubKey)
-                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, zmqPubKey)
+                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, signerSettings.headlessIDKeyStr)
                         })
                     }
                     FileDialog {
@@ -324,28 +323,6 @@ Item {
                         selectExisting: false
                         nameFilters: [ "Key files (*.pub)", "All files (*)" ]
                         selectedNameFilter: "*.pub"
-                    }
-                }
-
-                CustomButton {
-                    text: qsTr("Select")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
-                    Layout.rightMargin: 6
-                    onClicked: {
-                        zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
-                        zmqPubKeyDlg.open()
-                        zmqPubKeyDlg.bsAccepted.connect(function(){
-                            signerSettings.signerPubKey = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
-                        })
-                    }
-                    FileDialog {
-                        id: zmqPubKeyDlg
-                        visible: false
-                        title: "Select Signer Public Key"
-                        selectFolder: false
                     }
                 }
             }

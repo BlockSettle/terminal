@@ -37,6 +37,9 @@ static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
 static const QString srvIDKeyName = QString::fromStdString("server_id_key");
 static QString srvIDKeyHelp = QObject::tr("The server's compressed BIP 150 ID key (hex)");
 
+static const QString headlessIDKeyName = QString::fromStdString("headless_id_key");
+static QString headlessIDKeyHelp = QObject::tr("The headless's compressed BIP 150 ID key (hex)");
+
 static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
 static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
 
@@ -62,6 +65,7 @@ SignerSettings::SignerSettings(const QString &fileName)
       { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
       { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
       { ServerIDKeyStr,    SettingDef(QStringLiteral("ServerIDKeyStr")) },
+      { HeadlessIDKeyStr,  SettingDef(QStringLiteral("HeadlessIDKeyStr")) },
       { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
       { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
@@ -215,6 +219,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
    parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ runModeName, runModeHelp, runModeName });
    parser.addOption({ srvIDKeyName, srvIDKeyHelp, srvIDKeyName });
+   parser.addOption({ headlessIDKeyName, headlessIDKeyHelp, headlessIDKeyName });
    parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
    //parser.addOption({ signName, signHelp, QObject::tr("filename") });
    parser.addOption({ woName, woHelp });
@@ -269,6 +274,10 @@ bool SignerSettings::loadSettings(const QStringList &args)
       set(ServerIDKeyStr, parser.value(srvIDKeyName), false);
    }
 
+   if (parser.isSet(headlessIDKeyName)) {
+      set(HeadlessIDKeyStr, parser.value(headlessIDKeyName), false);
+   }
+
 //   if (parser.isSet(signName)) {
 //      if (!parser.isSet(headlessName)) {
 //         throw std::logic_error("Batch offline signing is possible only in headless mode");
@@ -307,13 +316,13 @@ QString SignerSettings::dirDocuments() const
    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-void SignerSettings::setServerIDKeyStr(const QString& inKeyStr)
-{
-   if (inKeyStr == get(ServerIDKeyStr).toString()) {
-      return;
-   }
-   set(ServerIDKeyStr, inKeyStr);
-}
+//void SignerSettings::setServerIDKeyStr(const QString& inKeyStr)
+//{
+//   if (inKeyStr == get(ServerIDKeyStr).toString()) {
+//      return;
+//   }
+//   set(ServerIDKeyStr, inKeyStr);
+//}
 
 void SignerSettings::setExportWalletsDir(const QString &val)
 {
