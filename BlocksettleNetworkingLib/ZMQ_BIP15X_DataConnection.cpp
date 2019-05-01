@@ -61,6 +61,9 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
                break;
             }
          }
+         if (!bip151Connection_ || (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)) {
+            continue;
+         }
          const auto curTime = std::chrono::steady_clock::now();
          const auto diff =
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -293,8 +296,8 @@ void ZmqBIP15XDataConnection::triggerHeartbeat()
    auto& packet = msg.getNextPacket();
 
    // An error message is already logged elsewhere if the send fails.
-   if (sendPacket(packet.toBinStr()), false) {
-      lastHeartbeat_ = chrono::steady_clock::now();
+   if (!sendPacket(packet.toBinStr()), false) {  // sendPacket already sets the timestamp
+      notifyOnDisconnected();
    }
 }
 
