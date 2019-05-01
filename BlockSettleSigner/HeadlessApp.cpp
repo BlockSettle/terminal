@@ -30,9 +30,11 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    const auto &cbTrustedClients = [this] {
       return settings_->trustedInterfaces();
    };
+
+   const std::string absCookiePath =
+      SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
-      , zmqContext, cbTrustedClients);
-   adapterConn->enableClientCookieUsage(); // We need a cookie from the client.
+      , zmqContext, cbTrustedClients, false, true, absCookiePath);
    adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
 
    if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
@@ -154,6 +156,7 @@ void HeadlessAppObj::onlineProcessing()
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    const BinaryData bdID = CryptoPRNG::generateRandom(8);
    std::vector<std::string> trustedTerms;
+
    if (settings_->getTermIDKeyStr().empty()) {
       trustedTerms = settings_->trustedTerminals();
    }
@@ -170,8 +173,12 @@ void HeadlessAppObj::onlineProcessing()
       std::string trustedTermStr = "127.0.0.1:" + settings_->getTermIDKeyStr();
       trustedTerms.push_back(trustedTermStr);
    }
+
+   const std::string absCookiePath =
+      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false);
+      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false, true, false
+      , absCookiePath);
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_

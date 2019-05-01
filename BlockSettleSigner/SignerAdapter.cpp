@@ -26,8 +26,10 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    // When creating the client connection, we need to generate a cookie for the
    // server connection in order to enable verification. We also need to add
    // the key we got on the command line to the list of trusted keys.
+   const std::string absCookiePath =
+      SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true
-      , true, true);
+      , true, true, false, absCookiePath);
    adapterConn->SetContext(zmqContext);
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
