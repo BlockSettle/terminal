@@ -490,6 +490,15 @@ const BinaryData& AddressEntry_P2SH::getAddress() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+AddressEntryType AddressEntry_P2SH::getType() const
+{
+   auto nestedType = AddressEntry::getType();
+   auto baseType = getPredecessor()->getType();
+
+   return AddressEntryType(baseType | nestedType);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //// P2WSH
 ////////////////////////////////////////////////////////////////////////////////
 const BinaryData& AddressEntry_P2WSH::getPreimage() const
@@ -580,11 +589,22 @@ const BinaryData& AddressEntry_P2WSH::getScript() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+AddressEntryType AddressEntry_P2WSH::getType() const
+{
+   auto nestedType = AddressEntry::getType();
+   auto baseType = getPredecessor()->getType();
+
+   return AddressEntryType(baseType | nestedType);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
 //// static methods
 ////////////////////////////////////////////////////////////////////////////////
 shared_ptr<AddressEntry> AddressEntry::instantiate(
    shared_ptr<AssetEntry> assetPtr, AddressEntryType aeType)
 {
+   /*creates an address entry based on an asset and an address type*/
    shared_ptr<AddressEntry> addressPtr = nullptr;
 
    bool isCompressed = aeType && ADDRESS_COMPRESSED_MASK;
@@ -637,4 +657,51 @@ shared_ptr<AddressEntry> AddressEntry::instantiate(
    }
 
    return addressPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+uint8_t AddressEntry::getPrefixByte(AddressEntryType aeType)
+{
+   /*return the prefix bye for a given AddressEntryType*/
+
+   auto nested = aeType & ADDRESS_NESTED_MASK;
+   if (nested != 0)
+   {
+      switch (nested)
+      {
+      case AddressEntryType_P2SH:
+         return NetworkConfig::getScriptHashPrefix();
+
+      case AddressEntryType_P2WSH:
+         return SCRIPT_PREFIX_P2WSH;
+
+      default:
+         throw AddressException("unexpected AddressEntry nested type");
+      }
+   }
+
+   switch (aeType & ADDRESS_TYPE_MASK)
+   {
+   case AddressEntryType_Default:
+      throw AddressException("invalid address entry type");
+      break;
+
+   case AddressEntryType_P2PKH:
+      return NetworkConfig::getPubkeyHashPrefix();
+
+   case AddressEntryType_P2PK:
+      throw AddressException("native P2PK doesnt come hashed");
+
+   case AddressEntryType_P2WPKH:
+      return SCRIPT_PREFIX_P2WPKH;
+
+   case AddressEntryType_Multisig:
+      throw AddressException("native multisig scripts do not come hashed");
+
+   default:
+      throw AddressException("invalid AddressEntryType");
+   }
+
+   throw AddressException("invalid AddressEntryType");
+   return UINT8_MAX;
 }

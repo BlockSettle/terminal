@@ -368,6 +368,26 @@ const BinaryData& AssetEntry_Multisig::getPrivateEncryptionKeyId(void) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetEntry_Single> AssetEntry_Single::getPublicCopy()
+{
+   auto woCopy = make_shared<AssetEntry_Single>(
+      index_, getAccountID(), pubkey_, nullptr);
+
+   return woCopy;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetEntry_Single> AssetEntry_BIP32Root::getPublicCopy()
+{
+   auto pubkey = getPubKey();
+   auto woCopy = make_shared<AssetEntry_BIP32Root>(
+      index_, getAccountID(), pubkey, nullptr,
+      chaincode_, depth_, leafID_);
+
+   return woCopy;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //// Asset
 ////////////////////////////////////////////////////////////////////////////////
@@ -417,7 +437,8 @@ BinaryData Asset_PrivateKey::serialize() const
 {
    BinaryWriter bw;
    bw.put_uint8_t(PRIVKEY_BYTE);
-   bw.put_int32_t(id_);
+   bw.put_var_int(id_.getSize());
+   bw.put_BinaryData(id_);
    bw.put_var_int(data_.getSize());
    bw.put_BinaryData(data_);
 
@@ -505,10 +526,11 @@ shared_ptr<Asset_EncryptedData> Asset_EncryptedData::deserialize(
    case PRIVKEY_BYTE:
    {
       //id
-      auto&& id = brr.get_int32_t();
+      auto len = brr.get_var_int();
+      auto&& id = brr.get_BinaryData(len);
 
       //data
-      auto len = brr.get_var_int();
+      len = brr.get_var_int();
       auto&& data = brr.get_SecureBinaryData(len);
 
       //cipher
@@ -716,6 +738,16 @@ void PeerPublicData::clear()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+shared_ptr<MetaData> PeerPublicData::copy() const
+{
+   auto copyPtr = make_shared<PeerPublicData>(getAccountID(), getIndex());
+   copyPtr->names_ = names_;
+   copyPtr->publicKey_ = publicKey_;
+
+   return copyPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //// PeerRootKey
 ////////////////////////////////////////////////////////////////////////////////
@@ -804,6 +836,16 @@ void PeerRootKey::set(const string& desc, const SecureBinaryData& key)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+shared_ptr<MetaData> PeerRootKey::copy() const
+{
+   auto copyPtr = make_shared<PeerRootKey>(getAccountID(), getIndex());
+   copyPtr->publicKey_ = publicKey_;
+   copyPtr->description_ = description_;
+
+   return copyPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //// PeerRootSignature
 ////////////////////////////////////////////////////////////////////////////////
@@ -882,4 +924,14 @@ void PeerRootSignature::set(
 
    publicKey_ = key;
    signature_ = sig;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<MetaData> PeerRootSignature::copy() const
+{
+   auto copyPtr = make_shared<PeerRootSignature>(getAccountID(), getIndex());
+   copyPtr->publicKey_ = publicKey_;
+   copyPtr->signature_ = signature_;
+
+   return copyPtr;
 }

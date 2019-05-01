@@ -41,13 +41,20 @@
 #define WALLETMETA_DBNAME "WalletHeader"
 
 #define VERSION_MAJOR      2
-#define VERSION_MINOR      0
+#define VERSION_MINOR      1
 #define VERSION_REVISION   0
  
 class WalletException : public std::runtime_error
 {
 public:
    WalletException(const std::string& msg) : std::runtime_error(msg)
+   {}
+};
+
+class NoAssetException : public std::runtime_error
+{
+public:
+   NoAssetException(const std::string& msg) : std::runtime_error(msg)
    {}
 };
 
@@ -180,10 +187,9 @@ protected:
    LMDB* db_ = nullptr;
    const std::string dbName_;
 
-   std::map<BinaryData, std::shared_ptr<AddressEntry>> addresses_;
    std::shared_ptr<DecryptedDataContainer> decryptedData_;
-   std::set<std::shared_ptr<AddressAccount>> accounts_;
-   std::set<std::shared_ptr<MetaDataAccount>> metaDataAccounts_;
+   std::map<BinaryData, std::shared_ptr<AddressAccount>> accounts_;
+   std::map<MetaAccountType, std::shared_ptr<MetaDataAccount>> metaDataAccounts_;
    BinaryData mainAccount_;
 
    ////
@@ -218,8 +224,6 @@ protected:
    void putData(BinaryWriter& key, BinaryWriter& data);
 
    //address type methods
-   void updateAddressSet(std::shared_ptr<AddressEntry>);
-   void writeAddressType(std::shared_ptr<AddressEntry>);
    AddressEntryType getAddrTypeForAccount(const BinaryData& ID);
 
    void loadMetaAccounts(void);
@@ -228,10 +232,6 @@ protected:
    virtual void putHeaderData(
       const BinaryData& parentID,
       const BinaryData& walletID);
-
-   std::shared_ptr<AddressEntry> getAddressEntryForAsset(
-      std::shared_ptr<AssetEntry>,
-      AddressEntryType);
 
    virtual void updateHashMap(void);
    virtual void readFromFile(void) = 0;
@@ -259,6 +259,8 @@ public:
       AddressEntryType aeType = AddressEntryType_Default);
    std::shared_ptr<AddressEntry> getNewAddress(const BinaryData& accountID,
       AddressEntryType);
+   std::shared_ptr<AddressEntry> getNewChangeAddress(
+      AddressEntryType aeType = AddressEntryType_Default);
 
    std::string getID(void) const;
    virtual ReentrantLock lockDecryptedContainer(void);
@@ -275,14 +277,18 @@ public:
    bool hasScrAddr(const BinaryData& scrAddr);
    const std::pair<BinaryData, AddressEntryType>& getAssetIDForAddr(const BinaryData& scrAddr);
    AddressEntryType getAddrTypeForID(const BinaryData& ID);
-   std::shared_ptr<AddressEntry> getAddressEntryForID(
-      const BinaryData&, AddressEntryType aeType = AddressEntryType_Default);
-   const std::string& getFilename(void) const;
+   std::shared_ptr<AddressEntry> getAddressEntryForID(const BinaryData&) const;
+   void shutdown(void);
 
    void setPassphrasePromptLambda(
       std::function<SecureBinaryData(const BinaryData&)> lambda)
    {
       decryptedData_->setPassphrasePromptLambda(lambda);
+   }
+   
+   void resetPassphrasePromptLambda(void)
+   {
+      decryptedData_->resetPassphraseLambda();
    }
 
    void addMetaAccount(MetaAccountType);
@@ -292,13 +298,19 @@ public:
    const std::string& getDbFilename(void) const;
    std::shared_ptr<LMDBEnv> getDbEnv(void) const { return dbEnv_; }
 
+   std::set<BinaryData> getAccountIDs(void) const;
+   std::map<BinaryData, std::shared_ptr<AddressEntry>> getUsedAddressMap(void) const;
+
    //virtual
    virtual std::set<BinaryData> getAddrHashSet();
    virtual const SecureBinaryData& getDecryptedValue(
       std::shared_ptr<Asset_PrivateKey>) = 0;
 
+   static std::string forkWathcingOnly(const std::string&);
+
    //static
-   static std::shared_ptr<AssetWallet> loadMainWalletFromFile(const std::string& path);
+   static std::shared_ptr<AssetWallet> loadMainWalletFromFile(
+      const std::string& path);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -338,6 +350,10 @@ protected:
       std::shared_ptr<DerivationScheme>,
       std::shared_ptr<AssetEntry>);
 
+private:
+   static void copyPublicData(
+      std::shared_ptr<AssetWallet_Single>, std::shared_ptr<LMDBEnv>);
+
 public:
    //tors
    AssetWallet_Single(std::shared_ptr<WalletMeta> metaPtr) :
@@ -349,16 +365,24 @@ public:
    const SecureBinaryData& getPublicRoot(void) const;
    std::shared_ptr<AssetEntry> getAccountRoot(const BinaryData& accountID) const;
    const SecureBinaryData& getArmory135Chaincode(void) const;
+   
    const BinaryData& createBIP32Account(
       std::shared_ptr<AssetEntry_BIP32Root> parentNode,
       std::vector<unsigned> derPath,
       bool isMain = false);
+   const BinaryData& createBIP32Account(
+      std::shared_ptr<AssetEntry_BIP32Root> parentNode,
+      std::vector<unsigned> derPath,
+      std::shared_ptr<AccountType_BIP32_Custom>);
 
    bool isWatchingOnly(void) const;
 
    std::shared_ptr<AssetEntry> getMainAccountAssetForIndex(unsigned) const;
    unsigned getMainAccountAssetCount(void) const;
    const BinaryData& getMainAccountID(void) const { return mainAccount_; }
+
+   const SecureBinaryData& getDecryptedPrivateKeyForAsset(
+      std::shared_ptr<AssetEntry_Single>);
 
    //virtual
    const SecureBinaryData& getDecryptedValue(
@@ -426,8 +450,6 @@ public:
       unsigned M,
       unsigned lookup = UINT32_MAX);
 
-
-
    //local
 };
 
@@ -435,11 +457,11 @@ public:
 class ResolverFeed_AssetWalletSingle : public ResolverFeed
 {
 private:
-   std::shared_ptr<AssetWallet> wltPtr_;
+   std::shared_ptr<AssetWallet_Single> wltPtr_;
 
 protected:
-   std::map<BinaryDataRef, BinaryDataRef> hash_to_preimage_;
-   std::map<BinaryDataRef, std::shared_ptr<AssetEntry_Single>> pubkey_to_asset_;
+   std::map<BinaryData, BinaryData> hash_to_preimage_;
+   std::map<BinaryData, std::shared_ptr<AssetEntry_Single>> pubkey_to_asset_;
 
 private:
 
@@ -476,36 +498,187 @@ private:
       }
    }
 
+   std::pair<std::shared_ptr<AssetEntry>, AddressEntryType>
+      getAssetPairForKey(const BinaryData& key)
+   {
+      //run through accounts
+      auto& accounts = wltPtr_->accounts_;
+      for (auto& accPair : accounts)
+      {
+         /*
+         Accounts store script hashes with their relevant prefix, resolver
+         asks uses unprefixed hashes as found in the actual outputs. Hence,
+         all possible script prefixes will be prepended to the key to
+         look for the relevant asset ID
+         */
+
+         auto accPtr = accPair.second;
+
+         auto prefixSet = accPtr->getAddressTypeSet();
+         auto& hashMap = accPtr->getAddressHashMap();
+         std::set<uint8_t> usedPrefixes;
+
+         for (auto& addrType : prefixSet)
+         {
+            BinaryWriter prefixedKey;
+            try
+            {
+               auto prefix = AddressEntry::getPrefixByte(addrType);
+
+               //skip prefixes already used
+               auto insertIter = usedPrefixes.insert(prefix);
+               if (!insertIter.second)
+                  continue;
+
+               prefixedKey.put_uint8_t(prefix);
+            }
+            catch (AddressException&)
+            {}
+
+            prefixedKey.put_BinaryData(key);
+
+            auto iter = hashMap.find(prefixedKey.getData());
+            if (iter == hashMap.end())
+               continue;
+
+            /*
+            We have a hit for this prefix, return the asset and its
+            address type. 
+            
+            Note that we can't use addrType, as it may use a prefix 
+            shared across several address types (i.e. P2SH-P2PK and 
+            P2SH-P2WPKH).
+
+            Therefor, we return the address type attached to hash 
+            rather the one used to roll the prefix.
+            */
+
+            auto asset =
+               accPtr->getAssetForID(iter->second.first.getSliceRef(4, 8));
+            return std::make_pair(asset, iter->second.second);
+         }
+      }
+
+      return std::make_pair(nullptr, AddressEntryType_Default);
+   }
+
 public:
    //tors
    ResolverFeed_AssetWalletSingle(std::shared_ptr<AssetWallet_Single> wltPtr) :
       wltPtr_(wltPtr)
-   {
-      auto& addrMap = wltPtr->addresses_;
-      for (auto& addr : addrMap)
-         addToMap(addr.second);
-   }
+   {}
 
    //virtual
    BinaryData getByVal(const BinaryData& key)
    {
-      //find id for the key
+      //check cached hits first
       auto iter = hash_to_preimage_.find(key);
-      if (iter == hash_to_preimage_.end())
-         throw std::runtime_error("invalid value");
+      if (iter != hash_to_preimage_.end())
+         return iter->second;
 
-      return iter->second;
+      //short of that, try to get the asset for this key
+      auto assetPair = getAssetPairForKey(key);
+      if (assetPair.first == nullptr ||
+         assetPair.second == AddressEntryType_Default)
+         throw std::runtime_error("could not resolve key");
+
+      auto addrPtr = AddressEntry::instantiate(
+         assetPair.first, assetPair.second);
+
+      /*
+      We cache all hits at this stage to speed up further resolution.
+
+      In the case of nested addresses, we have to cache the predessors
+      anyways as they are most likely going to be requested later, yet
+      there is no guarantee the account address hashmap which our
+      resolution is based on carries the predecessor hashes. addToMap
+      takes care of this for us.
+      */
+
+      addToMap(addrPtr);
+      return addrPtr->getPreimage();
    }
+
 
    virtual const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
    {
+      //check cache first
       auto pubkeyref = BinaryDataRef(pubkey);
       auto iter = pubkey_to_asset_.find(pubkeyref);
-      if (iter == pubkey_to_asset_.end())
-         throw std::runtime_error("invalid value");
+      if (iter != pubkey_to_asset_.end())
+         return wltPtr_->getDecryptedPrivateKeyForAsset(iter->second);
 
-      const auto& privkeyAsset = iter->second->getPrivKey();
-      return wltPtr_->getDecryptedValue(privkeyAsset);
+      /*
+      Lacking a cache hit, we need to get the asset for this pubkey. All
+      pubkeys are carried as assets, and all assets are expressed as all
+      possible script hash variations within an account's hash map.
+
+      Therefor, converting this pubkey to one of the eligible script hash
+      variation should yield a hit from the key to asset resolution logic.
+
+      From that asset object, we can then get the private key.
+
+      Conveniently, the only hash ever used on public keys is
+      BtcUtils::getHash160
+      */
+
+      auto&& hash = BtcUtils::getHash160(pubkey);
+      auto assetPair = getAssetPairForKey(pubkey);
+      if (assetPair.first == nullptr)
+         throw NoAssetException("invalid pubkey");
+
+      auto assetSingle =
+         std::dynamic_pointer_cast<AssetEntry_Single>(assetPair.first);
+      if (assetSingle == nullptr)
+         throw std::logic_error("invalid pubkey");
+
+      return wltPtr_->getDecryptedPrivateKeyForAsset(assetSingle);
+
+      /*
+      In case of NoAssetException failure, it is still possible this public key 
+      is used in an exotic script (multisig or other).
+      Use ResolverFeed_AssetWalletSingle_Exotic for a wallet carrying
+      that kind of scripts.
+
+      logic_error means the asset was found but it does not carry the private 
+      key.
+
+      DecryptedDataContainerException means the wallet failed to decrypt the 
+      encrypted pubkey (bad passphrase or unlocked wallet most likely).
+      */
+   }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class ResolverFeed_AssetWalletSingle_Exotic : 
+   public ResolverFeed_AssetWalletSingle
+{
+   //tors
+   ResolverFeed_AssetWalletSingle_Exotic(
+      std::shared_ptr<AssetWallet_Single> wltPtr) :
+      ResolverFeed_AssetWalletSingle(wltPtr)
+   {}
+
+   //virtual
+   const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
+   {
+      try
+      {
+         return ResolverFeed_AssetWalletSingle::getPrivKeyForPubkey(pubkey);
+      }
+      catch (NoAssetException&)
+      {}
+      
+      /*
+      Failed to get the asset for the pukbey by hashing it, run through
+      all assets linearly instead.
+      */
+
+      //grab account
+
+      //grab asset account
+
+      //run through assets, check pubkeys
    }
 };
 
@@ -541,7 +714,7 @@ public:
    {
       for (auto& addr_account : wltPtr->accounts_)
       {
-         for (auto& asset_account : addr_account->getAccountMap())
+         for (auto& asset_account : addr_account.second->getAccountMap())
          {
             for (unsigned i = 0; i < asset_account.second->getAssetCount(); i++)
             {

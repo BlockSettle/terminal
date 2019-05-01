@@ -137,8 +137,10 @@ shared_ptr<AssetEntry_Single>
    nextPrivkeySBD.clear();
 
    //instantiate new encrypted key object
+   auto privKeyID = accountID;
+   privKeyID.append(WRITE_UINT32_BE(index));
    auto nextPrivKey = make_shared<Asset_PrivateKey>(
-      index, encryptedNextPrivKey, move(newCipher));
+      privKeyID, encryptedNextPrivKey, move(newCipher));
 
    //instantiate and return new asset entry
    return make_shared<AssetEntry_Single>(
@@ -236,8 +238,10 @@ shared_ptr<AssetEntry_Single>
       newCipher.get(), node.getPrivateKey());
 
    //instantiate new encrypted key object
+   auto privKeyID = accountID;
+   privKeyID.append(WRITE_UINT32_BE(index));
    auto nextPrivKey = make_shared<Asset_PrivateKey>(
-      index, encryptedNextPrivKey, move(newCipher));
+      privKeyID, encryptedNextPrivKey, move(newCipher));
 
    //instantiate and return new asset entry
    auto nextPubkey = node.movePublicKey();

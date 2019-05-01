@@ -23,16 +23,16 @@ public:
    {}
 };
 
-#define ADDRESS_TYPE_PREFIX   0xC0
+#define ADDRESS_TYPE_PREFIX   0xD8
 
 ////
 enum AddressEntryType
 {
    AddressEntryType_Default = 0,
-   AddressEntryType_P2PKH,
-   AddressEntryType_P2PK,
-   AddressEntryType_P2WPKH,
-   AddressEntryType_Multisig,
+   AddressEntryType_P2PKH = 1,
+   AddressEntryType_P2PK = 2,
+   AddressEntryType_P2WPKH = 3,
+   AddressEntryType_Multisig = 4,
    AddressEntryType_Compressed = 0x10000000,
    AddressEntryType_P2SH = 0x40000000,
    AddressEntryType_P2WSH = 0x80000000
@@ -62,7 +62,7 @@ public:
    virtual ~AddressEntry(void) = 0;
 
    //local
-   AddressEntryType getType(void) const { return type_; }
+   virtual AddressEntryType getType(void) const { return type_; }
 
    //virtual
    virtual const BinaryData& getID(void) const = 0;
@@ -88,6 +88,7 @@ public:
    //static
    static std::shared_ptr<AddressEntry> instantiate(
       std::shared_ptr<AssetEntry>, AddressEntryType);
+   static uint8_t getPrefixByte(AddressEntryType);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -268,6 +269,8 @@ public:
    const BinaryData& getScript(void) const;
    std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
 
+   AddressEntryType getType(void) const;
+
    //size (accounts for outpoint and sequence)
    size_t getInputSize(void) const;
 };
@@ -299,6 +302,8 @@ public:
 
    const BinaryData& getScript(void) const;
    std::shared_ptr<ScriptRecipient> getRecipient(uint64_t) const;
+
+   AddressEntryType getType(void) const;
 
    //size (accounts for outpoint and sequence)
    size_t getInputSize(void) const { return 41; }

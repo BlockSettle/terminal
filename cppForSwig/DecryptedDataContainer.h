@@ -41,7 +41,7 @@ class DecryptedDataContainer : public Lockable
    struct DecryptedData
    {
       std::map<BinaryData, std::unique_ptr<DecryptedEncryptionKey>> encryptionKeys_;
-      std::map<unsigned, std::unique_ptr<DecryptedPrivateKey>> privateKeys_;
+      std::map<BinaryData, std::unique_ptr<DecryptedPrivateKey>> privateKeys_;
    };
 
 private:
