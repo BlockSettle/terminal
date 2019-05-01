@@ -244,9 +244,7 @@ namespace bs {
 
          mutable std::map<BinaryData, std::vector<uint64_t> >  addressBalanceMap_;
          mutable std::map<BinaryData, uint32_t>                addressTxNMap_;
-         mutable std::atomic_bool   updateAddrBalance_{ false };
          mutable std::atomic_bool   updateAddrTxN_{ false };
-         mutable std::map<bs::Address, std::vector<std::function<void(std::vector<uint64_t>)>>> cbBal_;
          mutable std::map<bs::Address, std::vector<std::function<void(uint32_t)>>>              cbTxN_;
 
          class UtxoFilterAdapter : public bs::UtxoReservation::Adapter

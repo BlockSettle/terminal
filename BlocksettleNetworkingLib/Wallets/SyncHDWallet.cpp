@@ -234,7 +234,7 @@ void hd::Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 }
 
 std::vector<std::string> hd::Wallet::registerWallet(
-   const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+   const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
    std::vector<std::string> result;
    for (const auto &leaf : getLeaves()) 

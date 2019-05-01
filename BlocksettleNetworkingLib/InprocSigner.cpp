@@ -234,7 +234,7 @@ bs::signer::RequestId InprocSigner::customDialogRequest(bs::signer::ui::DialogTy
 
 bs::signer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
 {
-   walletsMgr_->setChainCode(userId);
+   //walletsMgr_->setChainCode(userId);
    QTimer::singleShot(1, [this] { emit UserIdSet(); });
    return seqId_++;
 }
@@ -310,7 +310,7 @@ void InprocSigner::syncWalletInfo(const std::function<void(std::vector<bs::sync:
    const auto settlWallet = walletsMgr_->getSettlementWallet();
    if (settlWallet) {
       result.push_back({ bs::sync::WalletFormat::Settlement, settlWallet->walletId(), settlWallet->name()
-         , settlWallet->description(), settlWallet->networkType(), true });
+         , "", settlWallet->networkType(), true });
    }
    cb(result);
 }

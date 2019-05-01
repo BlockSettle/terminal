@@ -60,12 +60,9 @@ namespace bs {
             void setUserId(const BinaryData &usedId);
             bool deleteRemotely();
 
-            void registerWallet(const std::shared_ptr<ArmoryObject> &, bool asNew = false);
-            void setArmory(const std::shared_ptr<ArmoryObject> &);
-
             std::vector<std::string> registerWallet(
-               const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
-            void setArmory(const std::shared_ptr<ArmoryConnection> &);
+               const std::shared_ptr<ArmoryObject> &, bool asNew = false);
+            void setArmory(const std::shared_ptr<ArmoryObject> &);
             bool startRescan(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr, const cb_scan_write_last &cbw = nullptr);
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }

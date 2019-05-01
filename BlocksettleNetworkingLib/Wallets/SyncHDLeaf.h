@@ -85,7 +85,7 @@ namespace bs {
             int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
 
             void updateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
-            bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
+            std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
             bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const override;
             bool getActiveAddressCount(const std::function<void(size_t)> &) const override;
 
@@ -137,7 +137,7 @@ namespace bs {
             using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
 
          protected:
-            virtual bs::Address createAddress(const AddrPoolKey &, const CbAddress &, bool signal = true);
+            virtual bs::Address createAddress(const AddrPoolKey &, bool signal = true);
             void reset();
             bs::hd::Path getPathForAddress(const bs::Address &) const;
             void activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &);
@@ -218,8 +218,7 @@ namespace bs {
             std::set<AddrPoolKey>   activeScanAddresses_;
 
          private:
-            bs::Address createAddress(AddressEntryType aet, const CbAddress &cb = nullptr
-               , bool isInternal = false);
+            bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             void onScanComplete();
@@ -243,8 +242,8 @@ namespace bs {
             void setUserId(const BinaryData &) override;
 
          protected:
-            bs::Address createAddress(const AddrPoolKey &, const CbAddress &
-               , bool signal = true) override;
+            bs::Address createAddress(
+               const AddrPoolKey &, bool signal = true) override;
             void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
 
          private:

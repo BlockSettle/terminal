@@ -438,27 +438,21 @@ bool hd::Leaf::containsHiddenAddress(const bs::Address &addr) const
 }
 
 // Return an external-facing address.
-bs::Address hd::Leaf::getNewExtAddress(AddressEntryType aet, const CbAddress &cb)
+bs::Address hd::Leaf::getNewExtAddress(AddressEntryType aet)
 {
-   return createAddress(aet, cb, false);
+   return createAddress(aet, false);
 }
 
 // Return an internal-facing address.
-bs::Address hd::Leaf::getNewIntAddress(AddressEntryType aet, const CbAddress &cb)
+bs::Address hd::Leaf::getNewIntAddress(AddressEntryType aet)
 {
-   if (isExtOnly_) {
-      if (cb) {
-         cb({});
-      }
-      return {};
-   }
-   return createAddress(aet, cb, true);
+   return createAddress(aet, true);
 }
 
 // Return a change address.
-bs::Address hd::Leaf::getNewChangeAddress(AddressEntryType aet, const CbAddress &cb)
+bs::Address hd::Leaf::getNewChangeAddress(AddressEntryType aet)
 {
-   return createAddress(aet, cb, isExtOnly_ ? false : true);
+   return createAddress(aet, isExtOnly_ ? false : true);
 }
 
 std::vector<BinaryData> hd::Leaf::getAddrHashes() const
@@ -501,7 +495,7 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesInt() const
 }
 
 std::vector<std::string> hd::Leaf::registerWallet(
-   const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
+   const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
    setArmory(armory);
 
@@ -545,35 +539,24 @@ void hd::Leaf::unregisterWallet()
    btcWalletInt_.reset();
 }
 
-bs::Address hd::Leaf::createAddress(AddressEntryType aet, const CbAddress &cb, bool isInternal)
+bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
 {
    bs::hd::Path addrPath;
-   if (isInternal) {
-      if (isExtOnly_) {
-         if (cb) {
-            cb({});
-         }
-         return {};
-      }
+   if (isInternal && !isExtOnly_)
+   {
       addrPath.append(addrTypeInternal);
       addrPath.append(lastIntIdx_++);
    }
-   else {
+   else 
+   {
       addrPath.append(addrTypeExternal);
       addrPath.append(lastExtIdx_++);
    }
-   return createAddress({ addrPath, aet }, cb);
+   return createAddress({ addrPath, aet });
 }
 
-bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb, bool signal)
+bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, bool signal)
 {
-   const bool isInternal = (key.path.get(-2) == addrTypeInternal);
-   if (isInternal && isExtOnly_)
-      if (cb) {
-         cb({});
-      }
-      return {};
-
    bs::Address result;
    AddrPoolKey keyCopy = key;
    if (key.aet == AddressEntryType_Default)
@@ -600,13 +583,6 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb,
       auto topUpCb = [promPtr](void)
       {
          promPtr->set_value(true);
-         else {
-            logger_->warn("[createAddress] failed to find {} in the pool ({}) after top-up"
-               , keyCopy.path.toString(), addressPool_.size());
-            if (cb) {
-               cb({});
-            }
-         }
       };
 
       bool extInt = true;
@@ -620,15 +596,12 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, const CbAddress &cb,
          throw std::range_error("did not increase address pool enough");
    }
 
-   if (addrToIndex_.find(result.unprefixed()) != addrToIndex_.end()) {
-      return result;
-   }
-
    addAddress(result, key.path.toString(), keyCopy.aet);
 
    if (signal) {
       emit addressAdded();
    }
+
    return result;
 }
 
@@ -674,7 +647,8 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          fut.wait();
       }
       
-      cb();
+      if(cb)
+         cb();
    };
 
    unsigned lookup = extAddressPoolSize_;
@@ -789,34 +763,40 @@ int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, Addr
 
 void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &cb)
 {
-   if (!isBalanceAvailable()) {
+   if (!isBalanceAvailable())
       return;
-   }
+
    auto prevBalances = std::make_shared<std::vector<uint64_t>>();
 
    const auto &cbBalances = [this, cb, prevBalances]
-   (ReturnMessage<std::vector<uint64_t>> balanceVector)->void {
-      try {
+      (ReturnMessage<std::vector<uint64_t>> balanceVector)->void
+   {
+      try 
+      {
          auto bv = balanceVector.get();
-         if (bv.size() < 4) {
+         if (bv.size() < 4)
             return;
-         }
-         if (prevBalances->size() == 4) {
-            for (size_t i = 0; i < 4; ++i) {
+
+         if (prevBalances->size() == 4) 
+         {
+            for (size_t i = 0; i < 4; ++i)
                bv[i] += (*prevBalances)[i];
-            }
          }
 
-         const auto &cbTxOutList = [this, bv] (std::vector<UTXO> inputs) {
+         //lol no
+         /*
+         const auto &cbTxOutList = [this, bv] (std::vector<UTXO> inputs) 
+         {
             spendableBalanceCorrection_ = 0;
-            for (const auto &input : inputs) {
-               if (armory_->getConfirmationsNumber(input.getHeight()) >= kExtConfCount) {
+            for (const auto &input : inputs) 
+            {
+               if (armory_->getConfirmationsNumber(input.getHeight()) >= kExtConfCount)
                   continue;
-               }
+
                const auto addr = bs::Address::fromUTXO(input);
-               if (!isExternalAddress(addr)) {
+               if (!isExternalAddress(addr))
                   continue;
-               }
+
                spendableBalanceCorrection_ += input.getValue() / BTCNumericTypes::BalanceDivider;
             }
 
@@ -828,29 +808,48 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
                static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
             const auto count = bv[3];
 
-            if ((addrCount_ != count) || (totalBalance_ != totalBalance) || (spendableBalance_ != spendableBalance)
-               || (unconfirmedBalance_ != unconfirmedBalance)) {
+            if ((addrCount_ != count) || 
+               (totalBalance_ != totalBalance) || 
+               (spendableBalance_ != spendableBalance) || 
+               (unconfirmedBalance_ != unconfirmedBalance)) 
+            {
                   {
                      QMutexLocker lock(&addrMapsMtx_);
                      updateAddrBalance_ = true;
                      updateAddrTxN_ = true;
                      addrCount_ = count;
                   }
+
                   totalBalance_ = totalBalance;
                   spendableBalance_ = spendableBalance;
                   unconfirmedBalance_ = unconfirmedBalance;
 
+                  //do that from the callback...
                   emit balanceChanged(walletId(), bv);
             }
+
             emit balanceUpdated(walletId(), bv);
          };
-         Wallet::getSpendableTxOutList(cbTxOutList, this);
 
-         if (cb) {
+         //why? (rhetorical)
+         Wallet::getSpendableTxOutList(cbTxOutList, this);
+         */
+
+         totalBalance_ =
+            static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
+         spendableBalance_ =
+            static_cast<BTCNumericTypes::balance_type>(bv[1]) / BTCNumericTypes::BalanceDivider;
+         unconfirmedBalance_ =
+            static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
+         addrCount_ = bv[3];
+
+         if (cb)
             cb(bv);
-         }
-      } catch (const std::exception &e) {
-         if (logger_) {
+      } 
+      catch (const std::exception &e) 
+      {
+         if (logger_) 
+         {
             logger_->error("[hd::Leaf::UpdateBalances] Return data error " \
                "- {}", e.what());
          }
@@ -858,72 +857,63 @@ void hd::Leaf::updateBalances(const std::function<void(std::vector<uint64_t>)> &
    };
 
    const auto &cbBalancesExt = [this, cbBalances, prevBalances]
-      (ReturnMessage<std::vector<uint64_t>> balanceVector)->void {
-      try {
+      (ReturnMessage<std::vector<uint64_t>> balanceVector)->void 
+   {
+      try 
+      {
          auto bv = balanceVector.get();
          prevBalances->insert(prevBalances->end(), bv.cbegin(), bv.cend());
          btcWalletInt_->getBalancesAndCount(armory_->topBlock(), cbBalances);
       }
-      catch (const std::exception &e) {
-         if (logger_) {
+      catch (const std::exception &e) 
+      {
+         if (logger_)
+         {
             logger_->error("[hd::Leaf::UpdateBalances] Return data error " \
                "- {}", e.what());
          }
       }
    };
 
-   if (isExtOnly_) {
+   //grab wallet balance data
+   if (isExtOnly_) 
       btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
-   }
-   else {
+   else 
       btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalancesExt);
-   }
+
+
+   const auto &cbAddrBalance =
+      [this, cb](ReturnMessage<std::map<BinaryData, std::vector<uint64_t>>> balanceMap)
+   {
+      try
+      {
+         const auto bm = balanceMap.get();
+         updateMap<std::map<BinaryData, std::vector<uint64_t>>>(bm, addressBalanceMap_);
+      }
+      catch (std::exception& e)
+      {
+         if (logger_ != nullptr)
+            logger_->error("[hd::Leaf::getAddrBalance] Return data " \
+               "error - {}", e.what());
+      }
+   };
+
+   //grab address balance data
+   btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
+   if (!isExtOnly_)
+      btcWalletInt_->getAddrBalancesFromDB(cbAddrBalance);
 }
 
-bool hd::Leaf::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
+std::vector<uint64_t> hd::Leaf::getAddrBalance(const bs::Address &addr) const
 {
-   if (!isBalanceAvailable()) {
-      return false;
-   }
-   static const std::vector<uint64_t> defVal = { 0, 0, 0 };
+   if (!isBalanceAvailable())
+      throw std::runtime_error("uninitialized db connection");
 
-   if (updateAddrBalance_) {
-      auto cbCnt = std::make_shared<std::atomic_uint>(0);
-      const auto &cbAddrBalance = [this, cbCnt]
-         (ReturnMessage<std::map<BinaryData, std::vector<uint64_t>>> balanceMap) {
-         try {
-            const auto bm = balanceMap.get();
-            updateMap<std::map<BinaryData, std::vector<uint64_t>>>(bm, addressBalanceMap_);
-            if (isExtOnly_ || (cbCnt->fetch_add(1) >= 1)) {  // comparing with prev value
-               updateAddrBalance_ = false;
-            }
-         } catch (std::exception& e) {
-            if (logger_ != nullptr) {
-               logger_->error("[hd::Leaf::getAddrBalance] Return data " \
-                  "error - {}", e.what());
-            }
-         }
-         if (!updateAddrBalance_) {
-            invokeCb<std::vector<uint64_t>>(addressBalanceMap_, cbBal_, defVal);
-         }
-      };
+   auto iter = addressBalanceMap_.find(addr);
+   if (iter == addressBalanceMap_.end())
+      return { 0, 0, 0 };
 
-      cbBal_[addr].push_back(cb);
-      if (cbBal_.size() == 1) {
-         btcWallet_->getAddrBalancesFromDB(cbAddrBalance);
-         if (!isExtOnly_) {
-            btcWalletInt_->getAddrBalancesFromDB(cbAddrBalance);
-         }
-      }
-   } else {
-      const auto itBal = addressBalanceMap_.find(addr.id());
-      if (itBal == addressBalanceMap_.end()) {
-         cb(defVal);
-         return true;
-      }
-      cb(itBal->second);
-   }
-   return true;
+   return iter->second;
 }
 
 bool hd::Leaf::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> cb) const
@@ -1189,7 +1179,7 @@ bs::Address hd::Leaf::createAddressWithPath(const AddrPoolKey &key, bool signal)
       lastIndex += nbAddresses;
    }
    lastIndex++;
-   return createAddress({ addrPath, key.aet }, [](const bs::Address &) {}, signal);
+   return createAddress({ addrPath, key.aet }, signal);
 }
 
 void hd::Leaf::onSaveToWallet(const std::vector<PooledAddress> &addresses)
@@ -1265,13 +1255,13 @@ hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, con
    poolAET_ = { AddressEntryType_P2WPKH };
 }
 
-bs::Address hd::AuthLeaf::createAddress(const AddrPoolKey &key, const CbAddress &cb, bool signal)
+bs::Address hd::AuthLeaf::createAddress(const AddrPoolKey &key, bool signal)
 {
    if (userId_.isNull()) {
       tempAddresses_.insert(key);
       return {};
    }
-   return hd::Leaf::createAddress(key, cb, signal);
+   return hd::Leaf::createAddress(key, signal);
 }
 
 void hd::AuthLeaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
@@ -1293,7 +1283,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
    }
 
    for (const auto &addr : tempAddresses_) {
-      createAddress(addr, nullptr, false);
+      createAddress(addr, false);
       lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
    }
    topUpAddressPool(true);
@@ -1339,7 +1329,6 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
    {
       QMutexLocker lock(&addrMapsMtx_);
-      updateAddrBalance_ = false;
       addressBalanceMap_.clear();
    }
 
@@ -1633,7 +1622,9 @@ bool hd::CCLeaf::getAddrBalance(const bs::Address &addr, std::function<void(std:
       cb(xbtBalances);
    };
 
-   hd::Leaf::getAddrBalance(addr, inner);
+   auto balVec = hd::Leaf::getAddrBalance(addr);
+   inner(balVec);
+
    return true;
 }
 

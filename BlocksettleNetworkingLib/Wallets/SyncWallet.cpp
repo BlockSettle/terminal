@@ -134,6 +134,7 @@ BTCNumericTypes::balance_type Wallet::getTotalBalance() const
 
 bool Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)> cb) const
 {
+   /*
    if (!isBalanceAvailable()) {
       return false;
    }
@@ -170,7 +171,10 @@ bool Wallet::getAddrBalance(const bs::Address &addr, std::function<void(std::vec
       }
       cb(itBal->second);
    }
-   return true;
+   */
+
+   throw std::runtime_error("why is this code repeated in here and SyncHDLeaf?");
+   return false;
 }
 
 bool Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> cb) const
@@ -240,9 +244,8 @@ bool Wallet::getActiveAddressCount(const std::function<void(size_t)> &cb) const
 bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
    , std::function<void(std::vector<UTXO>)> cb, QObject *obj, uint64_t val)
 {
-   if (!isBalanceAvailable()) {
+   if (!isBalanceAvailable())
       return false;
-   }
 
    /*auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
    callbacks.push_back({ obj, cb });
@@ -251,7 +254,8 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
    }*/
 
    const auto &cbTxOutList = [this, val, btcWallet, cb]
-                             (ReturnMessage<std::vector<UTXO>> txOutList) {
+                             (ReturnMessage<std::vector<UTXO>> txOutList) 
+   {
       try 
       {
          // Before invoking the callbacks, process the UTXOs for the purposes of
@@ -310,13 +314,16 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
             spendableCallbacks_.erase(btcWallet->walletID());
          });*/
       }
-      catch (const std::exception &e) {
-         if (logger_ != nullptr) {
+      catch (const std::exception &e) 
+      {
+         if (logger_ != nullptr) 
+         {
             logger_->error("[bs::sync::Wallet::getSpendableTxOutList] Return data " \
                "error {} - value {}", e.what(), val);
          }
       }
    };
+
    btcWallet->getSpendableTxOutListForValue(val, cbTxOutList);
    return true;
 }
@@ -481,6 +488,7 @@ bool Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
 // Armory doesn't declare TXs safe until 6 confs have occurred.
 void Wallet::updateBalances(const std::function<void(std::vector<uint64_t>)> &cb)
 {
+   /*
    if (!isBalanceAvailable()) {
       return;
    }
@@ -503,7 +511,6 @@ void Wallet::updateBalances(const std::function<void(std::vector<uint64_t>)> &cb
             || (unconfirmedBalance_ != unconfirmedBalance)) {
             {
                QMutexLocker lock(&addrMapsMtx_);
-               updateAddrBalance_ = true;
                updateAddrTxN_ = true;
                addrCount_ = count;
             }
@@ -527,6 +534,9 @@ void Wallet::updateBalances(const std::function<void(std::vector<uint64_t>)> &cb
       }
    };
    btcWallet_->getBalancesAndCount(armory_->topBlock(), cbBalances);
+   */
+
+   throw std::runtime_error("why is this code repeated here and in synchdleaf?");
 }
 
 bool Wallet::getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
@@ -630,7 +640,6 @@ void Wallet::unregisterWallet()
    btcWallet_.reset();
    {
       QMutexLocker lock(&addrMapsMtx_);
-      cbBal_.clear();
       cbTxN_.clear();
    }
    spendableCallbacks_.clear();

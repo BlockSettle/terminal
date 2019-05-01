@@ -70,9 +70,8 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
          continue;
       }
       try {
-         logger_->debug("Loading BIP44 wallet from {}", file.toStdString());
-         const auto wallet = std::make_shared<hd::Wallet>(fileInfo.absoluteFilePath().toStdString(),
-                                                             netType , logger_);
+         logger_->debug("Loading BIP44 wallet from {}", file);
+         const auto wallet = std::make_shared<hd::Wallet>(file, netType , logger_);
          current++;
          if (cbProgress) {
             cbProgress(current, totalCount);
