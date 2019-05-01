@@ -103,7 +103,7 @@ void HeadlessAppObj::startInterface()
       args.push_back(serverIDKey.toHexStr());
 
       args.push_back("--headless_id_key");
-      args.push_back(serverIDKey.toHexStr());
+      args.push_back(headlessIDKey.toHexStr());
       break;
    default:
       break;
