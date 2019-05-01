@@ -31,8 +31,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       return settings_->trustedInterfaces();
    };
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
-      , zmqContext, cbTrustedClients);
-   adapterConn->enableClientCookieUsage(); // We need a cookie from the client.
+      , zmqContext, cbTrustedClients, false, true, "adapterClientID");
    adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
 
    if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
@@ -171,7 +170,8 @@ void HeadlessAppObj::onlineProcessing()
       trustedTerms.push_back(trustedTermStr);
    }
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false);
+      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false, true, false
+      , "signerServerID");
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
