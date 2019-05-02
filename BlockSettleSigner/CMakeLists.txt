@@ -10,13 +10,16 @@ SET(SOURCES
    HeadlessSettings.cpp
    SignerAdapterListener.cpp
    ${BSNetwork}/ActiveStreamClient.cpp
+   ${BSNetwork}/DataConnection.cpp
    ${BSNetwork}/IdStringGenerator.cpp
    ${BSNetwork}/HeadlessContainerListener.cpp
    ${BSNetwork}/MessageHolder.cpp
    ${BSNetwork}/ZmqContext.cpp
+   ${BSNetwork}/ZmqDataConnection.cpp
    ${BSNetwork}/ZmqHelperFunctions.cpp
    ${BSNetwork}/ZmqServerConnection.cpp
    ${BSNetwork}/ZmqStreamServerConnection.cpp
+   ${BSNetwork}/ZMQ_BIP15X_DataConnection.cpp
    ${BSNetwork}/ZMQ_BIP15X_ServerConnection.cpp
    ${BSNetwork}/ZMQ_BIP15X_Msg.cpp
 )
