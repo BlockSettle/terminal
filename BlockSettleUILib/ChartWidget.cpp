@@ -324,17 +324,17 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       maxTimestamp = qMax(maxTimestamp, static_cast<quint64>(candle.timestamp()));
 
       bool isLast = (i == 0);
-      if (candle.timestamp() >= lastCandle_.timestamp() || lastCandle_.timestamp() - candle.timestamp() < IntervalWidth(
-         interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp()))) {
+      if (candle.timestamp() >= lastCandle_.timestamp() 
+         || lastCandle_.timestamp() - candle.timestamp() < IntervalWidth( interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC))) {
          logger_->error("Invalid distance between candles from mdhs. The last timestamp: {}  new timestamp: {}",
                         lastCandle_.timestamp(), candle.timestamp());
       }
       else {
          if (lastCandle_.timestamp() - candle.timestamp() != IntervalWidth(
-            interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp())) && candlesticksChart_->data()->size()) {
+            interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC)) && candlesticksChart_->data()->size()) {
             for (int j = 0; j < (lastCandle_.timestamp() - candle.timestamp()) / IntervalWidth(
-                    interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp())) - 1; j++) {
-               AddDataPoint(lastCandle_.close(), lastCandle_.close(), lastCandle_.close(), lastCandle_.close(),
+                    interval, 1, QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC)) - 1; j++) {
+               AddDataPoint(candle.close(), candle.close(), candle.close(), candle.close(),
                             lastCandle_.timestamp() - IntervalWidth(interval) * (j + 1), 0);
             }
          }
@@ -344,7 +344,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
 
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
       qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
-             , QDateTime::fromMSecsSinceEpoch(candle.timestamp())
+             , QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC)
                .toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
              , candle.open()
              , candle.high()
@@ -402,7 +402,7 @@ void ChartWidget::ProcessEodResponse(const std::string& data)
    if (candlesticksChart_->data()->size() < 2) {
       return;
    }
-   auto delta = dateRange_.checkedId() <= Interval::OneWeek ? 2 : 1; //should we update last or pre-last candle
+   auto delta = dateRange_.checkedId() >= Interval::TwentyFourHours ? 2 : 1; //should we update last or pre-last candle
    auto lastCandle = candlesticksChart_->data()->end() - delta;
    lastCandle->high = qMax(lastCandle->high, eodPrice.price());
    lastCandle->low = qMin(lastCandle->low, eodPrice.price());
