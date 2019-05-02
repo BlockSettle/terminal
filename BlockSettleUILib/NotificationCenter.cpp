@@ -225,6 +225,14 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       newChatId_ = title;
       break;
 
+   case bs::ui::NotifyType::FriendRequest:
+      if (msg.size() != 1) {
+         return;
+      }
+      title = tr("New friend request");
+      text = tr("%1 wants to be friends with you").arg(msg[0].toString());
+      break;
+
    default: return;
    }
 
