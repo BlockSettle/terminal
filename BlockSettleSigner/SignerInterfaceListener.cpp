@@ -93,6 +93,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::WalletsListUpdatedType:
       parent_->walletsListUpdated();
       break;
+   case signer::HeadlessPubKeyRequestType:
+      onHeadlessPubKey(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -476,4 +479,21 @@ void SignerInterfaceListener::onDeleteHDWallet(const std::string &data, bs::sign
    }
    itCb->second(response.success(), response.error());
    cbDeleteHDWalletReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onHeadlessPubKey(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::HeadlessPubKeyResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbHeadlessPubKeyReqs_.find(reqId);
+   if (itCb == cbHeadlessPubKeyReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   itCb->second(response.pubkey());
+   cbHeadlessPubKeyReqs_.erase(itCb);
 }

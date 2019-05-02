@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.2
+import com.blocksettle.QmlFactory 1.0
 
 import "StyledControls"
 import "BsStyles"
@@ -12,6 +13,10 @@ Item {
     DirSelectionDialog {
         id: ldrWalletsDirDlg
         title: qsTr("Select wallets directory")
+    }
+
+    Component.onCompleted: {
+        qmlFactory.requestHeadlessPubKey()
     }
 
     Rectangle {
@@ -296,7 +301,7 @@ Item {
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
                     onClicked: {
-                        qmlFactory.setClipboard(signerSettings.headlessIDKeyStr())
+                        qmlFactory.setClipboard(qmlFactory.headlessPubKey)
                         btnZmqKeyCopy.text = qsTr("Copied")
                     }
                 }
@@ -311,7 +316,7 @@ Item {
                         //exportSignerPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
                         exportSignerPubKeyDlg.open()
                         exportSignerPubKeyDlg.accepted.connect(function(){
-                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.headlessIDKeyStr())
+                            var zmqPubKey = qmlFactory.headlessPubKey
                             JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, zmqPubKey)
                         })
                     }
