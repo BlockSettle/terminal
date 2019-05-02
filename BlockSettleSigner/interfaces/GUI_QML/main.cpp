@@ -14,6 +14,7 @@
 #include <QQmlContext>
 #include <memory>
 #include <iostream>
+#include <QQuickWindow>
 #include <btc/ecc.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -168,6 +169,7 @@ static int QMLApp(int argc, char **argv)
       SignerAdapter adapter(logger, settings->netType(), &srvIDKey);
       adapter.setCloseHeadless(settings->closeHeadless());
 
+      QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
       QQmlApplicationEngine engine;
       const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
       engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
