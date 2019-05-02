@@ -11,7 +11,7 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
    root_->insertItem(new CategoryItem(TreeItem::NodeType::RoomsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::ContactsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::AllUsersElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
+   //root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
 
 }
 

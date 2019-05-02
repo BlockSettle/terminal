@@ -951,6 +951,11 @@ void ChatClient::clearSearch()
    model_->clearSearch();
 }
 
+bool ChatClient::isFriend(const QString &userId)
+{
+   return chatDb_->isContactExist(userId);
+}
+
 void ChatClient::onActionAddToContacts(const QString& userId)
 {
 

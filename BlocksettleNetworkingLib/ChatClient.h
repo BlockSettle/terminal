@@ -98,6 +98,7 @@ public:
    void sendSearchUsersRequest(const QString& userIdPattern);
    QString deriveKey(const QString& email) const;
    void clearSearch();
+   bool isFriend(const QString &userId);
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);

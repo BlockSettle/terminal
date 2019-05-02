@@ -18,10 +18,12 @@ public:
    ~ChatSearchPopup();
 
    void setUserID(const QString &userID);
+   void setUserIsInContacts(const bool &isInContacts);
    void setCustomPosition(const QWidget *widget, const int &moveX, const int &moveY);
 
 signals:
    void sendFriendRequest(const QString &userID);
+   void removeFriendRequest(const QString &userID);
 
 private slots:
    void showMenu(const QPoint &pos);
@@ -30,6 +32,8 @@ private:
    Ui::ChatSearchPopup *ui_;
    QMenu *searchPopupMenu_;
    QString userID_;
+   bool isInContacts_;
+   QAction *userContactAction_;
 };
 
 #endif // CHATSEARCHPOPUP_H
