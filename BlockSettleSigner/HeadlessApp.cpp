@@ -193,6 +193,11 @@ void HeadlessAppObj::onlineProcessing()
    }
 }
 
+std::shared_ptr<ZmqBIP15XServerConnection> HeadlessAppObj::connection() const
+{
+   return connection_;
+}
+
 #if 0
 void HeadlessAppObj::OfflineProcessing()
 {

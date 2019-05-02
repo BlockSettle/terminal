@@ -110,19 +110,24 @@ static int QMLApp(int argc, char **argv)
    // ToDo: support 2.0 styles
    // app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
 
-   // we need this only for desktop app
-   const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
-   QSplashScreen splashScreen(splashImage);
-   splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
-#ifdef NDEBUG
-   // don't show slash screen on debug
-   splashScreen.show();
-#endif
-
    const auto settings = std::make_shared<SignerSettings>();
    if (!settings->loadSettings(app.arguments())) {
       return EXIT_FAILURE;
    }
+
+   QSplashScreen *splashScreen = nullptr;
+
+   // don't show slash screen on debug
+#ifdef NDEBUG
+   if (settings->runMode() == bs::signer::ui::RunMode::fullgui) {
+      // we need this only for desktop app
+      const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
+      splashScreen = new QSplashScreen(splashImage);
+      splashScreen->setWindowFlag(Qt::WindowStaysOnTopHint);
+
+      splashScreen->show();
+   }
+#endif
 
    spdlog::drop("");
    try {
@@ -167,7 +172,7 @@ static int QMLApp(int argc, char **argv)
       const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
       engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
 
-      QMLAppObj qmlAppObj(&adapter, logger, settings, &splashScreen, engine.rootContext());
+      QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
       QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
       switch (settings->runMode()) {

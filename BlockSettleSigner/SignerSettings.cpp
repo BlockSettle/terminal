@@ -307,13 +307,13 @@ QString SignerSettings::dirDocuments() const
    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-void SignerSettings::setServerIDKeyStr(const QString& inKeyStr)
-{
-   if (inKeyStr == get(ServerIDKeyStr).toString()) {
-      return;
-   }
-   set(ServerIDKeyStr, inKeyStr);
-}
+//void SignerSettings::setServerIDKeyStr(const QString& inKeyStr)
+//{
+//   if (inKeyStr == get(ServerIDKeyStr).toString()) {
+//      return;
+//   }
+//   set(ServerIDKeyStr, inKeyStr);
+//}
 
 void SignerSettings::setExportWalletsDir(const QString &val)
 {

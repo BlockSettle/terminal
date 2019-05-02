@@ -15,7 +15,7 @@ import "../StyledControls"
 import "../js/helper.js" as JsHelper
 
 CustomDialog {
-    id: changeEncryptionDialog
+    id: root
 
     property WalletInfo walletInfo : WalletInfo {}
     property QPasswordData newPasswordData: QPasswordData {}
@@ -238,14 +238,14 @@ CustomDialog {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
                     visible: walletInfo.encType !== QPasswordData.Auth
-                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    Layout.preferredWidth: root.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
                     topPadding: 30
                 }
 
                 CustomLabel {
-                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    Layout.preferredWidth: root.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
                     wrapMode: Text.WordWrap
@@ -275,7 +275,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
                     visible: walletInfo.encType !== QPasswordData.Auth
-                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    Layout.preferredWidth: root.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
                     topPadding: 30

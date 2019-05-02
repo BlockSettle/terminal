@@ -78,7 +78,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    settingsConnections();
 
-   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
+   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, adapter_, logger_);
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
    connect(qmlFactory_.get(), &QmlFactory::closeEventReceived, this, [this](){
       hideQmlWindow();
@@ -300,6 +300,7 @@ void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, co
    #endif // BS_USE_DBUS
       }
 
+      raiseQmlWindow();
       QMetaObject::invokeMethod(rootObj_, "createTxSignDialog"
                                 , Q_ARG(QVariant, prompt)
                                 , Q_ARG(QVariant, QVariant::fromValue(txInfo))

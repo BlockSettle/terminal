@@ -90,6 +90,9 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case signer::DeleteHDWalletType:
       rc = onDeleteHDWallet(packet.data(), packet.id());
       break;
+   case signer::HeadlessPubKeyRequestType:
+      rc = onHeadlessPubKeyRequest(packet.data(), packet.id());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -608,6 +611,16 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    }
 
    return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
+}
+
+bool SignerAdapterListener::onHeadlessPubKeyRequest(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::HeadlessPubKeyResponse response;
+   if (app_ && app_->connection()) {
+      response.set_pubkey(app_->connection()->getOwnPubKey().toHexStr());
+   }
+
+   return sendData(signer::HeadlessPubKeyRequestType, response.SerializeAsString(), reqId);
 }
 
 void SignerAdapterListener::walletsListUpdated()
