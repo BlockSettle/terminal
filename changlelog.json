@@ -1,7 +1,28 @@
 {
-   "latest_version" : "0.14.18",
-   "release_date" : "29 April 2019",
+   "latest_version" : "0.15.0",
+   "release_date" : "02 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.0",
+         "previous_version" : "0.14.18",
+         "release_date" : "02 May 2019",
+         "improvements" :
+         [
+            "Better error handling",
+            "Remove curve ZMQ code",
+            "Chat rooms updates",
+            "Chat AEAD"
+         ],
+         "bug_fixes" :
+         [
+            "Wallet list after delete",
+            "Terminal shutdown fix",
+            "Heartbeat fixes",
+            "FX MD in XBT section"
+         ],
+         "revision" : "fa38b6d4",
+         "common_revision" : "b1bb7586"
+      },
       {
          "version_string" : "0.14.18",
          "previous_version" : "0.14.17",
@@ -30,7 +51,7 @@
             "Signer TX dialog fixes",
             "WO fixes",
             "UI fixes",
-            "ZMQ BIP fixes",
+            "ZMQ BIP fixes"
          ],
          "revision" : "762c3d52",
          "common_revision" : "3f038999"
