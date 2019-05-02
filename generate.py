@@ -80,6 +80,25 @@ def generate_project(build_mode, link_mode, build_production, hide_warnings):
    elif os.path.isdir(build_dir):
       shutil.rmtree(build_dir)
 
+   # cleanup common
+   common_dir = os.path.join(os.getcwd(), "common")
+   if os.path.isdir(common_dir):
+      print('Cleaning common')
+      current_dir = os.getcwd()
+      os.chdir(common_dir)
+
+      command = [
+            'git',
+            'clean',
+            '-xdf'
+        ]
+
+      result = subprocess.call(command)
+      os.chdir(current_dir)
+      if result != 0:
+         print('Failed to clean common')
+         return 1
+
    os.makedirs(build_dir)
    os.chdir(build_dir)
 
