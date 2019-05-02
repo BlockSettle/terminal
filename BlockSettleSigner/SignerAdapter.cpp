@@ -103,7 +103,7 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
    listener_->setDecryptNodeCb(reqId, cb);
 }
 
-void SignerAdapter::getHeadlessPubKey(const std::function<void (const SecureBinaryData &)> &cb)
+void SignerAdapter::getHeadlessPubKey(const std::function<void (const std::string &)> &cb)
 {
    signer::HeadlessPubKeyRequest request;
    const auto reqId = listener_->send(signer::HeadlessPubKeyRequestType, request.SerializeAsString());

@@ -105,8 +105,8 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
 
 void QmlFactory::requestHeadlessPubKey()
 {
-   adapter_->getHeadlessPubKey([this](const SecureBinaryData &key){
-      setHeadlessPubKey(QString::fromStdString(key.toBinStr()));
+   adapter_->getHeadlessPubKey([this](const std::string &key){
+      setHeadlessPubKey(QString::fromStdString(key));
    });
 }
 

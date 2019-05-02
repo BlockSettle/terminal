@@ -67,7 +67,7 @@ public:
    void setDeleteHDWalletCb(bs::signer::RequestId reqId, const std::function<void(bool success, const std::string& errorMsg)> &cb) {
       cbDeleteHDWalletReqs_[reqId] = cb;
    }
-   void setHeadlessPubKeyCb(bs::signer::RequestId reqId, const std::function<void(const SecureBinaryData &pubKey)> &cb) {
+   void setHeadlessPubKeyCb(bs::signer::RequestId reqId, const std::function<void(const std::string &pubKey)> &cb) {
       cbHeadlessPubKeyReqs_[reqId] = cb;
    }
 
@@ -106,7 +106,7 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bool success)>> cbChangePwReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
-   std::map<bs::signer::RequestId, std::function<void(const SecureBinaryData &pubKey)>> cbHeadlessPubKeyReqs_;
+   std::map<bs::signer::RequestId, std::function<void(const std::string &pubKey)>> cbHeadlessPubKeyReqs_;
 };
 
 

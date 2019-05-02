@@ -57,7 +57,7 @@ public:
       , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &);
    void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
-   void getHeadlessPubKey(const std::function<void(const SecureBinaryData &pubKey)> &);
+   void getHeadlessPubKey(const std::function<void(const std::string &)> &);
 
    void addPendingAutoSignReq(const std::string &walletId);
    void deactivateAutoSign();
