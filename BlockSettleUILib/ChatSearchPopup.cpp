@@ -10,16 +10,13 @@ ChatSearchPopup::ChatSearchPopup(QWidget *parent) :
    userID_(),
    ui_(new Ui::ChatSearchPopup)
 {
-   setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
    ui_->setupUi(this);
+
    ui_->chatSearchPopupLabel->setContextMenuPolicy(Qt::CustomContextMenu);
    connect(ui_->chatSearchPopupLabel, &QLabel::customContextMenuRequested, this, &ChatSearchPopup::showMenu);
-   searchPopupMenu_ = new QMenu(this);
-   QAction *addUserToContactsAction = searchPopupMenu_->addAction(QObject::tr("Add to contacts"));
-   addUserToContactsAction->setStatusTip(QObject::tr("Click to add user to contact list"));
-   connect(addUserToContactsAction, &QAction::triggered,
-      [this](bool) { emit sendFriendRequest(ui_->chatSearchPopupLabel->text()); }
-   );
+
+   searchPopupMenu_ = new QMenu(this);   
+   userContactAction_ = searchPopupMenu_->addAction(QString());
 }
 
 ChatSearchPopup::~ChatSearchPopup()
@@ -40,9 +37,32 @@ void ChatSearchPopup::setUserID(const QString &userID)
    }
 }
 
+void ChatSearchPopup::setUserIsInContacts(const bool &isInContacts)
+{
+   isInContacts_ = isInContacts;
+}
+
 void ChatSearchPopup::showMenu(const QPoint &pos)
 {
    if (!userID_.isEmpty()) {
+
+      userContactAction_->disconnect();
+
+      if (!isInContacts_) {
+         userContactAction_->setText(tr("Add to contacts"));
+         userContactAction_->setStatusTip(QObject::tr("Click to add user to contact list"));
+         connect(userContactAction_, &QAction::triggered,
+            [this](bool) { emit sendFriendRequest(ui_->chatSearchPopupLabel->text()); }
+         );
+      }
+      else {
+         userContactAction_->setText(tr("Remove from contacts"));
+         userContactAction_->setStatusTip(QObject::tr("Click to remove user from contact list"));
+         connect(userContactAction_, &QAction::triggered,
+            [this](bool) { emit removeFriendRequest(ui_->chatSearchPopupLabel->text()); }
+         );
+      }
+
       searchPopupMenu_->exec(mapToGlobal(pos));
    }
 }

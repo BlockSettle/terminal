@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace spdlog {
    class logger;
@@ -50,7 +51,8 @@ public:
    std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
       bool monitored = false) const;
    std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
-      bool ephemeral = true) const;
+      bool ephemeral = true, bool makeClientCookie = false
+      , bool readServerCookie = false, const std::string& cookieName = "") const;
    std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(
       bool ephemeral = false) const;
 

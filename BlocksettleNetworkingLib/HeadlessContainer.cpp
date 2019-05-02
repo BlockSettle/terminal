@@ -5,7 +5,7 @@
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
-#include "ZmqSecuredDataConnection.h"
+#include "SystemFileUtils.h"
 
 #include <QCoreApplication>
 #include <QDataStream>
@@ -1072,8 +1072,11 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , ephemeralDataConnKeys_(ephemeralDataConnKeys)
 {
    // Create connection upfront in order to grab some required data early.
+   const std::string absCookiePath =
+      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    connection_ =
-      connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_);
+      connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_
+      , false, true, absCookiePath);
    connection_->setCBs(cbNewKey_);
 }
 

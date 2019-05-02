@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QStringListModel>
 #include <QScopedPointer>
+#include <QLayoutItem>
 
 #include "ChatUserListLogic.h"
 #include "ChatHandleInterfaces.h"
@@ -61,11 +62,12 @@ private slots:
    void onMessagesUpdated();
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
-   void onSearchUserReturnPressed();
    void onChatUserRemoved(const ChatUserDataPtr &);
    void onSendFriendRequest(const QString &userId);
+   void onRemoveFriendRequest(const QString &userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
+   void onSearchUserTextEdited(const QString& text);
    void treeViewUsersModelReset();
    void treeViewUsersModelRowsAboutToBeInserted();
    void treeViewUsersModelRowsInserted();
@@ -89,6 +91,8 @@ private:
    QString  currentChat_;
    ChatSearchPopup *popup_;
    bool isRoom_;
+   QSpacerItem *chatUsersVerticalSpacer_;
+   QTimer *popupVisibleTimer_; 
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
@@ -103,6 +107,8 @@ private:
    bool isRoom();
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
+   void initPopup();
+   void setPopupVisible(const bool &value);
 
    bool eventFilter(QObject * obj, QEvent * event) override;
 

@@ -11,7 +11,7 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
    root_->insertItem(new CategoryItem(TreeItem::NodeType::RoomsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::ContactsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::AllUsersElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
+   //root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
 
 }
 
@@ -100,17 +100,17 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
 
 bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   beginInsertRows(QModelIndex(), 0, 1);
+   //beginInsertRows(QModelIndex(), 0, 1);
    bool res = root_->insertRoomMessage(message);
-   endInsertRows();
+   //endInsertRows();
    return res;
 }
 
 bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   beginInsertRows(QModelIndex(), 0, 1);
+   //beginInsertRows(QModelIndex(), 0, 1);
    bool res = root_->insertContactsMessage(message);
-   endInsertRows();
+   //endInsertRows();
    return res;
 }
 
