@@ -147,24 +147,15 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
    }
 
    std::shared_ptr<bs::core::hd::Leaf> leaf;
-   SecureBinaryData password;
-   for (const auto &pwd : pwdData) {
-      password = mergeKeys(password, pwd.password);
-   }
+   auto& password = pwdData[0].password;
 
-   try {
-      std::shared_ptr<bs::core::hd::Node> leafNode;
-      const auto &rootNode = hdWallet->getRootNode(password);
-      if (rootNode) {
-         //leafNode = rootNode->derive(path);
-      } else {
-         logger_->error("[{}] failed to decrypt root node", __func__);
-         return 0;
-      }
-
+   try 
+   {
+      hdWallet->lockForEncryption(password);
       const auto leafIndex = path.get(2);
-      std::shared_ptr<bs::core::hd::Leaf> leaf; // = group->createLeaf(leafIndex, leafNode);
-      if (!leaf || !(leaf = group->getLeafByPath(leafIndex))) {
+      auto leaf = group->createLeaf(leafIndex);
+      if (leaf == nullptr) 
+      {
          logger_->error("[{}] failed to create/get leaf {}", __func__, path.toString());
          return 0;
       }

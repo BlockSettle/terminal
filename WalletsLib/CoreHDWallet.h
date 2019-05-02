@@ -4,7 +4,6 @@
 #include <memory>
 #include "CoreHDGroup.h"
 #include "CoreHDLeaf.h"
-#include "CoreHDNode.h"
 
 
 namespace spdlog {
@@ -43,7 +42,6 @@ namespace bs {
             virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
             virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
             virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
-            std::shared_ptr<Node> getRootNode(const SecureBinaryData&) const { return nullptr; }
 
             ~Wallet(void);
 

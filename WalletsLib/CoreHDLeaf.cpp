@@ -2,7 +2,6 @@
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
 #include "CoreHDLeaf.h"
-#include "CoreHDNode.h"
 #include "Wallets.h"
 
 #define ADDR_KEY     0x00002002
@@ -139,49 +138,16 @@ std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAddr(const BinaryData 
    return addrPtr;
 }
 
-std::shared_ptr<hd::Node> hd::Leaf::getNodeForAddr(const bs::Address &addr) const
-{
-   if (addr.isNull()) {
-      return nullptr;
-   }
-
-   auto& addrMap = accountPtr_->getAddressHashMap();
-   auto iter = addrMap.find(addr);
-   if (iter == addrMap.end())
-      return nullptr;
-
-   auto assetPtr = walletPtr_->getAssetForID(iter->second.first);
-   throw std::runtime_error("deprecated 1");
-
-   //TODO: instantiate hd::Node from asset entry
-   return nullptr;
-}
-
 SecureBinaryData hd::Leaf::getPublicKeyFor(const bs::Address &addr)
 {
-   const auto node = getNodeForAddr(addr);
-   if (node == nullptr) {
-      return BinaryData();
-   }
-   return node->pubCompressedKey();
-}
+   auto idPair = accountPtr_->getAssetIDPairForAddr(addr.prefixed());
+   auto assetPtr = accountPtr_->getAssetForID(idPair.first);
+   
+   auto assetSingle = std::dynamic_pointer_cast<AssetEntry_Single>(assetPtr);
+   if (assetSingle == nullptr)
+      throw AccountException("unexpected asset entry type");
 
-SecureBinaryData hd::Leaf::getPubChainedKeyFor(const bs::Address &addr)
-{
-   const auto node = getNodeForAddr(addr);
-   if (node == nullptr) {
-      return BinaryData();
-   }
-   return node->pubChainedKey();
-}
-
-KeyPair hd::Leaf::getKeyPairFor(const bs::Address &addr)
-{
-   auto& node = getNodeForAddr(addr);
-   if (node == nullptr)
-      return {};
-
-   return { node->privChainedKey(), node->pubChainedKey() };
+   return assetSingle->getPubKey()->getCompressedKey();
 }
 
 bs::Address hd::Leaf::newAddress(AddressEntryType aet)

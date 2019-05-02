@@ -14,6 +14,7 @@
 #include "Signer.h"
 #include "WalletEncryption.h"
 #include "Wallets.h"
+#include "BIP32_Node.h"
 
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
@@ -115,18 +116,16 @@ namespace bs {
          class Seed
          {
          public:
-            Seed(NetworkType netType) : netType_(netType) {}
-            Seed(const std::string &seed, NetworkType netType);
-            Seed(NetworkType netType, const SecureBinaryData &privKey, const BinaryData &chainCode = {})
-               : privKey_(privKey), chainCode_(chainCode), netType_(netType) {}
+            Seed(NetworkType netType) :
+               seed_(SecureBinaryData()), netType_(netType)
+            {}
 
-            bool empty() const { return (privKey_.isNull() && seed_.isNull()); }
-            bool hasPrivateKey() const { return (!privKey_.isNull()); }
-            const SecureBinaryData &privateKey() const { return privKey_; }
-            void setPrivateKey(const SecureBinaryData &privKey) { privKey_ = privKey; walletId_.clear(); }
-            const BinaryData &chainCode() const { return chainCode_; walletId_.clear(); }
+            Seed(const SecureBinaryData &seed, NetworkType netType);
+
+            bool empty() const { return seed_.isNull(); }
+            bool hasPrivateKey() const { return node_.getPrivateKey().getSize() == 32; }
+            const SecureBinaryData &privateKey() const { return node_.getPrivateKey(); }
             const SecureBinaryData &seed() const { return seed_; }
-            void setSeed(const BinaryData &seed) { seed_ = seed; walletId_.clear(); }
             NetworkType networkType() const { return netType_; }
             void setNetworkType(NetworkType netType) { netType_ = netType; walletId_.clear(); }
             std::string getWalletId() const;
@@ -135,13 +134,10 @@ namespace bs {
             static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
             static BinaryData decodeEasyCodeLineChecksum(const std::string&easyCodeHalf, size_t ckSumSize = 2, size_t keyValueSize = 16);
             static Seed fromEasyCodeChecksum(const EasyCoDec::Data &, NetworkType, size_t ckSumSize = 2);
-            static Seed fromEasyCodeChecksum(const EasyCoDec::Data &privKey, const EasyCoDec::Data &chainCode
-               , NetworkType, size_t ckSumSize = 2);
 
          private:
-            SecureBinaryData  privKey_;
-            BinaryData        chainCode_;
-            SecureBinaryData        seed_;
+            BIP32_Node node_;
+            SecureBinaryData seed_;
             NetworkType       netType_ = NetworkType::Invalid;
             mutable std::string  walletId_;
          };

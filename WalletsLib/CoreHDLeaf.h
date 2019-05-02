@@ -4,8 +4,9 @@
 #include <functional>
 #include <unordered_map>
 #include <lmdbpp.h>
-#include "CoreHDNode.h"
 #include "Accounts.h"
+#include "CoreWallet.h"
+#include "HDPath.h"
 
 namespace spdlog {
    class logger;
@@ -72,8 +73,6 @@ namespace bs {
                AddressEntryType aet = AddressEntryType_Default) const;
 
             SecureBinaryData getPublicKeyFor(const bs::Address &) override;
-            SecureBinaryData getPubChainedKeyFor(const bs::Address &) override;
-            KeyPair getKeyPairFor(const bs::Address &);
             std::shared_ptr<ResolverFeed> getResolver(void) const;
 
             const bs::hd::Path &path() const { return path_; }
@@ -87,11 +86,12 @@ namespace bs {
             WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
             std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) override;
 
+            std::shared_ptr<AssetEntry_BIP32Root> getRootAsset(void) const;
+
          protected:
             void reset();
 
             bs::hd::Path getPathForAddress(const bs::Address &) const;
-            std::shared_ptr<Node> getNodeForAddr(const bs::Address &) const;
 
             struct AddrPoolKey {
                bs::hd::Path      path;
@@ -138,11 +138,6 @@ namespace bs {
          {
          public:
             AuthLeaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger);
-
-         private:
-            std::shared_ptr<Node>   unchainedNode_;
-            Nodes                   unchainedRootNodes_;
-            BinaryData              chainCode_;
          };
 
 

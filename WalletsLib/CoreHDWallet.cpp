@@ -40,8 +40,7 @@ hd::Wallet::Wallet(const std::string &name, const std::string &desc
    , netType_(netType)
    , logger_(logger)
 {
-   wallet::Seed seed(netType);
-   seed.setSeed(CryptoPRNG::generateRandom(32));
+   wallet::Seed seed(CryptoPRNG::generateRandom(32), netType);
    initNew(seed, passphrase, folder);
 }
 

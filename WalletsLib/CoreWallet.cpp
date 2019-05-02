@@ -2,7 +2,6 @@
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"
 #include "Wallets.h"
-#include "CoreHDNode.h"    // only for calculating walletId in Seed
 #include "CoreWallet.h"
 
 #define SAFE_NUM_CONFS        6
@@ -272,15 +271,14 @@ bool wallet::TXMultiSignRequest::isValid() const noexcept
 }
 
 
-wallet::Seed::Seed(const std::string &seed, NetworkType netType)
-   : netType_(netType)
+wallet::Seed::Seed(const SecureBinaryData &seed, NetworkType netType)
+   : netType_(netType), seed_(seed)
 {
-   try {
-      BinaryData base58In(seed);
-      base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
-      seed_ = BtcUtils::base58toScrAddr(base58In);
-   }
-   catch (const std::exception &) {
+   node_.initFromSeed(seed_);
+
+   //jesus...
+   /*catch (const std::exception &)
+   {
       const auto result = segwit_addr::decode("seed", seed);
       if (result.first >= 0) {
          seed_ = BinaryData(&result.second[0], result.second.size());
@@ -288,20 +286,23 @@ wallet::Seed::Seed(const std::string &seed, NetworkType netType)
       if (seed_.isNull()) {
          seed_ = seed;
       }
-   }
+   }*/
 }
 
 std::string wallet::Seed::getWalletId() const
 {
-   if (walletId_.empty()) {
-      walletId_ = bs::core::hd::Node(*this).getId();
+   if (walletId_.empty()) 
+   {
+      auto& pubkey = node_.getPublicKey();
+      walletId_ = wallet::computeID(pubkey).toBinStr();
    }
    return walletId_;
 }
 
 EasyCoDec::Data wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const
 {
-   if (!hasPrivateKey()) {
+   throw std::runtime_error("needs fixed");
+   /*if (!hasPrivateKey()) {
       return {};
    }
    const size_t halfSize = privKey_.getSize() / 2;
@@ -312,7 +313,7 @@ EasyCoDec::Data wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const
    privKeyHalf1.append(hash1.getSliceCopy(0, (uint32_t)ckSumSize));
    privKeyHalf2.append(hash2.getSliceCopy(0, (uint32_t)ckSumSize));
    const auto chkSumPrivKey = privKeyHalf1 + privKeyHalf2;
-   return EasyCoDec().fromHex(chkSumPrivKey.toHexStr());
+   return EasyCoDec().fromHex(chkSumPrivKey.toHexStr());*/
 }
 
 SecureBinaryData wallet::Seed::decodeEasyCodeChecksum(const EasyCoDec::Data &easyData, size_t ckSumSize)
@@ -348,20 +349,8 @@ BinaryData wallet::Seed::decodeEasyCodeLineChecksum(
 wallet::Seed wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &easyData, NetworkType netType
    , size_t ckSumSize)
 {
-   return wallet::Seed(netType, decodeEasyCodeChecksum(easyData, ckSumSize));
+   return wallet::Seed(decodeEasyCodeChecksum(easyData, ckSumSize), netType);
 }
-
-wallet::Seed wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &privKey, const EasyCoDec::Data &chainCode
-   , NetworkType netType, size_t ckSumSize)
-{
-   if (chainCode.part1.empty() || chainCode.part2.empty()) {
-      return wallet::Seed(netType, decodeEasyCodeChecksum(privKey, ckSumSize));
-   }
-
-   return wallet::Seed(netType, decodeEasyCodeChecksum(privKey, ckSumSize)
-      , decodeEasyCodeChecksum(chainCode, ckSumSize));
-}
-
 
 Wallet::Wallet(std::shared_ptr<spdlog::logger> logger)
    : wallet::MetaData(), logger_(logger)

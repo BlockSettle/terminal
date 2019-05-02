@@ -734,52 +734,46 @@ bool HeadlessContainerListener::CreateHDLeaf(const std::string &clientId, unsign
       return false;
    }
 
-   SecureBinaryData password;
-   for (const auto &pwd : pwdData) {
-      password = mergeKeys(password, pwd.password);
-   }
-
-   if (backupEnabled_) {
+   auto& password = pwdData[0].password;
+   if (backupEnabled_)
       walletsMgr_->backupWallet(hdWallet, backupPath_);
-   }
 
-   const auto onPassword = [this, hdWallet, path, clientId, id](const SecureBinaryData &pass,
-         bool cancelledByUser) {
-      std::shared_ptr<bs::core::hd::Node> leafNode;
-      if (!hdWallet->encryptionTypes().empty() && pass.isNull()) {
+   const auto onPassword = 
+      [this, hdWallet, path, clientId, id]
+      (const SecureBinaryData &pass, bool cancelledByUser)
+   {
+      if (!hdWallet->encryptionTypes().empty() && pass.isNull())
+      {
          logger_->error("[HeadlessContainerListener] no password for encrypted wallet");
          CreateHDWalletResponse(clientId, id, "password required, but empty received");
       }
-      const auto &rootNode = hdWallet->getRootNode(pass);
-      if (rootNode) {
-         leafNode = nullptr;
-      } else {
-         logger_->error("[HeadlessContainerListener] failed to decrypt root node");
-         CreateHDWalletResponse(clientId, id, "root node decryption failed");
-      }
 
-      if (leafNode) {
-         //what is this horror?
-         const auto groupIndex = static_cast<bs::hd::CoinType>(path.get(1));
-         auto group = hdWallet->getGroup(groupIndex);
-         if (!group) {
-            group = hdWallet->createGroup(groupIndex);
-         }
-         const auto leafIndex = path.get(2);
-         auto leaf = nullptr;
-         if (!leaf || (leaf != group->getLeafByPath(leafIndex))) {
+      //what is this horror?
+      const auto groupIndex = static_cast<bs::hd::CoinType>(path.get(1));
+      auto group = hdWallet->getGroup(groupIndex);
+      if (!group)
+         group = hdWallet->createGroup(groupIndex);
+
+      const auto leafIndex = path.get(2);
+      auto leaf = group->getLeafByPath(leafIndex);
+
+      if (leaf == nullptr) 
+      {
+         hdWallet->lockForEncryption(pass);
+         leaf = group->createLeaf(leafIndex);
+
+         if (leaf == nullptr)
+         {
             logger_->error("[HeadlessContainerListener] failed to create/get leaf {}", path.toString());
             CreateHDWalletResponse(clientId, id, "failed to create leaf");
             return;
          }
+      }
 
-         CreateHDWalletResponse(clientId, id, ""
-         , leafNode->pubCompressedKey(), leafNode->chainCode());
-      }
-      else {
-         logger_->error("[HeadlessContainerListener] failed to create HD leaf");
-         CreateHDWalletResponse(clientId, id, "failed to derive");
-      }
+      auto assetPtr = leaf->getRootAsset();
+      CreateHDWalletResponse(clientId, id, "",
+         assetPtr->getPubKey()->getUncompressedKey(), 
+         assetPtr->getChaincode());
    };
 
    if (!hdWallet->encryptionTypes().empty()) {
@@ -808,7 +802,7 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
    std::shared_ptr<bs::core::hd::Wallet> wallet;
    try {
       auto seed = request.privatekey().empty() ? bs::core::wallet::Seed(request.seed(), netType)
-         : bs::core::wallet::Seed(netType, request.privatekey(), request.chaincode());
+         : bs::core::wallet::Seed(request.privatekey(), netType);
       wallet = walletsMgr_->createWallet(request.name(), request.description(),
          seed, walletsPath_, pwdData.begin()->password, request.primary());
    }
@@ -820,18 +814,15 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
       CreateHDWalletResponse(clientId, id, "creation failed");
       return false;
    }
-   try {
-      SecureBinaryData password = pwdData.empty() ? SecureBinaryData{} : pwdData[0].password;
-      if (keyRank.first > 1) {
-         for (int i = 1; i < keyRank.first; ++i) {
-            password = mergeKeys(password, pwdData[i].password);
-         }
-      }
+   try 
+   {
       const auto woWallet = wallet->createWatchingOnly();
-      if (!woWallet) {
+      if (!woWallet) 
+      {
          CreateHDWalletResponse(clientId, id, "failed to create watching-only copy");
          return false;
       }
+
       CreateHDWalletResponse(clientId, id, woWallet->walletId(), {}, {}, woWallet);
    }
    catch (const std::exception &e) {
@@ -952,6 +943,14 @@ bool HeadlessContainerListener::onSetLimits(const std::string &clientId, headles
 
 bool HeadlessContainerListener::onGetRootKey(const std::string &clientId, headless::RequestPacket &packet)
 {
+   /***
+   Disabling this until I understand what handles the decrypted root and how
+   ***/
+
+   throw std::runtime_error("disabled 1");
+   return false;
+
+   /*
    headless::GetRootKeyRequest request;
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[HeadlessContainerListener] failed to parse GetRootKeyRequest");
@@ -978,10 +977,10 @@ bool HeadlessContainerListener::onGetRootKey(const std::string &clientId, headle
       return false;
    }
    GetRootKeyResponse(clientId, packet.id(), decrypted, wallet->walletId());
-   return true;
+   return true;*/
 }
 
-void HeadlessContainerListener::GetRootKeyResponse(const std::string &clientId, unsigned int id
+/*void HeadlessContainerListener::GetRootKeyResponse(const std::string &clientId, unsigned int id
    , const std::shared_ptr<bs::core::hd::Node> &decrypted, const std::string &errorOrId)
 {
    headless::GetRootKeyResponse response;
@@ -999,7 +998,7 @@ void HeadlessContainerListener::GetRootKeyResponse(const std::string &clientId, 
    if (!sendData(packet.SerializeAsString(), clientId)) {
       logger_->error("[HeadlessContainerListener] failed to send response GetRootKey packet");
    }
-}
+}*/
 
 bool HeadlessContainerListener::onGetHDWalletInfo(const std::string &clientId, headless::RequestPacket &packet)
 {
@@ -1053,7 +1052,7 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
 bool HeadlessContainerListener::onChangePassword(const std::string &clientId
    , headless::RequestPacket &packet)
 {
-   headless::ChangePasswordRequest request;
+/*   headless::ChangePasswordRequest request;
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[HeadlessContainerListener] failed to parse ChangePasswordRequest");
       ChangePasswordResponse(clientId, packet.id(), {}, false);
@@ -1082,13 +1081,15 @@ bool HeadlessContainerListener::onChangePassword(const std::string &clientId
    }
    logger_->info("Changed password for wallet {} (id: {})", wallet->name(), wallet->walletId());
    ChangePasswordResponse(clientId, packet.id(), request.rootwalletid(), true);
-   return true;
+   return true;*/
+
+   return false;
 }
 
 void HeadlessContainerListener::ChangePasswordResponse(const std::string &clientId, unsigned int id
    , const std::string &walletId, bool ok)
 {
-   headless::ChangePasswordResponse response;
+/*   headless::ChangePasswordResponse response;
    response.set_rootwalletid(walletId);
    response.set_success(ok);
 
@@ -1100,7 +1101,7 @@ void HeadlessContainerListener::ChangePasswordResponse(const std::string &client
 
    if (!sendData(packet.SerializeAsString(), clientId)) {
       logger_->error("[HeadlessContainerListener] failed to send ChangePassword response");
-   }
+   }*/
 }
 
 void HeadlessContainerListener::AutoSignActiveResponse(const std::string &clientId, const std::string &walletId
@@ -1173,11 +1174,13 @@ void HeadlessContainerListener::activateAutoSign(const std::string &clientId, co
          deactivateAutoSign(walletId, "empty password");
          return;
       }
-      const auto decrypted = wallet->getRootNode(password);
+
+      throw std::runtime_error("disabled 2");
+      /*const auto decrypted = wallet->getRootNode(password);
       if (!decrypted) {
          deactivateAutoSign(walletId, "failed to decrypt root node");
          return;
-      }
+      }*/
    }
    passwords_[wallet->walletId()] = password;
    if (cbAsAct_) {
@@ -1445,10 +1448,10 @@ bool HeadlessContainerListener::onSyncAddresses(const std::string &clientId, Blo
       addrData->set_index(indexData.index());
    }
 
-   const auto hdWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
+   /*const auto hdWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
    if (hdWallet) {
       hdWallet->updatePersistence();
-   }
+   }*/
 
    packet.set_data(response.SerializeAsString());
    return sendData(packet.SerializeAsString(), clientId);
