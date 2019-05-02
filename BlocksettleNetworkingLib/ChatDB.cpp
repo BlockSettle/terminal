@@ -74,8 +74,10 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
             "timestamp INTEGER NOT NULL,"\
             "sender CHAR(16) NOT NULL,"\
             "receiver CHAR(32),"\
-            "enctext TEXT,"\
             "state INTEGER,"\
+            "encryption INTEGER,"\
+            "nonce BLOB,"\
+            "enctext TEXT,"\
             "reference CHAR(16)"\
             ");");
          if (!QSqlQuery(db).exec(query)) {
@@ -149,18 +151,33 @@ bool ChatDB::isRoomMessagesExist(const QString &roomId)
 
 bool ChatDB::add(const Chat::MessageData &msg)
 {
-   QSqlQuery qryAdd(QLatin1String("INSERT INTO messages(id, timestamp, sender, receiver, enctext, state, reference)"\
-      " VALUES(?, ?, ?, ?, ?, ?, ?);"), db_);
-   qryAdd.bindValue(0, msg.getId());
-   qryAdd.bindValue(1, msg.getDateTime());
-   qryAdd.bindValue(2, msg.getSenderId());
-   qryAdd.bindValue(3, msg.getReceiverId());
-   qryAdd.bindValue(4, msg.getMessageData());
-   qryAdd.bindValue(5, msg.getState());
-   qryAdd.bindValue(6, QString());
+   QSqlQuery qryAdd(db_);
+
+   qryAdd.prepare(QLatin1String("INSERT INTO messages(id, timestamp, sender, receiver, state, encryption, nonce, enctext, reference)"\
+                                " VALUES(:id, :tstamp, :sid, :rid, :state, :enctype, :nonce, :enctxt, :ref);"));
+   qryAdd.bindValue(QLatin1String(":id"), msg.getId());
+   qryAdd.bindValue(QLatin1String(":tstamp"), msg.getDateTime());
+   qryAdd.bindValue(QLatin1String(":sid"), msg.getSenderId());
+   qryAdd.bindValue(QLatin1String(":rid"), msg.getReceiverId());
+   qryAdd.bindValue(QLatin1String(":state"), msg.getState());
+   qryAdd.bindValue(QLatin1String(":enctype"), static_cast<int>(msg.encryptionType()));
+   qryAdd.bindValue(QLatin1String(":nonce"),
+                    QByteArray(reinterpret_cast<char*>(msg.getNonce().data()),
+                               static_cast<int>(msg.getNonce().size()))
+                    );
+   qryAdd.bindValue(QLatin1String(":enctxt"), msg.getMessageData());
+   qryAdd.bindValue(QLatin1String(":ref"), QString());
+
+//   qryAdd.bindValue(0, msg.getId());
+//   qryAdd.bindValue(1, msg.getDateTime());
+//   qryAdd.bindValue(2, msg.getSenderId());
+//   qryAdd.bindValue(3, msg.getReceiverId());
+//   qryAdd.bindValue(4, msg.getMessageData());
+//   qryAdd.bindValue(5, msg.getState());
+//   qryAdd.bindValue(6, QString());
 
    if (!qryAdd.exec()) {
-      logger_->error("[ChatDB::add] failed to insert to changed");
+      logger_->error("[ChatDB::add] failed to insert to changed: Error: {} Query:{}", qryAdd.lastError().text().toStdString(), qryAdd.lastQuery().toStdString());
       return false;
    }
    return true;
@@ -211,7 +228,7 @@ bool ChatDB::updateMessageStatus(const QString& messageId, int ustatus)
 std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QString &ownUserId, const QString &userId)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT sender, receiver, id, timestamp, enctext, state FROM messages "\
+   if (!query.prepare(QLatin1String("SELECT sender, receiver, id, timestamp, enctext, state, nonce, encryption FROM messages "\
       "WHERE (sender=:user AND receiver=:owner) OR (receiver=:user AND sender=:owner)"))) {
       logger_->error("[ChatDB::getUserMessages] failed to prepare query: {}", query.lastError().text().toStdString());
       return {};
@@ -225,9 +242,22 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
 
    std::vector<std::shared_ptr<Chat::MessageData>> records;
    while (query.next()) {
-      const auto msg = std::make_shared<Chat::MessageData>(query.value(0).toString()
-         , query.value(1).toString(), query.value(2).toString(), query.value(3).toDateTime()
-         , query.value(4).toString(), query.value(5).toInt());
+      QString id = query.value(QLatin1String("id")).toString();
+      QString senderId = query.value(QLatin1String("sender")).toString();
+      QString receiverId = query.value(QLatin1String("receiver")).toString();
+      QDateTime timestamp = query.value(QLatin1String("timestamp")).toDateTime();
+      QString messageData = query.value(QLatin1String("enctext")).toString();
+      int state = query.value(QLatin1String("state")).toInt();
+      QByteArray nonce = query.value(QLatin1String("nonce")).toByteArray();
+      Chat::MessageData::EncryptionType encryption = static_cast<Chat::MessageData::EncryptionType>(query.value(QLatin1String("encryption")).toInt());
+      const auto msg = std::make_shared<Chat::MessageData>(senderId,
+                                                           receiverId,
+                                                           id,
+                                                           timestamp,
+                                                           messageData,
+                                                           state);
+      msg->setNonce(Botan::SecureVector<uint8_t>(nonce.begin(), nonce.end()));
+      msg->setEncryptionType(encryption);
       records.push_back(msg);
    }
    std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a
