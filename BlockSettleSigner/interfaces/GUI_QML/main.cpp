@@ -124,23 +124,21 @@ static int QMLApp(int argc, char **argv)
       return EXIT_FAILURE;
    }
 
+   spdlog::drop("");
    try {
-      logger = spdlog::basic_logger_mt("app_logger"
-         , settings->logFileName().toStdString());
+      logger = spdlog::basic_logger_mt("", settings->logFileName().toStdString());
       // [date time.miliseconds] [level](thread id): text
       logger->set_pattern("%D %H:%M:%S.%e [%L](%t): %v");
-      logger->set_level(spdlog::level::debug);
-      logger->flush_on(spdlog::level::debug);
    }
    catch (const spdlog::spdlog_ex &e) {
       std::cerr << "Failed to create logger in "
          << settings->logFileName().toStdString() << ": " << e.what()
          << " - logging to console" << std::endl;
-      logger = spdlog::stdout_logger_mt("app_logger");
+      logger = spdlog::stdout_logger_mt("");
       logger->set_pattern("[%L](%t): %v");
-      logger->set_level(spdlog::level::debug);
-      logger->flush_on(spdlog::level::debug);
    }
+   logger->set_level(spdlog::level::debug);
+   logger->flush_on(spdlog::level::debug);
 
 #ifndef NDEBUG
    qInstallMessageHandler(qMessageHandler);
