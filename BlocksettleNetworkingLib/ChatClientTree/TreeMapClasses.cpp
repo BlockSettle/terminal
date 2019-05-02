@@ -40,24 +40,26 @@ bool RootItem::insertSearchUserObject(std::shared_ptr<Chat::UserData> data)
    return  res;
 }
 
-bool RootItem::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
+TreeItem* RootItem::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
 {
    TreeMessageNode * messageNode = new TreeMessageNode(TreeItem::NodeType::RoomsElement, message);
    bool res = insertMessageNode(messageNode);
    if (!res){
       delete messageNode;
+      return nullptr;
    }
-   return res;
+   return messageNode;
 }
 
-bool RootItem::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
+TreeItem* RootItem::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
 {
    TreeMessageNode * messageNode = new TreeMessageNode(TreeItem::NodeType::ContactsElement, message);
    bool res = insertMessageNode(messageNode);
    if (!res){
       delete messageNode;
+      return nullptr;
    }
-   return res;
+   return messageNode;
 }
 
 TreeItem* RootItem::findChatNode(const std::string &chatId)

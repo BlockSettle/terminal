@@ -100,25 +100,38 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
 
 bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   //beginInsertRows(QModelIndex(), 0, 1);
-   bool res = root_->insertRoomMessage(message);
-   //endInsertRows();
-   return res;
+   TreeItem * item = root_->insertRoomMessage(message);
+
+   if (!item)
+      return false;
+
+   const QModelIndex index = createIndex(item->selfIndex(), 0, item);
+   const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
+   const int last = first + 1;
+   beginInsertRows(index, first, last);
+   endInsertRows();
+
+   return true;
 }
 
 bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   //beginInsertRows(QModelIndex(), 0, 1);
-   bool res = root_->insertContactsMessage(message);
-   //endInsertRows();
-   return res;
+   TreeItem * item = root_->insertContactsMessage(message);
+   if (!item)
+      return false;
+
+   const QModelIndex index = createIndex(item->selfIndex(), 0, item);
+   const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
+   const int last = first + 1;
+   beginInsertRows(index, first, last);
+   endInsertRows();
+
+   return true;
 }
 
 TreeItem *ChatClientDataModel::findChatNode(const std::string &chatId)
 {
-   beginResetModel();
    TreeItem * res =root_->findChatNode(chatId);
-   endResetModel();
    return res;
 }
 
@@ -129,9 +142,18 @@ std::vector<std::shared_ptr<Chat::ContactRecordData> > ChatClientDataModel::getA
 
 bool ChatClientDataModel::removeContactNode(const std::string &contactId)
 {
-   beginResetModel();
+   TreeItem * item = root_->findCategoryNodeWith(TreeItem::NodeType::ContactsElement);
+
+   if (!item)
+      return false;
+
+   const QModelIndex index = createIndex(item->selfIndex(), 0, item);
+   const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
+   const int last = first + 1;
+
+   beginRemoveRows(index, first, last);
    bool res = root_->removeContactNode(contactId);
-   endResetModel();
+   endRemoveRows();
    return res;
 }
 

@@ -109,6 +109,7 @@ public:
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
+      chat_->ui_->treeViewUsers->expandAll();
    }
 
    void onStateExit() override {
