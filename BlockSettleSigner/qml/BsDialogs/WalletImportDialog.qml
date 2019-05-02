@@ -65,7 +65,9 @@ CustomTitleDialogWindow {
         ColumnLayout {
             TabBar {
                 id: tabBar
-                spacing: 2
+                spacing: 0
+                leftPadding: 1
+                rightPadding: 1
                 height: 35
 
                 Layout.fillWidth: true

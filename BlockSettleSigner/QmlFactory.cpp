@@ -110,9 +110,14 @@ void QmlFactory::requestHeadlessPubKey()
    });
 }
 
-void QmlFactory::setClipboard(const QString &text)
+void QmlFactory::setClipboard(const QString &text) const
 {
    QApplication::clipboard()->setText(text);
+}
+
+QString QmlFactory::getClipboard() const
+{
+   return QApplication::clipboard()->text();
 }
 
 void QmlFactory::installEventFilterToObj(QObject *object)

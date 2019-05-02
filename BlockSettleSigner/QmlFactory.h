@@ -96,7 +96,8 @@ public:
    void setHeadlessPubKey(const QString &headlessPubKey);
 
    // service functions
-   Q_INVOKABLE void setClipboard(const QString &text);
+   Q_INVOKABLE void setClipboard(const QString &text) const;
+   Q_INVOKABLE QString getClipboard() const;
    Q_INVOKABLE void installEventFilterToObj(QObject *object);
    bool eventFilter(QObject *object, QEvent *event) override;
 
