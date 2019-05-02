@@ -9,6 +9,7 @@
 #include <QMenu>
 #include <QModelIndex>
 #include <QSortFilterProxyModel>
+#include <QScrollBar>
 
 #include "AddressDetailDialog.h"
 #include "AddressListModel.h"
@@ -257,6 +258,13 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
    connect(walletsModel_, &WalletsViewModel::updateAddresses, this, &WalletsWidget::updateAddresses);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceChanged, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
+   connect(ui_->treeViewAddresses->model(), &QAbstractItemModel::layoutChanged, this, &WalletsWidget::treeViewAddressesLayoutChanged);
+   connect(ui_->treeViewAddresses->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::treeViewAddressesSelectionChanged);
+
+   connect(ui_->treeViewWallets->horizontalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
+   connect(ui_->treeViewWallets->verticalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
+   connect(ui_->treeViewAddresses->horizontalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
+   connect(ui_->treeViewAddresses->verticalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
 }
 
 std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getSelectedWallets() const
@@ -388,8 +396,67 @@ void WalletsWidget::updateAddresses()
    if (selectedWallets == prevSelectedWallets_) {
       return;
    }
+
+   if (ui_->treeViewWallets->selectionModel()->hasSelection()) {
+      prevSelectedWalletRow_ = ui_->treeViewWallets->selectionModel()->selectedIndexes().first().row();
+   }
+   
    addressModel_->setWallets(selectedWallets);
    prevSelectedWallets_ = selectedWallets;
+
+   keepSelection();
+}
+
+void WalletsWidget::keepSelection()
+{
+   // keep wallet row selection (highlighting)
+   if (!ui_->treeViewWallets->selectionModel()->hasSelection() && prevSelectedWalletRow_ != -1) {
+      auto index = ui_->treeViewWallets->model()->index(prevSelectedWalletRow_, 0);
+      if (index.isValid())
+         ui_->treeViewWallets->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+   }
+   ui_->treeViewWallets->horizontalScrollBar()->setValue(walletsScrollPos_.x());
+   ui_->treeViewWallets->verticalScrollBar()->setValue(walletsScrollPos_.y());
+
+
+   // keep address row selection (highlighting)
+   if (!ui_->treeViewAddresses->selectionModel()->hasSelection() && prevSelectedAddressRow_ != -1) {
+      auto index = ui_->treeViewAddresses->model()->index(prevSelectedAddressRow_, 0);
+      if (index.isValid())
+         ui_->treeViewAddresses->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+   }
+   ui_->treeViewAddresses->horizontalScrollBar()->setValue(addressesScrollPos_.x());
+   ui_->treeViewAddresses->verticalScrollBar()->setValue(addressesScrollPos_.y());
+}
+
+void WalletsWidget::treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+   if (ui_->treeViewAddresses->selectionModel()->hasSelection()) {
+      prevSelectedAddressRow_ = ui_->treeViewAddresses->selectionModel()->selectedIndexes().first().row();
+   }
+}
+
+void WalletsWidget::treeViewAddressesLayoutChanged()
+{
+   // keep address row selection (highlighting)
+   if (!ui_->treeViewAddresses->selectionModel()->hasSelection() && prevSelectedAddressRow_ != -1) {
+      auto index = ui_->treeViewAddresses->model()->index(prevSelectedAddressRow_, 0);
+      if (index.isValid())
+         ui_->treeViewAddresses->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+   }
+}
+
+void WalletsWidget::scrollChanged()
+{
+   if (ui_->treeViewWallets->model()->rowCount() > 0) {
+      walletsScrollPos_.setX(ui_->treeViewWallets->horizontalScrollBar()->value());
+      walletsScrollPos_.setY(ui_->treeViewWallets->verticalScrollBar()->value());
+   }
+
+   if (ui_->treeViewAddresses->model()->rowCount() > 0) {
+      addressesScrollPos_.setX(ui_->treeViewAddresses->horizontalScrollBar()->value());
+      addressesScrollPos_.setY(ui_->treeViewAddresses->verticalScrollBar()->value());
+   }
 }
 
 void WalletsWidget::onWalletBalanceChanged(std::string walletId)
