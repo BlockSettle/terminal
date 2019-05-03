@@ -164,13 +164,27 @@ bool ChatClientDataModel::removeContactNode(const std::string &contactId)
 {
    TreeItem * item = root_->findCategoryNodeWith(TreeItem::NodeType::ContactsElement);
 
-   if (!item) {
+   //Check if category node exists and have children that could be removed
+   if (!item || item->getChildren().empty()) {
       return false;
    }
 
+   //   If exists, we're creating index for this category node,
+   //   for which children count POTENTIALLY could be changed
    const QModelIndex index = createIndex(item->selfIndex(), 0, item);
-   const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
-   const int last = first + 1;
+
+   //Trying to find contact node that contains ContactRecordData with contactId
+   ChatContactElement * contactNode = root_->findContactNode(contactId);
+
+   if (!contactNode){
+      //If not found, then nothing to remove, and returning false
+      return false;
+   }
+
+   //If found, we can get index of this contactNode, it can calculate self index in parent
+   const int first = contactNode->selfIndex();
+   //We removing only one item, so should be first==last
+   const int last = first;
 
    beginRemoveRows(index, first, last);
    bool res = root_->removeContactNode(contactId);
