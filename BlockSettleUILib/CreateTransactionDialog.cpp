@@ -317,6 +317,11 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
    pendingTXSignId_ = 0;
    QString detailedText;
 
+   if (cancelledByUser) {
+      stopBroadcasting();
+      return;
+   }
+
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
    if (error.empty() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
       BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
@@ -361,9 +366,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
       detailedText = QString::fromStdString(error);
    }
 
-   if (!cancelledByUser) {
-      MessageBoxBroadcastError(detailedText, this).exec();
-   }
+   MessageBoxBroadcastError(detailedText, this).exec();
 
    stopBroadcasting();
 }
