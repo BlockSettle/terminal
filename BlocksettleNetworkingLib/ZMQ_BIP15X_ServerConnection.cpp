@@ -328,7 +328,7 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
    const auto &cbSent = [this, connPtr]
          (const std::string &clientId, const std::string &, bool result) {
       if (!result) {
-         logger_->error("[ZmqBIP15XServerConnection::{}] failed to send rekey", __func__);
+         logger_->error("[ZmqBIP15XServerConnection::rekey] failed to send rekey");
          return;
       }
       logger_->debug("[ZmqBIP15XServerConnection::rekey] rekeying session for {}"

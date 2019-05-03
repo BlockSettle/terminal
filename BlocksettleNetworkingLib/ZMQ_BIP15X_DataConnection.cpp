@@ -373,8 +373,8 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
             return;
          }
          else {
-            logger_->error("[ZmqBIP15XDataConnection::{}] Packet {} [{}] decryption failed - Error {}"
-               , __func__, payload.toHexStr(), payload.getSize(), result);
+            logger_->error("[ZmqBIP15XDataConnection::{}] Packet [{}] decryption failed - Error {}"
+               , __func__, payload.getSize(), result);
             notifyOnError(DataConnectionListener::SerializationFailed);
             return;
          }
