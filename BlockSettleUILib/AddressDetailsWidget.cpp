@@ -191,7 +191,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 {
    // The callback that handles previous Tx objects attached to the TxIn objects
    // and processes them. Once done, the UI can be changed.
-   const auto &cbCollectPrevTXs = [this](std::vector<Tx> prevTxs) {
+   const auto &cbCollectPrevTXs = [this](const std::vector<Tx> &prevTxs) {
       for (const auto &prevTx : prevTxs) {
          txMap_[prevTx.getThisHash()] = prevTx;
       }
@@ -201,7 +201,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 
    // Callback used to process Tx objects obtained from Armory. Used primarily
    // to obtain Tx entries for the TxIn objects we're checking.
-   const auto &cbCollectTXs = [this, cbCollectPrevTXs](std::vector<Tx> txs) {
+   const auto &cbCollectTXs = [this, cbCollectPrevTXs](const std::vector<Tx> &txs) {
       std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for an addr (fee calc).
       for (const auto &tx : txs) {
          const auto &prevTxHash = tx.getThisHash();
@@ -229,13 +229,23 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 
    // Callback to process ledger entries (pages) from the ledger delegate. Gets
    // Tx entries from Armory.
-   const auto &cbLedger = [this, cbCollectTXs]
-                          (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) {
-      std::set<BinaryData> txHashSet; // Hashes assoc'd with a given address.
+   const auto &cbLedger = [this, cbCollectTXs] (ReturnMessage<std::vector<ClientClasses::LedgerEntry>> entries) {
+      auto result = std::make_shared<std::vector<ClientClasses::LedgerEntry>>();
       try {
-         auto le = entries.get();
+         *result = entries.get();
+      }
+      catch (const std::exception &e) {
+         logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
+            "- {}", e.what());
+         return;
+      }
+
+      // Process entries on main thread because this callback is called from background
+      QMetaObject::invokeMethod(this, [this, cbCollectTXs, result] {
+         std::set<BinaryData> txHashSet; // Hashes assoc'd with a given address.
+
          // Get the hash and TXEntry object for each relevant Tx hash.
-         for (const auto &entry : le) {
+         for (const auto &entry : *result) {
             BinaryData searchHash(entry.getTxHash());
             const auto &itTX = txMap_.find(searchHash);
             if (itTX == txMap_.end()) {
@@ -243,28 +253,19 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
                txEntryHashSet_[searchHash] = bs::TXEntry::fromLedgerEntry(entry);
             }
          }
-      }
-      catch (const std::exception &e) {
-         if (logger_ != nullptr) {
-            logger_->error("[AddressDetailsWidget::getTxData] Return data error " \
-               "- {}", e.what());
+         if (txHashSet.empty()) {
+            logger_->info("[AddressDetailsWidget::getTxData] address participates in no TXs");
+         } else {
+            armory_->getTXsByHash(txHashSet, cbCollectTXs);
          }
-      }
-
-      if (txHashSet.empty()) {
-         logger_->info("[AddressDetailsWidget::getTxData] address participates in no TXs");
-      }
-      else {
-         armory_->getTXsByHash(txHashSet, cbCollectTXs);
-      }
+      });
    };
 
-   const auto &cbPageCnt = [this, delegate, cbLedger]
-                           (ReturnMessage<uint64_t> pageCnt)->void {
+   const auto &cbPageCnt = [this, delegate, cbLedger] (ReturnMessage<uint64_t> pageCnt) {
       try {
-         const auto &inPageCnt = pageCnt.get();
+         uint64_t inPageCnt = pageCnt.get();
          for(uint64_t i = 0; i < inPageCnt; i++) {
-            delegate->getHistoryPage(i, cbLedger);
+            delegate->getHistoryPage(uint32_t(i), cbLedger);
          }
       }
       catch (const std::exception &e) {
@@ -291,7 +292,7 @@ void AddressDetailsWidget::refresh(const std::shared_ptr<bs::sync::PlainWallet> 
    const auto &cbLedgerDelegate = [this](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
       getTxData(delegate);
    };
-   const auto addr = wallet->getUsedAddressList()[0];
+   const auto addr = wallet->getUsedAddressList().at(0);
    if (!wallet->getLedgerDelegateForAddress(addr, cbLedgerDelegate)) {
       logger_->debug("[AddressDetailsWidget::refresh (cbBalance)] Failed to "
                      "get ledger delegate for wallet ID {} - address {}"

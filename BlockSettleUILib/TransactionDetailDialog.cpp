@@ -55,7 +55,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
             txHashSet.insert(op.getTxHash());
             txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
          }
-         const auto &cbTXs = [this, item, txOutIndices](std::vector<Tx> txs) {
+         const auto &cbTXs = [this, item, txOutIndices](const std::vector<Tx> &txs) {
             itemSender = new QTreeWidgetItem(QStringList(tr("Sender")));
             itemReceiver = new QTreeWidgetItem(QStringList(tr("Receiver")));
             for (auto item : { itemSender, itemReceiver }) {

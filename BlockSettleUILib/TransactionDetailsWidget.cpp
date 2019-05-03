@@ -114,7 +114,7 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
    }
    // get the transaction data from armory
    std::string txidStr = rpcTXID.getRPCTXID().toHexStr();
-   const auto &cbTX = [this, txidStr](Tx tx) {
+   const auto &cbTX = [this, txidStr](const Tx &tx) {
       if (tx.isInitialized()) {
          processTxData(tx);
       }
@@ -140,7 +140,7 @@ void TransactionDetailsWidget::processTxData(Tx tx)
 
    // Get each Tx object associated with the Tx's TxIn object. Needed to calc
    // the fees.
-   const auto &cbProcessTX = [this](std::vector<Tx> prevTxs) {
+   const auto &cbProcessTX = [this](const std::vector<Tx> &prevTxs) {
       for (const auto &prevTx : prevTxs) {
          BinaryTXID intPrevTXHash(prevTx.getThisHash(), false);
          prevTxMap_[intPrevTXHash] = prevTx;

@@ -6,7 +6,6 @@
 #include <QScopedPointer>
 #include <QLayoutItem>
 
-#include "ChatUserListLogic.h"
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
 
@@ -17,6 +16,11 @@ namespace Ui {
 }
 namespace spdlog {
    class logger;
+}
+
+namespace Chat {
+   class RoomData;
+   class UserData;
 }
 
 class ChatClient;
@@ -62,15 +66,11 @@ private slots:
    void onMessagesUpdated();
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
-   void onChatUserRemoved(const ChatUserDataPtr &);
    void onSendFriendRequest(const QString &userId);
    void onRemoveFriendRequest(const QString &userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
    void onSearchUserTextEdited(const QString& text);
-   void treeViewUsersModelReset();
-   void treeViewUsersModelRowsAboutToBeInserted();
-   void treeViewUsersModelRowsInserted();
 
    void OnOTCRequestCreated();
    void DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range);
@@ -98,7 +98,6 @@ private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
    QMap<QString, QString> draftMessages_;
    bool needsToStartFirstRoom_;
-   std::set<QModelIndex> expandedIndexes_;
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
@@ -115,13 +114,7 @@ private:
    // ViewItemWatcher interface
 public:
    void onElementSelected(CategoryElement *element) override;
-
-   // ViewItemWatcher interface
-public:
    void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
-
-   // ViewItemWatcher interface
-public:
    void onElementUpdated(CategoryElement *element) override;
 };
 

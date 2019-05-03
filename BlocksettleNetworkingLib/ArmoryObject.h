@@ -13,33 +13,29 @@ class ArmoryObject : public QObject, public ArmoryConnection
 public:
    ArmoryObject(const std::shared_ptr<spdlog::logger> &, const std::string &txCacheFN
       , bool cbInMainThread = true);
-   ~ArmoryObject() noexcept = default;
+   ~ArmoryObject() noexcept override = default;
 
    void setupConnection(const ArmorySettings &settings
-      , const std::function<bool(const BinaryData &, const std::string &)> &bip150PromptUserCb
-      = [](const BinaryData&, const std::string&) {return true; });
+      , const BIP151Cb &bip150PromptUserCb = [](const BinaryData&, const std::string&) { return true; });
 
    std::string registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &, const std::string &walletId
-      , const std::vector<BinaryData> &addrVec, const std::function<void(const std::string &)> &
+      , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &
       , bool asNew = false) override;
-   bool getWalletsHistory(const std::vector<std::string> &walletIDs
-      , const std::function<void(std::vector<ClientClasses::LedgerEntry>)> &) override;
+   bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &) override;
 
    // If context is not null and cbInMainThread is true then the callback will be called
    // on main thread only if context is still alive.
    bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &
-      , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
-      , QObject *context = nullptr);
-   bool getWalletsLedgerDelegate(
-      const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &) override;
+      , const LedgerDelegateCb &, QObject *context = nullptr);
+   bool getWalletsLedgerDelegate(const LedgerDelegateCb &) override;
 
-   bool getTxByHash(const BinaryData &hash, const std::function<void(Tx)> &) override;
-   bool getTXsByHash(const std::set<BinaryData> &hashes, const std::function<void(std::vector<Tx>)> &) override;
-   bool getRawHeaderForTxHash(const BinaryData& inHash, const std::function<void(BinaryData)> &) override;
-   bool getHeaderByHeight(const unsigned int inHeight, const std::function<void(BinaryData)> &) override;
+   bool getTxByHash(const BinaryData &hash, const TxCb &) override;
+   bool getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb &) override;
+   bool getRawHeaderForTxHash(const BinaryData& inHash, const BinaryDataCb &) override;
+   bool getHeaderByHeight(const unsigned int inHeight, const BinaryDataCb &) override;
 
-   bool estimateFee(unsigned int nbBlocks, const std::function<void(float)> &) override;
-   bool getFeeSchedule(const std::function<void(std::map<unsigned int, float>)> &) override;
+   bool estimateFee(unsigned int nbBlocks, const FloatCb &) override;
+   bool getFeeSchedule(const FloatMapCb &) override;
 
    auto bip150PromptUser(const BinaryData& srvPubKey
       , const std::string& srvIPPort) -> bool;

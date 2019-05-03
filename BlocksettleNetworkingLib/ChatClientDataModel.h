@@ -31,6 +31,7 @@ public:
    bool insertGeneralUserObject(std::shared_ptr<Chat::UserData> data);
    bool insertSearchUserObject(std::shared_ptr<Chat::UserData> data);
    bool insertSearchUserList(std::vector<std::shared_ptr<Chat::UserData>> userList);
+   bool insertMessageNode(TreeMessageNode *messageNode);
    bool insertRoomMessage(std::shared_ptr<Chat::MessageData> message);
    bool insertContactsMessage(std::shared_ptr<Chat::MessageData> message);
    TreeItem* findChatNode(const std::string& chatId);

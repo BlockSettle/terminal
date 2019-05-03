@@ -109,6 +109,7 @@ public:
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
+      chat_->ui_->treeViewUsers->expandAll();
    }
 
    void onStateExit() override {
@@ -255,9 +256,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited, this, &ChatWidget::onSearchUserTextEdited);
-   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::modelReset, this, &ChatWidget::treeViewUsersModelReset);
-   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::rowsAboutToBeInserted, this, &ChatWidget::treeViewUsersModelRowsAboutToBeInserted);
-   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::rowsInserted, this, &ChatWidget::treeViewUsersModelRowsInserted);
 
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
 //           this, &ChatWidget::onSearchUserListReceived);
@@ -267,13 +265,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    initPopup();
 }
 
-void ChatWidget::onChatUserRemoved(const ChatUserDataPtr &chatUserDataPtr)
-{
-   if (currentChat_ == chatUserDataPtr->userId())
-   {
-      onUserClicked({});
-   }
-}
 
 void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList)
 {
@@ -310,46 +301,6 @@ void ChatWidget::onUserClicked(const QString& userId)
 void ChatWidget::onUsersDeleted(const std::vector<std::string> &users)
 {
    stateCurrent_->onUsersDeleted(users);
-}
-
-void ChatWidget::treeViewUsersModelReset()
-{
-   // expand all by default
-   ui_->treeViewUsers->expandAll();
-}
-
-void ChatWidget::treeViewUsersModelRowsAboutToBeInserted()
-{
-   // get all indexes
-   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
-                                                                Qt::DisplayRole,
-                                                                QLatin1String("*"),
-                                                                -1,
-                                                                Qt::MatchWildcard|Qt::MatchRecursive);
-   
-   // save expanded indexes
-   expandedIndexes_.clear();
-   for (const auto &index : indexes)
-      if (ui_->treeViewUsers->isExpanded(index))
-         expandedIndexes_.insert(index);
-}
-
-void ChatWidget::treeViewUsersModelRowsInserted()
-{
-   // get all indexes
-   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
-                                                                Qt::DisplayRole,
-                                                                QLatin1String("*"),
-                                                                -1,
-                                                                Qt::MatchWildcard|Qt::MatchRecursive);
-
-    // restore expand and collaps states for all indexes
-   for (const auto &index : indexes) {
-      if (expandedIndexes_.find(index) != expandedIndexes_.end())
-	      ui_->treeViewUsers->expand(index);
-      else
-         ui_->treeViewUsers->collapse(index);
-   }
 }
 
 void ChatWidget::changeState(ChatWidget::State state)

@@ -98,7 +98,7 @@ void CreateTransactionDialogAdvanced::setCPFPinputs(const Tx &tx, const std::sha
    }
    allowAutoSelInputs_ = false;
 
-   const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
+   const auto &cbTXs = [this, tx, wallet, txOutIndices](const std::vector<Tx> &txs) {
       auto selInputs = transactionData_->GetSelectedInputs();
       selInputs->SetUseAutoSel(false);
       int64_t origFee = 0;
@@ -194,7 +194,7 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       txOutIndices[outpoint.getTxHash()].insert(outpoint.getTxOutIndex());
    }
 
-   const auto &cbTXs = [this, tx, wallet, txOutIndices](std::vector<Tx> txs) {
+   const auto &cbTXs = [this, tx, wallet, txOutIndices](const std::vector<Tx> &txs) {
       int64_t totalVal = 0;
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
@@ -926,7 +926,7 @@ void CreateTransactionDialogAdvanced::SetImportedTransactions(const std::vector<
                txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
             }
 
-            const auto &cbTXs = [this, tx, utxoHashes, txOutIndices](std::vector<Tx> txs) {
+            const auto &cbTXs = [this, tx, utxoHashes, txOutIndices](const std::vector<Tx> &txs) {
                std::shared_ptr<bs::sync::Wallet> wallet;
                int64_t totalVal = 0;
 

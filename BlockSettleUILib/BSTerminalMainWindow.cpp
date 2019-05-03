@@ -1293,7 +1293,7 @@ void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
       return;
    }
    for (const auto &entry : entries) {
-      const auto &cbTx = [this, id = entry.id, txTime = entry.txTime, value = entry.value](Tx tx) {
+      const auto &cbTx = [this, id = entry.id, txTime = entry.txTime, value = entry.value](const Tx &tx) {
          const auto wallet = walletsMgr_->getWalletById(id);
          if (!wallet) {
             return;
