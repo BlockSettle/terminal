@@ -1,7 +1,23 @@
 {
-   "latest_version" : "0.15.0",
-   "release_date" : "02 May 2019",
+   "latest_version" : "0.15.1",
+   "release_date" : "03 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.1",
+         "previous_version" : "0.15.0",
+         "release_date" : "03 May 2019",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Signer TX cancel",
+            "EOD charting fixes",
+            "Crash fixes"
+         ],
+         "revision" : "7fd01165",
+         "common_revision" : "93f66109"
+      },
       {
          "version_string" : "0.15.0",
          "previous_version" : "0.14.18",
