@@ -1,7 +1,22 @@
 {
-   "latest_version" : "0.15.1",
+   "latest_version" : "0.15.2",
    "release_date" : "03 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.2",
+         "previous_version" : "0.15.1",
+         "release_date" : "03 May 2019",
+         "improvements" :
+         [
+            "Moved to qt 5.12.3"
+         ],
+         "bug_fixes" :
+         [
+            "Signer TX fixes"
+         ],
+         "revision" : "eab31638",
+         "common_revision" : "113b9387"
+      },
       {
          "version_string" : "0.15.1",
          "previous_version" : "0.15.0",
