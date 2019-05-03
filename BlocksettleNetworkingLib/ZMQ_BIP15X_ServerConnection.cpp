@@ -235,13 +235,6 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    , const string& data, const SendResultCb& cb)
 {
-   {
-      std::unique_lock<std::mutex> lock(rekeyMutex_);
-      if (rekeyStarted_.find(clientId) != rekeyStarted_.end()) {
-         pendingData_[clientId].push_back({ data, cb });
-         return true;
-      }
-   }
    bool retVal = false;
    BIP151Connection* connPtr = nullptr;
    if (socketConnMap_[clientId]->bip151HandshakeCompleted_) {
@@ -268,6 +261,14 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
       if (needsRekey) {
          socketConnMap_[clientId]->outKeyTimePoint_ = rightNow;
          rekey(clientId);
+      }
+   }
+
+   {
+      std::unique_lock<std::mutex> lock(rekeyMutex_);
+      if (rekeyStarted_.find(clientId) != rekeyStarted_.end()) {
+         pendingData_[clientId].push_back({ data, cb });
+         return true;
       }
    }
 
