@@ -100,7 +100,7 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
 
 bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   TreeItem * item = root_->insertRoomMessage(message);
+   auto item = new TreeMessageNode(TreeItem::NodeType::RoomsElement, message);
 
    if (!item)
       return false;
@@ -109,14 +109,18 @@ bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> m
    const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
    const int last = first + 1;
    beginInsertRows(index, first, last);
+   auto res = root_->insertRoomMessage(message);
    endInsertRows();
+
+   if (!res)
+      return false;
 
    return true;
 }
 
 bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   TreeItem * item = root_->insertContactsMessage(message);
+   auto item = new TreeMessageNode(TreeItem::NodeType::ContactsElement, message);
    if (!item)
       return false;
 
@@ -124,7 +128,11 @@ bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageDat
    const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
    const int last = first + 1;
    beginInsertRows(index, first, last);
+   auto res = root_->insertContactsMessage(message);
    endInsertRows();
+
+   if (!res)
+      return false;
 
    return true;
 }
