@@ -265,13 +265,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    initPopup();
 }
 
-void ChatWidget::onChatUserRemoved(const ChatUserDataPtr &chatUserDataPtr)
-{
-   if (currentChat_ == chatUserDataPtr->userId())
-   {
-      onUserClicked({});
-   }
-}
 
 void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList)
 {
