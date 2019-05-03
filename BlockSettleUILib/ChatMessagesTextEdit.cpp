@@ -132,7 +132,13 @@ QImage ChatMessagesTextEdit::statusImage(const int &row)
    QImage statusImage = statusImageOffline_;
    
    if (state & static_cast<int>(Chat::MessageData::State::Sent)){
-      statusImage = statusImageConnecting_;
+
+      if (isGroupRoom_) {
+         statusImage = statusImageRead_;
+      } else {
+         statusImage = statusImageConnecting_;
+      }
+
    }
    
    if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
