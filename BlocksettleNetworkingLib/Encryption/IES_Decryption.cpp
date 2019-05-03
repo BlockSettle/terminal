@@ -23,6 +23,11 @@ namespace Encryption
    {
    }
 
+   std::unique_ptr<IES_Decryption> IES_Decryption::create(const std::shared_ptr<spdlog::logger>& logger)
+   {
+      return std::unique_ptr<IES_Decryption>(new IES_Decryption(logger));
+   }
+
    void IES_Decryption::finish(Botan::SecureVector<uint8_t>& data)
    {
       if (privateKey_ == nullptr) {

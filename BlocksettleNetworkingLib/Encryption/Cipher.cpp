@@ -31,10 +31,16 @@ namespace Encryption
          }
       }
       else {
-         if (cipher_direction == ENCRYPTION)
-            return std::unique_ptr<Cipher>(new IES_Encryption(logger));
-         else
-            return std::unique_ptr<Cipher>(new IES_Decryption(logger));
+         if (cipher_direction == ENCRYPTION) {
+            if (auto ies = IES_Encryption::create(logger)) {
+               return std::unique_ptr<Cipher>(ies.release());
+            }
+         }
+         else {
+            if (auto ies = IES_Encryption::create(logger)) {
+               return std::unique_ptr<Cipher>(ies.release());
+            }
+         }
       }
 
       return std::unique_ptr<Cipher>();

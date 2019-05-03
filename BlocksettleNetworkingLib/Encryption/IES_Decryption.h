@@ -14,6 +14,8 @@ namespace Encryption
       IES_Decryption(const std::shared_ptr<spdlog::logger>&);
       ~IES_Decryption() = default;
 
+      static std::unique_ptr<IES_Decryption> create(const std::shared_ptr<spdlog::logger>& logger);
+
       void finish(Botan::SecureVector<uint8_t>& data) override;
    };
 

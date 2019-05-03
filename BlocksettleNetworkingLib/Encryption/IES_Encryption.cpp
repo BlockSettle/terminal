@@ -21,6 +21,11 @@ namespace Encryption
    {
    }
 
+   std::unique_ptr<IES_Encryption> IES_Encryption::create(const std::shared_ptr<spdlog::logger>& logger)
+   {
+      return std::unique_ptr<IES_Encryption>(new IES_Encryption(logger));
+   }
+
    void IES_Encryption::finish(Botan::SecureVector<uint8_t>& data)
    {
       if (publicKey_ == nullptr) {
