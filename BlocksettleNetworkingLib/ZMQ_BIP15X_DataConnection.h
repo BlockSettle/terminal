@@ -49,9 +49,6 @@ public:
       , const bool& makeClientCookie = false
       , const bool& readServerCookie = false
       , const std::string& cookiePath = "");
-/*   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
-      , bool monitored);*/
    ~ZmqBIP15XDataConnection() noexcept override;
 
    using cbNewKey = std::function<void(const std::string&, const std::string&
@@ -77,6 +74,8 @@ public:
    bool send(const std::string& data) override; // Send data from outside class.
    bool closeConnection() override;
 
+   void rekey();
+
 protected:
    bool startBIP151Handshake(const std::function<void()> &cbCompleted);
    bool handshakeCompleted() {
@@ -101,6 +100,7 @@ private:
    AuthPeersLambdas getAuthPeerLambda() const;
    void rekeyIfNeeded(const size_t& dataSize);
 
+private:
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    bool  serverPubkeySignalled_ = false;
    std::shared_ptr<AuthorizedPeers> authPeers_;

@@ -151,7 +151,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
       { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
-      { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) },
+      { remoteSignerKeys,                 SettingDef(QLatin1String("RemoteSignerKeys")) },
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
       { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys")) },
@@ -208,6 +208,8 @@ bool ApplicationSettings::isDefault(Setting set) const
 
 void ApplicationSettings::set(Setting s, const QVariant &val, bool toFile)
 {
+   bool changed = false;
+
    if (val.isValid()) {
       FastLock lock(lock_);
       auto itSD = settingDefs_.find(s);
@@ -216,13 +218,18 @@ void ApplicationSettings::set(Setting s, const QVariant &val, bool toFile)
          itSD->second.read = true;
          if (val != itSD->second.value) {
             itSD->second.value = val;
-            emit settingChanged(s, val);
+            changed = true;
          }
 
          if (toFile && !itSD->second.path.isEmpty()) {
             settings_.setValue(itSD->second.path, val);
          }
       }
+   }
+
+   lock_.clear();
+   if (changed) {
+      emit settingChanged(s, val);
    }
 }
 
