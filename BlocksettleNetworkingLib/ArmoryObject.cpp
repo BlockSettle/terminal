@@ -244,7 +244,7 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb 
       cb(*result);
       return true;
    }
-   const auto &cbWrap = [this, cb, result](std::vector<Tx> txs) {
+   const auto &cbWrap = [this, cb, result](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          if (tx.isInitialized()) {
             txCache_.put(tx.getThisHash(), tx);
