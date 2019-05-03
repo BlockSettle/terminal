@@ -71,7 +71,6 @@ class QtSettings(Configurator):
         if self._project_settings.get_link_mode() == 'static':
             command.append('-static')
             command.append('-openssl-linked')
-            command.append('-no-securetransport')
             command.append('-openssl')
             if self._project_settings.on_windows():
                 command.append('-static-runtime')
