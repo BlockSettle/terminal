@@ -590,7 +590,6 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
                dec->setPublicKey(remotePublicKey);
                dec->setNonce(msg->nonce());
                dec->setData(QByteArray::fromBase64(msg->messageData().toLatin1()).toStdString());
-               logger_->info("ASSOCIATED DATA DEC: {}", msg->jsonAssociatedData());
                dec->setAssociatedData(msg->jsonAssociatedData());
 
                try {
@@ -776,7 +775,6 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    messageData.setNonce(nonce);
 
    enc->setData(messageData.messageData().toStdString());
-   logger_->info("ASSOCIATED DATA ENC: {}", messageData.jsonAssociatedData());
    enc->setAssociatedData(messageData.jsonAssociatedData());
    
    Botan::SecureVector<uint8_t> encodedData;
