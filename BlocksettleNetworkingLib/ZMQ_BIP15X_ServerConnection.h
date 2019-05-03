@@ -52,7 +52,7 @@ class ZmqBIP15XServerConnection : public ZmqServerConnection
 public:
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
-      , const std::vector<std::string>& cbtrustedClients
+      , const std::vector<std::string>& trustedClients
       , const uint64_t& id
       , const bool& ephemeralPeers
       , const bool& makeServerCookie = false
@@ -80,6 +80,8 @@ public:
    std::string getCookiePath() const { return bipIDCookiePath_; }
    BinaryData getOwnPubKey() const;
    void addAuthPeer(const BinaryData& inKey, const std::string& keyName);
+
+   void rekey(const std::string &clientId);
 
 protected:
    // Overridden functions from ZmqServerConnection.
@@ -119,5 +121,9 @@ private:
    std::thread             hbThread_;
    std::mutex              hbMutex_;
    std::condition_variable hbCondVar_;
+
+   std::mutex              rekeyMutex_;
+   std::unordered_set<std::string>  rekeyStarted_;
+   std::unordered_map<std::string, std::vector<std::tuple<std::string, SendResultCb>>> pendingData_;
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

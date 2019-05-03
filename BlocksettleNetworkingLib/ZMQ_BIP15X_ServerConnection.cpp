@@ -235,60 +235,46 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    , const string& data, const SendResultCb& cb)
 {
+   {
+      std::unique_lock<std::mutex> lock(rekeyMutex_);
+      if (rekeyStarted_.find(clientId) != rekeyStarted_.end()) {
+         pendingData_[clientId].push_back({ data, cb });
+         return true;
+      }
+   }
    bool retVal = false;
    BIP151Connection* connPtr = nullptr;
-   if (socketConnMap_[clientId]->bip151HandshakeCompleted_)
-   {
+   if (socketConnMap_[clientId]->bip151HandshakeCompleted_) {
       connPtr = socketConnMap_[clientId]->encData_.get();
    }
 
    // Check if we need to do a rekey before sending the data.
-   if (socketConnMap_[clientId]->bip150HandshakeCompleted_)
-   {
+   if (socketConnMap_[clientId]->bip150HandshakeCompleted_) {
       bool needsRekey = false;
       auto rightNow = chrono::steady_clock::now();
 
       // Rekey off # of bytes sent or length of time since last rekey.
-      if (connPtr->rekeyNeeded(data.size()))
-      {
+      if (connPtr->rekeyNeeded(data.size())) {
          needsRekey = true;
       }
-      else
-      {
+      else {
          auto time_sec = chrono::duration_cast<chrono::seconds>(
             rightNow - socketConnMap_[clientId]->outKeyTimePoint_);
-         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS)
-         {
+         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS) {
             needsRekey = true;
          }
       }
 
-      if (needsRekey)
-      {
+      if (needsRekey) {
          socketConnMap_[clientId]->outKeyTimePoint_ = rightNow;
-         BinaryData rekeyData(BIP151PUBKEYSIZE);
-         memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
-
-         ZmqBIP15XSerializedMessage rekeyPacket;
-         rekeyPacket.construct(rekeyData.getRef(), connPtr, ZMQ_MSGTYPE_AEAD_REKEY);
-
-         auto& packet = rekeyPacket.getNextPacket();
-         if (!SendDataToClient(clientId, packet.toBinStr(), cb))
-         {
-            logger_->error("[ZmqBIP15XServerConnection::{}] {} failed to send "
-               "rekey: {} (result={})", __func__, connectionName_
-               , zmq_strerror(zmq_errno()));
-         }
-         connPtr->rekeyOuterSession();
-         socketConnMap_[clientId]->outerRekeyCount_++;
+         rekey(clientId);
       }
    }
 
    // Encrypt data here if the BIP 150 handshake is complete.
-   if (socketConnMap_[clientId] && socketConnMap_[clientId]->encData_){
+   if (socketConnMap_[clientId] && socketConnMap_[clientId]->encData_) {
       if (socketConnMap_[clientId]->encData_->getBIP150State() ==
-         BIP150State::SUCCESS)
-      {
+         BIP150State::SUCCESS) {
          string sendStr = data;
          const BinaryData payload(data);
          ZmqBIP15XSerializedMessage msg;
@@ -296,8 +282,7 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
             , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, socketConnMap_[clientId]->msgID_);
 
          // Cycle through all packets.
-         while (!msg.isDone())
-         {
+         while (!msg.isDone()) {
             auto& packet = msg.getNextPacket();
             if (packet.getSize() == 0) {
                logger_->error("[ZmqBIP15XServerConnection::{}] failed to "
@@ -306,23 +291,67 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
             }
 
             retVal = QueueDataToSend(clientId, packet.toBinStr(), cb, false);
-            if (!retVal)
-            {
+            if (!retVal) {
                logger_->error("[ZmqBIP15XServerConnection::{}] fragment send failed"
                   , __func__, data.size());
                return retVal;
             }
          }
       }
-      else
-      {
+      else {
          // Queue up the untouched data for straight transmission.
          retVal = QueueDataToSend(clientId, data, cb, false);
       }
    }
-
-
    return retVal;
+}
+
+void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
+{
+   if (!socketConnMap_[clientId]->bip151HandshakeCompleted_) {
+      logger_->error("[ZmqBIP15XServerConnection::{}] can't rekey without BIP151"
+         " handshaked completed", __func__);
+      return;
+   }
+   {
+      std::unique_lock<std::mutex> lock(rekeyMutex_);
+      rekeyStarted_.insert(clientId);
+   }
+   const auto connPtr = socketConnMap_[clientId]->encData_.get();
+   BinaryData rekeyData(BIP151PUBKEYSIZE);
+   memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
+
+   ZmqBIP15XSerializedMessage rekeyPacket;
+   rekeyPacket.construct(rekeyData.getRef(), connPtr, ZMQ_MSGTYPE_AEAD_REKEY);
+   auto& packet = rekeyPacket.getNextPacket();
+
+   const auto &cbSent = [this, connPtr]
+         (const std::string &clientId, const std::string &, bool result) {
+      if (!result) {
+         logger_->error("[ZmqBIP15XServerConnection::rekey] failed to send rekey");
+         return;
+      }
+      logger_->debug("[ZmqBIP15XServerConnection::rekey] rekeying session for {}"
+         , BinaryData(clientId).toHexStr());
+      connPtr->rekeyOuterSession();
+      socketConnMap_[clientId]->outerRekeyCount_++;
+      {
+         std::unique_lock<std::mutex> lock(rekeyMutex_);
+         rekeyStarted_.erase(clientId);
+      }
+      const auto itData = pendingData_.find(clientId);
+      if ((itData != pendingData_.end()) && !itData->second.empty()) {
+         for (const auto &data : itData->second) {
+            SendDataToClient(itData->first, std::get<0>(data), std::get<1>(data));
+         }
+         itData->second.clear();
+      }
+   };
+   if (!QueueDataToSend(clientId, packet.toBinStr(), cbSent, false)) {
+      logger_->error("[ZmqBIP15XServerConnection::{}] {} failed to send "
+         "rekey: {} (result={})", __func__, connectionName_
+         , zmq_strerror(zmq_errno()));
+   }
 }
 
 // A send function for the data connection that sends data to all clients,
@@ -337,10 +366,8 @@ bool ZmqBIP15XServerConnection::SendDataToAllClients(const std::string& data, co
    unsigned int successCount = 0;
    std::unique_lock<std::mutex> lock(clientsMtx_);
 
-   for (const auto &it : socketConnMap_)
-   {
-      if (SendDataToClient(it.first, data, cb))
-      {
+   for (const auto &it : socketConnMap_) {
+      if (SendDataToClient(it.first, data, cb)) {
          successCount++;
       }
    }

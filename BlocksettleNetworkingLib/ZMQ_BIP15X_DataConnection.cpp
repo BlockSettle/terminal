@@ -148,46 +148,51 @@ void ZmqBIP15XDataConnection::rekeyIfNeeded(const size_t& dataSize)
    bool needsRekey = false;
    const auto rightNow = chrono::steady_clock::now();
 
-   if (bip150HandshakeCompleted_)
-   {
+   if (bip150HandshakeCompleted_) {
       // Rekey off # of bytes sent or length of time since last rekey.
-      if (bip151Connection_->rekeyNeeded(dataSize))
-      {
+      if (bip151Connection_->rekeyNeeded(dataSize)) {
          needsRekey = true;
       }
-      else
-      {
+      else {
          auto time_sec = chrono::duration_cast<chrono::seconds>(
             rightNow - outKeyTimePoint_);
-         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS)
-         {
+         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS) {
             needsRekey = true;
          }
       }
 
-      if (needsRekey)
-      {
+      if (needsRekey) {
          outKeyTimePoint_ = rightNow;
-         BinaryData rekeyData(BIP151PUBKEYSIZE);
-         memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
-
-         ZmqBIP15XSerializedMessage rekeyPacket;
-         rekeyPacket.construct(rekeyData.getRef(), bip151Connection_.get()
-            , ZMQ_MSGTYPE_AEAD_REKEY);
-
-         auto& packet = rekeyPacket.getNextPacket();
-         if (!sendPacket(packet.toBinStr()))
-         {
-            if (logger_) {
-               logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-                  "rekey: {} (result={})", __func__, connectionName_
-                  , zmq_strerror(zmq_errno()));
-            }
-         }
-         bip151Connection_->rekeyOuterSession();
-         ++outerRekeyCount_;
+         rekey();
       }
    }
+}
+
+void ZmqBIP15XDataConnection::rekey()
+{
+   if (!bip150HandshakeCompleted_) {
+      logger_->error("[ZmqBIP15XDataConnection::{}] Can't rekey before BIP150 "
+         "handshake is complete", __func__);
+      return;
+   }
+
+   BinaryData rekeyData(BIP151PUBKEYSIZE);
+   memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
+
+   ZmqBIP15XSerializedMessage rekeyPacket;
+   rekeyPacket.construct(rekeyData.getRef(), bip151Connection_.get()
+      , ZMQ_MSGTYPE_AEAD_REKEY);
+
+   auto& packet = rekeyPacket.getNextPacket();
+   if (!sendPacket(packet.toBinStr())) {
+      if (logger_) {
+         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+            "rekey: {} (result={})", __func__, connectionName_
+            , zmq_strerror(zmq_errno()));
+      }
+   }
+   bip151Connection_->rekeyOuterSession();
+   ++outerRekeyCount_;
 }
 
 // An internal send function to be used when this class constructs a packet. The
@@ -346,35 +351,32 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
 
    // If decryption "failed" due to fragmentation, put the pieces together.
    // (Unlikely but we need to plan for it.)
-   if (leftOverData_.getSize() != 0)
-   {
+   if (leftOverData_.getSize() != 0) {
       leftOverData_.append(payload);
       payload = move(leftOverData_);
       leftOverData_.clear();
    }
 
    // Perform decryption if we're ready.
-   if (bip151Connection_->connectionComplete())
-   {
+   if (bip151Connection_->connectionComplete()) {
       auto result = bip151Connection_->decryptPacket(
          payload.getPtr(), payload.getSize(),
          payload.getPtr(), payload.getSize());
 
       // Failure isn't necessarily a problem if we're dealing with fragments.
-      if (result != 0)
-      {
+      if (result != 0) {
          // If decryption "fails" but the result indicates fragmentation, save
          // the fragment and wait before doing anything, otherwise treat it as a
          // legit error.
-         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1)
-         {
+         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1) {
             leftOverData_ = move(payload);
             return;
          }
-         else
-         {
-            logger_->error("[{}] Packet decryption failed - Error {}", __func__
-               , result);
+         else {
+            logger_->error("[ZmqBIP15XDataConnection::{}] Packet [{} bytes] "
+               "from {} decryption failed - Error {}"
+               , __func__, payload.getSize(), connectionName_, result);
+            notifyOnError(DataConnectionListener::SerializationFailed);
             return;
          }
       }
@@ -426,14 +428,12 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
 
    // Fragmented messages may not be marked as fragmented when decrypted but may
    // still be a fragment. That's fine. Just wait for the other fragments.
-   if (!currentReadMessage_.message_.isReady())
-   {
+   if (!currentReadMessage_.message_.isReady()) {
       return;
    }
 
    // If we're still handshaking, take the next step. (No fragments allowed.)
-   if (currentReadMessage_.message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD)
-   {
+   if (currentReadMessage_.message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(currentReadMessage_.message_)) {
          if (logger_) {
             logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
