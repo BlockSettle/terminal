@@ -121,7 +121,7 @@ public:
       authPrivKey,
       jwtUsername,
       zmqLocalSignerPubKeyFilePath,
-      zmqRemoteSignerPubKey,
+      remoteSignerKeys,
       rememberLoginUserName,
       armoryServers,
       defaultArmoryServersKeys,

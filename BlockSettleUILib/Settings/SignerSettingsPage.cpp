@@ -6,6 +6,7 @@
 #include "BtcUtils.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
+#include "SignerKeysWidget.h"
 
 
 enum RunModeIndex {
@@ -19,28 +20,11 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    , ui_{new Ui::SignerSettingsPage{}}
 {
    ui_->setupUi(this);
-   ui_->lineEditSignerKey->hide();
 
    connect(ui_->comboBoxRunMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignerSettingsPage::runModeChanged);
    connect(ui_->pushButtonOfflineDir, &QPushButton::clicked, this, &SignerSettingsPage::onOfflineDirSel);
    connect(ui_->spinBoxAsSpendLimit, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &SignerSettingsPage::onAsSpendLimitChanged);
-
-   connect(ui_->comboBoxSignerKeyImportType, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
-      ui_->lineEditSignerKey->setVisible(index == 1);
-      ui_->lineEditSignerKeyPath->setVisible(index == 0);
-      ui_->pushButtonSignerKey->setVisible(index == 0);
-   });
-
-   connect(ui_->pushButtonSignerKey, &QPushButton::clicked, [this](){
-      QString fileName = QFileDialog::getOpenFileName(this
-                                   , tr("Open Signer Public Key")
-                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
-                                   , tr("Key files (*.pub)"));
-
-      if (!fileName.isEmpty()) {
-         ui_->lineEditSignerKeyPath->setText(fileName);
-      }
-   });
+   connect(ui_->pushButtonManageSignerKeys, &QPushButton::clicked, this, &SignerSettingsPage::onManageSignerKeys);
 }
 
 SignerSettingsPage::~SignerSettingsPage() = default;
@@ -103,7 +87,7 @@ void SignerSettingsPage::reset()
 {
    for (const auto &setting : {ApplicationSettings::signerRunMode, ApplicationSettings::signerHost
       , ApplicationSettings::signerPort, ApplicationSettings::signerOfflineDir
-      , ApplicationSettings::zmqRemoteSignerPubKey, ApplicationSettings::autoSignSpendLimit
+      , ApplicationSettings::remoteSignerKeys, ApplicationSettings::autoSignSpendLimit
       , ApplicationSettings::twoWayAuth}) {
       appSettings_->reset(setting, false);
    }
@@ -142,7 +126,6 @@ void SignerSettingsPage::showSignerKeySettings(bool show)
    ui_->checkBoxTwoWayAuth->setVisible(show);
    ui_->widgetSignerKeyLabel->setVisible(show);
    ui_->widgetSignerKeyComboBox->setVisible(show);
-   ui_->widgetSignerKeyContent->setVisible(show);
 }
 
 void SignerSettingsPage::onAsSpendLimitChanged(double value)
@@ -153,6 +136,29 @@ void SignerSettingsPage::onAsSpendLimitChanged(double value)
    else {
       ui_->labelAsSpendLimit->setText(tr("Spend Limit - unlimited"));
    }
+}
+
+void SignerSettingsPage::onManageSignerKeys()
+{
+   // workaround here - wrap widget by QDialog
+   // TODO: fix stylesheet to support popup widgets
+
+   QDialog *d = new QDialog(this);
+   QVBoxLayout *l = new QVBoxLayout(d);
+   l->setContentsMargins(0,0,0,0);
+   d->setLayout(l);
+   d->setWindowTitle(tr("Import Signer Keys"));
+
+   SignerKeysWidget *signerKeysWidget = new SignerKeysWidget(appSettings_, this);
+   d->resize(signerKeysWidget->size());
+
+   l->addWidget(signerKeysWidget);
+
+   connect(signerKeysWidget, &SignerKeysWidget::needClose, this, [d](){
+      d->reject();
+   });
+
+   d->exec();
 }
 
 void SignerSettingsPage::apply()
@@ -176,20 +182,4 @@ void SignerSettingsPage::apply()
    // first comboBoxRunMode index is '--Select--' placeholder
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
    appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
-
-   // save signer key from file or from line input
-   QString signerKey;
-   if (ui_->comboBoxSignerKeyImportType->currentIndex() == 0) {
-      QFile file(ui_->lineEditSignerKeyPath->text());
-      if (file.open(QIODevice::ReadOnly)) {
-         signerKey = QString::fromLatin1(file.readAll());
-      }
-   }
-   else {
-      signerKey = ui_->lineEditSignerKey->text();
-   }
-
-   if (!signerKey.isEmpty()) {
-      appSettings_->set(ApplicationSettings::zmqRemoteSignerPubKey, signerKey);
-   }
 }

@@ -26,6 +26,7 @@ private slots:
    void runModeChanged(int index);
    void onOfflineDirSel();
    void onAsSpendLimitChanged(double);
+   void onManageSignerKeys();
 
 private:
    void onModeChanged(int index);

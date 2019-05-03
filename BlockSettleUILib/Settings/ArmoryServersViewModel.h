@@ -24,7 +24,6 @@ public:
    ArmoryServersViewModel(ArmoryServersViewModel&&) = delete;
    ArmoryServersViewModel& operator = (ArmoryServersViewModel&&) = delete;
 
-public:
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
@@ -32,7 +31,6 @@ public:
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
    void setHighLightSelectedServer(bool highLightSelectedServer);
-
    void setSingleColumnMode(bool singleColumnMode);
 
 public slots:
@@ -50,7 +48,8 @@ private:
       ColumnType,
       ColumnAddress,
       ColumnPort,
-      ColumnKey
+      ColumnKey,
+      ColumnsCount
    };
 };
 
