@@ -40,26 +40,25 @@ bool RootItem::insertSearchUserObject(std::shared_ptr<Chat::UserData> data)
    return  res;
 }
 
-TreeItem* RootItem::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
-{
-   TreeMessageNode * messageNode = new TreeMessageNode(TreeItem::NodeType::RoomsElement, message);
-   bool res = insertMessageNode(messageNode);
-   if (!res){
-      delete messageNode;
-      return nullptr;
-   }
-   return messageNode;
-}
 
-TreeItem* RootItem::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
+TreeItem * RootItem::resolveMessageTargetNode(TreeMessageNode * messageNode)
 {
-   TreeMessageNode * messageNode = new TreeMessageNode(TreeItem::NodeType::ContactsElement, message);
-   bool res = insertMessageNode(messageNode);
-   if (!res){
-      delete messageNode;
+   if (!messageNode){
       return nullptr;
    }
-   return messageNode;
+
+   auto categoryIt = std::find_if(children_.begin(), children_.end(), [messageNode](TreeItem* child){
+      return child->getAcceptType() == messageNode->getTargetParentType();
+   });
+
+   if (categoryIt != children_.end()) {
+
+     TreeItem* target = (*categoryIt)->findSupportChild(messageNode);
+      if (target) {
+         return target;
+      }
+   }
+   return nullptr;
 }
 
 TreeItem* RootItem::findChatNode(const std::string &chatId)

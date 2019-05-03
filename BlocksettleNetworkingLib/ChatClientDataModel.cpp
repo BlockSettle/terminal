@@ -98,48 +98,55 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
    return true;
 }
 
+bool ChatClientDataModel::insertMessageNode(TreeMessageNode * messageNode)
+{
+   //We use this to find target Room node were this message should be
+   //It need to do before call beginInsertRows to have access to target children list
+   //And make first and last indices calculation for beginInsertRows
+   TreeItem * target = root_->resolveMessageTargetNode(messageNode);
+
+   if (!target){
+      return false;
+   }
+
+   const QModelIndex parentIndex = createIndex(target->selfIndex(), 0, target);
+
+   const int first = target->getChildren().empty() ? 0 : target->getChildren().back()->selfIndex();
+   const int last = first + 1;
+
+   //Here we say that for target (parentIndex) will be inserted new children
+   //That will have indices from first to last
+   beginInsertRows(parentIndex, first, last);
+   bool res = root_->insertMessageNode(messageNode);
+   endInsertRows();
+
+   return res;
+}
+
 bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
 {
    auto item = new TreeMessageNode(TreeItem::NodeType::RoomsElement, message);
 
-   if (!item) {
-      return false;
+   bool res = insertMessageNode(item);
+
+   if (!res){
+      delete  item;
    }
 
-   const QModelIndex index = createIndex(item->selfIndex(), 0, item);
-   const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
-   const int last = first + 1;
-   beginInsertRows(index, first, last);
-   auto res = root_->insertRoomMessage(message);
-   endInsertRows();
-
-   if (!res) {
-      return false;
-   }
-
-   return true;
+   return res;
 }
 
 bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
 {
    auto item = new TreeMessageNode(TreeItem::NodeType::ContactsElement, message);
 
-   if (!item) {
-      return false;
+   bool res = insertMessageNode(item);
+
+   if (!res){
+      delete  item;
    }
 
-   const QModelIndex index = createIndex(item->selfIndex(), 0, item);
-   const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
-   const int last = first + 1;
-   beginInsertRows(index, first, last);
-   auto res = root_->insertContactsMessage(message);
-   endInsertRows();
-
-   if (!res) {
-      return false;
-   }
-
-   return true;
+   return res;
 }
 
 TreeItem *ChatClientDataModel::findChatNode(const std::string &chatId)
