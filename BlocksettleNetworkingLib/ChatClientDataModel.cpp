@@ -98,27 +98,60 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
    return true;
 }
 
+bool ChatClientDataModel::insertMessageNode(TreeMessageNode * messageNode)
+{
+   //We use this to find target Room node were this message should be
+   //It need to do before call beginInsertRows to have access to target children list
+   //And make first and last indices calculation for beginInsertRows
+   TreeItem * target = root_->resolveMessageTargetNode(messageNode);
+
+   if (!target){
+      return false;
+   }
+
+   const QModelIndex parentIndex = createIndex(target->selfIndex(), 0, target);
+
+   const int first = target->getChildren().empty() ? 0 : target->getChildren().back()->selfIndex();
+   const int last = first + 1;
+
+   //Here we say that for target (parentIndex) will be inserted new children
+   //That will have indices from first to last
+   beginInsertRows(parentIndex, first, last);
+   bool res = root_->insertMessageNode(messageNode);
+   endInsertRows();
+
+   return res;
+}
+
 bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   //beginInsertRows(QModelIndex(), 0, 1);
-   bool res = root_->insertRoomMessage(message);
-   //endInsertRows();
+   auto item = new TreeMessageNode(TreeItem::NodeType::RoomsElement, message);
+
+   bool res = insertMessageNode(item);
+
+   if (!res){
+      delete  item;
+   }
+
    return res;
 }
 
 bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
 {
-   //beginInsertRows(QModelIndex(), 0, 1);
-   bool res = root_->insertContactsMessage(message);
-   //endInsertRows();
+   auto item = new TreeMessageNode(TreeItem::NodeType::ContactsElement, message);
+
+   bool res = insertMessageNode(item);
+
+   if (!res){
+      delete  item;
+   }
+
    return res;
 }
 
 TreeItem *ChatClientDataModel::findChatNode(const std::string &chatId)
 {
-   beginResetModel();
    TreeItem * res =root_->findChatNode(chatId);
-   endResetModel();
    return res;
 }
 
@@ -129,9 +162,19 @@ std::vector<std::shared_ptr<Chat::ContactRecordData> > ChatClientDataModel::getA
 
 bool ChatClientDataModel::removeContactNode(const std::string &contactId)
 {
-   beginResetModel();
+   TreeItem * item = root_->findCategoryNodeWith(TreeItem::NodeType::ContactsElement);
+
+   if (!item) {
+      return false;
+   }
+
+   const QModelIndex index = createIndex(item->selfIndex(), 0, item);
+   const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
+   const int last = first + 1;
+
+   beginRemoveRows(index, first, last);
    bool res = root_->removeContactNode(contactId);
-   endResetModel();
+   endRemoveRows();
    return res;
 }
 
@@ -189,7 +232,6 @@ QModelIndex ChatClientDataModel::index(int row, int column, const QModelIndex &p
 
    if (childItem){
       return createIndex(row, column, childItem);
-
    }
 
    return QModelIndex();
@@ -197,14 +239,16 @@ QModelIndex ChatClientDataModel::index(int row, int column, const QModelIndex &p
 
 QModelIndex ChatClientDataModel::parent(const QModelIndex &child) const
 {
-   if (!child.isValid())
+   if (!child.isValid()) {
       return QModelIndex();
+   }
 
    TreeItem *childItem = static_cast<TreeItem*>(child.internalPointer());
    TreeItem *parentItem = childItem->getParent();
 
-   if (root_ && parentItem == root_.get())
+   if (root_ && parentItem == root_.get()) {
       return QModelIndex();
+   }
 
    return createIndex(parentItem->selfIndex(), 0, parentItem);
 }
@@ -237,8 +281,9 @@ int ChatClientDataModel::columnCount(const QModelIndex &parent) const
 
 QVariant ChatClientDataModel::data(const QModelIndex &index, int role) const
 {
-   if (!index.isValid()) //Applicable for RootNode
+   if (!index.isValid()) { //Applicable for RootNode
       return QVariant();
+   }
 
    TreeItem *item = static_cast<TreeItem*>(index.internalPointer());
    switch (role) {
@@ -373,8 +418,9 @@ void ChatClientDataModel::beginChatInsertRows(const TreeItem::NodeType &type)
 {
    TreeItem * item = root_->findCategoryNodeWith(type);
 
-   if (!item)
+   if (!item) {
       return;
+   }
 
    const QModelIndex index = createIndex(item->selfIndex(), 0, item);
    const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
