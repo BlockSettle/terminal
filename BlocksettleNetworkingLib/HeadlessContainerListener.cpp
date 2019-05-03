@@ -173,7 +173,7 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
 
    switch (packet.type()) {
    case headless::HeartbeatType:
-      packet.set_data({});
+      packet.set_data("");
       if (!sendData(packet.SerializeAsString(), clientId)) {
          logger_->error("[HeadlessContainerListener] failed to send response hearbeat packet");
          return false;
