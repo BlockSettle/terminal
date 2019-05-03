@@ -672,7 +672,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
       txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
    }
 
-   const auto &cbProcess = [this, wallet, tx, txKey, txOutIndices, cb](std::vector<Tx> txs) {
+   const auto &cbProcess = [this, wallet, tx, txKey, txOutIndices, cb](const std::vector<Tx> &txs) {
       bool ourOuts = false;
       bool otherOuts = false;
       bool ourIns = false;
@@ -829,7 +829,7 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
          txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
       }
 
-      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](std::vector<Tx> txs) {
+      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](const std::vector<Tx> &txs) {
          std::set<bs::Address> addresses;
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIndices.find(prevTx.getThisHash());

@@ -237,13 +237,13 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
       return;
    }
 
-   const auto &cbCollectOutTXs = [this, state](std::vector<Tx> txs) {
+   const auto &cbCollectOutTXs = [this, state](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          state->txs[tx.getThisHash()] = tx;
       }
       doValidateAddress(state);
    };
-   const auto &cbCollectInitialTXs = [this, state, cbCollectOutTXs](std::vector<Tx> txs) {
+   const auto &cbCollectInitialTXs = [this, state, cbCollectOutTXs](const std::vector<Tx> &txs) {
       std::set<BinaryData> txOutHashes;
       for (const auto &tx : txs) {
          state->txs[tx.getThisHash()] = tx;
@@ -344,7 +344,7 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
       }
       ReturnValidationResult(state);
    };
-   const auto &cbCollectTXs = [state, cbCheckState](std::vector<Tx> txs) {
+   const auto &cbCollectTXs = [state, cbCheckState](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
          state->txs[txHash] = tx;

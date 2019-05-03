@@ -186,7 +186,7 @@ void DealerXBTSettlementContainer::onPayInDetected(int confirmationsNumber, cons
    logger_->debug("[XbtSettlementContainer] Pay-in detected: {}", txHash.toHexStr(true));
 
    if (!weSell_) {
-      const auto &cbTX = [this](Tx tx) {
+      const auto &cbTX = [this](const Tx &tx) {
          bool foundAddr = false, amountValid = false;
          if (tx.isInitialized()) {
             for (int i = 0; i < tx.getNumTxOut(); i++) {

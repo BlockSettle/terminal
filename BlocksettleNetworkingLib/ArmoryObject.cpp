@@ -104,8 +104,7 @@ bool ArmoryObject::startLocalArmoryProcess(const ArmorySettings &settings)
    return false;
 }
 
-void ArmoryObject::setupConnection(const ArmorySettings &settings
-   , const std::function<bool (const BinaryData &, const std::string &)> &bip150PromptUserCb)
+void ArmoryObject::setupConnection(const ArmorySettings &settings, const BIP151Cb &bip150PromptUserCb)
 {
    emit prepareConnection(settings);
 
@@ -135,7 +134,7 @@ void ArmoryObject::setupConnection(const ArmorySettings &settings
 
 std::string ArmoryObject::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
    , const std::string &walletId, const std::vector<BinaryData> &addrVec
-   , const std::function<void(const std::string &regId)> &cb
+   , const RegisterWalletCb &cb
    , bool asNew)
 {
    const auto &cbWrap = [this, cb](const std::string &regId) {
@@ -150,8 +149,7 @@ std::string ArmoryObject::registerWallet(std::shared_ptr<AsyncClient::BtcWallet>
    return ArmoryConnection::registerWallet(wallet, walletId, addrVec, cbWrap, asNew);
 }
 
-bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs
-   , const std::function<void(std::vector<ClientClasses::LedgerEntry>)> &cb)
+bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &cb)
 {
    const auto &cbWrap = [this, cb](std::vector<ClientClasses::LedgerEntry> le) {
       if (!cb) {
@@ -167,7 +165,7 @@ bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs
 }
 
 bool ArmoryObject::getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &addr
-   , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb, QObject *context)
+   , const LedgerDelegateCb &cb, QObject *context)
 {
    QPointer<QObject> contextSmartPtr = context;
    const auto &cbWrap = [this, cb, context, contextSmartPtr]
@@ -190,7 +188,7 @@ bool ArmoryObject::getLedgerDelegateForAddress(const std::string &walletId, cons
    return ArmoryConnection::getLedgerDelegateForAddress(walletId, addr, cbWrap);
 }
 
-bool ArmoryObject::getWalletsLedgerDelegate(const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb)
+bool ArmoryObject::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
 {
    const auto &cbWrap = [this, cb](const std::shared_ptr<AsyncClient::LedgerDelegate> &ld) {
       if (!cb) {
@@ -207,7 +205,7 @@ bool ArmoryObject::getWalletsLedgerDelegate(const std::function<void(const std::
    return ArmoryConnection::getWalletsLedgerDelegate(cbWrap);
 }
 
-bool ArmoryObject::getTxByHash(const BinaryData &hash, const std::function<void(Tx)> &cb)
+bool ArmoryObject::getTxByHash(const BinaryData &hash, const TxCb &cb)
 {
    const auto tx = txCache_.get(hash);
    if (tx.isInitialized()) {
@@ -229,7 +227,7 @@ bool ArmoryObject::getTxByHash(const BinaryData &hash, const std::function<void(
    return ArmoryConnection::getTxByHash(hash, cbWrap);
 }
 
-bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const std::function<void(std::vector<Tx>)> &cb)
+bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb &cb)
 {
    auto result = std::make_shared<std::vector<Tx>>();
    std::set<BinaryData> missedHashes;
@@ -263,8 +261,7 @@ bool ArmoryObject::getTXsByHash(const std::set<BinaryData> &hashes, const std::f
    return ArmoryConnection::getTXsByHash(missedHashes, cbWrap);
 }
 
-bool ArmoryObject::getRawHeaderForTxHash(const BinaryData& inHash
-   , const std::function<void(BinaryData)> &callback)
+bool ArmoryObject::getRawHeaderForTxHash(const BinaryData& inHash, const BinaryDataCb &callback)
 {
    const auto &cbWrap = [this, callback](BinaryData header) {
       if (!callback) {
@@ -279,8 +276,7 @@ bool ArmoryObject::getRawHeaderForTxHash(const BinaryData& inHash
    return ArmoryConnection::getRawHeaderForTxHash(inHash, cbWrap);
 }
 
-bool ArmoryObject::getHeaderByHeight(const unsigned int inHeight
-   , const std::function<void(BinaryData)> &callback)
+bool ArmoryObject::getHeaderByHeight(const unsigned int inHeight, const BinaryDataCb &callback)
 {
    const auto &cbWrap = [this, callback](BinaryData header) {
       if (!callback) {
@@ -298,7 +294,7 @@ bool ArmoryObject::getHeaderByHeight(const unsigned int inHeight
 // Frontend for Armory's estimateFee() call. Used to get the "conservative" fee
 // that Bitcoin Core estimates for successful insertion into a block within a
 // given number (2-1008) of blocks.
-bool ArmoryObject::estimateFee(unsigned int nbBlocks, const std::function<void(float)> &cb)
+bool ArmoryObject::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
 {
    const auto &cbWrap = [this, cb](float fee) {
       if (!cb) {
@@ -316,7 +312,7 @@ bool ArmoryObject::estimateFee(unsigned int nbBlocks, const std::function<void(f
 // Frontend for Armory's getFeeSchedule() call. Used to get the range of fees
 // that Armory caches. The fees/byte are estimates for what's required to get
 // successful insertion of a TX into a block within X number of blocks.
-bool ArmoryObject::getFeeSchedule(const std::function<void(std::map<unsigned int, float>)> &cb)
+bool ArmoryObject::getFeeSchedule(const FloatMapCb &cb)
 {
    const auto &cbWrap = [this, cb](std::map<unsigned int, float> fees) {
       if (!cb) {

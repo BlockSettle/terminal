@@ -191,7 +191,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 {
    // The callback that handles previous Tx objects attached to the TxIn objects
    // and processes them. Once done, the UI can be changed.
-   const auto &cbCollectPrevTXs = [this](std::vector<Tx> prevTxs) {
+   const auto &cbCollectPrevTXs = [this](const std::vector<Tx> &prevTxs) {
       for (const auto &prevTx : prevTxs) {
          txMap_[prevTx.getThisHash()] = prevTx;
       }
@@ -201,7 +201,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
 
    // Callback used to process Tx objects obtained from Armory. Used primarily
    // to obtain Tx entries for the TxIn objects we're checking.
-   const auto &cbCollectTXs = [this, cbCollectPrevTXs](std::vector<Tx> txs) {
+   const auto &cbCollectTXs = [this, cbCollectPrevTXs](const std::vector<Tx> &txs) {
       std::set<BinaryData> prevTxHashSet; // Prev Tx hashes for an addr (fee calc).
       for (const auto &tx : txs) {
          const auto &prevTxHash = tx.getThisHash();

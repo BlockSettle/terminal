@@ -254,7 +254,7 @@ bool AuthAddressManager::Verify(const bs::Address &address)
       return false;
    }
 
-   const auto &cbInputs = [this, address](std::vector<UTXO> inputs) {
+   const auto &cbInputs = [this, address](const std::vector<UTXO> &inputs) {
       std::set<BinaryData> txHashSet;
       std::vector<UTXO> utxos;
       const auto &initialTxHash = GetInitialTxHash(address);
@@ -264,7 +264,7 @@ bool AuthAddressManager::Verify(const bs::Address &address)
             utxos.emplace_back(std::move(utxo));
          }
       }
-      const auto &cbTXs = [this, address, utxos](std::vector<Tx> txs) {
+      const auto &cbTXs = [this, address, utxos](const std::vector<Tx> &txs) {
          for (const auto &tx : txs) {
             const bs::TxChecker txChecker(tx);
             for (const auto &utxo : utxos) {

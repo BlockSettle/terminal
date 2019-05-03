@@ -85,28 +85,35 @@ public:
 
    unsigned int topBlock() const { return topBlock_; }
 
+   using RegisterWalletCb = std::function<void(const std::string &regId)>;
+   using WalletsHistoryCb = std::function<void (const std::vector<ClientClasses::LedgerEntry>&)>;
+   using LedgerDelegateCb = std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>;
+
    virtual std::string registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &, const std::string &walletId
-      , const std::vector<BinaryData> &addrVec, const std::function<void(const std::string &)> &
+      , const std::vector<BinaryData> &addrVec, const RegisterWalletCb&
       , bool asNew = false);
-   virtual bool getWalletsHistory(const std::vector<std::string> &walletIDs
-      , const std::function<void (std::vector<ClientClasses::LedgerEntry>)> &);
+   virtual bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb&);
 
    // If context is not null and cbInMainThread is true then the callback will be called
    // on main thread only if context is still alive.
-   bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &
-      , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &);
-   virtual bool getWalletsLedgerDelegate(
-      const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &);
+   bool getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &, const LedgerDelegateCb &);
+   virtual bool getWalletsLedgerDelegate(const LedgerDelegateCb &);
 
-   virtual bool getTxByHash(const BinaryData &hash, const std::function<void(Tx)> &);
-   virtual bool getTXsByHash(const std::set<BinaryData> &hashes, const std::function<void(std::vector<Tx>)> &);
-   virtual bool getRawHeaderForTxHash(const BinaryData& inHash,
-                              const std::function<void(BinaryData)> &);
-   virtual bool getHeaderByHeight(const unsigned int inHeight,
-                          const std::function<void(BinaryData)> &);
+   using TxCb = std::function<void(const Tx&)>;
+   using TXsCb = std::function<void(const std::vector<Tx>&)>;
 
-   virtual bool estimateFee(unsigned int nbBlocks, const std::function<void(float)> &);
-   virtual bool getFeeSchedule(const std::function<void(std::map<unsigned int, float>)> &);
+   using BinaryDataCb = std::function<void(const BinaryData&)>;
+
+   virtual bool getTxByHash(const BinaryData &hash, const TxCb&);
+   virtual bool getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb &);
+   virtual bool getRawHeaderForTxHash(const BinaryData& inHash, const BinaryDataCb &);
+   virtual bool getHeaderByHeight(const unsigned int inHeight, const BinaryDataCb &);
+
+   using FloatCb = std::function<void(float)>;
+   using FloatMapCb = std::function<void(const std::map<unsigned int, float> &)>;
+
+   virtual bool estimateFee(unsigned int nbBlocks, const FloatCb &);
+   virtual bool getFeeSchedule(const FloatMapCb&);
 
    bool isTransactionVerified(const ClientClasses::LedgerEntry &) const;
    bool isTransactionVerified(uint32_t blockNum) const;
@@ -119,14 +126,18 @@ public:
    void setState(State);
    std::atomic_bool  needsBreakConnectionLoop_ {false};
 
-   unsigned int setRefreshCb(const std::function<void(std::vector<BinaryData>, bool)> &);
+   using RefreshCb = std::function<void(const std::vector<BinaryData>&, bool)>;
+
+   unsigned int setRefreshCb(const RefreshCb &);
    bool unsetRefreshCb(unsigned int);
+
+   using StringCb = std::function<void(const std::string &)>;
+   using BIP151Cb = std::function<bool(const BinaryData&, const std::string&)>;
 
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port
       , const std::string &dataDir, const BinaryData &serverKey
-      , const std::function<void(const std::string &)> &cbError
-      , const std::function<bool(const BinaryData&, const std::string&)> &cbBIP151);
+      , const StringCb &cbError, const BIP151Cb &cbBIP151);
 
 private:
    void registerBDV(NetworkType);
@@ -137,7 +148,7 @@ private:
 
    void stopServiceThreads();
 
-   bool addGetTxCallback(const BinaryData &hash, const std::function<void(Tx)> &);  // returns true if hash exists
+   bool addGetTxCallback(const BinaryData &hash, const TxCb &);  // returns true if hash exists
    void callGetTxCallbacks(const BinaryData &hash, const Tx &);
 
 protected:
@@ -155,16 +166,16 @@ protected:
    std::atomic_bool  maintThreadRunning_;
 
    std::atomic_bool              isOnline_;
-   std::unordered_map<std::string, std::function<void(const std::string &)>>  preOnlineRegIds_;
+   std::unordered_map<std::string, RegisterWalletCb>  preOnlineRegIds_;
 
    mutable std::atomic_flag      txCbLock_ = ATOMIC_FLAG_INIT;
-   std::map<BinaryData, std::vector<std::function<void(Tx)>>>   txCallbacks_;
+   std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;
 
    std::map<BinaryData, bs::TXEntry>   zcEntries_;
 
    unsigned int cbSeqNo_ = 1;
    std::function<void(State)>    cbStateChanged_ = nullptr;
-   std::map<unsigned int, std::function<void(std::vector<BinaryData>, bool)>> cbRefresh_;
+   std::map<unsigned int, RefreshCb> cbRefresh_;
    std::function<void(unsigned int)>                  cbNewBlock_ = nullptr;
    std::function<void(std::vector<bs::TXEntry>)>      cbZCReceived_ = nullptr;
    std::function<void(std::vector<bs::TXEntry>)>      cbZCInvalidated_ = nullptr;
