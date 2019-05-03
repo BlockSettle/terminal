@@ -83,9 +83,11 @@ ApplicationWindow {
 
         dlg.bsAccepted.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, false)
+            dlg.destroy();
         })
         dlg.bsRejected.connect(function() {
             passwordEntered(walletInfo.walletId, dlg.passwordData, true)
+            dlg.destroy();
         })
 
         mainWindow.width = dlg.width
@@ -102,6 +104,8 @@ ApplicationWindow {
         mainWindow.requestActivate()
         dlg.open()
         dlg.init()
+
+        mainWindow.closing.connect(function() { dlg.bsRejected() });
     }
 
     function raiseWindow() {
