@@ -14,7 +14,7 @@ class QtSettings(Configurator):
         self.jom = JomSettings(settings)
         self.openssl = OpenSslSettings(settings)
         self._release = '5.12'
-        self._version = self._release + '.2'
+        self._version = self._release + '.3'
         self._package_name = 'qt-everywhere-src-' + self._version
         self._script_revision = '6'
 
@@ -71,6 +71,8 @@ class QtSettings(Configurator):
         if self._project_settings.get_link_mode() == 'static':
             command.append('-static')
             command.append('-openssl-linked')
+            command.append('-no-securetransport')
+            command.append('-openssl')
             if self._project_settings.on_windows():
                 command.append('-static-runtime')
 
@@ -83,7 +85,6 @@ class QtSettings(Configurator):
         command.append('-sql-mysql')
         command.append('-no-feature-vulkan')
 
-        # command.append('-no-securetransport')
         command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
 
         if self._project_settings.on_osx():
