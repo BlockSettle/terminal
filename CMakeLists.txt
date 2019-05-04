@@ -198,21 +198,8 @@ IF( NOT ZMQ_LIB )
    ENDIF( NOT ZMQ_LIB)
 ENDIF( NOT ZMQ_LIB)
 
-# OpenSSL libs
-SET(OPENSSL_ROOT_DIR        ${THIRD_PARTY_COMMON_DIR}/OpenSSL)
-SET(CMAKE_LIBRARY_PATH      ${CMAKE_LIBRARY_PATH} ${OPENSSL_ROOT_DIR}/lib)
-set(OPENSSL_USE_STATIC_LIBS TRUE)
-
-find_package(OpenSSL REQUIRED)
-
 include(InstallRequiredSystemLibraries)
 INSTALL(FILES ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION bin COMPONENT Libraries)
-
-SET(OPENSSL_LIBS
-    OpenSSL::SSL
-    OpenSSL::Crypto
-)
-INCLUDE_DIRECTORIES( ${OPENSSL_INCLUDE_DIR} )
 
 # setup botan
 SET(BOTAN_PACKAGE_ROOT ${THIRD_PARTY_COMMON_DIR}/botan)
@@ -753,7 +740,6 @@ ENDIF(WIN32)
 LIST(REMOVE_DUPLICATES QT_LIBS)
 
 IF(BSTERMINAL_SHARED_LIBS)
-   unset(OPENSSL_USE_STATIC_LIBS)
    remove_definitions(-DSTATIC_BUILD)
 
    IF(WIN32)
@@ -789,20 +775,6 @@ IF(BSTERMINAL_SHARED_LIBS)
       STRING(REPLACE ".lib" ".dll" WS_LIB_DLL ${WS_LIB})
       add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${WS_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${WS_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-
-      string(REGEX REPLACE "([0-9])\.([0-9])\.([0-9]\.*)" "\\1;\\2" VERSION_MATCHES ${OPENSSL_VERSION})
-      list(GET VERSION_MATCHES 0 version_major)
-      list(GET VERSION_MATCHES 1 version_minor)
-      string(REPLACE ".lib" "" CRYPTO_LIB_DLL ${OPENSSL_CRYPTO_LIBRARY})
-      string(REPLACE "OpenSSL/lib/" "OpenSSL/bin/" CRYPTO_LIB_DLL ${CRYPTO_LIB_DLL})
-      string(APPEND CRYPTO_LIB_DLL "-${version_major}_${version_minor}-x64.dll" )
-      string(REPLACE ".lib" "" SSL_LIB_DLL ${OPENSSL_SSL_LIBRARY})
-      string(REPLACE "OpenSSL/lib/" "OpenSSL/bin/" SSL_LIB_DLL ${SSL_LIB_DLL})
-      string(APPEND SSL_LIB_DLL "-${version_major}_${version_minor}-x64.dll" )
-      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
-         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${CRYPTO_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${CRYPTO_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
-      add_custom_command(TARGET ${COPY_SHARED_LIBS_NAME} POST_BUILD
-         COMMAND ${CMAKE_COMMAND} -E copy_if_different $<$<CONFIG:Debug>:${SSL_LIB_DLL}> $<$<NOT:$<CONFIG:Debug>>:${SSL_LIB_DLL}> ${LIBRARY_OUTPUT_PATH}/${CMAKE_BUILD_TYPE})
    ENDIF()
 
    IF(UNIX AND NOT APPLE)

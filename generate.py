@@ -22,7 +22,6 @@ from build_scripts.zeromq_settings        import ZeroMQSettings
 from build_scripts.libqrencode_settings   import LibQREncode
 from build_scripts.mpir_settings          import MPIRSettings
 from build_scripts.libbtc_settings        import LibBTC
-from build_scripts.openssl_settings       import OpenSslSettings
 from build_scripts.websockets_settings    import WebsocketsSettings
 from build_scripts.libchacha20poly1305_settings import LibChaCha20Poly1305Settings
 from build_scripts.botan_settings         import BotanSettings
