@@ -1088,7 +1088,7 @@ bool HeadlessContainerListener::CheckSpendLimit(uint64_t value, bool autoSign, c
       if (value > limits_.autoSignSpendXBT) {
          logger_->warn("[HeadlessContainerListener] requested auto-sign spend {} exceeds limit {}", value
             , limits_.autoSignSpendXBT);
-         deactivateAutoSign(walletId, "spend limit reached");
+         deactivateAutoSign({}, "spend limit reached");
          return false;
       }
    }
@@ -1119,17 +1119,17 @@ void HeadlessContainerListener::activateAutoSign(const std::string &clientId, co
 {
    const auto &wallet = walletId.empty() ? walletsMgr_->getPrimaryWallet() : walletsMgr_->getHDWalletById(walletId);
    if (!wallet) {
-      deactivateAutoSign(walletId, "wallet missing");
+      deactivateAutoSign({}, "wallet missing");
       return;
    }
    if (!wallet->encryptionTypes().empty()) {
       if (password.isNull()) {
-         deactivateAutoSign(walletId, "empty password");
+         deactivateAutoSign({}, "empty password");
          return;
       }
       const auto decrypted = wallet->getRootNode(password);
       if (!decrypted) {
-         deactivateAutoSign(walletId, "failed to decrypt root node");
+         deactivateAutoSign({}, "failed to decrypt root node");
          return;
       }
    }
