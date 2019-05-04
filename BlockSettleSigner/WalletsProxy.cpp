@@ -9,7 +9,6 @@
 #include "CoreHDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
-#include "SignerSettings.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
 #include "WalletEncryption.h"

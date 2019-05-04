@@ -92,8 +92,7 @@ private:
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<SignerSettings>  settings_;
-   SignerAdapter  *  adapter_;
+   SignerAdapter  *  adapter_{};
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    bool walletsSynchronized_ = false;
 };
