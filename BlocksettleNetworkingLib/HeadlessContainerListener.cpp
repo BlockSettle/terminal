@@ -1126,7 +1126,9 @@ void HeadlessContainerListener::activateAutoSign(const std::string &clientId, co
    }
    if (!wallet->encryptionTypes().empty()) {
       if (password.isNull()) {
-         deactivateAutoSign({}, walletId, "empty password");
+         // This will happen when user cancels autosign.
+         // Do not send reason text in this case, because it's used as an error message is set.
+         deactivateAutoSign({}, walletId, {});
          return;
       }
       const auto decrypted = wallet->getRootNode(password);

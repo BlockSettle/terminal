@@ -117,7 +117,6 @@ namespace bs {
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
          void onAutoSignActivated();
-         void onWalletInfo(unsigned int reqId, bs::hd::WalletInfo walletInfo);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -152,7 +151,6 @@ namespace bs {
          std::atomic_bool     autoUpdatePrices_;
 
          unsigned int         leafCreateReqId_ = 0;
-         unsigned int         autoSignWalletInfoReqId_ = 0;
          std::string          autoSignWalletId_;
 
          std::string product_;
