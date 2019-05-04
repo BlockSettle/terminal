@@ -51,21 +51,16 @@
 
  3. Install and link dependencies required by the BlockSettle terminal build process but not by the final binaries.
 
-		brew install python2 cmake mysql-connector-c mysql-connector-c++ automake libtool yasm nasm xz pkg-config
+		brew install python3 cmake mysql-connector-c mysql-connector-c++ automake libtool yasm nasm xz pkg-config
 		echo 'export PATH="/usr/local/opt/mysql-client/bin:$PATH"' >> ~/.bash_profile
 		echo 'export PATH="/usr/local/opt/qt/bin:$PATH"' >> ~/.bash_profile
 		source ~/.bash_profile
 
  4. Reset the build machine. (This is necessary due to issues related to the Python install.)
 
- 5. Create a symbolic link for glibtoolize. This requires sudo access and is probably not strictly necessary. It makes Autotools much happier, though, and should be harmless otherwise.
+ 5. Create a symbolic link for glibtoolize. This requires sudo access and is not strictly necessary. It makes Autotools much happier, though, and should be harmless otherwise.
 
 		sudo ln -s /usr/local/bin/glibtoolize /usr/local/bin/libtoolize
-
- 6. MPIR library may fail to build on certain CPUs (e.g., Intel's 7xxx series. It's possible to apply a workaround when using a VMWare VM. Change the "Virtualize Intel VT-X/EPT or AMD-V/RVI" checkbox in the VM configuration GUI. In addition, add the following lines to the appropriate virtual machine configuration (.vmx file):
-
-		cpuid.1.edx = "10111111111010111111101111111011"
-		cpuid.1.eax = "00000000000000110100011010101001"
 
 # Build instructions for all platforms
  1. Use `pip` to install the `wget` and `requests` Python packages. Note that, on Linux and macOS, the `pip` binary might actually need to be the `pip3` binary if Python 2.7 and 3.x are both on the system.
@@ -94,7 +89,7 @@
 
 		python generate.py release shared
 
- 8. From the BlockSettle Terminal root directory, go to the `terminal.release` or `terminal.debug` subdirectory (`terminal.release-shared` or `terminal.debug-shared` if running a shared build), depending on if the `debug` argument was used when generating the environment. On Linux or macOS, execute `make` as one would for any other project. On Windows, open the BlockSettle.sln file so that the binary can be compiled by Visual Studio. Once in VS, select `Build -> Build Solution` from the menu bar, or press `CTRL+SHIFT+B`. No matter which platform you use, you'll hopefully not get any compiler or linker errors.
+ 8. From the BlockSettle Terminal root directory, go to the `terminal.release` or `terminal.debug` subdirectory (`terminal.release-shared` or `terminal.debug-shared` if running a shared build), depending on if the `debug` argument was used when generating the environment. On Linux or macOS, execute `make` as one would for any other project. On Windows, open the `BS_Terminal.sln` file in Visual Studio and select `Build -> Build Solution` from the menu bar, or press `CTRL+SHIFT+B`. No matter which platform you use, you hopefully won't get any compiler or linker errors. (If you do, please check if this is a known issue. If not, and you have the capability, please submit a PR that properly fixes the problem.)
 
  9. Assuming the code compiles and links successfully, from the BlockSettle Terminal root directory, go to the `build_terminal` subdirectory. From there, go to the `Release/bin` or `Debug/bin` subdirectories to find the generated binaries. Linux and Windows binaries may be executed directly. On macOS, the user will either run the `blocksettle_signer` binary or double-click the BlockSettle Terminal app (or type `open -a Blocksettle\ Terminal` from the command line), or both if in remote mode. If the macOS version needs to have command line arguments passed, the easiest thing to do is to go directly to the actual executable. The binary to execute will be in the `BlockSettle Terminal.app/Contents/MacOS/` subdirectory.
 
@@ -110,7 +105,6 @@
 The terminal does need to download and compile some prerequisites in order for the terminal to run. As of Nov. 2018, these prerequisites are:
 
 - [Botan](https://botan.randombit.net/)
-- [Crypto++](https://www.cryptopp.com/)  (Will be removed eventually by Botan)
 - [Google Test](https://github.com/abseil/googletest)  (Required only if test tools are built)
 - [Jom](https://wiki.qt.io/Jom)  (Required only by Windows)
 - [libbtc](https://github.com/libbtc/libbtc)
@@ -129,3 +123,9 @@ By default, the prerequisites are downloaded and installed in the `3rd` subdirec
 - Linux (Ubuntu) - In ~/.bashrc, export the variable to the desired location. (Example: `export DEV_3RD_ROOT="$HOME/Projects/BlockSettle-alt-location/3rd"`)
 - Windows - Add the `DEV_3RD_ROOT` variable to the Windows system environment, similar to the manner in which the `PATH` variable was accessed in the [Windows platform-specific prerequisites](#windows) section.
 - macOS - In ~/.bash\_profile, export the variable to the desired location. (Example: `export DEV_3RD_ROOT="$HOME/Projects/BlockSettle-alt-location/3rd"`)
+
+## Troubleshooting
+The mpir library may fail to build on certain CPUs (e.g., Intel's 7xxx series). It's possible to apply a workaround when using a VMWare VM. Change the "Virtualize Intel VT-X/EPT or AMD-V/RVI" checkbox in the VM configuration GUI. In addition, add the following lines to the appropriate virtual machine configuration (.vmx file):
+
+     cpuid.1.edx = "10111111111010111111101111111011"
+     cpuid.1.eax = "00000000000000110100011010101001"
