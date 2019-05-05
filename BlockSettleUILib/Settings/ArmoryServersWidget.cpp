@@ -4,7 +4,8 @@
 
 const int kArmoryDefaultMainNetPort = 80;
 
-ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider, std::shared_ptr<ApplicationSettings> appSettings, QWidget *parent) :
+ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+   , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent) :
    QWidget(parent)
    , appSettings_(appSettings)
    , armoryServersProvider_(armoryServersProvider)

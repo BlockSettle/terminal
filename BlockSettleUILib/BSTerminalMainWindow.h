@@ -26,6 +26,7 @@ namespace bs {
 
 class AboutDialog;
 class ArmoryServersProvider;
+class SignersProvider;
 class AssetManager;
 class AuthAddressDialog;
 class AuthAddressManager;
@@ -130,6 +131,7 @@ private:
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
+   std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<AuthAddressManager>    authManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
    std::shared_ptr<ArmoryObject>          armory_;

@@ -31,7 +31,10 @@ SignContainer::SignContainer(const std::shared_ptr<spdlog::logger> &logger, OpMo
 // RETURN: A pointer to the signer object.
 std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , SignContainer::OpMode runMode, const QString &host
+   , SignContainer::OpMode runMode
+   , const QString &host
+   , const QString &port
+   , NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const bool& ephemeralDataConnKeys
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
@@ -40,9 +43,6 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
       logger->error("[{}] need connection manager to create signer", __func__);
       return nullptr;
    }
-
-   const auto &port = appSettings->get<QString>(ApplicationSettings::signerPort);
-   const auto netType = appSettings->get<NetworkType>(ApplicationSettings::netType);
 
    switch (runMode)
    {

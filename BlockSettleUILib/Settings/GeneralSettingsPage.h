@@ -26,6 +26,7 @@ private slots:
    void onSelectMsgLogFile();
    void onLogFileNameEdited(const QString &txt);
    void onLogLevelChanged(int);
+   void onOfflineDirSel();
 
 private:
    void checkSettings();

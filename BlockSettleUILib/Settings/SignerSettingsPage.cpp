@@ -6,7 +6,7 @@
 #include "BtcUtils.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
-#include "SignerKeysWidget.h"
+#include "SignersManageWidget.h"
 
 
 enum RunModeIndex {
@@ -22,9 +22,14 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    ui_->setupUi(this);
 
    connect(ui_->comboBoxRunMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignerSettingsPage::runModeChanged);
-   connect(ui_->pushButtonOfflineDir, &QPushButton::clicked, this, &SignerSettingsPage::onOfflineDirSel);
    connect(ui_->spinBoxAsSpendLimit, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &SignerSettingsPage::onAsSpendLimitChanged);
    connect(ui_->pushButtonManageSignerKeys, &QPushButton::clicked, this, &SignerSettingsPage::onManageSignerKeys);
+
+   ui_->widgetTwoWayAuth->hide();
+   ui_->checkBoxTwoWayAuth->hide();
+
+   ui_->widgetTwoWayAuth->setMaximumHeight(0);
+   ui_->checkBoxTwoWayAuth->setMaximumHeight(0);
 }
 
 SignerSettingsPage::~SignerSettingsPage() = default;
@@ -34,25 +39,13 @@ void SignerSettingsPage::runModeChanged(int index)
    onModeChanged(index);
 }
 
-void SignerSettingsPage::onOfflineDirSel()
-{
-   const auto dir = QFileDialog::getExistingDirectory(this, tr("Dir for offline signer files")
-      , ui_->labelOfflineDir->text(), QFileDialog::ShowDirsOnly);
-   if (dir.isEmpty()) {
-      return;
-   }
-   ui_->labelOfflineDir->setText(dir);
-}
-
 void SignerSettingsPage::onModeChanged(int index)
 {
    switch (static_cast<RunModeIndex>(index)) {
    case Local:
       showHost(false);
       showPort(true);
-      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
-      showOfflineDir(true);
-      ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(true);
       showSignerKeySettings(false);
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
@@ -63,9 +56,7 @@ void SignerSettingsPage::onModeChanged(int index)
       showHost(true);
       ui_->lineEditHost->setText(appSettings_->get<QString>(ApplicationSettings::signerHost));
       showPort(true);
-      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::signerPort));
-      showOfflineDir(true);
-      ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
+      ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
       showSignerKeySettings(true);
       ui_->formLayoutConnectionParams->setSpacing(6);
@@ -86,8 +77,8 @@ void SignerSettingsPage::display()
 void SignerSettingsPage::reset()
 {
    for (const auto &setting : {ApplicationSettings::signerRunMode, ApplicationSettings::signerHost
-      , ApplicationSettings::signerPort, ApplicationSettings::signerOfflineDir
-      , ApplicationSettings::remoteSignerKeys, ApplicationSettings::autoSignSpendLimit
+      , ApplicationSettings::localSignerPort, ApplicationSettings::signerOfflineDir
+      , ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
       , ApplicationSettings::twoWayAuth}) {
       appSettings_->reset(setting, false);
    }
@@ -104,12 +95,6 @@ void SignerSettingsPage::showPort(bool show)
 {
    ui_->labelPort->setVisible(show);
    ui_->spinBoxPort->setVisible(show);
-}
-
-void SignerSettingsPage::showOfflineDir(bool show)
-{
-   ui_->labelDirHint->setVisible(show);
-   ui_->widgetOfflineDir->setVisible(show);
 }
 
 void SignerSettingsPage::showLimits(bool show)
@@ -165,19 +150,17 @@ void SignerSettingsPage::apply()
 {
    switch (static_cast<RunModeIndex>(ui_->comboBoxRunMode->currentIndex())) {
    case Local:
-      appSettings_->set(ApplicationSettings::signerPort, ui_->spinBoxPort->value());
+      appSettings_->set(ApplicationSettings::localSignerPort, ui_->spinBoxPort->value());
       appSettings_->set(ApplicationSettings::autoSignSpendLimit, ui_->spinBoxAsSpendLimit->value());
       break;
 
    case Remote:
       appSettings_->set(ApplicationSettings::signerHost, ui_->lineEditHost->text());
-      appSettings_->set(ApplicationSettings::signerPort, ui_->spinBoxPort->value());
+      appSettings_->set(ApplicationSettings::localSignerPort, ui_->spinBoxPort->value());
       break;
 
    default:    break;
    }
-
-   appSettings_->set(ApplicationSettings::signerOfflineDir, ui_->labelOfflineDir->text());
 
    // first comboBoxRunMode index is '--Select--' placeholder
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);

@@ -1,25 +1,17 @@
-#ifndef __SIGNER_KEYS_MODEL_H__
-#define __SIGNER_KEYS_MODEL_H__
+#ifndef __SIGNERS_MODEL_H__
+#define __SIGNERS_MODEL_H__
 
 #include <QAbstractTableModel>
 #include <memory>
 
-#include "AuthAddress.h"
-#include "AuthAddressManager.h"
 #include "BinaryData.h"
 #include "ApplicationSettings.h"
-
-struct SignerKey
-{
-   QString name;
-   QString address;
-   QString key;
-};
+#include "SignersProvider.h"
 
 class SignerKeysModel : public QAbstractTableModel
 {
 public:
-   SignerKeysModel(const std::shared_ptr<ApplicationSettings>& appSettings
+   SignerKeysModel(const std::shared_ptr<SignersProvider> &signersProvider
                           , QObject *parent = nullptr);
    ~SignerKeysModel() noexcept = default;
 
@@ -35,27 +27,29 @@ public:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-   void addSignerPubKey(const SignerKey &key);
-   void deleteSignerPubKey(int index);
-   void editSignerPubKey(int index, const SignerKey &key);
-   void saveSignerPubKeys(QList<SignerKey> signerKeys);
+//   void addSignerPubKey(const SignerKey &key);
+//   void deleteSignerPubKey(int index);
+//   void editSignerPubKey(int index, const SignerKey &key);
+//   void saveSignerPubKeys(QList<SignerKey> signerKeys);
 
-   QList<SignerKey> signerPubKeys() const;
+//   QList<SignerKey> signerPubKeys() const;
 
 public slots:
    void update();
 
 private:
-   std::shared_ptr<ApplicationSettings> appSettings_;
-   QList<SignerKey> signerPubKeys_;
+   std::shared_ptr<SignersProvider> signersProvider_;
+   QList<SignerHost> signers_;
+   bool singleColumnMode_ = false;
 
-   enum ArmoryServersViewColumns : int
+   enum SignersViewColumns : int
    {
       ColumnName,
       ColumnAddress,
+      ColumnPort,
       ColumnKey,
       ColumnsCount
    };
 };
 
-#endif // __SIGNER_KEYS_MODEL_H__
+#endif // __SIGNERS_MODEL_H__

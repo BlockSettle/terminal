@@ -24,7 +24,6 @@ public:
 
 private slots:
    void runModeChanged(int index);
-   void onOfflineDirSel();
    void onAsSpendLimitChanged(double);
    void onManageSignerKeys();
 
@@ -33,7 +32,6 @@ private:
    void showHost(bool);
    void showPort(bool);
    void showZmqPubKey(bool);
-   void showOfflineDir(bool);
    void showLimits(bool);
    void showSignerKeySettings(bool);
 
