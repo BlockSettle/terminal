@@ -96,4 +96,10 @@ class OpenSslSettings(Configurator):
             print('OpenSSL install failed')
             return False
 
+        if self._project_settings.on_windows():
+            lib_dir = self.get_build_dir()
+            inst_dir = os.path.join(self.get_install_dir(), 'lib')
+            shutil.copyfile(os.path.join(lib_dir, 'libssl.lib'), os.path.join(inst_dir, 'ssl.lib'))
+            shutil.copyfile(os.path.join(lib_dir, 'libcrypto.lib'), os.path.join(inst_dir, 'crypto.lib'))
+
         return True

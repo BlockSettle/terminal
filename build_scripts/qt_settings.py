@@ -123,11 +123,18 @@ class QtSettings(Configurator):
         command.append('-prefix')
         command.append(self.get_install_dir())
 
+        ssldir_var = self.openssl.get_install_dir()
         ssllibs_var = '-L{} -lssl -lcrypto'.format(os.path.join(self.openssl.get_install_dir(),'lib'))
+        sslinc_var = os.path.join(self.openssl.get_install_dir(),'include')
+
         if self._project_settings.on_linux():
             ssllibs_var += ' -ldl -lpthread'
+        elif self._project_settings.on_windows():
+            ssllibs_var += ' -lUser32 -lAdvapi32 -lGdi32 -lCrypt32 -lws2_32'
         compile_variables = os.environ.copy()
+        compile_variables['OPENSSL_DIR'] = ssldir_var
         compile_variables['OPENSSL_LIBS'] = ssllibs_var
+        compile_variables['OPENSSL_INCLUDE'] = sslinc_var
 
         result = subprocess.call(command, env=compile_variables)
         if result != 0:
