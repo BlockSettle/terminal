@@ -1,0 +1,10 @@
+[submodule "common"]
+	path = common
+	url = https://github.com/BlockSettle/common
+	branch = bs_dev
+[submodule "Celer"]
+	path = Celer
+	url = https://github.com/BlockSettle/Celer
+[submodule "AuthAPI"]
+	path = AuthAPI
+	url = https://github.com/autheid/AuthAPI
