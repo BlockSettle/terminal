@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QMimeData>
+#include <QScrollBar>
 #include "ChatClientTree/TreeObjects.h"
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
@@ -18,7 +19,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setCellSpacing(0);
 
    QVector <QTextLength> col_widths;
-   col_widths << QTextLength (QTextLength::FixedLength, 110);
+   col_widths << QTextLength (QTextLength::FixedLength, 96);
    col_widths << QTextLength (QTextLength::FixedLength, 20);
    col_widths << QTextLength (QTextLength::FixedLength, 90);
    col_widths << QTextLength (QTextLength::VariableLength, 50);
@@ -36,6 +37,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    statusImageRead_ = QImage(QLatin1Literal(":/ICON_MSG_STATUS_READ"), "PNG");
 
    connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
+   connect(this, &QTextBrowser::textChanged, this, &ChatMessagesTextEdit::onTextChanged);
 
    userMenu_ = new QMenu(this);
    QAction *addUserToContactsAction = userMenu_->addAction(QObject::tr("Add to contacts"));
@@ -222,6 +224,11 @@ void ChatMessagesTextEdit::copyLinkLocationActionTriggered()
 void ChatMessagesTextEdit::selectAllActionTriggered()
 {
    this->selectAll();
+}
+
+void ChatMessagesTextEdit::onTextChanged()
+{
+   verticalScrollBar()->setValue(verticalScrollBar()->maximum());
 }
 
 void ChatMessagesTextEdit::switchToChat(const QString& chatId, bool isGroupRoom)

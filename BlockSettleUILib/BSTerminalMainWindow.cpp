@@ -1200,6 +1200,7 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (authManager_) {
       authManager_->OnDisconnectedFromCeler();
    }
+   mdProvider_->UnsubscribeFromMD();
 }
 
 void BSTerminalMainWindow::onCelerConnected()
