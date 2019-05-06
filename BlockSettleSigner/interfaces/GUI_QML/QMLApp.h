@@ -89,7 +89,8 @@ private:
    std::shared_ptr<QmlFactory>                  qmlFactory_;
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
-   QSystemTrayIcon      *  trayIcon_ = nullptr;
+   // Tray icon will not be started with light UI signer
+   QSystemTrayIcon      *  trayIconOptional_ = nullptr;
 
    enum NotificationMode {
       QSystemTray,

@@ -99,19 +99,21 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       }
    });
 
-   trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
-   connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
-   connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
+   if (params->runMode() != bs::signer::ui::RunMode::lightgui) {
+      trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
+      connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+      connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 
-#ifdef BS_USE_DBUS
-   if (dbus_->isValid()) {
-      notifMode_ = Freedesktop;
+   #ifdef BS_USE_DBUS
+      if (dbus_->isValid()) {
+         notifMode_ = Freedesktop;
 
-      QObject::disconnect(trayIcon_, &QSystemTrayIcon::messageClicked,
-         this, &QMLAppObj::onSysTrayMsgClicked);
-      connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+         QObject::disconnect(trayIconOptional_, &QSystemTrayIcon::messageClicked,
+            this, &QMLAppObj::onSysTrayMsgClicked);
+         connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+      }
+   #endif // BS_USE_DBUS
    }
-#endif // BS_USE_DBUS
 }
 
 void QMLAppObj::onReady()
@@ -154,7 +156,9 @@ void QMLAppObj::settingsConnections()
 
 void QMLAppObj::Start()
 {
-   trayIcon_->show();
+   if (trayIconOptional_) {
+      trayIconOptional_->show();
+   }
 }
 
 void QMLAppObj::registerQtTypes()
@@ -282,14 +286,14 @@ void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, co
 
    bs::hd::WalletInfo *walletInfo = qmlFactory_.get()->createWalletInfo(txReq.walletId);
    if (!walletInfo->walletId().isEmpty()) {
-      if (alert && trayIcon_) {
+      if (alert && trayIconOptional_) {
          QString notifPrompt = prompt;
          if (!txReq.walletId.empty()) {
             notifPrompt = tr("Enter password for %1").arg(walletInfo->name());
          }
 
          if (notifMode_ == QSystemTray) {
-            trayIcon_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
+            trayIconOptional_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
          }
    #ifdef BS_USE_DBUS
          else {
