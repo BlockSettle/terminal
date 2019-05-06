@@ -22,6 +22,8 @@ public:
    bs::network::Side::Type GetSide() const;
    bs::network::OTCRangeID GetRange() const;
 
+   void setSubmitButtonEnabled(bool enabled);
+
 private slots:
 
    void OnSellClicked();
