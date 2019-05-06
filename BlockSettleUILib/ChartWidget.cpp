@@ -169,21 +169,6 @@ void ChartWidget::OnMdUpdated(bs::network::Asset::Type assetType, const QString&
    }
 
    for (const auto& field : mdFields) {
-      if (field.type == bs::network::MDField::PriceLast && getCurrentProductName() == security) {
-         if (!candlesticksChart_->data()->isEmpty()) {
-            auto lastCandle = candlesticksChart_->data()->end() - 1;
-            lastCandle->high = qMax(lastCandle->high, field.value);
-            lastCandle->low = qMin(lastCandle->low, field.value);
-            if (!qFuzzyCompare(lastCandle->close, field.value)) {
-               lastCandle->close = field.value;
-               UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000,
-                              ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));
-               rescalePlot();
-               ui_->customPlot->replot();
-            }
-         }
-      }
-
       if (field.type == bs::network::MDField::MDTimestamp) {
          currentTimestamp_ = field.value;
          CheckToAddNewCandle(currentTimestamp_);
