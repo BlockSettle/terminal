@@ -99,6 +99,7 @@ public:
    QString deriveKey(const QString& email) const;
    void clearSearch();
    bool isFriend(const QString &userId);
+   QString getUserId();
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);

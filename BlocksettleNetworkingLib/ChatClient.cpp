@@ -122,6 +122,7 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
       sendRequest(request1);
       auto request2 = std::make_shared<Chat::ContactsListRequest>("", currentUserId_);
       sendRequest(request2);
+      emit ConnectedToServer();
    }
    else {
       loggedIn_ = false;
@@ -954,6 +955,11 @@ void ChatClient::clearSearch()
 bool ChatClient::isFriend(const QString &userId)
 {
    return chatDb_->isContactExist(userId);
+}
+
+QString ChatClient::getUserId()
+{
+   return QString::fromStdString(currentUserId_);
 }
 
 void ChatClient::onActionAddToContacts(const QString& userId)
