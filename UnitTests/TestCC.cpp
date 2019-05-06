@@ -22,11 +22,11 @@ void TestCC::SetUp()
    const auto &cbBalance = [](double balance) {
       auto curHeight = TestEnv::armory()->topBlock();
       if (balance < 50) {
-         TestEnv::regtestControl()->GenerateBlocks(101, [](bool) {});
+//         TestEnv::regtestControl()->GenerateBlocks(101, [](bool) {});
          TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 101);
       }
    };
-   TestEnv::regtestControl()->GetBalance(cbBalance);
+//   TestEnv::regtestControl()->GetBalance(cbBalance);
 
    const auto priWallet = TestEnv::walletsMgr()->createWallet("Primary", "", NetworkType::TestNet
       , TestEnv::appSettings()->GetHomeDir().toStdString(), true);
@@ -79,11 +79,11 @@ void TestCC::SetUp()
    recvAddr_ = xbtWallet_->getNewExtAddress();
    syncWallet->registerWallet(TestEnv::armory());
 
-   TestEnv::regtestControl()->SendTo(1.23, fundingAddr_, [](QString) {});
-   TestEnv::regtestControl()->SendTo(initialAmount_, genesisAddr_, [](QString) {});
+//   TestEnv::regtestControl()->SendTo(1.23, fundingAddr_, [](QString) {});
+//   TestEnv::regtestControl()->SendTo(initialAmount_, genesisAddr_, [](QString) {});
 
    auto curHeight = TestEnv::armory()->topBlock();
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    TestEnv::blockMonitor()->waitForWalletReady(wallet);
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
 
@@ -96,14 +96,14 @@ void TestCC::SetUp()
          const auto &cbTx = [this](bool result) {
             if (result) {
                const auto curHeight = TestEnv::armory()->topBlock();
-               TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//               TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
                TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
             }
             else {
                TestEnv::logger()->error("[TestCC] failed to send CC funding TX");
             }
          };
-         TestEnv::regtestControl()->SendTx(QString::fromStdString(fundingTx.toHexStr()), cbTx);
+//         TestEnv::regtestControl()->SendTx(QString::fromStdString(fundingTx.toHexStr()), cbTx);
       }
       catch (const std::exception &e) {
          TestEnv::logger()->error("[TestCC] failed to create CC funding TX: {}", e.what());
@@ -195,7 +195,7 @@ TEST_F(TestCC, TX_buy)
          const auto &cbTx = [](bool result) {
             ASSERT_TRUE(result);
          };
-         TestEnv::regtestControl()->SendTx(QString::fromStdString(tx.toHexStr()), cbTx);
+//         TestEnv::regtestControl()->SendTx(QString::fromStdString(tx.toHexStr()), cbTx);
       };
       xbtWallet_->getSpendableTxOutList(cbTxOutList2, nullptr);
    };
@@ -266,7 +266,7 @@ TEST_F(TestCC, TX_sell)
          const auto &cbTx = [](bool result) {
             ASSERT_TRUE(result);
          };
-         TestEnv::regtestControl()->SendTx(QString::fromStdString(tx.toHexStr()), cbTx);
+//         TestEnv::regtestControl()->SendTx(QString::fromStdString(tx.toHexStr()), cbTx);
       };
       xbtWallet_->getSpendableTxOutList(cbTxOutList2, nullptr);
    };

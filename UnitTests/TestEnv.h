@@ -6,7 +6,6 @@
 #include "BlockchainMonitor.h"
 #include "MockAssetMgr.h"
 #include "MockAuthAddrMgr.h"
-#include "RegtestController.h"
 
 
 namespace spdlog {
@@ -41,7 +40,6 @@ public:
    static std::shared_ptr<ConnectionManager> connectionMgr() { return connMgr_; }
    static std::shared_ptr<CelerClient> celerConnection() { return celerConn_; }
    static std::shared_ptr<spdlog::logger> logger() { return logger_; }
-   static std::shared_ptr<RegtestController> regtestControl() { return regtestControl_; }
    static std::shared_ptr<bs::core::WalletsManager> walletsMgr() { return walletsMgr_; }
    static std::shared_ptr<MarketDataProvider> mdProvider() { return mdProvider_; }
    static std::shared_ptr<QuoteProvider> quoteProvider() { return quoteProvider_; }
@@ -58,7 +56,6 @@ private:
    static std::shared_ptr<ConnectionManager>    connMgr_;
    static std::shared_ptr<MarketDataProvider>   mdProvider_;
    static std::shared_ptr<QuoteProvider>        quoteProvider_;
-   static std::shared_ptr<RegtestController>    regtestControl_;
    static std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;
    static std::shared_ptr<spdlog::logger>       logger_;
    static std::shared_ptr<ArmoryObject>     armory_;

@@ -11,7 +11,6 @@
 #include "ArmoryObject.h"
 #include "ArmorySettings.h"
 #include "AuthAddressManager.h"
-#include "BS_regtest.h"
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
@@ -30,7 +29,6 @@ std::shared_ptr<ConnectionManager> TestEnv::connMgr_;
 std::shared_ptr<spdlog::logger> TestEnv::logger_;
 std::shared_ptr<MarketDataProvider> TestEnv::mdProvider_;
 std::shared_ptr<QuoteProvider> TestEnv::quoteProvider_;
-std::shared_ptr<RegtestController> TestEnv::regtestControl_;
 std::shared_ptr<bs::core::WalletsManager> TestEnv::walletsMgr_;
 
 TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
@@ -81,15 +79,6 @@ void TestEnv::TearDown()
 
 void TestEnv::requireArmory()
 {
-   if (regtestControl_) {
-      return;
-   }
-   regtestControl_ = std::make_shared<RegtestController>(BS_REGTEST_HOST, BS_REGTEST_PORT, BS_REGTEST_AUTH_COOKIE);
-   const auto &cbBalance = [](double balance) {
-      logger_->debug("Bitcoin balance = {}", balance);
-   };
-   regtestControl_->GetBalance(cbBalance);
-
    armory_ = std::make_shared<ArmoryObject>(logger_, "tx_cache");
    ArmorySettings settings;
    settings.runLocally = false;

@@ -66,8 +66,8 @@ TEST(Armory, Balances_UTXOs)
    const auto &cbSend = [](QString result) {
       ASSERT_FALSE(result.isEmpty());
    };
-   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncLeaf);
    syncLeaf->updateBalances();
@@ -86,11 +86,11 @@ TEST(Armory, Balances_UTXOs)
       const auto &cbSendTX = [](bool result) {
          ASSERT_TRUE(result);
       };
-      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTX);
+//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTX);
    };
    ASSERT_TRUE(syncLeaf->getSpendableTxOutList(cbTxOutList1, nullptr));
 
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    ASSERT_TRUE(TestEnv::blockMonitor()->waitForWalletReady(syncCcLeaf));
    ASSERT_TRUE(TestEnv::blockMonitor()->waitForWalletReady(syncLeaf));
@@ -123,11 +123,11 @@ TEST(Armory, Balances_UTXOs)
       const auto &cbSendTX = [](bool result) {
          ASSERT_TRUE(result);
       };
-      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTX);
+//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTX);
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList2, nullptr);
 
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    syncLeaf->updateBalances();
    TestEnv::blockMonitor()->waitForWalletReady(syncCcLeaf);
@@ -169,11 +169,11 @@ TEST(Armory, Balances_UTXOs)
       const auto &cbSendTX = [](bool result) {
          ASSERT_TRUE(result);
       };
-      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned3.toHexStr()), cbSendTX);
+//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned3.toHexStr()), cbSendTX);
    };
    syncCcLeaf->getSpendableTxOutList(cbTxOutList3, nullptr);
 
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncCcLeaf);
    syncCcLeaf->updateBalances();
@@ -247,8 +247,8 @@ TEST(Armory, Ledger)
    const auto &cbSend = [](QString result) {
       ASSERT_FALSE(result.isEmpty());
    };
-   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->SendTo(0.5, addr1, cbSend);
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    ASSERT_TRUE(TestEnv::blockMonitor()->waitForWalletReady(syncLeaf));
 
@@ -267,11 +267,11 @@ TEST(Armory, Ledger)
       const auto &cbSendTx = [](bool result) {
          ASSERT_TRUE(result);
       };
-      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTx);
+//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned1.toHexStr()), cbSendTx);
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList1, nullptr, amount + fee);
 
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncLeaf);
 
@@ -310,11 +310,11 @@ TEST(Armory, Ledger)
       const auto &cbSendTx = [](bool result) {
          ASSERT_TRUE(result);
       };
-      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTx);
+//      TestEnv::regtestControl()->SendTx(QString::fromStdString(txSigned2.toHexStr()), cbSendTx);
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList2, nullptr, amount + fee);
 
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    curHeight = TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    TestEnv::blockMonitor()->waitForWalletReady(syncLeaf);
    syncLeaf->updateBalances();

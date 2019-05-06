@@ -23,7 +23,6 @@ from build_scripts.botan_settings         import BotanSettings
 
 def generate_project(build_mode):
    project_settings = Settings(build_mode)
-   project_settings.set_server_build_settings()
 
    print('Checking 3rd party components')
    print('Build mode        : ' + project_settings.get_build_mode())
@@ -59,9 +58,9 @@ def generate_project(build_mode):
    print('Start generating project')
    os.chdir(project_settings.get_project_root())
 
-   generated_dir = generated_dir = os.path.join(os.getcwd(), 'generated_server_proto')
-   build_dir = os.path.join(os.getcwd(), 'server.' + build_mode)
+   build_dir = os.path.join(os.getcwd(), 'tests.' + build_mode)
 
+   generated_dir = os.path.join(os.getcwd(), 'generated_proto')
    if os.path.isfile(generated_dir):
       os.remove(generated_dir)
    elif os.path.isdir(generated_dir):

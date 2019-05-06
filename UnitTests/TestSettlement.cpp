@@ -10,7 +10,6 @@
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
 #include "TestEnv.h"
-#include "RegtestController.h"
 #include "TransactionData.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -28,11 +27,11 @@ void TestSettlement::SetUp()
    const auto &cbBalance = [](double balance) {
       auto curHeight = TestEnv::armory()->topBlock();
       if (balance < 50) {
-         TestEnv::regtestControl()->GenerateBlocks(101, [](bool) {});
+//         TestEnv::regtestControl()->GenerateBlocks(101, [](bool) {});
          TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 101);
       }
    };
-   TestEnv::regtestControl()->GetBalance(cbBalance);
+//   TestEnv::regtestControl()->GetBalance(cbBalance);
 
    const auto amount = initialTransferAmount_;
 
@@ -50,7 +49,7 @@ void TestSettlement::SetUp()
          TestEnv::logger()->debug("[TestSettlement] sending {} to {}: {}", amount, addr.display()
             , result.toStdString());
       };
-      TestEnv::regtestControl()->SendTo(amount, addr, cbSend);
+//      TestEnv::regtestControl()->SendTo(amount, addr, cbSend);
 
       hdWallet->setChainCode(CryptoPRNG::generateRandom(32));
       auto authGrp = hdWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
@@ -75,7 +74,7 @@ void TestSettlement::SetUp()
    syncMgr_->registerWallets();
 
    auto curHeight = TestEnv::armory()->topBlock();
-   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
+//   TestEnv::regtestControl()->GenerateBlocks(6, [](bool) {});
    TestEnv::blockMonitor()->waitForNewBlocks(curHeight + 6);
    for (const auto &wallet : syncMgr_->getAllWallets()) {
       wallet->updateBalances();
