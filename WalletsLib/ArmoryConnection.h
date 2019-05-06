@@ -75,7 +75,7 @@ public:
    };
 
    ArmoryConnection(const std::shared_ptr<spdlog::logger> &);
-   ~ArmoryConnection() noexcept;
+   virtual ~ArmoryConnection() noexcept;
 
    State state() const { return state_; }
 
