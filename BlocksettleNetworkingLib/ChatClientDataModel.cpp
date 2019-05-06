@@ -338,6 +338,9 @@ QVariant ChatClientDataModel::roomData(const TreeItem *item, int role) const
 
       switch (role) {
          case RoomTitleRole:
+            if (room->getTitle().isEmpty()) {
+               return room->getId();
+            }
             return room->getTitle();
          case RoomIdRole:
             return room->getId();

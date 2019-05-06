@@ -67,7 +67,7 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
    }
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
-   itemOption.text = index.data(Role::RoomIdRole).toString();
+   itemOption.text = index.data(Role::RoomTitleRole).toString();
    QStyledItemDelegate::paint(painter, itemOption, index);
 
 }
