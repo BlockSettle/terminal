@@ -71,6 +71,7 @@ private slots:
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
    void onSearchUserTextEdited(const QString& text);
+   void onConnectedToServer();
 
    void OnOTCRequestCreated();
    void DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range);

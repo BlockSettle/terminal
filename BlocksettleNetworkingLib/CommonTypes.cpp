@@ -83,7 +83,7 @@ MDField::Type MDField::fromCeler(com::celertech::marketdata::api::enums::marketd
 }
 
 MDField MDField::get(const MDFields &fields, MDField::Type type) {
-   for (const auto field : fields) {
+   for (const auto &field : fields) {
       if (field.type == type) {
          return field;
       }

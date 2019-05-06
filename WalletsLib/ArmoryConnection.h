@@ -75,7 +75,7 @@ public:
    };
 
    ArmoryConnection(const std::shared_ptr<spdlog::logger> &);
-   ~ArmoryConnection() noexcept;
+   virtual ~ArmoryConnection() noexcept;
 
    State state() const { return state_; }
 
@@ -142,7 +142,7 @@ protected:
 private:
    void registerBDV(NetworkType);
    void setTopBlock(unsigned int topBlock) { topBlock_ = topBlock; }
-   void onRefresh(std::vector<BinaryData>);
+   void onRefresh(const std::vector<BinaryData> &);
    void onZCsReceived(const std::vector<ClientClasses::LedgerEntry> &);
    void onZCsInvalidated(const std::set<BinaryData> &);
 

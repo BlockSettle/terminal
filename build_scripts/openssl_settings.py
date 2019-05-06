@@ -14,7 +14,7 @@ class OpenSslSettings(Configurator):
         self._patch_ver = '1b'
         self._version = self._major_ver + '_' + self._minor_ver + '_' + self._patch_ver
         self._package_name = 'openssl-OpenSSL_' + self._version
-        self._script_revision = '1'
+        self._script_revision = '2'
 
         self._package_url = 'https://github.com/openssl/openssl/archive/OpenSSL_' + self._version + '.tar.gz'
 
