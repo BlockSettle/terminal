@@ -77,7 +77,6 @@ public:
       chatPubKey,
       chatDbFile,
       celerUsername,
-//      signerHost,
       localSignerPort,
       signerIndex,
       signerRunMode,
