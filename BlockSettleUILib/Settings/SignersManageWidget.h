@@ -1,10 +1,10 @@
-#ifndef SIGNER_KEYS_WIDGET_H
-#define SIGNER_KEYS_WIDGET_H
+#ifndef SIGNERS_MANAGE_WIDGET_H
+#define SIGNERS_MANAGE_WIDGET_H
 
 #include <QWidget>
 #include <ApplicationSettings.h>
 
-#include "SignerKeysModel.h"
+#include "SignersModel.h"
 
 namespace Ui {
 class SignerKeysWidget;
@@ -15,7 +15,8 @@ class SignerKeysWidget : public QWidget
    Q_OBJECT
 
 public:
-   explicit SignerKeysWidget(std::shared_ptr<ApplicationSettings> appSettings, QWidget *parent = nullptr);
+   explicit SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
+      , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent = nullptr);
    ~SignerKeysWidget();
 
 public slots:
@@ -23,9 +24,9 @@ public slots:
    void onDeleteSignerKey();
    void onEdit();
    void onSave();
+   void onSelect();
 
 signals:
-   void reconnectArmory();
    void needClose();
 
 private slots:
@@ -34,8 +35,9 @@ private slots:
 private:
    std::unique_ptr<Ui::SignerKeysWidget> ui_;
    std::shared_ptr<ApplicationSettings> appSettings_;
+   std::shared_ptr<SignersProvider> signersProvider_;
 
-   SignerKeysModel *signerKeysModel_;
+   SignersModel *signerKeysModel_;
 };
 
-#endif // SIGNER_KEYS_WIDGET_H
+#endif // SIGNERS_MANAGE_WIDGET_H
