@@ -116,13 +116,13 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 {
    if (response.getStatus() == Chat::LoginResponse::Status::LoginOk) {
       loggedIn_ = true;
+      emit ConnectedToServer();
       model_->setCurrentUser(currentUserId_);
       readDatabase();
       auto request1 = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentUserId_);
       sendRequest(request1);
       auto request2 = std::make_shared<Chat::ContactsListRequest>("", currentUserId_);
       sendRequest(request2);
-      emit ConnectedToServer();
    }
    else {
       loggedIn_ = false;
@@ -484,10 +484,10 @@ void ChatClient::sendHeartbeat()
    }
 }
 
-void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message)
-{
-   addMessageState(message, Chat::MessageData::State::Read);
-}
+//void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message)
+//{
+//   addMessageState(message, Chat::MessageData::State::Read);
+//}
 
 void ChatClient::onForceLogoutSignal()
 {
@@ -1087,4 +1087,12 @@ void ChatClient::onActionSearchUsers(const std::string &text)
 void ChatClient::onActionResetSearch()
 {
    model_->clearSearch();
+}
+
+void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
+{
+   message->setFlag(Chat::MessageData::State::Read);
+   chatDb_->updateMessageStatus(message->getId(), message->getState());
+   model_->notifyMessageChanged(message);
+   sendUpdateMessageState(message);
 }
