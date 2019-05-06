@@ -93,7 +93,7 @@ private:
    ChatSearchPopup *popup_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   QTimer *popupVisibleTimer_; 
+   QTimer *popupVisibleTimer_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;

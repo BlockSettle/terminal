@@ -32,6 +32,19 @@ enum class OTCPages : int
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
 
+bool IsOTCChatRoom(const QString& chatRoom)
+{
+   static const QString targetRoomName = QLatin1String("otc_chat");
+   return chatRoom == targetRoomName;
+}
+
+bool IsGlobalChatRoom(const QString& chatRoom)
+{
+   static const QString targetRoomName = QLatin1String("global_chat");
+   return chatRoom == targetRoomName;
+}
+
+
 class ChatWidgetState {
 public:
     virtual void onStateEnter() {} //Do something special on state appears, by default nothing
@@ -169,7 +182,7 @@ public:
    }
 
    void onRoomClicked(const QString& roomId) override {
-      if (roomId == QLatin1Literal("otc_chat")) {
+      if (IsOTCChatRoom(roomId)) {
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(1);
       } else {
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(0);
@@ -519,17 +532,13 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             break;
 
       }
-      if (currentChat_ == QLatin1Literal("otc_chat")) {
+
+      if (IsOTCChatRoom(currentChat_)) {
          ui_->stackedWidgetMessages->setCurrentIndex(1);
+         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(true);
       } else {
          ui_->stackedWidgetMessages->setCurrentIndex(0);
-      }
-
-      if (currentChat_ == QLatin1Literal("global_chat")) {
-         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(false);
-      }
-      else {
-         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(true);
+         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(!IsGlobalChatRoom(currentChat_));
       }
    }
 }
