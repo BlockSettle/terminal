@@ -94,6 +94,7 @@ private slots:
    void copyActionTriggered();
    void copyLinkLocationActionTriggered();
    void selectAllActionTriggered();
+   void onTextChanged();
 
 private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
