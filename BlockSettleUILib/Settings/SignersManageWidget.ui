@@ -12,7 +12,7 @@
   </property>
   <property name="sizeHint" stdset="0">
    <size>
-    <width>636</width>
+    <width>816</width>
     <height>439</height>
    </size>
   </property>
@@ -62,7 +62,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Delete Key</string>
+         <string>Delete Signer</string>
         </property>
        </widget>
       </item>
@@ -122,14 +122,14 @@
          </size>
         </property>
         <property name="text">
-         <string>Edit Key</string>
+         <string>Edit Signer</string>
         </property>
        </widget>
       </item>
       <item row="2" column="0" colspan="4">
        <widget class="QGroupBox" name="groupBox">
         <property name="title">
-         <string>ADD SIGNER KEY</string>
+         <string>ADD SIGNER</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
          <property name="leftMargin">
@@ -240,7 +240,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Optional when connecting to a public ArmoryDB</string>
+               <string>Optional</string>
               </property>
               <property name="styleSheet">
                <string notr="true">image: url(&quot;:/resources/notification_info@2x.png&quot;);</string>
@@ -452,6 +452,28 @@
           </widget>
          </item>
         </layout>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QPushButton" name="pushButtonSelect">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>180</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>180</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Select</string>
+        </property>
        </widget>
       </item>
      </layout>

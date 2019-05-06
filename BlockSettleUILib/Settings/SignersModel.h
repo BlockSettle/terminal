@@ -8,18 +8,18 @@
 #include "ApplicationSettings.h"
 #include "SignersProvider.h"
 
-class SignerKeysModel : public QAbstractTableModel
+class SignersModel : public QAbstractTableModel
 {
 public:
-   SignerKeysModel(const std::shared_ptr<SignersProvider> &signersProvider
+   SignersModel(const std::shared_ptr<SignersProvider> &signersProvider
                           , QObject *parent = nullptr);
-   ~SignerKeysModel() noexcept = default;
+   ~SignersModel() noexcept = default;
 
-   SignerKeysModel(const SignerKeysModel&) = delete;
-   SignerKeysModel& operator = (const SignerKeysModel&) = delete;
+   SignersModel(const SignersModel&) = delete;
+   SignersModel& operator = (const SignersModel&) = delete;
 
-   SignerKeysModel(SignerKeysModel&&) = delete;
-   SignerKeysModel& operator = (SignerKeysModel&&) = delete;
+   SignersModel(SignersModel&&) = delete;
+   SignersModel& operator = (SignersModel&&) = delete;
 
    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -27,12 +27,8 @@ public:
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-//   void addSignerPubKey(const SignerKey &key);
-//   void deleteSignerPubKey(int index);
-//   void editSignerPubKey(int index, const SignerKey &key);
-//   void saveSignerPubKeys(QList<SignerKey> signerKeys);
-
-//   QList<SignerKey> signerPubKeys() const;
+   void setHighLightSelectedServer(bool highLightSelectedServer);
+   void setSingleColumnMode(bool singleColumnMode);
 
 public slots:
    void update();
@@ -40,6 +36,8 @@ public slots:
 private:
    std::shared_ptr<SignersProvider> signersProvider_;
    QList<SignerHost> signers_;
+
+   bool highLightSelectedServer_ = true;
    bool singleColumnMode_ = false;
 
    enum SignersViewColumns : int

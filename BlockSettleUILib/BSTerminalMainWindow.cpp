@@ -75,6 +75,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    loginButtonText_ = tr("Login");
 
    armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
+   signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
@@ -1060,7 +1061,7 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 
 void BSTerminalMainWindow::openConfigDialog()
 {
-   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signContainer_, this);
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
    configDialog.exec();
 

@@ -54,7 +54,7 @@ void SignerSettingsPage::onModeChanged(int index)
 
    case Remote:
       showHost(true);
-      ui_->lineEditHost->setText(appSettings_->get<QString>(ApplicationSettings::signerHost));
+      ui_->comboBoxRemoteSigner->setCurrentIndex(appSettings_->get<int>(ApplicationSettings::signerIndex));
       showPort(true);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
@@ -76,7 +76,7 @@ void SignerSettingsPage::display()
 
 void SignerSettingsPage::reset()
 {
-   for (const auto &setting : {ApplicationSettings::signerRunMode, ApplicationSettings::signerHost
+   for (const auto &setting : {ApplicationSettings::signerRunMode
       , ApplicationSettings::localSignerPort, ApplicationSettings::signerOfflineDir
       , ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
       , ApplicationSettings::twoWayAuth}) {
@@ -88,7 +88,7 @@ void SignerSettingsPage::reset()
 void SignerSettingsPage::showHost(bool show)
 {
    ui_->labelHost->setVisible(show);
-   ui_->lineEditHost->setVisible(show);
+   ui_->comboBoxRemoteSigner->setVisible(show);
 }
 
 void SignerSettingsPage::showPort(bool show)
@@ -109,7 +109,6 @@ void SignerSettingsPage::showSignerKeySettings(bool show)
 {
    ui_->widgetTwoWayAuth->setVisible(show);
    ui_->checkBoxTwoWayAuth->setVisible(show);
-   ui_->widgetSignerKeyLabel->setVisible(show);
    ui_->widgetSignerKeyComboBox->setVisible(show);
 }
 
@@ -134,7 +133,7 @@ void SignerSettingsPage::onManageSignerKeys()
    d->setLayout(l);
    d->setWindowTitle(tr("Import Signer Keys"));
 
-   SignerKeysWidget *signerKeysWidget = new SignerKeysWidget(appSettings_, this);
+   SignerKeysWidget *signerKeysWidget = new SignerKeysWidget(signersProvider_, appSettings_, this);
    d->resize(signerKeysWidget->size());
 
    l->addWidget(signerKeysWidget);
@@ -144,6 +143,8 @@ void SignerSettingsPage::onManageSignerKeys()
    });
 
    d->exec();
+
+   emit signersChanged();
 }
 
 void SignerSettingsPage::apply()
@@ -155,8 +156,8 @@ void SignerSettingsPage::apply()
       break;
 
    case Remote:
-      appSettings_->set(ApplicationSettings::signerHost, ui_->lineEditHost->text());
       appSettings_->set(ApplicationSettings::localSignerPort, ui_->spinBoxPort->value());
+      signersProvider_->setupSigner(ui_->comboBoxRemoteSigner->currentIndex());
       break;
 
    default:    break;
@@ -165,4 +166,14 @@ void SignerSettingsPage::apply()
    // first comboBoxRunMode index is '--Select--' placeholder
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
    appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
+}
+
+void SignerSettingsPage::initSettings()
+{
+   signersModel_ = new SignersModel(signersProvider_);
+   signersModel_->setSingleColumnMode(true);
+   signersModel_->setHighLightSelectedServer(false);
+   ui_->comboBoxRemoteSigner->setModel(signersModel_);
+
+   connect(signersProvider_.get(), &SignersProvider::dataChanged, this, &SignerSettingsPage::display);
 }

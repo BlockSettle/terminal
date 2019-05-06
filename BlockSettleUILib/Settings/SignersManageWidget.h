@@ -20,10 +20,11 @@ public:
    ~SignerKeysWidget();
 
 public slots:
-//   void onAddSignerKey();
-//   void onDeleteSignerKey();
-//   void onEdit();
-//   void onSave();
+   void onAddSignerKey();
+   void onDeleteSignerKey();
+   void onEdit();
+   void onSave();
+   void onSelect();
 
 signals:
    void needClose();
@@ -36,7 +37,7 @@ private:
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<SignersProvider> signersProvider_;
 
-   SignerKeysModel *signerKeysModel_;
+   SignersModel *signerKeysModel_;
 };
 
 #endif // SIGNERS_MANAGE_WIDGET_H

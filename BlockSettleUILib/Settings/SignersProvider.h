@@ -68,6 +68,7 @@ public:
    SignerHost connectedSignerHost() const;
    void setConnectedSignerHost(const SignerHost &connectedSignerHost);
 
+   void setupSigner(int index, bool needUpdate = true);
 signals:
    void dataChanged();
 private:

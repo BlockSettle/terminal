@@ -35,7 +35,12 @@ SignerHost SignersProvider::getCurrentSigner() const
 
 int SignersProvider::indexOfCurrent() const
 {
-   return indexOf(getCurrentSigner());
+   int index = appSettings_->get<int>(ApplicationSettings::signerIndex);
+   QList<SignerHost> signersData = signers();
+   if (index < 0 || index >= signers().size()) {
+      return -1;
+   }
+   return index;
 }
 
 int SignersProvider::indexOfConnected() const
@@ -202,6 +207,17 @@ SignerHost SignersProvider::connectedSignerHost() const
 void SignersProvider::setConnectedSignerHost(const SignerHost &connectedSignerHost)
 {
    connectedSignerHost_ = connectedSignerHost;
+}
+
+void SignersProvider::setupSigner(int index, bool needUpdate)
+{
+   QList<SignerHost> signerList = signers();
+   if (index >= 0 && index < signerList.size()) {
+      appSettings_->set(ApplicationSettings::signerIndex, index);
+
+      if (needUpdate)
+         emit dataChanged();
+   }
 }
 
 
