@@ -57,3 +57,9 @@ function manageEncryptionDialog(data) {
     dlg.open()
     return dlg
 }
+
+function activateAutoSignDialog(data) {
+    var walletId = data["rootId"]
+    signerSettings.autoSignWallet = walletId
+    signerStatus.activateAutoSign()
+}

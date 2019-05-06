@@ -55,7 +55,7 @@ void QMLStatusUpdater::onAutoSignActivated(const std::string &walletId)
 {
    autoSignActive_ = true;
    emit autoSignActiveChanged();
-   autoSignTimeSpent_ = 0;
+   autoSignTimeSpent_.start();
    asTimer_.start(1000);
 }
 
@@ -64,16 +64,15 @@ void QMLStatusUpdater::onAutoSignDeactivated(const std::string &walletId)
    autoSignActive_ = false;
    emit autoSignActiveChanged();
    asTimer_.stop();
-   autoSignTimeSpent_ = 0;
+   autoSignTimeSpent_.invalidate();
    emit autoSignTimeSpentChanged();
 }
 
 void QMLStatusUpdater::onAutoSignTick()
 {
-   autoSignTimeSpent_++;
    emit autoSignTimeSpentChanged();
 
-   if ((settings_->limitAutoSignTime() > 0) && (autoSignTimeSpent_ >= settings_->limitAutoSignTime())) {
+   if ((settings_->limitAutoSignTime() > 0) && (timeAutoSignSeconds() >= settings_->limitAutoSignTime())) {
       deactivateAutoSign();
    }
 }
@@ -105,6 +104,19 @@ QStringList QMLStatusUpdater::connectedClients() const
       result.push_back(client);
    }
    return result;
+}
+
+int QMLStatusUpdater::timeAutoSignSeconds() const
+{
+   if (!autoSignTimeSpent_.isValid()) {
+      return 0;
+   }
+   return int(autoSignTimeSpent_.elapsed() / 1000);
+}
+
+QString QMLStatusUpdater::autoSignTimeSpent() const
+{
+   return SignerSettings::secondsToIntervalStr(timeAutoSignSeconds());
 }
 
 void QMLStatusUpdater::xbtSpent(const qint64 value, bool autoSign)

@@ -4,6 +4,7 @@
 #include <memory>
 #include <QObject>
 #include <QTimer>
+#include <QElapsedTimer>
 #include "SignerSettings.h"
 
 namespace spdlog {
@@ -74,8 +75,9 @@ private:
    bool manualSignUnlimited() const { return settings_->manualSignUnlimited(); }
    double autoSignLimit() const { return settings_->limitAutoSignXbt(); }
    double manualSignLimit() const { return settings_->limitManualXbt(); }
+   int timeAutoSignSeconds() const;
    QString autoSignTimeLimit() const { return settings_->limitAutoSignTimeStr(); }
-   QString autoSignTimeSpent() const { return SignerSettings::secondsToIntervalStr(autoSignTimeSpent_); }
+   QString autoSignTimeSpent() const;
    int txSignedCount() const { return txSignedCount_; }
    double autoSignSpent() const { return autoSignSpent_ / BTCNumericTypes::BalanceDivider; }
    double manualSignSpent() const { return manualSignSpent_ / BTCNumericTypes::BalanceDivider; }
@@ -91,7 +93,7 @@ private:
    int      txSignedCount_ = 0;
    uint64_t autoSignSpent_ = 0;
    uint64_t manualSignSpent_ = 0;
-   int      autoSignTimeSpent_ = 0;
+   QElapsedTimer autoSignTimeSpent_;
    bool     autoSignActive_ = false;
    bool     socketOk_ = true;
    std::multiset<QString> connectedClients_;
