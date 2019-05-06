@@ -78,8 +78,6 @@ public:
       chat_->logger_->debug("Set user name {}", email);
       const auto userId = chat_->client_->loginToServer(email, jwt);
       chat_->ui_->textEditMessages->setOwnUserId(userId);
-      chat_->ui_->labelUserName->setText(QString::fromStdString(userId));
-
       return userId;
    }
 
@@ -110,6 +108,7 @@ public:
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
+      chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
    }
 
    void onStateExit() override {
@@ -254,6 +253,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
+   connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited, this, &ChatWidget::onSearchUserTextEdited);
 
@@ -396,7 +396,6 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
    try {
       const auto userId = stateCurrent_->login(email, jwt);
-      changeState(State::LoggedIn);
       needsToStartFirstRoom_ = true;
       return userId;
    }
@@ -457,6 +456,11 @@ void ChatWidget::onSearchUserTextEdited(const QString& text)
       return; //Initially max key is 12 symbols
    }
    client_->sendSearchUsersRequest(userToAdd);
+}
+
+void ChatWidget::onConnectedToServer()
+{
+   changeState(State::LoggedIn);
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
