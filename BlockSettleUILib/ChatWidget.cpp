@@ -524,6 +524,13 @@ void ChatWidget::onElementSelected(CategoryElement *element)
       } else {
          ui_->stackedWidgetMessages->setCurrentIndex(0);
       }
+
+      if (currentChat_ == QLatin1Literal("global_chat")) {
+         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(false);
+      }
+      else {
+         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(true);
+      }
    }
 }
 

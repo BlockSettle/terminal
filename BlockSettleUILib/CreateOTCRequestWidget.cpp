@@ -28,6 +28,11 @@ CreateOTCRequestWidget::CreateOTCRequestWidget(QWidget* parent)
 
 CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
 
+void CreateOTCRequestWidget::setSubmitButtonEnabled(bool enabled)
+{
+   ui_->pushButtonSubmit->setEnabled(enabled);
+}
+
 void CreateOTCRequestWidget::OnSellClicked()
 {
    ui_->pushButtonBuy->setChecked(false);
