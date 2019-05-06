@@ -35,6 +35,8 @@ public:
 
 public slots:
    void onCustomContextMenu(const QPoint &);
+private slots:
+   void onClicked(const QModelIndex &);
 private:
    void updateDependUI(CategoryElement * element);
    void notifyCurrentChanged(CategoryElement *element);
