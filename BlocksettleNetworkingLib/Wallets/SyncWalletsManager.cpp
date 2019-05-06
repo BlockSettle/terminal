@@ -126,6 +126,10 @@ void WalletsManager::syncWallets(const CbProgress &cb)
       if (wi.empty()) {
          emit walletDeleted("");
       }
+
+      if (wi.empty()) {
+         emit walletsSynchronized();
+      }
    };
    if (!signContainer_) {
       logger_->error("[WalletsManager::{}] signer is not set - aborting"
