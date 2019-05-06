@@ -573,7 +573,7 @@ bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &
    return getConfirmationsNumber(item) > 1;
 }
 
-void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
+void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
 {
    if (!preOnlineRegIds_.empty()) {
       for (const auto &id : ids) {
