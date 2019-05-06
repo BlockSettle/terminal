@@ -16,7 +16,7 @@ class QtSettings(Configurator):
         self._release = '5.12'
         self._version = self._release + '.2'
         self._package_name = 'qt-everywhere-src-' + self._version
-        self._script_revision = '6'
+        self._script_revision = '7'
 
         if self._project_settings.on_windows():
             self._package_url = 'https://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
@@ -83,7 +83,6 @@ class QtSettings(Configurator):
         command.append('-sql-mysql')
         command.append('-no-feature-vulkan')
 
-        # command.append('-no-securetransport')
         command.append('-I{}'.format(os.path.join(self.openssl.get_install_dir(),'include')))
 
         if self._project_settings.on_osx():
@@ -131,6 +130,7 @@ class QtSettings(Configurator):
             ssllibs_var += ' -ldl -lpthread'
         elif self._project_settings.on_windows():
             ssllibs_var += ' -lUser32 -lAdvapi32 -lGdi32 -lCrypt32 -lws2_32'
+
         compile_variables = os.environ.copy()
         compile_variables['OPENSSL_DIR'] = ssldir_var
         compile_variables['OPENSSL_LIBS'] = ssllibs_var
