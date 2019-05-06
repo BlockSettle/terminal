@@ -150,6 +150,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    UpdateMainWindowAppearence();
    setWidgetsAuthorized(false);
+
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
