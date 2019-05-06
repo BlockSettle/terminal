@@ -40,8 +40,9 @@ TEST(TestNetwork, Types)
 TEST(TestNetwork, IdString)
 {
    IdStringGenerator gen;
-   EXPECT_EQ(gen.getNextId(), "1");
-   EXPECT_EQ(gen.getNextId(), "2");
+   for (int i = 1; i < 10; ++i) {
+      EXPECT_EQ(gen.getNextId(), std::to_string(i));
+   }
 }
 
 TEST(TestNetwork, PayinsContainer)
@@ -55,6 +56,7 @@ TEST(TestNetwork, PayinsContainer)
    EXPECT_EQ(payins.get(key), tx);
    EXPECT_FALSE(payins.save(key, CryptoPRNG::generateRandom(16)));
    EXPECT_TRUE(payins.erase(key));
+   EXPECT_TRUE(payins.get(key).isNull());
    EXPECT_FALSE(payins.erase(key));
 }
 
@@ -62,14 +64,12 @@ TEST(TestNetwork, ZMQ_BIP15X)
 {
    static std::promise<bool> connectProm;
    static auto connectFut = connectProm.get_future();
-   static bool connReported = false;
    static std::promise<bool> clientPktsProm;
    static auto clientPktsFut = clientPktsProm.get_future();
    static std::promise<bool> srvPktsProm;
    static auto srvPktsFut = srvPktsProm.get_future();
 
    static std::vector<std::string> clientPackets;
-   static size_t clientPktCnt = 0;
    for (int i = 0; i < 5; ++i) {
       clientPackets.push_back(CryptoPRNG::generateRandom(23).toBinStr());
    }
@@ -80,8 +80,7 @@ TEST(TestNetwork, ZMQ_BIP15X)
    }
 
    static std::vector<std::string> srvPackets;
-   static size_t srvPktCnt = 0;
-   size_t pktSize = 100;
+   uint32_t pktSize = 100;
    for (int i = 0; i < 11; ++i) {
       srvPackets.push_back(CryptoPRNG::generateRandom(pktSize).toBinStr());
       pktSize *= 2;
@@ -97,27 +96,24 @@ TEST(TestNetwork, ZMQ_BIP15X)
          : ServerConnectionListener(), logger_(logger) {}
       ~ServerConnListener() noexcept override = default;
 
-      bool onReady(int cur = 0, int total = 0);
-
    protected:
-      void OnDataFromClient(const std::string &clientId, const std::string &data) override {
-         logger_->debug("[{}] {} from {} #{}", __func__, data.size()
-            , BinaryData(clientId).toHexStr(), clientPktCnt);
-         if (clientPktCnt < clientPackets.size()) {
-            if (clientPackets[clientPktCnt++] != data) {
-               logger_->error("[{}] packet #{} mismatch", __func__, clientPktCnt - 1);
+       size_t clientPktCnt_ = 0;
+       bool packetsMatch_ = true;
+       void OnDataFromClient(const std::string &clientId, const std::string &data) override {
+         logger_->error("[{}] {} from {} #{}", __func__, data.size()
+            , BinaryData(clientId).toHexStr(), clientPktCnt_);
+         if (clientPktCnt_ < clientPackets.size()) {
+            if (clientPackets[clientPktCnt_++] != data) {
+               packetsMatch_ = false;
+               logger_->error("[{}] packet #{} mismatch", __func__, clientPktCnt_ - 1);
             }
          }
-         if (!failed_ && (clientPktCnt == clientPackets.size())) {
-            clientPktsProm.set_value(true);
+         if (!failed_ && (clientPktCnt_ == clientPackets.size())) {
+            clientPktsProm.set_value(packetsMatch_);
          }
       }
       void onClientError(const std::string &clientId, const std::string &errStr) override {
          logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
-         if (!connReported) {
-            connectProm.set_value(false);
-            connReported = true;
-         }
          if (!failed_) {
             clientPktsProm.set_value(false);
             failed_ = true;
@@ -141,43 +137,43 @@ TEST(TestNetwork, ZMQ_BIP15X)
       ClientConnListener(const std::shared_ptr<spdlog::logger> &logger)
          : DataConnectionListener(), logger_(logger) {}
 
+      size_t srvPktCnt_ = 0;
+      bool packetsMatch_ = true;
       void OnDataReceived(const std::string &data) override {
-         logger_->debug("[{}] {} #{}", __func__, data.size(), srvPktCnt);
-         if (srvPktCnt < srvPackets.size()) {
-            if (srvPackets[srvPktCnt++] != data) {
-               logger_->error("[{}] packet #{} mismatch", __func__, srvPktCnt - 1);
+         logger_->debug("[{}] {} #{}", __func__, data.size(), srvPktCnt_);
+         if (srvPktCnt_ < srvPackets.size()) {
+            if (srvPackets[srvPktCnt_++] != data) {
+               packetsMatch_ = false;
+               logger_->error("[{}] packet #{} mismatch", __func__, srvPktCnt_ - 1);
             }
          }
-         if (!failed_ && (srvPktCnt == srvPackets.size())) {
-            srvPktsProm.set_value(true);
+         if (!failed_ && (srvPktCnt_ == srvPackets.size())) {
+            srvPktsProm.set_value(packetsMatch_);
          }
       }
+      bool connReported_ = false;
       void OnConnected() override {
          logger_->debug("[{}]", __func__);
          connectProm.set_value(true);
-         connReported = true;
+         connReported_ = true;
+      }
+      void fail() {
+          if (!connReported_) {
+              connectProm.set_value(false);
+              connReported_ = true;
+          }
+          if (!failed_) {
+              srvPktsProm.set_value(false);
+              failed_ = true;
+          }
       }
       void OnDisconnected() override {
          logger_->debug("[{}]", __func__);
-         if (!connReported) {
-            connectProm.set_value(false);
-            connReported = true;
-         }
-         if (!failed_) {
-            srvPktsProm.set_value(false);
-            failed_ = true;
-         }
+         fail();
       }
       void OnError(DataConnectionError errorCode) override {
          logger_->debug("[{}] {}", __func__, int(errorCode));
-         if (!connReported) {
-            connectProm.set_value(false);
-            connReported = true;
-         }
-         if (!failed_) {
-            srvPktsProm.set_value(false);
-            failed_ = true;
-         }
+         fail();
       }
 
    private:
@@ -207,20 +203,17 @@ TEST(TestNetwork, ZMQ_BIP15X)
    serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
    clientConn->addAuthPeer(serverKey, host + ":" + port);
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
-   const bool connResult = connectFut.get();
-   EXPECT_TRUE(connResult);
+   EXPECT_TRUE(connectFut.get());
 
-   if (connResult) {
-      for (const auto &clientPkt : clientPackets) {
-         clientConn->send(clientPkt);
-      }
-      EXPECT_TRUE(clientPktsFut.get());
-
-      for (const auto &srvPkt : srvPackets) {
-         serverConn->SendDataToAllClients(srvPkt);
-      }
-      EXPECT_TRUE(srvPktsFut.get());
+   for (const auto &clientPkt : clientPackets) {
+      clientConn->send(clientPkt);
    }
+   EXPECT_TRUE(clientPktsFut.get());
+
+   for (const auto &srvPkt : srvPackets) {
+      serverConn->SendDataToAllClients(srvPkt);
+   }
+   EXPECT_TRUE(srvPktsFut.get());
 
    EXPECT_TRUE(clientConn->closeConnection());
    serverConn.reset();  // This is needed to detach listener before it's destroyed
@@ -417,28 +410,25 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
    clientConn->addAuthPeer(serverKey, host + ":" + port);
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
-   const bool connResult = connectFut1.get();
-   EXPECT_TRUE(connResult);
+   EXPECT_TRUE(connectFut1.get());
 
-   if (connResult) {
-      for (const auto &clientPkt : packets) {
-         clientConn->send(clientPkt);
-      }
-      EXPECT_TRUE(clientPktsFut1.get());
-
-      clientConn->rekey();
-      clientConn->send(CryptoPRNG::generateRandom(23).toBinStr());
-
-      for (const auto &srvPkt : packets) {
-         serverConn->SendDataToAllClients(srvPkt);
-      }
-      EXPECT_TRUE(srvPktsFut1.get());
-
-      for (const auto &clientPkt : packets) {
-         clientConn->send(clientPkt);
-      }
-      EXPECT_TRUE(clientPktsFut2.get());
+   for (const auto &clientPkt : packets) {
+      clientConn->send(clientPkt);
    }
+   EXPECT_TRUE(clientPktsFut1.get());
+
+   clientConn->rekey();
+   clientConn->send(CryptoPRNG::generateRandom(23).toBinStr());
+
+   for (const auto &srvPkt : packets) {
+      serverConn->SendDataToAllClients(srvPkt);
+   }
+   EXPECT_TRUE(srvPktsFut1.get());
+
+   for (const auto &clientPkt : packets) {
+      clientConn->send(clientPkt);
+   }
+   EXPECT_TRUE(clientPktsFut2.get());
    EXPECT_TRUE(clientConn->closeConnection());
 
    const auto client2Lsn = std::make_shared<AnotherClientConnListener>(TestEnv::logger());
