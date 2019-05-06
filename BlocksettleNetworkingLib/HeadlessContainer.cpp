@@ -177,6 +177,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
 
       // BIP 150/151 should be be complete by this point.
       hasUI_ = response.hasui();
+      isReady_ = true;
       emit authenticated();
    }
    else {
@@ -193,12 +194,14 @@ void HeadlessListener::OnConnected()
 void HeadlessListener::OnDisconnected()
 {
    logger_->debug("[HeadlessListener] Disconnected");
+   isReady_ = false;
    emit disconnected();
 }
 
 void HeadlessListener::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
    logger_->debug("[HeadlessListener] error {}", errorCode);
+   isReady_ = false;
    emit error(tr("error #%1").arg(QString::number(errorCode)));
 }
 
@@ -728,7 +731,7 @@ bs::signer::RequestId HeadlessContainer::GetInfo(const std::string &rootWalletId
 
 bool HeadlessContainer::isReady() const
 {
-   return (listener_ != nullptr);
+   return (listener_ != nullptr) && listener_->isReady();
 }
 
 bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
@@ -1066,10 +1069,10 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
-   , connectionManager_{connectionManager}
+   , ephemeralDataConnKeys_(ephemeralDataConnKeys)
    , appSettings_{appSettings}
    , cbNewKey_{inNewKeyCB}
-   , ephemeralDataConnKeys_(ephemeralDataConnKeys)
+   , connectionManager_{connectionManager}
 {
    // Create connection upfront in order to grab some required data early.
    const std::string absCookiePath =
@@ -1200,8 +1203,8 @@ void RemoteSigner::onDisconnected()
    missingWallets_.clear();
    woWallets_.clear();
 
-   std::set<bs::signer::RequestId> tmpReqs = signRequests_;
-   signRequests_.clear();
+   // signRequests_ will be empty after moving out (that's in the C++ std)
+   std::set<bs::signer::RequestId> tmpReqs = std::move(signRequests_);
 
    for (const auto &id : tmpReqs) {
       emit TXSigned(id, {}, "signer disconnected", false);
