@@ -143,6 +143,9 @@ void SignerSettingsPage::onManageSignerKeys()
 
 void SignerSettingsPage::apply()
 {
+   appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
+   appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
+
    switch (static_cast<SignContainer::OpMode>(ui_->comboBoxRunMode->currentIndex() + 1)) {
    case SignContainer::OpMode::Local:
       appSettings_->set(ApplicationSettings::localSignerPort, ui_->spinBoxPort->value());
@@ -150,15 +153,11 @@ void SignerSettingsPage::apply()
       break;
 
    case SignContainer::OpMode::Remote:
-      appSettings_->set(ApplicationSettings::localSignerPort, ui_->spinBoxPort->value());
       signersProvider_->setupSigner(ui_->comboBoxRemoteSigner->currentIndex());
       break;
 
    default:    break;
    }
-
-   appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
-   appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
 }
 
 void SignerSettingsPage::initSettings()
