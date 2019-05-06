@@ -16,7 +16,11 @@
 #include "ManualResetEvent.h"
 #include "SocketIncludes.h"
 
+namespace {
+
 const int DefaultArmoryDBStartTimeoutMsec = 500;
+
+} // namesapce
 
 Q_DECLARE_METATYPE(ArmoryConnection::State)
 Q_DECLARE_METATYPE(BDMPhase)

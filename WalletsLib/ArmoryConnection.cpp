@@ -12,8 +12,6 @@
 #include "ManualResetEvent.h"
 #include "SocketIncludes.h"
 
-const int DefaultArmoryDBStartTimeoutMsec = 500;
-
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
    , regThreadRunning_(false)
