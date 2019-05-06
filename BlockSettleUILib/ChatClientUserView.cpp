@@ -96,7 +96,7 @@ private slots:
 //            addAction(tr("Add friend"), this, &ChatUsersContextMenu::onAddToContacts);
 //            break;
          case Chat::ContactStatus::Accepted:
-            addAction(tr("Remove friend"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+            addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
             break;
          case Chat::ContactStatus::Incoming:
             addAction(tr("Accept friend request"), this, &ChatUsersContextMenu::onAcceptFriendRequest);
