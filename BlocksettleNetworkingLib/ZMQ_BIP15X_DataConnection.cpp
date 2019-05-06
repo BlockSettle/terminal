@@ -315,7 +315,7 @@ void ZmqBIP15XDataConnection::triggerHeartbeat()
    auto& packet = msg.getNextPacket();
 
    // An error message is already logged elsewhere if the send fails.
-   if (!sendPacket(packet.toBinStr()), false) {  // sendPacket already sets the timestamp
+   if (!sendPacket(packet.toBinStr())) {  // sendPacket already sets the timestamp
       notifyOnDisconnected();
    }
 }
