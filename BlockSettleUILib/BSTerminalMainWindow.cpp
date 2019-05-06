@@ -554,6 +554,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    }
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
+   connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
    walletsMgr_->setSignContainer(signContainer_);
 
@@ -562,6 +563,8 @@ bool BSTerminalMainWindow::InitSigningContainer()
 
 void BSTerminalMainWindow::SignerReady()
 {
+   updateControlEnabledState();
+
    if (signContainer_->hasUI()) {
       disconnect(signContainer_.get(), &SignContainer::PasswordRequested, this, &BSTerminalMainWindow::onPasswordRequested);
    }
@@ -630,7 +633,7 @@ void BSTerminalMainWindow::acceptMDAgreement()
 void BSTerminalMainWindow::updateControlEnabledState()
 {
    action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
-      && armory_->isOnline() && signContainer_);
+      && armory_->isOnline() && signContainer_ && signContainer_->isReady());
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -930,6 +933,7 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 
 void BSTerminalMainWindow::onSignerConnError(const QString &err)
 {
+   updateControlEnabledState();
    showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(err));
 }
 
