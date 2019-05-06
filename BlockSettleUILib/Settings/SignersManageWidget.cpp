@@ -1,14 +1,20 @@
-#include "SignerKeysWidget.h"
-#include "ui_SignerKeysWidget.h"
+#include "SignersManageWidget.h"
+#include "ui_SignersManageWidget.h"
 #include <QDebug>
 
-SignerKeysWidget::SignerKeysWidget(std::shared_ptr<ApplicationSettings> appSettings, QWidget *parent) :
+SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
+   , const std::shared_ptr<ApplicationSettings> &appSettings
+   , QWidget *parent) :
    QWidget(parent)
    , appSettings_(appSettings)
+   , signersProvider_(signersProvider)
    , ui_(new Ui::SignerKeysWidget)
-   , signerKeysModel_(new SignerKeysModel(appSettings))
+   , signerKeysModel_(new SignersModel(signersProvider))
 {
    ui_->setupUi(this);
+
+   ui_->spinBoxPort->setMinimum(0);
+   ui_->spinBoxPort->setMaximum(USHRT_MAX);
 
    ui_->tableViewSignerKeys->setModel(signerKeysModel_);
    ui_->tableViewSignerKeys->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -19,6 +25,7 @@ SignerKeysWidget::SignerKeysWidget(std::shared_ptr<ApplicationSettings> appSetti
    connect(ui_->pushButtonEditSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::onEdit);
    connect(ui_->pushButtonCancelSaveSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::resetForm);
    connect(ui_->pushButtonSaveSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::onSave);
+   connect(ui_->pushButtonSelect, &QPushButton::clicked, this, &SignerKeysWidget::onSelect);
 
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this](){
@@ -27,10 +34,21 @@ SignerKeysWidget::SignerKeysWidget(std::shared_ptr<ApplicationSettings> appSetti
 
    connect(ui_->tableViewSignerKeys->selectionModel(), &QItemSelectionModel::selectionChanged, this,
       [this](const QItemSelection &selected, const QItemSelection &deselected){
+
+      ui_->pushButtonSelect->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
       ui_->pushButtonDeleteSignerKey->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
       ui_->pushButtonEditSignerKey->setDisabled(ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty());
 
       resetForm();
+
+      // save to settings right after row highlight
+      if (!ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
+         int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
+
+         if (index < signersProvider_->signers().size()) {
+            signersProvider_->setupSigner(index, false);
+         }
+      }
    });
 
    resetForm();
@@ -44,12 +62,13 @@ void SignerKeysWidget::onAddSignerKey()
       return;
 
 
-   SignerKey signerKey;
-   signerKey.name = ui_->lineEditName->text();
-   signerKey.address = ui_->lineEditAddress->text();
-   signerKey.key = ui_->lineEditKey->text();
+   SignerHost signerHost;
+   signerHost.name = ui_->lineEditName->text();
+   signerHost.address = ui_->lineEditAddress->text();
+   signerHost.port = ui_->spinBoxPort->value();
+   signerHost.key = ui_->lineEditKey->text();
 
-   signerKeysModel_->addSignerPubKey(signerKey);
+   signersProvider_->add(signerHost);
    resetForm();
 }
 
@@ -64,7 +83,8 @@ void SignerKeysWidget::onDeleteSignerKey()
       return;
    }
 
-   signerKeysModel_->deleteSignerPubKey(selectedRow);
+   signersProvider_->remove(selectedRow);
+   resetForm();
 }
 
 void SignerKeysWidget::onEdit()
@@ -74,16 +94,17 @@ void SignerKeysWidget::onEdit()
    }
 
    int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
-   if (index >= signerKeysModel_->signerPubKeys().size()) {
+   if (index >= signersProvider_->signers().size()) {
       return;
    }
 
-   SignerKey signerKey = signerKeysModel_->signerPubKeys().at(index);
+   SignerHost signerHost = signersProvider_->signers().at(index);
    ui_->stackedWidgetAddSave->setCurrentWidget(ui_->pageSaveSignerKeyButton);
 
-   ui_->lineEditName->setText(signerKey.name);
-   ui_->lineEditAddress->setText(signerKey.address);
-   ui_->lineEditKey->setText(signerKey.key);
+   ui_->lineEditName->setText(signerHost.name);
+   ui_->lineEditAddress->setText(signerHost.address);
+   ui_->spinBoxPort->setValue(signerHost.port);
+   ui_->lineEditKey->setText(signerHost.key);
 }
 
 void SignerKeysWidget::onSave()
@@ -93,12 +114,14 @@ void SignerKeysWidget::onSave()
    }
 
    int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
-   SignerKey signerKey;
-   signerKey.name = ui_->lineEditName->text();
-   signerKey.address = ui_->lineEditAddress->text();
-   signerKey.key = ui_->lineEditKey->text();
+   SignerHost signerHost;
+   signerHost.name = ui_->lineEditName->text();
+   signerHost.address = ui_->lineEditAddress->text();
+   signerHost.port = ui_->spinBoxPort->value();
+   signerHost.key = ui_->lineEditKey->text();
 
-   signerKeysModel_->editSignerPubKey(index, signerKey);
+   signersProvider_->replace(index, signerHost);
+   resetForm();
 }
 
 void SignerKeysWidget::resetForm()
@@ -108,4 +131,19 @@ void SignerKeysWidget::resetForm()
    ui_->lineEditName->clear();
    ui_->lineEditAddress->clear();
    ui_->lineEditKey->clear();
+   ui_->spinBoxPort->setValue(23456);
+}
+
+void SignerKeysWidget::onSelect()
+{
+   if (ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
+      return;
+   }
+
+   int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
+   if (index >= signersProvider_->signers().size()) {
+      return;
+   }
+
+   signersProvider_->setupSigner(index);
 }
