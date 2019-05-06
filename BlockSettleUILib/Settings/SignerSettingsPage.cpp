@@ -8,13 +8,6 @@
 #include "SignContainer.h"
 #include "SignersManageWidget.h"
 
-
-enum RunModeIndex {
-   Local = 0,
-   Remote,
-};
-
-
 SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    : SettingsPage{parent}
    , ui_{new Ui::SignerSettingsPage{}}
@@ -36,13 +29,13 @@ SignerSettingsPage::~SignerSettingsPage() = default;
 
 void SignerSettingsPage::runModeChanged(int index)
 {
-   onModeChanged(index);
+   onModeChanged(static_cast<SignContainer::OpMode>(index + 1));
 }
 
-void SignerSettingsPage::onModeChanged(int index)
+void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
 {
-   switch (static_cast<RunModeIndex>(index)) {
-   case Local:
+   switch (mode) {
+   case SignContainer::OpMode::Local:
       showHost(false);
       showPort(true);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
@@ -52,7 +45,7 @@ void SignerSettingsPage::onModeChanged(int index)
       ui_->formLayoutConnectionParams->setSpacing(3);
       break;
 
-   case Remote:
+   case SignContainer::OpMode::Remote:
       showHost(true);
       ui_->comboBoxRemoteSigner->setCurrentIndex(appSettings_->get<int>(ApplicationSettings::signerIndex));
       showPort(true);
@@ -68,9 +61,10 @@ void SignerSettingsPage::onModeChanged(int index)
 
 void SignerSettingsPage::display()
 {
-   const auto modeIndex = appSettings_->get<int>(ApplicationSettings::signerRunMode) - 1;
-   onModeChanged(modeIndex);
-   ui_->comboBoxRunMode->setCurrentIndex(modeIndex);
+   const auto modeIndex = appSettings_->get<int>(ApplicationSettings::signerRunMode);
+   SignContainer::OpMode opMode = static_cast<SignContainer::OpMode>(modeIndex);
+   onModeChanged(opMode);
+   ui_->comboBoxRunMode->setCurrentIndex(modeIndex - 1);
    ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::twoWayAuth));
 }
 
@@ -149,13 +143,13 @@ void SignerSettingsPage::onManageSignerKeys()
 
 void SignerSettingsPage::apply()
 {
-   switch (static_cast<RunModeIndex>(ui_->comboBoxRunMode->currentIndex())) {
-   case Local:
+   switch (static_cast<SignContainer::OpMode>(ui_->comboBoxRunMode->currentIndex() + 1)) {
+   case SignContainer::OpMode::Local:
       appSettings_->set(ApplicationSettings::localSignerPort, ui_->spinBoxPort->value());
       appSettings_->set(ApplicationSettings::autoSignSpendLimit, ui_->spinBoxAsSpendLimit->value());
       break;
 
-   case Remote:
+   case SignContainer::OpMode::Remote:
       appSettings_->set(ApplicationSettings::localSignerPort, ui_->spinBoxPort->value());
       signersProvider_->setupSigner(ui_->comboBoxRemoteSigner->currentIndex());
       break;
@@ -163,7 +157,6 @@ void SignerSettingsPage::apply()
    default:    break;
    }
 
-   // first comboBoxRunMode index is '--Select--' placeholder
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
    appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
 }

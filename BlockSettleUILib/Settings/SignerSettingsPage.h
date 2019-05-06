@@ -34,7 +34,7 @@ signals:
    void signersChanged();
 
 private:
-   void onModeChanged(int index);
+   void onModeChanged(SignContainer::OpMode mode);
    void showHost(bool);
    void showPort(bool);
    void showZmqPubKey(bool);
