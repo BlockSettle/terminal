@@ -83,6 +83,14 @@ signals:
    void LogOut();
 
 private:
+   void SetOTCLoggedInState();
+   void SetLoggedOutOTCState();
+
+   void OTCSwitchToCommonRoom();
+   void OTCSwitchToDMRoom();
+   void OTCSwitchToGlobalRoom();
+
+private:
    QScopedPointer<Ui::ChatWidget> ui_;
 
    std::shared_ptr<ChatClient>      client_;
@@ -93,7 +101,7 @@ private:
    ChatSearchPopup *popup_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   QTimer *popupVisibleTimer_; 
+   QTimer *popupVisibleTimer_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
