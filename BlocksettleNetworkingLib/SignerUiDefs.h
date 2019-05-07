@@ -20,6 +20,7 @@ namespace bs {
          ManageWallet,
          ActivateAutoSign,
       };
+      Q_ENUM_NS(DialogType)
 
       inline QString getSignerDialogPath(DialogType signerDialog) {
          switch (signerDialog) {
