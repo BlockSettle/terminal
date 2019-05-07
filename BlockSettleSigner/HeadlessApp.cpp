@@ -68,9 +68,6 @@ void HeadlessAppObj::start()
 
    ready_ = true;
    onlineProcessing();
-   if (cbReady_) {
-      cbReady_(true);
-   }
 }
 
 void HeadlessAppObj::startInterface()
@@ -190,6 +187,11 @@ void HeadlessAppObj::onlineProcessing()
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
       throw std::runtime_error("failed to bind listening socket");
+   }
+
+   if (cbReady_) {
+      // Needed to setup SignerAdapterListener callbacks
+      cbReady_(true);
    }
 }
 

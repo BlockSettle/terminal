@@ -104,7 +104,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
       connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 
-   #ifdef BS_USE_DBUS
+#ifdef BS_USE_DBUS
       if (dbus_->isValid()) {
          notifMode_ = Freedesktop;
 
@@ -112,7 +112,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
             this, &QMLAppObj::onSysTrayMsgClicked);
          connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
       }
-   #endif // BS_USE_DBUS
+#endif // BS_USE_DBUS
    }
 }
 
@@ -295,13 +295,13 @@ void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, co
          if (notifMode_ == QSystemTray) {
             trayIconOptional_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
          }
-   #ifdef BS_USE_DBUS
+#ifdef BS_USE_DBUS
          else {
             dbus_->notifyDBus(QSystemTrayIcon::Warning,
                tr("Password request"), notifPrompt,
                QIcon(), 30000);
          }
-   #endif // BS_USE_DBUS
+#endif // BS_USE_DBUS
       }
 
       raiseQmlWindow();
