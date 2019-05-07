@@ -59,6 +59,7 @@ public:
    void setOwnUserId(const std::string &userId) { ownUserId_ = QString::fromStdString(userId); }
    void switchToChat(const QString& chatId, bool isGroupRoom = false);
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
+   void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
 
    
 signals:
@@ -94,6 +95,7 @@ private slots:
    void copyActionTriggered();
    void copyLinkLocationActionTriggered();
    void selectAllActionTriggered();
+   void onTextChanged();
 
 private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
@@ -102,6 +104,7 @@ private:
    QString   currentChatId_;
    QString   ownUserId_;
    std::shared_ptr<ChatItemActionsHandler> handler_;
+   std::shared_ptr<ChatMessageReadHandler> messageReadHandler_;
    
 private:
    std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);

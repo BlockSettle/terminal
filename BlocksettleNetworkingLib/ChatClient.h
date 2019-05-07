@@ -34,6 +34,7 @@ class ChatClient : public QObject
              , public Chat::ResponseHandler
              , public ChatItemActionsHandler
              , public ChatSearchActionsHandler
+             , public ChatMessageReadHandler
 {
    Q_OBJECT
 
@@ -127,7 +128,7 @@ signals:
 
    void ForceLogoutSignal();
 public slots:
-   void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
+   //void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
    
 private slots:
    void onForceLogoutSignal();
@@ -172,6 +173,12 @@ public:
 public:
    void onActionSearchUsers(const std::string &text) override;
    void onActionResetSearch() override;
+
+   // ChatMessageReadHandler interface
+public:
+   void onMessageRead(std::shared_ptr<Chat::MessageData> message) override;
 };
+
+
 
 #endif   // CHAT_CLIENT_H

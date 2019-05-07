@@ -529,21 +529,24 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
          });
       };
    }
-   else if ((runMode == SignContainer::OpMode::Local)
-      && SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
-      if (BSMessageBox(BSMessageBox::messageBoxType::question
-         , tr("Signer Local Connection")
-         , tr("Another Signer (or some other program occupying port %1) is "
-         "running. Would you like to continue connecting to it?").arg(localSignerPort)
-         , tr("If you wish to continue using GUI signer running on the same "
-         "host, just select Remote Signer in settings and configure local "
-         "connection")
-         , this).exec() == QDialog::Rejected) {
-         return retPtr;
-      }
-      runMode = SignContainer::OpMode::Remote;
-      resultHost = QLatin1String("127.0.0.1");
+   else if (runMode == SignContainer::OpMode::Local) {
       resultPort = localSignerPort;
+
+      if (SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
+         runMode = SignContainer::OpMode::Remote;
+         resultHost = QLatin1String("127.0.0.1");
+
+         if (BSMessageBox(BSMessageBox::messageBoxType::question
+            , tr("Signer Local Connection")
+            , tr("Another Signer (or some other program occupying port %1) is "
+            "running. Would you like to continue connecting to it?").arg(localSignerPort)
+            , tr("If you wish to continue using GUI signer running on the same "
+            "host, just select Remote Signer in settings and configure local "
+            "connection")
+            , this).exec() == QDialog::Rejected) {
+            return retPtr;
+         }
+      }
    }
 
    retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode

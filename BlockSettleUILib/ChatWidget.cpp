@@ -109,6 +109,7 @@ public:
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
+      selectFirstRoom();
    }
 
    void onStateExit() override {
@@ -207,6 +208,25 @@ public:
    }
 
    void onUsersDeleted(const std::vector<std::string> &/*users*/)  override {}
+
+   void selectFirstRoom()
+   {
+      onRoomClicked(QLatin1String("global_chat"));
+
+      QModelIndexList indexes = chat_->ui_->treeViewUsers->model()->match(chat_->ui_->treeViewUsers->model()->index(0,0),
+                                                                Qt::DisplayRole,
+                                                                QLatin1String("*"),
+                                                                -1,
+                                                                Qt::MatchWildcard|Qt::MatchRecursive);
+      
+      // highlight first room
+      for (auto index : indexes) {
+         if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
+            chat_->ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
+            break;
+         }
+      }
+   }
 };
 
 ChatWidget::ChatWidget(QWidget *parent)
@@ -241,12 +261,14 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
    ui_->treeViewUsers->setModel(client_->getDataModel().get());
-   ui_->treeViewUsers->expandAll();
+//   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(new LoggerWatcher());
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
    ui_->treeViewUsers->setHandler(client_);
    ui_->textEditMessages->setHandler(client_);
+   ui_->textEditMessages->setMessageReadHandler(client_);
+
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
 
