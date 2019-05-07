@@ -1,7 +1,28 @@
 {
-   "latest_version" : "0.15.2",
-   "release_date" : "03 May 2019",
+   "latest_version" : "0.15.3",
+   "release_date" : "07 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.3",
+         "previous_version" : "0.15.2",
+         "release_date" : "07 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+            "Remote signer connections management",
+            "Some OTC UI mockups"
+         ],
+         "bug_fixes" :
+         [
+            "Qt back to 5.12.2",
+            "Signer UI fixes",
+            "Disconnect signer fixes",
+            "Signer connection fixes",
+            "Various chat fixes"
+         ],
+         "revision" : "001bedb7",
+         "common_revision" : "b8913997"
+      },
       {
          "version_string" : "0.15.2",
          "previous_version" : "0.15.1",
