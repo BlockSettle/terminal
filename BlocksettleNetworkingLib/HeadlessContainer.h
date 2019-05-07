@@ -44,7 +44,7 @@ public:
       , Blocksettle::Communication::headless::CreateHDWalletRequest &request);
 
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
-   ~HeadlessContainer() noexcept = default;
+   ~HeadlessContainer() noexcept override = default;
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}

@@ -98,7 +98,7 @@ private:
    void verifyNewIDKey(const BinaryDataRef& newKey
       , const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
-   void rekeyIfNeeded(const size_t& dataSize);
+   void rekeyIfNeeded(size_t dataSize);
 
 private:
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
