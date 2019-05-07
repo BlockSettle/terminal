@@ -24,13 +24,28 @@ Q_DECLARE_METATYPE(std::vector<std::string>)
 
 enum class OTCPages : int
 {
-   OTCCreateRequest = 0,
-   OTCCreateResponse,
-   OTCNegotiateRequest,
-   OTCNegotiateResponse
+   OTCLoginRequiredShieldPage = 0,
+   OTCGeneralRoomShieldPage,
+   OTCCreateRequestPage,
+   OTCCreateResponsePage,
+   OTCNegotiateRequestPage,
+   OTCNegotiateResponsePage
 };
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
+
+bool IsOTCChatRoom(const QString& chatRoom)
+{
+   static const QString targetRoomName = QLatin1String("otc_chat");
+   return chatRoom == targetRoomName;
+}
+
+bool IsGlobalChatRoom(const QString& chatRoom)
+{
+   static const QString targetRoomName = QLatin1String("global_chat");
+   return chatRoom == targetRoomName;
+}
+
 
 class ChatWidgetState {
 public:
@@ -72,6 +87,8 @@ public:
       chat_->ui_->chatSearchLineEdit->clear();
       chat_->ui_->chatSearchLineEdit->setEnabled(false);
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
+
+      chat_->SetLoggedOutOTCState();
    }
 
    std::string login(const std::string& email, const std::string& jwt) override {
@@ -109,6 +126,9 @@ public:
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
+
+      chat_->SetOTCLoggedInState();
+
       selectFirstRoom();
    }
 
@@ -170,7 +190,7 @@ public:
    }
 
    void onRoomClicked(const QString& roomId) override {
-      if (roomId == QLatin1Literal("otc_chat")) {
+      if (IsOTCChatRoom(roomId)) {
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(1);
       } else {
          chat_->ui_->stackedWidgetMessages->setCurrentIndex(0);
@@ -260,7 +280,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 {
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
-   ui_->treeViewUsers->setModel(client_->getDataModel().get());
+   auto model = client_->getDataModel();
+   model->setNewMessageMonitor(this);
+   ui_->treeViewUsers->setModel(model.get());
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(new LoggerWatcher());
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
@@ -541,17 +563,17 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             break;
 
       }
-      if (currentChat_ == QLatin1Literal("otc_chat")) {
+
+      if (IsOTCChatRoom(currentChat_)) {
          ui_->stackedWidgetMessages->setCurrentIndex(1);
+         OTCSwitchToCommonRoom();
       } else {
          ui_->stackedWidgetMessages->setCurrentIndex(0);
-      }
-
-      if (currentChat_ == QLatin1Literal("global_chat")) {
-         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(false);
-      }
-      else {
-         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(true);
+         if (IsGlobalChatRoom(currentChat_)) {
+            OTCSwitchToGlobalRoom();
+         } else {
+            OTCSwitchToDMRoom();
+         }
       }
    }
 }
@@ -579,7 +601,7 @@ void ChatWidget::DisplayOTCRequest(const bs::network::Side::Type& side, const bs
    ui_->widgetCreateOTCResponse->SetSide(side);
    ui_->widgetCreateOTCResponse->SetRange(range);
 
-   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponse));
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
 }
 
 
@@ -589,5 +611,36 @@ void ChatWidget::OnOTCResponseCreated()
    auto amountRange = ui_->widgetCreateOTCResponse->GetResponseQuantityRange();
    ui_->widgetNegotiateRequest->DisplayResponse(ui_->widgetCreateOTCRequest->GetSide(), priceRange, amountRange);
 
-   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequest));
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
+}
+
+
+void ChatWidget::SetOTCLoggedInState()
+{
+   OTCSwitchToGlobalRoom();
+}
+
+void ChatWidget::SetLoggedOutOTCState()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
+}
+
+void ChatWidget::OTCSwitchToCommonRoom()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateRequestPage));
+}
+
+void ChatWidget::OTCSwitchToDMRoom()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateRequestPage));
+}
+
+void ChatWidget::OTCSwitchToGlobalRoom()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+}
+
+void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented)
+{
+   qDebug() << "New Message: " << (isNewMessagePresented?"TRUE":"FALSE");
 }

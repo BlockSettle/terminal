@@ -18,8 +18,15 @@
 #include <spdlog/spdlog.h>
 #include "signer.pb.h"
 
+namespace {
+
 constexpr int kKillTimeout = 5000;
 constexpr int kStartTimeout = 5000;
+
+// When remote signer will try to reconnect
+constexpr int kRemoteReconnectPeriod = 10000;
+
+} // namespace
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -177,6 +184,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
 
       // BIP 150/151 should be be complete by this point.
       hasUI_ = response.hasui();
+      isReady_ = true;
       emit authenticated();
    }
    else {
@@ -193,13 +201,18 @@ void HeadlessListener::OnConnected()
 void HeadlessListener::OnDisconnected()
 {
    logger_->debug("[HeadlessListener] Disconnected");
+   isReady_ = false;
    emit disconnected();
 }
 
 void HeadlessListener::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
    logger_->debug("[HeadlessListener] error {}", errorCode);
+   isReady_ = false;
    emit error(tr("error #%1").arg(QString::number(errorCode)));
+
+   // Need to disconnect connection because otherwise it will continue send error responses over and over
+   connection_->closeConnection();
 }
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
@@ -728,7 +741,7 @@ bs::signer::RequestId HeadlessContainer::GetInfo(const std::string &rootWalletId
 
 bool HeadlessContainer::isReady() const
 {
-   return (listener_ != nullptr);
+   return (listener_ != nullptr) && listener_->isReady();
 }
 
 bool HeadlessContainer::isWalletOffline(const std::string &walletId) const
@@ -1066,18 +1079,13 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
-   , connectionManager_{connectionManager}
+   , ephemeralDataConnKeys_(ephemeralDataConnKeys)
    , appSettings_{appSettings}
    , cbNewKey_{inNewKeyCB}
-   , ephemeralDataConnKeys_(ephemeralDataConnKeys)
+   , connectionManager_{connectionManager}
 {
    // Create connection upfront in order to grab some required data early.
-   const std::string absCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
-   connection_ =
-      connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_
-      , false, true, absCookiePath);
-   connection_->setCBs(cbNewKey_);
+   RecreateConnection();
 }
 
 // Establish the remote connection to the signer.
@@ -1169,6 +1177,34 @@ void RemoteSigner::Authenticate()
    Send(packet);
 }
 
+void RemoteSigner::RecreateConnection()
+{
+   logger_->info("[{}] Restart connection...", __func__);
+
+   const bool makeClientCookie = false;
+   // Server's cookies are not available in remote mode
+   const bool readServerCookie = (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc);
+
+   std::string absCookiePath;
+   if (readServerCookie) {
+      absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+   }
+
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_
+         , makeClientCookie, readServerCookie, absCookiePath);
+   connection_->setCBs(cbNewKey_);
+
+   headlessConnFinished_ = false;
+}
+
+void RemoteSigner::ScheduleRestart()
+{
+   QTimer::singleShot(kRemoteReconnectPeriod, this, [this] {
+      RecreateConnection();
+      Start();
+   });
+}
+
 bool RemoteSigner::isOffline() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
@@ -1200,19 +1236,22 @@ void RemoteSigner::onDisconnected()
    missingWallets_.clear();
    woWallets_.clear();
 
-   std::set<bs::signer::RequestId> tmpReqs = signRequests_;
-   signRequests_.clear();
+   // signRequests_ will be empty after moving out (that's in the C++ std)
+   std::set<bs::signer::RequestId> tmpReqs = std::move(signRequests_);
 
    for (const auto &id : tmpReqs) {
       emit TXSigned(id, {}, "signer disconnected", false);
    }
 
    emit disconnected();
+
+   ScheduleRestart();
 }
 
 void RemoteSigner::onConnError(const QString &err)
 {
    emit connectionError(err);
+   ScheduleRestart();
 }
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)

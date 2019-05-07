@@ -44,7 +44,7 @@ public:
       , Blocksettle::Communication::headless::CreateHDWalletRequest &request);
 
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
-   ~HeadlessContainer() noexcept = default;
+   ~HeadlessContainer() noexcept override = default;
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
@@ -131,7 +131,7 @@ public:
       , OpMode opMode = OpMode::Remote
       , const bool ephemeralDataConnKeys = true
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
-   ~RemoteSigner() noexcept = default;
+   ~RemoteSigner() noexcept override = default;
 
    bool Start() override;
    bool Stop() override;
@@ -158,6 +158,9 @@ protected slots:
 private:
    void ConnectHelper();
    void Authenticate();
+   // Recreates new ZmqBIP15XDataConnection because it can't gracefully handle server restart
+   void RecreateConnection();
+   void ScheduleRestart();
 
    bs::signer::RequestId signOffline(const bs::core::wallet::TXSignRequest &txSignReq);
 
@@ -188,7 +191,7 @@ public:
       , const bool ephemeralDataConnKeys = false
       , double asSpendLimit = 0
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
-   ~LocalSigner() noexcept = default;
+   ~LocalSigner() noexcept override = default;
 
    bool Start() override;
    bool Stop() override;
@@ -221,6 +224,7 @@ public:
       , bool updateId = true);
    bs::signer::RequestId newRequestId() { return ++id_; }
    bool hasUI() const { return hasUI_; }
+   bool isReady() const { return isReady_; }
 
 signals:
    void authenticated();
@@ -235,7 +239,9 @@ private:
    std::shared_ptr<DataConnection>  connection_;
    const NetworkType                netType_;
    bs::signer::RequestId            id_ = 0;
-   bool     hasUI_ = false;
+   // This will be updated from background thread
+   std::atomic<bool>                hasUI_{false};
+   std::atomic<bool>                isReady_{false};
 };
 
 #endif // __HEADLESS_CONTAINER_H__

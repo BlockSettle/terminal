@@ -1,6 +1,5 @@
 #include "TreeItem.h"
 #include <iostream>
-#include <QDebug>
 
 
 
@@ -15,7 +14,6 @@ TreeItem *TreeItem::getParent() const {return parent_; }
 TreeItem::~TreeItem()
 {
    deleteChildren();
-   qDebug() << "TreeItem::~TreeItem()";
 }
 
 bool TreeItem::insertItem(TreeItem *item)

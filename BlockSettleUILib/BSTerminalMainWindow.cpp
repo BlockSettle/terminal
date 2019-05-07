@@ -79,7 +79,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
-      QTimer::singleShot(0, this, [this](){
+      QTimer::singleShot(0, this, []() {
          qApp->exit(EXIT_FAILURE);
       });
       return;
@@ -152,6 +152,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    UpdateMainWindowAppearence();
    setWidgetsAuthorized(false);
+
+   updateControlEnabledState();
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
@@ -460,6 +462,7 @@ void BSTerminalMainWindow::LoadWallets()
 //      splashScreen.SetProgress(progress);
       logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
    };
+   walletsMgr_->reset();
    walletsMgr_->syncWallets(progressDelegate);
 }
 
@@ -562,6 +565,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
    }
    connect(signContainer_.get(), &SignContainer::ready, this, &BSTerminalMainWindow::SignerReady, Qt::QueuedConnection);
    connect(signContainer_.get(), &SignContainer::connectionError, this, &BSTerminalMainWindow::onSignerConnError, Qt::QueuedConnection);
+   connect(signContainer_.get(), &SignContainer::disconnected, this, &BSTerminalMainWindow::updateControlEnabledState, Qt::QueuedConnection);
 
    walletsMgr_->setSignContainer(signContainer_);
 
@@ -570,6 +574,8 @@ bool BSTerminalMainWindow::InitSigningContainer()
 
 void BSTerminalMainWindow::SignerReady()
 {
+   updateControlEnabledState();
+
    if (signContainer_->hasUI()) {
       disconnect(signContainer_.get(), &SignContainer::PasswordRequested, this, &BSTerminalMainWindow::onPasswordRequested);
    }
@@ -638,7 +644,7 @@ void BSTerminalMainWindow::acceptMDAgreement()
 void BSTerminalMainWindow::updateControlEnabledState()
 {
    action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
-      && armory_->isOnline() && signContainer_);
+      && armory_->isOnline() && signContainer_ && signContainer_->isReady());
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -938,6 +944,7 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 
 void BSTerminalMainWindow::onSignerConnError(const QString &err)
 {
+   updateControlEnabledState();
    showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(err));
 }
 
@@ -1618,7 +1625,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
 
 void BSTerminalMainWindow::onArmoryNeedsReconnect()
 {
-   disconnect(statusBarView_.get(), 0, 0, 0);
+   disconnect(statusBarView_.get(), nullptr, nullptr, nullptr);
    statusBarView_->deleteLater();
    QApplication::processEvents();
 

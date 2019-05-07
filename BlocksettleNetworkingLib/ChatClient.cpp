@@ -672,7 +672,10 @@ void ChatClient::OnDataReceived(const std::string& data)
       logger_->error("[ChatClient::OnDataReceived] failed to parse message:\n{}", data);
       return;
    }
-   response->handle(*this);
+   // Process on main thread because otherwise ChatDB could crash
+   QMetaObject::invokeMethod(this, [this, response] {
+      response->handle(*this);
+   });
 }
 
 void ChatClient::OnConnected()
@@ -1163,8 +1166,19 @@ bool ChatClient::decryptIESMessage(std::shared_ptr<Chat::MessageData>& message)
 
 void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
 {
+   if (message->senderId().toStdString() == model_->currentUser()) {
+      return;
+   }
+
    message->setFlag(Chat::MessageData::State::Read);
    chatDb_->updateMessageStatus(message->id(), message->state());
    model_->notifyMessageChanged(message);
    sendUpdateMessageState(message);
+}
+
+void ChatClient::onRoomMessageRead(std::shared_ptr<Chat::MessageData> message)
+{
+   message->setFlag(Chat::MessageData::State::Read);
+   chatDb_->updateMessageStatus(message->id(), message->state());
+   model_->notifyMessageChanged(message);
 }

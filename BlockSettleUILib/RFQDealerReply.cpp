@@ -829,7 +829,7 @@ void RFQDealerReply::disableAutoSign()
    auto walletId = ui_->comboBoxWalletAS->currentData(UiUtils::WalletIdRole).toString();
    ui_->checkBoxAutoSign->setChecked(false);
    if (!walletId.isEmpty()) {
-      emit autoSignActivated({}, walletId, false);
+      emit autoSignActivated(walletId, false);
    }
    updateAutoSignState();
 }

@@ -54,6 +54,7 @@ namespace Chat {
 
       void setFlag(const State);
       void unsetFlag(const State);
+      bool testFlag(const State stateFlag);
       void updateState(const int newState);
       
       //Set ID for message, returns old ID that was replaced

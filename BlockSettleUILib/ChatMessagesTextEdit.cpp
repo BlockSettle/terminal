@@ -421,13 +421,15 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 {
 
    for (const auto& message: messages) {
-      if (messageReadHandler_ && !(message->state() & (int)Chat::MessageData::State::Read) ){
-         messageReadHandler_->onMessageRead(message);
-      }
       messages_[currentChatId_].push_back(message);
    }
    for (const auto& message : messages) {
       insertMessage(message);
+   }
+   for (const auto& message : messages) {
+      if (messageReadHandler_ && !(message->state() & (int)Chat::MessageData::State::Read) ){
+         messageReadHandler_->onMessageRead(message);
+      }
    }
    return;
 
@@ -496,11 +498,11 @@ void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_pt
    for (const auto& message : messages) {
       messages_[currentChatId_].push_back(message);
    }
-
-
-
    for (const auto& message : messages) {
       insertMessage(message);
+      if (messageReadHandler_ && !message->testFlag(Chat::MessageData::State::Read)){
+         messageReadHandler_->onRoomMessageRead(message);
+      }
    }
    return;
 
