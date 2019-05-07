@@ -160,6 +160,7 @@ private:
    void Authenticate();
    // Recreates new ZmqBIP15XDataConnection because it can't gracefully handle server restart
    void RecreateConnection();
+   void ScheduleRestart();
 
    bs::signer::RequestId signOffline(const bs::core::wallet::TXSignRequest &txSignReq);
 

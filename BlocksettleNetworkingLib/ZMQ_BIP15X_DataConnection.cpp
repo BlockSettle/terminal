@@ -111,6 +111,10 @@ ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
          }
       }
    }
+
+   // Need to close connection before ZmqBIP15XDataConnection is partially destroyed!
+   // Otherwise it might crash in ZmqBIP15XDataConnection::ProcessIncomingData a bit later
+   closeConnection();
 }
 
 // Get lambda functions related to authorized peers. Copied from Armory.
