@@ -30,7 +30,9 @@ class ChatWidgetState;
 class ChatSearchPopup;
 class OTCRequestViewModel;
 
-class ChatWidget : public QWidget, public ViewItemWatcher
+class ChatWidget : public QWidget
+                 , public ViewItemWatcher
+                 , public NewMessageMonitor
 {
    Q_OBJECT
 
@@ -125,7 +127,13 @@ public:
    void onElementSelected(CategoryElement *element) override;
    void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
    void onElementUpdated(CategoryElement *element) override;
+
+   // NewMessageMonitor interface
+public:
+   void onNewMessagePresent(const bool isNewMessagePresented) override;
 };
+
+
 
 
 
