@@ -7,8 +7,6 @@
 #include "market_data_history.pb.h"
 #include "trade_history.pb.h"
 
-const qreal BASE_FACTOR = 1.0;
-
 const QColor BACKGROUND_COLOR = QColor(28, 40, 53);
 const QColor FOREGROUND_COLOR = QColor(Qt::white);
 const QColor VOLUME_COLOR = QColor(32, 159, 223);
@@ -328,6 +326,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
       lastCandle_ = candle;
 
       AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
+#if 0
       qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
              , QDateTime::fromMSecsSinceEpoch(candle.timestamp(), Qt::TimeSpec::UTC)
                .toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
@@ -336,6 +335,7 @@ void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
              , candle.low()
              , candle.close()
              , candle.volume());
+#endif
       if (firstPortion && isLast) {
          lastHigh_ = candle.high();
          lastLow_ = candle.low();
@@ -455,6 +455,7 @@ void ChartWidget::AddNewCandle()
    candle.set_volume(0.0);
 
    AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
+#if 0
    qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
           , QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
           , candle.open()
@@ -462,6 +463,7 @@ void ChartWidget::AddNewCandle()
           , candle.low()
           , candle.close()
           , candle.volume());
+#endif
 }
 
 void ChartWidget::ModifyCandle()
