@@ -18,13 +18,13 @@
     <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -32,10 +32,13 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Please Login in order to submit RFQ</string>
+      <string>OTC is not allowed in General chat room</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
      <property name="h1" stdset="0">
       <bool>true</bool>

@@ -87,6 +87,8 @@ public:
       chat_->ui_->chatSearchLineEdit->clear();
       chat_->ui_->chatSearchLineEdit->setEnabled(false);
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
+
+      chat_->SetLoggedOutOTCState();
    }
 
    std::string login(const std::string& email, const std::string& jwt) override {
@@ -124,6 +126,8 @@ public:
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
+
+      chat_->SetOTCLoggedInState();
    }
 
    void onStateExit() override {
@@ -539,10 +543,14 @@ void ChatWidget::onElementSelected(CategoryElement *element)
 
       if (IsOTCChatRoom(currentChat_)) {
          ui_->stackedWidgetMessages->setCurrentIndex(1);
-         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(true);
+         OTCSwitchToCommonRoom();
       } else {
          ui_->stackedWidgetMessages->setCurrentIndex(0);
-         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(!IsGlobalChatRoom(currentChat_));
+         if (IsGlobalChatRoom(currentChat_)) {
+            OTCSwitchToGlobalRoom();
+         } else {
+            OTCSwitchToDMRoom();
+         }
       }
    }
 }
@@ -581,4 +589,30 @@ void ChatWidget::OnOTCResponseCreated()
    ui_->widgetNegotiateRequest->DisplayResponse(ui_->widgetCreateOTCRequest->GetSide(), priceRange, amountRange);
 
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
+}
+
+
+void ChatWidget::SetOTCLoggedInState()
+{
+   OTCSwitchToGlobalRoom();
+}
+
+void ChatWidget::SetLoggedOutOTCState()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
+}
+
+void ChatWidget::OTCSwitchToCommonRoom()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateRequestPage));
+}
+
+void ChatWidget::OTCSwitchToDMRoom()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateRequestPage));
+}
+
+void ChatWidget::OTCSwitchToGlobalRoom()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
 }
