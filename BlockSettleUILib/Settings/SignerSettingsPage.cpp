@@ -48,7 +48,7 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
    case SignContainer::OpMode::Remote:
       showHost(true);
       ui_->comboBoxRemoteSigner->setCurrentIndex(appSettings_->get<int>(ApplicationSettings::signerIndex));
-      showPort(true);
+      showPort(false);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
       showSignerKeySettings(true);
@@ -125,7 +125,7 @@ void SignerSettingsPage::onManageSignerKeys()
    QVBoxLayout *l = new QVBoxLayout(d);
    l->setContentsMargins(0,0,0,0);
    d->setLayout(l);
-   d->setWindowTitle(tr("Import Signer Keys"));
+   d->setWindowTitle(tr("Manage Signer Connection"));
 
    SignerKeysWidget *signerKeysWidget = new SignerKeysWidget(signersProvider_, appSettings_, this);
    d->resize(signerKeysWidget->size());

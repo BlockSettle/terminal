@@ -84,7 +84,7 @@ namespace bs {
 
       signals:
          void aqScriptLoaded(const QString &filename);
-         void autoSignActivated(const SecureBinaryData &password, const QString &hdWalletId, bool active);
+         void autoSignActivated(const QString &hdWalletId, bool active);
          void submitQuoteNotif(network::QuoteNotification);
          void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 

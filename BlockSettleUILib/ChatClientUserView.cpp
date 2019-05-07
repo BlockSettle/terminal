@@ -274,17 +274,23 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
 
 void LoggerWatcher::onElementSelected(CategoryElement *element)
 {
+#if 0
    qDebug() << "Item selected:\n" << QString::fromStdString(element->getDataObject()->toJsonString());
+#endif
 }
 
 void LoggerWatcher::onElementUpdated(CategoryElement *element)
 {
+#if 0
    qDebug() << "Item updated:\n" << QString::fromStdString(element->getDataObject()->toJsonString());
+#endif
 }
 
 void LoggerWatcher::onMessageChanged(std::shared_ptr<Chat::MessageData> message)
 {
+#if 0
    qDebug() << "Message changed:\n" << QString::fromStdString(message->toJsonString());
+#endif
 }
 
 void ChatClientUserView::rowsInserted(const QModelIndex &parent, int start, int end)

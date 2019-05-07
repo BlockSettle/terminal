@@ -31,7 +31,9 @@ class ChatWidgetState;
 class ChatSearchPopup;
 class OTCRequestViewModel;
 
-class ChatWidget : public QWidget, public ViewItemWatcher
+class ChatWidget : public QWidget
+                 , public ViewItemWatcher
+                 , public NewMessageMonitor
 {
    Q_OBJECT
 
@@ -85,6 +87,14 @@ signals:
    void LogOut();
 
 private:
+   void SetOTCLoggedInState();
+   void SetLoggedOutOTCState();
+
+   void OTCSwitchToCommonRoom();
+   void OTCSwitchToDMRoom();
+   void OTCSwitchToGlobalRoom();
+
+private:
    QScopedPointer<Ui::ChatWidget> ui_;
 
    std::shared_ptr<ChatClient>      client_;
@@ -95,7 +105,7 @@ private:
    ChatSearchPopup *popup_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   QTimer *popupVisibleTimer_; 
+   QTimer *popupVisibleTimer_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
@@ -119,7 +129,13 @@ public:
    void onElementSelected(CategoryElement *element) override;
    void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
    void onElementUpdated(CategoryElement *element) override;
+
+   // NewMessageMonitor interface
+public:
+   void onNewMessagePresent(const bool isNewMessagePresented) override;
 };
+
+
 
 
 

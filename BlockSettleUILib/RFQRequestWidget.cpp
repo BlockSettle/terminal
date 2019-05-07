@@ -15,6 +15,11 @@
 #include <QPushButton>
 #include <QLineEdit>
 
+enum class RFQPages : int
+{
+   LoginRequierdPage = 0,
+   EditableRFQPage
+};
 
 RFQRequestWidget::RFQRequestWidget(QWidget* parent)
    : TabWithShortcut(parent)
@@ -143,6 +148,7 @@ void RFQRequestWidget::onConnectedToCeler()
    connect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
    connect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
 
+   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::EditableRFQPage));
    ui_->pageRFQTicket->enablePanel();
 }
 
@@ -152,6 +158,8 @@ void RFQRequestWidget::onDisconnectedFromCeler()
    disconnect(ui_->widgetMarketData, &MarketDataWidget::BuyClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecuritySell);
    disconnect(ui_->widgetMarketData, &MarketDataWidget::SellClicked, ui_->pageRFQTicket, &RFQTicketXBT::setSecurityBuy);
 
+
+   ui_->stackedWidgetRFQ->setCurrentIndex(static_cast<int>(RFQPages::LoginRequierdPage));
    ui_->pageRFQTicket->disablePanel();
 }
 

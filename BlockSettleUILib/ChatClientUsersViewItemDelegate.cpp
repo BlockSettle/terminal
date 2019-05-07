@@ -67,7 +67,11 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
    }
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
-   itemOption.text = index.data(Role::RoomTitleRole).toString();
+   bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
+   itemOption.text = index.data(Role::RoomTitleRole).toString()
+                     .append(newMessage
+                             ? QLatin1String("[*]")
+                             : QLatin1String(""));
    QStyledItemDelegate::paint(painter, itemOption, index);
 
 }
@@ -82,8 +86,11 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
 
    ContactStatus contactStatus = index.data(Role::ContactStatusRole).value<ContactStatus>();
    OnlineStatus onlineStatus = index.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
-
-   itemOption.text = index.data(Role::ContactIdRole).toString();
+   bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
+   itemOption.text = index.data(Role::ContactIdRole).toString()
+                     .append(newMessage
+                             ? QLatin1String("[*]")
+                             : QLatin1String(""));
 
    switch (contactStatus) {
       case ContactStatus::Accepted:

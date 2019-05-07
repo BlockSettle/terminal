@@ -5,6 +5,7 @@
 #include <QAbstractItemModel>
 
 #include "ChatClientTree/TreeObjects.h"
+#include "ChatHandleInterfaces.h"
 
 class ChatClientDataModel : public QAbstractItemModel
 {
@@ -18,7 +19,8 @@ public:
       ContactStatusRole,
       ContactOnlineStatusRole,
       UserIdRole,
-      UserOnlineStatusRole
+      UserOnlineStatusRole,
+      ChatNewMessageRole
    };
 
    ChatClientDataModel(QObject * parent = nullptr);
@@ -44,26 +46,32 @@ public:
    void setCurrentUser(const std::string &currentUser);
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
+   void setNewMessageMonitor(NewMessageMonitor* monitor);
 
    // QAbstractItemModel interface
 public:
    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
    QModelIndex parent(const QModelIndex &child) const override;
    int rowCount(const QModelIndex &parent) const override;
-   int columnCount(const QModelIndex &parent) const override;
+   int columnCount(const QModelIndex &) const override;
    QVariant data(const QModelIndex &index, int role) const override;
    Qt::ItemFlags flags(const QModelIndex &index) const override;
-
 private slots:
    void onItemChanged(TreeItem* item);
 private:
    QVariant roomData(const TreeItem * item, int role) const;
    QVariant contactData(const TreeItem * item, int role) const;
    QVariant userData(const TreeItem * item, int role) const;
+   QVariant chatNewMessageData(const TreeItem * item, int role) const;
 
 private:
    std::shared_ptr<RootItem> root_;
    void beginChatInsertRows(const TreeItem::NodeType &type);
+   void updateNewMessagesFlag();
+
+private:
+   NewMessageMonitor * newMessageMonitor_;
+   bool newMesagesFlag_;
 };
 
 

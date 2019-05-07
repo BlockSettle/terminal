@@ -178,6 +178,7 @@ public:
    // ChatMessageReadHandler interface
 public:
    void onMessageRead(std::shared_ptr<Chat::MessageData> message) override;
+   void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
 };
 
 #endif   // CHAT_CLIENT_H
