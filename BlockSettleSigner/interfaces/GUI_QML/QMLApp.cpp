@@ -338,11 +338,12 @@ void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantM
    for (int i = 0; i < metaSignerDialogType.keyCount(); ++i) {
       if (bs::signer::ui::getSignerDialogPath(static_cast<bs::signer::ui::DialogType>(i)) == dialogName) {
          isDialogCorrect = true;
+         break;
       }
    }
 
    if (!isDialogCorrect) {
-      throw(std::logic_error("Unknow signer dialog"));
+      throw(std::logic_error("Unknown signer dialog"));
       return;
    }
    QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
