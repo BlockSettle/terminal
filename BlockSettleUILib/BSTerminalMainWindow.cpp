@@ -43,6 +43,7 @@
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
 #include "OfflineSigner.h"
+#include "PubKeyLoader.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
 #include "SelectWalletDialog.h"
@@ -101,6 +102,11 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    setupIcon();
    UiUtils::setupIconFont(this);
    NotificationCenter::createInstance(applicationSettings_, ui_.get(), sysTrayIcon_, this);
+
+   cbApprovePuB_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::PublicBridge
+      , this, applicationSettings_);
+   cbApproveChat_ = PubKeyLoader::getApprovingCallback(PubKeyLoader::KeyType::Chat
+      , this, applicationSettings_);
 
    InitConnections();
 
@@ -189,33 +195,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
    }
 
    const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
-
-   // Define the callback that will be used to determine if the signer's BIP
-   // 150 identity key, if it has changed, will be accepted. It needs strings
-   // for the old and new keys, and a promise to set once the user decides.
-   //
-   // NB: This may need to be altered later. The PuB key should be hard-coded
-   // and respected.
-   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
-      [this](const std::string& oldKey, const std::string& newKey
-      , std::shared_ptr<std::promise<bool>> newKeyProm)->void
-      {
-      QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm] {
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
-            , tr("Server identity key has changed")
-            , tr("Do you wish to import the new PuB server identity key?")
-            , tr("Old Key: %1\nNew Key: %2")
-            .arg(QString::fromStdString(oldKey))
-            .arg(QString::fromStdString(newKey))
-            , this);
-
-         const bool answer = (box->exec() == QDialog::Accepted);
-         box->deleteLater();
-
-         newKeyProm->set_value(answer);
-      });
-   };
-   connection->setCBs(ourNewKeyCB);
+   connection->setCBs(cbApprovePuB_);
 
    Blocksettle::Communication::RequestPacket reqPkt;
    reqPkt.set_requesttype(Blocksettle::Communication::GetNetworkSettingsType);
@@ -465,7 +445,7 @@ void BSTerminalMainWindow::LoadWallets()
 
 void BSTerminalMainWindow::InitAuthManager()
 {
-   authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_);
+   authManager_ = std::make_shared<AuthAddressManager>(logMgr_->logger(), armory_, cbApprovePuB_);
    authManager_->init(applicationSettings_, walletsMgr_, authSignManager_, signContainer_);
 
    connect(authManager_.get(), &AuthAddressManager::NeedVerify, this, &BSTerminalMainWindow::openAuthDlgVerify);
@@ -680,7 +660,7 @@ bool BSTerminalMainWindow::showStartupDialog()
 void BSTerminalMainWindow::InitAssets()
 {
    ccFileManager_ = std::make_shared<CCFileManager>(logMgr_->logger(), applicationSettings_
-      , authSignManager_, connectionManager_);
+      , authSignManager_, connectionManager_, cbApprovePuB_);
    assetManager_ = std::make_shared<AssetManager>(logMgr_->logger(), walletsMgr_, mdProvider_, celerConnection_);
    assetManager_->init();
 
@@ -881,7 +861,7 @@ void BSTerminalMainWindow::connectSigner()
       return;
    }
 
-   if(!signContainer_->Start()) {
+   if (!signContainer_->Start()) {
       BSMessageBox(BSMessageBox::warning, tr("BlockSettle Signer Connection")
          , tr("Failed to start signer connection.")).exec();
    }
@@ -1124,7 +1104,7 @@ void BSTerminalMainWindow::onReadyToLogin()
 
    if (loginDialog.exec() == QDialog::Accepted) {
       currentUserLogin_ = loginDialog.getUsername();
-      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt());
+      auto id = ui_->widgetChat->login(currentUserLogin_.toStdString(), loginDialog.getJwt(), cbApproveChat_);
       setLoginButtonText(currentUserLogin_);
       setWidgetsAuthorized(true);
 

@@ -17,6 +17,7 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 #include "ChatClientDataModel.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
@@ -42,7 +43,8 @@ public:
    explicit ChatWidgetState(ChatWidget* chat, ChatWidget::State type) : chat_(chat), type_(type) {}
    virtual ~ChatWidgetState() = default;
 
-   virtual std::string login(const std::string& email, const std::string& jwt) = 0;
+   virtual std::string login(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &) = 0;
    virtual void logout() = 0;
    virtual void onLoggedOut() { }
    virtual void onSendButtonClicked() = 0;
@@ -74,9 +76,10 @@ public:
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
    }
 
-   std::string login(const std::string& email, const std::string& jwt) override {
+   std::string login(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &cb) override {
       chat_->logger_->debug("Set user name {}", email);
-      const auto userId = chat_->client_->loginToServer(email, jwt);
+      const auto userId = chat_->client_->loginToServer(email, jwt, cb);
       chat_->ui_->textEditMessages->setOwnUserId(userId);
       return userId;
    }
@@ -116,7 +119,8 @@ public:
       chat_->onUserClicked({});
    }
 
-   std::string login(const std::string& /*email*/, const std::string& /*jwt*/) override {
+   std::string login(const std::string& /*email*/, const std::string& /*jwt*/
+      , const ZmqBIP15XDataConnection::cbNewKey &) override {
       chat_->logger_->info("Already logged in! You should first logout!");
       return std::string();
    }
@@ -407,10 +411,11 @@ void ChatWidget::setPopupVisible(const bool &value)
    }
 }
 
-std::string ChatWidget::login(const std::string& email, const std::string& jwt)
+std::string ChatWidget::login(const std::string& email, const std::string& jwt
+   , const ZmqBIP15XDataConnection::cbNewKey &cb)
 {
    try {
-      const auto userId = stateCurrent_->login(email, jwt);
+      const auto userId = stateCurrent_->login(email, jwt, cb);
       needsToStartFirstRoom_ = true;
       return userId;
    }

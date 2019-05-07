@@ -8,6 +8,7 @@
 
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include <memory>
 
@@ -50,7 +51,8 @@ public:
            , const std::shared_ptr<ApplicationSettings> &appSettings
            , const std::shared_ptr<spdlog::logger>& logger);
 
-   std::string login(const std::string& email, const std::string& jwt);
+   std::string login(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout();
    bool hasUnreadMessages();
    void switchToChat(const QString& chatId);
