@@ -29,7 +29,7 @@ class ComboBoxDelegate : public QItemDelegate
 {
    Q_OBJECT
 public:
-   explicit ComboBoxDelegate(QObject *parent = 0);
+   explicit ComboBoxDelegate(QObject *parent = nullptr);
 protected:
    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
@@ -41,7 +41,7 @@ class ChartWidget : public QWidget
 
 public:
     explicit ChartWidget(QWidget* pParent = nullptr);
-    ~ChartWidget();
+    ~ChartWidget() override;
     void SendEoDRequest();
     void init(const std::shared_ptr<ApplicationSettings>&
               , const std::shared_ptr<MarketDataProvider>&
