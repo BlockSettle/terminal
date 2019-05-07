@@ -486,10 +486,11 @@ void ChatClientDataModel::beginChatInsertRows(const TreeItem::NodeType &type)
 void ChatClientDataModel::updateNewMessagesFlag()
 {
    bool flag = false;
+   CategoryElement *elem = NULL;
    for (auto category : root_->getChildren()) {
       for ( auto categoryElement : category->getChildren()) {
          if (categoryElement->getAcceptType() == TreeItem::NodeType::MessageDataNode) {
-            CategoryElement * elem = static_cast<CategoryElement*>(categoryElement);
+            elem = static_cast<CategoryElement*>(categoryElement);
             if (elem->updateNewItemsFlag()) {
                flag = true;
             }
@@ -499,6 +500,6 @@ void ChatClientDataModel::updateNewMessagesFlag()
    newMesagesFlag_ = flag;
 
    if (newMessageMonitor_) {
-      newMessageMonitor_->onNewMessagePresent(newMesagesFlag_);
+      newMessageMonitor_->onNewMessagePresent(newMesagesFlag_, elem);
    }
 }

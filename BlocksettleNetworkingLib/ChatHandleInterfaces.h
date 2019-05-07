@@ -44,7 +44,7 @@ class NewMessageMonitor {
 public:
 
    virtual  ~NewMessageMonitor() = default;
-   virtual void onNewMessagePresent(const bool isNewMessagePresented) = 0;
+   virtual void onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element) = 0;
 };
 
 
