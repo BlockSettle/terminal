@@ -1074,13 +1074,7 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , cbNewKey_{inNewKeyCB}
    , connectionManager_{connectionManager}
 {
-   // Create connection upfront in order to grab some required data early.
-   const std::string absCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
-   connection_ =
-      connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_
-      , false, true, absCookiePath);
-   connection_->setCBs(cbNewKey_);
+   RecreateConnection();
 }
 
 // Establish the remote connection to the signer.
@@ -1172,6 +1166,20 @@ void RemoteSigner::Authenticate()
    Send(packet);
 }
 
+void RemoteSigner::RecreateConnection()
+{
+   logger_->info("RecreateConnection...");
+   // Create connection upfront in order to grab some required data early.
+   const std::string absCookiePath =
+      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+   connection_ =
+      connectionManager_->CreateZMQBIP15XDataConnection(true
+         , false, true, absCookiePath);
+   connection_->setCBs(cbNewKey_);
+
+   headlessConnFinished_ = false;
+}
+
 bool RemoteSigner::isOffline() const
 {
    std::lock_guard<std::mutex> lock(mutex_);
@@ -1211,11 +1219,17 @@ void RemoteSigner::onDisconnected()
    }
 
    emit disconnected();
+
+   RecreateConnection();
+   Start();
 }
 
 void RemoteSigner::onConnError(const QString &err)
 {
    emit connectionError(err);
+
+   RecreateConnection();
+   Start();
 }
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
