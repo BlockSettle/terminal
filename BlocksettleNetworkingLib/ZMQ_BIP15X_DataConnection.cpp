@@ -19,11 +19,13 @@ using namespace std;
 //         A flag for a monitored socket. (const bool&)
 // OUTPUT: None
 ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
-   const shared_ptr<spdlog::logger>& logger, const bool& ephemeralPeers
-   , const bool& monitored, const bool& makeClientCookie
-   , const bool& readServerCookie, const std::string& cookieNamePath)
-   : ZmqDataConnection(logger, monitored), makeClientIDCookie_(makeClientCookie)
-   , useServerIDCookie_(readServerCookie), bipIDCookiePath_(cookieNamePath)
+   const shared_ptr<spdlog::logger>& logger, const bool ephemeralPeers
+   , const bool monitored, const bool makeClientCookie
+   , const bool readServerCookie, const std::string& cookieNamePath)
+   : ZmqDataConnection(logger, monitored)
+   , bipIDCookiePath_(cookieNamePath)
+   , useServerIDCookie_(readServerCookie)
+   , makeClientIDCookie_(makeClientCookie)
 {
    if (makeClientIDCookie_ && useServerIDCookie_) {
       throw std::runtime_error("Cannot read client ID cookie and create ID " \
@@ -92,7 +94,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    hbThread_ = std::thread(heartbeatProc);
 }
 
-ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection()
+ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
 {
    hbThreadRunning_ = false;
    hbCondVar_.notify_one();
@@ -143,7 +145,7 @@ AuthPeersLambdas ZmqBIP15XDataConnection::getAuthPeerLambda() const
 // INPUT:  N/A
 // OUTPUT: N/A
 // RETURN: N/A
-void ZmqBIP15XDataConnection::rekeyIfNeeded(const size_t& dataSize)
+void ZmqBIP15XDataConnection::rekeyIfNeeded(size_t dataSize)
 {
    bool needsRekey = false;
    const auto rightNow = chrono::steady_clock::now();
@@ -315,7 +317,7 @@ void ZmqBIP15XDataConnection::triggerHeartbeat()
    auto& packet = msg.getNextPacket();
 
    // An error message is already logged elsewhere if the send fails.
-   if (!sendPacket(packet.toBinStr()), false) {  // sendPacket already sets the timestamp
+   if (!sendPacket(packet.toBinStr())) {  // sendPacket already sets the timestamp
       notifyOnDisconnected();
    }
 }

@@ -72,6 +72,8 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 {
    ui_->setupUi(this);
 
+   ui_->labelEncRank->clear();
+
    walletFilter_ = new CurrentWalletFilter(wallet, this);
    walletFilter_->setSourceModel(walletsModel);
    ui_->treeViewWallets->setModel(walletFilter_);
