@@ -26,7 +26,7 @@ CustomTitleDialogWindow {
     title: curPage === 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
 
     property bool fullScreenMode: true
-    width: curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.8) : 470
+    width: curPage === 1 ? (fullScreenMode ? 640 : mainWindow.width * 0.75) : 470
     height: curPage === 1 ? (fullScreenMode ? 800 : mainWindow.height * 0.98) : 265
 
     abortConfirmation: true
@@ -94,13 +94,14 @@ The backup is uncrypted and will allow anyone who holds it to recover the entire
         ScrollView {
             Layout.alignment: Qt.AlignCenter
             Layout.preferredWidth: mainLayout.width * 0.95
+            Layout.preferredHeight: mainLayout.height * 0.95
             Layout.fillHeight: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AlwaysOn
             clip: true
             id: scroll
             contentWidth: width
-            contentHeight: pdf.preferedHeight
+            contentHeight: pdf.preferedHeight - 50
             visible: curPage == 1
 
             QmlPdfBackup {

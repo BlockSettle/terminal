@@ -68,7 +68,7 @@ SignerSettings::SignerSettings(const QString &fileName)
       { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
       { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) },
       { TrustedTerminals,  SettingDef(QStringLiteral("TrustedTerminals")) },
-      { TwoWayAuth,        SettingDef(QStringLiteral("TwoWayAuth"), false) }
+      { TwoWayAuth,        SettingDef(QStringLiteral("TwoWayAuth"), true) }
    };
 }
 
