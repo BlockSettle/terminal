@@ -21,8 +21,7 @@ UserScriptHandler::UserScriptHandler(std::shared_ptr<QuoteProvider> quoteProvide
    std::shared_ptr<AssetManager> assetManager,
    std::shared_ptr<spdlog::logger> logger,
    UserScriptRunner *runner)
-   : aq_(nullptr)
-   , utxoAdapter_(utxoAdapter)
+   : utxoAdapter_(utxoAdapter)
    , signingContainer_(signingContainer)
    , mdProvider_(mdProvider)
    , assetManager_(assetManager)
@@ -96,7 +95,9 @@ void UserScriptHandler::onQuoteReqNotification(const bs::network::QuoteReqNotifi
    else {
       aqQuoteReqs_.erase(qrn.quoteRequestId);
       if (itAQObj != aqObjs_.end()) {
-         aq_->destroy(itAQObj->second);
+         if (aq_) {
+            aq_->destroy(itAQObj->second);
+         }
          aqObjs_.erase(qrn.quoteRequestId);
          bestQPrices_.erase(qrn.quoteRequestId);
 
@@ -153,6 +154,7 @@ void UserScriptHandler::initAQ(const QString &fileName)
 
       if (aq_) {
          aq_->deleteLater();
+         aq_ = nullptr;
       }
 
       emit failedToLoad(err);
@@ -163,6 +165,10 @@ void UserScriptHandler::initAQ(const QString &fileName)
 
 void UserScriptHandler::deinitAQ(bool deleteAq)
 {
+   if (!aq_) {
+      return;
+   }
+
    for (auto aqObj : aqObjs_) {
       aq_->destroy(aqObj.second);
    }
@@ -171,6 +177,7 @@ void UserScriptHandler::deinitAQ(bool deleteAq)
 
    if (deleteAq) {
       aq_->deleteLater();
+      aq_ = nullptr;
    }
 }
 

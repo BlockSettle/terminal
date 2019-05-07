@@ -78,8 +78,6 @@ public:
       chat_->logger_->debug("Set user name {}", email);
       const auto userId = chat_->client_->loginToServer(email, jwt);
       chat_->ui_->textEditMessages->setOwnUserId(userId);
-      chat_->ui_->labelUserName->setText(QString::fromStdString(userId));
-
       return userId;
    }
 
@@ -110,6 +108,8 @@ public:
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
+      chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
+      selectFirstRoom();
    }
 
    void onStateExit() override {
@@ -208,6 +208,25 @@ public:
    }
 
    void onUsersDeleted(const std::vector<std::string> &/*users*/)  override {}
+
+   void selectFirstRoom()
+   {
+      onRoomClicked(QLatin1String("global_chat"));
+
+      QModelIndexList indexes = chat_->ui_->treeViewUsers->model()->match(chat_->ui_->treeViewUsers->model()->index(0,0),
+                                                                Qt::DisplayRole,
+                                                                QLatin1String("*"),
+                                                                -1,
+                                                                Qt::MatchWildcard|Qt::MatchRecursive);
+      
+      // highlight first room
+      for (auto index : indexes) {
+         if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
+            chat_->ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
+            break;
+         }
+      }
+   }
 };
 
 ChatWidget::ChatWidget(QWidget *parent)
@@ -242,18 +261,21 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
    ui_->treeViewUsers->setModel(client_->getDataModel().get());
-   ui_->treeViewUsers->expandAll();
+//   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(new LoggerWatcher());
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
    ui_->treeViewUsers->setHandler(client_);
    ui_->textEditMessages->setHandler(client_);
+   ui_->textEditMessages->setMessageReadHandler(client_);
+
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
+   connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited, this, &ChatWidget::onSearchUserTextEdited);
 
@@ -389,7 +411,6 @@ std::string ChatWidget::login(const std::string& email, const std::string& jwt)
 {
    try {
       const auto userId = stateCurrent_->login(email, jwt);
-      changeState(State::LoggedIn);
       needsToStartFirstRoom_ = true;
       return userId;
    }
@@ -450,6 +471,11 @@ void ChatWidget::onSearchUserTextEdited(const QString& text)
       return; //Initially max key is 12 symbols
    }
    client_->sendSearchUsersRequest(userToAdd);
+}
+
+void ChatWidget::onConnectedToServer()
+{
+   changeState(State::LoggedIn);
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
@@ -519,6 +545,13 @@ void ChatWidget::onElementSelected(CategoryElement *element)
          ui_->stackedWidgetMessages->setCurrentIndex(1);
       } else {
          ui_->stackedWidgetMessages->setCurrentIndex(0);
+      }
+
+      if (currentChat_ == QLatin1Literal("global_chat")) {
+         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(false);
+      }
+      else {
+         ui_->widgetCreateOTCRequest->setSubmitButtonEnabled(true);
       }
    }
 }

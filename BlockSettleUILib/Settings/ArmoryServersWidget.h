@@ -17,8 +17,8 @@ class ArmoryServersWidget : public QWidget
 
 public:
    explicit ArmoryServersWidget(const std::shared_ptr<ArmoryServersProvider>& armoryServersProvider
-                                , std::shared_ptr<ApplicationSettings> appSettings
-                                , QWidget *parent = nullptr);
+      , const std::shared_ptr<ApplicationSettings> &appSettings
+      , QWidget *parent = nullptr);
    ~ArmoryServersWidget();
 
    void adaptForStartupDialog();

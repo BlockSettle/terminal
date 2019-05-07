@@ -121,6 +121,7 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 {
    if (response.getStatus() == Chat::LoginResponse::Status::LoginOk) {
       loggedIn_ = true;
+      emit ConnectedToServer();
       model_->setCurrentUser(currentUserId_);
       readDatabase();
       auto request1 = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentUserId_);
@@ -488,10 +489,10 @@ void ChatClient::sendHeartbeat()
    }
 }
 
-void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message)
-{
-   addMessageState(message, Chat::MessageData::State::Read);
-}
+//void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message)
+//{
+//   addMessageState(message, Chat::MessageData::State::Read);
+//}
 
 void ChatClient::onForceLogoutSignal()
 {
@@ -981,6 +982,11 @@ bool ChatClient::isFriend(const QString &userId)
    return chatDb_->isContactExist(userId);
 }
 
+QString ChatClient::getUserId()
+{
+   return QString::fromStdString(currentUserId_);
+}
+
 void ChatClient::onActionAddToContacts(const QString& userId)
 {
 
@@ -1153,4 +1159,12 @@ bool ChatClient::decryptEISMessage(std::shared_ptr<Chat::MessageData>& message)
       message->setFlag(Chat::MessageData::State::Invalid);
       return false;
    }
+}
+
+void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
+{
+   message->setFlag(Chat::MessageData::State::Read);
+   chatDb_->updateMessageStatus(message->id(), message->state());
+   model_->notifyMessageChanged(message);
+   sendUpdateMessageState(message);
 }

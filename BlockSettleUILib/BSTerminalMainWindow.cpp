@@ -16,6 +16,7 @@
 
 #include "AboutDialog.h"
 #include "ArmoryServersProvider.h"
+#include "SignersProvider.h"
 #include "AssetManager.h"
 #include "AuthAddressDialog.h"
 #include "AuthAddressManager.h"
@@ -74,6 +75,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    loginButtonText_ = tr("Login");
 
    armoryServersProvider_= std::make_shared<ArmoryServersProvider>(applicationSettings_);
+   signersProvider_= std::make_shared<SignersProvider>(applicationSettings_);
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
@@ -482,8 +484,12 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 {
    std::shared_ptr<SignContainer> retPtr;
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
-   auto signerHost = applicationSettings_->get<QString>(ApplicationSettings::signerHost);
-   const auto signerPort = applicationSettings_->get<QString>(ApplicationSettings::signerPort);
+   SignerHost signerHost = signersProvider_->getCurrentSigner();
+
+   QString resultHost = signerHost.address;
+   QString resultPort = QString::number(signerHost.port);
+   NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
+   QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
 
    // These callbacks will only be used for remote signers. Note the code below,
    // where a local signer is eventually marked as remote. We'll work around
@@ -521,24 +527,28 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
          });
       };
    }
-   else if ((runMode == SignContainer::OpMode::Local)
-      && SignerConnectionExists(QLatin1String("127.0.0.1"), signerPort)) {
-      if (BSMessageBox(BSMessageBox::messageBoxType::question
-         , tr("Signer Local Connection")
-         , tr("Another Signer (or some other program occupying port %1) is "
-         "running. Would you like to continue connecting to it?").arg(signerPort)
-         , tr("If you wish to continue using GUI signer running on the same "
-         "host, just select Remote Signer in settings and configure local "
-         "connection")
-         , this).exec() == QDialog::Rejected) {
-         return retPtr;
+   else if (runMode == SignContainer::OpMode::Local) {
+      resultPort = localSignerPort;
+
+      if (SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
+         runMode = SignContainer::OpMode::Remote;
+         resultHost = QLatin1String("127.0.0.1");
+
+         if (BSMessageBox(BSMessageBox::messageBoxType::question
+            , tr("Signer Local Connection")
+            , tr("Another Signer (or some other program occupying port %1) is "
+            "running. Would you like to continue connecting to it?").arg(localSignerPort)
+            , tr("If you wish to continue using GUI signer running on the same "
+            "host, just select Remote Signer in settings and configure local "
+            "connection")
+            , this).exec() == QDialog::Rejected) {
+            return retPtr;
+         }
       }
-      runMode = SignContainer::OpMode::Remote;
-      signerHost = QLatin1String("127.0.0.1");
    }
 
    retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-      , signerHost, connectionManager_, ephemeralDataConnKeys, ourNewKeyCB);
+      , resultHost, resultPort, netType, connectionManager_, ephemeralDataConnKeys, ourNewKeyCB);
    return retPtr;
 }
 
@@ -1054,7 +1064,7 @@ void BSTerminalMainWindow::openAuthDlgVerify(const QString &addrToVerify)
 
 void BSTerminalMainWindow::openConfigDialog()
 {
-   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signContainer_, this);
+   ConfigDialog configDialog(applicationSettings_, armoryServersProvider_, signersProvider_, signContainer_, this);
    connect(&configDialog, &ConfigDialog::reconnectArmory, this, &BSTerminalMainWindow::onArmoryNeedsReconnect);
    configDialog.exec();
 
@@ -1193,6 +1203,7 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (authManager_) {
       authManager_->OnDisconnectedFromCeler();
    }
+   mdProvider_->UnsubscribeFromMD();
 }
 
 void BSTerminalMainWindow::onCelerConnected()

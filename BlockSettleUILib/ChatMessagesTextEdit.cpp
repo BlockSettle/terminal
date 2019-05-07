@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QMimeData>
+#include <QScrollBar>
 #include "ChatClientTree/TreeObjects.h"
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
@@ -18,7 +19,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setCellSpacing(0);
 
    QVector <QTextLength> col_widths;
-   col_widths << QTextLength (QTextLength::FixedLength, 110);
+   col_widths << QTextLength (QTextLength::FixedLength, 96);
    col_widths << QTextLength (QTextLength::FixedLength, 20);
    col_widths << QTextLength (QTextLength::FixedLength, 90);
    col_widths << QTextLength (QTextLength::VariableLength, 50);
@@ -36,6 +37,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    statusImageRead_ = QImage(QLatin1Literal(":/ICON_MSG_STATUS_READ"), "PNG");
 
    connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
+   connect(this, &QTextBrowser::textChanged, this, &ChatMessagesTextEdit::onTextChanged);
 
    userMenu_ = new QMenu(this);
    QAction *addUserToContactsAction = userMenu_->addAction(QObject::tr("Add to contacts"));
@@ -224,6 +226,11 @@ void ChatMessagesTextEdit::selectAllActionTriggered()
    this->selectAll();
 }
 
+void ChatMessagesTextEdit::onTextChanged()
+{
+   verticalScrollBar()->setValue(verticalScrollBar()->maximum());
+}
+
 void ChatMessagesTextEdit::switchToChat(const QString& chatId, bool isGroupRoom)
 {
    currentChatId_ = chatId;
@@ -240,6 +247,11 @@ void ChatMessagesTextEdit::switchToChat(const QString& chatId, bool isGroupRoom)
 void ChatMessagesTextEdit::setHandler(std::shared_ptr<ChatItemActionsHandler> handler)
 {
    handler_ = handler;
+}
+
+void ChatMessagesTextEdit::setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler)
+{
+   messageReadHandler_ = handler;
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
@@ -409,6 +421,9 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 {
 
    for (const auto& message: messages) {
+      if (messageReadHandler_ && !(message->getState() & (int)Chat::MessageData::State::Read) ){
+         messageReadHandler_->onMessageRead(message);
+      }
       messages_[currentChatId_].push_back(message);
    }
    for (const auto& message : messages) {
@@ -478,11 +493,13 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 
 void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages, bool isFirstFetch)
 {
-   for (const auto& message: messages) {
+   for (const auto& message : messages) {
       messages_[currentChatId_].push_back(message);
    }
 
-   for (const auto& message: messages) {
+
+
+   for (const auto& message : messages) {
       insertMessage(message);
    }
    return;

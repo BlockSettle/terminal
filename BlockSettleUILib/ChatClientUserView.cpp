@@ -96,7 +96,7 @@ private slots:
 //            addAction(tr("Add friend"), this, &ChatUsersContextMenu::onAddToContacts);
 //            break;
          case Chat::ContactStatus::Accepted:
-            addAction(tr("Remove friend"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+            addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
             break;
          case Chat::ContactStatus::Incoming:
             addAction(tr("Accept friend request"), this, &ChatUsersContextMenu::onAcceptFriendRequest);
@@ -131,6 +131,10 @@ ChatClientUserView::ChatClientUserView(QWidget *parent)
    setContextMenuPolicy(Qt::CustomContextMenu);
    connect(this, &QAbstractItemView::customContextMenuRequested, this, &ChatClientUserView::onCustomContextMenu);
    setItemDelegate(new ChatClientUsersViewItemDelegate(this));
+
+   // expand/collapse categories only on single click
+   setExpandsOnDoubleClick(false);
+   connect(this, &QTreeView::clicked, this, &ChatClientUserView::onClicked);
 }
 
 void ChatClientUserView::addWatcher(ViewItemWatcher * watcher)
@@ -152,6 +156,22 @@ void ChatClientUserView::onCustomContextMenu(const QPoint & point)
    }
    if (contextMenu_){
       contextMenu_->execMenu(point);
+   }
+}
+
+void ChatClientUserView::onClicked(const QModelIndex &index)
+{
+   if (index.isValid()) {
+      const auto nodeType = qvariant_cast<TreeItem::NodeType>(index.data(ChatClientDataModel::Role::ItemTypeRole));
+
+      if (nodeType == TreeItem::NodeType::CategoryNode) {
+         if (isExpanded(index)) {
+            collapse(index);
+         }
+         else {
+            expand(index);
+         }
+      }
    }
 }
 

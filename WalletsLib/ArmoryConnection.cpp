@@ -12,8 +12,6 @@
 #include "ManualResetEvent.h"
 #include "SocketIncludes.h"
 
-const int DefaultArmoryDBStartTimeoutMsec = 500;
-
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
    , regThreadRunning_(false)
@@ -573,7 +571,7 @@ bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &
    return getConfirmationsNumber(item) > 1;
 }
 
-void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
+void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
 {
    if (!preOnlineRegIds_.empty()) {
       for (const auto &id : ids) {

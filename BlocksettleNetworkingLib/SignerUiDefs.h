@@ -17,7 +17,8 @@ namespace bs {
          ImportWallet,
          BackupWallet,
          DeleteWallet,
-         ManageWallet
+         ManageWallet,
+         ActivateAutoSign,
       };
 
       inline QString getSignerDialogPath(DialogType signerDialog) {
@@ -32,6 +33,8 @@ namespace bs {
             return QStringLiteral("deleteWalletDialog");
          case DialogType::ManageWallet:
             return QStringLiteral("manageEncryptionDialog");
+         case DialogType::ActivateAutoSign:
+            return QStringLiteral("activateAutoSignDialog");
 
          default:
             return QStringLiteral("");

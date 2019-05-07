@@ -14,9 +14,9 @@ class QtSettings(Configurator):
         self.jom = JomSettings(settings)
         self.openssl = OpenSslSettings(settings)
         self._release = '5.12'
-        self._version = self._release + '.3'
+        self._version = self._release + '.2'
         self._package_name = 'qt-everywhere-src-' + self._version
-        self._script_revision = '6'
+        self._script_revision = '7'
 
         if self._project_settings.on_windows():
             self._package_url = 'https://download.qt.io/official_releases/qt/' + self._release + '/' + self._version + '/single/' + self._package_name + '.zip'
@@ -125,10 +125,12 @@ class QtSettings(Configurator):
         ssldir_var = self.openssl.get_install_dir()
         ssllibs_var = '-L{} -lssl -lcrypto'.format(os.path.join(self.openssl.get_install_dir(),'lib'))
         sslinc_var = os.path.join(self.openssl.get_install_dir(),'include')
+
         if self._project_settings.on_linux():
             ssllibs_var += ' -ldl -lpthread'
         elif self._project_settings.on_windows():
             ssllibs_var += ' -lUser32 -lAdvapi32 -lGdi32 -lCrypt32 -lws2_32'
+
         compile_variables = os.environ.copy()
         compile_variables['OPENSSL_DIR'] = ssldir_var
         compile_variables['OPENSSL_LIBS'] = ssllibs_var

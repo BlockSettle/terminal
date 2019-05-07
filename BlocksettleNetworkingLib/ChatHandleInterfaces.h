@@ -33,5 +33,11 @@ public:
    virtual void onActionResetSearch() = 0;
 };
 
+class ChatMessageReadHandler {
+public:
+   virtual ~ChatMessageReadHandler() = default;
+   virtual void onMessageRead(std::shared_ptr<Chat::MessageData> message) = 0;
+};
+
 
 #endif // CHATHANDLEINTERFACES_H

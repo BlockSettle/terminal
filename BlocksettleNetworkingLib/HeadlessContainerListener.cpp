@@ -1088,7 +1088,7 @@ bool HeadlessContainerListener::CheckSpendLimit(uint64_t value, bool autoSign, c
       if (value > limits_.autoSignSpendXBT) {
          logger_->warn("[HeadlessContainerListener] requested auto-sign spend {} exceeds limit {}", value
             , limits_.autoSignSpendXBT);
-         deactivateAutoSign(walletId, "spend limit reached");
+         deactivateAutoSign({}, walletId, "spend limit reached");
          return false;
       }
    }
@@ -1117,19 +1117,23 @@ void HeadlessContainerListener::onXbtSpent(int64_t value, bool autoSign)
 void HeadlessContainerListener::activateAutoSign(const std::string &clientId, const std::string &walletId
    , const SecureBinaryData &password)
 {
+   logger_->info("Activate AutoSign for {}", walletId);
+
    const auto &wallet = walletId.empty() ? walletsMgr_->getPrimaryWallet() : walletsMgr_->getHDWalletById(walletId);
    if (!wallet) {
-      deactivateAutoSign(walletId, "wallet missing");
+      deactivateAutoSign({}, walletId, "wallet missing");
       return;
    }
    if (!wallet->encryptionTypes().empty()) {
       if (password.isNull()) {
-         deactivateAutoSign(walletId, "empty password");
+         // This will happen when user cancels autosign.
+         // Do not send reason text in this case, because it's used as an error message is set.
+         deactivateAutoSign({}, walletId, {});
          return;
       }
       const auto decrypted = wallet->getRootNode(password);
       if (!decrypted) {
-         deactivateAutoSign(walletId, "failed to decrypt root node");
+         deactivateAutoSign({}, walletId, "failed to decrypt root node");
          return;
       }
    }
@@ -1143,6 +1147,8 @@ void HeadlessContainerListener::activateAutoSign(const std::string &clientId, co
 void HeadlessContainerListener::deactivateAutoSign(const std::string &clientId, const std::string &walletId
    , const std::string &reason)
 {
+   logger_->info("Deactivate AutoSign for {} ({})", walletId, reason);
+
    if (walletId.empty()) {
       passwords_.clear();
    }
