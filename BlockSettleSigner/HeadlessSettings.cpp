@@ -70,18 +70,25 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
          , cxxopts::value<std::string>(guiMode)->default_value("fullgui"))
       ;
 
-   const auto result = options.parse(argc, argv);
+   try {
+      const auto result = options.parse(argc, argv);
 
-   if (result.count("help")) {
-      std::cout << options.help({ "" }) << std::endl;
-      exit(0);
-   }
+      if (result.count("help")) {
+         std::cout << options.help({ "" }) << std::endl;
+         exit(0);
+      }
 
-   if (result.count("mainnet")) {
-      testNet_ = false;
+      if (result.count("mainnet")) {
+         testNet_ = false;
+      }
+      else if (result.count("testnet")) {
+         testNet_ = true;
+      }
+
    }
-   else if (result.count("testnet")) {
-      testNet_ = true;
+   catch(const std::exception& e) {
+      logger_->warn("[{}] Signer option error: {}", __func__, e.what());
+      logger_->warn("[{}] Not all signer options may be used.", __func__);
    }
 
    if (guiMode == "lightgui") {
