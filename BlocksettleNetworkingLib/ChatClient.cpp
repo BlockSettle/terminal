@@ -649,7 +649,10 @@ void ChatClient::OnDataReceived(const std::string& data)
       logger_->error("[ChatClient::OnDataReceived] failed to parse message:\n{}", data);
       return;
    }
-   response->handle(*this);
+   // Process on main thread because otherwise ChatDB could crash
+   QMetaObject::invokeMethod(this, [this, response] {
+      response->handle(*this);
+   });
 }
 
 void ChatClient::OnConnected()
