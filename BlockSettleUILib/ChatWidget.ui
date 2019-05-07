@@ -618,6 +618,8 @@
             <property name="currentIndex">
              <number>0</number>
             </property>
+            <widget class="OTCLoginRequiredShield" name="widgetLoginRequiredShield"/>
+            <widget class="OTCGeneralRoomShield" name="widgetGeneralShield"/>
             <widget class="CreateOTCRequestWidget" name="widgetCreateOTCRequest"/>
             <widget class="CreateOTCResponseWidget" name="widgetCreateOTCResponse"/>
             <widget class="OTCNegotiationRequestWidget" name="widgetNegotiateRequest"/>
@@ -667,7 +669,7 @@
   <customwidget>
    <class>CreateOTCResponseWidget</class>
    <extends>QWidget</extends>
-   <header location="global">CreateOTCResponseWidget.h</header>
+   <header>CreateOTCResponseWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -680,6 +682,18 @@
    <class>OTCNegotiationRequestWidget</class>
    <extends>QWidget</extends>
    <header>OTCNegotiationRequestWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCLoginRequiredShield</class>
+   <extends>QWidget</extends>
+   <header>OTCLoginRequiredShield.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCGeneralRoomShield</class>
+   <extends>QWidget</extends>
+   <header>OTCGeneralRoomShield.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

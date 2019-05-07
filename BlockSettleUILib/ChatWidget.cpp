@@ -24,10 +24,12 @@ Q_DECLARE_METATYPE(std::vector<std::string>)
 
 enum class OTCPages : int
 {
-   OTCCreateRequest = 0,
-   OTCCreateResponse,
-   OTCNegotiateRequest,
-   OTCNegotiateResponse
+   OTCLoginRequiredShieldPage = 0,
+   OTCGeneralRoomShieldPage,
+   OTCCreateRequestPage,
+   OTCCreateResponsePage,
+   OTCNegotiateRequestPage,
+   OTCNegotiateResponsePage
 };
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
@@ -568,7 +570,7 @@ void ChatWidget::DisplayOTCRequest(const bs::network::Side::Type& side, const bs
    ui_->widgetCreateOTCResponse->SetSide(side);
    ui_->widgetCreateOTCResponse->SetRange(range);
 
-   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponse));
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
 }
 
 
@@ -578,5 +580,5 @@ void ChatWidget::OnOTCResponseCreated()
    auto amountRange = ui_->widgetCreateOTCResponse->GetResponseQuantityRange();
    ui_->widgetNegotiateRequest->DisplayResponse(ui_->widgetCreateOTCRequest->GetSide(), priceRange, amountRange);
 
-   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequest));
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
 }
