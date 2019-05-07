@@ -462,6 +462,7 @@ void BSTerminalMainWindow::LoadWallets()
 //      splashScreen.SetProgress(progress);
       logMgr_->logger()->debug("Loaded wallet {} of {}", cur, total);
    };
+   walletsMgr_->reset();
    walletsMgr_->syncWallets(progressDelegate);
 }
 
