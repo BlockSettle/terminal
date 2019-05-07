@@ -128,6 +128,8 @@ public:
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
 
       chat_->SetOTCLoggedInState();
+
+      selectFirstRoom();
    }
 
    void onStateExit() override {
@@ -226,6 +228,25 @@ public:
    }
 
    void onUsersDeleted(const std::vector<std::string> &/*users*/)  override {}
+
+   void selectFirstRoom()
+   {
+      onRoomClicked(QLatin1String("global_chat"));
+
+      QModelIndexList indexes = chat_->ui_->treeViewUsers->model()->match(chat_->ui_->treeViewUsers->model()->index(0,0),
+                                                                Qt::DisplayRole,
+                                                                QLatin1String("*"),
+                                                                -1,
+                                                                Qt::MatchWildcard|Qt::MatchRecursive);
+      
+      // highlight first room
+      for (auto index : indexes) {
+         if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
+            chat_->ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
+            break;
+         }
+      }
+   }
 };
 
 ChatWidget::ChatWidget(QWidget *parent)
