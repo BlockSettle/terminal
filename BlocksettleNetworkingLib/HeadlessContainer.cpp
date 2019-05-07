@@ -18,8 +18,15 @@
 #include <spdlog/spdlog.h>
 #include "signer.pb.h"
 
+namespace {
+
 constexpr int kKillTimeout = 5000;
 constexpr int kStartTimeout = 5000;
+
+// When remote signer will try to reconnect
+constexpr int kRemoteReconnectPeriod = 10000;
+
+} // namespace
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -203,6 +210,9 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
    logger_->debug("[HeadlessListener] error {}", errorCode);
    isReady_ = false;
    emit error(tr("error #%1").arg(QString::number(errorCode)));
+
+   // Need to disconnect connection because otherwise it will continue send error responses over and over
+   connection_->closeConnection();
 }
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
@@ -1074,6 +1084,7 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , cbNewKey_{inNewKeyCB}
    , connectionManager_{connectionManager}
 {
+   // Create connection upfront in order to grab some required data early.
    RecreateConnection();
 }
 
@@ -1168,16 +1179,30 @@ void RemoteSigner::Authenticate()
 
 void RemoteSigner::RecreateConnection()
 {
-   logger_->info("RecreateConnection...");
-   // Create connection upfront in order to grab some required data early.
-   const std::string absCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
-   connection_ =
-      connectionManager_->CreateZMQBIP15XDataConnection(true
-         , false, true, absCookiePath);
+   logger_->info("[{}] Restart connection...", __func__);
+
+   const bool makeClientCookie = false;
+   // Server's cookies are not available in remote mode
+   const bool readServerCookie = (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc);
+
+   std::string absCookiePath;
+   if (readServerCookie) {
+      absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+   }
+
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_
+         , makeClientCookie, readServerCookie, absCookiePath);
    connection_->setCBs(cbNewKey_);
 
    headlessConnFinished_ = false;
+}
+
+void RemoteSigner::ScheduleRestart()
+{
+   QTimer::singleShot(kRemoteReconnectPeriod, this, [this] {
+      RecreateConnection();
+      Start();
+   });
 }
 
 bool RemoteSigner::isOffline() const
@@ -1220,16 +1245,13 @@ void RemoteSigner::onDisconnected()
 
    emit disconnected();
 
-   RecreateConnection();
-   Start();
+   ScheduleRestart();
 }
 
 void RemoteSigner::onConnError(const QString &err)
 {
    emit connectionError(err);
-
-   RecreateConnection();
-   Start();
+   ScheduleRestart();
 }
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
