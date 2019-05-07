@@ -23,10 +23,17 @@ CustomTitleDialogWindow {
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
     property int addressRowHeight: 24
 
+    id: root
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
-    height: 420
+    height: 420 + recvAddresses.height
+
+    onTxInfoChanged: {
+        console.log(txInfo.recvAddresses.length)
+        console.log(txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3)
+        sizeChanged(root.width, 700 + txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3)
+    }
 
     function clickConfirmBtn() {
         btnConfirm.clicked()
@@ -115,40 +122,37 @@ CustomTitleDialogWindow {
                     text: qsTr("Output Address(es)")
                     Layout.alignment: Qt.AlignTop
                 }
-                ScrollView {
-                    Layout.preferredHeight: txInfo.recvAddresses.length < 5 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 4
+
+                ListView {
+                    id: recvAddresses
                     Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignLeft
+                    Layout.alignment: Qt.AlignRight
+                    model: txInfo.recvAddresses
                     clip: true
+                    Layout.preferredHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
 
-                    ColumnLayout{
-                        spacing: 0
-                        anchors.fill: parent
-                        Layout.margins: 0
-                        Layout.alignment: Qt.AlignTop
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {
+                        active: true
+                    }
 
-                        Repeater {
-                            id: addressRepeater
-                            Layout.alignment: Qt.AlignTop
-                            model: txInfo.recvAddresses
+                    delegate: Rectangle {
+                        id: addressRect
+                        color: "transparent"
+                        height: 22
+                        width: recvAddresses.width
 
-                            Rectangle {
-                                id: addressRect
-                                color: "transparent"
-                                Layout.fillWidth: true
-                                height: 20
-
-                                CustomLabelValue {
-                                    id: labelTxWalletId
-                                    text: modelData
-                                    anchors.fill: parent
-                                    horizontalAlignment: Text.AlignRight
-                                    verticalAlignment: Text.AlignTop
-                                    font: fixedFont
-                                }
-                            }
+                        CustomLabelValue {
+                            id: labelTxWalletId
+                            text: modelData
+                            anchors.fill: addressRect
+                            horizontalAlignment: Text.AlignRight
+                            verticalAlignment: Text.AlignTop
+                            font: fixedFont
                         }
                     }
+
                 }
             }
 
