@@ -19,9 +19,9 @@ using namespace std;
 //         A flag for a monitored socket. (const bool&)
 // OUTPUT: None
 ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
-   const shared_ptr<spdlog::logger>& logger, const bool& ephemeralPeers
-   , const bool& monitored, const bool& makeClientCookie
-   , const bool& readServerCookie, const std::string& cookieNamePath)
+   const shared_ptr<spdlog::logger>& logger, const bool ephemeralPeers
+   , const bool monitored, const bool makeClientCookie
+   , const bool readServerCookie, const std::string& cookieNamePath)
    : ZmqDataConnection(logger, monitored)
    , bipIDCookiePath_(cookieNamePath)
    , useServerIDCookie_(readServerCookie)
@@ -94,7 +94,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    hbThread_ = std::thread(heartbeatProc);
 }
 
-ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection()
+ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
 {
    hbThreadRunning_ = false;
    hbCondVar_.notify_one();

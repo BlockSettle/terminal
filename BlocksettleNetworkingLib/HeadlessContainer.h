@@ -188,7 +188,7 @@ public:
       , const bool ephemeralDataConnKeys = false
       , double asSpendLimit = 0
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
-   ~LocalSigner() noexcept = default;
+   ~LocalSigner() noexcept override = default;
 
    bool Start() override;
    bool Stop() override;

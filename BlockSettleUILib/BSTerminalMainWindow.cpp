@@ -79,7 +79,7 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
-      QTimer::singleShot(0, this, [this](){
+      QTimer::singleShot(0, this, []() {
          qApp->exit(EXIT_FAILURE);
       });
       return;
@@ -1624,7 +1624,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
 
 void BSTerminalMainWindow::onArmoryNeedsReconnect()
 {
-   disconnect(statusBarView_.get(), 0, 0, 0);
+   disconnect(statusBarView_.get(), nullptr, nullptr, nullptr);
    statusBarView_->deleteLater();
    QApplication::processEvents();
 
