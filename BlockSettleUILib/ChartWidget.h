@@ -51,6 +51,7 @@ public:
               , const std::shared_ptr<spdlog::logger>&);
 
     void setAuthorized(bool authorized);
+    void disconnect();
 
 protected slots:
    void OnDataReceived(const std::string& data);

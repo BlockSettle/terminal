@@ -1153,6 +1153,7 @@ void BSTerminalMainWindow::onLogout()
 {
    ui_->widgetWallets->setUsername(QString());
    ui_->widgetChat->logout();
+   ui_->widgetChart->disconnect();
 
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();

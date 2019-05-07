@@ -129,6 +129,11 @@ void ChartWidget::setAuthorized(bool authorized)
    authorized_ = authorized;
 }
 
+void ChartWidget::disconnect()
+{
+   OnMDDisconnecting();
+}
+
 ChartWidget::~ChartWidget()
 {
    delete ui_;
