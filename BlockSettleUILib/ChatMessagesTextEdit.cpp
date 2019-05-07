@@ -421,7 +421,7 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 {
 
    for (const auto& message: messages) {
-      if (messageReadHandler_ && !(message->getState() & (int)Chat::MessageData::State::Read) ){
+      if (messageReadHandler_ && !(message->state() & (int)Chat::MessageData::State::Read) ){
          messageReadHandler_->onMessageRead(message);
       }
       messages_[currentChatId_].push_back(message);

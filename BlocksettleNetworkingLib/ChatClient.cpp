@@ -608,7 +608,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
 
             model_->insertContactsMessage(msg);
 
-            encryptByEISAndSaveMessageInDb(msg);
+            encryptByIESAndSaveMessageInDb(msg);
          }
          break;
 
@@ -739,7 +739,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
 
-   if (!encryptByEISAndSaveMessageInDb(std::make_shared<Chat::MessageData>(messageData)))
+   if (!encryptByIESAndSaveMessageInDb(std::make_shared<Chat::MessageData>(messageData)))
    {
       return result;
    }
@@ -843,7 +843,7 @@ void ChatClient::retrieveUserMessages(const QString &userId)
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
-            decryptEISMessage(msg);
+            decryptIESMessage(msg);
          }
          model_->insertContactsMessage(msg);
       }
@@ -856,7 +856,7 @@ void ChatClient::retrieveRoomMessages(const QString& roomId)
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
-            decryptEISMessage(msg);
+            decryptIESMessage(msg);
          }
          model_->insertRoomMessage(msg);
       }
@@ -1114,7 +1114,7 @@ void ChatClient::onActionResetSearch()
    model_->clearSearch();
 }
 
-bool ChatClient::encryptByEISAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message)
+bool ChatClient::encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message)
 {
    BinaryData localPublicKey(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size());
    std::unique_ptr<Encryption::IES_Encryption> enc = Encryption::IES_Encryption::create(logger_);
@@ -1139,7 +1139,7 @@ bool ChatClient::encryptByEISAndSaveMessageInDb(const std::shared_ptr<Chat::Mess
    return true;
 }
 
-bool ChatClient::decryptEISMessage(std::shared_ptr<Chat::MessageData>& message)
+bool ChatClient::decryptIESMessage(std::shared_ptr<Chat::MessageData>& message)
 {
    std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
    SecureBinaryData localPrivateKey(appSettings_->GetAuthKeys().first.data(), appSettings_->GetAuthKeys().first.size());

@@ -100,8 +100,8 @@ public:
    QString deriveKey(const QString& email) const;
    void clearSearch();
    bool isFriend(const QString &userId);
-   bool encryptByEISAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
-   bool decryptEISMessage(std::shared_ptr<Chat::MessageData>& message);
+   bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
+   bool decryptIESMessage(std::shared_ptr<Chat::MessageData>& message);
    QString getUserId();
 
 private:
