@@ -22,8 +22,6 @@ class ConnectionManager;
 namespace spdlog { class logger; }
 class MdhsClient;
 
-using namespace Blocksettle::Communication::TradeHistory;
-
 #include <QItemDelegate>
 #include <QPainter>
 
@@ -73,7 +71,7 @@ protected slots:
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
-   static QString ProductTypeToString(TradeHistoryTradeType type);
+   static QString ProductTypeToString(Blocksettle::Communication::TradeHistory::TradeHistoryTradeType type);
    void SetupCrossfire();
 
    void OnLoadingNetworkSettings();
@@ -94,7 +92,7 @@ protected:
    void UpdateChart(const int& interval);
    void InitializeCustomPlot();
    quint64 IntervalWidth(int interval = -1, int count = 1, const QDateTime& specialDate = {}) const;
-   static int FractionSizeForProduct(TradeHistoryTradeType type);
+   static int FractionSizeForProduct(Blocksettle::Communication::TradeHistory::TradeHistoryTradeType type);
    void ProcessProductsListResponse(const std::string& data);
    void ProcessOhlcHistoryResponse(const std::string& data);
    void ProcessEodResponse(const std::string& data);
@@ -127,7 +125,7 @@ private:
    std::shared_ptr<spdlog::logger>					logger_;
 
    bool                                         isProductListInitialized_{ false };
-   std::map<std::string, TradeHistoryTradeType> productTypesMapper;
+   std::map<std::string, Blocksettle::Communication::TradeHistory::TradeHistoryTradeType> productTypesMapper;
 
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker{ new QCPAxisTickerDateTime };
 

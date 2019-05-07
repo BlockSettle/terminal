@@ -11,6 +11,8 @@ const QColor BACKGROUND_COLOR = QColor(28, 40, 53);
 const QColor FOREGROUND_COLOR = QColor(Qt::white);
 const QColor VOLUME_COLOR = QColor(32, 159, 223);
 
+using namespace Blocksettle::Communication::TradeHistory;
+
 ComboBoxDelegate::ComboBoxDelegate(QObject* parent)
    : QItemDelegate(parent)
 {
