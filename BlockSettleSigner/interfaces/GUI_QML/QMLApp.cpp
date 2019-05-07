@@ -59,11 +59,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
-
-   connect(adapter_, &SignerAdapter::customDialogRequest, this, [this](const QString &dialogName, const QVariantMap &data){
-      QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
-                                , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
-   });
+   connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -332,4 +328,23 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 {
    emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
+}
+
+void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantMap &data)
+{
+   QMetaEnum metaSignerDialogType = QMetaEnum::fromType<bs::signer::ui::DialogType>();
+
+   bool isDialogCorrect = false;
+   for (int i = 0; i < metaSignerDialogType.keyCount(); ++i) {
+      if (bs::signer::ui::getSignerDialogPath(static_cast<bs::signer::ui::DialogType>(i)) == dialogName) {
+         isDialogCorrect = true;
+      }
+   }
+
+   if (!isDialogCorrect) {
+      throw(std::logic_error("Unknow signer dialog"));
+      return;
+   }
+   QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
+                             , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
 }

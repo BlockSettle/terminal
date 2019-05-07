@@ -26,8 +26,8 @@ Item {
         height: labelHelp.height
         z: 1
         color: "black"
-        visible: twoway_help_mouse_area.containsMouse
-
+        // visible: twoway_help_mouse_area.containsMouse
+        visible: false
 
         CustomLabel {
             id: labelHelp
@@ -187,32 +187,35 @@ Item {
                 Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("Two-way authentication")
+                    text: qsTr("AuthKey broadcast")
                 }
 
-                Image {
-                    id: twoway_help_image
-                    Layout.maximumWidth: 10
-                    Layout.maximumHeight: 10
+//                Image {
+//                    id: twoway_help_image
+//                    Layout.maximumWidth: 10
+//                    Layout.maximumHeight: 10
 
-                    source: "qrc:/resources/notification_info.png"
-                    MouseArea {
-                        id: twoway_help_mouse_area
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onHoveredChanged: {
-                            rectHelp.x = rectHelp.mapFromItem(twoway_help_image, 0, 0).x + 15
-                            rectHelp.y = rectHelp.mapFromItem(twoway_help_image, 0, 0).y - 10
-                        }
-                    }
-                }
+//                    source: "qrc:/resources/notification_info.png"
+//                    MouseArea {
+//                        id: twoway_help_mouse_area
+//                        anchors.fill: parent
+//                        hoverEnabled: true
+//                        onHoveredChanged: {
+//                            rectHelp.x = rectHelp.mapFromItem(twoway_help_image, 0, 0).x + 15
+//                            rectHelp.y = rectHelp.mapFromItem(twoway_help_image, 0, 0).y - 10
+//                        }
+//                    }
+//                }
+
+//                CustomLabel {
+//                    id: twoway_help_label
+//                    visible: twoway_help_mouse_area.containsMouse
+//                    Layout.fillWidth: true
+//                }
 
                 CustomLabel {
-                    id: twoway_help_label
-                    //visible: twoway_help_mouse_area.containsMouse
                     Layout.fillWidth: true
                 }
-
 
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
@@ -288,7 +291,7 @@ Item {
                     Layout.alignment: Qt.AlignLeft
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: signerSettings.signerPubKey
+                    text: qmlFactory.headlessPubKey
                     color: BSStyle.textColor
 
                 }
@@ -300,9 +303,22 @@ Item {
                     Layout.maximumWidth: 80
                     Layout.maximumHeight: 26
                     Layout.rightMargin: 6
+
                     onClicked: {
                         qmlFactory.setClipboard(qmlFactory.headlessPubKey)
                         btnZmqKeyCopy.text = qsTr("Copied")
+                        enabled = false
+                        copiedTimer.start()
+                    }
+
+                    Timer {
+                       id: copiedTimer
+                       repeat: false
+                       interval: 1000
+                       onTriggered: {
+                           btnZmqKeyCopy.enabled = true
+                           btnZmqKeyCopy.text = qsTr("Copy")
+                       }
                     }
                 }
                 CustomButton {
@@ -314,6 +330,7 @@ Item {
                     Layout.rightMargin: 6
                     onClicked: {
                         //exportSignerPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
+                        //exportSignerPubKeyDlg.folder = shortcuts.home
                         exportSignerPubKeyDlg.open()
                         exportSignerPubKeyDlg.accepted.connect(function(){
                             var zmqPubKey = qmlFactory.headlessPubKey
@@ -328,6 +345,7 @@ Item {
                         selectExisting: false
                         nameFilters: [ "Key files (*.pub)", "All files (*)" ]
                         selectedNameFilter: "*.pub"
+                        folder: shortcuts.documents
                     }
                 }
             }
@@ -406,6 +424,9 @@ Item {
                     Layout.maximumWidth: 125
                 }
 
+                CustomLabel {
+                    Layout.fillWidth: true
+                }
 
                 CustomButton {
                     text: qsTr("Manage")

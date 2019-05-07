@@ -112,7 +112,7 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
 
                 CustomLabel {
-                    text: qsTr("Receiving Address(es)")
+                    text: qsTr("Output Address(es)")
                     Layout.alignment: Qt.AlignTop
                 }
                 ScrollView {
