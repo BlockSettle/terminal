@@ -7,7 +7,6 @@
 namespace Chat {
 
    const size_t NONCE_SIZE = 24;
-   const size_t SYMMETRIC_KEY_LEN = 32;
 
    MessageData::MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime, 
       const QString& messageData, int state)

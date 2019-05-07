@@ -37,7 +37,7 @@ namespace Encryption
             }
          }
          else {
-            if (auto ies = IES_Encryption::create(logger)) {
+            if (auto ies = IES_Decryption::create(logger)) {
                return std::unique_ptr<Cipher>(ies.release());
             }
          }

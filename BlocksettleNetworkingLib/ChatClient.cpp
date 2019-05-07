@@ -618,7 +618,6 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
          break;
          
          default:
-         {}
          break;
       }
       sendUpdateMessageState(msg);
