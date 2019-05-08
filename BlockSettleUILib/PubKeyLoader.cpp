@@ -106,7 +106,7 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
       QMetaObject::invokeMethod(parent, [kt, parent, appSettings, newKey, newKeyProm] {
          PubKeyLoader loader(appSettings);
          const auto newKeyBin = BinaryData::CreateFromHex(newKey);
-         const auto oldKeyBin = loader.loadKey(PubKeyLoader::KeyType::PublicBridge);
+         const auto oldKeyBin = loader.loadKey(kt);
          if (oldKeyBin == newKeyBin) {
             newKeyProm->set_value(true);
             return;
@@ -123,7 +123,7 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
          const bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
          if (answer) {
-            loader.saveKey(PubKeyLoader::KeyType::PublicBridge, newKeyBin);
+            loader.saveKey(kt, newKeyBin);
          }
 
          newKeyProm->set_value(answer);
