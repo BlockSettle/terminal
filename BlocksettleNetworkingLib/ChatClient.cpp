@@ -60,6 +60,11 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
    //heartbeatTimer_.start();
+
+   // 300 sec
+   ownOtcExpireTimer_.setInterval(300000);
+   ownOtcExpireTimer_.setSingleShot(false);
+   connect(&ownOtcExpireTimer_, &QTimer::timeout, this, &ChatClient::onOwnOTCRequestExpired);
 }
 
 ChatClient::~ChatClient() noexcept
@@ -1095,4 +1100,52 @@ void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
    chatDb_->updateMessageStatus(message->getId(), message->getState());
    model_->notifyMessageChanged(message);
    sendUpdateMessageState(message);
+}
+
+bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
+{
+   if (request.ownRequest && !ownOtcId_.empty()) {
+      logger_->debug("[ChatClient::SubmitOTCRequest] already have own OTC");
+      return false;
+   }
+
+   bs::network::LiveOTCRequest liveRequest;
+
+   liveRequest.otcId = std::to_string(nextOtcId_++);
+   liveRequest.ownRequest = request.ownRequest;
+   liveRequest.side = request.side;
+   liveRequest.amountRange = request.amountRange;
+   liveRequest.expireTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch() + 300000;
+
+   if (request.ownRequest) {
+      liveRequest.requestorId = currentUserId_;
+      ownOtcId_ = liveRequest.otcId;
+
+      ownOtcExpireTimer_.start();
+
+      emit OTCRequestAccepted(liveRequest);
+   } else {
+      liveRequest.requestorId = baseFakeRequestorId_ + std::to_string(nextRequestorId_++);
+      emit NewOTCRequestReceived(liveRequest);
+   }
+}
+
+void ChatClient::onOwnOTCRequestExpired()
+{
+   if (ownOtcId_.empty()) {
+      logger_->error("[ChatClient::onOwnOTCRequestExpired] looks like timer was not stopped. no own otc id");
+      return;
+   }
+
+   logger_->debug("[ChatClient::onOwnOTCRequestExpired] own common OTC expired: {}"
+      , ownOtcId_);
+   emit OwnOTCRequestExpired(ownOtcId_);
+
+   ownOtcId_.clear();
+}
+
+// cancel current OTC request sent to OTC chat
+bool ChatClient::PullOwnOTCRequest(const std::string& otcRequestId)
+{
+
 }

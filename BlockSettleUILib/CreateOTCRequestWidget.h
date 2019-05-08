@@ -20,7 +20,8 @@ public:
    ~CreateOTCRequestWidget() override;
 
    bs::network::Side::Type GetSide() const;
-   bs::network::OTCRangeID GetRange() const;
+   bs::network::OTCRangeID::Type GetRange() const;
+   bool SendAsOwn() const;
 
    void setSubmitButtonEnabled(bool enabled);
 

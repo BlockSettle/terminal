@@ -21,6 +21,7 @@ public:
       qRegisterMetaType<bs::network::CCSecurityDef>("CCSecurityDef");
       qRegisterMetaType<bs::network::NewTrade>("NewTrade");
       qRegisterMetaType<bs::network::NewPMTrade>("NewPMTrade");
+      qRegisterMetaType<bs::network::LiveOTCRequest>("LiveOTCRequest");
       qRegisterMetaType<bs::PayoutSigner::Type>();
    }
 

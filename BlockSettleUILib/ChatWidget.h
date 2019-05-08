@@ -1,10 +1,10 @@
 #ifndef CHAT_WIDGET_H
 #define CHAT_WIDGET_H
 
-#include <QWidget>
-#include <QStringListModel>
-#include <QScopedPointer>
 #include <QLayoutItem>
+#include <QScopedPointer>
+#include <QStringListModel>
+#include <QWidget>
 
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
@@ -73,10 +73,17 @@ private slots:
    void onSearchUserTextEdited(const QString& text);
    void onConnectedToServer();
 
+   // OTC UI slots
    void OnOTCRequestCreated();
-   void DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range);
-
    void OnOTCResponseCreated();
+
+   // OTC chat client slots
+   void OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequest);
+   void OnOTCOwnRequestRejected(const QString& reason);
+   void OnNewOTCRequestReceived(const bs::network::LiveOTCRequest& otcRequest);
+   void OnOTCRequestCancelled(const std::string& otcId);
+   void OnOTCRequestExpired(const std::string& otcId);
+   void OnOwnOTCRequestExpired(const std::string& otcId);
 
 signals:
    void LoginFailed();

@@ -2,7 +2,8 @@
 
 OTCRequestViewModel::OTCRequestViewModel(QObject* parent)
    : QAbstractTableModel(parent)
-{}
+{
+}
 
 int OTCRequestViewModel::rowCount(const QModelIndex & parent) const
 {
@@ -10,10 +11,10 @@ int OTCRequestViewModel::rowCount(const QModelIndex & parent) const
       return 0;
    }
 
-   return (int)inputs_.size();
+   return (int)currentRequests_.size();
 }
 
-int OTCRequestViewModel::columnCount(const QModelIndex & parent) const
+int OTCRequestViewModel::columnCount(const QModelIndex &) const
 {
    return ColumnCount;
 }
@@ -21,7 +22,7 @@ int OTCRequestViewModel::columnCount(const QModelIndex & parent) const
 void OTCRequestViewModel::clear()
 {
    beginResetModel();
-   inputs_.clear();
+   currentRequests_.clear();
    endResetModel();
 }
 
@@ -31,7 +32,7 @@ QVariant OTCRequestViewModel::data(const QModelIndex & index, int role) const
    case Qt::TextAlignmentRole:
       return int(Qt::AlignLeft | Qt::AlignVCenter);
    case Qt::DisplayRole:
-      return getRowData(index.column(), inputs_[index.row()]);
+      return getRowData(index.column(), currentRequests_[index.row()]);
    }
    return QVariant{};
 }
@@ -63,28 +64,36 @@ QVariant OTCRequestViewModel::headerData(int section, Qt::Orientation orientatio
    return QVariant{};
 }
 
-QVariant OTCRequestViewModel::getRowData(const int column, const InputData& data) const
+QVariant OTCRequestViewModel::getRowData(const int column, const bs::network::LiveOTCRequest& otc) const
 {
    switch(column) {
    case ColumnSecurity:
-      return data.security;
+      return QLatin1String("EUR/XBT");
 
    case ColumnType:
-      return data.type;
+      return QLatin1String("OTC");
 
    case ColumnProduct:
-      return data.product;
+      return QLatin1String("XBT");
 
    case ColumnSide:
-      return data.side;
+      return QString::fromStdString(bs::network::Side::toString(otc.side));
 
    case ColumnQuantity:
-      return QVariant(data.quantity);
+      return QString::fromStdString(bs::network::OTCRangeID::toString(otc.amountRange));
 
    case ColumnDuration:
-      return QVariant(data.duration);
+      return 0;
    }
 
    return QVariant{};
 }
 
+void OTCRequestViewModel::AddLiveOTCRequest(const bs::network::LiveOTCRequest& otc)
+{
+   beginInsertRows(QModelIndex{}, currentRequests_.size(), currentRequests_.size());
+
+   currentRequests_.emplace_back(otc);
+
+   endInsertRows();
+}

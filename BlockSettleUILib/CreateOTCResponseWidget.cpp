@@ -24,27 +24,27 @@ void CreateOTCResponseWidget::SetSide(const bs::network::Side::Type& side)
    }
 }
 
-void CreateOTCResponseWidget::SetRange(const bs::network::OTCRangeID& range)
+void CreateOTCResponseWidget::SetRange(const bs::network::OTCRangeID::Type& range)
 {
    ui_->widgetAmountRange->setEnabled(true);
 
    switch (range) {
-   case bs::network::OTCRangeID::Range1_5:
+   case bs::network::OTCRangeID::Type::Range1_5:
       ui_->widgetAmountRange->SetRange(1, 5);
       break;
-   case bs::network::OTCRangeID::Range5_10:
+   case bs::network::OTCRangeID::Type::Range5_10:
       ui_->widgetAmountRange->SetRange(5, 10);
       break;
-   case bs::network::OTCRangeID::Range10_50:
+   case bs::network::OTCRangeID::Type::Range10_50:
       ui_->widgetAmountRange->SetRange(10, 50);
       break;
-   case bs::network::OTCRangeID::Range50_100:
+   case bs::network::OTCRangeID::Type::Range50_100:
       ui_->widgetAmountRange->SetRange(50, 100);
       break;
-   case bs::network::OTCRangeID::Range100_250:
+   case bs::network::OTCRangeID::Type::Range100_250:
       ui_->widgetAmountRange->SetRange(100, 250);
       break;
-   case bs::network::OTCRangeID::Range250plus:
+   case bs::network::OTCRangeID::Type::Range250plus:
    default:
       ui_->widgetAmountRange->SetRange(250, 1000);
       ui_->widgetAmountRange->setEnabled(false);

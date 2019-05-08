@@ -2,18 +2,20 @@
 #define CHAT_CLIENT_H
 
 
+#include "ChatClientTree/TreeObjects.h"
+#include "ChatDB.h"
+#include "ChatHandleInterfaces.h"
+#include "ChatProtocol/ChatProtocol.h"
+#include "CommonTypes.h"
+#include "DataConnectionListener.h"
+#include "SecureBinaryData.h"
+
+#include <queue>
+
+#include <QAbstractItemModel>
 #include <QObject>
 #include <QTimer>
 
-#include "ChatProtocol/ChatProtocol.h"
-#include "ChatDB.h"
-#include "DataConnectionListener.h"
-#include "SecureBinaryData.h"
-#include <queue>
-#include <QAbstractItemModel>
-
-#include "ChatClientTree/TreeObjects.h"
-#include "ChatHandleInterfaces.h"
 namespace spdlog {
    class logger;
 }
@@ -21,13 +23,11 @@ namespace Chat {
    class Request;
 }
 
-
-class ConnectionManager;
-class ZmqBIP15XDataConnection;
 class ApplicationSettings;
-class UserHasher;
 class ChatClientDataModel;
-
+class ConnectionManager;
+class UserHasher;
+class ZmqBIP15XDataConnection;
 
 class ChatClient : public QObject
              , public DataConnectionListener
@@ -102,6 +102,46 @@ public:
    bool isFriend(const QString &userId);
    QString getUserId();
 
+public:
+   // OTC related stubs
+   // should send OTC request to chat server to OTC chat
+   // Results:
+   //    Can result in signals
+   //       OTCRequestAccepted - request sent to OTC chat and was accepted
+   //       OTCRequestRejected - OTC request was rejected by chat server.
+   //    If return false - no signals will be emited
+   // Returns:
+   //    true - request was submitted
+   //    false - request was not delivered to chat server.
+   bool SubmitOTCRequest(const bs::network::OTCRequest& request);
+
+   // cancel current OTC request sent to OTC chat
+   bool PullOwnOTCRequest(const std::string& otcRequestId);
+
+// XXX temp OTC related slots.
+private slots:
+   void onOwnOTCRequestExpired();
+   // OTC related signals
+signals:
+   // self OTC request accepted.
+   void OTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequest);
+
+   // self OTC request to OTC room was rejected by chat server
+   void OTCOwnRequestRejected(const QString& reason);
+
+   // we got a new OTC request from someone in OTC chat
+   void NewOTCRequestReceived(const bs::network::LiveOTCRequest& otcRequest);
+
+   // OTC request was pulledby requestor. We should receive it even if it our own.
+   // we could not just remove OTC, it should be initiated by chat server
+   void OTCRequestCancelled(const std::string& otcId);
+
+   // OTC request expired and is not settled
+   void OTCRequestExpired(const std::string& otcId);
+
+   // own OTC request sent to OTC chat expired
+   void OwnOTCRequestExpired(const std::string& otcId);
+
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
    void readDatabase();
@@ -129,7 +169,7 @@ signals:
    void ForceLogoutSignal();
 public slots:
    //void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
-   
+
 private slots:
    void onForceLogoutSignal();
    void sendHeartbeat();
@@ -177,6 +217,15 @@ public:
    // ChatMessageReadHandler interface
 public:
    void onMessageRead(std::shared_ptr<Chat::MessageData> message) override;
+
+private:
+   // OTC temp fields. will be removed after OTC goes through chat server
+   uint64_t          nextOtcId_ = 1;
+   const std::string baseFakeRequestorId_ = "fake_req";
+   uint64_t          nextRequestorId_ = 1;
+
+   QTimer            ownOtcExpireTimer_;
+   std::string       ownOtcId_;
 };
 
 

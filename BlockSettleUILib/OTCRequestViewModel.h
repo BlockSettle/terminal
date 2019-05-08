@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "CommonTypes.h"
+
 class OTCRequestViewModel : public QAbstractTableModel
 {
 Q_OBJECT
@@ -20,6 +22,9 @@ public:
 
    void clear();
 
+public:
+   void AddLiveOTCRequest(const bs::network::LiveOTCRequest& otc);
+
 private:
    enum Columns
    {
@@ -31,21 +36,11 @@ private:
       ColumnDuration,
       ColumnCount
    };
-
-   struct InputData
-   {
-      QString           security;
-      QString           type;
-      QString           product;
-      QString           side;
-      unsigned int      quantity;
-      unsigned int      duration;
-   };
 private:
-   QVariant getRowData(const int column, const InputData& data) const;
+   QVariant getRowData(const int column, const bs::network::LiveOTCRequest& otc) const;
 
 private:
-   std::vector<InputData> inputs_;
+   std::vector<bs::network::LiveOTCRequest> currentRequests_;
 };
 
 #endif

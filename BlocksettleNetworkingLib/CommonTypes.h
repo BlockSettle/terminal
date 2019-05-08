@@ -14,6 +14,10 @@
 #include "com/celertech/marketdata/api/enums/ProductTypeProto.pb.h"
 #include "com/celertech/marketdata/api/enums/MarketDataEntryTypeProto.pb.h"
 
+#ifndef NDEBUG
+#include <<stdexcept>
+#endif
+
 namespace bs {
    namespace network {
 
@@ -361,14 +365,42 @@ namespace bs {
          uint64_t    timestamp;
       };
 
-      enum OTCRangeID
+
+      struct OTCRangeID
       {
-         Range1_5,
-         Range5_10,
-         Range10_50,
-         Range50_100,
-         Range100_250,
-         Range250plus
+         enum class Type : int
+         {
+            Range1_5,
+            Range5_10,
+            Range10_50,
+            Range50_100,
+            Range100_250,
+            Range250plus
+         };
+
+         static std::string toString(const Type& range)
+         {
+            switch(range) {
+            case Type::Range1_5:
+               return "1-5";
+            case Type::Range5_10:
+               return "5-10";
+            case Type::Range10_50:
+               return "10-50";
+            case Type::Range50_100:
+               return "50-100";
+            case Type::Range100_250:
+               return "100-250";
+            case Type::Range250plus:
+               return "250+";
+            default:
+#ifndef NDEBUG
+               throw std::runtime_error("invalid range type");
+#endif
+               return "invalid range";
+
+            }
+         }
       };
 
       struct OTCPriceRange
@@ -381,6 +413,32 @@ namespace bs {
       {
          uint64_t lower;
          uint64_t upper;
+      };
+
+      struct OTCRequest
+      {
+         Side::Type        side;
+         OTCRangeID::Type  amountRange;
+
+         // XXX
+         // ownRequest - temporary field used for test purpose until OTC goes through chat server
+         bool              ownRequest;
+      };
+
+      struct LiveOTCRequest
+      {
+         std::string    otcId;
+         std::string    requestorId;
+
+         // XXX
+         // ownRequest - temporary field used for test purpose until OTC goes through chat server
+         bool           ownRequest;
+
+         Side::Type        side;
+         OTCRangeID::Type  amountRange;
+
+         //expireTimestamp milliseconds UTC
+         uint64_t          expireTimestamp;
       };
 
    }  //namespace network
@@ -398,6 +456,7 @@ Q_DECLARE_METATYPE(bs::network::MDFields)
 Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
 Q_DECLARE_METATYPE(bs::network::NewTrade)
 Q_DECLARE_METATYPE(bs::network::NewPMTrade)
+Q_DECLARE_METATYPE(bs::network::LiveOTCRequest)
 
 
 #endif //__BS_COMMON_TYPES_H__

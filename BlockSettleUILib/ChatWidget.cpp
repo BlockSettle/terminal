@@ -1,23 +1,22 @@
 #include "ChatWidget.h"
 #include "ui_ChatWidget.h"
 
-#include "ChatClient.h"
 #include "ApplicationSettings.h"
+#include "ChatClient.h"
+#include "ChatClientDataModel.h"
 #include "ChatSearchPopup.h"
-
 #include "OTCRequestViewModel.h"
-
-#include <QScrollBar>
-#include <QMouseEvent>
-#include <QApplication>
-#include <QObject>
-#include <QDebug>
 #include "UserHasher.h"
+
+#include <QApplication>
+#include <QMouseEvent>
+#include <QObject>
+#include <QScrollBar>
+
+#include <QDebug>
 
 #include <thread>
 #include <spdlog/spdlog.h>
-#include "ChatClientDataModel.h"
-
 
 Q_DECLARE_METATYPE(std::vector<std::string>)
 
@@ -238,7 +237,7 @@ public:
                                                                 QLatin1String("*"),
                                                                 -1,
                                                                 Qt::MatchWildcard|Qt::MatchRecursive);
-      
+
       // highlight first room
       for (auto index : indexes) {
          if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
@@ -267,9 +266,6 @@ ChatWidget::ChatWidget(QWidget *parent)
 
    connect(ui_->widgetCreateOTCRequest, &CreateOTCRequestWidget::RequestCreated, this, &ChatWidget::OnOTCRequestCreated);
    connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::ResponseCreated, this, &ChatWidget::OnOTCResponseCreated);
-
-   //widgetNegotiateRequest
-   //widgetNegotiateResponse
 }
 
 ChatWidget::~ChatWidget() = default;
@@ -302,6 +298,19 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
 //           this, &ChatWidget::onSearchUserListReceived);
    //connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::returnPressed, this, &ChatWidget::onSearchUserReturnPressed);
+
+   connect(client_.get(), &ChatClient::OTCRequestAccepted
+      , this, &ChatWidget::OnOTCRequestAccepted, Qt::QueuedConnection);
+   connect(client_.get(), &ChatClient::OTCOwnRequestRejected
+      , this, &ChatWidget::OnOTCOwnRequestRejected, Qt::QueuedConnection);
+   connect(client_.get(), &ChatClient::NewOTCRequestReceived
+      , this, &ChatWidget::OnNewOTCRequestReceived, Qt::QueuedConnection);
+   connect(client_.get(), &ChatClient::OTCRequestCancelled
+      , this, &ChatWidget::OnOTCRequestCancelled, Qt::QueuedConnection);
+   connect(client_.get(), &ChatClient::OTCRequestExpired
+      , this, &ChatWidget::OnOTCRequestExpired, Qt::QueuedConnection);
+   connect(client_.get(), &ChatClient::OwnOTCRequestExpired
+      , this, &ChatWidget::OnOwnOTCRequestExpired, Qt::QueuedConnection);
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
    initPopup();
@@ -588,20 +597,15 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
 
 void ChatWidget::OnOTCRequestCreated()
 {
-   auto side = ui_->widgetCreateOTCRequest->GetSide();
-   auto range = ui_->widgetCreateOTCRequest->GetRange();
+   const auto side = ui_->widgetCreateOTCRequest->GetSide();
+   const auto range = ui_->widgetCreateOTCRequest->GetRange();
+   const bool ownOTC = ui_->widgetCreateOTCRequest->SendAsOwn();
 
-   DisplayOTCRequest(side, range);
+   if (!client_->SubmitOTCRequest(bs::network::OTCRequest{side, range, ownOTC})) {
+      logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit request to OTC chat");
+      return;
+   }
 }
-
-void ChatWidget::DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range)
-{
-   ui_->widgetCreateOTCResponse->SetSide(side);
-   ui_->widgetCreateOTCResponse->SetRange(range);
-
-   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
-}
-
 
 void ChatWidget::OnOTCResponseCreated()
 {
@@ -636,4 +640,37 @@ void ChatWidget::OTCSwitchToDMRoom()
 void ChatWidget::OTCSwitchToGlobalRoom()
 {
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+}
+
+
+void ChatWidget::OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequest)
+{
+   // add own OTC request to model
+   otcRequestViewModel_->AddLiveOTCRequest(otcRequest);
+}
+
+void ChatWidget::OnOTCOwnRequestRejected(const QString& reason)
+{
+   // do nothing for now
+}
+
+void ChatWidget::OnNewOTCRequestReceived(const bs::network::LiveOTCRequest& otcRequest)
+{
+   // add new OTC request to model
+   otcRequestViewModel_->AddLiveOTCRequest(otcRequest);
+}
+
+void ChatWidget::OnOTCRequestCancelled(const std::string& otcId)
+{
+   // remove cancelled OTC request
+}
+
+void ChatWidget::OnOTCRequestExpired(const std::string& otcId)
+{
+   // remove cancelled OTC request and all connected data
+}
+
+void ChatWidget::OnOwnOTCRequestExpired(const std::string& otcId)
+{
+   // remove own OTC request
 }

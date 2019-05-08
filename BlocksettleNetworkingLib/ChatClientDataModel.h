@@ -66,16 +66,4 @@ private:
    void beginChatInsertRows(const TreeItem::NodeType &type);
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
 #endif // CHATCLIENTUSERSMODEL_H

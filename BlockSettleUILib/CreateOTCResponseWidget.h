@@ -20,7 +20,7 @@ public:
    ~CreateOTCResponseWidget() override;
 
    void SetSide(const bs::network::Side::Type& side);
-   void SetRange(const bs::network::OTCRangeID& range);
+   void SetRange(const bs::network::OTCRangeID::Type& range);
 
 public:
    bs::network::OTCPriceRange GetResponsePriceRange() const;
