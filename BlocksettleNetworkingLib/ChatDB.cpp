@@ -155,17 +155,17 @@ bool ChatDB::add(const Chat::MessageData &msg)
 
    qryAdd.prepare(QLatin1String("INSERT INTO messages(id, timestamp, sender, receiver, state, encryption, nonce, enctext, reference)"\
                                 " VALUES(:id, :tstamp, :sid, :rid, :state, :enctype, :nonce, :enctxt, :ref);"));
-   qryAdd.bindValue(QLatin1String(":id"), msg.getId());
-   qryAdd.bindValue(QLatin1String(":tstamp"), msg.getDateTime());
-   qryAdd.bindValue(QLatin1String(":sid"), msg.getSenderId());
-   qryAdd.bindValue(QLatin1String(":rid"), msg.getReceiverId());
-   qryAdd.bindValue(QLatin1String(":state"), msg.getState());
+   qryAdd.bindValue(QLatin1String(":id"), msg.id());
+   qryAdd.bindValue(QLatin1String(":tstamp"), msg.dateTime());
+   qryAdd.bindValue(QLatin1String(":sid"), msg.senderId());
+   qryAdd.bindValue(QLatin1String(":rid"), msg.receiverId());
+   qryAdd.bindValue(QLatin1String(":state"), msg.state());
    qryAdd.bindValue(QLatin1String(":enctype"), static_cast<int>(msg.encryptionType()));
    qryAdd.bindValue(QLatin1String(":nonce"),
-                    QByteArray(reinterpret_cast<char*>(msg.getNonce().data()),
-                               static_cast<int>(msg.getNonce().size()))
+                    QByteArray(reinterpret_cast<char*>(msg.nonce().data()),
+                               static_cast<int>(msg.nonce().size()))
                     );
-   qryAdd.bindValue(QLatin1String(":enctxt"), msg.getMessageData());
+   qryAdd.bindValue(QLatin1String(":enctxt"), msg.messageData());
    qryAdd.bindValue(QLatin1String(":ref"), QString());
 
 //   qryAdd.bindValue(0, msg.getId());
@@ -262,7 +262,7 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
    }
    std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a
       , const std::shared_ptr<Chat::MessageData> &b) {
-      return (a->getDateTime().toMSecsSinceEpoch() < b->getDateTime().toMSecsSinceEpoch());
+      return (a->dateTime().toMSecsSinceEpoch() < b->dateTime().toMSecsSinceEpoch());
    });
    return records;
 }
@@ -290,7 +290,7 @@ std::vector<std::shared_ptr<Chat::MessageData> > ChatDB::getRoomMessages(const Q
    }
    std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a
       , const std::shared_ptr<Chat::MessageData> &b) {
-      return (a->getDateTime().toMSecsSinceEpoch() < b->getDateTime().toMSecsSinceEpoch());
+      return (a->dateTime().toMSecsSinceEpoch() < b->dateTime().toMSecsSinceEpoch());
    });
    return records;
 }

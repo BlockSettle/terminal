@@ -24,7 +24,7 @@ bool ChatRoomElement::isSupported(TreeItem *item) const
 //             bool forCurrentUser = (mNode->getMessage()->getSenderId().toStdString() == user
 //                             || mNode->getMessage()->getReceiverId().toStdString() == user);
                bool forThisElement =    /*mNode->getMessage()->getSenderId() == room->getId()
-                                     || */mNode->getMessage()->getReceiverId() == room->getId();
+                                     || */mNode->getMessage()->receiverId() == room->getId();
 
                byData = forThisElement;
             }
@@ -57,11 +57,11 @@ bool ChatContactElement::isSupported(TreeItem *item) const
          if (contact) {
             TreeMessageNode * mNode = static_cast<TreeMessageNode*>(item);
             if (mNode) {
-               bool forCurrentUser = (mNode->getMessage()->getSenderId().toStdString() == user
-                                   || mNode->getMessage()->getReceiverId().toStdString() == user);
+               bool forCurrentUser = (mNode->getMessage()->senderId().toStdString() == user
+                                   || mNode->getMessage()->receiverId().toStdString() == user);
                bool forThisElement = forCurrentUser &&
-                                     (  mNode->getMessage()->getSenderId() == contact->getContactId()
-                                      ||mNode->getMessage()->getReceiverId() == contact->getContactId());
+                                     (  mNode->getMessage()->senderId() == contact->getContactId()
+                                      ||mNode->getMessage()->receiverId() == contact->getContactId());
 
                byData = forThisElement;
             }
