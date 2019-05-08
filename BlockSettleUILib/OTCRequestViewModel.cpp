@@ -111,3 +111,20 @@ void OTCRequestViewModel::AddLiveOTCRequest(const bs::network::LiveOTCRequest& o
 
    endInsertRows();
 }
+
+bool OTCRequestViewModel::RemoveOTCByID(const std::string& otc)
+{
+   // XXX simple solution. Not sure at what number of OTC requests this will start to slow down UI
+   // will move to internal pointers and maps a bit later
+   for (int i=0; i < currentRequests_.size(); ++i) {
+      if (currentRequests_[i].otcId == otc) {
+         beginRemoveRows(QModelIndex{}, i, i);
+         currentRequests_.erase(currentRequests_.begin() + i);
+         endRemoveRows();
+
+         return true;
+      }
+   }
+
+   return false;
+}

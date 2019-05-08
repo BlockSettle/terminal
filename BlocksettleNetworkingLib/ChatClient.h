@@ -123,6 +123,7 @@ public:
 // XXX temp OTC related slots.
 private slots:
    void onOwnOTCRequestExpired();
+
    // OTC related signals
 signals:
    // self OTC request accepted.

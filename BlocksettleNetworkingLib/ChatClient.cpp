@@ -1140,7 +1140,16 @@ void ChatClient::onOwnOTCRequestExpired()
 // cancel current OTC request sent to OTC chat
 bool ChatClient::PullOwnOTCRequest(const std::string& otcRequestId)
 {
-   return false;
+   if (ownOtcId_ != otcRequestId) {
+      logger_->error("[ChatClient::PullOwnOTCRequest] invalid OTC ID");
+      // XXX probably something should be emitted, since chat server will(should) reject pull request
+      return false;
+   }
+
+   ownOtcId_.clear();
+
+   emit OTCRequestCancelled(otcRequestId);
+   return true;
 }
 
 void ChatClient::onRoomMessageRead(std::shared_ptr<Chat::MessageData> message)

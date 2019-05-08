@@ -24,6 +24,7 @@ public:
 
 public:
    void AddLiveOTCRequest(const bs::network::LiveOTCRequest& otc);
+   bool RemoveOTCByID(const std::string& otc);
 
    bs::network::LiveOTCRequest GetOTCRequest(const QModelIndex& index);
 

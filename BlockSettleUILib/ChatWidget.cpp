@@ -272,6 +272,7 @@ ChatWidget::ChatWidget(QWidget *parent)
 
    connect(ui_->widgetCreateOTCRequest, &CreateOTCRequestWidget::RequestCreated, this, &ChatWidget::OnOTCRequestCreated);
    connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::ResponseCreated, this, &ChatWidget::OnOTCResponseCreated);
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::PullOTCRequested, this, &ChatWidget::OnPullOwnOTCRequest);
 }
 
 ChatWidget::~ChatWidget() = default;
@@ -588,11 +589,12 @@ void ChatWidget::onElementSelected(CategoryElement *element)
          OTCSwitchToCommonRoom();
       } else {
          ui_->stackedWidgetMessages->setCurrentIndex(0);
-         if (IsGlobalChatRoom(currentChat_)) {
+         // XXX: DM OTC request not supported yet. Do not remove commented code
+         // if (IsGlobalChatRoom(currentChat_)) {
             OTCSwitchToGlobalRoom();
-         } else {
-            OTCSwitchToDMRoom();
-         }
+         // } else {
+            // OTCSwitchToDMRoom();
+         // }
       }
    }
 }
@@ -625,6 +627,11 @@ void ChatWidget::OnOTCRequestCreated()
       submittedOtc_ = otcRequest;
       DisplayOwnSubmittedOTC();
    }
+}
+
+void ChatWidget::OnPullOwnOTCRequest(const std::string& otcId)
+{
+   client_->PullOwnOTCRequest(otcId);
 }
 
 void ChatWidget::OnOTCResponseCreated()
@@ -683,7 +690,27 @@ void ChatWidget::OnNewOTCRequestReceived(const bs::network::LiveOTCRequest& otcR
 
 void ChatWidget::OnOTCRequestCancelled(const std::string& otcId)
 {
-   // remove cancelled OTC request
+   if (IsOwnOTCId(otcId)) {
+      OnOwnOTCPulled();
+   } else {
+      OnOTCCancelled(otcId);
+   }
+}
+
+bool ChatWidget::IsOwnOTCId(const std::string& otcId) const
+{
+   return otcAccepted_ && (otcId == ownActiveOTC_.otcId);
+}
+
+void ChatWidget::OnOwnOTCPulled()
+{
+   otcSubmitted_ = otcAccepted_ = false;
+   otcRequestViewModel_->RemoveOTCByID(ownActiveOTC_.otcId);
+}
+
+void ChatWidget::OnOTCCancelled(const std::string& otcId)
+{
+   otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
 void ChatWidget::OnOTCRequestExpired(const std::string& otcId)
