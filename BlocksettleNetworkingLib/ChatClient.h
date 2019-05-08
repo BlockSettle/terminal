@@ -35,6 +35,7 @@ class ChatClient : public QObject
              , public ChatItemActionsHandler
              , public ChatSearchActionsHandler
              , public ChatMessageReadHandler
+             , public ModelChangesHandler
 {
    Q_OBJECT
 
@@ -179,6 +180,9 @@ public:
 public:
    void onMessageRead(std::shared_ptr<Chat::MessageData> message) override;
    void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
-};
 
+   // ModelChangesHandler interface
+public:
+   void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
+};
 #endif   // CHAT_CLIENT_H

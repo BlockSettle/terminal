@@ -430,14 +430,23 @@ bool ChatDB::getContacts(ContactUserDataList &contactList)
 bool ChatDB::updateContact(const ContactUserData &contact)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=:user_name, status=:status WHERE user_id=:user_id;"))) {
-      logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
-      return false;
-   }
 
-   query.bindValue(QLatin1String(":user_name"), contact.userName());
-   query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
-   query.bindValue(QLatin1String(":user_id"), contact.userId());
+   if (!contact.userName().simplified().isEmpty()) {
+      if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=:user_name, status=:status WHERE user_id=:user_id;"))) {
+         logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
+         return false;
+      }
+      query.bindValue(QLatin1String(":user_name"), contact.userName());
+      query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
+      query.bindValue(QLatin1String(":user_id"), contact.userId());
+   } else {
+      if (!query.prepare(QLatin1String("UPDATE contacts SET status=:status WHERE user_id=:user_id;"))) {
+         logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
+         return false;
+      }
+      query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
+      query.bindValue(QLatin1String(":user_id"), contact.userId());
+   }
 
    if (!query.exec()) {
       logger_->error("[ChatDB::updateContact] failed to exec query: {}", query.lastError().text().toStdString());

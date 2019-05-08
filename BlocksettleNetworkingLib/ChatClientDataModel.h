@@ -15,6 +15,7 @@ public:
       ItemAcceptTypeRole,
       RoomTitleRole,
       RoomIdRole,
+      ContactTitleRole,
       ContactIdRole,
       ContactStatusRole,
       ContactOnlineStatusRole,
@@ -71,19 +72,12 @@ private:
 
 private:
    NewMessageMonitor * newMessageMonitor_;
+   ModelChangesHandler * modelChangesHandler_;
    bool newMesagesFlag_;
+
+   // QAbstractItemModel interface
+public:
+   bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+   void setModelChangesHandler(ModelChangesHandler *modelChangesHandler);
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
 #endif // CHATCLIENTUSERSMODEL_H
