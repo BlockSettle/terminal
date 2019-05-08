@@ -1,7 +1,22 @@
 {
-   "latest_version" : "0.15.3",
-   "release_date" : "07 May 2019",
+   "latest_version" : "0.15.4",
+   "release_date" : "08 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.4",
+         "previous_version" : "0.15.3",
+         "release_date" : "08 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes"
+         ],
+         "revision" : "81cbb46d",
+         "common_revision" : "f7df26fd"
+      },
       {
          "version_string" : "0.15.3",
          "previous_version" : "0.15.2",
