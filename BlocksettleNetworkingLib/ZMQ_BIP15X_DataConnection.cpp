@@ -542,6 +542,11 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       sendPacket(packet.toBinStr());
    };
 
+   //compute server name
+   stringstream ss;
+   ss << hostAddr_ << ":" << hostPort_;
+   const auto srvId = ss.str();
+
    // Read the message, get the type, and process as needed. Code mostly copied
    // from Armory.
    auto msgbdr = msgObj.getSingleBinaryMessage();
@@ -570,11 +575,6 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
             authPeers_->addPeer(cookieKey, keyName);
          }
       }
-
-      //compute server name
-      stringstream ss;
-      ss << hostAddr_ << ":" << hostPort_;
-      const auto srvId = ss.str();
 
       // If we don't have the key already, we may ask the the user if they wish
       // to continue. (Remote signer only.)
@@ -762,6 +762,8 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       if (cbCompleted_) {
          cbCompleted_();
       }
+      logger_->info("[processHandshake] BIP 150 handshake with server complete "
+         "- connection to {} is ready and fully secured", srvId);
 
       break;
    }
