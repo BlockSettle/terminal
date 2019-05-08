@@ -14,6 +14,7 @@
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
 
+
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ZmqBIP15XDataConnection> &conn
    , SignerAdapter *parent)
