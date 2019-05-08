@@ -37,6 +37,8 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       , zmqContext, cbTrustedClients, false, true, absCookiePath);
    adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
 
+   adapterConn->setLocalHeartbeatInterval();
+
    if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
       , adapterLsn_.get())) {
       logger_->error("Failed to bind adapter connection");
@@ -176,6 +178,7 @@ void HeadlessAppObj::onlineProcessing()
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
       , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false, true, false
       , absCookiePath);
+   connection_->setLocalHeartbeatInterval();
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_

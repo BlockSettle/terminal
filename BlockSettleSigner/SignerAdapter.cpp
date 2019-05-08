@@ -12,8 +12,12 @@
 #include "SignerAdapterContainer.h"
 #include "SignerInterfaceListener.h"
 
-static const std::string kLocalAddrV4 = "127.0.0.1";
-static const std::string kLocalAddrPort = "23457";
+namespace {
+
+   const std::string kLocalAddrV4 = "127.0.0.1";
+   const std::string kLocalAddrPort = "23457";
+
+} // namespace
 
 using namespace Blocksettle::Communication;
 
@@ -41,6 +45,8 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort + "_1";
       adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
    }
+
+   adapterConn->setLocalHeartbeatInterval();
 
    {
       const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";

@@ -8,11 +8,11 @@ QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params
    , const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), settings_(params), adapter_(adapter), logger_(logger)
 {
-   connect(settings_.get(), &SignerSettings::offlineChanged, [this] { emit offlineChanged(); });
-   connect(settings_.get(), &SignerSettings::listenSocketChanged, [this] { emit listenSocketChanged(); });
-   connect(settings_.get(), &SignerSettings::limitManualXbtChanged, [this] { emit manualSignLimitChanged(); });
-   connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, [this] { emit autoSignLimitChanged(); });
-   connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, [this] { emit autoSignTimeLimitChanged(); });
+   connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLStatusUpdater::offlineChanged);
+   connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLStatusUpdater::listenSocketChanged);
+   connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLStatusUpdater::manualSignLimitChanged);
+   connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLStatusUpdater::autoSignLimitChanged);
+   connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLStatusUpdater::autoSignTimeLimitChanged);
 
    connect(adapter_, &SignerAdapter::peerConnected, this, &QMLStatusUpdater::onPeerConnected);
    connect(adapter_, &SignerAdapter::peerDisconnected, this, &QMLStatusUpdater::onPeerDisconnected);
