@@ -709,9 +709,10 @@ void BSTerminalMainWindow::InitChatView()
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
 
-   if (NotificationCenter::instance() != NULL)
+   if (NotificationCenter::instance() != NULL) {
       connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick,
               ui_->widgetChat, &ChatWidget::onNewChatMessageTrayNotificationClicked);
+   }
 }
 
 void BSTerminalMainWindow::InitChartsView()
@@ -1133,6 +1134,7 @@ void BSTerminalMainWindow::onLogout()
 {
    ui_->widgetWallets->setUsername(QString());
    ui_->widgetChat->logout();
+   ui_->widgetChart->disconnect();
 
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();

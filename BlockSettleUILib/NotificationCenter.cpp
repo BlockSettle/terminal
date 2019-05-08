@@ -65,7 +65,7 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 {
    mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
    connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
-      if (index != mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat)) {
+      if (index == mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat)) {
          mainWinUi_->tabWidget->setTabIcon(index, QIcon());
       }
    });
@@ -78,14 +78,10 @@ void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMess
       const bool isInCurrentChat = msg[2].toBool();
       const bool hasUnreadMessages = msg[3].toBool();
 
-      if (hasUnreadMessages) {
+      if (mainWinUi_->tabWidget->currentIndex() != chatIndex && !isInCurrentChat && hasUnreadMessages) {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
       } else {
-         if (mainWinUi_->tabWidget->currentIndex() != chatIndex && isInCurrentChat) {
-            mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
-         } else {
-            mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
-         }
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
       }
       
       return;
@@ -281,6 +277,9 @@ void NotificationTrayIconResponder::messageClicked()
    else if (newChatMessage_) {
       if (!newChatId_.isNull() && globalInstance != NULL) {
          emit globalInstance->newChatMessageClick(newChatId_);
+
+         const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
          mainWinUi_->tabWidget->activateWindow();
       }

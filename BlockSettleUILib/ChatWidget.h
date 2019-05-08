@@ -132,7 +132,7 @@ public:
 
    // NewMessageMonitor interface
 public:
-   void onNewMessagePresent(const bool isNewMessagePresented) override;
+   void onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element) override;
 };
 
 
