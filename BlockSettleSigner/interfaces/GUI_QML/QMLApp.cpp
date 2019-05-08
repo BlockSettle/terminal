@@ -59,11 +59,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
-
-   connect(adapter_, &SignerAdapter::customDialogRequest, this, [this](const QString &dialogName, const QVariantMap &data){
-      QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
-                                , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
-   });
+   connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -104,7 +100,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
       connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 
-   #ifdef BS_USE_DBUS
+#ifdef BS_USE_DBUS
       if (dbus_->isValid()) {
          notifMode_ = Freedesktop;
 
@@ -112,7 +108,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
             this, &QMLAppObj::onSysTrayMsgClicked);
          connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
       }
-   #endif // BS_USE_DBUS
+#endif // BS_USE_DBUS
    }
 }
 
@@ -295,13 +291,13 @@ void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, co
          if (notifMode_ == QSystemTray) {
             trayIconOptional_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
          }
-   #ifdef BS_USE_DBUS
+#ifdef BS_USE_DBUS
          else {
             dbus_->notifyDBus(QSystemTrayIcon::Warning,
                tr("Password request"), notifPrompt,
                QIcon(), 30000);
          }
-   #endif // BS_USE_DBUS
+#endif // BS_USE_DBUS
       }
 
       raiseQmlWindow();
@@ -332,4 +328,24 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 {
    emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
+}
+
+void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantMap &data)
+{
+   QMetaEnum metaSignerDialogType = QMetaEnum::fromType<bs::signer::ui::DialogType>();
+
+   bool isDialogCorrect = false;
+   for (int i = 0; i < metaSignerDialogType.keyCount(); ++i) {
+      if (bs::signer::ui::getSignerDialogPath(static_cast<bs::signer::ui::DialogType>(i)) == dialogName) {
+         isDialogCorrect = true;
+         break;
+      }
+   }
+
+   if (!isDialogCorrect) {
+      throw(std::logic_error("Unknown signer dialog"));
+      return;
+   }
+   QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
+                             , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
 }

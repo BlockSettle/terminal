@@ -70,6 +70,7 @@ private slots:
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
    void onCancelSignTx(const BinaryData &txId);
+   void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
 
 private:
    void settingsConnections();
