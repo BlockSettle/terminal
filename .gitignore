@@ -9,6 +9,7 @@
 *.pfx
 *.log
 *.db
+*.user
 
 build_tests/
 tests.release/
@@ -19,3 +20,4 @@ generated_proto/
 tx_cache
 tx_cache-lock
 unit_tests.log
+
