@@ -59,7 +59,7 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       ("d,dirwallets", "Directory where wallets reside"
          , cxxopts::value<std::string>(walletsDir_))
       ("terminal_id_key", "Set terminal BIP 150 ID key"
-         , cxxopts::value<std::string>(termIDKeyStr_)->default_value(termIDKeyStr_))
+         , cxxopts::value<std::string>(termIDKeyStr_))
       ("testnet", "Set bitcoin network type to testnet"
          , cxxopts::value<bool>()->default_value("false"))
       ("mainnet", "Set bitcoin network type to mainnet"
@@ -70,18 +70,30 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
          , cxxopts::value<std::string>(guiMode)->default_value("fullgui"))
       ;
 
-   const auto result = options.parse(argc, argv);
+   try {
+      const auto result = options.parse(argc, argv);
 
-   if (result.count("help")) {
+      if (result.count("help")) {
+         std::cout << options.help({ "" }) << std::endl;
+         exit(0);
+      }
+
+      if (result.count("mainnet")) {
+         testNet_ = false;
+      }
+      else if (result.count("testnet")) {
+         testNet_ = true;
+      }
+
+   }
+   catch(const std::exception& e) {
+      // The logger should still be outputting to stdout at this point. Still,
+      // in case this changes, output help directly to stdout.
+      logger_->warn("[{}] Signer option error: {}", __func__, e.what());
+      logger_->warn("[{}] The following options are available:", __func__);
       std::cout << options.help({ "" }) << std::endl;
+      logger_->warn("[{}] Signer will now exit.", __func__);
       exit(0);
-   }
-
-   if (result.count("mainnet")) {
-      testNet_ = false;
-   }
-   else if (result.count("testnet")) {
-      testNet_ = true;
    }
 
    if (guiMode == "lightgui") {
