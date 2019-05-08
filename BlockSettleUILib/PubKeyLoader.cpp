@@ -102,7 +102,8 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
    // NB: This may need to be altered later. The PuB key should be hard-coded
    // and respected.
    return [kt, parent, appSettings] (const std::string& oldKey
-         , const std::string& newKey, std::shared_ptr<std::promise<bool>> newKeyProm) {
+         , const std::string& newKey, const std::string& srvAddrPort
+         , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
       QMetaObject::invokeMethod(parent, [kt, parent, appSettings, newKey, newKeyProm] {
          PubKeyLoader loader(appSettings);
          const auto newKeyBin = BinaryData::CreateFromHex(newKey);
