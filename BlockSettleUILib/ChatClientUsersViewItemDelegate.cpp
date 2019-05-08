@@ -1,5 +1,6 @@
 #include "ChatClientUsersViewItemDelegate.h"
 #include "ChatClientDataModel.h"
+#include <QPainter>
 
 using NodeType = TreeItem::NodeType;
 using Role = ChatClientDataModel::Role;
@@ -68,12 +69,8 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
    bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
-   itemOption.text = index.data(Role::RoomTitleRole).toString()
-                     .append(newMessage
-                             ? QLatin1String("[*]")
-                             : QLatin1String(""));
+   itemOption.text = index.data(Role::RoomTitleRole).toString();
    QStyledItemDelegate::paint(painter, itemOption, index);
-
 }
 
 void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
@@ -87,10 +84,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
    ContactStatus contactStatus = index.data(Role::ContactStatusRole).value<ContactStatus>();
    OnlineStatus onlineStatus = index.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
    bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
-   itemOption.text = index.data(Role::ContactIdRole).toString()
-                     .append(newMessage
-                             ? QLatin1String("[*]")
-                             : QLatin1String(""));
+   itemOption.text = index.data(Role::ContactIdRole).toString();   
 
    switch (contactStatus) {
       case ContactStatus::Accepted:
@@ -115,7 +109,19 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
          break;
    }
-   return QStyledItemDelegate::paint(painter, itemOption, index);
+   
+   QStyledItemDelegate::paint(painter, itemOption, index);
+
+   // draw dot
+   if (newMessage) {
+      auto text = index.data(Role::ContactIdRole).toString();
+      QFontMetrics fm(itemOption.font, painter->device());
+      auto textRect = fm.boundingRect(itemOption.rect, 0, text);
+      auto textWidth = textRect.width();
+      const QPixmap pixmap(QLatin1String(":/ICON_DOT"));
+      const QRect r(itemOption.rect.left() + textWidth + pixmap.width(), itemOption.rect.top() + pixmap.height() - 1, pixmap.width(), pixmap.height());
+      painter->drawPixmap(r, pixmap, pixmap.rect());
+   }
 }
 
 void ChatClientUsersViewItemDelegate::paintUserElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const

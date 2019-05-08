@@ -77,33 +77,19 @@ std::shared_ptr<ChatClientDataModel> ChatClient::getDataModel()
    return model_;
 }
 
-std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt)
+std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt
+   , const ZmqBIP15XDataConnection::cbNewKey &cb)
 {
    if (connection_) {
       logger_->error("[ChatClient::loginToServer] connecting with not purged connection");
-      return std::string();
+      return {};
    }
 
    currentUserId_ = hasher_->deriveKey(email);
    currentJwt_ = jwt;
 
    connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
-
-   // Define the callback that will be used to determine if the signer's BIP
-   // 150 identity key, if it has changed, will be accepted. It needs strings
-   // for the old and new keys, and a promise to set once the user decides.
-   // NB: This may need to be altered later. The PuB key should be hard-coded
-   // and respected.
-   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
-      [this](const std::string& oldKey, const std::string& newKey
-      , std::shared_ptr<std::promise<bool>> newKeyProm)->void
-   {
-      logger_->info("[ChatClient::{}] Temporary kludge for accepting the "
-         "public bridge ID key. Need to check against a hard-coded value."
-         , __func__);
-      newKeyProm->set_value(true);
-   };
-   connection_->setCBs(ourNewKeyCB);
+   connection_->setCBs(cb);
 
    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
                             , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
@@ -111,8 +97,6 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
       logger_->error("[ChatClient::loginToServer] failed to open ZMQ data connection");
       connection_.reset();
    }
-
-
 
    return currentUserId_;
 }

@@ -12,6 +12,7 @@
 #include "CelerClient.h"
 #include "QWalletInfo.h"
 #include "SignContainer.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 namespace Ui {
     class BSTerminalMainWindow;
@@ -233,6 +234,9 @@ private:
    bool armoryKeyDialogShown_ = false;
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;
+
+   ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
+   ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+#include "ZMQ_BIP15X_DataConnection.h"
+
 namespace spdlog {
    class logger;
 }
@@ -20,8 +22,9 @@ class CCPubConnection : public QObject
 Q_OBJECT
 
 public:
-   CCPubConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const std::shared_ptr<ConnectionManager>& connectionManager);
+   CCPubConnection(const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<ConnectionManager> &
+      , const ZmqBIP15XDataConnection::cbNewKey &cb = nullptr);
    ~CCPubConnection() noexcept override = default;
 
    CCPubConnection(const CCPubConnection&) = delete;
@@ -57,6 +60,7 @@ protected:
 
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
+   ZmqBIP15XDataConnection::cbNewKey      cbApproveConn_ = nullptr;
    std::shared_ptr<RequestReplyCommand>   cmdPuB_;
 };
 

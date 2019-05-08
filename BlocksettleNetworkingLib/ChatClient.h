@@ -14,14 +14,14 @@
 
 #include "ChatClientTree/TreeObjects.h"
 #include "ChatHandleInterfaces.h"
+#include "ZMQ_BIP15X_DataConnection.h"
+
 namespace spdlog {
    class logger;
 }
 namespace Chat {
    class Request;
 }
-
-
 class ConnectionManager;
 class ZmqBIP15XDataConnection;
 class ApplicationSettings;
@@ -51,7 +51,8 @@ public:
 
    std::shared_ptr<ChatClientDataModel> getDataModel();
 
-   std::string loginToServer(const std::string& email, const std::string& jwt);
+   std::string loginToServer(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout(bool send = true);
 
    void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
