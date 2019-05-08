@@ -1,9 +1,18 @@
 #include "MockAuthAddrMgr.h"
 
+namespace {
+
+void newKeyCb(const std::string&, const std::string&
+   , const std::shared_ptr<std::promise<bool>> &promise)
+{
+   promise->set_value(true);
+}
+
+} // namespace
 
 MockAuthAddrMgr::MockAuthAddrMgr(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ArmoryConnection> &armory)
-   : AuthAddressManager(logger, armory)
+   : AuthAddressManager(logger, armory, newKeyCb)
 {
    addresses_ = { bs::Address(std::string("2MxeBMYgTeF9XGvgLVLDQg5wW15WiWtGqPf")),
       bs::Address(std::string("2NFWju6yY2UMW8RQ3gPc2bz3CDLNDrfssdp")) };
