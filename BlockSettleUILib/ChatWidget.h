@@ -1,6 +1,7 @@
 #ifndef CHAT_WIDGET_H
 #define CHAT_WIDGET_H
 
+#include <QItemSelection>
 #include <QLayoutItem>
 #include <QScopedPointer>
 #include <QStringListModel>
@@ -81,7 +82,7 @@ private slots:
    void OnOTCRequestCreated();
    void OnOTCResponseCreated();
 
-   void OnOTCSelected(const QModelIndex& index);
+   void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
    // OTC chat client slots
    void OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequest);
@@ -103,6 +104,17 @@ private:
    void OTCSwitchToDMRoom();
    void OTCSwitchToGlobalRoom();
 
+   // used to display proper widget if OTC room selected.
+   // either create OTC or Pull OTC, if was submitted
+   void DisplayCorrespondingOTCRequestWidget();
+
+   bool IsOTCRequestSubmitted() const;
+   bool IsOTCRequestAccepted() const;
+
+   void DisplayCreateOTCWidget();
+   void DisplayOwnSubmittedOTC();
+   void DisplayOwnLiveOTC();
+
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
 
@@ -123,6 +135,12 @@ private:
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
+
+   bool                          otcSubmitted_ = false;
+   bs::network::OTCRequest       submittedOtc_;
+
+   bool                          otcAccepted_ = false;
+   bs::network::LiveOTCRequest   ownActiveOTC_;
 
 private:
    bool isRoom();
