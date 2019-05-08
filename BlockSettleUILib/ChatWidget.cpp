@@ -28,6 +28,7 @@ enum class OTCPages : int
    OTCLoginRequiredShieldPage = 0,
    OTCGeneralRoomShieldPage,
    OTCCreateRequestPage,
+   OTCPullOwnOTCRequestPage,
    OTCCreateResponsePage,
    OTCNegotiateRequestPage,
    OTCNegotiateResponsePage
@@ -319,6 +320,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::OwnOTCRequestExpired
       , this, &ChatWidget::OnOwnOTCRequestExpired, Qt::QueuedConnection);
 
+   connect(ui_->treeViewOTCRequests, &QTreeView::clicked, this, &ChatWidget::OnOTCSelected);
+   connect(ui_->treeViewOTCRequests, &QTreeView::doubleClicked, this, &ChatWidget::OnOTCSelected);
+
    changeState(State::LoggedOut); //Initial state is LoggedOut
    initPopup();
 }
@@ -338,7 +342,7 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
 {
    if (users.size() > 0) {
       std::shared_ptr<Chat::UserData> firstUser = users.at(0);
-      popup_->setUserID(firstUser->getUserId()); 
+      popup_->setUserID(firstUser->getUserId());
       popup_->setUserIsInContacts(client_->isFriend(firstUser->getUserId()));
    } else {
       popup_->setUserID(QString());
@@ -347,7 +351,7 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
    setPopupVisible(true);
 
    // hide popup after a few sec
-   if (users.size() == 0) 
+   if (users.size() == 0)
       popupVisibleTimer_->start(kShowEmptyFoundUserListTimeoutMs);
 }
 
@@ -398,7 +402,7 @@ void ChatWidget::onMessagesUpdated()
 }
 
 void ChatWidget::initPopup()
-{   
+{
    // create popup
    popup_ = new ChatSearchPopup(this);
    popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
@@ -682,9 +686,29 @@ void ChatWidget::OnOwnOTCRequestExpired(const std::string& otcId)
    // remove own OTC request
 }
 
+void ChatWidget::OnOTCSelected(const QModelIndex& index)
+{
+   const auto otc = otcRequestViewModel_->GetOTCRequest(index);
+   if (!otc.IsValid()) {
+      logger_->error("[ChatWidget::OnOTCSelected] can't get selected OTC");
+      return;
+   }
+
+   if (otc.ownRequest) {
+      // display request that could be pulled
+      ui_->widgetPullOwnOTCRequest->DisplayActiveOTC(otc);
+      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
+   } else {
+      // display negotiation request
+      // NOTE: do we need to switch to channel if we already replied to this OTC?
+      // what if we already replied to this?
+      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
+   }
+}
+
 void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element)
 {
-   qDebug() << "New Message: " << (isNewMessagePresented?"TRUE":"FALSE");
+   qDebug() << "New Message: " << (isNewMessagePresented ? "TRUE" : "FALSE");
 
    // show notification about new message in tray icon
    if (isNewMessagePresented) {
@@ -699,10 +723,10 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, const Cat
                const bool isInCurrentChat = false;
                const bool hasUnreadMessages = true;
 
-               NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, 
-                                         {contact->getContactId(), 
-                                          tr("New message"), 
-                                          QVariant(isInCurrentChat), 
+               NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
+                                         {contact->getContactId(),
+                                          tr("New message"),
+                                          QVariant(isInCurrentChat),
                                           QVariant(hasUnreadMessages)});
             }
          }

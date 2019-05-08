@@ -81,6 +81,8 @@ private slots:
    void OnOTCRequestCreated();
    void OnOTCResponseCreated();
 
+   void OnOTCSelected(const QModelIndex& index);
+
    // OTC chat client slots
    void OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequest);
    void OnOTCOwnRequestRejected(const QString& reason);
@@ -141,13 +143,5 @@ public:
 public:
    void onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element) override;
 };
-
-
-
-
-
-
-
-
 
 #endif // CHAT_WIDGET_H

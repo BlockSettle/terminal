@@ -439,6 +439,12 @@ namespace bs {
 
          //expireTimestamp milliseconds UTC
          uint64_t          expireTimestamp;
+
+         LiveOTCRequest() : expireTimestamp{0} {}
+
+         bool IsValid() const {
+            return expireTimestamp != 0;
+         }
       };
 
    }  //namespace network

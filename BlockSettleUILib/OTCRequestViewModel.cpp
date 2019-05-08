@@ -26,8 +26,22 @@ void OTCRequestViewModel::clear()
    endResetModel();
 }
 
+bs::network::LiveOTCRequest OTCRequestViewModel::GetOTCRequest(const QModelIndex& index)
+{
+   if (!index.isValid() || index.row() >= currentRequests_.size()) {
+      return {};
+   }
+
+   return currentRequests_[index.row()];
+}
+
+
 QVariant OTCRequestViewModel::data(const QModelIndex & index, int role) const
 {
+   if (!index.isValid() || index.row() >= currentRequests_.size()) {
+      return {};
+   }
+
    switch (role) {
    case Qt::TextAlignmentRole:
       return int(Qt::AlignLeft | Qt::AlignVCenter);

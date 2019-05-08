@@ -25,6 +25,8 @@ public:
 public:
    void AddLiveOTCRequest(const bs::network::LiveOTCRequest& otc);
 
+   bs::network::LiveOTCRequest GetOTCRequest(const QModelIndex& index);
+
 private:
    enum Columns
    {

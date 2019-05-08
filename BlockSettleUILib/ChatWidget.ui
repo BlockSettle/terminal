@@ -621,6 +621,7 @@
             <widget class="OTCLoginRequiredShield" name="widgetLoginRequiredShield"/>
             <widget class="OTCGeneralRoomShield" name="widgetGeneralShield"/>
             <widget class="CreateOTCRequestWidget" name="widgetCreateOTCRequest"/>
+            <widget class="PullOwnOTCRequestWidget" name="widgetPullOwnOTCRequest"/>
             <widget class="CreateOTCResponseWidget" name="widgetCreateOTCResponse"/>
             <widget class="OTCNegotiationRequestWidget" name="widgetNegotiateRequest"/>
             <widget class="OTCNegotiationResponseWidget" name="widgetNegotiateResponse"/>
@@ -694,6 +695,12 @@
    <class>OTCGeneralRoomShield</class>
    <extends>QWidget</extends>
    <header>OTCGeneralRoomShield.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PullOwnOTCRequestWidget</class>
+   <extends>QWidget</extends>
+   <header>PullOwnOTCRequestWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

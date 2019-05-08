@@ -467,6 +467,9 @@
         <property name="text">
          <string>Settlement Period: 300 sec</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
        </widget>
       </item>
      </layout>
