@@ -9,6 +9,7 @@
 #include "CommonTypes.h"
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include <queue>
 
@@ -51,7 +52,8 @@ public:
 
    std::shared_ptr<ChatClientDataModel> getDataModel();
 
-   std::string loginToServer(const std::string& email, const std::string& jwt);
+   std::string loginToServer(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout(bool send = true);
 
    void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
@@ -217,6 +219,7 @@ public:
    // ChatMessageReadHandler interface
 public:
    void onMessageRead(std::shared_ptr<Chat::MessageData> message) override;
+   void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
 
 private:
    // OTC temp fields. will be removed after OTC goes through chat server
@@ -227,7 +230,5 @@ private:
    QTimer            ownOtcExpireTimer_;
    std::string       ownOtcId_;
 };
-
-
 
 #endif   // CHAT_CLIENT_H

@@ -5,8 +5,10 @@
 #include "ChatClient.h"
 #include "ChatClientDataModel.h"
 #include "ChatSearchPopup.h"
+#include "NotificationCenter.h"
 #include "OTCRequestViewModel.h"
 #include "UserHasher.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -56,7 +58,8 @@ public:
    explicit ChatWidgetState(ChatWidget* chat, ChatWidget::State type) : chat_(chat), type_(type) {}
    virtual ~ChatWidgetState() = default;
 
-   virtual std::string login(const std::string& email, const std::string& jwt) = 0;
+   virtual std::string login(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &) = 0;
    virtual void logout() = 0;
    virtual void onLoggedOut() { }
    virtual void onSendButtonClicked() = 0;
@@ -90,9 +93,10 @@ public:
       chat_->SetLoggedOutOTCState();
    }
 
-   std::string login(const std::string& email, const std::string& jwt) override {
+   std::string login(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &cb) override {
       chat_->logger_->debug("Set user name {}", email);
-      const auto userId = chat_->client_->loginToServer(email, jwt);
+      const auto userId = chat_->client_->loginToServer(email, jwt, cb);
       chat_->ui_->textEditMessages->setOwnUserId(userId);
       return userId;
    }
@@ -135,7 +139,8 @@ public:
       chat_->onUserClicked({});
    }
 
-   std::string login(const std::string& /*email*/, const std::string& /*jwt*/) override {
+   std::string login(const std::string& /*email*/, const std::string& /*jwt*/
+      , const ZmqBIP15XDataConnection::cbNewKey &) override {
       chat_->logger_->info("Already logged in! You should first logout!");
       return std::string();
    }
@@ -276,7 +281,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 {
    logger_ = logger;
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
-   ui_->treeViewUsers->setModel(client_->getDataModel().get());
+   auto model = client_->getDataModel();
+   model->setNewMessageMonitor(this);
+   ui_->treeViewUsers->setModel(model.get());
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(new LoggerWatcher());
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
@@ -436,10 +443,11 @@ void ChatWidget::setPopupVisible(const bool &value)
    }
 }
 
-std::string ChatWidget::login(const std::string& email, const std::string& jwt)
+std::string ChatWidget::login(const std::string& email, const std::string& jwt
+   , const ZmqBIP15XDataConnection::cbNewKey &cb)
 {
    try {
-      const auto userId = stateCurrent_->login(email, jwt);
+      const auto userId = stateCurrent_->login(email, jwt, cb);
       needsToStartFirstRoom_ = true;
       return userId;
    }
@@ -642,7 +650,6 @@ void ChatWidget::OTCSwitchToGlobalRoom()
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
 }
 
-
 void ChatWidget::OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequest)
 {
    // add own OTC request to model
@@ -673,4 +680,32 @@ void ChatWidget::OnOTCRequestExpired(const std::string& otcId)
 void ChatWidget::OnOwnOTCRequestExpired(const std::string& otcId)
 {
    // remove own OTC request
+}
+
+void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element)
+{
+   qDebug() << "New Message: " << (isNewMessagePresented?"TRUE":"FALSE");
+
+   // show notification about new message in tray icon
+   if (isNewMessagePresented) {
+      auto data = element->getDataObject();
+
+      if (data->getType() == Chat::DataObject::Type::ContactRecordData) {
+         auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(data);
+
+         // don't show notification for global chat
+         if (contact && contact->getContactId() != QLatin1String("global_chat")) {
+            if ( contact->getContactId() != currentChat_ ){
+               const bool isInCurrentChat = false;
+               const bool hasUnreadMessages = true;
+
+               NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, 
+                                         {contact->getContactId(), 
+                                          tr("New message"), 
+                                          QVariant(isInCurrentChat), 
+                                          QVariant(hasUnreadMessages)});
+            }
+         }
+      }
+   }
 }

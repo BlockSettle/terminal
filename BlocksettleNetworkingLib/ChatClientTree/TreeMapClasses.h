@@ -50,13 +50,17 @@ class CategoryElement : public TreeItem {
    CategoryElement(NodeType elementType, NodeType storingType, std::shared_ptr<Chat::DataObject> object)
       : TreeItem(elementType, storingType, NodeType::CategoryNode)
       , dataObject_(object)
+      , newItemsFlag_(false)
    {
 
    }
 public:
    std::shared_ptr<Chat::DataObject> getDataObject() const {return dataObject_;}
+   bool updateNewItemsFlag();
+   bool getNewItemsFlag() const;
    private:
    std::shared_ptr<Chat::DataObject> dataObject_;
+   bool newItemsFlag_;
 };
 
 #endif // TREEMAPCLASSES_H

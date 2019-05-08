@@ -769,6 +769,10 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
          //rekey after succesful BIP150 handshake
          socketConnMap_[clientID]->encData_->bip150HandshakeRekey();
          socketConnMap_[clientID]->bip150HandshakeCompleted_ = true;
+         logger_->info("[processHandshake] BIP 150 handshake with client "
+            "complete - connection with {} is ready and fully secured"
+            , BinaryData(clientID).toHexStr());
+
          break;
       }
 

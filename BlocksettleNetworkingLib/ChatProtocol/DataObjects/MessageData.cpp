@@ -80,6 +80,11 @@ namespace Chat {
       state_ &= ~(int)state;
    }
 
+   bool MessageData::testFlag(const MessageData::State stateFlag)
+   {
+      return state_ & static_cast<int>(stateFlag);
+   }
+
    void MessageData::updateState(const int newState)
    {
       state_ = newState;

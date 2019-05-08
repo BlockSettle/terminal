@@ -11,9 +11,11 @@
 using namespace Blocksettle::Communication;
 
 CCPubConnection::CCPubConnection(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<ConnectionManager>& connectionManager)
- : logger_{logger}
- , connectionManager_{connectionManager}
+   , const std::shared_ptr<ConnectionManager> &connectionManager
+   , const ZmqBIP15XDataConnection::cbNewKey &cb)
+   : logger_{logger}
+   , connectionManager_{connectionManager}
+   , cbApproveConn_(cb)
 {}
 
 bool CCPubConnection::LoadCCDefinitionsFromPub()
@@ -38,20 +40,7 @@ bool CCPubConnection::LoadCCDefinitionsFromPub()
 bool CCPubConnection::SubmitRequestToPB(const std::string &name, const std::string& data)
 {
    const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
-
-   // Define the callback that will be used to determine if the signer's BIP
-   // 150 identity key, if it has changed, will be accepted. It needs strings
-   // for the old and new keys, and a promise to set once the user decides.
-   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
-      [this](const std::string& oldKey, const std::string& newKey
-      , std::shared_ptr<std::promise<bool>> newKeyProm)->void
-   {
-      logger_->info("[CCPubConnection::SubmitRequestToPB] Temporary kludge for "
-         "accepting the public bridge ID key. Need to check against a "
-         "hard-coded value.", __func__);
-      newKeyProm->set_value(true);
-   };
-   connection->setCBs(ourNewKeyCB);
+   connection->setCBs(cbApproveConn_);
 
    cmdPuB_ = std::make_shared<RequestReplyCommand>(name, connection, logger_);
 

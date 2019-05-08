@@ -8,6 +8,7 @@
 
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include <memory>
 
@@ -30,7 +31,9 @@ class ChatWidgetState;
 class ChatSearchPopup;
 class OTCRequestViewModel;
 
-class ChatWidget : public QWidget, public ViewItemWatcher
+class ChatWidget : public QWidget
+                 , public ViewItemWatcher
+                 , public NewMessageMonitor
 {
    Q_OBJECT
 
@@ -50,7 +53,8 @@ public:
            , const std::shared_ptr<ApplicationSettings> &appSettings
            , const std::shared_ptr<spdlog::logger>& logger);
 
-   std::string login(const std::string& email, const std::string& jwt);
+   std::string login(const std::string& email, const std::string& jwt
+      , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout();
    bool hasUnreadMessages();
    void switchToChat(const QString& chatId);
@@ -132,7 +136,13 @@ public:
    void onElementSelected(CategoryElement *element) override;
    void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
    void onElementUpdated(CategoryElement *element) override;
+
+   // NewMessageMonitor interface
+public:
+   void onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element) override;
 };
+
+
 
 
 

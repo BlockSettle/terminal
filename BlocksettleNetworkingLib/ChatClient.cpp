@@ -77,33 +77,19 @@ std::shared_ptr<ChatClientDataModel> ChatClient::getDataModel()
    return model_;
 }
 
-std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt)
+std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt
+   , const ZmqBIP15XDataConnection::cbNewKey &cb)
 {
    if (connection_) {
       logger_->error("[ChatClient::loginToServer] connecting with not purged connection");
-      return std::string();
+      return {};
    }
 
    currentUserId_ = hasher_->deriveKey(email);
    currentJwt_ = jwt;
 
    connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
-
-   // Define the callback that will be used to determine if the signer's BIP
-   // 150 identity key, if it has changed, will be accepted. It needs strings
-   // for the old and new keys, and a promise to set once the user decides.
-   // NB: This may need to be altered later. The PuB key should be hard-coded
-   // and respected.
-   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
-      [this](const std::string& oldKey, const std::string& newKey
-      , std::shared_ptr<std::promise<bool>> newKeyProm)->void
-   {
-      logger_->info("[ChatClient::{}] Temporary kludge for accepting the "
-         "public bridge ID key. Need to check against a hard-coded value."
-         , __func__);
-      newKeyProm->set_value(true);
-   };
-   connection_->setCBs(ourNewKeyCB);
+   connection_->setCBs(cb);
 
    if (!connection_->openConnection(appSettings_->get<std::string>(ApplicationSettings::chatServerHost)
                             , appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this))
@@ -111,8 +97,6 @@ std::string ChatClient::loginToServer(const std::string& email, const std::strin
       logger_->error("[ChatClient::loginToServer] failed to open ZMQ data connection");
       connection_.reset();
    }
-
-
 
    return currentUserId_;
 }
@@ -654,7 +638,10 @@ void ChatClient::OnDataReceived(const std::string& data)
       logger_->error("[ChatClient::OnDataReceived] failed to parse message:\n{}", data);
       return;
    }
-   response->handle(*this);
+   // Process on main thread because otherwise ChatDB could crash
+   QMetaObject::invokeMethod(this, [this, response] {
+      response->handle(*this);
+   });
 }
 
 void ChatClient::OnConnected()
@@ -1096,6 +1083,10 @@ void ChatClient::onActionResetSearch()
 
 void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
 {
+   if (message->getSenderId().toStdString() == model_->currentUser()) {
+      return;
+   }
+
    message->setFlag(Chat::MessageData::State::Read);
    chatDb_->updateMessageStatus(message->getId(), message->getState());
    model_->notifyMessageChanged(message);
@@ -1128,6 +1119,8 @@ bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
       liveRequest.requestorId = baseFakeRequestorId_ + std::to_string(nextRequestorId_++);
       emit NewOTCRequestReceived(liveRequest);
    }
+
+   return true;
 }
 
 void ChatClient::onOwnOTCRequestExpired()
@@ -1147,5 +1140,12 @@ void ChatClient::onOwnOTCRequestExpired()
 // cancel current OTC request sent to OTC chat
 bool ChatClient::PullOwnOTCRequest(const std::string& otcRequestId)
 {
+   return false;
+}
 
+void ChatClient::onRoomMessageRead(std::shared_ptr<Chat::MessageData> message)
+{
+   message->setFlag(Chat::MessageData::State::Read);
+   chatDb_->updateMessageStatus(message->getId(), message->getState());
+   model_->notifyMessageChanged(message);
 }

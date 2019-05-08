@@ -50,6 +50,7 @@ namespace Chat {
 
       void setFlag(const State);
       void unsetFlag(const State);
+      bool testFlag(const State stateFlag);
       void updateState(const int newState);
       bool decrypt(const autheid::PrivateKey& privKey);
       bool encrypt(const autheid::PublicKey& pubKey);
