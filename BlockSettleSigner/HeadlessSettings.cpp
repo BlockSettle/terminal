@@ -89,9 +89,8 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
    catch(const std::exception& e) {
       // The logger should still be outputting to stdout at this point. Still,
       // in case this changes, output help directly to stdout.
-      logger_->warn("[{}] Signer option error: {}", __func__, e.what());
-      logger_->warn("[{}] The following options are available:", __func__);
       std::cout << options.help({ "" }) << std::endl;
+      logger_->warn("[{}] Signer option error: {}", __func__, e.what());
       logger_->warn("[{}] Signer will now exit.", __func__);
       exit(0);
    }
