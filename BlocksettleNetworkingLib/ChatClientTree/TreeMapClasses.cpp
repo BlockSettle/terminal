@@ -309,7 +309,7 @@ bool CategoryElement::updateNewItemsFlag()
       const RootItem * root = static_cast<const RootItem*>(recursiveRoot());
       if (message
           && !message->testFlag(Chat::MessageData::State::Read)
-          && root->currentUser() != message->getSenderId().toStdString()) {
+          && root->currentUser() != message->senderId().toStdString()) {
          newItemsFlag_ = true;
          break; //If first is found, no reason to continue
       }
