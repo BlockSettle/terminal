@@ -643,7 +643,12 @@ void ChatWidget::SetLoggedOutOTCState()
 
 void ChatWidget::OTCSwitchToCommonRoom()
 {
-   DisplayCreateOTCWidget();
+   const auto currentSeletion = ui_->treeViewOTCRequests->selectionModel()->selection();
+   if (currentSeletion.indexes().isEmpty()) {
+      DisplayCorrespondingOTCRequestWidget();
+   } else {
+      ui_->treeViewOTCRequests->selectionModel()->clearSelection();
+   }
 }
 
 void ChatWidget::OTCSwitchToDMRoom()
