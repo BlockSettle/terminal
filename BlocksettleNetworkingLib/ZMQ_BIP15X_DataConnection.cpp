@@ -574,12 +574,17 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       //compute server name
       stringstream ss;
       ss << hostAddr_ << ":" << hostPort_;
+      const auto srvId = ss.str();
 
       // If we don't have the key already, we may ask the the user if they wish
       // to continue. (Remote signer only.)
-      if (!bip151Connection_->havePublicKey(msgbdr, ss.str())) {
+      if (!bip151Connection_->havePublicKey(msgbdr, srvId)) {
          //we don't have this key, call user prompt lambda
-         verifyNewIDKey(msgbdr, ss.str());
+         if (verifyNewIDKey(msgbdr, srvId)) {
+            // Add the key. Old keys aren't deleted automatically. Do it to be safe.
+            authPeers_->eraseName(srvId);
+            authPeers_->addPeer(msgbdr.copy(), std::vector<std::string>{ srvId });
+         }
       }
       else {
          //set server key promise
@@ -785,6 +790,15 @@ void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
    if (inNewKeyCB) {
       cbNewKey_ = inNewKeyCB;
    }
+   else {
+      cbNewKey_ = [this](const std::string &, const std::string
+         , const std::shared_ptr<std::promise<bool>> &prom) {
+         logger_->error("[ZmqBIP15XDataConnection] no new key callback was set - auto-accepting connections");
+         if (prom) {
+            prom->set_value(true);
+         }
+      };
+   }
 }
 
 // Add an authorized peer's BIP 150 identity key manually.
@@ -813,7 +827,7 @@ void ZmqBIP15XDataConnection::addAuthPeer(const BinaryData& inKey
 //         The server IP address (or host name) and port. (const string)
 // OUTPUT: N/A
 // RETURN: N/A
-void ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
+bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
    , const string& srvAddrPort)
 {
    if (useServerIDCookie_) {
@@ -825,46 +839,42 @@ void ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
          serverPubkeySignalled_ = true;
       }
       notifyOnError(DataConnectionListener::HandshakeFailed);
-      return;
+      return false;
    }
 
-   // Check to see if we've already verified the key. If not, fire the
-   // callback allowing the user to verify the new key.
-   auto authPeerNameMap = authPeers_->getPeerNameMap();
-   auto authPeerNameSearch = authPeerNameMap.find(srvAddrPort);
-   if (authPeerNameSearch == authPeerNameMap.end()) {
-      logger_->info("[{}] New key ({}) for server [{}] arrived.", __func__
-         , newKey.toHexStr(), srvAddrPort);
+   logger_->debug("[{}] New key ({}) for server [{}] arrived.", __func__
+      , newKey.toHexStr(), srvAddrPort);
 
-      if (!cbNewKey_) {
-         logger_->error("[{}] no server key callback is set - aborting handshake", __func__);
-         notifyOnError(DataConnectionListener::HandshakeFailed);
-         return;
-      }
-
-      // Ask the user if they wish to accept the new identity key.
-      BinaryData oldKey; // there shouldn't be any old key, at least in authPeerNameSearch
-      cbNewKey_(oldKey.toHexStr(), newKey.toHexStr(), serverPubkeyProm_);
-      serverPubkeySignalled_ = true;
-
-      //have we seen the server's pubkey?
-      if (serverPubkeyProm_ != nullptr) {
-         //if so, wait on the promise
-         auto fut = serverPubkeyProm_->get_future();
-         fut.wait();
-         serverPubkeyProm_.reset();
-         serverPubkeySignalled_ = false;
-      }
-
-      // Add the key. Old keys aren't deleted automatically. Do it to be safe.
-      vector<string> keyName;
-      keyName.push_back(srvAddrPort);
-      authPeers_->eraseName(srvAddrPort);
-      authPeers_->addPeer(newKey.copy(), keyName);
-      logger_->info("[{}] Server at {} has had its identity key (0x{}) "
-         "replaced with (0x{}). Connection accepted.", __func__, srvAddrPort
-         , oldKey.toHexStr(), newKey.toHexStr());
+   if (!cbNewKey_) {
+      logger_->error("[{}] no server key callback is set - aborting handshake", __func__);
+      notifyOnError(DataConnectionListener::HandshakeFailed);
+      return false;
    }
+
+   // Ask the user if they wish to accept the new identity key.
+   // There shouldn't be any old key, at least in authPeerNameSearch
+   cbNewKey_({}, newKey.toHexStr(), serverPubkeyProm_);
+   serverPubkeySignalled_ = true;
+   bool cbResult = false;
+
+   //have we seen the server's pubkey?
+   if (serverPubkeyProm_ != nullptr) {
+      //if so, wait on the promise
+      auto fut = serverPubkeyProm_->get_future();
+      cbResult = fut.get();
+      serverPubkeyProm_.reset();
+      serverPubkeySignalled_ = false;
+   }
+
+   if (!cbResult) {
+      logger_->info("[{}] User refused new server {} identity key {} - connection refused"
+         , __func__, srvAddrPort, newKey.toHexStr());
+      return false;
+   }
+
+   logger_->info("[{}] Server at {} has new identity key {}. Connection accepted."
+      , __func__, srvAddrPort, newKey.toHexStr());
+   return true;
 }
 
 // Get the signer's identity public key. Intended for use with local signers.

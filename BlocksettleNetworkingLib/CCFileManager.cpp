@@ -19,8 +19,9 @@ using namespace Blocksettle::Communication;
 CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , const std::shared_ptr<AuthSignManager> &authSignMgr
-   , const std::shared_ptr<ConnectionManager>& connectionManager)
-   : CCPubConnection(logger, connectionManager)
+   , const std::shared_ptr<ConnectionManager>& connectionManager
+   , const ZmqBIP15XDataConnection::cbNewKey &cb)
+   : CCPubConnection(logger, connectionManager, cb)
    , appSettings_(appSettings)
    , authSignManager_(authSignMgr)
 {
