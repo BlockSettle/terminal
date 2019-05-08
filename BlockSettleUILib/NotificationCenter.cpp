@@ -219,6 +219,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       text = msg[1].toString();
       newChatMessage_ = true;
       newChatId_ = title;
+      mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
       break;
 
    case bs::ui::NotifyType::FriendRequest:
