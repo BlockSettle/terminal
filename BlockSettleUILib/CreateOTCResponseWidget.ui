@@ -485,7 +485,7 @@
          <string notr="true"/>
         </property>
         <property name="text">
-         <string>SUBMIT OTC</string>
+         <string>SUBMIT</string>
         </property>
        </widget>
       </item>

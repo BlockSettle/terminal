@@ -10,10 +10,21 @@ CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)
 
    ui_->widgetPriceRange->SetRange(3000, 4000);
 
-   connect(ui_->pushButtonSubmit, &QPushButton::pressed, this, &CreateOTCResponseWidget::ResponseCreated);
+   connect(ui_->pushButtonSubmit, &QPushButton::pressed, this, &CreateOTCResponseWidget::OnCreateResponse);
 }
 
 CreateOTCResponseWidget::~CreateOTCResponseWidget() = default;
+
+void CreateOTCResponseWidget::SetActiveOTCRequest(const bs::network::LiveOTCRequest& otc)
+{
+   SetSide(otc.side);
+   SetRange(otc.amountRange);
+
+   currentOtcRequest_ = otc;
+}
+
+void CreateOTCResponseWidget::OnCreateResponse()
+{}
 
 void CreateOTCResponseWidget::SetSide(const bs::network::Side::Type& side)
 {
@@ -27,6 +38,8 @@ void CreateOTCResponseWidget::SetSide(const bs::network::Side::Type& side)
 void CreateOTCResponseWidget::SetRange(const bs::network::OTCRangeID::Type& range)
 {
    ui_->widgetAmountRange->setEnabled(true);
+
+   ui_->labelRange->setText(QString::fromStdString(bs::network::OTCRangeID::toString(range)));
 
    switch (range) {
    case bs::network::OTCRangeID::Type::Range1_5:
@@ -51,7 +64,6 @@ void CreateOTCResponseWidget::SetRange(const bs::network::OTCRangeID::Type& rang
       break;
    }
 }
-
 
 bs::network::OTCPriceRange CreateOTCResponseWidget::GetResponsePriceRange() const
 {

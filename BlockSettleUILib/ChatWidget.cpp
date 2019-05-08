@@ -621,13 +621,7 @@ void ChatWidget::OnOTCRequestCreated()
 
 void ChatWidget::OnOTCResponseCreated()
 {
-   auto priceRange = ui_->widgetCreateOTCResponse->GetResponsePriceRange();
-   auto amountRange = ui_->widgetCreateOTCResponse->GetResponseQuantityRange();
-   ui_->widgetNegotiateRequest->DisplayResponse(ui_->widgetCreateOTCRequest->GetSide(), priceRange, amountRange);
-
-   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
 }
-
 
 void ChatWidget::SetOTCLoggedInState()
 {
@@ -702,6 +696,7 @@ void ChatWidget::OnOTCSelected(const QModelIndex& index)
       // display negotiation request
       // NOTE: do we need to switch to channel if we already replied to this OTC?
       // what if we already replied to this?
+      ui_->widgetCreateOTCResponse->SetActiveOTCRequest(otc);
       ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
    }
 }
