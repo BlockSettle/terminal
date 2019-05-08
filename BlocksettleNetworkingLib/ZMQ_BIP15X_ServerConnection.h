@@ -82,6 +82,10 @@ public:
    void addAuthPeer(const BinaryData& inKey, const std::string& keyName);
 
    void rekey(const std::string &clientId);
+   void setLocalHeartbeatInterval();
+
+   static const std::chrono::milliseconds DefaultHeartbeatInterval;
+   static const std::chrono::milliseconds LocalHeartbeatInterval;
 
 protected:
    // Overridden functions from ZmqServerConnection.
@@ -115,7 +119,6 @@ private:
    const bool makeServerIDCookie_;
    const std::string bipIDCookiePath_;
 
-   const int   heartbeatInterval_ = 30000 * 2;   // allow some toleration on heartbeat miss
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;
@@ -125,5 +128,6 @@ private:
    std::mutex              rekeyMutex_;
    std::unordered_set<std::string>  rekeyStarted_;
    std::unordered_map<std::string, std::vector<std::tuple<std::string, SendResultCb>>> pendingData_;
+   std::chrono::milliseconds heartbeatInterval_;
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

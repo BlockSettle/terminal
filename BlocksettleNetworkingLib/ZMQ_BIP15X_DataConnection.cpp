@@ -1,16 +1,23 @@
+#include "ZMQ_BIP15X_DataConnection.h"
+
 #include <chrono>
 #include <QStandardPaths>
-
 #include "FastLock.h"
 #include "MessageHolder.h"
 #include "EncryptionUtils.h"
 #include "SystemFileUtils.h"
-#include "ZMQ_BIP15X_DataConnection.h"
 #include "BIP150_151.h"
+#include "ZMQ_BIP15X_ServerConnection.h"
 
 using namespace std;
 
-#define HEARTBEAT_PACKET_SIZE 23
+namespace {
+
+   const int HEARTBEAT_PACKET_SIZE = 23;
+
+   const char CLIENT_AUTH_PEER_FILENAME[] = "client.peers";
+
+} // namespace
 
 // The constructor to use.
 //
@@ -26,6 +33,8 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    , bipIDCookiePath_(cookieNamePath)
    , useServerIDCookie_(readServerCookie)
    , makeClientIDCookie_(makeClientCookie)
+   , lastHeartbeatReply_(std::chrono::steady_clock::now())
+   , heartbeatInterval_(ZmqBIP15XServerConnection::DefaultHeartbeatInterval)
 {
    if (makeClientIDCookie_ && useServerIDCookie_) {
       throw std::runtime_error("Cannot read client ID cookie and create ID " \
@@ -43,6 +52,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    }
 
    outKeyTimePoint_ = chrono::steady_clock::now();
+
    currentReadMessage_.reset();
    string datadir =
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
@@ -69,6 +79,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    }
 
    const auto &heartbeatProc = [this] {
+      auto lastHeartbeat = std::chrono::steady_clock::now();
       while (hbThreadRunning_) {
          {
             std::unique_lock<std::mutex> lock(hbMutex_);
@@ -81,16 +92,14 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
             continue;
          }
          const auto curTime = std::chrono::steady_clock::now();
-         const auto diff =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-            curTime - lastHeartbeat_);
-         if (diff.count() > heartbeatInterval_) {
+         const auto diff = curTime - lastHeartbeat;
+         if (diff > heartbeatInterval_) {
+            lastHeartbeat = curTime;
             triggerHeartbeat();
          }
       }
    };
    hbThreadRunning_ = true;
-   lastHeartbeat_ = std::chrono::steady_clock::now();
    hbThread_ = std::thread(heartbeatProc);
 }
 
@@ -207,13 +216,14 @@ void ZmqBIP15XDataConnection::rekey()
 // ***Please use this function for sending all data from inside this class.***
 //
 // INPUT:  The data to send. (const string&)
-//         Flag for encryption usage. True by default. (const bool&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::sendPacket(const string& data)
 {
+   if (fatalError_) {
+      return false;
+   }
    int result = -1;
-   const auto rightNow = chrono::steady_clock::now();
 
    {
       FastLock locker(lockSocket_);
@@ -228,7 +238,6 @@ bool ZmqBIP15XDataConnection::sendPacket(const string& data)
       return false;
    }
 
-   lastHeartbeat_ = rightNow; // Reset the heartbeat timer, as data was sent.
    return true;
 }
 
@@ -243,6 +252,10 @@ bool ZmqBIP15XDataConnection::sendPacket(const string& data)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::send(const string& data)
 {
+   if (fatalError_) {
+      return false;
+   }
+
    bool retVal = false;
 
    // If we need to rekey, do it before encrypting the data.
@@ -316,14 +329,37 @@ void ZmqBIP15XDataConnection::triggerHeartbeat()
 
    ZmqBIP15XSerializedMessage msg;
    BinaryData emptyPayload;
-   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT
-      , msgID_);
-   auto& packet = msg.getNextPacket();
+   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT, msgID_);
 
    // An error message is already logged elsewhere if the send fails.
-   if (!sendPacket(packet.toBinStr())) {  // sendPacket already sets the timestamp
-      notifyOnDisconnected();
+   if (!sendPacket(msg.getNextPacket().toBinStr())) {  // sendPacket already sets the timestamp
+      notifyOnError(DataConnectionListener::UndefinedSocketError);
+      return;
    }
+
+   // Old servers don't send heartbeats.
+   // TODO: Remove this check when all servers are updated.
+   if (!serverSendsHeartbeat_) {
+      return;
+   }
+
+   auto lastHeartbeatDiff = std::chrono::steady_clock::now() - lastHeartbeatReply_.load();
+   if (lastHeartbeatDiff > heartbeatInterval_ * 2) {
+      notifyOnError(DataConnectionListener::HeartbeatWaitFailed);
+   }
+}
+
+void ZmqBIP15XDataConnection::notifyOnError(DataConnectionListener::DataConnectionError errorCode)
+{
+   // Notify about error only once
+   if (fatalError_) {
+      return;
+   }
+
+   fatalError_ = true;
+   // Do not send anything when connection fails, client will need to restart connection
+   closeConnection();
+   DataConnection::notifyOnError(errorCode);
 }
 
 // Kick off the BIP 151 handshake. This is the first function to call once the
@@ -435,6 +471,13 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
    // Fragmented messages may not be marked as fragmented when decrypted but may
    // still be a fragment. That's fine. Just wait for the other fragments.
    if (!currentReadMessage_.message_.isReady()) {
+      return;
+   }
+
+   if (currentReadMessage_.message_.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
+      lastHeartbeatReply_ = std::chrono::steady_clock::now();
+      currentReadMessage_.reset();
+      serverSendsHeartbeat_ = true;
       return;
    }
 
@@ -793,7 +836,7 @@ void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
       cbNewKey_ = inNewKeyCB;
    }
    else {
-      cbNewKey_ = [this](const std::string &, const std::string
+      cbNewKey_ = [this](const std::string &, const std::string, const std::string&
          , const std::shared_ptr<std::promise<bool>> &prom) {
          logger_->error("[ZmqBIP15XDataConnection] no new key callback was set - auto-accepting connections");
          if (prom) {
@@ -819,6 +862,11 @@ void ZmqBIP15XDataConnection::addAuthPeer(const BinaryData& inKey
    }
    authPeers_->eraseName(keyName);
    authPeers_->addPeer(inKey, vector<string>{ keyName });
+}
+
+void ZmqBIP15XDataConnection::setLocalHeartbeatInterval()
+{
+   heartbeatInterval_ = ZmqBIP15XServerConnection::LocalHeartbeatInterval;
 }
 
 // If the user is presented with a new remote server ID key it doesn't already
@@ -855,7 +903,7 @@ bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
 
    // Ask the user if they wish to accept the new identity key.
    // There shouldn't be any old key, at least in authPeerNameSearch
-   cbNewKey_({}, newKey.toHexStr(), serverPubkeyProm_);
+   cbNewKey_({}, newKey.toHexStr(), srvAddrPort, serverPubkeyProm_);
    serverPubkeySignalled_ = true;
    bool cbResult = false;
 

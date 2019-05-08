@@ -1,10 +1,16 @@
-#include <chrono>
-
 #include "ZMQ_BIP15X_ServerConnection.h"
+
+#include <chrono>
 #include "MessageHolder.h"
 #include "SystemFileUtils.h"
 
 using namespace std;
+
+// Used with remote connections (termina/Celer)
+const std::chrono::milliseconds ZmqBIP15XServerConnection::DefaultHeartbeatInterval = std::chrono::seconds(30);
+
+// Used with local connections (terminal/signer/signer GUI)
+const std::chrono::milliseconds ZmqBIP15XServerConnection::LocalHeartbeatInterval = std::chrono::seconds(3);
 
 // A call resetting the encryption-related data for individual connections.
 //
@@ -35,8 +41,10 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , const bool& ephemeralPeers, const bool& makeServerCookie
    , const bool& readClientCookie, const std::string& cookiePath)
    : ZmqServerConnection(logger, context), id_(id)
-   , makeServerIDCookie_(makeServerCookie), useClientIDCookie_(readClientCookie)
+   , useClientIDCookie_(readClientCookie)
+   , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
+   , heartbeatInterval_(DefaultHeartbeatInterval)
 {
    if (makeServerIDCookie_ && readClientCookie) {
       throw std::runtime_error("Cannot read client ID cookie and create ID " \
@@ -147,8 +155,8 @@ void ZmqBIP15XServerConnection::heartbeatThread()
          const auto curTime = std::chrono::steady_clock::now();
          std::vector<std::string> timedOutClients;
          for (const auto &hbTime : lastHeartbeats_) {
-            const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - hbTime.second);
-            if (diff.count() > heartbeatInterval_) {
+            const auto diff = curTime - hbTime.second;
+            if (diff > heartbeatInterval_ * 2) {
                timedOutClients.push_back(hbTime.first);
             }
          }
@@ -355,6 +363,11 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
    }
 }
 
+void ZmqBIP15XServerConnection::setLocalHeartbeatInterval()
+{
+   heartbeatInterval_ = LocalHeartbeatInterval;
+}
+
 // A send function for the data connection that sends data to all clients,
 // somewhat like multicasting.
 //
@@ -458,6 +471,12 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    if (connData->currentReadMessage_.message_.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
       lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
       connData->currentReadMessage_.reset();
+
+      ZmqBIP15XSerializedMessage heartbeatPacket;
+      BinaryData emptyPayload;
+      heartbeatPacket.construct(emptyPayload.getDataVector(), connData->encData_.get(), ZMQ_MSGTYPE_HEARTBEAT);
+      auto& packet = heartbeatPacket.getNextPacket();
+      QueueDataToSend(clientID, packet.toBinStr(), {}, false);
       return;
    }
    else if (connData->currentReadMessage_.message_.getType() >
@@ -506,7 +525,6 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    // Pass the final data up the chain.
    notifyListenerOnData(clientID, outMsg.toBinStr());
-   lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
    connData->currentReadMessage_.reset();
 }
 

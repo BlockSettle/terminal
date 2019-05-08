@@ -586,12 +586,16 @@ void ChatWidget::onElementSelected(CategoryElement *element)
 
 void ChatWidget::onMessageChanged(std::shared_ptr<Chat::MessageData> message)
 {
+#if 0
    qDebug() << __func__ << " " << QString::fromStdString(message->toJsonString());
+#endif
 }
 
 void ChatWidget::onElementUpdated(CategoryElement *element)
 {
+#if 0
    qDebug() << __func__ << " " << QString::fromStdString(element->getDataObject()->toJsonString());
+#endif
 }
 
 void ChatWidget::OnOTCRequestCreated()

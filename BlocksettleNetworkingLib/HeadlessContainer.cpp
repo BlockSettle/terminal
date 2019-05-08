@@ -20,11 +20,11 @@
 
 namespace {
 
-constexpr int kKillTimeout = 5000;
-constexpr int kStartTimeout = 5000;
+   constexpr int kKillTimeout = 5000;
+   constexpr int kStartTimeout = 5000;
 
-// When remote signer will try to reconnect
-constexpr int kRemoteReconnectPeriod = 10000;
+   // When remote signer will try to reconnect
+   constexpr auto kRemoteReconnectPeriod = std::chrono::seconds(10);
 
 } // namespace
 
@@ -1193,6 +1193,7 @@ void RemoteSigner::RecreateConnection()
    connection_ = connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_
          , makeClientCookie, readServerCookie, absCookiePath);
    connection_->setCBs(cbNewKey_);
+   connection_->setLocalHeartbeatInterval();
 
    headlessConnFinished_ = false;
 }
