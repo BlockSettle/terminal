@@ -59,7 +59,7 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
       ("d,dirwallets", "Directory where wallets reside"
          , cxxopts::value<std::string>(walletsDir_))
       ("terminal_id_key", "Set terminal BIP 150 ID key"
-         , cxxopts::value<std::string>(termIDKeyStr_)->default_value(termIDKeyStr_))
+         , cxxopts::value<std::string>(termIDKeyStr_))
       ("testnet", "Set bitcoin network type to testnet"
          , cxxopts::value<bool>()->default_value("false"))
       ("mainnet", "Set bitcoin network type to mainnet"
@@ -87,8 +87,12 @@ bool HeadlessSettings::loadSettings(int argc, char **argv)
 
    }
    catch(const std::exception& e) {
+      // The logger should still be outputting to stdout at this point.
       logger_->warn("[{}] Signer option error: {}", __func__, e.what());
-      logger_->warn("[{}] Not all signer options may be used.", __func__);
+      logger_->warn("[{}] The following options are available:", __func__);
+      logger_->warn("{}", options.help({ "" }));
+      logger_->warn("[{}] Signer will now exit.", __func__);
+      exit(0);
    }
 
    if (guiMode == "lightgui") {
