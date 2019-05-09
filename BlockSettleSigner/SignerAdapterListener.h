@@ -40,6 +40,7 @@ protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnClientConnected(const std::string &clientId) override;
    void OnClientDisconnected(const std::string &clientId) override;
+   void onClientError(const std::string& clientId, const std::string &error) override;
 
 private:
    void setCallbacks();
@@ -64,6 +65,7 @@ private:
    bool onHeadlessPubKeyRequest(const std::string &data, bs::signer::RequestId);
 
    void walletsListUpdated();
+   void shutdownIfNeeded();
 
 private:
    HeadlessAppObj *  app_;
