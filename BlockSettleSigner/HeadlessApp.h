@@ -22,7 +22,7 @@ class HeadlessSettings;
 class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
-
+class HeadlessContainerCallbacks;
 
 class HeadlessAppObj
 {
@@ -34,15 +34,7 @@ public:
 
    void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
-   void setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
-      , const std::function<void(const std::string &)> &cbPeerDisconn
-      , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
-      , const std::function<void(const BinaryData &)> &cbTxSigned
-      , const std::function<void(const BinaryData &)> &cbCancelTxSign
-      , const std::function<void(int64_t, bool)> &cbXbtSpent
-      , const std::function<void(const std::string &)> &cbAsAct
-      , const std::function<void(const std::string &)> &cbAsDeact
-      , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog);
+   void setCallbacks(HeadlessContainerCallbacks *callbacks);
 
    void reloadWallets(const std::string &, const std::function<void()> &);
    void reconnect(const std::string &listenAddr, const std::string &port);

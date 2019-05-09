@@ -9,6 +9,109 @@
 
 using namespace Blocksettle::Communication;
 
+class HeadlessContainerCallbacksImpl : public HeadlessContainerCallbacks
+{
+public:
+   HeadlessContainerCallbacksImpl(SignerAdapterListener *owner)
+      : owner_(owner)
+   {
+   }
+
+   void peerConn(const std::string &ip) override
+   {
+      signer::PeerEvent evt;
+      evt.set_ip_address(ip);
+      owner_->sendData(signer::PeerConnectedType, evt.SerializeAsString());
+   }
+
+   void peerDisconn(const std::string &ip) override
+   {
+      signer::PeerEvent evt;
+      evt.set_ip_address(ip);
+      owner_->sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
+   }
+
+   void clientDisconn(const std::string &) override
+   {
+   }
+
+   void pwd(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
+   {
+      signer::PasswordEvent evt;
+      evt.set_wallet_id(txReq.walletId);
+      evt.set_prompt(prompt);
+      if (txReq.autoSign) {
+         evt.set_auto_sign(true);
+      } else {
+         for (const auto &input : txReq.inputs) {
+            evt.add_inputs(input.serialize().toBinStr());
+         }
+         for (const auto &recip : txReq.recipients) {
+            evt.add_recipients(recip->getSerializedScript().toBinStr());
+         }
+         evt.set_fee(txReq.fee);
+         evt.set_rbf(txReq.RBF);
+         if (txReq.change.value) {
+            auto change = evt.mutable_change();
+            change->set_address(txReq.change.address.display());
+            change->set_index(txReq.change.index);
+            change->set_value(txReq.change.value);
+         }
+      }
+      owner_->sendData(signer::PasswordRequestType, evt.SerializeAsString());
+   }
+
+   void txSigned(const BinaryData &tx) override
+   {
+      signer::TxSignEvent evt;
+      evt.set_tx(tx.toBinStr());
+      owner_->sendData(signer::TxSignedType, evt.SerializeAsString());
+   }
+
+   void cancelTxSign(const BinaryData &txHash) override
+   {
+      signer::TxSignEvent evt;
+      evt.set_tx_hash(txHash.toBinStr());
+      owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
+   }
+
+   void xbtSpent(int64_t value, bool autoSign) override
+   {
+      signer::XbtSpentEvent evt;
+      evt.set_value(value);
+      evt.set_auto_sign(autoSign);
+      owner_->sendData(signer::XbtSpentType, evt.SerializeAsString());
+   }
+
+   void asAct(const std::string &walletId) override
+   {
+      autoSign(true, walletId);
+   }
+
+   void asDeact(const std::string &walletId) override
+   {
+      autoSign(false, walletId);
+   }
+
+   void customDialog(const std::string &dialogName, const std::string &data) override
+   {
+      signer::CustomDialogRequest evt;
+      evt.set_dialogname(dialogName);
+      evt.set_variantdata(data);
+      owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
+   }
+
+   void autoSign(bool act, const std::string &walletId)
+   {
+      signer::AutoSignActEvent evt;
+      evt.set_activated(act);
+      evt.set_wallet_id(walletId);
+      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
+   }
+
+   SignerAdapterListener *owner_{};
+};
+
 static std::string toHex(const std::string &binData)
 {
    return BinaryData(binData).toHexStr();
@@ -123,79 +226,8 @@ void SignerAdapterListener::onClientError(const std::string &clientId, const std
 
 void SignerAdapterListener::setCallbacks()
 {
-   const auto &cbPeerConnected = [this](const std::string &ip) {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
-      sendData(signer::PeerConnectedType, evt.SerializeAsString());
-   };
-   const auto &cbPeerDisconnected = [this](const std::string &ip) {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
-      sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
-
-      // peer disconnected is called from ZMQ monitoring and normally detected faster
-      shutdownIfNeeded();
-   };
-   const auto &cbPwd = [this](const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) {
-      signer::PasswordEvent evt;
-      evt.set_wallet_id(txReq.walletId);
-      evt.set_prompt(prompt);
-      if (txReq.autoSign) {
-         evt.set_auto_sign(true);
-      } else {
-         for (const auto &input : txReq.inputs) {
-            evt.add_inputs(input.serialize().toBinStr());
-         }
-         for (const auto &recip : txReq.recipients) {
-            evt.add_recipients(recip->getSerializedScript().toBinStr());
-         }
-         evt.set_fee(txReq.fee);
-         evt.set_rbf(txReq.RBF);
-         if (txReq.change.value) {
-            auto change = evt.mutable_change();
-            change->set_address(txReq.change.address.display());
-            change->set_index(txReq.change.index);
-            change->set_value(txReq.change.value);
-         }
-      }
-      sendData(signer::PasswordRequestType, evt.SerializeAsString());
-   };
-   const auto &cbTxSigned = [this](const BinaryData &tx) {
-      signer::TxSignEvent evt;
-      evt.set_tx(tx.toBinStr());
-      sendData(signer::TxSignedType, evt.SerializeAsString());
-   };
-   const auto &cbCancelTxSign = [this](const BinaryData &txHash) {
-      signer::TxSignEvent evt;
-      evt.set_tx_hash(txHash.toBinStr());
-      sendData(signer::CancelTxSignType, evt.SerializeAsString());
-   };
-   const auto &cbXbtSpent = [this](const int64_t value, bool autoSign) {
-      signer::XbtSpentEvent evt;
-      evt.set_value(value);
-      evt.set_auto_sign(autoSign);
-      sendData(signer::XbtSpentType, evt.SerializeAsString());
-   };
-   const auto &cbAutoSign = [this](bool act, const std::string &walletId) {
-      signer::AutoSignActEvent evt;
-      evt.set_activated(act);
-      evt.set_wallet_id(walletId);
-      sendData(signer::AutoSignActType, evt.SerializeAsString());
-   };
-   const auto &cbAutoSignActivated = [cbAutoSign](const std::string &walletId) {
-      cbAutoSign(true, walletId);
-   };
-   const auto &cbAutoSignDeactivated = [cbAutoSign](const std::string &walletId) {
-      cbAutoSign(false, walletId);
-   };
-   const auto &cbCustomDialog = [this](const std::string &dialogName, const std::string &data) {
-      signer::CustomDialogRequest evt;
-      evt.set_dialogname(dialogName);
-      evt.set_variantdata(data);
-      sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
-   };
-   app_->setCallbacks(cbPeerConnected, cbPeerDisconnected, cbPwd, cbTxSigned, cbCancelTxSign
-      , cbXbtSpent, cbAutoSignActivated, cbAutoSignDeactivated, cbCustomDialog);
+   callbacks_.reset(new HeadlessContainerCallbacksImpl(this));
+   app_->setCallbacks(callbacks_.get());
 }
 
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
