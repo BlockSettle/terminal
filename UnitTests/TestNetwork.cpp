@@ -451,6 +451,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
     static std::atomic<bool> serverConnected(false);
     static std::atomic<bool> clientDisconnected(false);
     static std::atomic<bool> serverDisconnected(false);
+    static std::atomic<bool> clientServerError(false);
 
     static std::vector<std::string> clientPackets;
     for (int i = 0; i < 5; ++i) {
@@ -478,6 +479,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         }
         void onClientError(const std::string &clientId, const std::string &errStr) override {
             logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
+            clientServerError = true;
         }
         void OnClientConnected(const std::string &clientId) override {
             logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
@@ -511,6 +513,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         }
         void OnError(DataConnectionError errorCode) override {
             logger_->debug("[{}] {}", __func__, int(errorCode));
+            clientServerError = true;
         }
 
     private:
@@ -557,6 +560,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
 
         clientConnected = false;
         serverConnected = false;
+        clientServerError = false;
 
         const std::string host = "127.0.0.1";
         std::string port;
@@ -579,9 +583,13 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
             serverConn->SendDataToAllClients(srvPackets.at(j));
         }
 
+        clientDisconnected = false;
+        serverDisconnected = false;
+
         ASSERT_TRUE(clientConn->closeConnection());
         ASSERT_TRUE(await(clientDisconnected));
         ASSERT_TRUE(await(serverDisconnected));
+        ASSERT_FALSE(clientServerError.load());
         serverConn.reset();  // This is needed to detach listener before it's destroyed
     }
 }
