@@ -22,18 +22,13 @@ CustomTitleDialogWindow {
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
     property int addressRowHeight: 24
+    property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
 
     id: root
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
-    height: 420 + recvAddresses.height
-
-    onTxInfoChanged: {
-        console.log(txInfo.recvAddresses.length)
-        console.log(txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3)
-        sizeChanged(root.width, 700 + txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3)
-    }
+    height: 420 + recvAddresses.height - 24
 
     function clickConfirmBtn() {
         btnConfirm.clicked()

@@ -127,7 +127,7 @@ Item {
     }
 
     function storeSettings() {
-        if (signerSettings.limitAutoSignXbt != limitAutoSignXbt.text) {
+        if (signerSettings.limitAutoSignXbt !== limitAutoSignXbt.text) {
             if (limitAutoSignXbt.text !== qsTr("Unlimited")) {
                 signerSettings.limitAutoSignXbt = limitAutoSignXbt.text
             }
