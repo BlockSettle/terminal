@@ -129,11 +129,14 @@ std::shared_ptr<ZmqBIP15XServerConnection>
 
 std::shared_ptr<ZmqBIP15XDataConnection>
    ConnectionManager::CreateZMQBIP15XDataConnection(bool ephemeral
+   , const std::string& ownKeyFileDir, const std::string& ownKeyFileName
    , bool makeClientCookie, bool readServerCookie
    , const std::string& cookieName) const
 {
    auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
       , ephemeral
+      , ownKeyFileDir
+      , ownKeyFileName
       , true  // Monitor the conn. It relies on a connection event.
       , makeClientCookie
       , readServerCookie

@@ -51,7 +51,8 @@ public:
    std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
       bool monitored = false) const;
    std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
-      bool ephemeral = true, bool makeClientCookie = false
+      bool ephemeral = true, const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = "", bool makeClientCookie = false
       , bool readServerCookie = false, const std::string& cookieName = "") const;
    std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(
       bool ephemeral = false) const;

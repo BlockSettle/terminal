@@ -1,7 +1,6 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 
 #include <chrono>
-#include <QStandardPaths>
 #include "FastLock.h"
 #include "MessageHolder.h"
 #include "EncryptionUtils.h"
@@ -12,21 +11,23 @@
 using namespace std;
 
 namespace {
-
    const int HEARTBEAT_PACKET_SIZE = 23;
-
-   const char CLIENT_AUTH_PEER_FILENAME[] = "client.peers";
-
 } // namespace
 
 // The constructor to use.
 //
 // INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
 //         Ephemeral peer usage. Not recommended. (const bool&)
+//         The directory containing the file with the non-ephemeral key. (const std::string)
+//         The file with the non-ephemeral key. (const std::string)
 //         A flag for a monitored socket. (const bool&)
+//         A flag indicating if the connection will make a key cookie. (bool)
+//         A flag indicating if the connection will read a key cookie. (bool)
+//         The path to the key cookie to read or write. (const std::string)
 // OUTPUT: None
 ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    const shared_ptr<spdlog::logger>& logger, const bool ephemeralPeers
+   , const std::string& ownKeyFileDir, const std::string& ownKeyFileName
    , const bool monitored, const bool makeClientCookie
    , const bool readServerCookie, const std::string& cookieNamePath)
    : ZmqDataConnection(logger, monitored)
@@ -54,14 +55,11 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    outKeyTimePoint_ = chrono::steady_clock::now();
 
    currentReadMessage_.reset();
-   string datadir =
-      QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString();
-   string filename(CLIENT_AUTH_PEER_FILENAME);
 
    // In general, load the server key from a special Armory wallet file.
    if (!ephemeralPeers) {
       authPeers_ = make_shared<AuthorizedPeers>(
-         datadir, filename);
+         ownKeyFileDir, ownKeyFileName);
    }
    else {
       authPeers_ = make_shared<AuthorizedPeers>();
