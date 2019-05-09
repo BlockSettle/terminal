@@ -21,6 +21,7 @@ class HeadlessAppObj;
 class HeadlessContainerListener;
 class ServerConnection;
 class HeadlessSettings;
+class HeadlessContainerCallbacksImpl;
 
 class SignerAdapterListener : public ServerConnectionListener
 {
@@ -68,12 +69,15 @@ private:
    void shutdownIfNeeded();
 
 private:
+   friend class HeadlessContainerCallbacksImpl;
+
    HeadlessAppObj *  app_;
    std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<HeadlessSettings>   settings_;
    bool  ready_ = false;
+   std::unique_ptr<HeadlessContainerCallbacksImpl> callbacks_;
 };
 
 #endif // SIGNER_ADAPTER_LISTENER_H
