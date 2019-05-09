@@ -76,38 +76,45 @@ ApplicationWindow {
     function createTxSignDialog(prompt, txInfo, walletInfo) {
         // called from QMLAppObj::requestPassword
 
-        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
-        dlg.walletInfo = walletInfo
-        dlg.prompt = prompt
-        dlg.txInfo = txInfo
+        currentDialog = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+        currentDialog.walletInfo = walletInfo
+        currentDialog.prompt = prompt
+        currentDialog.txInfo = txInfo
 
-        dlg.bsAccepted.connect(function() {
-            passwordEntered(walletInfo.walletId, dlg.passwordData, false)
-            dlg.destroy()
-            hideWindow()
-        })
-        dlg.bsRejected.connect(function() {
-            passwordEntered(walletInfo.walletId, dlg.passwordData, true)
-            dlg.destroy()
-            hideWindow()
+        show()
+
+        currentDialog.sizeChanged.connect(function(w, h){
+            mainWindow.width = w
+            mainWindow.height = h
         })
 
-        mainWindow.width = dlg.width
-        mainWindow.height = dlg.height
-        mainWindow.title = dlg.title
-        if (typeof dlg.qmlTitleVisible !== "undefined") dlg.qmlTitleVisible = false
+        currentDialog.bsAccepted.connect(function() {
+            passwordEntered(walletInfo.walletId, currentDialog.passwordData, false)
+            currentDialog.destroy()
+            hideWindow()
+        })
+        currentDialog.bsRejected.connect(function() {
+            passwordEntered(walletInfo.walletId, currentDialog.passwordData, true)
+            currentDialog.destroy()
+            hideWindow()
+        })
 
-        dlg.dialogsChainFinished.connect(function(){ hide() })
-        dlg.nextChainDialogChangedOverloaded.connect(function(nextDialog){
+        mainWindow.width = currentDialog.width
+        mainWindow.height = currentDialog.height + currentDialog.recvAddrHeight
+        mainWindow.title = currentDialog.title
+        if (typeof currentDialog.qmlTitleVisible !== "undefined") currentDialog.qmlTitleVisible = false
+
+        currentDialog.dialogsChainFinished.connect(function(){ hide() })
+        currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
             mainWindow.width = nextDialog.width
             mainWindow.height = nextDialog.height
         })
 
         mainWindow.requestActivate()
-        dlg.open()
-        dlg.init()
+        currentDialog.open()
+        currentDialog.init()
 
-        mainWindow.closing.connect(function() { dlg.bsRejected() });
+        mainWindow.closing.connect(function() { currentDialog.bsRejected() });
     }
 
     function raiseWindow() {
@@ -145,6 +152,5 @@ ApplicationWindow {
             mainWindow.width = w
             mainWindow.height = h
         })
-
     }
 }

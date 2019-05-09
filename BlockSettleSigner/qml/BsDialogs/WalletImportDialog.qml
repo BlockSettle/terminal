@@ -522,6 +522,7 @@ CustomTitleDialogWindow {
 
                             var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
                             checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
+                            checkPasswordDialog.type = BSPasswordInput.Type.Confirm
                             checkPasswordDialog.open()
                             checkPasswordDialog.bsAccepted.connect(function() {
                                 walletsProxy.createWallet(isPrimary, seed, walletInfo, passwordData, createCallback)

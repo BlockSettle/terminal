@@ -13,9 +13,15 @@ CustomTitleDialogWindow {
     property alias enteredPassword : passwordInput.text
     property bool passwordCorrect: passwordInput.text.length !== 0 && (passwordToCheck.length ===0 || passwordInput.text === passwordToCheck)
 
-    title: qsTr("Notice!")
+    title: type === BSPasswordInput.Type.Request ? qsTr("Decrypt Wallet") : qsTr("Notice!")
     width: 350
     rejectable: true
+
+    enum Type {
+       Confirm = 0,
+       Request = 1
+    }
+    property int type: BSPasswordInput.Type.Confirm
 
     cContentItem: ColumnLayout {
         Layout.fillWidth: true
@@ -24,6 +30,7 @@ CustomTitleDialogWindow {
 
             CustomHeader {
                 text: qsTr("Please take care of your assets!")
+                visible: type === BSPasswordInput.Type.Confirm
                 Layout.fillWidth: true
                 Layout.preferredHeight: 25
                 Layout.topMargin: 5
@@ -33,6 +40,7 @@ CustomTitleDialogWindow {
 
             CustomLabel{
                 id: labelDetails_
+                visible: type === BSPasswordInput.Type.Confirm
                 text: qsTr("No one can help you recover your bitcoins if you forget the passphrase and don't have a backup! \
 Your Wallet and any backups are useless if you lose them.\
 <br><br>A backup protects your wallet forever, against hard drive loss and losing your passphrase. \
@@ -119,7 +127,7 @@ Please make a backup and keep it in a safe place.\
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: 5
-                text: qsTr("Continue")
+                text: type === BSPasswordInput.Type.Request ? qsTr("Ok") : qsTr("Continue")
                 onClicked: {
                     acceptAnimated()
                 }
