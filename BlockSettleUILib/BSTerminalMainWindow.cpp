@@ -50,6 +50,7 @@
 #include "Settings/ConfigDialog.h"
 #include "StartupDialog.h"
 #include "StatusBarView.h"
+#include "SystemFileUtils.h"
 #include "TabWithShortcut.h"
 #include "TerminalEncryptionDialog.h"
 #include "TransactionsViewModel.h"
@@ -481,14 +482,19 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    ZmqBIP15XDataConnection::invokeCB ourInvokeCB = nullptr;
 
    bool ephemeralDataConnKeys = true;
+   std::string keyFileDir = "";
+   std::string keyFileName = "";
    if (runMode == SignContainer::OpMode::Remote) {
       ephemeralDataConnKeys = false;
+      keyFileDir = SystemFilePaths::appDataLocation();
+      keyFileName = "client.peers";
 
       // Define the callback that will be used to determine if the signer's BIP
       // 150 identity key, if it has changed, will be accepted. It needs strings
       // for the old and new keys, and a promise to set once the user decides.
       ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
-         , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &newKeyProm) {
+         , const std::string& srvAddrPort
+         , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
          QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm] {
             BSMessageBox *box = new BSMessageBox(BSMessageBox::question
                , tr("Server identity key has changed")
@@ -531,7 +537,8 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    }
 
    retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-      , resultHost, resultPort, netType, connectionManager_, ephemeralDataConnKeys, ourNewKeyCB);
+      , resultHost, resultPort, netType, connectionManager_
+      , ephemeralDataConnKeys, keyFileDir, keyFileName, ourNewKeyCB);
    return retPtr;
 }
 

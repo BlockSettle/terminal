@@ -42,9 +42,9 @@ class ZmqBIP15XDataConnection : public ZmqDataConnection
 {
 public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const bool ephemeralPeers = false, const bool monitored = false
-      , const bool makeClientCookie = false
-      , const bool readServerCookie = false
+      , const bool ephemeralPeers = false, const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = "", const bool monitored = false
+      , const bool makeClientCookie = false, const bool readServerCookie = false
       , const std::string& cookiePath = "");
    ~ZmqBIP15XDataConnection() noexcept override;
 

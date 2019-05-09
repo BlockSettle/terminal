@@ -1076,10 +1076,14 @@ RemoteSigner::RemoteSigner(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings>& appSettings
    , OpMode opMode
    , const bool ephemeralDataConnKeys
+   , const std::string& ownKeyFileDir
+   , const std::string& ownKeyFileName
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : HeadlessContainer(logger, opMode)
    , host_(host), port_(port), netType_(netType)
    , ephemeralDataConnKeys_(ephemeralDataConnKeys)
+   , ownKeyFileDir_(ownKeyFileDir)
+   , ownKeyFileName_(ownKeyFileName)
    , appSettings_{appSettings}
    , cbNewKey_{inNewKeyCB}
    , connectionManager_{connectionManager}
@@ -1190,8 +1194,9 @@ void RemoteSigner::RecreateConnection()
       absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    }
 
-   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(ephemeralDataConnKeys_
-         , makeClientCookie, readServerCookie, absCookiePath);
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(
+      ephemeralDataConnKeys_, ownKeyFileDir_, ownKeyFileName_, makeClientCookie
+      , readServerCookie, absCookiePath);
    connection_->setCBs(cbNewKey_);
    connection_->setLocalHeartbeatInterval();
 
@@ -1433,10 +1438,13 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , SignContainer::OpMode mode
    , const bool ephemeralDataConnKeys
+   , const std::string& ownKeyFileDir
+   , const std::string& ownKeyFileName
    , double asSpendLimit
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-      , connectionManager, appSettings, mode, ephemeralDataConnKeys, inNewKeyCB)
+      , connectionManager, appSettings, mode, ephemeralDataConnKeys
+      , ownKeyFileDir, ownKeyFileName, inNewKeyCB)
       , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
 {}
 
