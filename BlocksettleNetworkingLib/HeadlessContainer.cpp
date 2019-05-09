@@ -1205,7 +1205,7 @@ void RemoteSigner::RecreateConnection()
 
 void RemoteSigner::ScheduleRestart()
 {
-   if (isRestartScheduled_ || opMode() != OpMode::Local) {
+   if (isRestartScheduled_) {
       return;
    }
 
