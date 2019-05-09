@@ -182,7 +182,6 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
 
    case headless::AuthenticationRequestType:
       return AuthResponse(clientId, packet);
-      break;
 
    case headless::CancelSignTxRequestType:
       return onCancelSignTx(clientId, packet);
@@ -493,7 +492,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
 
    const std::string prompt("Signing multi-wallet input (auth revoke) transaction");
 
-   const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, reqType, id=packet.id()]
+   const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, id=packet.id()]
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
       try {
          const auto tx = bs::core::SignMultiInputTX(txMultiReq, walletPasswords, walletMap);
@@ -846,15 +845,6 @@ bool HeadlessContainerListener::CreateHDWallet(const std::string &clientId, unsi
       return false;
    }
    return true;
-}
-
-static NetworkType mapNetworkType(headless::NetworkType netType)
-{
-   switch (netType) {
-   case headless::MainNetType:   return NetworkType::MainNet;
-   case headless::TestNetType:   return NetworkType::TestNet;
-   default:                      return NetworkType::Invalid;
-   }
 }
 
 bool HeadlessContainerListener::onCreateHDWallet(const std::string &clientId, headless::RequestPacket &packet)

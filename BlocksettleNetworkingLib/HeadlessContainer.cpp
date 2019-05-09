@@ -1205,7 +1205,13 @@ void RemoteSigner::RecreateConnection()
 
 void RemoteSigner::ScheduleRestart()
 {
+   if (isRestartScheduled_) {
+      return;
+   }
+
+   isRestartScheduled_ = true;
    QTimer::singleShot(kRemoteReconnectPeriod, this, [this] {
+      isRestartScheduled_ = false;
       RecreateConnection();
       Start();
    });
