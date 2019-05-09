@@ -1142,7 +1142,7 @@ bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
    liveRequest.ownRequest = request.ownRequest;
    liveRequest.side = request.side;
    liveRequest.amountRange = request.amountRange;
-   liveRequest.expireTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch() + 300000;
+   liveRequest.expireTimestamp = QDateTime::currentDateTimeUtc().addSecs(10*60).toMSecsSinceEpoch();
 
    if (request.ownRequest) {
       liveRequest.requestorId = currentUserId_;

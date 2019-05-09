@@ -97,7 +97,14 @@ QVariant OTCRequestViewModel::getRowData(const int column, const bs::network::Li
       return QString::fromStdString(bs::network::OTCRangeID::toString(otc.amountRange));
 
    case ColumnDuration:
-      return 0;
+      {
+         auto currentTimestamp = QDateTime::currentDateTime().toMSecsSinceEpoch();
+         if (currentTimestamp >= otc.expireTimestamp) {
+            return 0;
+         }
+
+         return static_cast<int>((otc.expireTimestamp - currentTimestamp)/60000);
+      }
    }
 
    return QVariant{};
