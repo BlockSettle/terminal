@@ -202,15 +202,16 @@ void AddressListModel::updateWalletData()
       // Get an address's balance & # of TXs from Armory via the wallet.
       const auto &wallet = addressRows_[i].wallet;
       const auto &address = addressRows_[i].address;
-      if (wallet) {
-         if (!wallet->getAddrTxN(address, cbTxN)) {
+      if (wallet) 
+      {
+         if (!wallet->getAddrTxN(address, cbTxN)) 
+         {
             cbTxN(0);
             continue;
          }
-         if (!wallet->getAddrBalance(address, cbBalance)) {
-            cbBalance({});
-            continue;
-         }
+
+         auto addrBalances = wallet->getAddrBalance(address);
+         cbBalance(addrBalances);
       }
    }
 }

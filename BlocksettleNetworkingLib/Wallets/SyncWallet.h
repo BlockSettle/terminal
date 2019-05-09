@@ -92,9 +92,7 @@ namespace bs {
 
          virtual bool containsAddress(const bs::Address &addr) = 0;
          virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
-         virtual bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const;
          virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
-//         virtual BinaryData getRootId() const = 0;
          virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
             , QObject *obj, uint64_t val = UINT64_MAX);
          virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
@@ -108,11 +106,13 @@ namespace bs {
             , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
          virtual bool isBalanceAvailable() const;
-         virtual void updateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr);
          virtual BTCNumericTypes::balance_type getSpendableBalance() const;
          virtual BTCNumericTypes::balance_type getUnconfirmedBalance() const;
          virtual BTCNumericTypes::balance_type getTotalBalance() const;
          virtual void firstInit(bool force = false);
+
+         virtual void updateBalances(const std::function<void(void)> &cb = nullptr) = 0;
+         virtual std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
 
          virtual bool isWatchingOnly() const { return false; }
          virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
@@ -134,14 +134,11 @@ namespace bs {
          virtual size_t getWalletAddressCount() const { return addrCount_; }
          virtual bool getActiveAddressCount(const std::function<void(size_t)> &) const;
 
-         virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default
-            , const CbAddress &cb = nullptr) = 0;
-         virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default
-            , const CbAddress &cb = nullptr) = 0;
-         virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default
-            , const CbAddress &cb = nullptr) { return getNewExtAddress(aet); }
-         virtual bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default
-            , const CbAddress &cb = nullptr);
+         virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
+         virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
+         virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) 
+            { return getNewIntAddress(aet); }
+
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
 
@@ -225,6 +222,9 @@ namespace bs {
             , uint32_t id, std::function<void(const Wallet *wallet
                , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
+         bool isRegistered(void) const { return isRegistered_; }
+         void setRegistered(void) { isRegistered_ = true; }
+
       protected:
          std::string       walletName_;
          SignContainer  *  signContainer_;
@@ -244,9 +244,7 @@ namespace bs {
 
          mutable std::map<BinaryData, std::vector<uint64_t> >  addressBalanceMap_;
          mutable std::map<BinaryData, uint32_t>                addressTxNMap_;
-         mutable std::atomic_bool   updateAddrBalance_{ false };
          mutable std::atomic_bool   updateAddrTxN_{ false };
-         mutable std::map<bs::Address, std::vector<std::function<void(std::vector<uint64_t>)>>> cbBal_;
          mutable std::map<bs::Address, std::vector<std::function<void(uint32_t)>>>              cbTxN_;
 
          class UtxoFilterAdapter : public bs::UtxoReservation::Adapter
@@ -265,6 +263,7 @@ namespace bs {
 
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
          std::atomic_bool  heartbeatRunning_ = { false };
+         bool isRegistered_ = false;
       };
 
 

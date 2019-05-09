@@ -744,10 +744,7 @@ void WalletGroup::registerAddresses(
 {
    if (!msg->has_walletid() || !msg->has_flag())
       return;
-
-   if (msg->bindata_size() == 0)
-      return;
-   
+  
    auto walletID = msg->walletid();
    BinaryDataRef walletIDRef; walletIDRef.setRef(walletID);
 
@@ -755,6 +752,24 @@ void WalletGroup::registerAddresses(
    if (theWallet == nullptr)
    {
       LOGWARN << "failed to get or set wallet";
+      return;
+   }
+
+   BinaryData id;
+   if (msg->has_hash())
+   {
+      auto idstr = msg->hash();
+      id.copyFrom(idstr);
+   }
+
+   if (msg->bindata_size() == 0)
+   {
+      if (id.getSize() != 0)
+      {
+         theWallet->bdvPtr_->flagRefresh(
+            BDV_refreshAndRescan, id, nullptr);
+      }
+
       return;
    }
 
@@ -771,13 +786,6 @@ void WalletGroup::registerAddresses(
          continue;
 
       scrAddrSet.insert(scrAddrRef);
-   }
-
-   BinaryData id;
-   if (msg->has_hash())
-   {
-      auto idstr = msg->hash();
-      id.copyFrom(idstr);
    }
 
    auto callback = 

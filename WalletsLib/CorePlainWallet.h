@@ -70,32 +70,33 @@ namespace bs {
          bool containsAddress(const bs::Address &addr) override;
 
          std::string walletId() const override { return walletId_; }
-         std::string description() const override { return desc_; }
-         void setDescription(const std::string &desc) override { desc_ = desc; }
+         std::string description() const { return desc_; }
+         void setDescription(const std::string &desc) { desc_ = desc; }
          wallet::Type type() const override { return wallet::Type::Bitcoin; }
 
          BinaryData getRootId() const override { return BinaryData(); }
 
-         std::shared_ptr<ResolverFeed> getResolver(const SecureBinaryData &) override;
-         std::shared_ptr<ResolverFeed> getPublicKeyResolver() override;
+         std::shared_ptr<ResolverFeed> getResolver(void) const;
 
          bs::Address getNewExtAddress(AddressEntryType) override { return {}; }
          bs::Address getNewIntAddress(AddressEntryType) override { return {}; }
 
-         size_t getUsedAddressCount() const override { return usedAddresses_.size(); }
+         unsigned getUsedAddressCount() const override { return usedAddresses_.size(); }
          std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;
-         bs::Address createAddressWithIndex(const std::string &, bool, AddressEntryType) override { return {}; }
 
          SecureBinaryData getPublicKeyFor(const bs::Address &) override;
-         KeyPair getKeyPairFor(const bs::Address &, const SecureBinaryData &password) override;
+         KeyPair getKeyPairFor(const bs::Address &, const SecureBinaryData &password);
 
-         bool eraseFile() override;
+         bool isWatchingOnly() const { return true; }
+         NetworkType networkType(void) const { return netType_; }
 
+         void shutdown(void);
+         std::string getFilename(void) const { return dbFilename_; }
       protected:
-         std::shared_ptr<LMDBEnv> getDBEnv() override { return dbEnv_; }
-         LMDB *getDB() override { return db_.get(); }
+         std::shared_ptr<LMDBEnv> getDBEnv() { return dbEnv_; }
+         LMDB *getDB() { return db_.get(); }
 
          void loadFromFile(const std::string &filename);
          void openDBEnv(const std::string &filename);
@@ -126,6 +127,7 @@ namespace bs {
          std::shared_ptr<LMDBEnv>   dbEnv_;
          std::shared_ptr<LMDB>      db_;
          std::string                dbFilename_;
+         const NetworkType netType_;
       };
 
    }  //namespace core

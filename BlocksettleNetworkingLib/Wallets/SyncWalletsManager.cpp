@@ -60,16 +60,19 @@ void WalletsManager::syncWallets(const CbProgress &cb)
 {
    const auto &cbWalletInfo = [this, cb](std::vector<bs::sync::WalletInfo> wi) {
       auto walletIds = std::make_shared<std::unordered_set<std::string>>();
-      for (const auto &info : wi) {
+      for (const auto &info : wi)
          walletIds->insert(info.id);
-      }
-      for (const auto &info : wi) {
-         const auto &cbDone = [this, walletIds, id=info.id, total=wi.size(), cb] {
+
+      for (const auto &info : wi) 
+      {
+         const auto &cbDone = [this, walletIds, id=info.id, total=wi.size(), cb] 
+         {
             walletIds->erase(id);
-            if (cb) {
+            if (cb)
                cb(total - walletIds->size(), total);
-            }
-            if (walletIds->empty()) {
+
+            if (walletIds->empty()) 
+            {
                logger_->debug("[WalletsManager::syncWallets] all wallets synchronized");
                emit walletsSynchronized();
                emit walletChanged();
@@ -78,43 +81,60 @@ void WalletsManager::syncWallets(const CbProgress &cb)
 
          logger_->debug("[WalletsManager::syncWallets] syncing wallet {} ({} {})"
             , info.id, info.name, (int)info.format);
-         switch (info.format) {
-         case bs::sync::WalletFormat::HD: {
-            try {
-               const auto hdWallet = std::make_shared<hd::Wallet>(info.netType, info.id, info.name
-                  , info.description, signContainer_.get(), logger_);
-               if (hdWallet) {
-                  const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
+         
+         switch (info.format) 
+         {
+         case bs::sync::WalletFormat::HD: 
+         {
+            try 
+            {
+               const auto hdWallet = std::make_shared<hd::Wallet>(info.netType, info.id, info.name,
+                  info.description, signContainer_.get(), logger_);
+
+               if (hdWallet) 
+               {
+                  const auto &cbHDWalletDone = [this, hdWallet, cbDone] 
+                  {
                      saveWallet(hdWallet);
                      cbDone();
                   };
+
                   hdWallet->synchronize(cbHDWalletDone);
                }
             }
-            catch (const std::exception &e) {
+            catch (const std::exception &e) 
+            {
                logger_->error("[WalletsManager::syncWallets] failed to create HD wallet "
                   "{}: {}", info.id, e.what());
                cbDone();
             }
             break;
          }
-         case bs::sync::WalletFormat::Settlement: {
-            if (settlementWallet_) {
+
+         case bs::sync::WalletFormat::Settlement: 
+         {
+            if (settlementWallet_) 
+            {
                logger_->error("[WalletsManager::syncWallets] more than one settlement "
                   "wallet is not supported");
                cbDone();
             }
-            else {
-               const auto settlWallet = std::make_shared<SettlementWallet>(info.id, info.name, info.description
-                  , signContainer_.get(), logger_);
-               const auto &cbSettlementDone = [this, settlWallet, cbDone] {
+            else 
+            {
+               const auto settlWallet = std::make_shared<SettlementWallet>(
+                  info.id, info.name, info.description, signContainer_.get(), logger_);
+               
+               const auto &cbSettlementDone = [this, settlWallet, cbDone] 
+               {
                   setSettlementWallet(settlWallet);
                   cbDone();
                };
+
                settlWallet->synchronize(cbSettlementDone);
             }
             break;
          }
+
          default:
             cbDone();
             logger_->info("[WalletsManager::syncWallets] wallet format {} is not "
@@ -122,13 +142,17 @@ void WalletsManager::syncWallets(const CbProgress &cb)
             break;
          }
       }
+
       logger_->debug("[WalletsManager::syncWallets] initial wallets synchronized");
    };
-   if (!signContainer_) {
+
+   if (!signContainer_) 
+   {
       logger_->error("[WalletsManager::{}] signer is not set - aborting"
          , __func__);
       return;
    }
+
    signContainer_->syncWalletInfo(cbWalletInfo);
 }
 
@@ -275,7 +299,9 @@ WalletsManager::WalletPtr WalletsManager::getDefaultWallet() const
    const auto &priWallet = getPrimaryWallet();
    if (priWallet) {
       const auto &group = priWallet->getGroup(priWallet->getXBTGroupType());
-      result = group ? group->getLeaf(0) : nullptr;
+      
+      //all leaf paths are always hardened
+      result = group ? group->getLeaf(0x80000000) : nullptr;
    }
    return result;
 }
@@ -291,7 +317,8 @@ WalletsManager::WalletPtr WalletsManager::getCCWallet(const std::string &cc)
    const auto &priWallet = getPrimaryWallet();
    auto ccGroup = priWallet->getGroup(bs::hd::CoinType::BlockSettle_CC);
    if (ccGroup == nullptr) {
-      ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
+      //cc wallet is always ext only
+      ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
    }
    return ccGroup->getLeaf(cc);
 }
@@ -576,21 +603,28 @@ bool WalletsManager::deleteWallet(const HDWalletPtr &wallet)
    return result;
 }
 
-void WalletsManager::registerWallets()
+std::vector<std::string> WalletsManager::registerWallets()
 {
+   std::vector<std::string> result;
    if (!armory_) {
-      return;
+      return result;
    }
    if (empty()) {
       logger_->debug("[WalletsManager::{}] - No wallets to register.", __func__);
-      return;
+      return result;
    }
-   for (auto &it : wallets_) {
-      it.second->registerWallet(armory_);
+   for (auto &it : wallets_) 
+   {
+      auto&& ids = it.second->registerWallet(armory_);
+      result.insert(result.end(), ids.begin(), ids.end());
    }
-   if (settlementWallet_) {
-       settlementWallet_->registerWallet(armory_);
+   if (settlementWallet_) 
+   {
+      auto&& ids = settlementWallet_->registerWallet(armory_);
+      result.insert(result.end(), ids.begin(), ids.end());
    }
+
+   return result;
 }
 
 void WalletsManager::unregisterWallets()
@@ -605,6 +639,16 @@ void WalletsManager::unregisterWallets()
 
 void WalletsManager::updateWallets(bool force)
 {
+   /***
+   This code is triggered without checking if the wallets are actually
+   registered. Such a common event as NewBlock will trigger this, while
+   the trigger itself is a Qt signal connected to WalletsManager. In 
+   other words, there is not even an attempt to check that the underlying
+   wallets are registered, as adding a new wallet object to the 
+   WalletsManager object while online but before registering said wallet 
+   will trigger a DB side "unknown wallet" error from this call, which
+   may or may not be handled gracefully on this end.
+   ***/
    for (auto &it : wallets_) {
       it.second->firstInit(force);
    }

@@ -21,7 +21,7 @@ InprocSigner::InprocSigner(const std::shared_ptr<bs::core::hd::Wallet> &wallet
    , walletsPath_({}), netType_(wallet->networkType())
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
-   walletsMgr_->addWallet(wallet, walletsPath_);
+   walletsMgr_->addWallet(wallet);
 }
 
 InprocSigner::InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &wallet
@@ -66,9 +66,9 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
    try {
       BinaryData signedTx;
       if (mode == TXSignMode::Full) {
-         signedTx = wallet->signTXRequest(txSignReq, password);
+         signedTx = wallet->signTXRequest(txSignReq);
       } else {
-         signedTx = wallet->signPartialTXRequest(txSignReq, password);
+         signedTx = wallet->signPartialTXRequest(txSignReq);
       }
       QTimer::singleShot(1, [this, reqId, signedTx] {emit TXSigned(reqId, signedTx, {}, false); });
    }
@@ -101,7 +101,7 @@ bs::signer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::
       logger_->error("[{}] failed to find auth wallet", __func__);
       return 0;
    }
-   const auto authKeys = authWallet->getKeyPairFor(authAddr, password);
+   bs::core::KeyPair authKeys; // = authWallet->getKeyPairFor(authAddr, password);
    if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
       logger_->error("[{}] failed to get priv/pub keys for {}", __func__, authAddr.display());
       return 0;
@@ -147,24 +147,15 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
    }
 
    std::shared_ptr<bs::core::hd::Leaf> leaf;
-   SecureBinaryData password;
-   for (const auto &pwd : pwdData) {
-      password = mergeKeys(password, pwd.password);
-   }
+   auto& password = pwdData[0].password;
 
-   try {
-      std::shared_ptr<bs::core::hd::Node> leafNode;
-      const auto &rootNode = hdWallet->getRootNode(password);
-      if (rootNode) {
-         leafNode = rootNode->derive(path);
-      } else {
-         logger_->error("[{}] failed to decrypt root node", __func__);
-         return 0;
-      }
-
+   try 
+   {
+      hdWallet->lockForEncryption(password);
       const auto leafIndex = path.get(2);
-      leaf = group->createLeaf(leafIndex, leafNode);
-      if (!leaf || !(leaf = group->getLeaf(leafIndex))) {
+      auto leaf = group->createLeaf(leafIndex);
+      if (leaf == nullptr) 
+      {
          logger_->error("[{}] failed to create/get leaf {}", __func__, path.toString());
          return 0;
       }
@@ -179,16 +170,16 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
    switch (groupType) {
    case bs::hd::CoinType::Bitcoin_main:
    case bs::hd::CoinType::Bitcoin_test:
-      hdLeaf = std::make_shared<bs::sync::hd::Leaf>(leaf->walletId(), leaf->name(), leaf->description()
+      hdLeaf = std::make_shared<bs::sync::hd::Leaf>(leaf->walletId(), leaf->name(), ""
          , this, logger_, leaf->type(), leaf->hasExtOnlyAddresses());
       break;
    case bs::hd::CoinType::BlockSettle_Auth:
       hdLeaf = std::make_shared<bs::sync::hd::AuthLeaf>(leaf->walletId(), leaf->name()
-         , leaf->description(), this, logger_);
+         , "", this, logger_);
       break;
    case bs::hd::CoinType::BlockSettle_CC:
       hdLeaf = std::make_shared<bs::sync::hd::CCLeaf>(leaf->walletId(), leaf->name()
-         , leaf->description(), this, logger_, leaf->hasExtOnlyAddresses());
+         , "", this, logger_, leaf->hasExtOnlyAddresses());
       break;
    default:    break;
    }
@@ -201,7 +192,7 @@ bs::signer::RequestId InprocSigner::createHDWallet(const std::string &name, cons
    , bs::wallet::KeyRank keyRank)
 {
    try {
-      const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, primary, pwdData, keyRank);
+      const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, pwdData.begin()->password, primary);
       const bs::signer::RequestId reqId = seqId_++;
       const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->networkType(), wallet->walletId()
          , wallet->name(), wallet->description(), this, logger_);
@@ -221,7 +212,7 @@ void InprocSigner::createSettlementWallet(const std::function<void(const std::sh
       wallet = walletsMgr_->createSettlementWallet(netType_, walletsPath_);
    }
    const auto settlWallet = std::make_shared<bs::sync::SettlementWallet>(wallet->walletId(), wallet->name()
-      , wallet->description(), this, logger_);
+      , "", this, logger_);
    if (cb) {
       cb(settlWallet);
    }
@@ -234,7 +225,7 @@ bs::signer::RequestId InprocSigner::customDialogRequest(bs::signer::ui::DialogTy
 
 bs::signer::RequestId InprocSigner::SetUserId(const BinaryData &userId)
 {
-   walletsMgr_->setChainCode(userId);
+   //walletsMgr_->setChainCode(userId);
    QTimer::singleShot(1, [this] { emit UserIdSet(); });
    return seqId_++;
 }
@@ -310,7 +301,7 @@ void InprocSigner::syncWalletInfo(const std::function<void(std::vector<bs::sync:
    const auto settlWallet = walletsMgr_->getSettlementWallet();
    if (settlWallet) {
       result.push_back({ bs::sync::WalletFormat::Settlement, settlWallet->walletId(), settlWallet->name()
-         , settlWallet->description(), settlWallet->networkType(), true });
+         , "", settlWallet->networkType(), true });
    }
    cb(result);
 }
@@ -323,9 +314,12 @@ void InprocSigner::syncHDWallet(const std::string &id, const std::function<void(
       for (const auto &group : hdWallet->getGroups()) {
          bs::sync::HDWalletData::Group groupData;
          groupData.type = static_cast<bs::hd::CoinType>(group->index());
+         groupData.extOnly = group->isExtOnly();
 
          for (const auto &leaf : group->getLeaves()) {
-            groupData.leaves.push_back({ leaf->walletId(), leaf->index() });
+            //ext only needs to be reflected on headless signer
+            groupData.leaves.push_back(
+               { leaf->walletId(), leaf->index(), leaf->hasExtOnlyAddresses() });
          }
          result.groups.push_back(groupData);
       }
@@ -345,6 +339,9 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
       result.encryptionKeys = wallet->encryptionKeys();
       result.encryptionRank = wallet->encryptionRank();
       result.netType = wallet->networkType();
+      
+      result.highestExtIndex_ = wallet->getExtAddressCount();
+      result.highestIntIndex_ = wallet->getIntAddressCount();
 
       for (const auto &addr : wallet->getUsedAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
@@ -398,22 +395,64 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
    , bool persistent)
 {
    std::vector<std::pair<bs::Address, std::string>> result;
-   result.reserve(inData.size());
    const auto wallet = walletsMgr_->getWalletById(walletId);
-   if (wallet) {
-      for (const auto &in : inData) {
-         std::string index;
-         try {
-            const bs::Address addr(in.first);
-            if (addr.isValid()) {
-               index = wallet->getAddressIndex(addr);
-            }
-         } catch (const std::exception &) {}
-         if (index.empty()) {
-            index = in.first;
-         }
-         result.push_back({ wallet->createAddressWithIndex(in.first, persistent, in.second), in.first });
-      }
+   if (wallet == nullptr)
+   {
+      cb(result);
+      return;
    }
+
+   result.reserve(inData.size());
+   for (const auto &in : inData)
+   {
+      std::string index;
+      try
+      {
+         const bs::Address addr(in.first);
+         if (addr.isValid())
+            index = wallet->getAddressIndex(addr);
+      }
+      catch (const std::exception&)
+      {
+      }
+
+      if (index.empty())
+         index = in.first;
+
+      result.push_back({ wallet->synchronizeUsedAddressChain(in.first, in.second), in.first });
+   }
+
+   cb(result);
+}
+
+void InprocSigner::extendAddressChain(
+   const std::string &walletId, unsigned count, bool extInt,
+   const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
+{
+   /***
+   Extend the wallet's account external (extInt == true) or internal 
+   (extInt == false) chain, return the newly created addresses.
+
+   These are not instantiated addresses, but pooled ones. They represent
+   possible address type variations of the newly created assets, a set
+   necessary to properly register the wallet with ArmoryDB.
+   ***/
+
+   std::vector<std::pair<bs::Address, std::string>> result;
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (wallet == nullptr)
+   {
+      cb(result);
+      return;
+   }
+
+   auto&& newAddrVec = wallet->extendAddressChain(count, extInt);
+   for (auto& addr : newAddrVec)
+   {
+      auto&& index = wallet->getAddressIndex(addr);
+      auto addrPair = std::make_pair(addr, index);
+      result.emplace_back(addrPair);
+   }
+
    cb(result);
 }

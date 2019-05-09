@@ -28,12 +28,15 @@
 #define DEFAULT_ZCTHREAD_COUNT 100
 #define WEBSOCKET_PORT 7681
 
+class BitcoinP2P;
+
 ////////////////////////////////////////////////////////////////////////////////
 struct BlockDataManagerConfig
 {
 private:
    static ARMORY_DB_TYPE armoryDbType_;
    static SOCKET_SERVICE service_;
+   static ARMORY_OPERATION_MODE operationMode_;
 
 public:
    BDM_INIT_MODE initMode_ = INIT_RESUME;
@@ -54,7 +57,7 @@ public:
    std::string dbDir_;
    std::string logFilePath_;
 
-   NodeType nodeType_ = Node_BTC;
+   std::shared_ptr<BitcoinP2P> nodePtr_ = nullptr;
    std::string btcPort_;
    std::string listenPort_;
    std::string rpcPort_;
@@ -124,6 +127,16 @@ public:
    }
 
    static std::string getDbModeStr(void);
+
+   static void setOperationMode(ARMORY_OPERATION_MODE _mode)
+   {
+      operationMode_ = _mode;
+   }
+
+   static ARMORY_OPERATION_MODE getOperationMode(void)
+   {
+      return operationMode_;
+   }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

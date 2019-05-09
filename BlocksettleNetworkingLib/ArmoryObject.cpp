@@ -138,14 +138,10 @@ std::string ArmoryObject::registerWallet(std::shared_ptr<AsyncClient::BtcWallet>
    , const std::function<void(const std::string &regId)> &cb
    , bool asNew)
 {
-   const auto &cbWrap = [this, cb](const std::string &regId) {
-      if (cb) {
-         if (cbInMainThread_) {
-            QMetaObject::invokeMethod(this, [cb, regId] { cb(regId); });
-         } else {
-            cb(regId);
-         }
-      }
+   const auto &cbWrap = [this, cb](const std::string &regId) 
+   {
+      if (cb) 
+         cb(regId);
    };
    return ArmoryConnection::registerWallet(wallet, walletId, addrVec, cbWrap, asNew);
 }

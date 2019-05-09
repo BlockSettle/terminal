@@ -504,7 +504,7 @@ void ApplicationSettings::SetDBDir(const QString &path)
 
 SocketType ApplicationSettings::GetArmorySocketType() const
 {
-   return SocketHttp;
+   return SocketWS;
 }
 
 int ApplicationSettings::GetDefaultArmoryRemotePort(NetworkType networkType)

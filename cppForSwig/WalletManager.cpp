@@ -306,7 +306,7 @@ void CoinSelectionInstance::decorateUTXOs(
    {
       auto&& scrAddr = utxo.getRecipientScrAddr();
       auto& ID = walletPtr->getAssetIDForAddr(scrAddr);
-      auto addrPtr = walletPtr->getAddressEntryForID(ID.first, ID.second);
+      auto addrPtr = walletPtr->getAddressEntryForID(ID.first);
 
       utxo.txinRedeemSizeBytes_ = 0;
       utxo.witnessDataSizeBytes_ = 0;

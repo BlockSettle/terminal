@@ -473,9 +473,9 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
 
                if (qryCCWallet.exec() == QDialog::Accepted) {
                   bs::hd::Path path;
-                  path.append(bs::hd::purpose, true);
-                  path.append(bs::hd::BlockSettle_CC, true);
-                  path.append(qrn.product, true);
+                  path.append(bs::hd::purpose | 0x80000000);
+                  path.append(bs::hd::BlockSettle_CC | 0x80000000);
+                  path.append(qrn.product);
                   leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
                }
             } else {
@@ -1203,7 +1203,8 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
    const auto &priWallet = walletsManager_->getPrimaryWallet();
    auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    if (!group) {
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC);
+      //CC wallets always are ext only
+      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    group->addLeaf(leaf, true);
 

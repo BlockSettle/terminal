@@ -892,7 +892,8 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
             " have a Primary Wallet which supports the sub-wallets required to interact with the system.")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
-         wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+         //auth wallets are always ext only
+         wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth, true);
          return true;
       }
       return false;

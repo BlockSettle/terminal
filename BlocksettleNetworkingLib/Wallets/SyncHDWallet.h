@@ -45,7 +45,7 @@ namespace bs {
             NetworkType networkType() const { return netType_; }
 
             std::shared_ptr<Group> getGroup(bs::hd::CoinType ct) const;
-            std::shared_ptr<Group> createGroup(bs::hd::CoinType ct);
+            std::shared_ptr<Group> createGroup(bs::hd::CoinType ct, bool isExtOnly);
             void addGroup(const std::shared_ptr<Group> &group);
             size_t getNumGroups() const { return groups_.size(); }
             std::vector<std::shared_ptr<Group>> getGroups() const;
@@ -60,9 +60,9 @@ namespace bs {
             void setUserId(const BinaryData &usedId);
             bool deleteRemotely();
 
-            void registerWallet(const std::shared_ptr<ArmoryObject> &, bool asNew = false);
+            std::vector<std::string> registerWallet(
+               const std::shared_ptr<ArmoryObject> &, bool asNew = false);
             void setArmory(const std::shared_ptr<ArmoryObject> &);
-
             bool startRescan(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr, const cb_scan_write_last &cbw = nullptr);
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
@@ -84,7 +84,6 @@ namespace bs {
             const std::string walletId_;
             const std::string name_, desc_;
             NetworkType    netType_ = NetworkType::MainNet;
-            bool           extOnlyAddresses_ = false;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
             mutable QMutex    mtxGroups_;

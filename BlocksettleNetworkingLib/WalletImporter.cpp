@@ -75,9 +75,9 @@ void WalletImporter::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
    else {
       for (const auto &cc : ccList) {
          bs::hd::Path path;
-         path.append(bs::hd::purpose, true);
-         path.append(bs::hd::CoinType::BlockSettle_CC, true);
-         path.append(cc, true);
+         path.append(bs::hd::purpose | 0x80000000);
+         path.append(bs::hd::CoinType::BlockSettle_CC | 0x80000000);
+         path.append(cc);
          const auto reqId = signingContainer_->createHDLeaf(rootWallet_->walletId(), path, pwdData_);
          if (reqId) {
             createCCWalletReqs_[reqId] = cc;
@@ -92,7 +92,8 @@ void WalletImporter::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
       const auto cc = createCCWalletReqs_[id];
       createCCWalletReqs_.erase(id);
 
-      const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
+      //cc wallet is always ext only
+      const auto group = rootWallet_->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
       group->addLeaf(leaf);
       if (assetMgr_) {
          leaf->setData(assetMgr_->getCCGenesisAddr(cc).display());

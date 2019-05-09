@@ -28,46 +28,50 @@ hd::Wallet::~Wallet() = default;
 
 void hd::Wallet::synchronize(const std::function<void()> &cbDone)
 {
-   if (!signContainer_) {
+   if (!signContainer_)
       return;
-   }
-   const auto &cbProcess = [this, cbDone](HDWalletData data) {
-      for (const auto &grpData : data.groups) {
-         auto group = createGroup(grpData.type);
-         if (!group) {
+
+   const auto &cbProcess = [this, cbDone](HDWalletData data) 
+   {
+      for (const auto &grpData : data.groups) 
+      {
+         auto group = createGroup(grpData.type, grpData.extOnly);
+         if (!group) 
+         {
             LOG(logger_, error, "[hd::Wallet::synchronize] failed to create group {}", (uint32_t)grpData.type);
             continue;
          }
-         for (const auto &leafData : grpData.leaves) {
+
+         for (const auto &leafData : grpData.leaves) 
+         {
             auto leaf = group->createLeaf(leafData.index, leafData.id);
-            if (!leaf) {
+            if (!leaf) 
+            {
                LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{} with id {}"
                   , (uint32_t)grpData.type, leafData.index, leafData.id);
                continue;
             }
          }
       }
+
       const auto leaves = getLeaves();
       auto leafIds = std::make_shared<std::set<std::string>>();
-      for (const auto &leaf : leaves) {
+      for (const auto &leaf : leaves)
          leafIds->insert(leaf->walletId());
-      }
-      for (const auto &leaf : leaves) {
-         const auto &cbLeafDone = [this, leaf, leafIds, cbDone] {
-            leafIds->erase(leaf->walletId());
-            if (encryptionTypes_.empty()) {
-               encryptionTypes_ = leaf->encryptionTypes();
-               encryptionKeys_ = leaf->encryptionKeys();
-               encryptionRank_ = leaf->encryptionRank();
-               emit metaDataChanged();
-            }
-            if (leafIds->empty() && cbDone) {
+
+      for (const auto &leaf : leaves) 
+      {
+         const auto &cbLeafDone = [leafIds, cbDone, id=leaf->walletId()] 
+         {
+            leafIds->erase(id);
+            if (leafIds->empty() && cbDone)
                cbDone();
-            }
          };
+
          leaf->synchronize(cbLeafDone);
       }
    };
+
    signContainer_->syncHDWallet(walletId(), cbProcess);
 }
 
@@ -132,7 +136,7 @@ std::shared_ptr<bs::sync::Wallet> hd::Wallet::getLeaf(const std::string &id) con
    return itLeaf->second;
 }
 
-std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
+std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct, bool isExtOnly)
 {
    std::shared_ptr<hd::Group> result;
    result = getGroup(ct);
@@ -144,17 +148,17 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
    switch (ct) {
    case bs::hd::CoinType::BlockSettle_Auth:
       result = std::make_shared<hd::AuthGroup>(path, name_, desc_, signContainer_
-         , logger_, extOnlyAddresses_);
+         , logger_, isExtOnly);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
       result = std::make_shared<hd::CCGroup>(path, name_, desc_,signContainer_
-         , logger_, extOnlyAddresses_);
+         , logger_, isExtOnly);
       break;
 
    default:
       result = std::make_shared<hd::Group>(path, name_, hd::Group::nameForType(ct)
-         , desc_, signContainer_, logger_, extOnlyAddresses_);
+         , desc_, signContainer_, logger_, isExtOnly);
       break;
    }
    addGroup(result);
@@ -229,11 +233,17 @@ void hd::Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
    }
 }
 
-void hd::Wallet::registerWallet(const std::shared_ptr<ArmoryObject> &armory, bool asNew)
+std::vector<std::string> hd::Wallet::registerWallet(
+   const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
-   for (const auto &leaf : getLeaves()) {
-      leaf->registerWallet(armory, asNew);
+   std::vector<std::string> result;
+   for (const auto &leaf : getLeaves()) 
+   {
+      auto&& regIDs = leaf->registerWallet(armory, asNew);
+      result.insert(result.end(), regIDs.begin(), regIDs.end());
    }
+
+   return result;
 }
 
 bool hd::Wallet::startRescan(const hd::Wallet::cb_scan_notify &cb, const cb_scan_read_last &cbr

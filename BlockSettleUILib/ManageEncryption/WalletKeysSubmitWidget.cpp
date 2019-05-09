@@ -197,11 +197,7 @@ void WalletKeysSubmitWidget::cancel()
 
 SecureBinaryData WalletKeysSubmitWidget::key() const
 {
-   SecureBinaryData result;
-   for (const auto &pwd : pwdData_) {
-      result = mergeKeys(result, pwd.password);
-   }
-   return result;
+   return pwdData_[0].password;
 }
 
 bool WalletKeysSubmitWidget::isKeyFinal() const

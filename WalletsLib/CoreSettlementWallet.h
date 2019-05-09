@@ -39,7 +39,7 @@ namespace bs {
 
          std::shared_ptr<SettlementAddressEntry> newAddress(const BinaryData &settlementId
             , const BinaryData &buyAuthPubKey, const BinaryData &sellAuthPubKey
-            , bool persistent = true, const std::string &comment = {});
+            , const std::string &comment = {}, bool persistent = true);
          bool containsAddress(const bs::Address &addr) override;
 
          wallet::Type type() const override { return wallet::Type::Settlement; }
@@ -50,19 +50,16 @@ namespace bs {
          BinaryData signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const KeyPair &
             , const BinaryData &settlementId);
 
-         std::shared_ptr<ResolverFeed> getResolver(const SecureBinaryData &) override { return nullptr; }   // can't resolve without external data
-         std::shared_ptr<ResolverFeed> getPublicKeyResolver() override { return nullptr; }   // no public keys are stored
-
          bs::Address getNewExtAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
          bs::Address getNewIntAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
 
          std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) override;
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;
-         bs::Address createAddressWithIndex(const std::string &index, bool persistent, AddressEntryType) override;
+         bs::Address createAddressWithIndex(const std::string &index, bool persistent, AddressEntryType);
 
          SecureBinaryData getPublicKeyFor(const bs::Address &) override;
-         KeyPair getKeyPairFor(const bs::Address &, const SecureBinaryData &password) override;
+         KeyPair getKeyPairFor(const bs::Address &, const SecureBinaryData &password);
 
       protected:
          int addAddress(const bs::Address &, const std::shared_ptr<GenericAsset> &asset = nullptr) override;

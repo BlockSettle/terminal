@@ -67,17 +67,15 @@ namespace bs {
 
             std::vector<bs::Address> getExtAddressList() const override { return extAddresses_; }
             std::vector<bs::Address> getIntAddressList() const override { return intAddresses_; }
+
             size_t getExtAddressCount() const override { return extAddresses_.size(); }
             size_t getIntAddressCount() const override { return intAddresses_.size(); }
+            size_t getAddressPoolSize() const { return addressPool_.size(); }
+
             bool isExternalAddress(const Address &) const override;
-            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default
-               , const CbAddress &cb = nullptr) override;
-            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default
-               , const CbAddress &cb = nullptr) override;
-            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default
-               , const CbAddress &cb = nullptr) override;
-            bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default
-               , const CbAddress &cb = nullptr) override;
+            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
+            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
+            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &
@@ -86,10 +84,11 @@ namespace bs {
 
             int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
 
-            void updateBalances(const std::function<void(std::vector<uint64_t>)> &cb = nullptr) override;
-            bool getAddrBalance(const bs::Address &addr, std::function<void(std::vector<uint64_t>)>) const override;
             bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const override;
             bool getActiveAddressCount(const std::function<void(size_t)> &) const override;
+
+            virtual void updateBalances(
+               const std::function<void(void)> &cb = nullptr) override;
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
@@ -139,15 +138,14 @@ namespace bs {
             using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
 
          protected:
-            virtual bs::Address createAddress(const AddrPoolKey &, const CbAddress &, bool signal = true);
+            virtual bs::Address createAddress(const AddrPoolKey &, bool signal = true);
             void reset();
             bs::hd::Path getPathForAddress(const bs::Address &) const;
             void activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &);
             void activateHiddenAddress(const bs::Address &);
             bs::Address createAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true);
             bs::Address createAddressWithPath(const AddrPoolKey &, bool signal = true);
-            virtual void topUpAddressPool(const std::function<void()> &cb = nullptr
-               , size_t intAddresses = 0, size_t extAddresses = 0);
+            virtual void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr);
             void postOnline();
 
          protected:
@@ -171,7 +169,7 @@ namespace bs {
             bs::hd::Path::Elem  lastIntIdx_ = 0;
             bs::hd::Path::Elem  lastExtIdx_ = 0;
 
-            size_t intAddressPoolSize_ = 100;
+            size_t intAddressPoolSize_ = 20;
             size_t extAddressPoolSize_ = 100;
             std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
 
@@ -221,8 +219,7 @@ namespace bs {
             std::set<AddrPoolKey>   activeScanAddresses_;
 
          private:
-            bs::Address createAddress(AddressEntryType aet, const CbAddress &cb = nullptr
-               , bool isInternal = false);
+            bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             void onScanComplete();
@@ -246,10 +243,9 @@ namespace bs {
             void setUserId(const BinaryData &) override;
 
          protected:
-            bs::Address createAddress(const AddrPoolKey &, const CbAddress &
-               , bool signal = true) override;
-            void topUpAddressPool(const std::function<void()> &cb = nullptr
-               , size_t intAddresses = 0, size_t extAddresses = 0) override;
+            bs::Address createAddress(
+               const AddrPoolKey &, bool signal = true) override;
+            void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
 
          private:
             BinaryData              userId_;
@@ -280,8 +276,7 @@ namespace bs {
             BTCNumericTypes::balance_type getSpendableBalance() const override;
             BTCNumericTypes::balance_type getUnconfirmedBalance() const override;
             BTCNumericTypes::balance_type getTotalBalance() const override;
-            bool getAddrBalance(const bs::Address &addr
-               , std::function<void(std::vector<uint64_t>)>) const override;
+            std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const override;
 
             BTCNumericTypes::balance_type getTxBalance(int64_t) const override;
             QString displayTxValue(int64_t val) const override;

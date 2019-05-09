@@ -64,7 +64,7 @@ bool PlainWallet::containsAddress(const bs::Address &addr)
    return (addressIndex(addr) >= 0);
 }
 
-bs::Address PlainWallet::getNewExtAddress(AddressEntryType, const Wallet::CbAddress &)
+bs::Address PlainWallet::getNewExtAddress(AddressEntryType)
 {  // should have a pool to return immediately
    return {};
 }

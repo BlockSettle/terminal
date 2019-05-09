@@ -19,17 +19,14 @@ WalletsManager::~WalletsManager() noexcept
 {
    // These really ought to be called elsewhere, when the appropriate binaries
    // shut down.
-   shutdownBIP151CTX();
-   btc_ecc_stop();
+   /*shutdownBIP151CTX();
+   btc_ecc_stop();*/
 }
 
 void WalletsManager::reset()
 {
-   walletsLoaded_ = false;
-   wallets_.clear();
    hdWallets_.clear();
    walletNames_.clear();
-   walletsId_.clear();
    hdWalletsId_.clear();
    settlementWallet_.reset();
 }
@@ -74,8 +71,7 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
       }
       try {
          logger_->debug("Loading BIP44 wallet from {}", file);
-         const auto wallet = std::make_shared<hd::Wallet>(walletsPath + "/" + file
-                                                               , logger_);
+         const auto wallet = std::make_shared<hd::Wallet>(file, netType , logger_);
          current++;
          if (cbProgress) {
             cbProgress(current, totalCount);
@@ -122,6 +118,7 @@ void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &
    std::strftime(tmStr, sizeof(tmStr), "%Y%j%H%M%S", std::localtime(&tm));
    const auto backupFile = targetDir + "/" + hd::Wallet::fileNamePrefix(false)
       + wallet->walletId()  + "_" + tmStr + ".lmdb";
+   
    wallet->copyToFile(backupFile);
 }
 
@@ -159,7 +156,7 @@ WalletsManager::WalletPtr WalletsManager::getAuthWallet() const
    if (!group) {
       return nullptr;
    }
-   return group->getLeaf(0u);
+   return group->getLeafByPath(0u);
 }
 
 WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
@@ -172,36 +169,11 @@ WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
    return nullptr;
 }
 
-void WalletsManager::saveWallet(const WalletPtr &newWallet, NetworkType netType)
-{
-   addWallet(newWallet);
-}
-
-void WalletsManager::addWallet(const WalletPtr &wallet)
-{
-   walletsId_.emplace_back(wallet->walletId());
-   wallets_.emplace(wallet->walletId(), wallet);
-}
-
 void WalletsManager::saveWallet(const HDWalletPtr &wallet)
 {
-   if (!chainCode_.isNull()) {
-      wallet->setChainCode(chainCode_);
-   }
    hdWalletsId_.emplace_back(wallet->walletId());
    hdWallets_[wallet->walletId()] = wallet;
    walletNames_.insert(wallet->name());
-   for (const auto &leaf : wallet->getLeaves()) {
-      addWallet(leaf);
-   }
-}
-
-void WalletsManager::setChainCode(const BinaryData &chainCode)
-{
-   chainCode_ = chainCode;
-   for (const auto &hdWallet : hdWallets_) {
-      hdWallet.second->setChainCode(chainCode);
-   }
 }
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(const unsigned int index) const
@@ -233,12 +205,13 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::st
 
 WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walletId) const
 {
-   if (!wallets_.empty()) {
-      const auto &walletIt = wallets_.find(walletId);
-      if (walletIt != wallets_.end()) {
-         return walletIt->second;
-      }
+   for (const auto &hdWallet : hdWallets_)
+   {
+      auto leafPtr = hdWallet.second->getLeaf(walletId);
+      if (leafPtr != nullptr)
+         return leafPtr;
    }
+
    if (settlementWallet_ && (settlementWallet_->walletId() == walletId)) {
       return settlementWallet_;
    }
@@ -247,31 +220,35 @@ WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walle
 
 WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &addr) const
 {
-   const auto &address = addr.unprefixed();
+   for (const auto wallet : hdWallets_)
    {
-      for (const auto wallet : wallets_) {
-         if (wallet.second && (wallet.second->containsAddress(address)
-            || wallet.second->containsHiddenAddress(address))) {
-            return wallet.second;
+      for (auto& group : wallet.second->getGroups())
+      {
+         for (auto& leafPtr : group->getAllLeaves())
+         {
+            if (leafPtr && (leafPtr->containsAddress(addr) ||
+               leafPtr->containsHiddenAddress(addr)))
+               return leafPtr;
          }
       }
    }
-   if ((settlementWallet_ != nullptr) && settlementWallet_->containsAddress(address)) {
+
+   if ((settlementWallet_ != nullptr) && settlementWallet_->containsAddress(addr))
       return settlementWallet_;
-   }
+
    return nullptr;
 }
 
 void WalletsManager::eraseWallet(const WalletPtr &wallet)
 {
-   if (!wallet) {
+   /*if (!wallet) {
       return;
    }
    const auto itId = std::find(walletsId_.begin(), walletsId_.end(), wallet->walletId());
    if (itId != walletsId_.end()) {
       walletsId_.erase(itId);
    }
-   wallets_.erase(wallet->walletId());
+   wallets_.erase(wallet->walletId());*/
 }
 
 bool WalletsManager::deleteWalletFile(const WalletPtr &wallet)
@@ -295,10 +272,17 @@ bool WalletsManager::deleteWalletFile(const WalletPtr &wallet)
    }
 
    if (!isHDLeaf) {
-      if (!wallet->eraseFile()) {
-         logger_->error("Failed to remove wallet file for {}", wallet->name());
-         return false;
+      auto filename = wallet->getFilename();
+      if (filename.size() > 0)
+      {
+         wallet->shutdown();
+         if (std::remove(filename.c_str()) != 0)
+         {
+            logger_->error("Failed to remove wallet file for {}", wallet->name());
+            return false;
+         }
       }
+
       if (wallet == settlementWallet_) {
          settlementWallet_ = nullptr;
       }
@@ -332,35 +316,35 @@ bool WalletsManager::deleteWalletFile(const HDWalletPtr &wallet)
    return result;
 }
 
-WalletsManager::HDWalletPtr WalletsManager::createWallet(const std::string& name, const std::string& description
-   , wallet::Seed seed, const std::string &walletsPath, bool primary
-   , const std::vector<bs::wallet::PasswordData> &pwdData, bs::wallet::KeyRank keyRank)
+WalletsManager::HDWalletPtr WalletsManager::createWallet(
+   const std::string& name, const std::string& description
+   , wallet::Seed seed, const std::string &folder, 
+   const SecureBinaryData& passphrase, bool primary)
 {
-   const HDWalletPtr newWallet = std::make_shared<hd::Wallet>(name, description
-                                                           , seed, logger_);
+   const HDWalletPtr newWallet = std::make_shared<hd::Wallet>(
+      name, description, seed, passphrase, folder, logger_);
 
    if (hdWallets_.find(newWallet->walletId()) != hdWallets_.end()) {
       throw std::runtime_error("HD wallet with id " + newWallet->walletId() + " already exists");
    }
 
-   newWallet->createStructure();
-   if (primary) {
-      newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+   {
+      auto lock = newWallet->lockForEncryption(passphrase);
+      newWallet->createStructure();
+      if (primary) {
+         newWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+      }
    }
-   if (!pwdData.empty()) {
-      newWallet->changePassword(pwdData, keyRank, SecureBinaryData(), false, false, false);
-   }
-   addWallet(newWallet, walletsPath);
+
+   addWallet(newWallet);
    return newWallet;
 }
 
-void WalletsManager::addWallet(const HDWalletPtr &wallet, const std::string &walletsPath)
+void WalletsManager::addWallet(const HDWalletPtr &wallet)
 {
    if (!wallet) {
       return;
    }
-   if (!walletsPath.empty()) {
-      wallet->saveToDir(walletsPath);
-   }
+
    saveWallet(wallet);
 }

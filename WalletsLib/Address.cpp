@@ -226,6 +226,7 @@ bool bs::Address::isProperHash() const
 
 AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
 {
+   //this shouldn't be used to fill in for default address type!
    if (addr.getSize() == 21) {
       const auto prefix = addr[0];
       if (prefix == NetworkConfig::getPubkeyHashPrefix()) {
@@ -316,22 +317,14 @@ BinaryData bs::Address::prefixed() const
 {
    if ((getSize() == 20) || (getSize() == 32)) {   // Missing the prefix, we have to add it
       if (prefixed_.isNull()) {
-         auto prefix = NetworkConfig::getPubkeyHashPrefix();
-         switch (aet_) {
-         case AddressEntryType_P2SH:
-            prefix = NetworkConfig::getScriptHashPrefix();
-            break;
-         case AddressEntryType_Multisig:
-            prefix = SCRIPT_PREFIX_MULTISIG;
-            break;
-         case AddressEntryType_P2WSH:
-            prefix = SCRIPT_PREFIX_P2WSH;
-            break;
-         case AddressEntryType_P2WPKH:
-            prefix = SCRIPT_PREFIX_P2WPKH;
-            break;
-         default: break;
-         }
+         /***
+         Nested address types are a bit mask on native address types, they cannot be switched
+         on as is. Prefixes precede human readable addresses, a false positive will lead to 
+         loss of coins as the address defines the output script to send the coins to. Any
+         failure to produce a valid prefix should lead to a critical failure, hence the throws.
+         ***/
+
+         auto prefix = AddressEntry::getPrefixByte(aet_);
          prefixed_.append(prefix);
          prefixed_.append(unprefixed());
       }
@@ -388,21 +381,36 @@ bool bs::Address::operator==(const bs::Address &addr) const
 std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
 {
    try {
-      switch (getType()) {
-      case AddressEntryType_P2PKH:
-         return std::make_shared<Recipient_P2PKH>(unprefixed(), value);
+      auto type = getType() & ~ADDRESS_COMPRESSED_MASK;
+      auto nestedType = type & ADDRESS_NESTED_MASK;
 
-      case AddressEntryType_P2WSH:
-         return std::make_shared<Recipient_P2WSH>(unprefixed(), value);
+      if (nestedType == 0)
+      {
+         switch (type) 
+         {
+         case AddressEntryType_P2PKH:
+            return std::make_shared<Recipient_P2PKH>(unprefixed(), value);
 
-      case AddressEntryType_P2SH:
-         return std::make_shared<Recipient_P2SH>(unprefixed(), value);
+         case AddressEntryType_P2WPKH:
+            return std::make_shared<Recipient_P2WPKH>(unprefixed(), value);
 
-      case AddressEntryType_P2WPKH:
-         return std::make_shared<Recipient_P2WPKH>(unprefixed(), value);
+         default:
+            return nullptr;
+         }
+      }
+      else
+      {
+         switch (nestedType)
+         {
+         case AddressEntryType_P2WSH:
+            return std::make_shared<Recipient_P2WSH>(unprefixed(), value);
 
-      default:
-         return nullptr;
+         case AddressEntryType_P2SH:
+            return std::make_shared<Recipient_P2SH>(unprefixed(), value);
+
+         default:
+            return nullptr;
+         }
       }
    }
    catch (...) {

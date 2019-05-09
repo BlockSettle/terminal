@@ -235,7 +235,7 @@ bool TxIOPair::isSpendable(LMDBBlockDatabase *db, uint32_t currBlk) const
    if (hasTxOutInMain(db))
    {
       uint32_t nConf = currBlk - txRefOfOutput_.getBlockHeight() + 1;
-      if (isFromCoinbase_ && nConf <= COINBASE_MATURITY)
+      if (isFromCoinbase_ && nConf <= 6)
          return false;
       else
          return true;
@@ -262,7 +262,7 @@ bool TxIOPair::isMineButUnconfirmed(
    {
       uint32_t nConf = currBlk - txRefOfOutput_.getBlockHeight() + 1;
       if (isFromCoinbase_)
-         return (nConf<COINBASE_MATURITY);
+         return (nConf<6);
       else
          return (nConf<confTarget);
    }

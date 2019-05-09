@@ -48,6 +48,7 @@ namespace bs {
       size_t getWitnessDataSize() const;  // returns UINT32_MAX if irrelevant
 
       static bs::Address fromPubKey(const BinaryData &data, AddressEntryType aet = AddressEntryType_Default) {
+         //does not work with MS scripts nor P2PK (does not operate on hashes), neither P2WSH (uses hash256)
          return Address(BtcUtils::getHash160(data), aet);
       }
       static bs::Address fromPubKey(const std::string &data, AddressEntryType aet = AddressEntryType_Default) {

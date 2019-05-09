@@ -8,7 +8,6 @@
 #include "EncryptionUtils.h"
 #include "CoreSettlementWallet.h"
 #include "CoreWallet.h"
-#include "WalletEncryption.h"
 
 
 namespace spdlog {
@@ -41,7 +40,7 @@ namespace bs {
          void loadWallets(NetworkType, const std::string &walletsPath, const CbProgress &cb = nullptr);
          void backupWallet(const HDWalletPtr &, const std::string &targetDir) const;
 
-         bool empty() const { return wallets_.empty(); }
+         bool empty() const { return hdWallets_.empty(); }
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
 
@@ -60,18 +59,13 @@ namespace bs {
          bool deleteWalletFile(const WalletPtr &);
          bool deleteWalletFile(const HDWalletPtr &);
 
-         void setChainCode(const BinaryData &);
-
          HDWalletPtr createWallet(const std::string& name, const std::string& description
-            , bs::core::wallet::Seed, const std::string &walletsPath, bool primary = false
-            , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
-         void addWallet(const HDWalletPtr &, const std::string &walletsPath = {});
+            , bs::core::wallet::Seed, const std::string &folder, 
+            const SecureBinaryData& passprase, bool primary = false);
+         void addWallet(const HDWalletPtr &);
 
       private:
-         void addWallet(const WalletPtr &);
-
          bool isWalletFile(const std::string &fileName) const;
-         void saveWallet(const WalletPtr &, NetworkType);
          void saveWallet(const HDWalletPtr &);
          void eraseWallet(const WalletPtr &);
 
@@ -80,11 +74,11 @@ namespace bs {
          bool  walletsLoaded_ = false;
          const unsigned int                  nbBackupFilesToKeep_;
          std::unordered_map<std::string, HDWalletPtr> hdWallets_;
-         std::unordered_map<std::string, WalletPtr>   wallets_;
+         //std::unordered_map<std::string, WalletPtr>   wallets_;
          std::unordered_set<std::string>     walletNames_;
-         std::vector<BinaryData>             walletsId_;
+         //std::vector<BinaryData>             walletsId_;
          std::vector<std::string>            hdWalletsId_;
-         BinaryData                          chainCode_;
+         //BinaryData                          chainCode_;
          std::shared_ptr<SettlementWallet>   settlementWallet_;
       };
 

@@ -38,8 +38,8 @@ ImportWalletDialog::ImportWalletDialog(const std::shared_ptr<bs::sync::WalletsMa
    , connectionManager_(connectionManager)
    , logger_(logger)
    , armory_(armory)
-   , walletSeed_(bs::core::wallet::Seed::fromEasyCodeChecksum(seedData, chainCodeData
-   , appSettings->get<NetworkType>(ApplicationSettings::netType)))
+   , walletSeed_(bs::core::wallet::Seed::fromEasyCodeChecksum(
+      seedData, appSettings->get<NetworkType>(ApplicationSettings::netType)))
    , disableImportPrimary_{disableImportPrimary}
 {
    walletInfo_.setRootId(QString::fromStdString(walletSeed_.getWalletId()));

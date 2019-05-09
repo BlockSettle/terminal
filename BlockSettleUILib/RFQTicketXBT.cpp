@@ -242,7 +242,8 @@ void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sy
    const auto &priWallet = walletsManager_->getPrimaryWallet();
    auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    if (!group) {
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC);
+      //cc wallets are always ext only
+      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    const auto &ccProduct = getProduct().toStdString();
    group->addLeaf(leaf);
@@ -1021,9 +1022,9 @@ void RFQTicketXBT::onCreateWalletClicked()
 {
    ui_->pushButtonCreateWallet->setEnabled(false);
    bs::hd::Path path;
-   path.append(bs::hd::purpose, true);
-   path.append(bs::hd::BlockSettle_CC, true);
-   path.append(getProduct().toStdString(), true);
+   path.append(bs::hd::purpose | 0x80000000);
+   path.append(bs::hd::BlockSettle_CC | 0x80000000);
+   path.append(getProduct().toStdString());
    leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
    if (leafCreateReqId_ == 0) {
       showHelp(tr("Create CC wallet request failed"));
