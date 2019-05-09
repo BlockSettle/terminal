@@ -26,6 +26,22 @@ namespace bs {
 }
 class ServerConnection;
 
+class HeadlessContainerCallbacks
+{
+public:
+   virtual ~HeadlessContainerCallbacks() = default;
+
+   virtual void peerConn(const std::string &) = 0;
+   virtual void peerDisconn(const std::string &) = 0;
+   virtual void clientDisconn(const std::string &) = 0;
+   virtual void pwd(const bs::core::wallet::TXSignRequest &, const std::string &) = 0;
+   virtual void txSigned(const BinaryData &) = 0;
+   virtual void cancelTxSign(const BinaryData &) = 0;
+   virtual void xbtSpent(int64_t, bool) = 0;
+   virtual void asAct(const std::string &) = 0;
+   virtual void asDeact(const std::string &) = 0;
+   virtual void customDialog(const std::string &, const std::string &) = 0;
+};
 
 class HeadlessContainerListener : public ServerConnectionListener
 {
@@ -43,15 +59,7 @@ public:
 
    bool disconnect(const std::string &clientId = {});
 
-   void setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
-      , const std::function<void(const std::string &)> &cbPeerDisconn
-      , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
-      , const std::function<void(const BinaryData &)> &cbTxSigned
-      , const std::function<void(const BinaryData &)> &cbCancelTxSign
-      , const std::function<void(int64_t, bool)> &cbXbtSpent
-      , const std::function<void(const std::string &)> &cbAsAct
-      , const std::function<void(const std::string &)> &cbAsDeact
-      , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog);
+   void setCallbacks(HeadlessContainerCallbacks *callbacks);
 
    void passwordReceived(const std::string &walletId
       , const SecureBinaryData &password, bool cancelledByUser);
@@ -152,15 +160,7 @@ private:
 
    const bool backupEnabled_ = true;
 
-   std::function<void(const std::string &)> cbPeerConn_ = nullptr;
-   std::function<void(const std::string &)> cbPeerDisconn_ = nullptr;
-   std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> cbPwd_ = nullptr;
-   std::function<void(const BinaryData &)> cbTxSigned_ = nullptr;
-   std::function<void(const BinaryData &)> cbCancelTxSign_ = nullptr;
-   std::function<void(int64_t, bool)> cbXbtSpent_ = nullptr;
-   std::function<void(const std::string &)> cbAsAct_ = nullptr;
-   std::function<void(const std::string &)> cbAsDeact_ = nullptr;
-   std::function<void(const std::string &, const std::string &)> cbCustomDialog_ = nullptr;
+   HeadlessContainerCallbacks *callbacks_{};
 };
 
 #endif // __HEADLESS_CONTAINER_LISTENER_H__
