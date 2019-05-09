@@ -72,12 +72,9 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
          "supplied. Connection is incomplete.");
    }
 
-   string datadir = SystemFilePaths::appDataLocation();
-   string filename(SERVER_AUTH_PEER_FILENAME);
-
    // In general, load the client key from a special Armory wallet file.
    if (!ephemeralPeers) {
-       authPeers_ = make_shared<AuthorizedPeers>(datadir, filename);
+       authPeers_ = make_shared<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
    }
    else {
       authPeers_ = make_shared<AuthorizedPeers>();
