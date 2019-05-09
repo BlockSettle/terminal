@@ -187,7 +187,7 @@ Item {
                 Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("AuthKey broadcast")
+                    text: qsTr("Two-way Signer Authentication")
                 }
 
 //                Image {
