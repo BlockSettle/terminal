@@ -492,7 +492,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
 
    const std::string prompt("Signing multi-wallet input (auth revoke) transaction");
 
-   const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, id=packet.id()]
+   const auto cbOnAllPasswords = [this, txMultiReq, walletMap, clientId, reqType, id=packet.id()]
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
       try {
          const auto tx = bs::core::SignMultiInputTX(txMultiReq, walletPasswords, walletMap);
