@@ -7,12 +7,9 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 #include "AuthorizedPeers.h"
-#include "ArmoryServersProvider.h"
 #include "BIP150_151.h"
 #include "ZmqDataConnection.h"
 #include "ZMQ_BIP15X_Msg.h"
-
-#define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
@@ -51,8 +48,8 @@ public:
       , const std::string& cookiePath = "");
    ~ZmqBIP15XDataConnection() noexcept override;
 
-   using cbNewKey = std::function<void(const std::string&, const std::string&
-      , std::shared_ptr<std::promise<bool>>)>;
+   using cbNewKey = std::function<void(const std::string &oldKey, const std::string &newKey
+      , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
    using invokeCB = std::function<void(const std::string&
       , const std::string&
       , std::shared_ptr<std::promise<bool>>
@@ -69,6 +66,7 @@ public:
    BinaryData getOwnPubKey() const;
    bool genBIPIDCookie();
    void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
+   void setLocalHeartbeatInterval();
 
    // Overridden functions from ZmqDataConnection.
    bool send(const std::string& data) override; // Send data from outside class.
@@ -91,6 +89,8 @@ protected:
    ZmqContext::sock_ptr CreateDataSocket() override;
    bool recvData() override;
    void triggerHeartbeat();
+
+   void notifyOnError(DataConnectionListener::DataConnectionError errorCode);
 
 private:
    void ProcessIncomingData(BinaryData& payload);
@@ -118,15 +118,17 @@ private:
    const bool makeClientIDCookie_;
    uint32_t msgID_ = 0;
    std::function<void()>   cbCompleted_ = nullptr;
-   const int   heartbeatInterval_ = 30000;
 
    cbNewKey cbNewKey_;
 
-   std::chrono::steady_clock::time_point  lastHeartbeat_;
+   std::atomic<std::chrono::steady_clock::time_point> lastHeartbeatReply_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;
    std::mutex              hbMutex_;
    std::condition_variable hbCondVar_;
+   std::atomic_bool        fatalError_{false};
+   std::atomic_bool        serverSendsHeartbeat_{false};
+   std::chrono::milliseconds heartbeatInterval_;
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

@@ -102,11 +102,12 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
    // NB: This may need to be altered later. The PuB key should be hard-coded
    // and respected.
    return [kt, parent, appSettings] (const std::string& oldKey
-         , const std::string& newKey, std::shared_ptr<std::promise<bool>> newKeyProm) {
+         , const std::string& newKey, const std::string& srvAddrPort
+         , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
       QMetaObject::invokeMethod(parent, [kt, parent, appSettings, newKey, newKeyProm] {
          PubKeyLoader loader(appSettings);
          const auto newKeyBin = BinaryData::CreateFromHex(newKey);
-         const auto oldKeyBin = loader.loadKey(PubKeyLoader::KeyType::PublicBridge);
+         const auto oldKeyBin = loader.loadKey(kt);
          if (oldKeyBin == newKeyBin) {
             newKeyProm->set_value(true);
             return;
@@ -123,7 +124,7 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
          const bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
          if (answer) {
-            loader.saveKey(PubKeyLoader::KeyType::PublicBridge, newKeyBin);
+            loader.saveKey(kt, newKeyBin);
          }
 
          newKeyProm->set_value(answer);

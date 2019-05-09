@@ -6,6 +6,7 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
     : QAbstractItemModel(parent)
     , root_(std::make_shared<RootItem>())
     , newMessageMonitor_(nullptr)
+    , modelChangesHandler_(nullptr)
 {
    connect(root_.get(), &TreeItem::itemChanged, this, &ChatClientDataModel::onItemChanged);
 
@@ -313,14 +314,16 @@ QVariant ChatClientDataModel::data(const QModelIndex &index, int role) const
       case RoomTitleRole:
       case RoomIdRole:
          return roomData(item, role);
+      case ContactTitleRole:
       case ContactIdRole:
       case ContactStatusRole:
       case ContactOnlineStatusRole:
+      case Qt::EditRole:
          return contactData(item, role);
       case UserIdRole:
       case UserOnlineStatusRole:
          return userData(item, role);
-   case ChatNewMessageRole:
+      case ChatNewMessageRole:
          return chatNewMessageData(item, role);
       default:
          return QVariant();
@@ -378,16 +381,24 @@ QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
       }
 
       switch (role) {
+         case ContactTitleRole:
+            if (contact->getDisplayName().isEmpty()) {
+               return contact->getContactId();
+            }
+            return contact->getDisplayName();
          case ContactIdRole:
             return contact->getContactId();
          case ContactStatusRole:
             return QVariant::fromValue(contact->getContactStatus());
          case ContactOnlineStatusRole:
             return QVariant::fromValue(contact_element->getOnlineStatus());
+         case Qt::EditRole:
+            return contact->getDisplayName();
          default:
             return QVariant();
       }
    }
+   return QVariant();
 }
 
 QVariant ChatClientDataModel::userData(const TreeItem *item, int role) const
@@ -452,13 +463,19 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
             current_flags.setFlag(Qt::ItemIsSelectable, false);
          }
          break;
-      case TreeItem::NodeType::SearchElement:
-      case TreeItem::NodeType::RoomsElement:
       case TreeItem::NodeType::ContactsElement:
+         //Only contact record could be edited
+         if (!current_flags.testFlag(Qt::ItemIsEditable)){
+            current_flags.setFlag(Qt::ItemIsEditable);
+         }
+         //no break needed
+      case TreeItem::NodeType::RoomsElement:
+      case TreeItem::NodeType::SearchElement:
       case TreeItem::NodeType::AllUsersElement:
          if (!current_flags.testFlag(Qt::ItemIsEnabled)){
             current_flags.setFlag(Qt::ItemIsEnabled);
          }
+
          break;
       default:
          break;
@@ -501,5 +518,37 @@ void ChatClientDataModel::updateNewMessagesFlag()
 
    if (newMessageMonitor_) {
       newMessageMonitor_->onNewMessagePresent(newMesagesFlag_, elem);
+   }
+}
+
+void ChatClientDataModel::setModelChangesHandler(ModelChangesHandler *modelChangesHandler)
+{
+   modelChangesHandler_ = modelChangesHandler;
+}
+
+bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+   if (!index.isValid()) {
+      return  false;
+   }
+
+   TreeItem *item = static_cast<TreeItem*>(index.internalPointer());
+
+   switch (item->getType()) {
+      case TreeItem::NodeType::ContactsElement: {
+         auto citem = static_cast<ChatContactElement*>(item);
+         auto cdata = citem->getContactData();
+         if (citem && cdata) {
+            cdata->setDisplayName(value.toString());
+            root_->notifyContactChanged(cdata);
+            if (modelChangesHandler_) {
+               modelChangesHandler_->onContactUpdatedByInput(cdata);
+            }
+            return true;
+         }
+         return false;
+      }
+      default:
+         return QAbstractItemModel::setData(index, value, role);
    }
 }

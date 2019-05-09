@@ -36,6 +36,7 @@ class ChatClient : public QObject
              , public ChatItemActionsHandler
              , public ChatSearchActionsHandler
              , public ChatMessageReadHandler
+             , public ModelChangesHandler
 {
    Q_OBJECT
 
@@ -102,6 +103,8 @@ public:
    QString deriveKey(const QString& email) const;
    void clearSearch();
    bool isFriend(const QString &userId);
+   bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
+   bool decryptIESMessage(std::shared_ptr<Chat::MessageData>& message);
    QString getUserId();
 
 public:
@@ -230,6 +233,10 @@ private:
 
    QTimer            ownOtcExpireTimer_;
    std::string       ownOtcId_;
-};
 
+
+   // ModelChangesHandler interface
+public:
+   void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
+};
 #endif   // CHAT_CLIENT_H

@@ -1528,3 +1528,7 @@ ChatUsersViewItemStyle {
     qproperty-color_contact_rejected: #c4362f;
     }
 
+*[contact_editor=true] {
+    background-color: #1c2835;
+}
+

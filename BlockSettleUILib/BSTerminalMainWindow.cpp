@@ -488,7 +488,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       // 150 identity key, if it has changed, will be accepted. It needs strings
       // for the old and new keys, and a promise to set once the user decides.
       ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
-         , std::shared_ptr<std::promise<bool>> newKeyProm)->void {
+         , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &newKeyProm) {
          QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm] {
             BSMessageBox *box = new BSMessageBox(BSMessageBox::question
                , tr("Server identity key has changed")

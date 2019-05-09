@@ -46,6 +46,12 @@ public:
    virtual  ~NewMessageMonitor() = default;
    virtual void onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element) = 0;
 };
+class ModelChangesHandler {
+public:
+
+   virtual  ~ModelChangesHandler() = default;
+   virtual void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) = 0;
+};
 
 
 #endif // CHATHANDLEINTERFACES_H
