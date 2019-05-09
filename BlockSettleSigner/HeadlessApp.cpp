@@ -155,9 +155,19 @@ void HeadlessAppObj::onlineProcessing()
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    const BinaryData bdID = CryptoPRNG::generateRandom(8);
    std::vector<std::string> trustedTerms;
+   const std::string absCookiePath =
+      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+   bool ephemeralConnIDKey = true;
+   bool makeServerCookie = true;
+   std::string keyFileDir = "";
+   std::string keyFileName = "";
 
    if (settings_->getTermIDKeyStr().empty()) {
       trustedTerms = settings_->trustedTerminals();
+      ephemeralConnIDKey = false;
+      makeServerCookie = false;
+      keyFileDir = SystemFilePaths::appDataLocation();
+      keyFileName = "remote_signer.peers";
    }
    else {
       BinaryData termIDKey;
@@ -173,12 +183,10 @@ void HeadlessAppObj::onlineProcessing()
       trustedTerms.push_back(trustedTermStr);
    }
 
-   const std::string absCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), false, true, false
-      , absCookiePath);
-   connection_->setLocalHeartbeatInterval();
+      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), ephemeralConnIDKey
+      , keyFileDir, keyFileName, makeServerCookie, false, absCookiePath);
+      connection_->setLocalHeartbeatInterval();
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_

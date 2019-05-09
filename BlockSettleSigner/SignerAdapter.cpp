@@ -33,7 +33,7 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    const std::string absCookiePath =
       SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true
-      , true, true, false, absCookiePath);
+      , "", "", true, true, false, absCookiePath);
    adapterConn->SetContext(zmqContext);
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
