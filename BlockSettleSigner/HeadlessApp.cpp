@@ -157,9 +157,35 @@ void HeadlessAppObj::onlineProcessing()
    std::vector<std::string> trustedTerms;
 
    if (settings_->getTermIDKeyStr().empty()) {
-      trustedTerms = settings_->trustedTerminals();
+      // We're using a user-defined, whitelisted key set. Make sure the keys are
+      // valid before accepting the entries.
+      for (const std::string& i : settings_->trustedTerminals()) {
+         const auto colonIndex = i.find(':');
+         if (colonIndex == std::string::npos) {
+            logger_->error("[{}] Trusted client list key entry {} is malformed."
+               , __func__, i);
+            continue;
+         }
+
+         SecureBinaryData inKey = READHEX(i.substr(colonIndex + 1));
+         if (inKey.isNull()) {
+            logger_->error("[{}] Trusted client list key entry {} has no key."
+               , __func__, i);
+            continue;
+         }
+
+         if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
+            logger_->error("[{}] Trusted client list key entry ({}) has an "
+               "invalid ECDSA key ({}).", __func__, i, inKey.toHexStr());
+            continue;
+         }
+         else {
+            trustedTerms.push_back(i);
+         }
+      }
    }
    else {
+      // We're using a cookie. Only the one key in the cookie will be trusted.
       BinaryData termIDKey;
       if (!(settings_->getTermIDKeyBin(termIDKey))) {
          logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
