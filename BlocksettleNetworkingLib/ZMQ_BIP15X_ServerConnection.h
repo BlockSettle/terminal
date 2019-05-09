@@ -55,6 +55,8 @@ public:
       , const std::vector<std::string>& trustedClients
       , const uint64_t& id
       , const bool& ephemeralPeers
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
       , const bool& makeServerCookie = false
       , const bool& readClientCookie = false
       , const std::string& cookiePath = "");

@@ -130,6 +130,8 @@ public:
       , const std::shared_ptr<ApplicationSettings>& appSettings
       , OpMode opMode = OpMode::Remote
       , const bool ephemeralDataConnKeys = true
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
    ~RemoteSigner() noexcept override = default;
 
@@ -169,9 +171,11 @@ protected:
    const QString                              port_;
    const NetworkType                          netType_;
    const bool                                 ephemeralDataConnKeys_;
+   const std::string                          ownKeyFileDir_;
+   const std::string                          ownKeyFileName_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
    std::shared_ptr<ApplicationSettings>       appSettings_;
-   const ZmqBIP15XDataConnection::cbNewKey cbNewKey_;
+   const ZmqBIP15XDataConnection::cbNewKey    cbNewKey_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
@@ -189,6 +193,8 @@ public:
       , const std::shared_ptr<ApplicationSettings>& appSettings
       , SignContainer::OpMode mode = OpMode::Local
       , const bool ephemeralDataConnKeys = false
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
    ~LocalSigner() noexcept override = default;

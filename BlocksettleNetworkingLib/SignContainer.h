@@ -142,6 +142,8 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    , NetworkType netType
    , const std::shared_ptr<ConnectionManager> & connectionManager
    , const bool& ephemeralDataConnKeys
+   , const std::string& ownKeyFileDir
+   , const std::string& ownKeyFileName
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
 
 bool SignerConnectionExists(const QString &host, const QString &port);

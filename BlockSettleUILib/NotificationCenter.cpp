@@ -208,10 +208,12 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       hasUnreadMessages = msg[3].toBool();
 
       if (!hasUnreadMessages && !isInCurrentChat) {
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          return;
       }
 
       if (isChatTab && QApplication::activeWindow()) {
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          return;
       }
 
@@ -226,8 +228,8 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       if (msg.size() != 1) {
          return;
       }
-      title = tr("New friend request");
-      text = tr("%1 wants to be friends with you").arg(msg[0].toString());
+      title = tr("New contact request");
+      text = tr("%1 wants to add you to contact list").arg(msg[0].toString());
       break;
 
    default: return;
