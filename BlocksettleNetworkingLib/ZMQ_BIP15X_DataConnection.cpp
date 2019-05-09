@@ -37,6 +37,11 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    , lastHeartbeatReply_(std::chrono::steady_clock::now())
    , heartbeatInterval_(ZmqBIP15XServerConnection::DefaultHeartbeatInterval)
 {
+   if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
+      throw std::runtime_error("Client requested static ID key but no key " \
+         "wallet file is specified.");
+   }
+
    if (makeClientIDCookie_ && useServerIDCookie_) {
       throw std::runtime_error("Cannot read client ID cookie and create ID " \
          "cookie at the same time. Connection is incomplete.");

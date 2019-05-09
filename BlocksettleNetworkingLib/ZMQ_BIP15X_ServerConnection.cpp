@@ -33,12 +33,18 @@ void ZmqBIP15XPerConnData::reset()
 //         List of trusted clients. (const QStringList&)
 //         Per-connection ID. (const uint64_t&)
 //         Ephemeral peer usage. Not recommended. (const bool&)
+//         The directory containing the file with the non-ephemeral key. (const std::string)
+//         The file with the non-ephemeral key. (const std::string)
+//         A flag indicating if the connection will make a key cookie. (bool)
+//         A flag indicating if the connection will read a key cookie. (bool)
+//         The path to the key cookie to read or write. (const std::string)
 // OUTPUT: None
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
    , const std::vector<std::string>& trustedClients, const uint64_t& id
-   , const bool& ephemeralPeers, const bool& makeServerCookie
+   , const bool& ephemeralPeers, const std::string& ownKeyFileDir
+   , const std::string& ownKeyFileName, const bool& makeServerCookie
    , const bool& readClientCookie, const std::string& cookiePath)
    : ZmqServerConnection(logger, context), id_(id)
    , useClientIDCookie_(readClientCookie)
@@ -46,6 +52,11 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , bipIDCookiePath_(cookiePath)
    , heartbeatInterval_(DefaultHeartbeatInterval)
 {
+   if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
+      throw std::runtime_error("Client requested static ID key but no key " \
+         "wallet file is specified.");
+   }
+
    if (makeServerIDCookie_ && readClientCookie) {
       throw std::runtime_error("Cannot read client ID cookie and create ID " \
          "cookie at the same time. Connection is incomplete.");
@@ -82,6 +93,21 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    heartbeatThread();
 }
 
+// A specialized server connection constructor with limited options. Used only
+// for connections with ephemeral keys that use one-way verification (i.e.,
+// clients aren't verified).
+//
+// INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
+//         ZMQ context. (const std::shared_ptr<ZmqContext>&)
+//         List of trusted clients. (const QStringList&)
+//         Per-connection ID. (const uint64_t&)
+//         Ephemeral peer usage. Not recommended. (const bool&)
+//         The directory containing the file with the non-ephemeral key. (const std::string)
+//         The file with the non-ephemeral key. (const std::string)
+//         A flag indicating if the connection will make a key cookie. (bool)
+//         A flag indicating if the connection will read a key cookie. (bool)
+//         The path to the key cookie to read or write. (const std::string)
+// OUTPUT: None
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
@@ -91,8 +117,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    : ZmqServerConnection(logger, context)
    , cbTrustedClients_(cbTrustedClients), makeServerIDCookie_(makeServerCookie)
    , useClientIDCookie_(readClientCookie), bipIDCookiePath_(cookiePath)
-
-
 {
    if (makeServerIDCookie_ && readClientCookie) {
       throw std::runtime_error("Cannot read client ID cookie and create ID " \
