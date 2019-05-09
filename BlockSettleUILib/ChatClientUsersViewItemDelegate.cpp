@@ -3,6 +3,9 @@
 #include <QPainter>
 #include <QLineEdit>
 
+static const int kDotSize = 8;
+static const QString kDotPathname = QLatin1String(":/ICON_DOT");
+
 using NodeType = TreeItem::NodeType;
 using Role = ChatClientDataModel::Role;
 using OnlineStatus = ChatContactElement::OnlineStatus;
@@ -72,6 +75,17 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
    bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
    itemOption.text = index.data(Role::RoomTitleRole).toString();
    QStyledItemDelegate::paint(painter, itemOption, index);
+
+   // draw dot
+   if (newMessage) {
+      QFontMetrics fm(itemOption.font, painter->device());
+      auto textRect = fm.boundingRect(itemOption.rect, 0, itemOption.text);
+      const QPixmap pixmap(kDotPathname);
+      const QRect r(itemOption.rect.left() + textRect.width() + kDotSize,
+                    itemOption.rect.top() + itemOption.rect.height() / 2 - kDotSize / 2 + 1,
+                    kDotSize, kDotSize);
+      painter->drawPixmap(r, pixmap, pixmap.rect());
+   }
 }
 
 void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
@@ -115,12 +129,12 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
 
    // draw dot
    if (newMessage) {
-      auto text = index.data(Role::ContactIdRole).toString();
       QFontMetrics fm(itemOption.font, painter->device());
-      auto textRect = fm.boundingRect(itemOption.rect, 0, text);
-      auto textWidth = textRect.width();
-      const QPixmap pixmap(QLatin1String(":/ICON_DOT"));
-      const QRect r(itemOption.rect.left() + textWidth + pixmap.width(), itemOption.rect.top() + pixmap.height() - 1, pixmap.width(), pixmap.height());
+      auto textRect = fm.boundingRect(itemOption.rect, 0, itemOption.text);
+      const QPixmap pixmap(kDotPathname);
+      const QRect r(itemOption.rect.left() + textRect.width() + kDotSize,
+                    itemOption.rect.top() + itemOption.rect.height() / 2 - kDotSize / 2 + 1,
+                    kDotSize, kDotSize);
       painter->drawPixmap(r, pixmap, pixmap.rect());
    }
 }

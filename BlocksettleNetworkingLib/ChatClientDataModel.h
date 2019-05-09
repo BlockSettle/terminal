@@ -74,6 +74,7 @@ private:
    NewMessageMonitor * newMessageMonitor_;
    ModelChangesHandler * modelChangesHandler_;
    bool newMesagesFlag_;
+   std::shared_ptr<Chat::MessageData> lastMessage_;
 
    // QAbstractItemModel interface
 public:

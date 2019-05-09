@@ -132,7 +132,7 @@ public:
 
    // NewMessageMonitor interface
 public:
-   void onNewMessagePresent(const bool isNewMessagePresented, const CategoryElement *element) override;
+   void onNewMessagePresent(const bool isNewMessagePresented, std::shared_ptr<Chat::MessageData> message) override;
 };
 
 

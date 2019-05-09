@@ -19,8 +19,8 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setCellSpacing(0);
 
    QVector <QTextLength> col_widths;
-   col_widths << QTextLength (QTextLength::FixedLength, 96);
-   col_widths << QTextLength (QTextLength::FixedLength, 20);
+   col_widths << QTextLength (QTextLength::FixedLength, 110);
+   col_widths << QTextLength (QTextLength::FixedLength, 34);
    col_widths << QTextLength (QTextLength::FixedLength, 90);
    col_widths << QTextLength (QTextLength::VariableLength, 50);
    tableFormat.setColumnWidthConstraints (col_widths);
@@ -40,15 +40,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    connect(this, &QTextBrowser::textChanged, this, &ChatMessagesTextEdit::onTextChanged);
 
    userMenu_ = new QMenu(this);
-   QAction *addUserToContactsAction = userMenu_->addAction(QObject::tr("Add to contacts"));
-   addUserToContactsAction->setStatusTip(QObject::tr("Click to add user to contact list"));
-   connect(addUserToContactsAction, &QAction::triggered,
-      [this](bool) {
-         if (handler_){
-            handler_->onActionAddToContacts(username_);
-         }
-      }
-   );
+   userContactAction_ = userMenu_->addAction(QString());
 }
 
 QString ChatMessagesTextEdit::data(const int &row, const Column &column)
@@ -260,7 +252,27 @@ void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
    } 
    else if  (link.toString().startsWith(QLatin1Literal("user:"))) {
       username_ = link.toString().mid(QString(QLatin1Literal("user:")).length());
-      userMenu_->exec(QCursor::pos());
+
+      userContactAction_->disconnect();
+
+      if (handler_) {
+         if (handler_->onActionIsFriend(username_)) {
+            userContactAction_->setText(tr("Remove from contacts"));
+            userContactAction_->setStatusTip(tr("Click to remove user from contact list"));
+            connect(userContactAction_, &QAction::triggered, [this](bool) {
+               // TODO:
+               //handler_->onActionRemoveFromContacts(username_);
+            });
+         }
+         else {
+            userContactAction_->setText(tr("Add to contacts"));
+            userContactAction_->setStatusTip(tr("Click to add user to contact list"));
+            connect(userContactAction_, &QAction::triggered, [this](bool) {
+               handler_->onActionAddToContacts(username_);
+            });
+         }
+         userMenu_->exec(QCursor::pos());
+      }
    }
    else {
       QDesktopServices::openUrl(link);

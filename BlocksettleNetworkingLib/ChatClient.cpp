@@ -264,7 +264,8 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
             model_->insertContactObject(contact, true);
             addOrUpdateContact(contactId, ContactUserData::Status::Incoming);
             auto requestS = std::make_shared<Chat::ContactActionRequestServer>("", currentUserId_, contactId.toStdString(), Chat::ContactsActionServer::AddContactRecord, Chat::ContactStatus::Incoming, pk);
-            sendRequest(requestS);
+            sendRequest(requestS);            
+            emit NewContactRequest(contactId);
          }
 
          //addOrUpdateContact(QString::fromStdString(response.senderId()), QStringLiteral(""), true);
@@ -1024,6 +1025,11 @@ void ChatClient::onActionRejectContactRequest(std::shared_ptr<Chat::ContactRecor
    sendRequest(request);
    auto requestS = std::make_shared<Chat::ContactActionRequestServer>("", currentUserId_, crecord->getContactId().toStdString(), Chat::ContactsActionServer::UpdateContactRecord, Chat::ContactStatus::Rejected, autheid::PublicKey());
    sendRequest(requestS);
+}
+
+bool ChatClient::onActionIsFriend(const QString& userId)
+{
+   return isFriend(userId);
 }
 
 void ChatClient::retrySendQueuedMessages(const std::string userId)

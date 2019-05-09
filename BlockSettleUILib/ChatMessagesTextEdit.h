@@ -121,6 +121,7 @@ private:
    ChatMessagesTextEditStyle internalStyle_;
 
    QMenu *userMenu_;
+   QAction *userContactAction_;
    QString username_;
    bool isGroupRoom_;
 
