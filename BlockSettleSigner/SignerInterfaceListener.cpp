@@ -3,6 +3,7 @@
 #include <QDataStream>
 #include <QFile>
 #include <QStandardPaths>
+#include <QApplication>
 #include "CelerClientConnection.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
@@ -105,19 +106,22 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
 
 void SignerInterfaceListener::OnConnected()
 {
-   logger_->debug("[SignerInterfaceListener] connected");
+   logger_->info("[SignerInterfaceListener] connected");
    send(signer::HeadlessReadyType, "");
 }
 
 void SignerInterfaceListener::OnDisconnected()
 {
-   logger_->debug("[SignerInterfaceListener] disconnected");
+   // Signer interface should not be used without signer, we could quit safely
+   logger_->info("[SignerInterfaceListener] disconnected, shutdown...");
+   QApplication::quit();
 }
 
 void SignerInterfaceListener::OnError(DataConnectionError errorCode)
 {
    logger_->debug("[SignerInterfaceListener] error {}", errorCode);
    QMetaObject::invokeMethod(parent_, [this] { emit parent_->connectionError(); });
+   QApplication::quit();
 }
 
 bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)

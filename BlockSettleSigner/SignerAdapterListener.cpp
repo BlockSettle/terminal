@@ -110,6 +110,15 @@ void SignerAdapterListener::OnClientConnected(const std::string &clientId)
 void SignerAdapterListener::OnClientDisconnected(const std::string &clientId)
 {
    logger_->debug("[SignerAdapterListener] client {} disconnected", toHex(clientId));
+
+   shutdownIfNeeded();
+}
+
+void SignerAdapterListener::onClientError(const std::string &clientId, const std::string &error)
+{
+   logger_->debug("[SignerAdapterListener] client {} error: {}", toHex(clientId), error);
+
+   shutdownIfNeeded();
 }
 
 void SignerAdapterListener::setCallbacks()
@@ -123,6 +132,9 @@ void SignerAdapterListener::setCallbacks()
       signer::PeerEvent evt;
       evt.set_ip_address(ip);
       sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
+
+      // peer disconnected is called from ZMQ monitoring and normally detected faster
+      shutdownIfNeeded();
    };
    const auto &cbPwd = [this](const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) {
       signer::PasswordEvent evt;
@@ -628,4 +640,12 @@ void SignerAdapterListener::walletsListUpdated()
    logger_->debug("[{}]", __func__);
    app_->walletsListUpdated();
    sendData(signer::WalletsListUpdatedType, {});
+}
+
+void SignerAdapterListener::shutdownIfNeeded()
+{
+   if (settings_->runMode() == bs::signer::RunMode::lightgui && app_) {
+      logger_->info("terminal disconnect detected, shutdown...");
+      app_->close();
+   }
 }
