@@ -202,10 +202,6 @@ void HeadlessAppObj::onlineProcessing()
          logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
             "ID key", __func__);
       }
-      if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
-         logger_->error("[{}] Signer unable to add the terminal BIP 150 ID key "
-            "({})", __func__, termIDKey.toHexStr());
-      }
       std::string trustedTermStr = "127.0.0.1:" + settings_->getTermIDKeyStr();
       trustedTerms.push_back(trustedTermStr);
    }
