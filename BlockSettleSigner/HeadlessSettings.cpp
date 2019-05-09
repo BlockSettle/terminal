@@ -130,28 +130,32 @@ NetworkType HeadlessSettings::netType() const
 // RETURN: True is success, false if failure.
 bool HeadlessSettings::getTermIDKeyBin(BinaryData& keyBuf)
 {
-   bool retVal = false;
-   keyBuf.resize(BIP151PUBKEYSIZE);
-   if (termIDKeyStr_.empty()) {
-      logger_->error("[{}] No terminal BIP 150 ID key is available.", __func__);
-      return retVal;
-   }
+   try {
+      keyBuf.resize(BIP151PUBKEYSIZE);
+      if (termIDKeyStr_.empty()) {
+         logger_->error("[{}] No terminal BIP 150 ID key is available.", __func__);
+         return false;
+      }
 
-   // Make sure the key is a valid public key.
-   keyBuf = READHEX(termIDKeyStr_);
-   if (keyBuf.getSize() != BIP151PUBKEYSIZE) {
-      logger_->error("[{}] Terminal BIP 150 ID key is not {} bytes).", __func__
-         , BIP151PUBKEYSIZE);
-      return retVal;
-   }
-   if (!(CryptoECDSA().VerifyPublicKeyValid(keyBuf))) {
-      logger_->error("[{}] Terminal BIP 150 ID key ({}) is not a valid "
-         "secp256k1 compressed public key.", __func__, termIDKeyStr_);
-      return retVal;
-   }
+      // Make sure the key is a valid public key.
+      keyBuf = READHEX(termIDKeyStr_);
+      if (keyBuf.getSize() != BIP151PUBKEYSIZE) {
+         logger_->error("[{}] Terminal BIP 150 ID key is not {} bytes).", __func__
+            , BIP151PUBKEYSIZE);
+         return false;
+      }
+      if (!(CryptoECDSA().VerifyPublicKeyValid(keyBuf))) {
+         logger_->error("[{}] Terminal BIP 150 ID key ({}) is not a valid "
+            "secp256k1 compressed public key.", __func__, termIDKeyStr_);
+         return false;
+      }
 
-   retVal = true;
-   return retVal;
+      return true;
+   } catch (const std::exception &e) {
+      logger_->error("[{}] Terminal BIP 150 ID key ({}) is not valid: {}"
+         , __func__, e.what());
+      return false;
+   }
 }
 
 std::string HeadlessSettings::getWalletsDir() const

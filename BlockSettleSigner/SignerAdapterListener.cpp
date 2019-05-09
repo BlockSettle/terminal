@@ -31,7 +31,7 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    });
 }
 
-SignerAdapterListener::~SignerAdapterListener() = default;
+SignerAdapterListener::~SignerAdapterListener() noexcept = default;
 
 void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const std::string &data)
 {
