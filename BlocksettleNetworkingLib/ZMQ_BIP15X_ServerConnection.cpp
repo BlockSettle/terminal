@@ -6,7 +6,7 @@
 
 using namespace std;
 
-// Used with remote connections (termina/Celer)
+// Used with remote connections (terminal/Celer)
 const std::chrono::milliseconds ZmqBIP15XServerConnection::DefaultHeartbeatInterval = std::chrono::seconds(30);
 
 // Used with local connections (terminal/signer/signer GUI)
@@ -862,7 +862,7 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
    if (socketConnMap_[clientID] == nullptr) {
       assert(cbTrustedClients_);
       auto lbds = getAuthPeerLambda();
-      for (auto b : cbTrustedClients_()) {
+      for (const auto &b : cbTrustedClients_()) {
          const auto colonIndex = b.find(':');
          if (colonIndex == std::string::npos) {
             logger_->error("[{}] Trusted client list is malformed (for {})."
