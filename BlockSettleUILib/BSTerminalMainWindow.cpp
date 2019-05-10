@@ -1345,6 +1345,7 @@ void BSTerminalMainWindow::closeEvent(QCloseEvent* event)
       event->ignore();
    }
    else {
+      ui_->widgetChat->logout();
       QMainWindow::closeEvent(event);
       QApplication::exit();
    }
