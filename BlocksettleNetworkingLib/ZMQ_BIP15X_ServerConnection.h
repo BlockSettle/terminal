@@ -13,8 +13,6 @@
 #include "ZmqServerConnection.h"
 #include "ZMQ_BIP15X_Msg.h"
 
-#define SERVER_AUTH_PEER_FILENAME "server.peers"
-
 // DESIGN NOTES: Cookies are used for local connections. When the client is
 // invoked by a binary containing a server connection, the binary must be
 // invoked with the client connection's public BIP 150 ID key. In turn, the
@@ -52,8 +50,8 @@ class ZmqBIP15XServerConnection : public ZmqServerConnection
 public:
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
-      , const std::vector<std::string>& trustedClients
       , const uint64_t& id
+      , const std::function<std::vector<std::string>()>& trustedClients
       , const bool& ephemeralPeers
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
@@ -113,7 +111,6 @@ private:
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
    BinaryData leftOverData_;
-   bool bipIDCookieExists_ = false;
    uint64_t id_;
    std::mutex  clientsMtx_;
    std::function<std::vector<std::string>()> cbTrustedClients_;
