@@ -306,6 +306,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
    connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
+   connect(client_.get(), &ChatClient::ContactRequestAccepted, this, &ChatWidget::onContactRequestAccepted);
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const QString &userId) {
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {userId});
    });
@@ -510,6 +511,28 @@ void ChatWidget::onSearchUserTextEdited(const QString& text)
 void ChatWidget::onConnectedToServer()
 {
    changeState(State::LoggedIn);
+}
+
+void ChatWidget::onContactRequestAccepted(const QString &userId)
+{
+   // select user in chat tree
+   stateCurrent_->onUserClicked(userId);
+
+   // highlight user in chat tree
+   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
+                                                                Qt::DisplayRole,
+                                                                QLatin1String("*"),
+                                                                -1,
+                                                                Qt::MatchWildcard|Qt::MatchRecursive);
+
+   for (auto index : indexes) {
+      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::ContactsElement) {
+         if (userId == index.data(ChatClientDataModel::Role::ContactIdRole).toString() ) {
+            ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            break;
+         }
+      }
+   }
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
