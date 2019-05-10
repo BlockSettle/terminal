@@ -122,6 +122,7 @@ private:
    void OnOTCCancelled(const std::string& otcId);
 
    bool IsOTCChatSelected() const;
+   void UpdateOTCRoomWidgetIfRequired();
 
 private:
    QScopedPointer<Ui::ChatWidget> ui_;

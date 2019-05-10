@@ -1208,3 +1208,15 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
    ContactUserData::Status status = contactStatusToDBStatus(crecord->getContactStatus());
    addOrUpdateContact(crecord->getContactId(), status, crecord->getDisplayName());
 }
+
+bool ChatClient::SubmitOTCResponse(const bs::network::OTCResponse& response)
+{
+   model_->insertOTCSentResponse(response.otcId);
+
+   // UI flow debug block
+   if (response.otcId == ownOtcId_) {
+      model_->insertOTCReceivedResponse(response.otcId);
+   }
+
+   return true;
+}

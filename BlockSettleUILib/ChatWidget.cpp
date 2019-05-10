@@ -650,6 +650,16 @@ void ChatWidget::OnPullOwnOTCRequest(const std::string& otcId)
 
 void ChatWidget::OnOTCResponseCreated()
 {
+   const auto response = ui_->widgetCreateOTCResponse->GetCurrentOTCResponse();
+
+   qDebug() << "submitting response";
+
+   if (client_->SubmitOTCResponse(response)) {
+      // create channel for response, but negotiation will be disabled until we
+      // receive Ack from chat server that response is accepted by the system
+   } else {
+      // XXX - report error?
+   }
 }
 
 void ChatWidget::SetOTCLoggedInState()
@@ -690,6 +700,11 @@ void ChatWidget::OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequ
    otcAccepted_ = true;
    ownActiveOTC_ = otcRequest;
 
+   UpdateOTCRoomWidgetIfRequired();
+}
+
+void ChatWidget::UpdateOTCRoomWidgetIfRequired()
+{
    if (IsOTCChatSelected()) {
       const auto currentSeletion = ui_->treeViewOTCRequests->selectionModel()->selection();
       if (currentSeletion.indexes().isEmpty()) {
@@ -736,12 +751,14 @@ void ChatWidget::OnOTCCancelled(const std::string& otcId)
 
 void ChatWidget::OnOTCRequestExpired(const std::string& otcId)
 {
-   // remove cancelled OTC request and all connected data
+   otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
 void ChatWidget::OnOwnOTCRequestExpired(const std::string& otcId)
 {
-   // remove own OTC request
+   otcSubmitted_ = otcAccepted_ = false;
+   otcRequestViewModel_->RemoveOTCByID(otcId);
+   UpdateOTCRoomWidgetIfRequired();
 }
 
 void ChatWidget::OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &)

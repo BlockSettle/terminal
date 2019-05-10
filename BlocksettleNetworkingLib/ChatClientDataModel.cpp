@@ -1,7 +1,6 @@
 #include "ChatClientDataModel.h"
 #include <algorithm>
 
-
 ChatClientDataModel::ChatClientDataModel(QObject * parent)
     : QAbstractItemModel(parent)
     , root_(std::make_shared<RootItem>())
@@ -13,8 +12,8 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
    root_->insertItem(new CategoryItem(TreeItem::NodeType::RoomsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::ContactsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::AllUsersElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCRequestsElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCResponsesElement));
+   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCReceivedResponsesElement));
+   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCSentResponsesElement));
    //root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
 
 }
@@ -557,4 +556,22 @@ bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &valu
       default:
          return QAbstractItemModel::setData(index, value, role);
    }
+}
+
+// insert channel for response that client send to OTC requests
+bool ChatClientDataModel::insertOTCSentResponse(const std::string& otcId)
+{
+   beginChatInsertRows(TreeItem::NodeType::OTCSentResponsesElement);
+   bool res = root_->insertOTCSentResponseObject(otcId);
+   endInsertRows();
+   return res;
+}
+
+// insert channel for response client receive for own OTC
+bool ChatClientDataModel::insertOTCReceivedResponse(const std::string& otcId)
+{
+   beginChatInsertRows(TreeItem::NodeType::OTCReceivedResponsesElement);
+   bool res = root_->insertOTCReceivedResponseObject(otcId);
+   endInsertRows();
+   return res;
 }

@@ -4,7 +4,7 @@
 #include <QJsonObject>
 
 namespace Chat {
-   
+
    class DataObject {
    public:
       enum class Type {

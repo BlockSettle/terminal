@@ -54,11 +54,11 @@ void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const
       case TreeItem::NodeType::AllUsersElement:
          itemOption.text = tr("Users");
          break;
-      case TreeItem::NodeType::OTCRequestsElement:
-         itemOption.text = tr("Responses to My OTC");
+      case TreeItem::NodeType::OTCReceivedResponsesElement:
+         itemOption.text = tr("Received Responses");
          break;
-      case TreeItem::NodeType::OTCResponsesElement:
-         itemOption.text = tr("My Responses");
+      case TreeItem::NodeType::OTCSentResponsesElement:
+         itemOption.text = tr("Sent Responses");
          break;
       default:
          itemOption.text = tr("<unknown>");

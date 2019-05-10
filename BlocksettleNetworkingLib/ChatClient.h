@@ -1,7 +1,6 @@
 #ifndef CHAT_CLIENT_H
 #define CHAT_CLIENT_H
 
-
 #include "ChatClientTree/TreeObjects.h"
 #include "ChatDB.h"
 #include "ChatHandleInterfaces.h"
@@ -124,6 +123,8 @@ public:
    // cancel current OTC request sent to OTC chat
    bool PullOwnOTCRequest(const std::string& otcRequestId);
 
+   bool SubmitOTCResponse(const bs::network::OTCResponse& response);
+
 // XXX temp OTC related slots.
 private slots:
 
@@ -147,6 +148,11 @@ signals:
 
    // own OTC request sent to OTC chat expired
    void OwnOTCRequestExpired(const std::string& otcId);
+
+   void OnOTCResponseAccepted(const bs::network::OTCNegotiation& otcResponse);
+   void OnOTCResponseRejected(const std::string& otcId, const QString& reason);
+
+   void OnOTCResponseReceived(const bs::network::OTCNegotiation& otcResponse);
 
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);

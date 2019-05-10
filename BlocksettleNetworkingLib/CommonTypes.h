@@ -427,12 +427,12 @@ namespace bs {
 
       struct LiveOTCRequest
       {
-         std::string    otcId;
-         std::string    requestorId;
+         std::string       otcId;
+         std::string       requestorId;
 
          // XXX
          // ownRequest - temporary field used for test purpose until OTC goes through chat server
-         bool           ownRequest;
+         bool              ownRequest;
 
          Side::Type        side;
          OTCRangeID::Type  amountRange;
@@ -445,6 +445,33 @@ namespace bs {
          bool IsValid() const {
             return expireTimestamp != 0;
          }
+      };
+
+      struct OTCResponse
+      {
+         std::string       otcId;
+
+         OTCPriceRange     priceRange;
+         OTCQuantityRange  quantityRange;
+      };
+
+      struct OTCNegotiation
+      {
+         std::string       otcId;
+         std::string       responseId;
+
+         std::string       requestorId;
+         std::string       responderId;
+
+         std::string       xbtSettlementId;
+         Side::Type        side;
+
+         double            price;
+         double            amount;
+
+         uint64_t          otcExpireTimestamp;
+         uint64_t          offerExpireTimestamp;
+         uint64_t          settlementExpireTimestamp;
       };
 
    }  //namespace network
@@ -463,6 +490,7 @@ Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
 Q_DECLARE_METATYPE(bs::network::NewTrade)
 Q_DECLARE_METATYPE(bs::network::NewPMTrade)
 Q_DECLARE_METATYPE(bs::network::LiveOTCRequest)
+Q_DECLARE_METATYPE(bs::network::OTCNegotiation)
 
 
 #endif //__BS_COMMON_TYPES_H__

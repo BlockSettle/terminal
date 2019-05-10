@@ -24,12 +24,14 @@ class TreeItem : public QObject {
       RoomsElement,
       ContactsElement,
       AllUsersElement,
-      OTCRequestsElement,
-      OTCResponsesElement,
+      OTCReceivedResponsesElement,
+      OTCSentResponsesElement,
 
       //Subcategory accept types
       NoDataNode,
-      MessageDataNode
+      MessageDataNode,
+      OTCReceivedResponseNode,
+      OTCSentResponseNode
    };
 
    Q_ENUM(NodeType)

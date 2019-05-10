@@ -49,6 +49,12 @@ public:
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
    void setNewMessageMonitor(NewMessageMonitor* monitor);
 
+   // insert channel for response that client send to OTC requests
+   bool insertOTCSentResponse(const std::string& otcId);
+
+   // insert channel for response client receive for own OTC
+   bool insertOTCReceivedResponse(const std::string& otcId);
+
    // QAbstractItemModel interface
 public:
    QModelIndex index(int row, int column, const QModelIndex &parent) const override;

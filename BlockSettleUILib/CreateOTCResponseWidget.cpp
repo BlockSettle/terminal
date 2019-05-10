@@ -24,7 +24,9 @@ void CreateOTCResponseWidget::SetActiveOTCRequest(const bs::network::LiveOTCRequ
 }
 
 void CreateOTCResponseWidget::OnCreateResponse()
-{}
+{
+   emit ResponseCreated();
+}
 
 void CreateOTCResponseWidget::SetSide(const bs::network::Side::Type& side)
 {
@@ -83,4 +85,16 @@ bs::network::OTCQuantityRange CreateOTCResponseWidget::GetResponseQuantityRange(
    range.upper = ui_->widgetAmountRange->GetUpperValue();
 
    return range;
+}
+
+
+bs::network::OTCResponse CreateOTCResponseWidget::GetCurrentOTCResponse() const
+{
+   bs::network::OTCResponse response;
+
+   response.otcId = currentOtcRequest_.otcId;
+   response.priceRange = GetResponsePriceRange();
+   response.quantityRange = GetResponseQuantityRange();
+
+   return response;
 }

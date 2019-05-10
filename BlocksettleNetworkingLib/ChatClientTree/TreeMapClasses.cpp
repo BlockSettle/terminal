@@ -1,8 +1,12 @@
 #include "TreeMapClasses.h"
-#include "TreeObjects.h"
-#include <algorithm>
 
-bool RootItem::insertRoomObject(std::shared_ptr<Chat::RoomData> data){
+#include "TreeObjects.h"
+
+#include <algorithm>
+#include <QDebug>
+
+bool RootItem::insertRoomObject(std::shared_ptr<Chat::RoomData> data)
+{
    TreeItem* candidate =  new ChatRoomElement(data);
    bool res = insertNode(candidate);
    if (!res) {
@@ -11,12 +15,17 @@ bool RootItem::insertRoomObject(std::shared_ptr<Chat::RoomData> data){
    return  res;
 }
 
-bool RootItem::insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline){
+bool RootItem::insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
+{
    ChatContactElement* candidate = new ChatContactElement(data);
    candidate->setOnlineStatus(isOnline
-                              ?ChatContactElement::OnlineStatus::Online
-                              :ChatContactElement::OnlineStatus::Offline);
+                              ? ChatContactElement::OnlineStatus::Online
+                              : ChatContactElement::OnlineStatus::Offline);
    bool res = insertNode(candidate);
+   if (!res) {
+      delete candidate;
+   }
+
    return  res;
 }
 
@@ -227,9 +236,8 @@ bool RootItem::insertNode(TreeItem * item)
    TreeItem * supportChild = findSupportChild(item);
    if (supportChild) {
       return supportChild->insertItem(item);
-   } else {
-
    }
+
    return false;
 
 //   auto it = std::find_if(children_.begin(), children_.end(), [item](TreeItem* child){
@@ -320,4 +328,31 @@ bool CategoryElement::updateNewItemsFlag()
 bool CategoryElement::getNewItemsFlag() const
 {
    return newItemsFlag_;
+}
+
+// insert channel for response that client send to OTC requests
+bool RootItem::insertOTCSentResponseObject(const std::string& otcId)
+{
+   auto otcRequestNode = new OTCSentResponseElement(otcId);
+   bool insertResult = insertNode(otcRequestNode);
+   if (!insertResult) {
+      delete otcRequestNode;
+   }
+
+   qDebug() << "Sent response added";
+   return insertResult;
+}
+
+// insert channel for response client receive for own OTC
+bool RootItem::insertOTCReceivedResponseObject(const std::string& otcId)
+{
+   auto otcRequestNode = new OTCReceivedResponseElement(otcId);
+   bool insertResult = insertNode(otcRequestNode);
+   if (!insertResult) {
+      delete otcRequestNode;
+   }
+
+   qDebug() << "Received response added";
+
+   return insertResult;
 }

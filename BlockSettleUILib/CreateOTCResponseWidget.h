@@ -21,6 +21,8 @@ public:
 
    void SetActiveOTCRequest(const bs::network::LiveOTCRequest& otc);
 
+   bs::network::OTCResponse GetCurrentOTCResponse() const;
+
 private:
    void SetSide(const bs::network::Side::Type& side);
    void SetRange(const bs::network::OTCRangeID::Type& range);
