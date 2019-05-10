@@ -413,15 +413,15 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
    }
 }
 
-void HeadlessContainer::ProcessSetLimitsResponse(unsigned int id, const std::string &data)
+void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::string &data)
 {
-   headless::SetLimitsResponse response;
-   if (!response.ParseFromString(data)) {
+   headless::AutoSignActEvent event;
+   if (!event.ParseFromString(data)) {
       logger_->error("[HeadlessContainer] Failed to parse SetLimits reply");
       emit Error(id, "failed to parse");
       return;
    }
-   emit AutoSignStateChanged(response.rootwalletid(), response.autosignactive(), response.error());
+   emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive(), event.error());
 }
 
 bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
@@ -673,25 +673,25 @@ bs::signer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::string &
    return Send(packet);
 }
 
-void HeadlessContainer::setLimits(const std::string &walletId, const SecureBinaryData &pass
-   , bool autoSign)
-{
-   if (walletId.empty()) {
-      logger_->error("[HeadlessContainer] no walletId for SetLimits");
-      return;
-   }
-   headless::SetLimitsRequest request;
-   request.set_rootwalletid(walletId);
-   if (!pass.isNull()) {
-      request.set_password(pass.toHexStr());
-   }
-   request.set_activateautosign(autoSign);
+//void HeadlessContainer::setLimits(const std::string &walletId, const SecureBinaryData &pass
+//   , bool autoSign)
+//{
+//   if (walletId.empty()) {
+//      logger_->error("[HeadlessContainer] no walletId for SetLimits");
+//      return;
+//   }
+//   headless::SetLimitsRequest request;
+//   request.set_rootwalletid(walletId);
+//   if (!pass.isNull()) {
+//      request.set_password(pass.toHexStr());
+//   }
+//   request.set_activateautosign(autoSign);
 
-   headless::RequestPacket packet;
-   packet.set_type(headless::SetLimitsRequestType);
-   packet.set_data(request.SerializeAsString());
-   Send(packet);
-}
+//   headless::RequestPacket packet;
+//   packet.set_type(headless::SetLimitsRequestType);
+//   packet.set_data(request.SerializeAsString());
+//   Send(packet);
+//}
 
 bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
 {
@@ -1301,8 +1301,8 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       emit UserIdSet();
       break;
 
-   case headless::SetLimitsRequestType:
-      ProcessSetLimitsResponse(packet.id(), packet.data());
+   case headless::AutoSignActType:
+      ProcessAutoSignActEvent(packet.id(), packet.data());
       break;
 
    case headless::CreateSettlWalletType:

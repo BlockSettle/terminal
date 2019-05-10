@@ -82,7 +82,7 @@ public:
    virtual bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
    virtual bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) = 0;
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
-   virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
+   //virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
    virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
    virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
       , const QVariantMap &data = QVariantMap()) = 0;

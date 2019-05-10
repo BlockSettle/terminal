@@ -281,9 +281,14 @@ void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
    if (!hdWallet) {
       return;
    }
+
+
    if (signingContainer_->isReady()) {
-      signingContainer_->setLimits(hdWallet->walletId(), {}, active);
+      //signingContainer_->setLimits(hdWallet->walletId(), {}, active);
+      signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign
+         , {{ QLatin1String("rootId"), hdWalletId }});
    }
+
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
