@@ -1007,6 +1007,8 @@ void ChatClient::onActionAcceptContactRequest(std::shared_ptr<Chat::ContactRecor
    sendRequest(request);
    auto requestS = std::make_shared<Chat::ContactActionRequestServer>("", currentUserId_, crecord->getContactId().toStdString(), Chat::ContactsActionServer::UpdateContactRecord, Chat::ContactStatus::Accepted, crecord->getContactPublicKey());
    sendRequest(requestS);
+
+   emit ContactRequestAccepted(crecord->getContactId());
 }
 
 void ChatClient::onActionRejectContactRequest(std::shared_ptr<Chat::ContactRecordData> crecord)
