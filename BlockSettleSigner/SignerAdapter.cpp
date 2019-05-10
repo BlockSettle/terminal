@@ -48,14 +48,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
 
    adapterConn->setLocalHeartbeatInterval();
 
-   {
-      const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";
-      QFile pubKeyFile(QString::fromStdString(pubKeyFileName));
-      if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-         throw std::runtime_error("failed to create public key file " + pubKeyFileName);
-      }
-      pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
-   }
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
    if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
       , listener_.get())) {
