@@ -539,6 +539,15 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
          setPopupVisible(false);
    }
 
+   if (event->type() == QEvent::WindowActivate) {
+      // hide tab icon on window activate event
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
+                                {QString(),
+                                 QString(),
+                                 QVariant(true),
+                                 QVariant(true)});
+   }
+
    return QWidget::eventFilter(obj, event);
 }
 

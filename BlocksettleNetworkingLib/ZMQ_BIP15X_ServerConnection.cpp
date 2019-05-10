@@ -6,7 +6,7 @@
 
 using namespace std;
 
-// Used with remote connections (termina/Celer)
+// Used with remote connections (terminal/Celer)
 const std::chrono::milliseconds ZmqBIP15XServerConnection::DefaultHeartbeatInterval = std::chrono::seconds(30);
 
 // Used with local connections (terminal/signer/signer GUI)
@@ -30,8 +30,8 @@ void ZmqBIP15XPerConnData::reset()
 //
 // INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
 //         ZMQ context. (const std::shared_ptr<ZmqContext>&)
-//         List of trusted clients. (const QStringList&)
 //         Per-connection ID. (const uint64_t&)
+//         Callback for getting a list of trusted clients. (function<vector<string>()>)
 //         Ephemeral peer usage. Not recommended. (const bool&)
 //         The directory containing the file with the non-ephemeral key. (const std::string)
 //         The file with the non-ephemeral key. (const std::string)
@@ -42,7 +42,8 @@ void ZmqBIP15XPerConnData::reset()
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
-   , const std::vector<std::string>& trustedClients, const uint64_t& id
+   , const uint64_t& id
+   , const std::function<std::vector<std::string>()>& cbTrustedClients
    , const bool& ephemeralPeers, const std::string& ownKeyFileDir
    , const std::string& ownKeyFileName, const bool& makeServerCookie
    , const bool& readClientCookie, const std::string& cookiePath)
@@ -50,6 +51,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , useClientIDCookie_(readClientCookie)
    , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
+   , cbTrustedClients_(cbTrustedClients)
    , heartbeatInterval_(DefaultHeartbeatInterval)
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
@@ -80,10 +82,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
       authPeers_ = make_shared<AuthorizedPeers>();
    }
 
-   cbTrustedClients_ = [trustedClients]() -> std::vector<std::string> {
-      return trustedClients;
-   };
-
    if (makeServerIDCookie_) {
       genBIPIDCookie();
    }
@@ -96,11 +94,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
 //
 // INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
 //         ZMQ context. (const std::shared_ptr<ZmqContext>&)
-//         List of trusted clients. (const QStringList&)
-//         Per-connection ID. (const uint64_t&)
-//         Ephemeral peer usage. Not recommended. (const bool&)
-//         The directory containing the file with the non-ephemeral key. (const std::string)
-//         The file with the non-ephemeral key. (const std::string)
+//         Callback for getting a list of trusted clients. (function<vector<string>()>)
 //         A flag indicating if the connection will make a key cookie. (bool)
 //         A flag indicating if the connection will read a key cookie. (bool)
 //         The path to the key cookie to read or write. (const std::string)
@@ -862,7 +856,7 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
    if (socketConnMap_[clientID] == nullptr) {
       assert(cbTrustedClients_);
       auto lbds = getAuthPeerLambda();
-      for (auto b : cbTrustedClients_()) {
+      for (const auto &b : cbTrustedClients_()) {
          const auto colonIndex = b.find(':');
          if (colonIndex == std::string::npos) {
             logger_->error("[{}] Trusted client list is malformed (for {})."

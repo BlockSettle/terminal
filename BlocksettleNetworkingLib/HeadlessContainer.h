@@ -181,6 +181,7 @@ private:
    std::shared_ptr<ConnectionManager> connectionManager_;
    mutable std::mutex   mutex_;
    bool headlessConnFinished_ = false;
+   bool isRestartScheduled_{false};
 };
 
 class LocalSigner : public RemoteSigner
