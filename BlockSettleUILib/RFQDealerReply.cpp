@@ -53,9 +53,8 @@ RFQDealerReply::RFQDealerReply(QWidget* parent)
 
    connect(ui_->pushButtonSubmit, &QPushButton::clicked, this, &RFQDealerReply::submitButtonClicked);
    connect(ui_->pushButtonPull, &QPushButton::clicked, this, &RFQDealerReply::pullButtonClicked);
-   connect(ui_->checkBoxAQ, &ToggleSwitch::stateChanged, this, &RFQDealerReply::aqStateChanged);
+   connect(ui_->checkBoxAQ, &ToggleSwitch::clicked, this, &RFQDealerReply::checkBoxAQClicked);
    connect(ui_->comboBoxAQScript, SIGNAL(activated(int)), this, SLOT(aqScriptChanged(int)));
-   connect(this, &RFQDealerReply::aqScriptLoaded, this, &RFQDealerReply::onAqScriptLoaded);
    connect(ui_->pushButtonAdvanced, &QPushButton::clicked, this, &RFQDealerReply::showCoinControl);
 
    connect(ui_->comboBoxWallet, SIGNAL(currentIndexChanged(int)), this, SLOT(walletSelected(int)));
@@ -106,27 +105,10 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
       aq_->setWalletsManager(walletsManager_);
    }
 
-   connect(aq_, &UserScriptRunner::aqScriptLoaded, [this] (const QString &fileName) {
-      aqLoaded_ = true;
-      validateGUI();
-      emit aqScriptLoaded(fileName);
-   });
-   connect(aq_, &UserScriptRunner::failedToLoad, [this](const QString &err) {
-      logger_->error("Script loading failed: {}", err.toStdString());
-
-      auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
-      scripts.removeAt(ui_->comboBoxAQScript->currentIndex() - 1);
-      appSettings_->set(ApplicationSettings::aqScripts, scripts);
-      appSettings_->reset(ApplicationSettings::lastAqScript);
-      aqFillHistory();
-
-      aqLoaded_ = false;
-      validateGUI();
-   });
-   connect(aq_, &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply,
-      Qt::QueuedConnection);
-   connect(aq_, &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif,
-      Qt::QueuedConnection);
+   connect(aq_, &UserScriptRunner::aqScriptLoaded, this, &RFQDealerReply::onAqScriptLoaded);
+   connect(aq_, &UserScriptRunner::failedToLoad, this, &RFQDealerReply::onAqScriptFailed);
+   connect(aq_, &UserScriptRunner::sendQuote, this, &RFQDealerReply::onAQReply, Qt::QueuedConnection);
+   connect(aq_, &UserScriptRunner::pullQuoteNotif, this, &RFQDealerReply::pullQuoteNotif, Qt::QueuedConnection);
 
    if (signingContainer_) {
       connect(signingContainer_.get(), &SignContainer::HDLeafCreated, this, &RFQDealerReply::onHDLeafCreated);
@@ -159,8 +141,6 @@ void RFQDealerReply::initUi()
    ui_->spinBoxOfferPx->setEnabled(false);
 
    ui_->labelProductGroup->clear();
-
-   ui_->checkBoxAQ->setEnabled(false);
 
    validateGUI();
 }
@@ -925,16 +905,19 @@ std::shared_ptr<TransactionData> RFQDealerReply::getTransactionData(const std::s
 void RFQDealerReply::validateGUI()
 {
    updateSubmitButton();
-   if (!aqLoaded_) {
-      ui_->checkBoxAQ->setChecked(false);
-   }
 
-   ui_->pushButtonAQScript->setEnabled(!ui_->checkBoxAQ->isChecked());
+   ui_->checkBoxAQ->setChecked(aqLoaded_);
+
+   // enable toggleswitch only if a script file is already selected
+   bool isValidScript = (ui_->comboBoxAQScript->currentIndex() > 0);
+   ui_->checkBoxAQ->setEnabled(isValidScript && celerConnected_);
+   ui_->comboBoxAQScript->setEnabled(celerConnected_);
+   ui_->groupBoxAutoSign->setEnabled(celerConnected_);
 }
 
 void RFQDealerReply::onTransactionDataChanged()
 {
-   QMetaObject::invokeMethod(this, "updateSubmitButton");
+   QMetaObject::invokeMethod(this, &RFQDealerReply::updateSubmitButton);
 }
 
 void RFQDealerReply::initAQ(const QString &filename)
@@ -943,8 +926,15 @@ void RFQDealerReply::initAQ(const QString &filename)
       return;
    }
    aqLoaded_ = false;
+   aq_->enableAQ(filename);
+   validateGUI();
+}
 
-   aq_->initAQ(filename);
+void RFQDealerReply::deinitAQ()
+{
+   aq_->disableAQ();
+   aqLoaded_ = false;
+   validateGUI();
 }
 
 void RFQDealerReply::aqFillHistory()
@@ -960,8 +950,7 @@ void RFQDealerReply::aqFillHistory()
       const auto lastScript = appSettings_->get<QString>(ApplicationSettings::lastAqScript);
       for (int i = 0; i < scripts.size(); i++) {
          QFileInfo fi(scripts[i]);
-         ui_->comboBoxAQScript->addItem(fi.fileName());
-
+         ui_->comboBoxAQScript->addItem(fi.fileName(), scripts[i]);
          if (scripts[i] == lastScript) {
             curIndex = i + 1; // note the "Load" row in the head
          }
@@ -975,28 +964,31 @@ void RFQDealerReply::aqScriptChanged(int curIndex)
    if (curIndex < 0) {
       return;
    }
+
    if (curIndex == 0) {
       const auto scriptFN = QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QString()
          , tr("QML files (*.qml)"));
+
       if (scriptFN.isEmpty()) {
          aqFillHistory();
          return;
       }
-      else {
-         initAQ(scriptFN);
+
+      // comboBoxAQScript will be updated later from onAqScriptLoaded
+      initAQ(scriptFN);
+   } else {
+      if (aqLoaded_) {
+         deinitAQ();
       }
-   }
-   else {
-      // enable toggleswitch if a script is selected
-      // celer is connected
-      if (celerConnected_) {
-         ui_->checkBoxAQ->setEnabled(true);
-      }
+      initAQ(ui_->comboBoxAQScript->currentData().toString());
    }
 }
 
 void RFQDealerReply::onAqScriptLoaded(const QString &filename)
 {
+   logger_->info("AQ script loaded ({})", filename.toStdString());
+   aqLoaded_ = true;
+
    auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
    if (scripts.indexOf(filename) < 0) {
       scripts << filename;
@@ -1004,20 +996,34 @@ void RFQDealerReply::onAqScriptLoaded(const QString &filename)
    }
    appSettings_->set(ApplicationSettings::lastAqScript, filename);
    aqFillHistory();
+
+   validateGUI();
 }
 
-void RFQDealerReply::aqStateChanged(int state)
+void RFQDealerReply::onAqScriptFailed(const QString &filename, const QString &error)
 {
-   if (state == Qt::Unchecked) {
+   logger_->error("AQ script loading failed (): {}", filename.toStdString(), error.toStdString());
+   aqLoaded_ = false;
+
+   auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
+   scripts.removeOne(filename);
+   appSettings_->set(ApplicationSettings::aqScripts, scripts);
+   appSettings_->reset(ApplicationSettings::lastAqScript);
+   aqFillHistory();
+
+   validateGUI();
+}
+
+void RFQDealerReply::checkBoxAQClicked()
+{
+   if (aqLoaded_) {
       aq_->disableAQ();
+      aqLoaded_ = false;
+   } else {
+      initAQ(ui_->comboBoxAQScript->currentData().toString());
    }
-   else {
-      const auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
-      int index = ui_->comboBoxAQScript->currentIndex() - 1;
-      if (index >= 0 && index < scripts.size()) {
-         initAQ(scripts[index]);
-      }
-   }
+
+   validateGUI();
 }
 
 void RFQDealerReply::onOrderUpdated(const bs::network::Order &order)
@@ -1207,22 +1213,16 @@ void RFQDealerReply::onCreateHDWalletError(unsigned int id, std::string errMsg)
 
 void RFQDealerReply::onCelerConnected()
 {
-   // enable toggleswitch only if a script file is already selected
-   if (ui_->comboBoxAQScript->currentIndex() > 0) {
-      ui_->checkBoxAQ->setEnabled(true);
-   }
    celerConnected_ = true;
-   ui_->groupBoxAutoSign->setEnabled(true);
    updateAutoSignState(); // update child control state
+   validateGUI();
 }
 
 void RFQDealerReply::onCelerDisconnected()
 {
-   celerConnected_ = false;
-   ui_->checkBoxAQ->setEnabled(false);
-   ui_->checkBoxAQ->setCheckState(Qt::Unchecked);
-   ui_->groupBoxAutoSign->setEnabled(false);
-   aqStateChanged(Qt::Unchecked);
-   disableAutoSign();
    logger_->info("Disabled auto-quoting due to Celer disconnection");
+   celerConnected_ = false;
+   aq_->disableAQ();
+   disableAutoSign();
+   validateGUI();
 }
