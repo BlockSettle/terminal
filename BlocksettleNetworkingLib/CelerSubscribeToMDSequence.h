@@ -18,7 +18,7 @@ class CelerSubscribeToMDSequence : public CelerCommandSequence<CelerSubscribeToM
 {
 public:
    CelerSubscribeToMDSequence(const std::string& currencyPair, bs::network::Asset::Type at, const std::shared_ptr<spdlog::logger>& logger);
-   ~CelerSubscribeToMDSequence() noexcept = default;
+   ~CelerSubscribeToMDSequence() noexcept override = default;
 
    CelerSubscribeToMDSequence(const CelerSubscribeToMDSequence&) = delete;
    CelerSubscribeToMDSequence& operator = (const CelerSubscribeToMDSequence&) = delete;

@@ -84,7 +84,7 @@ bool CelerClient::LoginToServer(const std::string& hostname, const std::string& 
      loginSuccessCallback(loginString, sessionToken, heartbeatInterval);
    };
    auto onLoginFailed = [this](const std::string& errorMessage) {
-     this->loginFailedCallback(errorMessage);
+     loginFailedCallback(errorMessage);
    };
    loginSequence->SetCallbackFunctions(onLoginSuccess, onLoginFailed);
 
