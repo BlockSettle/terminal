@@ -139,8 +139,6 @@ public:
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
 
       chat_->SetOTCLoggedInState();
-
-      selectFirstRoom();
    }
 
    void onStateExit() override {
@@ -240,25 +238,6 @@ public:
    }
 
    void onUsersDeleted(const std::vector<std::string> &/*users*/)  override {}
-
-   void selectFirstRoom()
-   {
-      onRoomClicked(Chat::GlobalRoomKey);
-
-      QModelIndexList indexes = chat_->ui_->treeViewUsers->model()->match(chat_->ui_->treeViewUsers->model()->index(0,0),
-                                                                Qt::DisplayRole,
-                                                                QLatin1String("*"),
-                                                                -1,
-                                                                Qt::MatchWildcard|Qt::MatchRecursive);
-      
-      // highlight first room
-      for (auto index : indexes) {
-         if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
-            chat_->ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
-            break;
-         }
-      }
-   }
 };
 
 ChatWidget::ChatWidget(QWidget *parent)
@@ -514,6 +493,7 @@ void ChatWidget::onSearchUserTextEdited(const QString& text)
 void ChatWidget::onConnectedToServer()
 {
    changeState(State::LoggedIn);
+   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectFirstRoom);
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
@@ -695,4 +675,25 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
                                     QVariant(hasUnreadMessages)});
       }
    }
+}
+
+void ChatWidget::selectFirstRoom()
+{
+   onRoomClicked(Chat::GlobalRoomKey);
+
+   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
+                                                               Qt::DisplayRole,
+                                                               QLatin1String("*"),
+                                                               -1,
+                                                               Qt::MatchWildcard|Qt::MatchRecursive);
+      
+   // highlight first room
+   for (auto index : indexes) {
+      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
+         ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+         break;
+      }
+   }
+
+   disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectFirstRoom);
 }
