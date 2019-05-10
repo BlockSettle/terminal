@@ -125,8 +125,12 @@ std::shared_ptr<ZmqBIP15XServerConnection>
       , const std::string& ownKeyFileName) const
 {
    BinaryData bdID = CryptoPRNG::generateRandom(8);
+   auto cbTrustedClients = [this]() -> std::vector<std::string> {
+      return zmqTrustedTerminals_;
+   };
+
    return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
-      , zmqTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), ephemeral
+      , READ_UINT64_LE(bdID.getPtr()), cbTrustedClients, ephemeral
       , ownKeyFileDir, ownKeyFileName, false);
 }
 
