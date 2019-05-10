@@ -12,6 +12,7 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 
 #include <queue>
+#include <unordered_set>
 
 #include <QAbstractItemModel>
 #include <QObject>
@@ -125,7 +126,6 @@ public:
 
 // XXX temp OTC related slots.
 private slots:
-   void onOwnOTCRequestExpired();
 
    // OTC related signals
 signals:
@@ -233,9 +233,9 @@ private:
    const std::string baseFakeRequestorId_ = "fake_req";
    uint64_t          nextRequestorId_ = 1;
 
-   QTimer            ownOtcExpireTimer_;
    std::string       ownOtcId_;
 
+   std::unordered_set<std::string> aliveOtcRequests_;
 
    // ModelChangesHandler interface
 public:

@@ -43,19 +43,25 @@ void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorCategoryItem());
    switch (index.data(Role::ItemAcceptTypeRole).value<NodeType>()){
       case TreeItem::NodeType::SearchElement:
-         itemOption.text = QLatin1String("Search");
+         itemOption.text = tr("Search");
          break;
       case TreeItem::NodeType::RoomsElement:
-         itemOption.text = QLatin1String("Chat rooms");
+         itemOption.text = tr("Chat rooms");
          break;
       case TreeItem::NodeType::ContactsElement:
-         itemOption.text = QLatin1String("Contacts");
+         itemOption.text = tr("Contacts");
          break;
       case TreeItem::NodeType::AllUsersElement:
-         itemOption.text = QLatin1String("Users");
+         itemOption.text = tr("Users");
+         break;
+      case TreeItem::NodeType::OTCRequestsElement:
+         itemOption.text = tr("Responses to My OTC");
+         break;
+      case TreeItem::NodeType::OTCResponsesElement:
+         itemOption.text = tr("My Responses");
          break;
       default:
-         itemOption.text = QLatin1String("<unknown>");
+         itemOption.text = tr("<unknown>");
 
    }
 

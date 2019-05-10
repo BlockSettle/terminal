@@ -3,6 +3,7 @@
 
 #include <QAbstractTableModel>
 #include <QString>
+#include <QTimer>
 
 #include <vector>
 
@@ -28,6 +29,10 @@ public:
 
    bs::network::LiveOTCRequest GetOTCRequest(const QModelIndex& index);
 
+private slots:
+   // update time left only. do not remove anything
+   void RefreshBoard();
+
 private:
    enum Columns
    {
@@ -43,7 +48,8 @@ private:
    QVariant getRowData(const int column, const bs::network::LiveOTCRequest& otc) const;
 
 private:
-   std::vector<bs::network::LiveOTCRequest> currentRequests_;
+   std::vector<bs::network::LiveOTCRequest>  currentRequests_;
+   QTimer                                    refreshTicker_;
 };
 
 #endif

@@ -13,6 +13,8 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
    root_->insertItem(new CategoryItem(TreeItem::NodeType::RoomsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::ContactsElement));
    root_->insertItem(new CategoryItem(TreeItem::NodeType::AllUsersElement));
+   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCRequestsElement));
+   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCResponsesElement));
    //root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
 
 }
@@ -51,7 +53,7 @@ bool ChatClientDataModel::insertRoomObject(std::shared_ptr<Chat::RoomData> data)
 bool ChatClientDataModel::insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
 {
    beginChatInsertRows(TreeItem::NodeType::ContactsElement);
-   bool res = root_->insertContactObject(data, isOnline);   
+   bool res = root_->insertContactObject(data, isOnline);
    endInsertRows();
    return res;
 }

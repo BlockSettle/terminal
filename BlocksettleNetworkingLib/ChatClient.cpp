@@ -94,11 +94,6 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    heartbeatTimer_.setSingleShot(false);
    connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
    //heartbeatTimer_.start();
-
-   // 300 sec
-   ownOtcExpireTimer_.setInterval(300000);
-   ownOtcExpireTimer_.setSingleShot(false);
-   connect(&ownOtcExpireTimer_, &QTimer::timeout, this, &ChatClient::onOwnOTCRequestExpired);
 }
 
 ChatClient::~ChatClient() noexcept
@@ -1154,29 +1149,29 @@ bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
       liveRequest.requestorId = currentUserId_;
       ownOtcId_ = liveRequest.otcId;
 
-      ownOtcExpireTimer_.start();
-
       emit OTCRequestAccepted(liveRequest);
    } else {
       liveRequest.requestorId = baseFakeRequestorId_ + std::to_string(nextRequestorId_++);
       emit NewOTCRequestReceived(liveRequest);
    }
 
+   aliveOtcRequests_.emplace(liveRequest.otcId);
+   QTimer::singleShot(10*60*1000, [this, otcId = liveRequest.otcId]
+   {
+      auto it = aliveOtcRequests_.find(otcId);
+      if (aliveOtcRequests_.end() != it) {
+         aliveOtcRequests_.erase(it);
+
+         if (ownOtcId_ == otcId) {
+            ownOtcId_.clear();
+            emit OwnOTCRequestExpired(otcId);
+         } else {
+            emit OTCRequestExpired(otcId);
+         }
+      }
+   });
+
    return true;
-}
-
-void ChatClient::onOwnOTCRequestExpired()
-{
-   if (ownOtcId_.empty()) {
-      logger_->error("[ChatClient::onOwnOTCRequestExpired] looks like timer was not stopped. no own otc id");
-      return;
-   }
-
-   logger_->debug("[ChatClient::onOwnOTCRequestExpired] own common OTC expired: {}"
-      , ownOtcId_);
-   emit OwnOTCRequestExpired(ownOtcId_);
-
-   ownOtcId_.clear();
 }
 
 // cancel current OTC request sent to OTC chat

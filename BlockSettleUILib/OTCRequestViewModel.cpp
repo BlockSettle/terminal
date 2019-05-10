@@ -3,6 +3,9 @@
 OTCRequestViewModel::OTCRequestViewModel(QObject* parent)
    : QAbstractTableModel(parent)
 {
+   refreshTicker_.setInterval(500);
+   connect(&refreshTicker_, &QTimer::timeout, this, &OTCRequestViewModel::RefreshBoard);
+   refreshTicker_.start();
 }
 
 int OTCRequestViewModel::rowCount(const QModelIndex & parent) const
@@ -134,4 +137,12 @@ bool OTCRequestViewModel::RemoveOTCByID(const std::string& otc)
    }
 
    return false;
+}
+
+void OTCRequestViewModel::RefreshBoard()
+{
+   if (!currentRequests_.empty()) {
+      emit dataChanged(createIndex(0, static_cast<int>(ColumnDuration))
+         , createIndex(currentRequests_.size()-1, static_cast<int>(ColumnDuration)), {Qt::DisplayRole});
+   }
 }

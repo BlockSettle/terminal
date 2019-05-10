@@ -24,7 +24,8 @@ class TreeItem : public QObject {
       RoomsElement,
       ContactsElement,
       AllUsersElement,
-
+      OTCRequestsElement,
+      OTCResponsesElement,
 
       //Subcategory accept types
       NoDataNode,
