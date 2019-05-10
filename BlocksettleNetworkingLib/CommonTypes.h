@@ -15,7 +15,7 @@
 #include "com/celertech/marketdata/api/enums/MarketDataEntryTypeProto.pb.h"
 
 #ifndef NDEBUG
-#include <<stdexcept>
+#include <stdexcept>
 #endif
 
 namespace bs {
