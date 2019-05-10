@@ -26,16 +26,20 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
-   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
-   const auto &cbTrustedClients = [this] {
-      return settings_->trustedInterfaces();
+   // Only the SignerListener's cookie will be trusted. Supply an empty set of
+   // non-cookie trusted clients.
+   const auto &cbTrustedClientsSL = [this] {
+      std::vector<std::string> emptyTrustedClients;
+      return emptyTrustedClients;
    };
 
+   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    const std::string absCookiePath =
       SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
-      , zmqContext, cbTrustedClients, false, true, absCookiePath);
-   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
+      , zmqContext, cbTrustedClientsSL, false, true, absCookiePath);
+   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn
+      , logger_, walletsMgr_, params);
 
    adapterConn->setLocalHeartbeatInterval();
 
@@ -155,61 +159,82 @@ void HeadlessAppObj::onlineProcessing()
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    const BinaryData bdID = CryptoPRNG::generateRandom(8);
    std::vector<std::string> trustedTerms;
-   const std::string absCookiePath =
+   std::string absTermCookiePath =
       SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    bool ephemeralConnIDKey = true;
    bool makeServerCookie = true;
-   std::string keyFileDir = "";
-   std::string keyFileName = "";
+   std::string ourKeyFileDir = "";
+   std::string ourKeyFileName = "";
 
    if (settings_->getTermIDKeyStr().empty()) {
       ephemeralConnIDKey = false;
       makeServerCookie = false;
-      keyFileDir = SystemFilePaths::appDataLocation();
-      keyFileName = "remote_signer.peers";
+      absTermCookiePath = "";
+      ourKeyFileDir = SystemFilePaths::appDataLocation();
+      ourKeyFileName = "remote_signer.peers";
+   }
 
-      // We're using a user-defined, whitelisted key set. Make sure the keys are
-      // valid before accepting the entries.
-      for (const std::string& i : settings_->trustedTerminals()) {
-         const auto colonIndex = i.find(':');
-         if (colonIndex == std::string::npos) {
-            logger_->error("[{}] Trusted client list key entry {} is malformed."
-               , __func__, i);
-            continue;
-         }
+   // The whitelisted key set depends on whether or not the signer is meant to
+   // be local (signer invoked with --terminal_id_key) or remote (use a set of
+   // trusted terminals).
+   auto getClientIDKeys = [this]() -> std::vector<std::string> {
+      std::vector<std::string> retKeys;
 
-         SecureBinaryData inKey = READHEX(i.substr(colonIndex + 1));
-         if (inKey.isNull()) {
-            logger_->error("[{}] Trusted client list key entry {} has no key."
-               , __func__, i);
-            continue;
-         }
+      if (settings_->getTermIDKeyStr().empty()) {
+         // We're using a user-defined, whitelisted key set. Make sure the keys are
+         // valid before accepting the entries.
+         for (const std::string& i : settings_->trustedTerminals()) {
+            const auto colonIndex = i.find(':');
+            if (colonIndex == std::string::npos) {
+               logger_->error("[{}] Trusted client list key entry {} is malformed."
+                  , __func__, i);
+               continue;
+            }
 
-         if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
-            logger_->error("[{}] Trusted client list key entry ({}) has an "
-               "invalid ECDSA key ({}).", __func__, i, inKey.toHexStr());
-            continue;
-         }
-         else {
-            trustedTerms.push_back(i);
+            SecureBinaryData inKey = READHEX(i.substr(colonIndex + 1));
+            if (inKey.isNull()) {
+               logger_->error("[{}] Trusted client list key entry {} has no key."
+                  , __func__, i);
+               continue;
+            }
+
+            if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
+               logger_->error("[{}] Trusted client list key entry ({}) has an "
+                  "invalid ECDSA key ({}).", __func__, i, inKey.toHexStr());
+               continue;
+            }
+            else {
+               retKeys.push_back(i);
+            }
          }
       }
-   }
-   else {
-      // We're using a cookie. Only the one key in the cookie will be trusted.
-      BinaryData termIDKey;
-      if (!(settings_->getTermIDKeyBin(termIDKey))) {
-         logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
-            "ID key", __func__);
+      else {
+         const std::string termIDKeyStr = settings_->getTermIDKeyStr();
+         if (termIDKeyStr.empty()) {
+            logger_->error("[{}] Local connection requested but no key is available"
+               , __func__);
+            return retKeys;
+         }
+
+         // We're using a cookie. Only the one key in the cookie will be trusted.
+         BinaryData termIDKey = READHEX(termIDKeyStr);
+         if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
+            logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
+               "ID key", __func__);
+         }
+
+         std::string trustedTermStr = "127.0.0.1:" + termIDKeyStr;
+         retKeys.push_back(trustedTermStr);
       }
-      std::string trustedTermStr = "127.0.0.1:" + settings_->getTermIDKeyStr();
-      trustedTerms.push_back(trustedTermStr);
-   }
+
+      return retKeys;
+   };
 
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , trustedTerms, READ_UINT64_LE(bdID.getPtr()), ephemeralConnIDKey
-      , keyFileDir, keyFileName, makeServerCookie, false, absCookiePath);
-      connection_->setLocalHeartbeatInterval();
+      , READ_UINT64_LE(bdID.getPtr()), getClientIDKeys, ephemeralConnIDKey
+      , ourKeyFileDir, ourKeyFileName, makeServerCookie, false
+      , absTermCookiePath);
+   connection_->setLocalHeartbeatInterval();
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
