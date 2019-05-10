@@ -1149,14 +1149,21 @@ bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
       liveRequest.requestorId = currentUserId_;
       ownOtcId_ = liveRequest.otcId;
 
-      emit OTCRequestAccepted(liveRequest);
+      // simulate 2 seconds delay on accept response
+      QTimer::singleShot(2000, [this, liveRequest]
+         {
+            emit OTCRequestAccepted(liveRequest);
+         });
    } else {
       liveRequest.requestorId = baseFakeRequestorId_ + std::to_string(nextRequestorId_++);
       emit NewOTCRequestReceived(liveRequest);
    }
 
    aliveOtcRequests_.emplace(liveRequest.otcId);
-   QTimer::singleShot(10*60*1000, [this, otcId = liveRequest.otcId]
+
+   const auto expireInterval = liveRequest.expireTimestamp - QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+
+   QTimer::singleShot(expireInterval, [this, otcId = liveRequest.otcId]
    {
       auto it = aliveOtcRequests_.find(otcId);
       if (aliveOtcRequests_.end() != it) {

@@ -84,7 +84,6 @@ private slots:
 
    void OnPullOwnOTCRequest(const std::string& otcId);
 
-
    void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
    // OTC chat client slots
@@ -121,6 +120,8 @@ private:
    bool IsOwnOTCId(const std::string& otcId) const;
    void OnOwnOTCPulled();
    void OnOTCCancelled(const std::string& otcId);
+
+   bool IsOTCChatSelected() const;
 
 private:
    QScopedPointer<Ui::ChatWidget> ui_;

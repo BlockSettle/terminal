@@ -689,6 +689,13 @@ void ChatWidget::OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequ
 
    otcAccepted_ = true;
    ownActiveOTC_ = otcRequest;
+
+   if (IsOTCChatSelected()) {
+      const auto currentSeletion = ui_->treeViewOTCRequests->selectionModel()->selection();
+      if (currentSeletion.indexes().isEmpty()) {
+         DisplayCorrespondingOTCRequestWidget();
+      }
+   }
 }
 
 void ChatWidget::OnOTCOwnRequestRejected(const QString& reason)
@@ -801,6 +808,11 @@ bool ChatWidget::IsOTCRequestSubmitted() const
 bool ChatWidget::IsOTCRequestAccepted() const
 {
    return otcAccepted_;
+}
+
+bool ChatWidget::IsOTCChatSelected() const
+{
+   return IsOTCChatRoom(currentChat_);
 }
 
 void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shared_ptr<Chat::MessageData> message)
