@@ -1,13 +1,13 @@
 <RCC>
     <qresource prefix="/">
-        <file alias="ICON_STATUS_OFFLINE">resources/status_offline.png</file>
-        <file alias="ICON_STATUS_ERROR">resources/status_error.png</file>
-        <file alias="ICON_STATUS_ONLINE">resources/status_online.png</file>
-        <file alias="ICON_STATUS_CONNECTING">resources/status_connecting.png</file>
-        <file alias="ICON_MSG_STATUS_OFFLINE">resources/msg_status_offline.png</file>
-        <file alias="ICON_MSG_STATUS_ONLINE">resources/msg_status_online.png</file>
-        <file alias="ICON_MSG_STATUS_CONNECTING">resources/msg_status_connecting.png</file>
-        <file alias="ICON_MSG_STATUS_READ">resources/msg_status_read.png</file>
+        <file alias="ICON_STATUS_OFFLINE">resources/status_offline_2.png</file>
+        <file alias="ICON_STATUS_ERROR">resources/status_error_2.png</file>
+        <file alias="ICON_STATUS_ONLINE">resources/status_online_2.png</file>
+        <file alias="ICON_STATUS_CONNECTING">resources/status_connecting_2.png</file>
+        <file alias="ICON_MSG_STATUS_OFFLINE">resources/msg_status_offline_2.png</file>
+        <file alias="ICON_MSG_STATUS_ONLINE">resources/msg_status_online_2.png</file>
+        <file alias="ICON_MSG_STATUS_CONNECTING">resources/msg_status_connecting_2.png</file>
+        <file alias="ICON_MSG_STATUS_READ">resources/msg_status_read_2.png</file>
         <file>resources/preferences-system.png</file>
         <file>resources/preferences-system-network.png</file>
         <file>resources/Raleway/Raleway-Regular.ttf</file>

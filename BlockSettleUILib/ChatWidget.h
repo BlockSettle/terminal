@@ -77,6 +77,7 @@ private slots:
    void onSearchUserTextEdited(const QString& text);
    void onConnectedToServer();
    void selectFirstRoom();
+   void onContactRequestAccepted(const QString &userId);
 
    void OnOTCRequestCreated();
    void DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range);

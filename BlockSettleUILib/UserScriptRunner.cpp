@@ -149,7 +149,7 @@ void UserScriptHandler::initAQ(const QString &fileName)
       emit aqScriptLoaded(fileName);
       aqEnabled_ = true;
    });
-   connect(aq_, &AutoQuoter::failed, [this](const QString &err) {
+   connect(aq_, &AutoQuoter::failed, [this, fileName](const QString &err) {
       logger_->error("Script loading failed: {}", err.toStdString());
 
       if (aq_) {
@@ -157,7 +157,7 @@ void UserScriptHandler::initAQ(const QString &fileName)
          aq_ = nullptr;
       }
 
-      emit failedToLoad(err);
+      emit failedToLoad(fileName, err);
    });
    connect(aq_, &AutoQuoter::sendingQuoteReply, this, &UserScriptHandler::onAQReply);
    connect(aq_, &AutoQuoter::pullingQuoteReply, this, &UserScriptHandler::onAQPull);
@@ -312,20 +312,15 @@ UserScriptRunner::UserScriptRunner(std::shared_ptr<QuoteProvider> quoteProvider,
    , thread_(new QThread(this))
    , script_(new UserScriptHandler(quoteProvider, utxoAdapter, signingContainer,
          mdProvider, assetManager, logger, this))
-   , enabled_(false)
+
+   , logger_(logger)
 {
    script_->moveToThread(thread_);
 
-   connect(script_, &UserScriptHandler::aqScriptLoaded, this, &UserScriptRunner::aqScriptLoaded,
-      Qt::QueuedConnection);
-   connect(script_, &UserScriptHandler::failedToLoad, this, &UserScriptRunner::failedToLoad,
-      Qt::QueuedConnection);
-   connect(script_, &UserScriptHandler::failedToLoad, this, &UserScriptRunner::failedToLoadScript,
-      Qt::QueuedConnection);
-   connect(script_, &UserScriptHandler::pullQuoteNotif, this, &UserScriptRunner::pullQuoteNotif,
-      Qt::QueuedConnection);
-   connect(script_, &UserScriptHandler::sendQuote, this, &UserScriptRunner::sendQuote,
-      Qt::QueuedConnection);
+   connect(script_, &UserScriptHandler::aqScriptLoaded, this, &UserScriptRunner::aqScriptLoaded);
+   connect(script_, &UserScriptHandler::failedToLoad, this, &UserScriptRunner::failedToLoad);
+   connect(script_, &UserScriptHandler::pullQuoteNotif, this, &UserScriptRunner::pullQuoteNotif);
+   connect(script_, &UserScriptHandler::sendQuote, this, &UserScriptRunner::sendQuote);
 
    thread_->start();
 }
@@ -337,11 +332,6 @@ UserScriptRunner::~UserScriptRunner() noexcept
    thread_->wait();
 }
 
-bool UserScriptRunner::isEnabled() const
-{
-   return enabled_;
-}
-
 void UserScriptRunner::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &walletsManager)
 {
    script_->setWalletsManager(walletsManager);
@@ -349,26 +339,19 @@ void UserScriptRunner::setWalletsManager(const std::shared_ptr<bs::sync::Wallets
 
 void UserScriptRunner::enableAQ(const QString &fileName)
 {
+   logger_->info("Load AQ script {}...", fileName.toStdString());
    emit initAQ(fileName);
-
-   enabled_ = true;
 }
 
 void UserScriptRunner::disableAQ()
 {
+   logger_->info("Unload AQ script");
    emit deinitAQ(true);
-
-   enabled_ = false;
 }
 
 std::shared_ptr<TransactionData> UserScriptRunner::getTransactionData(const std::string &reqId) const
 {
    return script_->getTransactionData(reqId);
-}
-
-void UserScriptRunner::failedToLoadScript()
-{
-   enabled_ = false;
 }
 
 void UserScriptRunner::setTxData(const std::string &id, std::shared_ptr<TransactionData> txData)

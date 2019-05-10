@@ -130,6 +130,7 @@ signals:
    void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
    void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
    void NewContactRequest(const QString &userId);
+   void ContactRequestAccepted(const QString &userId);
 
    void ForceLogoutSignal();
 public slots:
