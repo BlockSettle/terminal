@@ -29,13 +29,13 @@ void QmlFactory::setWalletsManager(const std::shared_ptr<bs::sync::WalletsManage
    walletsMgr_ = walletsMgr;
 }
 
-WalletInfo *QmlFactory::createWalletInfo() {
+WalletInfo *QmlFactory::createWalletInfo() const{
    auto wi = new bs::hd::WalletInfo();
    QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
    return wi;
 }
 
-WalletInfo *QmlFactory::createWalletInfo(const QString &walletId)
+WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) const
 {
    if (!walletsMgr_) {
       return nullptr;
@@ -63,7 +63,15 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId)
    return wi;
 }
 
-WalletInfo *QmlFactory::createWalletInfoFromDigitalBackup(const QString &filename) {
+bs::hd::WalletInfo *QmlFactory::createWalletInfo(int index) const
+{
+   const auto &wallet = walletsMgr_->getHDWallet(index);
+   auto wi = new bs::hd::WalletInfo(wallet);
+   QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
+   return wi;
+}
+
+WalletInfo *QmlFactory::createWalletInfoFromDigitalBackup(const QString &filename) const {
    auto wi = new bs::hd::WalletInfo(bs::hd::WalletInfo::fromDigitalBackup(filename));
    QQmlEngine::setObjectOwnership(wi, QQmlEngine::JavaScriptOwnership);
    return wi;

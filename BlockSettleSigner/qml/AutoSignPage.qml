@@ -4,10 +4,17 @@ import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.3
 
 import com.blocksettle.WalletsProxy 1.0
+import com.blocksettle.WalletInfo 1.0
+import com.blocksettle.QmlFactory 1.0
+import com.blocksettle.QPasswordData 1.0
 
 import "StyledControls"
+import "BsControls"
 
 Item {
+    id: root
+    property int currentIndex: 0
+
     ScrollView {
         anchors.fill: parent
         clip: true
@@ -48,6 +55,7 @@ Item {
                         model: walletsProxy.walletNames
                         currentIndex: walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
                         onActivated: {
+                            root.currentIndex = currentIndex
                             signerSettings.autoSignWallet = walletsProxy.walletIdForIndex(currentIndex)
                         }
                     }
@@ -69,10 +77,27 @@ Item {
                     checked: signerStatus.autoSignActive
                     onClicked: {
                         if (checked) {
-                            signerStatus.activateAutoSign()
+                            var walletInfo = qmlFactory.createWalletInfo(signerSettings.autoSignWallet)
+
+                            if (walletInfo.encType === QPasswordData.Password) {
+                                console.log("passwordDialog Password ")
+
+                                var passwordDialog = Qt.createComponent("BsControls/BSPasswordInput.qml").createObject(mainWindow);
+                                passwordDialog.type = BSPasswordInput.Type.Request
+                                passwordDialog.open()
+                                passwordDialog.bsAccepted.connect(function() {
+                                    console.log("passwordDialog " + passwordDialog.enteredPassword)
+                                })
+                            }
+                            else if (walletInfo.encType === QPasswordData.Auth) {
+                                console.log("passwordDialog Auth ")
+
+                            }
+
+                            //signerStatus.activateAutoSign()
                         }
                         else {
-                            signerStatus.deactivateAutoSign()
+                            //signerStatus.deactivateAutoSign()
                         }
                     }
                 }

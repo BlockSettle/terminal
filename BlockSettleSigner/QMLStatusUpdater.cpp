@@ -43,11 +43,23 @@ void QMLStatusUpdater::deactivateAutoSign()
    adapter_->deactivateAutoSign();
 }
 
-void QMLStatusUpdater::activateAutoSign()
+void QMLStatusUpdater::activateAutoSign(const QString &walletId
+                                        , bs::wallet::QPasswordData passwordData
+                                        , bool activate
+                                        , QJSValue jsCallback)
 {
    emit autoSignActiveChanged();
-   const auto &walletId = settings_->autoSignWallet().toStdString();
-   adapter_->addPendingAutoSignReq(walletId);
+   auto cb = [this, walletId, jsCallback] (bool success) {
+      QJSValueList args;
+      args << QJSValue(success);
+      QMetaObject::invokeMethod(this, [this, args, jsc=jsCallback] {
+         if (jsc.isCallable()) {
+            return jsc.call(args);
+         }
+      });
+   };
+
+   adapter_->activateAutoSign(walletId, passwordData, true, cb);
    emit autoSignRequiresPwd(walletId);
 }
 

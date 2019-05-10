@@ -83,15 +83,15 @@ public:
       owner_->sendData(signer::XbtSpentType, evt.SerializeAsString());
    }
 
-   void asAct(const std::string &walletId) override
-   {
-      autoSign(true, walletId);
-   }
+//   void asAct(const std::string &walletId) override
+//   {
+//      autoSign(true, walletId);
+//   }
 
-   void asDeact(const std::string &walletId) override
-   {
-      autoSign(false, walletId);
-   }
+//   void asDeact(const std::string &walletId) override
+//   {
+//      autoSign(false, walletId);
+//   }
 
    void customDialog(const std::string &dialogName, const std::string &data) override
    {
@@ -101,13 +101,13 @@ public:
       owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
    }
 
-   void autoSign(bool act, const std::string &walletId)
-   {
-      signer::AutoSignActEvent evt;
-      evt.set_activated(act);
-      evt.set_wallet_id(walletId);
-      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
-   }
+//   void autoSign(bool act, const std::string &walletId)
+//   {
+//      signer::AutoSignActRequest evt;
+//      evt.set_activated(act);
+//      evt.set_wallet_id(walletId);
+//      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
+//   }
 
    SignerAdapterListener *owner_{};
 };
@@ -523,17 +523,13 @@ bool SignerAdapterListener::onReconnect(const std::string &data)
 
 bool SignerAdapterListener::onAutoSignRequest(const std::string &data)
 {
-   signer::AutoSignActEvent request;
+   signer::AutoSignActRequest request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   if (request.activated() && !request.wallet_id().empty()) {
-      app_->addPendingAutoSignReq(request.wallet_id());
-   }
-   else {
-      app_->deactivateAutoSign();
-   }
+
+   app_->activateAutoSign(request.rootwalletid(), request.activateautosign(), SecureBinaryData(request.password()));
    return true;
 }
 
