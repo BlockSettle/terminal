@@ -94,11 +94,7 @@ public:
       chat_->SetLoggedOutOTCState();
 
       // hide tab icon for unread messages
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
-                                   {QString(),
-                                    QString(),
-                                    QVariant(false),
-                                    QVariant(false)});
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
    }
 
    std::string login(const std::string& email, const std::string& jwt
@@ -541,11 +537,7 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
 
    if (event->type() == QEvent::WindowActivate) {
       // hide tab icon on window activate event
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
-                                {QString(),
-                                 QString(),
-                                 QVariant(true),
-                                 QVariant(true)});
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
    }
 
    return QWidget::eventFilter(obj, event);
@@ -849,8 +841,6 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
    if (isNewMessagePresented) {
       // don't show notification for global chat
       if (message && !IsGlobalChatRoom(message->receiverId())) {
-         const bool isInCurrentChat = message->senderId() == currentChat_;
-         const bool hasUnreadMessages = true;
 
          auto messageText = message->messageData();
          const int maxMessageLength = 20;
@@ -861,9 +851,7 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
 
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
                                    {message->senderId(),
-                                    messageText,
-                                    QVariant(isInCurrentChat),
-                                    QVariant(hasUnreadMessages)});
+                                    messageText});
       }
    }
 }

@@ -716,7 +716,7 @@ void BSTerminalMainWindow::InitChatView()
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
 
-   if (NotificationCenter::instance() != NULL) {
+   if (NotificationCenter::instance() != nullptr) {
       connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick,
               ui_->widgetChat, &ChatWidget::onNewChatMessageTrayNotificationClicked);
    }
@@ -1132,6 +1132,9 @@ void BSTerminalMainWindow::onReadyToLogin()
          // logMgr_->logger()->debug("[BSTerminalMainWindow::onReadyToLogin] armory disconnected. Could not login to celer.");
       // }
 #endif
+
+      // Market data, charts and chat should be available for all Auth eID logins
+      mdProvider_->SubscribeToMD();
    } else {
       setWidgetsAuthorized(false);
    }
@@ -1146,6 +1149,8 @@ void BSTerminalMainWindow::onLogout()
    if (celerConnection_->IsConnected()) {
       celerConnection_->CloseConnection();
    }
+
+   mdProvider_->UnsubscribeFromMD();
 
    setLoginButtonText(loginButtonText_);
 
@@ -1173,10 +1178,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
    walletsMgr_->setUserId(userId);
 
    setLoginButtonText(currentUserLogin_);
-
-   if (!mdProvider_->IsConnectionActive()) {
-      mdProvider_->SubscribeToMD();
-   }
 }
 
 void BSTerminalMainWindow::onUserLoggedOut()
@@ -1199,7 +1200,6 @@ void BSTerminalMainWindow::onUserLoggedOut()
    if (authManager_) {
       authManager_->OnDisconnectedFromCeler();
    }
-   mdProvider_->UnsubscribeFromMD();
 }
 
 void BSTerminalMainWindow::onCelerConnected()
