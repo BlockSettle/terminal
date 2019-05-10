@@ -76,6 +76,7 @@ private slots:
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
    void onSearchUserTextEdited(const QString& text);
    void onConnectedToServer();
+   void selectFirstRoom();
    void onContactRequestAccepted(const QString &userId);
 
    void OnOTCRequestCreated();
