@@ -667,8 +667,6 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
 
 void ChatWidget::selectFirstRoom()
 {
-   onRoomClicked(Chat::GlobalRoomKey);
-
    QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
                                                                Qt::DisplayRole,
                                                                QLatin1String("*"),
@@ -678,9 +676,12 @@ void ChatWidget::selectFirstRoom()
    // highlight first room
    for (auto index : indexes) {
       if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
-         ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-         disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectFirstRoom);
-         break;
+         if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey) {
+            onRoomClicked(Chat::GlobalRoomKey);
+            ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectFirstRoom);
+            break;
+         }
       }
    }
 }
