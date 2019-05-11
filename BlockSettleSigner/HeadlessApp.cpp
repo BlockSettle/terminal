@@ -37,7 +37,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    const std::string absCookiePath =
       SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
-      , zmqContext, cbTrustedClientsSL, false, true, absCookiePath);
+      , zmqContext, cbTrustedClientsSL, false, false, false, true, absCookiePath);
    adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn
       , logger_, walletsMgr_, params);
 
@@ -232,7 +232,7 @@ void HeadlessAppObj::onlineProcessing()
 
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
       , READ_UINT64_LE(bdID.getPtr()), getClientIDKeys, ephemeralConnIDKey
-      , ourKeyFileDir, ourKeyFileName, makeServerCookie, false
+      , false, false, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
    connection_->setLocalHeartbeatInterval();
 

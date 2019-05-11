@@ -211,7 +211,7 @@ int main(int argc, char** argv)
 
    btc_ecc_start(); // Initialize libbtc
    startupBIP151CTX();
-   startupBIP150CTX(4, true);
+   startupBIP150CTX(4, false);
 
    return QMLApp(argc, argv);
 }

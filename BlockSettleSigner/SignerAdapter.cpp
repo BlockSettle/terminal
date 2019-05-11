@@ -32,8 +32,8 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    // the key we got on the command line to the list of trusted keys.
    const std::string absCookiePath =
       SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
-   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true
-      , "", "", true, true, false, absCookiePath);
+   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, false
+      , false, true, "", "", true, true, false, absCookiePath);
    adapterConn->SetContext(zmqContext);
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
