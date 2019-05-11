@@ -1,6 +1,4 @@
 #include <gtest/gtest.h>
-#include <QApplication>
-#include <QDebug>
 #include "CelerMessageMapper.h"
 #include "CommonTypes.h"
 #include "IdStringGenerator.h"
@@ -9,6 +7,7 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
+
 
 TEST(TestNetwork, CelerMessageMapper)
 {
@@ -445,14 +444,85 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 }
 
 
+static auto await(std::atomic<bool>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 100 }) {
+    using namespace std::chrono_literals;
+    const auto napTime = 10ms;
+    for (auto elapsed = 0ms; elapsed < deadline; elapsed += napTime) {
+        if (what.load()) {
+            return true;
+        }
+        std::this_thread::sleep_for(napTime);
+    }
+    return false;
+};
+
+
+class TstClientListener : public DataConnectionListener
+{
+public:
+    TstClientListener(const std::shared_ptr<spdlog::logger> &logger)
+        : DataConnectionListener(), logger_(logger) {}
+
+    void OnDataReceived(const std::string &data) override {
+        logger_->debug("[{}] {}", __func__, data.size());
+    }
+    void OnConnected() override {
+        logger_->debug("[{}]", __func__);
+        connected_ = true;
+    }
+    void OnDisconnected() override {
+        logger_->debug("[{}]", __func__);
+        disconnected_ = true;
+    }
+    void OnError(DataConnectionError errorCode) override {
+        logger_->debug("[{}] {}", __func__, int(errorCode));
+        error_ = true;
+    }
+
+    std::atomic<bool> connected_{ false };
+    std::atomic<bool> disconnected_{ false };
+    std::atomic<bool> error_{ false };
+
+private:
+    std::shared_ptr<spdlog::logger>  logger_;
+};
+
+
+class TstServerListener : public ServerConnectionListener
+{
+public:
+    TstServerListener(const std::shared_ptr<spdlog::logger> &logger)
+        : ServerConnectionListener(), logger_(logger) {}
+    ~TstServerListener() noexcept override = default;
+
+    void OnDataFromClient(const std::string &clientId, const std::string &data) override {
+        logger_->debug("[{}] {} from {}", __func__, data.size()
+            , BinaryData(clientId).toHexStr());
+    }
+    void onClientError(const std::string &clientId, const std::string &errStr) override {
+        logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
+        error_ = true;
+    }
+    void OnClientConnected(const std::string &clientId) override {
+        logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+        connected_ = true;
+    }
+    void OnClientDisconnected(const std::string &clientId) override {
+        logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+        disconnected_ = true;
+    }
+
+    std::atomic<bool> connected_{ false };
+    std::atomic<bool> disconnected_{ false };
+    std::atomic<bool> error_{ false };
+
+private:
+    std::shared_ptr<spdlog::logger>  logger_;
+};
+
+
 TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
 {
-    static std::atomic<bool> clientConnected(false);
-    static std::atomic<bool> serverConnected(false);
-    static std::atomic<bool> clientDisconnected(false);
-    static std::atomic<bool> serverDisconnected(false);
-    static std::atomic<bool> clientServerError(false);
-
     static std::vector<std::string> clientPackets;
     for (int i = 0; i < 5; ++i) {
         clientPackets.push_back(CryptoPRNG::generateRandom(23).toBinStr());
@@ -465,75 +535,8 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         pktSize *= 2;
     }
 
-    class ServerListener : public ServerConnectionListener
-    {
-    public:
-        ServerListener(const std::shared_ptr<spdlog::logger> &logger)
-            : ServerConnectionListener(), logger_(logger) {}
-        ~ServerListener() noexcept override = default;
-
-    protected:
-        void OnDataFromClient(const std::string &clientId, const std::string &data) override {
-            logger_->debug("[{}] {} from {}", __func__, data.size()
-                , BinaryData(clientId).toHexStr());
-        }
-        void onClientError(const std::string &clientId, const std::string &errStr) override {
-            logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
-            clientServerError = true;
-        }
-        void OnClientConnected(const std::string &clientId) override {
-            logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
-            serverConnected = true;
-        }
-        void OnClientDisconnected(const std::string &clientId) override {
-            logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
-            serverDisconnected = true;
-        }
-
-    private:
-        std::shared_ptr<spdlog::logger>  logger_;
-    };
-
-    class ClientListener : public DataConnectionListener
-    {
-    public:
-        ClientListener(const std::shared_ptr<spdlog::logger> &logger)
-            : DataConnectionListener(), logger_(logger) {}
-
-        void OnDataReceived(const std::string &data) override {
-            logger_->debug("[{}] {}", __func__, data.size());
-        }
-        void OnConnected() override {
-            logger_->debug("[{}]", __func__);
-            clientConnected = true;
-        }
-        void OnDisconnected() override {
-            logger_->debug("[{}]", __func__);
-            clientDisconnected = true;
-        }
-        void OnError(DataConnectionError errorCode) override {
-            logger_->debug("[{}] {}", __func__, int(errorCode));
-            clientServerError = true;
-        }
-
-    private:
-        std::shared_ptr<spdlog::logger>  logger_;
-    };
-
-    const auto srvLsn = std::make_shared<ServerListener>(TestEnv::logger());
-    const auto clientLsn = std::make_shared<ClientListener>(TestEnv::logger());
-
-    auto await = [](std::atomic<bool>& what) {
-        using namespace std::chrono_literals;
-        const auto napTime = 10ms;
-        for (auto elapsed = 0ms; elapsed < 100ms; elapsed += napTime) {
-            if (what.load()) {
-                return true;
-            }
-            std::this_thread::sleep_for(napTime);
-        }
-        return false;
-    };
+    const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
+    const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
 
     struct Messages {
         size_t clientMsgs;
@@ -558,9 +561,8 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         const auto serverKey = serverConn->getOwnPubKey();
         clientConn->SetContext(zmqContext);
 
-        clientConnected = false;
-        serverConnected = false;
-        clientServerError = false;
+        clientLsn->connected_ = false;
+        srvLsn->connected_ = false;
 
         const std::string host = "127.0.0.1";
         std::string port;
@@ -573,8 +575,8 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
 
         ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
         
-        ASSERT_TRUE(await(clientConnected));
-        ASSERT_TRUE(await(serverConnected));
+        ASSERT_TRUE(await(clientLsn->connected_));
+        ASSERT_TRUE(await(srvLsn->connected_));
 
         for (size_t j = 0; j < pass[i].clientMsgs; ++j) {
             clientConn->send(clientPackets.at(j));
@@ -583,13 +585,100 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
             serverConn->SendDataToAllClients(srvPackets.at(j));
         }
 
-        clientDisconnected = false;
-        serverDisconnected = false;
+        clientLsn->disconnected_ = false;
+        srvLsn->disconnected_ = false;
 
         ASSERT_TRUE(clientConn->closeConnection());
-        ASSERT_TRUE(await(clientDisconnected));
-        ASSERT_TRUE(await(serverDisconnected));
-        ASSERT_FALSE(clientServerError.load());
+        ASSERT_TRUE(await(clientLsn->disconnected_));
+        ASSERT_TRUE(await(srvLsn->disconnected_));
+        ASSERT_FALSE(clientLsn->error_.load());
+        ASSERT_FALSE(srvLsn->error_.load());
+        serverConn.reset();  // This is needed to detach listener before it's destroyed
+    }
+}
+
+
+TEST(TestNetwork, ZMQ_BIP15X_Heartbeat)
+{
+    static std::vector<std::string> clientPackets;
+    for (int i = 0; i < 5; ++i) {
+        clientPackets.push_back(CryptoPRNG::generateRandom(23).toBinStr());
+    }
+
+    static std::vector<std::string> srvPackets;
+    uint32_t pktSize = 100;
+    for (int i = 0; i < 5; ++i) {
+        srvPackets.push_back(CryptoPRNG::generateRandom(pktSize).toBinStr());
+        pktSize *= 2;
+    }
+
+    const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
+    const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+    using namespace std::chrono_literals;
+
+    struct Messages {
+        size_t clientMsgs;
+        size_t serverMsgs;
+    } pass[] = {
+        {1, 1},
+        {5, 5},
+        {0, 0},
+        {0, 1},
+        {1, 0}
+    };
+    const size_t passes = sizeof pass / sizeof pass[0];
+
+    for (size_t i = 0; i < passes; ++i) {
+        auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
+            TestEnv::logger(), true, true);
+        const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+        std::vector<std::string> trustedClients = {
+            std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
+        auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
+            TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+        const auto serverKey = serverConn->getOwnPubKey();
+        clientConn->SetContext(zmqContext);
+
+        clientLsn->connected_ = false;
+        srvLsn->connected_ = false;
+
+        TestEnv::logger()->info("[{}] pass {}", __func__, i);
+
+        const std::string host = "127.0.0.1";
+        std::string port;
+        do {
+            port = std::to_string((rand() % 50000) + 10000);
+        } while (!serverConn->BindConnection(host, port, srvLsn.get()));
+
+        serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
+        clientConn->addAuthPeer(serverKey, host + ":" + port);
+
+        ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
+
+        ASSERT_TRUE(await(clientLsn->connected_));
+        ASSERT_TRUE(await(srvLsn->connected_));
+
+        for (size_t j = 0; j < pass[i].clientMsgs; ++j) {
+            clientConn->send(clientPackets.at(j));
+        }
+        for (size_t j = 0; j < pass[i].serverMsgs; ++j) {
+            serverConn->SendDataToAllClients(srvPackets.at(j));
+        }
+
+        srvLsn->disconnected_ = false;
+
+        const auto allowedJitter = 1000ms;
+
+        std::this_thread::sleep_for(2*ZmqBIP15XDataConnection::heartbeatInterval_ * 1ms + allowedJitter);
+        ASSERT_FALSE(clientLsn->disconnected_.load());
+        ASSERT_FALSE(srvLsn->disconnected_.load());
+
+        clientConn.reset();
+
+        ASSERT_TRUE(await(srvLsn->disconnected_, 2*ZmqBIP15XDataConnection::heartbeatInterval_ * 1ms + allowedJitter));
+        ASSERT_FALSE(clientLsn->error_.load());
+        ASSERT_FALSE(srvLsn->error_.load());
+
         serverConn.reset();  // This is needed to detach listener before it's destroyed
     }
 }
