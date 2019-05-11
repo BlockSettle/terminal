@@ -104,8 +104,8 @@ protected:
 
    void DrawCrossfire(QMouseEvent* event);
 
-   void AddNewCandle();
-   void ModifyCandle();
+   void UpdatePrintFlag();
+
    void UpdatePlot(const int& interval, const qint64& timestamp);
 
    bool needLoadNewData(const QCPRange& range, QSharedPointer<QCPFinancialDataContainer> data) const;
@@ -134,13 +134,15 @@ private:
    bool eodUpdated_{ false };
    bool eodRequestSent_{ false };
 
-   constexpr static int requestLimit{ 100 };
-   constexpr static int candleViewLimit{ 60 };
+   constexpr static int requestLimit{ 200 };
+   constexpr static int candleViewLimit{ 150 };
    constexpr static qint64 candleCountOnScreenLimit{ 1500 };
 
    Blocksettle::Communication::MarketDataHistory::OhlcCandle lastCandle_;
 
    double prevRequestStamp{ 0.0 };
+
+   double zoomDiff_{ 0.0 };
 
    Ui::ChartWidget *ui_;
    QButtonGroup dateRange_;
@@ -148,6 +150,9 @@ private:
    QCPFinancial *candlesticksChart_;
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;
+
+   QCPItemText *   xRectItem_{ nullptr };
+   bool isHigh_ { true };
 
    QCPItemLine* horLine;
    QCPItemLine* vertLine;
