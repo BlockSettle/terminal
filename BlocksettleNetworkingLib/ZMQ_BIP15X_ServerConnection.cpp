@@ -888,6 +888,7 @@ void ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
          socketConnMap_[clientID]->outKeyTimePoint_ = chrono::steady_clock::now();
       }
       notifyListenerOnNewConnection(clientID);
+      lastHeartbeats_[clientID] = std::chrono::steady_clock::now();
    }
    else {
       BinaryData hexID(clientID);

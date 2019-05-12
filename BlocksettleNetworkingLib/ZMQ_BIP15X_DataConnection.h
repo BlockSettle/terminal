@@ -74,6 +74,8 @@ public:
 
    void rekey();
 
+   static const int heartbeatInterval_ = 30000;
+
 protected:
    bool startBIP151Handshake(const std::function<void()> &cbCompleted);
    bool handshakeCompleted() {
