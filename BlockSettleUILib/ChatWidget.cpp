@@ -464,9 +464,9 @@ void ChatWidget::onLoggedOut()
    emit LogOut();
 }
 
-void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &chatId)
+void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
 {
-   switchToChat(chatId);
+   ui_->treeViewUsers->setCurrentUserChat(userId);
 }
 
 void ChatWidget::onSearchUserTextEdited(const QString& text)
@@ -490,29 +490,12 @@ void ChatWidget::onSearchUserTextEdited(const QString& text)
 void ChatWidget::onConnectedToServer()
 {
    changeState(State::LoggedIn);
-   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectFirstRoom);
+   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
 }
 
 void ChatWidget::onContactRequestAccepted(const QString &userId)
 {
-   // select user in chat tree
-   stateCurrent_->onUserClicked(userId);
-
-   // highlight user in chat tree
-   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
-                                                                Qt::DisplayRole,
-                                                                QLatin1String("*"),
-                                                                -1,
-                                                                Qt::MatchWildcard|Qt::MatchRecursive);
-
-   for (auto index : indexes) {
-      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::ContactsElement) {
-         if (userId == index.data(ChatClientDataModel::Role::ContactIdRole).toString() ) {
-            ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            break;
-         }
-      }
-   }
+   ui_->treeViewUsers->setCurrentUserChat(userId);
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
@@ -688,21 +671,22 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
    }
 }
 
-void ChatWidget::selectFirstRoom()
+void ChatWidget::selectGlobalRoom()
 {
+   // find all indexes
    QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
                                                                Qt::DisplayRole,
                                                                QLatin1String("*"),
                                                                -1,
                                                                Qt::MatchWildcard|Qt::MatchRecursive);
       
-   // highlight first room
+   // select Global room
    for (auto index : indexes) {
       if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
          if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey) {
             onRoomClicked(Chat::GlobalRoomKey);
             ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectFirstRoom);
+            disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
             break;
          }
       }
