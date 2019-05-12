@@ -224,7 +224,8 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    }
 
    if (notifMode_ == QSystemTray) {
-      trayIcon_->showMessage(title, text, icon, msecs);
+      //trayIcon_->showMessage(title, text, icon, msecs);
+      trayIcon_->showMessage(title, text, QIcon(QLatin1String(":/FULL_LOGO")), msecs);
    }
 #ifdef BS_USE_DBUS
    else {
