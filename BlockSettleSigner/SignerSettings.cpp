@@ -361,7 +361,15 @@ void SignerSettings::setTrustedTerminals(const QStringList &val)
 {
    d_->clear_trusted_terminals();
    for (const QString &s : val) {
+      if (s.isEmpty()) {
+         continue;
+      }
+
       QStringList split = s.split(QLatin1Char(':'));
+      if (split.size() != 2) {
+         continue;
+      }
+
       auto line = d_->add_trusted_terminals();
       line->set_id(split[0].toStdString());
       line->set_key(split[1].toStdString());
