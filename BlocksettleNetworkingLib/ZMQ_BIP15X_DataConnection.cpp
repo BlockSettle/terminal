@@ -35,7 +35,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    , useServerIDCookie_(readServerCookie)
    , makeClientIDCookie_(makeClientCookie)
    , lastHeartbeatReply_(std::chrono::steady_clock::now())
-   , heartbeatInterval_(ZmqBIP15XServerConnection::DefaultHeartbeatInterval)
+   , heartbeatInterval_(std::chrono::seconds(30))
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
@@ -869,7 +869,7 @@ void ZmqBIP15XDataConnection::addAuthPeer(const BinaryData& inKey
 
 void ZmqBIP15XDataConnection::setLocalHeartbeatInterval()
 {
-   heartbeatInterval_ = ZmqBIP15XServerConnection::LocalHeartbeatInterval;
+   heartbeatInterval_ = std::chrono::seconds(3);
 }
 
 // If the user is presented with a new remote server ID key it doesn't already

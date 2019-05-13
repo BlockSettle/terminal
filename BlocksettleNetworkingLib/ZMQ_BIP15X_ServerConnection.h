@@ -84,9 +84,6 @@ public:
    void rekey(const std::string &clientId);
    void setLocalHeartbeatInterval();
 
-   static const std::chrono::milliseconds DefaultHeartbeatInterval;
-   static const std::chrono::milliseconds LocalHeartbeatInterval;
-
 protected:
    // Overridden functions from ZmqServerConnection.
    ZmqContext::sock_ptr CreateDataSocket() override;
