@@ -261,8 +261,9 @@ bool SignerSettings::loadSettings(const QStringList &args)
       if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
          return false;
       }
-   } else {
-      runMode_ = bs::signer::ui::RunMode::fullgui;
+   }
+   else {
+      return false;
    }
 
    if (parser.isSet(srvIDKeyName)) {
