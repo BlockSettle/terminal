@@ -219,9 +219,9 @@ Item {
 
                 CustomSwitch {
                     Layout.alignment: Qt.AlignRight
-                    checked: signerSettings.twoWayAuth
+                    checked: signerSettings.startupBIP150CTX
                     onClicked: {
-                        signerSettings.twoWayAuth = checked
+                        signerSettings.startupBIP150CTX = checked
                     }
                 }
             }
@@ -355,13 +355,16 @@ Item {
 
                 CustomLabel {
                     text: qsTr("Listen IP address")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
+                    Layout.fillWidth: true
                 }
                 CustomTextInput {
                     placeholderText: "0.0.0.0"
-                    Layout.fillWidth: true
+
+                    Layout.minimumWidth: 171
+                    Layout.preferredWidth: 171
+                    Layout.maximumWidth: 171
+                    Layout.alignment: Qt.AlignRight
+
                     Layout.rightMargin: 6
                     text: signerSettings.listenAddress
                     selectByMouse: true
@@ -376,13 +379,16 @@ Item {
 
                 CustomLabel {
                     text: qsTr("Listening port")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
+                    Layout.fillWidth: true
                 }
                 CustomTextInput {
                     placeholderText: "23456"
-                    Layout.fillWidth: true
+
+                    Layout.minimumWidth: 171
+                    Layout.preferredWidth: 171
+                    Layout.maximumWidth: 171
+                    Layout.alignment: Qt.AlignRight
+
                     Layout.rightMargin: 6
                     text: signerSettings.listenPort
                     selectByMouse: true

@@ -29,7 +29,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString autoSignWallet READ autoSignWallet WRITE setAutoSignWallet NOTIFY autoSignWalletChanged)
    Q_PROPERTY(bool hideEidInfoBox READ hideEidInfoBox WRITE setHideEidInfoBox NOTIFY hideEidInfoBoxChanged)
    Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
-   Q_PROPERTY(bool twoWayAuth READ twoWayAuth WRITE setTwoWayAuth NOTIFY twoWayAuthChanged)
+   Q_PROPERTY(bool startupBIP150CTX READ startupBIP150CTX WRITE setStartupBIP150CTX NOTIFY startupBIP150CTXChanged)
 
 public:
    SignerSettings(const QString &fileName = QLatin1String("signer.ini"));
@@ -55,7 +55,7 @@ public:
       LimitManualPwKeep,
       HideEidInfoBox,
       TrustedTerminals,
-      TwoWayAuth
+      StartupBIP150CTX
    };
 
    bool loadSettings(const QStringList &args);
@@ -84,7 +84,7 @@ public:
    bs::signer::Limits limits() const;
    bool hideEidInfoBox() const { return get(HideEidInfoBox).toBool(); }
    QStringList trustedTerminals() const { return get(TrustedTerminals).toStringList(); }
-   bool twoWayAuth() const { return get(TwoWayAuth).toBool(); }
+   bool startupBIP150CTX() const { return get(StartupBIP150CTX).toBool(); }
 
    QString dirDocuments() const;
    bs::signer::ui::RunMode runMode() const { return runMode_; }
@@ -106,7 +106,7 @@ public:
    void setLimitManualPwKeepStr(const QString &val) { set(LimitManualPwKeep, intervalStrToSeconds(val)); }
    void setHideEidInfoBox(bool val) { set(HideEidInfoBox, val); }
    void setTrustedTerminals(const QStringList &val) { set(TrustedTerminals, val); }
-   void setTwoWayAuth(bool val) { set(TwoWayAuth, val); }
+   void setStartupBIP150CTX(bool val) { set(StartupBIP150CTX, val); }
 
    void reset(Setting s, bool toFile = true);     // Reset setting to default value
 
@@ -127,7 +127,7 @@ signals:
    void autoSignWalletChanged();
    void hideEidInfoBoxChanged();
    void trustedTerminalsChanged();
-   void twoWayAuthChanged();
+   void startupBIP150CTXChanged();
 
 private:
    QVariant get(Setting s) const;

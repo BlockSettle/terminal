@@ -68,7 +68,7 @@ SignerSettings::SignerSettings(const QString &fileName)
       { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
       { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) },
       { TrustedTerminals,  SettingDef(QStringLiteral("TrustedTerminals")) },
-      { TwoWayAuth,        SettingDef(QStringLiteral("TwoWayAuth"), true) }
+      { StartupBIP150CTX,        SettingDef(QStringLiteral("StartupBIP150CTX"), true) }
    };
 }
 
@@ -174,8 +174,8 @@ void SignerSettings::settingChanged(Setting s, const QVariant &)
    case TrustedTerminals:
       emit trustedTerminalsChanged();
       break;
-   case TwoWayAuth:
-      emit twoWayAuthChanged();
+   case StartupBIP150CTX:
+      emit startupBIP150CTXChanged();
       break;
    default: break;
    }

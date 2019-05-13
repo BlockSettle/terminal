@@ -12,6 +12,7 @@ CustomDialog {
         CustomHeaderPanel {
             Layout.fillWidth: true
             Layout.preferredHeight: qmlTitleVisible ? 40 : 0
+            height: qmlTitleVisible ? 40 : 0
             text: root.title
             visible: qmlTitleVisible
         }
