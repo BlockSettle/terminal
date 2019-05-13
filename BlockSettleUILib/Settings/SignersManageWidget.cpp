@@ -156,7 +156,7 @@ void SignerKeysWidget::onKeyImport()
 {
    QString fileName = QFileDialog::getOpenFileName(this
       , tr("Open Key File"),  QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
-      , tr("Key Files (*.pub *.key *.*)"));
+      , tr("Key Files (*.pub *.key);;All files (*.*)"));
 
    QFile file(fileName);
    if (file.open(QIODevice::ReadOnly)) {
