@@ -155,7 +155,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
       { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys")) },
-      { twoWayAuth,                       SettingDef(QLatin1String("TwoWayAuth"), false) }
+      { startupBIP150CTX,                       SettingDef(QLatin1String("TwoWayAuth"), false) }
    };
 }
 

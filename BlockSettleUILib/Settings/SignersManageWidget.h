@@ -25,6 +25,7 @@ public slots:
    void onEdit();
    void onSave();
    void onSelect();
+   void onKeyImport();
 
 signals:
    void needClose();

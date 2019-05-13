@@ -17,12 +17,6 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    connect(ui_->comboBoxRunMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignerSettingsPage::runModeChanged);
    connect(ui_->spinBoxAsSpendLimit, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &SignerSettingsPage::onAsSpendLimitChanged);
    connect(ui_->pushButtonManageSignerKeys, &QPushButton::clicked, this, &SignerSettingsPage::onManageSignerKeys);
-
-   ui_->widgetTwoWayAuth->hide();
-   ui_->checkBoxTwoWayAuth->hide();
-
-   ui_->widgetTwoWayAuth->setMaximumHeight(0);
-   ui_->checkBoxTwoWayAuth->setMaximumHeight(0);
 }
 
 SignerSettingsPage::~SignerSettingsPage() = default;
@@ -42,7 +36,6 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
       showLimits(true);
       showSignerKeySettings(false);
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
-      ui_->formLayoutConnectionParams->setSpacing(3);
       break;
 
    case SignContainer::OpMode::Remote:
@@ -52,7 +45,6 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
       showSignerKeySettings(true);
-      ui_->formLayoutConnectionParams->setSpacing(6);
       break;
 
    default:    break;
@@ -65,7 +57,7 @@ void SignerSettingsPage::display()
    SignContainer::OpMode opMode = static_cast<SignContainer::OpMode>(modeIndex);
    onModeChanged(opMode);
    ui_->comboBoxRunMode->setCurrentIndex(modeIndex - 1);
-   ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::twoWayAuth));
+   ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::startupBIP150CTX));
 }
 
 void SignerSettingsPage::reset()
@@ -73,7 +65,7 @@ void SignerSettingsPage::reset()
    for (const auto &setting : {ApplicationSettings::signerRunMode
       , ApplicationSettings::localSignerPort, ApplicationSettings::signerOfflineDir
       , ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
-      , ApplicationSettings::twoWayAuth}) {
+      , ApplicationSettings::startupBIP150CTX}) {
       appSettings_->reset(setting, false);
    }
    display();
@@ -82,6 +74,7 @@ void SignerSettingsPage::reset()
 void SignerSettingsPage::showHost(bool show)
 {
    ui_->labelHost->setVisible(show);
+   ui_->labelHost_2->setVisible(show);
    ui_->comboBoxRemoteSigner->setVisible(show);
 }
 
@@ -144,7 +137,7 @@ void SignerSettingsPage::onManageSignerKeys()
 void SignerSettingsPage::apply()
 {
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
-   appSettings_->set(ApplicationSettings::twoWayAuth, ui_->checkBoxTwoWayAuth->isChecked());
+   appSettings_->set(ApplicationSettings::startupBIP150CTX, ui_->checkBoxTwoWayAuth->isChecked());
 
    switch (static_cast<SignContainer::OpMode>(ui_->comboBoxRunMode->currentIndex() + 1)) {
    case SignContainer::OpMode::Local:
