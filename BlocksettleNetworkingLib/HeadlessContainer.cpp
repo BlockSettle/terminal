@@ -161,7 +161,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
    }
    if (packet.id() > id_) {
       logger_->error("[HeadlessListener] reply id inconsistency: {} > {}", packet.id(), id_);
-      emit error(tr("reply id inconsistency"));
+      emit error(HeadlessContainer::InvalidProtocol, tr("reply id inconsistency"));
       return;
    }
 
@@ -173,12 +173,12 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       headless::AuthenticationReply response;
       if (!response.ParseFromString(packet.data())) {
          logger_->error("[HeadlessListener] failed to parse auth reply");
-         emit error(tr("failed to parse auth reply"));
+         emit error(HeadlessContainer::SerializationFailed, tr("failed to parse auth reply"));
          return;
       }
       if (HeadlessContainer::mapNetworkType(response.nettype()) != netType_) {
          logger_->error("[HeadlessListener] network type mismatch");
-         emit error(tr("network type mismatch"));
+         emit error(HeadlessContainer::NetworkTypeMismatch, tr("network type mismatch"));
          return;
       }
 
@@ -209,7 +209,27 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
 {
    logger_->debug("[HeadlessListener] error {}", errorCode);
    isReady_ = false;
-   emit error(tr("error #%1").arg(QString::number(errorCode)));
+
+   switch (errorCode) {
+      case UndefinedSocketError:
+         emit error(HeadlessContainer::SocketFailed, tr("socket error"));
+         break;
+      case HostNotFoundError:
+         emit error(HeadlessContainer::HostNotFound, tr("host not found"));
+         break;
+      case HandshakeFailed:
+         emit error(HeadlessContainer::HandshakeFailed, tr("encryption handshake failed"));
+         break;
+      case SerializationFailed:
+         emit error(HeadlessContainer::SerializationFailed, tr("serialization failed"));
+         break;
+      case HeartbeatWaitFailed:
+         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("heartbeat wait failed"));
+         break;
+      default:
+         emit error(HeadlessContainer::UnknownError, tr("unknown error"));
+         break;
+   }
 
    // Need to disconnect connection because otherwise it will continue send error responses over and over
    connection_->closeConnection();
@@ -1167,7 +1187,7 @@ void RemoteSigner::Authenticate()
    mutex_.lock();
    if (!listener_) {
       mutex_.unlock();
-      emit connectionError(tr("listener missing on authenticate"));
+      emit connectionError(UnknownError, tr("listener missing on authenticate"));
       return;
    }
    mutex_.unlock();
@@ -1260,9 +1280,9 @@ void RemoteSigner::onDisconnected()
    ScheduleRestart();
 }
 
-void RemoteSigner::onConnError(const QString &err)
+void RemoteSigner::onConnError(ConnectionError error, const QString &details)
 {
-   emit connectionError(err);
+   emit connectionError(error, details);
    ScheduleRestart();
 }
 
@@ -1514,7 +1534,7 @@ bool LocalSigner::Start()
    if (!QFile::exists(signerAppPath)) {
       logger_->error("[HeadlessContainer] Signer binary {} not found"
          , signerAppPath.toStdString());
-      emit connectionError(tr("missing signer binary"));
+      emit connectionError(UnknownError, tr("missing signer binary"));
       emit ready();
       return false;
    }
