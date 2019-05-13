@@ -365,7 +365,7 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
    rekeyPacket.construct(rekeyData.getRef(), connPtr, ZMQ_MSGTYPE_AEAD_REKEY);
    auto& packet = rekeyPacket.getNextPacket();
 
-   const auto &cbSent = [this, connPtr, connection] (const std::string &clientId, const std::string &, bool result)
+   const auto &cbSent = [this, connection] (const std::string &clientId, const std::string &, bool result)
    {
       if (!result) {
          logger_->error("[ZmqBIP15XServerConnection::rekey] failed to send rekey");
@@ -373,7 +373,7 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
       }
       logger_->debug("[ZmqBIP15XServerConnection::rekey] rekeying session for {}"
          , BinaryData(clientId).toHexStr());
-      connPtr->rekeyOuterSession();
+      connection->encData_->rekeyOuterSession();
       ++connection->outerRekeyCount_;
 
       {
@@ -505,7 +505,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    // If we're still handshaking, take the next step. (No fragments allowed.)
    if (connData->currentReadMessage_.message_.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
-      UpdateClientHeartbetTimestamp(clientID);
+      UpdateClientHeartbeatTimestamp(clientID);
       connData->currentReadMessage_.reset();
 
       ZmqBIP15XSerializedMessage heartbeatPacket;
@@ -596,7 +596,7 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
    };
 
    // Handshake function. Code mostly copied from Armory.
-   auto processHandshake = [this, &writeToClient, clientID, msgObj]()->bool
+   auto processHandshake = [this, writeToClient, clientID, msgObj]()->bool
    {
       auto connection = GetConnection(clientID);
       if (connection == nullptr) {
@@ -948,7 +948,7 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
    // XXX add connection
    AddConnection(clientID, connection);
 
-   UpdateClientHeartbetTimestamp(clientID);
+   UpdateClientHeartbeatTimestamp(clientID);
    notifyListenerOnNewConnection(clientID);
 
    return connection;
@@ -984,7 +984,7 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::GetConnection(c
    return it->second;
 }
 
-void ZmqBIP15XServerConnection::UpdateClientHeartbetTimestamp(const std::string& clientId)
+void ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp(const std::string& clientId)
 {
    FastLock locker{heartbeatsLock_};
 
@@ -996,7 +996,7 @@ void ZmqBIP15XServerConnection::UpdateClientHeartbetTimestamp(const std::string&
    } else {
       it->second = currentTime;
    }
-   logger_->debug("[ZmqBIP15XServerConnection::UpdateClientHeartbetTimestamp] {} HT: {}"
+   logger_->debug("[ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp] {} HT: {}"
       , BinaryData(clientId).toHexStr()
       , std::chrono::duration_cast<std::chrono::milliseconds>(currentTime.time_since_epoch()).count());
 }

@@ -109,7 +109,7 @@ private:
    bool genBIPIDCookie();
    void heartbeatThread();
 
-   void UpdateClientHeartbetTimestamp(const std::string& clientId);
+   void UpdateClientHeartbeatTimestamp(const std::string& clientId);
 
    bool AddConnection(const std::string& clientId, const std::shared_ptr<ZmqBIP15XPerConnData>& connection);
    std::shared_ptr<ZmqBIP15XPerConnData> GetConnection(const std::string& clientId);
