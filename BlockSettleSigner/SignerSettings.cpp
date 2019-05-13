@@ -38,7 +38,7 @@ uint64_t convertToSatoshi(double xbt)
    if (xbt == 0.0) {
       return UINT64_MAX;
    }
-   return  uint64_t(xbt * BTCNumericTypes::BalanceDivider + 0.5);
+   return  uint64_t(std::llround(xbt * BTCNumericTypes::BalanceDivider));
 }
 
 } // namespace
