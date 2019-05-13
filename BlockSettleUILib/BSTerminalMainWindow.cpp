@@ -411,7 +411,6 @@ void BSTerminalMainWindow::LoadWallets()
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
-      walletsSynched_ = true;
       goOnlineArmory();
       updateControlEnabledState();
 
@@ -556,6 +555,9 @@ bool BSTerminalMainWindow::InitSigningContainer()
 
    walletsMgr_->setSignContainer(signContainer_);
 
+   ui_->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
+   InitPortfolioView();
+
    return true;
 }
 
@@ -579,8 +581,6 @@ void BSTerminalMainWindow::SignerReady()
 
       InitWalletsView();
       InitPortfolioView();
-
-      ui_->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
 
       auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
       quoteProvider->ConnectToCelerClient(celerConnection_);
@@ -1657,11 +1657,9 @@ bool BSTerminalMainWindow::goOnlineArmory() const
    // Go online under the following conditions:
    // - The Armory connection isn't already online.
    // - The Armory BDV is registered.
-   // - The terminal has properly synched the wallet state.
    // - The wallet manager has no wallets, including a settlement wallet. (NOTE:
    //   Settlement wallets are auto-generated. A future PR will change that.)
    if (armory_ && !armory_->isOnline() && armoryBDVRegistered_
-      && walletsSynched_ && walletsMgr_ && walletsMgr_->walletsCount() == 0
       /*&& !walletsMgr_->hasSettlementWallet()*/) {
       logMgr_->logger()->info("[{}] - Armory connection is going online without "
          "wallets.", __func__);
