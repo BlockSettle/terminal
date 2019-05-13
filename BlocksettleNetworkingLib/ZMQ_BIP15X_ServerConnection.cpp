@@ -8,6 +8,12 @@
 
 using namespace std;
 
+// Used with remote connections (terminal/Celer)
+const std::chrono::milliseconds ZmqBIP15XServerConnection::DefaultHeartbeatInterval = std::chrono::seconds(30);
+
+// Used with local connections (terminal/signer/signer GUI)
+const std::chrono::milliseconds ZmqBIP15XServerConnection::LocalHeartbeatInterval = std::chrono::seconds(3);
+
 // A call resetting the encryption-related data for individual connections.
 //
 // INPUT:  None
@@ -48,7 +54,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
    , cbTrustedClients_(cbTrustedClients)
-   , heartbeatInterval_(std::chrono::seconds(30))
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
@@ -404,7 +409,7 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
 
 void ZmqBIP15XServerConnection::setLocalHeartbeatInterval()
 {
-   heartbeatInterval_ = std::chrono::seconds(3);
+   heartbeatInterval_ = LocalHeartbeatInterval;
 }
 
 // A send function for the data connection that sends data to all clients,
