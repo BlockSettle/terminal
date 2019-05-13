@@ -26,7 +26,7 @@ class ArmoryCallback : public RemoteCallback
 public:
    ArmoryCallback(ArmoryConnection *conn, const std::shared_ptr<spdlog::logger> &logger)
       : RemoteCallback(), connection_(conn), logger_(logger) {}
-   virtual ~ArmoryCallback(void) noexcept = default;
+   virtual ~ArmoryCallback() noexcept override = default;
 
    void run(BDMAction action, void* ptr, int block = 0) override;
    void progress(BDMPhase phase,
@@ -177,8 +177,8 @@ protected:
    std::function<void(State)>    cbStateChanged_ = nullptr;
    std::map<unsigned int, RefreshCb> cbRefresh_;
    std::function<void(unsigned int)>                  cbNewBlock_ = nullptr;
-   std::function<void(std::vector<bs::TXEntry>)>      cbZCReceived_ = nullptr;
-   std::function<void(std::vector<bs::TXEntry>)>      cbZCInvalidated_ = nullptr;
+   std::function<void(const std::vector<bs::TXEntry> &)>      cbZCReceived_ = nullptr;
+   std::function<void(const std::vector<bs::TXEntry> &)>      cbZCInvalidated_ = nullptr;
    std::function<void(BDMPhase, float, unsigned int, unsigned int)>  cbProgress_ = nullptr;
    std::function<void(NodeStatus, bool, RpcStatus)>   cbNodeStatus_ = nullptr;
    std::function<void(const std::string &, const std::string &)>  cbError_ = nullptr;

@@ -418,7 +418,9 @@ void BSTerminalMainWindow::LoadWallets()
          if (!initialWalletCreateDialogShown_) {
             if (state == ArmoryConnection::State::Connected && walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
                initialWalletCreateDialogShown_ = true;
-               QMetaObject::invokeMethod(this, "createWallet", Qt::QueuedConnection, Q_ARG(bool, true));
+               QMetaObject::invokeMethod(this, [this] {
+                  createWallet(true);
+               });
             }
          }
       });
@@ -745,15 +747,15 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
    switch(newState)
    {
    case ArmoryConnection::State::Ready:
-      QMetaObject::invokeMethod(this, "CompleteUIOnlineView", Qt::QueuedConnection);
+      QMetaObject::invokeMethod(this, &BSTerminalMainWindow::CompleteUIOnlineView);
       break;
    case ArmoryConnection::State::Connected:
       armoryBDVRegistered_ = true;
       goOnlineArmory();
-      QMetaObject::invokeMethod(this, "CompleteDBConnection", Qt::QueuedConnection);
+      QMetaObject::invokeMethod(this, &BSTerminalMainWindow::CompleteDBConnection);
       break;
    case ArmoryConnection::State::Offline:
-      QMetaObject::invokeMethod(this, "ArmoryIsOffline", Qt::QueuedConnection);
+      QMetaObject::invokeMethod(this, &BSTerminalMainWindow::ArmoryIsOffline);
       break;
    case ArmoryConnection::State::Scanning:
    case ArmoryConnection::State::Error:
