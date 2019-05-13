@@ -154,7 +154,7 @@ protected slots:
    void onAuthenticated();
    void onConnected();
    void onDisconnected();
-   void onConnError(const QString &err);
+   void onConnError(ConnectionError error, const QString &details);
    void onPacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
@@ -238,7 +238,7 @@ signals:
    void authFailed();
    void connected();
    void disconnected();
-   void error(const QString &err);
+   void error(HeadlessContainer::ConnectionError error, const QString &details);
    void PacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
