@@ -366,18 +366,18 @@ bool ChatDB::isContactExist(const QString &userId)
    return false;
 }
 
-bool ChatDB::addContact(const ContactUserData &contact)
+bool ChatDB::addContact(Chat::ContactRecordData &contact)
 {
-   if (isContactExist(contact.userId())) {
+   if (isContactExist(contact.getContactForId())) {
       return true;
    }
 
    QSqlQuery query(db_);
    query.prepare(QLatin1String("INSERT INTO contacts(user_id, user_name, status) VALUES(:user_id, :user_name, :status)"));
 
-   query.bindValue(QLatin1String(":user_id"), contact.userId());
-   query.bindValue(QLatin1String(":user_name"), contact.userName());
-   query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
+   query.bindValue(QLatin1String(":user_id"), contact.getContactForId());
+   query.bindValue(QLatin1String(":user_name"), contact.getDisplayName());
+   query.bindValue(QLatin1String(":status"), static_cast<int>(contact.getContactStatus()));
 
    if (!query.exec()) {
       logger_->error("[ChatDB::addContact] failed to insert new contact: {}", query.lastError().text().toStdString());
@@ -405,7 +405,7 @@ bool ChatDB::removeContact(const QString &userId)
    return true;
 }
 
-bool ChatDB::getContacts(ContactUserDataList &contactList)
+bool ChatDB::getContacts(ContactRecordDataList &contactList)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String("SELECT user_id, user_name, status FROM contacts;"))) {
@@ -418,34 +418,35 @@ bool ChatDB::getContacts(ContactUserDataList &contactList)
    }
 
    while (query.next()) {
-      ContactUserData contact;
-      contact.setUserId(query.value(0).toString());
-      contact.setUserName(query.value(1).toString());
-      contact.setStatus(static_cast<ContactUserData::Status>(query.value(2).toInt()));
+      Chat::ContactRecordData contact(query.value(0).toString(),
+                                      query.value(0).toString(),
+                                      static_cast<Chat::ContactStatus>(query.value(2).toInt()),
+                                      autheid::PublicKey(),
+                                      query.value(1).toString());
       contactList.emplace_back(contact);
    }
    return true;
 }
 
-bool ChatDB::updateContact(const ContactUserData &contact)
+bool ChatDB::updateContact(Chat::ContactRecordData &contact)
 {
    QSqlQuery query(db_);
 
-   if (!contact.userName().simplified().isEmpty()) {
+   if (!contact.getDisplayName().simplified().isEmpty()) {
       if (!query.prepare(QLatin1String("UPDATE contacts SET user_name=:user_name, status=:status WHERE user_id=:user_id;"))) {
          logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
          return false;
       }
-      query.bindValue(QLatin1String(":user_name"), contact.userName());
-      query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
-      query.bindValue(QLatin1String(":user_id"), contact.userId());
+      query.bindValue(QLatin1String(":user_name"), contact.getDisplayName());
+      query.bindValue(QLatin1String(":status"), static_cast<int>(contact.getContactStatus()));
+      query.bindValue(QLatin1String(":user_id"), contact.getContactForId());
    } else {
       if (!query.prepare(QLatin1String("UPDATE contacts SET status=:status WHERE user_id=:user_id;"))) {
          logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
          return false;
       }
-      query.bindValue(QLatin1String(":status"), static_cast<int>(contact.status()));
-      query.bindValue(QLatin1String(":user_id"), contact.userId());
+      query.bindValue(QLatin1String(":status"), static_cast<int>(contact.getContactStatus()));
+      query.bindValue(QLatin1String(":user_id"), contact.getContactForId());
    }
 
    if (!query.exec()) {
@@ -456,7 +457,7 @@ bool ChatDB::updateContact(const ContactUserData &contact)
    return true;
 }
 
-bool ChatDB::getContact(const QString& userId, ContactUserData& contact)
+bool ChatDB::getContact(const QString& userId, Chat::ContactRecordData& contact)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String("SELECT user_id, user_name, status FROM contacts WHERE user_id=?;"))) {
@@ -473,8 +474,8 @@ bool ChatDB::getContact(const QString& userId, ContactUserData& contact)
 
    if (query.next()) {
       contact.setUserId(query.value(0).toString());
-      contact.setUserName(query.value(1).toString());
-      contact.setStatus(static_cast<ContactUserData::Status>(query.value(2).toInt()));
+      contact.setDisplayName(query.value(1).toString());
+      contact.setStatus(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
       return true;
    }
 

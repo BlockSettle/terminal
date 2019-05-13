@@ -39,7 +39,7 @@ private:
 
 };
 
-using ContactUserDataList = std::vector<ContactUserData>;
+using ContactRecordDataList = std::vector<Chat::ContactRecordData>;
 
 
 class ChatDB : public QObject
@@ -73,11 +73,11 @@ public:
    bool loadKeys(std::map<QString, autheid::PublicKey>& peer_public_keys_out);
 
    bool isContactExist(const QString &userId);
-   bool addContact(const ContactUserData &contact);
+   bool addContact(Chat::ContactRecordData &contact);
    bool removeContact(const QString &userId);
-   bool getContacts(ContactUserDataList &contactList);
-   bool updateContact(const ContactUserData &contact);
-   bool getContact(const QString& userId, ContactUserData& contact);
+   bool getContacts(ContactRecordDataList &contactList);
+   bool updateContact(Chat::ContactRecordData &contact);
+   bool getContact(const QString& userId, Chat::ContactRecordData& contact);
 
 //   bool insertContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
 //   bool removeContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
