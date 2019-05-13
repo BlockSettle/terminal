@@ -1,6 +1,9 @@
 #include "SignersManageWidget.h"
 #include "ui_SignersManageWidget.h"
 #include <QDebug>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <SecureBinaryData.h>
 
 SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -26,6 +29,7 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    connect(ui_->pushButtonCancelSaveSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::resetForm);
    connect(ui_->pushButtonSaveSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::onSave);
    connect(ui_->pushButtonSelect, &QPushButton::clicked, this, &SignerKeysWidget::onSelect);
+   connect(ui_->pushButtonKeyImport, &QPushButton::clicked, this, &SignerKeysWidget::onKeyImport);
 
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this](){
@@ -147,3 +151,18 @@ void SignerKeysWidget::onSelect()
 
    signersProvider_->setupSigner(index);
 }
+
+void SignerKeysWidget::onKeyImport()
+{
+   QString fileName = QFileDialog::getOpenFileName(this
+      , tr("Open Key File"),  QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+      , tr("Key Files (*.pub *.key);;All files (*.*)"));
+
+   QFile file(fileName);
+   if (file.open(QIODevice::ReadOnly)) {
+      SecureBinaryData key = SecureBinaryData(file.readAll().constData());
+      ui_->lineEditKey->setText(QString::fromStdString(key.toHexStr()));
+   }
+}
+
+
