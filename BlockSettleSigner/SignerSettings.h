@@ -32,7 +32,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString autoSignWallet READ autoSignWallet WRITE setAutoSignWallet NOTIFY autoSignWalletChanged)
    Q_PROPERTY(bool hideEidInfoBox READ hideEidInfoBox WRITE setHideEidInfoBox NOTIFY hideEidInfoBoxChanged)
    Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
-   Q_PROPERTY(bool twoWayAuth READ twoWayAuth WRITE setTwoWayAuth NOTIFY twoWayAuthChanged)
+   Q_PROPERTY(bool startupBIP150CTX READ startupBIP150CTX WRITE setStartupBIP150CTX NOTIFY startupBIP150CTXChanged)
 
 public:
    SignerSettings();
@@ -68,7 +68,7 @@ public:
    bs::signer::Limits limits() const;
    bool hideEidInfoBox() const;
    QStringList trustedTerminals() const;
-   bool twoWayAuth() const;
+   bool startupBIP150CTX() const;
 
    QString dirDocuments() const;
    bs::signer::ui::RunMode runMode() const { return runMode_; }
@@ -87,7 +87,7 @@ public:
    void setLimitManualPwKeepStr(const QString &val);
    void setHideEidInfoBox(bool val);
    void setTrustedTerminals(const QStringList &val);
-   void setTwoWayAuth(bool val);
+   void setStartupBIP150CTX(bool val);
 
    static QString secondsToIntervalStr(int);
    static int intervalStrToSeconds(const QString &);
@@ -106,7 +106,7 @@ signals:
    void autoSignWalletChanged();
    void hideEidInfoBoxChanged();
    void trustedTerminalsChanged();
-   void twoWayAuthChanged();
+   void startupBIP150CTXChanged();
 
 private:
    using Settings = Blocksettle::Communication::signer::Settings;

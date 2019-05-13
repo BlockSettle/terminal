@@ -92,8 +92,8 @@ void SignerSettings::settingChanged(int setting)
    case signer::TrustedTerminals:
       emit trustedTerminalsChanged();
       break;
-   case signer::TwoWayAuth:
-      emit twoWayAuthChanged();
+   case signer::StartupBIP150CTX:
+      emit startupBIP150CTXChanged();
       break;
    default:
       break;
@@ -193,8 +193,9 @@ bool SignerSettings::loadSettings(const QStringList &args)
       if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
          return false;
       }
-   } else {
-      runMode_ = bs::signer::ui::RunMode::fullgui;
+   }
+   else {
+      return false;
    }
 
    if (parser.isSet(srvIDKeyName)) {
@@ -274,9 +275,9 @@ QStringList SignerSettings::trustedTerminals() const
    return result;
 }
 
-bool SignerSettings::twoWayAuth() const
+bool SignerSettings::startupBIP150CTX() const
 {
-   return d_->two_way_auth();
+   return d_->startup_bip150_ctx();
 }
 
 QString SignerSettings::dirDocuments() const
@@ -292,7 +293,7 @@ void SignerSettings::setOffline(bool val)
 
 void SignerSettings::setTestNet(bool val)
 {
-   qDebug() << "test ned" << val;
+   qDebug() << "test net" << val;
    d_->set_test_net(val);
    settingChanged(signer::Setting::TestNet);
 }
@@ -377,10 +378,10 @@ void SignerSettings::setTrustedTerminals(const QStringList &val)
    settingChanged(signer::Setting::TrustedTerminals);
 }
 
-void SignerSettings::setTwoWayAuth(bool val)
+void SignerSettings::setStartupBIP150CTX(bool val)
 {
-   d_->set_two_way_auth(val);
-   settingChanged(signer::Setting::TwoWayAuth);
+   d_->set_startup_bip150_ctx(val);
+   settingChanged(signer::Setting::StartupBIP150CTX);
 }
 
 QString SignerSettings::secondsToIntervalStr(int s)
