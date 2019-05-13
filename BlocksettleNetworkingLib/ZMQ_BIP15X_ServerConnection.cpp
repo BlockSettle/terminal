@@ -176,7 +176,7 @@ void ZmqBIP15XServerConnection::heartbeatThread()
             FastLock locker{heartbeatsLock_};
 
             for (const auto &hbTime : lastHeartbeats_) {
-               const auto diff = curTime - hbTime.second;
+               const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - hbTime.second);
                if (diff > heartbeatInterval_ * 2) {
                   timedOutClients.push_back(hbTime.first);
 
