@@ -133,8 +133,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
       genBIPIDCookie();
    }
 
-   logger_->debug("[ZmqBIP15XServerConnection::ZmqBIP15XServerConnection] : HI: {}", heartbeatInterval_.count());
-
    heartbeatThread();
 }
 
@@ -163,7 +161,6 @@ ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
 void ZmqBIP15XServerConnection::heartbeatThread()
 {
    const auto &heartbeatProc = [this] {
-      logger_->debug("[ZmqBIP15XServerConnection::heartbeatThread::heartbeatProc] : HI: {}", heartbeatInterval_.count());
       while (hbThreadRunning_) {
          {
             std::unique_lock<std::mutex> lock(hbMutex_);
@@ -182,11 +179,6 @@ void ZmqBIP15XServerConnection::heartbeatThread()
                const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - hbTime.second);
                if (diff > heartbeatInterval_ * 2) {
                   timedOutClients.push_back(hbTime.first);
-
-                  logger_->debug("[ZmqBIP15XServerConnection::heartbeatThread] client timedout:\n   HI: {}\n   HB: {}\n   CT: {}"
-                     , heartbeatInterval_.count()
-                     , std::chrono::duration_cast<std::chrono::milliseconds>(hbTime.second.time_since_epoch()).count()
-                     , std::chrono::duration_cast<std::chrono::milliseconds>(curTime.time_since_epoch()).count());
                }
             }
          }
@@ -199,8 +191,6 @@ void ZmqBIP15XServerConnection::heartbeatThread()
          }
       }
    };
-
-   logger_->debug("[ZmqBIP15XServerConnection::heartbeatThread] : HI: {}", heartbeatInterval_.count());
 
    hbThreadRunning_ = true;
    hbThread_ = std::thread(heartbeatProc);
