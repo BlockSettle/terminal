@@ -17,6 +17,7 @@ LIST(APPEND SOURCES
    ../../SignerSettings.cpp
    ../../TXInfo.cpp
    ../../WalletsProxy.cpp
+   ../../HeadlessSettings.cpp
 )
 
 FILE(GLOB HEADERS *.h)
