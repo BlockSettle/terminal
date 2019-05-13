@@ -73,6 +73,7 @@ protected slots:
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
    static QString ProductTypeToString(Blocksettle::Communication::TradeHistory::TradeHistoryTradeType type);
    void SetupCrossfire();
+   void SetupLastPrintFlag();
 
    void OnLoadingNetworkSettings();
    void OnMDConnecting();
@@ -151,7 +152,7 @@ private:
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;
 
-   QCPItemText *   xRectItem_{ nullptr };
+   QCPItemText *   lastPrintFlag_{ nullptr };
    bool isHigh_ { true };
 
    QCPItemLine* horLine;
