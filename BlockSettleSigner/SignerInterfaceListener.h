@@ -90,6 +90,8 @@ private:
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    void onHeadlessPubKey(const std::string &data, bs::signer::RequestId);
 
+   void shutdown();
+
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
