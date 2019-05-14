@@ -265,7 +265,6 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    , const string& data, const SendResultCb& cb)
 {
-   bool retVal = false;
    BIP151Connection* connPtr = nullptr;
 
    auto connection = GetConnection(clientId);
@@ -311,38 +310,33 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    }
 
    // Encrypt data here if the BIP 150 handshake is complete.
-   if (connection && connection->encData_) {
-      if (connection->encData_->getBIP150State() ==
-         BIP150State::SUCCESS) {
-         string sendStr = data;
-         const BinaryData payload(data);
-         ZmqBIP15XSerializedMessage msg;
-         msg.construct(payload.getDataVector(), connPtr
-            , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, connection->msgID_);
+   if (connection->encData_ && connection->encData_->getBIP150State() == BIP150State::SUCCESS) {
+      const BinaryData payload(data);
+      ZmqBIP15XSerializedMessage msg;
+      msg.construct(payload.getDataVector(), connPtr
+         , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, connection->msgID_);
 
-         // Cycle through all packets.
-         while (!msg.isDone()) {
-            auto& packet = msg.getNextPacket();
-            if (packet.getSize() == 0) {
-               logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] failed to "
-                  "serialize data (size {})", data.size());
-               return false;
-            }
-
-            if (!QueueDataToSend(clientId, packet.toBinStr(), cb, false)) {
-               logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] fragment send failed"
-                  , data.size());
-               return false;
-            }
+      // Cycle through all packets.
+      while (!msg.isDone()) {
+         auto& packet = msg.getNextPacket();
+         if (packet.getSize() == 0) {
+            logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] failed to "
+               "serialize data (size {})", data.size());
+            return false;
          }
-         retVal = true;
+
+         if (!QueueDataToSend(clientId, packet.toBinStr(), cb, false)) {
+            logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] fragment send failed"
+               , data.size());
+            return false;
+         }
       }
-      else {
-         // Queue up the untouched data for straight transmission.
-         retVal = QueueDataToSend(clientId, data, cb, false);
-      }
+
+      return true;
    }
-   return retVal;
+
+   // Queue up the untouched data for straight transmission.
+   return QueueDataToSend(clientId, data, cb, false);
 }
 
 void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
