@@ -8,12 +8,6 @@
 
 using namespace std;
 
-// Used with remote connections (terminal/Celer)
-const std::chrono::milliseconds ZmqBIP15XServerConnection::DefaultHeartbeatInterval = std::chrono::seconds(30);
-
-// Used with local connections (terminal/signer/signer GUI)
-const std::chrono::milliseconds ZmqBIP15XServerConnection::LocalHeartbeatInterval = std::chrono::seconds(3);
-
 // A call resetting the encryption-related data for individual connections.
 //
 // INPUT:  None
@@ -54,6 +48,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
    , cbTrustedClients_(cbTrustedClients)
+   , heartbeatInterval_(getDefaultHeartbeatInterval())
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
@@ -104,6 +99,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
    , const std::function<std::vector<std::string>()> &cbTrustedClients
+   , const std::string& ownKeyFileDir, const std::string& ownKeyFileName
    , const bool& makeServerCookie, const bool& readClientCookie
    , const std::string& cookiePath)
    : ZmqServerConnection(logger, context)
@@ -125,11 +121,19 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
          "supplied. Connection is incomplete.");
    }
 
-   authPeers_ = make_shared<AuthorizedPeers>();
+   if (!ownKeyFileDir.empty() && !ownKeyFileName.empty()) {
+      logger_->debug("[{}] creating/reading static key in {}/{}", __func__
+         , ownKeyFileDir, ownKeyFileName);
+      authPeers_ = make_shared<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
+   }
+   else {
+      logger_->debug("[{}] creating ephemeral key", __func__);
+      authPeers_ = make_shared<AuthorizedPeers>();
+   }
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    id_ = READ_UINT64_LE(bdID.getPtr());
 
-   if (useClientIDCookie_) {
+   if (makeServerIDCookie_) {
       genBIPIDCookie();
    }
 
@@ -331,7 +335,9 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
                return false;
             }
          }
-      } else {
+         retVal = true;
+      }
+      else {
          // Queue up the untouched data for straight transmission.
          retVal = QueueDataToSend(clientId, data, cb, false);
       }
@@ -399,7 +405,19 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
 
 void ZmqBIP15XServerConnection::setLocalHeartbeatInterval()
 {
-   heartbeatInterval_ = LocalHeartbeatInterval;
+   heartbeatInterval_ = getLocalHeartbeatInterval();
+}
+
+// static
+const chrono::milliseconds ZmqBIP15XServerConnection::getDefaultHeartbeatInterval()
+{
+   return std::chrono::seconds(30);
+}
+
+// static
+const chrono::milliseconds ZmqBIP15XServerConnection::getLocalHeartbeatInterval()
+{
+   return std::chrono::seconds(3);
 }
 
 // A send function for the data connection that sends data to all clients,
@@ -993,12 +1011,12 @@ void ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp(const std::string
    auto it = lastHeartbeats_.find(clientId);
    if (it == lastHeartbeats_.end()) {
       lastHeartbeats_.emplace(clientId, currentTime);
+      logger_->debug("[ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp] added {} HT: {}"
+         , BinaryData(clientId).toHexStr()
+         , std::chrono::duration_cast<std::chrono::milliseconds>(currentTime.time_since_epoch()).count());
    } else {
       it->second = currentTime;
    }
-   logger_->debug("[ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp] {} HT: {}"
-      , BinaryData(clientId).toHexStr()
-      , std::chrono::duration_cast<std::chrono::milliseconds>(currentTime.time_since_epoch()).count());
 }
 
 // Get lambda functions related to authorized peers. Copied from Armory.
