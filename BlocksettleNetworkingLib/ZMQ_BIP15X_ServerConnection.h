@@ -61,6 +61,8 @@ public:
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
       , const std::function<std::vector<std::string>()>& cbTrustedClients
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
       , const bool& makeServerCookie = false
       , const bool& readClientCookie = false
       , const std::string& cookiePath = "");
