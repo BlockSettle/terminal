@@ -22,6 +22,7 @@ public:
    bs::network::Side::Type GetSide() const;
    bs::network::OTCRangeID::Type GetRange() const;
    bool SendAsOwn() const;
+   bool ReplyRequired() const;
 
    void setSubmitButtonEnabled(bool enabled);
 
@@ -31,6 +32,7 @@ private slots:
    void OnBuyClicked();
 
    void OnRangeSelected(int index);
+   void onSendAsOwnChanged();
 
 signals:
    void RequestCreated();

@@ -616,8 +616,9 @@ void ChatWidget::OnOTCRequestCreated()
    const auto side = ui_->widgetCreateOTCRequest->GetSide();
    const auto range = ui_->widgetCreateOTCRequest->GetRange();
    const bool ownOTC = ui_->widgetCreateOTCRequest->SendAsOwn();
+   const bool replyRequired = ui_->widgetCreateOTCRequest->ReplyRequired();
 
-   auto otcRequest = bs::network::OTCRequest{side, range, ownOTC};
+   auto otcRequest = bs::network::OTCRequest{side, range, ownOTC, replyRequired};
 
    if (!client_->SubmitOTCRequest(otcRequest)) {
       logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit request to OTC chat");

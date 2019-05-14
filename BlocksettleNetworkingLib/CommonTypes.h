@@ -423,6 +423,9 @@ namespace bs {
          // XXX
          // ownRequest - temporary field used for test purpose until OTC goes through chat server
          bool              ownRequest;
+
+         // fakeReplyRequired - chat server will simulate "reply"
+         bool              fakeReplyRequired;
       };
 
       struct LiveOTCRequest

@@ -236,7 +236,7 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
             model_->insertContactObject(contact, true);
             addOrUpdateContact(contactId, Chat::ContactStatus::Incoming);
             auto requestS = std::make_shared<Chat::ContactActionRequestServer>("", currentUserId_, contactId.toStdString(), Chat::ContactsActionServer::AddContactRecord, Chat::ContactStatus::Incoming, pk);
-            sendRequest(requestS);            
+            sendRequest(requestS);
             emit NewContactRequest(contactId);
          }
 
@@ -572,7 +572,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
             model_->insertContactsMessage(msg);
          }
          break;
-         
+
          default:
          break;
       }
@@ -737,7 +737,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
 
    enc->setData(messageData.messageData().toStdString());
    enc->setAssociatedData(messageData.jsonAssociatedData());
-   
+
    Botan::SecureVector<uint8_t> encodedData;
 
    try {
@@ -1107,8 +1107,8 @@ bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
       liveRequest.requestorId = currentUserId_;
       ownOtcId_ = liveRequest.otcId;
 
-      // simulate 2 seconds delay on accept response
-      QTimer::singleShot(2000, [this, liveRequest]
+      // simulate 1 second delay on accept response
+      QTimer::singleShot(1000, [this, liveRequest]
          {
             emit OTCRequestAccepted(liveRequest);
          });
