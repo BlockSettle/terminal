@@ -110,15 +110,7 @@ void AuthAddressManager::onAuthWalletChanged()
    emit AuthWalletChanged();
 }
 
-AuthAddressManager::~AuthAddressManager() noexcept
-{
-   addressVerificator_.reset();
-   FastLock lock(lockList_);
-   FastLock locker(lockCommands_);
-   for (auto &cmd : activeCommands_) {
-      cmd->DropResult();
-   }
-}
+AuthAddressManager::~AuthAddressManager() noexcept = default;
 
 size_t AuthAddressManager::GetAddressCount()
 {
@@ -751,39 +743,40 @@ bool AuthAddressManager::SendGetBSAddressListRequest()
 
 bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
-   const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
+   auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
    connection->setCBs(cbApproveConn_);
 
-   auto command = std::make_shared<RequestReplyCommand>(name, connection, logger_);
+   requestId_ += 1;
+   int requestId = requestId_;
 
-   command->SetReplyCallback([command, this](const std::string& data) {
+   auto command = std::make_unique<RequestReplyCommand>(name, connection, logger_);
+
+   command->SetReplyCallback([requestId, this](const std::string& data) {
       OnDataReceived(data);
-      command->CleanupCallbacks();
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
+
+      QMetaObject::invokeMethod(this, [this, requestId] {
+         activeCommands_.erase(requestId);
+      });
       return true;
    });
 
-   command->SetErrorCallback([command, this](const std::string& message) {
-      logger_->error("[AuthAddressManager::{}] error callback: {}", command->GetName(), message);
-      command->CleanupCallbacks();
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
+   command->SetErrorCallback([requestId, this](const std::string& message) {
+      QMetaObject::invokeMethod(this, [this, requestId, message] {
+         auto it = activeCommands_.find(requestId);
+         std::string name = (it != activeCommands_.end()) ? it->second->GetName() : "unknown";
+         logger_->error("[AuthAddressManager::{}] error callback: {}", name, message);
+         activeCommands_.erase(requestId);
+      });
    });
-
-   {
-      FastLock locker(lockCommands_);
-      activeCommands_.insert(command);
-   }
 
    if (!command->ExecuteRequest(settings_->get<std::string>(ApplicationSettings::pubBridgeHost)
          , settings_->get<std::string>(ApplicationSettings::pubBridgePort)
          , data, true)) {
       logger_->error("[AuthAddressManager::SubmitRequestToPB] failed to send request {}", name);
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
       return false;
    }
+
+   activeCommands_.emplace(requestId, std::move(command));
 
    return true;
 }
