@@ -155,7 +155,8 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
       { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys")) },
-      { startupBIP150CTX,                 SettingDef(QLatin1String("StartupBIP150CTX"), false) }
+      { startupBIP150CTX,        SettingDef(QLatin1String("StartupBIP150CTX"), false) },
+      { dontLoadCCList,          SettingDef(QLatin1String("DontLoadCCList"), false) },
    };
 }
 
