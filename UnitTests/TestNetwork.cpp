@@ -207,12 +207,12 @@ TEST(TestNetwork, ZMQ_BIP15X)
    for (const auto &clientPkt : clientPackets) {
       clientConn->send(clientPkt);
    }
-   ASSERT_TRUE(clientPktsFut.get());
+   EXPECT_TRUE(clientPktsFut.get());
 
    for (const auto &srvPkt : srvPackets) {
       serverConn->SendDataToAllClients(srvPkt);
    }
-   ASSERT_TRUE(srvPktsFut.get());
+   EXPECT_TRUE(srvPktsFut.get());
 
    ASSERT_TRUE(clientConn->closeConnection());
    serverConn.reset();  // This is needed to detach listener before it's destroyed
@@ -598,7 +598,84 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
 }
 
 
-TEST(TestNetwork, ZMQ_BIP15X_Heartbeat)
+TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
+{
+    static std::vector<std::string> clientPackets;
+    for (int i = 0; i < 5; ++i) {
+        clientPackets.push_back(CryptoPRNG::generateRandom(23).toBinStr());
+    }
+
+    static std::vector<std::string> srvPackets;
+    uint32_t pktSize = 100;
+    for (int i = 0; i < 5; ++i) {
+        srvPackets.push_back(CryptoPRNG::generateRandom(pktSize).toBinStr());
+        pktSize *= 2;
+    }
+
+    const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
+    const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+
+    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
+        TestEnv::logger(), true, true);
+    const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+    std::vector<std::string> trustedClients = {
+        std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
+    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
+        TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+    const auto serverKey = serverConn->getOwnPubKey();
+    clientConn->SetContext(zmqContext);
+
+    const std::string host = "127.0.0.1";
+    std::string port;
+    do {
+        port = std::to_string((rand() % 50000) + 10000);
+    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
+
+    serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
+    clientConn->addAuthPeer(serverKey, host + ":" + port);
+
+    struct Messages {
+        size_t clientMsgs;
+        size_t serverMsgs;
+    } pass[] = {
+        {1, 1},
+        {5, 5},
+        {0, 0},
+        {0, 1},
+        {1, 0}
+    };
+    const size_t passes = sizeof pass / sizeof pass[0];
+
+    for (size_t i = 0; i < passes; ++i) {
+        clientLsn->connected_ = false;
+        srvLsn->connected_ = false;
+
+        ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
+
+        ASSERT_TRUE(await(clientLsn->connected_));
+        ASSERT_TRUE(await(srvLsn->connected_));
+
+        for (size_t j = 0; j < pass[i].clientMsgs; ++j) {
+            clientConn->send(clientPackets.at(j));
+        }
+        for (size_t j = 0; j < pass[i].serverMsgs; ++j) {
+            serverConn->SendDataToAllClients(srvPackets.at(j));
+        }
+
+        clientLsn->disconnected_ = false;
+        srvLsn->disconnected_ = false;
+
+        ASSERT_TRUE(clientConn->closeConnection());
+        ASSERT_TRUE(await(clientLsn->disconnected_));
+        ASSERT_TRUE(await(srvLsn->disconnected_));
+        ASSERT_FALSE(clientLsn->error_.load());
+        ASSERT_FALSE(srvLsn->error_.load());
+    }
+    serverConn.reset();  // This is needed to detach listener before it's destroyed
+}
+
+
+TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
 {
     static std::vector<std::string> clientPackets;
     for (int i = 0; i < 5; ++i) {
@@ -641,8 +718,6 @@ TEST(TestNetwork, ZMQ_BIP15X_Heartbeat)
 
         clientLsn->connected_ = false;
         srvLsn->connected_ = false;
-
-        TestEnv::logger()->info("[{}] pass {}", __func__, i);
 
         const std::string host = "127.0.0.1";
         std::string port;
