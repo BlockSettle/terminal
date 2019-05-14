@@ -872,7 +872,7 @@ void BSTerminalMainWindow::connectArmory()
       // stop armory connection loop if server key was rejected
       if (!result) {
          armory_->needsBreakConnectionLoop_.store(true);
-         armory_->setState(ArmoryConnection::State::Canceled);
+         armory_->setState(ArmoryConnection::State::Cancelled);
       }
       return result;
    });

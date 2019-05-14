@@ -2,6 +2,7 @@
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QMetaEnum>
+#include <QTimer>
 
 #include "NetworkSettingsPage.h"
 #include "ui_NetworkSettingsPage.h"
@@ -74,6 +75,12 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
 
    connect(ui_->pushButtonArmoryServerKeyCopy, &QPushButton::clicked, this, [this](){
       qApp->clipboard()->setText(ui_->labelArmoryServerKey->text());
+      ui_->pushButtonArmoryServerKeyCopy->setEnabled(false);
+      ui_->pushButtonArmoryServerKeyCopy->setText(tr("Copied"));
+      QTimer::singleShot(2000, [this](){
+         ui_->pushButtonArmoryServerKeyCopy->setEnabled(true);
+         ui_->pushButtonArmoryServerKeyCopy->setText(tr("Copy"));
+      });
    });
    connect(ui_->pushButtonArmoryServerKeySave, &QPushButton::clicked, this, [this](){
       QString fileName = QFileDialog::getSaveFileName(this
@@ -89,6 +96,12 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
 
    connect(ui_->pushButtonArmoryTerminalKeyCopy, &QPushButton::clicked, this, [this](){
       qApp->clipboard()->setText(ui_->labelArmoryTerminalKey->text());
+      ui_->pushButtonArmoryTerminalKeyCopy->setEnabled(false);
+      ui_->pushButtonArmoryTerminalKeyCopy->setText(tr("Copied"));
+      QTimer::singleShot(2000, [this](){
+         ui_->pushButtonArmoryTerminalKeyCopy->setEnabled(true);
+         ui_->pushButtonArmoryTerminalKeyCopy->setText(tr("Copy"));
+      });
    });
    connect(ui_->pushButtonArmoryTerminalKeySave, &QPushButton::clicked, this, [this](){
       QString fileName = QFileDialog::getSaveFileName(this
