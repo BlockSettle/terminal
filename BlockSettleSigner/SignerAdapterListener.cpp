@@ -254,6 +254,7 @@ bool SignerAdapterListener::onReady(int cur, int total)
    evt.set_ready(ready_);
    evt.set_cur_wallet(cur);
    evt.set_total_wallets(total);
+   evt.set_headless_bind_succeed(app_->headlessBindSucceed());
    sendData(signer::HeadlessReadyType, evt.SerializeAsString());
    return true;
 }

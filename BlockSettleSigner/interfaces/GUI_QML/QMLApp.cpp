@@ -56,6 +56,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
    connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
+   connect(adapter_, &SignerAdapter::headlessBindFailed, this, &QMLAppObj::onHeadlessBindFiled);
    connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
@@ -127,7 +128,13 @@ void QMLAppObj::onReady()
 void QMLAppObj::onConnectionError()
 {
    QMetaObject::invokeMethod(rootObj_, "showError"
-      , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
+                             , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
+}
+
+void QMLAppObj::onHeadlessBindFiled()
+{
+   QMetaObject::invokeMethod(rootObj_, "showError"
+                             , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
 }
 
 void QMLAppObj::onWalletsSynced()

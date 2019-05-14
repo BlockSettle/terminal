@@ -71,6 +71,7 @@ public:
 signals:
    void ready() const;
    void connectionError() const;
+   void headlessBindFailed() const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
    void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt);
@@ -81,6 +82,7 @@ signals:
    void autoSignActivated(const std::string &walletId);
    void autoSignDeactivated(const std::string &walletId);
    void customDialogRequest(const QString &dialogName, const QVariantMap &data);
+   void bindFailed() const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

@@ -239,12 +239,18 @@ void HeadlessAppObj::onlineProcessing()
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
          , walletsMgr_, settings_->getWalletsDir(), settings_->netType());
    }
+
    listener_->SetLimits(settings_->limits());
-   if (!connection_->BindConnection(settings_->listenAddress()
-      , settings_->listenPort(), listener_.get())) {
+
+   headlessBindSucceed_ = connection_->BindConnection(settings_->listenAddress()
+      , settings_->listenPort(), listener_.get());
+   if (!headlessBindSucceed_) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
-      throw std::runtime_error("failed to bind listening socket");
+      // Abort only if lightgui used, fullgui should just show error message instead
+      if (settings_->runMode() == bs::signer::RunMode::lightgui) {
+         throw std::runtime_error("failed to bind listening socket");
+      }
    }
 
    if (cbReady_) {

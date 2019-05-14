@@ -147,6 +147,9 @@ void SignerInterfaceListener::onReady(const std::string &data)
    }
    if (evt.ready()) {
       QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
+      if (!evt.headless_bind_succeed()) {
+         QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
+      }
    }
    else {
       logger_->info("[SignerInterfaceListener::{}] received 'non-ready' event {} of {}"
