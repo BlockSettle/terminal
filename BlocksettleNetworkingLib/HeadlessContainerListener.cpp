@@ -89,6 +89,10 @@ void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId
 {
    logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
    connectedClients_.erase(clientId);
+
+   if (callbacks_) {
+      callbacks_->clientDisconn(clientId);
+   }
 }
 
 void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, const std::string &data)
