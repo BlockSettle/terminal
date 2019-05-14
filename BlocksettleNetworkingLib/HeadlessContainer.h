@@ -117,8 +117,6 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
 };
 
-bool KillHeadlessProcess();
-
 
 class RemoteSigner : public HeadlessContainer
 {
@@ -198,14 +196,13 @@ public:
       , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
-   ~LocalSigner() noexcept override = default;
+   ~LocalSigner() noexcept override;
 
    bool Start() override;
    bool Stop() override;
 
 protected:
    virtual QStringList args() const;
-   virtual QString pidFileName() const;
 
 private:
    const QString  homeDir_;
