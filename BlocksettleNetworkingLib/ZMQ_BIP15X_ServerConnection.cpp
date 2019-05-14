@@ -54,6 +54,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
    , cbTrustedClients_(cbTrustedClients)
+   , heartbeatInterval_(DefaultHeartbeatInterval)
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
