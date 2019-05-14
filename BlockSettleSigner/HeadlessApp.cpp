@@ -33,11 +33,14 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       return emptyTrustedClients;
    };
 
+   const bool readClientCookie = true;
+   const bool makeServerCookie = false;
+   const std::string absCookiePath = SystemFilePaths::appDataLocation() + "/adapterClientID";
+
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
-   const std::string absCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
-      , zmqContext, cbTrustedClientsSL, false, true, absCookiePath);
+      , zmqContext, cbTrustedClientsSL, "", ""
+      , makeServerCookie, readClientCookie, absCookiePath);
    adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn
       , logger_, walletsMgr_, params);
 
@@ -157,17 +160,14 @@ void HeadlessAppObj::onlineProcessing()
 
    // Set up the connection with the terminal.
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
-   const BinaryData bdID = CryptoPRNG::generateRandom(8);
    std::vector<std::string> trustedTerms;
    std::string absTermCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "signerServerID";
-   bool ephemeralConnIDKey = true;
+      SystemFilePaths::appDataLocation() + "/signerServerID";
    bool makeServerCookie = true;
    std::string ourKeyFileDir = "";
    std::string ourKeyFileName = "";
 
    if (settings_->getTermIDKeyStr().empty()) {
-      ephemeralConnIDKey = false;
       makeServerCookie = false;
       absTermCookiePath = "";
       ourKeyFileDir = SystemFilePaths::appDataLocation();
@@ -231,8 +231,7 @@ void HeadlessAppObj::onlineProcessing()
    };
 
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , READ_UINT64_LE(bdID.getPtr()), getClientIDKeys, ephemeralConnIDKey
-      , ourKeyFileDir, ourKeyFileName, makeServerCookie, false
+      , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
    connection_->setLocalHeartbeatInterval();
 
