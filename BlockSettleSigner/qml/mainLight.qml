@@ -102,7 +102,9 @@ ApplicationWindow {
         mainWindow.width = currentDialog.width
         mainWindow.height = currentDialog.height + currentDialog.recvAddrHeight
         mainWindow.title = currentDialog.title
-        if (typeof currentDialog.qmlTitleVisible !== "undefined") currentDialog.qmlTitleVisible = false
+        if (typeof currentDialog.qmlTitleVisible !== "undefined") {
+            currentDialog.qmlTitleVisible = false
+        }
 
         currentDialog.dialogsChainFinished.connect(function(){ hide() })
         currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){
@@ -135,7 +137,9 @@ ApplicationWindow {
         mainWindow.width = currentDialog.width
         mainWindow.height = currentDialog.height
         mainWindow.title = currentDialog.title
-        if (typeof currentDialog.qmlTitleVisible !== "undefined") currentDialog.qmlTitleVisible = false
+        if (typeof currentDialog.qmlTitleVisible !== "undefined") {
+            currentDialog.qmlTitleVisible = false
+        }
 
         currentDialog.dialogsChainFinished.connect(function(){ hide() })
         currentDialog.nextChainDialogChangedOverloaded.connect(function(nextDialog){

@@ -6,6 +6,7 @@
 #include "HeadlessSettings.h"
 #include "HeadlessContainerListener.h"
 #include "ServerConnection.h"
+#include "HeadlessSettings.h"
 
 using namespace Blocksettle::Communication;
 
@@ -33,6 +34,10 @@ public:
 
    void clientDisconn(const std::string &) override
    {
+      if (owner_->settings_->runMode() == bs::signer::RunMode::lightgui) {
+         owner_->logger_->info("Quit because terminal disconnected unexpectedly and lightgui used");
+         std::exit(0);
+      }
    }
 
    void pwd(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override

@@ -9,27 +9,13 @@
 #include "BtcUtils.h"
 #include "SignerSettings.h"
 #include "SystemFileUtils.h"
-
-static const QString listenName = QString::fromStdString("listen");
-static const QString listenHelp = QObject::tr("IP address to listen on");
-
-static const QString portName = QString::fromStdString("port");
-static const QString portHelp = QObject::tr("Specify command port number");
-
-static const QString logName = QString::fromStdString("log");
-static const QString logHelp = QObject::tr("Log file name (relative to temp dir)");
-
-//static const QString walletsDirName = QString::fromStdString("dirwallets");
-//static const QString walletsDirHelp = QObject::tr("Directory where wallets reside");
+#include "bs_signer.pb.h"
+#include "HeadlessSettings.h"
+#include <QDebug>
+using namespace Blocksettle::Communication;
 
 static const QString testnetName = QString::fromStdString("testnet");
 static const QString testnetHelp = QObject::tr("Set bitcoin network type to testnet");
-
-static const QString mainnetName = QString::fromStdString("mainnet");
-static const QString mainnetHelp = QObject::tr("Set bitcoin network type to mainnet");
-
-//static const QString signName = QString::fromStdString("sign");
-//static const QString signHelp = QObject::tr("Sign transaction[s] from request file - auto toggles offline mode (headless mode only)");
 
 static const QString runModeName = QString::fromStdString("guimode");
 static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
@@ -37,148 +23,83 @@ static QString runModeHelp = QObject::tr("GUI run mode [fullgui|lightgui]");
 static const QString srvIDKeyName = QString::fromStdString("server_id_key");
 static QString srvIDKeyHelp = QObject::tr("The server's compressed BIP 150 ID key (hex)");
 
-static const QString autoSignLimitName = QString::fromStdString("auto_sign_spend_limit");
-static const QString autoSignLimitHelp = QObject::tr("Spend limit expressed in XBT for auto-sign operations");
+namespace {
 
-static const QString woName = QString::fromStdString("watchonly");
-static const QString woHelp = QObject::tr("Try to load only watching-only wallets");
+double convertFromSatoshi(uint64_t satoshi)
+{
+   if (satoshi == UINT64_MAX) {
+      return 0.0;
+   }
+   return double(satoshi) / double(BTCNumericTypes::BalanceDivider);
+}
 
-static const QString closeHeadlessName = QString::fromStdString("close_headless");
-static const QString closeHeadlessHelp = QString::fromStdString("Shutdown headless process after signer GUI exit");
+uint64_t convertToSatoshi(double xbt)
+{
+   if (xbt == 0.0) {
+      return UINT64_MAX;
+   }
+   return  uint64_t(std::llround(xbt * BTCNumericTypes::BalanceDivider));
+}
 
-SignerSettings::SignerSettings(const QString &fileName)
+} // namespace
+
+SignerSettings::SignerSettings()
    : QObject(nullptr)
+   , writableDir_(SystemFilePaths::appDataLocation())
+   , fileName_(writableDir_ + "/signer.json")
+   , d_(new Settings)
 {
-   writableDir_ = SystemFilePaths::appDataLocation();
-   backend_ = std::make_shared<QSettings>(QString::fromStdString(writableDir_ + "/") + fileName, QSettings::IniFormat);
-
-   settingDefs_ = {
-      { OfflineMode,       SettingDef(QStringLiteral("Offline"), false)},
-      { WatchingOnly,      SettingDef(QStringLiteral("WatchingOnly"), false)},
-      { TestNet,           SettingDef(QStringLiteral("TestNet"), false) },
-      //{ WalletsDir,        SettingDef(QStringLiteral("WalletsDir")) },
-      { AutoSignWallet,    SettingDef(QStringLiteral("AutoSignWallet")) },
-      { LogFileName,       SettingDef(QStringLiteral("LogFileName"), QString::fromStdString(writableDir_ + "/bs_gui_signer.log")) },
-      { ListenAddress,     SettingDef(QStringLiteral("ListenAddress"), QStringLiteral("0.0.0.0")) },
-      { ListenPort,        SettingDef(QStringLiteral("ListenPort"), 23456) },
-      { ServerIDKeyStr,    SettingDef(QStringLiteral("ServerIDKeyStr")) },
-      { LimitManualXBT,    SettingDef(QStringLiteral("Limits/Manual/XBT"), (qint64)UINT64_MAX) },
-      { LimitAutoSignXBT,  SettingDef(QStringLiteral("Limits/AutoSign/XBT"), (qint64)UINT64_MAX) },
-      { LimitAutoSignTime, SettingDef(QStringLiteral("Limits/AutoSign/Time"), 3600) },
-      { LimitManualPwKeep, SettingDef(QStringLiteral("Limits/Manual/PasswordInMemKeepInterval"), 0) },
-      { HideEidInfoBox,    SettingDef(QStringLiteral("HideEidInfoBox"), 0) },
-      { TrustedTerminals,  SettingDef(QStringLiteral("TrustedTerminals")) },
-      { TwoWayAuth,        SettingDef(QStringLiteral("TwoWayAuth"), true) }
-   };
+   HeadlessSettings::loadSettings(d_.get(), fileName_);
 }
 
-QString SignerSettings::getExportWalletsDir() const
+SignerSettings::~SignerSettings() = default;
+
+void SignerSettings::settingChanged(int setting)
 {
-   QString result = get(ExportWalletsDir).toString();
-   if (!result.isEmpty()) {
-      return result;
-   }
-   return dirDocuments();
-}
-
-QVariant SignerSettings::get(Setting set) const
-{
-   auto itSD = settingDefs_.find(set);
-   if (itSD == settingDefs_.end()) {
-      return QVariant{};
-   }
-
-   if (itSD->second.read) {   // lazy init
-      return itSD->second.value;
-   }
-
-   if (itSD->second.path.isEmpty()) {
-      itSD->second.value = itSD->second.defVal;
-   }
-   else {
-      itSD->second.value = backend_->value(itSD->second.path, itSD->second.defVal);
-   }
-
-   itSD->second.read = true;
-   return itSD->second.value;
-}
-
-void SignerSettings::set(Setting s, const QVariant &val, bool toFile)
-{
-   if (val.isValid()) {
-      auto itSD = settingDefs_.find(s);
-
-      if (itSD != settingDefs_.end()) {
-         itSD->second.read = true;
-         if (val != itSD->second.value) {
-            itSD->second.value = val;
-            if (toFile && !itSD->second.path.isEmpty()) {
-               backend_->setValue(itSD->second.path, val);
-            }
-            settingChanged(s, val);
-         }
-      }
-   }
-}
-
-void SignerSettings::reset(Setting s, bool toFile)
-{
-   auto itSD = settingDefs_.find(s);
-
-   if (itSD != settingDefs_.end()) {
-      itSD->second.read = true;
-      if (itSD->second.value != itSD->second.defVal) {
-         itSD->second.value = itSD->second.defVal;
-         if (toFile && !itSD->second.path.isEmpty()) {
-            backend_->setValue(itSD->second.path, itSD->second.value);
-         }
-         emit settingChanged(s, itSD->second.defVal);
-      }
-   }
-}
-
-void SignerSettings::settingChanged(Setting s, const QVariant &)
-{
+   auto s = signer::Setting(setting);
    switch (s) {
-   case OfflineMode:
+   case signer::OfflineMode:
       emit offlineChanged();
       break;
-   case TestNet:
+   case signer::TestNet:
       emit testNetChanged();
       break;
-   case WatchingOnly:
+   case signer::WatchingOnly:
       emit woChanged();
       break;
-   case AutoSignWallet:
+   case signer::AutoSignWallet:
       emit autoSignWalletChanged();
       break;
-   case ListenAddress:
-   case ListenPort:
+   case signer::ListenAddress:
+   case signer::ListenPort:
       emit listenSocketChanged();
       break;
-   case LimitManualXBT:
+   case signer::LimitManualXBT:
       emit limitManualXbtChanged();
       break;
-   case LimitAutoSignXBT:
+   case signer::LimitAutoSignXBT:
       emit limitAutoSignXbtChanged();
       break;
-   case LimitAutoSignTime:
+   case signer::LimitAutoSignTime:
       emit limitAutoSignTimeChanged();
       break;
-   case LimitManualPwKeep:
+   case signer::LimitManualPwKeep:
       emit limitManualPwKeepChanged();
       break;
-   case HideEidInfoBox:
+   case signer::HideEidInfoBox:
       emit hideEidInfoBoxChanged();
       break;
-   case TrustedTerminals:
+   case signer::TrustedTerminals:
       emit trustedTerminalsChanged();
       break;
-   case TwoWayAuth:
-      emit twoWayAuthChanged();
+   case signer::StartupBIP150CTX:
+      emit startupBIP150CTXChanged();
       break;
-   default: break;
+   default:
+      break;
    }
+
+   HeadlessSettings::saveSettings(*d_, fileName_);
 }
 
 // Get the server BIP 150 ID key. Intended only for when the key is passed in
@@ -200,6 +121,56 @@ bool SignerSettings::getSrvIDKeyBin(BinaryData& keyBuf)
    return true;
 }
 
+QString SignerSettings::getExportWalletsDir() const
+{
+   return QString::fromStdString(d_->export_wallets_dir());
+}
+
+QString SignerSettings::autoSignWallet() const
+{
+   return QString::fromStdString(d_->auto_sign_wallet());
+}
+
+bool SignerSettings::offline() const
+{
+   return d_->offline();
+}
+
+double SignerSettings::limitManualXbt() const
+{
+   return convertFromSatoshi(d_->limit_manual_xbt());
+}
+
+double SignerSettings::limitAutoSignXbt() const
+{
+   return convertFromSatoshi(d_->limit_auto_sign_xbt());
+}
+
+bool SignerSettings::autoSignUnlimited() const
+{
+   return (limitManualXbt() == 0.0);
+}
+
+bool SignerSettings::manualSignUnlimited() const
+{
+   return (limitAutoSignXbt() == 0.0);
+}
+
+int SignerSettings::limitAutoSignTime() const
+{
+   return d_->limit_auto_sign_time();
+}
+
+QString SignerSettings::limitAutoSignTimeStr() const
+{
+   return secondsToIntervalStr(d_->limit_auto_sign_time());
+}
+
+QString SignerSettings::limitManualPwKeepStr() const
+{
+   return secondsToIntervalStr(d_->limit_pass_keep_time());
+}
+
 bool SignerSettings::loadSettings(const QStringList &args)
 {
    QMetaEnum runModesEnum = QMetaEnum::fromType<bs::signer::ui::RunMode>();
@@ -207,50 +178,11 @@ bool SignerSettings::loadSettings(const QStringList &args)
    QCommandLineParser parser;
    parser.setApplicationDescription(QObject::tr("BlockSettle Signer"));
    parser.addHelpOption();
-   parser.addOption({ listenName, listenHelp, QObject::tr("ip/host") });
-   parser.addOption({ portName, portHelp, QObject::tr("port") });
-   parser.addOption({ logName, logHelp, QObject::tr("log") });
-   //parser.addOption({ walletsDirName, walletsDirHelp, QObject::tr("dir") });
    parser.addOption({ testnetName, testnetHelp });
-   parser.addOption({ mainnetName, mainnetHelp });
    parser.addOption({ runModeName, runModeHelp, runModeName });
    parser.addOption({ srvIDKeyName, srvIDKeyHelp, srvIDKeyName });
-   parser.addOption({ autoSignLimitName, autoSignLimitHelp, QObject::tr("limit") });
-   //parser.addOption({ signName, signHelp, QObject::tr("filename") });
-   parser.addOption({ woName, woHelp });
-   parser.addOption({ closeHeadlessName, closeHeadlessHelp, QLatin1String("true") });
 
    parser.process(args);
-
-   if (parser.isSet(listenName)) {
-      set(ListenAddress, parser.value(listenName), false);
-   }
-
-   if (parser.isSet(portName)) {
-      set(ListenPort, parser.value(portName), false);
-   }
-
-   if (parser.isSet(logName)) {
-      set(LogFileName, QString::fromStdString(writableDir_ + "/") + parser.value(logName), false);
-   }
-
-   if (parser.isSet(mainnetName)) {
-      set(TestNet, false, false);
-   }
-   else if (parser.isSet(testnetName)) {
-      set(TestNet, true, false);
-   }
-
-   if (parser.isSet(woName)) {
-      set(WatchingOnly, true, false);
-   }
-
-   if (parser.isSet(autoSignLimitName)) {
-      const auto val = parser.value(autoSignLimitName).toDouble();
-      if (val > 0) {
-         set(LimitAutoSignXBT, (qulonglong)(val * BTCNumericTypes::BalanceDivider), false);
-      }
-   }
 
    if (parser.isSet(runModeName)) {
       int runModeValue = runModesEnum.keyToValue(parser.value(runModeName).toLatin1());
@@ -261,45 +193,91 @@ bool SignerSettings::loadSettings(const QStringList &args)
       if (runMode_ != bs::signer::ui::RunMode::fullgui && runMode_ != bs::signer::ui::RunMode::lightgui) {
          return false;
       }
-   } else {
-      runMode_ = bs::signer::ui::RunMode::fullgui;
+   }
+   else {
+      return false;
    }
 
    if (parser.isSet(srvIDKeyName)) {
-      set(ServerIDKeyStr, parser.value(srvIDKeyName), false);
+      srvIDKey_ = parser.value(srvIDKeyName).toStdString();
    }
 
-//   if (parser.isSet(signName)) {
-//      if (!parser.isSet(headlessName)) {
-//         throw std::logic_error("Batch offline signing is possible only in headless mode");
-//      }
-//      reqFiles_ << parser.value(signName);
-//      set(OfflineMode, true, false);
-//   }
+   // This switch is needed when terminal is started with testnet connection and local signer used.
+   // Once settings are managed on the headless signer side we could use something better here.
+   if (parser.isSet(testnetName)) {
+      d_->set_test_net(true);
+   }
 
-   NetworkConfig config;
-   if (testNet()) {
-      config.selectNetwork(NETWORK_MODE_TESTNET);
+   if (d_->test_net()) {
+      NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
    }
    else {
-      config.selectNetwork(NETWORK_MODE_MAINNET);
-   }
-
-   if (parser.isSet(closeHeadlessName)) {
-      closeHeadless_ = QVariant::fromValue(parser.value(closeHeadlessName)).toBool();
+      NetworkConfig::selectNetwork(NETWORK_MODE_MAINNET);
    }
 
    return true;
 }
 
+QString SignerSettings::serverIDKeyStr() const
+{
+   return QString::fromStdString(srvIDKey_);
+}
+
+QString SignerSettings::listenAddress() const
+{
+   return QString::fromStdString(d_->listen_address());
+}
+
+QString SignerSettings::port() const
+{
+   if (d_->listen_port() == 0) {
+      return QLatin1String("23456");
+   }
+   return QString::number(d_->listen_port());
+}
+
+QString SignerSettings::logFileName() const
+{
+   return QString::fromStdString(writableDir_ + "/bs_gui_signer.log");
+}
+
+bool SignerSettings::testNet() const
+{
+   return d_->test_net();
+}
+
+bool SignerSettings::watchingOnly() const
+{
+   return d_->watching_only();
+}
+
 bs::signer::Limits SignerSettings::limits() const
 {
-   return bs::signer::Limits {
-      (uint64_t)get(LimitAutoSignXBT).toULongLong(),
-      (uint64_t)get(LimitManualXBT).toULongLong(),
-      get(LimitAutoSignTime).toInt(),
-      get(LimitManualPwKeep).toInt()
-   };
+   bs::signer::Limits result;
+   result.autoSignSpendXBT = d_->limit_auto_sign_xbt();
+   result.manualSpendXBT = d_->limit_manual_xbt();
+   result.autoSignTimeS = d_->limit_auto_sign_time();
+   result.manualPassKeepInMemS = d_->limit_pass_keep_time();
+   return result;
+}
+
+bool SignerSettings::hideEidInfoBox() const
+{
+   return d_->hide_eid_info_box();
+}
+
+QStringList SignerSettings::trustedTerminals() const
+{
+   QStringList result;
+   for (const auto& item : d_->trusted_terminals()) {
+      result.push_back(QString::fromStdString(item.id() + ":" + item.key()));
+   }
+   return result;
+}
+
+bool SignerSettings::startupBIP150CTX() const
+{
+   return d_->startup_bip150_ctx();
 }
 
 QString SignerSettings::dirDocuments() const
@@ -307,31 +285,103 @@ QString SignerSettings::dirDocuments() const
    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
-//void SignerSettings::setServerIDKeyStr(const QString& inKeyStr)
-//{
-//   if (inKeyStr == get(ServerIDKeyStr).toString()) {
-//      return;
-//   }
-//   set(ServerIDKeyStr, inKeyStr);
-//}
+void SignerSettings::setOffline(bool val)
+{
+   d_->set_offline(val);
+   settingChanged(signer::Setting::OfflineMode);
+}
+
+void SignerSettings::setTestNet(bool val)
+{
+   qDebug() << "test net" << val;
+   d_->set_test_net(val);
+   settingChanged(signer::Setting::TestNet);
+}
+
+void SignerSettings::setWatchingOnly(const bool val)
+{
+   d_->set_watching_only(val);
+   settingChanged(signer::Setting::WatchingOnly);
+}
 
 void SignerSettings::setExportWalletsDir(const QString &val)
 {
-#if defined (Q_OS_WIN)
-   set(ExportWalletsDir, val);
-#else
-   const auto dir = val.startsWith(QLatin1Char('/')) ? val : QLatin1String("/") + val;
-   set(ExportWalletsDir, dir);
-#endif
+   d_->set_export_wallets_dir(val.toStdString());
+   settingChanged(signer::Setting::ExportWalletsDir);
 }
 
-void SignerSettings::setXbtLimit(const double val, Setting s)
+void SignerSettings::setAutoSignWallet(const QString &val)
 {
-   uint64_t limit = UINT64_MAX;
-   if (val > 0) {
-      limit = val * BTCNumericTypes::BalanceDivider;
+   d_->set_auto_sign_wallet(val.toStdString());
+   settingChanged(signer::Setting::AutoSignWallet);
+}
+
+void SignerSettings::setListenAddress(const QString &val)
+{
+   d_->set_listen_address(val.toStdString());
+   settingChanged(signer::Setting::ListenAddress);
+}
+
+void SignerSettings::setPort(const QString &val)
+{
+   d_->set_listen_port(val.toInt());
+   settingChanged(signer::Setting::ListenPort);
+}
+
+void SignerSettings::setLimitManualXbt(const double val)
+{
+   d_->set_limit_manual_xbt(convertToSatoshi(val));
+   settingChanged(signer::Setting::LimitManualXBT);
+}
+
+void SignerSettings::setLimitAutoSignXbt(const double val)
+{
+   d_->set_limit_auto_sign_xbt(convertToSatoshi(val));
+   settingChanged(signer::Setting::LimitAutoSignXBT);
+}
+
+void SignerSettings::setLimitAutoSignTimeStr(const QString &val)
+{
+   d_->set_limit_auto_sign_time(intervalStrToSeconds(val));
+   settingChanged(signer::Setting::LimitAutoSignTime);
+}
+
+void SignerSettings::setLimitManualPwKeepStr(const QString &val)
+{
+   d_->set_limit_pass_keep_time(intervalStrToSeconds(val));
+   settingChanged(signer::Setting::LimitManualPwKeep);
+}
+
+void SignerSettings::setHideEidInfoBox(bool val)
+{
+   d_->set_hide_eid_info_box(val);
+   settingChanged(signer::Setting::HideEidInfoBox);
+}
+
+void SignerSettings::setTrustedTerminals(const QStringList &val)
+{
+   d_->clear_trusted_terminals();
+   for (const QString &s : val) {
+      if (s.isEmpty()) {
+         continue;
+      }
+
+      QStringList split = s.split(QLatin1Char(':'));
+      if (split.size() != 2) {
+         continue;
+      }
+
+      auto line = d_->add_trusted_terminals();
+      line->set_id(split[0].toStdString());
+      line->set_key(split[1].toStdString());
    }
-   set(s, (qulonglong)limit);
+   settingChanged(signer::Setting::TrustedTerminals);
+}
+
+void SignerSettings::setStartupBIP150CTX(bool val)
+{
+   d_->set_startup_bip150_ctx(val);
+   settingChanged(signer::Setting::StartupBIP150CTX);
 }
 
 QString SignerSettings::secondsToIntervalStr(int s)
@@ -341,12 +391,12 @@ QString SignerSettings::secondsToIntervalStr(int s)
       return result;
    }
    if (s >= 3600) {
-      int h = std::floor(s / 3600);
+      int h = s / 3600;
       s -= h * 3600;
       result = QString::number(h) + QLatin1String("h");
    }
    if (s >= 60) {
-      int m = std::floor(s / 60);
+      int m = s / 60;
       s -= m * 60;
       if (!result.isEmpty()) {
          result += QLatin1String(" ");
