@@ -127,15 +127,18 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    }
 
    if (!ownKeyFileDir.empty() && ownKeyFileName.empty()) {
+      logger_->debug("[{}] creating/reading static key in {}/{}", __func__
+         , ownKeyFileDir, ownKeyFileName);
       authPeers_ = make_shared<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
    }
    else {
+      logger_->debug("[{}] creating ephemeral key", __func__);
       authPeers_ = make_shared<AuthorizedPeers>();
    }
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    id_ = READ_UINT64_LE(bdID.getPtr());
 
-   if (useClientIDCookie_) {
+   if (makeServerIDCookie_) {
       genBIPIDCookie();
    }
 
