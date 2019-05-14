@@ -126,7 +126,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
          "supplied. Connection is incomplete.");
    }
 
-   if (!ownKeyFileDir.empty() && ownKeyFileName.empty()) {
+   if (!ownKeyFileDir.empty() && !ownKeyFileName.empty()) {
       logger_->debug("[{}] creating/reading static key in {}/{}", __func__
          , ownKeyFileDir, ownKeyFileName);
       authPeers_ = make_shared<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
