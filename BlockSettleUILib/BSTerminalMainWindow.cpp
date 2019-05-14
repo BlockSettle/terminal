@@ -110,7 +110,6 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
       , this, applicationSettings_);
 
    InitConnections();
-
    initArmory();
 
    walletsMgr_ = std::make_shared<bs::sync::WalletsManager>(logMgr_->logger(), applicationSettings_, armory_);
@@ -161,6 +160,8 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
    setWidgetsAuthorized(false);
 
    updateControlEnabledState();
+
+   InitWidgets();
 }
 
 void BSTerminalMainWindow::onMDConnectionDetailsRequired()
@@ -574,31 +575,9 @@ void BSTerminalMainWindow::SignerReady()
    }
 
    LoadWallets();
+   //InitWidgets();
 
-   if (!widgetsInited_) {
-      authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
-         , assetManager_, applicationSettings_, this);
-
-      InitWalletsView();
-      InitPortfolioView();
-
-      ui_->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
-
-      auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
-      quoteProvider->ConnectToCelerClient(celerConnection_);
-
-      auto dialogManager = std::make_shared<DialogManager>(geometry());
-
-      ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
-         , dialogManager, signContainer_, armory_, connectionManager_);
-      ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
-         , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
-
-      widgetsInited_ = true;
-   }
-   else {
-      signContainer_->SetUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
-   }
+   signContainer_->SetUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
 }
 
 void BSTerminalMainWindow::InitConnections()
@@ -1639,8 +1618,8 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
    InitWalletsView();
 
 
-   widgetsInited_ = false;
    InitSigningContainer();
+   InitWidgets();
    InitAuthManager();
 
    connectSigner();
@@ -1663,7 +1642,6 @@ bool BSTerminalMainWindow::goOnlineArmory() const
    // - The wallet manager has no wallets, including a settlement wallet. (NOTE:
    //   Settlement wallets are auto-generated. A future PR will change that.)
    if (armory_ && !armory_->isOnline() && armoryBDVRegistered_
-      && walletsSynched_ && walletsMgr_ && walletsMgr_->walletsCount() == 0
       /*&& !walletsMgr_->hasSettlementWallet()*/) {
       logMgr_->logger()->info("[{}] - Armory connection is going online without "
          "wallets.", __func__);
@@ -1671,4 +1649,25 @@ bool BSTerminalMainWindow::goOnlineArmory() const
    }
 
    return armory_->isOnline();
+}
+
+void BSTerminalMainWindow::InitWidgets()
+{
+   authAddrDlg_ = std::make_shared<AuthAddressDialog>(logMgr_->logger(), authManager_
+      , assetManager_, applicationSettings_, this);
+
+   InitWalletsView();
+   InitPortfolioView();
+
+   ui_->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
+
+   auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
+   quoteProvider->ConnectToCelerClient(celerConnection_);
+
+   auto dialogManager = std::make_shared<DialogManager>(geometry());
+
+   ui_->widgetRFQ->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, assetManager_
+      , dialogManager, signContainer_, armory_, connectionManager_);
+   ui_->widgetRFQReply->init(logMgr_->logger(), celerConnection_, authManager_, quoteProvider, mdProvider_, assetManager_
+      , applicationSettings_, dialogManager, signContainer_, armory_, connectionManager_);
 }
