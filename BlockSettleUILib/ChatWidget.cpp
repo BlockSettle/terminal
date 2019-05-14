@@ -852,7 +852,7 @@ void ChatWidget::selectGlobalRoom()
                                                                QLatin1String("*"),
                                                                -1,
                                                                Qt::MatchWildcard|Qt::MatchRecursive);
-      
+
    // select Global room
    for (auto index : indexes) {
       if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
