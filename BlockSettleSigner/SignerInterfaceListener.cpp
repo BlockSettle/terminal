@@ -113,15 +113,14 @@ void SignerInterfaceListener::OnConnected()
 void SignerInterfaceListener::OnDisconnected()
 {
    // Signer interface should not be used without signer, we could quit safely
-   logger_->info("[SignerInterfaceListener] disconnected, shutdown...");
-   QApplication::quit();
+   logger_->info("[SignerInterfaceListener] disconnected, shutdown");
+   shutdown();
 }
 
 void SignerInterfaceListener::OnError(DataConnectionError errorCode)
 {
-   logger_->debug("[SignerInterfaceListener] error {}", errorCode);
-   QMetaObject::invokeMethod(parent_, [this] { emit parent_->connectionError(); });
-   QApplication::quit();
+   logger_->info("[SignerInterfaceListener] error {}, shutdown", errorCode);
+   shutdown();
 }
 
 bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
@@ -501,4 +500,10 @@ void SignerInterfaceListener::onHeadlessPubKey(const std::string &data, bs::sign
    }
    itCb->second(response.pubkey());
    cbHeadlessPubKeyReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::shutdown()
+{
+   // For some reasons QApplication::quit does not work reliable
+   std::exit(0);
 }
