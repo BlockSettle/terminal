@@ -104,6 +104,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
    , const std::function<std::vector<std::string>()> &cbTrustedClients
+   , const std::string& ownKeyFileDir, const std::string& ownKeyFileName
    , const bool& makeServerCookie, const bool& readClientCookie
    , const std::string& cookiePath)
    : ZmqServerConnection(logger, context)
@@ -125,7 +126,12 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
          "supplied. Connection is incomplete.");
    }
 
-   authPeers_ = make_shared<AuthorizedPeers>();
+   if (!ownKeyFileDir.empty() && ownKeyFileName.empty()) {
+      authPeers_ = make_shared<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
+   }
+   else {
+      authPeers_ = make_shared<AuthorizedPeers>();
+   }
    BinaryData bdID = CryptoPRNG::generateRandom(8);
    id_ = READ_UINT64_LE(bdID.getPtr());
 
