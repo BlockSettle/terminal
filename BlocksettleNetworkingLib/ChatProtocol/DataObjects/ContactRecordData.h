@@ -28,6 +28,8 @@ namespace Chat {
        QString getDisplayName() const;
        void setDisplayName(const QString &displayName);
 
+       void setUserId(const QString &userId);
+
     private:
        QString userId_;
        QString contactId_;
