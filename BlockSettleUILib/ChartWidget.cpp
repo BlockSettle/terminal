@@ -283,6 +283,7 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
    connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
            this, &ChartWidget::OnInstrumentChanged);
    ui_->cboInstruments->setCurrentIndex(1); //to prevent automatic selection of parent item
+   zoomDiff_ = 0.0;
 }
 
 void ChartWidget::ProcessOhlcHistoryResponse(const std::string& data)
@@ -449,56 +450,39 @@ void ChartWidget::DrawCrossfire(QMouseEvent* event)
    horLine->setVisible(true);
 }
 
-void ChartWidget::AddNewCandle()
+void ChartWidget::UpdatePrintFlag()
 {
-   const auto currentTimestamp = QDateTime::currentMSecsSinceEpoch();
-   OhlcCandle candle;
-   candle.set_open(lastClose_);
-   candle.set_close(lastClose_);
-   candle.set_high(lastClose_);
-   candle.set_low(lastClose_);
-   candle.set_timestamp(currentTimestamp);
-   candle.set_volume(0.0);
-
-   AddDataPoint(candle.open(), candle.high(), candle.low(), candle.close(), candle.timestamp(), candle.volume());
-#if 0
-   qDebug("Added: %s, open: %f, high: %f, low: %f, close: %f, volume: %f"
-          , QDateTime::fromMSecsSinceEpoch(candle.timestamp()).toUTC().toString(Qt::ISODateWithMs).toStdString().c_str()
-          , candle.open()
-          , candle.high()
-          , candle.low()
-          , candle.close()
-          , candle.volume());
-#endif
-}
-
-void ChartWidget::ModifyCandle()
-{
-   if (!candlesticksChart_->data()->size()) {
+   if (candlesticksChart_->data()->isEmpty()) {
+      lastPrintFlag_->setVisible(false);
       return;
    }
-   const auto& lastCandle = candlesticksChart_->data()->at(candlesticksChart_->data()->size() - 1);
-   QCPFinancialData candle(*lastCandle);
-
-   candle.close = lastClose_;
-   candle.high = lastHigh_;
-   candle.low = lastLow_;
-
-   candlesticksChart_->data()->remove(lastCandle->key);
-   candlesticksChart_->data()->add(candle);
+   lastPrintFlag_->setVisible(true);
+   if (isHigh_) {
+      lastPrintFlag_->setBrush(QBrush(c_greenColor));
+   } else {
+      lastPrintFlag_->setBrush(QBrush(c_redColor));
+   }
+   auto prec = FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]);
+   lastPrintFlag_->setText(QStringLiteral("-  ") + QString::number(lastClose_, 'f', prec));
+   lastPrintFlag_->position->setCoords(ui_->customPlot->yAxis2->axisRect()->rect().right() + 2, ui_->customPlot->yAxis2->coordToPixel(lastClose_));
+   ui_->customPlot->replot();
 }
 
 void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
 {
    qreal upper = timestamp / 1000 + IntervalWidth(interval) / 1000 / 2;
    qreal lower = upper - IntervalWidth(interval, requestLimit) / 1000 - IntervalWidth(interval) / 1000 / 2;
-
+   if (!qFuzzyIsNull(zoomDiff_)) {
+      lower = upper - zoomDiff_;
+   }
    ui_->customPlot->xAxis->setRange(lower, upper);
    auto margin = IntervalWidth(dateRange_.checkedId()) / 1000 * 0.5;
    ui_->customPlot->xAxis->setRange(lower - margin, upper + margin);
    rescaleCandlesYAxis();
    ui_->customPlot->yAxis2->setNumberPrecision(
       FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]));
+   ui_->customPlot->replot();
+   UpdatePrintFlag();
 }
 
 bool ChartWidget::needLoadNewData(const QCPRange& range, const QSharedPointer<QCPFinancialDataContainer> data) const
@@ -626,14 +610,16 @@ void ChartWidget::OnDateRangeChanged(int interval)
 {
    if (lastInterval_ != interval) {
       lastInterval_ = interval;
+      zoomDiff_ = 0.0;
       UpdateChart(interval);
-
    }
 }
 
 void ChartWidget::OnInstrumentChanged(const QString& text)
 {
    if (text != getCurrentProductName()) {
+      zoomDiff_ = volumeAxisRect_->axis(QCPAxis::atBottom)->range().size();
+      isHigh_ = true;
       UpdateChart(dateRange_.checkedId());
    }
 }
@@ -718,6 +704,10 @@ void ChartWidget::OnPlotMouseMove(QMouseEvent* event)
       lastDragCoord_.setX(currentXPos);
       double tempCoeff = 10.0; //change this to impact on xAxis scale speed, the lower coeff the faster scaling
       lower_bound += diff / tempCoeff * /*scalingCoeff * */ directionCoeff;
+      auto lower_limit = candlesticksChart_->data()->constBegin()->key - (upper_bound - lower_bound) * 0.2;
+      if (lower_bound < lower_limit && directionCoeff == -1) {
+         return;
+      }
       bottomAxis->setRange(lower_bound, upper_bound);
    }
    if (isDraggingMainPlot_) {
@@ -862,6 +852,10 @@ void ChartWidget::OnWheelScroll(QWheelEvent* event)
    double tempCoeff = 120.0 / qAbs(event->angleDelta().y()) * 10;
    //change this to impact on xAxis scale speed, the lower coeff the faster scaling
    lower_bound += diff / tempCoeff * directionCoeff;
+   auto lower_limit = candlesticksChart_->data()->constBegin()->key - (upper_bound - lower_bound) * 0.2 ;
+   if (lower_bound < lower_limit && directionCoeff == -1) {
+      return;
+   }
    bottomAxis->setRange(lower_bound, upper_bound);
    ui_->customPlot->replot();
 }
@@ -1023,6 +1017,23 @@ void ChartWidget::SetupCrossfire()
    }
 }
 
+void ChartWidget::SetupLastPrintFlag()
+{
+   lastPrintFlag_ = new QCPItemText(ui_->customPlot);
+   lastPrintFlag_->setVisible(false);
+   lastPrintFlag_->setPen(Qt::NoPen);
+   lastPrintFlag_->setColor(Qt::white);
+   lastPrintFlag_->setBrush(QBrush(c_greenColor));
+   auto font = ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->labelFont();
+   lastPrintFlag_->setFont(font);
+   lastPrintFlag_->position->setType(QCPItemPosition::ptAbsolute);
+   lastPrintFlag_->position->setAxisRect(ui_->customPlot->yAxis2->axisRect());
+   lastPrintFlag_->setPositionAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+   lastPrintFlag_->setLayer(QStringLiteral("axes"));
+   lastPrintFlag_->setClipAxisRect(ui_->customPlot->yAxis2->axisRect());
+   lastPrintFlag_->setClipToAxisRect(false);
+}
+
 void ChartWidget::InitializeCustomPlot()
 {
    SetupCrossfire();
@@ -1098,6 +1109,13 @@ void ChartWidget::InitializeCustomPlot()
            qOverload<const QCPRange&, const QCPRange&>(&QCPAxis::rangeChanged),
            this,
            &ChartWidget::OnVolumeAxisRangeChanged);
+
+   SetupLastPrintFlag();
+
+   connect(ui_->customPlot->yAxis2,
+      qOverload<const QCPRange&, const QCPRange&>(&QCPAxis::rangeChanged),
+      this,
+      [this]() {UpdatePrintFlag(); });
 
    // configure axes of both main and bottom axis rect:
    dateTimeTicker->setDateTimeSpec(Qt::UTC);
@@ -1195,6 +1213,9 @@ void ChartWidget::OnNewTrade(const std::string& productName, uint64_t timestamp,
    lastCandle->high = qMax(lastCandle->high, price);
    lastCandle->low = qMin(lastCandle->low, price);
    if (!qFuzzyCompare(lastCandle->close, price) || !qFuzzyIsNull(amount)) {
+      isHigh_ = price > lastClose_;
+      lastClose_ = price;
+      UpdatePrintFlag();
       lastCandle->close = price;
       UpdateOHLCInfo(IntervalWidth(dateRange_.checkedId()) / 1000,
                      ui_->customPlot->xAxis->pixelToCoord(ui_->customPlot->mapFromGlobal(QCursor::pos()).x()));

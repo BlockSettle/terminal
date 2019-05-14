@@ -77,3 +77,8 @@ void ContactRecordData::setDisplayName(const QString &displayName)
 {
    displayName_ = displayName;
 }
+
+void ContactRecordData::setUserId(const QString &userId)
+{
+   userId_ = userId;
+}

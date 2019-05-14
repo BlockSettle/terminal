@@ -561,6 +561,7 @@ bool BSTerminalMainWindow::InitSigningContainer()
 
 void BSTerminalMainWindow::SignerReady()
 {
+   lastSignerError_ = SignContainer::NoError;
    updateControlEnabledState();
 
    if (signContainer_->hasUI()) {
@@ -930,10 +931,15 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
    });
 }
 
-void BSTerminalMainWindow::onSignerConnError(const QString &err)
+void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError error, const QString &details)
 {
+   if (lastSignerError_ == error) {
+      return;
+   }
+
+   lastSignerError_ = error;
    updateControlEnabledState();
-   showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(err));
+   showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
 }
 
 void BSTerminalMainWindow::onReceive()
@@ -1342,7 +1348,8 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo *txInfo)
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
 {
-   sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QSystemTrayIcon::Information);
+   //sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QSystemTrayIcon::Information);
+   sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QIcon(QLatin1String(":/FULL_LOGO")));
 }
 
 void BSTerminalMainWindow::closeEvent(QCloseEvent* event)

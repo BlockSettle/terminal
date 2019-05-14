@@ -45,6 +45,53 @@ message Packet
    bytes       data       = 3;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+message KeyPair
+{
+   string id = 1;
+   // In hex format
+   string key = 2;
+}
+
+enum Setting {
+   SettingInvalid = 0;
+   OfflineMode = 1;
+   TestNet = 2;
+   WatchingOnly = 3;
+   ExportWalletsDir = 4;
+   AutoSignWallet = 5;
+   ListenAddress = 6;
+   ListenPort = 7;
+   LimitManualXBT = 8;
+   LimitAutoSignXBT = 9;
+   LimitAutoSignTime = 10;
+   LimitManualPwKeep = 11;
+   HideEidInfoBox = 12;
+   TrustedTerminals = 13;
+   StartupBIP150CTX = 14;
+};
+
+message Settings
+{
+   bool offline = 1;
+   bool test_net = 2;
+   bool watching_only = 3;
+   string export_wallets_dir = 4;
+   string auto_sign_wallet = 11;
+   string listen_address = 5;
+   int32 listen_port = 6;
+   uint64 limit_manual_xbt = 7;
+   uint64 limit_auto_sign_xbt = 8;
+   int32 limit_auto_sign_time = 9;
+   int32 limit_pass_keep_time = 10;
+   bool hide_eid_info_box = 12;
+   repeated KeyPair trusted_terminals = 13;
+   bool startup_bip150_ctx = 14;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 message ReadyEvent
 {
    bool  ready = 1;

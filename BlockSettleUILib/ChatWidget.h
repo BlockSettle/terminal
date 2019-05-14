@@ -62,7 +62,7 @@ public:
 
 public slots:
    void onLoggedOut();
-   void onNewChatMessageTrayNotificationClicked(const QString &chatId);
+   void onNewChatMessageTrayNotificationClicked(const QString &userId);
 
 private slots:
    void onSendButtonClicked();
@@ -77,6 +77,8 @@ private slots:
    void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
    void onSearchUserTextEdited(const QString& text);
    void onConnectedToServer();
+   void selectGlobalRoom();
+   void onContactRequestAccepted(const QString &userId);
 
    // OTC UI slots
    void OnOTCRequestCreated();
