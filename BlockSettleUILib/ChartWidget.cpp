@@ -452,14 +452,19 @@ void ChartWidget::DrawCrossfire(QMouseEvent* event)
 
 void ChartWidget::UpdatePrintFlag()
 {
+   if (candlesticksChart_->data()->isEmpty()) {
+      lastPrintFlag_->setVisible(false);
+      return;
+   }
+   lastPrintFlag_->setVisible(true);
    if (isHigh_) {
-      xRectItem_->setBrush(QBrush(c_greenColor));
+      lastPrintFlag_->setBrush(QBrush(c_greenColor));
    } else {
-      xRectItem_->setBrush(QBrush(c_redColor));
+      lastPrintFlag_->setBrush(QBrush(c_redColor));
    }
    auto prec = FractionSizeForProduct(productTypesMapper[getCurrentProductName().toStdString()]);
-   xRectItem_->setText(QStringLiteral("-  ") + QString::number(lastClose_, 'f', prec));
-   xRectItem_->position->setCoords(ui_->customPlot->yAxis2->axisRect()->rect().right() + 2, ui_->customPlot->yAxis2->coordToPixel(lastClose_));
+   lastPrintFlag_->setText(QStringLiteral("-  ") + QString::number(lastClose_, 'f', prec));
+   lastPrintFlag_->position->setCoords(ui_->customPlot->yAxis2->axisRect()->rect().right() + 2, ui_->customPlot->yAxis2->coordToPixel(lastClose_));
    ui_->customPlot->replot();
 }
 
@@ -1012,6 +1017,23 @@ void ChartWidget::SetupCrossfire()
    }
 }
 
+void ChartWidget::SetupLastPrintFlag()
+{
+   lastPrintFlag_ = new QCPItemText(ui_->customPlot);
+   lastPrintFlag_->setVisible(false);
+   lastPrintFlag_->setPen(Qt::NoPen);
+   lastPrintFlag_->setColor(Qt::white);
+   lastPrintFlag_->setBrush(QBrush(c_greenColor));
+   auto font = ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->labelFont();
+   lastPrintFlag_->setFont(font);
+   lastPrintFlag_->position->setType(QCPItemPosition::ptAbsolute);
+   lastPrintFlag_->position->setAxisRect(ui_->customPlot->yAxis2->axisRect());
+   lastPrintFlag_->setPositionAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+   lastPrintFlag_->setLayer(QStringLiteral("axes"));
+   lastPrintFlag_->setClipAxisRect(ui_->customPlot->yAxis2->axisRect());
+   lastPrintFlag_->setClipToAxisRect(false);
+}
+
 void ChartWidget::InitializeCustomPlot()
 {
    SetupCrossfire();
@@ -1088,20 +1110,7 @@ void ChartWidget::InitializeCustomPlot()
            this,
            &ChartWidget::OnVolumeAxisRangeChanged);
 
-   //xRectItem_ = new QCPItemRect(ui_->customPlot);
-   xRectItem_ = new QCPItemText(ui_->customPlot);
-   xRectItem_->setVisible(true);
-   xRectItem_->setPen(Qt::NoPen);
-   xRectItem_->setColor(Qt::white);
-   xRectItem_->setBrush(QBrush(c_greenColor));
-   auto font = ui_->customPlot->axisRect()->axis(QCPAxis::atRight)->labelFont();
-   xRectItem_->setFont(font);
-   xRectItem_->position->setType(QCPItemPosition::ptAbsolute);
-   xRectItem_->position->setAxisRect(ui_->customPlot->yAxis2->axisRect());
-   xRectItem_->setPositionAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-   xRectItem_->setLayer(QStringLiteral("axes"));
-   xRectItem_->setClipAxisRect(ui_->customPlot->yAxis2->axisRect());
-   xRectItem_->setClipToAxisRect(false);
+   SetupLastPrintFlag();
 
    connect(ui_->customPlot->yAxis2,
       qOverload<const QCPRange&, const QCPRange&>(&QCPAxis::rangeChanged),

@@ -93,8 +93,9 @@ protected:
    bool ReadFromDataSocket() override;
 
    void resetBIP151Connection(const std::string& clientID);
-   void setBIP151Connection(const std::string& clientID);
-   bool handshakeCompleted(const ZmqBIP15XPerConnData& checkConn) {
+   std::shared_ptr<ZmqBIP15XPerConnData> setBIP151Connection(const std::string& clientID);
+
+   bool handshakeCompleted(const ZmqBIP15XPerConnData& checkConn) const {
       return (checkConn.bip150HandshakeCompleted_ &&
          checkConn.bip151HandshakeCompleted_);
    }
@@ -108,16 +109,24 @@ private:
    bool genBIPIDCookie();
    void heartbeatThread();
 
+   void UpdateClientHeartbeatTimestamp(const std::string& clientId);
+
+   bool AddConnection(const std::string& clientId, const std::shared_ptr<ZmqBIP15XPerConnData>& connection);
+   std::shared_ptr<ZmqBIP15XPerConnData> GetConnection(const std::string& clientId);
+
+private:
    std::shared_ptr<AuthorizedPeers> authPeers_;
-   std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
+   std::atomic_flag                                               connectionsLock_ = ATOMIC_FLAG_INIT;
+   std::map<std::string, std::shared_ptr<ZmqBIP15XPerConnData>>   socketConnMap_;
+
    BinaryData leftOverData_;
    uint64_t id_;
-   std::mutex  clientsMtx_;
    std::function<std::vector<std::string>()> cbTrustedClients_;
    const bool useClientIDCookie_;
    const bool makeServerIDCookie_;
    const std::string bipIDCookiePath_;
 
+   std::atomic_flag                                               heartbeatsLock_ = ATOMIC_FLAG_INIT;
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;
@@ -127,6 +136,6 @@ private:
    std::mutex              rekeyMutex_;
    std::unordered_set<std::string>  rekeyStarted_;
    std::unordered_map<std::string, std::vector<std::tuple<std::string, SendResultCb>>> pendingData_;
-   std::chrono::milliseconds heartbeatInterval_;
+   std::chrono::milliseconds heartbeatInterval_ = DefaultHeartbeatInterval;
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__
