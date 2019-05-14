@@ -91,7 +91,11 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String(MAINNET_ARMORY_BLOCKSETTLE_ADDRESS)) },
       { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), MAINNET_ARMORY_BLOCKSETTLE_PORT) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
+   #ifdef PRODUCTION_BUILD
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.36")) },
+   #else
+      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.45")) },
+   #endif
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
       { pubBridgePubKey,         SettingDef(QLatin1String("PubBridgePubKey"), QString()) },
       { envConfiguration,        SettingDef(QLatin1String("envConfiguration"), 0) },

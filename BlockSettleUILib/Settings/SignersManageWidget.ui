@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>847</width>
-    <height>678</height>
+    <width>800</width>
+    <height>500</height>
    </rect>
   </property>
   <property name="sizeHint" stdset="0">
@@ -96,6 +96,9 @@
         <property name="textElideMode">
          <enum>Qt::ElideNone</enum>
         </property>
+        <property name="showGrid">
+         <bool>false</bool>
+        </property>
         <property name="cornerButtonEnabled">
          <bool>false</bool>
         </property>
@@ -170,7 +173,7 @@
            </property>
            <property name="maximumSize">
             <size>
-             <width>120</width>
+             <width>250</width>
              <height>21</height>
             </size>
            </property>
