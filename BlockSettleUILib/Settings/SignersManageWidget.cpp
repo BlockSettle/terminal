@@ -19,8 +19,11 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    ui_->spinBoxPort->setMinimum(0);
    ui_->spinBoxPort->setMaximum(USHRT_MAX);
 
+   ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(0, 100);
+   ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(1, 50);
+   ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(2, 50);
+
    ui_->tableViewSignerKeys->setModel(signerKeysModel_);
-   ui_->tableViewSignerKeys->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->tableViewSignerKeys->horizontalHeader()->setStretchLastSection(true);
 
    connect(ui_->pushButtonAddSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::onAddSignerKey);

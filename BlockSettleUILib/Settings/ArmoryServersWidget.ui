@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>847</width>
-    <height>593</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="sizeHint" stdset="0">
    <size>
-    <width>847</width>
-    <height>593</height>
+    <width>1002</width>
+    <height>467</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -511,9 +511,18 @@
         <property name="textElideMode">
          <enum>Qt::ElideNone</enum>
         </property>
+        <property name="showGrid">
+         <bool>false</bool>
+        </property>
         <property name="cornerButtonEnabled">
          <bool>false</bool>
         </property>
+        <attribute name="horizontalHeaderDefaultSectionSize">
+         <number>140</number>
+        </attribute>
+        <attribute name="horizontalHeaderMinimumSectionSize">
+         <number>80</number>
+        </attribute>
         <attribute name="verticalHeaderVisible">
          <bool>false</bool>
         </attribute>
