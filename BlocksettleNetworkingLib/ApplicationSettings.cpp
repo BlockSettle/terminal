@@ -158,7 +158,9 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { remoteSigners,                    SettingDef(QLatin1String("RemoteSignerKeys")) },
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
-      { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys")) },
+      { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys"), QStringList()
+         << QLatin1String("0350ac2d232e0b0fb5c68a821ff8e50e42608aa62c5755485e6caa8bc14e5918ea")       // mainnet Armory cluster key
+         << QLatin1String("02ed6116a7844cae8a1dc4d5fb27922594b79cc41df081d84d2f36983757904de5")) },   // testnet Armory cluster key
       { startupBIP150CTX,                 SettingDef(QLatin1String("StartupBIP150CTX"), false) }
    };
 }
