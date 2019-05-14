@@ -340,7 +340,9 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
                return false;
             }
          }
-      } else {
+         retVal = true;
+      }
+      else {
          // Queue up the untouched data for straight transmission.
          retVal = QueueDataToSend(clientId, data, cb, false);
       }
@@ -1002,12 +1004,12 @@ void ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp(const std::string
    auto it = lastHeartbeats_.find(clientId);
    if (it == lastHeartbeats_.end()) {
       lastHeartbeats_.emplace(clientId, currentTime);
+      logger_->debug("[ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp] added {} HT: {}"
+         , BinaryData(clientId).toHexStr()
+         , std::chrono::duration_cast<std::chrono::milliseconds>(currentTime.time_since_epoch()).count());
    } else {
       it->second = currentTime;
    }
-   logger_->debug("[ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp] {} HT: {}"
-      , BinaryData(clientId).toHexStr()
-      , std::chrono::duration_cast<std::chrono::milliseconds>(currentTime.time_since_epoch()).count());
 }
 
 // Get lambda functions related to authorized peers. Copied from Armory.
