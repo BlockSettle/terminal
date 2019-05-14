@@ -1023,7 +1023,8 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
    packet.set_data(response.SerializeAsString());
 
    if (!sendData(packet.SerializeAsString(), clientId)) {
-      logger_->error("[HeadlessContainerListener] failed to send response GetHDWalletInfo packet");
+      logger_->error("[HeadlessContainerListener::{}] failed to send to {}", __func__
+         , BinaryData(clientId).toHexStr());
    }
 }
 
