@@ -19,13 +19,6 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setCellPadding(0);
    tableFormat.setCellSpacing(0);
 
-   QVector <QTextLength> col_widths;
-   col_widths << QTextLength (QTextLength::FixedLength, 110);
-   col_widths << QTextLength (QTextLength::FixedLength, 34);
-   col_widths << QTextLength (QTextLength::FixedLength, 90);
-   col_widths << QTextLength (QTextLength::VariableLength, 50);
-   tableFormat.setColumnWidthConstraints (col_widths);
-
    setAlignment(Qt::AlignHCenter);
    setAutoFormatting(QTextEdit::AutoAll);
    setAcceptRichText(true);
@@ -262,6 +255,16 @@ void ChatMessagesTextEdit::setMessageReadHandler(std::shared_ptr<ChatMessageRead
 void ChatMessagesTextEdit::setClient(std::shared_ptr<ChatClient> client)
 {
    client_ = client;
+}
+
+void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, const int &user, const int &message)
+{
+   QVector <QTextLength> col_widths;
+   col_widths << QTextLength(QTextLength::FixedLength, time);
+   col_widths << QTextLength(QTextLength::FixedLength, icon);
+   col_widths << QTextLength(QTextLength::FixedLength, user);
+   col_widths << QTextLength(QTextLength::VariableLength, message);
+   tableFormat.setColumnWidthConstraints(col_widths);
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {

@@ -62,8 +62,9 @@ public:
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    void setClient(std::shared_ptr<ChatClient> client);
+   void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
 
-   
+
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
    void rowsInserted();

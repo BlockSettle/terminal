@@ -244,6 +244,15 @@ ChatWidget::ChatWidget(QWidget *parent)
 {
    ui_->setupUi(this);
 
+#ifndef Q_OS_WIN
+   ui_->timeLabel->setMinimumSize(ui_->timeLabel->property("minimumSizeLinux").toSize());
+#endif
+
+   ui_->textEditMessages->setColumnsWidth(ui_->timeLabel->minimumWidth(),
+                                          ui_->iconLabel->minimumWidth(),
+                                          ui_->userLabel->minimumWidth(),
+                                          ui_->messageLabel->minimumWidth());
+
    //Init UI and other stuff
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
