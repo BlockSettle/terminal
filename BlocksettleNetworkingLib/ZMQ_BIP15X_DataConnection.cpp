@@ -99,22 +99,6 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
 
 ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
 {
-   hbThreadRunning_ = false;
-   hbCondVar_.notify_one();
-   hbThread_.join();
-
-   // If it exists, delete the identity cookie.
-   if (makeClientIDCookie_) {
-//      const string absCookiePath =
-//         SystemFilePaths::appDataLocation() + "/" + bipIDCookieName_;
-      if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
-         if (!SystemFileUtils::rmFile(bipIDCookiePath_)) {
-            logger_->error("[{}] Unable to delete client identity cookie ({})."
-               , __func__, bipIDCookiePath_);
-         }
-      }
-   }
-
    // Need to close connection before ZmqBIP15XDataConnection is partially destroyed!
    // Otherwise it might crash in ZmqBIP15XDataConnection::ProcessIncomingData a bit later
    closeConnection();
@@ -430,6 +414,24 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::closeConnection()
 {
+   if (hbThreadRunning_) {
+      hbThreadRunning_ = false;
+      hbCondVar_.notify_one();
+      hbThread_.join();
+   }
+
+   // If it exists, delete the identity cookie.
+   if (cookie_ == BIP15XCookie::MakeClient) {
+//      const string absCookiePath =
+//         SystemFilePaths::appDataLocation() + "/" + bipIDCookieName_;
+      if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
+         if (!SystemFileUtils::rmFile(bipIDCookiePath_)) {
+            logger_->error("[{}] Unable to delete client identity cookie ({})."
+               , __func__, bipIDCookiePath_);
+         }
+      }
+   }
+
    // If a future obj is still waiting, satisfy it to prevent lockup. This
    // shouldn't happen here but it's an emergency fallback.
    if (serverPubkeyProm_ && !serverPubkeySignalled_) {
