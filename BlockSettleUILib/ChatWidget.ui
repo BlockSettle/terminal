@@ -390,7 +390,7 @@
                     </spacer>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_2">
+                    <widget class="QLabel" name="timeLabel">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -398,6 +398,12 @@
                       </sizepolicy>
                      </property>
                      <property name="minimumSize">
+                      <size>
+                       <width>101</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="minimumSizeLinux" stdset="0">
                       <size>
                        <width>110</width>
                        <height>0</height>
@@ -409,7 +415,7 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_7">
+                    <widget class="QLabel" name="iconLabel">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -418,7 +424,7 @@
                      </property>
                      <property name="minimumSize">
                       <size>
-                       <width>34</width>
+                       <width>20</width>
                        <height>0</height>
                       </size>
                      </property>
@@ -428,7 +434,7 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_6">
+                    <widget class="QLabel" name="userLabel">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -447,9 +453,15 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_8">
+                    <widget class="QLabel" name="messageLabel">
                      <property name="text">
                       <string>Message</string>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>50</width>
+                       <height>0</height>
+                      </size>
                      </property>
                     </widget>
                    </item>

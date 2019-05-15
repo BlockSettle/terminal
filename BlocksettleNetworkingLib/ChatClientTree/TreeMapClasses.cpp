@@ -357,7 +357,3 @@ bool RootItem::insertOTCReceivedResponseObject(const std::string& otcId)
    return insertResult;
 }
 
-void CategoryElement::setNewItemsFlag(bool newItemsFlag)
-{
-   newItemsFlag_ = newItemsFlag;
-}

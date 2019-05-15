@@ -66,7 +66,7 @@ public:
    enum class State : uint8_t {
       Offline,
       Connecting,
-      Canceled,
+      Cancelled,
       Connected,
       Scanning,
       Error,
