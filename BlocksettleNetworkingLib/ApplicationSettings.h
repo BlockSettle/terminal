@@ -125,7 +125,7 @@ public:
       rememberLoginUserName,
       armoryServers,
       defaultArmoryServersKeys,
-      startupBIP150CTX,
+      twoWaySignerAuth,
       dontLoadCCList,
       _last
    };
