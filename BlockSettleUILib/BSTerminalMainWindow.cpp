@@ -1619,7 +1619,6 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
 
 
    InitSigningContainer();
-   InitWidgets();
    InitAuthManager();
 
    connectSigner();
