@@ -321,8 +321,3 @@ bool CategoryElement::getNewItemsFlag() const
 {
    return newItemsFlag_;
 }
-
-void CategoryElement::setNewItemsFlag(bool newItemsFlag)
-{
-   newItemsFlag_ = newItemsFlag;
-}

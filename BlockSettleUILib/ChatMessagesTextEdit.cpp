@@ -516,6 +516,11 @@ void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_pt
          messageReadHandler_->onRoomMessageRead(message);
       }
    }
+   for (const auto& message : messages_[currentChatId_]) {
+      if (messageReadHandler_ && !message->testFlag(Chat::MessageData::State::Read)){
+         messageReadHandler_->onRoomMessageRead(message);
+      }
+   }
    return;
 
    if (isFirstFetch) {

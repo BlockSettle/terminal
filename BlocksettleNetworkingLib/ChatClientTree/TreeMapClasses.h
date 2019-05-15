@@ -58,7 +58,6 @@ public:
    std::shared_ptr<Chat::DataObject> getDataObject() const {return dataObject_;}
    bool updateNewItemsFlag();
    bool getNewItemsFlag() const;
-   void setNewItemsFlag(bool newItemsFlag);
    private:
    std::shared_ptr<Chat::DataObject> dataObject_;
    bool newItemsFlag_;
