@@ -763,9 +763,10 @@ bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::s
    command->SetErrorCallback([requestId, this](const std::string& message) {
       QMetaObject::invokeMethod(this, [this, requestId, message] {
          auto it = activeCommands_.find(requestId);
-         std::string name = (it != activeCommands_.end()) ? it->second->GetName() : "unknown";
-         logger_->error("[AuthAddressManager::{}] error callback: {}", name, message);
-         activeCommands_.erase(requestId);
+         if (it != activeCommands_.end()) {
+            logger_->error("[AuthAddressManager::{}] error callback: {}", it->second->GetName(), message);
+            activeCommands_.erase(it);
+         }
       });
    });
 
