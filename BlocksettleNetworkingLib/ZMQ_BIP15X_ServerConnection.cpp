@@ -942,20 +942,16 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
          return nullptr;
       }
 
-      SecureBinaryData inKey = READHEX(b.substr(colonIndex + 1));
-      if (inKey.isNull()) {
-         logger_->error("[{}] Trusted client key {} [{} bytes] for {} is not "
-            "accepted: {}", __func__, inKey.toHexStr(), inKey.getSize()
-            , BinaryData(clientID).toHexStr(), e.what());
-         return nullptr;
-      }
+      std::string keyHex = b.substr(colonIndex + 1);
 
       try {
+         SecureBinaryData inKey = READHEX(keyHex);
+
          authPeers_->addPeer(inKey, vector<string>{ clientID });
       }
       catch (const std::exception &e) {
          logger_->error("[{}] Trusted client key {} [{}] for {} is malformed: {}"
-            , __func__, inKey.toHexStr(), inKey.getSize(), clientID, e.what());
+            , __func__, keyHex, keyHex.size(), BinaryData(clientID).toHexStr(), e.what());
          return nullptr;
       }
    }
