@@ -8,6 +8,7 @@
 #include <QMimeData>
 #include <QScrollBar>
 #include "ChatClientTree/TreeObjects.h"
+#include "ChatClientDataModel.h"
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
@@ -60,11 +61,23 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
       {
          static const auto ownSender = tr("you");
          QString sender = messages_[currentChatId_][row]->senderId();
+         auto contactItem = client_->getDataModel()->findContactItem(sender.toStdString());         
+
          if (sender == ownUserId_) {
-            sender = ownSender;
-         } else if (isGroupRoom_) {
-            sender = toHtmlUsername(sender);
+            return ownSender;
          }
+         
+         if (contactItem->hasDisplayName()) {
+            if (isGroupRoom_) {
+               return toHtmlUsername(contactItem->getDisplayName(), sender);
+            }
+            return contactItem->getDisplayName();
+         }
+
+         if (isGroupRoom_) {
+            return toHtmlUsername(sender);
+         }
+
          return sender;
       }
       case Column::Status:{
@@ -244,6 +257,11 @@ void ChatMessagesTextEdit::setHandler(std::shared_ptr<ChatItemActionsHandler> ha
 void ChatMessagesTextEdit::setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler)
 {
    messageReadHandler_ = handler;
+}
+
+void ChatMessagesTextEdit::setClient(std::shared_ptr<ChatClient> client)
+{
+   client_ = client;
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
@@ -580,9 +598,14 @@ void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_pt
    emit rowsInserted();
 }
 
-QString ChatMessagesTextEdit::toHtmlUsername(const QString &username)
+QString ChatMessagesTextEdit::toHtmlUsername(const QString &username, const QString &userId)
 {
    QString changedUsername = QString(QLatin1Literal("<a href=\"user:%1\" style=\"color:%2\">%1</a>")).arg(username).arg(internalStyle_.colorHyperlink().name());
+
+   if (userId.length() > 0) {
+      changedUsername = QString(QLatin1Literal("<a href=\"user:%1\" style=\"color:%2\">%3</a>")).arg(userId).arg(internalStyle_.colorHyperlink().name()).arg(username);
+   }
+
    return changedUsername;
 }
 

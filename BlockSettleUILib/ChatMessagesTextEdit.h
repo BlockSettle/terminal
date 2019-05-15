@@ -11,6 +11,7 @@
 #include <QImage>
 #include <QMenu>
 #include "ChatClientUserView.h"
+#include "ChatClient.h"
 
 namespace Chat {
    class MessageData;
@@ -60,6 +61,7 @@ public:
    void switchToChat(const QString& chatId, bool isGroupRoom = false);
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
+   void setClient(std::shared_ptr<ChatClient> client);
 
    
 signals:
@@ -105,6 +107,7 @@ private:
    QString   ownUserId_;
    std::shared_ptr<ChatItemActionsHandler> handler_;
    std::shared_ptr<ChatMessageReadHandler> messageReadHandler_;
+   std::shared_ptr<ChatClient> client_;
    
 private:
    std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
@@ -113,7 +116,7 @@ private:
    void insertLoadMore();
    void loadMore();
    QString toHtmlText(const QString &text);
-   QString toHtmlUsername(const QString &username);
+   QString toHtmlUsername(const QString &username, const QString &userId = QString());
    QString toHtmlInvalid(const QString &text);
 
    QTextTableFormat tableFormat;
