@@ -667,8 +667,16 @@ void BSTerminalMainWindow::InitAssets()
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
    if (!ccFileManager_->hasLocalFile()) {
-      logMgr_->logger()->info("Request for CC definitions from Public Bridge");
-      ccFileManager_->LoadCCDefinitionsFromPub();
+      if (applicationSettings_->get<bool>(ApplicationSettings::dontLoadCCList)) {
+         return;
+      }
+      BSMessageBox ccQuestion(BSMessageBox::question, tr("Load Private Market Securities")
+         , tr("Would you like to load PM securities from Public Bridge now?"), this);
+      const bool loadCCs = (ccQuestion.exec() == QDialog::Accepted);
+      applicationSettings_->set(ApplicationSettings::dontLoadCCList, !loadCCs);
+      if (loadCCs) {
+         ccFileManager_->LoadCCDefinitionsFromPub();
+      }
    }
    else {
       ccFileManager_->LoadSavedCCDefinitions();
@@ -845,7 +853,7 @@ void BSTerminalMainWindow::connectArmory()
       // stop armory connection loop if server key was rejected
       if (!result) {
          armory_->needsBreakConnectionLoop_.store(true);
-         armory_->setState(ArmoryConnection::State::Canceled);
+         armory_->setState(ArmoryConnection::State::Cancelled);
       }
       return result;
    });

@@ -97,6 +97,7 @@ message ReadyEvent
    bool  ready = 1;
    int32 cur_wallet = 2;
    int32 total_wallets = 3;
+   bool headless_bind_succeed = 4;
 }
 
 message PeerEvent

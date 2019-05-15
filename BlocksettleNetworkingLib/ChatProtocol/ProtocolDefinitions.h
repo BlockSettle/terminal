@@ -59,6 +59,7 @@ namespace Chat
       Accept,
       Reject,
       Request,
+      Remove
    };
 
    enum class ContactStatus {

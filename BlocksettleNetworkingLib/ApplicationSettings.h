@@ -126,6 +126,7 @@ public:
       armoryServers,
       defaultArmoryServersKeys,
       startupBIP150CTX,
+      dontLoadCCList,
       _last
    };
 
