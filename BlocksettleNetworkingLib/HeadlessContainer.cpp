@@ -1158,20 +1158,24 @@ void RemoteSigner::RecreateConnection()
 {
    logger_->info("[{}] Restart connection...", __func__);
 
-   const bool makeClientCookie = false;
+
+   ZmqBIP15XDataConnectionParams params;
+   params.ephemeralPeers = ephemeralDataConnKeys_;
+   params.ownKeyFileDir = ownKeyFileDir_;
+   params.ownKeyFileName = ownKeyFileName_;
    // Server's cookies are not available in remote mode
-   const bool readServerCookie = (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc);
+   if (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc) {
+      params.cookie = BIP15XCookie::ReadServer;
+   }
+   params.setLocalHeartbeatInterval();
 
    std::string absCookiePath;
-   if (readServerCookie) {
+   if (params.cookie == BIP15XCookie::ReadServer) {
       absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    }
 
-   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(
-      ephemeralDataConnKeys_, ownKeyFileDir_, ownKeyFileName_, makeClientCookie
-      , readServerCookie, absCookiePath);
+   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(params);
    connection_->setCBs(cbNewKey_);
-   connection_->setLocalHeartbeatInterval();
 
    headlessConnFinished_ = false;
 }

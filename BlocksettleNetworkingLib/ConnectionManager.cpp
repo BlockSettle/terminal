@@ -132,21 +132,18 @@ std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XCha
       , ownKeyFileDir, ownKeyFileName, false);
 }
 
-std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(
-   bool ephemeral, const std::string& ownKeyFileDir, const std::string& ownKeyFileName
-   , bool makeClientCookie, bool readServerCookie, const std::string& cookieName) const
+std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(const ZmqBIP15XDataConnectionParams &params) const
 {
-   auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
-      , ephemeral
-      , ownKeyFileDir
-      , ownKeyFileName
-      , true  // Monitor the conn. It relies on a connection event.
-      , makeClientCookie
-      , readServerCookie
-      , cookieName);
+   auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_, params);
    connection->SetContext(zmqContext_);
-
    return connection;
+}
+
+std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection() const
+{
+   ZmqBIP15XDataConnectionParams params;
+   params.ephemeralPeers = true;
+   return CreateZMQBIP15XDataConnection(params);
 }
 
 std::shared_ptr<ServerConnection> ConnectionManager::CreatePubBridgeServerConnection() const
