@@ -1087,6 +1087,30 @@ void ZmqBIP15XServerConnection::addAuthPeer(const BinaryData& inKey
    authPeers_->addPeer(inKey, vector<string>{ keyName });
 }
 
+void ZmqBIP15XServerConnection::updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &keys)
+{
+   const auto peers = authPeers_->getPeerNameMap();
+   for (const auto &peer : peers) {
+      try {
+         authPeers_->eraseName(peer.first);
+      }
+      catch (...) {} // just ignore exception when erasing "own" key
+   }
+   for (const auto &key : keys) {
+      if (!(CryptoECDSA().VerifyPublicKeyValid(key.second))) {
+         logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
+            , __func__, key.second.toHexStr(), key.first);
+         continue;
+      }
+      try {
+         authPeers_->addPeer(key.second, vector<string>{ key.first });
+      }
+      catch (const std::exception &e) {
+         logger_->error("[{}] failed to add peer {}: {}", __func__, key.first, e.what());
+      }
+   }
+}
+
 // Get the client's identity public key. Intended for use with local clients.
 //
 // INPUT:  The accompanying key IP:Port or name. (const string)
