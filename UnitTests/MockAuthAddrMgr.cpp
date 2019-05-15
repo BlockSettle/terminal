@@ -2,7 +2,7 @@
 
 namespace {
 
-void newKeyCb(const std::string&, const std::string&
+void newKeyCb(const std::string&, const std::string&, const std::string &
    , const std::shared_ptr<std::promise<bool>> &promise)
 {
    promise->set_value(true);
