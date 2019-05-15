@@ -365,6 +365,17 @@ namespace bs {
          uint64_t    timestamp;
       };
 
+      struct OTCPriceRange
+      {
+         uint64_t lower;
+         uint64_t upper;
+      };
+
+      struct OTCQuantityRange
+      {
+         uint64_t lower;
+         uint64_t upper;
+      };
 
       struct OTCRangeID
       {
@@ -401,18 +412,29 @@ namespace bs {
 
             }
          }
-      };
 
-      struct OTCPriceRange
-      {
-         uint64_t lower;
-         uint64_t upper;
-      };
-
-      struct OTCQuantityRange
-      {
-         uint64_t lower;
-         uint64_t upper;
+         static OTCQuantityRange toQuantityRange(const Type& range)
+         {
+            switch(range) {
+            case Type::Range1_5:
+               return OTCQuantityRange{1, 5};
+            case Type::Range5_10:
+               return OTCQuantityRange{5, 10};
+            case Type::Range10_50:
+               return OTCQuantityRange{10,50};
+            case Type::Range50_100:
+               return OTCQuantityRange{50, 100};
+            case Type::Range100_250:
+               return OTCQuantityRange{100, 250};
+            case Type::Range250plus:
+               return OTCQuantityRange{250, 1000};
+            default:
+#ifndef NDEBUG
+               throw std::runtime_error("invalid range type");
+#endif
+               return OTCQuantityRange{1, 1};
+            }
+         }
       };
 
       struct OTCRequest
@@ -453,6 +475,21 @@ namespace bs {
       struct OTCResponse
       {
          std::string       otcId;
+         std::string       requestorId;
+
+         OTCPriceRange     priceRange;
+         OTCQuantityRange  quantityRange;
+      };
+
+      struct LiveOTCResponse
+      {
+         std::string       otcId;
+         std::string       responseId;
+
+         // requestorId - owner of OTC
+         std::string       requestorId;
+         // responderId - owner of response
+         std::string       responderId;
 
          OTCPriceRange     priceRange;
          OTCQuantityRange  quantityRange;

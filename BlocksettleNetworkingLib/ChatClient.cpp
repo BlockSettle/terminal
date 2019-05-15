@@ -23,6 +23,60 @@
 #include <QDateTime>
 #include <QDebug>
 
+////////////////////////////////////////////////////////////////////////////////
+// OTC simulation time periods. Could be removed with whole simulation
+////////////////////////////////////////////////////////////////////////////////
+
+static constexpr int acceptCommonOTCTimeout = 1000;
+static constexpr int simulateResponseToMyCommonOTC = 1000;
+
+std::string ChatClient::GetNextRequestorId()
+{
+   return baseFakeRequestorId_ + std::to_string(nextRequestorId_++);
+}
+
+std::string ChatClient::GetNextResponderId()
+{
+   return baseFakeResponderId_ + std::to_string(nextResponderId_++);
+}
+
+std::string ChatClient::GetNextRequestId()
+{
+   return std::to_string(nextRequestId_++);
+}
+
+std::string ChatClient::GetNextOTCId()
+{
+   return std::to_string(nextOtcId_++);
+}
+
+std::string ChatClient::GetNextResponseId()
+{
+   return std::to_string(nextResponseId_++);
+}
+
+void ChatClient::ScheduleForExpire(const bs::network::LiveOTCRequest& liveRequest)
+{
+   const auto expireInterval = liveRequest.expireTimestamp - QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+
+   QTimer::singleShot(expireInterval, [this, otcId = liveRequest.otcId]
+   {
+      auto it = aliveOtcRequests_.find(otcId);
+      if (aliveOtcRequests_.end() != it) {
+         aliveOtcRequests_.erase(it);
+
+         if (ownOtcId_ == otcId) {
+            ownOtcId_.clear();
+            emit OwnOTCRequestExpired(otcId);
+         } else {
+            emit OTCRequestExpired(otcId);
+         }
+      }
+   });
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::RoomData>)
@@ -1260,16 +1314,31 @@ void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
    sendUpdateMessageState(message);
 }
 
-bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
+bool ChatClient::SubmitCommonOTCRequest(const bs::network::OTCRequest& request)
 {
    if (request.ownRequest && !ownOtcId_.empty()) {
-      logger_->debug("[ChatClient::SubmitOTCRequest] already have own OTC");
+      logger_->debug("[ChatClient::SubmitCommonOTCRequest] already have own OTC");
       return false;
    }
 
+   if (!sendCommonOTCRequest(request)) {
+      logger_->error("[ChatClient::SubmitCommonOTCRequest] failed to sendcommon OTC request");
+      return false;
+   }
+
+   return true;
+}
+
+bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
+{
+   // XXX - do actual send and return true if message was sent to chat server
+
+   // all down is part of a flow simulation
    bs::network::LiveOTCRequest liveRequest;
 
-   liveRequest.otcId = std::to_string(nextOtcId_++);
+   const bool simulateResponse = request.ownRequest && request.fakeReplyRequired;
+
+   liveRequest.otcId = GetNextOTCId();
    liveRequest.ownRequest = request.ownRequest;
    liveRequest.side = request.side;
    liveRequest.amountRange = request.amountRange;
@@ -1280,49 +1349,110 @@ bool ChatClient::SubmitOTCRequest(const bs::network::OTCRequest& request)
       ownOtcId_ = liveRequest.otcId;
 
       // simulate 1 second delay on accept response
-      QTimer::singleShot(1000, [this, liveRequest]
+      QTimer::singleShot(acceptCommonOTCTimeout, [this, liveRequest, simulateResponse]
          {
-            emit OTCRequestAccepted(liveRequest);
+            HandleCommonOTCRequestAccepted(liveRequest);
+
+            if (simulateResponse) {
+               QTimer::singleShot(simulateResponseToMyCommonOTC, [this, liveRequest]
+                  {
+                     bs::network::LiveOTCResponse response;
+
+                     response.otcId = liveRequest.otcId;
+                     response.responseId = GetNextResponseId();
+
+                     response.requestorId = currentUserId_;
+                     response.responderId = GetNextResponderId();
+
+                     response.priceRange = bs::network::OTCPriceRange{3300, 3700};
+                     response.quantityRange = bs::network::OTCRangeID::toQuantityRange(liveRequest.amountRange);
+
+                     HandleCommonOTCResponse(response);
+                  });
+            }
          });
    } else {
-      liveRequest.requestorId = baseFakeRequestorId_ + std::to_string(nextRequestorId_++);
-      emit NewOTCRequestReceived(liveRequest);
+      liveRequest.requestorId = GetNextRequestorId();
+      HandleCommonOTCRequest(liveRequest);
    }
-
-   aliveOtcRequests_.emplace(liveRequest.otcId);
-
-   const auto expireInterval = liveRequest.expireTimestamp - QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-
-   QTimer::singleShot(expireInterval, [this, otcId = liveRequest.otcId]
-   {
-      auto it = aliveOtcRequests_.find(otcId);
-      if (aliveOtcRequests_.end() != it) {
-         aliveOtcRequests_.erase(it);
-
-         if (ownOtcId_ == otcId) {
-            ownOtcId_.clear();
-            emit OwnOTCRequestExpired(otcId);
-         } else {
-            emit OTCRequestExpired(otcId);
-         }
-      }
-   });
 
    return true;
 }
 
+void ChatClient::HandleCommonOTCRequest(const bs::network::LiveOTCRequest& liveOTCRequest)
+{
+   aliveOtcRequests_.emplace(liveOTCRequest.otcId);
+   ScheduleForExpire(liveOTCRequest);
+
+   emit NewOTCRequestReceived(liveOTCRequest);
+}
+
+void ChatClient::HandleCommonOTCRequestAccepted(const bs::network::LiveOTCRequest& liveOTCRequest)
+{
+   aliveOtcRequests_.emplace(liveOTCRequest.otcId);
+   ScheduleForExpire(liveOTCRequest);
+
+   emit OTCRequestAccepted(liveOTCRequest);
+}
+
+void ChatClient::HandleCommonOTCRequestRejected(const std::string& rejectReason)
+{
+   emit OTCOwnRequestRejected(QString::fromStdString(rejectReason));
+}
+
+void ChatClient::HandleCommonOTCRequestCancelled(const std::string& otcId)
+{
+   ownOtcId_.clear();
+   auto it = aliveOtcRequests_.find(otcId);
+   if (it != aliveOtcRequests_.end()) {
+      aliveOtcRequests_.erase(it);
+   }
+
+   emit OTCRequestCancelled(otcId);
+}
+
+void ChatClient::HandleAcceptedCommonOTCResponse(const bs::network::LiveOTCResponse& response)
+{
+   model_->insertOTCSentResponse(response.otcId);
+}
+
+void ChatClient::HandleRejectedCommonOTCResponse(const std::string& otcId, const std::string& reason)
+{
+   emit CommonOTCResponseRejected(otcId, QString::fromStdString(reason));
+}
+
+// HandleCommonOTCResponse - handle response we receive to our OTC request
+//    sent to common OTC chat room
+void ChatClient::HandleCommonOTCResponse(const bs::network::LiveOTCResponse& response)
+{
+   model_->insertOTCReceivedResponse(response.otcId);
+}
+
 // cancel current OTC request sent to OTC chat
-bool ChatClient::PullOwnOTCRequest(const std::string& otcRequestId)
+bool ChatClient::PullCommonOTCRequest(const std::string& otcRequestId)
 {
    if (ownOtcId_ != otcRequestId) {
-      logger_->error("[ChatClient::PullOwnOTCRequest] invalid OTC ID");
+      logger_->error("[ChatClient::PullCommonOTCRequest] invalid OTC ID");
       // XXX probably something should be emitted, since chat server will(should) reject pull request
       return false;
    }
 
-   ownOtcId_.clear();
+   HandleCommonOTCRequestCancelled(otcRequestId);
+   return true;
+}
 
-   emit OTCRequestCancelled(otcRequestId);
+bool ChatClient::SubmitCommonOTCResponse(const bs::network::OTCResponse& response)
+{
+   bs::network::LiveOTCResponse liveResponse;
+
+   liveResponse.otcId = response.otcId;
+   liveResponse.responseId = GetNextResponseId();
+   liveResponse.requestorId = response.requestorId;
+   liveResponse.responderId = currentUserId_;
+   liveResponse.priceRange = response.priceRange;
+   liveResponse.quantityRange = response.quantityRange;
+
+   HandleAcceptedCommonOTCResponse(liveResponse);
    return true;
 }
 
@@ -1338,16 +1468,4 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
    addOrUpdateContact(crecord->getContactId(),
                       crecord->getContactStatus(),
                       crecord->getDisplayName());
-}
-
-bool ChatClient::SubmitOTCResponse(const bs::network::OTCResponse& response)
-{
-   model_->insertOTCSentResponse(response.otcId);
-
-   // UI flow debug block
-   if (response.otcId == ownOtcId_) {
-      model_->insertOTCReceivedResponse(response.otcId);
-   }
-
-   return true;
 }

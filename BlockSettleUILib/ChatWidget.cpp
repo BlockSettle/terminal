@@ -620,7 +620,7 @@ void ChatWidget::OnOTCRequestCreated()
 
    auto otcRequest = bs::network::OTCRequest{side, range, ownOTC, replyRequired};
 
-   if (!client_->SubmitOTCRequest(otcRequest)) {
+   if (!client_->SubmitCommonOTCRequest(otcRequest)) {
       logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit request to OTC chat");
       return;
    }
@@ -634,16 +634,14 @@ void ChatWidget::OnOTCRequestCreated()
 
 void ChatWidget::OnPullOwnOTCRequest(const std::string& otcId)
 {
-   client_->PullOwnOTCRequest(otcId);
+   client_->PullCommonOTCRequest(otcId);
 }
 
 void ChatWidget::OnOTCResponseCreated()
 {
    const auto response = ui_->widgetCreateOTCResponse->GetCurrentOTCResponse();
 
-   qDebug() << "submitting response";
-
-   if (client_->SubmitOTCResponse(response)) {
+   if (client_->SubmitCommonOTCResponse(response)) {
       // create channel for response, but negotiation will be disabled until we
       // receive Ack from chat server that response is accepted by the system
    } else {
