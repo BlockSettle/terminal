@@ -86,8 +86,9 @@ public:
    void rekey(const std::string &clientId);
    void setLocalHeartbeatInterval();
 
-   static const std::chrono::milliseconds DefaultHeartbeatInterval;
-   static const std::chrono::milliseconds LocalHeartbeatInterval;
+   // There was some issues with static field initalization order so use static function here
+   static const std::chrono::milliseconds getDefaultHeartbeatInterval();
+   static const std::chrono::milliseconds getLocalHeartbeatInterval();
 
 protected:
    // Overridden functions from ZmqServerConnection.
@@ -138,6 +139,6 @@ private:
    std::mutex              rekeyMutex_;
    std::unordered_set<std::string>  rekeyStarted_;
    std::unordered_map<std::string, std::vector<std::tuple<std::string, SendResultCb>>> pendingData_;
-   std::chrono::milliseconds heartbeatInterval_ = DefaultHeartbeatInterval;
+   std::chrono::milliseconds heartbeatInterval_ = getDefaultHeartbeatInterval();
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

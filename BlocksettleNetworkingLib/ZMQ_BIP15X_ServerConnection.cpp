@@ -8,12 +8,6 @@
 
 using namespace std;
 
-// Used with remote connections (terminal/Celer)
-const std::chrono::milliseconds ZmqBIP15XServerConnection::DefaultHeartbeatInterval = std::chrono::seconds(30);
-
-// Used with local connections (terminal/signer/signer GUI)
-const std::chrono::milliseconds ZmqBIP15XServerConnection::LocalHeartbeatInterval = std::chrono::seconds(3);
-
 // A call resetting the encryption-related data for individual connections.
 //
 // INPUT:  None
@@ -54,6 +48,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
    , cbTrustedClients_(cbTrustedClients)
+   , heartbeatInterval_(getDefaultHeartbeatInterval())
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
@@ -410,7 +405,19 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
 
 void ZmqBIP15XServerConnection::setLocalHeartbeatInterval()
 {
-   heartbeatInterval_ = LocalHeartbeatInterval;
+   heartbeatInterval_ = getLocalHeartbeatInterval();
+}
+
+// static
+const chrono::milliseconds ZmqBIP15XServerConnection::getDefaultHeartbeatInterval()
+{
+   return std::chrono::seconds(30);
+}
+
+// static
+const chrono::milliseconds ZmqBIP15XServerConnection::getLocalHeartbeatInterval()
+{
+   return std::chrono::seconds(3);
 }
 
 // A send function for the data connection that sends data to all clients,
@@ -935,19 +942,16 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
          return nullptr;
       }
 
-      SecureBinaryData inKey = READHEX(b.substr(colonIndex + 1));
-      if (inKey.isNull()) {
-         logger_->error("[{}] Trusted client key for {} is malformed."
-            , __func__, clientID);
-         return nullptr;
-      }
+      std::string keyHex = b.substr(colonIndex + 1);
 
       try {
+         SecureBinaryData inKey = READHEX(keyHex);
+
          authPeers_->addPeer(inKey, vector<string>{ clientID });
       }
       catch (const std::exception &e) {
          logger_->error("[{}] Trusted client key {} [{}] for {} is malformed: {}"
-            , __func__, inKey.toHexStr(), inKey.getSize(), clientID, e.what());
+            , __func__, keyHex, keyHex.size(), BinaryData(clientID).toHexStr(), e.what());
          return nullptr;
       }
    }

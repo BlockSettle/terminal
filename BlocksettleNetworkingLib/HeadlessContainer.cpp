@@ -176,6 +176,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
          emit error(HeadlessContainer::SerializationFailed, tr("failed to parse auth reply"));
          return;
       }
+
       if (HeadlessContainer::mapNetworkType(response.nettype()) != netType_) {
          logger_->error("[HeadlessListener] network type mismatch");
          emit error(HeadlessContainer::NetworkTypeMismatch, tr("network type mismatch"));
@@ -255,54 +256,6 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
 {
    qRegisterMetaType<headless::RequestPacket>();
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
-}
-
-static int killProcess(int pid, int timeout)
-{
-#ifdef Q_OS_WIN
-   DWORD dRet = TerminateWinApp((DWORD)pid, timeout);
-   return dRet;
-
-//   HANDLE hProc;
-//   hProc = ::OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-//   ::TerminateProcess(hProc, 0);
-//   ::CloseHandle(hProc);
-#else    // !Q_OS_WIN
-   QProcess::execute(QLatin1String("kill"), { QString::number(pid) });
-   return 0;
-#endif   // Q_OS_WIN
-}
-
-static const QString pidFN = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QLatin1String("/bs_headless.pid");
-
-QString LocalSigner::pidFileName() const
-{
-   return pidFN;
-}
-
-bool KillHeadlessProcess()
-{
-   QFile pidFile(pidFN);
-   if (pidFile.exists()) {
-      if (pidFile.open(QIODevice::ReadOnly)) {
-         const auto pidData = pidFile.readAll();
-         pidFile.close();
-         const auto pid = atoi(pidData.toStdString().c_str());
-         if (pid <= 0) {
-            qDebug() << "[HeadlessContainer] invalid PID" << pid <<"in" << pidFN;
-         }
-         else {
-            killProcess(pid, kKillTimeout);
-            qDebug() << "[HeadlessContainer] killed previous headless process with PID" << pid;
-            return true;
-         }
-      }
-      else {
-         qDebug() << "[HeadlessContainer] Failed to open PID file" << pidFN;
-      }
-      pidFile.remove();
-   }
-   return false;
 }
 
 bs::signer::RequestId HeadlessContainer::Send(headless::RequestPacket packet, bool incSeqNo)
@@ -1268,7 +1221,7 @@ void RemoteSigner::onDisconnected()
    missingWallets_.clear();
    woWallets_.clear();
 
-   // signRequests_ will be empty after moving out (that's in the C++ std)
+   // signRequests_ will be empty after that
    std::set<bs::signer::RequestId> tmpReqs = std::move(signRequests_);
 
    for (const auto &id : tmpReqs) {
@@ -1474,6 +1427,11 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
       , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
 {}
 
+LocalSigner::~LocalSigner() noexcept
+{
+   Stop();
+}
+
 QStringList LocalSigner::args() const
 {
    auto walletsCopyDir = homeDir_ + QLatin1String("/copy");
@@ -1512,13 +1470,10 @@ QStringList LocalSigner::args() const
 
 bool LocalSigner::Start()
 {
+   Stop();
+
    // If there's a previous headless process, stop it.
-   KillHeadlessProcess();
    headlessProcess_ = std::make_shared<QProcess>();
-   connect(headlessProcess_.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished)
-      , [this](int exitCode, QProcess::ExitStatus exitStatus) {
-      QFile::remove(pidFileName());
-   });
 
 #ifdef Q_OS_WIN
    const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer.exe");
@@ -1535,7 +1490,6 @@ bool LocalSigner::Start()
       logger_->error("[HeadlessContainer] Signer binary {} not found"
          , signerAppPath.toStdString());
       emit connectionError(UnknownError, tr("missing signer binary"));
-      emit ready();
       return false;
    }
 
@@ -1552,24 +1506,11 @@ bool LocalSigner::Start()
 
    headlessProcess_->start(signerAppPath, cmdArgs);
    if (!headlessProcess_->waitForStarted(kStartTimeout)) {
-      logger_->error("[HeadlessContainer] Failed to start child");
+      logger_->error("[HeadlessContainer] Failed to start process");
       headlessProcess_.reset();
-      emit ready();
+      emit connectionError(UnknownError, tr("failed to start process"));
       return false;
    }
-
-   QFile pidFile(pidFileName());
-   if (pidFile.open(QIODevice::WriteOnly)) {
-      const auto pidStr = \
-         QString::number(headlessProcess_->processId()).toStdString();
-      pidFile.write(pidStr.data(), pidStr.size());
-      pidFile.close();
-   }
-   else {
-      logger_->warn("[LocalSigner::{}] Failed to open PID file {} for writing"
-         , __func__, pidFileName().toStdString());
-   }
-   logger_->debug("[LocalSigner::{}] child process started", __func__);
 
    // Give the signer a little time to get set up.
    QThread::msleep(250);
@@ -1582,14 +1523,9 @@ bool LocalSigner::Stop()
    RemoteSigner::Stop();
 
    if (headlessProcess_) {
-#ifdef Q_OS_WIN
-      int ret = killProcess(headlessProcess_->processId(), kKillTimeout);
-      logger_->info("Local headless process terminated with code {}", ret);
-#else
-      headlessProcess_->terminate();
-#endif
       if (!headlessProcess_->waitForFinished(kKillTimeout)) {
-         headlessProcess_->close();
+         headlessProcess_->terminate();
+         headlessProcess_->waitForFinished(kKillTimeout);
       }
       headlessProcess_.reset();
    }
