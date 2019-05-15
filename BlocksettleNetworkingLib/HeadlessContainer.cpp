@@ -1163,15 +1163,12 @@ void RemoteSigner::RecreateConnection()
    params.ephemeralPeers = ephemeralDataConnKeys_;
    params.ownKeyFileDir = ownKeyFileDir_;
    params.ownKeyFileName = ownKeyFileName_;
+   params.setLocalHeartbeatInterval();
+
    // Server's cookies are not available in remote mode
    if (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc) {
       params.cookie = BIP15XCookie::ReadServer;
-   }
-   params.setLocalHeartbeatInterval();
-
-   std::string absCookiePath;
-   if (params.cookie == BIP15XCookie::ReadServer) {
-      absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+      params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    }
 
    connection_ = connectionManager_->CreateZMQBIP15XDataConnection(params);
