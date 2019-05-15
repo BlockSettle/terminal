@@ -387,7 +387,7 @@ bool WalletsManager::walletNameExists(const std::string &walletName) const
 BTCNumericTypes::balance_type WalletsManager::getSpendableBalance() const
 {
    if (!isArmoryReady()) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    // TODO: make it lazy init
    BTCNumericTypes::balance_type totalSpendable = 0;
