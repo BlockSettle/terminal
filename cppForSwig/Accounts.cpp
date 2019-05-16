@@ -405,7 +405,7 @@ void AssetAccount::extendPrivateChain(
    ReentrantLock lock(this);
    auto lastIndex = getLastComputedIndex();
 
-   unsigned assetIndex = 0;
+   unsigned assetIndex = UINT32_MAX;
    if (assetPtr != nullptr)
       assetIndex = assetPtr->getIndex();
 
@@ -421,9 +421,9 @@ void AssetAccount::extendPrivateChain(
          auto iter = assets_.find(id);
          if (iter != assets_.end())
          {
-            //do not overwrite an existing asset that already has a privkey
             if (iter->second->hasPrivateKey())
             {
+               //do not overwrite an existing asset that already has a privkey
                continue;
             }
             else
@@ -514,9 +514,9 @@ unsigned AssetAccount::getAndBumpHighestUsedIndex()
 {
    ReentrantLock lock(this);
 
-   auto index = lastUsedIndex_++;
+   ++lastUsedIndex_;
    updateHighestUsedIndex();
-   return index;
+   return lastUsedIndex_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -535,13 +535,6 @@ shared_ptr<AssetEntry> AssetAccount::getNewAsset()
    }
 
    return entryIter->second;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-shared_ptr<AddressEntry> AssetAccount::getNewAddress(AddressEntryType aeType)
-{
-   auto asset = getNewAsset();
-   return AddressEntry::instantiate(asset, aeType);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -618,6 +611,71 @@ const SecureBinaryData& AssetAccount::getChaincode() const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+shared_ptr<Asset_PrivateKey> AssetAccount::fillPrivateKey(
+   shared_ptr<DecryptedDataContainer> ddc,
+   const BinaryData& id)
+{
+   if (id.getSize() != 12)
+      throw AccountException("unexpected asset id length");
+
+   //get the asset
+   auto assetID_bdr = id.getSliceRef(8, 4);
+   auto assetID = READ_UINT32_BE(assetID_bdr);
+
+   auto iter = assets_.find(assetID);
+   if (iter == assets_.end())
+      throw AccountException("invalid asset id");
+
+   auto thisAsset = std::dynamic_pointer_cast<AssetEntry_Single>(iter->second);
+   if (thisAsset == nullptr)
+      throw AccountException("unexpected asset type in map");
+
+   //sanity check
+   if (thisAsset->hasPrivateKey())
+      return thisAsset->getPrivKey();
+
+   //reverse iter through the map, find closest previous asset with priv key
+   //this is only necessary for armory 1.35 derivation
+   shared_ptr<AssetEntry> prevAssetWithKey = nullptr;
+   map<unsigned, shared_ptr<AssetEntry>>::reverse_iterator rIter(iter);
+   while (rIter != assets_.rend())
+   {
+      if (rIter->second->hasPrivateKey())
+      {
+         prevAssetWithKey = rIter->second;
+         break;
+      }
+
+      ++rIter;
+   }
+   
+   //if no asset in map had a private key, use the account root instead
+   if (prevAssetWithKey == nullptr)
+      prevAssetWithKey = root_;
+
+   //figure out the asset count
+   unsigned count = assetID - (unsigned)prevAssetWithKey->getIndex();
+
+   //extend the private chain
+   extendPrivateChain(ddc, prevAssetWithKey, count);
+
+   //grab the fresh asset, return its private key
+   auto privKeyIter = assets_.find(assetID);
+   if (privKeyIter == assets_.end())
+      throw AccountException("invalid asset id");
+
+   if (!privKeyIter->second->hasPrivateKey())
+      throw AccountException("fillPrivateKey failed");
+
+   auto assetSingle = 
+      std::dynamic_pointer_cast<AssetEntry_Single>(privKeyIter->second);
+   if(assetSingle == nullptr)
+      throw AccountException("fillPrivateKey failed");
+
+   return assetSingle->getPrivKey();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //// AddressAccount
 ////////////////////////////////////////////////////////////////////////////////
@@ -629,16 +687,16 @@ void AddressAccount::make_new(
 {
    reset();
 
-   //asset account lambda
-   auto createNewAccount = [&decrData, this](
+   //create root asset
+   auto createRootAsset = [&decrData, this](
       shared_ptr<AccountType_BIP32> accBip32,
-      unsigned node_id, unique_ptr<Cipher> cipher_copy)
-         ->shared_ptr<AssetAccount>
+      unsigned node_id, unique_ptr<Cipher> cipher_copy)->
+      shared_ptr<AssetEntry_BIP32Root>
    {
       auto&& account_id = WRITE_UINT32_BE(node_id);
       auto&& full_account_id = ID_ + account_id;
 
-      shared_ptr<AssetEntry_Single> rootAsset;
+      shared_ptr<AssetEntry_BIP32Root> rootAsset;
       SecureBinaryData chaincode;
 
       BIP32_Node node;
@@ -691,8 +749,10 @@ void AddressAccount::make_new(
             decrData->encryptData(cipher_copy.get(), node.getPrivateKey());
 
          //create assets
+         auto privKeyID = full_account_id;
+         privKeyID.append(WRITE_UINT32_LE(UINT32_MAX));
          auto priv_asset = make_shared<Asset_PrivateKey>(
-            -1, encrypted_root, move(cipher_copy));
+            privKeyID, encrypted_root, move(cipher_copy));
          rootAsset = make_shared<AssetEntry_BIP32Root>(
             -1, full_account_id,
             pubkey, priv_asset,
@@ -700,11 +760,37 @@ void AddressAccount::make_new(
             node.getDepth(), node.getLeafID());
       }
 
+      return rootAsset;
+   };
+
+   //asset account lambda
+   auto createNewAccount = [this](
+      shared_ptr<AssetEntry_BIP32Root> rootAsset,
+      shared_ptr<DerivationScheme_BIP32> derScheme)->
+      shared_ptr<AssetAccount>
+   {
+      if(rootAsset == nullptr)
+         throw AccountException("null root asset");
+
       //der scheme
-      if (chaincode.getSize() == 0)
-         throw AccountException("invalid chaincode");
-      auto derScheme = make_shared<DerivationScheme_BIP32>(
-         chaincode, node.getDepth(), node.getLeafID());
+      if(derScheme == nullptr)
+      {
+         auto chaincode = rootAsset->getChaincode();
+         if (chaincode.getSize() == 0)
+            throw AccountException("invalid chaincode");
+
+         derScheme = make_shared<DerivationScheme_BIP32>(
+            chaincode, rootAsset->getDepth(), rootAsset->getLeafID());
+      }
+
+      //account id
+      auto full_account_id = rootAsset->getAccountID();
+      auto len = full_account_id.getSize();
+      if (ID_.getSize() > len)
+         throw AccountException("unexpected ID size");
+
+      auto account_id = full_account_id.getSliceCopy(
+         ID_.getSize(), len - ID_.getSize());
 
       //instantiate account
       auto asset_account = make_shared<AssetAccount>(
@@ -784,9 +870,12 @@ void AddressAccount::make_new(
          if (node == UINT32_MAX)
             throw AccountException("UINT32_MAX is a reserved node value");
 
-         auto account_obj = createNewAccount(
+         auto root_obj = createRootAsset(
             accBip32, node,
             move(cipher->getCopy()));
+         auto account_obj = createNewAccount(
+            root_obj, nullptr);
+         
          addAccount(account_obj);
       }
 
@@ -794,10 +883,11 @@ void AddressAccount::make_new(
    }
 
    case AccountTypeEnum_BIP32_Custom:
+   case AccountTypeEnum_BIP32_Salted:
    {
       auto accBip32 = dynamic_pointer_cast<AccountType_BIP32>(accType);
       if (accBip32 == nullptr)
-         throw runtime_error("unexpected account type");
+         throw AccountException("unexpected account type");
 
       ID_ = accType->getAccountID();
 
@@ -806,39 +896,79 @@ void AddressAccount::make_new(
       {
          for (auto& node : nodes)
          {
-            shared_ptr<AssetAccount> account_obj;
+            shared_ptr<AssetEntry_BIP32Root> root_obj;
             if (cipher != nullptr)
             {
-               account_obj = createNewAccount(
+               root_obj = createRootAsset(
                   accBip32, node,
                   move(cipher->getCopy()));
             }
             else
             {
-               account_obj = createNewAccount(
+               root_obj = createRootAsset(
                   accBip32, node,
                   nullptr);
             }
             
+            shared_ptr<DerivationScheme_BIP32> derScheme = nullptr;
+            if (accType->type() == AccountTypeEnum_BIP32_Salted)
+            {
+               auto accSalted = 
+                  dynamic_pointer_cast<AccountType_BIP32_Salted>(accType);
+               if (accSalted == nullptr)
+                  throw AccountException("unexpected account type");
+
+               auto chaincode = root_obj->getChaincode();
+               auto salt = accSalted->getSalt();
+               derScheme = 
+                  make_shared<DerivationScheme_BIP32_Salted>(
+                     salt, chaincode, 
+                     root_obj->getDepth(), root_obj->getLeafID());
+            }
+
+            auto account_obj = createNewAccount(
+               root_obj, derScheme);
             addAccount(account_obj);
          }
       }
       else
       {
-         shared_ptr<AssetAccount> account_obj;
+         shared_ptr<AssetEntry_BIP32Root> root_obj;
          if (cipher != nullptr)
          {
-            account_obj = createNewAccount(
-               accBip32, UINT32_MAX, //check AccountType_BIP32_Custom comments for more info
+            root_obj = createRootAsset(
+               accBip32, 
+               //check AccountType_BIP32_Custom comments for more info
+               UINT32_MAX, 
                move(cipher->getCopy()));
          }
          else
          {
-            account_obj = createNewAccount(
-               accBip32, UINT32_MAX, //check AccountType_BIP32_Custom comments for more info
+            root_obj = createRootAsset(
+               accBip32, 
+               //check AccountType_BIP32_Custom comments for more info
+               UINT32_MAX, 
                nullptr);
          }
+
+         shared_ptr<DerivationScheme_BIP32> derScheme = nullptr;
+         if (accType->type() == AccountTypeEnum_BIP32_Salted)
+         {
+            auto accSalted = 
+               dynamic_pointer_cast<AccountType_BIP32_Salted>(accType);
+            if (accSalted == nullptr)
+               throw AccountException("unexpected account type");
+
+            auto chaincode = root_obj->getChaincode();
+            auto salt = accSalted->getSalt();
+            derScheme = 
+               make_shared<DerivationScheme_BIP32_Salted>(
+                  salt, chaincode, 
+                  root_obj->getDepth(), root_obj->getLeafID());
+         }
             
+         auto account_obj = createNewAccount(
+            root_obj, derScheme);
          addAccount(account_obj);
       }
 
@@ -870,6 +1000,8 @@ void AddressAccount::reset()
    addressTypes_.clear();
    addressHashes_.clear();
    ID_.clear();
+
+   addresses_.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -919,6 +1051,10 @@ void AddressAccount::commit()
    CharacterArrayRef carData(bwData.getSize(), bwData.getData().getCharPtr());
 
    db_->insert(carKey, carData);
+
+   //commit instantiated address types
+   for (auto& addrPair : addresses_)
+      writeAddressType(addrPair.first, addrPair.second);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -989,6 +1125,45 @@ void AddressAccount::readFromDisk(const BinaryData& key)
    }
 
    ID_ = key.getSliceCopy(1, key.getSize() - 1);
+
+   //instantiated address types
+   BinaryWriter bwKey;
+   bwKey.put_uint8_t(ADDRESS_TYPE_PREFIX);
+   bwKey.put_BinaryData(getID());
+
+   BinaryDataRef keyBdr = bwKey.getDataRef();
+   CharacterArrayRef carKey2(keyBdr.getSize(), keyBdr.getPtr());
+
+   auto dbIter = db_->begin();
+   dbIter.seek(carKey2, LMDB::Iterator::Seek_GE);
+   while (dbIter.isValid())
+   {
+      auto& key = dbIter.key();
+      BinaryDataRef key_bdr((uint8_t*)key.mv_data, key.mv_size);
+      if (!key_bdr.startsWith(keyBdr))
+         break;
+
+      if (key.mv_size != 13)
+      {
+         LOGWARN << "unexpected address entry type key size!";
+         ++dbIter;
+         continue;
+      }
+
+      auto& data = dbIter.value();
+      if (data.mv_size != 4)
+      {
+         LOGWARN << "unexpected address entry type val size!";
+         ++dbIter;
+         continue;
+      }
+
+      auto aeType = AddressEntryType(*(uint32_t*)data.mv_data);
+      auto assetID = key_bdr.getSliceCopy(1, 12);
+      addresses_.insert(make_pair(assetID, aeType));
+      
+      ++dbIter;
+   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1065,12 +1240,26 @@ shared_ptr<AddressEntry> AddressAccount::getNewAddress(
    if (aeIter == addressTypes_.end())
       throw AccountException("invalid address type for this account");
 
-   return iter->second->getNewAddress(aeType);
+   auto assetPtr = iter->second->getNewAsset();
+   auto addrPtr = AddressEntry::instantiate(assetPtr, aeType);
+   
+   //keep track of the address type for this asset if it doesnt use the 
+   //account default
+   if (aeType != defaultAddressEntryType_)
+   {
+      //update on disk
+      updateInstantiatedAddressType(addrPtr);
+   }
+
+   return addrPtr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool AddressAccount::hasAddressType(AddressEntryType aeType)
 {
+   if (aeType == AddressEntryType_Default)
+      return true;
+
    auto iter = addressTypes_.find(aeType);
    return iter != addressTypes_.end();
 }
@@ -1078,7 +1267,7 @@ bool AddressAccount::hasAddressType(AddressEntryType aeType)
 ////////////////////////////////////////////////////////////////////////////////
 shared_ptr<AssetEntry> AddressAccount::getAssetForID(const BinaryData& ID) const
 {
-   if (ID.getSize() < 4)
+   if (ID.getSize() != 8)
       throw AccountException("invalid asset ID");
 
    auto accID = ID.getSliceRef(0, 4);
@@ -1089,6 +1278,21 @@ shared_ptr<AssetEntry> AddressAccount::getAssetForID(const BinaryData& ID) const
 
    auto assetID = ID.getSliceRef(4, ID.getSize() - 4);
    return iter->second->getAssetForID(assetID);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetEntry> AddressAccount::getAssetForID(unsigned ID, 
+   bool outer) const
+{
+   BinaryDataRef accountID(outerAccount_);
+   if (!outer)
+      accountID.setRef(innerAccount_);
+
+   auto iter = assetAccounts_.find(accountID);
+   if (iter == assetAccounts_.end())
+      throw AccountException("unknown account ID");
+
+   return iter->second->getAssetForID(WRITE_UINT32_BE(ID));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1162,6 +1366,225 @@ shared_ptr<AssetEntry> AddressAccount::getOutterAssetRoot() const
 {
    auto account = getOuterAccount();
    return account->getRoot();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AddressAccount> AddressAccount::getWatchingOnlyCopy(
+   shared_ptr<LMDBEnv> dbEnv, LMDB* db) const
+{
+   auto woAcc = make_shared<AddressAccount>(dbEnv, db);
+
+   //id
+   woAcc->ID_ = ID_;
+
+   //address
+   woAcc->defaultAddressEntryType_ = defaultAddressEntryType_;
+   woAcc->addressTypes_ = addressTypes_;
+   woAcc->addresses_ = addresses_;
+
+   //account ids
+   woAcc->outerAccount_ = outerAccount_;
+   woAcc->innerAccount_ = innerAccount_;
+
+   //asset accounts
+   for (auto& assetAccPair : assetAccounts_)
+   {
+      auto assetAccPtr = assetAccPair.second;
+      auto rootSingle = dynamic_pointer_cast<AssetEntry_Single>(assetAccPtr->root_);
+      if (rootSingle == nullptr)
+         throw AccountException("invalid account root");
+      auto woRoot = rootSingle->getPublicCopy();
+
+      auto woAccPtr = make_shared<AssetAccount>(
+         assetAccPtr->id_, assetAccPtr->parent_id_,
+         woRoot,
+         assetAccPtr->derScheme_,
+         dbEnv, db);
+
+      woAccPtr->lastUsedIndex_ = assetAccPtr->lastUsedIndex_;
+
+      for (auto& assetPair : assetAccPtr->assets_)
+      {
+         auto assetSingle = 
+            dynamic_pointer_cast<AssetEntry_Single>(assetPair.second);
+         if (assetSingle == nullptr)
+            throw AccountException("unexpect asset type");
+
+         auto assetWo = assetSingle->getPublicCopy();
+         assetWo->flagForCommit();
+         woAccPtr->assets_.insert(make_pair(assetPair.first, assetWo));
+      }
+
+      woAcc->addAccount(woAccPtr);
+   }
+
+   return woAcc;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AddressAccount::updateInstantiatedAddressType(
+   shared_ptr<AddressEntry> addrPtr)
+{
+   /***
+   AddressAccount keeps track instantiated address types with a simple
+   key-val scheme:
+
+   (ADDRESS_PREFIX|Asset's ID):(AddressEntry type)
+
+   Addresses using the account's default type are not recorded. Their type is
+   infered on load by AssetAccounts' highest used index and the lack of explicit
+   type entry.
+   ***/
+
+   //sanity check
+   if (addrPtr->getType() == AddressEntryType_Default)
+      throw AccountException("invalid address entry type");
+
+   updateInstantiatedAddressType(addrPtr->getID(), addrPtr->getType());
+}
+  
+////////////////////////////////////////////////////////////////////////////////
+void AddressAccount::updateInstantiatedAddressType(
+   const BinaryData& id, AddressEntryType aeType)
+{
+   auto iter = addresses_.find(id);
+   if (iter != addresses_.end())
+   {
+      //skip if type is entry already exist and new type matches old one
+      if (iter->second == aeType)
+         return;
+
+      //delete entry is new type matches default account type
+      if (aeType == defaultAddressEntryType_)
+      {
+         addresses_.erase(iter);
+         eraseInstantiatedAddressType(id);
+         return;
+      }
+   }
+
+   //otherwise write address type to disk
+   addresses_[id] = aeType;
+   writeAddressType(id, aeType);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AddressAccount::writeAddressType(
+   const BinaryData& id, AddressEntryType aeType)
+{
+   ReentrantLock lock(this);
+
+   BinaryWriter bwKey;
+   bwKey.put_uint8_t(ADDRESS_TYPE_PREFIX);
+   bwKey.put_BinaryData(id);
+
+   BinaryWriter bwData;
+   bwData.put_uint32_t(aeType);
+
+   CharacterArrayRef carKey(bwKey.getSize(), bwKey.getData().getCharPtr());
+   CharacterArrayRef carData(bwData.getSize(), bwData.getData().getCharPtr());
+
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+   db_->insert(carKey, carData);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void AddressAccount::eraseInstantiatedAddressType(const BinaryData& id)
+{
+   ReentrantLock lock(this);
+
+   BinaryWriter bwKey;
+   bwKey.put_uint8_t(ADDRESS_TYPE_PREFIX);
+   bwKey.put_BinaryData(id);
+
+   CharacterArrayRef carKey(bwKey.getSize(), bwKey.getData().getCharPtr());
+
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+   db_->erase(carKey);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AddressEntry> AddressAccount::getAddressEntryForID(
+   const BinaryDataRef& ID) const
+{
+   //sanity check
+   if (ID.getSize() != 12)
+      throw AccountException("invalid asset id");
+
+   //get the asset account
+   auto accIDRef = ID.getSliceRef(4, 4);
+   auto accIter = assetAccounts_.find(accIDRef);
+   if (accIter == assetAccounts_.end())
+      throw AccountException("unknown account id");
+
+   //does this ID exist?
+   BinaryRefReader brr(ID);
+   brr.advance(8);
+   auto id_int = brr.get_uint32_t(BE);
+
+   if (id_int > accIter->second->getHighestUsedIndex())
+      throw AccountException("trying to access an unrequested asset");
+
+   AddressEntryType aeType = defaultAddressEntryType_;
+   //is there an address entry with this ID?
+   auto addrIter = addresses_.find(ID);
+   if (addrIter != addresses_.end())
+      aeType = addrIter->second;
+
+   auto assetPtr = accIter->second->getAssetForIndex(id_int);
+   auto addrPtr = AddressEntry::instantiate(assetPtr, aeType);
+   return addrPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+map<BinaryData, shared_ptr<AddressEntry>> AddressAccount::getUsedAddressMap()
+   const
+{
+   /***
+   Expensive call, as addresses are built on the fly
+   ***/
+
+   map<BinaryData, shared_ptr<AddressEntry>> result;
+
+   for (auto& account : assetAccounts_)
+   {
+      auto usedIndex = account.second->getHighestUsedIndex();
+      if (usedIndex == UINT32_MAX)
+         continue;
+
+      for (unsigned i = 0; i <= usedIndex; i++)
+      {
+         auto assetPtr = account.second->getAssetForIndex(i);
+         auto& assetID = assetPtr->getID();
+
+         shared_ptr<AddressEntry> addrPtr;
+         auto iter = addresses_.find(assetID);
+         if (iter == addresses_.end())
+            addrPtr = AddressEntry::instantiate(assetPtr, defaultAddressEntryType_);
+         else
+            addrPtr = AddressEntry::instantiate(assetPtr, iter->second);
+
+         result.insert(make_pair(assetID, addrPtr));
+      }
+   }
+
+   return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<Asset_PrivateKey> AddressAccount::fillPrivateKey(
+   shared_ptr<DecryptedDataContainer> ddc,
+   const BinaryData& id)
+{
+   if (id.getSize() != 12)
+      throw AccountException("invalid asset id");
+
+   auto accID = id.getSliceRef(4, 4);
+   auto iter = assetAccounts_.find(accID);
+   if (iter == assetAccounts_.end())
+      throw AccountException("unknown asset id");
+
+   return iter->second->fillPrivateKey(ddc, id);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1267,7 +1690,7 @@ BinaryData AccountType_BIP32::getAccountID() const
       //this ensures address accounts of different types based on the same
       //bip32 root do not end up with the same id
       auto rootCopy = derivedRoot_;
-      rootCopy.getPtr()[0] ^= (uint8_t)type_;
+      rootCopy.getPtr()[0] ^= (uint8_t)type();
 
       auto&& pub_hash160 = BtcUtils::getHash160(rootCopy);
       accountID = move(pub_hash160.getSliceCopy(0, 4));
@@ -1276,7 +1699,7 @@ BinaryData AccountType_BIP32::getAccountID() const
    {
       
       auto&& root_pub = CryptoECDSA().ComputePublicKey(derivedRoot_);
-      root_pub.getPtr()[0] ^= (uint8_t)type_;
+      root_pub.getPtr()[0] ^= (uint8_t)type();
 
       auto&& pub_hash160 = BtcUtils::getHash160(root_pub);
       accountID = move(pub_hash160.getSliceCopy(0, 4));
@@ -1367,6 +1790,14 @@ BinaryData AccountType_BIP32_Custom::getInnerAccountID(void) const
       return innerAccount_;
 
    return WRITE_UINT32_BE(UINT32_MAX);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unsigned AccountType_BIP32_Custom::getAddressLookup() const
+{
+   if (addressLookup_ == UINT32_MAX)
+      throw AccountException("uninitialiazed address lookup");
+   return addressLookup_;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1635,6 +2066,25 @@ void MetaDataAccount::eraseMetaDataByIndex(unsigned id)
       return;
 
    iter->second->clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<MetaDataAccount> MetaDataAccount::copy(
+   shared_ptr<LMDBEnv> dbEnv, LMDB* db) const
+{
+   auto copyPtr = make_shared<MetaDataAccount>(dbEnv, db);
+   
+   copyPtr->type_ = type_;
+   copyPtr->ID_ = ID_;
+
+   for (auto& assetPair : assets_)
+   {
+      auto assetCopy = assetPair.second->copy();
+      assetCopy->flagForCommit();
+      copyPtr->assets_.insert(make_pair(assetPair.first, assetCopy));
+   }
+
+   return copyPtr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

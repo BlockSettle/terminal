@@ -220,7 +220,7 @@ public:
 
       return swigWallet_->createAddressBook();
    }
-
+   /*
    BinaryData getNestedSWAddrForID(const BinaryData& ID)
    {
       auto addrPtr = wallet_->getAddressEntryForID(ID,
@@ -245,6 +245,7 @@ public:
          AddressEntryType(AddressEntryType_P2PKH));
       return addrPtr->getAddress();
    }
+   */
 
    void extendAddressChain(unsigned count)
    {
@@ -269,7 +270,7 @@ public:
    const BinaryData& getScriptHashPreimage(const BinaryData& hash)
    {
       auto& assetID = wallet_->getAssetIDForAddr(hash);
-      auto addrPtr = wallet_->getAddressEntryForID(assetID.first, assetID.second);
+      auto addrPtr = wallet_->getAddressEntryForID(assetID.first);
       return addrPtr->getPreimage();
    }
 

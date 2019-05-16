@@ -289,6 +289,7 @@ public:
    void detectAllBlockFiles(void);
    const std::string& folderPath(void) const { return folderPath_; }
    const unsigned fileCount(void) const { return filePaths_.size(); }
+   const std::string& getLastFileName(void) const;
 };
 
 /////////////////////////////////////////////////////////////////////////////
