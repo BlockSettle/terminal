@@ -122,7 +122,15 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
          break;
       }
 
-      addressRows_.reserve(addressRows_.size() + addressList.size());
+      
+      // don't show Private Market addresses in the main/top level view
+      for (size_t i = 0; i < addressRows_.size(); i++) {
+         if (addressRows_[i].walletName == QLatin1Literal("0")) {
+            return;
+         }
+      }
+
+      addressRows_.reserve(addressRows_.size() + addressList.size());      
 
       for (size_t i = 0; i < addressList.size(); i++) {
          const auto &addr = addressList[i];
@@ -131,8 +139,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
          row.addrIndex = i;
          row.comment = QString::fromStdString(wallet->getAddressComment(addr));
 
-         if (row.walletName == QLatin1Literal("0"))
-            addressRows_.emplace_back(std::move(row));
+         addressRows_.emplace_back(std::move(row));
       }
    }
 }
