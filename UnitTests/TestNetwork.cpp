@@ -284,6 +284,12 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
             connectProm1.set_value(false);
             conn1Reported = true;
          }
+         else {
+             if (!conn2Reported) {
+                 connectProm2.set_value(false);
+                 conn2Reported = true;
+             }
+         }
          if (!prom1Set_) {
             clientPktsProm1.set_value(false);
             prom1Set_ = true;
@@ -409,27 +415,30 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
    clientConn->addAuthPeer(serverKey, host + ":" + port);
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
-   EXPECT_TRUE(connectFut1.get());
+   const bool connResult = connectFut1.get();
+   EXPECT_TRUE(connResult);
 
-   for (const auto &clientPkt : packets) {
-      clientConn->send(clientPkt);
+   if (connResult) {
+       for (const auto &clientPkt : packets) {
+           clientConn->send(clientPkt);
+       }
+       EXPECT_TRUE(clientPktsFut1.get());
+
+       clientConn->rekey();
+       clientConn->send(CryptoPRNG::generateRandom(23).toBinStr());
+
+       for (const auto &srvPkt : packets) {
+           serverConn->SendDataToAllClients(srvPkt);
+       }
+       EXPECT_TRUE(srvPktsFut1.get());
+
+       for (const auto &clientPkt : packets) {
+           clientConn->send(clientPkt);
+       }
+       EXPECT_TRUE(clientPktsFut2.get());
    }
-   EXPECT_TRUE(clientPktsFut1.get());
 
-   clientConn->rekey();
-   clientConn->send(CryptoPRNG::generateRandom(23).toBinStr());
-
-   for (const auto &srvPkt : packets) {
-      serverConn->SendDataToAllClients(srvPkt);
-   }
-   EXPECT_TRUE(srvPktsFut1.get());
-
-   for (const auto &clientPkt : packets) {
-      clientConn->send(clientPkt);
-   }
-   EXPECT_TRUE(clientPktsFut2.get());
    EXPECT_TRUE(clientConn->closeConnection());
-
    const auto client2Lsn = std::make_shared<AnotherClientConnListener>(StaticLogger::loggerPtr);
    const auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
       StaticLogger::loggerPtr, true, "", "", true);
@@ -437,6 +446,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    client2Conn->addAuthPeer(serverKey, host + ":" + port);
    ASSERT_TRUE(client2Conn->openConnection(host, port, client2Lsn.get()));
    EXPECT_TRUE(connectFut2.get());
+
    EXPECT_TRUE(client2Conn->closeConnection());
 
    serverConn.reset();  // This is needed to detach listener before it's destroyed
@@ -674,6 +684,9 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
 }
 
 
+// This test is actually fine, but, takes a _long_ time (10 min last time it was run),
+// so it's disabled as to not run by default. You can still run it if you want to check
+// the heartbeat handling.
 TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
 {
     static std::vector<std::string> clientPackets;
