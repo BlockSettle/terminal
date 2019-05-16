@@ -314,6 +314,7 @@ CustomTitleDialogWindow {
                             Layout.fillWidth: true
                             Layout.leftMargin: inputLabelsWidth + 5
                             enabled: !primaryWalletExists
+                            checked: !primaryWalletExists
                             text: qsTr("Primary Wallet")
                         }
                     }
