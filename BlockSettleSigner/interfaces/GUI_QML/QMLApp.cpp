@@ -137,6 +137,7 @@ void QMLAppObj::onHeadlessBindFiled()
 {
    QMetaObject::invokeMethod(rootObj_, "showError"
                              , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
+   statusUpdater_->setSocketOk(false);
 }
 
 void QMLAppObj::onWalletsSynced()
