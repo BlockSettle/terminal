@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BlockSettle
+GenericName=BlockSettle Terminal
+Comment=BlockSettle real-time settlement network application and a wallet manager
+Categories=Qt;Network
+Exec=/usr/bin/blocksettle
+Icon=blocksettle
+StartupNotify=false
+Terminal=false

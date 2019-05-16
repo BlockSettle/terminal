@@ -1,0 +1,6 @@
+#!/bin/sh
+
+xdg-icon-resource uninstall --size 64 blocksettle
+xdg-icon-resource uninstall --size 64 blocksettle_signer
+
+update-desktop-database
