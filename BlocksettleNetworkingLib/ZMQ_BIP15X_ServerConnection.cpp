@@ -1094,7 +1094,14 @@ void ZmqBIP15XServerConnection::updatePeerKeys(const std::vector<std::pair<std::
       try {
          authPeers_->eraseName(peer.first);
       }
-      catch (...) {} // just ignore exception when erasing "own" key
+      catch (const AuthorizedPeersException &) {} // just ignore exception when erasing "own" key
+      catch (const std::exception &e) {
+         logger_->error("[{}] exception when erasing peer key for {}: {}", __func__
+            , peer.first, e.what());
+      }
+      catch (...) {
+         logger_->error("[{}] exception when erasing peer key for {}", __func__, peer.first);
+      }
    }
    for (const auto &key : keys) {
       if (!(CryptoECDSA().VerifyPublicKeyValid(key.second))) {
