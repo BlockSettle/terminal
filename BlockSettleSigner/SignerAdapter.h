@@ -47,9 +47,13 @@ public:
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
 
+   using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed
       , bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-      , bs::wallet::KeyRank keyRank, const std::function<void(bool, const std::string&)> &cb);
+      , bs::wallet::KeyRank keyRank, const ResultCb &cb);
+
+   using CreateWoCb = std::function<void(const bs::sync::WatchingOnlyWallet &)>;
+   void importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb);
 
    void deleteWallet(const std::string &rootWalletId, const std::function<void(bool, const std::string&)> &cb);
 

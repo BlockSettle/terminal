@@ -23,9 +23,10 @@ CustomTitleDialogWindow {
     property QSeed seed: QSeed{}
     property WalletInfo walletInfo: WalletInfo{}
     property var passwordData: QPasswordData{}
+    property bool isWO: (tabBar.currentIndex === 1)
 
-    property bool acceptable: (curPage === 1 && walletSelected) ||
-                              (curPage === 2 && importAcceptable)
+    property bool acceptable: isWO ? digitalWoBackupAcceptable : ((curPage === 1 && walletSelected) ||
+                              (curPage === 2 && importAcceptable))
 
     property bool digitalBackupAcceptable: false
     property bool digitalWoBackupAcceptable: false
@@ -440,7 +441,7 @@ CustomTitleDialogWindow {
                         Layout.minimumWidth: inputLabelsWidth
                         Layout.preferredWidth: inputLabelsWidth
                         Layout.maximumWidth: inputLabelsWidth
-                        text: qsTr("Digital backup")
+                        text: qsTr("Watching-Only Wallet file")
                         verticalAlignment: Text.AlignTop
                         Layout.alignment: Qt.AlignTop
                     }
@@ -491,6 +492,22 @@ CustomTitleDialogWindow {
                 enabled: acceptable
 
                 onClicked: {
+                    if (isWO) {
+                        var importCallback = function(success, msg) {
+                            if (success) {
+                                var walletInfo = qmlFactory.createWalletInfo(msg)
+                                var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
+                                mb.bsAccepted.connect(acceptAnimated)
+                            } else {
+                                JsHelper.messageBox(BSMessageBox.Type.Critical
+                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                            }
+                        }
+
+                        walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
+                        return
+                    }
+
                     if (curPage === 1) {
                         curPage = 2
 
@@ -562,7 +579,9 @@ CustomTitleDialogWindow {
                 else {
                     filePath = filePath.replace(/(^file:\/{2})/, "") // this might be done like this to work in ubuntu? not sure...
                 }
+
                 lblDBFile.text = decodeURIComponent(filePath)
+
                 // seed will be stored to Seed::privKey_
                 seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)
                 walletInfo = qmlFactory.createWalletInfoFromDigitalBackup(lblDBFile.text)
@@ -598,10 +617,7 @@ CustomTitleDialogWindow {
                 }
                 lblWoDBFile.text = decodeURIComponent(filePath)
                 digitalWoBackupAcceptable = true
-
-                // todo check file, import wo wallet
             }
         }
     }
-
 }
