@@ -212,7 +212,8 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          auto group = woWallet.createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
          for (const auto &leafEntry : groupEntry.leaves) {
             auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
-               , leafEntry.chainCode, wo.netType);
+               , leafEntry.chainCode.isNull() ? BinaryData(BTC_BIP32_CHAINCODE_SIZE) : leafEntry.chainCode
+               , wo.netType);
             auto leaf = group->createLeaf(leafEntry.index, pubNode);
             if (!leaf) {
                logger_->error("[WalletsProxy] failed to create WO leaf {} for {}"
@@ -225,7 +226,8 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          }
       }
       try {
-         woWallet.saveToDir(path.toStdString());
+         woWallet.saveToFile(path.toStdString());
+         emit walletSuccess();
       }
       catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to save WO wallet for {}: {}", wo.id, e.what());
@@ -296,6 +298,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
          WalletBackupFile backupData(walletId.toStdString(), name, desc, easyData, edChainCode);
          f.write(QByteArray::fromStdString(backupData.Serialize()));
       }
+      emit walletSuccess();
    };
    adapter_->getDecryptedRootNode(wallet->walletId(), passwordData->password, cbResult);
 

@@ -78,6 +78,7 @@ public:
 
 signals:
    void walletError(const QString &walletId, const QString &errMsg) const;
+   void walletSuccess() const;
    void walletsChanged();
 
 private slots:
