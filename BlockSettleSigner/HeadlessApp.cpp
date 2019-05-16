@@ -409,7 +409,7 @@ void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communica
       for (const auto &key : trustedTerminals) {
          const auto colonIndex = key.find(':');
          if (colonIndex == std::string::npos) {
-            logger_->error("[{}] Trusted client list key entry {} is malformed"
+            logger_->error("[{}] Trusted client list key entry ({}) is malformed"
                , __func__, key);
             continue;
          }
@@ -422,7 +422,7 @@ void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communica
             updatedKeys.push_back({ key.substr(0, colonIndex), inKey });
          }
          catch (const std::exception &e) {
-            logger_->error("[{}] Trusted client list key entry {} has invalid key: {}"
+            logger_->error("[{}] Trusted client list key entry ({}) has invalid key: {}"
                , __func__, key, e.what());
          }
       }
