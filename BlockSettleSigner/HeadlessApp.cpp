@@ -395,3 +395,38 @@ void HeadlessAppObj::addPendingAutoSignReq(const std::string &walletId)
       listener_->addPendingAutoSignReq(walletId);
    }
 }
+
+void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
+{
+   const auto prevTrustedTerminals = settings_->trustedTerminals();
+   if (!settings_->update(settings)) {
+      logger_->error("[{}] failed to update settings", __func__);
+      return;
+   }
+   const auto trustedTerminals = settings_->trustedTerminals();
+   if (connection_ && (trustedTerminals != prevTrustedTerminals)) {
+      std::vector<std::pair<std::string, BinaryData>> updatedKeys;
+      for (const auto &key : trustedTerminals) {
+         const auto colonIndex = key.find(':');
+         if (colonIndex == std::string::npos) {
+            logger_->error("[{}] Trusted client list key entry ({}) is malformed"
+               , __func__, key);
+            continue;
+         }
+
+         try {
+            const SecureBinaryData inKey = READHEX(key.substr(colonIndex + 1));
+            if (inKey.isNull()) {
+               throw std::invalid_argument("no or malformed key data");
+            }
+            updatedKeys.push_back({ key.substr(0, colonIndex), inKey });
+         }
+         catch (const std::exception &e) {
+            logger_->error("[{}] Trusted client list key entry ({}) has invalid key: {}"
+               , __func__, key, e.what());
+         }
+      }
+      logger_->info("[{}] Updating {} trusted keys", __func__, updatedKeys.size());
+      connection_->updatePeerKeys(updatedKeys);
+   }
+}

@@ -89,6 +89,9 @@ public:
    void setTrustedTerminals(const QStringList &val);
    void setStartupBIP150CTX(bool val);
 
+   using Settings = Blocksettle::Communication::signer::Settings;
+   const std::unique_ptr<Settings> &get() const { return d_; }
+
    static QString secondsToIntervalStr(int);
    static int intervalStrToSeconds(const QString &);
 
@@ -107,10 +110,9 @@ signals:
    void hideEidInfoBoxChanged();
    void trustedTerminalsChanged();
    void startupBIP150CTXChanged();
+   void changed(int);
 
 private:
-   using Settings = Blocksettle::Communication::signer::Settings;
-
    void settingChanged(int setting);
    bool verifyServerIDKey();
 

@@ -142,6 +142,11 @@ void SignerAdapter::setLimits(bs::signer::Limits limits)
    listener_->send(signer::SetLimitsType, request.SerializeAsString());
 }
 
+void SignerAdapter::syncSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
+{
+   listener_->send(signer::SyncSettingsRequestType, settings->SerializeAsString());
+}
+
 void SignerAdapter::passwordReceived(const std::string &walletId
    , const SecureBinaryData &password, bool cancelledByUser)
 {

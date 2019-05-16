@@ -201,6 +201,9 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case signer::HeadlessPubKeyRequestType:
       rc = onHeadlessPubKeyRequest(packet.data(), packet.id());
       break;
+   case signer::SyncSettingsRequestType:
+      rc = onSyncSettings(packet.data());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -476,6 +479,17 @@ bool SignerAdapterListener::onSetLimits(const std::string &data)
    limits.autoSignTimeS = request.auto_sign_time();
    limits.manualPassKeepInMemS = request.password_keep_in_mem();
    app_->setLimits(limits);
+   return true;
+}
+
+bool SignerAdapterListener::onSyncSettings(const std::string &data)
+{
+   auto request = make_unique<signer::Settings>();
+   if (!request->ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   app_->updateSettings(request);
    return true;
 }
 

@@ -56,8 +56,7 @@ SignerSettings::~SignerSettings() = default;
 
 void SignerSettings::settingChanged(int setting)
 {
-   auto s = signer::Setting(setting);
-   switch (s) {
+   switch (static_cast<signer::Setting>(setting)) {
    case signer::OfflineMode:
       emit offlineChanged();
       break;
@@ -98,6 +97,7 @@ void SignerSettings::settingChanged(int setting)
    default:
       break;
    }
+   emit changed(setting);
 
    HeadlessSettings::saveSettings(*d_, fileName_);
 }

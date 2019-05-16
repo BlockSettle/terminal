@@ -16,6 +16,13 @@ namespace bs {
       class WalletsManager;
    }
 }
+namespace Blocksettle {
+   namespace Communication {
+      namespace signer {
+         class Settings;
+      }
+   }
+}
 class HeadlessContainerListener;
 class SignerAdapterListener;
 class HeadlessSettings;
@@ -45,6 +52,8 @@ public:
    void addPendingAutoSignReq(const std::string &walletId);
    void close();
    void walletsListUpdated();
+
+   void updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
 
    std::shared_ptr<ZmqBIP15XServerConnection> connection() const;
 
