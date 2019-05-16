@@ -4,7 +4,6 @@ import shutil
 import subprocess
 
 from component_configurator import Configurator
-from openssl_settings import OpenSslSettings
 
 class WebsocketsSettings(Configurator):
     def __init__(self, settings):
@@ -12,9 +11,7 @@ class WebsocketsSettings(Configurator):
         self._version = '3.1.0'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
-        self._script_revision = '2'
-
-        self._ssl_settings = OpenSslSettings(settings)
+        self._script_revision = '3'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
@@ -32,9 +29,13 @@ class WebsocketsSettings(Configurator):
         return True
 
     def config(self):
+        # Removing HTTPS is safe for our purposes. WS connections are secured by
+        # BIP 150/151, which basically acts as a lightweight TLS replacement.
         command = ['cmake',
                    os.path.join(self._project_settings.get_sources_dir(), self._package_name + '-' + self._version),
                    '-DLWS_WITHOUT_SERVER=OFF',
+                   '-DLWS_SSL_CLIENT_USE_OS_CA_CERTS=0',
+                   '-DLWS_WITH_SSL=0',
                    '-DLWS_WITHOUT_TESTAPPS=ON',
                    '-DLWS_WITHOUT_TEST_SERVER=ON',
                    '-DLWS_WITHOUT_TEST_PING=ON',
@@ -52,7 +53,7 @@ class WebsocketsSettings(Configurator):
         if self._project_settings.on_linux():
             command.append('-DLWS_WITH_STATIC=ON')
             command.append('-DLWS_WITH_SHARED=ON')
-            
+
         if self._project_settings.on_windows():
             if self._project_settings.get_link_mode() == 'shared':
                 command.append('-DLWS_WITH_STATIC=OFF')
@@ -64,11 +65,8 @@ class WebsocketsSettings(Configurator):
         command.append('-G')
         command.append(self._project_settings.get_cmake_generator())
 
-        env_vars = os.environ.copy()
-        env_vars['OPENSSL_ROOT_DIR'] = self._ssl_settings.get_install_dir()
-        env_vars['OPENSSL_INCLUDE_DIR'] = os.path.join(self._ssl_settings.get_install_dir(), 'include')
-
         print(command)
+        env_vars = os.environ.copy()
         result = subprocess.call(command, env=env_vars)
         return result == 0
 
@@ -77,7 +75,7 @@ class WebsocketsSettings(Configurator):
         if self._project_settings.get_link_mode() == 'shared':
             project_name = 'websockets_shared'
 
-        
+
         command = ['msbuild',
                    self.get_solution_file(),
                    '/t:' + project_name,
@@ -139,7 +137,7 @@ class WebsocketsSettings(Configurator):
         if self._project_settings.get_link_mode() == 'shared':
             self.filter_copy(lib_dir, install_lib_dir, '.so')
         self.filter_copy(lib_dir, install_lib_dir, '.a')
-            
+
         self.filter_copy(include_dir, install_include_dir)
 
         return True
