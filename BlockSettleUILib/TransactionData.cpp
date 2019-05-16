@@ -268,7 +268,7 @@ double TransactionData::CalculateMaxAmount(const bs::Address &recipient, bool fo
       if (logger_) {
          logger_->error("[TransactionData::CalculateMaxAmount] selInputs or wallet are missing");
       }
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    if ((maxAmount_ > 0) && !force) {
       return maxAmount_;
