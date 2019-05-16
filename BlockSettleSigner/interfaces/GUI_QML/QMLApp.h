@@ -68,6 +68,7 @@ private slots:
    void onOfflineChanged();
    void onListenSocketChanged();
    void onLimitsChanged();
+   void onSettingChanged(int);
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
    void onCancelSignTx(const BinaryData &txId);

@@ -250,3 +250,11 @@ bool HeadlessSettings::saveSettings(const HeadlessSettings::Settings &settings, 
    s.close();
    return s.good();
 }
+
+bool HeadlessSettings::update(const std::unique_ptr<Settings> &settings)
+{
+   if (!settings) {
+      return false;
+   }
+   *d_ = *settings;
+}

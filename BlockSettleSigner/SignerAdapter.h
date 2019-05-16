@@ -14,6 +14,13 @@ namespace bs {
 namespace spdlog {
    class logger;
 }
+namespace Blocksettle {
+   namespace Communication {
+      namespace signer {
+         class Settings;
+      }
+   }
+}
 class SignContainer;
 class SignerInterfaceListener;
 
@@ -45,6 +52,8 @@ public:
       , bs::wallet::KeyRank keyRank, const std::function<void(bool, const std::string&)> &cb);
 
    void deleteWallet(const std::string &rootWalletId, const std::function<void(bool, const std::string&)> &cb);
+
+   void syncSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
 
    void changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
       , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass

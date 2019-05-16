@@ -31,6 +31,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "bs_signer.pb.h"
+
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
 #endif // BS_USE_DBUS
@@ -155,6 +157,7 @@ void QMLAppObj::settingsConnections()
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
+   connect(settings_.get(), &SignerSettings::changed, this, &QMLAppObj::onSettingChanged);
 }
 
 void QMLAppObj::Start()
@@ -215,6 +218,11 @@ void QMLAppObj::onListenSocketChanged()
 void QMLAppObj::onLimitsChanged()
 {
    adapter_->setLimits(settings_->limits());
+}
+
+void QMLAppObj::onSettingChanged(int)
+{
+   adapter_->syncSettings(settings_->get());
 }
 
 void QMLAppObj::SetRootObject(QObject *obj)
