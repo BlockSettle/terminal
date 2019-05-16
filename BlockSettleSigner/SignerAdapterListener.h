@@ -64,6 +64,7 @@ private:
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    bool onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    bool onHeadlessPubKeyRequest(const std::string &data, bs::signer::RequestId);
+   bool onSyncSettings(const std::string &data);
 
    void walletsListUpdated();
    void shutdownIfNeeded();
