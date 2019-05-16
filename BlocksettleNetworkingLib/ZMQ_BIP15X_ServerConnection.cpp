@@ -925,7 +925,8 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
 // INPUT:  The client ID. (const string&)
 // OUTPUT: None
 // RETURN: new or existing connection
-std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
+std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connection(
+   const string& clientID)
 {
    auto connection = GetConnection(clientID);
    if (nullptr != connection) {
@@ -945,14 +946,14 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
       std::string keyHex = b.substr(colonIndex + 1);
 
       try {
-         SecureBinaryData inKey = READHEX(keyHex);
-
+         const BinaryData inKey = READHEX(keyHex);
          authPeers_->addPeer(inKey, vector<string>{ clientID });
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] Trusted client key {} [{}] for {} is malformed: {}"
-            , __func__, keyHex, keyHex.size(), BinaryData(clientID).toHexStr(), e.what());
-         return nullptr;
+         const BinaryData cID(clientID);
+         logger_->error("[{}] Trusted identity key for client {} is not "
+            "accepted: {}", __func__, cID.toHexStr(), e.what());
+            return nullptr;
       }
    }
 
