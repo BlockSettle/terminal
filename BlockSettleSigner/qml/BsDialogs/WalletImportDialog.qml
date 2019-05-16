@@ -18,9 +18,8 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     id: root
 
-    property bool primaryWalletExists: false
+    property bool primaryWalletExists: walletsProxy.primaryWalletExists
     property string password
-    property bool isPrimary: false
     property QSeed seed: QSeed{}
     property WalletInfo walletInfo: WalletInfo{}
     property var passwordData: QPasswordData{}
@@ -43,6 +42,12 @@ CustomTitleDialogWindow {
     height: 510
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
+
+    Component.onCompleted: {
+        if (!primaryWalletExists) {
+            cbPrimary.checked = true
+        }
+    }
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -314,6 +319,7 @@ CustomTitleDialogWindow {
                             Layout.fillWidth: true
                             Layout.leftMargin: inputLabelsWidth + 5
                             enabled: !primaryWalletExists
+                            checked: !primaryWalletExists
                             text: qsTr("Primary Wallet")
                         }
                     }
@@ -502,8 +508,6 @@ CustomTitleDialogWindow {
                         walletInfo.walletId = seed.walletId
                         walletInfo.rootId = seed.walletId
 
-                        isPrimary = cbPrimary.checked
-
                         var createCallback = function(success, errorMsg) {
                             if (success) {
                                 var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
@@ -525,13 +529,13 @@ CustomTitleDialogWindow {
                             checkPasswordDialog.type = BSPasswordInput.Type.Confirm
                             checkPasswordDialog.open()
                             checkPasswordDialog.bsAccepted.connect(function() {
-                                walletsProxy.createWallet(isPrimary, seed, walletInfo, passwordData, createCallback)
+                                walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, passwordData, createCallback)
                             })
                         }
                         else {
                             // auth eID
                             JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, function(newPasswordData) {
-                                 walletsProxy.createWallet(isPrimary, seed, walletInfo, newPasswordData, createCallback)
+                                 walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
                             })
                         }
                     }

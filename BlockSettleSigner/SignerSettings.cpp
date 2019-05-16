@@ -91,8 +91,8 @@ void SignerSettings::settingChanged(int setting)
    case signer::TrustedTerminals:
       emit trustedTerminalsChanged();
       break;
-   case signer::StartupBIP150CTX:
-      emit startupBIP150CTXChanged();
+   case signer::TwoWaySignerAuth:
+      emit twoWaySignerAuthChanged();
       break;
    default:
       break;
@@ -275,9 +275,9 @@ QStringList SignerSettings::trustedTerminals() const
    return result;
 }
 
-bool SignerSettings::startupBIP150CTX() const
+bool SignerSettings::twoWaySignerAuth() const
 {
-   return d_->startup_bip150_ctx();
+   return d_->two_way_signer_auth();
 }
 
 QString SignerSettings::dirDocuments() const
@@ -378,10 +378,10 @@ void SignerSettings::setTrustedTerminals(const QStringList &val)
    settingChanged(signer::Setting::TrustedTerminals);
 }
 
-void SignerSettings::setStartupBIP150CTX(bool val)
+void SignerSettings::setTwoWaySignerAuth(bool val)
 {
-   d_->set_startup_bip150_ctx(val);
-   settingChanged(signer::Setting::StartupBIP150CTX);
+   d_->set_two_way_signer_auth(val);
+   settingChanged(signer::Setting::TwoWaySignerAuth);
 }
 
 QString SignerSettings::secondsToIntervalStr(int s)
