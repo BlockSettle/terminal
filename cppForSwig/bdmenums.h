@@ -64,6 +64,12 @@ enum SOCKET_SERVICE
    SERVICE_UNITTEST
 };
 
+enum ARMORY_OPERATION_MODE
+{
+   OPERATION_REGULAR=0,
+   OPERATION_UNITTEST
+};
+
 enum BDM_INIT_MODE
 {
    INIT_RESUME,
@@ -78,12 +84,6 @@ enum SocketType
    SocketWS,
    SocketBitcoinP2P,
    SocketSimple
-};
-
-enum NodeType
-{
-   Node_BTC,
-   Node_UnitTest
 };
 
 enum BDV_Action

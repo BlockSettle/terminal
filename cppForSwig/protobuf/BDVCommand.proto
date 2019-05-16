@@ -44,11 +44,16 @@ enum Methods
 	getAddressTxioCount = 54;
 	setWalletConfTarget = 55;
 
+	getCombinedBalances = 56;
+	getCombinedAddrTxnCounts = 57;
+
 	getSpendableTxOutListForValue = 60;
 	getSpendableZCList = 61;
 	getRBFTxOutList = 62;
 	getSpendableTxOutListForAddr = 63;
 	getUTXOsForAddrList = 64;
+
+	getCombinedSpendableTxOutListForValue = 65;
 
 	broadcastZC = 70;
 	broadcastThroughRPC = 71;

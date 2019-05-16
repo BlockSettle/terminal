@@ -137,8 +137,10 @@ shared_ptr<AssetEntry_Single>
    nextPrivkeySBD.clear();
 
    //instantiate new encrypted key object
+   auto privKeyID = accountID;
+   privKeyID.append(WRITE_UINT32_BE(index));
    auto nextPrivKey = make_shared<Asset_PrivateKey>(
-      index, encryptedNextPrivKey, move(newCipher));
+      privKeyID, encryptedNextPrivKey, move(newCipher));
 
    //instantiate and return new asset entry
    return make_shared<AssetEntry_Single>(
@@ -165,7 +167,7 @@ vector<shared_ptr<AssetEntry>>
       if (privkey == nullptr)
          throw AssetUnavailableException();
       auto& privkeyData =
-         ddc->getDecryptedPrivateKey(privkey);
+         ddc->getDecryptedPrivateData(privkey);
 
       auto id_int = assetSingle->getIndex() + 1;
       auto& account_id = assetSingle->getAccountID();
@@ -236,8 +238,10 @@ shared_ptr<AssetEntry_Single>
       newCipher.get(), node.getPrivateKey());
 
    //instantiate new encrypted key object
+   auto privKeyID = accountID;
+   privKeyID.append(WRITE_UINT32_BE(index));
    auto nextPrivKey = make_shared<Asset_PrivateKey>(
-      index, encryptedNextPrivKey, move(newCipher));
+      privKeyID, encryptedNextPrivKey, move(newCipher));
 
    //instantiate and return new asset entry
    auto nextPubkey = node.movePublicKey();
@@ -266,7 +270,7 @@ vector<shared_ptr<AssetEntry>>
       if (privkey == nullptr)
          throw AssetUnavailableException();
       auto& privkeyData =
-         ddc->getDecryptedPrivateKey(privkey);
+         ddc->getDecryptedPrivateData(privkey);
 
       auto& account_id = rootAsset_single->getAccountID();
       return computeNextPrivateEntry(

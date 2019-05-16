@@ -12,3 +12,15 @@ message ManyAddressData
 {
 	repeated AddressData scrAddrData = 1;
 }
+
+message CombinedData
+{
+	required bytes id = 1;
+	repeated uint64 idBalances = 2 [packed=true];
+	repeated AddressData addrData = 3;
+}
+
+message ManyCombinedData
+{
+	repeated CombinedData packedBalance = 1;
+}

@@ -122,11 +122,15 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 class CallbackReturn_WebSocket : public CallbackReturn
 {
+   bool runInCaller_ = false;
+
 private:
    void callback(BinaryDataRef bdr) {}
 
 public:
    virtual void callback(const WebSocketMessagePartial&) = 0;
+   bool runInCaller(void) const { return runInCaller_; }
+   void setRunInCaller(bool val) { runInCaller_ = val; }
 };
 
 #endif
