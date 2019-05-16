@@ -19,8 +19,7 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     id: root
 
-    property bool primaryWalletExists: false
-    property bool isPrimary: false
+    property bool primaryWalletExists: walletsProxy.primaryWalletExists
 
     property int inputLabelsWidth: 110
 
@@ -36,6 +35,9 @@ CustomTitleDialogWindow {
 
     Component.onCompleted: {
         tfName.text = qsTr("Wallet #%1").arg(walletsProxy.walletNames.length + 1);
+        if (!primaryWalletExists) {
+            cbPrimary.checked = true
+        }
     }
 
     cContentItem: ColumnLayout {
@@ -252,11 +254,10 @@ CustomTitleDialogWindow {
                     walletInfo.desc = tfDesc.text
                     walletInfo.walletId = seed.walletId
                     walletInfo.rootId = seed.walletId
-                    isPrimary = cbPrimary.checked
 
                     var createCallback = function(success, errorMsg) {
                         if (success) {
-                            var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
+                            var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletCreate, true, walletInfo)
                             mb.bsAccepted.connect(acceptAnimated)
                         } else {
                             JsHelper.messageBox(BSMessageBox.Type.Critical
@@ -274,13 +275,13 @@ CustomTitleDialogWindow {
                             passwordData.encType = QPasswordData.Password
                             passwordData.encKey = ""
                             passwordData.textPassword = newPasswordWithConfirm.password
-                            walletsProxy.createWallet(isPrimary, seed, walletInfo, passwordData, createCallback)
+                            walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, passwordData, createCallback)
                         })
                     }
                     else {
                         // auth eID
                         JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, function(newPasswordData) {
-                            walletsProxy.createWallet(isPrimary, seed, walletInfo, newPasswordData, createCallback)
+                            walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
                         })
                     }
                 }
