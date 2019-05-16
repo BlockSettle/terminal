@@ -98,6 +98,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::HeadlessPubKeyRequestType:
       onHeadlessPubKey(packet.data(), packet.id());
       break;
+   case signer::UpdateStatusType:
+      onUpdateStatus(packet.data());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -500,6 +503,19 @@ void SignerInterfaceListener::onHeadlessPubKey(const std::string &data, bs::sign
    }
    itCb->second(response.pubkey());
    cbHeadlessPubKeyReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onUpdateStatus(const std::string &data)
+{
+   signer::UpdateStatus evt;
+   if (!evt.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   if (evt.signer_bind_status() == signer::BindFailed) {
+      QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
+   }
 }
 
 void SignerInterfaceListener::shutdown()

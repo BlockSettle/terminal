@@ -261,6 +261,13 @@ bool SignerAdapterListener::onReady(int cur, int total)
    return true;
 }
 
+void SignerAdapterListener::sendStatusUpdate()
+{
+   signer::UpdateStatus evt;
+   evt.set_signer_bind_status(signer::BindStatus(app_->signerBindStatus()));
+   sendData(signer::UpdateStatusType, evt.SerializeAsString());
+}
+
 bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SignTxRequest request;

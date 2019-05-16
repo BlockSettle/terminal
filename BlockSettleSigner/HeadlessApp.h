@@ -1,6 +1,7 @@
 #ifndef __HEADLESS_APP_H__
 #define __HEADLESS_APP_H__
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include "CoreWallet.h"
@@ -56,6 +57,7 @@ public:
    void updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
 
    std::shared_ptr<ZmqBIP15XServerConnection> connection() const;
+   bs::signer::BindStatus signerBindStatus() const { return signerBindStatus_; }
 
 private:
    void startInterface();
@@ -70,8 +72,9 @@ private:
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<SignerAdapterListener>       adapterLsn_;
    ProcessControl             guiProcess_;
-   std::function<void(bool)>  cbReady_ = nullptr;
-   bool ready_ = false;
+   std::function<void(bool)>  cbReady_;
+   bool ready_{false};
+   std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 };
 
 #endif // __HEADLESS_APP_H__

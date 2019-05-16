@@ -37,6 +37,9 @@ public:
 
    bool onReady(int cur = 0, int total = 0);
 
+   // Sent to GUI status update message
+   void sendStatusUpdate();
+
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnClientConnected(const std::string &clientId) override;

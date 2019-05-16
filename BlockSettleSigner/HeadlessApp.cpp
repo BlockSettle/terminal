@@ -75,6 +75,8 @@ void HeadlessAppObj::start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
+   adapterLsn_->sendStatusUpdate();
+
    ready_ = true;
    onlineProcessing();
 }
@@ -239,13 +241,24 @@ void HeadlessAppObj::onlineProcessing()
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
          , walletsMgr_, settings_->getWalletsDir(), settings_->netType());
    }
+
    listener_->SetLimits(settings_->limits());
-   if (!connection_->BindConnection(settings_->listenAddress()
-      , settings_->listenPort(), listener_.get())) {
+
+   bool result = connection_->BindConnection(settings_->listenAddress()
+      , settings_->listenPort(), listener_.get());
+
+   if (!result) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
-      throw std::runtime_error("failed to bind listening socket");
+
+      // Abort only if lightgui used, fullgui should just show error message instead
+      if (settings_->runMode() == bs::signer::RunMode::lightgui) {
+         throw std::runtime_error("failed to bind listening socket");
+      }
    }
+
+   signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
+   adapterLsn_->sendStatusUpdate();
 
    if (cbReady_) {
       // Needed to setup SignerAdapterListener callbacks
