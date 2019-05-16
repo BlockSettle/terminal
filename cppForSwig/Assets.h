@@ -31,6 +31,7 @@ public:
 #define PUBKEY_COMPRESSED_BYTE   0x81
 #define PRIVKEY_BYTE             0x82
 #define ENCRYPTIONKEY_BYTE       0x83
+#define WALLET_SEED_BYTE         0x84
 
 #define METADATA_COMMENTS_PREFIX 0x90
 #define METADATA_AUTHPEER_PREFIX 0x91
@@ -38,6 +39,7 @@ public:
 #define METADATA_ROOTSIG_PREFIX  0x93
 
 #define ROOT_ASSETENTRY_ID       0xFFFFFFFF
+#define SEED_ID                  READHEX("0x5EEDDEE55EEDDEE5");
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,22 +103,22 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-struct DecryptedPrivateKey
+struct DecryptedData
 {
 private:
-   const unsigned id_;
+   const BinaryData id_;
    const SecureBinaryData privateKey_;
 
 private:
    const SecureBinaryData& getData(void) const { return privateKey_; }
 
 public:
-   DecryptedPrivateKey(unsigned id, SecureBinaryData& key) :
+   DecryptedData(const BinaryData& id, SecureBinaryData& key) :
       id_(id), privateKey_(std::move(key))
    {}
 
    bool hasData(void) const { return privateKey_.getSize() != 0; }
-   const unsigned& getId(void) const { return id_; }
+   const BinaryData& getId(void) const { return id_; }
    const SecureBinaryData& getDataRef(void) const { return privateKey_; }
 };
 
@@ -187,17 +189,27 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 struct Asset_EncryptedData : public Asset
 {
+   /***
+   This class is instantiated with the cipher text and related cipher object.
+   It can only be used to yield the plain text on demand, it does not generate
+   the cipher text from the plain text for you.
+
+   Use Cipher::encrypt to generate the cipher text first. Pass that cipher with 
+   the resulting cipher text to this class' ctor.
+   ***/
+
    friend class DecryptedDataContainer;
 
 protected:
-   const SecureBinaryData data_;
+   const SecureBinaryData cipherText_;
    std::unique_ptr<Cipher> cipher_;
 
 public:
-   Asset_EncryptedData(SecureBinaryData& data, std::unique_ptr<Cipher> cipher)
-      : Asset(AssetType_EncryptedData), data_(std::move(data))
+   Asset_EncryptedData(
+      SecureBinaryData& cipherText, std::unique_ptr<Cipher> cipher) :
+      Asset(AssetType_EncryptedData), cipherText_(std::move(cipherText))
    {
-      if (data_.getSize() == 0)
+      if (cipherText_.getSize() == 0)
          return;
 
       if (cipher == nullptr)
@@ -209,11 +221,12 @@ public:
    //virtual
    virtual ~Asset_EncryptedData(void) = 0;
    virtual bool isSame(Asset_EncryptedData* const) const = 0;
+   virtual BinaryData getId(void) const = 0;
 
    //local
    bool hasData(void) const
    {
-      return (data_.getSize() != 0);
+      return (cipherText_.getSize() != 0);
    }
 
    std::unique_ptr<Cipher> copyCipher(void) const
@@ -229,15 +242,18 @@ public:
       return cipher_->getIV();
    }
 
-   const SecureBinaryData& getEncryptedData(void) const
+   const SecureBinaryData& getCipherText(void) const
    {
-      return data_;
+      return cipherText_;
    }
 
    const BinaryData& getEncryptionKeyID(void) const
    {
       return cipher_->getEncryptionKeyId();
    }
+
+   virtual std::unique_ptr<DecryptedData> decrypt(
+      const SecureBinaryData& key) const;
 
    //static
    static std::shared_ptr<Asset_EncryptedData> deserialize(const BinaryDataRef&);
@@ -251,46 +267,66 @@ struct Asset_EncryptionKey : public Asset_EncryptedData
 public:
    const BinaryData id_;
 
-private:
-   std::unique_ptr<DecryptedEncryptionKey> decrypt(
-      const SecureBinaryData& key) const;
-
 public:
-   Asset_EncryptionKey(BinaryData& id, SecureBinaryData& data,
+   Asset_EncryptionKey(BinaryData& id, 
+      SecureBinaryData& cipherText,
       std::unique_ptr<Cipher> cipher) :
-      Asset_EncryptedData(data, std::move(cipher)), id_(std::move(id))
+      Asset_EncryptedData(cipherText, std::move(cipher)), id_(std::move(id))
    {}
 
    BinaryData serialize(void) const;
-   const BinaryData& getId(void) const { return id_; }
+   BinaryData getId(void) const { return id_; }
 
    bool isSame(Asset_EncryptedData* const) const;
+
+   std::unique_ptr<DecryptedData> decrypt(
+      const SecureBinaryData& key) const
+   {
+      throw std::runtime_error("illegal for encryption keys");
+   }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 struct Asset_PrivateKey : public Asset_EncryptedData
 {
-   friend class DecryptedDataContainer;
+public:
+   const BinaryData id_;
 
 public:
-   const int id_;
-
-private:
-   std::unique_ptr<DecryptedPrivateKey> decrypt(
-      const SecureBinaryData& key) const;
-
-public:
-   Asset_PrivateKey(int id,
+   Asset_PrivateKey(const BinaryData& id,
       SecureBinaryData& data, std::unique_ptr<Cipher> cipher) :
       Asset_EncryptedData(data, std::move(cipher)), id_(id)
    {}
 
    BinaryData serialize(void) const;
-   unsigned getId(void) const { return id_; }
+   BinaryData getId(void) const { return id_; }
 
    bool isSame(Asset_EncryptedData* const) const;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+class EncryptedSeed : public Asset_EncryptedData
+{
+private:
+
+public:
+   //tors
+
+   //setup encrypted data
+   EncryptedSeed(
+      SecureBinaryData cipherText, std::unique_ptr<Cipher> cipher) :
+      Asset_EncryptedData(cipherText, move(cipher))
+   {}
+
+   //local
+   BinaryData serialize(void) const;
+
+   //virtual
+   bool isSame(Asset_EncryptedData* const) const;
+   BinaryData getId(void) const { return SEED_ID; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 class AssetEntry
 {
@@ -321,6 +357,7 @@ public:
    virtual const AssetEntryType getType(void) const { return type_; }
    bool needsCommit(void) const { return needsCommit_; }
    void doNotCommit(void) { needsCommit_ = false; }
+   void flagForCommit(void) { needsCommit_ = true; }
    BinaryData getDbKey(void) const;
 
    //virtual
@@ -380,6 +417,7 @@ public:
    virtual BinaryData serialize(void) const;
    bool hasPrivateKey(void) const;
    const BinaryData& getPrivateEncryptionKeyId(void) const;
+   virtual std::shared_ptr<AssetEntry_Single> getPublicCopy(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -433,6 +471,8 @@ public:
    BinaryData serialize(void) const;
    const AssetEntryType getType(void) const override 
    { return AssetEntryType_BIP32Root; }
+
+   std::shared_ptr<AssetEntry_Single> getPublicCopy(void);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -482,6 +522,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 struct MetaData
 {
    friend class MetaDataAccount;
@@ -505,11 +546,15 @@ public:
    virtual BinaryData getDbKey(void) const = 0;
    virtual void deserializeDBValue(const BinaryDataRef&) = 0;
    virtual void clear(void) = 0;
+   virtual std::shared_ptr<MetaData> copy(void) const = 0;
 
    //locals
    bool needsCommit(void) { return needsCommit_; }
    void flagForCommit(void) { needsCommit_ = true; }
    MetaType type(void) const { return type_; }
+
+   const BinaryData& getAccountID(void) const { return accountID_; }
+   unsigned getIndex(void) const { return index_; }
 
    //static
    static std::shared_ptr<MetaData> deserialize(
@@ -533,6 +578,7 @@ public:
    BinaryData getDbKey(void) const;
    void deserializeDBValue(const BinaryDataRef&);
    void clear(void);
+   std::shared_ptr<MetaData> copy(void) const;
 
    //locals
    void addName(const std::string&);
@@ -565,6 +611,7 @@ public:
    BinaryData getDbKey(void) const;
    void deserializeDBValue(const BinaryDataRef&);
    void clear(void);
+   std::shared_ptr<MetaData> copy(void) const;
 
    //locals
    void set(const std::string&, const SecureBinaryData&);
@@ -593,12 +640,12 @@ public:
    BinaryData getDbKey(void) const;
    void deserializeDBValue(const BinaryDataRef&);
    void clear(void);
+   std::shared_ptr<MetaData> copy(void) const;
 
    //locals
    void set(const SecureBinaryData& key, const SecureBinaryData& sig);
    const SecureBinaryData& getKey(void) const { return publicKey_; }
    const SecureBinaryData& getSig(void) const { return signature_; }
-
 };
 
 #endif

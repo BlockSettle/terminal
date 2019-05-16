@@ -53,6 +53,35 @@ SET (SOURCES
    chacha20poly1305/poly1305.c
    )
 
+IF (BUILD_TEST_TOOLS)
+   LIST (APPEND SOURCES
+      BDM_mainthread.cpp
+      BDM_Server.cpp
+      BitcoinP2P.cpp
+      Blockchain.cpp
+      BlockchainScanner.cpp
+      BlockchainScanner_Super.cpp
+      BlockDataMap.cpp
+      BlockDataViewer.cpp
+      BlockObj.cpp
+      BlockUtils.cpp
+      BtcWallet.cpp
+      DatabaseBuilder.cpp
+      HistoryPager.cpp
+      LedgerEntry.cpp
+      nodeRPC.cpp
+      Progress.cpp
+      ScrAddrFilter.cpp
+      ScrAddrObj.cpp
+      Server.cpp
+      SshParser.cpp
+      StoredBlockObj.cpp
+      txio.cpp
+      ZeroConf.cpp
+      gtest/NodeUnitTest.cpp
+   )
+ENDIF (BUILD_TEST_TOOLS)
+
 IF (WIN32)
    LIST(APPEND SOURCES SocketService_win32.cpp)
 ELSE (WIN32)
@@ -105,6 +134,35 @@ SET (HEADERS
    bech32/ref/c++/bech32.h
    bech32/ref/c++/segwit_addr.h
    )
+
+IF (BUILD_TEST_TOOLS)
+   LIST (APPEND HEADERS
+      BDM_mainthread.h
+      BDM_Server.h
+      BitcoinP2p.h
+      Blockchain.h
+      BlockchainScanner.h
+      BlockchainScanner_Super.h
+      BlockDataMap.h
+      BlockDataViewer.h
+      BlockObj.h
+      BlockUtils.h
+      BtcWallet.h
+      DatabaseBuilder.h
+      HistoryPager.h
+      LedgerEntry.h
+      nodeRPC.h
+      Progress.h
+      ScrAddrFilter.h
+      ScrAddrObj.h
+      Server.h
+      SshParser.h
+      StoredBlockObj.h
+      txio.h
+      ZeroConf.h
+      gtest/NodeUnitTest.h
+   )
+ENDIF (BUILD_TEST_TOOLS)
 
 SET(PROTO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protobuf)
 FILE(GLOB PROTO_FILES ${PROTO_DIR}/*.proto)

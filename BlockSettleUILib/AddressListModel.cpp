@@ -146,8 +146,8 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
 
 void AddressListModel::updateWalletData()
 {
-   auto nbTxNs = std::make_shared<int>(addressRows_.size());
-   auto nbBalances = std::make_shared<int>(addressRows_.size());
+   auto nbTxNs = std::make_shared<int>((int)addressRows_.size());
+   auto nbBalances = std::make_shared<int>((int)addressRows_.size());
 
    auto addrTxNs = std::make_shared<std::vector<uint32_t>>();
    addrTxNs->resize(addressRows_.size());

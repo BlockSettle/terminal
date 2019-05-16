@@ -925,7 +925,8 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
 // INPUT:  The client ID. (const string&)
 // OUTPUT: None
 // RETURN: new or existing connection
-std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connection(const string& clientID)
+std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connection(
+   const string& clientID)
 {
    auto connection = GetConnection(clientID);
    if (nullptr != connection) {
@@ -945,14 +946,14 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
       std::string keyHex = b.substr(colonIndex + 1);
 
       try {
-         SecureBinaryData inKey = READHEX(keyHex);
-
+         const BinaryData inKey = READHEX(keyHex);
          authPeers_->addPeer(inKey, vector<string>{ clientID });
       }
       catch (const std::exception &e) {
-         logger_->error("[{}] Trusted client key {} [{}] for {} is malformed: {}"
-            , __func__, keyHex, keyHex.size(), BinaryData(clientID).toHexStr(), e.what());
-         return nullptr;
+         const BinaryData cID(clientID);
+         logger_->error("[{}] Trusted identity key for client {} is not "
+            "accepted: {}", __func__, cID.toHexStr(), e.what());
+            return nullptr;
       }
    }
 
@@ -1085,6 +1086,37 @@ void ZmqBIP15XServerConnection::addAuthPeer(const BinaryData& inKey
       return;
    }
    authPeers_->addPeer(inKey, vector<string>{ keyName });
+}
+
+void ZmqBIP15XServerConnection::updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &keys)
+{
+   const auto peers = authPeers_->getPeerNameMap();
+   for (const auto &peer : peers) {
+      try {
+         authPeers_->eraseName(peer.first);
+      }
+      catch (const AuthorizedPeersException &) {} // just ignore exception when erasing "own" key
+      catch (const std::exception &e) {
+         logger_->error("[{}] exception when erasing peer key for {}: {}", __func__
+            , peer.first, e.what());
+      }
+      catch (...) {
+         logger_->error("[{}] exception when erasing peer key for {}", __func__, peer.first);
+      }
+   }
+   for (const auto &key : keys) {
+      if (!(CryptoECDSA().VerifyPublicKeyValid(key.second))) {
+         logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
+            , __func__, key.second.toHexStr(), key.first);
+         continue;
+      }
+      try {
+         authPeers_->addPeer(key.second, vector<string>{ key.first });
+      }
+      catch (const std::exception &e) {
+         logger_->error("[{}] failed to add peer {}: {}", __func__, key.first, e.what());
+      }
+   }
 }
 
 // Get the client's identity public key. Intended for use with local clients.
