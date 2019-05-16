@@ -87,6 +87,32 @@ BTCNumericTypes::balance_type UiUtils::amountToBtc(BTCNumericTypes::balance_type
    return value;
 }
 
+namespace UiUtils {
+   template <> QString displayAmount(double value)
+   {
+      if (std::isinf(value)) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(value, 'f', GetAmountPrecisionXBT()));
+   }
+
+   template <> QString displayAmount(uint64_t value)
+   {
+      if (value == UINT64_MAX) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
+   }
+
+   template <> QString displayAmount(int64_t value)
+   {
+      if (value == INT64_MAX) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
+   }
+}
+
 static int addLeaves(QComboBox *comboBox, int &index, const QString &prefix, const std::string &defWalletId
    , const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves, const std::shared_ptr<SignContainer> &container)
 {
@@ -236,7 +262,6 @@ QPixmap UiUtils::getQRCode(const QString& address, int size)
          return QPixmap::fromImage(image);
       }
    } else {
-      qDebug() << "Error encoding QR code" << strerror(errno);
       return QPixmap();
    }
 }
@@ -386,7 +411,7 @@ QString UiUtils::displayAddress(const QString &addr)
 
 QString UiUtils::displayShortAddress(const QString &addr, const uint maxLength)
 {
-   if ((maxLength < 5) || (addr.length() <= maxLength)) {
+   if ((maxLength < 5) || ((uint)addr.length() <= maxLength)) {
       return addr;
    }
 
