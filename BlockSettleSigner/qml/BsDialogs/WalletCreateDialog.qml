@@ -130,6 +130,7 @@ CustomTitleDialogWindow {
                 Layout.fillWidth: true
                 Layout.leftMargin: inputLabelsWidth + 5
                 text: qsTr("Primary Wallet")
+                checked: !primaryWalletExists
 
                 ToolTip.text: qsTr("A primary Wallet already exists, wallet will be created as regular wallet.")
                 ToolTip.delay: 150
