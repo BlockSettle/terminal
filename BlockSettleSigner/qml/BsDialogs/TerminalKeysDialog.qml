@@ -36,7 +36,7 @@ CustomDialog {
         Layout.margins: 1
 
         CustomHeader {
-            text: qsTr("Add Terminal Public Key")
+            text: qsTr("Add Terminal ID Key")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
             Layout.topMargin: 5
