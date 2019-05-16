@@ -74,7 +74,8 @@ int main(int argc, char* argv[])
    if (!bdmConfig.checkChain_)
    {
       //process incoming connections
-      server.start(&bdmThread, false);
+      server.start(&bdmThread, BlockDataManagerConfig::getDataDir()
+         , BlockDataManagerConfig::ephemeralPeers_, false);
    }
    else
    {

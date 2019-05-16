@@ -61,15 +61,7 @@ namespace UiUtils
 
    QValidator::State ValidateDoubleString(QString &input, int &pos, const int decimals);
 
-   template <typename T>
-   QString displayAmount(T value)
-   {
-      if (static_cast<int>(value) < 0) {
-         return CommonUiUtilsText::tr("Loading...");
-      }
-
-      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
-   }
+   template <typename T> QString displayAmount(T value);
 
    double parseAmountBtc(const QString& text);
 

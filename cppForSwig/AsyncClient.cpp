@@ -853,6 +853,62 @@ pair<unsigned, unsigned> AsyncClient::BlockDataViewer::getRekeyCount() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedBalances(
+   const vector<string>& wltIDs,
+   function<void(ReturnMessage<set<CombinedBalances>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedBalances, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ = 
+      make_unique<CallbackReturn_CombinedBalances>(callback);   
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedAddrTxnCounts(
+   const vector<string>& wltIDs,
+   function<void(ReturnMessage<set<CombinedCounts>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedBalances, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ = 
+      make_unique<CallbackReturn_CombinedCounts>(callback);   
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedSpendableTxOutListForValue(
+   const vector<string>& wltIDs, uint64_t value,
+   function<void(ReturnMessage<vector<UTXO>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedBalances, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   command->set_value(value);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ = 
+      make_unique<CallbackReturn_VectorUTXO>(callback);   
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // CallbackReturn children
 //
@@ -874,14 +930,27 @@ void AsyncClient::deserialize(
 void CallbackReturn_BinaryDataRef::callback(
    const WebSocketMessagePartial& partialMsg)
 {
-   ::Codec_CommonTypes::BinaryData msg;
-   AsyncClient::deserialize(&msg, partialMsg);
+   auto msg = make_shared<::Codec_CommonTypes::BinaryData>();
+   AsyncClient::deserialize(msg.get(), partialMsg);
 
-   auto str = msg.data();
-   BinaryDataRef ref;
-   ref.setRef(str);
+   auto lbd = [this, msg](void)->void
+   {
+      auto str = msg->data();
+      BinaryDataRef ref;
+      ref.setRef(str);
+      userCallbackLambda_(ref);
+   };
 
-   userCallbackLambda_(ref);
+   if (runInCaller())
+   {
+      lbd();
+   }
+   else
+   {
+      thread thr(lbd);
+      if (thr.joinable())
+         thr.detach();
+   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -897,9 +966,18 @@ void CallbackReturn_String::callback(
          throw ClientMessageError("invalid message in CallbackReturn_String");
 
       auto str = msg.data(0);
-      
       ReturnMessage<string> rm(str);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -923,9 +1001,18 @@ void CallbackReturn_LedgerDelegate::callback(
       auto& str = msg.data(0);
 
       LedgerDelegate ld(sockPtr_, bdvID_, str);
-
       ReturnMessage<LedgerDelegate> rm(ld);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -953,7 +1040,17 @@ void CallbackReturn_Tx::callback(
       cache_->insertTx(txHash_, tx);
       
       ReturnMessage<Tx> rm(tx);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -984,7 +1081,17 @@ void CallbackReturn_RawHeader::callback(
       cache_->insertRawHeader(height_, header);
 
       ReturnMessage<BinaryData> rm(header);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1005,7 +1112,17 @@ void CallbackReturn_NodeStatusStruct::callback(
       auto nss = make_shared<::ClientClasses::NodeStatusStruct>(msg);
       
       ReturnMessage<shared_ptr<::ClientClasses::NodeStatusStruct>> rm(nss);
-      userCallbackLambda_(rm);
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1027,7 +1144,17 @@ void CallbackReturn_FeeEstimateStruct::callback(
          msg.feebyte(), msg.smartfee(), msg.error());
 
       ReturnMessage<ClientClasses::FeeEstimateStruct> rm(fes);
-      userCallbackLambda_(rm);
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1058,7 +1185,17 @@ void CallbackReturn_FeeSchedule::callback(
       }
 
       ReturnMessage<map<unsigned, ClientClasses::FeeEstimateStruct>> rm(result);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1086,7 +1223,17 @@ void CallbackReturn_VectorLedgerEntry::callback(
       }
 
       ReturnMessage<vector<::ClientClasses::LedgerEntry>> rm(lev);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1107,7 +1254,17 @@ void CallbackReturn_UINT64::callback(
       uint64_t result = msg.value();
 
       ReturnMessage<uint64_t> rm(result);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1140,7 +1297,17 @@ void CallbackReturn_VectorUTXO::callback(
       }
 
       ReturnMessage<vector<UTXO>> rm(utxovec);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1163,7 +1330,17 @@ void CallbackReturn_VectorUINT64::callback(
          intvec[i] = msg.value(i);
 
       ReturnMessage<vector<uint64_t>> rm(intvec);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1197,7 +1374,17 @@ void CallbackReturn_Map_BD_U32::callback(
       }
 
       ReturnMessage<map<BinaryData, uint32_t>> rm(bdmap);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1229,7 +1416,17 @@ void CallbackReturn_Map_BD_VecU64::callback(
       }
 
       ReturnMessage<map<BinaryData, vector<uint64_t>>> rm(bdMap);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1250,7 +1447,17 @@ void CallbackReturn_LedgerEntry::callback(
       auto le = make_shared<::ClientClasses::LedgerEntry>(msg);
 
       ReturnMessage<shared_ptr<::ClientClasses::LedgerEntry>> rm(le);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1285,7 +1492,17 @@ void CallbackReturn_VectorAddressBookEntry::callback(
       }
 
       ReturnMessage<vector<AddressBookEntry>> rm(abVec);
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1303,7 +1520,17 @@ void CallbackReturn_Bool::callback(
       AsyncClient::deserialize(&msg, partialMsg);
 
       ReturnMessage<bool> rm(msg.value());
-      userCallbackLambda_(move(rm));
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1328,8 +1555,17 @@ void CallbackReturn_BlockHeader::callback(
       ClientClasses::BlockHeader bh(ref, height_);
 
       ReturnMessage<ClientClasses::BlockHeader> rm(bh);
-      userCallbackLambda_(move(rm));
 
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
    }
    catch (ClientMessageError& e)
    {
@@ -1346,6 +1582,114 @@ void CallbackReturn_BDVCallback::callback(
    AsyncClient::deserialize(msg.get(), partialMsg);
 
    userCallbackLambda_(msg);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void CallbackReturn_CombinedBalances::callback(
+   const WebSocketMessagePartial& partialMsg)
+{
+   try
+   {
+      ::Codec_AddressData::ManyCombinedData msg;
+      AsyncClient::deserialize(&msg, partialMsg);
+
+      set<CombinedBalances> result;
+
+      for (unsigned i=0; i<msg.packedbalance_size(); i++)
+      {
+         auto wltVals = msg.packedbalance(i);
+
+         CombinedBalances cbal;
+         cbal.walletId_ = wltVals.id();
+
+         for (unsigned y=0; y<wltVals.idbalances_size(); y++)
+            cbal.walletBalanceAndCount_.push_back(wltVals.idbalances(y));
+
+         for (unsigned y=0; y<wltVals.addrdata_size(); y++)
+         {
+            auto addrBals = wltVals.addrdata(y);
+               
+            BinaryData scrAddr(addrBals.scraddr());
+
+            vector<uint64_t> abl;
+            for (unsigned z=0; z<addrBals.value_size(); z++)
+               abl.push_back(addrBals.value(z));
+
+            cbal.addressBalances_.insert(make_pair(scrAddr, abl));
+         }
+
+         result.insert(cbal);
+      }
+      
+      ReturnMessage<set<CombinedBalances>> rm(result);
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
+   }
+   catch (ClientMessageError& e)
+   {
+      ReturnMessage<set<CombinedBalances>> rm(e);
+      userCallbackLambda_(move(rm));
+   }  
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void CallbackReturn_CombinedCounts::callback(
+   const WebSocketMessagePartial& partialMsg)
+{
+   try
+   {
+      ::Codec_AddressData::ManyCombinedData msg;
+      AsyncClient::deserialize(&msg, partialMsg);
+
+      set<CombinedCounts> result;
+
+      for (unsigned i=0; i<msg.packedbalance_size(); i++)
+      {
+         auto wltVals = msg.packedbalance(i);
+
+         CombinedCounts cbal;
+         cbal.walletId_ = wltVals.id();
+
+         for (unsigned y=0; y<wltVals.addrdata_size(); y++)
+         {
+            auto addrBals = wltVals.addrdata(y);
+               
+            BinaryData scrAddr(addrBals.scraddr());
+
+            uint64_t bl = addrBals.value(0);
+            cbal.addressTxnCounts_.insert(make_pair(scrAddr, bl));
+         }
+
+         result.insert(cbal);
+      }
+      
+      ReturnMessage<set<CombinedCounts>> rm(result);
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
+   }
+   catch (ClientMessageError& e)
+   {
+      ReturnMessage<set<CombinedCounts>> rm(e);
+      userCallbackLambda_(move(rm));
+   }  
 }
 
 ///////////////////////////////////////////////////////////////////////////////

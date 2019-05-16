@@ -36,6 +36,8 @@ enum PacketType
 
    // Send headless public key to signer ui to export it
    HeadlessPubKeyRequestType = 24;
+
+   SyncSettingsRequestType = 25;
 }
 
 message Packet
