@@ -82,6 +82,7 @@ public:
    std::string getCookiePath() const { return bipIDCookiePath_; }
    BinaryData getOwnPubKey() const;
    void addAuthPeer(const BinaryData& inKey, const std::string& keyName);
+   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
 
    void rekey(const std::string &clientId);
    void setLocalHeartbeatInterval();
