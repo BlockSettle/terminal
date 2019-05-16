@@ -261,7 +261,7 @@ bool SignerAdapterListener::onReady(int cur, int total)
 void SignerAdapterListener::sendStatusUpdate()
 {
    signer::UpdateStatus evt;
-   evt.set_headless_bind_failed(app_->headlessBindFailed());
+   evt.set_signer_bind_status(signer::BindStatus(app_->signerBindStatus()));
    sendData(signer::UpdateStatusType, evt.SerializeAsString());
 }
 

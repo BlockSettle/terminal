@@ -244,9 +244,10 @@ void HeadlessAppObj::onlineProcessing()
 
    listener_->SetLimits(settings_->limits());
 
-   headlessBindFailed_ = !connection_->BindConnection(settings_->listenAddress()
+   bool result = connection_->BindConnection(settings_->listenAddress()
       , settings_->listenPort(), listener_.get());
-   if (headlessBindFailed_) {
+
+   if (!result) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
 
@@ -254,9 +255,10 @@ void HeadlessAppObj::onlineProcessing()
       if (settings_->runMode() == bs::signer::RunMode::lightgui) {
          throw std::runtime_error("failed to bind listening socket");
       }
-
-      adapterLsn_->sendStatusUpdate();
    }
+
+   signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
+   adapterLsn_->sendStatusUpdate();
 
    if (cbReady_) {
       // Needed to setup SignerAdapterListener callbacks

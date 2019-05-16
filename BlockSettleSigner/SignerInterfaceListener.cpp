@@ -512,7 +512,8 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   if (evt.headless_bind_failed()) {
+
+   if (evt.signer_bind_status() == signer::BindFailed) {
       QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
    }
 }
