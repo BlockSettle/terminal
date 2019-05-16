@@ -82,17 +82,18 @@ TEST(TestCommon, CacheFile)
 
 TEST(TestCommon, AssetManager)
 {
-   TestEnv::requireAssets();
+   TestEnv env(StaticLogger::loggerPtr);
+   env.requireAssets();
 
-   auto inprocSigner = std::make_shared<InprocSigner>(TestEnv::walletsMgr(), TestEnv::logger(), "", NetworkType::TestNet);
+   auto inprocSigner = std::make_shared<InprocSigner>(env.walletsMgr(), StaticLogger::loggerPtr, "", NetworkType::TestNet);
    inprocSigner->Start();
-   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(TestEnv::logger()
-      , TestEnv::appSettings(), TestEnv::armory());
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(StaticLogger::loggerPtr
+      , env.appSettings(), env.armoryConnection());
    syncMgr->setSignContainer(inprocSigner);
    syncMgr->syncWallets();
 
-   auto mdProvider = TestEnv::mdProvider();
-   AssetManager assetMgr(TestEnv::logger(), syncMgr, mdProvider, TestEnv::celerConnection());
+   auto mdProvider = env.mdProvider();
+   AssetManager assetMgr(StaticLogger::loggerPtr, syncMgr, mdProvider, env.celerConnection());
    assetMgr.connect(mdProvider.get(), &MarketDataProvider::MDSecurityReceived, &assetMgr, &AssetManager::onMDSecurityReceived);
    assetMgr.connect(mdProvider.get(), &MarketDataProvider::MDSecuritiesReceived, &assetMgr, &AssetManager::onMDSecuritiesReceived);
 

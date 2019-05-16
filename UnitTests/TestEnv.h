@@ -7,9 +7,7 @@
 #include "BlockchainMonitor.h"
 #include "MockAssetMgr.h"
 #include "MockAuthAddrMgr.h"
-#include "RegtestController.h"
 #include "Server.h"
-#include "gtest/NodeUnitTest.h"
 #include "BlockDataManagerConfig.h"
 #include "BDM_mainthread.h"
 #include <btc/ecc.h>
@@ -34,6 +32,7 @@ class BlockchainMonitor;
 class CelerClient;
 class ConnectionManager;
 class MarketDataProvider;
+class NodeUnitTest;
 class QuoteProvider;
 
 class ResolverCoinbase : public ResolverFeed

@@ -56,6 +56,7 @@ public:
    std::string walletFolder_;
 };
 
+#if 0
 TEST_F(TestWallet, BIP44_derivation)
 {
    SecureBinaryData seed("test seed");
@@ -260,6 +261,7 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
    EXPECT_TRUE(wallet->eraseFile());
    EXPECT_TRUE(woWallet->eraseFile());
 }
+#endif   //0
 
 TEST_F(TestWallet, Settlement)
 {
@@ -325,6 +327,7 @@ TEST_F(TestWallet, Settlement)
    }
 }
 
+#if 0
 TEST_F(TestWallet, ExtOnlyAddresses)
 {
    SecureBinaryData passphrase("test");
@@ -1454,6 +1457,8 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 
    std::this_thread::sleep_for(std::chrono::seconds(2));
 }
+#endif   //0
+
 /*
 TEST(TestWallet, ImportExport)
 {

@@ -10,7 +10,6 @@
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
 #include "TestEnv.h"
-#include "RegtestController.h"
 #include "TransactionData.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -78,6 +77,7 @@ void TestSettlement::SetUp()
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
    walletsMgr_->createSettlementWallet(NetworkType::TestNet, {});
 
+#if 0
    for (size_t i = 0; i < nbParties_; i++) {
       auto hdWallet = std::make_shared<bs::core::hd::Wallet>(
          "Primary" + std::to_string(i), ""
@@ -113,6 +113,7 @@ void TestSettlement::SetUp()
       logger->debug("[TestSettlement] {} fundAddr={}, authAddr={}", hdWallet->name()
          , addr.display(), authAddr.display());
    }
+#endif   //0
 
    auto inprocSigner = std::make_shared<InprocSigner>(
       walletsMgr_, logger, "", NetworkType::TestNet);
@@ -122,8 +123,8 @@ void TestSettlement::SetUp()
    syncMgr_->setSignContainer(inprocSigner);
    syncMgr_->syncWallets();
 
-   auto regIDs = syncMgr_->registerWallets();
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+   syncMgr_->registerWallets();
+//   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
    mineBlocks(6);
@@ -140,6 +141,7 @@ void TestSettlement::SetUp()
          promPtr->set_value(true);
    };
 
+#if 0
    for (const auto &wallet : syncMgr_->getAllWallets())
       wallet->updateBalances(balLBD);
 
@@ -147,6 +149,7 @@ void TestSettlement::SetUp()
    settlWallet->updateBalances(balLBD);
    connect(settlWallet.get(), &bs::sync::Wallet::walletReady, this, &TestSettlement::onWalletReady);
    settlementId_ = CryptoPRNG::generateRandom(32);
+#endif   //0
 
    fut.wait();
 }

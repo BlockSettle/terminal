@@ -26,6 +26,7 @@ SET(BLOCK_SETTLE_ROOT ${CMAKE_SOURCE_DIR})
 SET(AUTH_EID_ROOT ${CMAKE_SOURCE_DIR})
 
 set(CMAKE_MODULE_PATH "${BLOCK_SETTLE_ROOT}/common/build_scripts/CMakeModules")
+set(BUILD_TEST_TOOLS 1)
 
 # set versions info
 # Terminal, PB, PuB and offline tools share same version for consistency

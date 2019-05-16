@@ -17,6 +17,7 @@ unit tests to add:
 - invalid CC output order in tx, check parenthood is invalid
 ***/
 
+#if 0
 TestCC::TestCC()
    : QObject(nullptr)
 {}
@@ -414,6 +415,7 @@ TEST_F(TestCC, TX_sell)
    balances = xbtWallet_->getAddrBalance(recvAddr_);
    EXPECT_EQ(balances[0], spendVal2);
 }
+#endif //0
 
 #if 0 // temporarily disabled
 TEST_F(TestCC, sell_after_buy)

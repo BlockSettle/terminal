@@ -7,11 +7,11 @@
 
 #include "TestEnv.h"
 
+#include "gtest/NodeUnitTest.h"
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
 #include "ArmorySettings.h"
 #include "AuthAddressManager.h"
-#include "BS_regtest.h"
 #include "CelerClient.h"
 #include "ConnectionManager.h"
 #include "CoreWalletsManager.h"
