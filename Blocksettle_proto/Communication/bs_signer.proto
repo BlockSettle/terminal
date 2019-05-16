@@ -40,6 +40,8 @@ enum PacketType
    SyncSettingsRequestType = 25;
 
    UpdateStatusType = 26;
+
+   ImportWoWalletType = 27;
 }
 
 message Packet
@@ -330,4 +332,11 @@ message HeadlessPubKeyResponse
 message UpdateStatus
 {
    BindStatus signer_bind_status = 1;
+}
+
+
+message ImportWoWalletRequest
+{
+   string filename = 1;
+   bytes  content = 2;
 }
