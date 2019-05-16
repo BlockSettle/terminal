@@ -75,6 +75,8 @@ void HeadlessAppObj::start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
+   adapterLsn_->sendStatusUpdate();
+
    ready_ = true;
    onlineProcessing();
 }
@@ -242,15 +244,18 @@ void HeadlessAppObj::onlineProcessing()
 
    listener_->SetLimits(settings_->limits());
 
-   headlessBindSucceed_ = connection_->BindConnection(settings_->listenAddress()
+   headlessBindFailed_ = !connection_->BindConnection(settings_->listenAddress()
       , settings_->listenPort(), listener_.get());
-   if (!headlessBindSucceed_) {
+   if (headlessBindFailed_) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
+
       // Abort only if lightgui used, fullgui should just show error message instead
       if (settings_->runMode() == bs::signer::RunMode::lightgui) {
          throw std::runtime_error("failed to bind listening socket");
       }
+
+      adapterLsn_->sendStatusUpdate();
    }
 
    if (cbReady_) {

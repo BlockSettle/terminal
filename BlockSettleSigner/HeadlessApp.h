@@ -48,7 +48,7 @@ public:
    void walletsListUpdated();
 
    std::shared_ptr<ZmqBIP15XServerConnection> connection() const;
-   bool headlessBindSucceed() const { return headlessBindSucceed_; }
+   bool headlessBindFailed() const { return headlessBindFailed_; }
 
 private:
    void startInterface();
@@ -65,7 +65,7 @@ private:
    ProcessControl             guiProcess_;
    std::function<void(bool)>  cbReady_;
    bool ready_{false};
-   std::atomic_bool headlessBindSucceed_{false};
+   std::atomic_bool headlessBindFailed_{false};
 };
 
 #endif // __HEADLESS_APP_H__
