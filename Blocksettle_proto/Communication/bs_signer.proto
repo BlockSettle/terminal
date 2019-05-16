@@ -71,7 +71,7 @@ enum Setting {
    LimitManualPwKeep = 11;
    HideEidInfoBox = 12;
    TrustedTerminals = 13;
-   StartupBIP150CTX = 14;
+   TwoWaySignerAuth = 14;
 };
 
 message Settings
@@ -89,7 +89,7 @@ message Settings
    int32 limit_pass_keep_time = 10;
    bool hide_eid_info_box = 12;
    repeated KeyPair trusted_terminals = 13;
-   bool startup_bip150_ctx = 14;
+   bool two_way_signer_auth = 14;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
