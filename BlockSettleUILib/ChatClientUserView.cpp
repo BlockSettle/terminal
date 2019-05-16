@@ -299,8 +299,6 @@ void LoggerWatcher::onElementSelected(CategoryElement *element)
 #if 0
    qDebug() << "Item selected:\n" << QString::fromStdString(element->getDataObject()->toJsonString());
 #endif
-   // clear dot of unread message
-   element->setNewItemsFlag(false);
 }
 
 void LoggerWatcher::onElementUpdated(CategoryElement *element)
