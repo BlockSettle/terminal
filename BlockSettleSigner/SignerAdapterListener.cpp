@@ -5,8 +5,9 @@
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "HeadlessContainerListener.h"
-#include "ServerConnection.h"
 #include "HeadlessSettings.h"
+#include "ServerConnection.h"
+#include "SystemFileUtils.h"
 
 using namespace Blocksettle::Communication;
 
@@ -707,6 +708,16 @@ bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer
    signer::ImportWoWalletRequest request;
    if (!request.ParseFromString(data)) {
       return false;
+   }
+
+   if (!SystemFileUtils::pathExist(settings_->getWalletsDir())) {
+      if (SystemFileUtils::mkPath(settings_->getWalletsDir())) {
+         logger_->info("[{}] created missing wallets dir {}", __func__, settings_->getWalletsDir());
+      }
+      else {
+         logger_->error("[{}] failed to create wallets dir {}", __func__, settings_->getWalletsDir());
+         return false;
+      }
    }
 
    {
