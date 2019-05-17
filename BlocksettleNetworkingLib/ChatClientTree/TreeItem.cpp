@@ -1,15 +1,20 @@
 #include "TreeItem.h"
+
 #include <iostream>
 
+ChatUIDefinitions::ChatTreeNodeType TreeItem::getType() const
+{
+   return ownType_;
+}
 
+TreeItem *TreeItem::getParent() const {
+   return parent_;
+}
 
-TreeItem::NodeType TreeItem::getType() const { return type_; }
-
-TreeItem::NodeType TreeItem::getAcceptType() const { return acceptType_; }
-
-TreeItem::NodeType TreeItem::getTargetParentType() const { return targetParentType_; }
-
-TreeItem *TreeItem::getParent() const {return parent_; }
+QString TreeItem::getDisplayName() const
+{
+   return displayName_;
+}
 
 TreeItem::~TreeItem()
 {
@@ -18,7 +23,7 @@ TreeItem::~TreeItem()
 
 bool TreeItem::insertItem(TreeItem *item)
 {
-   bool supported = isSupported(item);
+   bool supported = isChildSupported(item);
    //assert(supported);
    if (supported) {
       addChild(item);
@@ -29,7 +34,7 @@ bool TreeItem::insertItem(TreeItem *item)
 
 int TreeItem::selfIndex() const
 {
-   if (parent_){
+   if (parent_) {
        auto thizIt = std::find(parent_->children_.begin(), parent_->children_.end(), this);
        if (thizIt != parent_->children_.end()){
           return static_cast<int>(std::distance(parent_->children_.begin(), thizIt));
@@ -55,18 +60,6 @@ void TreeItem::deleteChildren()
    children_.clear();
 }
 
-void TreeItem::grabChildren(TreeItem *item)
-{
-   //Copy all children pointers to this children list
-   //And set they parent as this
-   for (auto child : item->getChildren()) {
-      child->setParent(this);
-      children_.push_back(child);
-   }
-   //Clean old parent children pointers list
-   item->children_.clear();
-}
-
 void TreeItem::setParent(TreeItem *parent)
 {
    parent_ = parent;
@@ -90,7 +83,7 @@ TreeItem *TreeItem::findSupportChild(TreeItem *item)
 {
    auto found = std::find_if(children_.begin(), children_.end(),
                                        [item](TreeItem* child){
-      return child->isSupported(item);
+      return child->isChildSupported(item);
    });
 
    if (found != children_.end()) {
@@ -99,22 +92,34 @@ TreeItem *TreeItem::findSupportChild(TreeItem *item)
    return nullptr;
 }
 
-TreeItem::TreeItem(TreeItem::NodeType type, TreeItem::NodeType acceptType, TreeItem::NodeType parentType)
+TreeItem::TreeItem(ChatUIDefinitions::ChatTreeNodeType type
+                  , const std::vector<ChatUIDefinitions::ChatTreeNodeType>& acceptedTypes
+                  , ChatUIDefinitions::ChatTreeNodeType parentType
+                  , const QString& displayName)
    : QObject(nullptr)
-   , type_(type)
-   , acceptType_(acceptType)
-   , targetParentType_(parentType)
-   , parent_(nullptr)
+   , ownType_{type}
+   , acceptNodeTypes_{acceptedTypes}
+   , targetParentType_{parentType}
+   , parent_{nullptr}
+   , displayName_{displayName}
 {
 }
 
-bool TreeItem::isSupported(TreeItem *item) const
+bool TreeItem::isChildSupported(const TreeItem *item) const
 {
-   //Check if this type is supported by this item
-   return acceptType_ == item->getType() && type_ == item->getTargetParentType();
+   return isChildTypeSupported(item->getType())
+      && item->isParentSupported(this);
 }
 
+bool TreeItem::isChildTypeSupported(const ChatUIDefinitions::ChatTreeNodeType& childType) const
+{
+   return acceptNodeTypes_.IsNodeTypeAccepted(childType);
+}
 
+bool TreeItem::isParentSupported(const TreeItem* item) const
+{
+   return targetParentType_ == item->getType();
+}
 
 const TreeItem *TreeItem::recursiveRoot() const
 {

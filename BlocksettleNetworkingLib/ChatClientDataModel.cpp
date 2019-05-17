@@ -9,12 +9,12 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
 {
    connect(root_.get(), &TreeItem::itemChanged, this, &ChatClientDataModel::onItemChanged);
 
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::RoomsElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::ContactsElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::AllUsersElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCReceivedResponsesElement));
-   root_->insertItem(new CategoryItem(TreeItem::NodeType::OTCSentResponsesElement));
-   //root_->insertItem(new CategoryItem(TreeItem::NodeType::SearchElement));
+   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::RoomsElement, tr("Chat rooms")));
+   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, tr("Contacts")));
+   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::AllUsersElement, tr("Users")));
+   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement, tr("Received Responses")));
+   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement, tr("Sent Responses")));
+   //root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::SearchElement, tr("Search")));
 
 }
 
@@ -27,7 +27,7 @@ void ChatClientDataModel::clearModel()
 
 void ChatClientDataModel::clearSearch()
 {
-   TreeItem * search = root_->findCategoryNodeWith(TreeItem::NodeType::SearchElement);
+   TreeItem * search = root_->findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType::SearchElement);
 
    if (!search || search->getChildren().empty()) {
       return;
@@ -43,7 +43,7 @@ void ChatClientDataModel::clearSearch()
 
 bool ChatClientDataModel::insertRoomObject(std::shared_ptr<Chat::RoomData> data)
 {
-   beginChatInsertRows(TreeItem::NodeType::RoomsElement);
+   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::RoomsElement);
    bool res = root_->insertRoomObject(data);
    endInsertRows();
    return res;
@@ -51,7 +51,7 @@ bool ChatClientDataModel::insertRoomObject(std::shared_ptr<Chat::RoomData> data)
 
 bool ChatClientDataModel::insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
 {
-   beginChatInsertRows(TreeItem::NodeType::ContactsElement);
+   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::ContactsElement);
    bool res = root_->insertContactObject(data, isOnline);
    endInsertRows();
    return res;
@@ -59,7 +59,7 @@ bool ChatClientDataModel::insertContactObject(std::shared_ptr<Chat::ContactRecor
 
 bool ChatClientDataModel::insertGeneralUserObject(std::shared_ptr<Chat::UserData> data)
 {
-   beginChatInsertRows(TreeItem::NodeType::AllUsersElement);
+   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::AllUsersElement);
    bool res = root_->insertGeneralUserObject(data);
    endInsertRows();
    return res;
@@ -67,7 +67,7 @@ bool ChatClientDataModel::insertGeneralUserObject(std::shared_ptr<Chat::UserData
 
 bool ChatClientDataModel::insertSearchUserObject(std::shared_ptr<Chat::UserData> data)
 {
-   beginChatInsertRows(TreeItem::NodeType::SearchElement);
+   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::SearchElement);
    bool res = root_->insertSearchUserObject(data);
    endInsertRows();
    return res;
@@ -78,7 +78,7 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
    if (userList.empty()) {
       return false;
    }
-   TreeItem * search = root_->findCategoryNodeWith(TreeItem::NodeType::SearchElement);
+   TreeItem * search = root_->findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType::SearchElement);
 
    if (!search) {
       return false;
@@ -130,7 +130,7 @@ bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> m
 {
    lastMessage_ = message;
 
-   auto item = new TreeMessageNode(TreeItem::NodeType::RoomsElement, message);
+   auto item = new TreeMessageNode(ChatUIDefinitions::ChatTreeNodeType::RoomsElement, message);
 
    bool res = insertMessageNode(item);
 
@@ -145,7 +145,7 @@ bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageDat
 {
    lastMessage_ = message;
 
-   auto item = new TreeMessageNode(TreeItem::NodeType::ContactsElement, message);
+   auto item = new TreeMessageNode(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, message);
 
    bool res = insertMessageNode(item);
 
@@ -158,8 +158,7 @@ bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageDat
 
 TreeItem *ChatClientDataModel::findChatNode(const std::string &chatId)
 {
-   TreeItem * res =root_->findChatNode(chatId);
-   return res;
+   return root_->findChatNode(chatId);
 }
 
 std::vector<std::shared_ptr<Chat::ContactRecordData> > ChatClientDataModel::getAllContacts()
@@ -169,7 +168,7 @@ std::vector<std::shared_ptr<Chat::ContactRecordData> > ChatClientDataModel::getA
 
 bool ChatClientDataModel::removeContactNode(const std::string &contactId)
 {
-   TreeItem * item = root_->findCategoryNodeWith(TreeItem::NodeType::ContactsElement);
+   TreeItem * item = root_->findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType::ContactsElement);
 
    //Check if category node exists and have children that could be removed
    if (!item || item->getChildren().empty()) {
@@ -314,8 +313,8 @@ QVariant ChatClientDataModel::data(const QModelIndex &index, int role) const
    switch (role) {
       case ItemTypeRole:
          return QVariant::fromValue(item->getType());
-      case ItemAcceptTypeRole:
-         return QVariant::fromValue(item->getAcceptType());
+      case CategoryGroupDisplayName:
+         return item->getDisplayName();
       case RoomTitleRole:
       case RoomIdRole:
          return roomData(item, role);
@@ -338,8 +337,8 @@ QVariant ChatClientDataModel::data(const QModelIndex &index, int role) const
 void ChatClientDataModel::onItemChanged(TreeItem *item)
 {
    switch (item->getType()) {
-      case TreeItem::NodeType::RoomsElement:
-      case TreeItem::NodeType::ContactsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
          updateNewMessagesFlag();
       break;
       default:
@@ -352,7 +351,7 @@ void ChatClientDataModel::onItemChanged(TreeItem *item)
 
 QVariant ChatClientDataModel::roomData(const TreeItem *item, int role) const
 {
-   if (item->getType() == TreeItem::NodeType::RoomsElement) {
+   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
       const ChatRoomElement * room_element = static_cast<const ChatRoomElement*>(item);
       auto room = room_element->getRoomData();
 
@@ -377,7 +376,7 @@ QVariant ChatClientDataModel::roomData(const TreeItem *item, int role) const
 
 QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
 {
-   if (item->getType() == TreeItem::NodeType::ContactsElement) {
+   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
       const ChatContactElement * contact_element = static_cast<const ChatContactElement*>(item);
       auto contact = contact_element->getContactData();
 
@@ -409,10 +408,10 @@ QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
 QVariant ChatClientDataModel::userData(const TreeItem *item, int role) const
 {
    std::shared_ptr<Chat::UserData> user = nullptr;
-   if (item->getType() == TreeItem::NodeType::AllUsersElement) {
+   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::AllUsersElement) {
       const ChatUserElement * user_element = static_cast<const ChatUserElement*>(item);
       user = user_element->getUserData();
-   } else if (item->getType() == TreeItem::NodeType::SearchElement) {
+   } else if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::SearchElement) {
       const ChatSearchElement * search_element = static_cast<const ChatSearchElement*>(item);
       user = search_element->getUserData();
    }
@@ -434,8 +433,7 @@ QVariant ChatClientDataModel::userData(const TreeItem *item, int role) const
 QVariant ChatClientDataModel::chatNewMessageData(const TreeItem *item, int role) const
 {
    bool newMessage = false;
-   if (item->getAcceptType() == TreeItem::NodeType::MessageDataNode) {
-
+   if (item->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)) {
       switch (role) {
       case ChatNewMessageRole: {
          const CategoryElement * categoryElement = static_cast<const CategoryElement*>(item);
@@ -463,20 +461,20 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
    TreeItem *item = static_cast<TreeItem*>(index.internalPointer());
 
    switch (item->getType()) {
-      case TreeItem::NodeType::CategoryNode:
+      case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
          if (current_flags.testFlag(Qt::ItemIsSelectable)){
             current_flags.setFlag(Qt::ItemIsSelectable, false);
          }
          break;
-      case TreeItem::NodeType::ContactsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
          //Only contact record could be edited
          if (!current_flags.testFlag(Qt::ItemIsEditable)){
             current_flags.setFlag(Qt::ItemIsEditable);
          }
          //no break needed
-      case TreeItem::NodeType::RoomsElement:
-      case TreeItem::NodeType::SearchElement:
-      case TreeItem::NodeType::AllUsersElement:
+      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
+      case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
          if (!current_flags.testFlag(Qt::ItemIsEnabled)){
             current_flags.setFlag(Qt::ItemIsEnabled);
          }
@@ -490,7 +488,7 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
    return current_flags;
 }
 
-void ChatClientDataModel::beginChatInsertRows(const TreeItem::NodeType &type)
+void ChatClientDataModel::beginChatInsertRows(const ChatUIDefinitions::ChatTreeNodeType &type)
 {
    TreeItem * item = root_->findCategoryNodeWith(type);
 
@@ -511,7 +509,7 @@ void ChatClientDataModel::updateNewMessagesFlag()
    CategoryElement *elem = NULL;
    for (auto category : root_->getChildren()) {
       for ( auto categoryElement : category->getChildren()) {
-         if (categoryElement->getAcceptType() == TreeItem::NodeType::MessageDataNode) {
+         if (categoryElement->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)) {
             elem = static_cast<CategoryElement*>(categoryElement);
             if (elem->updateNewItemsFlag()) {
                flag = true;
@@ -540,7 +538,7 @@ bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &valu
    TreeItem *item = static_cast<TreeItem*>(index.internalPointer());
 
    switch (item->getType()) {
-      case TreeItem::NodeType::ContactsElement: {
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
          auto citem = static_cast<ChatContactElement*>(item);
          auto cdata = citem->getContactData();
          if (citem && cdata) {
@@ -561,7 +559,7 @@ bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &valu
 // insert channel for response that client send to OTC requests
 bool ChatClientDataModel::insertOTCSentResponse(const std::string& otcId)
 {
-   beginChatInsertRows(TreeItem::NodeType::OTCSentResponsesElement);
+   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement);
    bool res = root_->insertOTCSentResponseObject(otcId);
    endInsertRows();
    return res;
@@ -570,7 +568,7 @@ bool ChatClientDataModel::insertOTCSentResponse(const std::string& otcId)
 // insert channel for response client receive for own OTC
 bool ChatClientDataModel::insertOTCReceivedResponse(const std::string& otcId)
 {
-   beginChatInsertRows(TreeItem::NodeType::OTCReceivedResponsesElement);
+   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement);
    bool res = root_->insertOTCReceivedResponseObject(otcId);
    endInsertRows();
    return res;

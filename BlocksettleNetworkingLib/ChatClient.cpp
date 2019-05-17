@@ -193,15 +193,15 @@ void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response
       QString serverId = QString::fromStdString(response.serverMessageId());
       QString receiverId = QString::fromStdString(response.receiverId());
       auto message = model_->findMessageItem(receiverId.toStdString(), localId.toStdString());
+      bool res = false;
       if (message){
          message->setId(serverId);
          message->setFlag(Chat::MessageData::State::Sent);
+         model_->notifyMessageChanged(message);
+         res = chatDb_->syncMessageId(localId, serverId);
       }
-      model_->notifyMessageChanged(message);
-      bool res = message && chatDb_->syncMessageId(localId, serverId);
 
       logger_->debug("[ChatClient::OnSendMessageResponse]: message id sync: {}", res?"Success":"Failed");
-
    }
 }
 
