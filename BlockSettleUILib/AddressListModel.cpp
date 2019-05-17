@@ -125,7 +125,7 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
          break;
       }
 
-      addressRows_.reserve(addressRows_.size() + addressList.size());      
+      addressRows_.reserve(addressRows_.size() + addressList.size());
 
       for (size_t i = 0; i < addressList.size(); i++) {
          const auto &addr = addressList[i];
