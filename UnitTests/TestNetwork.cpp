@@ -97,7 +97,7 @@ TEST(TestNetwork, ZMQ_BIP15X)
 
    protected:
        void OnDataFromClient(const std::string &clientId, const std::string &data) override {
-         logger_->error("[{}] {} from {} #{}", __func__, data.size()
+         logger_->debug("[{}] {} from {} #{}", __func__, data.size()
             , BinaryData(clientId).toHexStr(), clientPktCnt_);
          if (clientPktCnt_ < clientPackets.size()) {
             if (clientPackets[clientPktCnt_++] != data) {
