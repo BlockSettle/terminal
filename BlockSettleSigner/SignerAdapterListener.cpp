@@ -5,8 +5,9 @@
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "HeadlessContainerListener.h"
-#include "ServerConnection.h"
 #include "HeadlessSettings.h"
+#include "ServerConnection.h"
+#include "SystemFileUtils.h"
 
 using namespace Blocksettle::Communication;
 
@@ -200,6 +201,9 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
       break;
    case signer::HeadlessPubKeyRequestType:
       rc = onHeadlessPubKeyRequest(packet.data(), packet.id());
+      break;
+   case signer::ImportWoWalletType:
+      rc = onImportWoWallet(packet.data(), packet.id());
       break;
    case signer::SyncSettingsRequestType:
       rc = onSyncSettings(packet.data());
@@ -403,6 +407,32 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::Re
    return false;
 }
 
+bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wallet> &wallet
+   , Blocksettle::Communication::signer::PacketType pt, bs::signer::RequestId reqId)
+{
+   signer::CreateWatchingOnlyResponse response;
+   response.set_wallet_id(wallet->walletId());
+   response.set_name(wallet->name());
+   response.set_description(wallet->description());
+
+   for (const auto &group : wallet->getGroups()) {
+      auto groupEntry = response.add_groups();
+      groupEntry->set_type(group->index());
+      for (const auto &leaf : group->getLeaves()) {
+         auto leafEntry = groupEntry->add_leaves();
+         leafEntry->set_id(leaf->walletId());
+         leafEntry->set_index(leaf->index());
+         leafEntry->set_public_key(leaf->getPubKey().toBinStr());
+         for (const auto &addr : leaf->getUsedAddressList()) {
+            auto addrEntry = leafEntry->add_addresses();
+            addrEntry->set_index(leaf->getAddressIndex(addr));
+            addrEntry->set_aet(addr.getType());
+         }
+      }
+   }
+   return sendData(pt, response.SerializeAsString(), reqId);
+}
+
 bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptWalletRequest request;
@@ -423,27 +453,7 @@ bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::Requ
       return false;
    }
 
-   signer::CreateWatchingOnlyResponse response;
-   response.set_wallet_id(woWallet->walletId());
-   response.set_name(woWallet->name());
-   response.set_description(woWallet->description());
-
-   for (const auto &group : woWallet->getGroups()) {
-      auto groupEntry = response.add_groups();
-      groupEntry->set_type(group->index());
-      for (const auto &leaf : group->getLeaves()) {
-         auto leafEntry = groupEntry->add_leaves();
-         leafEntry->set_id(leaf->walletId());
-         leafEntry->set_index(leaf->index());
-         leafEntry->set_public_key(leaf->getPubKey().toBinStr());
-         for (const auto &addr : leaf->getUsedAddressList()) {
-            auto addrEntry = leafEntry->add_addresses();
-            addrEntry->set_index(leaf->getAddressIndex(addr));
-            addrEntry->set_aet(addr.getType());
-         }
-      }
-   }
-   return sendData(signer::CreateWOType, response.SerializeAsString(), reqId);
+   return sendWoWallet(woWallet, signer::CreateWOType, reqId);
 }
 
 bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::signer::RequestId reqId)
@@ -683,7 +693,7 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
 }
 
-bool SignerAdapterListener::onHeadlessPubKeyRequest(const std::string &data, bs::signer::RequestId reqId)
+bool SignerAdapterListener::onHeadlessPubKeyRequest(const std::string &, bs::signer::RequestId reqId)
 {
    signer::HeadlessPubKeyResponse response;
    if (app_ && app_->connection()) {
@@ -691,6 +701,41 @@ bool SignerAdapterListener::onHeadlessPubKeyRequest(const std::string &data, bs:
    }
 
    return sendData(signer::HeadlessPubKeyRequestType, response.SerializeAsString(), reqId);
+}
+
+bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::ImportWoWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   if (!SystemFileUtils::pathExist(settings_->getWalletsDir())) {
+      if (SystemFileUtils::mkPath(settings_->getWalletsDir())) {
+         logger_->info("[{}] created missing wallets dir {}", __func__, settings_->getWalletsDir());
+      }
+      else {
+         logger_->error("[{}] failed to create wallets dir {}", __func__, settings_->getWalletsDir());
+         return false;
+      }
+   }
+
+   {
+      const std::string filePath = settings_->getWalletsDir() + "/" + request.filename();
+      std::ofstream ofs(filePath, std::ios::out | std::ios::binary | std::ios::trunc);
+      if (!ofs.good()) {
+         logger_->error("[{}] failed to write to {}", __func__, filePath);
+         return false;
+      }
+      ofs << request.content();
+   }
+
+   const auto woWallet = walletsMgr_->loadWoWallet(settings_->getWalletsDir(), request.filename());
+   if (!woWallet) {
+      return false;
+   }
+   walletsListUpdated();
+   return sendWoWallet(woWallet, signer::ImportWoWalletType, reqId);
 }
 
 void SignerAdapterListener::walletsListUpdated()

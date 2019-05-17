@@ -54,6 +54,7 @@ public:
                                    , int removedIndex);
 
    Q_INVOKABLE QString getWoWalletFile(const QString &walletId) const;
+   Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
       , const QString &path, bs::wallet::QPasswordData *passwordData) const;
@@ -90,6 +91,8 @@ private:
    std::shared_ptr<bs::sync::hd::Wallet> getRootForId(const QString &walletId) const;
    QStringList walletNames() const;
    Q_INVOKABLE QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
+   std::shared_ptr<bs::core::hd::Wallet> getWoWallet(const bs::sync::WatchingOnlyWallet &) const;
+   std::shared_ptr<bs::sync::hd::Wallet> getWoSyncWallet(const bs::sync::WatchingOnlyWallet &) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

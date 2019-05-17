@@ -14,6 +14,9 @@ namespace spdlog {
 }
 namespace bs {
    namespace core {
+      namespace hd {
+         class Wallet;
+      }
       class WalletsManager;
    }
 }
@@ -48,8 +51,11 @@ protected:
 
 private:
    void setCallbacks();
+
    bool sendData(Blocksettle::Communication::signer::PacketType, const std::string &data
       , bs::signer::RequestId reqId = 0);
+   bool sendWoWallet(const std::shared_ptr<bs::core::hd::Wallet> &
+      , Blocksettle::Communication::signer::PacketType, bs::signer::RequestId reqId = 0);
 
    bool onSignTxReq(const std::string &data, bs::signer::RequestId);
    bool onSyncWalletInfo(bs::signer::RequestId);
@@ -67,6 +73,7 @@ private:
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    bool onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    bool onHeadlessPubKeyRequest(const std::string &data, bs::signer::RequestId);
+   bool onImportWoWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncSettings(const std::string &data);
 
    void walletsListUpdated();

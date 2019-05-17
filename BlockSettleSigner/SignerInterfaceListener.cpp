@@ -72,6 +72,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       onSyncWallet(packet.data(), packet.id());
       break;
    case signer::CreateWOType:
+   case signer::ImportWoWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
    case signer::GetDecryptedNodeType:
