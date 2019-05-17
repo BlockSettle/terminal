@@ -73,10 +73,6 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    // Create a random four-byte ID for the client.
    msgID_ = READ_UINT32_LE(CryptoPRNG::generateRandom(4));
 
-   // BIP 151 connection setup. Technically should be per-socket or something
-   // similar but data connections will only connect to one machine at a time.
-   auto lbds = getAuthPeerLambda();
-   bip151Connection_ = make_shared<BIP151Connection>(lbds);
    if (makeClientIDCookie_) {
       genBIPIDCookie();
    }
@@ -402,6 +398,12 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
       leftOverData_.clear();
    }
 
+   if (!bip151Connection_) {
+      logger_->error("[{}] received {} bytes of data in disconnected state"
+         , __func__, rawData.size());
+      return;
+   }
+
    // Perform decryption if we're ready.
    if (bip151Connection_->connectionComplete()) {
       auto result = bip151Connection_->decryptPacket(
@@ -432,6 +434,17 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
    ProcessIncomingData(payload);
 }
 
+bool ZmqBIP15XDataConnection::openConnection(const std::string &host
+   , const std::string &port, DataConnectionListener *listener)
+{
+   // BIP 151 connection setup. Technically should be per-socket or something
+// similar but data connections will only connect to one machine at a time.
+   auto lbds = getAuthPeerLambda();
+   bip151Connection_ = make_shared<BIP151Connection>(lbds);
+
+   return ZmqDataConnection::openConnection(host, port, listener);
+}
+
 // Close the connection.
 //
 // INPUT:  None
@@ -439,6 +452,21 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::closeConnection()
 {
+   if (bip151Connection_ &&
+      (bip151Connection_->getBIP150State() == BIP150State::SUCCESS)) {
+
+      ZmqBIP15XSerializedMessage msg;
+      const BinaryData emptyBD;
+      msg.construct(emptyBD.getDataVector(), bip151Connection_.get()
+         , ZMQ_MSGTYPE_DISCONNECT);
+
+      // An error message is already logged elsewhere if the send fails.
+      const auto pkt = msg.getNextPacket();
+      sendPacket(pkt.toBinStr());
+
+      notifyOnDisconnected();
+   }
+
    // If a future obj is still waiting, satisfy it to prevent lockup. This
    // shouldn't happen here but it's an emergency fallback.
    if (serverPubkeyProm_ && !serverPubkeySignalled_) {
@@ -446,7 +474,9 @@ bool ZmqBIP15XDataConnection::closeConnection()
       serverPubkeySignalled_ = true;
    }
    currentReadMessage_.reset();
-   return ZmqDataConnection::closeConnection();
+   bool rc = ZmqDataConnection::closeConnection();
+   bip151Connection_.reset();
+   return rc;
 }
 
 // The function that processes raw ZMQ connection data. It processes the BIP
@@ -505,12 +535,14 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
    currentReadMessage_.message_.getMessage(&inMsg);
 
    // We shouldn't get here but just in case....
-   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
+   if (!bip151Connection_ || (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)) {
       if (logger_) {
          logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
       }
-      notifyOnError(DataConnectionListener::HandshakeFailed);
+      if (bip151Connection_) {
+         notifyOnError(DataConnectionListener::HandshakeFailed);
+      }
       return;
    }
 
@@ -805,12 +837,12 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       bip151Connection_->bip150HandshakeRekey();
       bip150HandshakeCompleted_ = true;
       outKeyTimePoint_ = chrono::steady_clock::now();
+
+      logger_->info("[processHandshake] BIP 150 handshake with server complete "
+         "- connection to {} is ready and fully secured", srvId);
       if (cbCompleted_) {
          cbCompleted_();
       }
-      logger_->info("[processHandshake] BIP 150 handshake with server complete "
-         "- connection to {} is ready and fully secured", srvId);
-
       break;
    }
 

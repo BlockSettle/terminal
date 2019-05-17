@@ -847,12 +847,21 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
          //rekey after succesful BIP150 handshake
          connection->encData_->bip150HandshakeRekey();
          connection->bip150HandshakeCompleted_ = true;
+         notifyListenerOnNewConnection(clientID);
+
          logger_->info("[processHandshake] BIP 150 handshake with client "
             "complete - connection with {} is ready and fully secured"
             , BinaryData(clientID).toHexStr());
 
          break;
       }
+
+      case ZMQ_MSGTYPE_DISCONNECT:
+         logger_->debug("[processHandshake] disconnect request received from {}"
+            , BinaryData(clientID).toHexStr());
+         resetBIP151Connection(clientID);
+         notifyListenerOnDisconnectedClient(clientID);
+         break;
 
       default:
          logger_->error("[processHandshake] Unknown message type.");
@@ -862,9 +871,12 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
       return true;
    };
 
+   if (clientID.empty()) {
+      logger_->error("[{}] empty client ID", __func__);
+      return false;
+   }
    bool retVal = processHandshake();
-   if (!retVal)
-   {
+   if (!retVal) {
       logger_->error("[{}] BIP 150/151 handshake process failed.", __func__);
    }
    return retVal;
@@ -893,7 +905,7 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
       }
    }
 
-   {
+   if (connectionErased) {
       FastLock locker{heartbeatsLock_};
       auto it = lastHeartbeats_.find(clientID);
       if (it != lastHeartbeats_.end()) {
@@ -905,7 +917,7 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
    }
 
    if (connectionErased) {
-      logger_->error("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} erased"
+      logger_->debug("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} erased"
             , hexID.toHexStr());
    } else {
       logger_->error("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} not found"
@@ -959,7 +971,6 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
    AddConnection(clientID, connection);
 
    UpdateClientHeartbeatTimestamp(clientID);
-   notifyListenerOnNewConnection(clientID);
 
    return connection;
 }
