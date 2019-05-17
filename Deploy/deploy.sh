@@ -32,5 +32,7 @@ dpkg -b Ubuntu bsterminal.deb
 echo "deb package generated"
 
 rm -f Ubuntu/usr/bin/blocksettle
+rm -f Ubuntu/usr/bin/blocksettle_signer
+rm -f Ubuntu/usr/bin/bs_signer_gui
 rm -f Ubuntu/usr/share/blocksettle/DealerAutoQuote.qml
 rm -f Ubuntu/lib/x86_64-linux-gnu/*
