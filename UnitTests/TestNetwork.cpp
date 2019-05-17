@@ -437,12 +437,13 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
        }
        EXPECT_TRUE(clientPktsFut2.get());
    }
-
    EXPECT_TRUE(clientConn->closeConnection());
+
    const auto client2Lsn = std::make_shared<AnotherClientConnListener>(StaticLogger::loggerPtr);
    const auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
       StaticLogger::loggerPtr, true, "", "", true);
    client2Conn->SetContext(zmqContext);
+   serverConn->addAuthPeer(client2Conn->getOwnPubKey(), host + ":" + port);
    client2Conn->addAuthPeer(serverKey, host + ":" + port);
    ASSERT_TRUE(client2Conn->openConnection(host, port, client2Lsn.get()));
    EXPECT_TRUE(connectFut2.get());
