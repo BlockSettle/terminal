@@ -10,6 +10,7 @@
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
 #include "SettlementAddressEntry.h"
+#include "SystemFileUtils.h"
 #include "TestEnv.h"
 #include "UiUtils.h"
 #include "WalletEncryption.h"
@@ -41,7 +42,7 @@ class TestWallet : public ::testing::Test
       walletFolder_ = std::string("./homedir");
 
       DBUtils::removeDirectory(walletFolder_);
-      mkdir(walletFolder_.c_str());
+      SystemFileUtils::mkPath(walletFolder_);
    }
 
    void TearDown()
