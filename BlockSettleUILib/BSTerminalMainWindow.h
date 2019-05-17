@@ -155,7 +155,6 @@ private:
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
    QString currentUserLogin_;
-   bool  widgetsInited_ = false;
 
    struct NetworkSettings {
       struct Connection {
@@ -224,6 +223,8 @@ private:
    void loginToCeler(const std::string& username, const std::string& password);
 
    bool goOnlineArmory() const;
+
+   void InitWidgets();
 
 private:
    QString           loginButtonText_;

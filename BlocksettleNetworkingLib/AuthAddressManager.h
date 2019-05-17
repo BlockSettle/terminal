@@ -173,8 +173,8 @@ protected:
    std::shared_ptr<CelerClient>           celerClient_;
    std::shared_ptr<AddressVerificator>    addressVerificator_;
 
-   std::atomic_flag                                lockCommands_ = ATOMIC_FLAG_INIT;
-   std::set<std::shared_ptr<RequestReplyCommand>>  activeCommands_;
+   std::map<int, std::unique_ptr<RequestReplyCommand>>  activeCommands_;
+   int requestId_{};
 
    mutable std::atomic_flag                  lockList_ = ATOMIC_FLAG_INIT;
    std::vector<bs::Address>                  addresses_;
