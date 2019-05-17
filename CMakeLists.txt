@@ -495,7 +495,10 @@ ELSE(WIN32)
    ELSE(APPLE)
       FIND_PACKAGE( Threads REQUIRED )
       FIND_PACKAGE( X11 REQUIRED )
-      FIND_PACKAGE( XCB REQUIRED )
+      FIND_PACKAGE( X11_XCB REQUIRED )
+      FIND_PACKAGE( XCB REQUIRED
+         COMPONENTS XKB RENDERUTIL SYNC XFIXES XINERAMA RANDR RENDER IMAGE SHM KEYSYMS ICCCM SHAPE
+         OPTIONAL_COMPONENTS XINPUT )
       FIND_PACKAGE( Freetype REQUIRED )
       FIND_PACKAGE( Fontconfig REQUIRED )
 
@@ -522,7 +525,7 @@ ELSE(WIN32)
          ${QT5_LIB_ROOT}/libQt5FontDatabaseSupport.a
          ${FREETYPE_LIBRARIES}
          ${FONTCONFIG_LIBRARIES}
-         X11-xcb
+         X11::XCB
          X11
          Xi
          Xrender
@@ -537,6 +540,7 @@ ELSE(WIN32)
          )
 
          LIST (APPEND OS_SPECIFIC_LIBS
+            ${QT5_PLUGINS_ROOT}/platforms/libqxcb.a
             ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlite.a
             ${QT5_PLUGINS_ROOT}/sqldrivers/libqsqlmysql.a
             mysqlclient
