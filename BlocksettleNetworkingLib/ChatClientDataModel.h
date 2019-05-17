@@ -12,7 +12,7 @@ class ChatClientDataModel : public QAbstractItemModel
 public:
    enum Role {
       ItemTypeRole = Qt::UserRole + 1,
-      ItemAcceptTypeRole,
+      CategoryGroupDisplayName,
       RoomTitleRole,
       RoomIdRole,
       ContactTitleRole,
@@ -73,7 +73,7 @@ private:
 
 private:
    std::shared_ptr<RootItem> root_;
-   void beginChatInsertRows(const TreeItem::NodeType &type);
+   void beginChatInsertRows(const ChatUIDefinitions::ChatTreeNodeType &type);
    void updateNewMessagesFlag();
 
 private:

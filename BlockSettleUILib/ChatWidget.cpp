@@ -279,7 +279,6 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    model->setNewMessageMonitor(this);
    ui_->treeViewUsers->setModel(model.get());
 //   ui_->treeViewUsers->expandAll();
-   ui_->treeViewUsers->addWatcher(new LoggerWatcher());
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
    ui_->treeViewUsers->setHandler(client_);
@@ -571,7 +570,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
 {
    if (element) {
       switch (element->getType()) {
-         case TreeItem::NodeType::RoomsElement: {
+         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
             auto room = std::dynamic_pointer_cast<Chat::RoomData>(element->getDataObject());
             if (room) {
                setIsRoom(true);
@@ -579,7 +578,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             }
          }
          break;
-         case TreeItem::NodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
             auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(element->getDataObject());
             if (contact) {
                setIsRoom(false);
@@ -863,7 +862,7 @@ void ChatWidget::selectGlobalRoom()
 
    // select Global room
    for (auto index : indexes) {
-      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
+      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
          if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey) {
             disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
             onRoomClicked(Chat::GlobalRoomKey);

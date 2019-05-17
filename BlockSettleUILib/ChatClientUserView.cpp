@@ -33,7 +33,7 @@ public:
       //ItemType type = static_cast<ItemType>(currentIndex_.data(Role::ItemTypeRole).toInt());
       TreeItem * item = static_cast<TreeItem*>(currentIndex_.internalPointer());
 
-      if (item && item->getType() == TreeItem::NodeType::ContactsElement) {
+      if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
          auto citem = static_cast<ChatContactElement*>(item);
          currentContact_ = citem->getContactData();
          prepareContactMenu();
@@ -155,10 +155,10 @@ void ChatClientUserView::setCurrentUserChat(const QString &userId)
                                             QLatin1String("*"),
                                             -1,
                                             Qt::MatchWildcard|Qt::MatchRecursive);
-      
+
    // set required chat
    for (auto index : indexes) {
-      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::ContactsElement) {
+      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
          if (index.data(ChatClientDataModel::Role::ContactIdRole).toString() == userId) {
             setCurrentIndex(index);
             break;
@@ -182,9 +182,9 @@ void ChatClientUserView::onCustomContextMenu(const QPoint & point)
 void ChatClientUserView::onClicked(const QModelIndex &index)
 {
    if (index.isValid()) {
-      const auto nodeType = qvariant_cast<TreeItem::NodeType>(index.data(ChatClientDataModel::Role::ItemTypeRole));
+      const auto nodeType = qvariant_cast<ChatUIDefinitions::ChatTreeNodeType>(index.data(ChatClientDataModel::Role::ItemTypeRole));
 
-      if (nodeType == TreeItem::NodeType::CategoryNode) {
+      if (nodeType == ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode) {
          if (isExpanded(index)) {
             collapse(index);
          }
@@ -199,19 +199,19 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
 {
    auto data = static_cast<CategoryElement*>(element)->getDataObject();
    switch (element->getType()) {
-      case TreeItem::NodeType::RoomsElement:{
+      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:{
          std::shared_ptr<Chat::RoomData> room = std::dynamic_pointer_cast<Chat::RoomData>(data);
          if (label_){
             label_->setText(QObject::tr("CHAT #") + room->getId());
          }
       } break;
-      case TreeItem::NodeType::ContactsElement:{
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
          std::shared_ptr<Chat::ContactRecordData> contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(data);
          if (label_){
             label_->setText(QObject::tr("CHAT #") + contact->getContactId());
          }
       } break;
-      case TreeItem::NodeType::AllUsersElement:{
+      case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
          std::shared_ptr<Chat::UserData> room = std::dynamic_pointer_cast<Chat::UserData>(data);
          if (label_){
             label_->setText(QObject::tr("CHAT #") + room->getUserId());
@@ -256,9 +256,9 @@ void ChatClientUserView::currentChanged(const QModelIndex &current, const QModel
    TreeItem* item = static_cast<TreeItem*>(current.internalPointer());
    if (!watchers_.empty() && item) {
       switch (item->getType()) {
-         case TreeItem::NodeType::RoomsElement:
-         case TreeItem::NodeType::ContactsElement:
-         case TreeItem::NodeType::AllUsersElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
             auto element = static_cast<CategoryElement*>(item);
             updateDependUI(element);
             notifyCurrentChanged(element);
@@ -277,13 +277,13 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
    if (topLeft == bottomRight) {
       TreeItem* item = static_cast<TreeItem*>(topLeft.internalPointer());
       switch (item->getType()) {
-         case TreeItem::NodeType::MessageDataNode: {
+         case ChatUIDefinitions::ChatTreeNodeType::MessageDataNode: {
             auto mnode = static_cast<TreeMessageNode*>(item);
             notifyMessageChanged(mnode->getMessage());
          }
          break;
-         case TreeItem::NodeType::RoomsElement:
-         case TreeItem::NodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
             auto node = static_cast<CategoryElement*>(item);
             notifyElementUpdated(node);
          }
@@ -294,37 +294,17 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
    }
 }
 
-void LoggerWatcher::onElementSelected(CategoryElement *element)
-{
-#if 0
-   qDebug() << "Item selected:\n" << QString::fromStdString(element->getDataObject()->toJsonString());
-#endif
-}
-
-void LoggerWatcher::onElementUpdated(CategoryElement *element)
-{
-#if 0
-   qDebug() << "Item updated:\n" << QString::fromStdString(element->getDataObject()->toJsonString());
-#endif
-}
-
-void LoggerWatcher::onMessageChanged(std::shared_ptr<Chat::MessageData> message)
-{
-#if 0
-   qDebug() << "Message changed:\n" << QString::fromStdString(message->toJsonString());
-#endif
-}
-
 void ChatClientUserView::rowsInserted(const QModelIndex &parent, int start, int end)
 {
-   TreeItem::NodeType type = parent.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>();
-   TreeItem::NodeType supportType = parent.data(ChatClientDataModel::Role::ItemAcceptTypeRole).value<TreeItem::NodeType>();
+   // ChatUIDefinitions::ChatTreeNodeType type = parent.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
+   // ChatUIDefinitions::ChatTreeNodeType supportType = parent.data(ChatClientDataModel::Role::ItemAcceptTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
 
-   if (type == TreeItem::NodeType::CategoryNode)
-      if (supportType == TreeItem::NodeType::SearchElement) {
-         if (!isExpanded(parent)) {
-            expand(parent);
-         }
-      }
-   return QTreeView::rowsInserted(parent, start, end);
+   // if (type == ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode)
+   //    if (supportType == ChatUIDefinitions::ChatTreeNodeType::SearchElement) {
+   //       if (!isExpanded(parent)) {
+   //          expand(parent);
+   //       }
+   // }
+
+   QTreeView::rowsInserted(parent, start, end);
 }
