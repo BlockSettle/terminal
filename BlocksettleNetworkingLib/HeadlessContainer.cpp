@@ -1127,10 +1127,10 @@ bool RemoteSigner::Disconnect()
    if (!connection_) {
       return true;
    }
-   headless::RequestPacket packet;
+/*   headless::RequestPacket packet;
    packet.set_type(headless::DisconnectionRequestType);
-   packet.set_data("");
-   Send(packet);
+   packet.set_data("");    // This code produces crashes on terminal shutdown
+   Send(packet);*/         // and its purpose is obscure to me
 
    return connection_->closeConnection();
 }

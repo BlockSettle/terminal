@@ -66,7 +66,8 @@ void LoginWindow::onTimer()
 {
    timeLeft_ -= 0.5f;
    if (timeLeft_ <= 0) {
-      onAutheIDFailed(tr("Timeout"));
+      //onAutheIDFailed(tr("Timeout"));
+      setupLoginPage();
    }
    else {
       ui_->progressBar->setValue(timeLeft_ * 2);

@@ -70,6 +70,8 @@ public:
 
    // Overridden functions from ZmqDataConnection.
    bool send(const std::string& data) override; // Send data from outside class.
+   bool openConnection(const std::string &host, const std::string &port
+      , DataConnectionListener *) override;
    bool closeConnection() override;
 
    void rekey();

@@ -498,7 +498,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
          , const std::string& srvAddrPort
          , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
-         QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm] {
+         QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm, srvAddrPort] {
             BSMessageBox *box = new BSMessageBox(BSMessageBox::question
                , tr("Server identity key has changed")
                , tr("Do you wish to import the new server identity key?")
@@ -512,6 +512,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 
             if (answer) {
                newKeyProm->set_value(true);
+               signersProvider_->addKey(srvAddrPort, newKey);
             }
             else {
                newKeyProm->set_value(false);

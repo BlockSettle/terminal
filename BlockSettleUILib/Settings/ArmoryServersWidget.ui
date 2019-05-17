@@ -13,7 +13,7 @@
   <property name="sizeHint" stdset="0">
    <size>
     <width>1002</width>
-    <height>467</height>
+    <height>469</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -62,85 +62,8 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item row="4" column="0">
-          <widget class="QWidget" name="widgetZmqLabel_7" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>100</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_17">
-            <property name="spacing">
-             <number>3</number>
-            </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="labelZmqPubKey_5">
-              <property name="text">
-               <string>ArmoryDB Key</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="labelZmqPubKeyHint_5">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>10</width>
-                <height>15</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>10</width>
-                <height>15</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>Optional when connecting to a public ArmoryDB</string>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">image: url(&quot;:/resources/notification_info@2x.png&quot;);</string>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label_5">
+         <item row="2" column="0">
+          <widget class="QLabel" name="label">
            <property name="minimumSize">
             <size>
              <width>100</width>
@@ -154,53 +77,9 @@
             </size>
            </property>
            <property name="text">
-            <string>Network</string>
+            <string>IP / DNS</string>
            </property>
           </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QComboBox" name="comboBoxNetworkType">
-           <property name="minimumSize">
-            <size>
-             <width>250</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>250</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <item>
-            <property name="text">
-             <string>--Select--</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>MainNet</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>TestNet</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="0" column="2" rowspan="2">
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
          <item row="5" column="1">
           <widget class="QStackedWidget" name="stackedWidgetAddSave">
@@ -304,8 +183,8 @@
            </widget>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label">
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_5">
            <property name="minimumSize">
             <size>
              <width>100</width>
@@ -319,15 +198,21 @@
             </size>
            </property>
            <property name="text">
-            <string>IP / DNS</string>
+            <string>Network</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_3">
+         <item row="4" column="0">
+          <widget class="QWidget" name="widgetZmqLabel_7" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
-             <width>100</width>
+             <width>0</width>
              <height>0</height>
             </size>
            </property>
@@ -337,9 +222,61 @@
              <height>16777215</height>
             </size>
            </property>
-           <property name="text">
-            <string>Name</string>
-           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_17">
+            <property name="spacing">
+             <number>3</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="labelZmqPubKey_5">
+              <property name="text">
+               <string>ArmoryDB Key</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelZmqPubKeyHint_5">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>10</width>
+                <height>15</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>10</width>
+                <height>15</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Optional when connecting to a public ArmoryDB</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">image: url(&quot;:/resources/notification_info@2x.png&quot;);</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
          <item row="3" column="1">
@@ -418,8 +355,40 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
-          <widget class="QLineEdit" name="lineEditKey">
+         <item row="0" column="2" rowspan="2">
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="minimumSize">
+            <size>
+             <width>100</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>100</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Name</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QComboBox" name="comboBoxNetworkType">
            <property name="minimumSize">
             <size>
              <width>250</width>
@@ -432,7 +401,49 @@
              <height>16777215</height>
             </size>
            </property>
+           <item>
+            <property name="text">
+             <string>--Select--</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>MainNet</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>TestNet</string>
+            </property>
+           </item>
           </widget>
+         </item>
+         <item row="4" column="1">
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <widget class="QLineEdit" name="lineEditKey">
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>250</width>
+               <height>16777215</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButtonKeyImport">
+             <property name="text">
+              <string>Import</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -517,12 +528,6 @@
         <property name="cornerButtonEnabled">
          <bool>false</bool>
         </property>
-        <attribute name="horizontalHeaderDefaultSectionSize">
-         <number>140</number>
-        </attribute>
-        <attribute name="horizontalHeaderMinimumSectionSize">
-         <number>80</number>
-        </attribute>
         <attribute name="verticalHeaderVisible">
          <bool>false</bool>
         </attribute>
@@ -617,7 +622,6 @@
   <tabstop>comboBoxNetworkType</tabstop>
   <tabstop>lineEditAddress</tabstop>
   <tabstop>spinBoxPort</tabstop>
-  <tabstop>lineEditKey</tabstop>
  </tabstops>
  <resources/>
  <connections/>
