@@ -16,6 +16,7 @@
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
 #include "QuoteProvider.h"
+#include "SystemFileUtils.h"
 #include "UiUtils.h"
 
 const BinaryData testnetGenesisBlock = READHEX("0100000000000000000000000000000000000\
@@ -137,9 +138,9 @@ ArmoryInstance::ArmoryInstance()
    DBUtils::removeDirectory(homedir_);
    DBUtils::removeDirectory(ldbdir_);
 
-   mkdir(blkdir_.c_str());
-   mkdir(homedir_.c_str());
-   mkdir(ldbdir_.c_str());
+   SystemFileUtils::mkPath(blkdir_);
+   SystemFileUtils::mkPath(homedir_);
+   SystemFileUtils::mkPath(ldbdir_);
 
    //setup env
    NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
