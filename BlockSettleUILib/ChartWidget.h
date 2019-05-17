@@ -70,7 +70,7 @@ protected slots:
    void OnResetBtnClick();
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
-   void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
+   void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oldRange);
    static QString ProductTypeToString(Blocksettle::Communication::TradeHistory::TradeHistoryTradeType type);
    void SetupCrossfire();
    void SetupLastPrintFlag();
