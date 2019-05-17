@@ -64,6 +64,9 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
 
          auto contactItem = client_->getDataModel()->findContactItem(sender.toStdString());
          if (contactItem == nullptr) {
+            if (isGroupRoom_) {
+               return toHtmlUsername(sender);
+            }
             return sender;
          }
 
@@ -72,10 +75,6 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
                return toHtmlUsername(contactItem->getDisplayName(), sender);
             }
             return contactItem->getDisplayName();
-         }
-
-         if (isGroupRoom_) {
-            return toHtmlUsername(sender);
          }
 
          return sender;
