@@ -6,6 +6,7 @@
 #include "MdhsClient.h"
 #include "market_data_history.pb.h"
 #include "trade_history.pb.h"
+#include "ApplicationSettings.h"
 
 const QColor BACKGROUND_COLOR = QColor(28, 40, 53);
 const QColor FOREGROUND_COLOR = QColor(Qt::white);
@@ -120,8 +121,14 @@ void ChartWidget::init(const std::shared_ptr<ApplicationSettings>& appSettings
    // initialize charts
    InitializeCustomPlot();
 
-   // initial select interval
-   ui_->btn1h->click();
+   auto timeframe = appSettings_->get(ApplicationSettings::ChartTimeframe).toInt();
+   const auto btns = dateRange_.buttons();
+   for (auto it : btns) {
+      if (dateRange_.id(it) == timeframe) {
+         it->setChecked(true);
+         break;
+      }
+   }
 }
 
 void ChartWidget::setAuthorized(bool authorized)
@@ -269,7 +276,7 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
       logger_->error("can't parse response from mdhs: {}", data);
       return;
    }
-   std::map<TradeHistoryTradeType, std::vector<std::string>> tempMap;
+   std::map<TradeHistoryTradeType, std::vector<std::string>, std::greater<>> tempMap;
    for (const auto& product : response.products()) {
       tempMap[product.type()].push_back(product.product());
       productTypesMapper[product.product()] = product.type();
@@ -280,9 +287,22 @@ void ChartWidget::ProcessProductsListResponse(const std::string& data)
          AddChildItem(cboModel_, QString::fromStdString(name));
       }
    }
+
    connect(ui_->cboInstruments, &QComboBox::currentTextChanged,
            this, &ChartWidget::OnInstrumentChanged);
-   ui_->cboInstruments->setCurrentIndex(1); //to prevent automatic selection of parent item
+   auto savedProduct = appSettings_->get(ApplicationSettings::ChartProduct).toString();
+   bool found = false;
+   for (int i = 0; i < ui_->cboInstruments->count(); i++) {
+      if (ui_->cboInstruments->itemText(i).contains(savedProduct)) {
+         ui_->cboInstruments->setCurrentIndex(i);
+         found = true;
+         break;
+      }
+   }
+   if (!found) {
+      ui_->cboInstruments->setCurrentIndex(1); //to prevent automatic selection of parent item
+   }
+
    zoomDiff_ = 0.0;
 }
 
@@ -471,10 +491,9 @@ void ChartWidget::UpdatePrintFlag()
 void ChartWidget::UpdatePlot(const int& interval, const qint64& timestamp)
 {
    qreal upper = timestamp / 1000 + IntervalWidth(interval) / 1000 / 2;
-   qreal lower = upper - IntervalWidth(interval, requestLimit) / 1000 - IntervalWidth(interval) / 1000 / 2;
-   if (!qFuzzyIsNull(zoomDiff_)) {
-      lower = upper - zoomDiff_;
-   }
+   qreal lower = upper -
+      IntervalWidth(dateRange_.checkedId(), appSettings_->get(ApplicationSettings::ChartCandleCount).toInt()) / 1000 -
+      IntervalWidth(interval) / 1000 / 2;
    ui_->customPlot->xAxis->setRange(lower, upper);
    auto margin = IntervalWidth(dateRange_.checkedId()) / 1000 * 0.5;
    ui_->customPlot->xAxis->setRange(lower - margin, upper + margin);
@@ -609,6 +628,7 @@ int ChartWidget::FractionSizeForProduct(TradeHistoryTradeType type)
 void ChartWidget::OnDateRangeChanged(int interval)
 {
    if (lastInterval_ != interval) {
+      appSettings_->set(ApplicationSettings::ChartTimeframe, interval);
       lastInterval_ = interval;
       zoomDiff_ = 0.0;
       UpdateChart(interval);
@@ -618,6 +638,7 @@ void ChartWidget::OnDateRangeChanged(int interval)
 void ChartWidget::OnInstrumentChanged(const QString& text)
 {
    if (text != getCurrentProductName()) {
+      appSettings_->set(ApplicationSettings::ChartProduct, getCurrentProductName());
       zoomDiff_ = volumeAxisRect_->axis(QCPAxis::atBottom)->range().size();
       isHigh_ = true;
       UpdateChart(dateRange_.checkedId());
@@ -955,26 +976,28 @@ bool ChartWidget::isBeyondLowerLimit(QCPRange newRange, int interval)
    return newRange.size() < IntervalWidth(interval, candleViewLimit) / 1000;
 }
 
-void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange)
+void ChartWidget::OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oldRange)
 {
    auto interval = dateRange_.checkedId() == -1 ? 0 : dateRange_.checkedId();
 
-   if (isBeyondUpperLimit(newRange, interval)) {
+   if (isBeyondUpperLimit(newRange, interval) && oldRange.lower >= 0) {
       volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(
-         oneRange.upper - IntervalWidth(interval, candleCountOnScreenLimit) / 1000, oneRange.upper);
+         oldRange.upper - IntervalWidth(interval, candleCountOnScreenLimit) / 1000, oldRange.upper);
       ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
    }
    else {
       if (isBeyondLowerLimit(newRange, interval)) {
          volumeAxisRect_->axis(QCPAxis::atBottom)->setRange(
-            oneRange.upper - IntervalWidth(interval, candleViewLimit) / 1000 - 1.0, oneRange.upper);
+            oldRange.upper - IntervalWidth(interval, candleViewLimit) / 1000 - 1.0, oldRange.upper);
          ui_->customPlot->xAxis->setRange(volumeAxisRect_->axis(QCPAxis::atBottom)->range());
       }
       else {
          ui_->customPlot->xAxis->setRange(newRange);
       }
    }
-
+   if (!std::isinf(ui_->customPlot->xAxis->range().size() / (IntervalWidth(dateRange_.checkedId()) / 1000))) {
+      appSettings_->set(ApplicationSettings::ChartCandleCount, int(ui_->customPlot->xAxis->range().size() / (IntervalWidth(dateRange_.checkedId()) / 1000)));
+   }
    LoadAdditionalPoints(newRange);
    pickTicketDateFormat(newRange);
    rescalePlot();

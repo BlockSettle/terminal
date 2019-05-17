@@ -65,6 +65,7 @@ bool ZmqBIP15XMsgPartial::parsePacket(const BinaryDataRef& dataRef)
    case ZMQ_MSGTYPE_AUTH_REPLY:
    case ZMQ_MSGTYPE_AUTH_PROPOSE:
    case ZMQ_MSGTYPE_HEARTBEAT:
+   case ZMQ_MSGTYPE_DISCONNECT:
    {
       return parseMessageWithoutId(dataSlice);
    }

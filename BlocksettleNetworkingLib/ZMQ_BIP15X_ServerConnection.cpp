@@ -265,7 +265,6 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    , const string& data, const SendResultCb& cb)
 {
-   bool retVal = false;
    BIP151Connection* connPtr = nullptr;
 
    auto connection = GetConnection(clientId);
@@ -311,38 +310,33 @@ bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    }
 
    // Encrypt data here if the BIP 150 handshake is complete.
-   if (connection && connection->encData_) {
-      if (connection->encData_->getBIP150State() ==
-         BIP150State::SUCCESS) {
-         string sendStr = data;
-         const BinaryData payload(data);
-         ZmqBIP15XSerializedMessage msg;
-         msg.construct(payload.getDataVector(), connPtr
-            , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, connection->msgID_);
+   if (connection->encData_ && connection->encData_->getBIP150State() == BIP150State::SUCCESS) {
+      const BinaryData payload(data);
+      ZmqBIP15XSerializedMessage msg;
+      msg.construct(payload.getDataVector(), connPtr
+         , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, connection->msgID_);
 
-         // Cycle through all packets.
-         while (!msg.isDone()) {
-            auto& packet = msg.getNextPacket();
-            if (packet.getSize() == 0) {
-               logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] failed to "
-                  "serialize data (size {})", data.size());
-               return false;
-            }
-
-            if (!QueueDataToSend(clientId, packet.toBinStr(), cb, false)) {
-               logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] fragment send failed"
-                  , data.size());
-               return false;
-            }
+      // Cycle through all packets.
+      while (!msg.isDone()) {
+         auto& packet = msg.getNextPacket();
+         if (packet.getSize() == 0) {
+            logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] failed to "
+               "serialize data (size {})", data.size());
+            return false;
          }
-         retVal = true;
+
+         if (!QueueDataToSend(clientId, packet.toBinStr(), cb, false)) {
+            logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] fragment send failed"
+               , data.size());
+            return false;
+         }
       }
-      else {
-         // Queue up the untouched data for straight transmission.
-         retVal = QueueDataToSend(clientId, data, cb, false);
-      }
+
+      return true;
    }
-   return retVal;
+
+   // Queue up the untouched data for straight transmission.
+   return QueueDataToSend(clientId, data, cb, false);
 }
 
 void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
@@ -853,12 +847,21 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
          //rekey after succesful BIP150 handshake
          connection->encData_->bip150HandshakeRekey();
          connection->bip150HandshakeCompleted_ = true;
+         notifyListenerOnNewConnection(clientID);
+
          logger_->info("[processHandshake] BIP 150 handshake with client "
             "complete - connection with {} is ready and fully secured"
             , BinaryData(clientID).toHexStr());
 
          break;
       }
+
+      case ZMQ_MSGTYPE_DISCONNECT:
+         logger_->debug("[processHandshake] disconnect request received from {}"
+            , BinaryData(clientID).toHexStr());
+         resetBIP151Connection(clientID);
+         notifyListenerOnDisconnectedClient(clientID);
+         break;
 
       default:
          logger_->error("[processHandshake] Unknown message type.");
@@ -868,9 +871,12 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
       return true;
    };
 
+   if (clientID.empty()) {
+      logger_->error("[{}] empty client ID", __func__);
+      return false;
+   }
    bool retVal = processHandshake();
-   if (!retVal)
-   {
+   if (!retVal) {
       logger_->error("[{}] BIP 150/151 handshake process failed.", __func__);
    }
    return retVal;
@@ -899,7 +905,7 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
       }
    }
 
-   {
+   if (connectionErased) {
       FastLock locker{heartbeatsLock_};
       auto it = lastHeartbeats_.find(clientID);
       if (it != lastHeartbeats_.end()) {
@@ -911,7 +917,7 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
    }
 
    if (connectionErased) {
-      logger_->error("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} erased"
+      logger_->debug("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} erased"
             , hexID.toHexStr());
    } else {
       logger_->error("[ZmqBIP15XServerConnection::resetBIP151Connection] Connection ID {} not found"
@@ -965,7 +971,6 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
    AddConnection(clientID, connection);
 
    UpdateClientHeartbeatTimestamp(clientID);
-   notifyListenerOnNewConnection(clientID);
 
    return connection;
 }
