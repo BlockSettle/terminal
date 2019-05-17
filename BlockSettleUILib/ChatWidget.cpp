@@ -673,7 +673,7 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
          auto messageText = message->messageData();
          auto contactItem = client_->getDataModel()->findContactItem(message->senderId().toStdString());
              
-         if (contactItem->hasDisplayName()) {
+         if (contactItem && contactItem->hasDisplayName()) {
             messageTitle = contactItem->getDisplayName();
          }
 
