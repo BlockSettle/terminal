@@ -39,7 +39,7 @@ public:
 		const std::shared_ptr<spdlog::logger>& logger,
 		QObject* pParent = nullptr);
 
-	~MdhsClient() noexcept;
+   ~MdhsClient() noexcept override;
 
 	MdhsClient(const MdhsClient&) = delete;
 	MdhsClient& operator = (const MdhsClient&) = delete;
@@ -52,14 +52,12 @@ signals:
 	void DataReceived(const std::string& data);
 
 private:
-	bool OnDataReceived(const std::string& data);
-
 	std::shared_ptr<ApplicationSettings>	appSettings_;
 	std::shared_ptr<ConnectionManager>		connectionManager_;
 	std::shared_ptr<spdlog::logger>			logger_;
 
-	std::atomic_flag                                lockCommands_ = ATOMIC_FLAG_INIT;
-	std::set<std::shared_ptr<RequestReplyCommand>>  activeCommands_;
+   std::map<int, std::unique_ptr<RequestReplyCommand>> activeCommands_;
+   int requestId_{};
 };
 
 #endif // MDHS_CLIENT_H

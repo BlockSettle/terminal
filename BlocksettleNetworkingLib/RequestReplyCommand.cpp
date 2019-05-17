@@ -11,11 +11,6 @@ RequestReplyCommand::RequestReplyCommand(const std::string& name
  : name_(name)
  , connection_(connection)
  , logger_(logger)
- , dropResult_(false)
- , replyReceived_(false)
- , result_(false)
- , executeOnConnect_(false)
- , requestCompleted_(nullptr)
 {
 }
 
