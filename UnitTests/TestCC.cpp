@@ -535,4 +535,3 @@ TEST_F(TestCC, sell_after_buy)
    EXPECT_EQ(xbtWallet_->getAddrBalance(recvAddr)[0], spendValSell);
 }
 #endif   //0
-
