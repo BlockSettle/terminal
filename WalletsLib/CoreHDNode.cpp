@@ -204,8 +204,8 @@ BinaryData hd::Node::chainCode() const
 std::shared_ptr<AssetEntry_Single> hd::Node::getAsset(int id) const
 {
    SecureBinaryData privKeyBin = privChainedKey().copy();
-   const auto privKey = std::make_shared<Asset_PrivateKey>(id, privKeyBin
-      , make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
+   const auto privKey = std::make_shared<Asset_PrivateKey>(BinaryData::IntToStrLE(id)
+      , privKeyBin, make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
    SecureBinaryData pubKey = pubChainedKey();
    const AssetEntry_Single aes(id, BinaryData{}, pubKey, privKey);
    return std::make_shared<AssetEntry_Single>(aes);

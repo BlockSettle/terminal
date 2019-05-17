@@ -244,6 +244,15 @@ ChatWidget::ChatWidget(QWidget *parent)
 {
    ui_->setupUi(this);
 
+#ifndef Q_OS_WIN
+   ui_->timeLabel->setMinimumSize(ui_->timeLabel->property("minimumSizeLinux").toSize());
+#endif
+
+   ui_->textEditMessages->setColumnsWidth(ui_->timeLabel->minimumWidth(),
+                                          ui_->iconLabel->minimumWidth(),
+                                          ui_->userLabel->minimumWidth(),
+                                          ui_->messageLabel->minimumWidth());
+
    //Init UI and other stuff
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
 
@@ -685,9 +694,9 @@ void ChatWidget::selectGlobalRoom()
    for (auto index : indexes) {
       if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
          if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey) {
+            disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
             onRoomClicked(Chat::GlobalRoomKey);
             ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
             break;
          }
       }

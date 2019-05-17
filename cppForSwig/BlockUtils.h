@@ -120,10 +120,7 @@ class BlockDataManager
 {
 private:
    BlockDataManagerConfig config_;
-   
-   class BitcoinQtBlockFiles;
-   std::shared_ptr<BitcoinQtBlockFiles> readBlockHeaders_;
-   
+      
    // This is our permanent link to the two databases used
    LMDBBlockDatabase* iface_ = nullptr;
    
@@ -159,12 +156,10 @@ public:
    BlockDataManager(const BlockDataManagerConfig &config);
    ~BlockDataManager();
 
-   std::shared_ptr<Blockchain> blockchain() { return blockchain_; }
-   std::shared_ptr<Blockchain> blockchain() const { return blockchain_; }
-   
-   const BlockDataManagerConfig &config() const { return config_; }
-   
-   LMDBBlockDatabase *getIFace(void) {return iface_;}
+   std::shared_ptr<Blockchain> blockchain(void) const { return blockchain_; }
+   const BlockDataManagerConfig &config(void) const { return config_; }
+   LMDBBlockDatabase *getIFace(void) const { return iface_; }
+   std::shared_ptr<BlockFiles> blockFiles(void) const { return blockFiles_; }
    
    /////////////////////////////////////////////////////////////////////////////
    // Get the parameters of the network as they've been set

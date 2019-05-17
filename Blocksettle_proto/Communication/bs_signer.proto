@@ -36,6 +36,10 @@ enum PacketType
 
    // Send headless public key to signer ui to export it
    HeadlessPubKeyRequestType = 24;
+
+   SyncSettingsRequestType = 25;
+
+   UpdateStatusType = 26;
 }
 
 message Packet
@@ -69,7 +73,7 @@ enum Setting {
    LimitManualPwKeep = 11;
    HideEidInfoBox = 12;
    TrustedTerminals = 13;
-   StartupBIP150CTX = 14;
+   TwoWaySignerAuth = 14;
 };
 
 message Settings
@@ -87,7 +91,15 @@ message Settings
    int32 limit_pass_keep_time = 10;
    bool hide_eid_info_box = 12;
    repeated KeyPair trusted_terminals = 13;
-   bool startup_bip150_ctx = 14;
+   bool two_way_signer_auth = 14;
+}
+
+// Keep in sync with bs::signer::BindStatus
+enum BindStatus
+{
+   BindInactive = 0;
+   BindSucceed = 1;
+   BindFailed = 2;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -97,7 +109,6 @@ message ReadyEvent
    bool  ready = 1;
    int32 cur_wallet = 2;
    int32 total_wallets = 3;
-   bool headless_bind_succeed = 4;
 }
 
 message PeerEvent
@@ -313,4 +324,10 @@ message HeadlessPubKeyRequest
 message HeadlessPubKeyResponse
 {
    string pubKey = 1;
+}
+
+// Would be sent from headless process to the GUI when some status changes
+message UpdateStatus
+{
+   BindStatus signer_bind_status = 1;
 }

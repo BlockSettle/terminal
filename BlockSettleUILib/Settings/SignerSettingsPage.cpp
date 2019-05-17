@@ -57,7 +57,7 @@ void SignerSettingsPage::display()
    SignContainer::OpMode opMode = static_cast<SignContainer::OpMode>(modeIndex);
    onModeChanged(opMode);
    ui_->comboBoxRunMode->setCurrentIndex(modeIndex - 1);
-   ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::startupBIP150CTX));
+   ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::twoWaySignerAuth));
 }
 
 void SignerSettingsPage::reset()
@@ -65,7 +65,7 @@ void SignerSettingsPage::reset()
    for (const auto &setting : {ApplicationSettings::signerRunMode
       , ApplicationSettings::localSignerPort, ApplicationSettings::signerOfflineDir
       , ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
-      , ApplicationSettings::startupBIP150CTX}) {
+      , ApplicationSettings::twoWaySignerAuth}) {
       appSettings_->reset(setting, false);
    }
    display();
@@ -137,7 +137,7 @@ void SignerSettingsPage::onManageSignerKeys()
 void SignerSettingsPage::apply()
 {
    appSettings_->set(ApplicationSettings::signerRunMode, ui_->comboBoxRunMode->currentIndex() + 1);
-   appSettings_->set(ApplicationSettings::startupBIP150CTX, ui_->checkBoxTwoWayAuth->isChecked());
+   appSettings_->set(ApplicationSettings::twoWaySignerAuth, ui_->checkBoxTwoWayAuth->isChecked());
 
    switch (static_cast<SignContainer::OpMode>(ui_->comboBoxRunMode->currentIndex() + 1)) {
    case SignContainer::OpMode::Local:

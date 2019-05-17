@@ -825,15 +825,21 @@ BitcoinP2P::BitcoinP2P(const string& addrV4, const string& port,
    uint32_t magicword) :
    addr_(addrV4), port_(port), magic_word_(magicword)
 {
-   invBlockStack_ = make_shared<BlockingQueue<vector<InvEntry>>>();
-   nodeConnected_.store(false, memory_order_relaxed);
-   run_.store(true, memory_order_relaxed);
+   init();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 BitcoinP2P::~BitcoinP2P()
 {
    invBlockStack_->terminate();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void BitcoinP2P::init()
+{
+   invBlockStack_ = make_shared<BlockingQueue<vector<InvEntry>>>();
+   nodeConnected_.store(false, memory_order_relaxed);
+   run_.store(true, memory_order_relaxed);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

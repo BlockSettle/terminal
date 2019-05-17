@@ -140,6 +140,35 @@ Cipher::~Cipher()
 {}
 
 ////////////////////////////////////////////////////////////////////////////////
+unsigned Cipher::getBlockSize(CipherType type)
+{
+   unsigned blockSize;
+   switch (type)
+   {
+   case CipherType_AES:
+   {
+#ifdef LIBBTC_ONLY
+      blockSize = AES_BLOCK_SIZE;
+#else
+      blockSize = BTC_AES::BLOCKSIZE;
+#endif
+      break;
+   }
+
+   default:
+      throw runtime_error("cannot get block size for unexpected cipher type");
+   }
+
+   return blockSize;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData Cipher::generateIV(void) const
+{
+   return CryptoPRNG::generateRandom(getBlockSize(type_));
+}
+
+////////////////////////////////////////////////////////////////////////////////
 unique_ptr<Cipher> Cipher::deserialize(BinaryRefReader& brr)
 {
    unique_ptr<Cipher> cipher;
@@ -245,4 +274,10 @@ bool Cipher_AES::isSame(Cipher* const cipher) const
    return kdfId_ == cipher_aes->kdfId_ &&
       encryptionKeyId_ == cipher_aes->encryptionKeyId_ &&
       iv_ == cipher_aes->iv_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unsigned Cipher_AES::getBlockSize(void) const
+{
+   return Cipher::getBlockSize(getType());
 }

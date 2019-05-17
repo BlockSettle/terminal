@@ -1,14 +1,17 @@
-#include <QDebug>
-#include <QDesktopServices>
-#include <set>
 #include "ChatMessagesTextEdit.h"
+
+#include "ChatClientDataModel.h"
+#include "ChatClientTree/TreeObjects.h"
 #include "ChatProtocol/ChatProtocol.h"
+
 #include <QApplication>
 #include <QClipboard>
+#include <QDebug>
+#include <QDesktopServices>
 #include <QMimeData>
 #include <QScrollBar>
-#include "ChatClientTree/TreeObjects.h"
-#include "ChatClientDataModel.h"
+
+#include <set>
 
 const int FIRST_FETCH_MESSAGES_SIZE = 20;
 
@@ -18,13 +21,6 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setBorder(0);
    tableFormat.setCellPadding(0);
    tableFormat.setCellSpacing(0);
-
-   QVector <QTextLength> col_widths;
-   col_widths << QTextLength (QTextLength::FixedLength, 110);
-   col_widths << QTextLength (QTextLength::FixedLength, 34);
-   col_widths << QTextLength (QTextLength::FixedLength, 90);
-   col_widths << QTextLength (QTextLength::VariableLength, 50);
-   tableFormat.setColumnWidthConstraints (col_widths);
 
    setAlignment(Qt::AlignHCenter);
    setAutoFormatting(QTextEdit::AutoAll);
@@ -61,12 +57,16 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
       {
          static const auto ownSender = tr("you");
          QString sender = messages_[currentChatId_][row]->senderId();
-         auto contactItem = client_->getDataModel()->findContactItem(sender.toStdString());         
 
          if (sender == ownUserId_) {
             return ownSender;
          }
-         
+
+         auto contactItem = client_->getDataModel()->findContactItem(sender.toStdString());
+         if (contactItem == nullptr) {
+            return sender;
+         }
+
          if (contactItem->hasDisplayName()) {
             if (isGroupRoom_) {
                return toHtmlUsername(contactItem->getDisplayName(), sender);
@@ -87,7 +87,7 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
                emit MessageRead(message);
             }
             return QString();
-            
+
          }
          int state = message->state();
          QString status = QLatin1String("Sending");
@@ -95,11 +95,11 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
          if (state & static_cast<int>(Chat::MessageData::State::Sent)){
             status = QLatin1String("Sent");
          }
-         
+
          if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
             status = QLatin1String("Delivered");
          }
-         
+
          if (state & static_cast<int>(Chat::MessageData::State::Read)){
             status = QLatin1String("Read");
          }
@@ -123,7 +123,7 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
       default:
          break;
    }
-   
+
    return QString();
 }
 
@@ -137,7 +137,7 @@ QImage ChatMessagesTextEdit::statusImage(const int &row)
    int state = message->state();
 
    QImage statusImage = statusImageOffline_;
-   
+
    if (state & static_cast<int>(Chat::MessageData::State::Sent)){
 
       if (isGroupRoom_) {
@@ -147,15 +147,15 @@ QImage ChatMessagesTextEdit::statusImage(const int &row)
       }
 
    }
-   
+
    if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
       statusImage = statusImageOnline_;
    }
-   
+
    if (state & static_cast<int>(Chat::MessageData::State::Read)){
       statusImage = statusImageRead_;
    }
-   
+
    return statusImage;
 }
 
@@ -172,7 +172,7 @@ void ChatMessagesTextEdit::mousePressEvent(QMouseEvent *ev)
 void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
 {
    textCursor_ = cursorForPosition(e->pos());
-   
+
    // keep selection
    if (textCursor().hasSelection()) {
       textCursor_.setPosition(textCursor().selectionStart(), QTextCursor::MoveAnchor);
@@ -242,7 +242,7 @@ void ChatMessagesTextEdit::switchToChat(const QString& chatId, bool isGroupRoom)
    isGroupRoom_ = isGroupRoom;
    messages_.clear();
    messagesToLoadMore_.clear();
-   
+
    clear();
    table = NULL;
 
@@ -264,10 +264,20 @@ void ChatMessagesTextEdit::setClient(std::shared_ptr<ChatClient> client)
    client_ = client;
 }
 
+void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, const int &user, const int &message)
+{
+   QVector <QTextLength> col_widths;
+   col_widths << QTextLength(QTextLength::FixedLength, time);
+   col_widths << QTextLength(QTextLength::FixedLength, icon);
+   col_widths << QTextLength(QTextLength::FixedLength, user);
+   col_widths << QTextLength(QTextLength::VariableLength, message);
+   tableFormat.setColumnWidthConstraints(col_widths);
+}
+
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
    if (link.toString() == QLatin1Literal("load_more")) {
       loadMore();
-   } 
+   }
    else if  (link.toString().startsWith(QLatin1Literal("user:"))) {
       username_ = link.toString().mid(QString(QLatin1Literal("user:")).length());
 
@@ -301,7 +311,7 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::MessageData> msg)
 {
    auto rowIdx = static_cast<int>(messages_[currentChatId_].size());
    messages_[currentChatId_].push_back(msg);
-   
+
    /* add text */
    QTextCursor cursor(textCursor());
    cursor.movePosition(QTextCursor::End);
@@ -341,7 +351,7 @@ void ChatMessagesTextEdit::loadMore()
    for (const auto &msg: messagesToLoadMore_) {
       cursor.movePosition(QTextCursor::Start);
       cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, i * 2);
-      
+
       messages_[currentChatId_].insert(messages_[currentChatId_].begin() + i, msg);
 
       table = cursor.insertTable(1, 4, tableFormat);
@@ -374,7 +384,7 @@ void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::Mes
 void ChatMessagesTextEdit::onMessageIdUpdate(const QString& oldId, const QString& newId, const QString& chatId)
 {
    std::shared_ptr<Chat::MessageData> message = findMessage(chatId, oldId);
-   
+
    if (message != nullptr){
       message->setId(newId);
       message->setFlag(Chat::MessageData::State::Sent);
@@ -385,7 +395,7 @@ void ChatMessagesTextEdit::onMessageIdUpdate(const QString& oldId, const QString
 void ChatMessagesTextEdit::onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus)
 {
    std::shared_ptr<Chat::MessageData> message = findMessage(chatId, messageId);
-   
+
    if (message != nullptr){
       message->updateState(newStatus);
       notifyMessageChanged(message);
@@ -399,7 +409,7 @@ std::shared_ptr<Chat::MessageData> ChatMessagesTextEdit::findMessage(const QStri
       auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [messageId](std::shared_ptr<Chat::MessageData> data){
          return data->id() == messageId;
       });
-      
+
       if (it != messages_[chatId].end()) {
          found = *it;
       }
@@ -412,24 +422,24 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
    const QString chatId = message->senderId() == ownUserId_
                           ? message->receiverId()
                           : message->senderId();
-   
+
    if (messages_.contains(chatId)) {
       QString id = message->id();
       auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [id](std::shared_ptr<Chat::MessageData> data){
          return data->id() == id;
       });
-      
+
       if (it != messages_[chatId].end()) {
          int distance = static_cast<int>(std::distance(messages_[chatId].begin(), it));
-         
+
          QTextCursor cursor(textCursor());
          cursor.movePosition(QTextCursor::Start);
          cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, distance * 2 + (messagesToLoadMore_.size() > 0));
          cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 2);
          cursor.removeSelectedText();
-         
+
          table = cursor.insertTable(1, 4, tableFormat);
-         
+
          QString time = data(distance, Column::Time);
          table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
@@ -474,12 +484,12 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
          }
       }
 
-      if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) { 
+      if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) {
          /* display certain count of messages and thus remove the displayed messages from the messagesToLoadMore */
 
          // add "load more" hyperlink text
          insertLoadMore();
-         
+
          // display last messages
          unsigned long i = 0;
          for (const auto &msg: messagesToLoadMore_) {
@@ -509,7 +519,7 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
             if (!(msg->state() & static_cast<int>(Chat::MessageData::State::Read))){
                emit MessageRead(msg);
             }
-            
+
             emit userHaveNewMessageChanged(msg->senderId(), false, true);
          }
          else {
@@ -551,12 +561,12 @@ void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_pt
          }
       }
 
-      if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) { 
+      if (messagesToLoadMore_.size() > FIRST_FETCH_MESSAGES_SIZE) {
          /* display certain count of messages and thus remove the displayed messages from the messagesToLoadMore */
 
          // add "load more" hyperlink text
          insertLoadMore();
-         
+
          // display last messages
          unsigned long i = 0;
          for (const auto &msg: messagesToLoadMore_) {
@@ -625,7 +635,7 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text)
 
    while ((startIndex = changedText.indexOf(QLatin1Literal("https://"), index, Qt::CaseInsensitive)) != -1
       || (startIndex = changedText.indexOf(QLatin1Literal("http://"), index, Qt::CaseInsensitive)) != -1) {
-      
+
       int endIndex = changedText.indexOf(QLatin1Literal(" "), startIndex);
       if (endIndex == -1) {
          endIndex = changedText.indexOf(QLatin1Literal("\n"), startIndex);

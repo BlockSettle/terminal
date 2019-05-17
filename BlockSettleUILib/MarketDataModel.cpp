@@ -44,7 +44,7 @@ QString MarketDataModel::columnName(MarketDataColumns col) const
 static double toDoubleFromPriceStr(const QString &priceStr)
 {
    if (priceStr.isEmpty()) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    bool ok;
    double rv = priceStr.toDouble(&ok);
@@ -52,7 +52,7 @@ static double toDoubleFromPriceStr(const QString &priceStr)
       rv = QLocale().toDouble(priceStr, &ok);
    }
    if (!ok) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    return rv;
 }

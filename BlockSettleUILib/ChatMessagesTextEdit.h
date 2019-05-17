@@ -1,17 +1,19 @@
 #ifndef __CHAT_MESSAGES_VIEW_MODEL_H__
 #define __CHAT_MESSAGES_VIEW_MODEL_H__
 
-#include <memory>
-#include <QTextBrowser>
-#include <QMap>
-#include <QVector>
-#include <QDateTime>
-#include <tuple>
-#include <QTextTable>
-#include <QImage>
-#include <QMenu>
-#include "ChatClientUserView.h"
 #include "ChatClient.h"
+#include "ChatClientUserView.h"
+
+#include <QDateTime>
+#include <QImage>
+#include <QMap>
+#include <QMenu>
+#include <QTextBrowser>
+#include <QTextTable>
+#include <QVector>
+
+#include <memory>
+#include <tuple>
 
 namespace Chat {
    class MessageData;
@@ -62,8 +64,9 @@ public:
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    void setClient(std::shared_ptr<ChatClient> client);
+   void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
 
-   
+
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
    void rowsInserted();
@@ -84,7 +87,7 @@ protected:
 
    virtual void mousePressEvent(QMouseEvent *ev) override;
    virtual void contextMenuEvent(QContextMenuEvent *e);
-   
+
 public slots:
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);
    void onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);
@@ -92,7 +95,7 @@ public slots:
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
    void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
    void urlActivated(const QUrl &link);
-   
+
 private slots:
    void copyActionTriggered();
    void copyLinkLocationActionTriggered();
@@ -108,7 +111,7 @@ private:
    std::shared_ptr<ChatItemActionsHandler> handler_;
    std::shared_ptr<ChatMessageReadHandler> messageReadHandler_;
    std::shared_ptr<ChatClient> client_;
-   
+
 private:
    std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
@@ -141,11 +144,5 @@ public:
    QTextCursor textCursor_;
    QString anchor_;
 };
-
-
-
-
-
-
 
 #endif
