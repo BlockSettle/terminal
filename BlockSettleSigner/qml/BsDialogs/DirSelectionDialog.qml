@@ -13,11 +13,14 @@ Loader {
         selectFolder: true
         folder: "file:///" + startFromFolder
 
+        signal bsAccepted()
+
         onAccepted: {
             var tmp = fileUrl.toString()
             tmp = tmp.replace(/(^file:\/{3})/, "")
             tmp = decodeURIComponent(tmp)
             dir = tmp
+            bsAccepted()
         }
     }
 }
