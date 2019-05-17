@@ -58,6 +58,7 @@ void GeneralSettingsPage::display()
    ui_->checkBoxShowTxNotification->setChecked(appSettings_->get<bool>(ApplicationSettings::notifyOnTX));
    ui_->addvancedDialogByDefaultCheckBox->setChecked(appSettings_->get<bool>(ApplicationSettings::AdvancedTxDialogByDefault));
    ui_->checkBox_subscribeToMdOnStart->setChecked(appSettings_->get<bool>(ApplicationSettings::SubscribeToMDOnStart));
+   ui_->labelOfflineDir->setText(appSettings_->get<QString>(ApplicationSettings::signerOfflineDir));
 
    const auto cfg = appSettings_->GetLogsConfig();
    ui_->logFileName->setText(QString::fromStdString(cfg.at(0).fileName));

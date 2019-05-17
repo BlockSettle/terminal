@@ -12,14 +12,17 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    , appSettings_(appSettings)
    , signersProvider_(signersProvider)
    , ui_(new Ui::SignerKeysWidget)
-   , signerKeysModel_(new SignersModel(signersProvider))
+   , signersModel_(new SignersModel(signersProvider))
 {
    ui_->setupUi(this);
 
    ui_->spinBoxPort->setMinimum(0);
    ui_->spinBoxPort->setMaximum(USHRT_MAX);
 
-   ui_->tableViewSignerKeys->setModel(signerKeysModel_);
+   ui_->tableViewSignerKeys->setModel(signersModel_);
+   ui_->tableViewSignerKeys->selectionModel()->select(signersModel_->index(signersProvider->indexOfCurrent(), 0)
+      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
+
    int defaultSectionSize = ui_->tableViewSignerKeys->horizontalHeader()->defaultSectionSize();
    ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(0, defaultSectionSize * 2);
    ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(1, defaultSectionSize);

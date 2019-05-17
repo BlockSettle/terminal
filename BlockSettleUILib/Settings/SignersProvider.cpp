@@ -161,7 +161,6 @@ bool SignersProvider::remove(int index)
 
 void SignersProvider::addKey(const QString &address, int port, const QString &key)
 {
-   // find server
    int index = -1;
    for (int i = 0; i < signers().size(); ++i) {
       if (signers().at(i).address == address && signers().at(i).port == port) {
@@ -188,14 +187,14 @@ void SignersProvider::addKey(const QString &address, int port, const QString &ke
    emit dataChanged();
 }
 
-void SignersProvider::addKey(const std::string &srvIPPort, const BinaryData &srvPubKey)
+void SignersProvider::addKey(const std::string &srvIPPort, const std::string &srvPubKey)
 {
    QString ipPort = QString::fromStdString(srvIPPort);
    QStringList ipPortList = ipPort.split(QStringLiteral(":"));
    if (ipPortList.size() == 2) {
       addKey(ipPortList.at(0)
              , ipPortList.at(1).toInt()
-             , QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()));
+             , QString::fromStdString(srvPubKey));
    }
 }
 
