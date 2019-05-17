@@ -56,17 +56,12 @@ TreeItem * RootItem::resolveMessageTargetNode(TreeMessageNode * messageNode)
       return nullptr;
    }
 
-   auto categoryIt = std::find_if(children_.begin(), children_.end(), [messageNode](TreeItem* child){
-      return child->isChildSupported(messageNode);
-   });
-
-   if (categoryIt != children_.end()) {
-
-     TreeItem* target = (*categoryIt)->findSupportChild(messageNode);
-      if (target) {
-         return target;
+   for (auto categoryGroup : children_) {
+      if (categoryGroup->isChildTypeSupported(messageNode->targetParentType_)) {
+         return categoryGroup->findSupportChild(messageNode);
       }
    }
+
    return nullptr;
 }
 
@@ -195,10 +190,15 @@ std::string RootItem::currentUser() const
 bool RootItem::insertMessageNode(TreeMessageNode * messageNode)
 {
    for (auto categoryGroup : children_ ) {
-      auto targetElement = categoryGroup->findSupportChild(messageNode);
-      if (targetElement != nullptr) {
-         emit itemChanged(targetElement);
-         return true;
+      if (categoryGroup->isChildTypeSupported(messageNode->targetParentType_)) {
+         auto targetElement = categoryGroup->findSupportChild(messageNode);
+         if (targetElement != nullptr) {
+            if (targetElement->insertItem(messageNode)) {
+               emit itemChanged(targetElement);
+               return true;
+            }
+            break;
+         }
       }
    }
 

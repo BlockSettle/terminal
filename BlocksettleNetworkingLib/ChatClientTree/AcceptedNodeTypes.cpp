@@ -2,6 +2,8 @@
 
 AcceptedNodeTypes::AcceptedNodeTypes(const std::vector<ChatUIDefinitions::ChatTreeNodeType>& acceptedTypesList)
 {
+   dataTypeFlags_ = 0;
+
    for (const auto& it : acceptedTypesList) {
       if (it == ChatUIDefinitions::ChatTreeNodeType::NoDataNode) {
          // no childs will be accepted
