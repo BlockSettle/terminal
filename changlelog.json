@@ -1,7 +1,23 @@
 {
-   "latest_version" : "0.15.8",
+   "latest_version" : "0.15.9",
    "release_date" : "17 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.9",
+         "previous_version" : "0.15.8",
+         "release_date" : "17 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes",
+            "Wallet import fixes ( 1863 )"
+         ],
+         "revision" : "ff6428be",
+         "common_revision" : "22695e0a"
+      },
       {
          "version_string" : "0.15.8",
          "previous_version" : "0.15.7",
