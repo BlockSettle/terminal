@@ -227,8 +227,10 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    static bool conn2Reported = false;
    static std::promise<bool> clientPktsProm1;
    static auto clientPktsFut1 = clientPktsProm1.get_future();
+   static std::atomic_bool prom1Set_ { false };
    static std::promise<bool> clientPktsProm2;
    static auto clientPktsFut2 = clientPktsProm2.get_future();
+   static std::atomic_bool prom2Set_ { false };
    static std::promise<bool> srvPktsProm1;
    static auto srvPktsFut1 = srvPktsProm1.get_future();
 
@@ -251,22 +253,22 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 
    protected:
       void OnDataFromClient(const std::string &clientId, const std::string &data) override {
-         logger_->debug("[{}] {} from {} #{}", __func__, data.size()
+         logger_->debug("[srvLsn::{}] {} from {} #{}", __func__, data.size()
             , BinaryData(clientId).toHexStr(), clientPktCnt);
          if (clientPktCnt < packets.size()) {
             if (packets[clientPktCnt++] != data) {
-               logger_->error("[{}] packet #{} mismatch", __func__, clientPktCnt - 1);
+               logger_->error("[srvLsn::{}] packet #{} mismatch", __func__, clientPktCnt - 1);
             }
          }
          else {
-            logger_->debug("[{}] rekeying client {} after packet {}", __func__
+            logger_->debug("[srvLsn::{}] rekeying client {} after packet {}", __func__
                , BinaryData(clientId).toHexStr(), data.size());
             clientPktCnt = 0;
             connection_->rekey(clientId);
             return;
          }
          if (clientPktCnt == packets.size()) {
-            logger_->debug("[{}] all packets received", __func__);
+            logger_->debug("[srvLsn::{}] all packets received", __func__);
             if (!prom1Set_) {
                clientPktsProm1.set_value(true);
                prom1Set_ = true;
@@ -278,16 +280,10 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
          }
       }
       void onClientError(const std::string &clientId, const std::string &errStr) override {
-         logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
+         logger_->debug("[srvLsn::{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
          if (!conn1Reported) {
             connectProm1.set_value(false);
             conn1Reported = true;
-         }
-         else {
-             if (!conn2Reported) {
-                 connectProm2.set_value(false);
-                 conn2Reported = true;
-             }
          }
          if (!prom1Set_) {
             clientPktsProm1.set_value(false);
@@ -299,17 +295,15 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
          }
       }
       void OnClientConnected(const std::string &clientId) override {
-         logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+         logger_->debug("[srvLsn::{}] {}", __func__, BinaryData(clientId).toHexStr());
       }
       void OnClientDisconnected(const std::string &clientId) override {
-         logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
+         logger_->debug("[srvLsn::{}] {}", __func__, BinaryData(clientId).toHexStr());
       }
 
    private:
       std::shared_ptr<spdlog::logger>  logger_;
       std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
-      bool prom1Set_ = false;
-      bool prom2Set_ = false;
    };
 
    class ClientConnListener : public DataConnectionListener
@@ -321,11 +315,11 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
       void OnDataReceived(const std::string &data) override {
          if (srvPktCnt < packets.size()) {
             if (packets[srvPktCnt++] != data) {
-               logger_->error("[{}] packet #{} mismatch", __func__, srvPktCnt - 1);
+               logger_->error("[clntLsn1::{}] packet #{} mismatch", __func__, srvPktCnt - 1);
             }
          }
          if (srvPktCnt == packets.size()) {
-            logger_->debug("[{}] all {} packets received", __func__, srvPktCnt);
+            logger_->debug("[clntLsn1::{}] all {} packets received", __func__, srvPktCnt);
             if (!promSet_) {
                srvPktsProm1.set_value(true);
                promSet_ = true;
@@ -333,19 +327,21 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
          }
       }
       void OnConnected() override {
-         logger_->debug("[{}]", __func__);
-         connectProm1.set_value(true);
-         conn1Reported = true;
+         logger_->debug("[clntLsn1::{}]", __func__);
+         if (!conn1Reported) {
+            connectProm1.set_value(true);
+            conn1Reported = true;
+         }
       }
       void OnDisconnected() override {
-         logger_->debug("[{}]", __func__);
+         logger_->debug("[clntLsn1::{}]", __func__);
          if (!conn1Reported) {
             connectProm1.set_value(false);
             conn1Reported = true;
          }
       }
       void OnError(DataConnectionError errorCode) override {
-         logger_->debug("[{}] {}", __func__, int(errorCode));
+         logger_->debug("[clntLsn1::{}] {}", __func__, int(errorCode));
          if (!conn1Reported) {
             connectProm1.set_value(false);
             conn1Reported = true;
@@ -370,22 +366,24 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
       void OnDataReceived(const std::string &data) override {
       }
       void OnConnected() override {
-         logger_->debug("[{}]", __func__);
-         connectProm2.set_value(true);
-         conn2Reported = true;
+         logger_->debug("[clntLsn2::{}]", __func__);
+         if (!conn2Reported) {
+            conn2Reported = true;
+            connectProm2.set_value(true);
+         }
       }
       void OnDisconnected() override {
-         logger_->debug("[{}]", __func__);
+         logger_->debug("[clntLsn2::{}]", __func__);
          if (!conn2Reported) {
-            connectProm2.set_value(false);
             conn2Reported = true;
+            connectProm2.set_value(false);
          }
       }
       void OnError(DataConnectionError errorCode) override {
-         logger_->debug("[{}] {}", __func__, int(errorCode));
+         logger_->debug("[clntLsn2::{}] {}", __func__, int(errorCode));
          if (!conn2Reported) {
-            connectProm2.set_value(false);
             conn2Reported = true;
+            connectProm2.set_value(false);
          }
       }
 
@@ -438,8 +436,9 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    }
    EXPECT_TRUE(clientConn->closeConnection());
 
+   StaticLogger::loggerPtr->debug("[{}] another client connection", __func__);
    const auto client2Lsn = std::make_shared<AnotherClientConnListener>(StaticLogger::loggerPtr);
-   const auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
+   auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
       StaticLogger::loggerPtr, true, "", "", true);
    client2Conn->SetContext(zmqContext);
    serverConn->addAuthPeer(client2Conn->getOwnPubKey(), host + ":" + port);
