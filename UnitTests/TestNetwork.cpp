@@ -165,7 +165,6 @@ TEST(TestNetwork, ZMQ_BIP15X)
       }
       void OnDisconnected() override {
          logger_->debug("[{}]", __func__);
-         fail();
       }
       void OnError(DataConnectionError errorCode) override {
          logger_->debug("[{}] {}", __func__, int(errorCode));
@@ -453,8 +452,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    serverConn.reset();  // This is needed to detach listener before it's destroyed
 }
 
-
-static auto await(std::atomic<bool>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 100 }) {
+static bool await(std::atomic<bool>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 100 }) {
     using namespace std::chrono_literals;
     const auto napTime = 10ms;
     for (auto elapsed = 0ms; elapsed < deadline; elapsed += napTime) {
@@ -464,6 +462,18 @@ static auto await(std::atomic<bool>& what, std::chrono::milliseconds deadline = 
         std::this_thread::sleep_for(napTime);
     }
     return false;
+};
+template<typename T>
+static bool await(std::atomic<T>& what, const T expected, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 100 }) {
+   using namespace std::chrono_literals;
+   const auto napTime = 10ms;
+   for (auto elapsed = 0ms; elapsed < deadline; elapsed += napTime) {
+      if (what.load() == expected) {
+         return true;
+      }
+      std::this_thread::sleep_for(napTime);
+   }
+   return false;
 };
 
 
@@ -475,6 +485,7 @@ public:
 
     void OnDataReceived(const std::string &data) override {
         logger_->debug("[{}] {}", __func__, data.size());
+        packetCount_++;
     }
     void OnConnected() override {
         logger_->debug("[{}]", __func__);
@@ -489,9 +500,10 @@ public:
         error_ = true;
     }
 
-    std::atomic<bool> connected_{ false };
-    std::atomic<bool> disconnected_{ false };
-    std::atomic<bool> error_{ false };
+    std::atomic_bool connected_{ false };
+    std::atomic_bool disconnected_{ false };
+    std::atomic_bool error_{ false };
+    std::atomic_uint packetCount_{ 0 };
 
 private:
     std::shared_ptr<spdlog::logger>  logger_;
@@ -508,6 +520,7 @@ public:
     void OnDataFromClient(const std::string &clientId, const std::string &data) override {
         logger_->debug("[{}] {} from {}", __func__, data.size()
             , BinaryData(clientId).toHexStr());
+        packetCount_++;
     }
     void onClientError(const std::string &clientId, const std::string &errStr) override {
         logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
@@ -522,9 +535,10 @@ public:
         disconnected_ = true;
     }
 
-    std::atomic<bool> connected_{ false };
-    std::atomic<bool> disconnected_{ false };
-    std::atomic<bool> error_{ false };
+    std::atomic_bool connected_{ false };
+    std::atomic_bool disconnected_{ false };
+    std::atomic_bool error_{ false };
+    std::atomic_uint packetCount_{ 0 };
 
 private:
     std::shared_ptr<spdlog::logger>  logger_;
@@ -561,7 +575,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
     const size_t passes = sizeof pass / sizeof pass[0];
 
     for (size_t i = 0; i < passes; ++i) {
-        const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
+        auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
            StaticLogger::loggerPtr, true, "", "", true);
         const auto zmqContext = std::make_shared<ZmqContext>(StaticLogger::loggerPtr);
         std::vector<std::string> trustedClients = {
@@ -573,6 +587,12 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
 
         clientLsn->connected_ = false;
         srvLsn->connected_ = false;
+        clientLsn->disconnected_ = false;
+        srvLsn->disconnected_ = false;
+        clientLsn->error_ = false;
+        srvLsn->error_ = false;
+        clientLsn->packetCount_ = 0;
+        srvLsn->packetCount_ = 0;
 
         const std::string host = "127.0.0.1";
         std::string port;
@@ -594,16 +614,16 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         for (size_t j = 0; j < pass[i].serverMsgs; ++j) {
             serverConn->SendDataToAllClients(srvPackets.at(j));
         }
+        EXPECT_TRUE(await<unsigned int>(srvLsn->packetCount_, pass[i].clientMsgs))
+           << "\treceived " << srvLsn->packetCount_ << " instead of " << pass[i].clientMsgs;
+        EXPECT_TRUE(await<unsigned int>(clientLsn->packetCount_, pass[i].serverMsgs))
+           << "\treceived " << clientLsn->packetCount_ << " instead of " << pass[i].serverMsgs;
 
-        clientLsn->disconnected_ = false;
-        srvLsn->disconnected_ = false;
-
-        ASSERT_TRUE(clientConn->closeConnection());
-        ASSERT_TRUE(await(clientLsn->disconnected_));
-        ASSERT_TRUE(await(srvLsn->disconnected_));
+        EXPECT_TRUE(clientConn->closeConnection());
+        EXPECT_TRUE(await(clientLsn->disconnected_));
+        EXPECT_TRUE(await(srvLsn->disconnected_));
         ASSERT_FALSE(clientLsn->error_.load());
         ASSERT_FALSE(srvLsn->error_.load());
-        serverConn.reset();  // This is needed to detach listener before it's destroyed
     }
 }
 
@@ -633,6 +653,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
     auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
        StaticLogger::loggerPtr, zmqContext, [trustedClients] { return trustedClients; });
     const auto serverKey = serverConn->getOwnPubKey();
+    const auto clientKey = clientConn->getOwnPubKey();
     clientConn->SetContext(zmqContext);
 
     const std::string host = "127.0.0.1";
@@ -641,7 +662,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
         port = std::to_string((rand() % 50000) + 10000);
     } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-    serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
+    serverConn->addAuthPeer(clientKey, host + ":" + port);
     clientConn->addAuthPeer(serverKey, host + ":" + port);
 
     struct Messages {
@@ -659,11 +680,19 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
     for (size_t i = 0; i < passes; ++i) {
         clientLsn->connected_ = false;
         srvLsn->connected_ = false;
+        clientLsn->disconnected_ = false;
+        srvLsn->disconnected_ = false;
+        clientLsn->packetCount_ = 0;
+        srvLsn->packetCount_ = 0;
 
-        ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
+        EXPECT_EQ(clientKey, clientConn->getOwnPubKey());
+        EXPECT_EQ(serverKey, serverConn->getOwnPubKey());
 
-        ASSERT_TRUE(await(clientLsn->connected_));
-        ASSERT_TRUE(await(srvLsn->connected_));
+        ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get())) << "\titer " << i << " of " << passes;
+
+        ASSERT_TRUE(await(clientLsn->connected_)) << "\titer " << i << " of " << passes;
+        ASSERT_TRUE(await(srvLsn->connected_)) << "\titer " << i << " of " << passes;
+//        std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });   // test fails sometimes without this line
 
         for (size_t j = 0; j < pass[i].clientMsgs; ++j) {
             clientConn->send(clientPackets.at(j));
@@ -671,15 +700,16 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
         for (size_t j = 0; j < pass[i].serverMsgs; ++j) {
             serverConn->SendDataToAllClients(srvPackets.at(j));
         }
+        EXPECT_TRUE(await<unsigned int>(srvLsn->packetCount_, pass[i].clientMsgs))
+           << "\treceived " << srvLsn->packetCount_ << " instead of " << pass[i].clientMsgs;
+        EXPECT_TRUE(await<unsigned int>(clientLsn->packetCount_, pass[i].serverMsgs))
+           << "\treceived " << clientLsn->packetCount_ << " instead of " << pass[i].serverMsgs;
 
-        clientLsn->disconnected_ = false;
-        srvLsn->disconnected_ = false;
-
-        ASSERT_TRUE(clientConn->closeConnection());
-        ASSERT_TRUE(await(clientLsn->disconnected_));
-        ASSERT_TRUE(await(srvLsn->disconnected_));
-        ASSERT_FALSE(clientLsn->error_.load());
-        ASSERT_FALSE(srvLsn->error_.load());
+        EXPECT_TRUE(clientConn->closeConnection());
+        EXPECT_TRUE(await(clientLsn->disconnected_)) << "\titer " << i << " of " << passes;
+        EXPECT_TRUE(await(srvLsn->disconnected_)) << "\titer " << i << " of " << passes;
+        ASSERT_FALSE(clientLsn->error_.load()) << "\titer " << i << " of " << passes;
+        ASSERT_FALSE(srvLsn->error_.load()) << "\titer " << i << " of " << passes;
     }
     serverConn.reset();  // This is needed to detach listener before it's destroyed
 }
