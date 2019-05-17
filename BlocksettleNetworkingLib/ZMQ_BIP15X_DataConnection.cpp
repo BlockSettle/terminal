@@ -439,7 +439,8 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
 {
    // BIP 151 connection setup. Technically should be per-socket or something
 // similar but data connections will only connect to one machine at a time.
-   bip151Connection_ = make_shared<BIP151Connection>(getAuthPeerLambda());
+   auto lbds = getAuthPeerLambda();
+   bip151Connection_ = make_shared<BIP151Connection>(lbds);
 
    return ZmqDataConnection::openConnection(host, port, listener);
 }
