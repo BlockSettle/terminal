@@ -107,6 +107,9 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
       auto row = createRow(addr, wallet);
       addressRows_.emplace_back(std::move(row));
    } else {
+      if ((wallets_.size() > 1) && (wallet->type() == bs::core::wallet::Type::ColorCoin)) {
+         return;  // don't populate PM addresses when multiple wallets selected
+      }
       std::vector<bs::Address> addressList;
       switch (addrType_) {
       case AddressType::External:
@@ -120,14 +123,6 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
       default:
          addressList = wallet->getUsedAddressList();
          break;
-      }
-
-      
-      // don't show Private Market addresses in the main/top level view
-      for (size_t i = 0; i < addressRows_.size(); i++) {
-         if (addressRows_[i].walletName == QLatin1Literal("0")) {
-            return;
-         }
       }
 
       addressRows_.reserve(addressRows_.size() + addressList.size());      
