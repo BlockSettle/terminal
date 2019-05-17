@@ -667,16 +667,21 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
       // don't show notification for global chat
       if (message && !IsGlobalChatRoom(message->receiverId())) {
 
-         auto messageText = message->messageData();
          const int maxMessageLength = 20;
+
+         auto messageTitle = message->senderId();
+         auto messageText = message->messageData();
+         auto contactItem = client_->getDataModel()->findContactItem(message->senderId().toStdString());
+             
+         if (contactItem && contactItem->hasDisplayName()) {
+            messageTitle = contactItem->getDisplayName();
+         }
 
          if (messageText.length() > maxMessageLength) {
             messageText = messageText.mid(0, maxMessageLength) + QLatin1String("...");
          }
 
-         NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
-                                   {message->senderId(),
-                                    messageText});
+         NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {messageTitle, messageText, message->senderId()});
       }
    }
 }
