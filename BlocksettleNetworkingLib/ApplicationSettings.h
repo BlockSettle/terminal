@@ -127,6 +127,9 @@ public:
       defaultArmoryServersKeys,
       twoWaySignerAuth,
       dontLoadCCList,
+      ChartProduct,
+      ChartTimeframe,
+      ChartCandleCount,
       _last
    };
 
