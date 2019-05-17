@@ -63,7 +63,7 @@ public:
    bool remove(int index);
 
    void addKey(const QString &address, int port, const QString &key);
-   void addKey(const std::string &srvIPPort, const BinaryData &srvPubKey);
+   void addKey(const std::string &srvIPPort, const std::string &srvPubKey);
 
    SignerHost connectedSignerHost() const;
    void setConnectedSignerHost(const SignerHost &connectedSignerHost);
