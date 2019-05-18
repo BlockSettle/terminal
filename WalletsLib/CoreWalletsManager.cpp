@@ -310,8 +310,10 @@ bool WalletsManager::deleteWalletFile(const HDWalletPtr &wallet)
    }
    hdWallets_.erase(wallet->walletId());
    walletNames_.erase(wallet->name());
+
+   auto walletID = wallet->walletId();
    const bool result = wallet->eraseFile();
-   logger_->info("Wallet {} ({}) removed: {}", wallet->name(), wallet->walletId(), result);
+   logger_->info("Wallet {} ({}) removed: {}", wallet->name(), walletID, result);
 
    return result;
 }

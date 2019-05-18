@@ -15,6 +15,7 @@
 #include "WalletEncryption.h"
 #include "Wallets.h"
 #include "BIP32_Node.h"
+#include "HDPath.h"
 
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
@@ -27,6 +28,15 @@ namespace spdlog {
 }
 
 namespace bs {
+   namespace sync {
+      enum class SyncState
+      {
+         SyncState_Success,
+         SyncState_NothingToDo,
+         SyncState_Failure
+      };
+   }
+
    namespace core {
       namespace wallet {
          class AssetEntryMeta : public AssetEntry
@@ -134,6 +144,10 @@ namespace bs {
             static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
             static BinaryData decodeEasyCodeLineChecksum(const std::string&easyCodeHalf, size_t ckSumSize = 2, size_t keyValueSize = 16);
             static Seed fromEasyCodeChecksum(const EasyCoDec::Data &, NetworkType, size_t ckSumSize = 2);
+
+            SecureBinaryData toXpriv(void) const;
+            static Seed fromXpriv(const SecureBinaryData&, NetworkType);
+            const BIP32_Node& getNode(void) const { return node_; }
 
          private:
             BIP32_Node node_;
@@ -273,12 +287,21 @@ namespace bs {
          virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
+         
+         virtual bs::hd::Path::Elem getExtPath(void) const
+         {
+            throw std::runtime_error("not implemented 5");
+         }
+         virtual bs::hd::Path::Elem getIntPath(void) const
+         {
+            throw std::runtime_error("not implemented 6");
+         }
 
          /***
          Used to keep track of sync wallet used address index increments on the 
          Armory wallet side
          ***/
-         virtual bs::Address synchronizeUsedAddressChain(
+         virtual std::pair<bs::Address, bool> synchronizeUsedAddressChain(
             const std::string&, AddressEntryType)
          {
             throw WalletException("illegal method");
@@ -308,12 +331,19 @@ namespace bs {
          virtual void shutdown(void) = 0;
          virtual std::string getFilename(void) const = 0;
 
+         //find the path and address type for a set of prefixed scrAddr
+         virtual std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> indexPathAndTypes(
+            const std::set<BinaryData>&)
+         {
+            throw std::runtime_error("not implemented 7");
+            return std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>>();
+         }
+
       protected:
          virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;
          virtual LMDB *getDB() = 0;
 
       private:
-         bool isSegWitScript(const BinaryData &script);
          Signer getSigner(const wallet::TXSignRequest &,
             bool keepDuplicatedRecipients = false);
 

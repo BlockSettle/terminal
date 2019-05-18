@@ -84,10 +84,12 @@ namespace bs {
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); 
             }
 
+            bs::core::wallet::Seed getDecryptedSeed(void) const;
+
          protected:
             std::string    name_, desc_;
             NetworkType    netType_ = NetworkType::Invalid;
-            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>              groups_;
+            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>> groups_;
             std::shared_ptr<spdlog::logger>     logger_;
             bool extOnlyFlag_ = false;
 
