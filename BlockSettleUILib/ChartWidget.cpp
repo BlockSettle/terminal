@@ -910,7 +910,7 @@ void ChartWidget::OnResetBtnClick()
 void ChartWidget::resizeEvent(QResizeEvent* event)
 {
    QWidget::resizeEvent(event);
-   QTimer::singleShot(0, [this]() {UpdatePrintFlag(); });
+   QTimer::singleShot(0, [this]() {UpdatePrintFlag(); }); //UpdatePrintFlag should be called after chart have resized, so we put this method to event loop's queue 
 }
 
 quint64 ChartWidget::GetCandleTimestamp(const uint64_t& timestamp, const Interval& interval) const
