@@ -907,6 +907,12 @@ void ChartWidget::OnResetBtnClick()
    }
 }
 
+void ChartWidget::resizeEvent(QResizeEvent* event)
+{
+   QWidget::resizeEvent(event);
+   QTimer::singleShot(0, [this]() {UpdatePrintFlag(); });
+}
+
 quint64 ChartWidget::GetCandleTimestamp(const uint64_t& timestamp, const Interval& interval) const
 {
    QDateTime now = QDateTime::fromMSecsSinceEpoch(timestamp).toUTC();

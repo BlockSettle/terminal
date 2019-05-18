@@ -68,6 +68,7 @@ protected slots:
    void OnWheelScroll(QWheelEvent* event);
    void OnAutoScaleBtnClick();
    void OnResetBtnClick();
+   void resizeEvent(QResizeEvent* event) override;
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
    void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oldRange);
