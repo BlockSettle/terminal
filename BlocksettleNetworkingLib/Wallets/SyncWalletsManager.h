@@ -103,6 +103,9 @@ namespace bs {
 
          bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
 
+         //run after registration to update address chain usage counters
+         void trackAddressChainUse(std::function<void(bool)>);
+
       signals:
          void walletChanged();
          void walletDeleted(std::string walletId);

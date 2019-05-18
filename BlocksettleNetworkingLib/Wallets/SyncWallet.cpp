@@ -137,7 +137,7 @@ std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
    if (!isBalanceAvailable())
       throw std::runtime_error("uninitialized db connection");
 
-   QMutexLocker lock(&addrMapsMtx_);
+   std::unique_lock<std::mutex> lock(addrMapsMtx_);
 
    auto iter = addressBalanceMap_.find(addr.prefixed());
    if (iter == addressBalanceMap_.end())
@@ -553,7 +553,7 @@ void Wallet::unregisterWallet()
    heartbeatRunning_ = false;
    btcWallet_.reset();
    {
-      QMutexLocker lock(&addrMapsMtx_);
+      std::unique_lock<std::mutex> lock(addrMapsMtx_);
       cbTxN_.clear();
    }
    spendableCallbacks_.clear();
@@ -568,7 +568,11 @@ void Wallet::unregisterWallet()
 
 void Wallet::firstInit(bool force)
 {
-   updateBalances();
+   if (!firstInit_ || force)
+   {
+      updateBalances();
+      firstInit_ = true;
+   }
 }
 
 bs::core::wallet::TXSignRequest wallet::createTXRequest(const std::string &walletId
@@ -817,4 +821,18 @@ void Wallet::newAddresses(
          logger_->warn("[{}] no signer set", __func__);
       }
    }
+}
+
+void Wallet::trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb)
+{
+   //1) round up all addresses that have a tx count
+   std::set<BinaryData> usedAddrSet;
+   for (auto& addrPair : addressTxNMap_)
+   {
+      if (addrPair.second != 0)
+         usedAddrSet.insert(addrPair.first);
+   }
+
+   //2) send to armory wallet for processing
+   signContainer_->syncAddressBatch(walletId(), usedAddrSet, cb);
 }

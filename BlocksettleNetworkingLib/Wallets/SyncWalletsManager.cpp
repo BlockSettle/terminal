@@ -1069,7 +1069,7 @@ void WalletsManager::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
 
          // We have an affected wallet. Update it!
          ourZCentries.push_back(entry);
-         wallet->updateBalances();
+         //wallet->updateBalances();
       } // if
       else {
          logger_->debug("[WalletsManager::{}] - get ZC but wallet not found: {}"
@@ -1204,5 +1204,112 @@ void WalletsManager::resumeRescan()
          logger_->warn("[WalletsManager::{}] - Rescan for {} is already in "
             "progress", __func__, rootWallet.second->name());
       }
+   }
+}
+
+void WalletsManager::trackAddressChainUse(
+   std::function<void(bool)> cb)
+{
+   /***
+   This method grabs balance and count from the db for all managed 
+   wallets and deduces address chain use and type from the address
+   tx counters. 
+
+   This is then reflected to the armory wallets through the 
+   SignContainer, to keep address chain counters and address types
+   in sync.
+
+   This method should be run only once per per, after registration.
+
+   It will only have an effect if a wallet has been restored from 
+   seed or if there exist several instances of a wallet being used
+   on different machines across time.
+
+   More often than not, the armory wallet has all this meta data
+   saved on disk to begin with.
+
+   Callback is fired with either true (operation success) or 
+   false (SyncState_Failure, read below):
+
+   trackChainAddressUse can return 3 states per wallet. These 
+   states are combined and processed as one when all wallets are 
+   done synchronizing. The states are as follow:
+
+    - SyncState_Failure: the armory wallet failed to fine one or
+      several of the addresses. This shouldn't typically happen.
+      Most likely culprit is an address chain that is too short.
+      Extend it. 
+      This state overrides all other states.
+    
+    - SyncState_NothingToDo: wallets are already sync'ed. 
+      Lowest priority.
+    
+    - SyncState_Success: Armory wallet address chain usage is now up
+      to date, call WalletsManager::SyncWallets once again.
+      Overrides NothingToDo.
+   ***/
+
+   auto ctr = std::make_shared<std::atomic<unsigned>>(0);
+   auto wltCount = wallets_.size();
+   auto state = std::make_shared<bs::sync::SyncState>(
+      bs::sync::SyncState::SyncState_NothingToDo);
+
+   for (auto &it : wallets_)
+   {
+      auto trackLbd = [this, ctr, wltCount, state, cb](bs::sync::SyncState st)->void
+      {
+         switch (st)
+         {
+         case bs::sync::SyncState::SyncState_Failure:
+            *state = st;
+            break;
+
+         case bs::sync::SyncState::SyncState_Success:
+         {
+            if (*state == bs::sync::SyncState::SyncState_NothingToDo)
+               *state = st;
+            break;
+         }
+
+         default:
+            break;
+         }
+
+         if (ctr->fetch_add(1) == wltCount - 1)
+         {
+            switch (*state)
+            {
+            case bs::sync::SyncState::SyncState_Failure:
+            {
+               cb(false);
+               return;
+            }
+
+            case bs::sync::SyncState::SyncState_Success:
+            {
+               auto progLbd = [cb](int curr, int tot)->void
+               {
+                  if (curr == tot)
+                     cb(true);
+               };
+
+               syncWallets(progLbd);
+               return;
+            }
+
+            default:
+               cb(true);
+               return;
+            }
+         }
+      };
+
+      auto leafPtr = it.second;
+      auto balLbd = [leafPtr, trackLbd](void)->void
+      {
+         leafPtr->trackChainAddressUse(trackLbd);
+      };
+
+      leafPtr->updateBalances(balLbd);
    }
 }

@@ -168,9 +168,9 @@ namespace bs {
             , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}
             , const BinaryData prevPart = {});
 
-         static bool isSegWitInput(const UTXO& input);
-
          virtual bool deleteRemotely() { return false; } //stub
+
+         void trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb);
 
       signals:
          void addressAdded();
@@ -185,7 +185,7 @@ namespace bs {
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
          template <typename MapT> void updateMap(const MapT &src, MapT &dst) const {
-            QMutexLocker lock(&addrMapsMtx_);
+            std::unique_lock<std::mutex> lock(addrMapsMtx_);
             for (const auto &elem : src) {     // std::map::insert doesn't replace elements
                dst[elem.first] = std::move(elem.second);
             }
@@ -236,7 +236,7 @@ namespace bs {
          std::shared_ptr<spdlog::logger>  logger_; // May need to be set manually.
          mutable std::vector<bs::Address>       usedAddresses_;
          NetworkType netType_ = NetworkType::Invalid;
-         mutable QMutex    addrMapsMtx_;
+         mutable std::mutex    addrMapsMtx_;
          size_t            addrCount_ = 0;
 
          std::map<bs::Address, std::string>  addrComments_;
@@ -264,6 +264,9 @@ namespace bs {
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
          std::atomic_bool  heartbeatRunning_ = { false };
          bool isRegistered_ = false;
+
+      public:
+         bool firstInit_ = false;
       };
 
 

@@ -298,6 +298,9 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 
 void hd::Leaf::postOnline()
 {
+   if (firstInit_)
+      return;
+
    if (btcWallet_) {
       btcWallet_->setUnconfirmedTarget(kExtConfCount);
    }
@@ -310,6 +313,9 @@ void hd::Leaf::postOnline()
 void hd::Leaf::firstInit(bool force)
 {
    /*unused arg*/
+
+   if (firstInit_ && !force)
+      return;
 
    if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
       return;
@@ -324,6 +330,8 @@ void hd::Leaf::firstInit(bool force)
    };
    activateAddressesInvoked_ = true;
    armory_->getWalletsHistory({ walletId() }, cb);
+
+   firstInit_ = true;
 }
 
 void hd::Leaf::activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &led)
@@ -764,7 +772,7 @@ int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, Addr
 void hd::Leaf::updateBalances(const std::function<void(void)> &cb)
 {
    /***
-   callback is only used to signify request complition, use the 
+   callback is only used to signify request completion, use the 
    get methods to grab the individual balances
    ***/
 
@@ -792,58 +800,6 @@ void hd::Leaf::updateBalances(const std::function<void(void)> &cb)
             for (size_t i = 0; i < 4; ++i)
                bv[i] += (*prevBalances)[i];
          }
-
-         //lol no
-         /*
-         const auto &cbTxOutList = [this, bv] (std::vector<UTXO> inputs)
-         {
-            spendableBalanceCorrection_ = 0;
-            for (const auto &input : inputs)
-            {
-               if (armory_->getConfirmationsNumber(input.getHeight()) >= kExtConfCount)
-                  continue;
-
-               const auto addr = bs::Address::fromUTXO(input);
-               if (!isExternalAddress(addr))
-                  continue;
-
-               spendableBalanceCorrection_ += input.getValue() / BTCNumericTypes::BalanceDivider;
-            }
-
-            const auto totalBalance =
-               static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
-            const auto spendableBalance =
-               static_cast<BTCNumericTypes::balance_type>(bv[1]) / BTCNumericTypes::BalanceDivider;
-            const auto unconfirmedBalance =
-               static_cast<BTCNumericTypes::balance_type>(bv[2]) / BTCNumericTypes::BalanceDivider;
-            const auto count = bv[3];
-
-            if ((addrCount_ != count) ||
-               (totalBalance_ != totalBalance) ||
-               (spendableBalance_ != spendableBalance) ||
-               (unconfirmedBalance_ != unconfirmedBalance))
-            {
-                  {
-                     QMutexLocker lock(&addrMapsMtx_);
-                     updateAddrBalance_ = true;
-                     updateAddrTxN_ = true;
-                     addrCount_ = count;
-                  }
-
-                  totalBalance_ = totalBalance;
-                  spendableBalance_ = spendableBalance;
-                  unconfirmedBalance_ = unconfirmedBalance;
-
-                  //do that from the callback...
-                  emit balanceChanged(walletId(), bv);
-            }
-
-            emit balanceUpdated(walletId(), bv);
-         };
-
-         //why? (rhetorical)
-         Wallet::getSpendableTxOutList(cbTxOutList, this);
-         */
 
          totalBalance_ =
             static_cast<BTCNumericTypes::balance_type>(bv[0]) / BTCNumericTypes::BalanceDivider;
@@ -1330,14 +1286,14 @@ void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 {
    {
-      QMutexLocker lock(&addrMapsMtx_);
+      std::unique_lock<std::mutex> lock(addrMapsMtx_);
       addressBalanceMap_.clear();
    }
 
    if (!ZConly) {
       const auto &cbRefresh = [this](std::vector<UTXO> utxos) {
          const auto &cbUpdateSpendableBalance = [this](const std::vector<UTXO> &spendableUTXOs) {
-            QMutexLocker lock(&addrMapsMtx_);
+            std::unique_lock<std::mutex> lock(addrMapsMtx_);
             for (const auto &utxo : spendableUTXOs) {
                const auto &addr = utxo.getRecipientScrAddr();
                auto &balanceVec = addressBalanceMap_[addr];
@@ -1355,7 +1311,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 
    const auto &cbRefreshZC = [this](std::vector<UTXO> utxos) {
       const auto &cbUpdateZcBalance = [this](const std::vector<UTXO> &ZcUTXOs) {
-         QMutexLocker lock(&addrMapsMtx_);
+         std::unique_lock<std::mutex> lock(addrMapsMtx_);
          for (const auto &utxo : ZcUTXOs) {
             auto &balanceVec = addressBalanceMap_[utxo.getRecipientScrAddr()];
             if (balanceVec.empty()) {
