@@ -399,20 +399,11 @@ Asset_EncryptedData::~Asset_EncryptedData()
 {}
 
 ////////////////////////////////////////////////////////////////////////////////
-unique_ptr<DecryptedEncryptionKey> Asset_EncryptionKey::decrypt(
+unique_ptr<DecryptedData> Asset_EncryptedData::decrypt(
    const SecureBinaryData& key) const
 {
-   auto decryptedData = cipher_->decrypt(key, data_);
-   auto decrPtr = make_unique<DecryptedEncryptionKey>(decryptedData);
-   return move(decrPtr);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-unique_ptr<DecryptedPrivateKey> Asset_PrivateKey::decrypt(
-   const SecureBinaryData& key) const
-{
-   auto&& decryptedData = cipher_->decrypt(key, data_);
-   auto decrPtr = make_unique<DecryptedPrivateKey>(id_, decryptedData);
+   auto&& decryptedData = cipher_->decrypt(key, cipherText_);
+   auto decrPtr = make_unique<DecryptedData>(getId(), decryptedData);
    return move(decrPtr);
 }
 
@@ -439,8 +430,8 @@ BinaryData Asset_PrivateKey::serialize() const
    bw.put_uint8_t(PRIVKEY_BYTE);
    bw.put_var_int(id_.getSize());
    bw.put_BinaryData(id_);
-   bw.put_var_int(data_.getSize());
-   bw.put_BinaryData(data_);
+   bw.put_var_int(cipherText_.getSize());
+   bw.put_BinaryData(cipherText_);
 
    auto&& cipherData = cipher_->serialize();
    bw.put_var_int(cipherData.getSize());
@@ -459,8 +450,8 @@ BinaryData Asset_EncryptionKey::serialize() const
    bw.put_uint8_t(ENCRYPTIONKEY_BYTE);
    bw.put_var_int(id_.getSize());
    bw.put_BinaryData(id_);
-   bw.put_var_int(data_.getSize());
-   bw.put_BinaryData(data_);
+   bw.put_var_int(cipherText_.getSize());
+   bw.put_BinaryData(cipherText_);
 
    auto&& cipherData = cipher_->serialize();
    bw.put_var_int(cipherData.getSize());
@@ -479,7 +470,8 @@ bool Asset_PrivateKey::isSame(Asset_EncryptedData* const asset) const
    if (asset_ed == nullptr)
       return false;
 
-   return id_ == asset_ed->id_ && data_ == asset_ed->data_ &&
+   return id_ == asset_ed->id_ && 
+      cipherText_ == asset_ed->cipherText_ &&
       cipher_->isSame(asset_ed->cipher_.get());
 }
 
@@ -490,7 +482,8 @@ bool Asset_EncryptionKey::isSame(Asset_EncryptedData* const asset) const
    if (asset_ed == nullptr)
       return false;
 
-   return id_ == asset_ed->id_ && data_ == asset_ed->data_ &&
+   return id_ == asset_ed->id_ && 
+      cipherText_ == asset_ed->cipherText_ &&
       cipher_->isSame(asset_ed->cipher_.get());
 }
 
@@ -567,11 +560,58 @@ shared_ptr<Asset_EncryptedData> Asset_EncryptedData::deserialize(
       break;
    }
 
+   case WALLET_SEED_BYTE:
+   {
+      //data
+      auto len = brr.get_var_int();
+      auto&& data = brr.get_SecureBinaryData(len);
+
+      //cipher
+      len = brr.get_var_int();
+      if (len > brr.getSizeRemaining())
+         throw runtime_error("invalid serialized encrypted data len");
+      auto&& cipher = Cipher::deserialize(brr);
+
+      //ptr
+      assetPtr = make_shared<EncryptedSeed>(data, move(cipher));
+
+      break;
+   }
+
    default:
       throw runtime_error("unexpected encrypted data prefix");
    }
 
    return assetPtr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData EncryptedSeed::serialize() const
+{
+   BinaryWriter bw;
+   bw.put_uint8_t(WALLET_SEED_BYTE);
+   bw.put_var_int(cipherText_.getSize());
+   bw.put_BinaryData(cipherText_);
+
+   auto&& cipherData = cipher_->serialize();
+   bw.put_var_int(cipherData.getSize());
+   bw.put_BinaryData(cipherData);
+
+   BinaryWriter finalBw;
+   finalBw.put_var_int(bw.getSize());
+   finalBw.put_BinaryDataRef(bw.getDataRef());
+   return finalBw.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool EncryptedSeed::isSame(Asset_EncryptedData* const seed) const
+{
+   auto asset_ed = dynamic_cast<EncryptedSeed*>(seed);
+   if (asset_ed == nullptr)
+      return false;
+
+   return cipherText_ == asset_ed->cipherText_ &&
+      cipher_->isSame(asset_ed->cipher_.get());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

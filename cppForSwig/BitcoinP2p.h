@@ -564,6 +564,7 @@ protected:
    void processInvBlock(std::vector<InvEntry>);
 
 private:
+   void init(void);
    void connectLoop(void);
 
    //void pollSocketThread();
@@ -578,7 +579,6 @@ private:
    void replyPong(std::unique_ptr<Payload>);
 
    void processInv(std::unique_ptr<Payload>);
-   void processInvTx(std::vector<InvEntry>);
    void processGetData(std::unique_ptr<Payload>);
    void processGetTx(std::unique_ptr<Payload>);
    void processReject(std::unique_ptr<Payload>);
@@ -599,7 +599,7 @@ public:
    virtual void shutdown(void);
    void sendMessage(Payload&&);
 
-   std::shared_ptr<Payload> getTx(const InvEntry&, uint32_t timeout);
+   virtual std::shared_ptr<Payload> getTx(const InvEntry&, uint32_t timeout);
 
    void registerInvTxLambda(std::function<void(std::vector<InvEntry>)> func)
    {
@@ -621,35 +621,9 @@ public:
    {
       return invBlockStack_;
    }
-};
 
-////////////////////////////////////////////////////////////////////////////////
-class NodeUnitTest : public BitcoinP2P
-{
-public:
-   NodeUnitTest(const std::string& addr, const std::string& port, uint32_t magic_word) :
-      BitcoinP2P(addr, port, magic_word)
-   {}
-
-   void mockNewBlock(void)
-   {
-      InvEntry ie;
-      ie.invtype_ = Inv_Msg_Block;
-
-      std::vector<InvEntry> vecIE;
-      vecIE.push_back(ie);
-
-      processInvBlock(move(vecIE));
-   }
-
-   void connectToNode(bool async)
-   {}
-
-   void shutdown(void)
-   {
-      //clean up remaining lambdas
-      BitcoinP2P::shutdown();
-   }
+   uint32_t getMagicWord(void) const { return magic_word_; }
+   void processInvTx(std::vector<InvEntry>);   
 };
 
 #endif

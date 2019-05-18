@@ -78,6 +78,12 @@ enum AccountTypeEnum
    no address type is assumed, this has to be provided at creation
    */
    AccountTypeEnum_BIP32_Custom,
+
+   /*
+   Derives from BIP32_Custom, ECDH all keys pairs with salt, 
+   carried by derScheme object.
+   */
+   AccountTypeEnum_BIP32_Salted,
    
    AccountTypeEnum_BIP44,
    AccountTypeEnum_Custom
@@ -95,7 +101,6 @@ enum MetaAccountType
 struct AccountType
 {
 protected:
-   const AccountTypeEnum type_;
    SecureBinaryData privateRoot_;
    SecureBinaryData publicRoot_;
    mutable SecureBinaryData chainCode_;
@@ -106,16 +111,14 @@ protected:
    AddressEntryType defaultAddressEntryType_;
 
 protected:
-   AccountType(AccountTypeEnum val) :
-      type_(val)
+   AccountType()
    {}
 
 public:
-   AccountType(AccountTypeEnum val, 
+   AccountType(
       SecureBinaryData& privateRoot,
       SecureBinaryData& publicRoot,
-      SecureBinaryData& chainCode) :
-      type_(val), 
+      SecureBinaryData& chainCode) : 
       privateRoot_(std::move(privateRoot)),
       publicRoot_(std::move(publicRoot)),
       chainCode_(std::move(chainCode))
@@ -143,7 +146,7 @@ public:
    //locals
    void setMain(bool ismain) { isMain_ = ismain; }
    const bool isMain(void) const { return isMain_; }
-   AccountTypeEnum type(void) const { return type_; }
+   virtual AccountTypeEnum type(void) const = 0;
 
    const std::set<AddressEntryType>& getAddressTypes(void) const { return addressTypes_; }
    AddressEntryType getDefaultAddressEntryType(void) const { return defaultAddressEntryType_; }
@@ -164,7 +167,7 @@ public:
       SecureBinaryData& privateRoot,
       SecureBinaryData& publicRoot,
       SecureBinaryData& chainCode) :
-      AccountType(AccountTypeEnum_ArmoryLegacy,
+      AccountType(
       privateRoot, publicRoot, chainCode)
    {
       //uncompressed p2pkh
@@ -185,6 +188,9 @@ public:
       //default type
       defaultAddressEntryType_ = AddressEntryType_P2PKH;
    }
+
+   AccountTypeEnum type(void) const
+   { return AccountTypeEnum_ArmoryLegacy; }
 
    const SecureBinaryData& getChaincode(void) const;
    const SecureBinaryData& getPrivateRoot(void) const { return privateRoot_; }
@@ -211,10 +217,8 @@ private:
 
 protected:
    AccountType_BIP32(
-      AccountTypeEnum type,
       const std::vector<unsigned>& derivationPath,
       unsigned depth, unsigned leafId) :
-      AccountType(type),
       derivationPath_(derivationPath),
       depth_(depth), leafId_(leafId)
    {}
@@ -222,13 +226,12 @@ protected:
 
 public:
    AccountType_BIP32(
-      AccountTypeEnum type,
       SecureBinaryData& privateRoot,
       SecureBinaryData& publicRoot,
       SecureBinaryData& chainCode,
       const std::vector<unsigned>& derivationPath,
       unsigned depth, unsigned leafId) :
-      AccountType(type, privateRoot, publicRoot, chainCode),
+      AccountType(privateRoot, publicRoot, chainCode),
       derivationPath_(derivationPath),
       depth_(depth), leafId_(leafId)
    {
@@ -273,7 +276,7 @@ public:
       SecureBinaryData& chainCode,
       const std::vector<unsigned>& derivationPath,
       unsigned depth, unsigned leafId) :
-      AccountType_BIP32(AccountTypeEnum_BIP32_Legacy,
+      AccountType_BIP32(
          privateRoot, publicRoot, chainCode, derivationPath,
          depth, leafId)
    {
@@ -287,6 +290,9 @@ public:
       defaultAddressEntryType_ =
          AddressEntryType(AddressEntryType_Compressed | AddressEntryType_P2PKH);
    }
+
+   AccountTypeEnum type(void) const 
+   { return AccountTypeEnum_BIP32_Legacy; }
 
    std::set<unsigned> getNodes(void) const;
    BinaryData getOuterAccountID(void) const;
@@ -303,7 +309,7 @@ public:
       SecureBinaryData& chainCode,
       const std::vector<unsigned>& derivationPath,
       unsigned depth, unsigned leafId) :
-      AccountType_BIP32(AccountTypeEnum_BIP32_SegWit,
+      AccountType_BIP32(
          privateRoot, publicRoot, chainCode, derivationPath,
          depth, leafId)
    {
@@ -318,6 +324,10 @@ public:
       defaultAddressEntryType_ =
          AddressEntryType(AddressEntryType_P2WPKH);
    }
+
+
+   AccountTypeEnum type(void) const 
+   { return AccountTypeEnum_BIP32_SegWit; }
 
    virtual std::set<unsigned> getNodes(void) const;
    BinaryData getOuterAccountID(void) const;
@@ -348,14 +358,13 @@ public:
       SecureBinaryData& chainCode,
       const std::vector<unsigned>& derivationPath,
       unsigned depth, unsigned leafId) :
-         AccountType_BIP32(AccountTypeEnum_BIP32_Custom,
+         AccountType_BIP32(
          privateRoot, publicRoot, chainCode, derivationPath,
          depth, leafId)
    {}
 
    AccountType_BIP32_Custom(void) :
-      AccountType_BIP32(AccountTypeEnum_BIP32_Custom, 
-         std::vector<unsigned>(), 0, 0)
+      AccountType_BIP32(std::vector<unsigned>(), 0, 0)
    {}
 
    /***
@@ -377,6 +386,9 @@ public:
    since UINT32_MAX is a reserved node value that cannot be set by users.
    ***/
 
+   virtual AccountTypeEnum type(void) const 
+   { return AccountTypeEnum_BIP32_Custom; }
+
    std::set<unsigned> getNodes(void) const { return nodes_; }
    BinaryData getOuterAccountID(void) const;
    BinaryData getInnerAccountID(void) const;
@@ -389,6 +401,37 @@ public:
    void setAddressTypes(const std::set<AddressEntryType>&);
    void setDefaultAddressType(AddressEntryType);
    void setAddressLookup(unsigned count) { addressLookup_ = count; }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+struct AccountType_BIP32_Salted : public AccountType_BIP32_Custom
+{
+private:
+   const SecureBinaryData salt_;
+
+public:
+   AccountType_BIP32_Salted(
+      SecureBinaryData& privateRoot,
+      SecureBinaryData& publicRoot,
+      SecureBinaryData& chainCode,
+      const std::vector<unsigned>& derivationPath,
+      unsigned depth, unsigned leafId,
+      const SecureBinaryData& salt) :
+      AccountType_BIP32_Custom(
+         privateRoot, publicRoot, chainCode, derivationPath,
+         depth, leafId),
+      salt_(salt)
+   {}
+
+   AccountType_BIP32_Salted(const SecureBinaryData& salt) :
+      AccountType_BIP32_Custom(), salt_(salt)
+   {}
+
+   AccountTypeEnum type(void) const 
+   { return AccountTypeEnum_BIP32_Salted; }
+
+   const SecureBinaryData& getSalt(void) const 
+   { return salt_; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -424,6 +467,7 @@ private:
    void commit(void);
    void updateAssetCount(void);
 
+   void extendPublicChain(unsigned);
    void extendPublicChainToIndex(unsigned);
    void extendPublicChain(std::shared_ptr<AssetEntry>, unsigned);
    std::vector<std::shared_ptr<AssetEntry>> extendPublicChain(
@@ -459,8 +503,6 @@ public:
       root_(root), derScheme_(scheme),
       dbEnv_(dbEnv), db_(db)
    {}
-
-   void extendPublicChain(unsigned);
 
    size_t getAssetCount(void) const { return assets_.size(); }
    int getLastComputedIndex(void) const;
@@ -564,8 +606,10 @@ public:
    std::shared_ptr<AssetEntry> getOutterAssetRoot(void) const;
 
 
-   AddressEntryType getAddressType(void) const { return defaultAddressEntryType_; }
-   std::set<AddressEntryType> getAddressTypeSet(void) const { return addressTypes_; }
+   AddressEntryType getAddressType(void) const
+      { return defaultAddressEntryType_; }
+   std::set<AddressEntryType> getAddressTypeSet(void) const
+      { return addressTypes_; }
    bool hasAddressType(AddressEntryType);
 
    //get asset by binary string ID
@@ -575,13 +619,16 @@ public:
    //outer account (true) or the inner account (false)
    std::shared_ptr<AssetEntry> getAssetForID(unsigned, bool) const;
 
-   const std::pair<BinaryData, AddressEntryType>& getAssetIDPairForAddr(const BinaryData&);
+   const std::pair<BinaryData, AddressEntryType>& 
+      getAssetIDPairForAddr(const BinaryData&);
 
    void updateAddressHashMap(void);
-   const std::map<BinaryData, std::pair<BinaryData, AddressEntryType>>& getAddressHashMap(void);
+   const std::map<BinaryData, std::pair<BinaryData, AddressEntryType>>& 
+      getAddressHashMap(void);
 
    std::shared_ptr<AssetAccount> getOuterAccount(void) const;
-   const std::map<BinaryData, std::shared_ptr<AssetAccount>>& getAccountMap(void) const;
+   const std::map<BinaryData, std::shared_ptr<AssetAccount>>& 
+      getAccountMap(void) const;
 
    const BinaryData& getOuterAccountID(void) const { return outerAccount_; }
    const BinaryData& getInnerAccountID(void) const { return innerAccount_; }
@@ -591,8 +638,10 @@ public:
    std::shared_ptr<AddressAccount> getWatchingOnlyCopy(
       std::shared_ptr<LMDBEnv>, LMDB*) const;
 
-   std::shared_ptr<AddressEntry> getAddressEntryForID(const BinaryDataRef&) const;
-   std::map<BinaryData, std::shared_ptr<AddressEntry>> getUsedAddressMap(void) const;
+   std::shared_ptr<AddressEntry> getAddressEntryForID(
+      const BinaryDataRef&) const;
+   std::map<BinaryData, std::shared_ptr<AddressEntry>> 
+      getUsedAddressMap(void) const;
 
    //Lockable virtuals
    void initAfterLock(void) {}

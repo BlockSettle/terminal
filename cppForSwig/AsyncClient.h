@@ -96,6 +96,64 @@ class NoMatch
 {};
 
 ///////////////////////////////////////////////////////////////////////////////
+struct CombinedBalances
+{
+   BinaryData walletId_;
+      
+   /*
+   {
+      fullBalance,
+      spendableBalance,
+      unconfirmedBalance,
+      wltTxnCount
+   }
+   */
+   std::vector<uint64_t> walletBalanceAndCount_;
+
+   /*
+   {
+      scrAddr (prefixed):
+         {
+            fullBalance,
+            spendableBalance,
+            unconfirmedBalance
+         }
+   }
+   */
+
+   std::map<BinaryData, std::vector<uint64_t>> addressBalances_;
+
+   bool operator<(const CombinedBalances& rhs) const
+   {
+      return walletId_ < rhs.walletId_;
+   }
+
+   bool operator<(const BinaryData& rhs) const
+   {
+      return walletId_ < rhs;
+   }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct CombinedCounts
+{
+   BinaryData walletId_;
+      
+   /*
+   {
+      scrAddr (prefixed): txn count
+   }
+   */
+      
+   std::map<BinaryData, uint64_t> addressTxnCounts_;
+
+   bool operator<(const CombinedCounts& rhs) const
+   {
+      return walletId_ < rhs.walletId_;
+   }
+};
+
+///////////////////////////////////////////////////////////////////////////////
 namespace SwigClient
 {
    class BlockDataViewer;
@@ -346,7 +404,7 @@ namespace AsyncClient
             std::map<unsigned, ClientClasses::FeeEstimateStruct>>)>);
 
       void getHistoryForWalletSelection(
-         const std::vector<std::string>& wldIDs, const std::string& orderingStr,
+         const std::vector<std::string>&, const std::string& orderingStr,
          std::function<void(ReturnMessage<std::vector<::ClientClasses::LedgerEntry>>)>);
 
       void broadcastThroughRPC(const BinaryData& rawTx, 
@@ -363,6 +421,21 @@ namespace AsyncClient
       std::pair<unsigned, unsigned> getRekeyCount(void) const;
       void setCheckServerKeyPromptLambda(
          std::function<bool(const BinaryData&, const std::string&)>);
+
+      //combined methods
+      void getCombinedBalances(
+         const std::vector<std::string>&,
+         std::function<void(
+            ReturnMessage<std::map<std::string, CombinedBalances>>)>);
+      
+      void getCombinedAddrTxnCounts(
+         const std::vector<std::string>&,
+         std::function<void(
+            ReturnMessage<std::map<std::string, CombinedCounts>>)>);
+
+      void getCombinedSpendableTxOutListForValue(
+         const std::vector<std::string>&, uint64_t value,
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
    };
 
    ////////////////////////////////////////////////////////////////////////////
@@ -691,6 +764,42 @@ public:
       userCallbackLambda_(lbd)
    {}
 
+   //virtual
+   void callback(const WebSocketMessagePartial&);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct CallbackReturn_CombinedBalances : public CallbackReturn_WebSocket
+{
+private:
+   std::function<void(ReturnMessage<std::map<std::string, CombinedBalances>>)> 
+      userCallbackLambda_;
+
+public:
+   CallbackReturn_CombinedBalances(
+      std::function<void(
+         ReturnMessage<std::map<std::string, CombinedBalances>>)> lbd) :
+      userCallbackLambda_(lbd)
+   {}
+   
+   //virtual
+   void callback(const WebSocketMessagePartial&);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+struct CallbackReturn_CombinedCounts : public CallbackReturn_WebSocket
+{
+private:
+   std::function<void(ReturnMessage<std::map<std::string, CombinedCounts>>)> 
+      userCallbackLambda_;
+
+public:
+   CallbackReturn_CombinedCounts(
+      std::function<void(
+         ReturnMessage<std::map<std::string, CombinedCounts>>)> lbd) :
+      userCallbackLambda_(lbd)
+   {}
+   
    //virtual
    void callback(const WebSocketMessagePartial&);
 };
