@@ -97,6 +97,12 @@ public:
    virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
    
+   virtual void syncAddressBatch(const std::string &walletId,
+      const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>)
+   {
+      throw std::runtime_error("needs implemented, check InprocSigner for sample code");
+   }
+   
    virtual void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &)
    {

@@ -419,7 +419,8 @@ void InprocSigner::syncNewAddresses(const std::string &walletId
       if (index.empty())
          index = in.first;
 
-      result.push_back({ wallet->synchronizeUsedAddressChain(in.first, in.second), in.first });
+      result.push_back({ 
+         wallet->synchronizeUsedAddressChain(in.first, in.second).first, in.first });
    }
 
    cb(result);
@@ -455,4 +456,69 @@ void InprocSigner::extendAddressChain(
    }
 
    cb(result);
+}
+
+void InprocSigner::syncAddressBatch(
+   const std::string &walletId, const std::set<BinaryData>& addrSet,
+   std::function<void(bs::sync::SyncState)> cb)
+{
+   //grab wallet
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (wallet == nullptr)
+   {
+      cb(bs::sync::SyncState::SyncState_NothingToDo);
+      return;
+   }
+
+   //resolve the path and address type for addrSet
+   std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> parsedMap;
+   try
+   {
+      parsedMap = std::move(wallet->indexPathAndTypes(addrSet));
+   }
+   catch (AccountException&)
+   {
+      //failure to find even on of the addresses means the wallet chain needs 
+      //extended further
+      cb(bs::sync::SyncState::SyncState_Failure);
+   }
+
+   //strip out all the default address types
+   auto iter = parsedMap.begin();
+   while (iter != parsedMap.end())
+   {
+      if (iter->second.second == AddressEntryType_Default)
+      {
+         parsedMap.erase(iter++);
+         continue;
+      }
+
+      ++iter;
+   }
+
+   if(parsedMap.size() == 0)
+      cb(bs::sync::SyncState::SyncState_Success);
+
+   //order addresses by path
+   std::map<bs::hd::Path, std::pair<BinaryData, AddressEntryType>> pathSet;
+
+   for (auto& parsedPair : parsedMap)
+   {
+      auto addrPair = std::make_pair(parsedPair.first, parsedPair.second.second);
+      pathSet.insert(std::make_pair(parsedPair.second.first, addrPair));
+   }
+
+   //request each chain for the relevant address types
+   bool update = false;
+   for (auto& pathPair : pathSet)
+   {
+      auto resultPair = wallet->synchronizeUsedAddressChain(
+         pathPair.first.toString(), pathPair.second.second);
+      update |= resultPair.second;
+   }
+
+   if (update)
+      cb(bs::sync::SyncState::SyncState_Success);
+   else
+      cb(bs::sync::SyncState::SyncState_NothingToDo);
 }

@@ -79,6 +79,9 @@ public:
       , bool persistent = true) override;
    void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
+   void syncAddressBatch(const std::string &walletId, const std::set<BinaryData>& addrSet,
+      std::function<void(bs::sync::SyncState)> cb) override;
+
 
    bool isReady() const override { return inited_; }
 
