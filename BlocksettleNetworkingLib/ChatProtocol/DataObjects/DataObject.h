@@ -11,16 +11,21 @@ namespace Chat {
             MessageData,
             RoomData,
             ContactRecordData,
-            UserData
+            UserData,
+            OTCRequestData,
+            OTCResponseData,
+            OTCUpdateData
          };
    protected:
       DataObject(Type type);
    public:
+      virtual ~DataObject() = default;
+
       Type getType() const;
       virtual QJsonObject toJson() const;
       std::string toJsonString() const;
+
       static std::shared_ptr<DataObject> fromJSON(const std::string& jsonData);
-      virtual ~DataObject() = default;
    private:
       Type type_;
    };
