@@ -28,7 +28,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 static constexpr int acceptCommonOTCTimeout = 1000;
-static constexpr int simulateResponseToMyCommonOTC = 1000;
+static constexpr int simulateResponseToMyCommonOTCTimeout = 1000;
 
 std::string ChatClient::GetNextRequestorId()
 {
@@ -40,38 +40,38 @@ std::string ChatClient::GetNextResponderId()
    return baseFakeResponderId_ + std::to_string(nextResponderId_++);
 }
 
-std::string ChatClient::GetNextRequestId()
-{
-   return std::to_string(nextRequestId_++);
-}
-
 std::string ChatClient::GetNextOTCId()
 {
-   return std::to_string(nextOtcId_++);
+   return std::string("client_otc_id_") + std::to_string(nextOtcId_++);
+}
+
+std::string ChatClient::GetNextServerOTCId()
+{
+   return std::string("server_otc_id_") + std::to_string(nextOtcId_++);
 }
 
 std::string ChatClient::GetNextResponseId()
 {
-   return std::to_string(nextResponseId_++);
+   return std::string("client_response_") + std::to_string(nextResponseId_++);
 }
 
-void ChatClient::ScheduleForExpire(const bs::network::LiveOTCRequest& liveRequest)
+std::string ChatClient::GetNextServerResponseId()
 {
-   const auto expireInterval = liveRequest.expireTimestamp - QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+   return std::string("server_response_") + std::to_string(nextResponseId_++);
+}
 
-   QTimer::singleShot(expireInterval, [this, otcId = liveRequest.otcId]
+std::string ChatClient::GetNextNegotiationChannelId()
+{
+   return std::string("otc_channel_") + std::to_string(negotiationChannelId_++);
+}
+
+void ChatClient::ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
+{
+   const auto expireInterval = liveOTCRequest->expireTimestamp() - QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+
+   QTimer::singleShot(expireInterval, [this, otcId = liveOTCRequest->serverRequestId()]
    {
-      auto it = aliveOtcRequests_.find(otcId);
-      if (aliveOtcRequests_.end() != it) {
-         aliveOtcRequests_.erase(it);
-
-         if (ownOtcId_ == otcId) {
-            ownOtcId_.clear();
-            emit OwnOTCRequestExpired(otcId);
-         } else {
-            emit OTCRequestExpired(otcId);
-         }
-      }
+      HandleCommonOTCRequestExpired(otcId);
    });
 }
 
@@ -83,6 +83,9 @@ Q_DECLARE_METATYPE(std::shared_ptr<Chat::RoomData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::RoomData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::UserData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::UserData>>)
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::OTCRequestData>>)
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::OTCResponseData>>)
+Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::OTCUpdateData>>)
 
 namespace {
    const QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
@@ -103,6 +106,9 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::RoomData>>>();
    qRegisterMetaType<std::shared_ptr<Chat::UserData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::UserData>>>();
+   qRegisterMetaType<std::vector<std::shared_ptr<Chat::OTCRequestData>>>();
+   qRegisterMetaType<std::vector<std::shared_ptr<Chat::OTCResponseData>>>();
+   qRegisterMetaType<std::vector<std::shared_ptr<Chat::OTCUpdateData>>>();
 
    //This is required (with Qt::QueuedConnection), because of ZmqBIP15XDataConnection crashes when delete it from this (callback) thread
    connect(this, &ChatClient::ForceLogoutSignal, this, &ChatClient::onForceLogoutSignal, Qt::QueuedConnection);
@@ -1316,7 +1322,7 @@ void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
 
 bool ChatClient::SubmitCommonOTCRequest(const bs::network::OTCRequest& request)
 {
-   if (request.ownRequest && !ownOtcId_.empty()) {
+   if (request.ownRequest && !ownSubmittedOTCId_.isEmpty()) {
       logger_->debug("[ChatClient::SubmitCommonOTCRequest] already have own OTC");
       return false;
    }
@@ -1334,19 +1340,23 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
    // XXX - do actual send and return true if message was sent to chat server
 
    // all down is part of a flow simulation
-   bs::network::LiveOTCRequest liveRequest;
 
    const bool simulateResponse = request.ownRequest && request.fakeReplyRequired;
 
-   liveRequest.otcId = GetNextOTCId();
-   liveRequest.ownRequest = request.ownRequest;
-   liveRequest.side = request.side;
-   liveRequest.amountRange = request.amountRange;
-   liveRequest.expireTimestamp = QDateTime::currentDateTimeUtc().addSecs(10*60).toMSecsSinceEpoch();
+   const QString clientRequestId = QString::fromStdString(GetNextOTCId());
+   const QString serverRequestId = QString::fromStdString(GetNextServerOTCId());
+   const QString requestorId = QString::fromStdString(request.ownRequest
+                                                      ? currentUserId_
+                                                      : GetNextRequestorId());
+   const QString targetId = Chat::OTCRoomKey;
+   const uint64_t submitTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+   const uint64_t expireTimestamp = QDateTime::currentDateTimeUtc().addSecs(10*60).toMSecsSinceEpoch();
+
+   auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
+      , serverRequestId, requestorId, targetId, submitTimestamp, expireTimestamp, request);
 
    if (request.ownRequest) {
-      liveRequest.requestorId = currentUserId_;
-      ownOtcId_ = liveRequest.otcId;
+      ownSubmittedOTCId_ = liveRequest->clientRequestId();
 
       // simulate 1 second delay on accept response
       QTimer::singleShot(acceptCommonOTCTimeout, [this, liveRequest, simulateResponse]
@@ -1354,42 +1364,51 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
             HandleCommonOTCRequestAccepted(liveRequest);
 
             if (simulateResponse) {
-               QTimer::singleShot(simulateResponseToMyCommonOTC, [this, liveRequest]
+               QTimer::singleShot(simulateResponseToMyCommonOTCTimeout, [this, liveRequest]
                   {
-                     bs::network::LiveOTCResponse response;
+                     const auto clientResponseId = QString::fromStdString(GetNextResponseId());
+                     const auto serverResponseId = QString::fromStdString(GetNextServerResponseId());
+                     const auto negotiationChannelId = QString::fromStdString(GetNextNegotiationChannelId());
+                     const auto serverRequestId = liveRequest->serverRequestId();
+                     const auto requestorId = liveRequest->requestorId();
+                     const auto initialTargetId = liveRequest->targetId();
+                     const auto responderId = QString::fromStdString(GetNextResponderId());
+                     const uint64_t responseTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+                     const auto priceRange = bs::network::OTCPriceRange{3300, 3700};;
+                     const auto quantityRange = bs::network::OTCRangeID::toQuantityRange(liveRequest->otcRequest().amountRange);
 
-                     response.otcId = liveRequest.otcId;
-                     response.responseId = GetNextResponseId();
-
-                     response.requestorId = currentUserId_;
-                     response.responderId = GetNextResponderId();
-
-                     response.priceRange = bs::network::OTCPriceRange{3300, 3700};
-                     response.quantityRange = bs::network::OTCRangeID::toQuantityRange(liveRequest.amountRange);
+                     auto response = std::make_shared<Chat::OTCResponseData>(clientResponseId
+                        , serverResponseId, negotiationChannelId, serverRequestId
+                        , requestorId, initialTargetId, responderId
+                        , responseTimestamp, priceRange, quantityRange);
 
                      HandleCommonOTCResponse(response);
                   });
             }
          });
    } else {
-      liveRequest.requestorId = GetNextRequestorId();
       HandleCommonOTCRequest(liveRequest);
    }
 
    return true;
 }
 
-void ChatClient::HandleCommonOTCRequest(const bs::network::LiveOTCRequest& liveOTCRequest)
+void ChatClient::HandleCommonOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
 {
-   aliveOtcRequests_.emplace(liveOTCRequest.otcId);
+   aliveOtcRequests_.emplace(liveOTCRequest->serverRequestId().toStdString());
    ScheduleForExpire(liveOTCRequest);
 
    emit NewOTCRequestReceived(liveOTCRequest);
 }
 
-void ChatClient::HandleCommonOTCRequestAccepted(const bs::network::LiveOTCRequest& liveOTCRequest)
+void ChatClient::HandleCommonOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
 {
-   aliveOtcRequests_.emplace(liveOTCRequest.otcId);
+   if (liveOTCRequest->clientRequestId() != ownSubmittedOTCId_) {
+      logger_->error("[ChatClient::HandleCommonOTCRequestAccepted] looks like not ours OTC was accepted");
+      return;
+   }
+
+   aliveOtcRequests_.emplace(liveOTCRequest->serverRequestId().toStdString());
    ScheduleForExpire(liveOTCRequest);
 
    emit OTCRequestAccepted(liveOTCRequest);
@@ -1400,57 +1419,84 @@ void ChatClient::HandleCommonOTCRequestRejected(const std::string& rejectReason)
    emit OTCOwnRequestRejected(QString::fromStdString(rejectReason));
 }
 
-void ChatClient::HandleCommonOTCRequestCancelled(const std::string& otcId)
+void ChatClient::HandleCommonOTCRequestExpired(const QString& serverOTCId)
 {
-   ownOtcId_.clear();
-   auto it = aliveOtcRequests_.find(otcId);
-   if (it != aliveOtcRequests_.end()) {
-      aliveOtcRequests_.erase(it);
+   auto it = aliveOtcRequests_.find(serverOTCId.toStdString());
+   if (it == aliveOtcRequests_.end()) {
+      // we were not aware that this OTC request was alive
+      return;
+   }
+   aliveOtcRequests_.erase(it);
+
+   if (serverOTCId == ownServerOTCId_) {
+      ownSubmittedOTCId_.clear();
+      ownServerOTCId_.clear();
+      emit OwnOTCRequestExpired(serverOTCId);
+   } else {
+      emit OTCRequestExpired(serverOTCId);
+   }
+}
+
+void ChatClient::HandleCommonOTCRequestCancelled(const QString& serverOTCId)
+{
+   if (serverOTCId == ownServerOTCId_) {
+      ownSubmittedOTCId_.clear();
+      ownServerOTCId_.clear();
    }
 
-   emit OTCRequestCancelled(otcId);
+   auto it = aliveOtcRequests_.find(serverOTCId.toStdString());
+   if (it != aliveOtcRequests_.end()) {
+      aliveOtcRequests_.erase(it);
+      emit OTCRequestCancelled(serverOTCId);
+   }
 }
 
-void ChatClient::HandleAcceptedCommonOTCResponse(const bs::network::LiveOTCResponse& response)
+void ChatClient::HandleAcceptedCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
 {
-   model_->insertOTCSentResponse(response.otcId);
+   model_->insertOTCSentResponse(response->serverResponseId().toStdString());
 }
 
-void ChatClient::HandleRejectedCommonOTCResponse(const std::string& otcId, const std::string& reason)
+void ChatClient::HandleRejectedCommonOTCResponse(const QString& otcId, const std::string& reason)
 {
    emit CommonOTCResponseRejected(otcId, QString::fromStdString(reason));
 }
 
 // HandleCommonOTCResponse - handle response we receive to our OTC request
 //    sent to common OTC chat room
-void ChatClient::HandleCommonOTCResponse(const bs::network::LiveOTCResponse& response)
+void ChatClient::HandleCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
 {
-   model_->insertOTCReceivedResponse(response.otcId);
+   model_->insertOTCReceivedResponse(response->serverResponseId().toStdString());
 }
 
 // cancel current OTC request sent to OTC chat
-bool ChatClient::PullCommonOTCRequest(const std::string& otcRequestId)
+bool ChatClient::PullCommonOTCRequest(const QString& serverOTCId)
 {
-   if (ownOtcId_ != otcRequestId) {
+   if (ownServerOTCId_ != serverOTCId) {
       logger_->error("[ChatClient::PullCommonOTCRequest] invalid OTC ID");
       // XXX probably something should be emitted, since chat server will(should) reject pull request
       return false;
    }
 
-   HandleCommonOTCRequestCancelled(otcRequestId);
+   HandleCommonOTCRequestCancelled(serverOTCId);
    return true;
 }
 
 bool ChatClient::SubmitCommonOTCResponse(const bs::network::OTCResponse& response)
 {
-   bs::network::LiveOTCResponse liveResponse;
+   const auto clientResponseId = QString::fromStdString(GetNextResponseId());
+   const auto serverResponseId = QString::fromStdString(GetNextServerResponseId());
+   const auto negotiationChannelId = QString::fromStdString(GetNextNegotiationChannelId());
+   const auto serverRequestId = response.serverRequestId;
+   const auto requestorId = response.requestorId;
+   const auto initialTargetId = response.initialTargetId;
+   const auto responderId = QString::fromStdString(currentUserId_);
+   const uint64_t responseTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
+   const auto priceRange = response.priceRange;
+   const auto quantityRange = response.quantityRange;
 
-   liveResponse.otcId = response.otcId;
-   liveResponse.responseId = GetNextResponseId();
-   liveResponse.requestorId = response.requestorId;
-   liveResponse.responderId = currentUserId_;
-   liveResponse.priceRange = response.priceRange;
-   liveResponse.quantityRange = response.quantityRange;
+   auto liveResponse = std::make_shared<Chat::OTCResponseData>(clientResponseId
+      , serverResponseId, negotiationChannelId, serverRequestId, requestorId
+      , initialTargetId, responderId, responseTimestamp, priceRange, quantityRange);
 
    HandleAcceptedCommonOTCResponse(liveResponse);
    return true;

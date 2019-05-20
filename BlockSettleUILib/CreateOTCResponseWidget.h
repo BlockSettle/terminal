@@ -4,12 +4,12 @@
 #include <QWidget>
 #include <memory>
 
+#include "ChatProtocol/DataObjects/OTCRequestData.h"
 #include "CommonTypes.h"
 
 namespace Ui {
    class CreateOTCResponseWidget;
 };
-
 
 class CreateOTCResponseWidget : public QWidget
 {
@@ -19,7 +19,7 @@ public:
    CreateOTCResponseWidget(QWidget* parent = nullptr);
    ~CreateOTCResponseWidget() override;
 
-   void SetActiveOTCRequest(const bs::network::LiveOTCRequest& otc);
+   void SetActiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc);
 
    bs::network::OTCResponse GetCurrentOTCResponse() const;
 
@@ -39,7 +39,7 @@ signals:
 private:
    std::unique_ptr<Ui::CreateOTCResponseWidget> ui_;
 
-   bs::network::LiveOTCRequest currentOtcRequest_;
+   std::shared_ptr<Chat::OTCRequestData> currentOtcRequest_;
 };
 
 #endif // __CREATE_OTC_RESPONSE_WIDGET_H__

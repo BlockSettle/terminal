@@ -29,10 +29,10 @@ void OTCRequestViewModel::clear()
    endResetModel();
 }
 
-bs::network::LiveOTCRequest OTCRequestViewModel::GetOTCRequest(const QModelIndex& index)
+std::shared_ptr<Chat::OTCRequestData> OTCRequestViewModel::GetOTCRequest(const QModelIndex& index)
 {
    if (!index.isValid() || index.row() >= currentRequests_.size()) {
-      return {};
+      return nullptr;
    }
 
    return currentRequests_[index.row()];
@@ -81,7 +81,7 @@ QVariant OTCRequestViewModel::headerData(int section, Qt::Orientation orientatio
    return QVariant{};
 }
 
-QVariant OTCRequestViewModel::getRowData(const int column, const bs::network::LiveOTCRequest& otc) const
+QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr<Chat::OTCRequestData>& otc) const
 {
    switch(column) {
    case ColumnSecurity:
@@ -94,26 +94,26 @@ QVariant OTCRequestViewModel::getRowData(const int column, const bs::network::Li
       return QLatin1String("XBT");
 
    case ColumnSide:
-      return QString::fromStdString(bs::network::Side::toString(otc.side));
+      return QString::fromStdString(bs::network::Side::toString(otc->otcRequest().side));
 
    case ColumnQuantity:
-      return QString::fromStdString(bs::network::OTCRangeID::toString(otc.amountRange));
+      return QString::fromStdString(bs::network::OTCRangeID::toString(otc->otcRequest().amountRange));
 
    case ColumnDuration:
       {
          auto currentTimestamp = QDateTime::currentDateTime().toMSecsSinceEpoch();
-         if (currentTimestamp >= otc.expireTimestamp) {
+         if (currentTimestamp >= otc->expireTimestamp()) {
             return 0;
          }
 
-         return static_cast<int>((otc.expireTimestamp - currentTimestamp)/60000);
+         return static_cast<int>((otc->expireTimestamp() - currentTimestamp)/60000);
       }
    }
 
    return QVariant{};
 }
 
-void OTCRequestViewModel::AddLiveOTCRequest(const bs::network::LiveOTCRequest& otc)
+void OTCRequestViewModel::AddLiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc)
 {
    beginInsertRows(QModelIndex{}, currentRequests_.size(), currentRequests_.size());
 
@@ -122,12 +122,12 @@ void OTCRequestViewModel::AddLiveOTCRequest(const bs::network::LiveOTCRequest& o
    endInsertRows();
 }
 
-bool OTCRequestViewModel::RemoveOTCByID(const std::string& otc)
+bool OTCRequestViewModel::RemoveOTCByID(const QString& serverRequestId)
 {
    // XXX simple solution. Not sure at what number of OTC requests this will start to slow down UI
    // will move to internal pointers and maps a bit later
    for (int i=0; i < currentRequests_.size(); ++i) {
-      if (currentRequests_[i].otcId == otc) {
+      if (currentRequests_[i]->serverRequestId() == serverRequestId) {
          beginRemoveRows(QModelIndex{}, i, i);
          currentRequests_.erase(currentRequests_.begin() + i);
          endRemoveRows();

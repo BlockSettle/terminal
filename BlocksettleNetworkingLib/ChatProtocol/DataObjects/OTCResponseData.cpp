@@ -17,7 +17,7 @@ std::shared_ptr<OTCResponseData> OTCResponseData::fromJSON(const std::string& js
 }
 
 OTCResponseData::OTCResponseData(const QString& clientResponseId
-                      , const QString& requestId
+                      , const QString& serverRequestId
                       , const QString& requestorId
                       , const QString& initialTargetId
                       , const QString& responderId
@@ -26,7 +26,8 @@ OTCResponseData::OTCResponseData(const QString& clientResponseId
   : DataObject(DataObject::Type::OTCResponseData)
   , clientResponseId_{clientResponseId}
   , serverResponseId_{}
-  , requestId_{requestId}
+  , negotiationChannelId_{}
+  , serverRequestId_{serverRequestId}
   , requestorId_{requestorId}
   , initialTargetId_{initialTargetId}
   , responderId_{responderId}
@@ -37,7 +38,8 @@ OTCResponseData::OTCResponseData(const QString& clientResponseId
 
 OTCResponseData::OTCResponseData(const QString& clientResponseId
                       , const QString& serverResponseId
-                      , const QString& requestId
+                      , const QString& negotiationChannelId
+                      , const QString& serverRequestId
                       , const QString& requestorId
                       , const QString& initialTargetId
                       , const QString& responderId
@@ -47,7 +49,8 @@ OTCResponseData::OTCResponseData(const QString& clientResponseId
   : DataObject(DataObject::Type::OTCResponseData)
   , clientResponseId_{clientResponseId}
   , serverResponseId_{serverResponseId}
-  , requestId_{requestId}
+  , negotiationChannelId_{negotiationChannelId}
+  , serverRequestId_{serverRequestId}
   , requestorId_{requestorId}
   , initialTargetId_{initialTargetId}
   , responderId_{responderId}
@@ -55,6 +58,57 @@ OTCResponseData::OTCResponseData(const QString& clientResponseId
   , priceRange_{priceRange}
   , quantityRange_{quantityRange}
 {}
+
+QString OTCResponseData::clientResponseId() const
+{
+  return clientResponseId_;
+}
+
+QString OTCResponseData::serverResponseId() const
+{
+  return serverResponseId_;
+}
+
+QString OTCResponseData::negotiationChannelId() const
+{
+  return negotiationChannelId_;
+}
+
+QString OTCResponseData::serverRequestId() const
+{
+  return serverRequestId_;
+}
+
+QString OTCResponseData::requestorId() const
+{
+  return requestorId_;
+}
+
+QString OTCResponseData::initialTargetId() const
+{
+  return initialTargetId_;
+}
+
+QString OTCResponseData::responderId() const
+{
+  return responderId_;
+}
+
+uint64_t OTCResponseData::responseTimestamp() const
+{
+  return responseTimestamp_;
+}
+
+bs::network::OTCPriceRange    OTCResponseData::priceRange() const
+{
+  return priceRange_;
+}
+
+bs::network::OTCQuantityRange OTCResponseData::quantityRange() const
+{
+  return quantityRange_;
+}
+
 
 //namespace Chat end
 }

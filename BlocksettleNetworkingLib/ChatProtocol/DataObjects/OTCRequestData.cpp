@@ -74,7 +74,7 @@ uint64_t OTCRequestData::expireTimestamp() const
    return expireTimestamp_;
 }
 
-bs::network::OTCRequest OTCRequestData::otcRequest() const
+const bs::network::OTCRequest& OTCRequestData::otcRequest() const
 {
    return otcRequest_;
 }

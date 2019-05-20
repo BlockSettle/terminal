@@ -15,10 +15,10 @@ CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)
 
 CreateOTCResponseWidget::~CreateOTCResponseWidget() = default;
 
-void CreateOTCResponseWidget::SetActiveOTCRequest(const bs::network::LiveOTCRequest& otc)
+void CreateOTCResponseWidget::SetActiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc)
 {
-   SetSide(otc.side);
-   SetRange(otc.amountRange);
+   SetSide(otc->otcRequest().side);
+   SetRange(otc->otcRequest().amountRange);
 
    currentOtcRequest_ = otc;
 }
@@ -92,8 +92,10 @@ bs::network::OTCResponse CreateOTCResponseWidget::GetCurrentOTCResponse() const
 {
    bs::network::OTCResponse response;
 
-   response.otcId = currentOtcRequest_.otcId;
-   response.requestorId = currentOtcRequest_.requestorId;
+   response.serverRequestId = currentOtcRequest_->serverRequestId();
+   response.requestorId = currentOtcRequest_->requestorId();
+   response.initialTargetId = currentOtcRequest_->targetId();
+
    response.priceRange = GetResponsePriceRange();
    response.quantityRange = GetResponseQuantityRange();
 

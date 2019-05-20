@@ -17,7 +17,7 @@ namespace Chat {
       OTCResponseData() = delete;
 
       OTCResponseData(const QString& clientResponseId
-                      , const QString& requestId
+                      , const QString& serverRequestId
                       , const QString& requestorId
                       , const QString& initialTargetId
                       , const QString& responderId
@@ -26,7 +26,8 @@ namespace Chat {
 
       OTCResponseData(const QString& clientResponseId
                       , const QString& serverResponseId
-                      , const QString& requestId
+                      , const QString& negotiationChannelId
+                      , const QString& serverRequestId
                       , const QString& requestorId
                       , const QString& initialTargetId
                       , const QString& responderId
@@ -39,7 +40,9 @@ namespace Chat {
       QString clientResponseId() const;
       QString serverResponseId() const;
 
-      QString requestId() const;
+      QString negotiationChannelId() const;
+
+      QString serverRequestId() const;
 
       // requestorId - who sent request
       QString requestorId() const;
@@ -57,7 +60,8 @@ namespace Chat {
    private:
       const QString clientResponseId_;
       const QString serverResponseId_;
-      const QString requestId_;
+      const QString negotiationChannelId_;
+      const QString serverRequestId_;
       const QString requestorId_;
       const QString initialTargetId_;
       const QString responderId_;

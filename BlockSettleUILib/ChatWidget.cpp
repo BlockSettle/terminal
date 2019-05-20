@@ -641,7 +641,7 @@ void ChatWidget::OnOTCRequestCreated()
    }
 }
 
-void ChatWidget::OnPullOwnOTCRequest(const std::string& otcId)
+void ChatWidget::OnPullOwnOTCRequest(const QString& otcId)
 {
    client_->PullCommonOTCRequest(otcId);
 }
@@ -688,7 +688,7 @@ void ChatWidget::OTCSwitchToGlobalRoom()
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
 }
 
-void ChatWidget::OnOTCRequestAccepted(const bs::network::LiveOTCRequest& otcRequest)
+void ChatWidget::OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
 {
    // add own OTC request to model
    otcRequestViewModel_->AddLiveOTCRequest(otcRequest);
@@ -714,13 +714,13 @@ void ChatWidget::OnOTCOwnRequestRejected(const QString& reason)
    // do nothing for now
 }
 
-void ChatWidget::OnNewOTCRequestReceived(const bs::network::LiveOTCRequest& otcRequest)
+void ChatWidget::OnNewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
 {
    // add new OTC request to model
    otcRequestViewModel_->AddLiveOTCRequest(otcRequest);
 }
 
-void ChatWidget::OnOTCRequestCancelled(const std::string& otcId)
+void ChatWidget::OnOTCRequestCancelled(const QString& otcId)
 {
    if (IsOwnOTCId(otcId)) {
       OnOwnOTCPulled();
@@ -729,28 +729,28 @@ void ChatWidget::OnOTCRequestCancelled(const std::string& otcId)
    }
 }
 
-bool ChatWidget::IsOwnOTCId(const std::string& otcId) const
+bool ChatWidget::IsOwnOTCId(const QString& otcId) const
 {
-   return otcAccepted_ && (otcId == ownActiveOTC_.otcId);
+   return otcAccepted_ && (otcId == ownActiveOTC_->serverRequestId());
 }
 
 void ChatWidget::OnOwnOTCPulled()
 {
    otcSubmitted_ = otcAccepted_ = false;
-   otcRequestViewModel_->RemoveOTCByID(ownActiveOTC_.otcId);
+   otcRequestViewModel_->RemoveOTCByID(ownActiveOTC_->serverRequestId());
 }
 
-void ChatWidget::OnOTCCancelled(const std::string& otcId)
+void ChatWidget::OnOTCCancelled(const QString& otcId)
 {
    otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
-void ChatWidget::OnOTCRequestExpired(const std::string& otcId)
+void ChatWidget::OnOTCRequestExpired(const QString& otcId)
 {
    otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
-void ChatWidget::OnOwnOTCRequestExpired(const std::string& otcId)
+void ChatWidget::OnOwnOTCRequestExpired(const QString& otcId)
 {
    otcSubmitted_ = otcAccepted_ = false;
    otcRequestViewModel_->RemoveOTCByID(otcId);
@@ -762,12 +762,12 @@ void ChatWidget::OnOTCSelectionChanged(const QItemSelection &selected, const QIt
    if (!selected.indexes().isEmpty()) {
       const auto otc = otcRequestViewModel_->GetOTCRequest(selected.indexes()[0]);
 
-      if (!otc.IsValid()) {
+      if (otc == nullptr) {
          logger_->error("[ChatWidget::OnOTCSelectionChanged] can't get selected OTC");
          return;
       }
 
-      if (otc.ownRequest) {
+      if (IsOwnOTCId(otc->serverRequestId())) {
          // display request that could be pulled
          ui_->widgetPullOwnOTCRequest->DisplayActiveOTC(otc);
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));

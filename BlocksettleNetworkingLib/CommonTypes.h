@@ -450,68 +450,14 @@ namespace bs {
          bool              fakeReplyRequired;
       };
 
-      struct LiveOTCRequest
-      {
-         std::string       otcId;
-         std::string       requestorId;
-
-         // XXX
-         // ownRequest - temporary field used for test purpose until OTC goes through chat server
-         bool              ownRequest;
-
-         Side::Type        side;
-         OTCRangeID::Type  amountRange;
-
-         //expireTimestamp milliseconds UTC
-         uint64_t          expireTimestamp;
-
-         LiveOTCRequest() : expireTimestamp{0} {}
-
-         bool IsValid() const {
-            return expireTimestamp != 0;
-         }
-      };
-
       struct OTCResponse
       {
-         std::string       otcId;
-         std::string       requestorId;
+         QString     serverRequestId;
+         QString     requestorId;
+         QString     initialTargetId;
 
          OTCPriceRange     priceRange;
          OTCQuantityRange  quantityRange;
-      };
-
-      struct LiveOTCResponse
-      {
-         std::string       otcId;
-         std::string       responseId;
-
-         // requestorId - owner of OTC
-         std::string       requestorId;
-         // responderId - owner of response
-         std::string       responderId;
-
-         OTCPriceRange     priceRange;
-         OTCQuantityRange  quantityRange;
-      };
-
-      struct OTCNegotiation
-      {
-         std::string       otcId;
-         std::string       responseId;
-
-         std::string       requestorId;
-         std::string       responderId;
-
-         std::string       xbtSettlementId;
-         Side::Type        side;
-
-         double            price;
-         double            amount;
-
-         uint64_t          otcExpireTimestamp;
-         uint64_t          offerExpireTimestamp;
-         uint64_t          settlementExpireTimestamp;
       };
 
    }  //namespace network
@@ -529,8 +475,6 @@ Q_DECLARE_METATYPE(bs::network::MDFields)
 Q_DECLARE_METATYPE(bs::network::CCSecurityDef)
 Q_DECLARE_METATYPE(bs::network::NewTrade)
 Q_DECLARE_METATYPE(bs::network::NewPMTrade)
-Q_DECLARE_METATYPE(bs::network::LiveOTCRequest)
-Q_DECLARE_METATYPE(bs::network::OTCNegotiation)
 
 
 #endif //__BS_COMMON_TYPES_H__

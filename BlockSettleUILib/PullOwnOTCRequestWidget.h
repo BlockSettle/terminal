@@ -3,8 +3,8 @@
 
 #include <QWidget>
 
+#include "ChatProtocol/DataObjects/OTCRequestData.h"
 #include "CommonTypes.h"
-
 namespace Ui {
     class PullOwnOTCRequestWidget;
 };
@@ -17,19 +17,19 @@ public:
    PullOwnOTCRequestWidget(QWidget* parent = nullptr );
    ~PullOwnOTCRequestWidget() noexcept override;
 
-   void DisplayActiveOTC(const bs::network::LiveOTCRequest& otc);
+   void DisplayActiveOTC(const std::shared_ptr<Chat::OTCRequestData>& otc);
    void DisplaySubmittedOTC(const bs::network::OTCRequest& otc);
 
 private slots:
    void OnPullPressed();
 
 signals:
-   void PullOTCRequested(const std::string& otcId);
+   void PullOTCRequested(const QString& otcId);
 
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;
 
-   std::string currentOtcId_;
+   QString currentOtcId_;
 };
 
 #endif // __PULL_OWN_OTC_REQUEST_WIDGET_H__
