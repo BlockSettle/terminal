@@ -53,7 +53,7 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    case SignContainer::OpMode::Local:
       return std::make_shared<LocalSigner>(logger, appSettings->GetHomeDir()
          , netType, port, connectionManager, appSettings, runMode
-         , false, ownKeyFileDir, ownKeyFileName
+         , true, "", ""
          , appSettings->get<double>(ApplicationSettings::autoSignSpendLimit)
          , inNewKeyCB);
 
