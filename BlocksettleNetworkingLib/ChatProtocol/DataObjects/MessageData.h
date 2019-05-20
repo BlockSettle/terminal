@@ -45,7 +45,7 @@ namespace Chat {
       int state() const { return state_; }
       std::string jsonAssociatedData() const;
 
-      QJsonObject toJson() const;
+      QJsonObject toJson() const override;
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
 
       void setNonce(const Botan::SecureVector<uint8_t> &);

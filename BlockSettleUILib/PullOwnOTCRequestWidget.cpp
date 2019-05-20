@@ -18,11 +18,11 @@ void PullOwnOTCRequestWidget::OnPullPressed()
    emit PullOTCRequested(currentOtcId_);
 }
 
-void PullOwnOTCRequestWidget::DisplayActiveOTC(const bs::network::LiveOTCRequest& otc)
+void PullOwnOTCRequestWidget::DisplayActiveOTC(const std::shared_ptr<Chat::OTCRequestData>& otc)
 {
-   ui_->labelSide->setText(QLatin1String(bs::network::Side::toString(otc.side)));
-   ui_->labelRange->setText(QString::fromStdString(bs::network::OTCRangeID::toString(otc.amountRange)));
-   currentOtcId_ = otc.otcId;
+   ui_->labelSide->setText(QLatin1String(bs::network::Side::toString(otc->otcRequest().side)));
+   ui_->labelRange->setText(QString::fromStdString(bs::network::OTCRangeID::toString(otc->otcRequest().amountRange)));
+   currentOtcId_ = otc->serverRequestId();
 
    ui_->pushButtonPull->setEnabled(true);
 }

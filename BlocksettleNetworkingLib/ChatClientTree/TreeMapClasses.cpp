@@ -236,20 +236,27 @@ void RootItem::setCurrentUser(const std::string &currentUser)
 
 void RootItem::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
 {
-   QString chatId = message->senderId() == QString::fromStdString(currentUser())
-                    ? message->receiverId()
-                    : message->senderId();
+   if (message) {
+      QString chatId = message->senderId() == QString::fromStdString(currentUser())
+                       ? message->receiverId()
+                       : message->senderId();
 
-   TreeItem* chatNode = findChatNode(chatId.toStdString());
-   if (chatNode && chatNode->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)){
-         for (auto child : chatNode->getChildren()){
+      TreeItem* chatNode = findChatNode(chatId.toStdString());
+      if (chatNode == nullptr) {
+         chatId = message->receiverId();
+         chatNode = findChatNode(chatId.toStdString());
+      }
+
+      if (chatNode && chatNode->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)) {
+         for (auto child : chatNode->getChildren()) {
             CategoryElement * elem = static_cast<CategoryElement*>(child);
             auto msg = std::dynamic_pointer_cast<Chat::MessageData>(elem->getDataObject());
-            if (message->id() == msg->id()){
+            if (message->id() == msg->id()) {
                emit itemChanged(elem);
             }
          }
          emit itemChanged(chatNode);
+      }
    }
 }
 
