@@ -9,6 +9,7 @@
 #include "OTCRequestViewModel.h"
 #include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "ChatTreeModelWrapper.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -242,6 +243,7 @@ ChatWidget::ChatWidget(QWidget *parent)
    , ui_(new Ui::ChatWidget)
    , popup_(nullptr)
    , needsToStartFirstRoom_(false)
+   , modelWrapper_(new ChatTreeModelWrapper(this))
 {
    ui_->setupUi(this);
 
@@ -277,7 +279,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
    auto model = client_->getDataModel();
    model->setNewMessageMonitor(this);
-   ui_->treeViewUsers->setModel(model.get());
+   modelWrapper_->setSourceModel(model.get());
+   ui_->treeViewUsers->setModel(modelWrapper_.get());
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);

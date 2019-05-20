@@ -31,6 +31,7 @@ class ApplicationSettings;
 class ChatWidgetState;
 class ChatSearchPopup;
 class OTCRequestViewModel;
+class ChatTreeModelWrapper;
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
@@ -143,6 +144,7 @@ private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
    QMap<QString, QString> draftMessages_;
    bool needsToStartFirstRoom_;
+   QScopedPointer<ChatTreeModelWrapper, QScopedPointerDeleteLater> modelWrapper_;
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
