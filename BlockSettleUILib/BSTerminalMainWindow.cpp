@@ -503,13 +503,11 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
          QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm, srvAddrPort] {
             BSMessageBox box(BSMessageBox::question, tr("Server identity key has changed")
                , tr("Do you wish to import the new server %1 identity key?")
-               , tr("Old Key: %2\nNew Key: %3")
                .arg(QString::fromStdString(srvAddrPort))
-               .arg(QString::fromStdString(oldKey)).arg(QString::fromStdString(newKey))
-               , this);
+               , tr("Old Key: %1\nNew Key: %2").arg(QString::fromStdString(oldKey))
+               .arg(QString::fromStdString(newKey)), this);
 
             const bool answer = (box.exec() == QDialog::Accepted);
-
             if (answer) {
                signersProvider_->addKey(srvAddrPort, newKey);
             }
