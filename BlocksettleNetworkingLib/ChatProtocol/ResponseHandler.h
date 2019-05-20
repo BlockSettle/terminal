@@ -17,6 +17,8 @@ namespace Chat {
    class RoomMessagesResponse;
    class SearchUsersResponse;
    class LogoutResponse;
+   class SendOTCDataResponse;
+   class UpdateOTCDataResponse;
    
    class ResponseHandler
    {
@@ -45,5 +47,8 @@ namespace Chat {
       virtual void OnRoomMessages(const RoomMessagesResponse&) = 0;
 
       virtual void OnSearchUsersResponse(const SearchUsersResponse&) = 0;
+
+      virtual void OnSendOTCDataResponse(const SendOTCDataResponse&) = 0;
+      virtual void OnUpdateOTCDataResponse(const UpdateOTCDataResponse&) = 0;
    };
 }

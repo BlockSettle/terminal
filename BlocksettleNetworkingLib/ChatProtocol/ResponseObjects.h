@@ -17,5 +17,7 @@
 #include "ResponseObjects/ContactsListResponse.h"
 #include "ResponseObjects/SearchUsersResponse.h"
 #include "ResponseObjects/LogoutResponse.h"
+#include "ResponseObjects/SendOTCDataResponse.h"
+#include "ResponseObjects/UpdateOTCDataResponse.h"
 
 #include "ResponseHandler.h"

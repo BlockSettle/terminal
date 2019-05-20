@@ -20,6 +20,8 @@ using namespace Chat;
 #include "ContactsListResponse.h"
 #include "SearchUsersResponse.h"
 #include "LogoutResponse.h"
+#include "SendOTCDataResponse.h"
+#include "UpdateOTCDataResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
@@ -41,6 +43,8 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseContactsList"        ,   ResponseType::ResponseContactsList        }
    ,   { "ResponseSearchUsers"         ,   ResponseType::ResponseSearchUsers         }
    ,   { "ResponseLogout"              ,   ResponseType::ResponseLogout              }
+   ,   { "ResponseSendOTCData"         ,   ResponseType::ResponseSendOTCData         }
+   ,   { "ResponseUpdateOTCData"       ,   ResponseType::ResponseUpdateOTCData       }
 };
 
 
@@ -64,6 +68,8 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseContactsList        ,  "ResponseContactsList"        }
    ,   { ResponseType::ResponseSearchUsers         ,  "ResponseSearchUsers"         }
    ,   { ResponseType::ResponseLogout              ,  "ResponseLogout"              }
+   ,   { ResponseType::ResponseSendOTCData         ,  "ResponseSendOTCData"         }
+   ,   { ResponseType::ResponseUpdateOTCData       ,  "ResponseUpdateOTCData"       }
 };
 
 template <typename T>
@@ -143,6 +149,12 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseLogout:
          return std::make_shared<LogoutResponse>();
+
+      case ResponseType::ResponseSendOTCData:
+         return SendOTCDataResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseUpdateOTCData:
+         return UpdateOTCDataResponse::fromJSON(jsonData);
 
       default:
          break;

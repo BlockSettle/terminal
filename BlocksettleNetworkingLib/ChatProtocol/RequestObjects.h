@@ -14,5 +14,7 @@
 #include "RequestObjects/SendRoomMessageRequest.h"
 #include "RequestObjects/ContactsListRequest.h"
 #include "RequestObjects/SearchUsersRequest.h"
+#include "RequestObjects/SendOTCDataRequest.h"
+#include "RequestObjects/UpdateOTCDataRequest.h"
 
 #include "RequestHandler.h"

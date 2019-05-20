@@ -1515,3 +1515,15 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
                       crecord->getContactStatus(),
                       crecord->getDisplayName());
 }
+
+void ChatClient::OnSendOTCDataResponse(const Chat::SendOTCDataResponse &)
+{
+   //TODO: Implement!
+   return;
+}
+
+void ChatClient::OnUpdateOTCDataResponse(const Chat::UpdateOTCDataResponse &)
+{
+   //TODO: Implement!
+   return;
+}

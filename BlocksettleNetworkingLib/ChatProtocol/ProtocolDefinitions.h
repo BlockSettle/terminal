@@ -30,6 +30,8 @@ namespace Chat
    ,   RequestSendRoomMessage
    ,   RequestContactsList
    ,   RequestSearchUsers
+   ,   RequestSendOTCData
+   ,   RequestUpdateOTCData
    };
 
 
@@ -53,6 +55,8 @@ namespace Chat
    ,   ResponseContactsList
    ,   ResponseSearchUsers
    ,   ResponseLogout
+   ,   ResponseSendOTCData
+   ,   ResponseUpdateOTCData
    };
    
    enum class ContactsAction {
