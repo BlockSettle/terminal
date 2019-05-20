@@ -107,7 +107,7 @@ private slots:
    void onPasswordRequested(const bs::hd::WalletInfo &walletInfo, std::string prompt);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
-   void onSignerConnError(const QString &);
+   void onSignerConnError(SignContainer::ConnectionError error, const QString &details);
 
    void CompleteUIOnlineView();
    void CompleteDBConnection();
@@ -155,7 +155,6 @@ private:
    std::shared_ptr<WalletManagementWizard> walletsWizard_;
 
    QString currentUserLogin_;
-   bool  widgetsInited_ = false;
 
    struct NetworkSettings {
       struct Connection {
@@ -221,10 +220,11 @@ private:
    bool isUserLoggedIn() const;
    bool isArmoryConnected() const;
 
-   void loginWithCeler(const std::string& username, const std::string& password);
    void loginToCeler(const std::string& username, const std::string& password);
 
    bool goOnlineArmory() const;
+
+   void InitWidgets();
 
 private:
    QString           loginButtonText_;
@@ -237,6 +237,8 @@ private:
 
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
+
+   SignContainer::ConnectionError lastSignerError_{SignContainer::NoError};
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

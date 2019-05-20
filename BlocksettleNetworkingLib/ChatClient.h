@@ -89,9 +89,9 @@ public:
    // Called when we asked for a public key of peer, and got result.
    void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
 
-   bool getContacts(ContactUserDataList &contactList);
+   bool getContacts(ContactRecordDataList &contactList);
    bool addOrUpdateContact(const QString &userId,
-                           ContactUserData::Status status,
+                           Chat::ContactStatus status,
                            const QString &userName = QStringLiteral(""));
    bool removeContact(const QString &userId);
    void sendFriendRequest(const QString &friendUserId);
@@ -130,6 +130,7 @@ signals:
    void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
    void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
    void NewContactRequest(const QString &userId);
+   void ContactRequestAccepted(const QString &userId);
 
    void ForceLogoutSignal();
 public slots:

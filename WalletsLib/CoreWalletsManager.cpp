@@ -93,6 +93,34 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
    walletsLoaded_ = true;
 }
 
+WalletsManager::HDWalletPtr WalletsManager::loadWoWallet(const std::string &walletsPath
+   , const std::string &fileName)
+{
+   if (walletsPath.empty()) {
+      return nullptr;
+   }
+   if (!SystemFileUtils::pathExist(walletsPath)) {
+      logger_->debug("Creating wallets path {}", walletsPath);
+      SystemFileUtils::mkPath(walletsPath);
+   }
+
+   try {
+      logger_->debug("Loading BIP44 WO-wallet from {}", fileName);
+      const auto wallet = std::make_shared<hd::Wallet>(walletsPath + "/" + fileName
+         , logger_);
+      if (!wallet->isWatchingOnly()) {
+         logger_->error("Wallet {} is not watching-only", fileName);
+         return nullptr;
+      }
+
+      saveWallet(wallet);
+      return wallet;
+   } catch (const std::exception &e) {
+      logger_->warn("Failed to load WO-wallet: {}", e.what());
+   }
+   return nullptr;
+}
+
 void WalletsManager::backupWallet(const HDWalletPtr &wallet, const std::string &targetDir) const
 {
    if (wallet->isWatchingOnly()) {

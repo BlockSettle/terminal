@@ -44,6 +44,12 @@ enum PacketType
 
    // Send headless public key to signer ui to export it
    HeadlessPubKeyRequestType = 24;
+
+   SyncSettingsRequestType = 25;
+
+   UpdateStatusType = 26;
+
+   ImportWoWalletType = 27;
 }
 
 message Packet
@@ -52,6 +58,61 @@ message Packet
    PacketType  type       = 2;
    bytes       data       = 3;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+message KeyPair
+{
+   string id = 1;
+   // In hex format
+   string key = 2;
+}
+
+enum Setting {
+   SettingInvalid = 0;
+   OfflineMode = 1;
+   TestNet = 2;
+   WatchingOnly = 3;
+   ExportWalletsDir = 4;
+   AutoSignWallet = 5;
+   ListenAddress = 6;
+   ListenPort = 7;
+   LimitManualXBT = 8;
+   LimitAutoSignXBT = 9;
+   LimitAutoSignTime = 10;
+   LimitManualPwKeep = 11;
+   HideEidInfoBox = 12;
+   TrustedTerminals = 13;
+   TwoWaySignerAuth = 14;
+};
+
+message Settings
+{
+   bool offline = 1;
+   bool test_net = 2;
+   bool watching_only = 3;
+   string export_wallets_dir = 4;
+   string auto_sign_wallet = 11;
+   string listen_address = 5;
+   int32 listen_port = 6;
+   uint64 limit_manual_xbt = 7;
+   uint64 limit_auto_sign_xbt = 8;
+   int32 limit_auto_sign_time = 9;
+   int32 limit_pass_keep_time = 10;
+   bool hide_eid_info_box = 12;
+   repeated KeyPair trusted_terminals = 13;
+   bool two_way_signer_auth = 14;
+}
+
+// Keep in sync with bs::signer::BindStatus
+enum BindStatus
+{
+   BindInactive = 0;
+   BindSucceed = 1;
+   BindFailed = 2;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 message ReadyEvent
 {
@@ -281,4 +342,16 @@ message AutoSignActResponse
    string   rootWalletId = 1;
    bool     autoSignActive = 2;
    string   error = 3;
+}
+
+// Would be sent from headless process to the GUI when some status changes
+message UpdateStatus
+{
+   BindStatus signer_bind_status = 1;
+}
+
+message ImportWoWalletRequest
+{
+   string filename = 1;
+   bytes  content = 2;
 }

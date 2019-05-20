@@ -499,7 +499,7 @@ void ChatClientDataModel::beginChatInsertRows(const TreeItem::NodeType &type)
 
    const QModelIndex index = createIndex(item->selfIndex(), 0, item);
    const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();
-   const int last = first + 1;
+   const int last = first;
 
    beginInsertRows(index, first, last);
 }

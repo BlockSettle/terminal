@@ -125,7 +125,11 @@ public:
       rememberLoginUserName,
       armoryServers,
       defaultArmoryServersKeys,
-      twoWayAuth,
+      twoWaySignerAuth,
+      dontLoadCCList,
+      ChartProduct,
+      ChartTimeframe,
+      ChartCandleCount,
       _last
    };
 

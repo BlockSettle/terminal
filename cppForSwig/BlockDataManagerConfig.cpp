@@ -27,7 +27,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////
 ARMORY_DB_TYPE BlockDataManagerConfig::armoryDbType_ = ARMORY_DB_FULL;
 SOCKET_SERVICE BlockDataManagerConfig::service_ = SERVICE_WEBSOCKET;
-
+ARMORY_OPERATION_MODE BlockDataManagerConfig::operationMode_ = OPERATION_REGULAR;
 
 ////////////////////////////////////////////////////////////////////////////////
 const string BlockDataManagerConfig::dbDirExtention_ = "/databases";

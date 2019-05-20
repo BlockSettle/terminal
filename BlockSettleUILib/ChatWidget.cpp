@@ -94,11 +94,7 @@ public:
       chat_->SetLoggedOutOTCState();
 
       // hide tab icon for unread messages
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
-                                   {QString(),
-                                    QString(),
-                                    QVariant(false),
-                                    QVariant(false)});
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
    }
 
    std::string login(const std::string& email, const std::string& jwt
@@ -139,8 +135,6 @@ public:
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
 
       chat_->SetOTCLoggedInState();
-
-      selectFirstRoom();
    }
 
    void onStateExit() override {
@@ -240,25 +234,6 @@ public:
    }
 
    void onUsersDeleted(const std::vector<std::string> &/*users*/)  override {}
-
-   void selectFirstRoom()
-   {
-      onRoomClicked(Chat::GlobalRoomKey);
-
-      QModelIndexList indexes = chat_->ui_->treeViewUsers->model()->match(chat_->ui_->treeViewUsers->model()->index(0,0),
-                                                                Qt::DisplayRole,
-                                                                QLatin1String("*"),
-                                                                -1,
-                                                                Qt::MatchWildcard|Qt::MatchRecursive);
-      
-      // highlight first room
-      for (auto index : indexes) {
-         if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
-            chat_->ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
-            break;
-         }
-      }
-   }
 };
 
 ChatWidget::ChatWidget(QWidget *parent)
@@ -268,6 +243,15 @@ ChatWidget::ChatWidget(QWidget *parent)
    , needsToStartFirstRoom_(false)
 {
    ui_->setupUi(this);
+
+#ifndef Q_OS_WIN
+   ui_->timeLabel->setMinimumSize(ui_->timeLabel->property("minimumSizeLinux").toSize());
+#endif
+
+   ui_->textEditMessages->setColumnsWidth(ui_->timeLabel->minimumWidth(),
+                                          ui_->iconLabel->minimumWidth(),
+                                          ui_->userLabel->minimumWidth(),
+                                          ui_->messageLabel->minimumWidth());
 
    //Init UI and other stuff
    ui_->stackedWidget->setCurrentIndex(1); //Basically stackedWidget should be removed
@@ -302,6 +286,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->treeViewUsers->setHandler(client_);
    ui_->textEditMessages->setHandler(client_);
    ui_->textEditMessages->setMessageReadHandler(client_);
+   ui_->textEditMessages->setClient(client_);
 
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
@@ -310,6 +295,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
    connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
+   connect(client_.get(), &ChatClient::ContactRequestAccepted, this, &ChatWidget::onContactRequestAccepted);
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const QString &userId) {
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {userId});
    });
@@ -488,9 +474,9 @@ void ChatWidget::onLoggedOut()
    emit LogOut();
 }
 
-void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &chatId)
+void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
 {
-   switchToChat(chatId);
+   ui_->treeViewUsers->setCurrentUserChat(userId);
 }
 
 void ChatWidget::onSearchUserTextEdited(const QString& text)
@@ -514,6 +500,12 @@ void ChatWidget::onSearchUserTextEdited(const QString& text)
 void ChatWidget::onConnectedToServer()
 {
    changeState(State::LoggedIn);
+   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
+}
+
+void ChatWidget::onContactRequestAccepted(const QString &userId)
+{
+   ui_->treeViewUsers->setCurrentUserChat(userId);
 }
 
 bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
@@ -527,11 +519,7 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
 
    if (event->type() == QEvent::WindowActivate) {
       // hide tab icon on window activate event
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
-                                {QString(),
-                                 QString(),
-                                 QVariant(true),
-                                 QVariant(true)});
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
    }
 
    return QWidget::eventFilter(obj, event);
@@ -678,8 +666,6 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
 
       // don't show notification for global chat
       if (message && !IsGlobalChatRoom(message->receiverId())) {
-         const bool isInCurrentChat = message->senderId() == currentChat_;
-         const bool hasUnreadMessages = true;
 
          auto messageText = message->messageData();
          const int maxMessageLength = 20;
@@ -690,9 +676,29 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
 
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage,
                                    {message->senderId(),
-                                    messageText,
-                                    QVariant(isInCurrentChat),
-                                    QVariant(hasUnreadMessages)});
+                                    messageText});
+      }
+   }
+}
+
+void ChatWidget::selectGlobalRoom()
+{
+   // find all indexes
+   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
+                                                               Qt::DisplayRole,
+                                                               QLatin1String("*"),
+                                                               -1,
+                                                               Qt::MatchWildcard|Qt::MatchRecursive);
+      
+   // select Global room
+   for (auto index : indexes) {
+      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<TreeItem::NodeType>() == TreeItem::NodeType::RoomsElement) {
+         if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey) {
+            disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
+            onRoomClicked(Chat::GlobalRoomKey);
+            ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            break;
+         }
       }
    }
 }

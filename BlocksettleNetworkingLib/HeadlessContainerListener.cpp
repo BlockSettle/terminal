@@ -89,6 +89,10 @@ void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId
 {
    logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
    connectedClients_.erase(clientId);
+
+   if (callbacks_) {
+      callbacks_->clientDisconn(clientId);
+   }
 }
 
 void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, const std::string &data)
@@ -1023,7 +1027,8 @@ void HeadlessContainerListener::GetHDWalletInfoResponse(const std::string &clien
    packet.set_data(response.SerializeAsString());
 
    if (!sendData(packet.SerializeAsString(), clientId)) {
-      logger_->error("[HeadlessContainerListener] failed to send response GetHDWalletInfo packet");
+      logger_->error("[HeadlessContainerListener::{}] failed to send to {}", __func__
+         , BinaryData(clientId).toHexStr());
    }
 }
 

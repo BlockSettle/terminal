@@ -27,6 +27,9 @@ namespace Chat {
 
        QString getDisplayName() const;
        void setDisplayName(const QString &displayName);
+       bool hasDisplayName() const;
+
+       void setUserId(const QString &userId);
 
     private:
        QString userId_;

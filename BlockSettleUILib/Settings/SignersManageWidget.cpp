@@ -1,6 +1,9 @@
 #include "SignersManageWidget.h"
 #include "ui_SignersManageWidget.h"
 #include <QDebug>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <SecureBinaryData.h>
 
 SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
@@ -9,16 +12,21 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    , appSettings_(appSettings)
    , signersProvider_(signersProvider)
    , ui_(new Ui::SignerKeysWidget)
-   , signerKeysModel_(new SignersModel(signersProvider))
+   , signersModel_(new SignersModel(signersProvider))
 {
    ui_->setupUi(this);
 
    ui_->spinBoxPort->setMinimum(0);
    ui_->spinBoxPort->setMaximum(USHRT_MAX);
 
-   ui_->tableViewSignerKeys->setModel(signerKeysModel_);
-   ui_->tableViewSignerKeys->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->tableViewSignerKeys->horizontalHeader()->setStretchLastSection(true);
+   ui_->tableViewSignerKeys->setModel(signersModel_);
+   ui_->tableViewSignerKeys->selectionModel()->select(signersModel_->index(signersProvider->indexOfCurrent(), 0)
+      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
+
+   int defaultSectionSize = ui_->tableViewSignerKeys->horizontalHeader()->defaultSectionSize();
+   ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(0, defaultSectionSize * 2);
+   ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(1, defaultSectionSize);
+   ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(2, defaultSectionSize);
 
    connect(ui_->pushButtonAddSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::onAddSignerKey);
    connect(ui_->pushButtonDeleteSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::onDeleteSignerKey);
@@ -26,6 +34,7 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    connect(ui_->pushButtonCancelSaveSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::resetForm);
    connect(ui_->pushButtonSaveSignerKey, &QPushButton::clicked, this, &SignerKeysWidget::onSave);
    connect(ui_->pushButtonSelect, &QPushButton::clicked, this, &SignerKeysWidget::onSelect);
+   connect(ui_->pushButtonKeyImport, &QPushButton::clicked, this, &SignerKeysWidget::onKeyImport);
 
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this](){
@@ -147,3 +156,18 @@ void SignerKeysWidget::onSelect()
 
    signersProvider_->setupSigner(index);
 }
+
+void SignerKeysWidget::onKeyImport()
+{
+   QString fileName = QFileDialog::getOpenFileName(this
+      , tr("Open Key File"),  QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+      , tr("Key Files (*.pub *.key);;All files (*.*)"));
+
+   QFile file(fileName);
+   if (file.open(QIODevice::ReadOnly)) {
+      SecureBinaryData key = SecureBinaryData(file.readAll().constData());
+      ui_->lineEditKey->setText(QString::fromStdString(key.toHexStr()));
+   }
+}
+
+

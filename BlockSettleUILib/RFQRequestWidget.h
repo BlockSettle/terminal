@@ -36,7 +36,7 @@ Q_OBJECT
 
 public:
    RFQRequestWidget(QWidget* parent = nullptr);
-   ~RFQRequestWidget();
+   ~RFQRequestWidget() override;
 
    void initWidgets(const std::shared_ptr<MarketDataProvider>& mdProvider
       , const std::shared_ptr<ApplicationSettings> &appSettings);

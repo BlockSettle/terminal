@@ -169,7 +169,7 @@ void AuthorizedPeers::createWallet(const string& baseDir, const string& filename
    wallet_->addMetaAccount(MetaAccount_AuthPeers);
 
    //grab wallet filename
-   auto currentname = wallet_->getFilename();
+   auto currentname = wallet_->getDbFilename();
    
    //destroying the wallet will shutdown the underlying db object
    wallet_.reset();

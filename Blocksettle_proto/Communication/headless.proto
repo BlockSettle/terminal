@@ -408,4 +408,3 @@ message CustomDialogRequest
    string dialogName = 1;
    bytes  variantData = 2;
 }
-

@@ -161,7 +161,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
    }
    if (packet.id() > id_) {
       logger_->error("[HeadlessListener] reply id inconsistency: {} > {}", packet.id(), id_);
-      emit error(tr("reply id inconsistency"));
+      emit error(HeadlessContainer::InvalidProtocol, tr("reply id inconsistency"));
       return;
    }
 
@@ -173,12 +173,13 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       headless::AuthenticationReply response;
       if (!response.ParseFromString(packet.data())) {
          logger_->error("[HeadlessListener] failed to parse auth reply");
-         emit error(tr("failed to parse auth reply"));
+         emit error(HeadlessContainer::SerializationFailed, tr("failed to parse auth reply"));
          return;
       }
+
       if (HeadlessContainer::mapNetworkType(response.nettype()) != netType_) {
          logger_->error("[HeadlessListener] network type mismatch");
-         emit error(tr("network type mismatch"));
+         emit error(HeadlessContainer::NetworkTypeMismatch, tr("network type mismatch"));
          return;
       }
 
@@ -209,7 +210,27 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
 {
    logger_->debug("[HeadlessListener] error {}", errorCode);
    isReady_ = false;
-   emit error(tr("error #%1").arg(QString::number(errorCode)));
+
+   switch (errorCode) {
+      case UndefinedSocketError:
+         emit error(HeadlessContainer::SocketFailed, tr("socket error"));
+         break;
+      case HostNotFoundError:
+         emit error(HeadlessContainer::HostNotFound, tr("host not found"));
+         break;
+      case HandshakeFailed:
+         emit error(HeadlessContainer::HandshakeFailed, tr("encryption handshake failed"));
+         break;
+      case SerializationFailed:
+         emit error(HeadlessContainer::SerializationFailed, tr("serialization failed"));
+         break;
+      case HeartbeatWaitFailed:
+         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("heartbeat wait failed"));
+         break;
+      default:
+         emit error(HeadlessContainer::UnknownError, tr("unknown error"));
+         break;
+   }
 
    // Need to disconnect connection because otherwise it will continue send error responses over and over
    connection_->closeConnection();
@@ -235,54 +256,6 @@ HeadlessContainer::HeadlessContainer(const std::shared_ptr<spdlog::logger> &logg
 {
    qRegisterMetaType<headless::RequestPacket>();
    qRegisterMetaType<std::shared_ptr<bs::sync::hd::Leaf>>();
-}
-
-static int killProcess(int pid, int timeout)
-{
-#ifdef Q_OS_WIN
-   DWORD dRet = TerminateWinApp((DWORD)pid, timeout);
-   return dRet;
-
-//   HANDLE hProc;
-//   hProc = ::OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-//   ::TerminateProcess(hProc, 0);
-//   ::CloseHandle(hProc);
-#else    // !Q_OS_WIN
-   QProcess::execute(QLatin1String("kill"), { QString::number(pid) });
-   return 0;
-#endif   // Q_OS_WIN
-}
-
-static const QString pidFN = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + QLatin1String("/bs_headless.pid");
-
-QString LocalSigner::pidFileName() const
-{
-   return pidFN;
-}
-
-bool KillHeadlessProcess()
-{
-   QFile pidFile(pidFN);
-   if (pidFile.exists()) {
-      if (pidFile.open(QIODevice::ReadOnly)) {
-         const auto pidData = pidFile.readAll();
-         pidFile.close();
-         const auto pid = atoi(pidData.toStdString().c_str());
-         if (pid <= 0) {
-            qDebug() << "[HeadlessContainer] invalid PID" << pid <<"in" << pidFN;
-         }
-         else {
-            killProcess(pid, kKillTimeout);
-            qDebug() << "[HeadlessContainer] killed previous headless process with PID" << pid;
-            return true;
-         }
-      }
-      else {
-         qDebug() << "[HeadlessContainer] Failed to open PID file" << pidFN;
-      }
-      pidFile.remove();
-   }
-   return false;
 }
 
 bs::signer::RequestId HeadlessContainer::Send(headless::RequestPacket packet, bool incSeqNo)
@@ -1154,10 +1127,10 @@ bool RemoteSigner::Disconnect()
    if (!connection_) {
       return true;
    }
-   headless::RequestPacket packet;
+/*   headless::RequestPacket packet;
    packet.set_type(headless::DisconnectionRequestType);
-   packet.set_data("");
-   Send(packet);
+   packet.set_data("");    // This code produces crashes on terminal shutdown
+   Send(packet);*/         // and its purpose is obscure to me
 
    return connection_->closeConnection();
 }
@@ -1167,7 +1140,7 @@ void RemoteSigner::Authenticate()
    mutex_.lock();
    if (!listener_) {
       mutex_.unlock();
-      emit connectionError(tr("listener missing on authenticate"));
+      emit connectionError(UnknownError, tr("listener missing on authenticate"));
       return;
    }
    mutex_.unlock();
@@ -1248,7 +1221,7 @@ void RemoteSigner::onDisconnected()
    missingWallets_.clear();
    woWallets_.clear();
 
-   // signRequests_ will be empty after moving out (that's in the C++ std)
+   // signRequests_ will be empty after that
    std::set<bs::signer::RequestId> tmpReqs = std::move(signRequests_);
 
    for (const auto &id : tmpReqs) {
@@ -1260,9 +1233,9 @@ void RemoteSigner::onDisconnected()
    ScheduleRestart();
 }
 
-void RemoteSigner::onConnError(const QString &err)
+void RemoteSigner::onConnError(ConnectionError error, const QString &details)
 {
-   emit connectionError(err);
+   emit connectionError(error, details);
    ScheduleRestart();
 }
 
@@ -1454,6 +1427,11 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
       , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
 {}
 
+LocalSigner::~LocalSigner() noexcept
+{
+   Stop();
+}
+
 QStringList LocalSigner::args() const
 {
    auto walletsCopyDir = homeDir_ + QLatin1String("/copy");
@@ -1492,13 +1470,10 @@ QStringList LocalSigner::args() const
 
 bool LocalSigner::Start()
 {
+   Stop();
+
    // If there's a previous headless process, stop it.
-   KillHeadlessProcess();
    headlessProcess_ = std::make_shared<QProcess>();
-   connect(headlessProcess_.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished)
-      , [this](int exitCode, QProcess::ExitStatus exitStatus) {
-      QFile::remove(pidFileName());
-   });
 
 #ifdef Q_OS_WIN
    const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer.exe");
@@ -1514,8 +1489,7 @@ bool LocalSigner::Start()
    if (!QFile::exists(signerAppPath)) {
       logger_->error("[HeadlessContainer] Signer binary {} not found"
          , signerAppPath.toStdString());
-      emit connectionError(tr("missing signer binary"));
-      emit ready();
+      emit connectionError(UnknownError, tr("missing signer binary"));
       return false;
    }
 
@@ -1532,24 +1506,11 @@ bool LocalSigner::Start()
 
    headlessProcess_->start(signerAppPath, cmdArgs);
    if (!headlessProcess_->waitForStarted(kStartTimeout)) {
-      logger_->error("[HeadlessContainer] Failed to start child");
+      logger_->error("[HeadlessContainer] Failed to start process");
       headlessProcess_.reset();
-      emit ready();
+      emit connectionError(UnknownError, tr("failed to start process"));
       return false;
    }
-
-   QFile pidFile(pidFileName());
-   if (pidFile.open(QIODevice::WriteOnly)) {
-      const auto pidStr = \
-         QString::number(headlessProcess_->processId()).toStdString();
-      pidFile.write(pidStr.data(), pidStr.size());
-      pidFile.close();
-   }
-   else {
-      logger_->warn("[LocalSigner::{}] Failed to open PID file {} for writing"
-         , __func__, pidFileName().toStdString());
-   }
-   logger_->debug("[LocalSigner::{}] child process started", __func__);
 
    // Give the signer a little time to get set up.
    QThread::msleep(250);
@@ -1562,14 +1523,9 @@ bool LocalSigner::Stop()
    RemoteSigner::Stop();
 
    if (headlessProcess_) {
-#ifdef Q_OS_WIN
-      int ret = killProcess(headlessProcess_->processId(), kKillTimeout);
-      logger_->info("Local headless process terminated with code {}", ret);
-#else
-      headlessProcess_->terminate();
-#endif
       if (!headlessProcess_->waitForFinished(kKillTimeout)) {
-         headlessProcess_->close();
+         headlessProcess_->terminate();
+         headlessProcess_->waitForFinished(kKillTimeout);
       }
       headlessProcess_.reset();
    }

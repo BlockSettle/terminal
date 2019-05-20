@@ -117,8 +117,6 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
 };
 
-bool KillHeadlessProcess();
-
 
 class RemoteSigner : public HeadlessContainer
 {
@@ -154,7 +152,7 @@ protected slots:
    void onAuthenticated();
    void onConnected();
    void onDisconnected();
-   void onConnError(const QString &err);
+   void onConnError(ConnectionError error, const QString &details);
    void onPacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
@@ -198,14 +196,13 @@ public:
       , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
-   ~LocalSigner() noexcept override = default;
+   ~LocalSigner() noexcept override;
 
    bool Start() override;
    bool Stop() override;
 
 protected:
    virtual QStringList args() const;
-   virtual QString pidFileName() const;
 
 private:
    const QString  homeDir_;
@@ -238,7 +235,7 @@ signals:
    void authFailed();
    void connected();
    void disconnected();
-   void error(const QString &err);
+   void error(HeadlessContainer::ConnectionError error, const QString &details);
    void PacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:

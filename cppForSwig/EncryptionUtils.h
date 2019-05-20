@@ -206,27 +206,25 @@ private:
 class CryptoAES
 {
 public:
-   CryptoAES(void) {}
-
    /////////////////////////////////////////////////////////////////////////////
-   SecureBinaryData EncryptCFB(SecureBinaryData & data, 
-                               SecureBinaryData & key,
-                               SecureBinaryData & iv);
-
-   /////////////////////////////////////////////////////////////////////////////
-   SecureBinaryData DecryptCFB(SecureBinaryData & data, 
-                               SecureBinaryData & key,
-                               SecureBinaryData   iv);
-
-   /////////////////////////////////////////////////////////////////////////////
-   SecureBinaryData EncryptCBC(const SecureBinaryData & data, 
+   static SecureBinaryData EncryptCFB(const SecureBinaryData & data, 
                                const SecureBinaryData & key,
-                               SecureBinaryData & iv) const;
+                               const SecureBinaryData & iv);
 
    /////////////////////////////////////////////////////////////////////////////
-   SecureBinaryData DecryptCBC(const SecureBinaryData & data, 
+   static SecureBinaryData DecryptCFB(const SecureBinaryData & data, 
                                const SecureBinaryData & key,
-                               const SecureBinaryData & iv) const;
+                               const SecureBinaryData& iv);
+
+   /////////////////////////////////////////////////////////////////////////////
+   static SecureBinaryData EncryptCBC(const SecureBinaryData & data, 
+                               const SecureBinaryData & key,
+                               const SecureBinaryData & iv);
+
+   /////////////////////////////////////////////////////////////////////////////
+   static SecureBinaryData DecryptCBC(const SecureBinaryData & data, 
+                               const SecureBinaryData & key,
+                               const SecureBinaryData & iv);
 };
 
 
@@ -317,8 +315,8 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
    // For Point-compression
-   SecureBinaryData CompressPoint(SecureBinaryData const & pubKey65);
-   SecureBinaryData UncompressPoint(SecureBinaryData const & pubKey33);
+   static SecureBinaryData CompressPoint(SecureBinaryData const & pubKey65);
+   static SecureBinaryData UncompressPoint(SecureBinaryData const & pubKey33);
 
 #ifndef LIBBTC_ONLY
    /////////////////////////////////////////////////////////////////////////////

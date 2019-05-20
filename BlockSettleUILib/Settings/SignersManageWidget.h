@@ -25,6 +25,7 @@ public slots:
    void onEdit();
    void onSave();
    void onSelect();
+   void onKeyImport();
 
 signals:
    void needClose();
@@ -37,7 +38,7 @@ private:
    std::shared_ptr<ApplicationSettings> appSettings_;
    std::shared_ptr<SignersProvider> signersProvider_;
 
-   SignersModel *signerKeysModel_;
+   SignersModel *signersModel_;
 };
 
 #endif // SIGNERS_MANAGE_WIDGET_H

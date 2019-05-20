@@ -19,6 +19,13 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
 
    ui_->tableViewArmory->setModel(armoryServersModel_);
    ui_->tableViewArmory->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+   ui_->tableViewArmory->selectionModel()->select(armoryServersModel_->index(armoryServersProvider->indexOfCurrent(), 0)
+      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
+//   int defaultSectionSize = ui_->tableViewArmory->horizontalHeader()->defaultSectionSize();
+//   ui_->tableViewArmory->horizontalHeader()->resizeSection(0, defaultSectionSize * 2);
+//   ui_->tableViewArmory->horizontalHeader()->resizeSection(1, defaultSectionSize);
+//   ui_->tableViewArmory->horizontalHeader()->resizeSection(2, defaultSectionSize);
+//   ui_->tableViewArmory->horizontalHeader()->resizeSection(3, defaultSectionSize);
    ui_->tableViewArmory->horizontalHeader()->setStretchLastSection(true);
 
    isStartupDialog_ = false;

@@ -65,25 +65,13 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 {
    mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
    connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
-      if (index == mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat)) {
-         mainWinUi_->tabWidget->setTabIcon(index, QIcon());
-      }
+      mainWinUi_->tabWidget->setTabIcon(index, QIcon());
    });
 }
 
 void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
-   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
-      const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
-      const bool isInCurrentChat = msg[2].toBool();
-      const bool hasUnreadMessages = msg[3].toBool();
-
-      if (mainWinUi_->tabWidget->currentIndex() != chatIndex && !isInCurrentChat && hasUnreadMessages) {
-         mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
-      } else {
-         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
-      }
-      
+   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {  
       return;
    }
 
@@ -146,8 +134,6 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    newVersionMessage_ = false;
    newChatMessage_ = false;
    newChatId_ = QString();
-   bool isInCurrentChat;
-   bool hasUnreadMessages;
    
    const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
    const bool isChatTab = mainWinUi_->tabWidget->currentIndex() == chatIndex;
@@ -204,21 +190,23 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       break;
 
    case bs::ui::NotifyType::UpdateUnreadMessage:
-      isInCurrentChat = msg[2].toBool();
-      hasUnreadMessages = msg[3].toBool();
 
       if (isChatTab && QApplication::activeWindow()) {
          mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          return;
       }
 
-      if (!hasUnreadMessages && !isInCurrentChat) {
-         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
+      if (msg.size() != 2) {
          return;
       }
 
       title = msg[0].toString();
       text = msg[1].toString();
+
+      if (title.length() == 0 || text.length() == 0) {
+         return;
+      }
+      
       newChatMessage_ = true;
       newChatId_ = title;
       mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
@@ -236,7 +224,8 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
    }
 
    if (notifMode_ == QSystemTray) {
-      trayIcon_->showMessage(title, text, icon, msecs);
+      //trayIcon_->showMessage(title, text, icon, msecs);
+      trayIcon_->showMessage(title, text, QIcon(QLatin1String(":/resources/login-logo.png")), msecs);
    }
 #ifdef BS_USE_DBUS
    else {

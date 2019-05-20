@@ -159,6 +159,15 @@ void BlockFiles::detectAllBlockFiles()
 }
 
 /////////////////////////////////////////////////////////////////////////////
+const string& BlockFiles::getLastFileName(void) const
+{
+   if (filePaths_.size() == 0)
+      throw runtime_error("empty path map");
+
+   return filePaths_.rbegin()->second;
+}
+
+/////////////////////////////////////////////////////////////////////////////
 BlockDataLoader::BlockDataLoader(const string& path) :
    path_(path), prefix_("blk")
 {}

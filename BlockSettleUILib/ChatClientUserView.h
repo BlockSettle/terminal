@@ -32,6 +32,7 @@ public:
    void addWatcher(ViewItemWatcher* watcher);
    void setActiveChatLabel(QLabel * label);
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
+   void setCurrentUserChat(const QString &userId);
 
 public slots:
    void onCustomContextMenu(const QPoint &);
