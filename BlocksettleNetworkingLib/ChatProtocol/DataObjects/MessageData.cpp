@@ -8,19 +8,19 @@ namespace Chat {
 
    const size_t NONCE_SIZE = 24;
 
-   MessageData::MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime, 
+   MessageData::MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime,
       const QString& messageData, int state)
       : DataObject(DataObject::Type::MessageData),
       id_(id),
       senderId_(senderId),
       receiverId_(receiverId),
       dateTime_(dateTime),
-      messageData_(messageData), 
+      messageData_(messageData),
       state_(state),
       encryptionType_(EncryptionType::Unencrypted)
    {
    }
-   
+
    void MessageData::setMessageData(const QString& messageData)
    {
       messageData_ = messageData;
@@ -29,7 +29,7 @@ namespace Chat {
    QJsonObject MessageData::toJson() const
    {
       QJsonObject data = DataObject::toJson();
-   
+
       data[SenderIdKey] = senderId_;
       data[ReceiverIdKey] = receiverId_;
       data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
@@ -52,11 +52,11 @@ namespace Chat {
       QJsonDocument jsonDocument(data);
       return QString::fromLatin1(jsonDocument.toJson(QJsonDocument::Compact)).toStdString();
    }
-   
+
    std::shared_ptr<MessageData> MessageData::fromJSON(const std::string& jsonData)
    {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-   
+
       QString senderId = data[SenderIdKey].toString();
       QString receiverId = data[ReceiverIdKey].toString();
       QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
@@ -65,18 +65,18 @@ namespace Chat {
       const int state = data[StatusKey].toInt();
       QByteArray local_nonce = QByteArray::fromBase64(data[Nonce].toString().toLocal8Bit());
       Botan::SecureVector<uint8_t> nonce(local_nonce.begin(), local_nonce.end());
-   
+
       std::shared_ptr<MessageData> msg = std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
       msg->setNonce(nonce);
       msg->setEncryptionType(static_cast<EncryptionType>(data[EncryptionTypeKey].toInt()));
       return msg;
    }
-   
+
    void MessageData::setFlag(const State state)
    {
       state_ |= (int)state;
    }
-   
+
    void MessageData::unsetFlag(const MessageData::State state)
    {
       state_ &= ~(int)state;

@@ -12,7 +12,7 @@ class ChatClientDataModel : public QAbstractItemModel
 public:
    enum Role {
       ItemTypeRole = Qt::UserRole + 1,
-      ItemAcceptTypeRole,
+      CategoryGroupDisplayName,
       RoomTitleRole,
       RoomIdRole,
       ContactTitleRole,
@@ -49,6 +49,12 @@ public:
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
    void setNewMessageMonitor(NewMessageMonitor* monitor);
 
+   // insert channel for response that client send to OTC requests
+   bool insertOTCSentResponse(const std::string& otcId);
+
+   // insert channel for response client receive for own OTC
+   bool insertOTCReceivedResponse(const std::string& otcId);
+
    // QAbstractItemModel interface
 public:
    QModelIndex index(int row, int column, const QModelIndex &parent) const override;
@@ -67,7 +73,7 @@ private:
 
 private:
    std::shared_ptr<RootItem> root_;
-   void beginChatInsertRows(const TreeItem::NodeType &type);
+   void beginChatInsertRows(const ChatUIDefinitions::ChatTreeNodeType &type);
    void updateNewMessagesFlag();
 
 private:
@@ -81,4 +87,5 @@ public:
    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
    void setModelChangesHandler(ModelChangesHandler *modelChangesHandler);
 };
+
 #endif // CHATCLIENTUSERSMODEL_H

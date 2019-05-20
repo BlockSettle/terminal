@@ -7,17 +7,6 @@
 #include "ChatHandleInterfaces.h"
 #include "ChatUsersViewItemStyle.h"
 
-class LoggerWatcher : public ViewItemWatcher {
-   // ViewItemWatcher interface
-public:
-   void onElementSelected(CategoryElement *element) override;
-
-   // ViewItemWatcher interface
-public:
-   void onElementUpdated(CategoryElement *element) override;
-   void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
-};
-
 namespace Chat {
     class MessageData;
    }

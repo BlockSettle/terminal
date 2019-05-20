@@ -6,7 +6,6 @@
 static const int kDotSize = 8;
 static const QString kDotPathname = QLatin1String(":/ICON_DOT");
 
-using NodeType = TreeItem::NodeType;
 using Role = ChatClientDataModel::Role;
 using OnlineStatus = ChatContactElement::OnlineStatus;
 using ContactStatus = Chat::ContactStatus;
@@ -19,19 +18,23 @@ ChatClientUsersViewItemDelegate::ChatClientUsersViewItemDelegate(QObject *parent
 
 void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-   const NodeType nodeType =
-            qvariant_cast<NodeType>(index.data(Role::ItemTypeRole));
+   const ChatUIDefinitions::ChatTreeNodeType nodeType =
+            qvariant_cast<ChatUIDefinitions::ChatTreeNodeType>(index.data(Role::ItemTypeRole));
 
    switch (nodeType) {
-      case NodeType::CategoryNode:
+      case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
          return paintCategoryNode(painter, option, index);
-      case NodeType::RoomsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          return paintRoomsElement(painter, option, index);
-      case NodeType::ContactsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
          return paintContactsElement(painter, option, index);
-      case NodeType::AllUsersElement:
-      case NodeType::SearchElement:
+      case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
+      case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
          return paintUserElement(painter, option, index);
+      case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
+         return paintOTCReceivedResponsesElement(painter, option, index);
+      case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:
+         return paintOTCSentResponsesElement(painter, option, index);
       default:
          return QStyledItemDelegate::paint(painter, option, index);
    }
@@ -41,23 +44,8 @@ void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const
 {
    QStyleOptionViewItem itemOption(option);
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorCategoryItem());
-   switch (index.data(Role::ItemAcceptTypeRole).value<NodeType>()){
-      case TreeItem::NodeType::SearchElement:
-         itemOption.text = QLatin1String("Search");
-         break;
-      case TreeItem::NodeType::RoomsElement:
-         itemOption.text = QLatin1String("Chat rooms");
-         break;
-      case TreeItem::NodeType::ContactsElement:
-         itemOption.text = QLatin1String("Contacts");
-         break;
-      case TreeItem::NodeType::AllUsersElement:
-         itemOption.text = QLatin1String("Users");
-         break;
-      default:
-         itemOption.text = QLatin1String("<unknown>");
 
-   }
+   itemOption.text = index.data(Role::CategoryGroupDisplayName).toString();
 
    QStyledItemDelegate::paint(painter, itemOption, index);
 
@@ -66,7 +54,7 @@ void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const
 void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
-   if (index.data(Role::ItemTypeRole).value<NodeType>() != NodeType::RoomsElement){
+   if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
@@ -91,7 +79,7 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
 void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
-   if (index.data(Role::ItemTypeRole).value<NodeType>() != NodeType::ContactsElement){
+   if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsElement){
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
@@ -124,7 +112,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
          itemOption.palette.setColor(QPalette::Text, itemStyle_.colorContactOffline());
          break;
    }
-   
+
    QStyledItemDelegate::paint(painter, itemOption, index);
 
    // draw dot
@@ -142,8 +130,8 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
 void ChatClientUsersViewItemDelegate::paintUserElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
-   if (index.data(Role::ItemTypeRole).value<NodeType>() != NodeType::AllUsersElement
-       && index.data(Role::ItemTypeRole).value<NodeType>() != NodeType::SearchElement) {
+   if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::AllUsersElement
+       && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::SearchElement) {
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
@@ -157,6 +145,22 @@ void ChatClientUsersViewItemDelegate::paintUserElement(QPainter *painter, const 
          break;
    }
    itemOption.text = index.data(Role::UserIdRole).toString();
+   QStyledItemDelegate::paint(painter, itemOption, index);
+}
+
+void ChatClientUsersViewItemDelegate::paintOTCReceivedResponsesElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+   QStyleOptionViewItem itemOption(option);
+
+   itemOption.text = tr("Received OTC");
+   QStyledItemDelegate::paint(painter, itemOption, index);
+}
+
+void ChatClientUsersViewItemDelegate::paintOTCSentResponsesElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+   QStyleOptionViewItem itemOption(option);
+
+   itemOption.text = tr("Sent OTC");
    QStyledItemDelegate::paint(painter, itemOption, index);
 }
 
