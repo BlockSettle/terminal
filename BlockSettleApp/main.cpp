@@ -112,6 +112,9 @@ static int GuiApp(int &argc, char** argv)
 {
    Q_INIT_RESOURCE(armory);
 
+   QApplication::setAttribute(Qt::AA_DontShowIconsInMenus);
+   QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+
 #if defined (Q_OS_MAC)
    MacOsApp app(argc, argv);
 #else
@@ -119,8 +122,6 @@ static int GuiApp(int &argc, char** argv)
 #endif
 
    app.setQuitOnLastWindowClosed(false);
-   app.setAttribute(Qt::AA_DontShowIconsInMenus);
-   app.setAttribute(Qt::AA_EnableHighDpiScaling);
 
    QFileInfo localStyleSheetFile(QLatin1String("stylesheet.css"));
 

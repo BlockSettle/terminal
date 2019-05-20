@@ -26,27 +26,31 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
-   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
-   const auto &cbTrustedClients = [this] {
-      return settings_->trustedInterfaces();
+   // Only the SignerListener's cookie will be trusted. Supply an empty set of
+   // non-cookie trusted clients.
+   const auto &cbTrustedClientsSL = [this] {
+      std::vector<std::string> emptyTrustedClients;
+      return emptyTrustedClients;
    };
+
+   const bool readClientCookie = true;
+   const bool makeServerCookie = false;
+   const std::string absCookiePath = SystemFilePaths::appDataLocation() + "/adapterClientID";
+
+   const auto zmqContext = std::make_shared<ZmqContext>(logger_);
    const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
-      , zmqContext, cbTrustedClients);
-   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn, logger_, walletsMgr_, params);
+      , zmqContext, cbTrustedClientsSL, "", ""
+      , makeServerCookie, readClientCookie, absCookiePath);
+   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn
+      , logger_, walletsMgr_, params);
+
+   adapterConn->setLocalHeartbeatInterval();
 
    if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
       , adapterLsn_.get())) {
       logger_->error("Failed to bind adapter connection");
       throw std::runtime_error("failed to bind adapter socket");
    }
-
-   const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/headless.pub";
-   std::ofstream out(pubKeyFileName);
-   if (!out.good()) {
-      throw std::runtime_error("failed to write interface connection pubkey file " + pubKeyFileName);
-   }
-   out << adapterConn->getOwnPubKey().toHexStr();
-   out.flush();
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
 }
@@ -62,7 +66,7 @@ void HeadlessAppObj::start()
       adapterLsn_->onReady(cur, total);
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
-      , settings_->watchingOnly(), cbProgress);
+      , cbProgress);
 
    if (walletsMgr_->empty()) {
       logger_->warn("No wallets loaded");
@@ -71,16 +75,16 @@ void HeadlessAppObj::start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
+   adapterLsn_->sendStatusUpdate();
+
    ready_ = true;
    onlineProcessing();
-   if (cbReady_) {
-      cbReady_(true);
-   }
 }
 
 void HeadlessAppObj::startInterface()
 {
    std::vector<std::string> args;
+   BinaryData serverIDKey(BIP151PUBKEYSIZE);
    switch (settings_->runMode()) {
    case bs::signer::RunMode::headless:
       logger_->debug("[{}] no interface in headless mode", __func__);
@@ -90,14 +94,20 @@ void HeadlessAppObj::startInterface()
          , __func__);
       return;
    case bs::signer::RunMode::lightgui:
+      serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting lightgui", __func__);
       args.push_back("--guimode");
       args.push_back("lightgui");
+      args.push_back("--server_id_key");
+      args.push_back(serverIDKey.toHexStr());
       break;
    case bs::signer::RunMode::fullgui:
+      serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting fullgui", __func__);
       args.push_back("--guimode");
       args.push_back("fullgui");
+      args.push_back("--server_id_key");
+      args.push_back(serverIDKey.toHexStr());
       break;
    default:
       break;
@@ -107,9 +117,14 @@ void HeadlessAppObj::startInterface()
       args.push_back("--testnet");
    }
 
+#ifdef __APPLE__
+   std::string guiPath = SystemFilePaths::applicationDir()
+      + "/Blocksettle Signer Gui.app/Contents/MacOS/Blocksettle Signer GUI";
+#else
    std::string guiPath = SystemFilePaths::applicationDir() + "/bs_signer_gui";
 #ifdef WIN32
    guiPath += ".exe";
+#endif
 #endif
 
    if (!SystemFileUtils::fileExist(guiPath)) {
@@ -145,22 +160,115 @@ void HeadlessAppObj::onlineProcessing()
       , settings_->listenAddress(), settings_->listenPort()
       , (settings_->testNet() ? "testnet" : "mainnet"));
 
+   // Set up the connection with the terminal.
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
-   const BinaryData bdID = CryptoPRNG::generateRandom(8);
+   std::vector<std::string> trustedTerms;
+   std::string absTermCookiePath =
+      SystemFilePaths::appDataLocation() + "/signerServerID";
+   bool makeServerCookie = true;
+   std::string ourKeyFileDir = "";
+   std::string ourKeyFileName = "";
+
+   if (settings_->getTermIDKeyStr().empty()) {
+      makeServerCookie = false;
+      absTermCookiePath = "";
+      ourKeyFileDir = SystemFilePaths::appDataLocation();
+      ourKeyFileName = "remote_signer.peers";
+   }
+
+   // The whitelisted key set depends on whether or not the signer is meant to
+   // be local (signer invoked with --terminal_id_key) or remote (use a set of
+   // trusted terminals).
+   auto getClientIDKeys = [this]() -> std::vector<std::string> {
+      std::vector<std::string> retKeys;
+
+      if (settings_->getTermIDKeyStr().empty()) {
+         // We're using a user-defined, whitelisted key set. Make sure the keys are
+         // valid before accepting the entries.
+         for (const std::string& i : settings_->trustedTerminals()) {
+            const auto colonIndex = i.find(':');
+            if (colonIndex == std::string::npos) {
+               logger_->error("[{}] Trusted client list key entry {} is malformed."
+                  , __func__, i);
+               continue;
+            }
+
+            SecureBinaryData inKey = READHEX(i.substr(colonIndex + 1));
+            if (inKey.isNull()) {
+               logger_->error("[{}] Trusted client list key entry {} has no key."
+                  , __func__, i);
+               continue;
+            }
+
+            if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
+               logger_->error("[{}] Trusted client list key entry ({}) has an "
+                  "invalid ECDSA key ({}).", __func__, i, inKey.toHexStr());
+               continue;
+            }
+            else {
+               retKeys.push_back(i);
+            }
+         }
+      }
+      else {
+         const std::string termIDKeyStr = settings_->getTermIDKeyStr();
+         if (termIDKeyStr.empty()) {
+            logger_->error("[{}] Local connection requested but no key is available"
+               , __func__);
+            return retKeys;
+         }
+
+         // We're using a cookie. Only the one key in the cookie will be trusted.
+         BinaryData termIDKey = READHEX(termIDKeyStr);
+         if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
+            logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
+               "ID key", __func__);
+         }
+
+         std::string trustedTermStr = "127.0.0.1:" + termIDKeyStr;
+         retKeys.push_back(trustedTermStr);
+      }
+
+      return retKeys;
+   };
+
    connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
-      , settings_->trustedTerminals(), READ_UINT64_LE(bdID.getPtr()), false);
+      , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
+      , absTermCookiePath);
+   connection_->setLocalHeartbeatInterval();
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
          , walletsMgr_, settings_->getWalletsDir(), settings_->netType());
    }
+
    listener_->SetLimits(settings_->limits());
-   if (!connection_->BindConnection(settings_->listenAddress()
-      , settings_->listenPort(), listener_.get())) {
+
+   bool result = connection_->BindConnection(settings_->listenAddress()
+      , settings_->listenPort(), listener_.get());
+
+   if (!result) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
-      throw std::runtime_error("failed to bind listening socket");
+
+      // Abort only if lightgui used, fullgui should just show error message instead
+      if (settings_->runMode() == bs::signer::RunMode::lightgui) {
+         throw std::runtime_error("failed to bind listening socket");
+      }
    }
+
+   signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
+   adapterLsn_->sendStatusUpdate();
+
+   if (cbReady_) {
+      // Needed to setup SignerAdapterListener callbacks
+      cbReady_(true);
+   }
+}
+
+std::shared_ptr<ZmqBIP15XServerConnection> HeadlessAppObj::connection() const
+{
+   return connection_;
 }
 
 #if 0
@@ -222,7 +330,7 @@ void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::fun
 {
    walletsMgr_->reset();
    walletsMgr_->loadWallets(settings_->netType(), walletsDir
-      , settings_->watchingOnly(), [](int, int) {});
+      , [](int, int) {});
 //   settings_->setWalletsDir(walletsDir);
    cb();
 }
@@ -265,19 +373,10 @@ void HeadlessAppObj::passwordReceived(const std::string &walletId
    }
 }
 
-void HeadlessAppObj::setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
-   , const std::function<void(const std::string &)> &cbPeerDisconn
-   , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
-   , const std::function<void(const BinaryData &)> &cbTxSigned
-   , const std::function<void(const BinaryData &)> &cbCancelTxSign
-   , const std::function<void(int64_t, bool)> &cbXbtSpent
-   , const std::function<void(const std::string &)> &cbAsAct
-   , const std::function<void(const std::string &)> &cbAsDeact
-   , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog)
+void HeadlessAppObj::setCallbacks(HeadlessContainerCallbacks *callbacks)
 {
    if (listener_) {
-      listener_->setCallbacks(cbPeerConn, cbPeerDisconn, cbPwd, cbTxSigned
-          , cbCancelTxSign, cbXbtSpent, cbAsAct, cbAsDeact, cbCustomDialog);
+      listener_->setCallbacks(callbacks);
    }
    else {
       logger_->error("[{}] attempting to set callbacks on uninited listener", __func__);
@@ -307,5 +406,40 @@ void HeadlessAppObj::addPendingAutoSignReq(const std::string &walletId)
 {
    if (listener_) {
       listener_->addPendingAutoSignReq(walletId);
+   }
+}
+
+void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
+{
+   const auto prevTrustedTerminals = settings_->trustedTerminals();
+   if (!settings_->update(settings)) {
+      logger_->error("[{}] failed to update settings", __func__);
+      return;
+   }
+   const auto trustedTerminals = settings_->trustedTerminals();
+   if (connection_ && (trustedTerminals != prevTrustedTerminals)) {
+      std::vector<std::pair<std::string, BinaryData>> updatedKeys;
+      for (const auto &key : trustedTerminals) {
+         const auto colonIndex = key.find(':');
+         if (colonIndex == std::string::npos) {
+            logger_->error("[{}] Trusted client list key entry ({}) is malformed"
+               , __func__, key);
+            continue;
+         }
+
+         try {
+            const SecureBinaryData inKey = READHEX(key.substr(colonIndex + 1));
+            if (inKey.isNull()) {
+               throw std::invalid_argument("no or malformed key data");
+            }
+            updatedKeys.push_back({ key.substr(0, colonIndex), inKey });
+         }
+         catch (const std::exception &e) {
+            logger_->error("[{}] Trusted client list key entry ({}) has invalid key: {}"
+               , __func__, key, e.what());
+         }
+      }
+      logger_->info("[{}] Updating {} trusted keys", __func__, updatedKeys.size());
+      connection_->updatePeerKeys(updatedKeys);
    }
 }

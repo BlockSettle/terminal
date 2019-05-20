@@ -32,8 +32,7 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 40
-
+                    Layout.preferredHeight: 25
                     CustomLabel {
                         Layout.fillWidth: true
                         text: qsTr("Wallet")
@@ -43,7 +42,8 @@ Item {
                 Loader {
                     active: walletsProxy.loaded
                     sourceComponent: CustomComboBox {
-                        width: 200
+                        width: 150
+                        height: 25
                         enabled: !signerStatus.autoSignActive
                         model: walletsProxy.walletNames
                         currentIndex: walletsProxy.indexOfWalletId(signerSettings.autoSignWallet)
@@ -55,7 +55,7 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 40
+                    Layout.preferredHeight: 25
 
                     CustomLabel {
                         Layout.fillWidth: true
@@ -80,10 +80,11 @@ Item {
 
             SettingsGrid {
                 id: gridLimits
+                columns: 3
 
                 CustomHeader {
                     Layout.fillWidth: true
-                    Layout.columnSpan: 2
+                    Layout.columnSpan: 3
                     text: qsTr("Details")
                     Layout.preferredHeight: 25
                 }
@@ -91,8 +92,11 @@ Item {
                 CustomLabel {
                     text: qsTr("XBT spend limit")
                 }
-                CustomTextInput {
+                CustomLabel {
                     Layout.fillWidth: true
+                }
+                CustomTextInput {
+                    Layout.preferredWidth: 150
                     text: signerSettings.autoSignUnlimited ? qsTr("Unlimited") : signerSettings.limitAutoSignXbt
                     selectByMouse: true
                     id: limitAutoSignXbt
@@ -109,8 +113,11 @@ Item {
                 CustomLabel {
                     text: qsTr("Time limit")
                 }
-                CustomTextInput {
+                CustomLabel {
                     Layout.fillWidth: true
+                }
+                CustomTextInput {
+                    Layout.preferredWidth: 150
                     placeholderText: "e.g. 1h or 15m or 600s or combined"
                     selectByMouse: true
                     text: signerSettings.limitAutoSignTime ? signerSettings.limitAutoSignTime : qsTr("Unlimited")
@@ -127,7 +134,7 @@ Item {
     }
 
     function storeSettings() {
-        if (signerSettings.limitAutoSignXbt != limitAutoSignXbt.text) {
+        if (signerSettings.limitAutoSignXbt !== limitAutoSignXbt.text) {
             if (limitAutoSignXbt.text !== qsTr("Unlimited")) {
                 signerSettings.limitAutoSignXbt = limitAutoSignXbt.text
             }

@@ -36,7 +36,6 @@ class QSystemTrayIcon;
 class SignerAdapter;
 class SignerSettings;
 class WalletsProxy;
-class ZmqSecuredServerConnection;
 
 class QMLAppObj : public QObject
 {
@@ -57,6 +56,8 @@ signals:
 
 private slots:
    void onReady();
+   void onConnectionError();
+   void onHeadlessBindFailed();
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
@@ -67,9 +68,11 @@ private slots:
    void onOfflineChanged();
    void onListenSocketChanged();
    void onLimitsChanged();
+   void onSettingChanged(int);
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
    void onCancelSignTx(const BinaryData &txId);
+   void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
 
 private:
    void settingsConnections();
@@ -89,7 +92,8 @@ private:
    std::shared_ptr<QmlFactory>                  qmlFactory_;
    QObject  *  rootObj_ = nullptr;
    QmlWalletsViewModel  *  walletsModel_ = nullptr;
-   QSystemTrayIcon      *  trayIcon_ = nullptr;
+   // Tray icon will not be started with light UI signer
+   QSystemTrayIcon      *  trayIconOptional_ = nullptr;
 
    enum NotificationMode {
       QSystemTray,

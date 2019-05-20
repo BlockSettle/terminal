@@ -14,6 +14,7 @@
 #include <QQmlContext>
 #include <memory>
 #include <iostream>
+#include <QQuickWindow>
 #include <btc/ecc.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -110,37 +111,40 @@ static int QMLApp(int argc, char **argv)
    // ToDo: support 2.0 styles
    // app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
 
-   // we need this only for desktop app
-   const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
-   QSplashScreen splashScreen(splashImage);
-   splashScreen.setWindowFlag(Qt::WindowStaysOnTopHint);
-#ifdef NDEBUG
-   // don't show slash screen on debug
-   splashScreen.show();
-#endif
-
    const auto settings = std::make_shared<SignerSettings>();
    if (!settings->loadSettings(app.arguments())) {
       return EXIT_FAILURE;
    }
 
+   QSplashScreen *splashScreen = nullptr;
+
+   // don't show slash screen on debug
+#ifdef NDEBUG
+   if (settings->runMode() == bs::signer::ui::RunMode::fullgui) {
+      // we need this only for desktop app
+      const auto splashImage = QPixmap(QLatin1String(":/FULL_LOGO")).scaledToWidth(390, Qt::SmoothTransformation);
+      splashScreen = new QSplashScreen(splashImage);
+      splashScreen->setWindowFlag(Qt::WindowStaysOnTopHint);
+
+      splashScreen->show();
+   }
+#endif
+
+   spdlog::drop("");
    try {
-      logger = spdlog::basic_logger_mt("app_logger"
-         , settings->logFileName().toStdString());
+      logger = spdlog::basic_logger_mt("", settings->logFileName().toStdString());
       // [date time.miliseconds] [level](thread id): text
       logger->set_pattern("%D %H:%M:%S.%e [%L](%t): %v");
-      logger->set_level(spdlog::level::debug);
-      logger->flush_on(spdlog::level::debug);
    }
    catch (const spdlog::spdlog_ex &e) {
       std::cerr << "Failed to create logger in "
          << settings->logFileName().toStdString() << ": " << e.what()
          << " - logging to console" << std::endl;
-      logger = spdlog::stdout_logger_mt("app_logger");
+      logger = spdlog::stdout_logger_mt("");
       logger->set_pattern("[%L](%t): %v");
-      logger->set_level(spdlog::level::debug);
-      logger->flush_on(spdlog::level::debug);
    }
+   logger->set_level(spdlog::level::debug);
+   logger->flush_on(spdlog::level::debug);
 
 #ifndef NDEBUG
    qInstallMessageHandler(qMessageHandler);
@@ -156,14 +160,21 @@ static int QMLApp(int argc, char **argv)
    // don't use them. If they already exist, we'll leave them alone.
    logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
    try {
-      SignerAdapter adapter(logger, settings->netType());
+      BinaryData srvIDKey(BIP151PUBKEYSIZE);
+      if (!(settings->getSrvIDKeyBin(srvIDKey))) {
+         logger->error("[{}] Unable to obtain server identity key from the "
+            "command line. Functionality may be limited.", __func__);
+      }
+
+      SignerAdapter adapter(logger, settings->netType(), &srvIDKey);
       adapter.setCloseHeadless(settings->closeHeadless());
 
+      QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
       QQmlApplicationEngine engine;
       const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
       engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
 
-      QMLAppObj qmlAppObj(&adapter, logger, settings, &splashScreen, engine.rootContext());
+      QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
       QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
 
       switch (settings->runMode()) {

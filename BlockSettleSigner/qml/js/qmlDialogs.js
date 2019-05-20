@@ -17,7 +17,6 @@ function createNewWalletDialog(data) {
         // let user set a password or Auth eID and also name and desc. for the new wallet
         var dlgCreateWallet = Qt.createComponent("../BsDialogs/WalletCreateDialog.qml").createObject(mainWindow)
         dlgNewSeed.setNextChainDialog(dlgCreateWallet)
-        dlgCreateWallet.primaryWalletExists = walletsProxy.primaryWalletExists
         dlgCreateWallet.seed = newSeed
         dlgCreateWallet.open()
     })
@@ -27,7 +26,6 @@ function createNewWalletDialog(data) {
 
 function importWalletDialog(data) {
     var dlgImp = Qt.createComponent("../BsDialogs/WalletImportDialog.qml").createObject(mainWindow)
-    dlgImp.primaryWalletExists = walletsProxy.primaryWalletExists
     dlgImp.open()
     return dlgImp
 }
@@ -56,4 +54,10 @@ function manageEncryptionDialog(data) {
     dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
     dlg.open()
     return dlg
+}
+
+function activateAutoSignDialog(data) {
+    var walletId = data["rootId"]
+    signerSettings.autoSignWallet = walletId
+    signerStatus.activateAutoSign()
 }

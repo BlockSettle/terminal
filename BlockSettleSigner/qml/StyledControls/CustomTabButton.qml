@@ -11,7 +11,7 @@ TabButton {
         id: text_
         text: control.text
         font.capitalization: Font.AllUppercase
-        font.pixelSize: 12
+        font.pointSize: 10
         color: control.checked ? (control.down ? BSStyle.textPressedColor : BSStyle.textColor) : BSStyle.buttonsUncheckedColor
         elide: Text.ElideRight
         horizontalAlignment: Text.AlignHCenter

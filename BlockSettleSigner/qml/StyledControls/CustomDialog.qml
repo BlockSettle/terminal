@@ -46,6 +46,10 @@ CustomDialogWindow {
 
     signal enterPressed()
 
+    // this signal used in light mode to inform mainwindow if size of dialog is changed
+    // (for example if it's multipage dialog, or another popup doalog shown above current
+    signal sizeChanged(int w, int h)
+
     ////////////////////////////
     /// Dialogs chain management
 

@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.2
+import com.blocksettle.QmlFactory 1.0
 
 import "StyledControls"
 import "BsStyles"
@@ -14,6 +15,10 @@ Item {
         title: qsTr("Select wallets directory")
     }
 
+    Component.onCompleted: {
+        qmlFactory.requestHeadlessPubKey()
+    }
+
     Rectangle {
         id: rectHelp
 
@@ -21,8 +26,8 @@ Item {
         height: labelHelp.height
         z: 1
         color: "black"
-        visible: twoway_help_mouse_area.containsMouse
-
+        // visible: twoway_help_mouse_area.containsMouse
+        visible: false
 
         CustomLabel {
             id: labelHelp
@@ -175,193 +180,21 @@ Item {
 //                }
             }
 
-            RowLayout {
-                Layout.topMargin: 5
-                Layout.fillWidth: true
-                Layout.rightMargin: 10
-                Layout.leftMargin: 10
-
-                CustomLabel {
-                    text: qsTr("Two-way authentication")
-                }
-
-                Image {
-                    id: twoway_help_image
-                    Layout.maximumWidth: 10
-                    Layout.maximumHeight: 10
-
-                    source: "qrc:/resources/notification_info.png"
-                    MouseArea {
-                        id: twoway_help_mouse_area
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onHoveredChanged: {
-                            rectHelp.x = rectHelp.mapFromItem(twoway_help_image, 0, 0).x + 15
-                            rectHelp.y = rectHelp.mapFromItem(twoway_help_image, 0, 0).y - 10
-                        }
-                    }
-                }
-
-                CustomLabel {
-                    id: twoway_help_label
-                    //visible: twoway_help_mouse_area.containsMouse
-                    Layout.fillWidth: true
-                }
-
-
-                CustomSwitch {
-                    Layout.alignment: Qt.AlignRight
-                    checked: signerSettings.twoWayAuth
-                    onClicked: {
-                        signerSettings.twoWayAuth = checked
-                    }
-                }
-            }
-
-
-            RowLayout {
-                id: row4
-                Layout.topMargin: 5
-                Layout.fillWidth: true
-                Layout.rightMargin: 10
-                Layout.leftMargin: 10
-
-                CustomLabel {
-                    text: qsTr("ZMQ Private Key")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
-                }
-
-                CustomLabel {
-                    Layout.alignment: Qt.AlignLeft
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                    text: signerSettings.signerPrvKey
-                    color: BSStyle.textColor
-
-                }
-
-                CustomButton {
-                    text: qsTr("Select")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
-                    Layout.rightMargin: 6
-                    onClicked: {
-                        zmqPrivKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPrvKey)
-                        zmqPrivKeyDlg.open()
-                        zmqPrivKeyDlg.bsAccepted.connect(function(){
-                            signerSettings.signerPrvKey = JsHelper.fileUrlToPath(zmqPrivKeyDlg.fileUrl)
-                        })
-                    }
-                    FileDialog {
-                        id: zmqPrivKeyDlg
-                        visible: false
-                        title: "Select ZMQ Private Key"
-                        selectFolder: false
-                    }
-                }
-            }
-
-            RowLayout {
-                id: row5
-                Layout.topMargin: 5
-                Layout.fillWidth: true
-                Layout.rightMargin: 10
-                Layout.leftMargin: 10
-
-                CustomLabel {
-                    text: qsTr("ZMQ Public Key")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
-                }
-
-                CustomLabel {
-                    Layout.alignment: Qt.AlignLeft
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                    text: signerSettings.signerPubKey
-                    color: BSStyle.textColor
-
-                }
-                CustomButton {
-                    id: btnZmqKeyCopy
-                    text: qsTr("Copy")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
-                    Layout.rightMargin: 6
-                    onClicked: {
-                        var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.signerPubKey)
-                        qmlFactory.setClipboard(zmqPubKey)
-                        btnZmqKeyCopy.text = qsTr("Copied")
-                    }
-                }
-                CustomButton {
-                    text: qsTr("Export")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
-                    Layout.rightMargin: 6
-                    onClicked: {
-                        exportSignerPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
-                        exportSignerPubKeyDlg.open()
-                        exportSignerPubKeyDlg.accepted.connect(function(){
-                            var zmqPubKey = JsHelper.openTextFile("file:///" + signerSettings.signerPubKey)
-                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, zmqPubKey)
-                        })
-                    }
-                    FileDialog {
-                        id: exportSignerPubKeyDlg
-                        visible: false
-                        title: "Save Signer Public Key"
-                        selectFolder: false
-                        selectExisting: false
-                        nameFilters: [ "Key files (*.pub)", "All files (*)" ]
-                        selectedNameFilter: "*.pub"
-                    }
-                }
-
-                CustomButton {
-                    text: qsTr("Select")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
-                    Layout.rightMargin: 6
-                    onClicked: {
-                        zmqPubKeyDlg.folder = "file:///" + JsHelper.folderOfFile(signerSettings.signerPubKey)
-                        zmqPubKeyDlg.open()
-                        zmqPubKeyDlg.bsAccepted.connect(function(){
-                            signerSettings.signerPubKey = JsHelper.fileUrlToPath(zmqPubKeyDlg.fileUrl)
-                        })
-                    }
-                    FileDialog {
-                        id: zmqPubKeyDlg
-                        visible: false
-                        title: "Select ZMQ Public Key"
-                        selectFolder: false
-                    }
-                }
-            }
-
             SettingsGrid {
                 id: gridNetwork
 
                 CustomLabel {
                     text: qsTr("Listen IP address")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
+                    Layout.fillWidth: true
                 }
                 CustomTextInput {
                     placeholderText: "0.0.0.0"
-                    Layout.fillWidth: true
+
+                    Layout.minimumWidth: 310
+                    Layout.preferredWidth: 310
+                    Layout.maximumWidth: 310
+                    Layout.alignment: Qt.AlignRight
+
                     Layout.rightMargin: 6
                     text: signerSettings.listenAddress
                     selectByMouse: true
@@ -376,13 +209,16 @@ Item {
 
                 CustomLabel {
                     text: qsTr("Listening port")
-                    Layout.minimumWidth: 125
-                    Layout.preferredWidth: 125
-                    Layout.maximumWidth: 125
+                    Layout.fillWidth: true
                 }
                 CustomTextInput {
                     placeholderText: "23456"
-                    Layout.fillWidth: true
+
+                    Layout.minimumWidth: 310
+                    Layout.preferredWidth: 310
+                    Layout.maximumWidth: 310
+                    Layout.alignment: Qt.AlignRight
+
                     Layout.rightMargin: 6
                     text: signerSettings.listenPort
                     selectByMouse: true
@@ -393,6 +229,93 @@ Item {
                     }
                     onEditingFinished: {
                         signerSettings.listenPort = text
+                    }
+                }
+            }
+
+            RowLayout {
+                id: row5
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    text: qsTr("Signer ID Key")
+                    Layout.minimumWidth: 125
+                    Layout.preferredWidth: 125
+                    Layout.maximumWidth: 125
+                }
+                CustomLabel {
+                    Layout.fillWidth: true
+                }
+                CustomLabel {
+                    Layout.alignment: Qt.AlignRight
+                    wrapMode: Text.Wrap
+                    text: qmlFactory.headlessPubKey
+                    color: BSStyle.textColor
+                }
+            }
+
+            RowLayout {
+                id: row51
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                }
+                CustomButton {
+                    id: btnHeadlessKeyCopy
+                    text: qsTr("Copy")
+                    Layout.minimumWidth: 150
+                    Layout.preferredWidth: 150
+                    Layout.maximumWidth: 150
+                    Layout.maximumHeight: 22
+                    Layout.rightMargin: 6
+
+                    onClicked: {
+                        qmlFactory.setClipboard(qmlFactory.headlessPubKey)
+                        btnHeadlessKeyCopy.text = qsTr("Copied")
+                        enabled = false
+                        copiedTimer.start()
+                    }
+
+                    Timer {
+                       id: copiedTimer
+                       repeat: false
+                       interval: 1000
+                       onTriggered: {
+                           btnHeadlessKeyCopy.enabled = true
+                           btnHeadlessKeyCopy.text = qsTr("Copy")
+                       }
+                    }
+                }
+                CustomButton {
+                    text: qsTr("Export")
+                    Layout.minimumWidth: 150
+                    Layout.preferredWidth: 150
+                    Layout.maximumWidth: 150
+                    Layout.maximumHeight: 22
+                    Layout.rightMargin: 6
+                    onClicked: {
+                        exportSignerPubKeyDlg.open()
+                        exportSignerPubKeyDlg.accepted.connect(function(){
+                            var zmqPubKey = qmlFactory.headlessPubKey
+                            JsHelper.saveTextFile(exportSignerPubKeyDlg.fileUrl, zmqPubKey)
+                        })
+                    }
+                    FileDialog {
+                        id: exportSignerPubKeyDlg
+                        visible: false
+                        title: "Save Signer ID Key"
+                        selectFolder: false
+                        selectExisting: false
+                        nameFilters: [ "Key files (*.pub)", "All files (*)" ]
+                        selectedNameFilter: "*.pub"
+                        folder: shortcuts.documents
                     }
                 }
             }
@@ -411,6 +334,52 @@ Item {
             }
 
             RowLayout {
+                Layout.topMargin: 5
+                Layout.fillWidth: true
+                Layout.rightMargin: 10
+                Layout.leftMargin: 10
+
+                CustomLabel {
+                    text: qsTr("Terminal ID Key Authentication")
+                }
+
+//                Image {
+//                    id: twoway_help_image
+//                    Layout.maximumWidth: 10
+//                    Layout.maximumHeight: 10
+
+//                    source: "qrc:/resources/notification_info.png"
+//                    MouseArea {
+//                        id: twoway_help_mouse_area
+//                        anchors.fill: parent
+//                        hoverEnabled: true
+//                        onHoveredChanged: {
+//                            rectHelp.x = rectHelp.mapFromItem(twoway_help_image, 0, 0).x + 15
+//                            rectHelp.y = rectHelp.mapFromItem(twoway_help_image, 0, 0).y - 10
+//                        }
+//                    }
+//                }
+
+//                CustomLabel {
+//                    id: twoway_help_label
+//                    visible: twoway_help_mouse_area.containsMouse
+//                    Layout.fillWidth: true
+//                }
+
+                CustomLabel {
+                    Layout.fillWidth: true
+                }
+
+                CustomSwitch {
+                    Layout.alignment: Qt.AlignRight
+                    checked: signerSettings.twoWaySignerAuth
+                    onClicked: {
+                        signerSettings.twoWaySignerAuth = checked
+                    }
+                }
+            }
+
+            RowLayout {
                 id: rowManageKeys
                 Layout.topMargin: 5
                 Layout.fillWidth: true
@@ -418,19 +387,22 @@ Item {
                 Layout.leftMargin: 10
 
                 CustomLabel {
-                    text: qsTr("Terminals keys")
+                    text: qsTr("Terminals ID Keys")
                     Layout.minimumWidth: 125
                     Layout.preferredWidth: 125
                     Layout.maximumWidth: 125
                 }
 
+                CustomLabel {
+                    Layout.fillWidth: true
+                }
 
                 CustomButton {
                     text: qsTr("Manage")
-                    Layout.minimumWidth: 80
-                    Layout.preferredWidth: 80
-                    Layout.maximumWidth: 80
-                    Layout.maximumHeight: 26
+                    Layout.minimumWidth: 150
+                    Layout.preferredWidth: 150
+                    Layout.maximumWidth: 150
+                    Layout.maximumHeight: 22
                     Layout.rightMargin: 6
                     onClicked: {
                         var dlgTerminals = Qt.createComponent("BsDialogs/TerminalKeysDialog.qml").createObject(mainWindow)

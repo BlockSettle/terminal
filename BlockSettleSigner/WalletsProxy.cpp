@@ -1,14 +1,15 @@
 #include <QFile>
+#include <QFileInfo>
 #include <QVariant>
 #include <QPixmap>
 #include <QStandardPaths>
+#include <QMetaMethod>
 
 #include <spdlog/spdlog.h>
 
 #include "CoreHDWallet.h"
 #include "PaperBackupWriter.h"
 #include "SignerAdapter.h"
-#include "SignerSettings.h"
 #include "UiUtils.h"
 #include "WalletBackupFile.h"
 #include "WalletEncryption.h"
@@ -28,12 +29,18 @@ void WalletsProxy::setWalletsManager()
 {
    walletsMgr_ = adapter_->getWalletsManager();
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this, &WalletsProxy::onWalletsChanged);
-   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] { walletsSynchronized_ = true; });
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, [this] {
+      walletsSynchronized_ = true;
+      onWalletsChanged();
+   });
 }
 
 void WalletsProxy::onWalletsChanged()
 {
-   emit walletsChanged();
+   // thread safe replacement of
+   // emit walletsChanged();
+   QMetaMethod walletsChangedSignal = QMetaMethod::fromSignal(&WalletsProxy::walletsChanged);
+   walletsChangedSignal.invoke(this, Qt::QueuedConnection);
 }
 
 std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getRootForId(const QString &walletId) const
@@ -63,7 +70,7 @@ QString WalletsProxy::getRootWalletName(const QString &walletId) const
 
 bool WalletsProxy::primaryWalletExists() const
 {
-   return (walletsMgr_->getPrimaryWallet() != nullptr);
+   return (walletsMgr_ && (walletsMgr_->getPrimaryWallet() != nullptr));
 }
 
 void WalletsProxy::changePassword(const QString &walletId
@@ -192,21 +199,17 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
    return (QString::fromStdString(bs::core::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
 }
 
-void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path, bs::wallet::QPasswordData *passwordData) const
+std::shared_ptr<bs::core::hd::Wallet> WalletsProxy::getWoWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
-   const auto &cbResult = [this, walletId, path](const bs::sync::WatchingOnlyWallet &wo) {
-      if (wo.id.empty()) {
-         logger_->error("[WalletsProxy] failed to create WO wallet for id {}", wo.id);
-         emit walletError(walletId, tr("Failed to create watching-only wallet for %1").arg(walletId));
-         return;
-      }
-      bs::core::hd::Wallet woWallet(wo.id, wo.netType, false, wo.name, logger_
+   try {
+      auto result = std::make_shared<bs::core::hd::Wallet>(wo.id, wo.netType, false, wo.name, logger_
          , wo.description);
       for (const auto &groupEntry : wo.groups) {
-         auto group = woWallet.createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
+         auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
          for (const auto &leafEntry : groupEntry.leaves) {
             auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
-               , leafEntry.chainCode, wo.netType);
+               , leafEntry.chainCode.isNull() ? BinaryData(BTC_BIP32_CHAINCODE_SIZE) : leafEntry.chainCode
+               , wo.netType);
             auto leaf = group->createLeaf(leafEntry.index, pubNode);
             if (!leaf) {
                logger_->error("[WalletsProxy] failed to create WO leaf {} for {}"
@@ -218,8 +221,30 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
             }
          }
       }
+      return result;
+   }
+   catch (const std::exception &e) {
+      logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
+   }
+   return nullptr;
+}
+
+void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path, bs::wallet::QPasswordData *passwordData) const
+{
+   const auto &cbResult = [this, walletId, path](const bs::sync::WatchingOnlyWallet &wo) {
+      if (wo.id.empty()) {
+         logger_->error("[WalletsProxy] failed to create WO wallet for id {}", wo.id);
+         emit walletError(walletId, tr("Failed to create watching-only wallet for %1").arg(walletId));
+         return;
+      }
+      auto woWallet = getWoWallet(wo);
+      if (!woWallet) {
+         emit walletError(walletId, tr("Failed to create watching-only wallet for %1").arg(walletId));
+         return;
+      }
       try {
-         woWallet.saveToDir(path.toStdString());
+         woWallet->saveToFile(path.toStdString());
+         emit walletSuccess();
       }
       catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to save WO wallet for {}: {}", wo.id, e.what());
@@ -290,6 +315,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
          WalletBackupFile backupData(walletId.toStdString(), name, desc, easyData, edChainCode);
          f.write(QByteArray::fromStdString(backupData.Serialize()));
       }
+      emit walletSuccess();
    };
    adapter_->getDecryptedRootNode(wallet->walletId(), passwordData->password, cbResult);
 
@@ -313,6 +339,10 @@ void WalletsProxy::createWallet(bool isPrimary
                                 , bs::wallet::QPasswordData *passwordData
                                 , const QJSValue &jsCallback)
 {
+   if (!walletsMgr_) {
+      emit walletError({}, tr("Wallets manager is missing"));
+      return;
+   }
    if (seed->networkType() == bs::wallet::QSeed::Invalid) {
       emit walletError({}, tr("Failed to create wallet with invalid seed"));
       return;
@@ -332,15 +362,67 @@ void WalletsProxy::createWallet(bool isPrimary
 
 void WalletsProxy::deleteWallet(const QString &walletId, const QJSValue &jsCallback)
 {
-   auto cb = [this, jsCallback] (bool success, const std::string &error) {
-      QMetaObject::invokeMethod(this, [this, success, error, jsCallback] {
+   auto cb = [this, walletId, jsCallback] (bool success, const std::string &error) {
+      QJSValueList args;
+      args << QJSValue(success) << QString::fromStdString(error);
+      QMetaObject::invokeMethod(this, [this, args, jsCallback] {
+         invokeJsCallBack(jsCallback, args);
+      });
+   };
+   adapter_->deleteWallet(walletId.toStdString(), cb);
+}
+
+std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sync::WatchingOnlyWallet &wo) const
+{
+   try {
+      auto result = std::make_shared<bs::sync::hd::Wallet>(wo.netType, wo.id, wo.name, wo.description, logger_);
+      for (const auto &groupEntry : wo.groups) {
+         auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
+         for (const auto &leafEntry : groupEntry.leaves) {
+            auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
+               , leafEntry.chainCode.isNull() ? BinaryData(BTC_BIP32_CHAINCODE_SIZE) : leafEntry.chainCode
+               , wo.netType);
+            group->createLeaf(leafEntry.index, leafEntry.id);
+         }
+      }
+      return result;
+   } catch (const std::exception &e) {
+      logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
+   }
+   return nullptr;
+}
+
+void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsCallback)
+{
+   auto cb = [this, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {
+      QMetaObject::invokeMethod(this, [this, wo, jsCallback] {
+         logger_->debug("imported WO wallet with id {}", wo.id);
+         walletsMgr_->adoptNewWallet(getWoSyncWallet(wo));
          QJSValueList args;
-         args << QJSValue(success) << QString::fromStdString(error);
+         args << QJSValue(wo.id.empty() ? false : true)
+            << QString::fromStdString(wo.id.empty() ? wo.description : wo.id);
          invokeJsCallBack(jsCallback, args);
       });
    };
 
-   adapter_->deleteWallet(walletId.toStdString(), cb);
+   bs::sync::WatchingOnlyWallet errWallet;
+   QFile f(walletPath);
+   if (!f.exists()) {
+      errWallet.description = "file doesn't exist";
+      cb(errWallet);
+      return;
+   }
+   if (!f.open(QIODevice::ReadOnly)) {
+      errWallet.description = "failed to open file for reading";
+      cb(errWallet);
+      return;
+   }
+   const BinaryData content(f.readAll().toStdString());
+   f.close();
+
+   QFileInfo fi(walletPath);
+
+   adapter_->importWoWallet(fi.fileName().toStdString(), content, cb);
 }
 
 QStringList WalletsProxy::walletNames() const

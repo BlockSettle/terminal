@@ -18,15 +18,15 @@ import "../js/helper.js" as JsHelper
 CustomTitleDialogWindow {
     id: root
 
-    property bool primaryWalletExists: false
+    property bool primaryWalletExists: walletsProxy.primaryWalletExists
     property string password
-    property bool isPrimary: false
     property QSeed seed: QSeed{}
     property WalletInfo walletInfo: WalletInfo{}
     property var passwordData: QPasswordData{}
+    property bool isWO: (tabBar.currentIndex === 1)
 
-    property bool acceptable: (curPage === 1 && walletSelected) ||
-                              (curPage === 2 && importAcceptable)
+    property bool acceptable: isWO ? digitalWoBackupAcceptable : ((curPage === 1 && walletSelected) ||
+                              (curPage === 2 && importAcceptable))
 
     property bool digitalBackupAcceptable: false
     property bool digitalWoBackupAcceptable: false
@@ -43,6 +43,12 @@ CustomTitleDialogWindow {
     height: 510
     abortConfirmation: true
     abortBoxType: BSAbortBox.AbortType.WalletImport
+
+    Component.onCompleted: {
+        if (!primaryWalletExists) {
+            cbPrimary.checked = true
+        }
+    }
 
     onEnterPressed: {
         if (btnAccept.enabled) btnAccept.onClicked()
@@ -65,7 +71,9 @@ CustomTitleDialogWindow {
         ColumnLayout {
             TabBar {
                 id: tabBar
-                spacing: 2
+                spacing: 0
+                leftPadding: 1
+                rightPadding: 1
                 height: 35
 
                 Layout.fillWidth: true
@@ -312,6 +320,7 @@ CustomTitleDialogWindow {
                             Layout.fillWidth: true
                             Layout.leftMargin: inputLabelsWidth + 5
                             enabled: !primaryWalletExists
+                            checked: !primaryWalletExists
                             text: qsTr("Primary Wallet")
                         }
                     }
@@ -346,6 +355,11 @@ CustomTitleDialogWindow {
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
+                                        sizeChanged(noticeEidDialog.width, noticeEidDialog.height)
+
+                                        noticeEidDialog.closed.connect(function(){
+                                            sizeChanged(root.width, root.height)
+                                        })
                                         noticeEidDialog.open()
                                     }
                                 }
@@ -427,7 +441,7 @@ CustomTitleDialogWindow {
                         Layout.minimumWidth: inputLabelsWidth
                         Layout.preferredWidth: inputLabelsWidth
                         Layout.maximumWidth: inputLabelsWidth
-                        text: qsTr("Digital backup")
+                        text: qsTr("Watching-Only Wallet file")
                         verticalAlignment: Text.AlignTop
                         Layout.alignment: Qt.AlignTop
                     }
@@ -478,6 +492,22 @@ CustomTitleDialogWindow {
                 enabled: acceptable
 
                 onClicked: {
+                    if (isWO) {
+                        var importCallback = function(success, msg) {
+                            if (success) {
+                                var walletInfo = qmlFactory.createWalletInfo(msg)
+                                var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
+                                mb.bsAccepted.connect(acceptAnimated)
+                            } else {
+                                JsHelper.messageBox(BSMessageBox.Type.Critical
+                                    , qsTr("Import Failed"), qsTr("Import WO-wallet failed:\n") + msg)
+                            }
+                        }
+
+                        walletsProxy.importWoWallet(lblWoDBFile.text, importCallback)
+                        return
+                    }
+
                     if (curPage === 1) {
                         curPage = 2
 
@@ -494,8 +524,6 @@ CustomTitleDialogWindow {
                         walletInfo.desc = tfDesc.text
                         walletInfo.walletId = seed.walletId
                         walletInfo.rootId = seed.walletId
-
-                        isPrimary = cbPrimary.checked
 
                         var createCallback = function(success, errorMsg) {
                             if (success) {
@@ -515,15 +543,16 @@ CustomTitleDialogWindow {
 
                             var checkPasswordDialog = Qt.createComponent("../BsControls/BSPasswordInput.qml").createObject(mainWindow);
                             checkPasswordDialog.passwordToCheck = newPasswordWithConfirm.password
+                            checkPasswordDialog.type = BSPasswordInput.Type.Confirm
                             checkPasswordDialog.open()
                             checkPasswordDialog.bsAccepted.connect(function() {
-                                walletsProxy.createWallet(isPrimary, seed, walletInfo, passwordData, createCallback)
+                                walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, passwordData, createCallback)
                             })
                         }
                         else {
                             // auth eID
                             JsHelper.activateeIdAuth(textInputEmail.text, walletInfo, function(newPasswordData) {
-                                 walletsProxy.createWallet(isPrimary, seed, walletInfo, newPasswordData, createCallback)
+                                 walletsProxy.createWallet(cbPrimary.checked, seed, walletInfo, newPasswordData, createCallback)
                             })
                         }
                     }
@@ -550,7 +579,9 @@ CustomTitleDialogWindow {
                 else {
                     filePath = filePath.replace(/(^file:\/{2})/, "") // this might be done like this to work in ubuntu? not sure...
                 }
+
                 lblDBFile.text = decodeURIComponent(filePath)
+
                 // seed will be stored to Seed::privKey_
                 seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)
                 walletInfo = qmlFactory.createWalletInfoFromDigitalBackup(lblDBFile.text)
@@ -586,10 +617,7 @@ CustomTitleDialogWindow {
                 }
                 lblWoDBFile.text = decodeURIComponent(filePath)
                 digitalWoBackupAcceptable = true
-
-                // todo check file, import wo wallet
             }
         }
     }
-
 }

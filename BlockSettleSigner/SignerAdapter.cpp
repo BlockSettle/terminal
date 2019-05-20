@@ -12,24 +12,45 @@
 #include "SignerAdapterContainer.h"
 #include "SignerInterfaceListener.h"
 
+namespace {
+
+   const std::string kLocalAddrV4 = "127.0.0.1";
+   const std::string kLocalAddrPort = "23457";
+
+} // namespace
+
 using namespace Blocksettle::Communication;
 
-SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger, NetworkType netType)
+SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+   , const NetworkType netType, const BinaryData* inSrvIDKey)
    : QObject(nullptr), logger_(logger), netType_(netType)
 {
    const auto zmqContext = std::make_shared<ZmqContext>(logger);
-   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true, true);
+
+   // When creating the client connection, we need to generate a cookie for the
+   // server connection in order to enable verification. We also need to add
+   // the key we got on the command line to the list of trusted keys.
+   const std::string absCookiePath =
+      SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
+   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true
+      , "", "", true, true, false, absCookiePath);
    adapterConn->SetContext(zmqContext);
-   {
-      const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";
-      QFile pubKeyFile(QString::fromStdString(pubKeyFileName));
-      if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-         throw std::runtime_error("failed to create public key file " + pubKeyFileName);
-      }
-      pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
+   if (inSrvIDKey) {
+      std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
+      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
+
+      // Temporary (?) kludge: Sometimes, the key gets checked with "_1" at the
+      // end of the checked key name. This should be checked and corrected
+      // elsewhere, but for now, add a kludge to keep the code happy.
+      connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort + "_1";
+      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
    }
+
+   adapterConn->setLocalHeartbeatInterval();
+
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
-   if (!adapterConn->openConnection("127.0.0.1", "23457", listener_.get())) {
+   if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
+      , listener_.get())) {
       throw std::runtime_error("adapter connection failed");
    }
 
@@ -80,6 +101,13 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
    listener_->setDecryptNodeCb(reqId, cb);
 }
 
+void SignerAdapter::getHeadlessPubKey(const std::function<void (const std::string &)> &cb)
+{
+   signer::HeadlessPubKeyRequest request;
+   const auto reqId = listener_->send(signer::HeadlessPubKeyRequestType, request.SerializeAsString());
+   listener_->setHeadlessPubKeyCb(reqId, cb);
+}
+
 void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function<void()> &cb)
 {
    signer::ReloadWalletsRequest request;
@@ -114,6 +142,11 @@ void SignerAdapter::setLimits(bs::signer::Limits limits)
    listener_->send(signer::SetLimitsType, request.SerializeAsString());
 }
 
+void SignerAdapter::syncSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
+{
+   listener_->send(signer::SyncSettingsRequestType, settings->SerializeAsString());
+}
+
 void SignerAdapter::passwordReceived(const std::string &walletId
    , const SecureBinaryData &password, bool cancelledByUser)
 {
@@ -126,7 +159,7 @@ void SignerAdapter::passwordReceived(const std::string &walletId
 
 void SignerAdapter::createWallet(const std::string &name, const std::string &desc
    , bs::core::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-   , bs::wallet::KeyRank keyRank, const std::function<void(bool, const std::string&)> &cb)
+   , bs::wallet::KeyRank keyRank, const ResultCb &cb)
 {
    headless::CreateHDWalletRequest request;
 
@@ -157,6 +190,15 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
    }
    const auto reqId = listener_->send(signer::CreateHDWalletType, request.SerializeAsString());
    listener_->setCreateHDWalletCb(reqId, cb);
+}
+
+void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb)
+{
+   signer::ImportWoWalletRequest request;
+   request.set_filename(filename);
+   request.set_content(content.toBinStr());
+   const auto reqId = listener_->send(signer::ImportWoWalletType, request.SerializeAsString());
+   listener_->setWatchOnlyCb(reqId, cb);
 }
 
 void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::function<void (bool, const std::string &)> &cb)

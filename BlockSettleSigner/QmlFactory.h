@@ -11,6 +11,7 @@
 #include "AuthProxy.h"
 #include "ConnectionManager.h"
 
+class SignerAdapter;
 namespace bs {
    namespace sync {
       class WalletsManager;
@@ -20,9 +21,12 @@ namespace bs {
 class QmlFactory : public QObject
 {
    Q_OBJECT
+   Q_PROPERTY(QString headlessPubKey READ headlessPubKey WRITE setHeadlessPubKey NOTIFY headlessPubKeyChanged)
+
 public:
    QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
       , const std::shared_ptr<ConnectionManager> &connectionManager
+      , SignerAdapter *adapter
       , const std::shared_ptr<spdlog::logger> &logger
       , QObject *parent = nullptr);
 
@@ -87,19 +91,29 @@ public:
    Q_INVOKABLE AuthSignWalletObject *createRemoveEidObject(int index
                                                              , bs::hd::WalletInfo *walletInfo);
 
+   Q_INVOKABLE void requestHeadlessPubKey();
+   QString headlessPubKey() const;
+   void setHeadlessPubKey(const QString &headlessPubKey);
+
    // service functions
-   Q_INVOKABLE void setClipboard(const QString &text);
+   Q_INVOKABLE void setClipboard(const QString &text) const;
+   Q_INVOKABLE QString getClipboard() const;
    Q_INVOKABLE void installEventFilterToObj(QObject *object);
    bool eventFilter(QObject *object, QEvent *event) override;
 
 signals:
    void closeEventReceived();
+   void headlessPubKeyChanged();
 
 private:
+   SignerAdapter  *  adapter_;
+
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<ApplicationSettings> settings_;
    std::shared_ptr<ConnectionManager> connectionManager_;
    std::shared_ptr<spdlog::logger> logger_;
+
+   QString headlessPubKey_;
 };
 
 

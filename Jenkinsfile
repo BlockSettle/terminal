@@ -49,7 +49,7 @@ pipeline {
                 sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/Linux/bsterminal_${TAG}.deb /var/www/downloads/bsterminal.deb"
                 sh "scp ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg genoa@10.0.1.36:/var/www/terminal/MacOSX/BlockSettle_${TAG}.dmg"
                 sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/MacOSX/BlockSettle_${TAG}.dmg /var/www/downloads/BlockSettle.dmg"
-                sh 'scp -P 2222 admin@172.17.0.1:C:/Jenkins/workspace/terminal/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
+                sh 'scp -p2222 admin@10.0.1.135:C:/Jenkins/workspace/terminal/terminal/Deploy/bsterminal_installer.exe ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe'
                 sh "scp ${WORKSPACE}/terminal/Deploy/bsterminal_installer.exe genoa@10.0.1.36:/var/www/terminal/Windows/bsterminal_installer_${TAG}.exe"
                 sh "ssh genoa@10.0.1.36 ln -sf /var/www/terminal/Windows/bsterminal_installer_${TAG}.exe /var/www/downloads/bsterminal_installer.exe"
             }

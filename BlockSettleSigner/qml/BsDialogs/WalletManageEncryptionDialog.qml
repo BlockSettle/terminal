@@ -15,7 +15,7 @@ import "../StyledControls"
 import "../js/helper.js" as JsHelper
 
 CustomDialog {
-    id: changeEncryptionDialog
+    id: root
 
     property WalletInfo walletInfo : WalletInfo {}
     property QPasswordData newPasswordData: QPasswordData {}
@@ -69,7 +69,9 @@ CustomDialog {
         ColumnLayout {
             TabBar {
                 id: tabBar
-                spacing: 2
+                spacing: 0
+                leftPadding: 1
+                rightPadding: 1
                 height: 35
 
                 Layout.fillWidth: true
@@ -96,7 +98,7 @@ CustomDialog {
                 CustomTabButton {
                     id: deleteTabButton
                     //enabled: walletInfo.encType === QPasswordData.Auth
-                    text: "Remove Device"
+                    text: "Device List"
                     cText.font.capitalization: Font.MixedCase
                     implicitHeight: 35
                 }
@@ -162,6 +164,11 @@ CustomDialog {
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
+                                        sizeChanged(noticeEidDialog.width, noticeEidDialog.height)
+
+                                        noticeEidDialog.closed.connect(function(){
+                                            sizeChanged(root.width, root.height)
+                                        })
                                         noticeEidDialog.open()
                                     }
                                 }
@@ -233,14 +240,14 @@ CustomDialog {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
                     visible: walletInfo.encType !== QPasswordData.Auth
-                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    Layout.preferredWidth: root.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
                     topPadding: 30
                 }
 
                 CustomLabel {
-                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    Layout.preferredWidth: root.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
                     wrapMode: Text.WordWrap
@@ -270,7 +277,7 @@ CustomDialog {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
                     visible: walletInfo.encType !== QPasswordData.Auth
-                    Layout.preferredWidth: changeEncryptionDialog.width - 20
+                    Layout.preferredWidth: root.width - 20
                     horizontalAlignment: Text.AlignHCenter
                     padding: 20
                     topPadding: 30
@@ -326,13 +333,11 @@ CustomDialog {
                                 }
 
                                 JsHelper.removeEidDevice(index
-                                                         , walletInfo
-                                                         , function(oldPwEidData){
-                                                             var ok = walletsProxy.removeEidDevice(walletInfo.walletId
-                                                                                                   , oldPwEidData
-                                                                                                   , index)
-                                                             var mb = JsHelper.resultBox(BSResultBox.RemoveDevice, ok, walletInfo)
-                                                         })
+                                    , walletInfo
+                                    , function(oldPwEidData){
+                                        var ok = walletsProxy.removeEidDevice(walletInfo.walletId, oldPwEidData , index)
+                                        var mb = JsHelper.resultBox(BSResultBox.RemoveDevice, ok, walletInfo)
+                                })
                             }
                         }
                     }
@@ -381,42 +386,41 @@ CustomDialog {
                         if (walletInfo.encType === QPasswordData.Auth) {
                             // current auth is eID
                             JsHelper.requesteIdAuth(AutheIDClient.DeactivateWallet
-                                                    , walletInfo
-                                                    , function(oldPwEidData){
-                                                        if (rbPassword.checked) {
-                                                            // change to password
-                                                            walletsProxy.changePassword(walletInfo.walletId
-                                                                                        , oldPwEidData
-                                                                                        , newPasswordData
-                                                                                        , function(result){
-                                                                                            var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                                            if (result) {
-                                                                                                mb.bsAccepted.connect(function(){
-                                                                                                    acceptAnimated()
-                                                                                                })
-                                                                                            }
-                                                                                        })
-                                                        }
-                                                        else {
-                                                            // change to another eid account
-                                                            JsHelper.requesteIdAuth(AutheIDClient.ActivateWallet
-                                                                                    , walletInfo
-                                                                                    , function(newPwEidData){
-                                                                                        walletsProxy.changePassword(walletInfo.walletId
-                                                                                                                    , oldPwEidData
-                                                                                                                    , newPwEidData
-                                                                                                                    , function(result){
-                                                                                                                        var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                                                                        if (result) {
-                                                                                                                            mb.bsAccepted.connect(function(){
-                                                                                                                                addTabButton.onClicked()
-                                                                                                                            })
-                                                                                                                        }
-                                                                                                                    })
-                                                                                    }) // function(new passwordData)
-
-                                                        }
-                                                    }) // function(old passwordData)
+                                , walletInfo
+                                , function(oldPwEidData) {
+                                    if (rbPassword.checked) {
+                                        // change to password
+                                        walletsProxy.changePassword(walletInfo.walletId
+                                            , oldPwEidData
+                                            , newPasswordData
+                                            , function(result) {
+                                                var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                                if (result) {
+                                                    mb.bsAccepted.connect(function(){
+                                                        acceptAnimated()
+                                                    })
+                                                }
+                                        })
+                                    }
+                                    else {
+                                        // change to another eid account
+                                        JsHelper.requesteIdAuth(AutheIDClient.ActivateWallet
+                                            , walletInfo
+                                            , function(newPwEidData){
+                                                walletsProxy.changePassword(walletInfo.walletId
+                                                    , oldPwEidData
+                                                    , newPwEidData
+                                                    , function(result){
+                                                        var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                                        if (result) {
+                                                            mb.bsAccepted.connect(function(){
+                                                                addTabButton.onClicked()
+                                                            })
+                                                      }
+                                               })
+                                        }) // function(new passwordData)
+                                    }
+                             }) // function(old passwordData)
                         }
                         else {
                             // current auth is Password
@@ -426,34 +430,35 @@ CustomDialog {
                             if (rbPassword.checked) {
                                 // new auth is Password
                                 walletsProxy.changePassword(walletInfo.walletId
-                                                            , oldPasswordData
-                                                            , newPasswordData
-                                                            , function(result){
-                                                                var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                if (result) {
-                                                                    mb.bsAccepted.connect(function(){
-                                                                        acceptAnimated()
-                                                                    })
-                                                                }
-                                                            })
+                                    , oldPasswordData
+                                    , newPasswordData
+                                    , function(result){
+                                        var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                         if (result) {
+                                             mb.bsAccepted.connect(function(){
+                                                 acceptAnimated()
+                                             })
+                                         }
+                                })
                             }
                             else {
                                 // new auth is eID
                                 JsHelper.activateeIdAuth(textInputEmail.text
-                                                         , walletInfo
-                                                         , function(newPwEidData){
-                                                             walletsProxy.changePassword(walletInfo.walletId
-                                                                                         , oldPasswordData
-                                                                                         , newPwEidData
-                                                                                         , function(result){
-                                                                                             var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
-                                                                                             if (result) {
-                                                                                                 mb.bsAccepted.connect(function(){
-                                                                                                     addTabButton.onClicked()
-                                                                                                 })
-                                                                                             }
-                                                                                         })
-                                                         })
+                                    , walletInfo
+                                    , function(newPwEidData){
+                                         walletsProxy.changePassword(walletInfo.walletId
+                                             , oldPasswordData
+                                             , newPwEidData
+                                             , function(result){
+                                                 var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                                 if (result) {
+                                                     mb.bsAccepted.connect(function(){
+                                                         // addTabButton.onClicked()
+                                                         acceptAnimated()
+                                                     })
+                                                 }
+                                         })
+                                })
                             }
                         }
                     }
@@ -461,16 +466,16 @@ CustomDialog {
                         // add device
                         // step #1. request old device
                         JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletOldDevice
-                                                , walletInfo
-                                                , function(oldPwEidData){
-                                                    // step #2. add new device
-                                                    JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletNewDevice
-                                                                            , walletInfo
-                                                                            , function(newPwEidData){
-                                                                                ok = walletsProxy.addEidDevice(walletInfo.walletId, oldPwEidData, newPwEidData)
-                                                                                var mb = JsHelper.resultBox(BSResultBox.AddDevice, ok, walletInfo)
-                                                                            })
-                                                })
+                            , walletInfo
+                            , function(oldPwEidData){
+                                // step #2. add new device
+                                JsHelper.requesteIdAuth(AutheIDClient.ActivateWalletNewDevice
+                                    , walletInfo
+                                    , function(newPwEidData){
+                                        ok = walletsProxy.addEidDevice(walletInfo.walletId, oldPwEidData, newPwEidData)
+                                        var mb = JsHelper.resultBox(BSResultBox.AddDevice, ok, walletInfo)
+                                })
+                        })
 
                     }
                 }

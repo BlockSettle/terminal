@@ -5,9 +5,118 @@
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "HeadlessContainerListener.h"
+#include "HeadlessSettings.h"
 #include "ServerConnection.h"
+#include "SystemFileUtils.h"
 
 using namespace Blocksettle::Communication;
+
+class HeadlessContainerCallbacksImpl : public HeadlessContainerCallbacks
+{
+public:
+   HeadlessContainerCallbacksImpl(SignerAdapterListener *owner)
+      : owner_(owner)
+   {
+   }
+
+   void peerConn(const std::string &ip) override
+   {
+      signer::PeerEvent evt;
+      evt.set_ip_address(ip);
+      owner_->sendData(signer::PeerConnectedType, evt.SerializeAsString());
+   }
+
+   void peerDisconn(const std::string &ip) override
+   {
+      signer::PeerEvent evt;
+      evt.set_ip_address(ip);
+      owner_->sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
+   }
+
+   void clientDisconn(const std::string &) override
+   {
+      if (owner_->settings_->runMode() == bs::signer::RunMode::lightgui) {
+         owner_->logger_->info("Quit because terminal disconnected unexpectedly and lightgui used");
+         std::exit(0);
+      }
+   }
+
+   void pwd(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
+   {
+      signer::PasswordEvent evt;
+      evt.set_wallet_id(txReq.walletId);
+      evt.set_prompt(prompt);
+      if (txReq.autoSign) {
+         evt.set_auto_sign(true);
+      } else {
+         for (const auto &input : txReq.inputs) {
+            evt.add_inputs(input.serialize().toBinStr());
+         }
+         for (const auto &recip : txReq.recipients) {
+            evt.add_recipients(recip->getSerializedScript().toBinStr());
+         }
+         evt.set_fee(txReq.fee);
+         evt.set_rbf(txReq.RBF);
+         if (txReq.change.value) {
+            auto change = evt.mutable_change();
+            change->set_address(txReq.change.address.display());
+            change->set_index(txReq.change.index);
+            change->set_value(txReq.change.value);
+         }
+      }
+      owner_->sendData(signer::PasswordRequestType, evt.SerializeAsString());
+   }
+
+   void txSigned(const BinaryData &tx) override
+   {
+      signer::TxSignEvent evt;
+      evt.set_tx(tx.toBinStr());
+      owner_->sendData(signer::TxSignedType, evt.SerializeAsString());
+   }
+
+   void cancelTxSign(const BinaryData &txHash) override
+   {
+      signer::TxSignEvent evt;
+      evt.set_tx_hash(txHash.toBinStr());
+      owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
+   }
+
+   void xbtSpent(int64_t value, bool autoSign) override
+   {
+      signer::XbtSpentEvent evt;
+      evt.set_value(value);
+      evt.set_auto_sign(autoSign);
+      owner_->sendData(signer::XbtSpentType, evt.SerializeAsString());
+   }
+
+   void asAct(const std::string &walletId) override
+   {
+      autoSign(true, walletId);
+   }
+
+   void asDeact(const std::string &walletId) override
+   {
+      autoSign(false, walletId);
+   }
+
+   void customDialog(const std::string &dialogName, const std::string &data) override
+   {
+      signer::CustomDialogRequest evt;
+      evt.set_dialogname(dialogName);
+      evt.set_variantdata(data);
+      owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
+   }
+
+   void autoSign(bool act, const std::string &walletId)
+   {
+      signer::AutoSignActEvent evt;
+      evt.set_activated(act);
+      evt.set_wallet_id(walletId);
+      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
+   }
+
+   SignerAdapterListener *owner_{};
+};
 
 static std::string toHex(const std::string &binData)
 {
@@ -15,7 +124,7 @@ static std::string toHex(const std::string &binData)
 }
 
 SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
-   , const std::shared_ptr<ServerConnection> &conn
+   , const std::shared_ptr<ZmqBIP15XServerConnection> &conn
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::shared_ptr<HeadlessSettings> &settings)
@@ -31,7 +140,7 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    });
 }
 
-SignerAdapterListener::~SignerAdapterListener() = default;
+SignerAdapterListener::~SignerAdapterListener() noexcept = default;
 
 void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const std::string &data)
 {
@@ -90,6 +199,15 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case signer::DeleteHDWalletType:
       rc = onDeleteHDWallet(packet.data(), packet.id());
       break;
+   case signer::HeadlessPubKeyRequestType:
+      rc = onHeadlessPubKeyRequest(packet.data(), packet.id());
+      break;
+   case signer::ImportWoWalletType:
+      rc = onImportWoWallet(packet.data(), packet.id());
+      break;
+   case signer::SyncSettingsRequestType:
+      rc = onSyncSettings(packet.data());
+      break;
    default:
       logger_->warn("[SignerAdapterListener::{}] unprocessed packet type {}", __func__, packet.type());
       break;
@@ -107,80 +225,21 @@ void SignerAdapterListener::OnClientConnected(const std::string &clientId)
 void SignerAdapterListener::OnClientDisconnected(const std::string &clientId)
 {
    logger_->debug("[SignerAdapterListener] client {} disconnected", toHex(clientId));
+
+   shutdownIfNeeded();
+}
+
+void SignerAdapterListener::onClientError(const std::string &clientId, const std::string &error)
+{
+   logger_->debug("[SignerAdapterListener] client {} error: {}", toHex(clientId), error);
+
+   shutdownIfNeeded();
 }
 
 void SignerAdapterListener::setCallbacks()
 {
-   const auto &cbPeerConnected = [this](const std::string &ip) {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
-      sendData(signer::PeerConnectedType, evt.SerializeAsString());
-   };
-   const auto &cbPeerDisconnected = [this](const std::string &ip) {
-      signer::PeerEvent evt;
-      evt.set_ip_address(ip);
-      sendData(signer::PeerDisconnectedType, evt.SerializeAsString());
-   };
-   const auto &cbPwd = [this](const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) {
-      signer::PasswordEvent evt;
-      evt.set_wallet_id(txReq.walletId);
-      evt.set_prompt(prompt);
-      if (txReq.autoSign) {
-         evt.set_auto_sign(true);
-      } else {
-         for (const auto &input : txReq.inputs) {
-            evt.add_inputs(input.serialize().toBinStr());
-         }
-         for (const auto &recip : txReq.recipients) {
-            evt.add_recipients(recip->getSerializedScript().toBinStr());
-         }
-         evt.set_fee(txReq.fee);
-         evt.set_rbf(txReq.RBF);
-         if (txReq.change.value) {
-            auto change = evt.mutable_change();
-            change->set_address(txReq.change.address.display());
-            change->set_index(txReq.change.index);
-            change->set_value(txReq.change.value);
-         }
-      }
-      sendData(signer::PasswordRequestType, evt.SerializeAsString());
-   };
-   const auto &cbTxSigned = [this](const BinaryData &tx) {
-      signer::TxSignEvent evt;
-      evt.set_tx(tx.toBinStr());
-      sendData(signer::TxSignedType, evt.SerializeAsString());
-   };
-   const auto &cbCancelTxSign = [this](const BinaryData &txHash) {
-      signer::TxSignEvent evt;
-      evt.set_tx_hash(txHash.toBinStr());
-      sendData(signer::CancelTxSignType, evt.SerializeAsString());
-   };
-   const auto &cbXbtSpent = [this](const int64_t value, bool autoSign) {
-      signer::XbtSpentEvent evt;
-      evt.set_value(value);
-      evt.set_auto_sign(autoSign);
-      sendData(signer::XbtSpentType, evt.SerializeAsString());
-   };
-   const auto &cbAutoSign = [this](bool act, const std::string &walletId) {
-      signer::AutoSignActEvent evt;
-      evt.set_activated(act);
-      evt.set_wallet_id(walletId);
-      sendData(signer::AutoSignActType, evt.SerializeAsString());
-   };
-   const auto &cbAutoSignActivated = [cbAutoSign](const std::string &walletId) {
-      cbAutoSign(true, walletId);
-   };
-   const auto &cbAutoSignDeactivated = [cbAutoSign](const std::string &walletId) {
-      cbAutoSign(false, walletId);
-   };
-   const auto &cbCustomDialog = [this](const std::string &dialogName, const std::string &data) {
-      signer::CustomDialogRequest evt;
-      evt.set_dialogname(dialogName);
-      evt.set_variantdata(data);
-      sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
-   };
-   app_->setCallbacks(cbPeerConnected, cbPeerDisconnected, cbPwd, cbTxSigned, cbCancelTxSign
-      , cbXbtSpent, cbAutoSignActivated, cbAutoSignDeactivated, cbCustomDialog);
+   callbacks_.reset(new HeadlessContainerCallbacksImpl(this));
+   app_->setCallbacks(callbacks_.get());
 }
 
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
@@ -206,6 +265,13 @@ bool SignerAdapterListener::onReady(int cur, int total)
    return true;
 }
 
+void SignerAdapterListener::sendStatusUpdate()
+{
+   signer::UpdateStatus evt;
+   evt.set_signer_bind_status(signer::BindStatus(app_->signerBindStatus()));
+   sendData(signer::UpdateStatusType, evt.SerializeAsString());
+}
+
 bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::SignTxRequest request;
@@ -216,6 +282,11 @@ bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::Req
    const auto wallet = walletsMgr_->getWalletById(request.tx_request().wallet_id());
    if (!wallet) {
       logger_->error("[SignerAdapterListener::{}] failed to find wallet with id {}"
+         , __func__, request.tx_request().wallet_id());
+      return false;
+   }
+   if (wallet->isWatchingOnly()) {
+      logger_->error("[SignerAdapterListener::{}] can't sign with watching-only wallet {}"
          , __func__, request.tx_request().wallet_id());
       return false;
    }
@@ -336,6 +407,32 @@ bool SignerAdapterListener::onSyncWallet(const std::string &data, bs::signer::Re
    return false;
 }
 
+bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wallet> &wallet
+   , Blocksettle::Communication::signer::PacketType pt, bs::signer::RequestId reqId)
+{
+   signer::CreateWatchingOnlyResponse response;
+   response.set_wallet_id(wallet->walletId());
+   response.set_name(wallet->name());
+   response.set_description(wallet->description());
+
+   for (const auto &group : wallet->getGroups()) {
+      auto groupEntry = response.add_groups();
+      groupEntry->set_type(group->index());
+      for (const auto &leaf : group->getLeaves()) {
+         auto leafEntry = groupEntry->add_leaves();
+         leafEntry->set_id(leaf->walletId());
+         leafEntry->set_index(leaf->index());
+         leafEntry->set_public_key(leaf->getPubKey().toBinStr());
+         for (const auto &addr : leaf->getUsedAddressList()) {
+            auto addrEntry = leafEntry->add_addresses();
+            addrEntry->set_index(leaf->getAddressIndex(addr));
+            addrEntry->set_aet(addr.getType());
+         }
+      }
+   }
+   return sendData(pt, response.SerializeAsString(), reqId);
+}
+
 bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::DecryptWalletRequest request;
@@ -356,27 +453,7 @@ bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::Requ
       return false;
    }
 
-   signer::CreateWatchingOnlyResponse response;
-   response.set_wallet_id(woWallet->walletId());
-   response.set_name(woWallet->name());
-   response.set_description(woWallet->description());
-
-   for (const auto &group : woWallet->getGroups()) {
-      auto groupEntry = response.add_groups();
-      groupEntry->set_type(group->index());
-      for (const auto &leaf : group->getLeaves()) {
-         auto leafEntry = groupEntry->add_leaves();
-         leafEntry->set_id(leaf->walletId());
-         leafEntry->set_index(leaf->index());
-         leafEntry->set_public_key(leaf->getPubKey().toBinStr());
-         for (const auto &addr : leaf->getUsedAddressList()) {
-            auto addrEntry = leafEntry->add_addresses();
-            addrEntry->set_index(leaf->getAddressIndex(addr));
-            addrEntry->set_aet(addr.getType());
-         }
-      }
-   }
-   return sendData(signer::CreateWOType, response.SerializeAsString(), reqId);
+   return sendWoWallet(woWallet, signer::CreateWOType, reqId);
 }
 
 bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::signer::RequestId reqId)
@@ -419,6 +496,17 @@ bool SignerAdapterListener::onSetLimits(const std::string &data)
    limits.autoSignTimeS = request.auto_sign_time();
    limits.manualPassKeepInMemS = request.password_keep_in_mem();
    app_->setLimits(limits);
+   return true;
+}
+
+bool SignerAdapterListener::onSyncSettings(const std::string &data)
+{
+   auto request = make_unique<signer::Settings>();
+   if (!request->ParseFromString(data)) {
+      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
+      return false;
+   }
+   app_->updateSettings(request);
    return true;
 }
 
@@ -605,9 +693,62 @@ bool SignerAdapterListener::onDeleteHDWallet(const std::string &data, bs::signer
    return sendData(signer::DeleteHDWalletType, response.SerializeAsString(), reqId);
 }
 
+bool SignerAdapterListener::onHeadlessPubKeyRequest(const std::string &, bs::signer::RequestId reqId)
+{
+   signer::HeadlessPubKeyResponse response;
+   if (app_ && app_->connection()) {
+      response.set_pubkey(app_->connection()->getOwnPubKey().toHexStr());
+   }
+
+   return sendData(signer::HeadlessPubKeyRequestType, response.SerializeAsString(), reqId);
+}
+
+bool SignerAdapterListener::onImportWoWallet(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::ImportWoWalletRequest request;
+   if (!request.ParseFromString(data)) {
+      return false;
+   }
+
+   if (!SystemFileUtils::pathExist(settings_->getWalletsDir())) {
+      if (SystemFileUtils::mkPath(settings_->getWalletsDir())) {
+         logger_->info("[{}] created missing wallets dir {}", __func__, settings_->getWalletsDir());
+      }
+      else {
+         logger_->error("[{}] failed to create wallets dir {}", __func__, settings_->getWalletsDir());
+         return false;
+      }
+   }
+
+   {
+      const std::string filePath = settings_->getWalletsDir() + "/" + request.filename();
+      std::ofstream ofs(filePath, std::ios::out | std::ios::binary | std::ios::trunc);
+      if (!ofs.good()) {
+         logger_->error("[{}] failed to write to {}", __func__, filePath);
+         return false;
+      }
+      ofs << request.content();
+   }
+
+   const auto woWallet = walletsMgr_->loadWoWallet(settings_->getWalletsDir(), request.filename());
+   if (!woWallet) {
+      return false;
+   }
+   walletsListUpdated();
+   return sendWoWallet(woWallet, signer::ImportWoWalletType, reqId);
+}
+
 void SignerAdapterListener::walletsListUpdated()
 {
    logger_->debug("[{}]", __func__);
    app_->walletsListUpdated();
    sendData(signer::WalletsListUpdatedType, {});
+}
+
+void SignerAdapterListener::shutdownIfNeeded()
+{
+   if (settings_->runMode() == bs::signer::RunMode::lightgui && app_) {
+      logger_->info("terminal disconnect detected, shutdown...");
+      app_->close();
+   }
 }

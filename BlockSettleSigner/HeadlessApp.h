@@ -1,6 +1,7 @@
 #ifndef __HEADLESS_APP_H__
 #define __HEADLESS_APP_H__
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include "CoreWallet.h"
@@ -16,14 +17,20 @@ namespace bs {
       class WalletsManager;
    }
 }
+namespace Blocksettle {
+   namespace Communication {
+      namespace signer {
+         class Settings;
+      }
+   }
+}
 class HeadlessContainerListener;
 class SignerAdapterListener;
 class HeadlessSettings;
-class ZmqSecuredServerConnection;
 class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
-
+class HeadlessContainerCallbacks;
 
 class HeadlessAppObj
 {
@@ -35,15 +42,7 @@ public:
 
    void start();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
-   void setCallbacks(const std::function<void(const std::string &)> &cbPeerConn
-      , const std::function<void(const std::string &)> &cbPeerDisconn
-      , const std::function<void(const bs::core::wallet::TXSignRequest &, const std::string &)> &cbPwd
-      , const std::function<void(const BinaryData &)> &cbTxSigned
-      , const std::function<void(const BinaryData &)> &cbCancelTxSign
-      , const std::function<void(int64_t, bool)> &cbXbtSpent
-      , const std::function<void(const std::string &)> &cbAsAct
-      , const std::function<void(const std::string &)> &cbAsDeact
-      , const std::function<void(const std::string &, const std::string &)> &cbCustomDialog);
+   void setCallbacks(HeadlessContainerCallbacks *callbacks);
 
    void reloadWallets(const std::string &, const std::function<void()> &);
    void reconnect(const std::string &listenAddr, const std::string &port);
@@ -55,6 +54,11 @@ public:
    void close();
    void walletsListUpdated();
 
+   void updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
+
+   std::shared_ptr<ZmqBIP15XServerConnection> connection() const;
+   bs::signer::BindStatus signerBindStatus() const { return signerBindStatus_; }
+
 private:
    void startInterface();
    void onlineProcessing();
@@ -64,12 +68,13 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    const std::shared_ptr<HeadlessSettings>      settings_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
-   std::shared_ptr<ZmqBIP15XServerConnection> connection_;
+   std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;
    std::shared_ptr<SignerAdapterListener>       adapterLsn_;
    ProcessControl             guiProcess_;
-   std::function<void(bool)>  cbReady_ = nullptr;
-   bool ready_ = false;
+   std::function<void(bool)>  cbReady_;
+   bool ready_{false};
+   std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 };
 
 #endif // __HEADLESS_APP_H__

@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 #include "AuthProxy.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "SignerAdapter.h"
 
 using namespace bs::hd;
 
@@ -13,10 +14,12 @@ using namespace bs::hd;
 
 QmlFactory::QmlFactory(const std::shared_ptr<ApplicationSettings> &settings
    , const std::shared_ptr<ConnectionManager> &connectionManager
-   , const std::shared_ptr<spdlog::logger> &logger, QObject *parent)
+   , SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
+   , QObject *parent)
    : QObject(parent)
    , settings_(settings)
    , connectionManager_(connectionManager)
+   , adapter_(adapter)
    , logger_(logger)
 {
 }
@@ -35,6 +38,7 @@ WalletInfo *QmlFactory::createWalletInfo() {
 WalletInfo *QmlFactory::createWalletInfo(const QString &walletId)
 {
    if (!walletsMgr_) {
+      logger_->error("[{}] wallets manager is missing", __func__);
       return nullptr;
    }
    // ? move logic to WalletsManager ?
@@ -48,7 +52,7 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId)
    else {
       const auto &hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
       if (!hdWallet) {
-         // wallet not found
+         logger_->warn("[{}] wallet with id {} not found", __func__, walletId.toStdString());
          wi = new bs::hd::WalletInfo();
       }
       else {
@@ -100,9 +104,21 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
    return authObject;
 }
 
-void QmlFactory::setClipboard(const QString &text)
+void QmlFactory::requestHeadlessPubKey()
+{
+   adapter_->getHeadlessPubKey([this](const std::string &key){
+      setHeadlessPubKey(QString::fromStdString(key));
+   });
+}
+
+void QmlFactory::setClipboard(const QString &text) const
 {
    QApplication::clipboard()->setText(text);
+}
+
+QString QmlFactory::getClipboard() const
+{
+   return QApplication::clipboard()->text();
 }
 
 void QmlFactory::installEventFilterToObj(QObject *object)
@@ -116,11 +132,21 @@ void QmlFactory::installEventFilterToObj(QObject *object)
 
 bool QmlFactory::eventFilter(QObject *object, QEvent *event)
 {
+   // Do not return true to allow propagate close event (it's needed for tx dialog close signal detection)
    if (event->type() == QEvent::Close) {
-      event->accept();
       emit closeEventReceived();
-      return true;
    }
 
    return false;
+}
+
+QString QmlFactory::headlessPubKey() const
+{
+    return headlessPubKey_;
+}
+
+void QmlFactory::setHeadlessPubKey(const QString &headlessPubKey)
+{
+    headlessPubKey_ = headlessPubKey;
+    emit headlessPubKeyChanged();
 }

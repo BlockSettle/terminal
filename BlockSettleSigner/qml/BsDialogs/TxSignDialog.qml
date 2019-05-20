@@ -21,11 +21,14 @@ CustomTitleDialogWindow {
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property bool   cancelledByUser: false
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
+    property int addressRowHeight: 24
+    property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
 
+    id: root
     title: qsTr("Sign Transaction")
     rejectable: true
     width: 500
-    height: 500
+    height: 420 + recvAddresses.height - 24
 
     function clickConfirmBtn() {
         btnConfirm.clicked()
@@ -69,24 +72,13 @@ CustomTitleDialogWindow {
         }
     }
 
-//    onWalletInfoChanged: {
-//        if (walletInfo.encType === QPasswordData.Auth) btnConfirm.clicked()
-//    }
-
-
     cContentItem: ColumnLayout {
         spacing: 10
-
-        CustomLabel {
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-            visible: !txInfo.nbInputs && walletInfo.name.length
-            text: qsTr("Wallet %1").arg(walletInfo.name)
-        }
+        Layout.alignment: Qt.AlignTop
 
         GridLayout {
             id: gridDashboard
-            visible: txInfo.nbInputs
+            //visible: txInfo.nbInputs
             columns: 2
             Layout.leftMargin: 10
             Layout.rightMargin: 10
@@ -119,38 +111,44 @@ CustomTitleDialogWindow {
 
             RowLayout {
                 Layout.columnSpan: 2
+                Layout.fillWidth: true
 
                 CustomLabel {
-                    Layout.fillWidth: true
-                    text: qsTr("Receiving Address(es)")
-                    //verticalAlignment: Text.AlignTop
+                    text: qsTr("Output Address(es)")
                     Layout.alignment: Qt.AlignTop
-                    Layout.fillHeight: true
                 }
-                ColumnLayout{
-                    spacing: 0
-                    Layout.leftMargin: 0
-                    Layout.rightMargin: 0
-                    Repeater {
-                        Layout.alignment: Qt.AlignTop
-                        model: txInfo.recvAddresses
 
-                        Rectangle {
-                            color: "transparent"
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            implicitWidth: labelTxWalletId.width
-                            Layout.alignment: Qt.AlignLeft
+                ListView {
+                    id: recvAddresses
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignRight
+                    model: txInfo.recvAddresses
+                    clip: true
+                    Layout.preferredHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
 
-                            CustomLabelValue {
-                                id: labelTxWalletId
-                                text: modelData
-                                Layout.alignment: Qt.AlignLeft
-                            }
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {
+                        active: true
+                    }
+
+                    delegate: Rectangle {
+                        id: addressRect
+                        color: "transparent"
+                        height: 22
+                        width: recvAddresses.width
+
+                        CustomLabelValue {
+                            id: labelTxWalletId
+                            text: modelData
+                            anchors.fill: addressRect
+                            horizontalAlignment: Text.AlignRight
+                            verticalAlignment: Text.AlignTop
+                            font: fixedFont
                         }
                     }
-                }
 
+                }
             }
 
 
@@ -304,7 +302,6 @@ CustomTitleDialogWindow {
                 value: timer.timeLeft
             }
         }
-
     }
 
     cFooterItem: RowLayout {

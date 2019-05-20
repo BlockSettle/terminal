@@ -157,6 +157,10 @@ ApplicationWindow {
         dlg.init()
     }
 
+    function showError(text) {
+        ibFailure.displayMessage(text)
+    }
+
     function raiseWindow() {
         JsHelper.raiseWindow()
     }

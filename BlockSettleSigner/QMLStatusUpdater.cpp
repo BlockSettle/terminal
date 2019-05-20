@@ -8,11 +8,11 @@ QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params
    , const std::shared_ptr<spdlog::logger> &logger)
    : QObject(nullptr), settings_(params), adapter_(adapter), logger_(logger)
 {
-   connect(settings_.get(), &SignerSettings::offlineChanged, [this] { emit offlineChanged(); });
-   connect(settings_.get(), &SignerSettings::listenSocketChanged, [this] { emit listenSocketChanged(); });
-   connect(settings_.get(), &SignerSettings::limitManualXbtChanged, [this] { emit manualSignLimitChanged(); });
-   connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, [this] { emit autoSignLimitChanged(); });
-   connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, [this] { emit autoSignTimeLimitChanged(); });
+   connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLStatusUpdater::offlineChanged);
+   connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLStatusUpdater::listenSocketChanged);
+   connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLStatusUpdater::manualSignLimitChanged);
+   connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLStatusUpdater::autoSignLimitChanged);
+   connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLStatusUpdater::autoSignTimeLimitChanged);
 
    connect(adapter_, &SignerAdapter::peerConnected, this, &QMLStatusUpdater::onPeerConnected);
    connect(adapter_, &SignerAdapter::peerDisconnected, this, &QMLStatusUpdater::onPeerDisconnected);
@@ -55,7 +55,7 @@ void QMLStatusUpdater::onAutoSignActivated(const std::string &walletId)
 {
    autoSignActive_ = true;
    emit autoSignActiveChanged();
-   autoSignTimeSpent_ = 0;
+   autoSignTimeSpent_.start();
    asTimer_.start(1000);
 }
 
@@ -64,16 +64,15 @@ void QMLStatusUpdater::onAutoSignDeactivated(const std::string &walletId)
    autoSignActive_ = false;
    emit autoSignActiveChanged();
    asTimer_.stop();
-   autoSignTimeSpent_ = 0;
+   autoSignTimeSpent_.invalidate();
    emit autoSignTimeSpentChanged();
 }
 
 void QMLStatusUpdater::onAutoSignTick()
 {
-   autoSignTimeSpent_++;
    emit autoSignTimeSpentChanged();
 
-   if ((settings_->limitAutoSignTime() > 0) && (autoSignTimeSpent_ >= settings_->limitAutoSignTime())) {
+   if ((settings_->limitAutoSignTime() > 0) && (timeAutoSignSeconds() >= settings_->limitAutoSignTime())) {
       deactivateAutoSign();
    }
 }
@@ -88,7 +87,11 @@ void QMLStatusUpdater::onPeerConnected(const QString &ip)
 void QMLStatusUpdater::onPeerDisconnected(const QString &ip)
 {
    logger_->debug("[{}] {}", __func__, ip.toStdString());
-   connectedClients_.erase(ip);
+   auto it = connectedClients_.find(ip);
+   if (it == connectedClients_.end()) {
+      return;
+   }
+   connectedClients_.erase(it);
    emit connectionsChanged();
 }
 
@@ -105,6 +108,19 @@ QStringList QMLStatusUpdater::connectedClients() const
       result.push_back(client);
    }
    return result;
+}
+
+int QMLStatusUpdater::timeAutoSignSeconds() const
+{
+   if (!autoSignTimeSpent_.isValid()) {
+      return 0;
+   }
+   return int(autoSignTimeSpent_.elapsed() / 1000);
+}
+
+QString QMLStatusUpdater::autoSignTimeSpent() const
+{
+   return SignerSettings::secondsToIntervalStr(timeAutoSignSeconds());
 }
 
 void QMLStatusUpdater::xbtSpent(const qint64 value, bool autoSign)

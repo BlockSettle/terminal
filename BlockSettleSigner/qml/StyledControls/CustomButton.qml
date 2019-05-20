@@ -10,6 +10,7 @@ Button {
     rightPadding: 15
     anchors.margins: 5
 
+
     contentItem: Text {
         text: control.text
         opacity: enabled ? 1.0 : 0.3

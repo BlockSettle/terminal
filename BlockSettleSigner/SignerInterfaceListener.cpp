@@ -3,6 +3,7 @@
 #include <QDataStream>
 #include <QFile>
 #include <QStandardPaths>
+#include <QApplication>
 #include "CelerClientConnection.h"
 #include "DataConnection.h"
 #include "DataConnectionListener.h"
@@ -13,6 +14,7 @@
 
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
+
 
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ZmqBIP15XDataConnection> &conn
@@ -70,6 +72,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       onSyncWallet(packet.data(), packet.id());
       break;
    case signer::CreateWOType:
+   case signer::ImportWoWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
    case signer::GetDecryptedNodeType:
@@ -93,6 +96,12 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    case signer::WalletsListUpdatedType:
       parent_->walletsListUpdated();
       break;
+   case signer::HeadlessPubKeyRequestType:
+      onHeadlessPubKey(packet.data(), packet.id());
+      break;
+   case signer::UpdateStatusType:
+      onUpdateStatus(packet.data());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -101,18 +110,21 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
 
 void SignerInterfaceListener::OnConnected()
 {
-   logger_->debug("[SignerInterfaceListener] connected");
+   logger_->info("[SignerInterfaceListener] connected");
    send(signer::HeadlessReadyType, "");
 }
 
 void SignerInterfaceListener::OnDisconnected()
 {
-   logger_->debug("[SignerInterfaceListener] disconnected");
+   // Signer interface should not be used without signer, we could quit safely
+   logger_->info("[SignerInterfaceListener] disconnected, shutdown");
+   shutdown();
 }
 
 void SignerInterfaceListener::OnError(DataConnectionError errorCode)
 {
-   logger_->debug("[SignerInterfaceListener] error {}", errorCode);
+   logger_->info("[SignerInterfaceListener] error {}, shutdown", errorCode);
+   shutdown();
 }
 
 bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
@@ -475,4 +487,40 @@ void SignerInterfaceListener::onDeleteHDWallet(const std::string &data, bs::sign
    }
    itCb->second(response.success(), response.error());
    cbDeleteHDWalletReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onHeadlessPubKey(const std::string &data, bs::signer::RequestId reqId)
+{
+   signer::HeadlessPubKeyResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+   const auto &itCb = cbHeadlessPubKeyReqs_.find(reqId);
+   if (itCb == cbHeadlessPubKeyReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
+   }
+   itCb->second(response.pubkey());
+   cbHeadlessPubKeyReqs_.erase(itCb);
+}
+
+void SignerInterfaceListener::onUpdateStatus(const std::string &data)
+{
+   signer::UpdateStatus evt;
+   if (!evt.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   if (evt.signer_bind_status() == signer::BindFailed) {
+      QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
+   }
+}
+
+void SignerInterfaceListener::shutdown()
+{
+   // For some reasons QApplication::quit does not work reliable
+   std::exit(0);
 }

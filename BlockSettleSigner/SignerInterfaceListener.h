@@ -33,6 +33,7 @@ public:
    void OnError(DataConnectionError errorCode) override;
 
    bs::signer::RequestId send(signer::PacketType pt, const std::string &data);
+   std::shared_ptr<ZmqBIP15XDataConnection> getDataConnection() { return connection_; }
 
    void setTxSignCb(bs::signer::RequestId reqId, const std::function<void(const BinaryData &)> &cb) {
       cbSignReqs_[reqId] = cb;
@@ -66,6 +67,9 @@ public:
    void setDeleteHDWalletCb(bs::signer::RequestId reqId, const std::function<void(bool success, const std::string& errorMsg)> &cb) {
       cbDeleteHDWalletReqs_[reqId] = cb;
    }
+   void setHeadlessPubKeyCb(bs::signer::RequestId reqId, const std::function<void(const std::string &pubKey)> &cb) {
+      cbHeadlessPubKeyReqs_[reqId] = cb;
+   }
 
 private:
    void onReady(const std::string &data);
@@ -84,6 +88,10 @@ private:
    void onChangePassword(const std::string &data, bs::signer::RequestId);
    void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
+   void onHeadlessPubKey(const std::string &data, bs::signer::RequestId);
+   void onUpdateStatus(const std::string &data);
+
+   void shutdown();
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
@@ -101,6 +109,7 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bool success)>> cbChangePwReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
+   std::map<bs::signer::RequestId, std::function<void(const std::string &pubKey)>> cbHeadlessPubKeyReqs_;
 };
 
 

@@ -9,46 +9,47 @@ namespace spdlog {
    class logger;
 }
 
+namespace Blocksettle { namespace Communication { namespace signer {
+   class Settings;
+} } }
+
 class HeadlessSettings
 {
 public:
+   using Settings = Blocksettle::Communication::signer::Settings;
+
    HeadlessSettings(const std::shared_ptr<spdlog::logger> &logger);
-   ~HeadlessSettings() noexcept = default;
+   ~HeadlessSettings() noexcept;
 
    bool loadSettings(int argc, char **argv);
 
    NetworkType netType() const;
-   bool testNet() const { return testNet_; }
+   bool testNet() const;
    bs::signer::Limits limits() const;
-   std::string getWalletsDir() const;
-   bool watchingOnly() const { return watchOnly_; }
-   std::string listenAddress() const { return listenAddress_; }
-   std::string listenPort() const { return listenPort_; }
-   std::string interfacePort() const { return interfacePort_; }
+   std::string getWalletsDir() const { return walletsDir_; }
+   std::string listenAddress() const;
+   std::string listenPort() const;
+   std::string interfacePort() const { return "23457"; }
+   std::string getTermIDKeyStr() const { return termIDKeyStr_; }
+   bool getTermIDKeyBin(BinaryData& keyBuf);
    std::string logFile() const { return logFile_; }
-   std::vector<std::string> trustedTerminals() const { return trustedTerminals_; }
+   std::vector<std::string> trustedTerminals() const;
    std::vector<std::string> trustedInterfaces() const;
 
    bs::signer::RunMode runMode() const { return runMode_; }
 
-private:
-   // since INIReader doesn't support stringlist settings, iniStringToStringList do that
-   // valstr is a string taken from INI file, and contains comma separated values.
-   std::vector<std::string> iniStringToStringList(std::string valstr) const;
+   bool update(const std::unique_ptr<Settings> &);
+   static bool loadSettings(Settings *settings, const std::string &fileName);
+   static bool saveSettings(const Settings &settings, const std::string &fileName);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
 
-   bool     testNet_ = false;
-   bool     watchOnly_ = false;
-   double   autoSignSpendLimit_ = 0;
    std::string logFile_;
-   std::string walletsDir_;
-   std::string listenAddress_ = "0.0.0.0";
-   std::string listenPort_ = "23456";
-   std::string interfacePort_ = "23457";
-   std::vector<std::string>   trustedTerminals_;
+   std::string termIDKeyStr_;
    bs::signer::RunMode runMode_;
+   std::string walletsDir_;
+   std::unique_ptr<Settings> d_;
 };
 
 

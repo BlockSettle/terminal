@@ -31,6 +31,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "bs_signer.pb.h"
+
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
 #endif // BS_USE_DBUS
@@ -55,14 +57,12 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    registerQtTypes();
 
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
+   connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
+   connect(adapter_, &SignerAdapter::headlessBindFailed, this, &QMLAppObj::onHeadlessBindFailed);
    connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
-
-   connect(adapter_, &SignerAdapter::customDialogRequest, this, [this](const QString &dialogName, const QVariantMap &data){
-      QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
-                                , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
-   });
+   connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -77,7 +77,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    settingsConnections();
 
-   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
+   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, adapter_, logger_);
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
    connect(qmlFactory_.get(), &QmlFactory::closeEventReceived, this, [this](){
       hideQmlWindow();
@@ -98,19 +98,21 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       }
    });
 
-   trayIcon_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
-   connect(trayIcon_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
-   connect(trayIcon_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
+   if (params->runMode() != bs::signer::ui::RunMode::lightgui) {
+      trayIconOptional_ = new QSystemTrayIcon(QIcon(QStringLiteral(":/images/bs_logo.png")), this);
+      connect(trayIconOptional_, &QSystemTrayIcon::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+      connect(trayIconOptional_, &QSystemTrayIcon::activated, this, &QMLAppObj::onSysTrayActivated);
 
 #ifdef BS_USE_DBUS
-   if (dbus_->isValid()) {
-      notifMode_ = Freedesktop;
+      if (dbus_->isValid()) {
+         notifMode_ = Freedesktop;
 
-      QObject::disconnect(trayIcon_, &QSystemTrayIcon::messageClicked,
-         this, &QMLAppObj::onSysTrayMsgClicked);
-      connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
-   }
+         QObject::disconnect(trayIconOptional_, &QSystemTrayIcon::messageClicked,
+            this, &QMLAppObj::onSysTrayMsgClicked);
+         connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
+      }
 #endif // BS_USE_DBUS
+   }
 }
 
 void QMLAppObj::onReady()
@@ -123,6 +125,19 @@ void QMLAppObj::onReady()
       logger_->debug("Syncing wallet {} of {}", cur, total);
    };
    walletsMgr_->syncWallets(cbProgress);
+}
+
+void QMLAppObj::onConnectionError()
+{
+   QMetaObject::invokeMethod(rootObj_, "showError"
+                             , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
+}
+
+void QMLAppObj::onHeadlessBindFailed()
+{
+   QMetaObject::invokeMethod(rootObj_, "showError"
+                             , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
+   statusUpdater_->setSocketOk(false);
 }
 
 void QMLAppObj::onWalletsSynced()
@@ -143,11 +158,14 @@ void QMLAppObj::settingsConnections()
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
+   connect(settings_.get(), &SignerSettings::changed, this, &QMLAppObj::onSettingChanged);
 }
 
 void QMLAppObj::Start()
 {
-   trayIcon_->show();
+   if (trayIconOptional_) {
+      trayIconOptional_->show();
+   }
 }
 
 void QMLAppObj::registerQtTypes()
@@ -201,6 +219,11 @@ void QMLAppObj::onListenSocketChanged()
 void QMLAppObj::onLimitsChanged()
 {
    adapter_->setLimits(settings_->limits());
+}
+
+void QMLAppObj::onSettingChanged(int)
+{
+   adapter_->syncSettings(settings_->get());
 }
 
 void QMLAppObj::SetRootObject(QObject *obj)
@@ -275,24 +298,25 @@ void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, co
 
    bs::hd::WalletInfo *walletInfo = qmlFactory_.get()->createWalletInfo(txReq.walletId);
    if (!walletInfo->walletId().isEmpty()) {
-      if (alert && trayIcon_) {
+      if (alert && trayIconOptional_) {
          QString notifPrompt = prompt;
          if (!txReq.walletId.empty()) {
             notifPrompt = tr("Enter password for %1").arg(walletInfo->name());
          }
 
          if (notifMode_ == QSystemTray) {
-            trayIcon_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
+            trayIconOptional_->showMessage(tr("Password request"), notifPrompt, QSystemTrayIcon::Warning, 30000);
          }
-   #ifdef BS_USE_DBUS
+#ifdef BS_USE_DBUS
          else {
             dbus_->notifyDBus(QSystemTrayIcon::Warning,
                tr("Password request"), notifPrompt,
                QIcon(), 30000);
          }
-   #endif // BS_USE_DBUS
+#endif // BS_USE_DBUS
       }
 
+      raiseQmlWindow();
       QMetaObject::invokeMethod(rootObj_, "createTxSignDialog"
                                 , Q_ARG(QVariant, prompt)
                                 , Q_ARG(QVariant, QVariant::fromValue(txInfo))
@@ -320,4 +344,24 @@ void QMLAppObj::onSysTrayActivated(QSystemTrayIcon::ActivationReason reason)
 void QMLAppObj::onCancelSignTx(const BinaryData &txId)
 {
    emit cancelSignTx(QString::fromStdString(txId.toBinStr()));
+}
+
+void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantMap &data)
+{
+   QMetaEnum metaSignerDialogType = QMetaEnum::fromType<bs::signer::ui::DialogType>();
+
+   bool isDialogCorrect = false;
+   for (int i = 0; i < metaSignerDialogType.keyCount(); ++i) {
+      if (bs::signer::ui::getSignerDialogPath(static_cast<bs::signer::ui::DialogType>(i)) == dialogName) {
+         isDialogCorrect = true;
+         break;
+      }
+   }
+
+   if (!isDialogCorrect) {
+      throw(std::logic_error("Unknown signer dialog"));
+      return;
+   }
+   QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
+                             , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
 }
