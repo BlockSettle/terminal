@@ -270,6 +270,11 @@ void RootItem::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
                        : message->senderId();
 
       TreeItem* chatNode = findChatNode(chatId.toStdString());
+      if (chatNode == nullptr) {
+         chatId = message->receiverId();
+         chatNode = findChatNode(chatId.toStdString());
+      }
+
       if (chatNode && chatNode->getAcceptType() == TreeItem::NodeType::MessageDataNode) {
          for (auto child : chatNode->getChildren()) {
             CategoryElement * elem = static_cast<CategoryElement*>(child);
