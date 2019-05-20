@@ -83,9 +83,9 @@ Q_DECLARE_METATYPE(std::shared_ptr<Chat::RoomData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::RoomData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::UserData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::UserData>>)
-Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::OTCRequestData>>)
-Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::OTCResponseData>>)
-Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::OTCUpdateData>>)
+Q_DECLARE_METATYPE(std::shared_ptr<Chat::OTCRequestData>)
+Q_DECLARE_METATYPE(std::shared_ptr<Chat::OTCResponseData>)
+Q_DECLARE_METATYPE(std::shared_ptr<Chat::OTCUpdateData>)
 
 namespace {
    const QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
@@ -106,9 +106,9 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::RoomData>>>();
    qRegisterMetaType<std::shared_ptr<Chat::UserData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::UserData>>>();
-   qRegisterMetaType<std::vector<std::shared_ptr<Chat::OTCRequestData>>>();
-   qRegisterMetaType<std::vector<std::shared_ptr<Chat::OTCResponseData>>>();
-   qRegisterMetaType<std::vector<std::shared_ptr<Chat::OTCUpdateData>>>();
+   qRegisterMetaType<std::shared_ptr<Chat::OTCRequestData>>();
+   qRegisterMetaType<std::shared_ptr<Chat::OTCResponseData>>();
+   qRegisterMetaType<std::shared_ptr<Chat::OTCUpdateData>>();
 
    //This is required (with Qt::QueuedConnection), because of ZmqBIP15XDataConnection crashes when delete it from this (callback) thread
    connect(this, &ChatClient::ForceLogoutSignal, this, &ChatClient::onForceLogoutSignal, Qt::QueuedConnection);
