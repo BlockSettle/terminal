@@ -39,7 +39,6 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    , const QString &port
    , NetworkType netType
    , const std::shared_ptr<ConnectionManager>& connectionManager
-   , const bool& ephemeralDataConnKeys
    , const std::string& ownKeyFileDir
    , const std::string& ownKeyFileName
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
@@ -54,13 +53,13 @@ std::shared_ptr<SignContainer> CreateSigner(const std::shared_ptr<spdlog::logger
    case SignContainer::OpMode::Local:
       return std::make_shared<LocalSigner>(logger, appSettings->GetHomeDir()
          , netType, port, connectionManager, appSettings, runMode
-         , ephemeralDataConnKeys, ownKeyFileDir, ownKeyFileName
+         , false, ownKeyFileDir, ownKeyFileName
          , appSettings->get<double>(ApplicationSettings::autoSignSpendLimit)
          , inNewKeyCB);
 
    case SignContainer::OpMode::Remote:
       return std::make_shared<RemoteSigner>(logger, host, port, netType
-         , connectionManager, appSettings, runMode, ephemeralDataConnKeys
+         , connectionManager, appSettings, runMode, false
          , ownKeyFileDir, ownKeyFileName, inNewKeyCB);
 
    default:

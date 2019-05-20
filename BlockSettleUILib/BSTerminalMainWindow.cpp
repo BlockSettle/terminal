@@ -478,33 +478,29 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
    QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
 
-   // This callback will only be used for remote signers. Note the code below,
-   // where a local signer is eventually marked as remote. We'll work around
-   // this by defining the callbacks when the signer is initially marked remote.
-   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB = nullptr;
-
-   bool ephemeralDataConnKeys = true;
-   std::string keyFileDir = "";
-   std::string keyFileName = "";
    if (runMode == SignContainer::OpMode::Remote) {
-      ephemeralDataConnKeys = false;
-      keyFileDir = SystemFilePaths::appDataLocation();
-      keyFileName = "client.peers";
+      const auto keyFileDir = SystemFilePaths::appDataLocation();
+      const auto keyFileName = "client.peers";
 
       // Define the callback that will be used to determine if the signer's BIP
       // 150 identity key, if it has changed, will be accepted. It needs strings
       // for the old and new keys, and a promise to set once the user decides.
-      ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
+      const auto &ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
          , const std::string& srvAddrPort
          , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
          logMgr_->logger()->debug("[BSTerminalMainWindow::createSigner::callback] received"
-            " new key {} [{}], old key {} [{}] for {}", newKey, newKey.size(), oldKey
-            , oldKey.size(), srvAddrPort);
-         QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm, srvAddrPort] {
+            " new key {} [{}], old key {} [{}] for {} ({})", newKey, newKey.size(), oldKey
+            , oldKey.size(), srvAddrPort, signersProvider_->getCurrentSigner().serverId());
+         std::string oldKeyHex = oldKey;
+         if (oldKeyHex.empty() && (signersProvider_->getCurrentSigner().serverId() == srvAddrPort)) {
+            oldKeyHex = signersProvider_->getCurrentSigner().key.toStdString();
+         }
+
+         QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
             BSMessageBox box(BSMessageBox::question, tr("Server identity key has changed")
                , tr("Do you wish to import the new server %1 identity key?")
                .arg(QString::fromStdString(srvAddrPort))
-               , tr("Old Key: %1\nNew Key: %2").arg(QString::fromStdString(oldKey))
+               , tr("Old Key: %1\nNew Key: %2").arg(QString::fromStdString(oldKeyHex))
                .arg(QString::fromStdString(newKey)), this);
 
             const bool answer = (box.exec() == QDialog::Accepted);
@@ -514,6 +510,26 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             newKeyProm->set_value(answer);
          });
       };
+      retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
+         , resultHost, resultPort, netType, connectionManager_
+         , keyFileDir, keyFileName, ourNewKeyCB);
+      const auto remoteSigner = std::dynamic_pointer_cast<RemoteSigner>(retPtr);
+      if (remoteSigner) {
+         std::vector<std::pair<std::string, BinaryData>> keys;
+         for (const auto &signer : signersProvider_->signers()) {
+            try {
+               const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
+               keys.push_back({ signer.serverId(), signerKey });
+            }
+            catch (const std::exception &e) {
+               logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
+            }
+         }
+         remoteSigner->updatePeerKeys(keys);
+      }
+      else {
+         logMgr_->logger()->warn("[{}] failed to cast remote signer", __func__);
+      }
    }
    else if (runMode == SignContainer::OpMode::Local) {
       resultPort = localSignerPort;
@@ -533,11 +549,10 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             return retPtr;
          }
       }
+      retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
+         , resultHost, resultPort, netType, connectionManager_);
    }
 
-   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-      , resultHost, resultPort, netType, connectionManager_
-      , ephemeralDataConnKeys, keyFileDir, keyFileName, ourNewKeyCB);
    return retPtr;
 }
 
