@@ -478,11 +478,10 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
    QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
 
-   // These callbacks will only be used for remote signers. Note the code below,
+   // This callback will only be used for remote signers. Note the code below,
    // where a local signer is eventually marked as remote. We'll work around
    // this by defining the callbacks when the signer is initially marked remote.
    ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB = nullptr;
-   ZmqBIP15XDataConnection::invokeCB ourInvokeCB = nullptr;
 
    bool ephemeralDataConnKeys = true;
    std::string keyFileDir = "";
@@ -498,25 +497,23 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
          , const std::string& srvAddrPort
          , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
+         logMgr_->logger()->debug("[BSTerminalMainWindow::createSigner::callback] received"
+            " new key {} [{}], old key {} [{}] for {}", newKey, newKey.size(), oldKey
+            , oldKey.size(), srvAddrPort);
          QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm, srvAddrPort] {
-            BSMessageBox *box = new BSMessageBox(BSMessageBox::question
-               , tr("Server identity key has changed")
-               , tr("Do you wish to import the new server identity key?")
-               , tr("Old Key: %1\nNew Key: %2")
-               .arg(QString::fromStdString(oldKey))
-               .arg(QString::fromStdString(newKey))
+            BSMessageBox box(BSMessageBox::question, tr("Server identity key has changed")
+               , tr("Do you wish to import the new server %1 identity key?")
+               , tr("Old Key: %2\nNew Key: %3")
+               .arg(QString::fromStdString(srvAddrPort))
+               .arg(QString::fromStdString(oldKey)).arg(QString::fromStdString(newKey))
                , this);
 
-            const bool answer = (box->exec() == QDialog::Accepted);
-            box->deleteLater();
+            const bool answer = (box.exec() == QDialog::Accepted);
 
             if (answer) {
-               newKeyProm->set_value(true);
                signersProvider_->addKey(srvAddrPort, newKey);
             }
-            else {
-               newKeyProm->set_value(false);
-            }
+            newKeyProm->set_value(answer);
          });
       };
    }
