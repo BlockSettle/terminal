@@ -2,14 +2,19 @@
 #define TREEMAPCLASSES_H
 
 #include "TreeItem.h"
+
 #include "ChatProtocol/DataObjects.h"
+
 class TreeMessageNode;
 class ChatContactElement;
-class RootItem : public TreeItem {
-   friend class ChatClientDataModel;
-   public:
+
+class RootItem : public TreeItem
+{
+friend class ChatClientDataModel;
+
+public:
    RootItem ()
-      : TreeItem(NodeType::RootNode, NodeType::CategoryNode, NodeType::RootNode)
+      : TreeItem(ChatUIDefinitions::ChatTreeNodeType::RootNode, std::vector<ChatUIDefinitions::ChatTreeNodeType>{ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode}, ChatUIDefinitions::ChatTreeNodeType::RootNode)
    {
    }
 
@@ -31,29 +36,41 @@ class RootItem : public TreeItem {
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
 
+   // insert channel for response that client send to OTC requests
+   bool insertOTCSentResponseObject(const std::string& otcId);
+
+   // insert channel for response client receive for own OTC
+   bool insertOTCReceivedResponseObject(const std::string& otcId);
+
 private:
    bool insertMessageNode(TreeMessageNode * messageNode);
    bool insertNode(TreeItem* item);
-   TreeItem* findCategoryNodeWith(TreeItem::NodeType type);
+   TreeItem* findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType type);
    std::string currentUser_;
 };
 
-class CategoryItem : public TreeItem {
-   public:
-   CategoryItem(NodeType categoryType)
-      : TreeItem(NodeType::CategoryNode, categoryType, NodeType::RootNode) {
+class TreeCategoryGroup : public TreeItem
+{
+public:
+   TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType elementType, const QString& displayName)
+      : TreeItem(ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode
+         , std::vector<ChatUIDefinitions::ChatTreeNodeType>{elementType}
+         , ChatUIDefinitions::ChatTreeNodeType::RootNode
+         , displayName)
+   {
    }
 };
 
-class CategoryElement : public TreeItem {
-   protected:
-   CategoryElement(NodeType elementType, NodeType storingType, std::shared_ptr<Chat::DataObject> object)
-      : TreeItem(elementType, storingType, NodeType::CategoryNode)
+class CategoryElement : public TreeItem
+{
+protected:
+   CategoryElement(ChatUIDefinitions::ChatTreeNodeType elementType, const std::vector<ChatUIDefinitions::ChatTreeNodeType>& storingTypes, std::shared_ptr<Chat::DataObject> object)
+      : TreeItem(elementType, storingTypes, ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode)
       , dataObject_(object)
       , newItemsFlag_(false)
    {
-
    }
+
 public:
    std::shared_ptr<Chat::DataObject> getDataObject() const {return dataObject_;}
    bool updateNewItemsFlag();

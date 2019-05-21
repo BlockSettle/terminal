@@ -23,7 +23,10 @@ int SignersModel::rowCount(const QModelIndex&) const
 
 QVariant SignersModel::data(const QModelIndex &index, int role) const
 {
-   if (index.row() >= signers_.size()) return QVariant();
+   if (index.row() >= signers_.size()) {
+      return QVariant();
+   }
+
    SignerHost signerHost = signers_.at(index.row());
 
    int currentServerIndex = signersProvider_->indexOfCurrent();
@@ -32,11 +35,9 @@ QVariant SignersModel::data(const QModelIndex &index, int role) const
        QFont font;
        font.setBold(true);
        return font;
-   }
-   else if (role == Qt::TextColorRole && index.row() == currentServerIndex && highLightSelectedServer_) {
+   } else if (role == Qt::TextColorRole && index.row() == currentServerIndex && highLightSelectedServer_) {
        return QColor(Qt::white);
-   }
-   else if (role == Qt::DisplayRole) {
+   } else if (role == Qt::DisplayRole) {
       switch (index.column()) {
       case ColumnName:
          return signerHost.name;

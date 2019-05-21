@@ -5,21 +5,21 @@ std::shared_ptr<Chat::RoomData> ChatRoomElement::getRoomData() const
    return std::dynamic_pointer_cast<Chat::RoomData>(getDataObject());
 }
 
-bool ChatRoomElement::isSupported(TreeItem *item) const
+bool ChatRoomElement::isChildSupported(const TreeItem *item) const
 {
-   bool byTypes = CategoryElement::isSupported(item);
+   bool byTypes = CategoryElement::isChildSupported(item);
    bool byData = false;
    if (byTypes) {
       const RootItem* root = nullptr;
       const TreeItem* try_root = recursiveRoot();
-      if (try_root->getType() == TreeItem::NodeType::RootNode) {
+      if (try_root->getType() == ChatUIDefinitions::ChatTreeNodeType::RootNode) {
          root = static_cast<const RootItem*>(try_root);
       }
       if (root) {
          std::string user = root->currentUser();
          auto room = std::dynamic_pointer_cast<Chat::RoomData>(getDataObject());
          if (room){
-            TreeMessageNode * mNode = static_cast<TreeMessageNode*>(item);
+            auto mNode = static_cast<const TreeMessageNode*>(item);
             if (mNode){
 //             bool forCurrentUser = (mNode->getMessage()->getSenderId().toStdString() == user
 //                             || mNode->getMessage()->getReceiverId().toStdString() == user);
@@ -41,21 +41,21 @@ std::shared_ptr<Chat::ContactRecordData> ChatContactElement::getContactData() co
    return std::dynamic_pointer_cast<Chat::ContactRecordData>(getDataObject());
 }
 
-bool ChatContactElement::isSupported(TreeItem *item) const
+bool ChatContactElement::isChildSupported(const TreeItem *item) const
 {
-   bool byTypes = CategoryElement::isSupported(item);
+   bool byTypes = CategoryElement::isChildSupported(item);
    bool byData = false;
    if (byTypes) {
       const RootItem* root = nullptr;
       const TreeItem* try_root = recursiveRoot();
-      if (try_root->getType() == TreeItem::NodeType::RootNode) {
+      if (try_root->getType() == ChatUIDefinitions::ChatTreeNodeType::RootNode) {
          root = static_cast<const RootItem*>(try_root);
       }
       if (root) {
          std::string user = root->currentUser();
          auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(getDataObject());
          if (contact) {
-            TreeMessageNode * mNode = static_cast<TreeMessageNode*>(item);
+            auto mNode = static_cast<const TreeMessageNode*>(item);
             if (mNode) {
                bool forCurrentUser = (mNode->getMessage()->senderId().toStdString() == user
                                    || mNode->getMessage()->receiverId().toStdString() == user);
