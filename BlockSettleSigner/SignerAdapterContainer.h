@@ -63,8 +63,11 @@ public:
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) override {}
 
+   bool isWalletOffline(const std::string &id) const override { return (woWallets_.find(id) != woWallets_.end()); }
+
 private:
    std::shared_ptr<SignerInterfaceListener>  listener_;
+   std::unordered_set<std::string>           woWallets_;
 };
 
 
