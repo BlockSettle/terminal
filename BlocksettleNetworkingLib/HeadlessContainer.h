@@ -140,6 +140,7 @@ public:
    bool isOffline() const override;
    bool hasUI() const override;
    SecureBinaryData getOwnPubKey() const { return connection_->getOwnPubKey(); }
+   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &keys) { connection_->updatePeerKeys(keys); }
 
    void setTargetDir(const QString& targetDir) override;
    QString targetDir() const override;

@@ -41,6 +41,10 @@ struct SignerHost
             .arg(port)
             .arg(key);
    }
+
+   std::string serverId() const {
+      return address.toStdString() + ":" + std::to_string(port);
+   }
 };
 
 class SignersProvider : public QObject
