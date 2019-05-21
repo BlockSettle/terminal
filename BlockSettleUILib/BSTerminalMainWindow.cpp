@@ -42,7 +42,6 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
-#include "OfflineSigner.h"
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
@@ -510,34 +509,28 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             newKeyProm->set_value(answer);
          });
       };
-      retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-         , resultHost, resultPort, netType, connectionManager_
-         , keyFileDir, keyFileName, ourNewKeyCB);
-      const auto remoteSigner = std::dynamic_pointer_cast<RemoteSigner>(retPtr);
-      if (remoteSigner) {
-         std::vector<std::pair<std::string, BinaryData>> keys;
-         for (const auto &signer : signersProvider_->signers()) {
-            try {
-               const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-               keys.push_back({ signer.serverId(), signerKey });
-            }
-            catch (const std::exception &e) {
-               logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
-            }
+      const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
+         , resultHost, resultPort, netType, connectionManager_, applicationSettings_
+         , runMode, false, keyFileDir, keyFileName, ourNewKeyCB);
+      retPtr = remoteSigner;
+
+      std::vector<std::pair<std::string, BinaryData>> keys;
+      for (const auto &signer : signersProvider_->signers()) {
+         try {
+            const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
+            keys.push_back({ signer.serverId(), signerKey });
          }
-         remoteSigner->updatePeerKeys(keys);
+         catch (const std::exception &e) {
+            logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
+         }
       }
-      else {
-         logMgr_->logger()->warn("[{}] failed to cast remote signer", __func__);
-      }
+      remoteSigner->updatePeerKeys(keys);
    }
    else if (runMode == SignContainer::OpMode::Local) {
       resultPort = localSignerPort;
+      bool startLocalSignerProcess = true;
 
       if (SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
-         runMode = SignContainer::OpMode::Remote;
-         resultHost = QLatin1String("127.0.0.1");
-
          if (BSMessageBox(BSMessageBox::messageBoxType::question
             , tr("Signer Local Connection")
             , tr("Another Signer (or some other program occupying port %1) is "
@@ -548,9 +541,13 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             , this).exec() == QDialog::Rejected) {
             return retPtr;
          }
+         startLocalSignerProcess = false;
       }
-      retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-         , resultHost, resultPort, netType, connectionManager_);
+      retPtr = std::make_shared<LocalSigner>(logMgr_->logger()
+         , applicationSettings_->GetHomeDir(), netType
+         , resultPort, connectionManager_, applicationSettings_
+         , startLocalSignerProcess, "", ""
+         , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
    }
 
    return retPtr;
@@ -623,8 +620,10 @@ void BSTerminalMainWindow::acceptMDAgreement()
 
 void BSTerminalMainWindow::updateControlEnabledState()
 {
-   action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
-      && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+   if (action_send_) {
+      action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
+         && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+   }
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -933,6 +932,7 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 
 void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError error, const QString &details)
 {
+   logMgr_->logger()->debug("[{}] error {} (prev: {}), details: {}", __func__, (int)error, (int)lastSignerError_, details.toStdString());
    if (lastSignerError_ == error) {
       return;
    }

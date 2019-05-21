@@ -191,8 +191,7 @@ public:
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , SignContainer::OpMode mode = OpMode::Local
-      , const bool ephemeralDataConnKeys = false
+      , const bool startSignerProcess = true
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
@@ -207,6 +206,7 @@ protected:
 
 private:
    const QString  homeDir_;
+   const bool     startProcess_;
    const double   asSpendLimit_;
    std::shared_ptr<QProcess>  headlessProcess_;
 };
