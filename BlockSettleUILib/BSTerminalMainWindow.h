@@ -39,7 +39,6 @@ class CCFileManager;
 class CCPortfolioModel;
 class CelerClient;
 class ConnectionManager;
-class OfflineSigner;
 class QSystemTrayIcon;
 class RequestReplyCommand;
 class StatusBarView;
@@ -123,10 +122,10 @@ private slots:
 
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
-   QAction *action_send_;
-   QAction *action_receive_;
-   QAction *action_login_;
-   QAction *action_logout_;
+   QAction *action_send_ = nullptr;
+   QAction *action_receive_ = nullptr;
+   QAction *action_login_ = nullptr;
+   QAction *action_logout_ = nullptr;
 
    std::shared_ptr<bs::LogManager>        logMgr_;
    std::shared_ptr<ApplicationSettings>   applicationSettings_;
