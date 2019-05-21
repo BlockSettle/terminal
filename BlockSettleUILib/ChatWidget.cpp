@@ -547,7 +547,7 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
       // handle ctrl+c (cmd+c on macOS)
       if(keyEvent->key() == Qt::Key_C && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
          if (ui_->textEditMessages->textCursor().hasSelection() && isChatMessagesSelected_) {
-            QApplication::clipboard()->setMimeData(ui_->textEditMessages->getMimeDataFromSelection());
+            QApplication::clipboard()->setText(ui_->textEditMessages->getFormattedTextFromSelection());
             return true;
          }
       }

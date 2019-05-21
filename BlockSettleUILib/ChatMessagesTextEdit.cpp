@@ -203,7 +203,7 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
 void ChatMessagesTextEdit::copyActionTriggered()
 {
    if (textCursor_.hasSelection()) {
-      QApplication::clipboard()->setMimeData(this->createMimeDataFromSelection());
+      QApplication::clipboard()->setText(getFormattedTextFromSelection());
    }
    else {
       QTextDocument doc;
@@ -265,9 +265,36 @@ void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, con
    tableFormat.setColumnWidthConstraints(col_widths);
 }
 
-QMimeData *ChatMessagesTextEdit::getMimeDataFromSelection()
+QString ChatMessagesTextEdit::getFormattedTextFromSelection()
 {
-   return createMimeDataFromSelection();
+   QString text;
+   QTextDocument textDocument;
+
+   // get selected text in html format
+   textDocument.setHtml(createMimeDataFromSelection()->html());      
+   QTextBlock &currentBlock = textDocument.begin();
+   int blockCount = 0;
+
+   // each column is presented as a block
+   while (currentBlock.isValid()) {
+      blockCount++;
+      if (!currentBlock.text().isEmpty()) {
+
+         // format columns splits to tabulation
+         if (!text.isEmpty()) {
+            text += QChar::Tabulation;
+            
+            // new row (when few rows are selected)
+            if ((blockCount - 2) % 5 == 0) {
+               text += QChar::LineFeed;
+            }
+         }
+         // replace some special characters, because they can display incorrect
+         text += currentBlock.text().replace(QChar::LineSeparator, QChar::LineFeed);
+      }
+      currentBlock = currentBlock.next();
+   }
+   return text;
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
