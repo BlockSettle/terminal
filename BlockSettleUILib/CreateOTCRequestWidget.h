@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <memory>
 
-#include "CommonTypes.h"
+#include "ChatCommonTypes.h"
 
 namespace Ui {
    class CreateOTCRequestWidget;
@@ -19,7 +19,7 @@ public:
    CreateOTCRequestWidget(QWidget* parent = nullptr);
    ~CreateOTCRequestWidget() override;
 
-   bs::network::Side::Type GetSide() const;
+   bs::network::ChatOTCSide::Type GetSide() const;
    bs::network::OTCRangeID::Type GetRange() const;
    bool SendAsOwn() const;
    bool ReplyRequired() const;
