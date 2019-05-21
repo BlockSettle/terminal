@@ -287,7 +287,7 @@ void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::sign
       const auto format = (wallet.format() == signer::WalletFormatHD) ? bs::sync::WalletFormat::HD
          : bs::sync::WalletFormat::Settlement;
       result.push_back({ format, wallet.id(), wallet.name(), wallet.description()
-         , parent_->netType() });
+         , parent_->netType(), wallet.watching_only() });
    }
    itCb->second(result);
    cbWalletInfo_.erase(itCb);

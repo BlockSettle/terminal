@@ -35,12 +35,17 @@ TreeView {
     TableViewColumn {
         title: qsTr("ID")
         role: "walletId"
-        width: parent.width / 5
+        width: parent.width / 6
+    }
+    TableViewColumn {
+        title: qsTr("Type")
+        role: "walletType"
+        width: parent.width / 6
     }
     TableViewColumn {
         title: qsTr("Encryption Method")
         role: "state"
-        width: parent.width / 4
+        width: parent.width / 5
     }
 
     style: TreeViewStyle {
