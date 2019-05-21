@@ -66,6 +66,7 @@ public:
    BinaryData getOwnPubKey() const;
    bool genBIPIDCookie();
    void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
+   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
    void setLocalHeartbeatInterval();
 
    // Overridden functions from ZmqDataConnection.
