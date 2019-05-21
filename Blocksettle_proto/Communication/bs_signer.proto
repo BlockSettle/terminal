@@ -179,6 +179,7 @@ message SyncWalletInfoResponse
       string id = 2;
       string name = 3;
       string description = 4;
+      bool   watching_only = 5;
    }
    repeated WalletInfo wallets = 1;
 }
