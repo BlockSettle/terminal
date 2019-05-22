@@ -112,7 +112,7 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
             newKeyProm->set_value(true);
             return;
          }
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question
             , QObject::tr("Server identity key has changed")
             , QObject::tr("Import %1 ID key?")
             .arg(serverName(kt))
@@ -120,7 +120,6 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
             .arg(oldKeyBin.isNull() ? QObject::tr("<none>") : QString::fromStdString(oldKeyBin.toHexStr()))
             .arg(QString::fromStdString(newKey))
             , parent);
-         box->setIdKeyNoticeMode();
 
          const bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();

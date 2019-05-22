@@ -75,12 +75,6 @@ void BSMessageBox::setCancelVisible(bool visible)
    ui_->pushButtonCancel->setVisible(visible);
 }
 
-void BSMessageBox::setIdKeyNoticeMode()
-{
-   setMinimumWidth(650);
-   setMaximumWidth(650);
-}
-
 void BSMessageBox::onDetailsPressed() {
    if (detailsVisible()) {
       ui_->pushButtonShowDetails->setText(tr("Show Details"));

@@ -496,14 +496,12 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
          }
 
          QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
-            BSMessageBox *box = new BSMessageBox(BSMessageBox::question, tr("Signer Id Key has changed")
+            MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question, tr("Signer Id Key has changed")
                , tr("Import Signer ID Key?")
                .arg(QString::fromStdString(srvAddrPort))
                , tr("Old Key: %1\nNew Key: %2")
                .arg(oldKeyHex.empty() ? tr("<none>") : QString::fromStdString(oldKeyHex))
                .arg(QString::fromStdString(newKey)), this);
-
-            box->setIdKeyNoticeMode();
 
             const bool answer = (box->exec() == QDialog::Accepted);
             box->deleteLater();
@@ -1566,7 +1564,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       ArmoryServer server = servers.at(serverIndex);
 
       if (server.armoryDBKey.isEmpty()) {
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question
                           , tr("ArmoryDB Key Import")
                           , tr("Import ArmoryDB ID Key?")
                           , tr("Address: %1\n"
@@ -1576,7 +1574,6 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setIdKeyNoticeMode();
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1588,7 +1585,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
          promiseObj->set_value(true);
       }
       else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
+         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::warning
                           , tr("ArmoryDB Key")
                           , tr("ArmoryDB Key was changed.\n"
                                "Do you wish to proceed connection and save new key?")
@@ -1601,7 +1598,6 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(server.armoryDBKey)
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setIdKeyNoticeMode();
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);
