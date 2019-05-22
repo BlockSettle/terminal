@@ -11,32 +11,35 @@
 
 CacheFile::CacheFile(const std::string &filename, size_t nbElemLimit)
    : QObject(nullptr)
+   , inMem_(filename.empty())
    , nbMaxElems_(nbElemLimit)
    , stopped_(false)
    , threadPool_(this)
    , saveTimer_(this)
 {
-   dbEnv_ = std::make_shared<LMDBEnv>();
-   dbEnv_->open(filename);
-   dbEnv_->setMapSize(DBMAPSIZE);
-   db_ = new LMDB(dbEnv_.get(), "cache");
+   if (!inMem_) {
+      dbEnv_ = std::make_shared<LMDBEnv>();
+      dbEnv_->open(filename);
+      dbEnv_->setMapSize(DBMAPSIZE);
+      db_ = new LMDB(dbEnv_.get(), "cache");
 
-   threadPool_.setMaxThreadCount(1);
-   read();
-   QtConcurrent::run(&threadPool_, this, &CacheFile::saver);
+      threadPool_.setMaxThreadCount(1);
+      read();
+      QtConcurrent::run(&threadPool_, this, &CacheFile::saver);
 
-   saveTimer_.setInterval(123 * 1000);
-   connect(&saveTimer_, &QTimer::timeout, [this] {
-      wcModified_.wakeOne();
-   });
-   saveTimer_.start();
+      saveTimer_.setInterval(123 * 1000);
+      connect(&saveTimer_, &QTimer::timeout, [this] {
+         wcModified_.wakeOne();
+      });
+      saveTimer_.start();
+   }
 }
 
 CacheFile::~CacheFile()
 {
    stop();
 
-   if (db_) {
+   if (!inMem_ && db_) {
       db_->close();
       dbEnv_->close();
       delete db_;
@@ -47,6 +50,9 @@ CacheFile::~CacheFile()
 void CacheFile::stop()
 {
    stopped_ = true;
+   if (inMem_) {
+      return;
+   }
    {
       QMutexLocker lock(&mtxModified_);
       wcModified_.wakeAll();
@@ -170,19 +176,30 @@ BinaryData CacheFile::get(const BinaryData &key) const
    QReadLocker lockMap(&rwLock_);
    auto it = map_.find(key);
    if (it == map_.end()) {
-      QMutexLocker lockMapModif(&mtxModified_);
-      it = mapModified_.find(key);
-      if (it == mapModified_.end()) {
+      if (inMem_) {
          return {};
       }
-      return it->second;
+      else {
+         QMutexLocker lockMapModif(&mtxModified_);
+         it = mapModified_.find(key);
+         if (it == mapModified_.end()) {
+            return {};
+         }
+         return it->second;
+      }
    }
    return it->second;
 }
 
 void CacheFile::put(const BinaryData &key, const BinaryData &val)
 {
-   QMutexLocker lock(&mtxModified_);
-   mapModified_[key] = val;
-   wcModified_.wakeOne();
+   if (inMem_) {
+      QWriteLocker lock(&rwLock_);
+      map_[key] = val;
+   }
+   else {
+      QMutexLocker lock(&mtxModified_);
+      mapModified_[key] = val;
+      wcModified_.wakeOne();
+   }
 }
