@@ -13,6 +13,8 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    , ui_{new Ui::SignerSettingsPage{}}
 {
    ui_->setupUi(this);
+   ui_->widgetTwoWayAuth->hide();
+   ui_->checkBoxTwoWayAuth->hide();
 
    connect(ui_->comboBoxRunMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignerSettingsPage::runModeChanged);
    connect(ui_->spinBoxAsSpendLimit, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &SignerSettingsPage::onAsSpendLimitChanged);
@@ -94,8 +96,8 @@ void SignerSettingsPage::showLimits(bool show)
 
 void SignerSettingsPage::showSignerKeySettings(bool show)
 {
-   ui_->widgetTwoWayAuth->setVisible(show);
-   ui_->checkBoxTwoWayAuth->setVisible(show);
+   //ui_->widgetTwoWayAuth->setVisible(show);
+   //ui_->checkBoxTwoWayAuth->setVisible(show);
    ui_->widgetSignerKeyComboBox->setVisible(show);
 }
 

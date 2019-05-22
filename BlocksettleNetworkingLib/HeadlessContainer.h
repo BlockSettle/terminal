@@ -140,6 +140,7 @@ public:
    bool isOffline() const override;
    bool hasUI() const override;
    SecureBinaryData getOwnPubKey() const { return connection_->getOwnPubKey(); }
+   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &keys) { connection_->updatePeerKeys(keys); }
 
    void setTargetDir(const QString& targetDir) override;
    QString targetDir() const override;
@@ -190,8 +191,7 @@ public:
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , SignContainer::OpMode mode = OpMode::Local
-      , const bool ephemeralDataConnKeys = false
+      , const bool startSignerProcess = true
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
@@ -206,6 +206,7 @@ protected:
 
 private:
    const QString  homeDir_;
+   const bool     startProcess_;
    const double   asSpendLimit_;
    std::shared_ptr<QProcess>  headlessProcess_;
 };
