@@ -768,17 +768,17 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
 
 void WalletsWidget::onDeleteWallet()
 {
-   const auto action = qobject_cast<QAction *>(sender());
-   const auto walletId = action ? action->data().toString() : QString();
-   if (walletId.isEmpty()) {
-      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
-      return;
-   }
-   const auto &wallet = walletsManager_->getWalletById(walletId.toStdString());
-   if (!wallet) {
-      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
-      return;
-   }
-   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, connectionManager_
-                      , logger_, this).exec();
+//   const auto action = qobject_cast<QAction *>(sender());
+//   const auto walletId = action ? action->data().toString() : QString();
+//   if (walletId.isEmpty()) {
+//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
+//      return;
+//   }
+//   const auto &wallet = walletsManager_->getWalletById(walletId.toStdString());
+//   if (!wallet) {
+//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
+//      return;
+//   }
+//   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, connectionManager_
+//                      , logger_, this).exec();
 }

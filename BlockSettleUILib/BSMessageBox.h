@@ -14,7 +14,7 @@ class BSMessageBox : public QDialog
 Q_OBJECT
 
 public:
-   enum messageBoxType {
+   enum Type {
       info = 1,
       success = 2,
       question = 3,
@@ -22,15 +22,15 @@ public:
       critical = 5
    };
 
-   BSMessageBox(messageBoxType mbType
+   BSMessageBox(Type mbType
       , const QString& title, const QString& text
       , QWidget* parent = nullptr);
 
-   BSMessageBox(messageBoxType mbType
+   BSMessageBox(Type mbType
       , const QString& title, const QString& text, const QString& details
       , QWidget* parent = nullptr);
 
-   BSMessageBox(messageBoxType mbType
+   BSMessageBox(Type mbType
       , const QString& title, const QString& text
       , const QString& description, const QString& details
       , QWidget* parent = nullptr);
@@ -44,6 +44,8 @@ public:
 
    void setOkVisible(bool visible);
    void setCancelVisible(bool visible);
+
+   void setIdKeyNoticeMode();
 protected slots:
    void onDetailsPressed();
 
@@ -51,7 +53,7 @@ private:
    bool detailsVisible() const;
    void hideDetails();
    void showDetails();
-   void setType(messageBoxType type);
+   void setType(Type type);
 
 private:
    std::unique_ptr<Ui::BSMessageBox> ui_;

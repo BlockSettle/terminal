@@ -114,12 +114,13 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
          }
          BSMessageBox *box = new BSMessageBox(BSMessageBox::question
             , QObject::tr("Server identity key has changed")
-            , QObject::tr("Do you wish to import the new %1 server identity key?")
+            , QObject::tr("Import %1 ID key?")
             .arg(serverName(kt))
             , QObject::tr("Old Key: %1\nNew Key: %2")
             .arg(oldKeyBin.isNull() ? QObject::tr("<none>") : QString::fromStdString(oldKeyBin.toHexStr()))
             .arg(QString::fromStdString(newKey))
             , parent);
+         box->setIdKeyNoticeMode();
 
          const bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
