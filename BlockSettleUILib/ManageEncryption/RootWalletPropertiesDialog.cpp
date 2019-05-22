@@ -13,7 +13,6 @@
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
 #include "ManageEncryption/ManageEncryptionDialog.h"
-#include "WalletBackupDialog.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
