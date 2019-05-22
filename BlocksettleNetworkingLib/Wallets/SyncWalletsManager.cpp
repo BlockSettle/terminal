@@ -976,6 +976,14 @@ void WalletsManager::addWallet(const HDWalletPtr &wallet)
    }
 }
 
+bool WalletsManager::isWatchingOnly(const std::string &walletId) const
+{
+   if (signContainer_) {
+      return signContainer_->isWalletOffline(walletId);
+   }
+   return false;
+}
+
 void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr)
 {
    const auto &cc = ccProd.toStdString();

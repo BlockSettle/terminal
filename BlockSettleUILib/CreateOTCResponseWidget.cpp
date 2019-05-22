@@ -28,7 +28,7 @@ void CreateOTCResponseWidget::OnCreateResponse()
    emit ResponseCreated();
 }
 
-void CreateOTCResponseWidget::SetSide(const bs::network::Side::Type& side)
+void CreateOTCResponseWidget::SetSide(const bs::network::ChatOTCSide::Type& side)
 {
    if (side == bs::network::Side::Sell) {
       ui_->labelSide->setText(tr("Sell"));
