@@ -136,12 +136,21 @@ namespace Chat
    static const QString OTCDataObjectKey = QStringLiteral("otc_data");
    static const QString OTCRqSideKey = QStringLiteral("otc_rq_side");
    static const QString OTCRqRangeIdKey = QStringLiteral("otc_rq_range");
-   static const QString OTCIdClientKey = QStringLiteral("otc_id_client");
-   static const QString OTCIdServerKey = QStringLiteral("otc_id_server");
+   static const QString OTCRequestIdClientKey = QStringLiteral("otc_request_id_client");
+   static const QString OTCRequestIdServerKey = QStringLiteral("otc_request_id_server");
+   static const QString OTCResponseIdClientKey = QStringLiteral("otc_response_id_client");
+   static const QString OTCResponseIdServerKey = QStringLiteral("otc_response_id_server");
    static const QString OTCRequestorIdKey = QStringLiteral("otc_requestor_id");
+   static const QString OTCResponderIdKey = QStringLiteral("otc_responder_id");
    static const QString OTCTargetIdKey = QStringLiteral("otc_target_id");
    static const QString OTCSubmitTimestampKey = QStringLiteral("otc_submit_timestamp");
    static const QString OTCExpiredTimestampKey = QStringLiteral("otc_expired_timestamp");
+   static const QString OTCResponseTimestampKey = QStringLiteral("otc_response_timestamp");
+   static const QString OTCNegotiationChannelIdKey = QStringLiteral("otc_negotiation_timestamp");
+   static const QString OTCPriceRangeObjectKey = QStringLiteral("otc_price_range");
+   static const QString OTCQuantityRangeObjectKey = QStringLiteral("otc_quantity_range");
+   static const QString OTCLowerKey = QStringLiteral("lower");
+   static const QString OTCUpperKey = QStringLiteral("upper");
 
 
    template <typename T>

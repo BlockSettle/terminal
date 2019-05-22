@@ -1,5 +1,7 @@
 #include "OTCResponseData.h"
 
+#include "../ProtocolDefinitions.h"
+
 #include <QDateTime>
 
 namespace Chat {
@@ -7,13 +9,57 @@ namespace Chat {
 QJsonObject OTCResponseData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
+   data[OTCResponseIdClientKey] = clientResponseId_;
+   data[OTCResponseIdServerKey] = serverResponseId_;
+   data[OTCNegotiationChannelIdKey] = negotiationChannelId_;
+   data[OTCRequestIdServerKey] = serverRequestId_;
+   data[OTCRequestorIdKey] = requestorId_;
+   data[OTCTargetIdKey] = initialTargetId_;
+   data[OTCResponderIdKey] = responderId_;
+   data[OTCResponseTimestampKey] = QString::number(responseTimestamp_);
+
+   QJsonObject priceRangeObj =  {{OTCLowerKey, QString::number(priceRange_.lower)},
+                                 {OTCUpperKey, QString::number(priceRange_.upper)}};
+   data[OTCPriceRangeObjectKey] = priceRangeObj;
+
+   QJsonObject quantityRangeObj = {{OTCLowerKey, QString::number(quantityRange_.lower)},
+                                   {OTCUpperKey, QString::number(quantityRange_.upper)}};
+   data[OTCQuantityRangeObjectKey] = quantityRangeObj;
 
    return data;
 }
 
 std::shared_ptr<OTCResponseData> OTCResponseData::fromJSON(const std::string& jsonData)
 {
-   return nullptr;
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+
+   QString clientResponseId = data[OTCResponseIdClientKey].toString();
+   QString serverResponseId = data[OTCResponseIdServerKey].toString();
+   QString negotiationChannelId = data[OTCNegotiationChannelIdKey].toString();
+   QString serverRequestId = data[OTCRequestIdServerKey].toString();
+   QString requestorId = data[OTCRequestorIdKey].toString();
+   QString initialTargetId = data[OTCTargetIdKey].toString();
+   QString responderId = data[OTCResponderIdKey].toString();
+   uint64_t responseTimestamp = data[OTCResponseTimestampKey].toString().toULongLong();
+
+   QJsonObject pro = data[OTCPriceRangeObjectKey].toObject();
+   bs::network::OTCPriceRange priceRange = {pro[OTCLowerKey].toString().toULongLong(),
+                                            pro[OTCUpperKey].toString().toULongLong()};
+
+   QJsonObject qro = data[OTCQuantityRangeObjectKey].toObject();
+   bs::network::OTCQuantityRange quantityRange =
+   {qro[OTCLowerKey].toString().toULongLong(), qro[OTCUpperKey].toString().toULongLong()};
+
+   return std::make_shared<OTCResponseData>(clientResponseId,
+                                           serverResponseId,
+                                           negotiationChannelId,
+                                           serverRequestId,
+                                           requestorId,
+                                           initialTargetId,
+                                           responderId,
+                                           responseTimestamp,
+                                           priceRange,
+                                           quantityRange);
 }
 
 OTCResponseData::OTCResponseData(const QString& clientResponseId

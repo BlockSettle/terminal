@@ -7,8 +7,8 @@ namespace Chat {
 QJsonObject OTCRequestData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
-   data[OTCIdClientKey] = clientRequestId_;
-   data[OTCIdServerKey] = serverRequestId_;
+   data[OTCRequestIdClientKey] = clientRequestId_;
+   data[OTCRequestIdServerKey] = serverRequestId_;
    data[OTCRequestorIdKey] = requestorId_;
    data[OTCTargetIdKey] = targetId_;
    data[OTCSubmitTimestampKey] = QString::number(submitTimestamp_);
@@ -23,8 +23,8 @@ std::shared_ptr<OTCRequestData> OTCRequestData::fromJSON(const std::string& json
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-   QString clientRequestId = data[OTCIdClientKey].toString();
-   QString serverRequestId = data[OTCIdServerKey].toString();
+   QString clientRequestId = data[OTCRequestIdClientKey].toString();
+   QString serverRequestId = data[OTCRequestIdServerKey].toString();
    QString requestorId = data[OTCRequestorIdKey].toString();
    QString targetId = data[OTCTargetIdKey].toString();
    uint64_t submitTimestamp = data[OTCSubmitTimestampKey].toString().toULongLong();
