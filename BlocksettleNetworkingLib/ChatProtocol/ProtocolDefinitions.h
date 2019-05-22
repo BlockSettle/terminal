@@ -146,7 +146,7 @@ namespace Chat
    static const QString OTCSubmitTimestampKey = QStringLiteral("otc_submit_timestamp");
    static const QString OTCExpiredTimestampKey = QStringLiteral("otc_expired_timestamp");
    static const QString OTCResponseTimestampKey = QStringLiteral("otc_response_timestamp");
-   static const QString OTCNegotiationChannelIdKey = QStringLiteral("otc_negotiation_timestamp");
+   static const QString OTCNegotiationChannelIdKey = QStringLiteral("otc_negotiation_channel_id");
    static const QString OTCPriceRangeObjectKey = QStringLiteral("otc_price_range");
    static const QString OTCQuantityRangeObjectKey = QStringLiteral("otc_quantity_range");
    static const QString OTCLowerKey = QStringLiteral("lower");
