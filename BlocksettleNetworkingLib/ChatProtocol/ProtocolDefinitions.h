@@ -134,6 +134,15 @@ namespace Chat
    static const QString GlobalRoomKey = QStringLiteral("global_chat");
    static const QString OTCRoomKey = QStringLiteral("otc_chat");
    static const QString OTCDataObjectKey = QStringLiteral("otc_data");
+   static const QString OTCRqSideKey = QStringLiteral("otc_rq_side");
+   static const QString OTCRqRangeIdKey = QStringLiteral("otc_rq_range");
+   static const QString OTCIdClientKey = QStringLiteral("otc_id_client");
+   static const QString OTCIdServerKey = QStringLiteral("otc_id_server");
+   static const QString OTCRequestorIdKey = QStringLiteral("otc_requestor_id");
+   static const QString OTCTargetIdKey = QStringLiteral("otc_target_id");
+   static const QString OTCSubmitTimestampKey = QStringLiteral("otc_submit_timestamp");
+   static const QString OTCExpiredTimestampKey = QStringLiteral("otc_expired_timestamp");
+
 
    template <typename T>
    class Message
