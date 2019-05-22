@@ -851,15 +851,26 @@ void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shar
 
    // show notification of new message in tray icon
    if (isNewMessagePresented) {
-      // don't show notification for global chat
-      if (message && !IsGlobalChatRoom(message->receiverId())) {
+      if (message) {
+         auto roomItem = client_->getDataModel()->findChatNode(message->receiverId().toStdString());
+         
+         // don't display tray notification if such room flag is set
+         if (roomItem && roomItem->getType() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
+            auto roomElement = static_cast<const ChatRoomElement*>(roomItem);
+            if (roomElement) {
+               auto roomData = roomElement->getRoomData();
+               if (roomData && !roomData->displayTrayNotification()) {
+                  return;
+               }
+            }
+         }         
 
          const int maxMessageLength = 20;
 
          auto messageTitle = message->senderId();
          auto messageText = message->messageData();
          auto contactItem = client_->getDataModel()->findContactItem(message->senderId().toStdString());
-             
+
          if (contactItem && contactItem->hasDisplayName()) {
             messageTitle = contactItem->getDisplayName();
          }
