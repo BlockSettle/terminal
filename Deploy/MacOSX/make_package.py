@@ -40,10 +40,14 @@ def sign_single_app(appPath):
    command.append('Developer ID Application: BlockSettle AB (Q47AVPUL6K)')
    command.append(appPath)
 
+   print(' '.join(command))
+
    return subprocess.call(command) == 0
 
 def check_signature(appPath):
    command = 'codesign -v -R="anchor trusted" "{}"'.format(appPath)
+
+   print(command)
 
    return subprocess.call(command, shell=True) == 0
 
