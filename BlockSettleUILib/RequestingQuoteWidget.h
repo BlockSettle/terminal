@@ -32,8 +32,6 @@ public:
 
    void populateDetails(const bs::network::RFQ& rfq, const std::shared_ptr<TransactionData> &);
 
-   Q_INVOKABLE void cancel();
-
 public slots:
    void ticker();
    bool onQuoteReceived(const bs::network::Quote& quote);
