@@ -22,6 +22,8 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setCellPadding(0);
    tableFormat.setCellSpacing(0);
 
+   setupHighlightPalette();
+
    setAlignment(Qt::AlignHCenter);
    setAutoFormatting(QTextEdit::AutoAll);
    setAcceptRichText(true);
@@ -158,16 +160,6 @@ QImage ChatMessagesTextEdit::statusImage(const int &row)
    return statusImage;
 }
 
-void ChatMessagesTextEdit::mousePressEvent(QMouseEvent *ev)
-{
-   // make focus to the widget to allow use default shortcuts (like ctrl+c) from keyboard
-   if (!this->hasFocus())
-      this->setFocus();
-
-   // proceed default mouse press behaviour
-   QTextBrowser::mousePressEvent(ev);
-}
-
 void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
 {
    textCursor_ = cursorForPosition(e->pos());
@@ -273,6 +265,11 @@ void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, con
    tableFormat.setColumnWidthConstraints(col_widths);
 }
 
+QMimeData *ChatMessagesTextEdit::getMimeDataFromSelection()
+{
+   return createMimeDataFromSelection();
+}
+
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
    if (link.toString() == QLatin1Literal("load_more")) {
       loadMore();
@@ -371,6 +368,14 @@ void ChatMessagesTextEdit::loadMore()
    }
 
    messagesToLoadMore_.clear();
+}
+
+void ChatMessagesTextEdit::setupHighlightPalette()
+{
+   auto highlightPalette = palette();
+   highlightPalette.setColor(QPalette::Inactive, QPalette::Highlight, highlightPalette.color(QPalette::Active, QPalette::Highlight));
+   highlightPalette.setColor(QPalette::Inactive, QPalette::HighlightedText, highlightPalette.color(QPalette::Active, QPalette::HighlightedText));
+   setPalette(highlightPalette);   
 }
 
 void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &msg)
