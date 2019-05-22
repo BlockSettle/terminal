@@ -94,7 +94,7 @@ QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr
       return QLatin1String("XBT");
 
    case ColumnSide:
-      return QString::fromStdString(bs::network::Side::toString(otc->otcRequest().side));
+      return QString::fromStdString(bs::network::ChatOTCSide::toString(otc->otcRequest().side));
 
    case ColumnQuantity:
       return QString::fromStdString(bs::network::OTCRangeID::toString(otc->otcRequest().amountRange));

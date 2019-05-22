@@ -42,7 +42,6 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
-#include "OfflineSigner.h"
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
@@ -510,34 +509,28 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             newKeyProm->set_value(answer);
          });
       };
-      retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-         , resultHost, resultPort, netType, connectionManager_
-         , keyFileDir, keyFileName, ourNewKeyCB);
-      const auto remoteSigner = std::dynamic_pointer_cast<RemoteSigner>(retPtr);
-      if (remoteSigner) {
-         std::vector<std::pair<std::string, BinaryData>> keys;
-         for (const auto &signer : signersProvider_->signers()) {
-            try {
-               const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-               keys.push_back({ signer.serverId(), signerKey });
-            }
-            catch (const std::exception &e) {
-               logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
-            }
+      const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
+         , resultHost, resultPort, netType, connectionManager_, applicationSettings_
+         , runMode, false, keyFileDir, keyFileName, ourNewKeyCB);
+      retPtr = remoteSigner;
+
+      std::vector<std::pair<std::string, BinaryData>> keys;
+      for (const auto &signer : signersProvider_->signers()) {
+         try {
+            const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
+            keys.push_back({ signer.serverId(), signerKey });
          }
-         remoteSigner->updatePeerKeys(keys);
+         catch (const std::exception &e) {
+            logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
+         }
       }
-      else {
-         logMgr_->logger()->warn("[{}] failed to cast remote signer", __func__);
-      }
+      remoteSigner->updatePeerKeys(keys);
    }
    else if (runMode == SignContainer::OpMode::Local) {
       resultPort = localSignerPort;
+      bool startLocalSignerProcess = true;
 
       if (SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
-         runMode = SignContainer::OpMode::Remote;
-         resultHost = QLatin1String("127.0.0.1");
-
          if (BSMessageBox(BSMessageBox::messageBoxType::question
             , tr("Signer Local Connection")
             , tr("Another Signer (or some other program occupying port %1) is "
@@ -548,9 +541,13 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             , this).exec() == QDialog::Rejected) {
             return retPtr;
          }
+         startLocalSignerProcess = false;
       }
-      retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-         , resultHost, resultPort, netType, connectionManager_);
+      retPtr = std::make_shared<LocalSigner>(logMgr_->logger()
+         , applicationSettings_->GetHomeDir(), netType
+         , resultPort, connectionManager_, applicationSettings_
+         , startLocalSignerProcess, "", ""
+         , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
    }
 
    return retPtr;
@@ -623,8 +620,10 @@ void BSTerminalMainWindow::acceptMDAgreement()
 
 void BSTerminalMainWindow::updateControlEnabledState()
 {
-   action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
-      && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+   if (action_send_) {
+      action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
+         && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+   }
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -677,19 +676,7 @@ void BSTerminalMainWindow::InitAssets()
 
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
-   if (!ccFileManager_->hasLocalFile()) {
-      if (applicationSettings_->get<bool>(ApplicationSettings::dontLoadCCList)) {
-         return;
-      }
-      BSMessageBox ccQuestion(BSMessageBox::question, tr("Load Private Market Securities")
-         , tr("Would you like to load PM securities from Public Bridge now?"), this);
-      const bool loadCCs = (ccQuestion.exec() == QDialog::Accepted);
-      applicationSettings_->set(ApplicationSettings::dontLoadCCList, !loadCCs);
-      if (loadCCs) {
-         ccFileManager_->LoadCCDefinitionsFromPub();
-      }
-   }
-   else {
+   if (ccFileManager_->hasLocalFile()) {
       ccFileManager_->LoadSavedCCDefinitions();
    }
 }
@@ -1174,6 +1161,16 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->actionWithdrawalRequest->setEnabled(true);
    ui_->actionLinkAdditionalBankAccount->setEnabled(true);
 
+   if (!applicationSettings_->get<bool>(ApplicationSettings::dontLoadCCList)) {
+      BSMessageBox ccQuestion(BSMessageBox::question, tr("Load Private Market Securities")
+         , tr("Would you like to load PM securities from Public Bridge now?"), this);
+      const bool loadCCs = (ccQuestion.exec() == QDialog::Accepted);
+      applicationSettings_->set(ApplicationSettings::dontLoadCCList, !loadCCs);
+      if (loadCCs) {
+         ccFileManager_->LoadCCDefinitionsFromPub();
+      }
+   }
+
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
    ccFileManager_->ConnectToCelerClient(celerConnection_);
 
@@ -1348,7 +1345,6 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo *txInfo)
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
 {
-   //sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QSystemTrayIcon::Information);
    sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QIcon(QLatin1String(":/resources/login-logo.png")));
 }
 

@@ -24,7 +24,7 @@ public:
    bs::network::OTCResponse GetCurrentOTCResponse() const;
 
 private:
-   void SetSide(const bs::network::Side::Type& side);
+   void SetSide(const bs::network::ChatOTCSide::Type& side);
    void SetRange(const bs::network::OTCRangeID::Type& range);
 
    bs::network::OTCPriceRange    GetResponsePriceRange() const;

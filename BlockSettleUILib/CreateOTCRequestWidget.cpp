@@ -64,13 +64,13 @@ void CreateOTCRequestWidget::OnRangeSelected(int index)
    RequestUpdated();
 }
 
-bs::network::Side::Type CreateOTCRequestWidget::GetSide() const
+bs::network::ChatOTCSide::Type CreateOTCRequestWidget::GetSide() const
 {
    if (ui_->pushButtonSell->isChecked()) {
-      return bs::network::Side::Sell;
+      return bs::network::ChatOTCSide::Sell;
    }
 
-   return bs::network::Side::Buy;
+   return bs::network::ChatOTCSide::Buy;
 }
 
 bs::network::OTCRangeID::Type CreateOTCRequestWidget::GetRange() const
