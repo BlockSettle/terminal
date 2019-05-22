@@ -33,7 +33,7 @@ def make_project(sourcesRoot):
    return result == 0
 
 def sign_single_app(appPath):
-   return True
+   command = []
 
    command.append('codesign')
    command.append('-s')
@@ -43,8 +43,6 @@ def sign_single_app(appPath):
    return subprocess.call(command) == 0
 
 def check_signature(appPath):
-   return True
-
    command = 'codesign -v -R="anchor trusted" "{}"'.format(appPath)
 
    return subprocess.call(command, shell=True) == 0
@@ -112,7 +110,6 @@ def make_package(sourcesRoot, packagePath):
       return False
 
 def sign_package(packagePath):
-   return True
    if not (sign_single_app(packagePath) and check_signature(packagePath)):
       print('Failed to sign package')
       return False
