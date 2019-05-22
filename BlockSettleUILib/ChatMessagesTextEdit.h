@@ -65,7 +65,7 @@ public:
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    void setClient(std::shared_ptr<ChatClient> client);
    void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
-   QMimeData *getMimeDataFromSelection();
+   QString getFormattedTextFromSelection();
 
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
