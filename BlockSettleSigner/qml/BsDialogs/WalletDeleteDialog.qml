@@ -95,11 +95,12 @@ CustomTitleDialogWindow {
                 enabled: chkConfirm.checked
 
                 onClicked: {
+                    var rootId = walletInfo.rootId
                     var deleteCallback = function(success, errorMsg) {
                         if (success) {
                             var mb = JsHelper.messageBox(BSMessageBox.Type.Info
                                 , qsTr("Wallet deleted")
-                                , qsTr("Wallet was successfully deleted"))
+                                , qsTr("Wallet <%1> successfully deleted").arg(rootId))
                             mb.bsAccepted.connect(acceptAnimated)
                         } else {
                             JsHelper.messageBox(BSMessageBox.Type.Critical

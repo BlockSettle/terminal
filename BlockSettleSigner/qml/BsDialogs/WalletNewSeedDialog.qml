@@ -18,7 +18,7 @@ CustomTitleDialogWindow {
     property int curPage: 1
     property bool acceptable: (curPage == 1 || seedMatch)
     property bool seedMatch: rootKeyInput.acceptableInput
-    // || true  // !!! ONLY FOR TESTING!!!
+     || true  // !!! ONLY FOR TESTING!!!
 
 
     property QSeed seed: QSeed{}
@@ -57,10 +57,10 @@ CustomTitleDialogWindow {
         target: pdf
 
         onSaveSucceed: function(path){
-            JsHelper.messageBox(BSMessageBox.Success, "Create Wallet", "Paper Root Private Key successfully saved", path)
+            JsHelper.messageBox(BSMessageBox.Success, "Create Wallet", "Root Private Key successfully saved", path)
         }
         onSaveFailed: function(path) {
-            JsHelper.messageBox(BSMessageBox.Critical, "Create Wallet", "Failed to save Paper Root Private Key", path)
+            JsHelper.messageBox(BSMessageBox.Critical, "Create Wallet", "Failed to save Root Private Key", path)
         }
 
         onPrintSucceed: {
