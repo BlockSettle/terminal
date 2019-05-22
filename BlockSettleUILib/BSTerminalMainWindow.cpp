@@ -496,13 +496,16 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
          }
 
          QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
-            BSMessageBox box(BSMessageBox::question, tr("Server identity key has changed")
-               , tr("Do you wish to import the new server %1 identity key?")
+            MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question, tr("Signer Id Key has changed")
+               , tr("Import Signer ID Key?")
                .arg(QString::fromStdString(srvAddrPort))
-               , tr("Old Key: %1\nNew Key: %2").arg(QString::fromStdString(oldKeyHex))
+               , tr("Old Key: %1\nNew Key: %2")
+               .arg(oldKeyHex.empty() ? tr("<none>") : QString::fromStdString(oldKeyHex))
                .arg(QString::fromStdString(newKey)), this);
 
-            const bool answer = (box.exec() == QDialog::Accepted);
+            const bool answer = (box->exec() == QDialog::Accepted);
+            box->deleteLater();
+
             if (answer) {
                signersProvider_->addKey(srvAddrPort, newKey);
             }
@@ -531,7 +534,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
       bool startLocalSignerProcess = true;
 
       if (SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
-         if (BSMessageBox(BSMessageBox::messageBoxType::question
+         if (BSMessageBox(BSMessageBox::Type::question
             , tr("Signer Local Connection")
             , tr("Another Signer (or some other program occupying port %1) is "
             "running. Would you like to continue connecting to it?").arg(localSignerPort)
@@ -1557,9 +1560,9 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       ArmoryServer server = servers.at(serverIndex);
 
       if (server.armoryDBKey.isEmpty()) {
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question
                           , tr("ArmoryDB Key Import")
-                          , tr("Do you wish to import the following ArmoryDB Key?")
+                          , tr("Import ArmoryDB ID Key?")
                           , tr("Address: %1\n"
                                "Port: %2\n"
                                "Key: %3")
@@ -1567,8 +1570,6 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumWidth(650);
-         box->setMaximumWidth(650);
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1580,7 +1581,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
          promiseObj->set_value(true);
       }
       else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
+         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::warning
                           , tr("ArmoryDB Key")
                           , tr("ArmoryDB Key was changed.\n"
                                "Do you wish to proceed connection and save new key?")
@@ -1593,8 +1594,6 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(server.armoryDBKey)
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumWidth(650);
-         box->setMaximumWidth(650);
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);
