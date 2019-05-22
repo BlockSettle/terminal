@@ -18,7 +18,11 @@ namespace Chat {
    std::shared_ptr<Response> UpdateOTCDataResponse::fromJSON(const std::string &jsonData)
    {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-      std::shared_ptr<OTCUpdateData> otcUpdateData = OTCUpdateData::fromJSON(jsonData);
+      QJsonDocument innerDataDocument = QJsonDocument(data[OTCDataObjectKey].toObject());
+
+      std::shared_ptr<OTCUpdateData> otcUpdateData =
+            OTCUpdateData::fromJSON(
+               QString::fromUtf8(innerDataDocument.toJson()).toStdString());
 
       return std::make_shared<UpdateOTCDataResponse>(otcUpdateData);
    }

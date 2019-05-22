@@ -19,7 +19,12 @@ QJsonObject SendOTCDataRequest::toJson() const
 std::shared_ptr<Request> SendOTCDataRequest::fromJSON(const std::string &clientId, const std::string &jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-   std::shared_ptr<OTCRequestData> otcRequestData =  OTCRequestData::fromJSON(data[OTCDataObjectKey].toString().toStdString());
+   QJsonDocument innerDataDocument = QJsonDocument(data[OTCDataObjectKey].toObject());
+
+   std::shared_ptr<OTCRequestData> otcRequestData =
+         OTCRequestData::fromJSON(
+            QString::fromUtf8(innerDataDocument.toJson()).toStdString());
+
    return std::make_shared<SendOTCDataRequest>(clientId, otcRequestData);
 }
 
