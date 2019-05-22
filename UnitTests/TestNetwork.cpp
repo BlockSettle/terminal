@@ -8,7 +8,6 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
-/*
 TEST(TestNetwork, CelerMessageMapper)
 {
    for (int i = CelerAPI::CelerMessageTypeFirst; i < CelerAPI::CelerMessageTypeLast; i++) {
@@ -799,4 +798,3 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
         serverConn.reset();  // This is needed to detach listener before it's destroyed
     }
 }
-*/

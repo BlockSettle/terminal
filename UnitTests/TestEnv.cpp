@@ -53,12 +53,12 @@ TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 
 void TestEnv::shutdown()
 {
-   if(appSettings_ != nullptr)
+   const bool armoryExisted = (armoryConnection_ != nullptr);
+
+   if (appSettings_ != nullptr)
       QDir(appSettings_->GetHomeDir()).removeRecursively();
 
-   if (logger_ != nullptr)
-   {
-      logger_->debug("test done");
+   if (logger_ != nullptr) {
       logger_->flush();
       logger_ = nullptr;
    }
@@ -68,8 +68,8 @@ void TestEnv::shutdown()
    authAddrMgr_ = nullptr;
    celerConn_ = nullptr;
 
-   armoryInstance_ = nullptr;
    armoryConnection_ = nullptr;
+   armoryInstance_ = nullptr;
    assetMgr_ = nullptr;
    connMgr_ = nullptr;
    appSettings_ = nullptr;
@@ -77,6 +77,9 @@ void TestEnv::shutdown()
    walletsMgr_ = nullptr;
 
    QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
+   if (armoryExisted) {
+      QDir(QLatin1String("./fakehomedir")).removeRecursively();
+   }
 }
 
 void TestEnv::requireArmory()
@@ -87,10 +90,10 @@ void TestEnv::requireArmory()
 
    armoryInstance_ = std::make_shared<ArmoryInstance>();
 
-   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "tx_cache");
+   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "", false);
    ArmorySettings settings;
    settings.runLocally = false;
-   settings.socketType = TestEnv::appSettings()->GetArmorySocketType();
+   settings.socketType = appSettings()->GetArmorySocketType();
    settings.netType = NetworkType::TestNet;
    settings.armoryDBIp = QLatin1String("127.0.0.1");
    settings.armoryDBPort = armoryInstance_->port_;
@@ -99,24 +102,21 @@ void TestEnv::requireArmory()
 
    blockMonitor_ = std::make_shared<BlockchainMonitor>(armoryConnection_);
 
-   connMgr_ = std::make_shared<ConnectionManager>(logger_);
-   celerConn_ = std::make_shared<CelerClient>(connMgr_);
-
    qDebug() << "Waiting for ArmoryDB connection...";
    while (armoryConnection_->state() != ArmoryConnection::State::Connected) {
-      QThread::msleep(23);
+      QThread::msleep(1);
    }
    qDebug() << "Armory connected - waiting for ready state...";
    armoryConnection_->goOnline();
    while (armoryConnection_->state() != ArmoryConnection::State::Ready) {
-      QThread::msleep(23);
+      QThread::msleep(1);
    }
    logger_->debug("Armory is ready - continue execution");
 }
 
 void TestEnv::requireAssets()
 {
-   requireArmory();
+   requireConnections();
    authAddrMgr_ = std::make_shared<MockAuthAddrMgr>(logger_, armoryConnection_);
 
    assetMgr_ = std::make_shared<MockAssetManager>(logger_);
@@ -124,6 +124,14 @@ void TestEnv::requireAssets()
 
    mdProvider_ = std::make_shared<MarketDataProvider>(logger_);
    quoteProvider_ = std::make_shared<QuoteProvider>(assetMgr_, logger_);
+}
+
+void TestEnv::requireConnections()
+{
+   requireArmory();
+
+   connMgr_ = std::make_shared<ConnectionManager>(logger_);
+   celerConn_ = std::make_shared<CelerClient>(connMgr_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -228,6 +236,11 @@ ArmoryInstance::~ArmoryInstance()
    theBDMt_ = nullptr;
 
    //clean up dirs
+   SystemFileUtils::rmFile("./fakehomedir/client.peers");
+   SystemFileUtils::rmFile("./fakehomedir/client.peers-lock");
+   SystemFileUtils::rmFile("./fakehomedir/server.peers");
+   SystemFileUtils::rmFile("./fakehomedir/server.peers-lock");
+
    DBUtils::removeDirectory(blkdir_);
    DBUtils::removeDirectory(homedir_);
    DBUtils::removeDirectory(ldbdir_);

@@ -105,6 +105,7 @@ public:
 
    void requireArmory();
    void requireAssets();
+   void requireConnections();
 
 private:
    std::shared_ptr<ApplicationSettings>  appSettings_;
