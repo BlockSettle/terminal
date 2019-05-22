@@ -59,15 +59,14 @@ void TestEnv::shutdown()
    if (appSettings_ != nullptr)
       QDir(appSettings_->GetHomeDir()).removeRecursively();
 
-   logger_->debug("test done");
    logger_->flush();
    mdProvider_ = nullptr;
    quoteProvider_ = nullptr;
    authAddrMgr_ = nullptr;
    celerConn_ = nullptr;
 
-   armoryInstance_ = nullptr;
    armoryConnection_ = nullptr;
+   armoryInstance_ = nullptr;
    assetMgr_ = nullptr;
    connMgr_ = nullptr;
    appSettings_ = nullptr;
@@ -76,8 +75,6 @@ void TestEnv::shutdown()
 
    QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
    if (armoryExisted) {
-      SystemFileUtils::rmFile("./tx_cache");
-      SystemFileUtils::rmFile("./tx_cache-lock");
       QDir(QLatin1String("./fakehomedir")).removeRecursively();
    }
 }
@@ -89,8 +86,8 @@ void TestEnv::requireArmory()
       return;
 
    armoryInstance_ = std::make_shared<ArmoryInstance>();
+   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "", false);
 
-   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "tx_cache", false);
    ArmorySettings settings;
    settings.runLocally = false;
    settings.socketType = appSettings()->GetArmorySocketType();
