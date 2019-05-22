@@ -74,6 +74,7 @@ namespace bs {
          const HDWalletPtr getHDWalletById(const std::string &walletId) const;
          const HDWalletPtr getHDRootForLeaf(const std::string &walletId) const;
          bool walletNameExists(const std::string &walletName) const;
+         bool isWatchingOnly(const std::string &walletId) const;
 
          bool deleteWallet(const WalletPtr &);
          bool deleteWallet(const HDWalletPtr &);
