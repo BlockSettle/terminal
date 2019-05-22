@@ -43,6 +43,38 @@ namespace
    }
 } // namespace
 
+QString AutheIDClient::errorString(AutheIDClient::ErrorType error)
+{
+   switch (error) {
+   case NoError:
+      return tr("No error");
+   case CreateError:
+      return tr("Invalid create reply");
+   case DecodeError:
+      return tr("Invalid result reply");
+   case DecryptError:
+      return tr("Decrypt failed");
+   case InvalidSecureReplyError:
+      return tr("Invalid secure relply");
+   case InvalidKeySizeError:
+      return tr("Invalid key size");
+   case MissingSignatuteError:
+      return tr("Missing mandatory signature data in reply");
+   case SerializationSignatureError:
+      return tr("Invalid signature serialization type");
+   case ParseSignatureError:
+      return tr("Failed to parse signature data");
+   case Timeout:
+      return tr("Operation time exceeded");
+   case Cancelled:
+      return tr("Operation cancelled");
+   case NotAuthenticated:
+      return tr("Not authenticated");
+   default:
+      return tr("Internal error");
+   }
+}
+
 AutheIDClient::DeviceInfo AutheIDClient::getDeviceInfo(const std::string &encKey)
 {
    DeviceInfo result;
@@ -101,8 +133,9 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
 
    QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray::fromStdString(payload));
    processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration] (const Result &result) {
-      if (!result.success) {
-         emit failed(tr("Auth eID faild: %1").arg(QString::fromStdString(result.errorMsg)));
+      if (result.networkError != QNetworkReply::NoError) {
+         //emit failed(result.networkError, tr("Auth eID failed: %1").arg(QString::fromStdString(result.errorMsg)));
+         emit failed(result.networkError, result.authError);
          return;
       }
 
@@ -221,7 +254,7 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
    rp::CreateResponse response;
    if (!response.ParseFromArray(payload.data(), payload.size())) {
       logger_->error("Can't decode ResultReply packet");
-      emit failed(tr("Invalid create reply"));
+      emit failed(QNetworkReply::NoError, ErrorType::CreateError);
       return;
    }
 
@@ -231,8 +264,9 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
 
    QNetworkReply *reply = connectionManager_->GetNAM()->get(request);
    processNetworkReply(reply, expiration, [this] (const Result &result) {
-      if (!result.success) {
-         emit failed(tr("Auth eID faild: %1").arg(QString::fromStdString(result.errorMsg)));
+      if (result.networkError != QNetworkReply::NoError) {
+         //emit failed(result.networkError, tr("Auth eID failed: %1").arg(QString::fromStdString(result.errorMsg)));
+         emit failed(result.networkError, result.authError);
          return;
       }
 
@@ -245,7 +279,7 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
    rp::GetResultResponse reply;
    if (!reply.ParseFromArray(payload.data(), payload.size())) {
       logger_->error("Can't decode ResultReply packet");
-      emit failed(tr("Invalid result reply"));
+      emit failed(QNetworkReply::NoError, ErrorType::DecodeError);
       return;
    }
 
@@ -261,42 +295,47 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
       return;
    }
 
+   if (reply.status() == rp::TIMEOUT) {
+      emit failed(QNetworkReply::NoError, ErrorType::Timeout);
+      return;
+   }
+
    if (resultAuth_)
    {
-       std::string jwtToken = reply.authentication().jwt();
-       if (!jwtToken.empty())
-       {
-            emit authSuccess(jwtToken);
-       }
-       else
-       {
-            emit failed(tr("Not authenticated"));
-       }
-       return;
+      std::string jwtToken = reply.authentication().jwt();
+      if (!jwtToken.empty())
+      {
+         emit authSuccess(jwtToken);
+      }
+      else
+      {
+         emit failed(QNetworkReply::NoError, ErrorType::NotAuthenticated);
+      }
+      return;
    }
 
    if (reply.device_key_enc().empty() || reply.device_id().empty()) {
-      emit failed(tr("Cancelled"));
+      emit failed(QNetworkReply::NoError, ErrorType::Cancelled);
       return;
    }
 
    autheid::SecureBytes secureReplyData = autheid::decryptData(reply.device_key_enc().data()
       , reply.device_key_enc().size(), authKeys_.first);
    if (secureReplyData.empty()) {
-      emit failed(tr("Decrypt failed"));
+      emit failed(QNetworkReply::NoError, ErrorType::DecryptError);
       return;
    }
 
    rp::GetResultResponse::DeviceKeyResult secureReply;
    if (!secureReply.ParseFromArray(secureReplyData.data(), int(secureReplyData.size()))) {
-      emit failed(tr("Invalid secure reply"));
+      emit failed(QNetworkReply::NoError, ErrorType::InvalidSecureReplyError);
       return;
    }
 
    const std::string &deviceKey = secureReply.device_key();
 
    if (deviceKey.size() != kKeySize) {
-      emit failed(tr("Invalid key size"));
+      emit failed(QNetworkReply::NoError, ErrorType::InvalidKeySizeError);
       return;
    }
 
@@ -314,14 +353,15 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
       QByteArray payload = reply->readAll();
 
       Result result;
+      result.networkError = reply->error();
 
       if (reply->error()) {
          rp::Error error;
          // Auth eID will send rp::Error
          if (!payload.isEmpty() && error.ParseFromArray(payload.data(), payload.size())) {
-            result.errorMsg = fmt::format("Auth eID failed: {}", error.message());
+            //result.errorMsg = fmt::format("Auth eID failed: {}", error.message());
          } else {
-            result.errorMsg = fmt::format("Auth eID failed: {}", reply->errorString().toStdString());
+            //result.errorMsg = fmt::format("Auth eID failed: {}", reply->errorString().toStdString());
          }
          if (callback) {
             callback(result);
@@ -329,7 +369,6 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
          return;
       }
 
-      result.success = true;
       result.payload = payload;
       if (callback) {
          callback(result);
@@ -387,16 +426,16 @@ bool AutheIDClient::isAutheIDClientNewDeviceNeeded(RequestType requestType)
 void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_SignatureResult &reply)
 {
    if (reply.signature_data().empty() || reply.sign().empty()) {
-      emit failed(tr("Missing mandatory signature data in reply"));
+      emit failed(QNetworkReply::NoError, ErrorType::MissingSignatuteError);
       return;
    }
    if (reply.serialization() != rp::SERIALIZATION_PROTOBUF) {
-      emit failed(tr("Invalid signature serialization type"));
+      emit failed(QNetworkReply::NoError, ErrorType::SerializationSignatureError);
       return;
    }
    rp::GetResultResponse::SignatureResult::SignatureData sigData;
    if (!sigData.ParseFromString(reply.signature_data())) {
-      emit failed(tr("Failed to parse signature data"));
+      emit failed(QNetworkReply::NoError, ErrorType::ParseSignatureError);
       return;
    }
 
