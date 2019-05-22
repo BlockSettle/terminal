@@ -272,7 +272,7 @@ QString ChatMessagesTextEdit::getFormattedTextFromSelection()
 
    // get selected text in html format
    textDocument.setHtml(createMimeDataFromSelection()->html());      
-   QTextBlock &currentBlock = textDocument.begin();
+   QTextBlock currentBlock = textDocument.begin();
    int blockCount = 0;
 
    // each column is presented as a block
