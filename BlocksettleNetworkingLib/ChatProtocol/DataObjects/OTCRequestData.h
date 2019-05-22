@@ -2,7 +2,7 @@
 #define __OTC_REQUEST_DATA_H__
 
 #include "DataObject.h"
-#include "CommonTypes.h"
+#include "ChatCommonTypes.h"
 
 namespace Chat {
 

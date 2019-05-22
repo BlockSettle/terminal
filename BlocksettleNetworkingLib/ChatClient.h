@@ -5,7 +5,7 @@
 #include "ChatDB.h"
 #include "ChatHandleInterfaces.h"
 #include "ChatProtocol/ChatProtocol.h"
-#include "CommonTypes.h"
+#include "ChatCommonTypes.h"
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
 #include "ZMQ_BIP15X_DataConnection.h"
