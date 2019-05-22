@@ -11,12 +11,16 @@ namespace Chat {
 
    QJsonObject UpdateOTCDataRequest::toJson() const
    {
-      return Request::toJson();
+      QJsonObject data = Request::toJson();
+      data[OTCDataObjectKey] = otcUpdateData_->toJson();
+      return data;
    }
 
    std::shared_ptr<Request> UpdateOTCDataRequest::fromJSON(const std::string &clientId, const std::string &jsonData)
    {
-      return nullptr;
+      QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+      std::shared_ptr<OTCUpdateData> otcUpdateData =  OTCUpdateData::fromJSON(data[OTCDataObjectKey].toString().toStdString());
+      return std::make_shared<UpdateOTCDataRequest>(clientId, otcUpdateData);
    }
 
    void UpdateOTCDataRequest::handle(RequestHandler & handler)
