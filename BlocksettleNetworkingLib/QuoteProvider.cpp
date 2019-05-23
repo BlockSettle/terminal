@@ -606,7 +606,7 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
       return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[FxOrderSnapshot] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::FxOrderSnapshot] {}", response.DebugString());
    }
 
    if (!resync && (response.orderstatus() == FILLED)) {
@@ -646,7 +646,7 @@ bool QuoteProvider::onQuoteCancelled(const std::string& data)
    }
 
    if (debugTraffic_) {
-      logger_->debug("[QuoteCancel] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onQuoteCancelled] {}", response.DebugString());
    }
 
    cleanQuoteRequestCcy(response.quoterequestid());
@@ -666,7 +666,7 @@ bool QuoteProvider::onSignTxNotif(const std::string& data)
       return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[SignTxNotification] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onSignTxNotif] {}", response.DebugString());
    }
 
    emit signTxRequested(QString::fromStdString(response.orderid()), QString::fromStdString(response.quoterequestid()));
