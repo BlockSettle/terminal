@@ -12,8 +12,8 @@ pipeline {
                         docker {
                             image 'terminal:latest'
                             reuseNode true
-                            args '-v /var/cache/3rd:${WORKSPACE}/3rd'
-                            args '-v /var/cache/3rd/release/Protobuf/:${WORKSPACE}/3rd/release/Protobuf/'                            
+                            args '-v /var/cache/3rd/downloads:${WORKSPACE}/3rd/downloads'
+                            args '-v /var/cache/3rd/release:${WORKSPACE}/3rd/release'
                         }
                     }
                     steps {
