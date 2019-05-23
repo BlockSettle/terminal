@@ -332,6 +332,7 @@ bool SignerAdapterListener::onSyncWalletInfo(bs::signer::RequestId reqId)
       wallet->set_id(hdWallet->walletId());
       wallet->set_name(hdWallet->name());
       wallet->set_description(hdWallet->description());
+      wallet->set_watching_only(hdWallet->isWatchingOnly());
    }
    const auto settlWallet = walletsMgr_->getSettlementWallet();
    if (settlWallet) {
