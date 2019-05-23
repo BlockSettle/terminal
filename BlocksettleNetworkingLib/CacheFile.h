@@ -33,6 +33,7 @@ protected:
    void purge();
 
 private:
+   const bool  inMem_;
    size_t      nbMaxElems_;
    LMDB     *  db_ = nullptr;
    std::shared_ptr<LMDBEnv>  dbEnv_;

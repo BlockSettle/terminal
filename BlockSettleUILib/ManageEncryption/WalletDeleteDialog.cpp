@@ -9,7 +9,6 @@
 #include "BSMessageBox.h"
 #include "WalletsWidget.h"
 #include "SignContainer.h"
-#include "WalletBackupDialog.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncSettlementWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -93,15 +92,6 @@ void WalletDeleteDialog::init()
 
 void WalletDeleteDialog::deleteHDWallet()
 {
-   if (ui_->checkBoxBackup->isChecked()) {
-      if (!WalletBackupAndVerify(hdWallet_, signingContainer_, appSettings_, connectionManager_
-                                 , logger_, this)) {
-//         BSMessageBox(BSMessageBox::critical, tr("No backup")
-//            , tr("No backup was created for this wallet - deletion cancelled"), this).exec();
-         reject();
-         return;
-      }
-   }
    if (walletsManager_->deleteWallet(hdWallet_)) {
       BSMessageBox(BSMessageBox::success, tr("Wallet deleted")
          , tr("HD Wallet was successfully deleted")

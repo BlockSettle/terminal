@@ -33,7 +33,6 @@ class AuthAddressManager;
 class QAction;
 class QMenu;
 class SignContainer;
-class WalletImporter;
 class WalletsViewModel;
 class ConnectionManager;
 
@@ -114,7 +113,6 @@ private:
    WalletsViewModel        *  walletsModel_;
    AddressListModel        *  addressModel_;
    AddressSortFilterModel  *  addressSortFilterModel_;
-   std::unordered_map<std::string, std::shared_ptr<WalletImporter>>  walletImporters_;
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
    QAction  *  actRevokeSettl_ = nullptr;
