@@ -41,18 +41,6 @@ CustomTitleDialogWindow {
         walletDetailsFrame.walletInfo = walletInfo
     }
 
-    Connections {
-        target: walletsProxy
-        onWalletSuccess: {
-            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                                   , qsTr("Wallet")
-                                                   , qsTr("Wallet successfully exported.")
-                                                   , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name)
-                                                                     .arg(walletInfo.walletId).arg(targetDir + "/" + backupFileName))
-            mb.bsAccepted.connect(function(){ acceptAnimated() })
-        }
-    }
-
     cContentItem: ColumnLayout {
         id: mainLayout
         spacing: 10
@@ -205,18 +193,39 @@ CustomTitleDialogWindow {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
+                    var exportCallback = function(success, errorMsg) {
+                        if (success) {
+                            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
+                                , qsTr("Wallet Export")
+                                , qsTr("%1Wallet successfully exported")
+                                    .arg(fullBackupMode ? "" : "Watching-Only ")
+                                , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
+                                    .arg(walletInfo.name)
+                                    .arg(walletInfo.walletId)
+                                    .arg(targetDir + "/" + backupFileName))
+                            mb.bsAccepted.connect(function(){ acceptAnimated() })
+                        } else {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Error")
+                                , qsTr("%1Wallet export failed")
+                                    .arg(fullBackupMode ? "" : "Watching-Only ")
+                                , errorMsg)
+                        }
+                    }
+
                     if (walletInfo.encType === QPasswordData.Password) {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
                         if (fullBackupMode) {
                             walletsProxy.backupPrivateKey(walletInfo.walletId
-                                                              , targetDir + "/" + backupFileName
-                                                              , isPrintable
-                                                              , passwordData)
+                               , targetDir + "/" + backupFileName, isPrintable
+                               , passwordData, exportCallback)
                         }
                         else {
-                            walletsProxy.exportWatchingOnly(walletInfo.walletId, targetDir + "/" + backupFileName, passwordData)
+                            walletsProxy.exportWatchingOnly(walletInfo.walletId
+                               , targetDir + "/" + backupFileName, passwordData
+                               , exportCallback)
                         }
                     }
                     else {
@@ -224,14 +233,15 @@ CustomTitleDialogWindow {
                             , function(passwordData){
                                 if (fullBackupMode) {
                                     walletsProxy.backupPrivateKey(walletInfo.walletId
-                                                                      , targetDir + "/" + backupFileName
-                                                                      , isPrintable
-                                                                      , passwordData)
+                                       , targetDir + "/" + backupFileName, isPrintable
+                                       , passwordData, exportCallback)
                                 }
                                 else {
-                                    walletsProxy.exportWatchingOnly(walletInfo.walletId, targetDir + "/" + backupFileName, passwordData)
+                                    walletsProxy.exportWatchingOnly(walletInfo.walletId
+                                       , targetDir + "/" + backupFileName, passwordData
+                                       , exportCallback)
                                 }
-                            })
+                        })
                     }
                 }
             }

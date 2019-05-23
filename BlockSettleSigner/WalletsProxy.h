@@ -35,35 +35,34 @@ public:
    WalletsProxy(const std::shared_ptr<spdlog::logger> &, SignerAdapter *);
 
    Q_INVOKABLE void createWallet(bool isPrimary, bs::wallet::QSeed *
-                                 , bs::hd::WalletInfo *
-                                 , bs::wallet::QPasswordData *, const QJSValue &jsCallback);
+      , bs::hd::WalletInfo *
+      , bs::wallet::QPasswordData *, const QJSValue &jsCallback);
 
    Q_INVOKABLE void deleteWallet(const QString &walletId, const QJSValue &jsCallback);
 
    Q_INVOKABLE void changePassword(const QString &walletId
-                                   , bs::wallet::QPasswordData *oldPasswordData
-                                   , bs::wallet::QPasswordData *newPasswordData
-                                   , const QJSValue &jsCallback);
+      , bs::wallet::QPasswordData *oldPasswordData
+      , bs::wallet::QPasswordData *newPasswordData
+      , const QJSValue &jsCallback);
 
    Q_INVOKABLE void addEidDevice(const QString &walletId
-                                   , bs::wallet::QPasswordData *oldPasswordData
-                                   , bs::wallet::QPasswordData *newPasswordData);
+      , bs::wallet::QPasswordData *oldPasswordData
+      , bs::wallet::QPasswordData *newPasswordData);
 
    Q_INVOKABLE void removeEidDevice(const QString &walletId
-                                   , bs::wallet::QPasswordData *oldPasswordData
-                                   , int removedIndex);
+      , bs::wallet::QPasswordData *oldPasswordData
+      , int removedIndex);
 
    Q_INVOKABLE QString getWoWalletFile(const QString &walletId) const;
    Q_INVOKABLE void importWoWallet(const QString &pathName, const QJSValue &jsCallback);
 
    Q_INVOKABLE void exportWatchingOnly(const QString &walletId
-      , const QString &path, bs::wallet::QPasswordData *passwordData) const;
+      , const QString &path, bs::wallet::QPasswordData *passwordData
+      , const QJSValue &jsCallback);
 
    Q_INVOKABLE bool backupPrivateKey(const QString &walletId
-                                     , QString fileName
-                                     , bool isPrintable
-                                     , bs::wallet::QPasswordData *passwordData) const;
-
+      , QString fileName, bool isPrintable, bs::wallet::QPasswordData *passwordData
+      , const QJSValue &jsCallback);
 
    Q_INVOKABLE QString getRootWalletId(const QString &walletId) const;
    Q_INVOKABLE QString getRootWalletName(const QString &walletId) const;
@@ -79,7 +78,6 @@ public:
 
 signals:
    void walletError(const QString &walletId, const QString &errMsg) const;
-   void walletSuccess() const;
    void walletsChanged();
 
 private slots:
