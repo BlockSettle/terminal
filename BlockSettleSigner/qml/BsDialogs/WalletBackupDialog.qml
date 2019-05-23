@@ -41,18 +41,6 @@ CustomTitleDialogWindow {
         walletDetailsFrame.walletInfo = walletInfo
     }
 
-    Connections {
-        target: walletsProxy
-        onWalletSuccess: {
-            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                                   , qsTr("Wallet")
-                                                   , qsTr("Wallet successfully exported.")
-                                                   , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name)
-                                                                     .arg(walletInfo.walletId).arg(targetDir + "/" + backupFileName))
-            mb.bsAccepted.connect(function(){ acceptAnimated() })
-        }
-    }
-
     cContentItem: ColumnLayout {
         id: mainLayout
         spacing: 10
