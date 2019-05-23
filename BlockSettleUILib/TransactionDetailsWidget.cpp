@@ -342,7 +342,7 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
       items << address << amountStr << wallet;
       item = new QTreeWidgetItem(items);
       item->setData(0, Qt::UserRole, isOutput);
-      item->setData(1, Qt::UserRole, amount);
+      item->setData(1, Qt::UserRole, (qulonglong)amount);
       tree->addTopLevelItem(item);
       item->setExpanded(true);
       if (!specialAddr) {
@@ -352,7 +352,7 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
    else {
       uint64_t prevAmount = item->data(1, Qt::UserRole).toULongLong();
       prevAmount += amount;
-      item->setData(1, Qt::UserRole, prevAmount);
+      item->setData(1, Qt::UserRole, (qulonglong)prevAmount);
       item->setData(1, Qt::DisplayRole, UiUtils::displayAmount(prevAmount));
    }
    if (!specialAddr) {

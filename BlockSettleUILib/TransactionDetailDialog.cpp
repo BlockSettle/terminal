@@ -258,7 +258,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
 
       item = new QTreeWidgetItem(items);
       item->setData(0, Qt::UserRole, displayedAddress);
-      item->setData(1, Qt::UserRole, out.getValue());
+      item->setData(1, Qt::UserRole, (qulonglong)out.getValue());
       parent->addChild(item);
       addrItems[displayedAddress] = item;
    }
@@ -266,7 +266,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
       uint64_t prevVal = item->data(1, Qt::UserRole).toULongLong();
       prevVal += out.getValue();
       valueStr += addressWallet ? addressWallet->displayTxValue(prevVal) : UiUtils::displayAmount(prevVal);
-      item->setData(1, Qt::UserRole, prevVal);
+      item->setData(1, Qt::UserRole, (qulonglong)prevVal);
       item->setData(1, Qt::DisplayRole, valueStr);
    }
    const auto txHashStr = QString::fromStdString(txHash.toHexStr(true));
