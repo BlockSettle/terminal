@@ -218,7 +218,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
          return;
       }
       title = tr("New contact request");
-      text = tr("%1 wants to add you to contact list").arg(msg[0].toString());
+      text = tr("%1 would like to add you as a contact").arg(msg[0].toString());
       break;
 
    default: return;
