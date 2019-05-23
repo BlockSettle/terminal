@@ -1,7 +1,25 @@
 {
-   "latest_version" : "0.15.11",
-   "release_date" : "22 May 2019",
+   "latest_version" : "0.15.12",
+   "release_date" : "23 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.12",
+         "previous_version" : "0.15.11",
+         "release_date" : "23 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+            "Chat updates",
+            "In memory TX cache"
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes",
+            "Cancel RFQ"
+         ],
+         "revision" : "afce6aaf",
+         "common_revision" : "0264818a"
+      },
       {
          "version_string" : "0.15.11",
          "previous_version" : "0.15.10",

@@ -57,18 +57,20 @@ CustomTitleDialogWindow {
 
                 CustomLabelValue{
                     id: labelText_
-                    padding: 15
+                    topPadding: 25
+                    leftPadding: 15
                     Layout.preferredWidth: root.width - image.width - 10
                     //color: colors[type]
                     color: BSStyle.dialogTitleWhiteColor
-                    Layout.minimumHeight: 40
+                    //Layout.minimumHeight: 25
+                    //Layout.maximumHeight: 25
                     text: customText
                 }
 
                 CustomLabel{
                     id: labelDetails_
                     text: customDetails
-                    padding: 15
+                    leftPadding: 15
                     //textFormat: Text.RichText
                     Layout.preferredWidth: root.width - image.width - 10
                     onLinkActivated: Qt.openUrlExternally(link)
