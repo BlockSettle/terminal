@@ -346,12 +346,20 @@ CustomTitleDialogWindow {
                             text: qsTr("Password")
                             checked: true
                             Layout.leftMargin: inputLabelsWidth
+
+                            onCheckedChanged: {
+                                if (checked) {
+                                    newPasswordWithConfirm.tfPasswordInput.focus = true
+                                }
+                            }
                         }
                         CustomRadioButton {
                             id: rbAuth
                             text: qsTr("Auth eID")
+
                             onCheckedChanged: {
                                 if (checked) {
+                                    textInputEmail.focus = true
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);

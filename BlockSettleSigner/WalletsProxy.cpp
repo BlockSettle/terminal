@@ -229,9 +229,10 @@ std::shared_ptr<bs::core::hd::Wallet> WalletsProxy::getWoWallet(const bs::sync::
    return nullptr;
 }
 
-void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path, bs::wallet::QPasswordData *passwordData) const
+void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path
+   , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
-   const auto &cbResult = [this, walletId, path](const bs::sync::WatchingOnlyWallet &wo) {
+   const auto &cbResult = [this, walletId, path, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {
       if (wo.id.empty()) {
          logger_->error("[WalletsProxy] failed to create WO wallet for id {}", wo.id);
          emit walletError(walletId, tr("Failed to create watching-only wallet for %1").arg(walletId));
@@ -244,28 +245,35 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
       }
       try {
          woWallet->saveToFile(path.toStdString());
-         emit walletSuccess();
+         QMetaObject::invokeMethod(this, [this, jsCallback] {
+            QJSValueList args;
+            args << QJSValue(true) << QStringLiteral("");
+            invokeJsCallBack(jsCallback, args);
+         });
       }
       catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to save WO wallet for {}: {}", wo.id, e.what());
-         emit walletError(walletId, tr("Failed to save watching-only wallet for %1 to %2: %3")
-            .arg(walletId).arg(path).arg(QLatin1String(e.what())));
+
+         QMetaObject::invokeMethod(this, [this, jsCallback, walletId, path, e] {
+            QJSValueList args;
+            args << QJSValue(false) << tr("Failed to save watching-only wallet for %1 to %2: %3")
+                    .arg(walletId).arg(path).arg(QLatin1String(e.what()));
+            invokeJsCallBack(jsCallback, args);
+         });
       }
    };
    adapter_->createWatchingOnlyWallet(walletId, passwordData->password, cbResult);
 }
 
-bool WalletsProxy::backupPrivateKey(const QString &walletId
-                                    , QString fileName
-                                    , bool isPrintable
-                                    , bs::wallet::QPasswordData *passwordData) const
+bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, bool isPrintable
+   , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
    const auto wallet = getRootForId(walletId);
    if (!wallet) {
       emit walletError(walletId, tr("Failed to backup private key: wallet not found"));
       return false;
    }
-   const auto &cbResult = [this, fileName, walletId, name=wallet->name(), desc=wallet->description(), isPrintable]
+   const auto &cbResult = [this, fileName, walletId, name=wallet->name(), desc=wallet->description(), isPrintable, jsCallback]
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
       QString fn = fileName;
       if (privKey.isNull()) {
@@ -301,21 +309,33 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId
             }
          } catch (const std::exception &e) {
             logger_->error("[WalletsProxy] failed to output PDF: {}", e.what());
-            emit walletError(walletId, tr("Failed to output PDF with private key backup for wallet %1")
-               .arg(walletId));
+            QMetaObject::invokeMethod(this, [this, jsCallback, walletId] {
+               QJSValueList args;
+               args << QJSValue(false) << tr("Failed to output PDF with private key backup for wallet %1")
+                       .arg(walletId);
+               invokeJsCallBack(jsCallback, args);
+            });
             return;
          }
       } else {
          QFile f(fn);
          if (!f.open(QIODevice::WriteOnly)) {
             logger_->error("[WalletsProxy] failed to open file {} for writing", fn.toStdString());
-            emit walletError(walletId, tr("Failed to open digital wallet backup file {} for writing").arg(fn));
+            QMetaObject::invokeMethod(this, [this, jsCallback, walletId, fn] {
+               QJSValueList args;
+               args << QJSValue(false) << tr("Failed to open digital wallet backup file {} for writing").arg(fn);
+               invokeJsCallBack(jsCallback, args);
+            });
             return;
          }
          WalletBackupFile backupData(walletId.toStdString(), name, desc, easyData, edChainCode);
          f.write(QByteArray::fromStdString(backupData.Serialize()));
       }
-      emit walletSuccess();
+      QMetaObject::invokeMethod(this, [this, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(true) << QStringLiteral("");
+         invokeJsCallBack(jsCallback, args);
+      });
    };
    adapter_->getDecryptedRootNode(wallet->walletId(), passwordData->password, cbResult);
 
