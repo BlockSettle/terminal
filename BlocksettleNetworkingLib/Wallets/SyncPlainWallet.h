@@ -38,7 +38,7 @@ namespace bs {
             , bool sync = true) override;
          bool containsAddress(const bs::Address &addr) override;
 
-         std::string walletId() const override { return walletId_; }
+         const std::string& walletId() const override { return walletId_; }
          std::string description() const override { return desc_; }
          void setDescription(const std::string &desc) override { desc_ = desc; }
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Bitcoin; }
@@ -51,14 +51,12 @@ namespace bs {
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;
 
-         virtual void updateBalances(
-            const std::function<void(void)> &cb = nullptr) override
-         {
-            throw std::runtime_error("reproduce SyncHDLeaf updateBalances code");
-         }
-
-
          bool deleteRemotely() override;
+
+         virtual void merge(const std::shared_ptr<Wallet>)
+         {
+            throw std::runtime_error("not implemented yet. not sure is necessary");
+         }
 
       protected:
          std::vector<BinaryData> getAddrHashes() const override;

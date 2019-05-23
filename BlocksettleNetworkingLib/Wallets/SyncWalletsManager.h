@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <set>
 #include <unordered_map>
 #include <QString>
 #include <QObject>
@@ -70,7 +71,7 @@ namespace bs {
          const WalletPtr getAuthWallet() const { return authAddressWallet_; }
 
          size_t hdWalletsCount() const { return hdWalletsId_.size(); }
-         const HDWalletPtr getHDWallet(const unsigned int index) const;
+         const HDWalletPtr getHDWallet(unsigned) const;
          const HDWalletPtr getHDWalletById(const std::string &walletId) const;
          const HDWalletPtr getHDRootForLeaf(const std::string &walletId) const;
          bool walletNameExists(const std::string &walletName) const;
@@ -187,8 +188,8 @@ namespace bs {
          wallet_container_type               wallets_;
          mutable QMutex                      mtxWallets_;
          std::set<QString>                   readyWallets_;
-         std::vector<BinaryData>             walletsId_;
-         std::vector<std::string>            hdWalletsId_;
+         std::set<BinaryData>                walletsId_;
+         std::set<std::string>               hdWalletsId_;
          WalletPtr                           authAddressWallet_;
          BinaryData                          userId_;
          std::shared_ptr<SettlementWallet>   settlementWallet_;
