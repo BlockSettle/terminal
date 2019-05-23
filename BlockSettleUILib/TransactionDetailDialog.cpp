@@ -206,7 +206,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
                                          const BinaryData& txHash)
 {
    const auto addr = bs::Address::fromTxOut(out);
-   const auto &addressWallet = walletsManager_->getWalletByAddress(addr.id());
+   const auto addressWallet = walletsManager_->getWalletByAddress(addr);
    bool negative = false;
    QString addressType;
    const bool isOurs = (addressWallet == wallet);
@@ -263,7 +263,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
       addrItems[displayedAddress] = item;
    }
    else {
-      uint64_t prevVal = item->data(1, Qt::UserRole).toLongLong();
+      uint64_t prevVal = item->data(1, Qt::UserRole).toULongLong();
       prevVal += out.getValue();
       valueStr += addressWallet ? addressWallet->displayTxValue(prevVal) : UiUtils::displayAmount(prevVal);
       item->setData(1, Qt::UserRole, prevVal);

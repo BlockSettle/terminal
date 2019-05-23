@@ -26,8 +26,7 @@ public:
    ~AddressDetailsWidget() override;
 
    void init(const std::shared_ptr<ArmoryObject> &armory
-      , const std::shared_ptr<spdlog::logger> &inLogger
-      , const std::shared_ptr<QTimer> &inTimer);
+      , const std::shared_ptr<spdlog::logger> &inLogger);
    void setQueryAddr(const bs::Address& inAddrVal);
    void clear();
 
@@ -45,6 +44,7 @@ public:
 
 signals:
    void transactionClicked(QString txId);
+   void finished() const;
 
 private slots:
    void onTxClicked(QTreeWidgetItem *item, int column);
@@ -81,7 +81,6 @@ private:
 
    std::shared_ptr<ArmoryObject>    armory_;
    std::shared_ptr<spdlog::logger>  logger_;
-   std::shared_ptr<QTimer>          expTimer_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H
