@@ -10,6 +10,7 @@
 #include <QModelIndex>
 #include <QSortFilterProxyModel>
 #include <QScrollBar>
+#include <QItemSelectionModel>
 
 #include "AddressDetailDialog.h"
 #include "AddressListModel.h"
@@ -213,6 +214,8 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
       ui_->pushButtonExternal, ui_->pushButtonUsed}) {
          connect(button, &QPushButton::toggled, this, &WalletsWidget::onFilterSettingsChanged);
    }
+
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &WalletsWidget::onWalletsSynchronized, Qt::QueuedConnection);
 }
 
 void WalletsWidget::setUsername(const QString& username)
@@ -456,6 +459,21 @@ void WalletsWidget::scrollChanged()
    if (ui_->treeViewAddresses->model()->rowCount() > 0) {
       addressesScrollPos_.setX(ui_->treeViewAddresses->horizontalScrollBar()->value());
       addressesScrollPos_.setY(ui_->treeViewAddresses->verticalScrollBar()->value());
+   }
+}
+
+void WalletsWidget::onWalletsSynchronized()
+{
+   if (walletsManager_->hasPrimaryWallet()) {
+      for (size_t i = 0; i < walletsManager_->hdWalletsCount(); ++i) {
+         const auto hdWallet = walletsManager_->getHDWallet(i);
+         if (hdWallet->isPrimary()) {
+            ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(i, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+         }
+      }
+   }
+   else if (walletsManager_->hdWalletsCount() > 0){
+      ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(0, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
    }
 }
 
