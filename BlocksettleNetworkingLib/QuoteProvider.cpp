@@ -560,16 +560,6 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
    auto orderDate = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
    auto ageSeconds = orderDate.secsTo(QDateTime::currentDateTime());
 
-   // older than 2 days
-   if (ageSeconds > 60*60*24*2) {
-      logger_->debug("[QuoteProvider::onBitcoinOrderSnapshot] old order. try to cancel");
-      auto command = std::make_shared<CelerCancelOrderSequence>(response.orderid()
-         , response.externalclorderid(), logger_);
-
-      celerClient_->ExecuteSequence(command);
-      return true;
-   }
-
    Order order;
    order.exchOrderId = QString::number(response.orderid());
    order.clOrderId = response.externalclorderid();
