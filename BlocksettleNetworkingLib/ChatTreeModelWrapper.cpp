@@ -5,8 +5,17 @@
 ChatTreeModelWrapper::ChatTreeModelWrapper(QObject *parent)
    : QSortFilterProxyModel(parent)
    , filteringRole_(-1)
+   , filteringCaseSensitive_(false)
 {
    setDynamicSortFilter(true);
+}
+
+void ChatTreeModelWrapper::setFilterKey(const QString &pattern, int role, bool caseSensitive)
+{
+   filteringPattern_ = pattern;
+   filteringRole_ = role;
+   filteringCaseSensitive_ = caseSensitive;
+   resetTree();
 }
 
 void ChatTreeModelWrapper::setSourceModel(QAbstractItemModel *sourceModel)
@@ -44,8 +53,21 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
    case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
    case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
    case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
-   case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:
-      return true;
+   case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
+      if (filteringPattern_.isEmpty() || filteringRole_ == -1) {
+         return true;
+      }
+      QVariant data = index.data(filteringRole_);
+      if (!data.isValid()) {
+         return true;
+      }
+      if (data.canConvert(QVariant::String)) {
+         auto caseSensitivity = filteringCaseSensitive_ ? Qt:: CaseSensitive : Qt::CaseInsensitive;
+         return data.toString().contains(filteringPattern_, caseSensitivity);
+      } else {
+         return true;
+      }
+   }
    default:
       return false;
    }

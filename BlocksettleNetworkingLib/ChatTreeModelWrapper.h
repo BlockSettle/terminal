@@ -10,6 +10,13 @@ public:
    explicit ChatTreeModelWrapper(QObject *parent = nullptr);
 
    /**
+    * @brief Filter chat rooms by key applied to specified role
+    * @param pattern String contained by branch property
+    * @param role Role of filtering property, -1 for ignore filtering
+    */
+   void setFilterKey(const QString &pattern, int role, bool caseSensitive = false);
+
+   /**
     * @reimp
     */
    void setSourceModel(QAbstractItemModel *sourceModel) override;
@@ -30,8 +37,9 @@ signals:
    void treeUpdated();
 
 private:
+   QString filteringPattern_;
    int filteringRole_;
-   QVariant filteringValue_;
+   bool filteringCaseSensitive_;
 };
 
 #endif // CHARTREEMODELWRAPPER_H
