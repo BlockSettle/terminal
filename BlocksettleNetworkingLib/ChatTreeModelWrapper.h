@@ -9,11 +9,25 @@ class ChatTreeModelWrapper : public QSortFilterProxyModel
 public:
    explicit ChatTreeModelWrapper(QObject *parent = nullptr);
 
+   /**
+    * @reimp
+    */
+   void setSourceModel(QAbstractItemModel *sourceModel) override;
+
 protected:
    /**
     * @reimp
     */
    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override;
+
+private slots:
+   /**
+    * @brief Re-apply filtering and expand tree
+    */
+   void resetTree();
+
+signals:
+   void treeUpdated();
 
 private:
    int filteringRole_;

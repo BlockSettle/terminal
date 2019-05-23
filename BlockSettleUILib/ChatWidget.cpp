@@ -282,6 +282,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    model->setNewMessageMonitor(this);
    auto proxyModel = client_->getProxyModel();
    ui_->treeViewUsers->setModel(proxyModel.get());
+   connect(proxyModel.get(), &ChatTreeModelWrapper::treeUpdated,
+           ui_->treeViewUsers, &QTreeView::expandAll);
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
