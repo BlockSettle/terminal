@@ -40,7 +40,11 @@ namespace bs {
             void synchronize(const std::function<void()> &cbDone) override;
 
             void firstInit(bool force = false) override;
-            std::string walletId() const override;
+            
+            const std::string& walletId() const override;
+            const std::string& walletIdInt() const override;
+
+
             std::string description() const override;
             void setDescription(const std::string &desc) override { desc_ = desc; }
             std::string shortName() const override { return suffix_; }
@@ -53,14 +57,8 @@ namespace bs {
             bool hasId(const std::string &) const override;
 
             BTCNumericTypes::balance_type getSpendableBalance() const override;
-            bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
-               , QObject *obj, uint64_t val = UINT64_MAX) override;
-            bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
-               , QObject *obj) override;
-            bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const override;
-            bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const override;
             bool getHistoryPage(uint32_t id, std::function<void(const bs::sync::Wallet *wallet
-               , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const override;
+               , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
             bool containsAddress(const bs::Address &addr) override;
             bool containsHiddenAddress(const bs::Address &addr) const override;
@@ -84,12 +82,6 @@ namespace bs {
 
             int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
 
-            bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const override;
-            bool getActiveAddressCount(const std::function<void(size_t)> &) const override;
-
-            virtual void updateBalances(
-               const std::function<void(void)> &cb = nullptr) override;
-
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
 
@@ -105,6 +97,8 @@ namespace bs {
             void setScanCompleteCb(const cb_complete_notify &cb) { cbScanNotify_ = cb; }
             void scanAddresses(unsigned int startIdx = 0, unsigned int portionSize = 100
                , const std::function<void(const std::string &walletId, unsigned int idx)> &cbw = nullptr);
+
+            virtual void merge(const std::shared_ptr<Wallet>) override;
 
          signals:
             void scanComplete(const std::string &walletId);
@@ -141,7 +135,6 @@ namespace bs {
             virtual bs::Address createAddress(const AddrPoolKey &, bool signal = true);
             void reset();
             bs::hd::Path getPathForAddress(const bs::Address &) const;
-            void activateAddressesFromLedger(const std::vector<ClientClasses::LedgerEntry> &);
             void activateHiddenAddress(const bs::Address &);
             bs::Address createAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true);
             bs::Address createAddressWithPath(const AddrPoolKey &, bool signal = true);
@@ -164,6 +157,7 @@ namespace bs {
             std::vector<SecureBinaryData>          encryptionKeys_;
             std::pair<unsigned int, unsigned int>  encryptionRank_{0, 0};
 
+            std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
             std::shared_ptr<AsyncClient::BtcWallet>   btcWalletInt_;
 
             bs::hd::Path::Elem  lastIntIdx_ = 0;
@@ -171,7 +165,9 @@ namespace bs {
 
             size_t intAddressPoolSize_ = 20;
             size_t extAddressPoolSize_ = 100;
-            std::vector<AddressEntryType> poolAET_ = { AddressEntryType_P2SH, AddressEntryType_P2WPKH };
+            std::vector<AddressEntryType> poolAET_ = { 
+               AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH), 
+               AddressEntryType_P2WPKH };
 
             std::set<AddrPoolKey>   tempAddresses_;
             std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressPool_;
@@ -226,8 +222,6 @@ namespace bs {
             void onSaveToWallet(const std::vector<PooledAddress> &);
             bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;
 
-            std::string getWalletIdInt() const;
-
             static std::vector<BinaryData> getRegAddresses(const std::vector<PooledAddress> &src);
             void fillPortion(bs::hd::Path::Elem start, const std::function<void()> &cb, unsigned int size = 100);
             void processPortion();
@@ -268,10 +262,8 @@ namespace bs {
             void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
             void firstInit(bool force) override;
 
-            bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
-               , QObject *, uint64_t val = UINT64_MAX) override;
             bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
-               , QObject *) override;
+               , QObject *);
             bool isBalanceAvailable() const override;
             BTCNumericTypes::balance_type getSpendableBalance() const override;
             BTCNumericTypes::balance_type getUnconfirmedBalance() const override;

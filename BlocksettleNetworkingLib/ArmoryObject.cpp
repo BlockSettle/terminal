@@ -133,17 +133,17 @@ void ArmoryObject::setupConnection(const ArmorySettings &settings
       , cbError, bip150PromptUserCb);
 }
 
-std::string ArmoryObject::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
-   , const std::string &walletId, const std::vector<BinaryData> &addrVec
-   , const std::function<void(const std::string &regId)> &cb
-   , bool asNew)
+std::string ArmoryObject::registerWallet(
+   const std::string &walletId, const std::vector<BinaryData> &addrVec,
+   const std::function<void(const std::string &regId)> &cb, bool asNew)
 {
    const auto &cbWrap = [this, cb](const std::string &regId) 
    {
       if (cb) 
          cb(regId);
    };
-   return ArmoryConnection::registerWallet(wallet, walletId, addrVec, cbWrap, asNew);
+
+   return ArmoryConnection::registerWallet(walletId, addrVec, cbWrap, asNew);
 }
 
 bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs

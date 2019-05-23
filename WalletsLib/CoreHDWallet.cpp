@@ -25,11 +25,11 @@ hd::Wallet::Wallet(const std::string &name, const std::string &desc
    initNew(seed, passphrase, folder);
 }
 
-hd::Wallet::Wallet(const std::string &filename, NetworkType netType
-                   , const std::shared_ptr<spdlog::logger> &logger)
+hd::Wallet::Wallet(const std::string &filename, NetworkType netType,
+   const std::string& folder, const std::shared_ptr<spdlog::logger> &logger)
    : netType_(netType), logger_(logger)
 {
-   loadFromFile(filename);
+   loadFromFile(filename, folder);
 }
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
@@ -75,17 +75,21 @@ void hd::Wallet::initNew(const wallet::Seed &seed,
    initializeDB();
 }
 
-void hd::Wallet::loadFromFile(const std::string &filename)
+void hd::Wallet::loadFromFile(
+   const std::string &filename, 
+   const std::string& folder)
 {
-   if (!SystemFileUtils::isValidFilePath(filename)) {
-      throw std::invalid_argument(std::string("Invalid file path: ") + filename);
+   auto fullname = folder;
+   DBUtils::appendPath(fullname, filename);
+   if (!SystemFileUtils::isValidFilePath(fullname)) {
+      throw std::invalid_argument(std::string("Invalid file path: ") + fullname);
    }
-   if (!SystemFileUtils::fileExist(filename)) {
+   if (!SystemFileUtils::fileExist(fullname)) {
       throw std::runtime_error("Wallet file does not exist");
    }
 
    //load armory wallet
-   auto walletPtr = AssetWallet::loadMainWalletFromFile(filename);
+   auto walletPtr = AssetWallet::loadMainWalletFromFile(fullname);
    walletPtr_ = std::dynamic_pointer_cast<AssetWallet_Single>(walletPtr);
    if (walletPtr_ == nullptr)
       throw WalletException("failed to load wallet");

@@ -20,6 +20,17 @@ Wallet::~Wallet()
    UtxoReservation::delAdapter(utxoAdapter_);
 }
 
+const std::string& Wallet::walletIdInt(void) const
+{
+   /***
+   Overload this if your wallet class supports internal chains. 
+   A wallet object without an internal chain should throw a 
+   runtime error. 
+   ***/
+
+   throw std::runtime_error("no internal chain");
+}
+
 void Wallet::synchronize(const std::function<void()> &cbDone)
 {
    const auto &cbProcess = [this, cbDone] (bs::sync::WalletData data) 
@@ -96,16 +107,10 @@ bool Wallet::setTransactionComment(const BinaryData &txOrHash, const std::string
 
 bool Wallet::isBalanceAvailable() const
 {
-   /***
-   This isn't a valid test at all, it does not check for wallet registration status.
-
-   EDIT: added the registration check
-   ***/
-   return (
-      armory_ != nullptr) && 
+   return 
+      (armory_ != nullptr) && 
       (armory_->state() == ArmoryConnection::State::Ready) && 
-      (btcWallet_ != nullptr &&
-      isRegistered());
+      isRegistered();
 }
 
 BTCNumericTypes::balance_type Wallet::getSpendableBalance() const
@@ -146,84 +151,88 @@ std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
    return iter->second;
 }
 
-bool Wallet::getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)> cb) const
+////////////////////////////////////////////////////////////////////////////////
+////
+//// Combined DB fetch methods
+////
+////////////////////////////////////////////////////////////////////////////////
+bool Wallet::updateBalances(const std::function<void(void)> &cb)
 {
-   if (!isBalanceAvailable()) {
-      return false;
-   }
-   if (updateAddrTxN_) {
-      const auto &cbTxN = [this, addr]
-                        (ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
-         try {
-            const auto inTxnMap = txnMap.get();
-            updateMap<std::map<BinaryData, uint32_t>>(inTxnMap, addressTxNMap_);
-            updateAddrTxN_ = false;
-         }
-         catch (const std::exception &e) {
-            if (logger_ != nullptr) {
-               logger_->error("[bs::sync::Wallet::getAddrTxN] Return data error - {} ", \
-                  "- Address {}", e.what(), addr.display());
-            }
-         }
+   /***
+   The callback is only used to signify request completion, use the
+   get methods to grab the individual balances
+   ***/
 
-         invokeCb<uint32_t>(addressTxNMap_, cbTxN_, 0);
-      };
-
-      cbTxN_[addr].push_back(cb);
-      if (cbTxN_.size() == 1) {
-         btcWallet_->getAddrTxnCountsFromDB(cbTxN);
-      }
-   }
-   else {
-      const auto itTxN = addressTxNMap_.find(addr.id());
-      if (itTxN == addressTxNMap_.end()) {
-         cb(0);
-         return true;
-      }
-      cb(itTxN->second);
-   }
-   return true;
-}
-
-bool Wallet::getActiveAddressCount(const std::function<void(size_t)> &cb) const
-{
-   if (!isBalanceAvailable()) {
-      return false;
-   }
-   if (addressTxNMap_.empty() || updateAddrTxN_) {
-      const auto &cbTxN = [this, cb] (ReturnMessage<std::map<BinaryData, uint32_t>> txnMap) {
-         try {
-            auto inTxnMap = txnMap.get();
-            updateMap<std::map<BinaryData, uint32_t>>(inTxnMap, addressTxNMap_);
-            updateAddrTxN_ = false;
-            cb(addressTxNMap_.size());
-         } catch (std::exception& e) {
-            if (logger_ != nullptr) {
-               logger_->error("[bs::sync::Wallet::GetActiveAddressCount] Return data error - {} ", e.what());
-            }
-         }
-      };
-      btcWallet_->getAddrTxnCountsFromDB(cbTxN);
-   } else {
-      cb(addressTxNMap_.size());
-   }
-   return true;
-}
-
-bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
-   , std::function<void(std::vector<UTXO>)> cb, QObject *obj, uint64_t val)
-{
    if (!isBalanceAvailable())
       return false;
 
-   /*auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
-   callbacks.push_back({ obj, cb });
-   if (callbacks.size() > 1) {
-      return true;
-   }*/
+   const auto &cbBalances = [this, cb]
+   (ReturnMessage<std::map<std::string, CombinedBalances>> balanceVector)->void
+   {
+      try
+      {
+         auto&& bv = balanceVector.get();
 
-   const auto &cbTxOutList = [this, val, btcWallet, cb]
-                             (ReturnMessage<std::vector<UTXO>> txOutList) 
+         //reset wallet balance and count, as these values are not diffs
+         totalBalance_ = 0;
+         spendableBalance_ = 0;
+         unconfirmedBalance_ = 0;
+         addrCount_ = 0;
+
+         for (auto& wltBal : bv)
+         {
+            //wallet balance
+            totalBalance_ += static_cast<BTCNumericTypes::balance_type>(
+               wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
+            spendableBalance_ += static_cast<BTCNumericTypes::balance_type>(
+               wltBal.second.walletBalanceAndCount_[1]) / BTCNumericTypes::BalanceDivider;
+            unconfirmedBalance_ += static_cast<BTCNumericTypes::balance_type>(
+               wltBal.second.walletBalanceAndCount_[2]) / BTCNumericTypes::BalanceDivider;
+
+            //wallet txn count
+            addrCount_ += wltBal.second.walletBalanceAndCount_[3];
+
+            //address balances
+            updateMap<std::map<BinaryData, std::vector<uint64_t>>>(
+               wltBal.second.addressBalances_, addressBalanceMap_);
+         }
+
+         if(cb)
+            cb();
+      }
+      catch (const std::exception &e)
+      {
+         if (logger_)
+         {
+            logger_->error("[hd::Leaf::updateBalances] Return data error " \
+               "- {}", e.what());
+         }
+      }
+   };
+
+   std::vector<std::string> walletIDs;
+   walletIDs.push_back(walletId());
+   try
+   {
+      walletIDs.push_back(walletIdInt());
+   }
+   catch (std::exception&)
+   {}
+
+   armory_->bdv()->getCombinedBalances(walletIDs, cbBalances);
+   return true;
+}
+
+bool Wallet::getSpendableTxOutList(
+   std::function<void(std::vector<UTXO>)> cb, uint64_t val)
+{
+   //combined utxo fetch method
+
+   if (!isBalanceAvailable())
+      return false;
+
+   const auto &cbTxOutList = [this, val, cb]
+      (ReturnMessage<std::vector<UTXO>> txOutList) 
    {
       try 
       {
@@ -252,206 +261,147 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
          }
 
          cb(txOutListCopy);
-
-         /***
-         QMetaObject::invokeMethod does not trigger in unit tests when Qt is left
-         to autodetect the "connection type". Forcing Qt::DirectConnection will
-         work but will always run the callback in the same thread as the caller,
-         which I suspect is not the acceptable behavior if the caller is passing
-         callbacks that can affect the GUI.
-
-         Regardless, unless this callback is called from a Qt signal, it would be
-         running from the WebSocketClient callback thread, which would result in
-         potential spendableCallbacks_ access concurency. This design isn't safe
-         under those circumstances. At any rate, Qt'isms ought to be kept outside
-         of routines that can and should be covered by unit tests, like this one.
-
-         Also, this approach to caching similar calls can result in false positives.
-         For example, what if the address map changes before the first call to
-         getSpendableTxOutList completes but before a 2nd one is emited? The 2nd one
-         would be cached, and miss UTXOs as a result. There is no check for that
-         condition, therefor the caching should not happen in the first place.
-         ***/
-
-         /*QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
-            auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
-            for (const auto &cbPairs : callbacks) {
-               if (cbPairs.first) {
-                     cbPairs.second(txOutListCopy);
-               }
-            }
-            spendableCallbacks_.erase(btcWallet->walletID());
-         });*/
       }
       catch (const std::exception &e) 
       {
          if (logger_ != nullptr) 
          {
-            logger_->error("[bs::sync::Wallet::getSpendableTxOutList] Return data " \
+            logger_->error(
+               "[bs::sync::Wallet::getSpendableTxOutList] Return data " \
                "error {} - value {}", e.what(), val);
          }
       }
    };
 
-   btcWallet->getSpendableTxOutListForValue(val, cbTxOutList);
+   std::vector<std::string> walletIDs;
+   walletIDs.push_back(walletId());
+   try
+   {
+      walletIDs.push_back(walletIdInt());
+   }
+   catch(std::exception&)
+   {}
+
+   armory_->bdv()->getCombinedSpendableTxOutListForValue(
+      walletIDs, val, cbTxOutList);
    return true;
 }
 
-bool Wallet::getSpendableTxOutList(std::function<void(std::vector<UTXO>)> cb
-   , QObject *obj, uint64_t val)
+bool Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb) const
 {
-   return getSpendableTxOutList(btcWallet_, cb, obj, val);
-}
-
-bool Wallet::getUTXOsToSpend(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
-   , uint64_t val, std::function<void(std::vector<UTXO>)> cb) const
-{
-   if (!isBalanceAvailable()) {
+   if (!isBalanceAvailable())
       return false;
-   }
-   const auto &cbProcess = [this, val, cb]
-                           (ReturnMessage<std::vector<UTXO>> utxos)-> void {
-      try {
-         auto utxosObj = utxos.get();
-         if (utxoAdapter_) {
-            utxoAdapter_->filter(utxosObj);
-         }
-         std::sort(utxosObj.begin(), utxosObj.end(), [](const UTXO &a, const UTXO &b) {
-            return (a.getValue() < b.getValue());
-         });
 
-         int index = (int)utxosObj.size() - 1;
-         while (index >= 0) {
-            if (utxosObj[index].getValue() < val) {
-               index++;
-               break;
-            }
-            index--;
-         }
-         if ((index >= 0) && ((size_t)index < utxosObj.size())) {
-            cb({ utxosObj[index] });
-            return;
-         }
-         else if (index < 0) {
-            cb({ utxosObj.front() });
-            return;
-         }
-
-         std::vector<UTXO> result;
-         uint64_t sum = 0;
-         index = (int)utxosObj.size() - 1;
-         while ((index >= 0) && (sum < val)) {  //TODO: needs to be optimized to fill the val more precisely
-            result.push_back(utxosObj[index]);
-            sum += utxosObj[index].getValue();
-            index--;
-         }
-
-         if (sum < val) {
-            cb({});
-         }
-         else {
-            cb(result);
-         }
-      }
-      catch (const std::exception &e) {
-         if (logger_ != nullptr) {
-            logger_->error("[bs::sync::Wallet::getUTXOsToSpend] Return data error " \
-               "- {} - value {}", e.what(), val);
-         }
-      }
-   };
-   btcWallet->getSpendableTxOutListForValue(val, cbProcess);
-   return true;
-}
-
-bool Wallet::getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)> cb) const
-{
-   return getUTXOsToSpend(btcWallet_, val, cb);
-}
-
-bool Wallet::getSpendableZCList(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
-   , std::function<void(std::vector<UTXO>)> cb, QObject *obj)
-{
-   if (!btcWallet) {
-      return false;
-   }
-
-   auto &cbList = zcListCallbacks_[btcWallet->walletID()];
-   cbList.push_back({ obj, cb });
-   if (cbList.size() > 1) {
-      return true;
-   }
-   const auto &cbZCList = [this, btcWallet](ReturnMessage<std::vector<UTXO>> utxos)-> void {
-      try {
+   const auto &cbZCList = [this, cb](
+      ReturnMessage<std::vector<UTXO>> utxos)-> void 
+   {
+      try 
+      {
          auto inUTXOs = utxos.get();
-         // Before invoking the callbacks, process the UTXOs for the purposes of
-         // handling internal/external addresses (UTXO filtering, balance
-         // adjusting, etc.).
-         const auto &cbProcess = [this, btcWallet, inUTXOs] {
-            QMetaObject::invokeMethod(this, [this, btcWallet, inUTXOs] {
-               const auto &itCb = zcListCallbacks_.find(btcWallet->walletID());
-               if (itCb == zcListCallbacks_.end()) {
-                  logger_->error("[sync::Wallet::getSpendableZCList] failed to find callback for id {}"
-                     , btcWallet->walletID());
-                  return;
-               }
-               for (const auto &cb : itCb->second) {
-                  if (cb.first) {
-                     cb.second(inUTXOs);
-                  }
-               }
-               zcListCallbacks_.erase(itCb);
-            });
-         };
-         cbProcess();
+         cb(inUTXOs);
       }
-      catch (const std::exception &e) {
-         if (logger_ != nullptr) {
+      catch (const std::exception &e) 
+      {
+         if (logger_ != nullptr) 
+         {
             logger_->error("[bs::sync::Wallet::getSpendableZCList] Return data error " \
                "- {}", e.what());
          }
       }
    };
-   btcWallet->getSpendableZCList(cbZCList);
+
+   std::vector<std::string> walletIDs;
+   walletIDs.push_back(walletId());
+   try
+   {
+      walletIDs.push_back(walletIdInt());
+   }
+   catch (std::exception&)
+   {}
+
+   armory_->bdv()->getCombinedSpendableZcOutputs(walletIDs, cbZCList);
    return true;
 }
 
-bool Wallet::getSpendableZCList(std::function<void(std::vector<UTXO>)> cb
-   , QObject *obj)
+bool Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
 {
-   return getSpendableZCList(btcWallet_, cb, obj);
-}
-
-bool Wallet::getRBFTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
-   , std::function<void(std::vector<UTXO>)> cb) const
-{
-   if (!isBalanceAvailable()) {
+   if (!isBalanceAvailable())
       return false;
-   }
 
-   // The callback we passed in needs data from Armory. Write a simple callback
-   // that takes Armory's data and uses it in the callback.
-   const auto &cbArmory = [this, cb](ReturnMessage<std::vector<UTXO>> utxos)->void {
-      try {
+   const auto &cbArmory = [this, cb]
+      (ReturnMessage<std::vector<UTXO>> utxos)->void
+   {
+      try 
+      {
          auto inUTXOs = utxos.get();
          cb(std::move(inUTXOs));
       }
-      catch(std::exception& e) {
-         if(logger_ != nullptr) {
+      catch(std::exception& e) 
+      {
+         if(logger_ != nullptr) 
+         {
             logger_->error("[bs::sync::Wallet::getRBFTxOutList] Return data error - " \
                "{}", e.what());
          }
       }
    };
 
-   btcWallet->getRBFTxOutList(cbArmory);
+   std::vector<std::string> walletIDs;
+   walletIDs.push_back(walletId());
+   try
+   {
+      walletIDs.push_back(walletIdInt());
+   }
+   catch (std::exception&)
+   {}
+
+   armory_->bdv()->getCombinedRBFTxOuts(walletIDs, cbArmory);
    return true;
 }
 
-bool Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
+bool Wallet::getAddressTxnCounts(std::function<void(void)> cb)
 {
-   return getRBFTxOutList(btcWallet_, cb);
+   /***
+   Same as updateBalances, this methods grabs the addr txn count
+   for all addresses in wallet (inner chain included) and caches
+   them locally.
+
+   Use getAddressTxnCount to get a specific count for a given 
+   address from the cache.
+   ***/
+
+   if (!isBalanceAvailable())
+      return false;
+
+   auto cbCounts = [this, cb]
+      (ReturnMessage<std::map<std::string, CombinedCounts>> counts)->void
+   {
+      auto&& countMap = counts.get();
+
+      for (auto& countPair : countMap)
+      {
+         updateMap<std::map<BinaryData, uint64_t>>(
+            countPair.second.addressTxnCounts_, addressTxNMap_);
+      }
+
+      if (cb)
+         cb();
+   };
+
+   std::vector<std::string> walletIDs;
+   walletIDs.push_back(walletId());
+   try
+   {
+      walletIDs.push_back(walletIdInt());
+   }
+   catch (std::exception&)
+   {}
+
+   armory_->bdv()->getCombinedAddrTxnCounts(walletIDs, cbCounts);
+   return true;
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 bool Wallet::getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &btcWallet
    , uint32_t id, std::function<void(const Wallet *wallet
@@ -506,12 +456,6 @@ bool Wallet::getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &btcWa
    return true;
 }
 
-bool Wallet::getHistoryPage(uint32_t id, std::function<void(const Wallet *wallet
-   , std::vector<ClientClasses::LedgerEntry>)> clientCb, bool onlyNew) const
-{
-   return getHistoryPage(btcWallet_, id, clientCb, onlyNew);
-}
-
 QString Wallet::displayTxValue(int64_t val) const
 {
    return QLocale().toString(val / BTCNumericTypes::BalanceDivider, 'f', BTCNumericTypes::default_precision);
@@ -535,13 +479,17 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryObje
 {
    setArmory(armory);
 
-   if (armory_) {
-      const auto &cbRegister = [this](const std::string &) {
+   if (armory_) 
+   {
+      const auto &cbRegister = [this](const std::string &) 
+      {
          logger_->debug("Wallet ready: {}", walletId());
          this->setRegistered();
          emit walletReady(QString::fromStdString(walletId()));
       };
-      const auto regId = armory_->registerWallet(btcWallet_, walletId(), getAddrHashes(), cbRegister, asNew);
+
+      const auto regId = armory_->registerWallet(
+         walletId(), getAddrHashes(), cbRegister, asNew);
       logger_->debug("register wallet {}, {} addresses = {}", walletId(), getAddrHashes().size(), regId);
       return { regId };
    }
@@ -551,19 +499,7 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryObje
 void Wallet::unregisterWallet()
 {
    heartbeatRunning_ = false;
-   btcWallet_.reset();
-   {
-      std::unique_lock<std::mutex> lock(addrMapsMtx_);
-      cbTxN_.clear();
-   }
-   spendableCallbacks_.clear();
-   zcListCallbacks_.clear();
    historyCache_.clear();
-
-   if (armory_) {
-      armory_->registerWallet(btcWallet_, walletId(), {}, [](const std::string &){}, false);
-   }
-   btcWallet_.reset();
 }
 
 void Wallet::firstInit(bool force)
@@ -835,4 +771,18 @@ void Wallet::trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb)
 
    //2) send to armory wallet for processing
    signContainer_->syncAddressBatch(walletId(), usedAddrSet, cb);
+}
+
+size_t Wallet::getActiveAddressCount()
+{
+   std::unique_lock<std::mutex> lock(addrMapsMtx_);
+   
+   size_t count = 0;
+   for (auto& addrBal : addressBalanceMap_)
+   {
+      if (addrBal.second[0] != 0)
+         ++count;
+   }
+
+   return count;
 }

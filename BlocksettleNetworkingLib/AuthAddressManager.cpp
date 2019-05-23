@@ -368,7 +368,7 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
                signIdsRevoke_.insert(id);
             }
          };
-         wallet->getUTXOsToSpend(fee, cbFeeUTXOs);
+         wallet->getSpendableTxOutList(cbFeeUTXOs, fee);
       };
       walletsManager_->estimatedFeePerByte(3, cbFee, this);
    };

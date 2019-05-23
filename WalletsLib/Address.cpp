@@ -372,10 +372,13 @@ BinaryData bs::Address::id() const
 
 bool bs::Address::operator==(const bs::Address &addr) const
 {
-   if (getSize() != addr.getSize()) {
-      return false;
-   }
-   return (id() == addr.id());
+   /*
+   This is the correct comparator (as opposed to checking for 
+   size first, as the carried data may or may not be prefixed
+   in the first place, leading to false negative size checks.
+   */
+
+   return prefixed() == addr.prefixed();
 }
 
 std::shared_ptr<ScriptRecipient> bs::Address::getRecipient(uint64_t value) const
