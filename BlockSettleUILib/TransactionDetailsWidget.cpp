@@ -437,6 +437,9 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
       QStringList txItems;
       txItems << txHashStr << UiUtils::displayAmount(amount);
       auto txHashItem = new QTreeWidgetItem(txItems);
+      if (!isOutput) {
+         txHashItem->setData(0, Qt::UserRole, QString::fromStdString(txHash.toHexStr(true)));
+      }
       txHashItem->setData(1, Qt::UserRole, (qulonglong)amount);
       item->addChild(txHashItem);
    }
@@ -451,8 +454,8 @@ void TransactionDetailsWidget::onAddressClicked(QTreeWidgetItem *item, int colum
       emit addressClicked(item->text(colAddressId));
    }
    else {
-      const auto txHashStr = item->text(colAddressId);
-      if (txHashStr.length() == 64) {
+      const auto txHashStr = item->data(colAddressId, Qt::UserRole).toString();
+      if (!txHashStr.isEmpty()) {
          emit txHashClicked(txHashStr);
       }
    }
