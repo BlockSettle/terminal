@@ -521,7 +521,7 @@ void ChatClientDataModel::updateNewMessagesFlag()
          
                // get display tray notification flag for room
                if (roomItem && roomItem->getType() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
-                  auto roomElement = static_cast<const ChatRoomElement*>(roomItem);
+                  auto roomElement = dynamic_cast<const ChatRoomElement*>(roomItem);
                   if (roomElement) {
                      auto roomData = roomElement->getRoomData();
                      if (roomData) {
