@@ -1,12 +1,12 @@
-#ifndef SENDOTCDATAREQUEST_H
-#define SENDOTCDATAREQUEST_H
+#ifndef SUBMITOTCREQUEST_H
+#define SUBMITOTCREQUEST_H
 #include "Request.h"
 
 namespace Chat {
-   class SendOTCDataRequest : public Request
+   class SubmitOTCRequest : public Request
    {
    public:
-      SendOTCDataRequest(const std::string &clientId, std::shared_ptr<OTCRequestData> otcData);
+      SubmitOTCRequest(const std::string &clientId, std::shared_ptr<OTCRequestData> otcData);
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId
                                                , const std::string& jsonData);
@@ -19,4 +19,4 @@ namespace Chat {
    };
 }
 
-#endif // SENDOTCDATAREQUEST_H
+#endif // SUBMITOTCREQUEST_H

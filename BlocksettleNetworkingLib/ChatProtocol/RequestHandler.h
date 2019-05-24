@@ -18,7 +18,7 @@ namespace Chat {
    class PendingMessagesResponse;
    class SendRoomMessageRequest;
    class SearchUsersRequest;
-   class SendOTCDataRequest;
+   class SubmitOTCRequest;
    class UpdateOTCDataRequest;
    
    class RequestHandler
@@ -51,7 +51,7 @@ namespace Chat {
 
       virtual void OnSearchUsersRequest(const SearchUsersRequest& ) = 0;
 
-      virtual void OnSendOTCDataRequest(const SendOTCDataRequest&) = 0;
+      virtual void OnSubmitOTCRequest(const SubmitOTCRequest&) = 0;
       virtual void OnUpdateOTCDataRequest(const UpdateOTCDataRequest&) = 0;
    };
 }

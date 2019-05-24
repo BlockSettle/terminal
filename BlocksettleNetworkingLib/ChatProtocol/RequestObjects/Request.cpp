@@ -16,7 +16,7 @@
 #include "SendRoomMessageRequest.h"
 #include "ContactsListRequest.h"
 #include "SearchUsersRequest.h"
-#include "SendOTCDataRequest.h"
+#include "SubmitOTCRequest.h"
 #include "UpdateOTCDataRequest.h"
 
 using namespace Chat;
@@ -38,7 +38,7 @@ static std::map<std::string, RequestType> RequestTypeFromString
    ,   { "RequestSendRoomMessage"     ,   RequestType::RequestSendRoomMessage     }
    ,   { "RequestContactsList"        ,   RequestType::RequestContactsList        }
    ,   { "RequestSearchUsers"         ,   RequestType::RequestSearchUsers         }
-   ,   { "RequestSendOTCData"         ,   RequestType::RequestSendOTCData         }
+   ,   { "RequestSubmitOTC"           ,   RequestType::RequestSubmitOTC           }
    ,   { "RequestUpdateOTCData"       ,   RequestType::RequestUpdateOTCData       }
 };
 
@@ -60,7 +60,7 @@ static std::map<RequestType, std::string> RequestTypeToString
    ,   { RequestType::RequestSendRoomMessage     ,   "RequestSendRoomMessage"     }
    ,   { RequestType::RequestContactsList        ,   "RequestContactsList"        }
    ,   { RequestType::RequestSearchUsers         ,   "RequestSearchUsers"         }
-   ,   { RequestType::RequestSendOTCData         ,   "RequestSendOTCData"         }
+   ,   { RequestType::RequestSubmitOTC           ,   "RequestSubmitOTC"           }
    ,   { RequestType::RequestUpdateOTCData       ,   "RequestUpdateOTCData"       }
 };
 
@@ -147,8 +147,8 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
       case RequestType::RequestSearchUsers:
          return SearchUsersRequest::fromJSON(clientId, jsonData);
 
-      case RequestType::RequestSendOTCData:
-         return SendOTCDataRequest::fromJSON(clientId, jsonData);
+      case RequestType::RequestSubmitOTC:
+         return SubmitOTCRequest::fromJSON(clientId, jsonData);
 
       case RequestType::RequestUpdateOTCData:
          return UpdateOTCDataRequest::fromJSON(clientId, jsonData);

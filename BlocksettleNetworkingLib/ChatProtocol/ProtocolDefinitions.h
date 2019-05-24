@@ -30,7 +30,7 @@ namespace Chat
    ,   RequestSendRoomMessage
    ,   RequestContactsList
    ,   RequestSearchUsers
-   ,   RequestSendOTCData
+   ,   RequestSubmitOTC
    ,   RequestUpdateOTCData
    };
 
@@ -55,7 +55,7 @@ namespace Chat
    ,   ResponseContactsList
    ,   ResponseSearchUsers
    ,   ResponseLogout
-   ,   ResponseSendOTCData
+   ,   ResponseSubmitOTC
    ,   ResponseUpdateOTCData
    };
    
@@ -87,6 +87,13 @@ namespace Chat
    enum class ContactsActionServerResult {
        Success,
        Failed
+   };
+
+   enum class OTCRequestResult {
+      Accepted,
+      Rejected,
+      Canceled,
+      Expired,
    };
    
    static const QString VersionKey   = QStringLiteral("version");
@@ -156,6 +163,9 @@ namespace Chat
    static const QString OTCUpdatePriceKey = QStringLiteral("otc_update_price");
    static const QString OTCLowerKey = QStringLiteral("lower");
    static const QString OTCUpperKey = QStringLiteral("upper");
+   static const QString OTCActionResultKey = QStringLiteral("otc_action_result");
+   static const QString OTCMessageKey = QStringLiteral("otc_message");
+
 
 
    template <typename T>
@@ -193,5 +203,6 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ContactStatus)
 Q_DECLARE_METATYPE(Chat::UserStatus)
+Q_DECLARE_METATYPE(Chat::OTCRequestResult)
 
 

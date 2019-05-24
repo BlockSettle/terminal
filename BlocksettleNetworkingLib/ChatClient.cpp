@@ -1355,6 +1355,9 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
    auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
       , serverRequestId, requestorId, targetId, submitTimestamp, expireTimestamp, request);
 
+   auto otcRequest = std::make_shared<Chat::SubmitOTCRequest>("", liveRequest);
+   sendRequest(otcRequest);
+   return true;
    if (request.ownRequest) {
       ownSubmittedOTCId_ = liveRequest->clientRequestId();
 
@@ -1465,6 +1468,8 @@ void ChatClient::HandleRejectedCommonOTCResponse(const QString& otcId, const std
 //    sent to common OTC chat room
 void ChatClient::HandleCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
 {
+   logger_->debug("[ChatClient::HandleCommonOTCResponse] OTCResponseData: {}", response->toJsonString());
+
    model_->insertOTCReceivedResponse(response->serverResponseId().toStdString());
 }
 
@@ -1516,9 +1521,28 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
                       crecord->getDisplayName());
 }
 
-void ChatClient::OnSendOTCDataResponse(const Chat::SendOTCDataResponse &)
+void ChatClient::OnSubmitOTCResponse(const Chat::SubmitOTCResponse &response)
 {
    //TODO: Implement!
+
+    logger_->debug("[ChatClient::OnSubmitOTCResponse] {}", response.getData());
+
+   switch (response.getResult()) {
+      case Chat::OTCRequestResult::Accepted:
+         HandleCommonOTCRequestAccepted(response.otcRequestData());
+         break;
+      case Chat::OTCRequestResult::Rejected:
+         HandleCommonOTCRequestRejected(response.otcRequestData()->serverRequestId().toStdString());
+         break;
+      case Chat::OTCRequestResult::Canceled:
+         HandleCommonOTCRequestCancelled(response.otcRequestData()->serverRequestId());
+         break;
+      case Chat::OTCRequestResult::Expired:
+         HandleCommonOTCRequestExpired(response.otcRequestData()->serverRequestId());
+         break;
+      default:
+         break;
+   }
    return;
 }
 

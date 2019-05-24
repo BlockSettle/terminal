@@ -70,7 +70,7 @@ public:
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
-   void OnSendOTCDataResponse(const Chat::SendOTCDataResponse &) override;
+   void OnSubmitOTCResponse(const Chat::SubmitOTCResponse &) override;
    void OnUpdateOTCDataResponse(const Chat::UpdateOTCDataResponse &) override;
 
    void OnDataReceived(const std::string& data) override;
