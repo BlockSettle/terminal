@@ -1,7 +1,24 @@
 {
-   "latest_version" : "0.15.12",
-   "release_date" : "23 May 2019",
+   "latest_version" : "0.15.13",
+   "release_date" : "24 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.13",
+         "previous_version" : "0.15.12",
+         "release_date" : "24 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Explorer fixes",
+            "Various signer and chat fixes",
+            "UI fixes and updates"
+         ],
+         "revision" : "20be5aef",
+         "common_revision" : "b9a281b7"
+      },
       {
          "version_string" : "0.15.12",
          "previous_version" : "0.15.11",
