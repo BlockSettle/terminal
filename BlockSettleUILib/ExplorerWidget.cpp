@@ -52,12 +52,13 @@ ExplorerWidget::~ExplorerWidget() = default;
 // be set up for now.
 void ExplorerWidget::init(const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<CCFileManager> &ccFileMgr)
 {
    armory_ = armory;
    logger_ = inLogger;
-   ui_->Transaction->init(armory, inLogger, walletsMgr);
-   ui_->Address->init(armory, inLogger);
+   ui_->Transaction->init(armory, inLogger, walletsMgr, ccFileMgr->ccSecurities());
+   ui_->Address->init(armory, inLogger, ccFileMgr->ccSecurities());
 //   ui_->Block->init(armory, inLogger);
 
    // With Armory and the logger set, we can start accepting text input.

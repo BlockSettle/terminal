@@ -17,6 +17,7 @@ namespace bs {
       class WalletsManager;
    }
 }
+class CCFileManager;
 
 class ExplorerWidget : public TabWithShortcut
 {
@@ -28,7 +29,8 @@ public:
 
    void init(const std::shared_ptr<ArmoryObject> &armory
       , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &);
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<CCFileManager> &);
    void shortcutActivated(ShortcutType s) override;
 
    enum Page {

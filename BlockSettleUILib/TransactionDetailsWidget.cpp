@@ -2,6 +2,7 @@
 #include "ui_TransactionDetailsWidget.h"
 #include "BTCNumericTypes.h"
 #include "BlockObj.h"
+#include "CheckRecipSigner.h"
 #include "UiUtils.h"
 #include "Wallets/SyncWalletsManager.h"
 
@@ -87,11 +88,13 @@ TransactionDetailsWidget::~TransactionDetailsWidget() = default;
 void TransactionDetailsWidget::init(
    const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
-   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr)
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const CCFileManager::CCSecurities &ccSecurities)
 {
    armory_ = armory;
    logger_ = inLogger;
    walletsMgr_ = walletsMgr;
+   ccSecurities_ = ccSecurities;
 
    connect(armory_.get(), &ArmoryObject::newBlock, this
       , &TransactionDetailsWidget::onNewBlock, Qt::QueuedConnection);
@@ -257,6 +260,52 @@ void TransactionDetailsWidget::loadInputs()
    loadTreeOut(ui_->treeOutput);
 }
 
+void TransactionDetailsWidget::updateTreeCC(QTreeWidget *tree
+   , const bs::network::CCSecurityDef &ccDef)
+{
+   for (int i = 0; i < tree->topLevelItemCount(); ++i) {
+      auto item = tree->topLevelItem(i);
+      const uint64_t amt = item->data(1, Qt::UserRole).toULongLong();
+      if (amt && ((amt % ccDef.nbSatoshis) == 0)) {
+         item->setData(1, Qt::DisplayRole, QString::number(amt / ccDef.nbSatoshis));
+         const auto addrWallet = item->data(2, Qt::DisplayRole).toString();
+         if (addrWallet.isEmpty()) {
+            item->setData(2, Qt::DisplayRole, QString::fromStdString(ccDef.product));
+         }
+         for (int j = 0; j < item->childCount(); ++j) {
+            auto outItem = item->child(j);
+            const uint64_t outAmt = outItem->data(1, Qt::UserRole).toULongLong();
+            outItem->setData(1, Qt::DisplayRole, QString::number(outAmt / ccDef.nbSatoshis));
+            outItem->setData(2, Qt::DisplayRole, QString::fromStdString(ccDef.product));
+         }
+      }
+   }
+}
+
+void TransactionDetailsWidget::updateCCInputs()
+{
+   const auto &cbUpdateCCInput = [this](const BinaryData &txHash
+      , const bs::network::CCSecurityDef &ccDef) {
+   };
+
+   for (size_t i = 0; i < curTx_.getNumTxIn(); ++i) {
+      const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
+      const auto &prevTx = prevTxMap_[op.getTxHash()];
+      for (const auto &ccSec : ccSecurities_) {
+         auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armory_);
+         const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
+            if (!found) {
+               return;
+            }
+            QMetaObject::invokeMethod(this, [this, ccSec] {
+               updateTreeCC(ui_->treeInput, ccSec);
+            });
+         };
+         txChecker->containsInputAddress(curTx_, cbHasGA, ccSec.nbSatoshis);
+      }
+   }
+}
+
 // Input widget population.
 void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
 {
@@ -265,8 +314,8 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
    // here's the code to add data to the Input tree.
    for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
-      TxIn in = curTx_.getTxInCopy(i);
-      OutPoint op = in.getOutPoint();
+      const TxIn in = curTx_.getTxInCopy(i);
+      const OutPoint op = in.getOutPoint();
       BinaryTXID intPrevTXID(op.getTxHash(), false);
       const auto &prevTx = prevTxMap_[intPrevTXID];
       if (prevTx.isInitialized()) {
@@ -289,9 +338,11 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       }
 
       // create a top level item using type, address, amount, wallet values
-      addItem(tree, addrStr, prevOut.getValue(), walletName, prevTx.getThisHash(), i);
+      addItem(tree, addrStr, prevOut.getValue(), walletName, prevTx.getThisHash());
    }
    tree->resizeColumns();
+
+   updateCCInputs();
 }
 
 // Output widget population.
@@ -322,15 +373,28 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
          addrStr = QString::fromStdString(outAddr.display());
       }
 
-      addItem(tree, addrStr, txOut.getValue(), walletName, txOut.getScript(), i);
+      addItem(tree, addrStr, txOut.getValue(), walletName, txOut.getScript());
 
       // add the item to the tree
    }
    tree->resizeColumns();
+
+   for (const auto &ccSec : ccSecurities_) {
+      auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armory_);
+      const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
+         if (!found) {
+            return;
+         }
+         QMetaObject::invokeMethod(this, [this, ccSec] {
+            updateTreeCC(ui_->treeOutput, ccSec);
+         });
+      };
+      txChecker->containsInputAddress(curTx_, cbHasGA, ccSec.nbSatoshis);
+   }
 }
 
 void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
-   , const uint64_t amount, const QString &wallet, const BinaryData &txHash, const int index)
+   , const uint64_t amount, const QString &wallet, const BinaryData &txHash)
 {
    const bool specialAddr = address.startsWith(QLatin1Char('<'));
    const bool isOutput = (tree == ui_->treeOutput);
@@ -357,9 +421,10 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
    }
    if (!specialAddr) {
       const auto txHashStr = QString::fromStdString(txHash.toHexStr(!isOutput));
-      auto txHashItem = new QTreeWidgetItem(QStringList() << txHashStr
-         << UiUtils::displayAmount(amount)
-         << ((index >= 0) ? QString::number(index) : QString()));
+      QStringList txItems;
+      txItems << txHashStr << UiUtils::displayAmount(amount);
+      auto txHashItem = new QTreeWidgetItem(txItems);
+      txHashItem->setData(1, Qt::UserRole, (qulonglong)amount);
       item->addChild(txHashItem);
    }
 }
