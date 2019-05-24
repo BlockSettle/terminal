@@ -3,6 +3,7 @@
 
 #include "ArmoryObject.h"
 #include "BinaryData.h"
+#include "CCFileManager.h"
 #include "TxClasses.h"
 
 #include <QMap>
@@ -80,7 +81,8 @@ public:
 
    void init(const std::shared_ptr<ArmoryObject> &
       , const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<bs::sync::WalletsManager> &);
+      , const std::shared_ptr<bs::sync::WalletsManager> &
+      , const CCFileManager::CCSecurities &);
 
    void populateTransactionWidget(BinaryTXID rpcTXID,
       const bool& firstPass = true);
@@ -109,17 +111,21 @@ private:
    void loadInputs();
    void setTxGUIValues();
    void clear();
+   void updateCCInputs();
 
    void processTxData(Tx tx);
 
    void addItem(QTreeWidget *tree, const QString &address, const uint64_t amount
-      , const QString &wallet, const BinaryData &txHash, const int index = -1);
+      , const QString &wallet, const BinaryData &txHash);
+
+   static void updateTreeCC(QTreeWidget *, const bs::network::CCSecurityDef &);
 
 private:
    std::unique_ptr<Ui::TransactionDetailsWidget>   ui_;
    std::shared_ptr<ArmoryObject>   armory_;
    std::shared_ptr<spdlog::logger> logger_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   CCFileManager::CCSecurities      ccSecurities_;
 
    Tx curTx_; // The Tx being analyzed in the widget.
 

@@ -2,8 +2,11 @@
 #include "ui_AddressDetailsWidget.h"
 #include <QDateTime>
 #include <QDebug>
+#include <QtConcurrent/QtConcurrentRun>
+#include "CheckRecipSigner.h"
 #include "UiUtils.h"
 #include "Wallets/SyncPlainWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 
 AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
@@ -22,17 +25,18 @@ AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
 
    connect(ui_->treeAddressTransactions, &QTreeWidget::itemClicked,
            this, &AddressDetailsWidget::onTxClicked);
-
 }
 
 AddressDetailsWidget::~AddressDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
 void AddressDetailsWidget::init(const std::shared_ptr<ArmoryObject> &armory
-   , const std::shared_ptr<spdlog::logger> &inLogger)
+   , const std::shared_ptr<spdlog::logger> &inLogger
+   , const CCFileManager::CCSecurities &ccSecurities)
 {
    armory_ = armory;
    logger_ = inLogger;
+   ccSecurities_ = ccSecurities;
 
    connect(armory_.get(), &ArmoryObject::refresh, this
            , &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
@@ -43,6 +47,8 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
 {
    // In case we've been here before, clear all the text.
    clear();
+
+   currentAddr_ = inAddrVal;
 
    // Armory can't directly take an address and return all the required data.
    // Work around this by creating a dummy wallet, adding the explorer address,
@@ -55,8 +61,62 @@ void AddressDetailsWidget::setQueryAddr(const bs::Address &inAddrVal)
    for (const auto &regId : regIds) {
       dummyWallets_[regId] = dummyWallet;
    }
+   updateFields();
+}
 
-   ui_->addressId->setText(QString::fromStdString(inAddrVal.display()));
+void AddressDetailsWidget::updateFields()
+{
+   if (!ccFound_.first.empty()) {
+      ui_->addressId->setText(tr("%1 [Private Market: %2]")
+         .arg(QString::fromStdString(currentAddr_.display()))
+         .arg(QString::fromStdString(ccFound_.first)));
+      if (balanceLoaded_) {
+         ui_->totalReceived->setText(QString::number(totalReceived_ / ccFound_.second));
+         ui_->totalSent->setText(QString::number(totalSpent_ / ccFound_.second));
+         ui_->balance->setText(QString::number((totalReceived_ - totalSpent_) / ccFound_.second));
+
+         for (int i = 0; i < ui_->treeAddressTransactions->topLevelItemCount(); ++i) {
+            int64_t amt = ui_->treeAddressTransactions->topLevelItem(i)->data(colOutputAmt, Qt::UserRole).toLongLong();
+            amt /= (int64_t)ccFound_.second;
+            ui_->treeAddressTransactions->topLevelItem(i)->setData(colOutputAmt, Qt::DisplayRole
+               , tr("%1 %2").arg(QString::number(amt)).arg(QString::fromStdString(ccFound_.first)));
+         }
+      }
+   }
+   else {
+      ui_->addressId->setText(QString::fromStdString(currentAddr_.display()));
+      if (balanceLoaded_) {
+         ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_));
+         ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_));
+         ui_->balance->setText(UiUtils::displayAmount(totalReceived_ - totalSpent_));
+      }
+   }
+}
+
+void AddressDetailsWidget::searchForCC()
+{
+   if (!ccFound_.first.empty()) {
+      return;
+   }
+   for (const auto &txPair : txMap_) {
+      for (const auto &ccSecurity : ccSecurities_) {
+         auto checker = std::make_shared<bs::TxAddressChecker>(ccSecurity.genesisAddr, armory_);
+         const auto &cbHasInput = [this, ccSecurity, checker](bool found) {
+            if (!found || !ccFound_.first.empty()) {
+               return;
+            }
+            ccFound_ = { ccSecurity.product, ccSecurity.nbSatoshis };
+            QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
+         };
+         if (!ccFound_.first.empty()) {
+            break;
+         }
+         if (((totalReceived_ % ccSecurity.nbSatoshis) == 0)
+            && ((totalSpent_ % ccSecurity.nbSatoshis) == 0)) {
+            checker->containsInputAddress(txPair.second, cbHasInput, ccSecurity.nbSatoshis);
+         }
+      }
+   }
 }
 
 // The function that gathers all the data to place in the UI.
@@ -65,9 +125,9 @@ void AddressDetailsWidget::loadTransactions()
    CustomTreeWidget *tree = ui_->treeAddressTransactions;
    tree->clear();
 
-   uint64_t totSpent = 0;
-   uint64_t totRcvd = 0;
    uint64_t totCount = 0;
+
+   QtConcurrent::run(this, &AddressDetailsWidget::searchForCC);
 
    // Go through each TXEntry object and calculate all required UI data.
    for (const auto &curTXEntry : txEntryHashSet_) {
@@ -108,6 +168,7 @@ void AddressDetailsWidget::loadTransactions()
       item->setText(colInputsNum, QString::number(tx.getNumTxIn()));
       item->setText(colOutputsNum, QString::number(tx.getNumTxOut()));
       item->setText(colOutputAmt, UiUtils::displayAmount(curTXEntry.second.value));
+      item->setData(colOutputAmt, Qt::UserRole, (qlonglong)curTXEntry.second.value);
       item->setText(colFees, UiUtils::displayAmount(fees));
       item->setText(colFeePerByte, QString::number(std::nearbyint(feePerByte)));
       item->setText(colTxSize, QString::number(tx.getSize()));
@@ -120,10 +181,10 @@ void AddressDetailsWidget::loadTransactions()
 
       // Check the total received or sent.
       if (curTXEntry.second.value > 0) {
-         totRcvd += curTXEntry.second.value;
+         totalReceived_ += curTXEntry.second.value;
       }
       else {
-         totSpent -= curTXEntry.second.value; // Negative, so fake that out.
+         totalSpent_ -= curTXEntry.second.value; // Negative, so fake that out.
       }
       totCount++;
 
@@ -133,13 +194,12 @@ void AddressDetailsWidget::loadTransactions()
       tree->addTopLevelItem(item);
    }
 
+   balanceLoaded_ = true;
    emit finished();
 
    // Set up the display for total rcv'd/spent.
-   ui_->balance->setText(UiUtils::displayAmount(totRcvd - totSpent));
-   ui_->totalReceived->setText(UiUtils::displayAmount(totRcvd));
-   ui_->totalSent->setText(UiUtils::displayAmount(totSpent));
    ui_->transactionCount->setText(QString::number(totCount));
+   updateFields();
 
    tree->resizeColumns();
 }
@@ -326,9 +386,14 @@ void AddressDetailsWidget::clear()
    for (const auto &dummyWallet : dummyWallets_) {
       dummyWallet.second->unregisterWallet();
    }
+   balanceLoaded_ = false;
+   totalReceived_ = 0;
+   totalSpent_ = 0;
    dummyWallets_.clear();
    txMap_.clear();
    txEntryHashSet_.clear();
+   ccFound_.first.clear();
+   ccFound_.second = 0;
 
    ui_->addressId->clear();
    ui_->treeAddressTransactions->clear();
