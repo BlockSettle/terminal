@@ -1357,7 +1357,9 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
 
    auto otcRequest = std::make_shared<Chat::SubmitOTCRequest>("", liveRequest);
    sendRequest(otcRequest);
+   ownSubmittedOTCId_ = liveRequest->clientRequestId();
    return true;
+
    if (request.ownRequest) {
       ownSubmittedOTCId_ = liveRequest->clientRequestId();
 
