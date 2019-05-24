@@ -111,7 +111,10 @@ void AddressDetailsWidget::searchForCC()
          if (!ccFound_.first.empty()) {
             break;
          }
-         checker->containsInputAddress(txPair.second, cbHasInput, ccSecurity.nbSatoshis);
+         if (((totalReceived_ % ccSecurity.nbSatoshis) == 0)
+            && ((totalSpent_ % ccSecurity.nbSatoshis) == 0)) {
+            checker->containsInputAddress(txPair.second, cbHasInput, ccSecurity.nbSatoshis);
+         }
       }
    }
 }
