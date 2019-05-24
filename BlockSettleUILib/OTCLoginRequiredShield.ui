@@ -32,7 +32,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Please Login in order to submit RFQ</string>
+      <string>Login to access OTC</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
