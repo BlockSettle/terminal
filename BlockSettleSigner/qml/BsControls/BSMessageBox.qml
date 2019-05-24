@@ -59,11 +59,10 @@ CustomTitleDialogWindow {
                     id: labelText_
                     topPadding: 25
                     leftPadding: 15
-                    Layout.preferredWidth: root.width - image.width - 10
+                    rightPadding: 6
+                    Layout.preferredWidth: root.width - image.width - leftPadding - rightPadding
                     //color: colors[type]
                     color: BSStyle.dialogTitleWhiteColor
-                    //Layout.minimumHeight: 25
-                    //Layout.maximumHeight: 25
                     text: customText
                 }
 
@@ -71,8 +70,9 @@ CustomTitleDialogWindow {
                     id: labelDetails_
                     text: customDetails
                     leftPadding: 15
+                    rightPadding: 6
                     //textFormat: Text.RichText
-                    Layout.preferredWidth: root.width - image.width - 10
+                    Layout.preferredWidth: root.width - image.width - leftPadding - rightPadding
                     onLinkActivated: Qt.openUrlExternally(link)
                     MouseArea {
                         anchors.fill: parent
@@ -81,7 +81,6 @@ CustomTitleDialogWindow {
                     }
                 }
             }
-
         }
 
         RowLayout {
