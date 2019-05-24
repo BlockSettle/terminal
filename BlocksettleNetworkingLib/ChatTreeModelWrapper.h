@@ -12,9 +12,12 @@ public:
    /**
     * @brief Filter chat rooms by key applied to specified role
     * @param pattern String contained by branch property
-    * @param role Role of filtering property, -1 for ignore filtering
+    * @param role Filtering role. Should be ChatClientDataModel::Role. Qt::Display by default
+    * @param caseSensitive Use case sensitive filtering or not. False by default
     */
-   void setFilterKey(const QString &pattern, int role, bool caseSensitive = false);
+   void setFilterKey(const QString &pattern,
+                     int role = Qt::DisplayRole,
+                     bool caseSensitive = false);
 
    /**
     * @reimp
@@ -35,11 +38,6 @@ private slots:
 
 signals:
    void treeUpdated();
-
-private:
-   QString filteringPattern_;
-   int filteringRole_;
-   bool filteringCaseSensitive_;
 };
 
 #endif // CHARTREEMODELWRAPPER_H

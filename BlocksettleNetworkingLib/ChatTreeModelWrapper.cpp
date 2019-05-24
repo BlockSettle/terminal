@@ -4,17 +4,15 @@
 
 ChatTreeModelWrapper::ChatTreeModelWrapper(QObject *parent)
    : QSortFilterProxyModel(parent)
-   , filteringRole_(-1)
-   , filteringCaseSensitive_(false)
 {
    setDynamicSortFilter(true);
 }
 
 void ChatTreeModelWrapper::setFilterKey(const QString &pattern, int role, bool caseSensitive)
 {
-   filteringPattern_ = pattern;
-   filteringRole_ = role;
-   filteringCaseSensitive_ = caseSensitive;
+   setFilterFixedString(pattern);
+   setFilterRole(role);
+   setFilterCaseSensitivity(caseSensitive ? Qt:: CaseSensitive : Qt::CaseInsensitive);
    resetTree();
 }
 
@@ -23,10 +21,22 @@ void ChatTreeModelWrapper::setSourceModel(QAbstractItemModel *sourceModel)
    if (this->sourceModel()) {
       disconnect(this->sourceModel(), &QAbstractItemModel::dataChanged,
                  this, &ChatTreeModelWrapper::resetTree);
+      disconnect(this->sourceModel(), &QAbstractItemModel::rowsInserted,
+                 this, &ChatTreeModelWrapper::resetTree);
+      disconnect(this->sourceModel(), &QAbstractItemModel::rowsRemoved,
+                 this, &ChatTreeModelWrapper::resetTree);
+      disconnect(this->sourceModel(), &QAbstractItemModel::modelReset,
+                 this, &ChatTreeModelWrapper::resetTree);
    }
    QSortFilterProxyModel::setSourceModel(sourceModel);
    if (sourceModel) {
       connect(this->sourceModel(), &QAbstractItemModel::dataChanged,
+                       this, &ChatTreeModelWrapper::resetTree);
+      connect(this->sourceModel(), &QAbstractItemModel::rowsInserted,
+                       this, &ChatTreeModelWrapper::resetTree);
+      connect(this->sourceModel(), &QAbstractItemModel::rowsRemoved,
+                       this, &ChatTreeModelWrapper::resetTree);
+      connect(this->sourceModel(), &QAbstractItemModel::modelReset,
                        this, &ChatTreeModelWrapper::resetTree);
    }
 }
@@ -54,19 +64,7 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
    case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
    case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
    case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
-      if (filteringPattern_.isEmpty() || filteringRole_ == -1) {
-         return true;
-      }
-      QVariant data = index.data(filteringRole_);
-      if (!data.isValid()) {
-         return true;
-      }
-      if (data.canConvert(QVariant::String)) {
-         auto caseSensitivity = filteringCaseSensitive_ ? Qt:: CaseSensitive : Qt::CaseInsensitive;
-         return data.toString().contains(filteringPattern_, caseSensitivity);
-      } else {
-         return true;
-      }
+      return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
    }
    default:
       return false;
