@@ -845,34 +845,22 @@ bool ChatWidget::IsOTCChatSelected() const
    return IsOTCChatRoom(currentChat_);
 }
 
-void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shared_ptr<Chat::MessageData> message)
+void ChatWidget::onNewMessagesPresent(std::map<QString, std::shared_ptr<Chat::MessageData>> newMessages)
 {
-   qDebug() << "New Message: " << (isNewMessagePresented ? "TRUE" : "FALSE");
-
    // show notification of new message in tray icon
-   if (isNewMessagePresented) {
-      if (message) {
-         auto roomItem = client_->getDataModel()->findChatNode(message->receiverId().toStdString());
-         
-         // don't display tray notification if such room flag is set
-         if (roomItem && roomItem->getType() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
-            auto roomElement = static_cast<const ChatRoomElement*>(roomItem);
-            if (roomElement) {
-               auto roomData = roomElement->getRoomData();
-               if (roomData && !roomData->displayTrayNotification()) {
-                  return;
-               }
-            }
-         }         
+   for (auto i : newMessages) {
 
+      auto userName = i.first;
+      auto message = i.second;
+
+      if (message) {
          const int maxMessageLength = 20;
 
          auto messageTitle = message->senderId();
          auto messageText = message->messageData();
-         auto contactItem = client_->getDataModel()->findContactItem(message->senderId().toStdString());
 
-         if (contactItem && contactItem->hasDisplayName()) {
-            messageTitle = contactItem->getDisplayName();
+         if (!userName.isEmpty()) {
+            messageTitle = userName;
          }
 
          if (messageText.length() > maxMessageLength) {
