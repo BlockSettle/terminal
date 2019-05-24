@@ -13,6 +13,8 @@ QJsonObject OTCUpdateData::toJson() const
    data[OTCUpdateTimestampKey] = QString::number(updateTimestamp_);
    data[OTCUpdateAmountKey] = amount_;
    data[OTCUpdatePriceKey] = price_;
+
+   return data;
 }
 
 std::shared_ptr<OTCUpdateData> OTCUpdateData::fromJSON(const std::string& jsonData)
