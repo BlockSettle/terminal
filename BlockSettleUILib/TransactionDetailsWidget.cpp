@@ -311,12 +311,20 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
 {
    tree->clear();
 
+   std::map<BinaryTXID, unsigned int> hashCounts;
+   for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
+      TxOut prevOut;
+      const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
+      const BinaryTXID txID(op.getTxHash(), false);
+      hashCounts[txID]++;
+   }
+
    // here's the code to add data to the Input tree.
    for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
       const TxIn in = curTx_.getTxInCopy(i);
       const OutPoint op = in.getOutPoint();
-      BinaryTXID intPrevTXID(op.getTxHash(), false);
+      const BinaryTXID intPrevTXID(op.getTxHash(), false);
       const auto &prevTx = prevTxMap_[intPrevTXID];
       if (prevTx.isInitialized()) {
          prevOut = prevTx.getTxOutCopy(op.getTxOutIndex());
@@ -338,7 +346,8 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       }
 
       // create a top level item using type, address, amount, wallet values
-      addItem(tree, addrStr, prevOut.getValue(), walletName, prevTx.getThisHash());
+      addItem(tree, addrStr, prevOut.getValue(), walletName, prevTx.getThisHash()
+         , (hashCounts[intPrevTXID] > 1) ? op.getTxOutIndex() : -1);
    }
    tree->resizeColumns();
 
@@ -394,7 +403,8 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
 }
 
 void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
-   , const uint64_t amount, const QString &wallet, const BinaryData &txHash)
+   , const uint64_t amount, const QString &wallet, const BinaryData &txHash
+   , const int txIndex)
 {
    const bool specialAddr = address.startsWith(QLatin1Char('<'));
    const bool isOutput = (tree == ui_->treeOutput);
@@ -420,7 +430,10 @@ void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
       item->setData(1, Qt::DisplayRole, UiUtils::displayAmount(prevAmount));
    }
    if (!specialAddr) {
-      const auto txHashStr = QString::fromStdString(txHash.toHexStr(!isOutput));
+      auto txHashStr = QString::fromStdString(txHash.toHexStr(!isOutput));
+      if (txIndex >= 0) {
+         txHashStr += QLatin1String(":") + QString::number(txIndex);
+      }
       QStringList txItems;
       txItems << txHashStr << UiUtils::displayAmount(amount);
       auto txHashItem = new QTreeWidgetItem(txItems);
