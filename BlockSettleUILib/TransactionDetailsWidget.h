@@ -4,8 +4,8 @@
 #include "ArmoryObject.h"
 #include "BinaryData.h"
 #include "TxClasses.h"
-#include "spdlog/logger.h"
 
+#include <QMap>
 #include <QWidget>
 
 // Important note: The concept of endianness doesn't really apply to transaction
@@ -20,9 +20,13 @@
 namespace spdlog {
    class logger;
 }
-
 namespace Ui {
    class TransactionDetailsWidget;
+}
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
 }
 class CustomTreeWidget;
 class QTreeWidgetItem;
@@ -74,15 +78,14 @@ public:
    explicit TransactionDetailsWidget(QWidget *parent = nullptr);
    ~TransactionDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryObject> &armory
-      , const std::shared_ptr<spdlog::logger> &inLogger
-      , const std::shared_ptr<QTimer> &inTimer);
+   void init(const std::shared_ptr<ArmoryObject> &
+      , const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &);
 
    void populateTransactionWidget(BinaryTXID rpcTXID,
       const bool& firstPass = true);
 
     enum TxTreeColumns {
-      colType = 0,
       colAddressId,
       colAmount,
       colWallet
@@ -90,6 +93,8 @@ public:
 
 signals:
    void addressClicked(QString addressId);
+   void txHashClicked(QString txHash);
+   void finished() const;
 
 protected slots:
    void onAddressClicked(QTreeWidgetItem *item, int column);
@@ -105,22 +110,24 @@ private:
    void setTxGUIValues();
    void clear();
 
+   void processTxData(Tx tx);
+
+   void addItem(QTreeWidget *tree, const QString &address, const uint64_t amount
+      , const QString &wallet, const BinaryData &txHash, const int index = -1);
+
+private:
    std::unique_ptr<Ui::TransactionDetailsWidget>   ui_;
    std::shared_ptr<ArmoryObject>   armory_;
-   std::shared_ptr<QTimer>         expTimer_;
    std::shared_ptr<spdlog::logger> logger_;
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
 
    Tx curTx_; // The Tx being analyzed in the widget.
 
    // Data captured from Armory callbacks.
    std::map<BinaryTXID, Tx> prevTxMap_; // Prev Tx hash / Prev Tx map.
 
-   void processTxData(Tx tx);
-
-   QTreeWidgetItem * createItem(QTreeWidget *tree, QString type
-      , QString address, QString amount, QString wallet);
-   QTreeWidgetItem * createItem(QTreeWidgetItem *parentItem, QString type
-      , QString address, QString amount, QString wallet);
+   QMap<QString, QTreeWidgetItem *> inputItems_;
+   QMap<QString, QTreeWidgetItem *> outputItems_;
 };
 
 #endif // TRANSACTIONDETAILSWIDGET_H

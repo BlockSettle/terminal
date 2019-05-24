@@ -12,6 +12,11 @@
 namespace Ui {
    class ExplorerWidget;
 }
+namespace bs {
+   namespace sync {
+      class WalletsManager;
+   }
+}
 
 class ExplorerWidget : public TabWithShortcut
 {
@@ -21,8 +26,9 @@ public:
     ExplorerWidget(QWidget *parent = nullptr);
     ~ExplorerWidget() override;
 
-   void init(const std::shared_ptr<ArmoryObject> &armory,
-             const std::shared_ptr<spdlog::logger> &inLogger);
+   void init(const std::shared_ptr<ArmoryObject> &armory
+      , const std::shared_ptr<spdlog::logger> &
+      , const std::shared_ptr<bs::sync::WalletsManager> &);
    void shortcutActivated(ShortcutType s) override;
 
    enum Page {
@@ -53,7 +59,7 @@ private:
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;
    std::shared_ptr<ArmoryObject>       armory_;
-   std::shared_ptr<QTimer>             expTimer_;
+   std::unique_ptr<QTimer>             expTimer_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::vector<std::string>            searchHistory_;
    int                                 searchHistoryPosition_;

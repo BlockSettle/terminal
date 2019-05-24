@@ -39,8 +39,10 @@ public:
 private:
    std::unique_ptr<Ui::TransactionDetailDialog> ui_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
-   QTreeWidgetItem   *  itemSender = nullptr;
-   QTreeWidgetItem   *  itemReceiver = nullptr;
+   QTreeWidgetItem   *itemSender_ = nullptr;
+   QTreeWidgetItem   *itemReceiver_ = nullptr;
+   QMap<QString, QTreeWidgetItem *> addrInputItems_;
+   QMap<QString, QTreeWidgetItem *> addrOutputItems_;
 
 private:
    void addAddress(const std::shared_ptr<bs::sync::Wallet> &, const TxOut& out,
