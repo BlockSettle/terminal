@@ -97,6 +97,7 @@ private slots:
    void treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
    void treeViewAddressesLayoutChanged();
    void scrollChanged();
+   void onWalletsSynchronized();
 
 private:
    std::unique_ptr<Ui::WalletsWidget> ui_;
