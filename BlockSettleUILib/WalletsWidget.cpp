@@ -462,6 +462,7 @@ void WalletsWidget::onWalletsSynchronized()
          const auto hdWallet = walletsManager_->getHDWallet(i);
          if (hdWallet->isPrimary()) {
             ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(i, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            break;
          }
       }
    }
