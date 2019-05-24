@@ -27,7 +27,9 @@ public:
 
    QAction* execMenu(const QPoint & point)
    {
-      currentIndex_ = view_->indexAt(point);
+      auto currentIndex = view_->indexAt(point);
+      auto proxyModel = qobject_cast<const QAbstractProxyModel*>(currentIndex.model());
+      currentIndex_ = proxyModel ? proxyModel->mapToSource(currentIndex) : currentIndex;
 
       clear();
       currentContact_.reset();
@@ -105,6 +107,8 @@ private slots:
             break;
          case Chat::ContactStatus::Outgoing:
             addAction(tr("This request is not accepted"));
+            addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+            break;
          default:
             break;
 
