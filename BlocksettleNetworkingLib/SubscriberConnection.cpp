@@ -50,7 +50,7 @@ SubscriberConnection::~SubscriberConnection() noexcept
 
 bool SubscriberConnection::isActive() const
 {
-   return listener_ != nullptr;
+   return listenThread_.joinable();
 }
 
 bool SubscriberConnection::ConnectToPublisher(const std::string& endpointName, SubscriberConnectionListener* listener)
@@ -167,6 +167,8 @@ bool SubscriberConnection::ConnectToPublisherEndpoint(const std::string& endpoin
 
 void SubscriberConnection::stopListen()
 {
+   listener_ = nullptr;
+
    if (!isActive()) {
       return;
    }
@@ -195,16 +197,22 @@ void SubscriberConnection::stopListen()
 
 void SubscriberConnection::listenFunction()
 {
+   // save smart pointers to avoid closing connection in listen thread
+   auto loggerCopy = logger_;
+   auto threadSlaveSocketCopy = std::move(threadSlaveSocket_);
+   auto dataSocketCopy = std::move(dataSocket_);
+   auto monSocketCopy = std::move(monSocket_);
+
    zmq_pollitem_t  poll_items[3];
    memset(&poll_items, 0, sizeof(poll_items));
 
-   poll_items[SubscriberConnection::ControlSocketIndex].socket = threadSlaveSocket_.get();
+   poll_items[SubscriberConnection::ControlSocketIndex].socket = threadSlaveSocketCopy.get();
    poll_items[SubscriberConnection::ControlSocketIndex].events = ZMQ_POLLIN;
 
-   poll_items[SubscriberConnection::StreamSocketIndex].socket = dataSocket_.get();
+   poll_items[SubscriberConnection::StreamSocketIndex].socket = dataSocketCopy.get();
    poll_items[SubscriberConnection::StreamSocketIndex].events = ZMQ_POLLIN;
 
-   poll_items[SubscriberConnection::MonitorSocketIndex].socket = monSocket_.get();
+   poll_items[SubscriberConnection::MonitorSocketIndex].socket = monSocketCopy.get();
    poll_items[SubscriberConnection::MonitorSocketIndex].events = ZMQ_POLLIN;
 
    int result;
@@ -212,7 +220,7 @@ void SubscriberConnection::listenFunction()
    while(true) {
       result = zmq_poll(poll_items, 3, -1);
       if (result == -1) {
-         logger_->error("[SubscriberConnection::listenFunction] poll failed for {} : {}"
+         loggerCopy->error("[SubscriberConnection::listenFunction] poll failed for {} : {}"
             , connectionName_, zmq_strerror(zmq_errno()));
          break;
       }
@@ -222,7 +230,7 @@ void SubscriberConnection::listenFunction()
 
          int recv_result = zmq_msg_recv(&command, poll_items[SubscriberConnection::ControlSocketIndex].socket, ZMQ_DONTWAIT);
          if (recv_result == -1) {
-            logger_->error("[SubscriberConnection::listenFunction] failed to recv command on {} : {}"
+            loggerCopy->error("[SubscriberConnection::listenFunction] failed to recv command on {} : {}"
                , connectionName_, zmq_strerror(zmq_errno()));
             break;
          }
@@ -231,30 +239,34 @@ void SubscriberConnection::listenFunction()
          if (command_code == SubscriberConnection::CommandStop) {
             break;
          } else {
-            logger_->error("[SubscriberConnection::listenFunction] unexpected command code {} for {}"
+            loggerCopy->error("[SubscriberConnection::listenFunction] unexpected command code {} for {}"
                , command_code, connectionName_);
             break;
          }
       }
 
       if (poll_items[SubscriberConnection::StreamSocketIndex].revents & ZMQ_POLLIN) {
-         if (!recvData()) {
+         if (!recvData(dataSocketCopy)) {
             break;
          }
       }
 
-      if (monSocket_ && (poll_items[SubscriberConnection::MonitorSocketIndex].revents & ZMQ_POLLIN)) {
-         switch (bs::network::get_monitor_event(monSocket_.get())) {
+      if (monSocketCopy && (poll_items[SubscriberConnection::MonitorSocketIndex].revents & ZMQ_POLLIN)) {
+         switch (bs::network::get_monitor_event(monSocketCopy.get())) {
          case ZMQ_EVENT_CONNECTED:
             if (!isConnected_) {
-               listener_->OnConnected();
+               if (listener_) {
+                  listener_->OnConnected();
+               }
                isConnected_ = true;
             }
             break;
 
          case ZMQ_EVENT_DISCONNECTED:
             if (isConnected_) {
-               listener_->OnDisconnected();
+               if (listener_) {
+                  listener_->OnDisconnected();
+               }
                isConnected_ = false;
             }
             break;
@@ -263,18 +275,20 @@ void SubscriberConnection::listenFunction()
    }
 }
 
-bool SubscriberConnection::recvData()
+bool SubscriberConnection::recvData(const ZmqContext::sock_ptr& dataSocket)
 {
    MessageHolder data;
 
-   int result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
+   int result = zmq_msg_recv(&data, dataSocket.get(), ZMQ_DONTWAIT);
    if (result == -1) {
       logger_->error("[SubscriberConnection::recvData] {} failed to recv data frame from stream: {}"
          , connectionName_, zmq_strerror(zmq_errno()));
       return false;
    }
 
-   listener_->OnDataReceived(data.ToString());
+   if (listener_) {
+      listener_->OnDataReceived(data.ToString());
+   }
 
    return true;
 }

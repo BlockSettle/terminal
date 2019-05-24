@@ -170,6 +170,12 @@ void AddressDetailsWidget::loadTransactions()
       item->setText(colFeePerByte, QString::number(std::nearbyint(feePerByte)));
       item->setText(colTxSize, QString::number(tx.getSize()));
 
+      item->setTextAlignment(colOutputAmt, Qt::AlignRight);
+
+      QFont font = item->font(colOutputAmt);
+      font.setBold(true);
+      item->setFont(colOutputAmt, font);
+
       // Check the total received or sent.
       if (curTXEntry.second.value > 0) {
          totalReceived_ += curTXEntry.second.value;

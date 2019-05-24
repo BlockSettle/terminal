@@ -560,16 +560,6 @@ bool QuoteProvider::onBitcoinOrderSnapshot(const std::string& data, bool resync)
    auto orderDate = QDateTime::fromMSecsSinceEpoch(response.createdtimestamputcinmillis());
    auto ageSeconds = orderDate.secsTo(QDateTime::currentDateTime());
 
-   // older than 2 days
-   if (ageSeconds > 60*60*24*2) {
-      logger_->debug("[QuoteProvider::onBitcoinOrderSnapshot] old order. try to cancel");
-      auto command = std::make_shared<CelerCancelOrderSequence>(response.orderid()
-         , response.externalclorderid(), logger_);
-
-      celerClient_->ExecuteSequence(command);
-      return true;
-   }
-
    Order order;
    order.exchOrderId = QString::number(response.orderid());
    order.clOrderId = response.externalclorderid();
@@ -616,7 +606,7 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
       return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[FxOrderSnapshot] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::FxOrderSnapshot] {}", response.DebugString());
    }
 
    if (!resync && (response.orderstatus() == FILLED)) {
@@ -656,7 +646,7 @@ bool QuoteProvider::onQuoteCancelled(const std::string& data)
    }
 
    if (debugTraffic_) {
-      logger_->debug("[QuoteCancel] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onQuoteCancelled] {}", response.DebugString());
    }
 
    cleanQuoteRequestCcy(response.quoterequestid());
@@ -676,7 +666,7 @@ bool QuoteProvider::onSignTxNotif(const std::string& data)
       return false;
    }
    if (debugTraffic_) {
-      logger_->debug("[SignTxNotification] {}", response.DebugString());
+      logger_->debug("[QuoteProvider::onSignTxNotif] {}", response.DebugString());
    }
 
    emit signTxRequested(QString::fromStdString(response.orderid()), QString::fromStdString(response.quoterequestid()));
