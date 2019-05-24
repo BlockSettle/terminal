@@ -6,13 +6,13 @@
 #include <QTimer>
 
 // Basic constructor, sets message box type, title and text
-BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
+BSMessageBox::BSMessageBox(Type mbType, const QString& title
    , const QString& text, QWidget* parent)
    : BSMessageBox(mbType, title, text, QString(), QString(), parent) {
 }
 
 // This constructor sets message box type, title, text and description.
-BSMessageBox::BSMessageBox(messageBoxType mbType
+BSMessageBox::BSMessageBox(Type mbType
    , const QString& title, const QString& text
    , const QString& description, QWidget* parent)
    : BSMessageBox(mbType, title, text, description, QString(), parent) {
@@ -25,7 +25,7 @@ BSMessageBox::BSMessageBox(messageBoxType mbType
 // description - text with smaller font and standard gray color placed below colored text
 // details - when specified 'Show Details' buttons shows and when clicked the
 // message box expands to show another text area with a scroll bar
-BSMessageBox::BSMessageBox(messageBoxType mbType, const QString& title
+BSMessageBox::BSMessageBox(Type mbType, const QString& title
    , const QString& text, const QString& description
    , const QString& details, QWidget* parent)
    : QDialog(parent)
@@ -101,7 +101,7 @@ void BSMessageBox::setLabelTextFormat(Qt::TextFormat tf) {
    ui_->labelText->setTextFormat(tf);
 }
 
-void BSMessageBox::setType(messageBoxType type) {
+void BSMessageBox::setType(Type type) {
    ui_->labelTitle->setProperty("h1", true);
    ui_->labelText->setProperty("h6", true);
    ui_->pushButtonCancel->hide();

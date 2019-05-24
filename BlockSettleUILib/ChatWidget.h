@@ -81,6 +81,8 @@ private slots:
    void onConnectedToServer();
    void selectGlobalRoom();
    void onContactRequestAccepted(const QString &userId);
+   void onBSChatInputSelectionChanged();
+   void onChatMessagesSelectionChanged();
 
    // OTC UI slots
    void OnOTCRequestCreated();
@@ -140,6 +142,7 @@ private:
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
    QTimer *popupVisibleTimer_;
+   bool isChatMessagesSelected_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
@@ -162,7 +165,7 @@ private:
    void initPopup();
    void setPopupVisible(const bool &value);
 
-   bool eventFilter(QObject * obj, QEvent * event) override;
+   bool eventFilter(QObject *sender, QEvent *event) override;
 
    // ViewItemWatcher interface
 public:

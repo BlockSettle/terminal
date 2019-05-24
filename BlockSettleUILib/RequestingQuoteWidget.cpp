@@ -73,17 +73,10 @@ void RequestingQuoteWidget::onCancel()
    requestTimer_.stop();
    if (quote_.quotingType == bs::network::Quote::Tradeable) {
       emit requestTimedOut();
-   }
-   else {
+   } else {
       utxoAdapter_->unreserve(rfq_.requestId);
-      emit requestCancelled();
+      emit cancelRFQ(QString::fromStdString(rfq_.requestId));
    }
-}
-
-void RequestingQuoteWidget::cancel()
-{
-   emit cancelRFQ(QString::fromStdString(rfq_.requestId));
-   rfq_ = bs::network::RFQ{};
 }
 
 void RequestingQuoteWidget::ticker()
