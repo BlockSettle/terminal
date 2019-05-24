@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QtConcurrent/QtConcurrentRun>
+#include "AddressVerificator.h"
 #include "CheckRecipSigner.h"
 #include "UiUtils.h"
 #include "Wallets/SyncPlainWallet.h"
@@ -40,6 +41,23 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryObject> &armory
 
    connect(armory_.get(), &ArmoryObject::refresh, this
            , &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
+}
+
+void AddressDetailsWidget::setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs)
+{
+   if (bsAuthAddrs.empty()) {
+      return;
+   }
+   bsAuthAddrs_ = bsAuthAddrs;
+
+   const auto authWalletId = CryptoPRNG::generateRandom(8).toHexStr();
+   addrVerify_ = std::make_shared<AddressVerificator>(logger_, armory_, authWalletId
+      , [this](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state) {
+      authAddrStates_[address->GetChainedAddress()] = state;
+      QMetaObject::invokeMethod(this, &AddressDetailsWidget::updateFields);
+   });
+   addrVerify_->SetBSAddressList(bsAuthAddrs);
+   addrVerify_->RegisterBSAuthAddresses();
 }
 
 // Set the address to be queried and perform initial setup.
@@ -84,7 +102,18 @@ void AddressDetailsWidget::updateFields()
       }
    }
    else {
-      ui_->addressId->setText(QString::fromStdString(currentAddr_.display()));
+      const auto authIt = authAddrStates_.find(currentAddr_);
+      if (bsAuthAddrs_.find(currentAddr_.display()) != bsAuthAddrs_.end()) {
+         ui_->addressId->setText(tr("%1 [Authentication: BlockSettle funding address]")
+            .arg(QString::fromStdString(currentAddr_.display())));
+      }
+      else if ((authIt != authAddrStates_.end()) && (authIt->second != AddressVerificationState::VerificationFailed)) {
+         ui_->addressId->setText(tr("%1 [Authentication: %2]").arg(QString::fromStdString(currentAddr_.display()))
+            .arg(QString::fromStdString(to_string(authIt->second))));
+      }
+      else {
+         ui_->addressId->setText(QString::fromStdString(currentAddr_.display()));
+      }
       if (balanceLoaded_) {
          ui_->totalReceived->setText(UiUtils::displayAmount(totalReceived_));
          ui_->totalSent->setText(UiUtils::displayAmount(totalSpent_));
@@ -119,6 +148,16 @@ void AddressDetailsWidget::searchForCC()
    }
 }
 
+void AddressDetailsWidget::searchForAuth()
+{
+   if (!addrVerify_) {
+      return;
+   }
+   if (addrVerify_->StartAddressVerification(std::make_shared<AuthAddress>(currentAddr_))) {
+      addrVerify_->RegisterAddresses();
+   }
+}
+
 // The function that gathers all the data to place in the UI.
 void AddressDetailsWidget::loadTransactions()
 {
@@ -128,6 +167,7 @@ void AddressDetailsWidget::loadTransactions()
    uint64_t totCount = 0;
 
    QtConcurrent::run(this, &AddressDetailsWidget::searchForCC);
+   QtConcurrent::run(this, &AddressDetailsWidget::searchForAuth);
 
    // Go through each TXEntry object and calculate all required UI data.
    for (const auto &curTXEntry : txEntryHashSet_) {
@@ -394,6 +434,7 @@ void AddressDetailsWidget::clear()
    txEntryHashSet_.clear();
    ccFound_.first.clear();
    ccFound_.second = 0;
+   authAddrStates_.clear();
 
    ui_->addressId->clear();
    ui_->treeAddressTransactions->clear();
