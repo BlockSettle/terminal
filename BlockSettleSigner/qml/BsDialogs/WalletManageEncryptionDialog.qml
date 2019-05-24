@@ -154,6 +154,12 @@ CustomDialog {
                             id: rbPassword
                             text: qsTr("Password")
                             checked: true
+
+                            onCheckedChanged: {
+                                if (checked) {
+                                    newPasswordInput.tfPasswordInput.focus = true
+                                }
+                            }
                         }
                         CustomRadioButton {
                             id: rbAuth
@@ -161,6 +167,7 @@ CustomDialog {
                             checked: false
                             onCheckedChanged: {
                                 if (checked) {
+                                    textInputEmail.focus = true
                                     // show notice dialog
                                     if (!signerSettings.hideEidInfoBox) {
                                         var noticeEidDialog = Qt.createComponent("../BsControls/BSEidNoticeBox.qml").createObject(mainWindow);
@@ -394,7 +401,7 @@ CustomDialog {
                                             , oldPwEidData
                                             , newPasswordData
                                             , function(result) {
-                                                var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                                var mb = JsHelper.resultBox(BSResultBox.EncryptionChangeToPassword, result, walletInfo)
                                                 if (result) {
                                                     mb.bsAccepted.connect(function(){
                                                         acceptAnimated()
@@ -411,7 +418,7 @@ CustomDialog {
                                                     , oldPwEidData
                                                     , newPwEidData
                                                     , function(result){
-                                                        var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                                        var mb = JsHelper.resultBox(BSResultBox.EncryptionChangeToAuth, result, walletInfo)
                                                         if (result) {
                                                             mb.bsAccepted.connect(function(){
                                                                 addTabButton.onClicked()
@@ -433,7 +440,7 @@ CustomDialog {
                                     , oldPasswordData
                                     , newPasswordData
                                     , function(result){
-                                        var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                        var mb = JsHelper.resultBox(BSResultBox.EncryptionChangeToPassword, result, walletInfo)
                                          if (result) {
                                              mb.bsAccepted.connect(function(){
                                                  acceptAnimated()
@@ -450,7 +457,7 @@ CustomDialog {
                                              , oldPasswordData
                                              , newPwEidData
                                              , function(result){
-                                                 var mb = JsHelper.resultBox(BSResultBox.EncryptionChange, result, walletInfo)
+                                                 var mb = JsHelper.resultBox(BSResultBox.EncryptionChangeToAuth, result, walletInfo)
                                                  if (result) {
                                                      mb.bsAccepted.connect(function(){
                                                          // addTabButton.onClicked()

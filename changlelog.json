@@ -1,7 +1,57 @@
 {
-   "latest_version" : "0.15.9",
-   "release_date" : "17 May 2019",
+   "latest_version" : "0.15.12",
+   "release_date" : "23 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.12",
+         "previous_version" : "0.15.11",
+         "release_date" : "23 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+            "Chat updates",
+            "In memory TX cache"
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes",
+            "Cancel RFQ"
+         ],
+         "revision" : "afce6aaf",
+         "common_revision" : "0264818a"
+      },
+      {
+         "version_string" : "0.15.11",
+         "previous_version" : "0.15.10",
+         "release_date" : "22 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+            "Chat updates"
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes"
+         ],
+         "revision" : "fbc1bc46",
+         "common_revision" : "da9134ae"
+      },
+      {
+         "version_string" : "0.15.10",
+         "previous_version" : "0.15.9",
+         "release_date" : "20 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+            "Initial OTC UI test flow"
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes"
+         ],
+         "revision" : "b903edba",
+         "common_revision" : "42c21fbc"
+      },
       {
          "version_string" : "0.15.9",
          "previous_version" : "0.15.8",

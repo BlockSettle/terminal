@@ -190,9 +190,9 @@ Item {
                 CustomTextInput {
                     placeholderText: "0.0.0.0"
 
-                    Layout.minimumWidth: 310
-                    Layout.preferredWidth: 310
-                    Layout.maximumWidth: 310
+                    Layout.minimumWidth: 440
+                    Layout.preferredWidth: 440
+                    Layout.maximumWidth: 440
                     Layout.alignment: Qt.AlignRight
 
                     Layout.rightMargin: 6
@@ -214,9 +214,9 @@ Item {
                 CustomTextInput {
                     placeholderText: "23456"
 
-                    Layout.minimumWidth: 310
-                    Layout.preferredWidth: 310
-                    Layout.maximumWidth: 310
+                    Layout.minimumWidth: 440
+                    Layout.preferredWidth: 440
+                    Layout.maximumWidth: 440
                     Layout.alignment: Qt.AlignRight
 
                     Layout.rightMargin: 6
@@ -251,6 +251,7 @@ Item {
                 }
                 CustomLabel {
                     Layout.alignment: Qt.AlignRight
+                    Layout.rightMargin: 6
                     wrapMode: Text.Wrap
                     text: qmlFactory.headlessPubKey
                     color: BSStyle.textColor
