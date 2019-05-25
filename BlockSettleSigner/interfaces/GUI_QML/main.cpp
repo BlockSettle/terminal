@@ -104,9 +104,9 @@ static int QMLApp(int argc, char **argv)
    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
    QApplication app(argc, argv);
 
-   QApplication::setApplicationName(QLatin1String("signer"));
+   QApplication::setApplicationName(QLatin1String("Signer"));
    QApplication::setOrganizationDomain(QLatin1String("blocksettle.com"));
-   QApplication::setOrganizationName(QLatin1String("blocksettle"));
+   QApplication::setOrganizationName(QLatin1String("BlockSettle"));
    QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
 
    // ToDo: support 2.0 styles
