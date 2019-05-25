@@ -15,18 +15,20 @@
 #include <sys/stat.h>
 #include <fstream>
 
-namespace SystemFilePaths {
-   static const std::string kAppDir = "blocksettle";
+namespace {
+   const std::string kAppDir = "blocksettle";
 #ifndef WIN32
 #ifdef __APPLE__
-   static const std::string kDataDir = "Library/Application Support";
-   static const std::string kConfigDir = "Library/Application Support";
+   const std::string kDataDir = "Library/Application Support";
+   const std::string kConfigDir = "Library/Application Support";
 #else
-   static const std::string kDataDir = ".local/share";
-   static const std::string kConfigDir = ".config";
+   const std::string kDataDir = ".local/share";
+   const std::string kConfigDir = ".config";
 #endif
 #endif
-}
+
+   std::string g_appDir;
+} // namespace
 
 using namespace SystemFileUtils;
 
@@ -204,21 +206,22 @@ std::string SystemFilePaths::configDataLocation()
 #endif
 }
 
-static std::string appDir;
-
-std::string SystemFilePaths::applicationDir()
+std::string SystemFilePaths::applicationDirIfKnown()
 {
-   return appDir;
+   return g_appDir;
 }
 
 void SystemFilePaths::setArgV0(const char *arg)
 {
-   appDir = arg;
+   g_appDir = arg;
 #ifdef WIN32
    std::replace(appDir.begin(), appDir.end(), '\\', '/');
 #endif
-   const auto sepPos = appDir.find_last_of('/');
+   const auto sepPos = g_appDir.find_last_of('/');
    if (sepPos != std::string::npos) {
-      appDir = appDir.substr(0, sepPos);
+      g_appDir = g_appDir.substr(0, sepPos);
+   } else {
+      // If binary is started with only basename (when found from $PATH) appDir is not easily known
+      g_appDir.clear();
    }
 }
