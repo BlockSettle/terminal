@@ -312,3 +312,20 @@ bs::wallet::KeyRank hd::Wallet::encryptionRank() const
 {
    return encryptionRank_;
 }
+
+void hd::Wallet::merge(const Wallet& rhs)
+{
+   //rudimentary implementation, flesh it out on the go
+   for (auto& leafPair : rhs.leaves_)
+   {
+      auto iter = leaves_.find(leafPair.first);
+      if (iter == leaves_.end())
+      {
+         leaves_.insert(leafPair);
+         continue;
+      }
+
+      auto& leafPtr = iter->second;
+      leafPtr->merge(leafPair.second);
+   }
+}

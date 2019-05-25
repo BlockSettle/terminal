@@ -26,12 +26,14 @@
 
 #include "DecryptedDataContainer.h"
 #include "Accounts.h"
+#include "BIP32_Node.h"
 
 #define WALLETTYPE_KEY        0x00000001
 #define PARENTID_KEY          0x00000002
 #define WALLETID_KEY          0x00000003
 #define ROOTASSET_KEY         0x00000007
 #define MAIN_ACCOUNT_KEY      0x00000008
+#define WALLET_SEED_KEY       0x00000009
 
 #define MASTERID_KEY          0x000000A0
 #define MAINWALLET_KEY        0x000000A1
@@ -304,7 +306,7 @@ public:
    //virtual
    virtual std::set<BinaryData> getAddrHashSet();
    virtual const SecureBinaryData& getDecryptedValue(
-      std::shared_ptr<Asset_PrivateKey>) = 0;
+      std::shared_ptr<Asset_EncryptedData>) = 0;
 
    static std::string forkWathcingOnly(const std::string&);
 
@@ -320,7 +322,8 @@ class AssetWallet_Single : public AssetWallet
    friend class AssetWallet_Multisig;
 
 protected:
-   std::shared_ptr<AssetEntry_Single> root_;
+   std::shared_ptr<AssetEntry_Single> root_ = nullptr;
+   std::shared_ptr<EncryptedSeed> seed_ = nullptr;
 
 protected:
    //virtual
@@ -353,6 +356,7 @@ protected:
 private:
    static void copyPublicData(
       std::shared_ptr<AssetWallet_Single>, std::shared_ptr<LMDBEnv>);
+   void setSeed(const SecureBinaryData&, const SecureBinaryData&);
 
 public:
    //tors
@@ -384,11 +388,20 @@ public:
    const SecureBinaryData& getDecryptedPrivateKeyForAsset(
       std::shared_ptr<AssetEntry_Single>);
 
+   std::shared_ptr<EncryptedSeed> getEncryptedSeed(void) const { return seed_; }
+
    //virtual
    const SecureBinaryData& getDecryptedValue(
-      std::shared_ptr<Asset_PrivateKey>);
+      std::shared_ptr<Asset_EncryptedData>);
 
    //static
+   static std::shared_ptr<AssetWallet_Single> createFromBIP32Node(
+      const BIP32_Node& node,
+      std::set<std::shared_ptr<AccountType>> accountTypes,
+      const SecureBinaryData& passphrase,
+      const std::string& folder,
+      unsigned lookup);
+
    static std::shared_ptr<AssetWallet_Single> createFromPrivateRoot_Armory135(
       const std::string& folder,
       const SecureBinaryData& privateRoot,
@@ -434,7 +447,7 @@ protected:
    //virtual
    void readFromFile(void);
    const SecureBinaryData& getDecryptedValue(
-      std::shared_ptr<Asset_PrivateKey>);
+      std::shared_ptr<Asset_EncryptedData>);
 
 public:
    //tors

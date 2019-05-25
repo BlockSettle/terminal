@@ -67,6 +67,8 @@ namespace bs {
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
 
+            void merge(const Wallet&);
+
          signals:
             void synchronized() const;
             void leafAdded(QString id);
@@ -99,6 +101,9 @@ namespace bs {
 
          private:
             std::unordered_set<std::string>  scannedLeaves_;
+
+         public:
+            unsigned containerId_ = UINT32_MAX;
          };
 
 
@@ -115,7 +120,6 @@ namespace bs {
                leaves_[wallet->walletId()] = wallet;
             }
          };
-
       }  //namespace hd
    }  //namespace sync
 }  //namespace bs

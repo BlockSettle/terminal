@@ -64,7 +64,7 @@ namespace bs {
             bs::hd::Path::Elem addressIndex(const bs::Address &addr) const;
             bool addressIndexExists(const std::string &index) const override;
   
-            bs::Address synchronizeUsedAddressChain(
+            std::pair<bs::Address, bool> synchronizeUsedAddressChain(
                const std::string&, AddressEntryType) override;
 
             //index as asset derivation id
@@ -85,6 +85,12 @@ namespace bs {
             std::string getFilename(void) const;
             WalletEncryptionLock lockForEncryption(const SecureBinaryData& passphrase);
             std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt) override;
+
+            std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> indexPathAndTypes(
+               const std::set<BinaryData>&) override;
+
+            virtual bs::hd::Path::Elem getExtPath(void) const { return addrTypeExternal_; }
+            virtual bs::hd::Path::Elem getIntPath(void) const { return addrTypeInternal_; }
 
             std::shared_ptr<AssetEntry_BIP32Root> getRootAsset(void) const;
 

@@ -72,7 +72,9 @@ namespace bs {
 
          virtual void synchronize(const std::function<void()> &cbDone);
 
-         virtual std::string walletId() const { return "defaultWalletID"; }
+         virtual const std::string& walletId(void) const = 0;
+         virtual const std::string& walletIdInt(void) const;
+
          virtual std::string name() const { return walletName_; }
          virtual std::string shortName() const { return name(); }
          virtual std::string description() const = 0;
@@ -92,18 +94,10 @@ namespace bs {
 
          virtual bool containsAddress(const bs::Address &addr) = 0;
          virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
-         virtual bool getAddrTxN(const bs::Address &addr, std::function<void(uint32_t)>) const;
-         virtual bool getSpendableTxOutList(std::function<void(std::vector<UTXO>)>
-            , QObject *obj, uint64_t val = UINT64_MAX);
-         virtual bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
-            , QObject *obj);
-         virtual bool getUTXOsToSpend(uint64_t val, std::function<void(std::vector<UTXO>)>) const;
-         virtual bool getRBFTxOutList(std::function<void(std::vector<UTXO>)>) const;
-         virtual std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryObject> &armory = nullptr
-            , bool asNew = false);
+         
+         virtual std::vector<std::string> registerWallet(
+            const std::shared_ptr<ArmoryObject> &armory = nullptr, bool asNew = false);
          virtual void unregisterWallet();
-         virtual bool getHistoryPage(uint32_t id, std::function<void(const Wallet *wallet
-            , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
          virtual bool isBalanceAvailable() const;
          virtual BTCNumericTypes::balance_type getSpendableBalance() const;
@@ -111,7 +105,6 @@ namespace bs {
          virtual BTCNumericTypes::balance_type getTotalBalance() const;
          virtual void firstInit(bool force = false);
 
-         virtual void updateBalances(const std::function<void(void)> &cb = nullptr) = 0;
          virtual std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
 
          virtual bool isWatchingOnly() const { return false; }
@@ -132,7 +125,6 @@ namespace bs {
          virtual size_t getExtAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getIntAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getWalletAddressCount() const { return addrCount_; }
-         virtual bool getActiveAddressCount(const std::function<void(size_t)> &) const;
 
          virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
@@ -168,9 +160,29 @@ namespace bs {
             , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients = {}
             , const BinaryData prevPart = {});
 
-         static bool isSegWitInput(const UTXO& input);
-
          virtual bool deleteRemotely() { return false; } //stub
+         virtual void merge(const std::shared_ptr<Wallet>) = 0;
+
+         void trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb);
+         size_t getActiveAddressCount(void);
+
+         /***
+         Baseline db fetch methods using combined get logic. These come 
+         with the default implementation but remain virtual to leave 
+         room for custom behavior. 
+         ***/
+
+         //balance and count
+         virtual bool updateBalances(const std::function<void(void)> & = nullptr);
+         virtual bool getAddressTxnCounts(std::function<void(void)> cb = nullptr);
+         
+         //utxos
+         virtual bool getSpendableTxOutList(
+            std::function<void(std::vector<UTXO>)>, uint64_t val);
+         virtual bool getSpendableZCList(
+            std::function<void(std::vector<UTXO>)>) const;
+         virtual bool getRBFTxOutList(
+            std::function<void(std::vector<UTXO>)>) const;
 
       signals:
          void addressAdded();
@@ -184,44 +196,19 @@ namespace bs {
       protected:
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
-         template <typename MapT> void updateMap(const MapT &src, MapT &dst) const {
-            QMutexLocker lock(&addrMapsMtx_);
+         template <typename MapT> void updateMap(const MapT &src, MapT &dst) const 
+         {
+            std::unique_lock<std::mutex> lock(addrMapsMtx_);
             for (const auto &elem : src) {     // std::map::insert doesn't replace elements
                dst[elem.first] = std::move(elem.second);
             }
          }
 
-         template <typename ArgT> void invokeCb(const std::map<BinaryData, ArgT> &data
-            , std::map<bs::Address, std::vector<std::function<void(ArgT)>>> &cbMap
-            , const ArgT &defVal) const {
-            for (const auto &queuedCb : cbMap) {
-               const auto &it = data.find(queuedCb.first.id());
-               if (it != data.end()) {
-                  for (const auto &cb : queuedCb.second) {
-                     cb(it->second);
-                  }
-               }
-               else {
-                  for (const auto &cb : queuedCb.second) {
-                     cb(defVal);
-                  }
-               }
-            }
-            cbMap.clear();
-         }
-
-         bool getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &
-            , std::function<void(std::vector<UTXO>)>, QObject *obj, uint64_t val);
-         bool getSpendableZCList(const std::shared_ptr<AsyncClient::BtcWallet> &
-            , std::function<void(std::vector<UTXO>)>, QObject *obj);
-         bool getUTXOsToSpend(const std::shared_ptr<AsyncClient::BtcWallet> &
-            , uint64_t val, std::function<void(std::vector<UTXO>)>) const;
-         bool getRBFTxOutList(const std::shared_ptr<AsyncClient::BtcWallet> &
-            , std::function<void(std::vector<UTXO>)>) const;
          bool getHistoryPage(const std::shared_ptr<AsyncClient::BtcWallet> &
             , uint32_t id, std::function<void(const Wallet *wallet
                , std::vector<ClientClasses::LedgerEntry>)>, bool onlyNew = false) const;
 
+      public:
          bool isRegistered(void) const { return isRegistered_; }
          void setRegistered(void) { isRegistered_ = true; }
 
@@ -232,20 +219,17 @@ namespace bs {
          BTCNumericTypes::balance_type unconfirmedBalance_ = 0;
          BTCNumericTypes::balance_type totalBalance_ = 0;
          std::shared_ptr<ArmoryObject> armory_;
-         std::shared_ptr<AsyncClient::BtcWallet>   btcWallet_;
-         std::shared_ptr<spdlog::logger>  logger_; // May need to be set manually.
-         mutable std::vector<bs::Address>       usedAddresses_;
+         std::shared_ptr<spdlog::logger> logger_; // May need to be set manually.
+         mutable std::vector<bs::Address> usedAddresses_;
          NetworkType netType_ = NetworkType::Invalid;
-         mutable QMutex    addrMapsMtx_;
-         size_t            addrCount_ = 0;
+         mutable std::mutex addrMapsMtx_;
+         size_t addrCount_ = 0;
 
          std::map<bs::Address, std::string>  addrComments_;
          std::map<BinaryData, std::string>   txComments_;
 
          mutable std::map<BinaryData, std::vector<uint64_t> >  addressBalanceMap_;
-         mutable std::map<BinaryData, uint32_t>                addressTxNMap_;
-         mutable std::atomic_bool   updateAddrTxN_{ false };
-         mutable std::map<bs::Address, std::vector<std::function<void(uint32_t)>>>              cbTxN_;
+         mutable std::map<BinaryData, uint64_t>                addressTxNMap_;
 
          class UtxoFilterAdapter : public bs::UtxoReservation::Adapter
          {
@@ -258,12 +242,12 @@ namespace bs {
          std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
 
       private:
-         std::map<std::string, std::vector<std::pair<QPointer<QObject>, std::function<void(std::vector<UTXO>)>>>> spendableCallbacks_;
-         std::map<std::string, std::vector<std::pair<QPointer<QObject>, std::function<void(std::vector<UTXO>)>>>> zcListCallbacks_;
-
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
          std::atomic_bool  heartbeatRunning_ = { false };
          bool isRegistered_ = false;
+
+      public:
+         bool firstInit_ = false;
       };
 
 

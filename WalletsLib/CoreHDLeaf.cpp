@@ -16,8 +16,7 @@ hd::Leaf::Leaf(NetworkType netType,
 
 hd::Leaf::~Leaf()
 {
-   if (db_ != nullptr)
-      delete db_;
+   shutdown();
 }
 
 void hd::Leaf::init(
@@ -233,8 +232,8 @@ std::vector<bs::Address> hd::Leaf::extendAddressChain(unsigned count, bool extIn
    return result;
 }
 
-std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAsset(std::shared_ptr<AssetEntry> assetPtr
-   , AddressEntryType ae_type)
+std::shared_ptr<AddressEntry> hd::Leaf::getAddressEntryForAsset(
+   std::shared_ptr<AssetEntry> assetPtr, AddressEntryType ae_type)
 {
    if (ae_type == AddressEntryType_Default) {
       ae_type = accountPtr_->getAddressType();
@@ -540,7 +539,7 @@ WalletEncryptionLock hd::Leaf::lockForEncryption(const SecureBinaryData& passphr
    return WalletEncryptionLock(walletPtr_, passphrase);
 }
 
-bs::Address hd::Leaf::synchronizeUsedAddressChain(
+std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(
    const std::string& index, AddressEntryType aeType)
 {
    //decode index to path
@@ -583,7 +582,7 @@ bs::Address hd::Leaf::synchronizeUsedAddressChain(
       topIndex = getIntAddressCount() - 1;
    unsigned addrIndex = path.get(-1);
 
-   bs::Address result;
+   std::pair<bs::Address, bool> result;
    int gap; //do not change to unsigned, gap needs to be signed
    if (topIndex != UINT32_MAX && addrIndex <= topIndex)
       gap = -1;
@@ -593,7 +592,8 @@ bs::Address hd::Leaf::synchronizeUsedAddressChain(
    if (gap <= 0)
    {
       //already created this address, grab it, check the type matches
-      result = getAddressByIndex(addrIndex, ext, aeType);
+      result.first = getAddressByIndex(addrIndex, ext, aeType);
+      result.second = false;
    }
    else
    {
@@ -605,26 +605,81 @@ bs::Address hd::Leaf::synchronizeUsedAddressChain(
             getNewExtAddress();
 
          //pull the new address using the requested type
-         result = getNewExtAddress(aeType);
+         result.first = getNewExtAddress(aeType);
       }
       else
       {
          for (int i = 1; i < gap; i++)
             getNewIntAddress();
          
-         result = getNewIntAddress(aeType);
+         result.first = getNewIntAddress(aeType);
       }
    }
 
    //sanity check: index and type should match request
-   if (aeType != AddressEntryType_Default && result.getType() != aeType)
+   if (aeType != AddressEntryType_Default && result.first.getType() != aeType)
       throw AccountException("did not get expected address entry type");
 
-   auto resultIndex = addressIndex(result);
+   auto resultIndex = addressIndex(result.first);
    if(resultIndex != addrIndex)
       throw AccountException("did not get expected address index");
 
+   result.second = true;
    return result;
+}
+
+std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>>
+hd::Leaf::indexPathAndTypes(const std::set<BinaryData>& addrSet)
+{
+   std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> result;
+   auto& addrHashMap = accountPtr_->getAddressHashMap();
+
+   for (auto& addr : addrSet)
+   {
+      auto iter = addrHashMap.find(addr);
+      if (iter == addrHashMap.end())
+         throw AccountException("unknown scrAddr");
+
+      std::pair<bs::hd::Path, AddressEntryType> pathTypePair;
+
+      /*
+      IDs in addrHashMap are always 12 bytes long:
+        AddressAccountID (4) | AssetAccountID (4) | AssetID (4)
+      */
+      BinaryRefReader brr(iter->second.first);
+      brr.advance(4);
+
+      //account id (ext/int)
+      pathTypePair.first.append(
+         bs::hd::Path::Elem(brr.get_uint32_t(BE)));
+      
+      //asset id
+      pathTypePair.first.append(
+         bs::hd::Path::Elem(brr.get_uint32_t(BE)));
+
+      if (iter->second.second == accountPtr_->getAddressType())
+         pathTypePair.second = AddressEntryType_Default;
+      else
+         pathTypePair.second = iter->second.second;
+
+
+      result.insert(std::make_pair(addr, pathTypePair));
+   }
+
+   return result;
+}
+
+std::shared_ptr<AssetEntry_BIP32Root> hd::Leaf::getRootAsset() const
+{
+   if (accountPtr_ == nullptr)
+      throw AccountException("null account ptr");
+   
+   auto rootPtr = accountPtr_->getOutterAssetRoot();
+   auto rootSingle = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(rootPtr);
+   if (rootSingle == nullptr)
+      throw AccountException("unexpected root ptr type");
+
+   return rootSingle;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

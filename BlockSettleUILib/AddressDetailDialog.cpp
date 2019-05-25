@@ -97,9 +97,10 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    auto balanceVec = wallet_->getAddrBalance(address);
    QMetaObject::invokeMethod(this, [this, balanceVec] { onAddrBalanceReceived(balanceVec); });
 
-   wallet_->getAddrTxN(address, [this](uint32_t txn) {
+   throw std::runtime_error("reimplement this");
+   /*wallet_->getAddrTxN(address, [this](uint32_t txn) {
       QMetaObject::invokeMethod(this, [this, txn] { onAddrTxNReceived(txn); });
-   });
+   });*/
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &AddressDetailDialog::onCopyClicked);

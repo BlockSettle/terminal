@@ -46,16 +46,41 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(BinaryDataRef data)
 
    case DERIVATIONSCHEME_BIP32:
    {
-      //get chaincode;
+      //chaincode;
       auto len = brr.get_var_int();
       auto&& chainCode = SecureBinaryData(brr.get_BinaryDataRef(len));
 
+      //bip32 node meta data
       auto depth = brr.get_uint32_t();
       auto leafID = brr.get_uint32_t();
+
+      //instantiate object
       derScheme = make_shared<DerivationScheme_BIP32>(
          chainCode, depth, leafID);
 
       break;
+   }
+
+   case DERIVATIONSCHEME_BIP32_SALTED:
+   {
+      //chaincode;
+      auto len = brr.get_var_int();
+      auto&& chainCode = SecureBinaryData(brr.get_BinaryDataRef(len));
+
+      //bip32 node meta data
+      auto depth = brr.get_uint32_t();
+      auto leafID = brr.get_uint32_t();
+
+      //salt
+      len = brr.get_var_int();
+      auto&& salt = SecureBinaryData(brr.get_BinaryDataRef(len));
+
+      //instantiate object
+      derScheme = make_shared<DerivationScheme_BIP32_Salted>(
+         salt, chainCode, depth, leafID);
+
+      break;
+
    }
 
    default:
@@ -167,7 +192,7 @@ vector<shared_ptr<AssetEntry>>
       if (privkey == nullptr)
          throw AssetUnavailableException();
       auto& privkeyData =
-         ddc->getDecryptedPrivateKey(privkey);
+         ddc->getDecryptedPrivateData(privkey);
 
       auto id_int = assetSingle->getIndex() + 1;
       auto& account_id = assetSingle->getAccountID();
@@ -270,7 +295,7 @@ vector<shared_ptr<AssetEntry>>
       if (privkey == nullptr)
          throw AssetUnavailableException();
       auto& privkeyData =
-         ddc->getDecryptedPrivateKey(privkey);
+         ddc->getDecryptedPrivateData(privkey);
 
       auto& account_id = rootAsset_single->getAccountID();
       return computeNextPrivateEntry(
@@ -361,4 +386,91 @@ BinaryData DerivationScheme_BIP32::serialize() const
    final.put_BinaryData(bw.getData());
 
    return final.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// DerivationScheme_BIP32_Salted
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+std::shared_ptr<AssetEntry_Single> 
+DerivationScheme_BIP32_Salted::computeNextPrivateEntry(
+   std::shared_ptr<DecryptedDataContainer> ddc,
+   const SecureBinaryData& privKey, std::unique_ptr<Cipher> cipher,
+   const BinaryData& full_id, unsigned index)
+{
+   //derScheme only allows for soft derivation
+   if (index > 0x7FFFFFFF)
+      throw DerivationSchemeException("illegal: hard derivation");
+
+   BIP32_Node node;
+   node.initFromPrivateKey(
+      getDepth(), getLeafId(), privKey, getChaincode());
+   node.derivePrivate(index);
+
+   //salt the key
+   auto&& saltedPrivKey = CryptoECDSA::PrivKeyScalarMultiply(
+      node.getPrivateKey(), salt_);
+
+   //compute salted pubkey
+   auto&& saltedPubKey = CryptoECDSA().ComputePublicKey(saltedPrivKey, true);
+
+   //encrypt the new privkey
+   auto&& newCipher = cipher->getCopy(); //copying a cypher cycles the IV
+   auto&& encryptedNextPrivKey = ddc->encryptData(
+      newCipher.get(), saltedPrivKey);
+
+   //instantiate encrypted salted privkey object
+   auto privKeyID = full_id;
+   privKeyID.append(WRITE_UINT32_BE(index));
+   auto nextPrivKey = make_shared<Asset_PrivateKey>(
+      privKeyID, encryptedNextPrivKey, move(newCipher));
+
+   //instantiate and return new asset entry
+   return make_shared<AssetEntry_Single>(
+      index, full_id, saltedPubKey, nextPrivKey);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+std::shared_ptr<AssetEntry_Single> 
+DerivationScheme_BIP32_Salted::computeNextPublicEntry(
+   const SecureBinaryData& pubKey,
+   const BinaryData& full_id, unsigned index)
+{
+   //derScheme only allows for soft derivation
+   if (index > 0x7FFFFFFF)
+      throw DerivationSchemeException("illegal: hard derivation");
+
+   //compute pub key
+   BIP32_Node node;
+   node.initFromPublicKey(getDepth(), getLeafId(), pubKey, getChaincode());
+   node.derivePublic(index);
+   auto nextPubkey = node.movePublicKey();
+
+   //salt it
+   auto&& saltedPubkey = CryptoECDSA::PubKeyScalarMultiply(nextPubkey, salt_);
+
+   return make_shared<AssetEntry_Single>(
+      index, full_id,
+      saltedPubkey, nullptr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData DerivationScheme_BIP32_Salted::serialize() const
+{
+   BinaryWriter bw;
+   bw.put_uint8_t(DERIVATIONSCHEME_BIP32_SALTED);
+   bw.put_var_int(getChaincode().getSize());
+   bw.put_BinaryData(getChaincode());
+   bw.put_uint32_t(getDepth());
+   bw.put_uint32_t(getLeafId());
+
+   bw.put_var_int(salt_.getSize());
+   bw.put_BinaryData(salt_);
+
+   BinaryWriter final;
+   final.put_var_int(bw.getSize());
+   final.put_BinaryData(bw.getData());
+
+   return final.getData();   
 }

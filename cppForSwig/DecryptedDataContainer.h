@@ -38,15 +38,15 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 class DecryptedDataContainer : public Lockable
 {
-   struct DecryptedData
+   struct DecryptedDataMaps
    {
       std::map<BinaryData, std::unique_ptr<DecryptedEncryptionKey>> encryptionKeys_;
-      std::map<BinaryData, std::unique_ptr<DecryptedPrivateKey>> privateKeys_;
+      std::map<BinaryData, std::unique_ptr<DecryptedData>> privateData_;
    };
 
 private:
    std::map<BinaryData, std::shared_ptr<KeyDerivationFunction>> kdfMap_;
-   std::unique_ptr<DecryptedData> lockedDecryptedData_ = nullptr;
+   std::unique_ptr<DecryptedDataMaps> lockedDecryptedData_ = nullptr;
 
    struct OtherLockedContainer
    {
@@ -72,7 +72,7 @@ private:
    case no passphrase was provided at wallet creation. This is to prevent
    for the master key being written in plain text on disk. It is encryption
    but does not effectively result in the wallet being protected by encryption,
-   since the default encryption is written on disk in plain text.
+   since the default encryption key is written on disk in plain text.
 
    This is mostly to allow for the entire container to be encrypted head to toe
    without implementing large caveats to handle unencrypted use cases.
@@ -115,8 +115,8 @@ public:
       resetPassphraseLambda();
    }
 
-   const SecureBinaryData& getDecryptedPrivateKey(
-      std::shared_ptr<Asset_PrivateKey> data);
+   const SecureBinaryData& getDecryptedPrivateData(
+      std::shared_ptr<Asset_EncryptedData> data);
    SecureBinaryData encryptData(
       Cipher* const cipher, const SecureBinaryData& data);
 

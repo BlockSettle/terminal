@@ -25,6 +25,8 @@ namespace bs {
                NetworkType netType, bool isExtOnly, 
                const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
+            ~Group(void);
+
             size_t getNumLeaves() const { return leaves_.size(); }
             std::shared_ptr<hd::Leaf> getLeafByPath(bs::hd::Path::Elem) const;
             std::shared_ptr<hd::Leaf> getLeafByPath(const std::string &key) const;
@@ -47,7 +49,6 @@ namespace bs {
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
 
-            virtual void setChainCode(const BinaryData &) {}
             virtual void shutdown(void);
             virtual std::set<AddressEntryType> getAddressTypeSet(void) const;
             bool isExtOnly(void) const { return isExtOnly_; }
@@ -60,6 +61,7 @@ namespace bs {
             virtual void initLeaf(std::shared_ptr<Leaf> &, const bs::hd::Path &, 
                unsigned lookup = UINT32_MAX) const;
 
+         protected:
             bs::hd::Path   path_;
             std::shared_ptr<spdlog::logger>  logger_;
             bool        needsCommit_ = true;
@@ -68,6 +70,7 @@ namespace bs {
             std::unordered_map<bs::hd::Path::Elem, std::shared_ptr<hd::Leaf>> leaves_;
 
             std::shared_ptr<AssetWallet_Single> walletPtr_;
+            LMDB* db_ = nullptr;
 
          private:
             BinaryData serialize() const;
@@ -81,6 +84,8 @@ namespace bs {
                , NetworkType netType
                , const std::shared_ptr<spdlog::logger> &logger);
             void deserialize(BinaryDataRef value);
+            void commit(bool force = false);
+            void putDataToDB(const BinaryData&, const BinaryData&);
          };
 
          class AuthGroup : public Group
@@ -93,7 +98,6 @@ namespace bs {
 
             wallet::Type type() const override { return wallet::Type::Authentication; }
 
-            void setChainCode(const BinaryData &) override;
             void shutdown(void) override;
             std::set<AddressEntryType> getAddressTypeSet(void) const override;
 

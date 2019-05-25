@@ -58,7 +58,8 @@ void WalletsManager::reset()
 
 void WalletsManager::syncWallets(const CbProgress &cb)
 {
-   const auto &cbWalletInfo = [this, cb](std::vector<bs::sync::WalletInfo> wi) {
+   const auto &cbWalletInfo = [this, cb](std::vector<bs::sync::WalletInfo> wi) 
+   {
       auto walletIds = std::make_shared<std::unordered_set<std::string>>();
       for (const auto &info : wi)
          walletIds->insert(info.id);
@@ -176,7 +177,7 @@ void WalletsManager::saveWallet(const WalletPtr &newWallet)
 {
    if (hdDummyWallet_ == nullptr) {
       hdDummyWallet_ = std::make_shared<hd::DummyWallet>(logger_);
-      hdWalletsId_.emplace_back(hdDummyWallet_->walletId());
+      hdWalletsId_.insert(hdDummyWallet_->walletId());
       hdWallets_[hdDummyWallet_->walletId()] = hdDummyWallet_;
    }
    addWallet(newWallet);
@@ -184,14 +185,22 @@ void WalletsManager::saveWallet(const WalletPtr &newWallet)
 
 void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
 {
-   if (!isHDLeaf && hdDummyWallet_) {
+   if (!isHDLeaf && hdDummyWallet_)
       hdDummyWallet_->add(wallet);
-   }
+
    {
       QMutexLocker lock(&mtxWallets_);
-      walletsId_.emplace_back(wallet->walletId());
-      wallets_.emplace(wallet->walletId(), wallet);
+      auto insertIter = walletsId_.insert(wallet->walletId());
+      if (!insertIter.second)
+      {
+         auto wltIter = wallets_.find(wallet->walletId());
+         if (wltIter == wallets_.end())
+            throw std::runtime_error("have id but lack leaf ptr");
+      }
+      else
+         wallets_[wallet->walletId()] = wallet;
    }
+
    connect(wallet.get(), &Wallet::walletReady, this, &WalletsManager::onWalletReady);
    connect(wallet.get(), &Wallet::addressAdded, [this] { emit walletChanged(); });
    connect(wallet.get(), &Wallet::walletReset, [this] { emit walletChanged(); });
@@ -203,15 +212,30 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
 
 void WalletsManager::saveWallet(const HDWalletPtr &wallet)
 {
-   if (!userId_.isNull()) {
+   if (!userId_.isNull())
       wallet->setUserId(userId_);
+
+   auto insertIter = hdWalletsId_.insert(wallet->walletId());
+
+   //integer id signifying the wallet's insertion order
+   if (!insertIter.second)
+   {
+      //wallet already exist in container, merge content instead
+      auto wltIter = hdWallets_.find(wallet->walletId());
+      if (wltIter == hdWallets_.end())
+         throw std::runtime_error("have wallet id but no ptr");
+
+      wltIter->second->merge(*wallet);
    }
-   hdWalletsId_.emplace_back(wallet->walletId());
-   hdWallets_[wallet->walletId()] = wallet;
+
+   //map::insert will not replace the wallet
+   wallet->containerId_ = hdWallets_.size();
+   hdWallets_.insert(make_pair(wallet->walletId(), wallet));
    walletNames_.insert(wallet->name());
-   for (const auto &leaf : wallet->getLeaves()) {
+
+   for (const auto &leaf : wallet->getLeaves())
       addWallet(leaf, true);
-   }
+
    connect(wallet.get(), &hd::Wallet::leafAdded, this, &WalletsManager::onHDLeafAdded);
    connect(wallet.get(), &hd::Wallet::leafDeleted, this, &WalletsManager::onHDLeafDeleted);
    connect(wallet.get(), &hd::Wallet::scanComplete, this, &WalletsManager::onWalletImported, Qt::QueuedConnection);
@@ -331,12 +355,16 @@ void WalletsManager::setUserId(const BinaryData &userId)
    }
 }
 
-const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(const unsigned int index) const
+const WalletsManager::HDWalletPtr WalletsManager::getHDWallet(unsigned id) const
 {
-   if (index >= hdWalletsId_.size()) {
-      return nullptr;
+   for (auto& wltPair : hdWallets_)
+   {
+      if (wltPair.second->containerId_ == id)
+         return wltPair.second;
    }
-   return getHDWalletById(hdWalletsId_[index]);
+
+   throw std::runtime_error("unknown wallet int id");
+   return nullptr;
 }
 
 const WalletsManager::HDWalletPtr WalletsManager::getHDWalletById(const std::string& walletId) const
@@ -1069,7 +1097,7 @@ void WalletsManager::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
 
          // We have an affected wallet. Update it!
          ourZCentries.push_back(entry);
-         wallet->updateBalances();
+         //wallet->updateBalances();
       } // if
       else {
          logger_->debug("[WalletsManager::{}] - get ZC but wallet not found: {}"
@@ -1204,5 +1232,112 @@ void WalletsManager::resumeRescan()
          logger_->warn("[WalletsManager::{}] - Rescan for {} is already in "
             "progress", __func__, rootWallet.second->name());
       }
+   }
+}
+
+void WalletsManager::trackAddressChainUse(
+   std::function<void(bool)> cb)
+{
+   /***
+   This method grabs address txn count from the db for all managed 
+   wallets and deduces address chain use and type from the address
+   tx counters. 
+
+   This is then reflected to the armory wallets through the 
+   SignContainer, to keep address chain counters and address types
+   in sync.
+
+   This method should be run only once per per, after registration.
+
+   It will only have an effect if a wallet has been restored from 
+   seed or if there exist several instances of a wallet being used
+   on different machines across time.
+
+   More often than not, the armory wallet has all this meta data
+   saved on disk to begin with.
+
+   Callback is fired with either true (operation success) or 
+   false (SyncState_Failure, read below):
+
+   trackChainAddressUse can return 3 states per wallet. These 
+   states are combined and processed as one when all wallets are 
+   done synchronizing. The states are as follow:
+
+    - SyncState_Failure: the armory wallet failed to fine one or
+      several of the addresses. This shouldn't typically happen.
+      Most likely culprit is an address chain that is too short.
+      Extend it. 
+      This state overrides all other states.
+    
+    - SyncState_NothingToDo: wallets are already sync'ed. 
+      Lowest priority.
+    
+    - SyncState_Success: Armory wallet address chain usage is now up
+      to date, call WalletsManager::SyncWallets once again.
+      Overrides NothingToDo.
+   ***/
+
+   auto ctr = std::make_shared<std::atomic<unsigned>>(0);
+   auto wltCount = wallets_.size();
+   auto state = std::make_shared<bs::sync::SyncState>(
+      bs::sync::SyncState::SyncState_NothingToDo);
+
+   for (auto &it : wallets_)
+   {
+      auto trackLbd = [this, ctr, wltCount, state, cb](bs::sync::SyncState st)->void
+      {
+         switch (st)
+         {
+         case bs::sync::SyncState::SyncState_Failure:
+            *state = st;
+            break;
+
+         case bs::sync::SyncState::SyncState_Success:
+         {
+            if (*state == bs::sync::SyncState::SyncState_NothingToDo)
+               *state = st;
+            break;
+         }
+
+         default:
+            break;
+         }
+
+         if (ctr->fetch_add(1) == wltCount - 1)
+         {
+            switch (*state)
+            {
+            case bs::sync::SyncState::SyncState_Failure:
+            {
+               cb(false);
+               return;
+            }
+
+            case bs::sync::SyncState::SyncState_Success:
+            {
+               auto progLbd = [cb](int curr, int tot)->void
+               {
+                  if (curr == tot)
+                     cb(true);
+               };
+
+               syncWallets(progLbd);
+               return;
+            }
+
+            default:
+               cb(true);
+               return;
+            }
+         }
+      };
+
+      auto leafPtr = it.second;
+      auto countLbd = [leafPtr, trackLbd](void)->void
+      {
+         leafPtr->trackChainAddressUse(trackLbd);
+      };
+
+      leafPtr->getAddressTxnCounts(countLbd);
    }
 }

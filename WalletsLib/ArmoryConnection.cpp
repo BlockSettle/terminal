@@ -32,6 +32,14 @@ void ArmoryConnection::stopServiceThreads()
    regThreadRunning_ = false;
 }
 
+std::shared_ptr<AsyncClient::BlockDataViewer> ArmoryConnection::bdv() const
+{
+   if (bdv_ == nullptr)
+      throw std::runtime_error("null bdv ptr");
+
+   return bdv_;
+}
+
 void ArmoryConnection::setupConnection(NetworkType netType, const std::string &host
    , const std::string &port, const std::string &dataDir, const BinaryData &serverKey
    , const std::function<void(const std::string &)> &cbError
@@ -205,19 +213,18 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
    return true;
 }
 
-std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
-   , const std::string &walletId, const std::vector<BinaryData> &addrVec
-   , const std::function<void(const std::string &regId)> &cb
-   , bool asNew)
+std::string ArmoryConnection::registerWallet(
+   const std::string &walletId, const std::vector<BinaryData> &addrVec,
+   const std::function<void(const std::string &regId)> &cb, bool asNew)
 {
-   if (!bdv_ || ((state_ != State::Ready) && (state_ != State::Connected))) {
+   if (!bdv_ || ((state_ != State::Ready) && (state_ != State::Connected))) 
+   {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return {};
    }
-   if (!wallet) {
-      wallet = std::make_shared<AsyncClient::BtcWallet>(bdv_->instantiateWallet(walletId));
-   }
    
+   auto wallet = std::make_shared<AsyncClient::BtcWallet>(
+      bdv_->instantiateWallet(walletId));
    const auto &regId = wallet->registerAddresses(addrVec, asNew);
    
    {
@@ -230,7 +237,7 @@ std::string ArmoryConnection::registerWallet(std::shared_ptr<AsyncClient::BtcWal
    /***
    This triggering of the registration callback does not work in any case. The code 
    needs to wait on the DB refresh signal, as it isn't guaranteed to happen right 
-   away, like with a fullnode (for home setups). Even with a supernode, the server may
+   away, (think fullnode, in home setups). Even with a supernode, the server may
    not process the registration request as soon as it receives it (busy with another
    task). That delay is enough to introduce false positives.
    ***/

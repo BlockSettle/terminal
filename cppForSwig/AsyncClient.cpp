@@ -853,6 +853,99 @@ pair<unsigned, unsigned> AsyncClient::BlockDataViewer::getRekeyCount() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedBalances(
+   const vector<string>& wltIDs,
+   function<void(ReturnMessage<map<string, CombinedBalances>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedBalances, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ = 
+      make_unique<CallbackReturn_CombinedBalances>(callback);   
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedAddrTxnCounts(
+   const vector<string>& wltIDs,
+   function<void(ReturnMessage<map<string, CombinedCounts>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedAddrTxnCounts, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ = 
+      make_unique<CallbackReturn_CombinedCounts>(callback);   
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedSpendableTxOutListForValue(
+   const vector<string>& wltIDs, uint64_t value,
+   function<void(ReturnMessage<vector<UTXO>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedSpendableTxOutListForValue, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   command->set_value(value);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ = 
+      make_unique<CallbackReturn_VectorUTXO>(callback);   
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedSpendableZcOutputs(
+   const vector<string>& wltIDs, 
+   function<void(ReturnMessage<vector<UTXO>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedSpendableZcOutputs, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_VectorUTXO>(callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedRBFTxOuts(
+   const vector<string>& wltIDs,
+   function<void(ReturnMessage<vector<UTXO>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedRBFTxOuts, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_VectorUTXO>(callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // CallbackReturn children
 //
@@ -1526,6 +1619,114 @@ void CallbackReturn_BDVCallback::callback(
    AsyncClient::deserialize(msg.get(), partialMsg);
 
    userCallbackLambda_(msg);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void CallbackReturn_CombinedBalances::callback(
+   const WebSocketMessagePartial& partialMsg)
+{
+   try
+   {
+      ::Codec_AddressData::ManyCombinedData msg;
+      AsyncClient::deserialize(&msg, partialMsg);
+
+      map<string, CombinedBalances> result;
+
+      for (unsigned i=0; i<msg.packedbalance_size(); i++)
+      {
+         auto wltVals = msg.packedbalance(i);
+
+         CombinedBalances cbal;
+         cbal.walletId_ = wltVals.id();
+
+         for (unsigned y=0; y<wltVals.idbalances_size(); y++)
+            cbal.walletBalanceAndCount_.push_back(wltVals.idbalances(y));
+
+         for (unsigned y=0; y<wltVals.addrdata_size(); y++)
+         {
+            auto addrBals = wltVals.addrdata(y);
+               
+            BinaryData scrAddr(addrBals.scraddr());
+
+            vector<uint64_t> abl;
+            for (unsigned z=0; z<addrBals.value_size(); z++)
+               abl.push_back(addrBals.value(z));
+
+            cbal.addressBalances_.insert(make_pair(scrAddr, abl));
+         }
+
+         result.insert(make_pair(wltVals.id(), cbal));
+      }
+      
+      ReturnMessage<map<string, CombinedBalances>> rm(result);
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
+   }
+   catch (ClientMessageError& e)
+   {
+      ReturnMessage<map<string, CombinedBalances>> rm(e);
+      userCallbackLambda_(move(rm));
+   }  
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void CallbackReturn_CombinedCounts::callback(
+   const WebSocketMessagePartial& partialMsg)
+{
+   try
+   {
+      ::Codec_AddressData::ManyCombinedData msg;
+      AsyncClient::deserialize(&msg, partialMsg);
+
+      map<string, CombinedCounts> result;
+
+      for (unsigned i=0; i<msg.packedbalance_size(); i++)
+      {
+         auto wltVals = msg.packedbalance(i);
+
+         CombinedCounts cbal;
+         cbal.walletId_ = wltVals.id();
+
+         for (unsigned y=0; y<wltVals.addrdata_size(); y++)
+         {
+            auto addrBals = wltVals.addrdata(y);
+               
+            BinaryData scrAddr(addrBals.scraddr());
+
+            uint64_t bl = addrBals.value(0);
+            cbal.addressTxnCounts_.insert(make_pair(scrAddr, bl));
+         }
+
+         result.insert(make_pair(wltVals.id(), cbal));
+      }
+      
+      ReturnMessage<map<string, CombinedCounts>> rm(result);
+
+      if (runInCaller())
+      {
+         userCallbackLambda_(move(rm));
+      }
+      else
+      {
+         thread thr(userCallbackLambda_, move(rm));
+         if (thr.joinable())
+            thr.detach();
+      }
+   }
+   catch (ClientMessageError& e)
+   {
+      ReturnMessage<map<string, CombinedCounts>> rm(e);
+      userCallbackLambda_(move(rm));
+   }  
 }
 
 ///////////////////////////////////////////////////////////////////////////////

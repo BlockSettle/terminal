@@ -171,7 +171,7 @@ bool ReqCCSettlementContainer::createCCUnsignedTXdata()
                QMetaObject::invokeMethod(this, [this] { emit error(tr("Failed to create CC TX half")); });
             }
          };
-         if (!transactionData_->getWallet()->getSpendableTxOutList(cbTxOutList, this, spendVal)) {
+         if (!transactionData_->getWallet()->getSpendableTxOutList(cbTxOutList, spendVal)) {
             logger_->error("[CCSettlementTransactionWidget::createCCUnsignedTXdata] getSpendableTxOutList failed");
          }
       };

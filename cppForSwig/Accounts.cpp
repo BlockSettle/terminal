@@ -687,16 +687,16 @@ void AddressAccount::make_new(
 {
    reset();
 
-   //asset account lambda
-   auto createNewAccount = [&decrData, this](
+   //create root asset
+   auto createRootAsset = [&decrData, this](
       shared_ptr<AccountType_BIP32> accBip32,
-      unsigned node_id, unique_ptr<Cipher> cipher_copy)
-         ->shared_ptr<AssetAccount>
+      unsigned node_id, unique_ptr<Cipher> cipher_copy)->
+      shared_ptr<AssetEntry_BIP32Root>
    {
       auto&& account_id = WRITE_UINT32_BE(node_id);
       auto&& full_account_id = ID_ + account_id;
 
-      shared_ptr<AssetEntry_Single> rootAsset;
+      shared_ptr<AssetEntry_BIP32Root> rootAsset;
       SecureBinaryData chaincode;
 
       BIP32_Node node;
@@ -760,11 +760,37 @@ void AddressAccount::make_new(
             node.getDepth(), node.getLeafID());
       }
 
+      return rootAsset;
+   };
+
+   //asset account lambda
+   auto createNewAccount = [this](
+      shared_ptr<AssetEntry_BIP32Root> rootAsset,
+      shared_ptr<DerivationScheme_BIP32> derScheme)->
+      shared_ptr<AssetAccount>
+   {
+      if(rootAsset == nullptr)
+         throw AccountException("null root asset");
+
       //der scheme
-      if (chaincode.getSize() == 0)
-         throw AccountException("invalid chaincode");
-      auto derScheme = make_shared<DerivationScheme_BIP32>(
-         chaincode, node.getDepth(), node.getLeafID());
+      if(derScheme == nullptr)
+      {
+         auto chaincode = rootAsset->getChaincode();
+         if (chaincode.getSize() == 0)
+            throw AccountException("invalid chaincode");
+
+         derScheme = make_shared<DerivationScheme_BIP32>(
+            chaincode, rootAsset->getDepth(), rootAsset->getLeafID());
+      }
+
+      //account id
+      auto full_account_id = rootAsset->getAccountID();
+      auto len = full_account_id.getSize();
+      if (ID_.getSize() > len)
+         throw AccountException("unexpected ID size");
+
+      auto account_id = full_account_id.getSliceCopy(
+         ID_.getSize(), len - ID_.getSize());
 
       //instantiate account
       auto asset_account = make_shared<AssetAccount>(
@@ -844,9 +870,12 @@ void AddressAccount::make_new(
          if (node == UINT32_MAX)
             throw AccountException("UINT32_MAX is a reserved node value");
 
-         auto account_obj = createNewAccount(
+         auto root_obj = createRootAsset(
             accBip32, node,
             move(cipher->getCopy()));
+         auto account_obj = createNewAccount(
+            root_obj, nullptr);
+         
          addAccount(account_obj);
       }
 
@@ -854,10 +883,11 @@ void AddressAccount::make_new(
    }
 
    case AccountTypeEnum_BIP32_Custom:
+   case AccountTypeEnum_BIP32_Salted:
    {
       auto accBip32 = dynamic_pointer_cast<AccountType_BIP32>(accType);
       if (accBip32 == nullptr)
-         throw runtime_error("unexpected account type");
+         throw AccountException("unexpected account type");
 
       ID_ = accType->getAccountID();
 
@@ -866,39 +896,85 @@ void AddressAccount::make_new(
       {
          for (auto& node : nodes)
          {
-            shared_ptr<AssetAccount> account_obj;
+            shared_ptr<AssetEntry_BIP32Root> root_obj;
             if (cipher != nullptr)
             {
-               account_obj = createNewAccount(
+               root_obj = createRootAsset(
                   accBip32, node,
                   move(cipher->getCopy()));
             }
             else
             {
-               account_obj = createNewAccount(
+               root_obj = createRootAsset(
                   accBip32, node,
                   nullptr);
             }
             
+            shared_ptr<DerivationScheme_BIP32> derScheme = nullptr;
+            if (accType->type() == AccountTypeEnum_BIP32_Salted)
+            {
+               auto accSalted = 
+                  dynamic_pointer_cast<AccountType_BIP32_Salted>(accType);
+               if (accSalted == nullptr)
+                  throw AccountException("unexpected account type");
+
+               if (accSalted->getSalt().getSize() != 32)
+                  throw AccountException("invalid salt len");
+
+               auto chaincode = root_obj->getChaincode();
+               auto salt = accSalted->getSalt();
+               derScheme = 
+                  make_shared<DerivationScheme_BIP32_Salted>(
+                     salt, chaincode, 
+                     root_obj->getDepth(), root_obj->getLeafID());
+            }
+
+            auto account_obj = createNewAccount(
+               root_obj, derScheme);
             addAccount(account_obj);
          }
       }
       else
       {
-         shared_ptr<AssetAccount> account_obj;
+         shared_ptr<AssetEntry_BIP32Root> root_obj;
          if (cipher != nullptr)
          {
-            account_obj = createNewAccount(
-               accBip32, UINT32_MAX, //check AccountType_BIP32_Custom comments for more info
+            root_obj = createRootAsset(
+               accBip32, 
+               //check AccountType_BIP32_Custom comments for more info
+               UINT32_MAX, 
                move(cipher->getCopy()));
          }
          else
          {
-            account_obj = createNewAccount(
-               accBip32, UINT32_MAX, //check AccountType_BIP32_Custom comments for more info
+            root_obj = createRootAsset(
+               accBip32, 
+               //check AccountType_BIP32_Custom comments for more info
+               UINT32_MAX, 
                nullptr);
          }
+
+         shared_ptr<DerivationScheme_BIP32> derScheme = nullptr;
+         if (accType->type() == AccountTypeEnum_BIP32_Salted)
+         {
+            auto accSalted = 
+               dynamic_pointer_cast<AccountType_BIP32_Salted>(accType);
+            if (accSalted == nullptr)
+               throw AccountException("unexpected account type");
+
+            if (accSalted->getSalt().getSize() != 32)
+               throw AccountException("invalid salt len");
+               
+            auto chaincode = root_obj->getChaincode();
+            auto salt = accSalted->getSalt();
+            derScheme = 
+               make_shared<DerivationScheme_BIP32_Salted>(
+                  salt, chaincode, 
+                  root_obj->getDepth(), root_obj->getLeafID());
+         }
             
+         auto account_obj = createNewAccount(
+            root_obj, derScheme);
          addAccount(account_obj);
       }
 
@@ -1620,7 +1696,7 @@ BinaryData AccountType_BIP32::getAccountID() const
       //this ensures address accounts of different types based on the same
       //bip32 root do not end up with the same id
       auto rootCopy = derivedRoot_;
-      rootCopy.getPtr()[0] ^= (uint8_t)type_;
+      rootCopy.getPtr()[0] ^= (uint8_t)type();
 
       auto&& pub_hash160 = BtcUtils::getHash160(rootCopy);
       accountID = move(pub_hash160.getSliceCopy(0, 4));
@@ -1629,7 +1705,7 @@ BinaryData AccountType_BIP32::getAccountID() const
    {
       
       auto&& root_pub = CryptoECDSA().ComputePublicKey(derivedRoot_);
-      root_pub.getPtr()[0] ^= (uint8_t)type_;
+      root_pub.getPtr()[0] ^= (uint8_t)type();
 
       auto&& pub_hash160 = BtcUtils::getHash160(root_pub);
       accountID = move(pub_hash160.getSliceCopy(0, 4));

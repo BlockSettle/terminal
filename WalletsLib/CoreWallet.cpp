@@ -275,18 +275,6 @@ wallet::Seed::Seed(const SecureBinaryData &seed, NetworkType netType)
    : netType_(netType), seed_(seed)
 {
    node_.initFromSeed(seed_);
-
-   //jesus...
-   /*catch (const std::exception &)
-   {
-      const auto result = segwit_addr::decode("seed", seed);
-      if (result.first >= 0) {
-         seed_ = BinaryData(&result.second[0], result.second.size());
-      }
-      if (seed_.isNull()) {
-         seed_ = seed;
-      }
-   }*/
 }
 
 std::string wallet::Seed::getWalletId() const
@@ -301,19 +289,18 @@ std::string wallet::Seed::getWalletId() const
 
 EasyCoDec::Data wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const
 {
-   throw std::runtime_error("needs fixed");
-   /*if (!hasPrivateKey()) {
-      return {};
-   }
-   const size_t halfSize = privKey_.getSize() / 2;
-   auto privKeyHalf1 = privKey_.getSliceCopy(0, (uint32_t)halfSize);
-   auto privKeyHalf2 = privKey_.getSliceCopy(halfSize, (uint32_t)halfSize);
+   if (seed_.getSize() == 0)
+      throw AssetException("empty seed, cannot generate ez16");
+
+   const size_t halfSize = seed_.getSize() / 2;
+   auto privKeyHalf1 = seed_.getSliceCopy(0, (uint32_t)halfSize);
+   auto privKeyHalf2 = seed_.getSliceCopy(halfSize, seed_.getSize() - halfSize);
    const auto hash1 = BtcUtils::getHash256(privKeyHalf1);
    const auto hash2 = BtcUtils::getHash256(privKeyHalf2);
    privKeyHalf1.append(hash1.getSliceCopy(0, (uint32_t)ckSumSize));
    privKeyHalf2.append(hash2.getSliceCopy(0, (uint32_t)ckSumSize));
    const auto chkSumPrivKey = privKeyHalf1 + privKeyHalf2;
-   return EasyCoDec().fromHex(chkSumPrivKey.toHexStr());*/
+   return EasyCoDec().fromHex(chkSumPrivKey.toHexStr());
 }
 
 SecureBinaryData wallet::Seed::decodeEasyCodeChecksum(const EasyCoDec::Data &easyData, size_t ckSumSize)
@@ -352,6 +339,26 @@ wallet::Seed wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &easyData,
    return wallet::Seed(decodeEasyCodeChecksum(easyData, ckSumSize), netType);
 }
 
+SecureBinaryData wallet::Seed::toXpriv() const
+{
+   return node_.getBase58();
+}
+
+wallet::Seed wallet::Seed::fromXpriv(const SecureBinaryData& xpriv, NetworkType netType)
+{
+   wallet::Seed seed(netType);
+   seed.node_.initFromBase58(xpriv);
+   
+   //check network
+
+   //check base
+   if (seed.node_.getDepth() > 0 || seed.node_.getFingerPrint() != 0)
+      throw WalletException("xpriv is not for wallet root");
+   
+   return seed;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 Wallet::Wallet(std::shared_ptr<spdlog::logger> logger)
    : wallet::MetaData(), logger_(logger)
 {}

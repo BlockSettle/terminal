@@ -232,7 +232,6 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
 
    unsigned int nbTotalAddresses = 0;
    auto nbUTXOs = std::make_shared<std::atomic_uint>(0);
-   auto nbActAddrs = std::make_shared<std::atomic_uint>(0);
 
    const auto &cbUTXOs = [this, nbUTXOs](std::vector<UTXO> utxos) {
       *nbUTXOs += utxos.size();
@@ -240,19 +239,19 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
          ui_->labelUTXOs->setText(QString::number(*nbUTXOs));
       });
    };
-   const auto &cbActiveAddrs = [this, nbActAddrs](size_t count) {
-      *nbActAddrs += count;
-      QMetaObject::invokeMethod(this, [this, nbActAddrs] {
-         ui_->labelAddressesActive->setText(QString::number(*nbActAddrs));
-      });
-   };
 
-   for (const auto &leaf : wallet->getLeaves()) {
-      leaf->getSpendableTxOutList(cbUTXOs, this);
-      leaf->getActiveAddressCount(cbActiveAddrs);
+   for (const auto &leaf : wallet->getLeaves()) 
+   {
+      leaf->getSpendableTxOutList(cbUTXOs, UINT64_MAX);
+
+      auto addrCnt = leaf->getActiveAddressCount();
+      QMetaObject::invokeMethod(this, [this, addrCnt] {
+         ui_->labelAddressesActive->setText(QString::number(addrCnt));
+      });
 
       nbTotalAddresses += leaf->getUsedAddressCount();
    }
+
    ui_->labelAddressesUsed->setText(QString::number(nbTotalAddresses));
 }
 
@@ -271,12 +270,13 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
          QMetaObject::invokeMethod(this, [this, size = utxos.size()] {
             ui_->labelUTXOs->setText(QString::number(size));
          });
-      }, this);
-      wallet->getActiveAddressCount([this](size_t count) {
-         QMetaObject::invokeMethod(this, [this, count]{
-            ui_->labelAddressesActive->setText(QString::number(count));
+      }, UINT64_MAX);
+      
+      auto addrCnt = wallet->getActiveAddressCount();
+      QMetaObject::invokeMethod(this, [this, addrCnt] {
+            ui_->labelAddressesActive->setText(QString::number(addrCnt));
          });
-      });
+
       ui_->labelSpendable->setText(UiUtils::displayAmount(wallet->getSpendableBalance()));
       ui_->labelUnconfirmed->setText(UiUtils::displayAmount(wallet->getUnconfirmedBalance()));
       ui_->labelTotal->setText(UiUtils::displayAmount(wallet->getTotalBalance()));

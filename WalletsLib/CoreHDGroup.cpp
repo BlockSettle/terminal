@@ -12,7 +12,17 @@ hd::Group::Group(std::shared_ptr<AssetWallet_Single> walletPtr,
    : walletPtr_(walletPtr), path_(path)
    , netType_(netType), isExtOnly_(isExtOnly)
    , logger_(logger)
-{}
+{
+   if (walletPtr_ == nullptr)
+      throw AccountException("null armory wallet pointer");
+
+   db_ = new LMDB(walletPtr_->getDbEnv().get(), BS_WALLET_DBNAME);
+}
+
+hd::Group::~Group()
+{
+   shutdown();
+}
 
 std::shared_ptr<hd::Leaf> hd::Group::getLeafByPath(bs::hd::Path::Elem elem) const
 {
@@ -76,6 +86,7 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(
       auto result = newLeaf();
       initLeaf(result, pathLeaf, lookup);
       addLeaf(result);
+      commit();
       return result;
    }
    catch (std::exception&)
@@ -273,8 +284,16 @@ void hd::Group::deserialize(BinaryDataRef value)
 
 void hd::Group::shutdown()
 {
-   for (auto& leafPair : leaves_)
-      leafPair.second->shutdown();
+   for (auto& leaf : leaves_)
+      leaf.second->shutdown();
+   leaves_.clear();
+
+   if (db_ != nullptr)
+   {
+      db_->close();
+      delete db_;
+      db_ = nullptr;
+   }
 
    walletPtr_ = nullptr;
 }
@@ -301,6 +320,31 @@ std::set<AddressEntryType> hd::Group::getAddressTypeSet(void) const
       };
 }
 
+void hd::Group::commit(bool force)
+{
+   if (!force && !needsCommit())
+      return;
+
+   BinaryWriter bwKey;
+   bwKey.put_uint8_t(BS_GROUP_PREFIX);
+   bwKey.put_uint32_t(index());
+   putDataToDB(bwKey.getData(), serialize());
+   committed();
+}
+
+void hd::Group::putDataToDB(const BinaryData& key, const BinaryData& data)
+{
+   if (walletPtr_ == nullptr)
+      throw WalletException("null wallet ptr");
+
+   CharacterArrayRef keyRef(key.getSize(), key.getPtr());
+   CharacterArrayRef dataRef(data.getSize(), data.getPtr());
+
+   auto envPtr = walletPtr_->getDbEnv();
+   LMDBEnv::Transaction tx(envPtr.get(), LMDB::ReadWrite);
+   db_->insert(keyRef, dataRef);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(std::shared_ptr<AssetWallet_Single> walletPtr,
@@ -308,29 +352,6 @@ hd::AuthGroup::AuthGroup(std::shared_ptr<AssetWallet_Single> walletPtr,
    const std::shared_ptr<spdlog::logger>& logger)
    : Group(walletPtr, path, netType, true, logger) //auto wallets are always ext only
 {}
-
-void hd::AuthGroup::setChainCode(const BinaryData &chainCode)
-{
-   chainCode_ = chainCode;
-
-   if (chainCode.isNull() && tempLeaves_.empty() && !leaves_.empty()) {
-      for (auto &leaf : leaves_) {
-         leaf.second->setChainCode(chainCode);
-      }
-      tempLeaves_ = leaves_;
-      for (const auto &leaf : tempLeaves_) {
-         deleteLeaf(leaf.first);
-      }
-   }
-   else if (!tempLeaves_.empty() && leaves_.empty()) {
-      auto leaves = std::move(tempLeaves_);
-      tempLeaves_.clear();
-      for (const auto &tempLeaf : leaves) {
-         tempLeaf.second->setChainCode(chainCode);
-         addLeaf(tempLeaf.second);
-      }
-   }
-}
 
 void hd::AuthGroup::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &path) const
 {

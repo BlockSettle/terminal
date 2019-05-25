@@ -204,11 +204,12 @@ void AddressListModel::updateWalletData()
       const auto &address = addressRows_[i].address;
       if (wallet) 
       {
-         if (!wallet->getAddrTxN(address, cbTxN)) 
+         throw std::runtime_error("reimplement this");
+         /*if (!wallet->getAddrTxN(address, cbTxN)) 
          {
             cbTxN(0);
             continue;
-         }
+         }*/
 
          auto addrBalances = wallet->getAddrBalance(address);
          cbBalance(addrBalances);

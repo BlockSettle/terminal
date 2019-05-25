@@ -302,9 +302,8 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
 
-   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
+   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](std::vector<UTXO> inUTXOs) {
       try {
-         auto inUTXOs = utxos.get();
          QMetaObject::invokeMethod(this, [this, wallet, txHashSet, inUTXOs, cbTXs] {
             setFixedWalletAndInputs(wallet, inUTXOs);
 

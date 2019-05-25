@@ -19,9 +19,10 @@ public:
       , const std::function<bool(const BinaryData &, const std::string &)> &bip150PromptUserCb
       = [](const BinaryData&, const std::string&) {return true; });
 
-   std::string registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &, const std::string &walletId
-      , const std::vector<BinaryData> &addrVec, const std::function<void(const std::string &)> &
-      , bool asNew = false) override;
+   std::string registerWallet(
+      const std::string &walletId, const std::vector<BinaryData> &addrVec, 
+      const std::function<void(const std::string &)> &, bool asNew = false) override;
+
    bool getWalletsHistory(const std::vector<std::string> &walletIDs
       , const std::function<void(std::vector<ClientClasses::LedgerEntry>)> &) override;
 

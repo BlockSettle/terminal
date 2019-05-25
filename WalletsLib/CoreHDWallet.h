@@ -29,8 +29,9 @@ namespace bs {
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             //load existing wallet
-            Wallet(const std::string &filename, NetworkType netType
-               , const std::shared_ptr<spdlog::logger> &logger = nullptr);
+            Wallet(const std::string &filename, NetworkType netType,
+               const std::string& folder = "",
+               const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             //generate random seed and init
             Wallet(const std::string &name, const std::string &desc
@@ -84,10 +85,12 @@ namespace bs {
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); 
             }
 
+            bs::core::wallet::Seed getDecryptedSeed(void) const;
+
          protected:
             std::string    name_, desc_;
             NetworkType    netType_ = NetworkType::Invalid;
-            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>              groups_;
+            std::map<bs::hd::Path::Elem, std::shared_ptr<Group>> groups_;
             std::shared_ptr<spdlog::logger>     logger_;
             bool extOnlyFlag_ = false;
 
@@ -100,7 +103,7 @@ namespace bs {
          protected:
             void initNew(const wallet::Seed &, 
                const SecureBinaryData& passphrase, const std::string& folder);
-            void loadFromFile(const std::string &filename);
+            void loadFromFile(const std::string &filename, const std::string& folder);
             void putDataToDB(const BinaryData& key, const BinaryData& data);
             BinaryDataRef getDataRefForKey(LMDB* db, const BinaryData& key) const;
             BinaryDataRef getDataRefForKey(uint32_t key) const;
