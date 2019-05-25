@@ -32,7 +32,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>OTC is not allowed in General chat room</string>
+      <string>OTC unavailable in Global</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

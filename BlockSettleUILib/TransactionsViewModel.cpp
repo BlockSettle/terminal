@@ -706,7 +706,9 @@ void TransactionsViewModel::loadLedgerEntries()
                }
 
                if (rawData_.size() >= inPageCnt) {
-                  ledgerToTxData();
+                  QMetaObject::invokeMethod(this, [this] {
+                     ledgerToTxData();
+                  });
                }
             };
             ledgerDelegate_->getHistoryPage(pageId, cbLedger);

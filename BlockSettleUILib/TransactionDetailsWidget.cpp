@@ -2,7 +2,9 @@
 #include "ui_TransactionDetailsWidget.h"
 #include "BTCNumericTypes.h"
 #include "BlockObj.h"
+#include "CheckRecipSigner.h"
 #include "UiUtils.h"
+#include "Wallets/SyncWalletsManager.h"
 
 #include <memory>
 #include <QToolTip>
@@ -86,11 +88,13 @@ TransactionDetailsWidget::~TransactionDetailsWidget() = default;
 void TransactionDetailsWidget::init(
    const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
-   , const std::shared_ptr<QTimer> &inTimer)
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const CCFileManager::CCSecurities &ccSecurities)
 {
    armory_ = armory;
    logger_ = inLogger;
-   expTimer_ = inTimer;
+   walletsMgr_ = walletsMgr;
+   ccSecurities_ = ccSecurities;
 
    connect(armory_.get(), &ArmoryObject::newBlock, this
       , &TransactionDetailsWidget::onNewBlock, Qt::QueuedConnection);
@@ -214,8 +218,7 @@ void TransactionDetailsWidget::setTxGUIValues()
       }
    }
 
-   // It's now safe to stop the query expiration timer. Do it right away.
-   expTimer_->stop();
+   emit finished();
 
    uint64_t fees = totIn - curTx_.getSumOfOutputs();
    float feePerByte = (float)fees / (float)curTx_.getTxWeight();
@@ -257,6 +260,52 @@ void TransactionDetailsWidget::loadInputs()
    loadTreeOut(ui_->treeOutput);
 }
 
+void TransactionDetailsWidget::updateTreeCC(QTreeWidget *tree
+   , const bs::network::CCSecurityDef &ccDef)
+{
+   for (int i = 0; i < tree->topLevelItemCount(); ++i) {
+      auto item = tree->topLevelItem(i);
+      const uint64_t amt = item->data(1, Qt::UserRole).toULongLong();
+      if (amt && ((amt % ccDef.nbSatoshis) == 0)) {
+         item->setData(1, Qt::DisplayRole, QString::number(amt / ccDef.nbSatoshis));
+         const auto addrWallet = item->data(2, Qt::DisplayRole).toString();
+         if (addrWallet.isEmpty()) {
+            item->setData(2, Qt::DisplayRole, QString::fromStdString(ccDef.product));
+         }
+         for (int j = 0; j < item->childCount(); ++j) {
+            auto outItem = item->child(j);
+            const uint64_t outAmt = outItem->data(1, Qt::UserRole).toULongLong();
+            outItem->setData(1, Qt::DisplayRole, QString::number(outAmt / ccDef.nbSatoshis));
+            outItem->setData(2, Qt::DisplayRole, QString::fromStdString(ccDef.product));
+         }
+      }
+   }
+}
+
+void TransactionDetailsWidget::updateCCInputs()
+{
+   const auto &cbUpdateCCInput = [this](const BinaryData &txHash
+      , const bs::network::CCSecurityDef &ccDef) {
+   };
+
+   for (size_t i = 0; i < curTx_.getNumTxIn(); ++i) {
+      const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
+      const auto &prevTx = prevTxMap_[op.getTxHash()];
+      for (const auto &ccSec : ccSecurities_) {
+         auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armory_);
+         const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
+            if (!found) {
+               return;
+            }
+            QMetaObject::invokeMethod(this, [this, ccSec] {
+               updateTreeCC(ui_->treeInput, ccSec);
+            });
+         };
+         txChecker->containsInputAddress(curTx_, cbHasGA, ccSec.nbSatoshis);
+      }
+   }
+}
+
 // Input widget population.
 void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
 {
@@ -265,8 +314,8 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
    // here's the code to add data to the Input tree.
    for (size_t i = 0; i < curTx_.getNumTxIn(); i++) {
       TxOut prevOut;
-      TxIn in = curTx_.getTxInCopy(i);
-      OutPoint op = in.getOutPoint();
+      const TxIn in = curTx_.getTxInCopy(i);
+      const OutPoint op = in.getOutPoint();
       BinaryTXID intPrevTXID(op.getTxHash(), false);
       const auto &prevTx = prevTxMap_[intPrevTXID];
       if (prevTx.isInitialized()) {
@@ -274,39 +323,26 @@ void TransactionDetailsWidget::loadTreeIn(CustomTreeWidget *tree)
       }
       auto txType = prevOut.getScriptType();
       const auto outAddr = bs::Address::fromTxOut(prevOut);
-      double amtBTC = UiUtils::amountToBtc(prevOut.getValue());
-      QString typeStr;
+      const auto addressWallet = walletsMgr_->getWalletByAddress(outAddr);
       QString addrStr;
+      const QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
 
       // For now, don't display any data if the TxOut is non-std. Displaying a
       // hex version of the script is one thing that could be done. This needs
       // to be discussed before implementing. Non-std could mean many things.
       if (txType == TXOUT_SCRIPT_NONSTANDARD) {
-         typeStr = QString::fromStdString("Non-Std");
+         addrStr = tr("<Non-Standard>");
       }
       else {
-         typeStr = QString::fromStdString("Input");
          addrStr = QString::fromStdString(outAddr.display());
       }
 
       // create a top level item using type, address, amount, wallet values
-      QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
-         , UiUtils::displayAmount(amtBTC), QString());
-
-      // Example: Add several child items to this top level item to crate a new
-      // branch in the tree. Could be useful for things like expanding a non-std
-      // input, or expanding any input, really.
-/*      item->addChild(createItem(item,
-                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
-                                tr("1JSAGsDo56rEqgxf3R1EAiCgwGJCUB31Cr"),
-                                tr("-0.00850000"),
-                                tr("Settlement")));
-      item->setExpanded(true);*/
-
-      // add the item to the tree
-      tree->addTopLevelItem(item);
+      addItem(tree, addrStr, prevOut.getValue(), walletName, prevTx.getThisHash());
    }
    tree->resizeColumns();
+
+   updateCCInputs();
 }
 
 // Output widget population.
@@ -316,64 +352,81 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
 
    // here's the code to add data to the Input tree.
    for (size_t i = 0; i < curTx_.getNumTxOut(); i++) {
-      auto txType = curTx_.getTxOutCopy(i).getScriptType();
-      const auto outAddr = bs::Address::fromTxOut(curTx_.getTxOutCopy(i));
-      double amtBTC = UiUtils::amountToBtc(curTx_.getTxOutCopy(i).getValue());
-      QString typeStr;
+      TxOut txOut = curTx_.getTxOutCopy(i);
+      auto txType = txOut.getScriptType();
+      const auto outAddr = bs::Address::fromTxOut(txOut);
+      const auto addressWallet = walletsMgr_->getWalletByAddress(outAddr);
       QString addrStr;
+      const QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
 
       // For now, don't display any data if the TxOut is OP_RETURN or non-std.
       // Displaying a hex version of the script is one thing that could be done.
       // This needs to be discussed before implementing. OP_RETURN isn't too bad
       // (80 bytes max) but non-std could mean just about anything.
       if (txType == TXOUT_SCRIPT_OPRETURN) {
-         typeStr = QString::fromStdString("OP_RETURN");
+         addrStr = tr("<OP_RETURN>");
       }
       else if (txType == TXOUT_SCRIPT_NONSTANDARD) {
-         typeStr = QString::fromStdString("Non-Std");
+         addrStr = tr("<Non-Standard>");
       }
       else {
-         typeStr = QString::fromStdString("Output");
          addrStr = QString::fromStdString(outAddr.display());
       }
 
-      // create a top level item using type, address, amount, wallet values
-      QTreeWidgetItem *item = createItem(tree, typeStr, addrStr
-         , UiUtils::displayAmount(amtBTC), QString());
+      addItem(tree, addrStr, txOut.getValue(), walletName, txOut.getScript());
 
       // add the item to the tree
-      tree->addTopLevelItem(item);
    }
    tree->resizeColumns();
+
+   for (const auto &ccSec : ccSecurities_) {
+      auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armory_);
+      const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
+         if (!found) {
+            return;
+         }
+         QMetaObject::invokeMethod(this, [this, ccSec] {
+            updateTreeCC(ui_->treeOutput, ccSec);
+         });
+      };
+      txChecker->containsInputAddress(curTx_, cbHasGA, ccSec.nbSatoshis);
+   }
 }
 
-QTreeWidgetItem * TransactionDetailsWidget::createItem(QTreeWidget *tree,
-                                                       QString type,
-                                                       QString address,
-                                                       QString amount,
-                                                       QString wallet)
+void TransactionDetailsWidget::addItem(QTreeWidget *tree, const QString &address
+   , const uint64_t amount, const QString &wallet, const BinaryData &txHash)
 {
-   QTreeWidgetItem *item = new QTreeWidgetItem(tree);
-   item->setText(colType, type); // type
-   item->setText(colAddressId, address); // address
-   item->setText(colAmount, amount); // amount
-   item->setText(colWallet, wallet); // wallet
-   return item;
-}
-
-QTreeWidgetItem * TransactionDetailsWidget::createItem(QTreeWidgetItem *parentItem,
-                                                       QString type,
-                                                       QString address,
-                                                       QString amount,
-                                                       QString wallet)
-{
-   QTreeWidgetItem *item = new QTreeWidgetItem(parentItem);
-   item->setFirstColumnSpanned(true);
-   item->setText(colType, type); // type
-   item->setText(colAddressId, address); // address
-   item->setText(colAmount, amount); // amount
-   item->setText(colWallet, wallet); // wallet
-   return item;
+   const bool specialAddr = address.startsWith(QLatin1Char('<'));
+   const bool isOutput = (tree == ui_->treeOutput);
+   auto &itemsMap = isOutput ? outputItems_ : inputItems_;
+   auto item = itemsMap[address];
+   if (!item || specialAddr) {
+      QStringList items;
+      const auto amountStr = UiUtils::displayAmount(amount);
+      items << address << amountStr << wallet;
+      item = new QTreeWidgetItem(items);
+      item->setData(0, Qt::UserRole, isOutput);
+      item->setData(1, Qt::UserRole, (qulonglong)amount);
+      tree->addTopLevelItem(item);
+      item->setExpanded(true);
+      if (!specialAddr) {
+         itemsMap[address] = item;
+      }
+   }
+   else {
+      uint64_t prevAmount = item->data(1, Qt::UserRole).toULongLong();
+      prevAmount += amount;
+      item->setData(1, Qt::UserRole, (qulonglong)prevAmount);
+      item->setData(1, Qt::DisplayRole, UiUtils::displayAmount(prevAmount));
+   }
+   if (!specialAddr) {
+      const auto txHashStr = QString::fromStdString(txHash.toHexStr(!isOutput));
+      QStringList txItems;
+      txItems << txHashStr << UiUtils::displayAmount(amount);
+      auto txHashItem = new QTreeWidgetItem(txItems);
+      txHashItem->setData(1, Qt::UserRole, (qulonglong)amount);
+      item->addChild(txHashItem);
+   }
 }
 
 // A function that sends a signal to the explorer widget to open the address
@@ -381,11 +434,13 @@ QTreeWidgetItem * TransactionDetailsWidget::createItem(QTreeWidgetItem *parentIt
 // addresses.
 void TransactionDetailsWidget::onAddressClicked(QTreeWidgetItem *item, int column)
 {
-   if (column == colAddressId) {
-      auto typeText = item->text(colType);
-      if (typeText == QString::fromStdString("Input")
-         || typeText == QString::fromStdString("Output")) {
-         emit(addressClicked(item->text(colAddressId)));
+   if (item->childCount() > 0) {
+      emit addressClicked(item->text(colAddressId));
+   }
+   else {
+      const auto txHashStr = item->text(colAddressId);
+      if (txHashStr.length() == 64) {
+         emit txHashClicked(txHashStr);
       }
    }
 }
@@ -395,6 +450,8 @@ void TransactionDetailsWidget::clear()
 {
    prevTxMap_.clear();
    curTx_ = Tx();
+   inputItems_.clear();
+   outputItems_.clear();
 
    ui_->tranID->clear();
    ui_->tranNumInputs->clear();

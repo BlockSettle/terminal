@@ -5,6 +5,7 @@
 
 #include <QDialog>
 #include <memory>
+
 #include "TransactionsViewModel.h"
 
 namespace Ui {
@@ -37,15 +38,17 @@ public:
    static const int minHeightAtRendering = 500;
 
 private:
-   std::unique_ptr<Ui::TransactionDetailDialog> ui_;
-   std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
-   QTreeWidgetItem   *  itemSender = nullptr;
-   QTreeWidgetItem   *  itemReceiver = nullptr;
+   void addAddress(const std::shared_ptr<bs::sync::Wallet> &, const TxOut& out,
+      bool isOutput, bool isTxOutgoing, const BinaryData& txHash);
+   QString getScriptType(const TxOut &);
 
 private:
-   void addAddress(const std::shared_ptr<bs::sync::Wallet> &, const TxOut& out,
-                   bool isOutput, bool isTxOutgoing, const BinaryData& txHash);
-   QString getScriptType(const TxOut &);
+   std::unique_ptr<Ui::TransactionDetailDialog> ui_;
+   std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;
+   QTreeWidgetItem   *itemSender_ = nullptr;
+   QTreeWidgetItem   *itemReceiver_ = nullptr;
+   QMap<QString, QTreeWidgetItem *> addrInputItems_;
+   QMap<QString, QTreeWidgetItem *> addrOutputItems_;
 };
 
 #endif // __TRANSACTION_DETAIL_DIALOG_H__

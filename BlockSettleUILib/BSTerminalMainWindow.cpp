@@ -721,7 +721,7 @@ void BSTerminalMainWindow::InitChartsView()
 // Initialize widgets related to transactions.
 void BSTerminalMainWindow::InitTransactionsView()
 {
-   ui_->widgetExplorer->init(armory_, logMgr_->logger());
+   ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_);
    ui_->widgetTransactions->init(walletsMgr_, armory_, signContainer_,
                                 logMgr_->logger("ui"));
    ui_->widgetTransactions->setEnabled(true);
