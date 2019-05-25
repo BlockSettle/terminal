@@ -436,6 +436,12 @@ namespace AsyncClient
       void getCombinedSpendableTxOutListForValue(
          const std::vector<std::string>&, uint64_t value,
          std::function<void(ReturnMessage<std::vector<UTXO>>)>);
+   
+      void getCombinedSpendableZcOutputs(const std::vector<std::string>&, 
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
+
+      void getCombinedRBFTxOuts(const std::vector<std::string>&, 
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
    };
 
    ////////////////////////////////////////////////////////////////////////////

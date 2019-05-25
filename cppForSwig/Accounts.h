@@ -467,7 +467,6 @@ private:
    void commit(void);
    void updateAssetCount(void);
 
-   void extendPublicChain(unsigned);
    void extendPublicChainToIndex(unsigned);
    void extendPublicChain(std::shared_ptr<AssetEntry>, unsigned);
    std::vector<std::shared_ptr<AssetEntry>> extendPublicChain(
@@ -519,6 +518,8 @@ public:
    const BinaryData& getID(void) const { return id_; }
    BinaryData getFullID(void) const { return parent_id_ + id_; }
    const SecureBinaryData& getChaincode(void) const;
+
+   void extendPublicChain(unsigned);
 
    //static
    static void putData(LMDB* db, const BinaryData& key, const BinaryData& data);

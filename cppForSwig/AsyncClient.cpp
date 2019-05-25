@@ -909,6 +909,43 @@ void AsyncClient::BlockDataViewer::getCombinedSpendableTxOutListForValue(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedSpendableZcOutputs(
+   const vector<string>& wltIDs, 
+   function<void(ReturnMessage<vector<UTXO>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedSpendableZcOutputs, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_VectorUTXO>(callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void AsyncClient::BlockDataViewer::getCombinedRBFTxOuts(
+   const vector<string>& wltIDs,
+   function<void(ReturnMessage<vector<UTXO>>)> callback)
+{
+   auto payload = BlockDataViewer::make_payload(
+      Methods::getCombinedRBFTxOuts, bdvID_);
+   auto command = dynamic_cast<BDVCommand*>(payload->message_.get());
+
+   for (auto& id : wltIDs)
+      command->add_bindata(id);
+
+   auto read_payload = make_shared<Socket_ReadPayload>();
+   read_payload->callbackReturn_ =
+      make_unique<CallbackReturn_VectorUTXO>(callback);
+   sock_->pushPayload(move(payload), read_payload);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
 //
 // CallbackReturn children
 //

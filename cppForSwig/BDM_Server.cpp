@@ -1087,6 +1087,114 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
       return response;
    }
 
+   case Methods::getCombinedSpendableZcOutputs:
+   {
+      /*
+      in:
+         value
+         wallet ids as bindata[]
+      out:
+         enough UTXOs to cover value twice, as Codec_Utxo::ManyUtxo
+
+      The order in which wallets are presented will be the order by
+      which utxo fetching will be prioritize, i.e. if the first wallet
+      has enough UTXOs to cover value twice over, there will not be any
+      UTXOs returned for the other wallets.
+      */
+
+      vector<BinaryData> wltIDs;
+      for (int i = 0; i < command->bindata_size(); i++)
+      {
+         auto& id = command->bindata(i);
+         BinaryData idRef((uint8_t*)id.data(), id.size());
+         wltIDs.push_back(idRef);
+      }
+
+      auto response = make_shared<::Codec_Utxo::ManyUtxo>();
+
+      for (auto id : wltIDs)
+      {
+         shared_ptr<BtcWallet> wltPtr = nullptr;
+         for (auto& group : this->groups_)
+         {
+            auto wltIter = group.wallets_.find(id);
+            if (wltIter != group.wallets_.end())
+               wltPtr = wltIter->second;
+         }
+
+         if (wltPtr == nullptr)
+            throw runtime_error("unknown wallet or lockbox ID");
+
+         auto&& utxoVec = wltPtr->getSpendableTxOutListZC();
+         for (auto& utxo : utxoVec)
+         {
+            auto utxoPtr = response->add_value();
+            utxoPtr->set_value(utxo.value_);
+            utxoPtr->set_script(utxo.script_.getPtr(), utxo.script_.getSize());
+            utxoPtr->set_txheight(utxo.txHeight_);
+            utxoPtr->set_txindex(utxo.txIndex_);
+            utxoPtr->set_txoutindex(utxo.txOutIndex_);
+            utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
+         }
+      }
+
+      return response;
+   }
+
+   case Methods::getCombinedRBFTxOuts:
+   {
+      /*
+      in:
+         value
+         wallet ids as bindata[]
+      out:
+         enough UTXOs to cover value twice, as Codec_Utxo::ManyUtxo
+
+      The order in which wallets are presented will be the order by
+      which utxo fetching will be prioritize, i.e. if the first wallet
+      has enough UTXOs to cover value twice over, there will not be any
+      UTXOs returned for the other wallets.
+      */
+
+      vector<BinaryData> wltIDs;
+      for (int i = 0; i < command->bindata_size(); i++)
+      {
+         auto& id = command->bindata(i);
+         BinaryData idRef((uint8_t*)id.data(), id.size());
+         wltIDs.push_back(idRef);
+      }
+
+      auto response = make_shared<::Codec_Utxo::ManyUtxo>();
+
+      for (auto id : wltIDs)
+      {
+         shared_ptr<BtcWallet> wltPtr = nullptr;
+         for (auto& group : this->groups_)
+         {
+            auto wltIter = group.wallets_.find(id);
+            if (wltIter != group.wallets_.end())
+               wltPtr = wltIter->second;
+         }
+
+         if (wltPtr == nullptr)
+            throw runtime_error("unknown wallet or lockbox ID");
+
+         auto&& utxoVec = wltPtr->getRBFTxOutList();
+         for (auto& utxo : utxoVec)
+         {
+            auto utxoPtr = response->add_value();
+            utxoPtr->set_value(utxo.value_);
+            utxoPtr->set_script(utxo.script_.getPtr(), utxo.script_.getSize());
+            utxoPtr->set_txheight(utxo.txHeight_);
+            utxoPtr->set_txindex(utxo.txIndex_);
+            utxoPtr->set_txoutindex(utxo.txOutIndex_);
+            utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
+         }
+      }
+
+      return response;
+   }
+
    default:
       LOGWARN << "unkonwn command";
       throw runtime_error("unknown command");
