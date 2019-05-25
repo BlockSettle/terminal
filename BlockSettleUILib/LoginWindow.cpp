@@ -1,7 +1,6 @@
 #include "LoginWindow.h"
 #include "ui_LoginWindow.h"
 
-#include <QSettings>
 #include <QIcon>
 
 #include "AboutDialog.h"
