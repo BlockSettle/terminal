@@ -242,7 +242,6 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
 
    const auto &cbTxOutList = [this, obj, cb, val, btcWallet]
                              (ReturnMessage<std::vector<UTXO>> txOutList) {
-      logger_->debug("{}", __func__);
       try {
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance

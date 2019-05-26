@@ -120,6 +120,14 @@ bool AddressVerificator::SetBSAddressList(const std::unordered_set<std::string>&
 bool AddressVerificator::StartAddressVerification(const std::shared_ptr<AuthAddress>& address)
 {
    auto addressCopy = std::make_shared<AuthAddress>(*address);
+   const auto addr = addressCopy->GetChainedAddress();
+
+   if (bsAddressList_.empty() || (bsAddressList_.find(addr) != bsAddressList_.end())) {
+      if (userCallback_) {
+         userCallback_(address, AddressVerificationState::VerificationFailed);
+      }
+      return false;
+   }
 
    if (AddressWasRegistered(addressCopy)) {
       logger_->debug("[AddressVerificator::StartAddressVerification] adding verification command to queue: {}"
@@ -207,7 +215,8 @@ void AddressVerificator::doValidateAddress(const std::shared_ptr<AddressVerifica
       }
    }
    if (!state->getInputFromBS) {
-      state->currentState = state->nbTransactions ? AddressVerificationState::Revoked : AddressVerificationState::NotSubmitted;
+      state->currentState = state->nbTransactions ? AddressVerificationState::VerificationFailed
+         : AddressVerificationState::NotSubmitted;
    }
    else if (state->value <= 0) {
       state->currentState = AddressVerificationState::Revoked;
