@@ -118,6 +118,7 @@ private:
    void insertLoadMore();
    void loadMore();
    void setupHighlightPalette();
+   void showUserHandleMenu(const QString &username);
    QString toHtmlText(const QString &text);
    QString toHtmlUsername(const QString &username, const QString &userId = QString());
    QString toHtmlInvalid(const QString &text);
@@ -128,7 +129,6 @@ private:
 
    QMenu *userMenu_;
    QAction *userContactAction_;
-   QString username_;
    bool isGroupRoom_;
 
    QImage statusImageOffline_;
