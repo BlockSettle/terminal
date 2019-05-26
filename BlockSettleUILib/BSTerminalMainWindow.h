@@ -230,6 +230,7 @@ private:
    NetworkSettings   networkSettings_;
    bool readyToRegisterWallets_ = false;
    bool initialWalletCreateDialogShown_ = false;
+   bool mdAgreementShow_ = false;
    bool armoryKeyDialogShown_ = false;
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;

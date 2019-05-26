@@ -609,9 +609,18 @@ void BSTerminalMainWindow::InitConnections()
 
 void BSTerminalMainWindow::acceptMDAgreement()
 {
+   if (mdAgreementShow_) {
+      return;
+   }
+
    if (!isMDLicenseAccepted()) {
       MDAgreementDialog dlg{this};
-      if (dlg.exec() != QDialog::Accepted) {
+
+      mdAgreementShow_ = true;
+      auto rc = dlg.exec();
+      mdAgreementShow_ = false;
+
+      if (rc != QDialog::Accepted) {
          return;
       }
 
