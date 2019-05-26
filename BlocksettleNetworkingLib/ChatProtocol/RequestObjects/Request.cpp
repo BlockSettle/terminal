@@ -87,37 +87,51 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return std::make_shared<HeartbeatPingRequest>(clientId);
 
       case RequestType::RequestLogin:
-        return std::make_shared<LoginRequest>(clientId
-                 , data[AuthIdKey].toString().toStdString()
-                 , data[JwtKey].toString().toStdString());
+        return std::make_shared<LoginRequest>(
+           clientId,
+           data[AuthIdKey].toString().toStdString(),
+           data[JwtKey].toString().toStdString(),
+           data[PublicKeyKey].toString().toStdString()
+           );
 
       case RequestType::RequestSendMessage:
          return SendMessageRequest::fromJSON(clientId, jsonData);
 
       case RequestType::RequestOnlineUsers:
-         return std::make_shared<OnlineUsersRequest>(clientId
-                 , data[AuthIdKey].toString().toStdString());
+         return std::make_shared<OnlineUsersRequest>(
+            clientId,
+            data[AuthIdKey].toString().toStdString()
+            );
 
       case RequestType::RequestMessages:
-         return std::make_shared<MessagesRequest>(clientId
-                 , data[SenderIdKey].toString().toStdString()
-                 , data[ReceiverIdKey].toString().toStdString());
+         return std::make_shared<MessagesRequest>(
+            clientId,
+            data[SenderIdKey].toString().toStdString(),
+            data[ReceiverIdKey].toString().toStdString()
+            );
 
       case RequestType::RequestLogout:
-         return std::make_shared<LogoutRequest>(clientId
-                 , data[AuthIdKey].toString().toStdString()
-                 , data[JwtKey].toString().toStdString());
+         return std::make_shared<LogoutRequest>(
+            clientId,
+            data[AuthIdKey].toString().toStdString(),
+            data[JwtKey].toString().toStdString(),
+            data[PublicKeyKey].toString().toStdString()
+            );
 
       case RequestType::RequestAskForPublicKey:
-         return std::make_shared<AskForPublicKeyRequest>(clientId,
-               data[SenderIdKey].toString().toStdString(),
-               data[ReceiverIdKey].toString().toStdString());
+         return std::make_shared<AskForPublicKeyRequest>(
+            clientId,
+            data[SenderIdKey].toString().toStdString(),
+            data[ReceiverIdKey].toString().toStdString()
+            );
 
       case RequestType::RequestSendOwnPublicKey:
-         return std::make_shared<SendOwnPublicKeyRequest>(clientId
-            , data[ReceiverIdKey].toString().toStdString()
-            , data[SenderIdKey].toString().toStdString()
-            , publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+         return std::make_shared<SendOwnPublicKeyRequest>(
+            clientId,
+            data[ReceiverIdKey].toString().toStdString(),
+            data[SenderIdKey].toString().toStdString(),
+            publicKeyFromString(data[PublicKeyKey].toString().toStdString())
+            );
 
       case RequestType::RequestChangeMessageStatus:
          return MessageChangeStatusRequest::fromJSON(clientId, jsonData);
@@ -129,8 +143,9 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return ContactActionRequestServer::fromJSON(clientId, jsonData);
 
       case RequestType::RequestChatroomsList:
-         return std::make_shared<ChatroomsListRequest>(clientId
-               , data[SenderIdKey].toString().toStdString());
+         return std::make_shared<ChatroomsListRequest>(
+            clientId,
+            data[SenderIdKey].toString().toStdString());
 
       case RequestType::RequestSendRoomMessage:
          return SendRoomMessageRequest::fromJSON(clientId, jsonData);

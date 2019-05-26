@@ -513,7 +513,7 @@ void ChatClient::logout(bool send)
    }
 
    if (send) {
-      auto request = std::make_shared<Chat::LogoutRequest>("", currentUserId_, "");
+      auto request = std::make_shared<Chat::LogoutRequest>("", currentUserId_, "", "");
       sendRequest(request);
    }
 
@@ -758,7 +758,8 @@ void ChatClient::OnDataReceived(const std::string& data)
 void ChatClient::OnConnected()
 {
    logger_->debug("[ChatClient::OnConnected]");
-   auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, currentJwt_);
+   BinaryData localPublicKey(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size());
+   auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, currentJwt_, localPublicKey.toHexStr());
    sendRequest(loginRequest);
 }
 

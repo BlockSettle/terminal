@@ -4,10 +4,12 @@ namespace Chat {
    BaseLoginRequest::BaseLoginRequest(RequestType requestType
                         , const std::string& clientId
                         , const std::string& authId
-                        , const std::string& jwt)
+                        , const std::string& jwt
+                        , const std::string& publicKey)
       : Request (requestType, clientId)
       , authId_(authId)
       , jwt_(jwt)
+      , publicKey_(publicKey)
    {
    
    }
@@ -19,6 +21,7 @@ namespace Chat {
    
       data[AuthIdKey] = QString::fromStdString(authId_);
       data[JwtKey] = QString::fromStdString(jwt_);
+      data[PublicKeyKey] = QString::fromStdString(publicKey_);
    
       return data;
    }
