@@ -226,7 +226,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       for (int i=0; i<mainWinUi_->tabWidget->count(); i++) {
          mainWinUi_->tabWidget->setTabIcon(i, QIcon());
       }
-      break;
+      return;
 
    default: return;
    }
