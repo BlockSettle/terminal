@@ -1,7 +1,7 @@
 #include "ContactsActionResponseDirect.h"
 
 namespace Chat {
-   ContactsActionResponseDirect::ContactsActionResponseDirect(const std::string& senderId, const std::string& receiverId, ContactsAction action, autheid::PublicKey publicKey)
+   ContactsActionResponseDirect::ContactsActionResponseDirect(const std::string& senderId, const std::string& receiverId, ContactsAction action, BinaryData publicKey)
       : PendingResponse (ResponseType::ResponseContactsActionDirect)
       , senderId_(senderId)
       , receiverId_(receiverId)
@@ -17,7 +17,7 @@ namespace Chat {
       data[SenderIdKey] = QString::fromStdString(senderId_);
       data[ReceiverIdKey] = QString::fromStdString(receiverId_);
       data[ContactActionKey] = static_cast<int>(action_);
-      data[PublicKeyKey] = QString::fromStdString(Chat::publicKeyToString(senderPublicKey_));
+      data[PublicKeyKey] = QString::fromStdString(senderPublicKey_.toHexStr());
 
       return data;
    }
@@ -28,7 +28,7 @@ namespace Chat {
       QString senderId = data[SenderIdKey].toString();
       QString receiverId = data[ReceiverIdKey].toString();
       ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
-      autheid::PublicKey publicKey = Chat::publicKeyFromString(data[PublicKeyKey].toString().toStdString());
+      BinaryData publicKey = BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString());
       return std::make_shared<ContactsActionResponseDirect>(senderId.toStdString(), receiverId.toStdString(), action, publicKey);
    }
    

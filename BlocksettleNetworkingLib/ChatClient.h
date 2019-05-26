@@ -243,7 +243,7 @@ private:
 
 
    std::unique_ptr<ChatDB>                   chatDb_;
-   std::map<QString, autheid::PublicKey>     pubKeys_;
+   std::map<QString, BinaryData>     pubKeys_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
    std::shared_ptr<UserHasher>               hasher_;
    std::map<QString, Botan::SecureVector<uint8_t>>   userNonces_;

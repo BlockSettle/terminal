@@ -130,7 +130,7 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
             clientId,
             data[ReceiverIdKey].toString().toStdString(),
             data[SenderIdKey].toString().toStdString(),
-            publicKeyFromString(data[PublicKeyKey].toString().toStdString())
+            BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString())
             );
 
       case RequestType::RequestChangeMessageStatus:

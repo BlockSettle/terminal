@@ -68,9 +68,9 @@ public:
     * \param[in] key Public key of the user.
     * \returns false of failure, otherwise true.
     */
-   bool addKey(const QString& user, const autheid::PublicKey& key);
+   bool addKey(const QString& user, const BinaryData& key);
 
-   bool loadKeys(std::map<QString, autheid::PublicKey>& peer_public_keys_out);
+   bool loadKeys(std::map<QString, BinaryData>& peer_public_keys_out);
 
    bool isContactExist(const QString &userId);
    bool addContact(Chat::ContactRecordData &contact);

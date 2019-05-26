@@ -9,7 +9,10 @@
 #include <QJsonObject>
 
 #include "EncryptionUtils.h"
-#include "autheid_utils.h"
+
+#include <disable_warnings.h>
+#include <BinaryData.h>
+#include <enable_warnings.h>
 
 namespace Chat
 {
@@ -158,9 +161,6 @@ namespace Chat
       return serializedData.toStdString();
    } 
    
-   autheid::PublicKey publicKeyFromString(const std::string &s);
-   std::string publicKeyToString(const autheid::PublicKey &k);
-
 } //namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ContactStatus)

@@ -312,7 +312,7 @@ bool ChatDB::removeRoomMessages(const QString &roomId) {
    return true;
 }
 
-bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)
+bool ChatDB::loadKeys(std::map<QString, BinaryData>& keys_out)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String("SELECT user_id, key FROM user_keys"))) {
@@ -325,18 +325,18 @@ bool ChatDB::loadKeys(std::map<QString, autheid::PublicKey>& keys_out)
    }
 
    while (query.next()) {
-      keys_out[query.value(0).toString()] = Chat::publicKeyFromString(
+      keys_out[query.value(0).toString()] = BinaryData::CreateFromHex(
          query.value(1).toString().toStdString());
    }
    return true;
 }
 
-bool ChatDB::addKey(const QString& user, const autheid::PublicKey& key)
+bool ChatDB::addKey(const QString& user, const BinaryData& key)
 {
    QSqlQuery qryAdd(QLatin1String(
       "INSERT INTO user_keys(user_id, key) VALUES(?, ?);"), db_);
    qryAdd.bindValue(0, user);
-   qryAdd.bindValue(1, QString::fromStdString(Chat::publicKeyToString(key)));
+   qryAdd.bindValue(1, QString::fromStdString(key.toHexStr()));
 
    if (!qryAdd.exec()) {
       logger_->error("[ChatDB::addKey] failed to insert new public key value to user_keys.");
@@ -368,14 +368,14 @@ bool ChatDB::isContactExist(const QString &userId)
 
 bool ChatDB::addContact(Chat::ContactRecordData &contact)
 {
-   if (isContactExist(contact.getContactForId())) {
+   if (isContactExist(contact.getUserId())) {
       return true;
    }
 
    QSqlQuery query(db_);
    query.prepare(QLatin1String("INSERT INTO contacts(user_id, user_name, status) VALUES(:user_id, :user_name, :status)"));
 
-   query.bindValue(QLatin1String(":user_id"), contact.getContactForId());
+   query.bindValue(QLatin1String(":user_id"), contact.getUserId());
    query.bindValue(QLatin1String(":user_name"), contact.getDisplayName());
    query.bindValue(QLatin1String(":status"), static_cast<int>(contact.getContactStatus()));
 
@@ -421,7 +421,7 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
       Chat::ContactRecordData contact(query.value(0).toString(),
                                       query.value(0).toString(),
                                       static_cast<Chat::ContactStatus>(query.value(2).toInt()),
-                                      autheid::PublicKey(),
+                                      BinaryData(),
                                       query.value(1).toString());
       contactList.emplace_back(contact);
    }
@@ -439,14 +439,14 @@ bool ChatDB::updateContact(Chat::ContactRecordData &contact)
       }
       query.bindValue(QLatin1String(":user_name"), contact.getDisplayName());
       query.bindValue(QLatin1String(":status"), static_cast<int>(contact.getContactStatus()));
-      query.bindValue(QLatin1String(":user_id"), contact.getContactForId());
+      query.bindValue(QLatin1String(":user_id"), contact.getUserId());
    } else {
       if (!query.prepare(QLatin1String("UPDATE contacts SET status=:status WHERE user_id=:user_id;"))) {
          logger_->error("[ChatDB::updateContact] failed to prepare query: {}", query.lastError().text().toStdString());
          return false;
       }
       query.bindValue(QLatin1String(":status"), static_cast<int>(contact.getContactStatus()));
-      query.bindValue(QLatin1String(":user_id"), contact.getContactForId());
+      query.bindValue(QLatin1String(":user_id"), contact.getUserId());
    }
 
    if (!query.exec()) {
@@ -475,7 +475,7 @@ bool ChatDB::getContact(const QString& userId, Chat::ContactRecordData& contact)
    if (query.next()) {
       contact.setUserId(query.value(0).toString());
       contact.setDisplayName(query.value(1).toString());
-      contact.setStatus(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
+      contact.setContactStatus(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
       return true;
    }
 
