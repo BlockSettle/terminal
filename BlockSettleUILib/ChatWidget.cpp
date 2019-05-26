@@ -94,9 +94,8 @@ public:
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
-
-      // hide tab icon for unread messages
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
+      
+      NotificationCenter::notify(bs::ui::NotifyType::LogOut, {});
    }
 
    std::string login(const std::string& email, const std::string& jwt

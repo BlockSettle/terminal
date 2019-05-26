@@ -34,6 +34,7 @@ namespace bs {
          NewVersion,
          UpdateUnreadMessage,
          FriendRequest,
+         LogOut
       };
 
       using NotifyMessage = QList<QVariant>;
