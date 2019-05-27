@@ -226,11 +226,11 @@ void WalletKeyWidget::onAuthSucceeded(const std::string &encKey, const SecureBin
    });
 }
 
-void WalletKeyWidget::onAuthFailed(const QString &text)
+void WalletKeyWidget::onAuthFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
 {
    stop();
    ui_->pushButtonAuth->setEnabled(true);
-   ui_->pushButtonAuth->setText(tr("Auth failed: %1 - retry").arg(text));
+   ui_->pushButtonAuth->setText(tr("Auth failed: %1 - retry").arg(AutheIDClient::errorString(authError)));
    //ui_->widgetAuthLayout->show();
    
    QPropertyAnimation *a = startAuthAnimation(false);
@@ -246,7 +246,7 @@ void WalletKeyWidget::onTimer()
 {
    timeLeft_ -= 0.5;
    if (timeLeft_ <= 0) {
-      onAuthFailed(tr("Timeout"));
+      onAuthFailed(QNetworkReply::NoError, AutheIDClient::ErrorType::Timeout);
    }
    else {
       //ui_->progressBar->setFormat(tr("%1 seconds left").arg((int)timeLeft_));
