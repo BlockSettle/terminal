@@ -162,22 +162,6 @@
            </widget>
           </item>
           <item>
-           <spacer name="chatUsersVerticalSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Preferred</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
            <widget class="ChatClientUserView" name="treeViewUsers">
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
@@ -241,7 +225,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>OwnUserName</string>
+               <string>offline</string>
               </property>
              </widget>
             </item>
@@ -318,7 +302,7 @@
             <item>
              <widget class="QStackedWidget" name="stackedWidgetMessages">
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
               <widget class="QFrame" name="page_6">
                <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -406,7 +390,7 @@
                     </spacer>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_2">
+                    <widget class="QLabel" name="timeLabel">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -414,6 +398,12 @@
                       </sizepolicy>
                      </property>
                      <property name="minimumSize">
+                      <size>
+                       <width>101</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="minimumSizeLinux" stdset="0">
                       <size>
                        <width>110</width>
                        <height>0</height>
@@ -425,7 +415,7 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_7">
+                    <widget class="QLabel" name="iconLabel">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -444,7 +434,7 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_6">
+                    <widget class="QLabel" name="userLabel">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                        <horstretch>0</horstretch>
@@ -463,9 +453,15 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QLabel" name="label_8">
+                    <widget class="QLabel" name="messageLabel">
                      <property name="text">
                       <string>Message</string>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>50</width>
+                       <height>0</height>
+                      </size>
                      </property>
                     </widget>
                    </item>
@@ -634,7 +630,10 @@
             <property name="currentIndex">
              <number>0</number>
             </property>
+            <widget class="OTCLoginRequiredShield" name="widgetLoginRequiredShield"/>
+            <widget class="OTCGeneralRoomShield" name="widgetGeneralShield"/>
             <widget class="CreateOTCRequestWidget" name="widgetCreateOTCRequest"/>
+            <widget class="PullOwnOTCRequestWidget" name="widgetPullOwnOTCRequest"/>
             <widget class="CreateOTCResponseWidget" name="widgetCreateOTCResponse"/>
             <widget class="OTCNegotiationRequestWidget" name="widgetNegotiateRequest"/>
             <widget class="OTCNegotiationResponseWidget" name="widgetNegotiateResponse"/>
@@ -683,7 +682,7 @@
   <customwidget>
    <class>CreateOTCResponseWidget</class>
    <extends>QWidget</extends>
-   <header location="global">CreateOTCResponseWidget.h</header>
+   <header>CreateOTCResponseWidget.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -696,6 +695,24 @@
    <class>OTCNegotiationRequestWidget</class>
    <extends>QWidget</extends>
    <header>OTCNegotiationRequestWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCLoginRequiredShield</class>
+   <extends>QWidget</extends>
+   <header>OTCLoginRequiredShield.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCGeneralRoomShield</class>
+   <extends>QWidget</extends>
+   <header>OTCGeneralRoomShield.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PullOwnOTCRequestWidget</class>
+   <extends>QWidget</extends>
+   <header>PullOwnOTCRequestWidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

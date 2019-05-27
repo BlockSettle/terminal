@@ -12,8 +12,6 @@
 #include "ManualResetEvent.h"
 #include "SocketIncludes.h"
 
-const int DefaultArmoryDBStartTimeoutMsec = 500;
-
 ArmoryConnection::ArmoryConnection(const std::shared_ptr<spdlog::logger> &logger)
    : logger_(logger)
    , regThreadRunning_(false)
@@ -42,8 +40,7 @@ std::shared_ptr<AsyncClient::BlockDataViewer> ArmoryConnection::bdv() const
 
 void ArmoryConnection::setupConnection(NetworkType netType, const std::string &host
    , const std::string &port, const std::string &dataDir, const BinaryData &serverKey
-   , const std::function<void(const std::string &)> &cbError
-   , const std::function<bool (const BinaryData &, const std::string &)> &cbBIP151)
+   , const StringCb &cbError, const BIP151Cb &cbBIP151)
 {
    // Add BIP 150 server keys
    if (!serverKey.isNull()) {
@@ -100,7 +97,7 @@ void ArmoryConnection::setupConnection(NetworkType netType, const std::string &h
       bool connected = false;
       do {
          if (needsBreakConnectionLoop_.load()) {
-            setState(State::Canceled);
+            setState(State::Cancelled);
             break;
          }
          cbRemote_ = std::make_shared<ArmoryCallback>(this, logger_);
@@ -213,9 +210,8 @@ bool ArmoryConnection::broadcastZC(const BinaryData& rawTx)
    return true;
 }
 
-std::string ArmoryConnection::registerWallet(
-   const std::string &walletId, const std::vector<BinaryData> &addrVec,
-   const std::function<void(const std::string &regId)> &cb, bool asNew)
+std::string ArmoryConnection::registerWallet(const std::string &walletId
+   , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &cb, bool asNew)
 {
    if (!bdv_ || ((state_ != State::Ready) && (state_ != State::Connected))) 
    {
@@ -252,8 +248,7 @@ std::string ArmoryConnection::registerWallet(
    }*/
 }
 
-bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletIDs
-   , const std::function<void(std::vector<ClientClasses::LedgerEntry>)> &cb)
+bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -277,7 +272,7 @@ bool ArmoryConnection::getWalletsHistory(const std::vector<std::string> &walletI
 }
 
 bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, const bs::Address &addr
-   , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb)
+   , const LedgerDelegateCb &cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -301,7 +296,7 @@ bool ArmoryConnection::getLedgerDelegateForAddress(const std::string &walletId, 
    return true;
 }
 
-bool ArmoryConnection::getWalletsLedgerDelegate(const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb)
+bool ArmoryConnection::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -323,7 +318,7 @@ bool ArmoryConnection::getWalletsLedgerDelegate(const std::function<void(const s
    return true;
 }
 
-bool ArmoryConnection::addGetTxCallback(const BinaryData &hash, const std::function<void(Tx)> &cb)
+bool ArmoryConnection::addGetTxCallback(const BinaryData &hash, const TxCb &cb)
 {
    FastLock lock(txCbLock_);
    const auto &it = txCallbacks_.find(hash);
@@ -339,7 +334,7 @@ bool ArmoryConnection::addGetTxCallback(const BinaryData &hash, const std::funct
 
 void ArmoryConnection::callGetTxCallbacks(const BinaryData &hash, const Tx &tx)
 {
-   std::vector<std::function<void(Tx)>> callbacks;
+   std::vector<TxCb> callbacks;
    {
       FastLock lock(txCbLock_);
       const auto &it = txCallbacks_.find(hash);
@@ -358,7 +353,7 @@ void ArmoryConnection::callGetTxCallbacks(const BinaryData &hash, const Tx &tx)
    }
 }
 
-bool ArmoryConnection::getTxByHash(const BinaryData &hash, const std::function<void(Tx)> &cb)
+bool ArmoryConnection::getTxByHash(const BinaryData &hash, const TxCb &cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -382,8 +377,7 @@ bool ArmoryConnection::getTxByHash(const BinaryData &hash, const std::function<v
    return true;
 }
 
-bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes
-   , const std::function<void(std::vector<Tx>)> &cb)
+bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, const TXsCb &cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -437,8 +431,7 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes
    return true;
 }
 
-bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash
-   , const std::function<void(BinaryData)> &callback)
+bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash, const BinaryDataCb &callback)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}",__func__, (int)state_.load());
@@ -465,8 +458,7 @@ bool ArmoryConnection::getRawHeaderForTxHash(const BinaryData& inHash
    return true;
 }
 
-bool ArmoryConnection::getHeaderByHeight(const unsigned int inHeight
-   , const std::function<void(BinaryData)> &callback)
+bool ArmoryConnection::getHeaderByHeight(const unsigned int inHeight, const BinaryDataCb &callback)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -495,8 +487,7 @@ bool ArmoryConnection::getHeaderByHeight(const unsigned int inHeight
 // Frontend for Armory's estimateFee() call. Used to get the "conservative" fee
 // that Bitcoin Core estimates for successful insertion into a block within a
 // given number (2-1008) of blocks.
-bool ArmoryConnection::estimateFee(unsigned int nbBlocks
-   , const std::function<void(float)> &cb)
+bool ArmoryConnection::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -533,7 +524,7 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks
 // Frontend for Armory's getFeeSchedule() call. Used to get the range of fees
 // that Armory caches. The fees/byte are estimates for what's required to get
 // successful insertion of a TX into a block within X number of blocks.
-bool ArmoryConnection::getFeeSchedule(const std::function<void(std::map<unsigned int, float>)> &cb)
+bool ArmoryConnection::getFeeSchedule(const FloatMapCb &cb)
 {
    if (!bdv_ || (state_ != State::Ready)) {
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
@@ -603,7 +594,7 @@ bool ArmoryConnection::isTransactionConfirmed(const ClientClasses::LedgerEntry &
    return getConfirmationsNumber(item) > 1;
 }
 
-void ArmoryConnection::onRefresh(std::vector<BinaryData> ids)
+void ArmoryConnection::onRefresh(const std::vector<BinaryData>& ids)
 {
    {
       std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
@@ -668,7 +659,7 @@ void ArmoryConnection::onZCsInvalidated(const std::set<BinaryData> &ids)
    }
 }
 
-unsigned int ArmoryConnection::setRefreshCb(const std::function<void(std::vector<BinaryData>, bool)> &cb)
+unsigned int ArmoryConnection::setRefreshCb(const RefreshCb &cb)
 {
    const auto reqId = cbSeqNo_++;
    cbRefresh_[reqId] = cb;
@@ -766,7 +757,7 @@ void ArmoryCallback::disconnected()
 {
    logger_->debug("[{}]", __func__);
    connection_->regThreadRunning_ = false;
-   if (connection_->state() != ArmoryConnection::State::Canceled) {
+   if (connection_->state() != ArmoryConnection::State::Cancelled) {
       connection_->setState(ArmoryConnection::State::Offline);
    }
 }

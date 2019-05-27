@@ -116,7 +116,7 @@ bool Wallet::isBalanceAvailable() const
 BTCNumericTypes::balance_type Wallet::getSpendableBalance() const
 {
    if (!isBalanceAvailable()) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    return spendableBalance_;
 }
@@ -132,7 +132,7 @@ BTCNumericTypes::balance_type Wallet::getUnconfirmedBalance() const
 BTCNumericTypes::balance_type Wallet::getTotalBalance() const
 {
    if (!isBalanceAvailable()) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    return totalBalance_;
 }
@@ -232,10 +232,8 @@ bool Wallet::getSpendableTxOutList(
       return false;
 
    const auto &cbTxOutList = [this, val, cb]
-      (ReturnMessage<std::vector<UTXO>> txOutList) 
-   {
-      try 
-      {
+      (ReturnMessage<std::vector<UTXO>> txOutList) {
+      try {
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
@@ -262,10 +260,8 @@ bool Wallet::getSpendableTxOutList(
 
          cb(txOutListCopy);
       }
-      catch (const std::exception &e) 
-      {
-         if (logger_ != nullptr) 
-         {
+      catch (const std::exception &e) {
+         if (logger_ != nullptr) {
             logger_->error(
                "[bs::sync::Wallet::getSpendableTxOutList] Return data " \
                "error {} - value {}", e.what(), val);
@@ -275,8 +271,7 @@ bool Wallet::getSpendableTxOutList(
 
    std::vector<std::string> walletIDs;
    walletIDs.push_back(walletId());
-   try
-   {
+   try {
       walletIDs.push_back(walletIdInt());
    }
    catch(std::exception&)

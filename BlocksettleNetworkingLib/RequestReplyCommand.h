@@ -28,7 +28,7 @@ public:
       , const std::shared_ptr<DataConnection>& connection
       , const std::shared_ptr<spdlog::logger>& logger);
 
-   ~RequestReplyCommand() noexcept;
+   ~RequestReplyCommand() noexcept override;
 
    RequestReplyCommand(const RequestReplyCommand&) = delete;
    RequestReplyCommand& operator = (const RequestReplyCommand&) = delete;
@@ -50,6 +50,8 @@ public:
    bool GetExecutionResult() const { return result_; }
    void DropResult() { dropResult_ = true; }
 
+   void resetConnection() { connection_.reset(); }
+
 public:
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -66,11 +68,11 @@ private:
 
    data_callback_type   replyCallback_;
    error_callback_type  errorCallback_;
-   std::atomic_bool     dropResult_;
+   std::atomic_bool     dropResult_{false};
 
-   bool replyReceived_;
-   bool result_;
-   bool executeOnConnect_;
+   bool replyReceived_{false};
+   bool result_{false};
+   bool executeOnConnect_{false};
 
    std::shared_ptr<ManualResetEvent> requestCompleted_;
 };

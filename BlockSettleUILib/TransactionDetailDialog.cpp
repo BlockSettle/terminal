@@ -26,6 +26,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
  , walletsManager_(walletsManager)
 {
    ui_->setupUi(this);
+   itemSender_ = new QTreeWidgetItem(QStringList(tr("Sender")));
+   itemReceiver_ = new QTreeWidgetItem(QStringList(tr("Receiver")));
 
    const auto &cbInit = [this, armory] (const TransactionsViewItem *item) {
       ui_->labelAmount->setText(item->amountStr);
@@ -55,10 +57,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
             txHashSet.insert(op.getTxHash());
             txOutIndices[op.getTxHash()].insert(op.getTxOutIndex());
          }
-         const auto &cbTXs = [this, item, txOutIndices](std::vector<Tx> txs) {
-            itemSender = new QTreeWidgetItem(QStringList(tr("Sender")));
-            itemReceiver = new QTreeWidgetItem(QStringList(tr("Receiver")));
-            for (auto item : { itemSender, itemReceiver }) {
+         const auto &cbTXs = [this, item, txOutIndices](const std::vector<Tx> &txs) {
+            for (auto item : { itemSender_, itemReceiver_ }) {
                ui_->treeAddresses->addTopLevelItem(item);
             }
 
@@ -102,7 +102,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
                   else {
                      QStringList items;
                      items << tr("Input") << tr("???") << tr("Unknown");
-                     itemSender->addChild(new QTreeWidgetItem(items));
+                     itemSender_->addChild(new QTreeWidgetItem(items));
                      initialized = false;
                   }
                }
@@ -124,8 +124,8 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
                   QString::number((float)value / (float)item->tx.getTxWeight()));
             }
 
-            ui_->treeAddresses->expandItem(itemSender);
-            ui_->treeAddresses->expandItem(itemReceiver);
+            ui_->treeAddresses->expandItem(itemSender_);
+            ui_->treeAddresses->expandItem(itemReceiver_);
 
             for (int i = 0; i < ui_->treeAddresses->columnCount(); ++i) {
                ui_->treeAddresses->resizeColumnToContents(i);
@@ -206,8 +206,8 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
                                          const BinaryData& txHash)
 {
    const auto addr = bs::Address::fromTxOut(out);
-   const auto &addressWallet = walletsManager_->getWalletByAddress(addr.id());
-   QString valueStr;
+   const auto addressWallet = walletsManager_->getWalletByAddress(addr);
+   bool negative = false;
    QString addressType;
    const bool isOurs = (addressWallet == wallet);
 
@@ -215,7 +215,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
       const bool isSettlement = (wallet->type() == bs::core::wallet::Type::Settlement);
       if (isOurs) {
          if (!isOutput) {
-            valueStr += QLatin1Char('-');
+            negative = true;
          }
          else if (!isSettlement) {
             addressType = tr("Change");
@@ -226,7 +226,7 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
    else {
       if (!isOurs) {
          if (!isOutput) {
-            valueStr += QLatin1Char('-');
+            negative = true;
          }
          else {
             addressType = tr("Change");
@@ -234,33 +234,47 @@ void TransactionDetailDialog::addAddress(const std::shared_ptr<bs::sync::Wallet>
          isOutput = false;
       }
    }
-   valueStr += addressWallet ? addressWallet->displayTxValue(out.getValue()) : UiUtils::displayAmount(out.getValue());
-   if (addressType.isEmpty()) {
-      addressType = isOutput ? tr("Output") : tr("Input");
-   }
 
-   QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
-   QStringList items;
-   items << addressType;
-   items << valueStr;
    const auto displayedAddress = QString::fromStdString(addr.display());
-   if (walletName.isEmpty()) {
-      items << displayedAddress;
+   QString valueStr = negative ? QLatin1String("-") : QString();
+   auto parent = isOutput ? itemReceiver_ : itemSender_;
+   auto &addrItems = isOutput ? addrOutputItems_ : addrInputItems_;
+   auto item = addrItems[displayedAddress];
+   if (item == nullptr) {
+      if (addressType.isEmpty()) {
+         addressType = isOutput ? tr("Output") : tr("Input");
+      }
+      valueStr += addressWallet ? addressWallet->displayTxValue(out.getValue()) : UiUtils::displayAmount(out.getValue());
+
+      QString walletName = addressWallet ? QString::fromStdString(addressWallet->name()) : QString();
+      QStringList items;
+      items << addressType;
+      items << valueStr;
+      if (walletName.isEmpty()) {
+         items << displayedAddress;
+      } else {
+         items << displayedAddress << walletName;
+      }
+
+      item = new QTreeWidgetItem(items);
+      item->setData(0, Qt::UserRole, displayedAddress);
+      item->setData(1, Qt::UserRole, (qulonglong)out.getValue());
+      parent->addChild(item);
+      addrItems[displayedAddress] = item;
    }
    else {
-      items << displayedAddress << walletName;
+      uint64_t prevVal = item->data(1, Qt::UserRole).toULongLong();
+      prevVal += out.getValue();
+      valueStr += addressWallet ? addressWallet->displayTxValue(prevVal) : UiUtils::displayAmount(prevVal);
+      item->setData(1, Qt::UserRole, (qulonglong)prevVal);
+      item->setData(1, Qt::DisplayRole, valueStr);
    }
-
-   auto parent = isOutput ? itemReceiver : itemSender;
-   auto item = new QTreeWidgetItem(items);
-   item->setData(0, Qt::UserRole, displayedAddress);
    const auto txHashStr = QString::fromStdString(txHash.toHexStr(true));
    auto txItem = new QTreeWidgetItem(QStringList() << getScriptType(out)
                                      << QString::number(out.getValue())
                                      << txHashStr);
    txItem->setData(0, Qt::UserRole, txHashStr);
    item->addChild(txItem);
-   parent->addChild(item);
 }
 
 QString TransactionDetailDialog::getScriptType(const TxOut &out)

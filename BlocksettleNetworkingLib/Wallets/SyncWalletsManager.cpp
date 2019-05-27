@@ -58,8 +58,7 @@ void WalletsManager::reset()
 
 void WalletsManager::syncWallets(const CbProgress &cb)
 {
-   const auto &cbWalletInfo = [this, cb](std::vector<bs::sync::WalletInfo> wi) 
-   {
+   const auto &cbWalletInfo = [this, cb](const std::vector<bs::sync::WalletInfo> &wi) {
       auto walletIds = std::make_shared<std::unordered_set<std::string>>();
       for (const auto &info : wi)
          walletIds->insert(info.id);
@@ -145,6 +144,13 @@ void WalletsManager::syncWallets(const CbProgress &cb)
       }
 
       logger_->debug("[WalletsManager::syncWallets] initial wallets synchronized");
+      if (wi.empty()) {
+         emit walletDeleted("");
+      }
+
+      if (wi.empty()) {
+         emit walletsSynchronized();
+      }
    };
 
    if (!signContainer_) 
@@ -435,7 +441,7 @@ bool WalletsManager::walletNameExists(const std::string &walletName) const
 BTCNumericTypes::balance_type WalletsManager::getSpendableBalance() const
 {
    if (!isArmoryReady()) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    // TODO: make it lazy init
    BTCNumericTypes::balance_type totalSpendable = 0;
@@ -741,7 +747,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
       txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
    }
 
-   const auto &cbProcess = [this, wallet, tx, txKey, txOutIndices, cb](std::vector<Tx> txs) {
+   const auto &cbProcess = [this, wallet, tx, txKey, txOutIndices, cb](const std::vector<Tx> &txs) {
       bool ourOuts = false;
       bool otherOuts = false;
       bool ourIns = false;
@@ -898,7 +904,7 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
          txOutIndices[op.getTxHash()].push_back(op.getTxOutIndex());
       }
 
-      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](std::vector<Tx> txs) {
+      const auto &cbProcess = [this, txOutIndices, wallet, cbProcessAddresses](const std::vector<Tx> &txs) {
          std::set<bs::Address> addresses;
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIndices.find(prevTx.getThisHash());
@@ -1039,6 +1045,14 @@ void WalletsManager::addWallet(const HDWalletPtr &wallet)
       wallet->registerWallet(armory_);
       emit walletsReady();
    }
+}
+
+bool WalletsManager::isWatchingOnly(const std::string &walletId) const
+{
+   if (signContainer_) {
+      return signContainer_->isWalletOffline(walletId);
+   }
+   return false;
 }
 
 void WalletsManager::onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr)

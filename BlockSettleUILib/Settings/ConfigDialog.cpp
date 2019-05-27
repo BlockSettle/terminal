@@ -1,22 +1,44 @@
 #include "ConfigDialog.h"
 
+#include "ArmoryServersProvider.h"
 #include "AssetManager.h"
 #include "GeneralSettingsPage.h"
 #include "NetworkSettingsPage.h"
+#include "SignersProvider.h"
 
 #include "ui_ConfigDialog.h"
 
 #include <QPushButton>
 
 
+SettingsPage::SettingsPage(QWidget *parent)
+   : QWidget(parent)
+{
+}
+
+void SettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+   , const std::shared_ptr<SignersProvider> &signersProvider
+   , std::shared_ptr<SignContainer> signContainer) {
+   appSettings_ = appSettings;
+   armoryServersProvider_ = armoryServersProvider;
+   signersProvider_ = signersProvider;
+   signContainer_ = signContainer;
+   initSettings();
+   display();
+}
+
+
 ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+      , const std::shared_ptr<SignersProvider> &signersProvider
       , std::shared_ptr<SignContainer> signContainer
       , QWidget* parent)
  : QDialog(parent)
  , ui_(new Ui::ConfigDialog)
  , appSettings_(appSettings)
  , armoryServersProvider_(armoryServersProvider)
+ , signersProvider_(signersProvider)
  , signContainer_(signContainer)
 {
    ui_->setupUi(this);
@@ -30,7 +52,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
    pages_ = {ui_->pageGeneral, ui_->pageNetwork, ui_->pageSigner, ui_->pageDealing };
 
    for (const auto &page : pages_) {
-      page->init(appSettings_, armoryServersProvider_, signContainer_);
+      page->init(appSettings_, armoryServersProvider_, signersProvider_, signContainer_);
       connect(page, &SettingsPage::illformedSettings, this, &ConfigDialog::illformedSettings);
    }
 
@@ -46,7 +68,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
       emit reconnectArmory();
    });
 
-   // armory servers should we saved even if whole ConfigDialog rejected
+   // armory servers should be saved even if whole ConfigDialog rejected
    // we overwriting prevState_ with new vales once ArmoryServersWidget closed
    connect(ui_->pageNetwork, &NetworkSettingsPage::armoryServerChanged, this, [this](){
       for (ApplicationSettings::Setting s : {
@@ -56,6 +78,14 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
            ApplicationSettings::armoryDbName,
            ApplicationSettings::armoryDbIp,
            ApplicationSettings::armoryDbPort}) {
+         prevState_[s] = appSettings_->get<QStringList>(s);
+      }
+   });
+
+   connect(ui_->pageSigner, &SignerSettingsPage::signersChanged, this, [this](){
+      for (ApplicationSettings::Setting s : {
+           ApplicationSettings::remoteSigners,
+           ApplicationSettings::signerIndex}) {
          prevState_[s] = appSettings_->get<QStringList>(s);
       }
    });

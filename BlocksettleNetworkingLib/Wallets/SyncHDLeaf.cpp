@@ -192,7 +192,7 @@ void hd::Leaf::processPortion()
       }
    };
 
-   const auto &cbTXs = [this, cbProcess](std::vector<Tx> txs) {
+   const auto &cbTXs = [this, cbProcess](const std::vector<Tx> &txs) {
       std::set<BinaryData> opTxHashes;
       std::map<BinaryData, std::set<uint32_t>> opTxIndices;
 
@@ -213,7 +213,7 @@ void hd::Leaf::processPortion()
          }
       }
 
-      const auto &cbInputs = [this, opTxIndices, cbProcess](std::vector<Tx> inputs) {
+      const auto &cbInputs = [this, opTxIndices, cbProcess](const std::vector<Tx> &inputs) {
          for (const auto &prevTx : inputs) {
             const auto &itIdx = opTxIndices.find(prevTx.getThisHash());
             if (itIdx == opTxIndices.end()) {
@@ -312,8 +312,6 @@ void hd::Leaf::postOnline()
 
 void hd::Leaf::firstInit(bool force)
 {
-   /*unused arg*/
-
    if (firstInit_ && !force)
       return;
 
@@ -1037,7 +1035,7 @@ void hd::CCLeaf::validationProc()
          if (!validationStarted_) {
             return;
          }
-         const auto &cbCheck = [this, addr, addressesToCheck](Tx tx) {
+         const auto &cbCheck = [this, addr, addressesToCheck](const Tx &tx) {
             const auto &cbResult = [this, tx](bool contained) {
                if (!contained && tx.isInitialized()) {
                   invalidTxHash_.insert(tx.getThisHash());
@@ -1113,7 +1111,7 @@ void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<
       txHashes.insert(hash);
       utxoMap[hash] = utxo;
    }
-   const auto &cbProcess = [this, utxoMap, cb, utxos](std::vector<Tx> txs) {
+   const auto &cbProcess = [this, utxoMap, cb, utxos](const std::vector<Tx> &txs) {
       struct TxResultData {
          Tx    tx;
          UTXO  utxo;

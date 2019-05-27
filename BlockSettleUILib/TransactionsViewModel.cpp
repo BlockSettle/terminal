@@ -706,7 +706,9 @@ void TransactionsViewModel::loadLedgerEntries()
                }
 
                if (rawData_.size() >= inPageCnt) {
-                  ledgerToTxData();
+                  QMetaObject::invokeMethod(this, [this] {
+                     ledgerToTxData();
+                  });
                }
             };
             ledgerDelegate_->getHistoryPage(pageId, cbLedger);
@@ -822,7 +824,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       }
    };
 
-   const auto cbTXs = [this, cbInit, userCB](std::vector<Tx> txs) {
+   const auto cbTXs = [this, cbInit, userCB](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          const auto &txHash = tx.getThisHash();
          txIns[txHash] = tx;
@@ -887,7 +889,7 @@ void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &a
       cbInit();
    };
 
-   const auto cbTX = [this, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr, userCB](Tx newTx) {
+   const auto cbTX = [this, armory, walletsMgr, cbTXs, cbInit, cbDir, cbMainAddr, userCB](const Tx &newTx) {
       if (!newTx.isInitialized()) {
          userCB(nullptr);
          return;

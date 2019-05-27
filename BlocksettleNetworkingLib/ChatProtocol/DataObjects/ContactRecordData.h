@@ -8,11 +8,15 @@ namespace Chat {
     class ContactRecordData : public DataObject
     {
     public:
-       ContactRecordData(const QString& userId, const QString& contactId, ContactStatus status, autheid::PublicKey publicKey);
+       ContactRecordData(const QString& userId
+                         , const QString& contactId
+                         , ContactStatus status
+                         , autheid::PublicKey publicKey
+                         , const QString& displayName = QString());
 
-       // DataObject interface
        QString getContactForId();
        QString getContactId();
+       QString getContactDisplayName();
        ContactStatus getContactStatus();
        autheid::PublicKey getContactPublicKey();
 
@@ -21,11 +25,18 @@ namespace Chat {
        static std::shared_ptr<ContactRecordData> fromJSON(const std::string& jsonData);
        void setStatus(const ContactStatus &status);
 
+       QString getDisplayName() const;
+       void setDisplayName(const QString &displayName);
+       bool hasDisplayName() const;
+
+       void setUserId(const QString &userId);
+
     private:
        QString userId_;
        QString contactId_;
        ContactStatus status_;
        autheid::PublicKey publicKey_;
+       QString displayName_;
 
     };
 }

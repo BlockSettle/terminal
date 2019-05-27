@@ -24,12 +24,20 @@ bool SettingsParser::LoadSettings(const QStringList& argList)
          defaultValueHelp = QLatin1String("<empty>");
       }
       QString desc = QString(QLatin1String("%1. Default: %2")).arg(param->desc()).arg(defaultValueHelp);
+
+      // There is a small problem with boolean parameters when they used from command line:
+      // Command line parameter does not override value from the settings file.
+      // Let's revert old behavior for now.
+#if 0
       if (param->defValue_.type() == QVariant::Type::Bool) {
+         // Use short form for boolean flags
          parser.addOption({ param->name(), desc });
       }
       else {
          parser.addOption({ param->name(), desc, param->name() });
       }
+#endif
+      parser.addOption({ param->name(), desc, param->name() });
    }
 
    parser.addHelpOption();

@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_7">
    <property name="spacing">
-    <number>5</number>
+    <number>0</number>
    </property>
    <property name="leftMargin">
     <number>0</number>
@@ -64,7 +64,7 @@
         <property name="headerLabel" stdset="0">
          <bool>true</bool>
         </property>
-        <property name="leftMargin">
+        <property name="leftMargin" stdset="0">
          <number>5</number>
         </property>
        </widget>
@@ -76,16 +76,16 @@
     <widget class="QWidget" name="generalWidget" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_6">
       <property name="spacing">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="leftMargin">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
        <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
        <number>0</number>
@@ -100,16 +100,16 @@
           <number>5</number>
          </property>
          <property name="leftMargin">
-          <number>0</number>
+          <number>5</number>
          </property>
          <property name="topMargin">
           <number>5</number>
          </property>
          <property name="rightMargin">
-          <number>0</number>
+          <number>5</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>5</number>
          </property>
          <item>
           <widget class="QWidget" name="widgetProduct" native="true">
@@ -323,25 +323,25 @@
        <widget class="QWidget" name="widgetSliders" native="true">
         <layout class="QVBoxLayout" name="verticalLayout_5">
          <property name="spacing">
-          <number>0</number>
+          <number>5</number>
          </property>
          <property name="leftMargin">
-          <number>0</number>
+          <number>5</number>
          </property>
          <property name="topMargin">
-          <number>0</number>
+          <number>5</number>
          </property>
          <property name="rightMargin">
-          <number>0</number>
+          <number>5</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>5</number>
          </property>
          <item>
           <widget class="QWidget" name="widgetPriceRangeContainer" native="true">
            <layout class="QVBoxLayout" name="verticalLayout_3">
             <property name="spacing">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>0</number>
@@ -372,7 +372,7 @@
           <widget class="QWidget" name="widgetAmountRangeContainer" native="true">
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <property name="spacing">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>0</number>
@@ -485,7 +485,7 @@
          <string notr="true"/>
         </property>
         <property name="text">
-         <string>SUBMIT OTC</string>
+         <string>SUBMIT</string>
         </property>
        </widget>
       </item>

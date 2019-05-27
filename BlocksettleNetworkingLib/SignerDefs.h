@@ -30,6 +30,14 @@ namespace signer {
       cli
    };
 
+   // Keep in sync with Blocksettle.Communication.signer.BindStatus
+   enum class BindStatus
+   {
+      Inactive = 0,
+      Succeed = 1,
+      Failed = 2,
+   };
+
 } // signer
 
 namespace sync {

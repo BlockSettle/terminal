@@ -7,12 +7,9 @@
 #include <thread>
 #include <spdlog/spdlog.h>
 #include "AuthorizedPeers.h"
-#include "ArmoryServersProvider.h"
 #include "BIP150_151.h"
 #include "ZmqDataConnection.h"
 #include "ZMQ_BIP15X_Msg.h"
-
-#define CLIENT_AUTH_PEER_FILENAME "client.peers"
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
@@ -45,15 +42,14 @@ class ZmqBIP15XDataConnection : public ZmqDataConnection
 {
 public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const bool& ephemeralPeers = false, const bool& monitored = false
-      , const bool& genIDCookie = false);
-/*   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const ArmoryServersProvider& trustedServer, const bool& ephemeralPeers
-      , bool monitored);*/
+      , const bool ephemeralPeers = false, const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = "", const bool monitored = false
+      , const bool makeClientCookie = false, const bool readServerCookie = false
+      , const std::string& cookiePath = "");
    ~ZmqBIP15XDataConnection() noexcept override;
 
-   using cbNewKey = std::function<void(const std::string&, const std::string&
-      , std::shared_ptr<std::promise<bool>>)>;
+   using cbNewKey = std::function<void(const std::string &oldKey, const std::string &newKey
+      , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
    using invokeCB = std::function<void(const std::string&
       , const std::string&
       , std::shared_ptr<std::promise<bool>>
@@ -64,15 +60,22 @@ public:
    ZmqBIP15XDataConnection(ZmqBIP15XDataConnection&&) = delete;
    ZmqBIP15XDataConnection& operator= (ZmqBIP15XDataConnection&&) = delete;
 
-   bool getServerIDCookie(BinaryData& cookieBuf, const std::string& cookieName);
+   bool getServerIDCookie(BinaryData& cookieBuf);
+   std::string getCookiePath() const { return bipIDCookiePath_; }
    void setCBs(const cbNewKey& inNewKeyCB);
    BinaryData getOwnPubKey() const;
    bool genBIPIDCookie();
    void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
+   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
+   void setLocalHeartbeatInterval();
 
    // Overridden functions from ZmqDataConnection.
    bool send(const std::string& data) override; // Send data from outside class.
+   bool openConnection(const std::string &host, const std::string &port
+      , DataConnectionListener *) override;
    bool closeConnection() override;
+
+   void rekey();
 
 protected:
    bool startBIP151Handshake(const std::function<void()> &cbCompleted);
@@ -90,14 +93,17 @@ protected:
    bool recvData() override;
    void triggerHeartbeat();
 
+   void notifyOnError(DataConnectionListener::DataConnectionError errorCode);
+
 private:
    void ProcessIncomingData(BinaryData& payload);
    bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
-   void verifyNewIDKey(const BinaryDataRef& newKey
+   bool verifyNewIDKey(const BinaryDataRef& newKey
       , const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
-   void rekeyIfNeeded(const size_t& dataSize);
+   void rekeyIfNeeded(size_t dataSize);
 
+private:
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    bool  serverPubkeySignalled_ = false;
    std::shared_ptr<AuthorizedPeers> authPeers_;
@@ -110,19 +116,22 @@ private:
    std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
-   bool useServerIDCookie_ = true;
-   bool bipIDCookieExists_ = false;
+   const std::string bipIDCookiePath_;
+   const bool useServerIDCookie_;
+   const bool makeClientIDCookie_;
    uint32_t msgID_ = 0;
    std::function<void()>   cbCompleted_ = nullptr;
-   const int   heartbeatInterval_ = 30000;
 
    cbNewKey cbNewKey_;
 
-   std::chrono::steady_clock::time_point  lastHeartbeat_;
+   std::atomic<std::chrono::steady_clock::time_point> lastHeartbeatReply_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;
    std::mutex              hbMutex_;
    std::condition_variable hbCondVar_;
+   std::atomic_bool        fatalError_{false};
+   std::atomic_bool        serverSendsHeartbeat_{false};
+   std::chrono::milliseconds heartbeatInterval_;
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

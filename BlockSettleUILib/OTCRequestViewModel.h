@@ -3,8 +3,12 @@
 
 #include <QAbstractTableModel>
 #include <QString>
+#include <QTimer>
 
 #include <vector>
+
+#include "ChatProtocol/DataObjects/OTCRequestData.h"
+#include "CommonTypes.h"
 
 class OTCRequestViewModel : public QAbstractTableModel
 {
@@ -20,6 +24,16 @@ public:
 
    void clear();
 
+public:
+   void AddLiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc);
+   bool RemoveOTCByID(const QString& serverRequestId);
+
+   std::shared_ptr<Chat::OTCRequestData> GetOTCRequest(const QModelIndex& index);
+
+private slots:
+   // update time left only. do not remove anything
+   void RefreshBoard();
+
 private:
    enum Columns
    {
@@ -31,21 +45,12 @@ private:
       ColumnDuration,
       ColumnCount
    };
-
-   struct InputData
-   {
-      QString           security;
-      QString           type;
-      QString           product;
-      QString           side;
-      unsigned int      quantity;
-      unsigned int      duration;
-   };
 private:
-   QVariant getRowData(const int column, const InputData& data) const;
+   QVariant getRowData(const int column, const std::shared_ptr<Chat::OTCRequestData>& otc) const;
 
 private:
-   std::vector<InputData> inputs_;
+   std::vector<std::shared_ptr<Chat::OTCRequestData>>  currentRequests_;
+   QTimer                                    refreshTicker_;
 };
 
 #endif

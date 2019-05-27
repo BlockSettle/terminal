@@ -9,6 +9,8 @@
 #include <QString>
 #include <QVariant>
 
+#include "ZMQ_BIP15X_DataConnection.h"
+
 namespace Blocksettle {
    namespace Communication {
       class GetCCGenesisAddressesResponse;
@@ -25,7 +27,7 @@ Q_OBJECT
 public:
    CCFileManager(const std::shared_ptr<spdlog::logger> &logger, const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<AuthSignManager> &
-      , const std::shared_ptr<ConnectionManager> &);
+      , const std::shared_ptr<ConnectionManager> &, const ZmqBIP15XDataConnection::cbNewKey &cb = nullptr);
    ~CCFileManager() noexcept override = default;
 
    CCFileManager(const CCFileManager&) = delete;

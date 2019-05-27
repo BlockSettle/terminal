@@ -11,17 +11,14 @@ RequestReplyCommand::RequestReplyCommand(const std::string& name
  : name_(name)
  , connection_(connection)
  , logger_(logger)
- , dropResult_(false)
- , replyReceived_(false)
- , result_(false)
- , executeOnConnect_(false)
- , requestCompleted_(nullptr)
 {
 }
 
 RequestReplyCommand::~RequestReplyCommand() noexcept
 {
-   connection_->closeConnection();
+   if (connection_) {
+      connection_->closeConnection();
+   }
 }
 
 void RequestReplyCommand::SetReplyCallback(const data_callback_type& callback)
@@ -54,7 +51,7 @@ bool RequestReplyCommand::ExecuteRequest(const std::string& host
    requestCompleted_ = std::make_shared<ManualResetEvent>();
    requestCompleted_->ResetEvent();
 
-   if (!(replyCallback_ || errorCallback_)) {
+   if (!replyCallback_ || !errorCallback_) {
       logger_->error("[RequestReplyCommand] {}: not all callbacks are set", name_);
       return false;
    }

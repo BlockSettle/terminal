@@ -359,7 +359,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Server Key</string>
+           <string>Server ID Key</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -487,7 +487,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Save</string>
+           <string>Export</string>
           </property>
          </widget>
         </item>
@@ -553,7 +553,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Terminal Key</string>
+           <string>Terminal ID Key</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -681,7 +681,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Save</string>
+           <string>Export</string>
           </property>
          </widget>
         </item>
@@ -890,51 +890,6 @@
         </layout>
        </widget>
       </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QFrame" name="restartNotificationFrame">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="styleSheet">
-      <string notr="true"/>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <property name="subtleLabel" stdset="0">
-      <bool>false</bool>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="spacing">
-       <number>0</number>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
      </layout>
     </widget>
    </item>

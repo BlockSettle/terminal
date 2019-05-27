@@ -49,7 +49,6 @@ namespace bs {
             void setDescription(const std::string &desc) override { desc_ = desc; }
             std::string shortName() const override { return suffix_; }
             bs::core::wallet::Type type() const override { return type_; }
-            bool isWatchingOnly() const override { return isWatchingOnly_; }
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const override { return encryptionTypes_; }
             std::vector<SecureBinaryData> encryptionKeys() const override { return encryptionKeys_; }
             std::pair<unsigned int, unsigned int> encryptionRank() const override { return encryptionRank_; }
@@ -152,7 +151,6 @@ namespace bs {
             std::string name_, desc_;
             std::string suffix_;
             bool  isExtOnly_ = false;
-            bool  isWatchingOnly_ = true;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
             std::vector<SecureBinaryData>          encryptionKeys_;
             std::pair<unsigned int, unsigned int>  encryptionRank_{0, 0};

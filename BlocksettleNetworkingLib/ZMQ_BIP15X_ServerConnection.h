@@ -13,8 +13,6 @@
 #include "ZmqServerConnection.h"
 #include "ZMQ_BIP15X_Msg.h"
 
-#define SERVER_AUTH_PEER_FILENAME "server.peers"
-
 // DESIGN NOTES: Cookies are used for local connections. When the client is
 // invoked by a binary containing a server connection, the binary must be
 // invoked with the client connection's public BIP 150 ID key. In turn, the
@@ -52,11 +50,22 @@ class ZmqBIP15XServerConnection : public ZmqServerConnection
 public:
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
-      , const std::vector<std::string>& trustedClients, const uint64_t& id
-      , const bool& ephemeralPeers);
-   ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<ZmqContext> &
-      , const std::function<std::vector<std::string>()> &cbTrustedClients);
+      , const uint64_t& id
+      , const std::function<std::vector<std::string>()>& trustedClients
+      , const bool& ephemeralPeers
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
+      , const bool& makeServerCookie = false
+      , const bool& readClientCookie = false
+      , const std::string& cookiePath = "");
+   ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
+      , const std::shared_ptr<ZmqContext>& context
+      , const std::function<std::vector<std::string>()>& cbTrustedClients
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
+      , const bool& makeServerCookie = false
+      , const bool& readClientCookie = false
+      , const std::string& cookiePath = "");
    ~ZmqBIP15XServerConnection() noexcept override;
 
    ZmqBIP15XServerConnection(const ZmqBIP15XServerConnection&) = delete;
@@ -69,10 +78,18 @@ public:
       , const SendResultCb& cb = nullptr) override;
    bool SendDataToAllClients(const std::string&, const SendResultCb &cb = nullptr) override;
 
-   bool getClientIDCookie(BinaryData& cookieBuf, const std::string& cookieName);
-   void enableClientCookieUsage() { useClientIDCookie_ = true; }
+   bool getClientIDCookie(BinaryData& cookieBuf);
+   std::string getCookiePath() const { return bipIDCookiePath_; }
    BinaryData getOwnPubKey() const;
    void addAuthPeer(const BinaryData& inKey, const std::string& keyName);
+   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
+
+   void rekey(const std::string &clientId);
+   void setLocalHeartbeatInterval();
+
+   // There was some issues with static field initalization order so use static function here
+   static const std::chrono::milliseconds getDefaultHeartbeatInterval();
+   static const std::chrono::milliseconds getLocalHeartbeatInterval();
 
 protected:
    // Overridden functions from ZmqServerConnection.
@@ -80,8 +97,9 @@ protected:
    bool ReadFromDataSocket() override;
 
    void resetBIP151Connection(const std::string& clientID);
-   void setBIP151Connection(const std::string& clientID);
-   bool handshakeCompleted(const ZmqBIP15XPerConnData& checkConn) {
+   std::shared_ptr<ZmqBIP15XPerConnData> setBIP151Connection(const std::string& clientID);
+
+   bool handshakeCompleted(const ZmqBIP15XPerConnData& checkConn) const {
       return (checkConn.bip150HandshakeCompleted_ &&
          checkConn.bip151HandshakeCompleted_);
    }
@@ -95,20 +113,33 @@ private:
    bool genBIPIDCookie();
    void heartbeatThread();
 
-   std::shared_ptr<AuthorizedPeers> authPeers_;
-   std::map<std::string, std::unique_ptr<ZmqBIP15XPerConnData>> socketConnMap_;
-   BinaryData leftOverData_;
-   bool bipIDCookieExists_ = false;
-   uint64_t id_;
-   std::mutex  clientsMtx_;
-   std::function<std::vector<std::string>()> cbTrustedClients_;
-   bool useClientIDCookie_ = false;
+   void UpdateClientHeartbeatTimestamp(const std::string& clientId);
 
-   const int   heartbeatInterval_ = 30000 * 2;   // allow some toleration on heartbeat miss
+   bool AddConnection(const std::string& clientId, const std::shared_ptr<ZmqBIP15XPerConnData>& connection);
+   std::shared_ptr<ZmqBIP15XPerConnData> GetConnection(const std::string& clientId);
+
+private:
+   std::shared_ptr<AuthorizedPeers> authPeers_;
+   std::atomic_flag                                               connectionsLock_ = ATOMIC_FLAG_INIT;
+   std::map<std::string, std::shared_ptr<ZmqBIP15XPerConnData>>   socketConnMap_;
+
+   BinaryData leftOverData_;
+   uint64_t id_;
+   std::function<std::vector<std::string>()> cbTrustedClients_;
+   const bool useClientIDCookie_;
+   const bool makeServerIDCookie_;
+   const std::string bipIDCookiePath_;
+
+   std::atomic_flag                                               heartbeatsLock_ = ATOMIC_FLAG_INIT;
    std::unordered_map<std::string, std::chrono::steady_clock::time_point>  lastHeartbeats_;
    std::atomic_bool        hbThreadRunning_;
    std::thread             hbThread_;
    std::mutex              hbMutex_;
    std::condition_variable hbCondVar_;
+
+   std::mutex              rekeyMutex_;
+   std::unordered_set<std::string>  rekeyStarted_;
+   std::unordered_map<std::string, std::vector<std::tuple<std::string, SendResultCb>>> pendingData_;
+   std::chrono::milliseconds heartbeatInterval_ = getDefaultHeartbeatInterval();
 };
 #endif // __ZMQ_BIP15X_SERVERCONNECTION_H__

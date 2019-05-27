@@ -2,7 +2,7 @@
 #include "DataObject.h"
 
 namespace Chat {
-   
+
    class RoomData : public DataObject
    {
    public:
@@ -11,22 +11,23 @@ namespace Chat {
          UserRecord(const QString& userId, bool isAdmin)
             : userId_(userId)
             , isAdmin_(isAdmin) {}
-         
+
          QString getUserId() { return userId_; }
          bool isAdmin() { return isAdmin_; }
       private:
          QString userId_;
          bool isAdmin_;
       };
-      
-      RoomData(const QString& roomId, 
+
+      RoomData(const QString& roomId,
                const QString& ownerId,
                const QString& roomTitle = QLatin1String("noname room"),
                const QString& roomKey = QLatin1String(""),
                bool isPrivate = false,
                bool sendUserUpdates = true,
-               bool displayUserList = true);
-      
+               bool displayUserList = true,
+               bool displayTrayNotification = true);
+
       QString getId();
       QString getOwnerId();
       QString getTitle();
@@ -37,7 +38,10 @@ namespace Chat {
 
       bool haveNewMessage() const;
       void setHaveNewMessage(bool haveNewMessage);
-      
+
+      bool displayTrayNotification() const;
+      void setDisplayTrayNotification(const bool &displayTrayNotification);
+
    private:
       QString id_;
       QString ownerId_;
@@ -47,12 +51,13 @@ namespace Chat {
       bool sendUserUpdates_;
       bool displayUserList_;
       bool haveNewMessage_;
+      bool displayTrayNotification_;
       //QList<UserRecord> userList_;
-      
-      
+
+
       // DataObject interface
    public:
-      QJsonObject toJson() const;
+      QJsonObject toJson() const override;
       static std::shared_ptr<RoomData> fromJSON(const std::string& jsonData);
    };
 

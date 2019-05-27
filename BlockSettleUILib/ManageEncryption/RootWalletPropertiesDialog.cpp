@@ -12,17 +12,13 @@
 #include "Address.h"
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
-#include "ManageEncryption/ManageEncryptionDialog.h"
-#include "WalletBackupDialog.h"
 #include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "UiUtils.h"
-#include "WalletDeleteDialog.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
 #include "WalletsViewModel.h"
 #include "WalletsWidget.h"
-#include "ManageEncryption/ManageEncryptionDialog.h"
 
 
 class CurrentWalletFilter : public QSortFilterProxyModel
@@ -72,6 +68,8 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 {
    ui_->setupUi(this);
 
+   ui_->labelEncRank->clear();
+
    walletFilter_ = new CurrentWalletFilter(wallet, this);
    walletFilter_->setSourceModel(walletsModel);
    ui_->treeViewWallets->setModel(walletFilter_);
@@ -116,7 +114,7 @@ RootWalletPropertiesDialog::~RootWalletPropertiesDialog() = default;
 
 void RootWalletPropertiesDialog::onDeleteWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::DialogType::DeleteWallet
+   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::DeleteWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
 
@@ -129,7 +127,7 @@ void RootWalletPropertiesDialog::onDeleteWallet()
 
 void RootWalletPropertiesDialog::onBackupWallet()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::DialogType::BackupWallet
+   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::BackupWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
 
@@ -139,20 +137,9 @@ void RootWalletPropertiesDialog::onBackupWallet()
 
 void RootWalletPropertiesDialog::onChangePassword()
 {
-   int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ManageWallet
+   signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ManageWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
-
-//   ManageEncryptionDialog manageEncryptionDialog(logger_, signingContainer_, wallet_
-//                                                 , walletInfo_, appSettings_, connectionManager_, this);
-
-//   int result = manageEncryptionDialog.exec();
-
-
-//   if (result == QDialog::Accepted) {
-//      // Update wallet encryption type
-//      infoReqId_ = signingContainer_->GetInfo(wallet_->walletId());
-//   }
 }
 
 static inline QString encTypeToString(bs::wallet::EncryptionType enc)

@@ -65,29 +65,13 @@ NotificationTabResponder::NotificationTabResponder(const Ui::BSTerminalMainWindo
 {
    mainWinUi_->tabWidget->setIconSize(QSize(8, 8));
    connect(mainWinUi_->tabWidget, &QTabWidget::currentChanged, [this](int index) {
-      if (index != mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat)) {
-         mainWinUi_->tabWidget->setTabIcon(index, QIcon());
-      }
+      mainWinUi_->tabWidget->setTabIcon(index, QIcon());
    });
 }
 
 void NotificationTabResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
-   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {
-      const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
-      const bool isInCurrentChat = msg[2].toBool();
-      const bool hasUnreadMessages = msg[3].toBool();
-
-      if (hasUnreadMessages) {
-         mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
-      } else {
-         if (mainWinUi_->tabWidget->currentIndex() != chatIndex && isInCurrentChat) {
-            mainWinUi_->tabWidget->setTabIcon(chatIndex, iconDot_);
-         } else {
-            mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
-         }
-      }
-      
+   if (nt == bs::ui::NotifyType::UpdateUnreadMessage) {  
       return;
    }
 
@@ -145,13 +129,11 @@ static const QString c_newVersionAction = QLatin1String("BlockSettleNewVersionAc
 void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
    QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information;
-   QString title, text;
+   QString title, text, userId;
    int msecs = 10000;
    newVersionMessage_ = false;
    newChatMessage_ = false;
    newChatId_ = QString();
-   bool isInCurrentChat;
-   bool hasUnreadMessages;
    
    const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
    const bool isChatTab = mainWinUi_->tabWidget->currentIndex() == chatIndex;
@@ -208,28 +190,50 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       break;
 
    case bs::ui::NotifyType::UpdateUnreadMessage:
-      isInCurrentChat = msg[2].toBool();
-      hasUnreadMessages = msg[3].toBool();
 
-      if (!hasUnreadMessages && !isInCurrentChat) {
+      if (isChatTab && QApplication::activeWindow()) {
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          return;
       }
 
-      if (isChatTab && QApplication::activeWindow()) {
+      if (msg.size() != 3) {
          return;
       }
 
       title = msg[0].toString();
       text = msg[1].toString();
+      userId = msg[2].toString();
+
+      if (title.isEmpty() || text.isEmpty() || userId.isEmpty()) {
+         return;
+      }
+      
       newChatMessage_ = true;
-      newChatId_ = title;
+      newChatId_ = userId;
+      mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
       break;
+
+   case bs::ui::NotifyType::FriendRequest:
+      if (msg.size() != 1) {
+         return;
+      }
+      title = tr("New contact request");
+      text = tr("%1 would like to add you as a contact").arg(msg[0].toString());
+      break;
+
+   case bs::ui::NotifyType::LogOut:
+      // hide icons in all tabs on user logout
+      for (int i=0; i<mainWinUi_->tabWidget->count(); i++) {
+         mainWinUi_->tabWidget->setTabIcon(i, QIcon());
+      }
+      return;
 
    default: return;
    }
 
    if (notifMode_ == QSystemTray) {
-      trayIcon_->showMessage(title, text, icon, msecs);
+      //trayIcon_->showMessage(title, text, icon, msecs);
+      trayIcon_->showMessage(title, text, QIcon(QLatin1String(":/resources/login-logo.png")), msecs);
    }
 #ifdef BS_USE_DBUS
    else {
@@ -273,6 +277,9 @@ void NotificationTrayIconResponder::messageClicked()
    else if (newChatMessage_) {
       if (!newChatId_.isNull() && globalInstance != NULL) {
          emit globalInstance->newChatMessageClick(newChatId_);
+
+         const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
+         mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
          mainWinUi_->tabWidget->activateWindow();
       }

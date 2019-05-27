@@ -77,8 +77,8 @@ public:
       chatPubKey,
       chatDbFile,
       celerUsername,
-      signerHost,
-      signerPort,
+      localSignerPort,
+      signerIndex,
       signerRunMode,
       signerOfflineDir,
       autoSignSpendLimit,
@@ -121,11 +121,15 @@ public:
       authPrivKey,
       jwtUsername,
       zmqLocalSignerPubKeyFilePath,
-      zmqRemoteSignerPubKey,
+      remoteSigners,
       rememberLoginUserName,
       armoryServers,
       defaultArmoryServersKeys,
-      twoWayAuth,
+      twoWaySignerAuth,
+      dontLoadCCList,
+      ChartProduct,
+      ChartTimeframe,
+      ChartCandleCount,
       _last
    };
 
@@ -154,6 +158,8 @@ public:
    static int GetDefaultArmoryLocalPort(NetworkType networkType);
    static int GetDefaultArmoryRemotePort(NetworkType networkType);
    int GetArmoryRemotePort(NetworkType networkType = NetworkType::Invalid) const;
+
+   static QString localSignerDefaultName();
 
    QString GetSettingsPath() const;
 

@@ -1453,7 +1453,7 @@
                         <verstretch>0</verstretch>
                        </sizepolicy>
                       </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="7,14,0">
+                      <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="7,14">
                        <property name="spacing">
                         <number>5</number>
                        </property>
@@ -1478,27 +1478,6 @@
                        </item>
                        <item alignment="Qt::AlignVCenter">
                         <widget class="QComboBox" name="comboBoxAQScript"/>
-                       </item>
-                       <item>
-                        <widget class="QPushButton" name="pushButtonAQScript">
-                         <property name="enabled">
-                          <bool>false</bool>
-                         </property>
-                         <property name="maximumSize">
-                          <size>
-                           <width>0</width>
-                           <height>16777215</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>Load auto-quoting script</string>
-                         </property>
-                        </widget>
                        </item>
                       </layout>
                      </widget>

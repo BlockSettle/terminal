@@ -136,6 +136,9 @@ QMainWindow {
   *[wellButtonBar="true"] QPushButton, *[wellButtonBar="true"] QToolButton, *[wellButtonBar="true"] *[buttonImportant="true"], *[wellButtonBar="true"] *[buttonSuccess="true"], *[wellButtonBar="true"] *[buttonWarning="true"] {
     padding: 5px 3px; }
 
+*[messageBoxIdKey="true"] {
+  min-width: 650px;}
+
 QWidget {
   border: none; }
   QWidget:focus {
@@ -1527,4 +1530,8 @@ ChatUsersViewItemStyle {
     qproperty-color_contact_outgoing: #a0bc5d;
     qproperty-color_contact_rejected: #c4362f;
     }
+
+*[contact_editor=true] {
+    background-color: #1c2835;
+}
 

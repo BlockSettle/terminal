@@ -54,6 +54,7 @@
 
 // Not part of the standard - Required by ZMQ.
 #define ZMQ_MSGTYPE_HEARTBEAT                 30
+#define ZMQ_MSGTYPE_DISCONNECT                31
 
 // NOTE: ZMQ is message-oriented. We must split up messages in order to play
 // nice with TCP. Max msg size = 65535 * 1400 = ~92 MiB

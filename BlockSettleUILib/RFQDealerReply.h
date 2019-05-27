@@ -83,8 +83,7 @@ namespace bs {
          QPushButton* quoteButton() const;
 
       signals:
-         void aqScriptLoaded(const QString &filename);
-         void autoSignActivated(const SecureBinaryData &password, const QString &hdWalletId, bool active);
+         void autoSignActivated(const QString &hdWalletId, bool active);
          void submitQuoteNotif(network::QuoteNotification);
          void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
 
@@ -107,9 +106,10 @@ namespace bs {
          void aqFillHistory();
          void aqScriptChanged(int curIndex);
          void onAqScriptLoaded(const QString &filename);
+         void onAqScriptFailed(const QString &filename, const QString &error);
          void walletSelected(int index);
          void onTransactionDataChanged();
-         void aqStateChanged(int state);
+         void checkBoxAQClicked();
          void onAQReply(const bs::network::QuoteReqNotification &qrn, double price);
          void onReservedUtxosChanged(const std::string &walletId, const std::vector<UTXO> &);
          void onOrderUpdated(const bs::network::Order &);
@@ -117,7 +117,6 @@ namespace bs {
          void onCreateHDWalletError(unsigned int id, std::string error);
          void onSignerStateUpdated();
          void onAutoSignActivated();
-         void onWalletInfo(unsigned int reqId, bs::hd::WalletInfo walletInfo);
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
@@ -152,7 +151,6 @@ namespace bs {
          std::atomic_bool     autoUpdatePrices_;
 
          unsigned int         leafCreateReqId_ = 0;
-         unsigned int         autoSignWalletInfoReqId_ = 0;
          std::string          autoSignWalletId_;
 
          std::string product_;
@@ -188,6 +186,7 @@ namespace bs {
          std::shared_ptr<bs::sync::Wallet> getXbtWallet();
          bs::Address getRecvAddress() const;
          void initAQ(const QString &filename);
+         void deinitAQ();
          void setBalanceOk(bool ok);
          void updateRecvAddresses();
          bool checkBalance() const;
