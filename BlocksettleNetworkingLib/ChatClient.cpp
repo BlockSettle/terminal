@@ -1532,10 +1532,17 @@ void ChatClient::OnSubmitOTCResponse(const Chat::SubmitOTCResponse &response)
 
    switch (response.getResult()) {
       case Chat::OTCRequestResult::Accepted:
-         HandleCommonOTCRequestAccepted(response.otcRequestData());
+         //Server sent Accepted to each participant on the OTCRequest target
+         //Client determine by itself if this is his own request
+         if (response.otcRequestData()->requestorId().toStdString() == model_->currentUser()){
+            HandleCommonOTCRequestAccepted(response.otcRequestData());
+         } else {
+            HandleCommonOTCRequest(response.otcRequestData());
+         }
          break;
       case Chat::OTCRequestResult::Rejected:
-         HandleCommonOTCRequestRejected(response.otcRequestData()->serverRequestId().toStdString());
+         //Server sent Rejected only to requestor, other clients don't know about this
+         HandleCommonOTCRequestRejected(response.getMessage().toStdString());
          break;
       case Chat::OTCRequestResult::Canceled:
          HandleCommonOTCRequestCancelled(response.otcRequestData()->serverRequestId());
