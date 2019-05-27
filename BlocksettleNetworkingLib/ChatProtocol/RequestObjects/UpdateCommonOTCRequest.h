@@ -5,10 +5,10 @@
 
 namespace Chat {
 
-   class UpdateOTCDataRequest : public Request
+   class UpdateCommonOTCRequest : public Request
    {
    public:
-      UpdateOTCDataRequest (const std::string& clientId, std::shared_ptr<OTCUpdateData> otcUpdateData);
+      UpdateCommonOTCRequest (const std::string& clientId, std::shared_ptr<OTCUpdateData> otcUpdateData);
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId
                                      , const std::string& jsonData);

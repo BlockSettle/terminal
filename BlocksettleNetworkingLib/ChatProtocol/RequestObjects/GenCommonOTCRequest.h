@@ -3,10 +3,10 @@
 #include "Request.h"
 
 namespace Chat {
-   class SubmitOTCRequest : public Request
+   class GenCommonOTCRequest : public Request
    {
    public:
-      SubmitOTCRequest(const std::string &clientId, std::shared_ptr<OTCRequestData> otcData);
+      GenCommonOTCRequest(const std::string &clientId, std::shared_ptr<OTCRequestData> otcData);
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId
                                                , const std::string& jsonData);

@@ -1356,7 +1356,7 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
    auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
       , serverRequestId, requestorId, targetId, submitTimestamp, expireTimestamp, request);
 
-   auto otcRequest = std::make_shared<Chat::SubmitOTCRequest>("", liveRequest);
+   auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
    sendRequest(otcRequest);
    ownSubmittedOTCId_ = liveRequest->clientRequestId();
    return true;
@@ -1524,7 +1524,7 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
                       crecord->getDisplayName());
 }
 
-void ChatClient::OnSubmitOTCResponse(const Chat::SubmitOTCResponse &response)
+void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &response)
 {
    //TODO: Implement!
 
@@ -1556,7 +1556,7 @@ void ChatClient::OnSubmitOTCResponse(const Chat::SubmitOTCResponse &response)
    return;
 }
 
-void ChatClient::OnUpdateOTCDataResponse(const Chat::UpdateOTCDataResponse &)
+void ChatClient::OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &)
 {
    //TODO: Implement!
    return;

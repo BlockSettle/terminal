@@ -4,10 +4,10 @@
 #include "Response.h"
 
 namespace Chat {
-   class UpdateOTCDataResponse : public Response
+   class UpdateCommonOTCResponse : public Response
    {
    public:
-      UpdateOTCDataResponse(std::shared_ptr<OTCUpdateData> otcUpdateData);
+      UpdateCommonOTCResponse(std::shared_ptr<OTCUpdateData> otcUpdateData);
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
       void handle(ResponseHandler&) override;

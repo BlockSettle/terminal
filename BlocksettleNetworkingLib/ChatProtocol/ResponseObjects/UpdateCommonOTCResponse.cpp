@@ -1,21 +1,21 @@
-#include "UpdateOTCDataResponse.h"
+#include "UpdateCommonOTCResponse.h"
 namespace Chat {
 
-   UpdateOTCDataResponse::UpdateOTCDataResponse(std::shared_ptr<OTCUpdateData> otcUpdateData)
-      : Response (ResponseType::ResponseUpdateOTCData)
+   UpdateCommonOTCResponse::UpdateCommonOTCResponse(std::shared_ptr<OTCUpdateData> otcUpdateData)
+      : Response (ResponseType::ResponseUpdateCommonOTC)
       , otcUpdateData_(otcUpdateData)
    {
 
    }
 
-   QJsonObject UpdateOTCDataResponse::toJson() const
+   QJsonObject UpdateCommonOTCResponse::toJson() const
    {
       QJsonObject data = Response::toJson();
       data[OTCDataObjectKey] = otcUpdateData_->toJson();
       return data;
    }
 
-   std::shared_ptr<Response> UpdateOTCDataResponse::fromJSON(const std::string &jsonData)
+   std::shared_ptr<Response> UpdateCommonOTCResponse::fromJSON(const std::string &jsonData)
    {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
       QJsonDocument innerDataDocument = QJsonDocument(data[OTCDataObjectKey].toObject());
@@ -24,15 +24,15 @@ namespace Chat {
             OTCUpdateData::fromJSON(
                QString::fromUtf8(innerDataDocument.toJson()).toStdString());
 
-      return std::make_shared<UpdateOTCDataResponse>(otcUpdateData);
+      return std::make_shared<UpdateCommonOTCResponse>(otcUpdateData);
    }
 
-   void UpdateOTCDataResponse::handle(ResponseHandler & handler)
+   void UpdateCommonOTCResponse::handle(ResponseHandler & handler)
    {
-      handler.OnUpdateOTCDataResponse(*this);
+      handler.OnUpdateCommonOTCResponse(*this);
    }
 
-   std::shared_ptr<OTCUpdateData> UpdateOTCDataResponse::getOtcUpdateData() const
+   std::shared_ptr<OTCUpdateData> UpdateCommonOTCResponse::getOtcUpdateData() const
    {
       return otcUpdateData_;
    }

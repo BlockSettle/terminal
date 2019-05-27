@@ -20,8 +20,8 @@ using namespace Chat;
 #include "ContactsListResponse.h"
 #include "SearchUsersResponse.h"
 #include "LogoutResponse.h"
-#include "SubmitOTCResponse.h"
-#include "UpdateOTCDataResponse.h"
+#include "GenCommonOTCResponse.h"
+#include "UpdateCommonOTCResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
@@ -43,8 +43,8 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseContactsList"        ,   ResponseType::ResponseContactsList        }
    ,   { "ResponseSearchUsers"         ,   ResponseType::ResponseSearchUsers         }
    ,   { "ResponseLogout"              ,   ResponseType::ResponseLogout              }
-   ,   { "ResponseSubmitOTC"           ,   ResponseType::ResponseSubmitOTC           }
-   ,   { "ResponseUpdateOTCData"       ,   ResponseType::ResponseUpdateOTCData       }
+   ,   { "ResponseGenCommonOTC"        ,   ResponseType::ResponseGenCommonOTC        }
+   ,   { "ResponseUpdateCommonOTC"     ,   ResponseType::ResponseUpdateCommonOTC     }
 };
 
 
@@ -68,8 +68,8 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseContactsList        ,  "ResponseContactsList"        }
    ,   { ResponseType::ResponseSearchUsers         ,  "ResponseSearchUsers"         }
    ,   { ResponseType::ResponseLogout              ,  "ResponseLogout"              }
-   ,   { ResponseType::ResponseSubmitOTC           ,  "ResponseSubmitOTC"           }
-   ,   { ResponseType::ResponseUpdateOTCData       ,  "ResponseUpdateOTCData"       }
+   ,   { ResponseType::ResponseGenCommonOTC        ,  "ResponseGenCommonOTC"        }
+   ,   { ResponseType::ResponseUpdateCommonOTC     ,  "ResponseUpdateCommonOTC"     }
 };
 
 template <typename T>
@@ -150,11 +150,11 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       case ResponseType::ResponseLogout:
          return std::make_shared<LogoutResponse>();
 
-      case ResponseType::ResponseSubmitOTC:
-         return SubmitOTCResponse::fromJSON(jsonData);
+      case ResponseType::ResponseGenCommonOTC:
+         return GenCommonOTCResponse::fromJSON(jsonData);
 
-      case ResponseType::ResponseUpdateOTCData:
-         return UpdateOTCDataResponse::fromJSON(jsonData);
+      case ResponseType::ResponseUpdateCommonOTC:
+         return UpdateCommonOTCResponse::fromJSON(jsonData);
 
       default:
          break;

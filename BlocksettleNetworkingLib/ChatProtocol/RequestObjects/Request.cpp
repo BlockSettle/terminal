@@ -16,8 +16,8 @@
 #include "SendRoomMessageRequest.h"
 #include "ContactsListRequest.h"
 #include "SearchUsersRequest.h"
-#include "SubmitOTCRequest.h"
-#include "UpdateOTCDataRequest.h"
+#include "GenCommonOTCRequest.h"
+#include "UpdateCommonOTCRequest.h"
 
 using namespace Chat;
 
@@ -38,8 +38,8 @@ static std::map<std::string, RequestType> RequestTypeFromString
    ,   { "RequestSendRoomMessage"     ,   RequestType::RequestSendRoomMessage     }
    ,   { "RequestContactsList"        ,   RequestType::RequestContactsList        }
    ,   { "RequestSearchUsers"         ,   RequestType::RequestSearchUsers         }
-   ,   { "RequestSubmitOTC"           ,   RequestType::RequestSubmitOTC           }
-   ,   { "RequestUpdateOTCData"       ,   RequestType::RequestUpdateOTCData       }
+   ,   { "RequestGenCommonOTC"        ,   RequestType::RequestGenCommonOTC        }
+   ,   { "RequestUpdateCommonOTC"     ,   RequestType::RequestUpdateCommonOTC     }
 };
 
 
@@ -60,8 +60,8 @@ static std::map<RequestType, std::string> RequestTypeToString
    ,   { RequestType::RequestSendRoomMessage     ,   "RequestSendRoomMessage"     }
    ,   { RequestType::RequestContactsList        ,   "RequestContactsList"        }
    ,   { RequestType::RequestSearchUsers         ,   "RequestSearchUsers"         }
-   ,   { RequestType::RequestSubmitOTC           ,   "RequestSubmitOTC"           }
-   ,   { RequestType::RequestUpdateOTCData       ,   "RequestUpdateOTCData"       }
+   ,   { RequestType::RequestGenCommonOTC        ,   "RequestGenCommonOTC"        }
+   ,   { RequestType::RequestUpdateCommonOTC     ,   "RequestUpdateCommonOTC"     }
 };
 
 template <typename T>
@@ -147,11 +147,11 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
       case RequestType::RequestSearchUsers:
          return SearchUsersRequest::fromJSON(clientId, jsonData);
 
-      case RequestType::RequestSubmitOTC:
-         return SubmitOTCRequest::fromJSON(clientId, jsonData);
+      case RequestType::RequestGenCommonOTC:
+         return GenCommonOTCRequest::fromJSON(clientId, jsonData);
 
-      case RequestType::RequestUpdateOTCData:
-         return UpdateOTCDataRequest::fromJSON(clientId, jsonData);
+      case RequestType::RequestUpdateCommonOTC:
+         return UpdateCommonOTCRequest::fromJSON(clientId, jsonData);
 
       default:
          break;
