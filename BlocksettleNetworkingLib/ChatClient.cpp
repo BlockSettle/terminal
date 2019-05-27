@@ -1506,7 +1506,10 @@ bool ChatClient::SubmitCommonOTCResponse(const bs::network::OTCResponse& respons
       , serverResponseId, negotiationChannelId, serverRequestId, requestorId
       , initialTargetId, responderId, responseTimestamp, priceRange, quantityRange);
 
-   HandleAcceptedCommonOTCResponse(liveResponse);
+   //HandleAcceptedCommonOTCResponse(liveResponse);
+
+   auto request = std::make_shared<Chat::AnswerCommonOTCRequest>("", liveResponse);
+   sendRequest(request);
    return true;
 }
 
@@ -1560,6 +1563,27 @@ void ChatClient::OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &
 {
    //TODO: Implement!
    logger_->debug("[ChatClient::OnAnswerCommonOTCResponse] {}", response.getData());
+
+   switch (response.getResult()) {
+      case Chat::OTCResult::Accepted:
+         //Server sent Accepted to each participant on the OTCResponse target
+         //Client determine by itself if this is his own request
+
+         if (response.otcResponseData()->requestorId().toStdString() == model_->currentUser()){
+            HandleAcceptedCommonOTCResponse(response.otcResponseData());
+         } else {
+            HandleCommonOTCResponse(response.otcResponseData());
+         }
+         break;
+      case Chat::OTCResult::Rejected:
+         //Server sent Rejected only to requestor, other clients don't know about this
+         HandleRejectedCommonOTCResponse(response.otcResponseData()->serverRequestId()
+                                         , response.getMessage().toStdString());
+         break;
+      default:
+         break;
+   }
+
    return;
 }
 
