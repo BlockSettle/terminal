@@ -36,6 +36,8 @@ public:
    explicit SearchWidget(QWidget *parent = nullptr);
    ~SearchWidget() override;
 
+   bool eventFilter(QObject *watched, QEvent *event) override;
+
    void init();
 
    bool isLineEditEnabled() const;
@@ -45,14 +47,20 @@ public:
 
 public slots:
    void clearLineEdit();
+   void clearList();
    void startListAutoHide();
    void setLineEditEnabled(bool value);
    void setListVisible(bool value);
    void setSearchText(QString value);
 
+private slots:
+   void showContextMenu(const QPoint &pos);
+
 signals:
    void searchUserTextEdited(const QString &text);
    void searchTextChanged(QString searchText);
+   void addFriendRequied(const QString &userID);
+   void removeFriendRequired(const QString &userID);
 
 private:
    QScopedPointer<Ui::SearchWidget> ui_;

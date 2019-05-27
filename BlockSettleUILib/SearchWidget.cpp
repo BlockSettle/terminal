@@ -3,6 +3,7 @@
 #include "ChatProtocol/DataObjects/UserData.h"
 
 #include <QTimer>
+#include <QMenu>
 
 /**
  * @brief Model for testing. Should be replaced after debug
@@ -63,10 +64,25 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::searchUserTextEdited);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
            this, &SearchWidget::searchTextChanged);
+   connect(ui_->searchResultTreeView, &QTreeView::customContextMenuRequested,
+           this, &SearchWidget::showContextMenu);
 }
 
 SearchWidget::~SearchWidget()
 {
+}
+
+bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
+{
+   if (ui_->searchResultTreeView->isVisible() && event->type() == QEvent::MouseButtonRelease) {
+      QPoint pos = ui_->searchResultTreeView->mapFromGlobal(QCursor::pos());
+
+      if (!ui_->searchResultTreeView->rect().contains(pos)) {
+         setListVisible(false);
+      }
+   }
+
+   return QWidget::eventFilter(watched, event);
 }
 
 void SearchWidget::init()
@@ -77,6 +93,10 @@ void SearchWidget::init()
    ui_->searchResultTreeView->setRootIsDecorated(false);
    ui_->searchResultTreeView->setFixedHeight(ui_->chatSearchLineEdit->height() * 3);
    ui_->searchResultTreeView->setVisible(false);
+   ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::NoSelection);
+   ui_->searchResultTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
+
+   qApp->installEventFilter(this);
 
    listVisibleTimer_->setSingleShot(true);
    connect(listVisibleTimer_.get(), &QTimer::timeout, [this] {
@@ -110,6 +130,11 @@ void SearchWidget::clearLineEdit()
    ui_->chatSearchLineEdit->clear();
 }
 
+void SearchWidget::clearList()
+{
+   model_->setUsers({});
+}
+
 void SearchWidget::startListAutoHide()
 {
    listVisibleTimer_->start(kShowEmptyFoundUserListTimeoutMs);
@@ -136,6 +161,18 @@ void SearchWidget::setListVisible(bool value)
 void SearchWidget::setSearchText(QString value)
 {
    ui_->chatSearchLineEdit->setText(value);
+}
+
+void SearchWidget::showContextMenu(const QPoint &pos)
+{
+   QScopedPointer<QMenu, QScopedPointerDeleteLater> menu(new QMenu());
+   auto index = ui_->searchResultTreeView->indexAt(pos);
+   if (!index.isValid()) {
+      return;
+   }
+   QString id = index.data(Qt::DisplayRole).toString();
+   menu->addAction(tr("User: %1").arg(id));
+   menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));
 }
 
 #include "SearchWidget.moc"
