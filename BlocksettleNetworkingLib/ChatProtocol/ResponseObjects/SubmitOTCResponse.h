@@ -7,7 +7,7 @@ namespace Chat {
    class SubmitOTCResponse : public Response
    {
    public:
-      SubmitOTCResponse(std::shared_ptr<OTCRequestData> otcResponseData,
+      SubmitOTCResponse(std::shared_ptr<OTCRequestData> otcRequestData,
                         OTCRequestResult result = OTCRequestResult::Rejected,
                         const QString& message =
             QLatin1String("The server did not provide the message."));
