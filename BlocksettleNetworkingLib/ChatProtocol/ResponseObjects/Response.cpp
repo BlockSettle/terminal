@@ -21,6 +21,7 @@ using namespace Chat;
 #include "SearchUsersResponse.h"
 #include "LogoutResponse.h"
 #include "GenCommonOTCResponse.h"
+#include "AnswerCommonOTCResponse.h"
 #include "UpdateCommonOTCResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
@@ -44,6 +45,7 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseSearchUsers"         ,   ResponseType::ResponseSearchUsers         }
    ,   { "ResponseLogout"              ,   ResponseType::ResponseLogout              }
    ,   { "ResponseGenCommonOTC"        ,   ResponseType::ResponseGenCommonOTC        }
+   ,   { "ResponseAnswerCommonOTC"     ,   ResponseType::ResponseAnswerCommonOTC     }
    ,   { "ResponseUpdateCommonOTC"     ,   ResponseType::ResponseUpdateCommonOTC     }
 };
 
@@ -69,6 +71,7 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseSearchUsers         ,  "ResponseSearchUsers"         }
    ,   { ResponseType::ResponseLogout              ,  "ResponseLogout"              }
    ,   { ResponseType::ResponseGenCommonOTC        ,  "ResponseGenCommonOTC"        }
+   ,   { ResponseType::ResponseAnswerCommonOTC     ,  "ResponseAnswerCommonOTC"     }
    ,   { ResponseType::ResponseUpdateCommonOTC     ,  "ResponseUpdateCommonOTC"     }
 };
 
@@ -152,6 +155,9 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseGenCommonOTC:
          return GenCommonOTCResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseAnswerCommonOTC:
+         return AnswerCommonOTCResponse::fromJSON(jsonData);
 
       case ResponseType::ResponseUpdateCommonOTC:
          return UpdateCommonOTCResponse::fromJSON(jsonData);

@@ -31,6 +31,7 @@ namespace Chat
    ,   RequestContactsList
    ,   RequestSearchUsers
    ,   RequestGenCommonOTC
+   ,   RequestAnswerCommonOTC
    ,   RequestUpdateCommonOTC
    };
 
@@ -56,6 +57,7 @@ namespace Chat
    ,   ResponseSearchUsers
    ,   ResponseLogout
    ,   ResponseGenCommonOTC
+   ,   ResponseAnswerCommonOTC
    ,   ResponseUpdateCommonOTC
    };
    

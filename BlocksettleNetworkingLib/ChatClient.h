@@ -71,6 +71,7 @@ public:
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
    void OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &) override;
+   void OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &) override;
    void OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &) override;
 
    void OnDataReceived(const std::string& data) override;

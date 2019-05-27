@@ -1528,7 +1528,7 @@ void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &respon
 {
    //TODO: Implement!
 
-    logger_->debug("[ChatClient::OnSubmitOTCResponse] {}", response.getData());
+    logger_->debug("[ChatClient::OnGenCommonOTCResponse] {}", response.getData());
 
    switch (response.getResult()) {
       case Chat::OTCRequestResult::Accepted:
@@ -1556,8 +1556,16 @@ void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &respon
    return;
 }
 
-void ChatClient::OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &)
+void ChatClient::OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse & response)
 {
    //TODO: Implement!
+   logger_->debug("[ChatClient::OnAnswerCommonOTCResponse] {}", response.getData());
+   return;
+}
+
+void ChatClient::OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse & response)
+{
+   //TODO: Implement!
+   logger_->debug("[ChatClient::OnUpdateCommonOTCResponse] {}", response.getData());
    return;
 }
