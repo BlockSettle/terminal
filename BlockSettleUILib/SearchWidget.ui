@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>226</width>
-    <height>172</height>
+    <height>189</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -85,6 +85,19 @@
      </item>
      <item>
       <widget class="QTreeView" name="searchResultTreeView"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="notFoundLabel">
+       <property name="text">
+        <string>User not found</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="margin">
+        <number>5</number>
+       </property>
+      </widget>
      </item>
      <item>
       <spacer name="chatUsersVerticalSpacer_">

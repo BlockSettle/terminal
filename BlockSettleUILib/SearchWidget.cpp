@@ -5,6 +5,10 @@
 #include <QTimer>
 #include <QMenu>
 
+constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
+constexpr int kMaxContentHeight = 130;
+constexpr int kRowHeigth = 25;
+
 /**
  * @brief Model for testing. Should be replaced after debug
  */
@@ -41,6 +45,8 @@ public:
       switch (role) {
       case Qt::DisplayRole:
          return QVariant::fromValue(users_.at(static_cast<size_t>(index.row()))->getUserId());
+      case Qt::SizeHintRole:
+         return QVariant::fromValue(QSize(20, kRowHeigth));
       default:
          return QVariant();
       }
@@ -49,9 +55,6 @@ public:
 private:
    std::vector<std::shared_ptr<Chat::UserData>> users_;
 };
-
-constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
-constexpr int kMaxContentHeight = 130;
 
 SearchWidget::SearchWidget(QWidget *parent)
    : QWidget(parent)
@@ -95,6 +98,8 @@ void SearchWidget::init()
    ui_->searchResultTreeView->setVisible(false);
    ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::NoSelection);
    ui_->searchResultTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
+
+   ui_->notFoundLabel->setVisible(false);
 
    qApp->installEventFilter(this);
 
@@ -148,6 +153,7 @@ void SearchWidget::setLineEditEnabled(bool value)
 void SearchWidget::setListVisible(bool value)
 {
    ui_->searchResultTreeView->setVisible(value);
+   ui_->notFoundLabel->setVisible(!value && !ui_->chatSearchLineEdit->text().isEmpty());
    if (value) {
       ui_->chatUsersVerticalSpacer_->changeSize(
                20, kMaxContentHeight - ui_->chatSearchLineEdit->height() * 3);
