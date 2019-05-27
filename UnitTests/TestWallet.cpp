@@ -10,7 +10,6 @@
 #include "CoreWalletsManager.h"
 #include "InprocSigner.h"
 #include "SettlementAddressEntry.h"
-#include "SystemFileUtils.h"
 #include "TestEnv.h"
 #include "UiUtils.h"
 #include "WalletEncryption.h"
@@ -20,16 +19,21 @@
 
 /***
 unit tests to add:
-- BIP32 path codec, with expected success and failure tests
+- BIP32 path codec, with expected success and failure tests. Check vanity 
+  node hashing in particular
+
 - Generate an address for each eligible address type, check the path can be 
   resolved (getAddressIndex). Make sure invalid ones can't be fetched.
+
 - Create wallet, alter state, destroy object, load from disk, check state 
   matches.
+
 - Same but with a sync wallet this time. Make sure in particular that the 
   various address maps match, and that outer and inner address chain use 
   index are the same over multiple loads. Both remote and inproc.
-- Extend chain over original derivation lookup. New addresses should be 
-  fetchable, registered and eligible to sign with.
+
+- Restoring a wallet from seed should restore its meta state as well (
+  auth/cc chains)
 ***/
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -42,7 +46,7 @@ class TestWallet : public ::testing::Test
       walletFolder_ = std::string("./homedir");
 
       DBUtils::removeDirectory(walletFolder_);
-      SystemFileUtils::mkPath(walletFolder_);
+      mkdir(walletFolder_.c_str());
    }
 
    void TearDown()
@@ -57,7 +61,6 @@ public:
    std::string walletFolder_;
 };
 
-#if 0
 TEST_F(TestWallet, BIP44_derivation)
 {
    SecureBinaryData seed("test seed");
@@ -262,7 +265,6 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
    EXPECT_TRUE(wallet->eraseFile());
    EXPECT_TRUE(woWallet->eraseFile());
 }
-#endif   //0
 
 TEST_F(TestWallet, Settlement)
 {
@@ -328,7 +330,6 @@ TEST_F(TestWallet, Settlement)
    }
 }
 
-#if 0
 TEST_F(TestWallet, ExtOnlyAddresses)
 {
    SecureBinaryData passphrase("test");
@@ -486,7 +487,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
    {
       //load from file
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, envPtr_->logger());
+         filename, NetworkType::TestNet, "", envPtr_->logger());
 
       //run checks anew
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
@@ -546,7 +547,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
    {
       //load wo from file
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         woFilename, NetworkType::TestNet, envPtr_->logger());
+         woFilename, NetworkType::TestNet, "", envPtr_->logger());
 
       EXPECT_TRUE(walletPtr->isWatchingOnly());
 
@@ -689,7 +690,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    {
       //reload wallet
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, envPtr_->logger());
+         filename, NetworkType::TestNet, "", envPtr_->logger());
 
       //create sync manager
       auto connPtr = std::make_shared<ArmoryObject>(
@@ -762,7 +763,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
    {
       //reload wallet
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet, envPtr_->logger());
+         filename, NetworkType::TestNet, "", envPtr_->logger());
 
       EXPECT_EQ(walletPtr->isWatchingOnly(), true);
 
@@ -973,26 +974,286 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
    }
 }
 
+TEST_F(TestWallet, ImportExport_Easy16)
+{
+   SecureBinaryData passphrase("test");
+
+   bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
+   ASSERT_EQ(seed.seed().getSize(), 32);
+
+   std::string filename, leaf1Id;
+   bs::Address addr1;
+
+   EasyCoDec::Data easySeed;
+
+   {
+      std::shared_ptr<bs::core::hd::Leaf> leaf1;
+
+      auto wallet1 = std::make_shared<bs::core::hd::Wallet>(
+         "test1", "", seed, passphrase, walletFolder_, nullptr);
+      auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
+      {
+         auto lock = wallet1->lockForEncryption(passphrase);
+         leaf1 = grp1->createLeaf(0u);
+         addr1 = leaf1->getNewExtAddress();
+      }
+
+      //grab clear text seed
+      std::shared_ptr<bs::core::wallet::Seed> seed1;
+      try
+      {
+         //wallet isn't locked, should throw
+         seed1 = std::make_shared<bs::core::wallet::Seed>(
+            wallet1->getDecryptedSeed());
+         ASSERT_TRUE(false);
+      }
+      catch (...)
+      {
+      }
+
+      try
+      {
+         auto lock = wallet1->lockForEncryption(passphrase);
+         seed1 = std::make_shared<bs::core::wallet::Seed>(
+            wallet1->getDecryptedSeed());
+      }
+      catch (...)
+      {
+         ASSERT_TRUE(false);
+      }
+
+      //check seeds
+      EXPECT_EQ(seed.seed(), seed1->seed());
+
+      //create backup string for seed
+      easySeed = seed1->toEasyCodeChecksum();
+      ASSERT_FALSE(easySeed.part1.empty());
+      ASSERT_FALSE(easySeed.part2.empty());
+
+      //erase wallet1
+      leaf1Id = leaf1->walletId();
+      filename = wallet1->getFileName();
+      ASSERT_TRUE(wallet1->eraseFile());
+   }
+
+   {
+      //restore from easy16 seed
+      const auto seedRestored =
+         bs::core::wallet::Seed::fromEasyCodeChecksum(easySeed, NetworkType::TestNet);
+      auto wallet2 = std::make_shared<bs::core::hd::Wallet>(
+         "test2", "", seedRestored, passphrase, walletFolder_, nullptr);
+      auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
+
+      //check leaf id and addr data
+      std::shared_ptr<bs::core::hd::Leaf> leaf2;
+      bs::Address addr2;
+      {
+         auto lock = wallet2->lockForEncryption(passphrase);
+         leaf2 = grp2->createLeaf(0u);
+         addr2 = leaf2->getNewExtAddress();
+      }
+
+      EXPECT_EQ(leaf1Id, leaf2->walletId());
+      EXPECT_EQ(addr1, addr2);
+
+      //check seeds again
+      std::shared_ptr<bs::core::wallet::Seed> seed2;
+      try
+      {
+         auto lock = wallet2->lockForEncryption(passphrase);
+         seed2 = std::make_shared<bs::core::wallet::Seed>(
+            wallet2->getDecryptedSeed());
+      }
+      catch (...)
+      {
+         ASSERT_TRUE(false);
+      }
+
+      EXPECT_EQ(seed.seed(), seed2->seed());
+
+      //shut it all down, reload, check seeds again
+      filename = wallet2->getFileName();
+   }
+
+   auto wallet3 = std::make_shared<bs::core::hd::Wallet>(
+      filename, NetworkType::TestNet);
+   auto grp3 = wallet3->getGroup(wallet3->getXBTGroupType());
+
+   //grab seed
+   std::shared_ptr<bs::core::wallet::Seed> seed3;
+   try
+   {
+      //wallet isn't locked, should throw
+      seed3 = std::make_shared<bs::core::wallet::Seed>(
+         wallet3->getDecryptedSeed());
+      ASSERT_TRUE(false);
+   }
+   catch (...)
+   {
+   }
+
+   try
+   {
+      auto lock = wallet3->lockForEncryption(passphrase);
+      seed3 = std::make_shared<bs::core::wallet::Seed>(
+         wallet3->getDecryptedSeed());
+   }
+   catch (...)
+   {
+      ASSERT_TRUE(false);
+   }
+
+   //check seed
+   EXPECT_EQ(seed.seed(), seed3->seed());
+
+
+   //check addr & id
+   auto leaf3 = grp3->getLeafByPath(0u);
+   auto addr3 = leaf3->getAddressByIndex(0, true);
+   EXPECT_EQ(leaf1Id, leaf3->walletId());
+   EXPECT_EQ(addr1, addr3);
+}
+
+TEST_F(TestWallet, ImportExport_xpriv)
+{
+   SecureBinaryData passphrase("test");
+
+   bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
+   ASSERT_EQ(seed.seed().getSize(), 32);
+
+   std::string filename, leaf1Id;
+   bs::Address addr1;
+
+   SecureBinaryData xpriv;
+
+   {
+      std::shared_ptr<bs::core::hd::Leaf> leaf1;
+
+      auto wallet1 = std::make_shared<bs::core::hd::Wallet>(
+         "test1", "", seed, passphrase, walletFolder_, nullptr);
+      auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
+      {
+         auto lock = wallet1->lockForEncryption(passphrase);
+         leaf1 = grp1->createLeaf(0u);
+         addr1 = leaf1->getNewExtAddress();
+      }
+
+      //grab clear text seed
+      std::shared_ptr<bs::core::wallet::Seed> seed1;
+      try
+      {
+         //wallet isn't locked, should throw
+         seed1 = std::make_shared<bs::core::wallet::Seed>(
+            wallet1->getDecryptedSeed());
+         ASSERT_TRUE(false);
+      }
+      catch (...)
+      {
+      }
+
+      try
+      {
+         auto lock = wallet1->lockForEncryption(passphrase);
+         seed1 = std::make_shared<bs::core::wallet::Seed>(
+            wallet1->getDecryptedSeed());
+      }
+      catch (...)
+      {
+         ASSERT_TRUE(false);
+      }
+
+      //check seeds
+      EXPECT_EQ(seed.seed(), seed1->seed());
+
+      //create xpriv from seed
+      xpriv = seed1->toXpriv();
+      ASSERT_NE(xpriv.getSize(), 0);
+
+      //erase wallet1
+      leaf1Id = leaf1->walletId();
+      filename = wallet1->getFileName();
+      ASSERT_TRUE(wallet1->eraseFile());
+   }
+
+   {
+      //restore from xpriv
+      const auto seedRestored =
+         bs::core::wallet::Seed::fromXpriv(xpriv, NetworkType::TestNet);
+      auto wallet2 = std::make_shared<bs::core::hd::Wallet>(
+         "test2", "", seedRestored, passphrase, walletFolder_, nullptr);
+      auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
+
+      //check leaf id and addr data
+      std::shared_ptr<bs::core::hd::Leaf> leaf2;
+      bs::Address addr2;
+      {
+         auto lock = wallet2->lockForEncryption(passphrase);
+         leaf2 = grp2->createLeaf(0u);
+         addr2 = leaf2->getNewExtAddress();
+      }
+
+      EXPECT_EQ(leaf1Id, leaf2->walletId());
+      EXPECT_EQ(addr1, addr2);
+
+      //check restoring from xpriv yields no seed
+      try
+      {
+         auto lock = wallet2->lockForEncryption(passphrase);
+         auto seed2 = std::make_shared<bs::core::wallet::Seed>(
+            wallet2->getDecryptedSeed());
+         ASSERT_TRUE(false);
+      }
+      catch (WalletException&)
+      {}
+
+      //shut it all down, reload, check seeds again
+      filename = wallet2->getFileName();
+   }
+
+   auto wallet3 = std::make_shared<bs::core::hd::Wallet>(
+      filename, NetworkType::TestNet);
+   auto grp3 = wallet3->getGroup(wallet3->getXBTGroupType());
+
+   //there still shouldnt be a seed to grab
+   try
+   {
+      auto lock = wallet3->lockForEncryption(passphrase);
+      auto seed3 = std::make_shared<bs::core::wallet::Seed>(
+         wallet3->getDecryptedSeed());
+      ASSERT_TRUE(false);
+   }
+   catch (...)
+   {}
+
+   //check addr & id
+   auto leaf3 = grp3->getLeafByPath(0u);
+   auto addr3 = leaf3->getAddressByIndex(0, true);
+   EXPECT_EQ(leaf1Id, leaf3->walletId());
+   EXPECT_EQ(addr1, addr3);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 class TestWalletWithArmory : public ::testing::Test
 {
+protected:
    void SetUp()
    {
       envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
       envPtr_->requireArmory();
 
       passphrase_ = SecureBinaryData("pass");
+      bs::core::wallet::Seed seed{ 
+         SecureBinaryData("dem seeds"), NetworkType::TestNet };
+
       walletPtr_ = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", NetworkType::TestNet, passphrase_, 
+         "test", "", seed, passphrase_, 
          envPtr_->armoryInstance()->homedir_);
 
       auto grp = walletPtr_->createGroup(walletPtr_->getXBTGroupType());
-      std::shared_ptr<bs::core::hd::Leaf> leaf;
       {
          auto lock = walletPtr_->lockForEncryption(passphrase_);
          leafPtr_ = grp->createLeaf(0, 10);
       }
-
    }
 
    void TearDown()
@@ -1000,6 +1261,7 @@ class TestWalletWithArmory : public ::testing::Test
       leafPtr_.reset();
       walletPtr_.reset();
 
+      envPtr_->shutdown();
       envPtr_.reset();
    }
 
@@ -1055,8 +1317,8 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
    /***
-   mine some coins to original address set to make sure they 
-   dont get unregistered by the new addresses registration 
+   mine some coins to original address set to make sure they
+   dont get unregistered by the new addresses registration
    process
    ***/
 
@@ -1064,7 +1326,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    recipient = addrVec[0].getRecipient(50 * COIN);
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
-   
+
    //check the address balances
    //update balance
    auto promPtr2 = std::make_shared<std::promise<bool>>();
@@ -1088,9 +1350,9 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    /***
    Sign coins off of new asset batch's address. Addresses generated
    that way only have public keys, as the wallet was not unlocked
-   prior to chain extention. 
-   
-   This test verifies the wallet resolver feed can compute the private 
+   prior to chain extention.
+
+   This test verifies the wallet resolver feed can compute the private
    key on the fly, as the wallet is unlocked for the signing process.
    ***/
 
@@ -1101,7 +1363,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    auto pass = passphrase_;
    const auto &cbTxOutList =
       [this, leaf, syncLeaf, addrVec, promPtr1]
-      (std::vector<UTXO> inputs)->void
+   (std::vector<UTXO> inputs)->void
    {
       const auto recipient = addrVec[11].getRecipient(25 * COIN);
       const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
@@ -1123,7 +1385,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    };
 
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, nullptr);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
    fut1.wait();
 
    //mine 6 more blocks
@@ -1146,8 +1408,335 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    //check balance
    balances = syncLeaf->getAddrBalance(addrVec[11]);
    EXPECT_EQ(balances[0], 25 * COIN);
+}
 
-   std::this_thread::sleep_for(std::chrono::seconds(2));
+TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
+{
+   std::shared_ptr<bs::core::wallet::Seed> seed;
+   std::vector<bs::Address> extVec;
+   std::vector<bs::Address> intVec;
+
+   {
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+      inprocSigner->Start();
+      auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+         , envPtr_->appSettings(), envPtr_->armoryConnection());
+      syncMgr->setSignContainer(inprocSigner);
+      syncMgr->syncWallets();
+
+      auto regIDs = syncMgr->registerWallets();
+      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+
+      auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
+      auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
+      ASSERT_TRUE(syncLeaf != nullptr);
+
+      //check wallet has 10 assets per account
+      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 60);
+
+      //pull 13 ext addresses
+      for (unsigned i = 0; i < 12; i++)
+         extVec.push_back(syncWallet->getNewExtAddress());
+      extVec.push_back(syncWallet->getNewExtAddress(
+         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
+
+      //pull 60 int addresses
+      for (unsigned i = 0; i < 60; i++)
+         intVec.push_back(syncWallet->getNewIntAddress());
+
+      //mine coins to ext[12]
+      auto armoryInstance = envPtr_->armoryInstance();
+      unsigned blockCount = 6;
+
+      unsigned curHeight = envPtr_->armoryConnection()->topBlock();
+      auto recipient = extVec[12].getRecipient(50 * COIN);
+      armoryInstance->mineNewBlock(recipient.get(), blockCount);
+      envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+
+      //update balance
+      auto promPtr2 = std::make_shared<std::promise<bool>>();
+      auto fut2 = promPtr2->get_future();
+      const auto &cbBalance = [promPtr2](void)
+      {
+         promPtr2->set_value(true);
+      };
+
+      //async, has to wait
+      syncLeaf->updateBalances(cbBalance);
+      fut2.wait();
+
+      //check balance
+      auto balances = syncLeaf->getAddrBalance(extVec[12]);
+      EXPECT_EQ(balances[0], 300 * COIN);
+
+
+      //send coins to ext[13]
+      extVec.push_back(syncWallet->getNewExtAddress());
+
+      auto promPtr1 = std::make_shared<std::promise<bool>>();
+      auto fut1 = promPtr1->get_future();
+
+      auto leaf = leafPtr_;
+      auto pass = passphrase_;
+      const auto &cbTxOutList =
+         [this, leaf, syncLeaf, extVec, intVec, promPtr1]
+      (std::vector<UTXO> inputs)->void
+      {
+         /*
+         Use only 1 utxo, send 25 to ext[13], change to int[41], 
+         no fee
+         */
+
+         ASSERT_EQ(inputs.size(), 5);
+         ASSERT_EQ(inputs[0].getValue(), 50 * COIN);
+
+         std::vector<UTXO> utxos;
+         utxos.push_back(inputs[0]);
+
+         const auto recipient = extVec[13].getRecipient(25 * COIN);
+         const auto txReq = syncLeaf->createTXRequest(
+            utxos, { recipient }, 0, false, intVec[41]);
+
+         BinaryData txSigned;
+         {
+            auto lock = leaf->lockForEncryption(passphrase_);
+            txSigned = leaf->signTXRequest(txReq);
+            ASSERT_FALSE(txSigned.isNull());
+         }
+
+         Tx txObj(txSigned);
+         envPtr_->armoryInstance()->pushZC(txSigned);
+
+         auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+         ASSERT_EQ(zcVec.size(), 1);
+         EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
+
+         promPtr1->set_value(true);
+      };
+
+      //async, has to wait
+      syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+      fut1.wait();
+
+      //mine 6 more blocks
+      curHeight = envPtr_->armoryConnection()->topBlock();
+      armoryInstance->mineNewBlock(recipient.get(), blockCount);
+      envPtr_->blockMonitor()->waitForNewBlocks(curHeight + 6);
+
+      //update balance
+      auto promPtr4 = std::make_shared<std::promise<bool>>();
+      auto fut4 = promPtr4->get_future();
+      const auto &cbBalance2 = [promPtr4](void)
+      {
+         promPtr4->set_value(true);
+      };
+
+      //async, has to wait
+      syncLeaf->updateBalances(cbBalance2);
+      fut4.wait();
+
+      //check balance
+      balances = syncLeaf->getAddrBalance(extVec[12]);
+      EXPECT_EQ(balances[0], 550 * COIN);
+
+      balances = syncLeaf->getAddrBalance(extVec[13]);
+      EXPECT_EQ(balances[0], 25 * COIN);
+
+      balances = syncLeaf->getAddrBalance(intVec[41]);
+      EXPECT_EQ(balances[0], 25 * COIN);
+
+      //grab wallet seed
+      {
+         auto lock = walletPtr_->lockForEncryption(passphrase_);
+         seed = std::make_shared<bs::core::wallet::Seed>(
+            walletPtr_->getDecryptedSeed());
+      }
+
+      //shutdown it all down
+      leafPtr_.reset();
+      walletPtr_->eraseFile();
+      walletPtr_.reset();
+   }
+
+   std::string filename;
+
+   {
+      //restore wallet from seed
+      walletPtr_ = std::make_shared<bs::core::hd::Wallet>(
+         "test", "",
+         *seed, passphrase_,
+         envPtr_->armoryInstance()->homedir_);
+
+      auto grp = walletPtr_->createGroup(walletPtr_->getXBTGroupType());
+      {
+         auto lock = walletPtr_->lockForEncryption(passphrase_);
+         leafPtr_ = grp->createLeaf(0, 100);
+      }
+
+      //sync with db
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+      inprocSigner->Start();
+      auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+         , envPtr_->appSettings(), envPtr_->armoryConnection());
+      syncMgr->setSignContainer(inprocSigner);
+      syncMgr->syncWallets();
+
+      auto regIDs = syncMgr->registerWallets();
+      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+
+      auto trackProm = std::make_shared<std::promise<bool>>();
+      auto trackFut = trackProm->get_future();
+      auto trackLbd = [trackProm](bool result)->void
+      {
+         ASSERT_TRUE(result);
+         trackProm->set_value(true);
+      };
+
+      //synchronize address chain use
+      syncMgr->trackAddressChainUse(trackLbd);
+      trackFut.wait();
+
+      auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
+      auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
+      ASSERT_TRUE(syncLeaf != nullptr);
+
+      //check wallet has 100 assets per account
+      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 600);
+
+      //update balances
+      auto promPtr2 = std::make_shared<std::promise<bool>>();
+      auto fut2 = promPtr2->get_future();
+      const auto &cbBalance = [promPtr2](void)
+      {
+         promPtr2->set_value(true);
+      };
+
+      //async, has to wait
+      ASSERT_TRUE(syncLeaf->updateBalances(cbBalance));
+      fut2.wait();
+
+      //check balance
+      auto balances = syncLeaf->getAddrBalance(extVec[12]);
+      EXPECT_EQ(balances[0], 550 * COIN);
+
+      balances = syncLeaf->getAddrBalance(extVec[13]);
+      EXPECT_EQ(balances[0], 25 * COIN);
+
+      balances = syncLeaf->getAddrBalance(intVec[41]);
+      EXPECT_EQ(balances[0], 25 * COIN);
+
+      //check address chain length
+      EXPECT_EQ(syncLeaf->getExtAddressCount(), 14);
+      EXPECT_EQ(syncLeaf->getIntAddressCount(), 42);
+
+      //check ext[12] is p2sh_p2wpkh
+      auto& extAddrList = syncLeaf->getExtAddressList();
+      EXPECT_EQ(extAddrList[12].getType(),
+         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+
+      //check address list matches
+      EXPECT_EQ(extAddrList, extVec);
+
+      //pull more addresses
+      extVec.push_back(syncLeaf->getNewExtAddress(
+         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
+
+      for (unsigned i = 0; i < 5; i++)
+         intVec.push_back(syncLeaf->getNewIntAddress());
+
+      //check chain length
+      EXPECT_EQ(syncLeaf->getExtAddressCount(), 15);
+      EXPECT_EQ(syncLeaf->getIntAddressCount(), 47);
+
+      filename = walletPtr_->getFileName();
+   }
+
+   /*
+   trackAddressChainUse syncs the wallet address chain length and 
+   address types based on on-chain data. Our wallet currently has
+   instantiated addresses that lie beyond the top addresse with
+   history. 
+
+   If we were to restore the wallet from scratch as tested in the 
+   previous scope, those instantiated addresses would not be 
+   detected, as they dont have any on chain activity.
+
+   However, synchronizing the wallet from on disk data should not 
+   result in the reseting of those extra addresses. This next
+   scope tests for that.
+   */
+
+   {
+      //reload wallet
+      walletPtr_ = std::make_shared<bs::core::hd::Wallet>(
+         filename, NetworkType::TestNet);
+
+      //resync address chain use, it should not disrupt current state
+      auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+      inprocSigner->Start();
+      auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+         , envPtr_->appSettings(), envPtr_->armoryConnection());
+      syncMgr->setSignContainer(inprocSigner);
+      syncMgr->syncWallets();
+
+      auto regIDs = syncMgr->registerWallets();
+      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+
+      auto trackProm = std::make_shared<std::promise<bool>>();
+      auto trackFut = trackProm->get_future();
+      auto trackLbd = [trackProm](bool result)->void
+      {
+         ASSERT_TRUE(result);
+         trackProm->set_value(true);
+      };
+
+      //synchronize address chain use
+      syncMgr->trackAddressChainUse(trackLbd);
+      trackFut.wait();
+
+      auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
+      auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
+      ASSERT_TRUE(syncLeaf != nullptr);
+
+      //check wallet has 100 assets per account
+      ASSERT_EQ(syncLeaf->getAddressPoolSize(), 600);
+
+      //update balances
+      auto promPtr2 = std::make_shared<std::promise<bool>>();
+      auto fut2 = promPtr2->get_future();
+      const auto &cbBalance = [promPtr2](void)
+      {
+         promPtr2->set_value(true);
+      };
+
+      //async, has to wait
+      ASSERT_TRUE(syncLeaf->updateBalances(cbBalance));
+      fut2.wait();
+
+      //check balance
+      auto balances = syncLeaf->getAddrBalance(extVec[12]);
+      EXPECT_EQ(balances[0], 550 * COIN);
+
+      balances = syncLeaf->getAddrBalance(extVec[13]);
+      EXPECT_EQ(balances[0], 25 * COIN);
+
+      balances = syncLeaf->getAddrBalance(intVec[41]);
+      EXPECT_EQ(balances[0], 25 * COIN);
+
+      //check address chain length
+      EXPECT_EQ(syncLeaf->getExtAddressCount(), 15);
+      EXPECT_EQ(syncLeaf->getIntAddressCount(), 47);
+
+      //check ext[12] & [15] are p2sh_p2wpkh
+      auto& extAddrList = syncLeaf->getExtAddressList();
+      EXPECT_EQ(extAddrList[12].getType(),
+         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+      EXPECT_EQ(extAddrList[14].getType(),
+         AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+
+      //check address list matches
+      EXPECT_EQ(extAddrList, extVec);
+   }
 }
 
 TEST_F(TestWalletWithArmory, Auth)
@@ -1229,15 +1818,11 @@ TEST_F(TestWalletWithArmory, Comments)
       promPtr->set_value(true);
    };
 
-   EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, syncWallet.get()));
+   EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX));
    fut.wait();
-
-   //introducing a delay so that the pending data fetch callbacks triggered by the
-   //new block notification do not choke on an already cleaned up wallet
-   std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 
-TEST_F(TestWalletWithArmory, SimpleTX)
+TEST_F(TestWalletWithArmory, ZCBalance)
 {
    const auto addr1 = leafPtr_->getNewExtAddress(
       AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
@@ -1246,6 +1831,11 @@ TEST_F(TestWalletWithArmory, SimpleTX)
    const auto changeAddr = leafPtr_->getNewChangeAddress(
       AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
    EXPECT_EQ(leafPtr_->getUsedAddressCount(), 2);
+
+   //add an extra address not part of the wallet
+   bs::Address otherAddr(
+      READHEX("0000000000000000000000000000000000000000"), 
+      AddressEntryType_P2PKH);
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
@@ -1290,11 +1880,20 @@ TEST_F(TestWalletWithArmory, SimpleTX)
    auto leaf = leafPtr_;
    auto pass = passphrase_;
    const auto &cbTxOutList = 
-      [this, leaf, syncLeaf, changeAddr, addr2, amount, fee, pass, promPtr1]
+      [this, leaf, syncLeaf, changeAddr, addr2, otherAddr,
+       amount, fee, pass, promPtr1]
       (std::vector<UTXO> inputs)->void
    {
+      ASSERT_EQ(inputs.size(), 5);
+
+      //pick a single input
+      std::vector<UTXO> utxos;
+      utxos.push_back(inputs[0]);
+
       const auto recipient = addr2.getRecipient(amount);
-      const auto txReq = syncLeaf->createTXRequest(inputs, { recipient }, fee, false, changeAddr);
+      const auto recipient2 = otherAddr.getRecipient(amount);
+      const auto txReq = syncLeaf->createTXRequest(
+         utxos, { recipient, recipient2 }, fee, false, changeAddr);
       BinaryData txSigned;
       {
          auto lock = leaf->lockForEncryption(pass);
@@ -1313,13 +1912,8 @@ TEST_F(TestWalletWithArmory, SimpleTX)
    };
    
    //async, has to wait
-   syncLeaf->getSpendableTxOutList(cbTxOutList, nullptr);
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
    fut1.wait();
-
-   //mine 6 more block
-   curHeight = envPtr_->armoryConnection()->topBlock();
-   armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + 6);
 
    //update balance
    auto promPtr2 = std::make_shared<std::promise<bool>>();
@@ -1333,11 +1927,37 @@ TEST_F(TestWalletWithArmory, SimpleTX)
    syncLeaf->updateBalances(cbBalance);
    fut2.wait();
 
-   auto bal = syncLeaf->getAddrBalance(addr2);
+   auto leafBal = syncLeaf->getTotalBalance();
+   EXPECT_EQ(syncLeaf->getTotalBalance(), 
+      double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+
+   auto bal = syncLeaf->getAddrBalance(addr1);
+   ASSERT_EQ(bal.size(), 3);
+   EXPECT_EQ(bal[0], 250 * COIN);
+
+   bal = syncLeaf->getAddrBalance(addr2);
    ASSERT_EQ(bal.size(), 3);
    EXPECT_EQ(bal[0], amount);
 
-   std::this_thread::sleep_for(std::chrono::seconds(2));
+   bal = syncLeaf->getAddrBalance(changeAddr);
+   ASSERT_EQ(bal.size(), 3);
+   EXPECT_EQ(bal[0], 50 * COIN - 2 * amount - fee);
+
+   //try to grab zc utxos
+   auto prom3 = std::make_shared<std::promise<bool>>();
+   auto fut3 = prom3->get_future();
+   auto zcTxOutLbd = [prom3, amount, fee](std::vector<UTXO> utxos)->void
+   {
+      ASSERT_EQ(utxos.size(), 2);
+
+      EXPECT_EQ(utxos[0].getValue(), amount);
+      EXPECT_EQ(utxos[1].getValue(), 50 * COIN - 2 * amount - fee);
+
+      prom3->set_value(true);
+   };
+
+   syncLeaf->getSpendableZCList(zcTxOutLbd);
+   fut3.wait();
 }
 
 TEST_F(TestWalletWithArmory, SimpleTX_bech32)
@@ -1406,7 +2026,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       promPtr1->set_value(true);
    };
    
-   syncLeaf->getSpendableTxOutList(cbTxOutList1, nullptr);
+   syncLeaf->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
    fut1.wait();
 
    curHeight = envPtr_->armoryConnection()->topBlock();
@@ -1453,46 +2073,11 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 
       promPtr3->set_value(true);
    };
-   syncLeaf->getSpendableTxOutList(cbTxOutList2, nullptr);
+   syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
    fut3.wait();
 
    std::this_thread::sleep_for(std::chrono::seconds(2));
 }
-#endif   //0
-
-/*
-TEST(TestWallet, ImportExport)
-{
-   const std::string authLeaf = "Auth";
-   const bs::core::wallet::Seed seed{ NetworkType::TestNet };
-   auto wallet1 = std::make_shared<bs::core::hd::Wallet>("test1", "", seed, nullptr, true);
-   auto grp1 = wallet1->createGroup(wallet1->getXBTGroupType());
-   auto leaf0 = grp1->createLeaf(0u);
-   leaf0->getNewExtAddress();
-
-   const auto &rootNode1 = wallet1->getRootNode({});
-   ASSERT_NE(rootNode1, nullptr);
-   auto leaf1 = grp1->createLeaf(authLeaf, rootNode1);
-   ASSERT_NE(leaf1, nullptr);
-   const auto addr1 = leaf1->getNewExtAddress();
-
-   const auto seed1 = rootNode1->seed();
-   const auto easyPrivKey = seed1.toEasyCodeChecksum();
-   ASSERT_FALSE(easyPrivKey.part1.empty());
-   ASSERT_FALSE(easyPrivKey.part2.empty());
-
-   const auto seed2 = bs::core::wallet::Seed::fromEasyCodeChecksum(easyPrivKey, NetworkType::TestNet);
-   auto wallet2 = std::make_shared<bs::core::hd::Wallet>("test2", "", seed2, nullptr, true);
-   auto grp2 = wallet2->createGroup(wallet2->getXBTGroupType());
-
-   auto leaf2 = grp2->createLeaf(authLeaf);
-   ASSERT_NE(leaf2, nullptr);
-   const auto addr2 = leaf2->getNewExtAddress();
-
-   EXPECT_EQ(leaf1->walletId(), leaf2->walletId());
-   EXPECT_EQ(addr1, addr2);
-}
-*/
 
 /*
 TEST(TestWallet, Encryption)

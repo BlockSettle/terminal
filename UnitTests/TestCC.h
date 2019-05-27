@@ -25,7 +25,6 @@ namespace bs {
    }
 }
 
-#if 0
 class TestCC : public QObject, public ::testing::Test
 {
    Q_OBJECT
@@ -63,6 +62,6 @@ protected:
 
    SecureBinaryData passphrase_;
 };
-#endif   //0
+
 
 #endif // __TEST_CC_H__

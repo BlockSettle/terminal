@@ -7,7 +7,6 @@
 
 #include "TestEnv.h"
 
-#include "gtest/NodeUnitTest.h"
 #include "ApplicationSettings.h"
 #include "ArmoryConnection.h"
 #include "ArmorySettings.h"
@@ -17,7 +16,6 @@
 #include "CoreWalletsManager.h"
 #include "MarketDataProvider.h"
 #include "QuoteProvider.h"
-#include "SystemFileUtils.h"
 #include "UiUtils.h"
 
 const BinaryData testnetGenesisBlock = READHEX("0100000000000000000000000000000000000\
@@ -54,19 +52,23 @@ TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 
 void TestEnv::shutdown()
 {
-   const bool armoryExisted = (armoryConnection_ != nullptr);
-
-   if (appSettings_ != nullptr)
+   if(appSettings_ != nullptr)
       QDir(appSettings_->GetHomeDir()).removeRecursively();
 
-   logger_->flush();
+   if (logger_ != nullptr)
+   {
+      logger_->debug("test done");
+      logger_->flush();
+      logger_ = nullptr;
+   }
+
    mdProvider_ = nullptr;
    quoteProvider_ = nullptr;
    authAddrMgr_ = nullptr;
    celerConn_ = nullptr;
 
-   armoryConnection_ = nullptr;
    armoryInstance_ = nullptr;
+   armoryConnection_ = nullptr;
    assetMgr_ = nullptr;
    connMgr_ = nullptr;
    appSettings_ = nullptr;
@@ -74,9 +76,6 @@ void TestEnv::shutdown()
    walletsMgr_ = nullptr;
 
    QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
-   if (armoryExisted) {
-      QDir(QLatin1String("./fakehomedir")).removeRecursively();
-   }
 }
 
 void TestEnv::requireArmory()
@@ -86,11 +85,11 @@ void TestEnv::requireArmory()
       return;
 
    armoryInstance_ = std::make_shared<ArmoryInstance>();
-   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "", false);
 
+   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "tx_cache");
    ArmorySettings settings;
    settings.runLocally = false;
-   settings.socketType = appSettings()->GetArmorySocketType();
+   settings.socketType = TestEnv::appSettings()->GetArmorySocketType();
    settings.netType = NetworkType::TestNet;
    settings.armoryDBIp = QLatin1String("127.0.0.1");
    settings.armoryDBPort = armoryInstance_->port_;
@@ -99,21 +98,24 @@ void TestEnv::requireArmory()
 
    blockMonitor_ = std::make_shared<BlockchainMonitor>(armoryConnection_);
 
+   connMgr_ = std::make_shared<ConnectionManager>(logger_);
+   celerConn_ = std::make_shared<CelerClient>(connMgr_);
+
    qDebug() << "Waiting for ArmoryDB connection...";
    while (armoryConnection_->state() != ArmoryConnection::State::Connected) {
-      QThread::msleep(1);
+      QThread::msleep(23);
    }
    qDebug() << "Armory connected - waiting for ready state...";
    armoryConnection_->goOnline();
    while (armoryConnection_->state() != ArmoryConnection::State::Ready) {
-      QThread::msleep(1);
+      QThread::msleep(23);
    }
    logger_->debug("Armory is ready - continue execution");
 }
 
 void TestEnv::requireAssets()
 {
-   requireConnections();
+   requireArmory();
    authAddrMgr_ = std::make_shared<MockAuthAddrMgr>(logger_, armoryConnection_);
 
    assetMgr_ = std::make_shared<MockAssetManager>(logger_);
@@ -121,14 +123,6 @@ void TestEnv::requireAssets()
 
    mdProvider_ = std::make_shared<MarketDataProvider>(logger_);
    quoteProvider_ = std::make_shared<QuoteProvider>(assetMgr_, logger_);
-}
-
-void TestEnv::requireConnections()
-{
-   requireArmory();
-
-   connMgr_ = std::make_shared<ConnectionManager>(logger_);
-   celerConn_ = std::make_shared<CelerClient>(connMgr_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -143,9 +137,9 @@ ArmoryInstance::ArmoryInstance()
    DBUtils::removeDirectory(homedir_);
    DBUtils::removeDirectory(ldbdir_);
 
-   SystemFileUtils::mkPath(blkdir_);
-   SystemFileUtils::mkPath(homedir_);
-   SystemFileUtils::mkPath(ldbdir_);
+   mkdir(blkdir_.c_str());
+   mkdir(homedir_.c_str());
+   mkdir(ldbdir_.c_str());
 
    //setup env
    NetworkConfig::selectNetwork(NETWORK_MODE_TESTNET);
@@ -233,11 +227,6 @@ ArmoryInstance::~ArmoryInstance()
    theBDMt_ = nullptr;
 
    //clean up dirs
-   SystemFileUtils::rmFile("./fakehomedir/client.peers");
-   SystemFileUtils::rmFile("./fakehomedir/client.peers-lock");
-   SystemFileUtils::rmFile("./fakehomedir/server.peers");
-   SystemFileUtils::rmFile("./fakehomedir/server.peers-lock");
-
    DBUtils::removeDirectory(blkdir_);
    DBUtils::removeDirectory(homedir_);
    DBUtils::removeDirectory(ldbdir_);

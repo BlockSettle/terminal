@@ -3,7 +3,7 @@
 #include "ChatProtocol/ChatProtocol.h"
 #include "TestEnv.h"
 
-
+/*
 TEST(TestChat, PerfEncryptEC)
 {
    const auto &cbGetMsgText = [](int index) -> QString {
@@ -86,3 +86,4 @@ TEST(TestChat, PerfVerifySigEC)
       autheid::verifyData(jsonData.data(), jsonData.length(), signature.data(), signature.size(), pubKey);
    }
 }
+*/

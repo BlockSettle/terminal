@@ -8,6 +8,7 @@
 #include "MockAssetMgr.h"
 #include "MockAuthAddrMgr.h"
 #include "Server.h"
+#include "gtest/NodeUnitTest.h"
 #include "BlockDataManagerConfig.h"
 #include "BDM_mainthread.h"
 #include <btc/ecc.h>
@@ -32,7 +33,6 @@ class BlockchainMonitor;
 class CelerClient;
 class ConnectionManager;
 class MarketDataProvider;
-class NodeUnitTest;
 class QuoteProvider;
 
 class ResolverCoinbase : public ResolverFeed
@@ -105,7 +105,6 @@ public:
 
    void requireArmory();
    void requireAssets();
-   void requireConnections();
 
 private:
    std::shared_ptr<ApplicationSettings>  appSettings_;

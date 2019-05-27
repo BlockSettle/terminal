@@ -17,7 +17,6 @@ unit tests to add:
 - invalid CC output order in tx, check parenthood is invalid
 ***/
 
-#if 0
 TestCC::TestCC()
    : QObject(nullptr)
 {}
@@ -162,7 +161,7 @@ void TestCC::SetUp()
          throw e;
       }
    };
-   auto inputs = xbtWallet_->getSpendableTxOutList(cbInputs, nullptr);
+   auto inputs = xbtWallet_->getSpendableTxOutList(cbInputs, UINT64_MAX);
    futFund.wait();
 
    auto promPtr = std::make_shared<std::promise<bool>>();
@@ -187,7 +186,7 @@ void TestCC::TearDown()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-TEST_F(TestCC, Initial_balance)
+TEST_F(TestCC, DISABLED_Initial_balance)
 {
    ASSERT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
    ASSERT_NE(ccWallet_, nullptr);
@@ -200,7 +199,7 @@ TEST_F(TestCC, Initial_balance)
    auto promPtr = std::make_shared<std::promise<bool>>();
    auto fut = promPtr->get_future();
    EXPECT_TRUE(ccWallet_->getSpendableTxOutList(
-      [promPtr](std::vector<UTXO>) {promPtr->set_value(true); }, nullptr));
+      [promPtr](std::vector<UTXO>) { promPtr->set_value(true); }, UINT64_MAX));
   
     auto balances = ccWallet_->getAddrBalance(ccWallet_->getUsedAddressList()[0]);
    EXPECT_EQ(balances[0], ccFundingAmount_);
@@ -214,7 +213,7 @@ TEST_F(TestCC, Initial_balance)
    EXPECT_DOUBLE_EQ(xbtWallet_->getTotalBalance(), totalD);
 }
 
-TEST_F(TestCC, TX_buy)
+TEST_F(TestCC, DISABLED_TX_buy)
 {
    const float feePerByte = 7.5;
    const double qtyCC = 100;
@@ -224,8 +223,8 @@ TEST_F(TestCC, TX_buy)
 
    // dealer starts first in case of buy
    BinaryData txHash;
-   const auto &cbTxOutList1 = 
-      [this, qtyCC, spendVal2, ccRecvAddr, feePerByte, &txHash](std::vector<UTXO> inputs1) 
+   const auto &cbTxOutList1 =
+      [this, qtyCC, spendVal2, ccRecvAddr, feePerByte, &txHash](std::vector<UTXO> inputs1)
    {
       const uint64_t spendVal1 = qtyCC * ccLotSize_;
       const auto recipient1 = ccRecvAddr.getRecipient(spendVal1);
@@ -234,7 +233,7 @@ TEST_F(TestCC, TX_buy)
       auto txReq1 = ccWallet_->createPartialTXRequest(spendVal1, inputs1, changeAddr1, 0, { recipient1 });
 
       // requester uses dealer's TX
-      const auto &cbTxOutList2 = 
+      const auto &cbTxOutList2 =
          [this, qtyCC, spendVal2, txReq1, feePerByte, &txHash](std::vector<UTXO> inputs2) {
          const auto recipient2 = recvAddr_.getRecipient(spendVal2);
          ASSERT_NE(recipient2, nullptr);
@@ -258,10 +257,10 @@ TEST_F(TestCC, TX_buy)
          txReq3.prevStates = { txReq2.serializeState() };
          txReq3.populateUTXOs = true;
          txReq3.inputs = txReq1.inputs;
-         
+
          BinaryData signed1;
          {
-            auto ccLeaf = 
+            auto ccLeaf =
                std::dynamic_pointer_cast<bs::core::hd::Leaf>(ccSignWallet_);
             auto lock = ccLeaf->lockForEncryption(passphrase_);
             signed1 = ccSignWallet_->signPartialTXRequest(txReq3);
@@ -291,9 +290,9 @@ TEST_F(TestCC, TX_buy)
 
          fut.wait();
       };
-      xbtWallet_->getSpendableTxOutList(cbTxOutList2, nullptr);
+      xbtWallet_->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
    };
-   ccWallet_->getSpendableTxOutList(cbTxOutList1, nullptr);
+   ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
 
    auto zcVec = envPtr_->blockMonitor()->waitForZC();
    ASSERT_EQ(zcVec.size(), 3);
@@ -319,7 +318,7 @@ TEST_F(TestCC, TX_buy)
    EXPECT_EQ(balances[0], spendVal2);
 }
 
-TEST_F(TestCC, TX_sell)
+TEST_F(TestCC, DISABLED_TX_sell)
 {
    const float feePerByte = 8.5;
    const double qtyCC = 100;
@@ -388,9 +387,9 @@ TEST_F(TestCC, TX_sell)
          txHash = txObj.getThisHash();
          envPtr_->armoryInstance()->pushZC(tx);
       };
-      xbtWallet_->getSpendableTxOutList(cbTxOutList2, nullptr);
+      xbtWallet_->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
    };
-   ccWallet_->getSpendableTxOutList(cbTxOutList1, nullptr);
+   ccWallet_->getSpendableTxOutList(cbTxOutList1, UINT64_MAX);
 
    auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
    ASSERT_EQ(zcVec.size(), 3);
@@ -415,7 +414,6 @@ TEST_F(TestCC, TX_sell)
    balances = xbtWallet_->getAddrBalance(recvAddr_);
    EXPECT_EQ(balances[0], spendVal2);
 }
-#endif //0
 
 #if 0 // temporarily disabled
 TEST_F(TestCC, sell_after_buy)
@@ -535,3 +533,4 @@ TEST_F(TestCC, sell_after_buy)
    EXPECT_EQ(xbtWallet_->getAddrBalance(recvAddr)[0], spendValSell);
 }
 #endif   //0
+
