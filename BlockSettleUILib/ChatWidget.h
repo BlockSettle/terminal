@@ -33,6 +33,7 @@ class ApplicationSettings;
 class ChatWidgetState;
 class ChatSearchPopup;
 class OTCRequestViewModel;
+class ChatTreeModelWrapper;
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
