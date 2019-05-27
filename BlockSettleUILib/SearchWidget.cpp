@@ -5,6 +5,7 @@
 
 #include <QTimer>
 #include <QMenu>
+#include <QDebug>
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
 constexpr int kMaxContentHeight = 130;
@@ -98,8 +99,9 @@ void SearchWidget::setLineEditEnabled(bool value)
 
 void SearchWidget::setListVisible(bool value)
 {
-   ui_->searchResultTreeView->setVisible(value);
-   ui_->notFoundLabel->setVisible(!value && ui_->searchResultTreeView->model()->rowCount() == 0);
+   bool hasUsers = ui_->searchResultTreeView->model()->rowCount() > 0;
+   ui_->searchResultTreeView->setVisible(value && hasUsers);
+   ui_->notFoundLabel->setVisible(value && !hasUsers);
    if (value) {
       ui_->chatUsersVerticalSpacer_->changeSize(
                20, kMaxContentHeight - ui_->chatSearchLineEdit->height() * 3);
@@ -124,6 +126,7 @@ void SearchWidget::showContextMenu(const QPoint &pos)
    }
    bool isInContacts = index.data(UserSearchModel::IsInContacts).toBool();
    QString id = index.data(Qt::DisplayRole).toString();
+   qDebug() << "user:" << id << isInContacts;
    if (isInContacts) {
       auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
          emit removeFriendRequired(id);

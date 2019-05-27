@@ -10,6 +10,7 @@
 #include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatTreeModelWrapper.h"
+#include "UserSearchModel.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -91,7 +92,9 @@ public:
       chat_->ui_->input_textEdit->setVisible(false);
       chat_->ui_->input_textEdit->setEnabled(false);
       chat_->ui_->chatSearchLineEdit->clear();
+      chat_->ui_->searchWidget->clearLineEdit();
       chat_->ui_->chatSearchLineEdit->setEnabled(false);
+      chat_->ui_->searchWidget->setLineEditEnabled(false);
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
@@ -133,6 +136,7 @@ public:
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(true);
       chat_->ui_->chatSearchLineEdit->setEnabled(true);
+      chat_->ui_->searchWidget->setLineEditEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
 
@@ -306,6 +310,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited, this, &ChatWidget::onSearchUserTextEdited);
+//   connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
    connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
 
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
@@ -330,6 +335,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
    initPopup();
+   ui_->searchWidget->setSearchModel(client_->getUserSearchModel());
+   ui_->searchWidget->init();
+   connect(ui_->searchWidget, &SearchWidget::addFriendRequied, this, &ChatWidget::onSendFriendRequest);
+   connect(ui_->searchWidget, &SearchWidget::removeFriendRequired, this, &ChatWidget::onRemoveFriendRequest);
 }
 
 
@@ -352,12 +361,23 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
    } else {
       popup_->setUserID(QString());
    }
+//   ui_->searchWidget->setUsers(users);
+   std::vector<std::pair<QString,bool>> userInfoList;
+   for (const auto &user : users) {
+      if (user) {
+         userInfoList.emplace_back(user->getUserId(), client_->isFriend(user->getUserId()));
+      }
+   }
+   client_->getUserSearchModel()->setUsers(userInfoList);
 
    setPopupVisible(true);
+   ui_->searchWidget->setListVisible(true);
 
    // hide popup after a few sec
-   if (users.size() == 0)
+   if (users.size() == 0) {
       popupVisibleTimer_->start(kShowEmptyFoundUserListTimeoutMs);
+      ui_->searchWidget->startListAutoHide();
+   }
 }
 
 void ChatWidget::onUserClicked(const QString& userId)
@@ -504,8 +524,13 @@ void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
 void ChatWidget::onSearchUserTextEdited(const QString& text)
 {
    QString userToAdd = ui_->chatSearchLineEdit->text();
+   ui_->searchWidget->setSearchText(text);
+//   QString userToAdd = ui_->searchWidget->searchText();
    if (userToAdd.isEmpty() || userToAdd.length() < 3) {
       setPopupVisible(false);
+      ui_->searchWidget->setListVisible(false);
+//      ui_->searchWidget->clearList();
+      client_->getUserSearchModel()->setUsers({});
       return;
    }
 

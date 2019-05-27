@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>226</width>
-    <height>189</height>
+    <height>223</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -41,7 +41,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="caption">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -84,19 +84,40 @@
       </widget>
      </item>
      <item>
-      <widget class="QTreeView" name="searchResultTreeView"/>
-     </item>
-     <item>
-      <widget class="QLabel" name="notFoundLabel">
-       <property name="text">
-        <string>User not found</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-       <property name="margin">
-        <number>5</number>
-       </property>
+      <widget class="QFrame" name="verticalFrame">
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>3</number>
+        </property>
+        <property name="topMargin">
+         <number>3</number>
+        </property>
+        <property name="rightMargin">
+         <number>3</number>
+        </property>
+        <property name="bottomMargin">
+         <number>3</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="notFoundLabel">
+          <property name="text">
+           <string>User not found</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="margin">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTreeView" name="searchResultTreeView"/>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
