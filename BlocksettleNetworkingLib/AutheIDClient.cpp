@@ -134,7 +134,6 @@ void AutheIDClient::createCreateRequest(const std::string &payload, int expirati
    QNetworkReply *reply = connectionManager_->GetNAM()->post(request, QByteArray::fromStdString(payload));
    processNetworkReply(reply, kNetworkTimeoutSeconds, [this, expiration] (const Result &result) {
       if (result.networkError != QNetworkReply::NoError) {
-         //emit failed(result.networkError, tr("Auth eID failed: %1").arg(QString::fromStdString(result.errorMsg)));
          emit failed(result.networkError, result.authError);
          return;
       }
@@ -264,12 +263,6 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
 
    QNetworkReply *reply = connectionManager_->GetNAM()->get(request);
    processNetworkReply(reply, expiration, [this] (const Result &result) {
-      if (result.networkError != QNetworkReply::NoError) {
-         //emit failed(result.networkError, tr("Auth eID failed: %1").arg(QString::fromStdString(result.errorMsg)));
-         emit failed(result.networkError, result.authError);
-         return;
-      }
-
       processResultReply(result.payload);
    });
 }
@@ -349,23 +342,28 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
 void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds, const AutheIDClient::ResultCallback &callback)
 {
    // Use this as context because AutheIDClient might be already destroyed when reply is finished!
-   connect(reply, &QNetworkReply::finished, this, [reply, callback] {
+   connect(reply, &QNetworkReply::finished, this, [this, reply, callback] {
       QByteArray payload = reply->readAll();
 
       Result result;
       result.networkError = reply->error();
 
-      if (reply->error()) {
+      if (reply->error() == QNetworkReply::OperationCanceledError) {
+         return;
+      }
+      else if (reply->error() == QNetworkReply::TimeoutError) {
+         emit failed(reply->error(), ErrorType::ServerError);
+         return;
+      }
+      else if (reply->error()) {
          rp::Error error;
          // Auth eID will send rp::Error
          if (!payload.isEmpty() && error.ParseFromArray(payload.data(), payload.size())) {
-            //result.errorMsg = fmt::format("Auth eID failed: {}", error.message());
+            logger_->error("Auth EId server error: {}", error.message());
          } else {
-            //result.errorMsg = fmt::format("Auth eID failed: {}", reply->errorString().toStdString());
+            logger_->error("Auth EId failed: error code {}, ", reply->error(), reply->errorString().toStdString());
          }
-         if (callback) {
-            callback(result);
-         }
+         emit failed(QNetworkReply::NoError, ErrorType::ServerError);
          return;
       }
 
@@ -375,8 +373,9 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
       }
    });
 
-   QTimer::singleShot(timeoutSeconds * 1000, reply, [reply] {
+   QTimer::singleShot(timeoutSeconds * 1000 + 3000, reply, [reply] {
       // This would call finished slot and that would call callback if that is still needed
+      // Normally it's not called since timeout triggered by server response
       reply->abort();
    });
 

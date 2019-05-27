@@ -68,7 +68,8 @@ public:
       ParseSignatureError,
       Timeout,
       Cancelled,
-      NotAuthenticated
+      NotAuthenticated,
+      ServerError
    };
    Q_ENUM(ErrorType)
    static QString errorString(ErrorType error);
