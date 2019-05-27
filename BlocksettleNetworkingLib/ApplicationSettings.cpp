@@ -164,7 +164,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
       { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
       { remoteSigners,                    SettingDef(QLatin1String("RemoteSigners"), QStringList()
-         << QLatin1String("Local GUI Signer Mode:127.0.0.1:23456:")) },
+         << QString::fromLatin1("%1:127.0.0.1:23456:").arg(localSignerDefaultName())) },
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
       { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys"), QStringList()
@@ -551,6 +551,11 @@ int ApplicationSettings::GetArmoryRemotePort(NetworkType networkType) const
          (networkType == NetworkType::Invalid) ? get<NetworkType>(netType) : networkType);
    }
    return port;
+}
+
+QString ApplicationSettings::localSignerDefaultName()
+{
+   return tr("Local GUI Signer Mode");
 }
 
 int ApplicationSettings::GetDefaultArmoryLocalPort(NetworkType networkType)

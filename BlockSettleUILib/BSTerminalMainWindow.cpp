@@ -468,92 +468,106 @@ void BSTerminalMainWindow::InitAuthManager()
 
 std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 {
-   std::shared_ptr<SignContainer> retPtr;
    auto runMode = static_cast<SignContainer::OpMode>(applicationSettings_->get<int>(ApplicationSettings::signerRunMode));
-   SignerHost signerHost = signersProvider_->getCurrentSigner();
 
-   QString resultHost = signerHost.address;
+   switch (runMode) {
+      case SignContainer::OpMode::Remote:
+         return createRemoteSigner();
+      case SignContainer::OpMode::Local:
+         return createLocalSigner();
+      default:
+         return nullptr;
+   }
+}
+
+std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
+{
+   SignerHost signerHost = signersProvider_->getCurrentSigner();
+   const auto keyFileDir = SystemFilePaths::appDataLocation();
+   const auto keyFileName = "client.peers";
    QString resultPort = QString::number(signerHost.port);
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
+
+   // Define the callback that will be used to determine if the signer's BIP
+   // 150 identity key, if it has changed, will be accepted. It needs strings
+   // for the old and new keys, and a promise to set once the user decides.
+   const auto &ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
+      , const std::string& srvAddrPort
+      , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
+      logMgr_->logger()->debug("[BSTerminalMainWindow::createSigner::callback] received"
+         " new key {} [{}], old key {} [{}] for {} ({})", newKey, newKey.size(), oldKey
+         , oldKey.size(), srvAddrPort, signersProvider_->getCurrentSigner().serverId());
+      std::string oldKeyHex = oldKey;
+      if (oldKeyHex.empty() && (signersProvider_->getCurrentSigner().serverId() == srvAddrPort)) {
+         oldKeyHex = signersProvider_->getCurrentSigner().key.toStdString();
+      }
+
+      QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
+         MessageBoxIdKey box(BSMessageBox::question, tr("Signer Id Key has changed")
+            , tr("Import Signer ID Key (%1)?")
+            .arg(QString::fromStdString(srvAddrPort))
+            , tr("Old Key: %1\nNew Key: %2")
+            .arg(oldKeyHex.empty() ? tr("<none>") : QString::fromStdString(oldKeyHex))
+            .arg(QString::fromStdString(newKey)), this);
+
+         const bool answer = (box.exec() == QDialog::Accepted);
+
+         if (answer) {
+            signersProvider_->addKey(srvAddrPort, newKey);
+         }
+         newKeyProm->set_value(answer);
+      });
+   };
+
+   QString resultHost = signerHost.address;
+   const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
+      , resultHost, resultPort, netType, connectionManager_, applicationSettings_
+      , SignContainer::OpMode::Remote, false, keyFileDir, keyFileName, ourNewKeyCB);
+
+   std::vector<std::pair<std::string, BinaryData>> keys;
+   for (const auto &signer : signersProvider_->signers()) {
+      try {
+         const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
+         keys.push_back({ signer.serverId(), signerKey });
+      }
+      catch (const std::exception &e) {
+         logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
+      }
+   }
+   remoteSigner->updatePeerKeys(keys);
+
+   return remoteSigner;
+}
+
+std::shared_ptr<SignContainer> BSTerminalMainWindow::createLocalSigner()
+{
+   SignerHost signerHost = signersProvider_->getCurrentSigner();
+   QLatin1String localSignerHost("127.0.0.1");
    QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
+   NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
 
-   if (runMode == SignContainer::OpMode::Remote) {
-      const auto keyFileDir = SystemFilePaths::appDataLocation();
-      const auto keyFileName = "client.peers";
-
-      // Define the callback that will be used to determine if the signer's BIP
-      // 150 identity key, if it has changed, will be accepted. It needs strings
-      // for the old and new keys, and a promise to set once the user decides.
-      const auto &ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
-         , const std::string& srvAddrPort
-         , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
-         logMgr_->logger()->debug("[BSTerminalMainWindow::createSigner::callback] received"
-            " new key {} [{}], old key {} [{}] for {} ({})", newKey, newKey.size(), oldKey
-            , oldKey.size(), srvAddrPort, signersProvider_->getCurrentSigner().serverId());
-         std::string oldKeyHex = oldKey;
-         if (oldKeyHex.empty() && (signersProvider_->getCurrentSigner().serverId() == srvAddrPort)) {
-            oldKeyHex = signersProvider_->getCurrentSigner().key.toStdString();
-         }
-
-         QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
-            MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question, tr("Signer Id Key has changed")
-               , tr("Import Signer ID Key?")
-               .arg(QString::fromStdString(srvAddrPort))
-               , tr("Old Key: %1\nNew Key: %2")
-               .arg(oldKeyHex.empty() ? tr("<none>") : QString::fromStdString(oldKeyHex))
-               .arg(QString::fromStdString(newKey)), this);
-
-            const bool answer = (box->exec() == QDialog::Accepted);
-            box->deleteLater();
-
-            if (answer) {
-               signersProvider_->addKey(srvAddrPort, newKey);
-            }
-            newKeyProm->set_value(answer);
-         });
-      };
-      const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
-         , resultHost, resultPort, netType, connectionManager_, applicationSettings_
-         , runMode, false, keyFileDir, keyFileName, ourNewKeyCB);
-      retPtr = remoteSigner;
-
-      std::vector<std::pair<std::string, BinaryData>> keys;
-      for (const auto &signer : signersProvider_->signers()) {
-         try {
-            const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-            keys.push_back({ signer.serverId(), signerKey });
-         }
-         catch (const std::exception &e) {
-            logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
-         }
+   if (SignerConnectionExists(localSignerHost, localSignerPort)) {
+      BSMessageBox mbox(BSMessageBox::Type::question
+                  , tr("Local Signer Connection")
+                  , tr("Continue with Remote connection in Local GUI mode?")
+                  , tr("The Terminal failed to spawn the headless signer as the program is already running. "
+                       "Would you like to continue with remote connection in Local GUI mode?")
+                  , this);
+      if (mbox.exec() == QDialog::Rejected) {
+         return nullptr;
       }
-      remoteSigner->updatePeerKeys(keys);
-   }
-   else if (runMode == SignContainer::OpMode::Local) {
-      resultPort = localSignerPort;
-      bool startLocalSignerProcess = true;
 
-      if (SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
-         if (BSMessageBox(BSMessageBox::Type::question
-            , tr("Signer Local Connection")
-            , tr("Another Signer (or some other program occupying port %1) is "
-            "running. Would you like to continue connecting to it?").arg(localSignerPort)
-            , tr("If you wish to continue using GUI signer running on the same "
-            "host, just select Remote Signer in settings and configure local "
-            "connection")
-            , this).exec() == QDialog::Rejected) {
-            return retPtr;
-         }
-         startLocalSignerProcess = false;
-      }
-      retPtr = std::make_shared<LocalSigner>(logMgr_->logger()
-         , applicationSettings_->GetHomeDir(), netType
-         , resultPort, connectionManager_, applicationSettings_
-         , startLocalSignerProcess, "", ""
-         , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
+      // Use locally started signer as remote
+      signersProvider_->switchToLocalFullGUI(localSignerHost, localSignerPort);
+      return createRemoteSigner();
    }
 
-   return retPtr;
+   const bool startLocalSignerProcess = true;
+   return std::make_shared<LocalSigner>(logMgr_->logger()
+      , applicationSettings_->GetHomeDir(), netType
+      , localSignerPort, connectionManager_, applicationSettings_
+      , startLocalSignerProcess, "", ""
+      , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
 }
 
 bool BSTerminalMainWindow::InitSigningContainer()

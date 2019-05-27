@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QStandardPaths>
+#include "SignContainer.h"
 
 SignersProvider::SignersProvider(const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
    : QObject(parent)
@@ -31,6 +32,26 @@ SignerHost SignersProvider::getCurrentSigner() const
    }
 
    return signersData.at(index);
+}
+
+void SignersProvider::switchToLocalFullGUI(const QString &host, const QString &port)
+{
+   SignerHost local;
+   local.name = appSettings_->localSignerDefaultName();
+   local.address = host;
+   local.port = port.toInt();
+
+   int localIndex = indexOf(local);
+   if (localIndex < 0) {
+      add(local);
+      localIndex = indexOf(local);
+      if (localIndex < 0) {
+         return;
+      }
+   }
+
+   appSettings_->set(ApplicationSettings::signerRunMode, int(SignContainer::OpMode::Remote));
+   setupSigner(localIndex, true);
 }
 
 int SignersProvider::indexOfCurrent() const
