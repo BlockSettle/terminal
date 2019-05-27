@@ -22,6 +22,8 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    tableFormat.setCellPadding(0);
    tableFormat.setCellSpacing(0);
 
+   setupHighlightPalette();
+
    setAlignment(Qt::AlignHCenter);
    setAutoFormatting(QTextEdit::AutoAll);
    setAcceptRichText(true);
@@ -158,16 +160,6 @@ QImage ChatMessagesTextEdit::statusImage(const int &row)
    return statusImage;
 }
 
-void ChatMessagesTextEdit::mousePressEvent(QMouseEvent *ev)
-{
-   // make focus to the widget to allow use default shortcuts (like ctrl+c) from keyboard
-   if (!this->hasFocus())
-      this->setFocus();
-
-   // proceed default mouse press behaviour
-   QTextBrowser::mousePressEvent(ev);
-}
-
 void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
 {
    textCursor_ = cursorForPosition(e->pos());
@@ -211,7 +203,7 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
 void ChatMessagesTextEdit::copyActionTriggered()
 {
    if (textCursor_.hasSelection()) {
-      QApplication::clipboard()->setMimeData(this->createMimeDataFromSelection());
+      QApplication::clipboard()->setText(getFormattedTextFromSelection());
    }
    else {
       QTextDocument doc;
@@ -271,6 +263,38 @@ void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, con
    col_widths << QTextLength(QTextLength::FixedLength, user);
    col_widths << QTextLength(QTextLength::VariableLength, message);
    tableFormat.setColumnWidthConstraints(col_widths);
+}
+
+QString ChatMessagesTextEdit::getFormattedTextFromSelection()
+{
+   QString text;
+   QTextDocument textDocument;
+
+   // get selected text in html format
+   textDocument.setHtml(createMimeDataFromSelection()->html());      
+   QTextBlock currentBlock = textDocument.begin();
+   int blockCount = 0;
+
+   // each column is presented as a block
+   while (currentBlock.isValid()) {
+      blockCount++;
+      if (!currentBlock.text().isEmpty()) {
+
+         // format columns splits to tabulation
+         if (!text.isEmpty()) {
+            text += QChar::Tabulation;
+            
+            // new row (when few rows are selected)
+            if ((blockCount - 2) % 5 == 0) {
+               text += QChar::LineFeed;
+            }
+         }
+         // replace some special characters, because they can display incorrect
+         text += currentBlock.text().replace(QChar::LineSeparator, QChar::LineFeed);
+      }
+      currentBlock = currentBlock.next();
+   }
+   return text;
 }
 
 void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
@@ -371,6 +395,14 @@ void ChatMessagesTextEdit::loadMore()
    }
 
    messagesToLoadMore_.clear();
+}
+
+void ChatMessagesTextEdit::setupHighlightPalette()
+{
+   auto highlightPalette = palette();
+   highlightPalette.setColor(QPalette::Inactive, QPalette::Highlight, highlightPalette.color(QPalette::Active, QPalette::Highlight));
+   highlightPalette.setColor(QPalette::Inactive, QPalette::HighlightedText, highlightPalette.color(QPalette::Active, QPalette::HighlightedText));
+   setPalette(highlightPalette);   
 }
 
 void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &msg)

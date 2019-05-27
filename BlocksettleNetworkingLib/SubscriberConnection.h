@@ -86,7 +86,7 @@ private:
 
    bool isActive() const;
 
-   bool recvData();
+   bool recvData(const ZmqContext::sock_ptr& dataSocket);
 
    bool ConnectToPublisherEndpoint(const std::string& endpoint, SubscriberConnectionListener* listener);
 

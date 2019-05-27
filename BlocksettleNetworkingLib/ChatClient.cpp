@@ -168,6 +168,7 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 {
    if (response.getStatus() == Chat::LoginResponse::Status::LoginOk) {
       loggedIn_ = true;
+      model_->initTreeCategoryGroup();
       emit ConnectedToServer();
       model_->setCurrentUser(currentUserId_);
       readDatabase();

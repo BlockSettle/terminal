@@ -33,7 +33,6 @@ class AuthAddressManager;
 class QAction;
 class QMenu;
 class SignContainer;
-class WalletImporter;
 class WalletsViewModel;
 class ConnectionManager;
 
@@ -98,6 +97,7 @@ private slots:
    void treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
    void treeViewAddressesLayoutChanged();
    void scrollChanged();
+   void onWalletsSynchronized();
 
 private:
    std::unique_ptr<Ui::WalletsWidget> ui_;
@@ -113,7 +113,6 @@ private:
    WalletsViewModel        *  walletsModel_;
    AddressListModel        *  addressModel_;
    AddressSortFilterModel  *  addressSortFilterModel_;
-   std::unordered_map<std::string, std::shared_ptr<WalletImporter>>  walletImporters_;
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
    QAction  *  actRevokeSettl_ = nullptr;

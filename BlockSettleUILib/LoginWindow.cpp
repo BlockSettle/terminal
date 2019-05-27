@@ -142,9 +142,11 @@ void LoginWindow::onAutheIDDone(const std::string& jwt)
    QDialog::accept();
 }
 
-void LoginWindow::onAutheIDFailed(const QString &text)
+void LoginWindow::onAutheIDFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
 {
-   setupLoginPage();
-   BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), text, this);
-   loginErrorBox.exec();
+   if (authError != AutheIDClient::Timeout) {
+      setupLoginPage();
+      BSMessageBox loginErrorBox(BSMessageBox::critical, tr("Login failed"), tr("Login failed"), AutheIDClient::errorString(authError), this);
+      loginErrorBox.exec();
+   }
 }

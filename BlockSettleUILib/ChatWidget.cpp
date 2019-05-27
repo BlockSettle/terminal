@@ -14,6 +14,8 @@
 #include <QMouseEvent>
 #include <QObject>
 #include <QScrollBar>
+#include <QClipboard>
+#include <QMimeData>
 
 #include <QDebug>
 
@@ -92,9 +94,8 @@ public:
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
-
-      // hide tab icon for unread messages
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
+      
+      NotificationCenter::notify(bs::ui::NotifyType::LogOut, {});
    }
 
    std::string login(const std::string& email, const std::string& jwt
@@ -285,6 +286,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->textEditMessages->setHandler(client_);
    ui_->textEditMessages->setMessageReadHandler(client_);
    ui_->textEditMessages->setClient(client_);
+   ui_->input_textEdit->setAcceptRichText(false);
 
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
@@ -298,7 +300,9 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {userId});
    });
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
+   connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited, this, &ChatWidget::onSearchUserTextEdited);
+   connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
 
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
 //           this, &ChatWidget::onSearchUserListReceived);
@@ -522,7 +526,7 @@ void ChatWidget::onContactRequestAccepted(const QString &userId)
    ui_->treeViewUsers->setCurrentUserChat(userId);
 }
 
-bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
+bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
 {
    if ( popup_->isVisible() && event->type() == QEvent::MouseButtonRelease) {
       QPoint pos = popup_->mapFromGlobal(QCursor::pos());
@@ -536,7 +540,20 @@ bool ChatWidget::eventFilter(QObject *obj, QEvent *event)
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
    }
 
-   return QWidget::eventFilter(obj, event);
+   // copy selected messages by keyboard shortcut
+   if (event->type() == QEvent::KeyPress && sender == ui_->input_textEdit) {
+      QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+
+      // handle ctrl+c (cmd+c on macOS)
+      if(keyEvent->key() == Qt::Key_C && keyEvent->modifiers().testFlag(Qt::ControlModifier)) {
+         if (ui_->textEditMessages->textCursor().hasSelection() && isChatMessagesSelected_) {
+            QApplication::clipboard()->setText(ui_->textEditMessages->getFormattedTextFromSelection());
+            return true;
+         }
+      }
+   }
+
+   return QWidget::eventFilter(sender, event);
 }
 
 void ChatWidget::onSendFriendRequest(const QString &userId)
@@ -876,4 +893,14 @@ void ChatWidget::selectGlobalRoom()
          }
       }
    }
+}
+
+void ChatWidget::onBSChatInputSelectionChanged()
+{
+   isChatMessagesSelected_ = false;
+}
+
+void ChatWidget::onChatMessagesSelectionChanged()
+{   
+   isChatMessagesSelected_ = true;
 }

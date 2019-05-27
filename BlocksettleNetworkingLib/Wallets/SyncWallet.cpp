@@ -232,20 +232,22 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
       return false;
    }
 
-   auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
-   callbacks.push_back({ obj, cb });
-   if (callbacks.size() > 1) {
-      return true;
+   if (obj) {
+      auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
+      callbacks.push_back({ obj, cb });
+      if (callbacks.size() > 1) {
+         return true;
+      }
    }
 
-   const auto &cbTxOutList = [this, val, btcWallet]
+   const auto &cbTxOutList = [this, obj, cb, val, btcWallet]
                              (ReturnMessage<std::vector<UTXO>> txOutList) {
       try {
          // Before invoking the callbacks, process the UTXOs for the purposes of
          // handling internal/external addresses (UTXO filtering, balance
          // adjusting, etc.).
          auto txOutListObj = txOutList.get();
-         const auto &cbProcess = [this, val, btcWallet, txOutListObj] {
+         const auto &cbProcess = [this, obj, cb, val, btcWallet, txOutListObj] {
             std::vector<UTXO> txOutListCopy = txOutListObj;
             if (utxoAdapter_) {
                utxoAdapter_->filter(txOutListCopy);
@@ -265,15 +267,22 @@ bool Wallet::getSpendableTxOutList(const std::shared_ptr<AsyncClient::BtcWallet>
                   txOutListCopy.resize(cutOffIdx + 1);
                }
             }
-            QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
-               auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
-               for (const auto &cbPairs : callbacks) {
-                  if (cbPairs.first) {
-                        cbPairs.second(txOutListCopy);
-                  }
+            if (obj == nullptr) {
+               if (cb) {
+                  cb(txOutListCopy);
                }
-               spendableCallbacks_.erase(btcWallet->walletID());
-            });
+            }
+            else {
+               QMetaObject::invokeMethod(this, [this, btcWallet, txOutListCopy] {
+                  auto &callbacks = spendableCallbacks_[btcWallet->walletID()];
+                  for (const auto &cbPairs : callbacks) {
+                     if (cbPairs.first) {
+                        cbPairs.second(txOutListCopy);
+                     }
+                  }
+                  spendableCallbacks_.erase(btcWallet->walletID());
+               });
+            }
          };
 
          cbProcess();

@@ -4,6 +4,8 @@
 #include <functional>
 #include <memory>
 #include <QObject>
+#include <QNetworkReply>
+#include "AutheIDClient.h"
 #include "BinaryData.h"
 
 namespace spdlog {
@@ -37,7 +39,7 @@ public:
 
 private slots:
    void onSignSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
-   void onFailed(const QString &);
+   void onFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;

@@ -27,6 +27,7 @@ public:
    ChatClientDataModel(QObject * parent = nullptr);
 
 public:
+   void initTreeCategoryGroup();
    void clearModel();
    void clearSearch();
    bool insertRoomObject(std::shared_ptr<Chat::RoomData> data);
