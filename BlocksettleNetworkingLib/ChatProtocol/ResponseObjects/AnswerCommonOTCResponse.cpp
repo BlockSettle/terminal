@@ -3,22 +3,38 @@
 using namespace Chat;
 
 AnswerCommonOTCResponse::AnswerCommonOTCResponse(std::shared_ptr<OTCResponseData> otcResponseData,
-                                                  OTCRequestResult result)
+                                                  OTCRequestResult result,
+                                                 const QString& message)
    : Response (ResponseType::ResponseAnswerCommonOTC)
    , otcResponseData_(otcResponseData)
    , result_(result)
+   , message_(message)
+
 {
 
 }
 
 QJsonObject AnswerCommonOTCResponse::toJson() const
 {
-   return Response::toJson();
+   QJsonObject data = Response::toJson();
+   data[OTCDataObjectKey] = otcResponseData_->toJson();
+   data[OTCActionResultKey] = static_cast<int>(result_);
+   data[OTCMessageKey] = message_;
+   return data;
 }
 
 std::shared_ptr<Response> AnswerCommonOTCResponse::fromJSON(const std::string &jsonData)
 {
-   return nullptr;
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   OTCRequestResult result = static_cast<OTCRequestResult>(data[OTCActionResultKey].toInt());
+   QString message = data[OTCMessageKey].toString();
+   QJsonDocument innerDataDocument = QJsonDocument(data[OTCDataObjectKey].toObject());
+
+   std::shared_ptr<OTCResponseData> otcResponseData =
+         OTCResponseData::fromJSON(
+            QString::fromUtf8(innerDataDocument.toJson()).toStdString());
+
+   return std::make_shared<AnswerCommonOTCResponse>(otcResponseData, result, message);
 }
 
 void AnswerCommonOTCResponse::handle(ResponseHandler & handler)
@@ -34,4 +50,14 @@ std::shared_ptr<OTCResponseData> AnswerCommonOTCResponse::otcResponseData() cons
 OTCRequestResult AnswerCommonOTCResponse::getResult() const
 {
    return result_;
+}
+
+QString AnswerCommonOTCResponse::getMessage() const
+{
+   return message_;
+}
+
+void AnswerCommonOTCResponse::setMessage(const QString &message)
+{
+   message_ = message;
 }

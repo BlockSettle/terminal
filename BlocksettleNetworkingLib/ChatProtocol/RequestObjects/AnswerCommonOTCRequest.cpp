@@ -12,12 +12,21 @@ AnswerCommonOTCRequest::AnswerCommonOTCRequest(const std::string &clientId,
 
 QJsonObject AnswerCommonOTCRequest::toJson() const
 {
-   return Request::toJson();
+   QJsonObject data = Request::toJson();
+   data[OTCDataObjectKey] = otcResponseData_->toJson();
+   return data;
 }
 
 std::shared_ptr<Request> AnswerCommonOTCRequest::fromJSON(const std::string &clientId, const std::string &jsonData)
 {
-   return nullptr;
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+   QJsonDocument innerDataDocument = QJsonDocument(data[OTCDataObjectKey].toObject());
+
+   std::shared_ptr<OTCResponseData> otcRequestData =
+         OTCResponseData::fromJSON(
+            QString::fromUtf8(innerDataDocument.toJson()).toStdString());
+
+   return std::make_shared<AnswerCommonOTCRequest>(clientId, otcRequestData);
 }
 
 void AnswerCommonOTCRequest::handle(RequestHandler & handler)
@@ -28,4 +37,14 @@ void AnswerCommonOTCRequest::handle(RequestHandler & handler)
 const std::shared_ptr<OTCResponseData> AnswerCommonOTCRequest::getOtcResponseData() const
 {
    return otcResponseData_;
+}
+
+QString AnswerCommonOTCRequest::getResponsedId() const
+{
+   return otcResponseData_->responderId();
+}
+
+QString AnswerCommonOTCRequest::getRequestorId() const
+{
+   return otcResponseData_->requestorId();
 }

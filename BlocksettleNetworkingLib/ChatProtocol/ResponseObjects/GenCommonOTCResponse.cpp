@@ -29,11 +29,11 @@ std::shared_ptr<Response> GenCommonOTCResponse::fromJSON(const std::string &json
    QString message = data[OTCMessageKey].toString();
    QJsonDocument innerDataDocument = QJsonDocument(data[OTCDataObjectKey].toObject());
 
-   std::shared_ptr<OTCRequestData> otcResponseData =
+   std::shared_ptr<OTCRequestData> otcRequestData =
          OTCRequestData::fromJSON(
             QString::fromUtf8(innerDataDocument.toJson()).toStdString());
 
-   return std::make_shared<GenCommonOTCResponse>(otcResponseData, result, message);
+   return std::make_shared<GenCommonOTCResponse>(otcRequestData, result, message);
 }
 
 void GenCommonOTCResponse::handle(ResponseHandler & handler)
