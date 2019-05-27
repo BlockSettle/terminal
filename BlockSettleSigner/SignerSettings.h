@@ -6,8 +6,6 @@
 #include "SignerDefs.h"
 #include "SignerUiDefs.h"
 
-class QSettings;
-
 namespace Blocksettle { namespace Communication { namespace signer {
    class Settings;
 } } }

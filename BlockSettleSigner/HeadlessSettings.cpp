@@ -233,8 +233,12 @@ bool HeadlessSettings::loadSettings(HeadlessSettings::Settings *settings, const 
    std::ifstream s(fileName);
    std::stringstream buffer;
    buffer << s.rdbuf();
+   const std::string data = buffer.str();
+   if (data.empty()) {
+      return true;
+   }
 
-   auto status = google::protobuf::util::JsonStringToMessage(buffer.str(), settings);
+   auto status = google::protobuf::util::JsonStringToMessage(data, settings);
    return status.ok();
 }
 

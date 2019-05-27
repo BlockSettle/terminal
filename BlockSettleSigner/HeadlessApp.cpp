@@ -118,20 +118,29 @@ void HeadlessAppObj::startInterface()
    }
 
 #ifdef __APPLE__
-   std::string guiPath = SystemFilePaths::applicationDir()
+   std::string guiPath = SystemFilePaths::applicationDirIfKnown()
       + "/Blocksettle Signer Gui.app/Contents/MacOS/Blocksettle Signer GUI";
 #else
-   std::string guiPath = SystemFilePaths::applicationDir() + "/bs_signer_gui";
+
+   std::string guiPath = SystemFilePaths::applicationDirIfKnown();
+
+   if (guiPath.empty()) {
+      guiPath = "bs_signer_gui";
+   } else {
+      guiPath = guiPath + "/bs_signer_gui";
+
 #ifdef WIN32
-   guiPath += ".exe";
-#endif
+      guiPath += ".exe";
 #endif
 
-   if (!SystemFileUtils::fileExist(guiPath)) {
-      logger_->error("[{}] {} doesn't exist"
-         , __func__, guiPath);
-      return;
+      if (!SystemFileUtils::fileExist(guiPath)) {
+         logger_->error("[{}] {} doesn't exist"
+            , __func__, guiPath);
+         return;
+      }
    }
+#endif
+
    logger_->debug("[{}] process path: {}", __func__, guiPath);
 
 /*
