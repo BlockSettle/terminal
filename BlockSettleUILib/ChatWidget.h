@@ -33,6 +33,7 @@ class ApplicationSettings;
 class ChatWidgetState;
 class ChatSearchPopup;
 class OTCRequestViewModel;
+class ChatTreeModelWrapper;
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
@@ -175,7 +176,7 @@ public:
 
    // NewMessageMonitor interface
 public:
-   void onNewMessagePresent(const bool isNewMessagePresented, std::shared_ptr<Chat::MessageData> message) override;
+   void onNewMessagesPresent(std::map<QString, std::shared_ptr<Chat::MessageData>> newMessages) override;
 };
 
 #endif // CHAT_WIDGET_H

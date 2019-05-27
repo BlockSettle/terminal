@@ -45,7 +45,7 @@ class NewMessageMonitor {
 public:
 
    virtual  ~NewMessageMonitor() = default;
-   virtual void onNewMessagePresent(const bool isNewMessagePresented, std::shared_ptr<Chat::MessageData> message) = 0;
+   virtual void onNewMessagesPresent(std::map<QString, std::shared_ptr<Chat::MessageData>> newMessages) = 0;
 };
 class ModelChangesHandler {
 public:

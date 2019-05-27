@@ -35,11 +35,11 @@ bool AuthSignManager::Sign(const BinaryData &dataToSign, const QString &title, c
    return true;
 }
 
-void AuthSignManager::onFailed(const QString &text)
+void AuthSignManager::onFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError)
 {
-   logger_->error("[AuthSignManager] Auth eID failure: {}", text.toStdString());
+   logger_->error("[AuthSignManager] Auth eID failure: {}", AutheIDClient::errorString(authError).toStdString());
    if (onSignFailedCB_) {
-      onSignFailedCB_(text);
+      onSignFailedCB_(AutheIDClient::errorString(authError));
    }
    onSignedCB_ = {};
    onSignFailedCB_ = {};

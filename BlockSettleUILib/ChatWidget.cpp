@@ -9,6 +9,7 @@
 #include "OTCRequestViewModel.h"
 #include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "ChatTreeModelWrapper.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -278,7 +279,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
    auto model = client_->getDataModel();
    model->setNewMessageMonitor(this);
-   ui_->treeViewUsers->setModel(model.get());
+   auto proxyModel = client_->getProxyModel();
+   ui_->treeViewUsers->setModel(proxyModel.get());
+   connect(proxyModel.get(), &ChatTreeModelWrapper::treeUpdated,
+           ui_->treeViewUsers, &QTreeView::expandAll);
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
@@ -845,23 +849,22 @@ bool ChatWidget::IsOTCChatSelected() const
    return IsOTCChatRoom(currentChat_);
 }
 
-void ChatWidget::onNewMessagePresent(const bool isNewMessagePresented, std::shared_ptr<Chat::MessageData> message)
+void ChatWidget::onNewMessagesPresent(std::map<QString, std::shared_ptr<Chat::MessageData>> newMessages)
 {
-   qDebug() << "New Message: " << (isNewMessagePresented ? "TRUE" : "FALSE");
-
    // show notification of new message in tray icon
-   if (isNewMessagePresented) {
-      // don't show notification for global chat
-      if (message && !IsGlobalChatRoom(message->receiverId())) {
+   for (auto i : newMessages) {
 
+      auto userName = i.first;
+      auto message = i.second;
+
+      if (message) {
          const int maxMessageLength = 20;
 
          auto messageTitle = message->senderId();
          auto messageText = message->messageData();
-         auto contactItem = client_->getDataModel()->findContactItem(message->senderId().toStdString());
-             
-         if (contactItem && contactItem->hasDisplayName()) {
-            messageTitle = contactItem->getDisplayName();
+
+         if (!userName.isEmpty()) {
+            messageTitle = userName;
          }
 
          if (messageText.length() > maxMessageLength) {
