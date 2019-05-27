@@ -3,7 +3,35 @@ CMAKE_MINIMUM_REQUIRED( VERSION 3.3 )
 SET(UNIT_TESTS unit_tests)
 PROJECT( ${UNIT_TESTS} )
 
-FILE(GLOB SOURCES *.cpp)
+FILE(GLOB SOURCES 
+   *.cpp
+   ../common/cppForSwig/BDM_Server.cpp
+   ../common/cppForSwig/BDM_mainthread.cpp
+   ../common/cppForSwig/BitcoinP2P.cpp
+   ../common/cppForSwig/Blockchain.cpp
+   ../common/cppForSwig/BlockchainScanner.cpp
+   ../common/cppForSwig/BlockchainScanner_Super.cpp
+   ../common/cppForSwig/BlockDataMap.cpp
+   ../common/cppForSwig/BlockDataViewer.cpp
+   ../common/cppForSwig/BlockObj.cpp
+   ../common/cppForSwig/BlockUtils.cpp
+   ../common/cppForSwig/BtcWallet.cpp
+   ../common/cppForSwig/DatabaseBuilder.cpp
+   ../common/cppForSwig/HistoryPager.cpp
+   ../common/cppForSwig/LedgerEntry.cpp
+   ../common/cppForSwig/lmdb_wrapper.cpp
+   ../common/cppForSwig/nodeRPC.cpp
+   ../common/cppForSwig/gtest/NodeUnitTest.cpp
+   ../common/cppForSwig/Progress.cpp
+   ../common/cppForSwig/ScrAddrFilter.cpp
+   ../common/cppForSwig/ScrAddrObj.cpp
+   ../common/cppForSwig/Server.cpp
+   ../common/cppForSwig/SshParser.cpp
+   ../common/cppForSwig/StoredBlockObj.cpp
+   ../common/cppForSwig/txio.cpp
+   ../common/cppForSwig/ZeroConf.cpp
+)
+
 FILE(GLOB HEADERS *.h)
 
 INCLUDE_DIRECTORIES( ${BLOCKSETTLE_UI_INCLUDE_DIR} )
@@ -27,6 +55,7 @@ ADD_EXECUTABLE( ${UNIT_TESTS}
 
 TARGET_COMPILE_DEFINITIONS( ${UNIT_TESTS} PRIVATE
    SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG
+   COINBASE_MATURITY_TESTS
    )
 
 TARGET_LINK_LIBRARIES( ${UNIT_TESTS}
