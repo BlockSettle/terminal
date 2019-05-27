@@ -13,6 +13,7 @@
 #include "autheid_utils.h"
 #include "UserHasher.h"
 #include "ChatClientDataModel.h"
+#include "UserSearchModel.h"
 #include <QRegularExpression>
 
 #include "Encryption/AEAD_Encryption.h"
@@ -120,6 +121,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
 
    hasher_ = std::make_shared<UserHasher>();
    model_ = std::make_shared<ChatClientDataModel>();
+   userSearchModel_ = std::make_shared<UserSearchModel>();
    model_->setModelChangesHandler(this);
 
    heartbeatTimer_.setInterval(30 * 1000);
@@ -136,6 +138,11 @@ ChatClient::~ChatClient() noexcept
 std::shared_ptr<ChatClientDataModel> ChatClient::getDataModel()
 {
    return model_;
+}
+
+std::shared_ptr<UserSearchModel> ChatClient::getUserSearchModel()
+{
+   return userSearchModel_;
 }
 
 std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt

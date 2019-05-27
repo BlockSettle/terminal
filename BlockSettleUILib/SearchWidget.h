@@ -5,7 +5,7 @@
 
 #include <memory>
 
-class ListModel;
+class QAbstractItemModel;
 
 namespace Ui {
    class SearchWidget;
@@ -43,11 +43,10 @@ public:
    bool isLineEditEnabled() const;
    bool isListVisible() const;
    QString searchText() const;
-   void setUsers(const std::vector<std::shared_ptr<Chat::UserData>> &users);
+   void setSearchModel(const std::shared_ptr<QAbstractItemModel> &model);
 
 public slots:
    void clearLineEdit();
-   void clearList();
    void startListAutoHide();
    void setLineEditEnabled(bool value);
    void setListVisible(bool value);
@@ -65,7 +64,6 @@ signals:
 private:
    QScopedPointer<Ui::SearchWidget> ui_;
    QScopedPointer<QTimer> listVisibleTimer_;
-   QScopedPointer<ListModel> model_;
 };
 
 #endif // SEARCHWIDGET_H

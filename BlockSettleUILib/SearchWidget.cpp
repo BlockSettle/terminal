@@ -1,66 +1,18 @@
 #include "SearchWidget.h"
 #include "ui_SearchWidget.h"
 #include "ChatProtocol/DataObjects/UserData.h"
+#include "UserSearchModel.h"
 
 #include <QTimer>
 #include <QMenu>
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
 constexpr int kMaxContentHeight = 130;
-constexpr int kRowHeigth = 25;
-
-/**
- * @brief Model for testing. Should be replaced after debug
- */
-
-class ListModel : public QAbstractListModel
-{
-   Q_OBJECT
-public:
-   explicit ListModel(QObject *parent = nullptr) : QAbstractListModel(parent) {}
-   void setUsers(const std::vector<std::shared_ptr<Chat::UserData>> &users)
-   {
-      beginResetModel();
-      users_.clear();
-      for (const auto &user : users) {
-         if (user) {
-            users_.push_back(user);
-         }
-      }
-      endResetModel();
-   }
-   int rowCount(const QModelIndex &parent = QModelIndex()) const override
-   {
-      Q_UNUSED(parent)
-      return static_cast<int>(users_.size());
-   }
-   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override
-   {
-      if (!index.isValid()) {
-         return QVariant();
-      }
-      if (index.row() < 0 || index.row() >= static_cast<int>(users_.size())) {
-         return QVariant();
-      }
-      switch (role) {
-      case Qt::DisplayRole:
-         return QVariant::fromValue(users_.at(static_cast<size_t>(index.row()))->getUserId());
-      case Qt::SizeHintRole:
-         return QVariant::fromValue(QSize(20, kRowHeigth));
-      default:
-         return QVariant();
-      }
-   }
-
-private:
-   std::vector<std::shared_ptr<Chat::UserData>> users_;
-};
 
 SearchWidget::SearchWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::SearchWidget)
    , listVisibleTimer_(new QTimer)
-   , model_(new ListModel)
 {
    ui_->setupUi(this);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited,
@@ -107,7 +59,6 @@ void SearchWidget::init()
    connect(listVisibleTimer_.get(), &QTimer::timeout, [this] {
       setListVisible(false);
    });
-   ui_->searchResultTreeView->setModel(model_.get());
 }
 
 bool SearchWidget::isLineEditEnabled() const
@@ -125,19 +76,14 @@ QString SearchWidget::searchText() const
    return ui_->chatSearchLineEdit->text();
 }
 
-void SearchWidget::setUsers(const std::vector<std::shared_ptr<Chat::UserData> > &users)
+void SearchWidget::setSearchModel(const std::shared_ptr<QAbstractItemModel> &model)
 {
-   model_->setUsers(users);
+   ui_->searchResultTreeView->setModel(model.get());
 }
 
 void SearchWidget::clearLineEdit()
 {
    ui_->chatSearchLineEdit->clear();
-}
-
-void SearchWidget::clearList()
-{
-   model_->setUsers({});
 }
 
 void SearchWidget::startListAutoHide()
@@ -153,7 +99,7 @@ void SearchWidget::setLineEditEnabled(bool value)
 void SearchWidget::setListVisible(bool value)
 {
    ui_->searchResultTreeView->setVisible(value);
-   ui_->notFoundLabel->setVisible(!value && !ui_->chatSearchLineEdit->text().isEmpty());
+   ui_->notFoundLabel->setVisible(!value && ui_->searchResultTreeView->model()->rowCount() == 0);
    if (value) {
       ui_->chatUsersVerticalSpacer_->changeSize(
                20, kMaxContentHeight - ui_->chatSearchLineEdit->height() * 3);
@@ -176,9 +122,18 @@ void SearchWidget::showContextMenu(const QPoint &pos)
    if (!index.isValid()) {
       return;
    }
+   bool isInContacts = index.data(UserSearchModel::IsInContacts).toBool();
    QString id = index.data(Qt::DisplayRole).toString();
-   menu->addAction(tr("User: %1").arg(id));
+   if (isInContacts) {
+      auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
+         emit removeFriendRequired(id);
+      });
+      action->setStatusTip(tr("Click to remove user from contact list"));
+   } else {
+      auto action = menu->addAction(tr("Add to contacts"), [this, id] {
+         emit removeFriendRequired(id);
+      });
+      action->setStatusTip(tr("Click to add user to contact list"));
+   }
    menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));
 }
-
-#include "SearchWidget.moc"
