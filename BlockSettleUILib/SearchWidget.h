@@ -3,8 +3,16 @@
 
 #include <QWidget>
 
+#include <memory>
+
+class ListModel;
+
 namespace Ui {
    class SearchWidget;
+}
+
+namespace Chat {
+   class UserData;
 }
 
 class SearchWidget : public QWidget
@@ -33,6 +41,7 @@ public:
    bool isLineEditEnabled() const;
    bool isListVisible() const;
    QString searchText() const;
+   void setUsers(const std::vector<std::shared_ptr<Chat::UserData>> &users);
 
 public slots:
    void clearLineEdit();
@@ -48,6 +57,7 @@ signals:
 private:
    QScopedPointer<Ui::SearchWidget> ui_;
    QScopedPointer<QTimer> listVisibleTimer_;
+   QScopedPointer<ListModel> model_;
 };
 
 #endif // SEARCHWIDGET_H
