@@ -1531,7 +1531,7 @@ void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &respon
     logger_->debug("[ChatClient::OnGenCommonOTCResponse] {}", response.getData());
 
    switch (response.getResult()) {
-      case Chat::OTCRequestResult::Accepted:
+      case Chat::OTCResult::Accepted:
          //Server sent Accepted to each participant on the OTCRequest target
          //Client determine by itself if this is his own request
          if (response.otcRequestData()->requestorId().toStdString() == model_->currentUser()){
@@ -1540,14 +1540,14 @@ void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &respon
             HandleCommonOTCRequest(response.otcRequestData());
          }
          break;
-      case Chat::OTCRequestResult::Rejected:
+      case Chat::OTCResult::Rejected:
          //Server sent Rejected only to requestor, other clients don't know about this
          HandleCommonOTCRequestRejected(response.getMessage().toStdString());
          break;
-      case Chat::OTCRequestResult::Canceled:
+      case Chat::OTCResult::Canceled:
          HandleCommonOTCRequestCancelled(response.otcRequestData()->serverRequestId());
          break;
-      case Chat::OTCRequestResult::Expired:
+      case Chat::OTCResult::Expired:
          HandleCommonOTCRequestExpired(response.otcRequestData()->serverRequestId());
          break;
       default:

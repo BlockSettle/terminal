@@ -20,7 +20,7 @@ namespace Chat {
 
    private:
       std::shared_ptr<OTCResponseData> otcResponseData_;
-      OTCRequestResult result_;
+      OTCResult result_;
    };
 }
 

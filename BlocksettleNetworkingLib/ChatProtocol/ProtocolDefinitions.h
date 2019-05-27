@@ -91,7 +91,7 @@ namespace Chat
        Failed
    };
 
-   enum class OTCRequestResult {
+   enum class OTCResult {
       Accepted,
       Rejected,
       Canceled,
@@ -165,7 +165,7 @@ namespace Chat
    static const QString OTCUpdatePriceKey = QStringLiteral("otc_update_price");
    static const QString OTCLowerKey = QStringLiteral("lower");
    static const QString OTCUpperKey = QStringLiteral("upper");
-   static const QString OTCActionResultKey = QStringLiteral("otc_action_result");
+   static const QString OTCResultKey = QStringLiteral("otc_result");
    static const QString OTCMessageKey = QStringLiteral("otc_message");
 
 
@@ -205,6 +205,6 @@ namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ContactStatus)
 Q_DECLARE_METATYPE(Chat::UserStatus)
-Q_DECLARE_METATYPE(Chat::OTCRequestResult)
+Q_DECLARE_METATYPE(Chat::OTCResult)
 
 
