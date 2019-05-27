@@ -38,8 +38,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    connect(this, &QTextBrowser::anchorClicked, this, &ChatMessagesTextEdit::urlActivated);
    connect(this, &QTextBrowser::textChanged, this, &ChatMessagesTextEdit::onTextChanged);
 
-   userMenu_ = new QMenu(this);
-   userContactAction_ = userMenu_->addAction(QString());
+   initUserContextMenu();
 }
 
 QString ChatMessagesTextEdit::data(const int &row, const Column &column)
@@ -119,7 +118,7 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
          } else if ( message->encryptionType() == Chat::MessageData::EncryptionType::AEAD) {
             return toHtmlInvalid(text.arg(QLatin1String("AEAD ENCRYPTED!")));
          }
-         return toHtmlText(text.arg(messages_[currentChatId_][row]->messageData()));
+         return toHtmlText(messages_[currentChatId_][row]->messageData());
       }
       default:
          break;
@@ -173,7 +172,28 @@ void ChatMessagesTextEdit::contextMenuEvent(QContextMenuEvent *e)
    setTextCursor(textCursor_);
    QString text = textCursor_.block().text();
 
-   // create custom context menu
+   // show contact context menu when username is right clicked in User column
+   if ((textCursor_.block().blockNumber() - 1) % 5 == static_cast<int>(Column::User) ) {
+      if (!anchorAt(e->pos()).isEmpty()) {
+         username_ = text;
+
+         if (handler_) {
+            for (auto action : userMenu_->actions()) {
+               userMenu_->removeAction(action);
+            }
+            if (handler_->onActionIsFriend(username_)) {
+               userMenu_->addAction(userRemoveContactAction_);
+            }
+            else {
+               userMenu_->addAction(userAddContactAction_);
+            }
+            userMenu_->exec(QCursor::pos());
+         }
+         return;
+      }
+   }
+
+   // show default text context menu
    if (text.length() > 0 || textCursor_.hasSelection()) {
       QMenu contextMenu(this);
 
@@ -301,31 +321,7 @@ void  ChatMessagesTextEdit::urlActivated(const QUrl &link) {
    if (link.toString() == QLatin1Literal("load_more")) {
       loadMore();
    }
-   else if  (link.toString().startsWith(QLatin1Literal("user:"))) {
-      username_ = link.toString().mid(QString(QLatin1Literal("user:")).length());
-
-      userContactAction_->disconnect();
-
-      if (handler_) {
-         if (handler_->onActionIsFriend(username_)) {
-            userContactAction_->setText(tr("Remove from contacts"));
-            userContactAction_->setStatusTip(tr("Click to remove user from contact list"));
-            connect(userContactAction_, &QAction::triggered, [this](bool) {
-               // TODO:
-               //handler_->onActionRemoveFromContacts(username_);
-            });
-         }
-         else {
-            userContactAction_->setText(tr("Add to contacts"));
-            userContactAction_->setStatusTip(tr("Click to add user to contact list"));
-            connect(userContactAction_, &QAction::triggered, [this](bool) {
-               handler_->onActionAddToContacts(username_);
-            });
-         }
-         userMenu_->exec(QCursor::pos());
-      }
-   }
-   else {
+   else if (!link.toString().startsWith(QLatin1Literal("user:"))) {
       QDesktopServices::openUrl(link);
    }
 }
@@ -403,6 +399,24 @@ void ChatMessagesTextEdit::setupHighlightPalette()
    highlightPalette.setColor(QPalette::Inactive, QPalette::Highlight, highlightPalette.color(QPalette::Active, QPalette::Highlight));
    highlightPalette.setColor(QPalette::Inactive, QPalette::HighlightedText, highlightPalette.color(QPalette::Active, QPalette::HighlightedText));
    setPalette(highlightPalette);   
+}
+
+void ChatMessagesTextEdit::initUserContextMenu()
+{
+   userMenu_ = new QMenu(this);
+
+   userAddContactAction_ = new QAction(tr("Add to contacts"));
+   userAddContactAction_->setStatusTip(tr("Click to add user to contact list"));
+   connect(userAddContactAction_, &QAction::triggered, [this](bool) {
+      handler_->onActionAddToContacts(username_);
+   });
+
+   userRemoveContactAction_ = new QAction(tr("Remove from contacts"));
+   userRemoveContactAction_->setStatusTip(tr("Click to remove user from contact list"));
+   connect(userRemoveContactAction_, &QAction::triggered, [this](bool) {
+      // TODO:
+      //handler_->onActionRemoveFromContacts(username_);
+   });
 }
 
 void ChatMessagesTextEdit::onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &msg)

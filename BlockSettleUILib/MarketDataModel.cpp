@@ -111,13 +111,13 @@ static void FieldsToMap(bs::network::Asset::Type at, const bs::network::MDFields
    for (const auto &field : fields) {
       switch (field.type) {
       case bs::network::MDField::PriceBid:
-         map[MarketDataModel::MarketDataColumns::BidPrice] = { UiUtils::displayPriceForAssetType(field.value, at), field.value };
+         map[MarketDataModel::MarketDataColumns::BidPrice] = { UiUtils::displayPriceForAssetType(field.value, at), UiUtils::truncatePriceForAsset(field.value, at) };
          break;
       case bs::network::MDField::PriceOffer:
-         map[MarketDataModel::MarketDataColumns::OfferPrice] = { UiUtils::displayPriceForAssetType(field.value, at), field.value };
+         map[MarketDataModel::MarketDataColumns::OfferPrice] = { UiUtils::displayPriceForAssetType(field.value, at), UiUtils::truncatePriceForAsset(field.value, at) };
          break;
       case bs::network::MDField::PriceLast:
-         map[MarketDataModel::MarketDataColumns::LastPrice] = { UiUtils::displayPriceForAssetType(field.value, at), field.value };
+         map[MarketDataModel::MarketDataColumns::LastPrice] = { UiUtils::displayPriceForAssetType(field.value, at), UiUtils::truncatePriceForAsset(field.value, at) };
          break;
       case bs::network::MDField::DailyVolume:
          map[MarketDataModel::MarketDataColumns::DailyVol] = { getVolumeString(field.value, at), field.value };

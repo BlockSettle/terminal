@@ -74,8 +74,6 @@ void TerminalEncryptionDialog::setType(TerminalEncryptionDialogType type) {
       setPasswordConfirmVisible(false);
       setWindowTitle(tr("Terminal"));
       break;
-   default:
-      break;
    }
 }
 

@@ -105,8 +105,9 @@ private:
    using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
    QMap<QString, MessagesHistory> messages_;
    MessagesHistory messagesToLoadMore_;
-   QString   currentChatId_;
-   QString   ownUserId_;
+   QString currentChatId_;
+   QString ownUserId_;
+   QString username_;
    std::shared_ptr<ChatItemActionsHandler> handler_;
    std::shared_ptr<ChatMessageReadHandler> messageReadHandler_;
    std::shared_ptr<ChatClient> client_;
@@ -118,6 +119,7 @@ private:
    void insertLoadMore();
    void loadMore();
    void setupHighlightPalette();
+   void initUserContextMenu();
    QString toHtmlText(const QString &text);
    QString toHtmlUsername(const QString &username, const QString &userId = QString());
    QString toHtmlInvalid(const QString &text);
@@ -127,8 +129,8 @@ private:
    ChatMessagesTextEditStyle internalStyle_;
 
    QMenu *userMenu_;
-   QAction *userContactAction_;
-   QString username_;
+   QAction *userAddContactAction_;
+   QAction *userRemoveContactAction_;
    bool isGroupRoom_;
 
    QImage statusImageOffline_;

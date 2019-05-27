@@ -4,6 +4,8 @@
 #include <QTimer>
 #include <QDialog>
 #include <memory>
+#include <QNetworkReply>
+#include "AutheIDClient.h"
 
 class AutheIDClient;
 
@@ -44,7 +46,7 @@ private slots:
    void onAuthStatusUpdated(const QString &userId, const QString &status);
 
    void onAutheIDDone(const std::string& email);
-   void onAutheIDFailed(const QString &text);
+   void onAutheIDFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError);
    void onTimer();
 
    void setupLoginPage();

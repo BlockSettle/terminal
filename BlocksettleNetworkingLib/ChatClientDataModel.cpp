@@ -512,20 +512,46 @@ void ChatClientDataModel::updateNewMessagesFlag()
 {
    bool flag = false;
    CategoryElement *elem = NULL;
+   std::map<QString, std::shared_ptr<Chat::MessageData>> newMessages;
+
    for (auto category : root_->getChildren()) {
       for ( auto categoryElement : category->getChildren()) {
          if (categoryElement->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)) {
             elem = static_cast<CategoryElement*>(categoryElement);
             if (elem->updateNewItemsFlag()) {
                flag = true;
+
+               bool displayTrayNotification = true;
+               auto roomItem = findChatNode(lastMessage_->receiverId().toStdString());
+         
+               // get display tray notification flag for room
+               if (roomItem && roomItem->getType() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
+                  auto roomElement = dynamic_cast<const ChatRoomElement*>(roomItem);
+                  if (roomElement) {
+                     auto roomData = roomElement->getRoomData();
+                     if (roomData) {
+                        displayTrayNotification = roomData->displayTrayNotification();
+                     }
+                  }
+               }
+
+               if (displayTrayNotification) {
+                  // get contact name if exist
+                  QString contactName;
+                  auto contactItem = findContactItem(lastMessage_->senderId().toStdString());
+                  if (contactItem && contactItem->hasDisplayName()) {
+                     contactName = contactItem->getDisplayName();
+                  }
+                  newMessages.emplace(contactName, lastMessage_);
+               }
             }
-         }
+         }        
       }
    }
    newMesagesFlag_ = flag;
 
    if (newMessageMonitor_) {
-      newMessageMonitor_->onNewMessagePresent(newMesagesFlag_, lastMessage_);
+      newMessageMonitor_->onNewMessagesPresent(newMessages);
    }
 }
 

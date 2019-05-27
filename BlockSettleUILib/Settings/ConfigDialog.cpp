@@ -11,6 +11,24 @@
 #include <QPushButton>
 
 
+SettingsPage::SettingsPage(QWidget *parent)
+   : QWidget(parent)
+{
+}
+
+void SettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
+   , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+   , const std::shared_ptr<SignersProvider> &signersProvider
+   , std::shared_ptr<SignContainer> signContainer) {
+   appSettings_ = appSettings;
+   armoryServersProvider_ = armoryServersProvider;
+   signersProvider_ = signersProvider;
+   signContainer_ = signContainer;
+   initSettings();
+   display();
+}
+
+
 ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
       , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
       , const std::shared_ptr<SignersProvider> &signersProvider
@@ -50,7 +68,7 @@ ConfigDialog::ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettin
       emit reconnectArmory();
    });
 
-   // armory servers should we saved even if whole ConfigDialog rejected
+   // armory servers should be saved even if whole ConfigDialog rejected
    // we overwriting prevState_ with new vales once ArmoryServersWidget closed
    connect(ui_->pageNetwork, &NetworkSettingsPage::armoryServerChanged, this, [this](){
       for (ApplicationSettings::Setting s : {
