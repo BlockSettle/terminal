@@ -75,6 +75,7 @@ namespace UiUtils
    QString displayValue(double qty, const std::string &security, const std::string &product, bs::network::Asset::Type);
 
    QString displayPriceForAssetType(double price, bs::network::Asset::Type at);
+   double  truncatePriceForAsset(double price, bs::network::Asset::Type at);
 
    QString displayPriceFX(double price);
    QString displayPriceXBT(double price);

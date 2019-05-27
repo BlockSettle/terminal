@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
 
 #include <functional>
 
@@ -54,6 +55,25 @@ public:
    };
    Q_ENUM(RequestType)
 
+   enum ErrorType
+   {
+      NoError,
+      CreateError,
+      DecodeError,
+      DecryptError,
+      InvalidSecureReplyError,
+      InvalidKeySizeError,
+      MissingSignatuteError,
+      SerializationSignatureError,
+      ParseSignatureError,
+      Timeout,
+      Cancelled,
+      NotAuthenticated,
+      ServerError
+   };
+   Q_ENUM(ErrorType)
+   static QString errorString(ErrorType error);
+
    static DeviceInfo getDeviceInfo(const std::string &encKey);
 
    // ConnectionManager must live long enough to be able send cancel message
@@ -73,15 +93,16 @@ signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
    void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
    void authSuccess(const std::string &jwt);
-   void failed(const QString &text);
+   void failed(QNetworkReply::NetworkError networkError, ErrorType error);
    void userCancelled();
 
 private:
    struct Result
    {
       QByteArray payload;
-      std::string errorMsg;
-      bool success{false};
+      ErrorType authError;
+      QNetworkReply::NetworkError networkError;
+      //std::string errorMsg;
    };
 
    using ResultCallback = std::function<void(const Result &result)>;

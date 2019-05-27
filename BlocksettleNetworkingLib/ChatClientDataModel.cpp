@@ -8,20 +8,25 @@ ChatClientDataModel::ChatClientDataModel(QObject * parent)
     , modelChangesHandler_(nullptr)
 {
    connect(root_.get(), &TreeItem::itemChanged, this, &ChatClientDataModel::onItemChanged);
+}
 
+void ChatClientDataModel::initTreeCategoryGroup()
+{
+   beginResetModel();
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::RoomsElement, tr("Chat rooms")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, tr("Contacts")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::AllUsersElement, tr("Users")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement, tr("Received Responses")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement, tr("Sent Responses")));
    //root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::SearchElement, tr("Search")));
-
+   endResetModel();
 }
 
 void ChatClientDataModel::clearModel()
 {
    beginResetModel();
-   root_->clear();
+   //root_->clear();
+   root_->deleteChildren();
    endResetModel();
 }
 

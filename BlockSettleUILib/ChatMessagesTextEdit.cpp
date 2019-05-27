@@ -119,7 +119,7 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
          } else if ( message->encryptionType() == Chat::MessageData::EncryptionType::AEAD) {
             return toHtmlInvalid(text.arg(QLatin1String("AEAD ENCRYPTED!")));
          }
-         return toHtmlText(text.arg(messages_[currentChatId_][row]->messageData()));
+         return toHtmlText(messages_[currentChatId_][row]->messageData());
       }
       default:
          break;

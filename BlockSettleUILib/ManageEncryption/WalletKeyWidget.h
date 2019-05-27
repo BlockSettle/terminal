@@ -67,7 +67,7 @@ private slots:
    void onAuthIdChanged(const QString &);
    void onAuthSignClicked();
    void onAuthSucceeded(const std::string &deviceId, const SecureBinaryData &password);
-   void onAuthFailed(const QString &text);
+   void onAuthFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError);
    void onAuthStatusUpdated(const QString &status);
    void onTimer();
 

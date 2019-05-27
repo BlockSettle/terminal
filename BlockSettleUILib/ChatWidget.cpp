@@ -9,6 +9,7 @@
 #include "OTCRequestViewModel.h"
 #include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "ChatTreeModelWrapper.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -94,9 +95,8 @@ public:
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
-
-      // hide tab icon for unread messages
-      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
+      
+      NotificationCenter::notify(bs::ui::NotifyType::LogOut, {});
    }
 
    std::string login(const std::string& email, const std::string& jwt
@@ -279,7 +279,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
    auto model = client_->getDataModel();
    model->setNewMessageMonitor(this);
-   ui_->treeViewUsers->setModel(model.get());
+   auto proxyModel = client_->getProxyModel();
+   ui_->treeViewUsers->setModel(proxyModel.get());
+   connect(proxyModel.get(), &ChatTreeModelWrapper::treeUpdated,
+           ui_->treeViewUsers, &QTreeView::expandAll);
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
@@ -287,6 +290,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    ui_->textEditMessages->setHandler(client_);
    ui_->textEditMessages->setMessageReadHandler(client_);
    ui_->textEditMessages->setClient(client_);
+   ui_->input_textEdit->setAcceptRichText(false);
 
    ui_->treeViewUsers->setActiveChatLabel(ui_->labelActiveChat);
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
