@@ -1235,10 +1235,6 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
       logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
    }
-
-   if (!mdProvider_->IsConnectionActive() && isMDLicenseAccepted()) {
-      mdProvider_->SubscribeToMD();
-   }
 }
 
 void BSTerminalMainWindow::createAuthWallet()
