@@ -72,8 +72,9 @@ bool ProcessControl::run(const std::string &program, const std::vector<std::stri
       for (const auto &arg : args) {
          argvList[argvIdx++] = strdup(arg.c_str());
       }
-      argvList[argvIdx] = NULL;
-      execv(program.c_str(), argvList);
+      argvList[argvIdx] = nullptr;
+      // Use execvp to be able search for the binary in PATH if abs path is not known
+      execvp(program.c_str(), argvList);
    }
 #endif   //WIN32
    return true;
