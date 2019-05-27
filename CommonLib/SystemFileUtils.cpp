@@ -215,7 +215,7 @@ void SystemFilePaths::setArgV0(const char *arg)
 {
    g_appDir = arg;
 #ifdef WIN32
-   std::replace(appDir.begin(), appDir.end(), '\\', '/');
+   std::replace(g_appDir.begin(), g_appDir.end(), '\\', '/');
 #endif
    const auto sepPos = g_appDir.find_last_of('/');
    if (sepPos != std::string::npos) {
