@@ -139,10 +139,13 @@ void CelerClient::loginSuccessCallback(const std::string& userName, const std::s
 
          if (bp && bd) {
             userType_ = tr("Dealing Participant");
+            celerUserType_ = CelerUserType::Dealing;
          } else if (bp && !bd) {
             userType_ = tr("Trading Participant");
+            celerUserType_ = CelerUserType::Trading;
          } else {
             userType_ = tr("Market Participant");
+            celerUserType_ = CelerUserType::Market;
          }
 
          emit OnConnectedToServer();
@@ -475,6 +478,11 @@ std::string CelerClient::userId() const
 const QString& CelerClient::userType() const
 {
    return userType_;
+}
+
+CelerClient::CelerUserType CelerClient::celerUserType() const
+{
+   return celerUserType_;
 }
 
 std::unordered_set<std::string> CelerClient::GetSubmittedAuthAddressSet() const

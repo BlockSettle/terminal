@@ -10,6 +10,7 @@
 #include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatTreeModelWrapper.h"
+#include "CelerClient.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -34,7 +35,8 @@ enum class OTCPages : int
    OTCPullOwnOTCRequestPage,
    OTCCreateResponsePage,
    OTCNegotiateRequestPage,
-   OTCNegotiateResponsePage
+   OTCNegotiateResponsePage,
+   OTCParticipantShieldPage
 };
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
@@ -490,6 +492,11 @@ void ChatWidget::switchToChat(const QString& chatId)
    onUserClicked(chatId);
 }
 
+void ChatWidget::setCelerClient(std::shared_ptr<CelerClient> celerClient)
+{
+   celerClient_ = celerClient;
+}
+
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
@@ -693,8 +700,15 @@ void ChatWidget::OTCSwitchToCommonRoom()
 {
    const auto currentSeletion = ui_->treeViewOTCRequests->selectionModel()->selection();
    if (currentSeletion.indexes().isEmpty()) {
-      DisplayCorrespondingOTCRequestWidget();
-   } else {
+      // OTC available only for trading and dealing participants
+      if (celerClient_ && (celerClient_->celerUserType() == CelerClient::CelerUserType::Dealing || celerClient_->celerUserType() == CelerClient::CelerUserType::Trading)) {
+         DisplayCorrespondingOTCRequestWidget();
+      }
+      else {
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCParticipantShieldPage));
+      }
+   } 
+   else {
       ui_->treeViewOTCRequests->selectionModel()->clearSelection();
    }
 }
