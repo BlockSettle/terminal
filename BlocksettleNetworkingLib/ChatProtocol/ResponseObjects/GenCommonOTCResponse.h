@@ -19,6 +19,8 @@ namespace Chat {
       OTCRequestResult getResult() const;
       QString getMessage() const;
 
+      void setMessage(const QString &message);
+
    private:
       std::shared_ptr<OTCRequestData> otcRequestData_;
       OTCRequestResult result_;

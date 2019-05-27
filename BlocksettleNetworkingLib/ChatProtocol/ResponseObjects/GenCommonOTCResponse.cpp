@@ -55,3 +55,8 @@ QString GenCommonOTCResponse::getMessage() const
 {
    return message_;
 }
+
+void GenCommonOTCResponse::setMessage(const QString &message)
+{
+   message_ = message;
+}
