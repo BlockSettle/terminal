@@ -27,6 +27,7 @@ public:
    ChatClientDataModel(QObject * parent = nullptr);
 
 public:
+   void initTreeCategoryGroup();
    void clearModel();
    void clearSearch();
    bool insertRoomObject(std::shared_ptr<Chat::RoomData> data);
@@ -57,7 +58,7 @@ public:
 
    // QAbstractItemModel interface
 public:
-   QModelIndex index(int row, int column, const QModelIndex &parent) const override;
+   QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
    QModelIndex parent(const QModelIndex &child) const override;
    int rowCount(const QModelIndex &parent) const override;
    int columnCount(const QModelIndex &) const override;

@@ -116,7 +116,7 @@ private:
    void processTxData(Tx tx);
 
    void addItem(QTreeWidget *tree, const QString &address, const uint64_t amount
-      , const QString &wallet, const BinaryData &txHash);
+      , const QString &wallet, const BinaryData &txHash, const int txIndex = -1);
 
    static void updateTreeCC(QTreeWidget *, const bs::network::CCSecurityDef &);
 

@@ -14,6 +14,7 @@
 #include "UserHasher.h"
 #include "ChatClientDataModel.h"
 #include "UserSearchModel.h"
+#include "ChatTreeModelWrapper.h"
 #include <QRegularExpression>
 
 #include "Encryption/AEAD_Encryption.h"
@@ -123,6 +124,8 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    model_ = std::make_shared<ChatClientDataModel>();
    userSearchModel_ = std::make_shared<UserSearchModel>();
    model_->setModelChangesHandler(this);
+   proxyModel_ = std::make_shared<ChatTreeModelWrapper>();
+   proxyModel_->setSourceModel(model_.get());
 
    heartbeatTimer_.setInterval(30 * 1000);
    heartbeatTimer_.setSingleShot(false);
@@ -143,6 +146,11 @@ std::shared_ptr<ChatClientDataModel> ChatClient::getDataModel()
 std::shared_ptr<UserSearchModel> ChatClient::getUserSearchModel()
 {
    return userSearchModel_;
+}
+
+std::shared_ptr<ChatTreeModelWrapper> ChatClient::getProxyModel()
+{
+   return proxyModel_;
 }
 
 std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt
@@ -175,6 +183,7 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
 {
    if (response.getStatus() == Chat::LoginResponse::Status::LoginOk) {
       loggedIn_ = true;
+      model_->initTreeCategoryGroup();
       emit ConnectedToServer();
       model_->setCurrentUser(currentUserId_);
       readDatabase();

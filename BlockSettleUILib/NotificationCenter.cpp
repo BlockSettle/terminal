@@ -221,6 +221,13 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
       text = tr("%1 would like to add you as a contact").arg(msg[0].toString());
       break;
 
+   case bs::ui::NotifyType::LogOut:
+      // hide icons in all tabs on user logout
+      for (int i=0; i<mainWinUi_->tabWidget->count(); i++) {
+         mainWinUi_->tabWidget->setTabIcon(i, QIcon());
+      }
+      return;
+
    default: return;
    }
 

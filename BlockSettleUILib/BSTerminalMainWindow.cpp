@@ -721,7 +721,7 @@ void BSTerminalMainWindow::InitChartsView()
 // Initialize widgets related to transactions.
 void BSTerminalMainWindow::InitTransactionsView()
 {
-   ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_);
+   ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_, authManager_);
    ui_->widgetTransactions->init(walletsMgr_, armory_, signContainer_,
                                 logMgr_->logger("ui"));
    ui_->widgetTransactions->setEnabled(true);
@@ -1111,6 +1111,8 @@ void BSTerminalMainWindow::onLogin()
 
 void BSTerminalMainWindow::onReadyToLogin()
 {
+   authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
+
    LoginWindow loginDialog(logMgr_->logger("autheID"), applicationSettings_, connectionManager_, this);
 
    if (loginDialog.exec() == QDialog::Accepted) {
@@ -1174,7 +1176,6 @@ void BSTerminalMainWindow::onUserLoggedIn()
       }
    }
 
-   authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
    ccFileManager_->ConnectToCelerClient(celerConnection_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
@@ -1233,10 +1234,6 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
    case CelerClient::LoginError:
       logMgr_->logger("ui")->debug("[BSTerminalMainWindow::onCelerConnectionError] login failed. Probably user do not have BS matching account");
       break;
-   }
-
-   if (!mdProvider_->IsConnectionActive()) {
-      mdProvider_->SubscribeToMD();
    }
 }
 

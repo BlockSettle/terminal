@@ -30,6 +30,7 @@ class ConnectionManager;
 class UserHasher;
 class ZmqBIP15XDataConnection;
 class UserSearchModel;
+class ChatTreeModelWrapper;
 
 class ChatClient : public QObject
              , public DataConnectionListener
@@ -54,6 +55,7 @@ public:
 
    std::shared_ptr<ChatClientDataModel> getDataModel();
    std::shared_ptr<UserSearchModel> getUserSearchModel();
+   std::shared_ptr<ChatTreeModelWrapper> getProxyModel();
 
    std::string loginToServer(const std::string& email, const std::string& jwt
       , const ZmqBIP15XDataConnection::cbNewKey &);
@@ -262,6 +264,7 @@ private:
    autheid::PrivateKey  ownPrivKey_;
    std::shared_ptr<ChatClientDataModel> model_;
    std::shared_ptr<UserSearchModel> userSearchModel_;
+   std::shared_ptr<ChatTreeModelWrapper> proxyModel_;
 
    // ChatItemActionsHandler interface
 public:

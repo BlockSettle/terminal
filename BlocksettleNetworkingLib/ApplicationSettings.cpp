@@ -26,7 +26,12 @@ static const QString bitcoinDirName = QLatin1String(".bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("/usr/bin/ArmoryDB");
 #endif
 
+#ifdef __linux__
+// Needed for consistency (headless now uses company name in lowercase on Linux)
+static const QString SettingsCompanyName = QLatin1String("blocksettle");
+#else
 static const QString SettingsCompanyName = QLatin1String("BlockSettle");
+#endif
 
 static const QString LogFileName = QLatin1String("bs_terminal.log");
 static const QString LogMsgFileName = QLatin1String("bs_terminal_messages.log");
