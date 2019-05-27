@@ -1236,7 +1236,7 @@ void BSTerminalMainWindow::onCelerConnectionError(int errorCode)
       break;
    }
 
-   if (!mdProvider_->IsConnectionActive()) {
+   if (!mdProvider_->IsConnectionActive() && isMDLicenseAccepted()) {
       mdProvider_->SubscribeToMD();
    }
 }
