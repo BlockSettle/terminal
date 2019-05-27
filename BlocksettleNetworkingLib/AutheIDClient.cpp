@@ -14,7 +14,8 @@ using namespace autheid;
 
 namespace
 {
-   const int kNetworkTimeoutSeconds = 10;
+const int kNetworkTimeoutSeconds = 10;
+const int kReplyTimeoutSeconds = 3;
 
    const int kKeySize = 32;
 
@@ -373,9 +374,10 @@ void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds
       }
    });
 
-   QTimer::singleShot(timeoutSeconds * 1000 + 3000, reply, [reply] {
-      // This would call finished slot and that would call callback if that is still needed
-      // Normally it's not called since timeout triggered by server response
+   // This would call finished slot and that would call callback if that is still needed
+   // Normally singleshot is not called since timeout triggered by server response
+   // Extra 3 seconds added to singleshot timer to be sure that the timeout server response will be received
+   QTimer::singleShot(timeoutSeconds * 1000 + kReplyTimeoutSeconds * 1000, reply, [reply] {
       reply->abort();
    });
 
