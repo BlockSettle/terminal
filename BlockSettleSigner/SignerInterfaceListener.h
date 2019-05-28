@@ -38,7 +38,7 @@ public:
    void setTxSignCb(bs::signer::RequestId reqId, const std::function<void(const BinaryData &)> &cb) {
       cbSignReqs_[reqId] = cb;
    }
-   void setWalleteInfoCb(bs::signer::RequestId reqId
+   void setWalletInfoCb(bs::signer::RequestId reqId
       , const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb) {
       cbWalletInfo_[reqId] = cb;
    }
@@ -89,6 +89,9 @@ private:
    void onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    void onHeadlessPubKey(const std::string &data, bs::signer::RequestId);
+   void onUpdateStatus(const std::string &data);
+
+   void shutdown();
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

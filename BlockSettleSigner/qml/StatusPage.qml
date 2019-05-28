@@ -84,7 +84,7 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 40
+                    Layout.preferredHeight: 25
 
                     CustomLabel {
                         Layout.fillWidth: true

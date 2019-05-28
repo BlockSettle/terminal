@@ -57,6 +57,7 @@ signals:
 private slots:
    void onReady();
    void onConnectionError();
+   void onHeadlessBindFailed();
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
@@ -67,6 +68,7 @@ private slots:
    void onOfflineChanged();
    void onListenSocketChanged();
    void onLimitsChanged();
+   void onSettingChanged(int);
    void onSysTrayMsgClicked();
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
    void onCancelSignTx(const BinaryData &txId);

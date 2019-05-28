@@ -38,6 +38,7 @@ WalletInfo *QmlFactory::createWalletInfo() const{
 WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) const
 {
    if (!walletsMgr_) {
+      logger_->error("[{}] wallets manager is missing", __func__);
       return nullptr;
    }
    // ? move logic to WalletsManager ?
@@ -51,7 +52,7 @@ WalletInfo *QmlFactory::createWalletInfo(const QString &walletId) const
    else {
       const auto &hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
       if (!hdWallet) {
-         // wallet not found
+         logger_->warn("[{}] wallet with id {} not found", __func__, walletId.toStdString());
          wi = new bs::hd::WalletInfo();
       }
       else {

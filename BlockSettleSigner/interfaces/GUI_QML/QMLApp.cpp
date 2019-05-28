@@ -31,6 +31,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "bs_signer.pb.h"
+
 #ifdef BS_USE_DBUS
 #include "DBusNotification.h"
 #endif // BS_USE_DBUS
@@ -56,6 +58,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
    connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
+   connect(adapter_, &SignerAdapter::headlessBindFailed, this, &QMLAppObj::onHeadlessBindFailed);
    connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
@@ -127,7 +130,14 @@ void QMLAppObj::onReady()
 void QMLAppObj::onConnectionError()
 {
    QMetaObject::invokeMethod(rootObj_, "showError"
-      , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
+                             , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
+}
+
+void QMLAppObj::onHeadlessBindFailed()
+{
+   QMetaObject::invokeMethod(rootObj_, "showError"
+                             , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
+   statusUpdater_->setSocketOk(false);
 }
 
 void QMLAppObj::onWalletsSynced()
@@ -148,6 +158,7 @@ void QMLAppObj::settingsConnections()
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
+   connect(settings_.get(), &SignerSettings::changed, this, &QMLAppObj::onSettingChanged);
 }
 
 void QMLAppObj::Start()
@@ -208,6 +219,11 @@ void QMLAppObj::onListenSocketChanged()
 void QMLAppObj::onLimitsChanged()
 {
    adapter_->setLimits(settings_->limits());
+}
+
+void QMLAppObj::onSettingChanged(int)
+{
+   adapter_->syncSettings(settings_->get());
 }
 
 void QMLAppObj::SetRootObject(QObject *obj)

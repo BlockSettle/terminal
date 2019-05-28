@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
+import QtQuick.Dialogs 1.2
 
 import com.blocksettle.PasswordConfirmValidator 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
@@ -36,41 +37,7 @@ CustomDialog {
         Layout.margins: 1
 
         CustomHeader {
-            text: qsTr("Add Terminal Public Key")
-            Layout.fillWidth: true
-            Layout.preferredHeight: 25
-            Layout.topMargin: 5
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.margins: 10
-
-            CustomTextInput {
-                id: inputName
-                Layout.preferredWidth: 150
-                placeholderText: qsTr("Name")
-            }
-            CustomTextInput {
-                id: inputKey
-                placeholderText: qsTr("Key")
-            }
-
-            CustomButton {
-                id: btnAddTerminal
-                text: qsTr("Add")
-                enabled: inputName.text.length > 0 && inputKey.text.length > 0
-                Layout.preferredHeight: inputName.implicitHeight
-                onClicked: {
-                    signerSettings.trustedTerminals.unshift(inputName.text + ":" + inputKey.text)
-                }
-            }
-        }
-
-        CustomHeader {
-            text: qsTr("Trusted Terminals")
+            text: qsTr("Terminal ID Keys")
             Layout.fillWidth: true
             Layout.preferredHeight: 25
             Layout.topMargin: 5
@@ -122,11 +89,78 @@ CustomDialog {
                     Layout.preferredHeight: 18
 
                     onClicked: {
-                        var dlg = JsHelper.messageBox(BSMessageBox.Type.Question, "Manage Terminals", "Remove terminal?")
+                        var dlg = JsHelper.messageBox(BSMessageBox.Type.Question, "Manage Terminal ID Keys", "Delete Terminal ID Key?")
                         dlg.bsAccepted.connect(function(){
                             signerSettings.trustedTerminals.splice(index, 1)
                         })
                     }
+                }
+            }
+        }
+
+
+        CustomHeader {
+            text: qsTr("Add Terminal ID Key")
+            Layout.fillWidth: true
+            Layout.preferredHeight: 25
+            Layout.topMargin: 5
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+        }
+
+        ColumnLayout {
+            Layout.margins: 10
+            Layout.fillWidth: true
+
+            CustomTextInput {
+                id: inputName
+                Layout.preferredWidth: 250
+                placeholderText: qsTr("Name")
+            }
+            RowLayout {
+                spacing: 6
+                CustomTextInput {
+                    id: inputKey
+                    Layout.preferredWidth: 250
+                    placeholderText: qsTr("Key")
+                }
+
+                CustomButton {
+                    id: btnImportKey
+                    Layout.preferredWidth: 150
+                    text: qsTr("Import")
+                    Layout.preferredHeight: inputName.implicitHeight
+                    onClicked: {
+                        importKeyDialog.open()
+                        importKeyDialog.accepted.connect(function(){
+                            var key = JsHelper.openTextFile(importKeyDialog.currentFile)
+                            inputKey.text = key
+                        })
+                    }
+
+                    FileDialog {
+                        id: importKeyDialog
+                        visible: false
+                        title: "Import Terminal ID Key"
+                        selectFolder: false
+                        selectExisting: true
+                        nameFilters: [ "Key files (*.pub)", "All files (*)" ]
+                        selectedNameFilter: "*.pub"
+                        folder: shortcuts.documents
+                    }
+                }
+            }
+
+
+
+            CustomButton {
+                id: btnAddTerminal
+                Layout.preferredWidth: 250
+                text: qsTr("Add")
+                enabled: inputName.text.length > 0 && inputKey.text.length > 0
+                Layout.preferredHeight: inputName.implicitHeight
+                onClicked: {
+                    signerSettings.trustedTerminals.unshift(inputName.text + ":" + inputKey.text)
                 }
             }
         }

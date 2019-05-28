@@ -20,7 +20,7 @@ CustomTitleDialogWindow {
     property string backupFileExt: "." + (isPrintable ? "pdf" : "wdb")
     property string backupFileName: fullBackupMode
                                     ? "backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + backupFileExt
-                                    : "wo_backup_wallet_" + walletInfo.name + "_" + walletInfo.walletId + ".lmdb"
+                                    : "bip44wo_" + walletInfo.walletId + "_wallet.lmdb"
     property bool   isPrintable: false
     property bool   acceptable: (walletInfo.encType === QPasswordData.Unencrypted)
                                     || walletInfo.encType === QPasswordData.Auth
@@ -193,49 +193,55 @@ CustomTitleDialogWindow {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: {
+                    var exportCallback = function(success, errorMsg) {
+                        if (success) {
+                            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
+                                , qsTr("Wallet Export")
+                                , qsTr("%1Wallet successfully exported")
+                                    .arg(fullBackupMode ? "" : "Watching-Only ")
+                                , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
+                                    .arg(walletInfo.name)
+                                    .arg(walletInfo.walletId)
+                                    .arg(targetDir + "/" + backupFileName))
+                            mb.bsAccepted.connect(function(){ acceptAnimated() })
+                        } else {
+                            JsHelper.messageBox(BSMessageBox.Type.Critical
+                                , qsTr("Error")
+                                , qsTr("%1Wallet export failed")
+                                    .arg(fullBackupMode ? "" : "Watching-Only ")
+                                , errorMsg)
+                        }
+                    }
+
                     if (walletInfo.encType === QPasswordData.Password) {
                         var passwordData = qmlFactory.createPasswordData()
                         passwordData.textPassword = walletDetailsFrame.password
 
                         if (fullBackupMode) {
-                            if (walletsProxy.backupPrivateKey(walletInfo.walletId
-                                                              , targetDir + "/" + backupFileName
-                                                              , isPrintable
-                                                              , passwordData)) {
-                                var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                                             , qsTr("Wallet")
-                                                             , qsTr("Wallet backup was successful.")
-                                                             , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
-                                                             .arg(walletInfo.name)
-                                                             .arg(walletInfo.walletId)
-                                                             .arg(targetDir))
-
-                                mb.bsAccepted.connect(function(){ acceptAnimated() })
-                            }
+                            walletsProxy.backupPrivateKey(walletInfo.walletId
+                               , targetDir + "/" + backupFileName, isPrintable
+                               , passwordData, exportCallback)
+                        }
+                        else {
+                            walletsProxy.exportWatchingOnly(walletInfo.walletId
+                               , targetDir + "/" + backupFileName, passwordData
+                               , exportCallback)
                         }
                     }
                     else {
-                        JsHelper.requesteIdAuth(AutheIDClient.BackupWallet
-                                                , walletInfo
-                                                , function(passwordData){
-                                                    if (fullBackupMode) {
-                                                        if (walletsProxy.backupPrivateKey(walletInfo.walletId
-                                                                                          , targetDir + "/" + backupFileName
-                                                                                          , isPrintable
-                                                                                          , passwordData)) {
-                                                            var mb = JsHelper.messageBox(BSMessageBox.Type.Success
-                                                                                         , qsTr("Wallet")
-                                                                                         , qsTr("Wallet backup was successful.")
-                                                                                         , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'")
-                                                                                         .arg(walletInfo.name)
-                                                                                         .arg(walletInfo.walletId)
-                                                                                         .arg(targetDir))
-
-                                                            mb.bsAccepted.connect(function(){ acceptAnimated() })
-                                                        }
-
-                                                    }
-                                                }) // function(passwordData)
+                        JsHelper.requesteIdAuth(AutheIDClient.BackupWallet, walletInfo
+                            , function(passwordData){
+                                if (fullBackupMode) {
+                                    walletsProxy.backupPrivateKey(walletInfo.walletId
+                                       , targetDir + "/" + backupFileName, isPrintable
+                                       , passwordData, exportCallback)
+                                }
+                                else {
+                                    walletsProxy.exportWatchingOnly(walletInfo.walletId
+                                       , targetDir + "/" + backupFileName, passwordData
+                                       , exportCallback)
+                                }
+                        })
                     }
                 }
             }

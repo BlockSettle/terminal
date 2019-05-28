@@ -99,7 +99,11 @@ void QMLStatusUpdater::onPeerConnected(const QString &ip)
 void QMLStatusUpdater::onPeerDisconnected(const QString &ip)
 {
    logger_->debug("[{}] {}", __func__, ip.toStdString());
-   connectedClients_.erase(ip);
+   auto it = connectedClients_.find(ip);
+   if (it == connectedClients_.end()) {
+      return;
+   }
+   connectedClients_.erase(it);
    emit connectionsChanged();
 }
 

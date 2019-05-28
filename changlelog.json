@@ -1,7 +1,137 @@
 {
-   "latest_version" : "0.15.5",
-   "release_date" : "09 May 2019",
+   "latest_version" : "0.15.13",
+   "release_date" : "24 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.13",
+         "previous_version" : "0.15.12",
+         "release_date" : "24 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Explorer fixes",
+            "Various signer and chat fixes",
+            "UI fixes and updates"
+         ],
+         "revision" : "20be5aef",
+         "common_revision" : "b9a281b7"
+      },
+      {
+         "version_string" : "0.15.12",
+         "previous_version" : "0.15.11",
+         "release_date" : "23 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+            "Chat updates",
+            "In memory TX cache"
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes",
+            "Cancel RFQ"
+         ],
+         "revision" : "afce6aaf",
+         "common_revision" : "0264818a"
+      },
+      {
+         "version_string" : "0.15.11",
+         "previous_version" : "0.15.10",
+         "release_date" : "22 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+            "Chat updates"
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes"
+         ],
+         "revision" : "fbc1bc46",
+         "common_revision" : "da9134ae"
+      },
+      {
+         "version_string" : "0.15.10",
+         "previous_version" : "0.15.9",
+         "release_date" : "20 May 2019",
+         "release_type" : "prod",
+         "improvements" :
+         [
+            "Initial OTC UI test flow"
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes"
+         ],
+         "revision" : "b903edba",
+         "common_revision" : "42c21fbc"
+      },
+      {
+         "version_string" : "0.15.9",
+         "previous_version" : "0.15.8",
+         "release_date" : "17 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes",
+            "Wallet import fixes ( 1863 )"
+         ],
+         "revision" : "ff6428be",
+         "common_revision" : "22695e0a"
+      },
+      {
+         "version_string" : "0.15.8",
+         "previous_version" : "0.15.7",
+         "release_date" : "17 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes",
+            "Save settings for chart view",
+            "Wallet import fixes ( 1862 )"
+         ],
+         "revision" : "27ac2b43",
+         "common_revision" : "a8dd50c3"
+      },
+      {
+         "version_string" : "0.15.7",
+         "previous_version" : "0.15.6",
+         "release_date" : "14 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes"
+         ],
+         "revision" : "78bc563a",
+         "common_revision" : "8a16bec7"
+      },
+      {
+         "version_string" : "0.15.6",
+         "previous_version" : "0.15.5",
+         "release_date" : "13 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+         ],
+         "bug_fixes" :
+         [
+            "Various signer and chat fixes"
+         ],
+         "revision" : "4000352b",
+         "common_revision" : "2a0f4803"
+      },
       {
          "version_string" : "0.15.5",
          "previous_version" : "0.15.4",

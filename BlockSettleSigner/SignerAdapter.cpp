@@ -48,14 +48,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
 
    adapterConn->setLocalHeartbeatInterval();
 
-   {
-      const std::string pubKeyFileName = SystemFilePaths::appDataLocation() + "/interface.pub";
-      QFile pubKeyFile(QString::fromStdString(pubKeyFileName));
-      if (!pubKeyFile.open(QIODevice::WriteOnly)) {
-         throw std::runtime_error("failed to create public key file " + pubKeyFileName);
-      }
-      pubKeyFile.write(QByteArray::fromStdString(adapterConn->getOwnPubKey().toHexStr()));
-   }
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
    if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
       , listener_.get())) {
@@ -150,6 +142,11 @@ void SignerAdapter::setLimits(bs::signer::Limits limits)
    listener_->send(signer::SetLimitsType, request.SerializeAsString());
 }
 
+void SignerAdapter::syncSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
+{
+   listener_->send(signer::SyncSettingsRequestType, settings->SerializeAsString());
+}
+
 void SignerAdapter::passwordReceived(const std::string &walletId
    , const SecureBinaryData &password, bool cancelledByUser)
 {
@@ -162,7 +159,7 @@ void SignerAdapter::passwordReceived(const std::string &walletId
 
 void SignerAdapter::createWallet(const std::string &name, const std::string &desc
    , bs::core::wallet::Seed seed, bool primary, const std::vector<bs::wallet::PasswordData> &pwdData
-   , bs::wallet::KeyRank keyRank, const std::function<void(bool, const std::string&)> &cb)
+   , bs::wallet::KeyRank keyRank, const ResultCb &cb)
 {
    headless::CreateHDWalletRequest request;
 
@@ -193,6 +190,15 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
    }
    const auto reqId = listener_->send(signer::CreateHDWalletType, request.SerializeAsString());
    listener_->setCreateHDWalletCb(reqId, cb);
+}
+
+void SignerAdapter::importWoWallet(const std::string &filename, const BinaryData &content, const CreateWoCb &cb)
+{
+   signer::ImportWoWalletRequest request;
+   request.set_filename(filename);
+   request.set_content(content.toBinStr());
+   const auto reqId = listener_->send(signer::ImportWoWalletType, request.SerializeAsString());
+   listener_->setWatchOnlyCb(reqId, cb);
 }
 
 void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::function<void (bool, const std::string &)> &cb)
