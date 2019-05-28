@@ -21,7 +21,9 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    // Set up the explorer expiration timer.
    expTimer_->setInterval(EXP_TIMEOUT);
    expTimer_->setSingleShot(true);
-   expTimer_->callOnTimeout(this, &ExplorerWidget::onExpTimeout);
+   connect(expTimer_.get(), &QTimer::timeout, this, &ExplorerWidget::onExpTimeout);
+   connect(ui_->Transaction, &TransactionDetailsWidget::finished, expTimer_.get(), &QTimer::stop);
+   connect(ui_->Address, &AddressDetailsWidget::finished, expTimer_.get(), &QTimer::stop);
 
    // connection to handle enter key being pressed inside the search box
    connect(ui_->searchBox, &QLineEdit::returnPressed,
@@ -30,8 +32,10 @@ ExplorerWidget::ExplorerWidget(QWidget *parent) :
    connect(ui_->Address, &AddressDetailsWidget::transactionClicked,
            this, &ExplorerWidget::onTransactionClicked);
    // connection to handle user clicking on adress id inside tx details page
-   connect(ui_->Transaction, &TransactionDetailsWidget::addressClicked,
-           this, &ExplorerWidget::onAddressClicked);
+   connect(ui_->Transaction, &TransactionDetailsWidget::addressClicked
+      , this, &ExplorerWidget::onAddressClicked);
+   connect(ui_->Transaction, &TransactionDetailsWidget::txHashClicked
+      , this, &ExplorerWidget::onTransactionClicked);
    connect(ui_->btnSearch, &QPushButton::clicked,
            this, [this](){ onSearchStarted(true); });
    connect(ui_->btnReset, &QPushButton::clicked,
@@ -46,13 +50,15 @@ ExplorerWidget::~ExplorerWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx). Blocks won't
 // be set up for now.
-void ExplorerWidget::init(const std::shared_ptr<ArmoryObject> &armory,
-                          const std::shared_ptr<spdlog::logger> &inLogger)
+void ExplorerWidget::init(const std::shared_ptr<ArmoryObject> &armory
+   , const std::shared_ptr<spdlog::logger> &inLogger
+   , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<CCFileManager> &ccFileMgr)
 {
    armory_ = armory;
    logger_ = inLogger;
-   ui_->Transaction->init(armory, inLogger, expTimer_);
-   ui_->Address->init(armory, inLogger, expTimer_);
+   ui_->Transaction->init(armory, inLogger, walletsMgr, ccFileMgr->ccSecurities());
+   ui_->Address->init(armory, inLogger, ccFileMgr->ccSecurities());
 //   ui_->Block->init(armory, inLogger);
 
    // With Armory and the logger set, we can start accepting text input.
@@ -115,6 +121,8 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
    if(strIsAddress == true) {
       ui_->stackedWidget->setCurrentIndex(AddressPage);
 
+      expTimer_->start();
+
       // Pass the address to the address widget and load the wallet, which kicks
       // off address processing and UI loading.
       ui_->Address->setQueryAddr(bsAddress);
@@ -122,7 +130,6 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
       if (saveToHistory) {
          pushTransactionHistory(userStr);
       }
-      expTimer_->start();
    }
    else if(userStr.length() == 64 &&
            userStr.toStdString().find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos) {
@@ -130,9 +137,9 @@ void ExplorerWidget::onSearchStarted(bool saveToHistory)
       if (saveToHistory) {
          pushTransactionHistory(userStr);
       }
+      expTimer_->start();
       setTransaction(userStr);
       ui_->searchBox->clear();
-      expTimer_->start();
    }
    else {
       // This isn't a valid address or 32 byte hex string.

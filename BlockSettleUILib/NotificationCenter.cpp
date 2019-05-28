@@ -129,7 +129,7 @@ static const QString c_newVersionAction = QLatin1String("BlockSettleNewVersionAc
 void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
    QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information;
-   QString title, text;
+   QString title, text, userId;
    int msecs = 10000;
    newVersionMessage_ = false;
    newChatMessage_ = false;
@@ -196,19 +196,20 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
          return;
       }
 
-      if (msg.size() != 2) {
+      if (msg.size() != 3) {
          return;
       }
 
       title = msg[0].toString();
       text = msg[1].toString();
+      userId = msg[2].toString();
 
-      if (title.length() == 0 || text.length() == 0) {
+      if (title.isEmpty() || text.isEmpty() || userId.isEmpty()) {
          return;
       }
       
       newChatMessage_ = true;
-      newChatId_ = title;
+      newChatId_ = userId;
       mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon(QLatin1String(":/ICON_DOT")));
       break;
 
@@ -217,7 +218,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
          return;
       }
       title = tr("New contact request");
-      text = tr("%1 wants to add you to contact list").arg(msg[0].toString());
+      text = tr("%1 would like to add you as a contact").arg(msg[0].toString());
       break;
 
    default: return;

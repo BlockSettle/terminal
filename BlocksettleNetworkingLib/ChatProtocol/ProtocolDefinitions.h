@@ -130,7 +130,6 @@ namespace Chat
    static const QString GlobalRoomKey = QStringLiteral("global_chat");
    static const QString OTCRoomKey = QStringLiteral("otc_chat");
 
-
    template <typename T>
    class Message
    {

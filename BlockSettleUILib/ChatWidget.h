@@ -1,10 +1,11 @@
 #ifndef CHAT_WIDGET_H
 #define CHAT_WIDGET_H
 
-#include <QWidget>
-#include <QStringListModel>
-#include <QScopedPointer>
+#include <QItemSelection>
 #include <QLayoutItem>
+#include <QScopedPointer>
+#include <QStringListModel>
+#include <QWidget>
 
 #include "ChatHandleInterfaces.h"
 #include "CommonTypes.h"
@@ -22,6 +23,8 @@ namespace spdlog {
 namespace Chat {
    class RoomData;
    class UserData;
+   class OTCResponseData;
+   class OTCRequestData;
 }
 
 class ChatClient;
@@ -78,11 +81,24 @@ private slots:
    void onConnectedToServer();
    void selectGlobalRoom();
    void onContactRequestAccepted(const QString &userId);
+   void onBSChatInputSelectionChanged();
+   void onChatMessagesSelectionChanged();
 
+   // OTC UI slots
    void OnOTCRequestCreated();
-   void DisplayOTCRequest(const bs::network::Side::Type& side, const bs::network::OTCRangeID& range);
-
    void OnOTCResponseCreated();
+
+   void OnPullOwnOTCRequest(const QString& otcId);
+
+   void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+
+   // OTC chat client slots
+   void OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
+   void OnOTCOwnRequestRejected(const QString& reason);
+   void OnNewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
+   void OnOTCRequestCancelled(const QString& otcId);
+   void OnOTCRequestExpired(const QString& otcId);
+   void OnOwnOTCRequestExpired(const QString& otcId);
 
 signals:
    void LoginFailed();
@@ -96,6 +112,24 @@ private:
    void OTCSwitchToDMRoom();
    void OTCSwitchToGlobalRoom();
 
+   // used to display proper widget if OTC room selected.
+   // either create OTC or Pull OTC, if was submitted
+   void DisplayCorrespondingOTCRequestWidget();
+
+   bool IsOTCRequestSubmitted() const;
+   bool IsOTCRequestAccepted() const;
+
+   void DisplayCreateOTCWidget();
+   void DisplayOwnSubmittedOTC();
+   void DisplayOwnLiveOTC();
+
+   bool IsOwnOTCId(const QString& otcId) const;
+   void OnOwnOTCPulled();
+   void OnOTCCancelled(const QString& otcId);
+
+   bool IsOTCChatSelected() const;
+   void UpdateOTCRoomWidgetIfRequired();
+
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
 
@@ -108,6 +142,7 @@ private:
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
    QTimer *popupVisibleTimer_;
+   bool isChatMessagesSelected_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
@@ -117,6 +152,12 @@ private:
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
 
+   bool                          otcSubmitted_ = false;
+   bs::network::OTCRequest       submittedOtc_;
+
+   bool                          otcAccepted_ = false;
+   std::shared_ptr<Chat::OTCRequestData>   ownActiveOTC_;
+
 private:
    bool isRoom();
    void setIsRoom(bool);
@@ -124,7 +165,7 @@ private:
    void initPopup();
    void setPopupVisible(const bool &value);
 
-   bool eventFilter(QObject * obj, QEvent * event) override;
+   bool eventFilter(QObject *sender, QEvent *event) override;
 
    // ViewItemWatcher interface
 public:
@@ -136,13 +177,5 @@ public:
 public:
    void onNewMessagePresent(const bool isNewMessagePresented, std::shared_ptr<Chat::MessageData> message) override;
 };
-
-
-
-
-
-
-
-
 
 #endif // CHAT_WIDGET_H

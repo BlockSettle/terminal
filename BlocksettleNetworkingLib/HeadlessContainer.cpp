@@ -1109,6 +1109,11 @@ bool RemoteSigner::Connect()
 
 void RemoteSigner::ConnectHelper()
 {
+   if (!connection_) {
+      logger_->error("[{}] connection not created", __func__);
+      emit disconnected();
+      return;
+   }
    if (!connection_->isActive()) {
       if (connection_->openConnection(host_.toStdString(), port_.toStdString()
          , listener_.get())) {
@@ -1167,13 +1172,21 @@ void RemoteSigner::RecreateConnection()
       absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    }
 
-   connection_ = connectionManager_->CreateZMQBIP15XDataConnection(
-      ephemeralDataConnKeys_, ownKeyFileDir_, ownKeyFileName_, makeClientCookie
-      , readServerCookie, absCookiePath);
-   connection_->setCBs(cbNewKey_);
-   connection_->setLocalHeartbeatInterval();
+   try {
+      connection_ = connectionManager_->CreateZMQBIP15XDataConnection(
+         ephemeralDataConnKeys_, ownKeyFileDir_, ownKeyFileName_, makeClientCookie
+         , readServerCookie, absCookiePath);
+      connection_->setCBs(cbNewKey_);
+      connection_->setLocalHeartbeatInterval();
 
-   headlessConnFinished_ = false;
+      headlessConnFinished_ = false;
+   }
+   catch (const std::exception &e) {
+      logger_->error("[{}] connection creation failed: {}", __func__, e.what());
+      QTimer::singleShot(10, [this] {  // slight delay is required on start-up init
+         emit connectionError(ConnectionError::SocketFailed, tr("Connection creation failed"));
+      });
+   }
 }
 
 void RemoteSigner::ScheduleRestart()
@@ -1415,16 +1428,15 @@ LocalSigner::LocalSigner(const std::shared_ptr<spdlog::logger> &logger
    , const QString &homeDir, NetworkType netType, const QString &port
    , const std::shared_ptr<ConnectionManager>& connectionManager
    , const std::shared_ptr<ApplicationSettings> &appSettings
-   , SignContainer::OpMode mode
-   , const bool ephemeralDataConnKeys
+   , const bool startSignerProcess
    , const std::string& ownKeyFileDir
    , const std::string& ownKeyFileName
    , double asSpendLimit
    , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB)
    : RemoteSigner(logger, QLatin1String("127.0.0.1"), port, netType
-      , connectionManager, appSettings, mode, ephemeralDataConnKeys
+      , connectionManager, appSettings, OpMode::Local, true
       , ownKeyFileDir, ownKeyFileName, inNewKeyCB)
-      , homeDir_(homeDir), asSpendLimit_(asSpendLimit)
+      , homeDir_(homeDir), startProcess_(startSignerProcess), asSpendLimit_(asSpendLimit)
 {}
 
 LocalSigner::~LocalSigner() noexcept
@@ -1472,48 +1484,50 @@ bool LocalSigner::Start()
 {
    Stop();
 
-   // If there's a previous headless process, stop it.
-   headlessProcess_ = std::make_shared<QProcess>();
+   if (startProcess_) {
+      // If there's a previous headless process, stop it.
+      headlessProcess_ = std::make_shared<QProcess>();
 
 #ifdef Q_OS_WIN
-   const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer.exe");
+      const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer.exe");
 #elif defined (Q_OS_MACOS)
-   auto bundleDir = QDir(QCoreApplication::applicationDirPath());
-   bundleDir.cdUp();
-   bundleDir.cdUp();
-   bundleDir.cdUp();
-   const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("blocksettle_signer"));
+      auto bundleDir = QDir(QCoreApplication::applicationDirPath());
+      bundleDir.cdUp();
+      bundleDir.cdUp();
+      bundleDir.cdUp();
+      const auto signerAppPath = bundleDir.absoluteFilePath(QLatin1String("blocksettle_signer"));
 #else
-   const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer");
+      const auto signerAppPath = QCoreApplication::applicationDirPath() + QLatin1String("/blocksettle_signer");
 #endif
-   if (!QFile::exists(signerAppPath)) {
-      logger_->error("[HeadlessContainer] Signer binary {} not found"
-         , signerAppPath.toStdString());
-      emit connectionError(UnknownError, tr("missing signer binary"));
-      return false;
-   }
+      if (!QFile::exists(signerAppPath)) {
+         logger_->error("[HeadlessContainer] Signer binary {} not found"
+            , signerAppPath.toStdString());
+         emit connectionError(UnknownError, tr("missing signer binary"));
+         return false;
+      }
 
-   const auto cmdArgs = args();
-   logger_->debug("[HeadlessContainer] starting {} {}"
-      , signerAppPath.toStdString(), cmdArgs.join(QLatin1Char(' ')).toStdString());
+      const auto cmdArgs = args();
+      logger_->debug("[HeadlessContainer] starting {} {}"
+         , signerAppPath.toStdString(), cmdArgs.join(QLatin1Char(' ')).toStdString());
 
 #ifndef NDEBUG
-   headlessProcess_->setProcessChannelMode(QProcess::MergedChannels);
-   connect(headlessProcess_.get(), &QProcess::readyReadStandardOutput, this, [this](){
-      qDebug().noquote() << headlessProcess_->readAllStandardOutput();
-   });
+      headlessProcess_->setProcessChannelMode(QProcess::MergedChannels);
+      connect(headlessProcess_.get(), &QProcess::readyReadStandardOutput, this, [this]() {
+         qDebug().noquote() << headlessProcess_->readAllStandardOutput();
+      });
 #endif
 
-   headlessProcess_->start(signerAppPath, cmdArgs);
-   if (!headlessProcess_->waitForStarted(kStartTimeout)) {
-      logger_->error("[HeadlessContainer] Failed to start process");
-      headlessProcess_.reset();
-      emit connectionError(UnknownError, tr("failed to start process"));
-      return false;
-   }
+      headlessProcess_->start(signerAppPath, cmdArgs);
+      if (!headlessProcess_->waitForStarted(kStartTimeout)) {
+         logger_->error("[HeadlessContainer] Failed to start process");
+         headlessProcess_.reset();
+         emit connectionError(UnknownError, tr("failed to start process"));
+         return false;
+      }
 
-   // Give the signer a little time to get set up.
-   QThread::msleep(250);
+      // Give the signer a little time to get set up.
+      QThread::msleep(250);
+   }
 
    return RemoteSigner::Start();
 }

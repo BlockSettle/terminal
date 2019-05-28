@@ -1,20 +1,21 @@
 #ifndef CHAT_CLIENT_H
 #define CHAT_CLIENT_H
 
-
-#include <QObject>
-#include <QTimer>
-
-#include "ChatProtocol/ChatProtocol.h"
+#include "ChatClientTree/TreeObjects.h"
 #include "ChatDB.h"
+#include "ChatHandleInterfaces.h"
+#include "ChatProtocol/ChatProtocol.h"
+#include "ChatCommonTypes.h"
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
-#include <queue>
-#include <QAbstractItemModel>
-
-#include "ChatClientTree/TreeObjects.h"
-#include "ChatHandleInterfaces.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+
+#include <queue>
+#include <unordered_set>
+
+#include <QAbstractItemModel>
+#include <QObject>
+#include <QTimer>
 
 namespace spdlog {
    class logger;
@@ -22,12 +23,12 @@ namespace spdlog {
 namespace Chat {
    class Request;
 }
-class ConnectionManager;
-class ZmqBIP15XDataConnection;
-class ApplicationSettings;
-class UserHasher;
-class ChatClientDataModel;
 
+class ApplicationSettings;
+class ChatClientDataModel;
+class ConnectionManager;
+class UserHasher;
+class ZmqBIP15XDataConnection;
 
 class ChatClient : public QObject
              , public DataConnectionListener
@@ -75,6 +76,43 @@ public:
    void OnDisconnected() override;
    void OnError(DataConnectionError errorCode) override;
 
+   /////////////////////////////////////////////////////////////////////////////
+   // OTC related messages handling
+   /////////////////////////////////////////////////////////////////////////////
+   // HandleCommonOTCRequest - new OTC request in common OTC chat room
+   void HandleCommonOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+
+   // HandleCommonOTCRequestAccepted - our OTC request to common room was
+   //    accepted by server
+   void HandleCommonOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+
+   // HandleCommonOTCRequestRejected - our OTC request to common room was
+   //    rejected by server
+   void HandleCommonOTCRequestRejected(const std::string& rejectReason);
+
+   // HandleCommonOTCRequestCancelled - OTC request sent to common OTC room was
+   //    cancelled by requestor. Could be both ours and someone else
+   void HandleCommonOTCRequestCancelled(const QString& serverOTCId);
+
+   void HandleCommonOTCRequestExpired(const QString& serverOTCId);
+
+   // HandleAcceptedCommonOTCResponse - chat server accepts our response to
+   //    OTC request in OTC chat room
+   void HandleAcceptedCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response);
+
+   // HandleRejectedCommonOTCResponse - chat server accepts our response to
+   //    OTC request in OTC chat room
+   void HandleRejectedCommonOTCResponse(const QString& otcId, const std::string& reason);
+
+   // HandleCommonOTCResponse - handle response we receive to our OTC request
+   //    sent to common OTC chat room
+   void HandleCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response);
+
+   // get update during negotiation
+   void HandleOTCUpdate(const std::shared_ptr<Chat::OTCUpdateData>& update);
+
+   /////////////////////////////////////////////////////////////////////////////
+
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
    std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
@@ -106,6 +144,60 @@ public:
    bool decryptIESMessage(std::shared_ptr<Chat::MessageData>& message);
    QString getUserId();
 
+public:
+   // OTC related stubs
+   // SubmitCommonOTCRequest - should send OTC request to chat server to OTC chat
+   // Results:
+   //    Can result in signals
+   //       OTCRequestAccepted - request sent to OTC chat and was accepted
+   //       OTCRequestRejected - OTC request was rejected by chat server.
+   //    If return false - no signals will be emited
+   // Returns:
+   //    true - request was submitted
+   //    false - request was not delivered to chat server.
+   bool SubmitCommonOTCRequest(const bs::network::OTCRequest& request);
+
+   // cancel current OTC request sent to OTC chat
+   bool PullCommonOTCRequest(const QString& serverOTCId);
+
+   bool SubmitCommonOTCResponse(const bs::network::OTCResponse& response);
+
+private:
+   // OTC related messaging endpoint
+   bool sendCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool sendPullCommonOTCRequest();
+   bool sendCommonOTCResponse();
+
+   // OTC related signals
+signals:
+   // self OTC request accepted.
+   void OTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
+
+   // self OTC request to OTC room was rejected by chat server
+   void OTCOwnRequestRejected(const QString& reason);
+
+   // we got a new OTC request from someone in OTC chat
+   void NewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
+
+   // OTC request was pulledby requestor. We should receive it even if it our own.
+   // we could not just remove OTC, it should be initiated by chat server
+   void OTCRequestCancelled(const QString& serverOTCId);
+
+   // OTC request expired and is not settled
+   void OTCRequestExpired(const QString& serverOTCId);
+
+   // own OTC request sent to OTC chat expired
+   void OwnOTCRequestExpired(const QString& serverOTCId);
+
+   // CommonOTCResponseAccepted/CommonOTCResponseRejected - chat server accepted/rejected our
+   //    response to OTC from common OTC chat
+   void CommonOTCResponseAccepted(const std::shared_ptr<Chat::OTCResponseData>& otcResponse);
+   void CommonOTCResponseRejected(const QString& serverOTCId, const QString& reason);
+
+   // CommonOTCResponseReceived - we get response to our request sent to common
+   //    OTC chat room
+   void CommonOTCResponseReceived(const std::shared_ptr<Chat::OTCResponseData>& otcResponse);
+
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
    void readDatabase();
@@ -135,7 +227,7 @@ signals:
    void ForceLogoutSignal();
 public slots:
    //void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
-   
+
 private slots:
    void onForceLogoutSignal();
    void sendHeartbeat();
@@ -185,6 +277,35 @@ public:
 public:
    void onMessageRead(std::shared_ptr<Chat::MessageData> message) override;
    void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
+
+private:
+   /////////////////////////////////////////////////////////////////////////////
+   // OTC simulation methods
+   std::string GetNextRequestorId();
+   std::string GetNextResponderId();
+   std::string GetNextOTCId();
+   std::string GetNextServerOTCId();
+   std::string GetNextResponseId();
+   std::string GetNextServerResponseId();
+   std::string GetNextNegotiationChannelId();
+   void ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+   /////////////////////////////////////////////////////////////////////////////
+
+private:
+   // OTC temp fields. will be removed after OTC goes through chat server
+   uint64_t          nextOtcId_ = 1;
+   const std::string baseFakeRequestorId_ = "fake_req";
+   uint64_t          nextRequestorId_ = 1;
+   const std::string baseFakeResponderId_ = "fake_resp";
+   uint64_t          nextResponderId_ = 1;
+   uint64_t          nextResponseId_ = 1;
+   uint64_t          negotiationChannelId_ = 1;
+
+   QString           ownSubmittedOTCId_;
+   QString           ownServerOTCId_;
+
+   // based on server reqest id
+   std::unordered_set<std::string> aliveOtcRequests_;
 
    // ModelChangesHandler interface
 public:

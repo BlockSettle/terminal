@@ -30,10 +30,10 @@ namespace Chat {
          IES = 1,
          AEAD = 2
       };
-   
+
       MessageData(const QString &sender, const QString &receiver,
          const QString &id, const QDateTime &dateTime,
-         const QString& messageData, 
+         const QString& messageData,
          int state = (int)State::Undefined);
 
       QString senderId() const { return senderId_; }
@@ -44,10 +44,10 @@ namespace Chat {
       void setMessageData(const QString& messageData);
       int state() const { return state_; }
       std::string jsonAssociatedData() const;
-      
-      QJsonObject toJson() const;
+
+      QJsonObject toJson() const override;
       static std::shared_ptr<MessageData> fromJSON(const std::string& jsonData);
-      
+
       void setNonce(const Botan::SecureVector<uint8_t> &);
       Botan::SecureVector<uint8_t> nonce() const;
       size_t defaultNonceSize() const;
@@ -56,13 +56,13 @@ namespace Chat {
       void unsetFlag(const State);
       bool testFlag(const State stateFlag);
       void updateState(const int newState);
-      
+
       //Set ID for message, returns old ID that was replaced
       QString setId(const QString& id);
 
       MessageData::EncryptionType encryptionType() const;
       void setEncryptionType(const MessageData::EncryptionType &type);
-   
+
    private:
       QString id_;
       QString senderId_;

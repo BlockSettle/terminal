@@ -14,19 +14,26 @@ CreateOTCRequestWidget::CreateOTCRequestWidget(QWidget* parent)
    connect(ui_->pushButtonBuy, &QPushButton::clicked, this, &CreateOTCRequestWidget::OnBuyClicked);
    connect(ui_->pushButtonSell, &QPushButton::clicked, this, &CreateOTCRequestWidget::OnSellClicked);
 
-   ui_->comboBoxRange->addItem(tr("1-5"), bs::network::OTCRangeID::Range1_5);
-   ui_->comboBoxRange->addItem(tr("5-10"), bs::network::OTCRangeID::Range5_10);
-   ui_->comboBoxRange->addItem(tr("10-50"), bs::network::OTCRangeID::Range10_50);
-   ui_->comboBoxRange->addItem(tr("50-100"), bs::network::OTCRangeID::Range50_100);
-   ui_->comboBoxRange->addItem(tr("100-250"), bs::network::OTCRangeID::Range100_250);
-   ui_->comboBoxRange->addItem(tr("250+"), bs::network::OTCRangeID::Range250plus);
+   ui_->comboBoxRange->addItem(tr("1-5"), static_cast<int>(bs::network::OTCRangeID::Type::Range1_5));
+   ui_->comboBoxRange->addItem(tr("5-10"), static_cast<int>(bs::network::OTCRangeID::Type::Range5_10));
+   ui_->comboBoxRange->addItem(tr("10-50"), static_cast<int>(bs::network::OTCRangeID::Type::Range10_50));
+   ui_->comboBoxRange->addItem(tr("50-100"), static_cast<int>(bs::network::OTCRangeID::Type::Range50_100));
+   ui_->comboBoxRange->addItem(tr("100-250"), static_cast<int>(bs::network::OTCRangeID::Type::Range100_250));
+   ui_->comboBoxRange->addItem(tr("250+"), static_cast<int>(bs::network::OTCRangeID::Type::Range250plus));
 
    connect(ui_->comboBoxRange, SIGNAL(activated(int)), this, SLOT(OnRangeSelected(int)));
+   connect(ui_->checkBoxSendAsOwn, &QCheckBox::stateChanged, this, &CreateOTCRequestWidget::onSendAsOwnChanged);
 
    connect(ui_->pushButtonSubmit, &QPushButton::pressed, this, &CreateOTCRequestWidget::RequestCreated);
 }
 
 CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
+
+void CreateOTCRequestWidget::onSendAsOwnChanged()
+{
+   ui_->checkBoxGetReply->setEnabled(ui_->checkBoxSendAsOwn->isChecked());
+   ui_->checkBoxGetReply->setChecked(ui_->checkBoxSendAsOwn->isChecked());
+}
 
 void CreateOTCRequestWidget::setSubmitButtonEnabled(bool enabled)
 {
@@ -57,16 +64,26 @@ void CreateOTCRequestWidget::OnRangeSelected(int index)
    RequestUpdated();
 }
 
-bs::network::Side::Type CreateOTCRequestWidget::GetSide() const
+bs::network::ChatOTCSide::Type CreateOTCRequestWidget::GetSide() const
 {
    if (ui_->pushButtonSell->isChecked()) {
-      return bs::network::Side::Sell;
+      return bs::network::ChatOTCSide::Sell;
    }
 
-   return bs::network::Side::Buy;
+   return bs::network::ChatOTCSide::Buy;
 }
 
-bs::network::OTCRangeID CreateOTCRequestWidget::GetRange() const
+bs::network::OTCRangeID::Type CreateOTCRequestWidget::GetRange() const
 {
-   return static_cast<bs::network::OTCRangeID>(ui_->comboBoxRange->itemData(ui_->comboBoxRange->currentIndex()).toInt());
+   return static_cast<bs::network::OTCRangeID::Type>(ui_->comboBoxRange->itemData(ui_->comboBoxRange->currentIndex()).toInt());
+}
+
+bool CreateOTCRequestWidget::SendAsOwn() const
+{
+   return ui_->checkBoxSendAsOwn->isChecked();
+}
+
+bool CreateOTCRequestWidget::ReplyRequired() const
+{
+   return ui_->checkBoxGetReply->isChecked();
 }

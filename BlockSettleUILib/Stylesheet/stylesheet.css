@@ -136,6 +136,9 @@ QMainWindow {
   *[wellButtonBar="true"] QPushButton, *[wellButtonBar="true"] QToolButton, *[wellButtonBar="true"] *[buttonImportant="true"], *[wellButtonBar="true"] *[buttonSuccess="true"], *[wellButtonBar="true"] *[buttonWarning="true"] {
     padding: 5px 3px; }
 
+*[messageBoxIdKey="true"] {
+  min-width: 650px;}
+
 QWidget {
   border: none; }
   QWidget:focus {

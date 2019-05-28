@@ -41,7 +41,7 @@ void RoomData::setHaveNewMessage(bool haveNewMessage)
 QJsonObject RoomData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
-   
+
    data[IdKey] = id_;
    data[RoomOwnerIdKey] = ownerId_;
    data[RoomTitleKey] = title_;
@@ -49,14 +49,14 @@ QJsonObject RoomData::toJson() const
    data[RoomIsPrivateKey] = isPrivate_;
    data[RoomSendUserUpdatesKey] = sendUserUpdates_;
    data[RoomDisplayUserListKey] = displayUserList_;
-         
+
    return data;
 }
 
 std::shared_ptr<RoomData> RoomData::fromJSON(const std::string& jsonData)
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
-   
+
    QString id = data[IdKey].toString();
    QString ownerId = data[RoomOwnerIdKey].toString();
    QString title = data[RoomTitleKey].toString();
@@ -64,6 +64,6 @@ std::shared_ptr<RoomData> RoomData::fromJSON(const std::string& jsonData)
    bool isPrivate = data[RoomIsPrivateKey].toBool();
    bool sendUserUpdates = data[RoomSendUserUpdatesKey].toBool();
    bool displayUserList = data[RoomDisplayUserListKey].toBool();
-   
+
    return std::make_shared<RoomData>(id, ownerId, title, roomKey, isPrivate, sendUserUpdates, displayUserList);
 }

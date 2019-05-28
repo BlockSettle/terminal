@@ -42,7 +42,6 @@
 #include "NewAddressDialog.h"
 #include "NewWalletDialog.h"
 #include "NotificationCenter.h"
-#include "OfflineSigner.h"
 #include "PubKeyLoader.h"
 #include "QuoteProvider.h"
 #include "RequestReplyCommand.h"
@@ -478,56 +477,64 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
    QString localSignerPort = applicationSettings_->get<QString>(ApplicationSettings::localSignerPort);
 
-   // These callbacks will only be used for remote signers. Note the code below,
-   // where a local signer is eventually marked as remote. We'll work around
-   // this by defining the callbacks when the signer is initially marked remote.
-   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB = nullptr;
-   ZmqBIP15XDataConnection::invokeCB ourInvokeCB = nullptr;
-
-   bool ephemeralDataConnKeys = true;
-   std::string keyFileDir = "";
-   std::string keyFileName = "";
    if (runMode == SignContainer::OpMode::Remote) {
-      ephemeralDataConnKeys = false;
-      keyFileDir = SystemFilePaths::appDataLocation();
-      keyFileName = "client.peers";
+      const auto keyFileDir = SystemFilePaths::appDataLocation();
+      const auto keyFileName = "client.peers";
 
       // Define the callback that will be used to determine if the signer's BIP
       // 150 identity key, if it has changed, will be accepted. It needs strings
       // for the old and new keys, and a promise to set once the user decides.
-      ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
+      const auto &ourNewKeyCB = [this](const std::string& oldKey, const std::string& newKey
          , const std::string& srvAddrPort
          , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
-         QMetaObject::invokeMethod(this, [this, oldKey, newKey, newKeyProm, srvAddrPort] {
-            BSMessageBox *box = new BSMessageBox(BSMessageBox::question
-               , tr("Server identity key has changed")
-               , tr("Do you wish to import the new server identity key?")
+         logMgr_->logger()->debug("[BSTerminalMainWindow::createSigner::callback] received"
+            " new key {} [{}], old key {} [{}] for {} ({})", newKey, newKey.size(), oldKey
+            , oldKey.size(), srvAddrPort, signersProvider_->getCurrentSigner().serverId());
+         std::string oldKeyHex = oldKey;
+         if (oldKeyHex.empty() && (signersProvider_->getCurrentSigner().serverId() == srvAddrPort)) {
+            oldKeyHex = signersProvider_->getCurrentSigner().key.toStdString();
+         }
+
+         QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
+            MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question, tr("Signer Id Key has changed")
+               , tr("Import Signer ID Key?")
+               .arg(QString::fromStdString(srvAddrPort))
                , tr("Old Key: %1\nNew Key: %2")
-               .arg(QString::fromStdString(oldKey))
-               .arg(QString::fromStdString(newKey))
-               , this);
+               .arg(oldKeyHex.empty() ? tr("<none>") : QString::fromStdString(oldKeyHex))
+               .arg(QString::fromStdString(newKey)), this);
 
             const bool answer = (box->exec() == QDialog::Accepted);
             box->deleteLater();
 
             if (answer) {
-               newKeyProm->set_value(true);
                signersProvider_->addKey(srvAddrPort, newKey);
             }
-            else {
-               newKeyProm->set_value(false);
-            }
+            newKeyProm->set_value(answer);
          });
       };
+      const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
+         , resultHost, resultPort, netType, connectionManager_, applicationSettings_
+         , runMode, false, keyFileDir, keyFileName, ourNewKeyCB);
+      retPtr = remoteSigner;
+
+      std::vector<std::pair<std::string, BinaryData>> keys;
+      for (const auto &signer : signersProvider_->signers()) {
+         try {
+            const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
+            keys.push_back({ signer.serverId(), signerKey });
+         }
+         catch (const std::exception &e) {
+            logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
+         }
+      }
+      remoteSigner->updatePeerKeys(keys);
    }
    else if (runMode == SignContainer::OpMode::Local) {
       resultPort = localSignerPort;
+      bool startLocalSignerProcess = true;
 
       if (SignerConnectionExists(QLatin1String("127.0.0.1"), localSignerPort)) {
-         runMode = SignContainer::OpMode::Remote;
-         resultHost = QLatin1String("127.0.0.1");
-
-         if (BSMessageBox(BSMessageBox::messageBoxType::question
+         if (BSMessageBox(BSMessageBox::Type::question
             , tr("Signer Local Connection")
             , tr("Another Signer (or some other program occupying port %1) is "
             "running. Would you like to continue connecting to it?").arg(localSignerPort)
@@ -537,12 +544,15 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
             , this).exec() == QDialog::Rejected) {
             return retPtr;
          }
+         startLocalSignerProcess = false;
       }
+      retPtr = std::make_shared<LocalSigner>(logMgr_->logger()
+         , applicationSettings_->GetHomeDir(), netType
+         , resultPort, connectionManager_, applicationSettings_
+         , startLocalSignerProcess, "", ""
+         , applicationSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
    }
 
-   retPtr = CreateSigner(logMgr_->logger(), applicationSettings_, runMode
-      , resultHost, resultPort, netType, connectionManager_
-      , ephemeralDataConnKeys, keyFileDir, keyFileName, ourNewKeyCB);
    return retPtr;
 }
 
@@ -613,8 +623,10 @@ void BSTerminalMainWindow::acceptMDAgreement()
 
 void BSTerminalMainWindow::updateControlEnabledState()
 {
-   action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
-      && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+   if (action_send_) {
+      action_send_->setEnabled(walletsMgr_->hdWalletsCount() > 0
+         && armory_->isOnline() && signContainer_ && signContainer_->isReady());
+   }
 }
 
 bool BSTerminalMainWindow::isMDLicenseAccepted() const
@@ -667,19 +679,7 @@ void BSTerminalMainWindow::InitAssets()
 
    connect(mdProvider_.get(), &MarketDataProvider::MDUpdate, assetManager_.get(), &AssetManager::onMDUpdate);
 
-   if (!ccFileManager_->hasLocalFile()) {
-      if (applicationSettings_->get<bool>(ApplicationSettings::dontLoadCCList)) {
-         return;
-      }
-      BSMessageBox ccQuestion(BSMessageBox::question, tr("Load Private Market Securities")
-         , tr("Would you like to load PM securities from Public Bridge now?"), this);
-      const bool loadCCs = (ccQuestion.exec() == QDialog::Accepted);
-      applicationSettings_->set(ApplicationSettings::dontLoadCCList, !loadCCs);
-      if (loadCCs) {
-         ccFileManager_->LoadCCDefinitionsFromPub();
-      }
-   }
-   else {
+   if (ccFileManager_->hasLocalFile()) {
       ccFileManager_->LoadSavedCCDefinitions();
    }
 }
@@ -721,7 +721,7 @@ void BSTerminalMainWindow::InitChartsView()
 // Initialize widgets related to transactions.
 void BSTerminalMainWindow::InitTransactionsView()
 {
-   ui_->widgetExplorer->init(armory_, logMgr_->logger());
+   ui_->widgetExplorer->init(armory_, logMgr_->logger(), walletsMgr_, ccFileManager_);
    ui_->widgetTransactions->init(walletsMgr_, armory_, signContainer_,
                                 logMgr_->logger("ui"));
    ui_->widgetTransactions->setEnabled(true);
@@ -1164,6 +1164,16 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->actionWithdrawalRequest->setEnabled(true);
    ui_->actionLinkAdditionalBankAccount->setEnabled(true);
 
+   if (!applicationSettings_->get<bool>(ApplicationSettings::dontLoadCCList)) {
+      BSMessageBox ccQuestion(BSMessageBox::question, tr("Load Private Market Securities")
+         , tr("Would you like to load PM securities from Public Bridge now?"), this);
+      const bool loadCCs = (ccQuestion.exec() == QDialog::Accepted);
+      applicationSettings_->set(ApplicationSettings::dontLoadCCList, !loadCCs);
+      if (loadCCs) {
+         ccFileManager_->LoadCCDefinitionsFromPub();
+      }
+   }
+
    authManager_->ConnectToPublicBridge(connectionManager_, celerConnection_);
    ccFileManager_->ConnectToCelerClient(celerConnection_);
 
@@ -1338,7 +1348,6 @@ void BSTerminalMainWindow::showZcNotification(const TxInfo *txInfo)
 
 void BSTerminalMainWindow::showRunInBackgroundMessage()
 {
-   //sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QSystemTrayIcon::Information);
    sysTrayIcon_->showMessage(tr("BlockSettle is running"), tr("BlockSettle Terminal is running in the backgroud. Click the tray icon to open the main window."), QIcon(QLatin1String(":/resources/login-logo.png")));
 }
 
@@ -1551,9 +1560,9 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       ArmoryServer server = servers.at(serverIndex);
 
       if (server.armoryDBKey.isEmpty()) {
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::question
+         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question
                           , tr("ArmoryDB Key Import")
-                          , tr("Do you wish to import the following ArmoryDB Key?")
+                          , tr("Import ArmoryDB ID Key?")
                           , tr("Address: %1\n"
                                "Port: %2\n"
                                "Key: %3")
@@ -1561,8 +1570,6 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumWidth(650);
-         box->setMaximumWidth(650);
 
          bool answer = (box->exec() == QDialog::Accepted);
          box->deleteLater();
@@ -1574,7 +1581,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
          promiseObj->set_value(true);
       }
       else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
-         BSMessageBox *box = new BSMessageBox(BSMessageBox::warning
+         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::warning
                           , tr("ArmoryDB Key")
                           , tr("ArmoryDB Key was changed.\n"
                                "Do you wish to proceed connection and save new key?")
@@ -1587,8 +1594,6 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
                                     .arg(server.armoryDBKey)
                                     .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
                           , this);
-         box->setMinimumWidth(650);
-         box->setMaximumWidth(650);
          box->setCancelVisible(true);
 
          bool answer = (box->exec() == QDialog::Accepted);

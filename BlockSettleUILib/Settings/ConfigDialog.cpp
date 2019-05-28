@@ -1,10 +1,10 @@
 #include "ConfigDialog.h"
 
+#include "ArmoryServersProvider.h"
 #include "AssetManager.h"
 #include "GeneralSettingsPage.h"
 #include "NetworkSettingsPage.h"
-#include "ArmoryServersProvider.h";
-#include "SignersProvider.h";
+#include "SignersProvider.h"
 
 #include "ui_ConfigDialog.h"
 

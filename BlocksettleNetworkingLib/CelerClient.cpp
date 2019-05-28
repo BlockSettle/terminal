@@ -140,9 +140,9 @@ void CelerClient::loginSuccessCallback(const std::string& userName, const std::s
          if (bp && bd) {
             userType_ = tr("Dealing Participant");
          } else if (bp && !bd) {
-            userType_ = tr("Market Participant");
+            userType_ = tr("Trading Participant");
          } else {
-            userType_ = tr("Market Data Participant");
+            userType_ = tr("Market Participant");
          }
 
          emit OnConnectedToServer();

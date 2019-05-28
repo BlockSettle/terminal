@@ -176,6 +176,7 @@ bool RFQDialog::close()
 void RFQDialog::onRFQCancelled(const QString &reqId)
 {
    quoteProvider_->CancelQuote(reqId);
+   reject();
 }
 
 void RFQDialog::onQuoteReceived(const bs::network::Quote& quote)

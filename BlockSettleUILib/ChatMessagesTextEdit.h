@@ -65,7 +65,7 @@ public:
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    void setClient(std::shared_ptr<ChatClient> client);
    void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
-
+   QString getFormattedTextFromSelection();
 
 signals:
    void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
@@ -85,7 +85,6 @@ protected:
    QString data(const int &row, const Column &column);
    QImage statusImage(const int &row);
 
-   virtual void mousePressEvent(QMouseEvent *ev) override;
    virtual void contextMenuEvent(QContextMenuEvent *e);
 
 public slots:
@@ -118,6 +117,7 @@ private:
    void insertMessage(std::shared_ptr<Chat::MessageData> message);
    void insertLoadMore();
    void loadMore();
+   void setupHighlightPalette();
    QString toHtmlText(const QString &text);
    QString toHtmlUsername(const QString &username, const QString &userId = QString());
    QString toHtmlInvalid(const QString &text);
