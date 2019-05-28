@@ -8,7 +8,10 @@
 #include <QDebug>
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
-constexpr int kMaxContentHeight = 130;
+constexpr int kRowHeigth = 25;
+constexpr int kUserListPaddings = 12;
+constexpr int kMaxVisibleRows = 3;
+constexpr int kBottomSpace = 20;
 
 SearchWidget::SearchWidget(QWidget *parent)
    : QWidget(parent)
@@ -43,13 +46,11 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
 
 void SearchWidget::init()
 {
-   setFixedHeight(kMaxContentHeight + ui_->chatSearchLineEdit->height());
+   setFixedHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
+                  ui_->chatSearchLineEdit->height() + kUserListPaddings + 6);
 
    ui_->searchResultTreeView->setHeaderHidden(true);
    ui_->searchResultTreeView->setRootIsDecorated(false);
-   int minHeight = static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2);
-   ui_->searchResultTreeView->setMaximumHeight(minHeight * 3);
-   ui_->searchResultTreeView->setMinimumHeight(minHeight);
    ui_->searchResultTreeView->setVisible(false);
    ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::NoSelection);
    ui_->searchResultTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -117,6 +118,9 @@ void SearchWidget::setSearchText(QString value)
 void SearchWidget::showContextMenu(const QPoint &pos)
 {
    QScopedPointer<QMenu, QScopedPointerDeleteLater> menu(new QMenu());
+   int rowCount = ui_->searchResultTreeView->model()->rowCount();
+   int visibleRows = rowCount >= kMaxVisibleRows ? kMaxVisibleRows : rowCount;
+   ui_->searchResultTreeView->setFixedHeight(kRowHeigth * visibleRows + kUserListPaddings);
    auto index = ui_->searchResultTreeView->indexAt(pos);
    if (!index.isValid()) {
       return;
