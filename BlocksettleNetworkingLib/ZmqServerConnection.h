@@ -67,9 +67,8 @@ protected:
 
    std::unordered_map<std::string, std::string> clientInfo_; // ClientID & related string
 
-private:
    void stopServer();
-
+private:
    // run in thread
    void listenFunction();
 

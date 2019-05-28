@@ -146,6 +146,8 @@ ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
    hbCondVar_.notify_one();
    hbThread_.join();
 
+   stopServer();
+
    // If it exists, delete the identity cookie.
    if (makeServerIDCookie_) {
       if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
