@@ -473,9 +473,9 @@ bool ZmqBIP15XDataConnection::closeConnection()
       serverPubkeyProm_->set_value(false);
       serverPubkeySignalled_ = true;
    }
-   currentReadMessage_.reset();
    bool rc = ZmqDataConnection::closeConnection();
    bip151Connection_.reset();
+   currentReadMessage_.reset();
    return rc;
 }
 
