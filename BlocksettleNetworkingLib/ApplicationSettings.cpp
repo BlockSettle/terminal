@@ -26,7 +26,12 @@ static const QString bitcoinDirName = QLatin1String(".bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("/usr/bin/ArmoryDB");
 #endif
 
+#ifdef __linux__
+// Needed for consistency (headless now uses company name in lowercase on Linux)
+static const QString SettingsCompanyName = QLatin1String("blocksettle");
+#else
 static const QString SettingsCompanyName = QLatin1String("BlockSettle");
+#endif
 
 static const QString LogFileName = QLatin1String("bs_terminal.log");
 static const QString LogMsgFileName = QLatin1String("bs_terminal_messages.log");
@@ -159,7 +164,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
       { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
       { remoteSigners,                    SettingDef(QLatin1String("RemoteSigners"), QStringList()
-         << QLatin1String("Local GUI Signer Mode:127.0.0.1:23456:")) },
+         << QString::fromLatin1("%1:127.0.0.1:23456:").arg(localSignerDefaultName())) },
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
       { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys"), QStringList()
@@ -546,6 +551,11 @@ int ApplicationSettings::GetArmoryRemotePort(NetworkType networkType) const
          (networkType == NetworkType::Invalid) ? get<NetworkType>(netType) : networkType);
    }
    return port;
+}
+
+QString ApplicationSettings::localSignerDefaultName()
+{
+   return tr("Local GUI Signer Mode");
 }
 
 int ApplicationSettings::GetDefaultArmoryLocalPort(NetworkType networkType)

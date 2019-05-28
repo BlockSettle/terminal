@@ -2,7 +2,7 @@
 #include "../ProtocolDefinitions.h"
 using namespace Chat;
 
-RoomData::RoomData(const QString& roomId, const QString& ownerId, const QString& roomTitle, const QString& roomKey, bool isPrivate, bool sendUserUpdates, bool displayUserList)
+RoomData::RoomData(const QString& roomId, const QString& ownerId, const QString& roomTitle, const QString& roomKey, bool isPrivate, bool sendUserUpdates, bool displayUserList, bool displayTrayNotification)
    : DataObject (DataObject::Type::RoomData)
    , id_(roomId)
    , ownerId_(ownerId)
@@ -11,6 +11,7 @@ RoomData::RoomData(const QString& roomId, const QString& ownerId, const QString&
    , isPrivate_(isPrivate)
    , sendUserUpdates_(sendUserUpdates)
    , displayUserList_(displayUserList)
+   , displayTrayNotification_(displayTrayNotification)
    , haveNewMessage_(false)
 {}
 
@@ -38,6 +39,16 @@ void RoomData::setHaveNewMessage(bool haveNewMessage)
    haveNewMessage_ = haveNewMessage;
 }
 
+bool RoomData::displayTrayNotification() const
+{
+   return displayTrayNotification_;
+}
+
+void RoomData::setDisplayTrayNotification(const bool &displayTrayNotification)
+{
+   displayTrayNotification_ = displayTrayNotification;
+}
+
 QJsonObject RoomData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
@@ -49,6 +60,7 @@ QJsonObject RoomData::toJson() const
    data[RoomIsPrivateKey] = isPrivate_;
    data[RoomSendUserUpdatesKey] = sendUserUpdates_;
    data[RoomDisplayUserListKey] = displayUserList_;
+   data[RoomDisplayTrayNotificationKey] = displayTrayNotification_;
 
    return data;
 }
@@ -64,6 +76,7 @@ std::shared_ptr<RoomData> RoomData::fromJSON(const std::string& jsonData)
    bool isPrivate = data[RoomIsPrivateKey].toBool();
    bool sendUserUpdates = data[RoomSendUserUpdatesKey].toBool();
    bool displayUserList = data[RoomDisplayUserListKey].toBool();
+   bool displayTrayNotification = data[RoomDisplayTrayNotificationKey].toBool();
 
-   return std::make_shared<RoomData>(id, ownerId, title, roomKey, isPrivate, sendUserUpdates, displayUserList);
+   return std::make_shared<RoomData>(id, ownerId, title, roomKey, isPrivate, sendUserUpdates, displayUserList, displayTrayNotification);
 }

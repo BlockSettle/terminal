@@ -1,8 +1,9 @@
 #include "ExplorerWidget.h"
 #include "ui_ExplorerWidget.h"
-#include "UiUtils.h"
-#include "TransactionDetailsWidget.h"
+#include "AuthAddressManager.h"
 #include "BSMessageBox.h"
+#include "TransactionDetailsWidget.h"
+#include "UiUtils.h"
 
 #include <QMouseEvent>
 #include <QStringListModel>
@@ -53,13 +54,19 @@ ExplorerWidget::~ExplorerWidget() = default;
 void ExplorerWidget::init(const std::shared_ptr<ArmoryObject> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
-   , const std::shared_ptr<CCFileManager> &ccFileMgr)
+   , const std::shared_ptr<CCFileManager> &ccFileMgr
+   , const std::shared_ptr<AuthAddressManager> &authMgr)
 {
    armory_ = armory;
    logger_ = inLogger;
+   authMgr_ = authMgr;
    ui_->Transaction->init(armory, inLogger, walletsMgr, ccFileMgr->ccSecurities());
    ui_->Address->init(armory, inLogger, ccFileMgr->ccSecurities());
 //   ui_->Block->init(armory, inLogger);
+
+   connect(authMgr_.get(), &AuthAddressManager::ConnectionComplete, [this] {
+      ui_->Address->setBSAuthAddrs(authMgr_->GetBSAddresses());
+   });
 
    // With Armory and the logger set, we can start accepting text input.
    ui_->searchBox->setReadOnly(false);

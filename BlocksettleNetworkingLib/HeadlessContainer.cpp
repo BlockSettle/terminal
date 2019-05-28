@@ -225,7 +225,7 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
          emit error(HeadlessContainer::SerializationFailed, tr("serialization failed"));
          break;
       case HeartbeatWaitFailed:
-         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("heartbeat wait failed"));
+         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("Connection lost"));
          break;
       default:
          emit error(HeadlessContainer::UnknownError, tr("unknown error"));

@@ -306,6 +306,27 @@ QString UiUtils::displayQty(double quantity, const std::string &currency)
    return displayQty(quantity, QString::fromStdString(currency));
 }
 
+double UiUtils::truncatePriceForAsset(double price, bs::network::Asset::Type at)
+{
+   unsigned int multiplier = 0;
+
+   switch(at) {
+   case bs::network::Asset::SpotFX:
+      multiplier = 10000;
+      break;
+   case bs::network::Asset::SpotXBT:
+      multiplier = 100;
+      break;
+   case bs::network::Asset::PrivateMarket:
+      multiplier = 1000000;
+      break;
+   default:
+      return 0;
+   }
+
+   return (double)((int)(price*multiplier)) / multiplier;
+}
+
 QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type at)
 {
    switch(at) {

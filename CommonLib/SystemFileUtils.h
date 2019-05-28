@@ -22,7 +22,7 @@ namespace SystemFileUtils {
 namespace SystemFilePaths {
    std::string appDataLocation();
    std::string configDataLocation();
-   std::string applicationDir();
+   std::string applicationDirIfKnown();
 
    void setArgV0(const char *);
 }

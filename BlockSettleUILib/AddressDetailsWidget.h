@@ -2,6 +2,7 @@
 #define __ADDRESSDETAILSWIDGET_H__
 
 #include "Address.h"
+#include "AuthAddress.h"
 #include "ArmoryObject.h"
 #include "CCFileManager.h"
 
@@ -16,6 +17,7 @@ namespace bs {
       class PlainWallet;
    }
 }
+class AddressVerificator;
 class CCFileManager;
 class QTreeWidgetItem;
 
@@ -31,6 +33,7 @@ public:
       , const std::shared_ptr<spdlog::logger> &inLogger
       , const CCFileManager::CCSecurities &);
    void setQueryAddr(const bs::Address& inAddrVal);
+   void setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs);
    void clear();
 
    enum AddressTreeColumns {
@@ -61,6 +64,7 @@ private:
    void refresh(const std::shared_ptr<bs::sync::PlainWallet> &);
    void loadTransactions();
    void searchForCC();
+   void searchForAuth();
 
 private:
    // NB: Right now, the code is slightly inefficient. There are two maps with
@@ -92,6 +96,9 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    CCFileManager::CCSecurities      ccSecurities_;
    std::pair<std::string, uint64_t> ccFound_;
+   std::shared_ptr<AddressVerificator> addrVerify_;
+   std::map<bs::Address, AddressVerificationState> authAddrStates_;
+   std::unordered_set<std::string>     bsAuthAddrs_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

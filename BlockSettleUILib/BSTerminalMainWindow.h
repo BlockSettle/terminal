@@ -70,6 +70,8 @@ private:
    void connectArmory();
    void connectSigner();
    std::shared_ptr<SignContainer> createSigner();
+   std::shared_ptr<SignContainer> createRemoteSigner();
+   std::shared_ptr<SignContainer> createLocalSigner();
 
    void setTabStyle();
 

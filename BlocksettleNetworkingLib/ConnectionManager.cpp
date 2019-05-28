@@ -8,8 +8,6 @@
 #include "SubscriberConnection.h"
 #include "ZmqContext.h"
 #include "ZmqDataConnection.h"
-#include "ZmqSecuredDataConnection.h"
-#include "ZmqSecuredServerConnection.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
@@ -100,20 +98,6 @@ std::shared_ptr<DataConnection> ConnectionManager::CreateCelerClientConnection()
 std::shared_ptr<DataConnection> ConnectionManager::CreateGenoaClientConnection(bool monitored) const
 {
    auto connection = std::make_shared< GenoaConnection<ZmqDataConnection> >(logger_, monitored);
-   connection->SetContext(zmqContext_);
-
-   return connection;
-}
-
-std::shared_ptr<ZmqSecuredServerConnection> ConnectionManager::CreateSecuredServerConnection() const
-{
-   return std::make_shared<ZmqSecuredServerConnection>(logger_, zmqContext_);
-}
-
-std::shared_ptr<ZmqSecuredDataConnection> ConnectionManager::CreateSecuredDataConnection(bool monitored) const
-{
-   auto connection = std::make_shared<ZmqSecuredDataConnection>(logger_
-      , monitored);
    connection->SetContext(zmqContext_);
 
    return connection;
