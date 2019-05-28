@@ -39,6 +39,9 @@ enum class OTCPages : int
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
 
+const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
+                                  QRegularExpression::CaseInsensitiveOption);
+
 bool IsOTCChatRoom(const QString& chatRoom)
 {
    static const QString targetRoomName = Chat::OTCRoomKey;
@@ -345,9 +348,16 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData
 void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
 {
    std::vector<std::pair<QString,bool>> userInfoList;
+   QString searchText = ui_->searchWidget->searchText();
+   bool isEmail = kRxEmail.match(searchText).hasMatch();
+   QString hash = client_->deriveKey(searchText);
    for (const auto &user : users) {
       if (user) {
-         userInfoList.emplace_back(user->getUserId(), client_->isFriend(user->getUserId()));
+         QString userId = user->getUserId();
+         if (isEmail && userId != hash) {
+            continue;
+         }
+         userInfoList.emplace_back(userId, client_->isFriend(userId));
       }
    }
    client_->getUserSearchModel()->setUsers(userInfoList);
@@ -474,8 +484,7 @@ void ChatWidget::onSearchUserTextEdited(const QString& /*text*/)
       return;
    }
 
-   QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
-   QRegularExpressionMatch match = rx_email.match(userToAdd);
+   QRegularExpressionMatch match = kRxEmail.match(userToAdd);
    if (match.hasMatch()) {
       userToAdd = client_->deriveKey(userToAdd);
    } else if (UserHasher::KeyLength < userToAdd.length()) {
