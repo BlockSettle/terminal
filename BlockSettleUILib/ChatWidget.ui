@@ -119,49 +119,6 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_3">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>USERS</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-            <property name="headerLabel" stdset="0">
-             <bool>true</bool>
-            </property>
-            <property name="headerPanel" stdset="0">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="ChatSearchLineEdit" name="chatSearchLineEdit">
-            <property name="locale">
-             <locale language="English" country="UnitedStates"/>
-            </property>
-            <property name="placeholderText">
-             <string>Enter email or email hash</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="SearchWidget" name="searchWidget" native="true">
             <property name="minimumSize">
              <size>
@@ -659,11 +616,6 @@
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>ChatSearchLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header location="global">ChatSearchLineEdit.h</header>
-  </customwidget>
   <customwidget>
    <class>BSChatInput</class>
    <extends>QTextEdit</extends>
