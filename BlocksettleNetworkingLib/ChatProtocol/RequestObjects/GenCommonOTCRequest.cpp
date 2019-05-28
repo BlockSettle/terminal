@@ -33,7 +33,7 @@ void Chat::GenCommonOTCRequest::handle(RequestHandler & handler)
    handler.OnGenCommonOTCRequest(*this);
 }
 
-const std::shared_ptr<OTCRequestData> GenCommonOTCRequest::getOtcRequestData() const
+std::shared_ptr<OTCRequestData> GenCommonOTCRequest::getOtcRequestData() const
 {
    return otcRequestData_;
 }

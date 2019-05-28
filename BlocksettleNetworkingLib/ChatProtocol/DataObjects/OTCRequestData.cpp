@@ -108,5 +108,10 @@ const bs::network::OTCRequest& OTCRequestData::otcRequest() const
    return otcRequest_;
 }
 
-//namespace Chat end
+void OTCRequestData::setServerRequestId(const QString &serverRequestId)
+{
+    serverRequestId_ = serverRequestId;
 }
+
+//namespace Chat end
+    }

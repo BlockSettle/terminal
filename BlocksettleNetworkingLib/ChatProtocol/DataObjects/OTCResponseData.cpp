@@ -155,6 +155,11 @@ bs::network::OTCQuantityRange OTCResponseData::quantityRange() const
   return quantityRange_;
 }
 
+void OTCResponseData::setServerResponseId(const QString &serverResponseId)
+{
+    serverResponseId_ = serverResponseId;
+}
+
 
 //namespace Chat end
-}
+    }

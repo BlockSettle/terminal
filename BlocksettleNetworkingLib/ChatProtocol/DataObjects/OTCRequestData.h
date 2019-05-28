@@ -41,9 +41,11 @@ namespace Chat {
 
       const bs::network::OTCRequest& otcRequest() const;
 
+      void setServerRequestId(const QString &serverRequestId);
+
    private:
       const QString clientRequestId_;
-      const QString serverRequestId_;
+      QString serverRequestId_;
       const QString requestorId_;
       const QString targetId_;
 
