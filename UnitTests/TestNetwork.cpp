@@ -165,7 +165,6 @@ TEST(TestNetwork, ZMQ_BIP15X)
       }
       void OnDisconnected() override {
          logger_->debug("[{}]", __func__);
-         fail();
       }
       void OnError(DataConnectionError errorCode) override {
          logger_->debug("[{}] {}", __func__, int(errorCode));
