@@ -287,7 +287,7 @@ bool ZmqBIP15XDataConnection::send(const string& data)
          retVal = sendPacket(packet.toBinStr());
          if (!retVal)
          {
-            logger_->error("[ZmqBIP15XServerConnection::{}] fragment send failed"
+            logger_->error("[ZmqBIP15XDataConnection::{}] fragment send failed"
                , __func__);
             return retVal;
          }
