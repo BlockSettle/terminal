@@ -637,6 +637,7 @@
             <widget class="CreateOTCResponseWidget" name="widgetCreateOTCResponse"/>
             <widget class="OTCNegotiationRequestWidget" name="widgetNegotiateRequest"/>
             <widget class="OTCNegotiationResponseWidget" name="widgetNegotiateResponse"/>
+            <widget class="OTCParticipantShield" name="widgetParticipantShield"/>
            </widget>
           </item>
          </layout>
@@ -715,6 +716,12 @@
    <header>PullOwnOTCRequestWidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>OTCParticipantShield</class>
+   <extends>QWidget</extends>
+   <header>OTCParticipantShield.h</header>
+   <container>1</container>
+  </customwidget>  
  </customwidgets>
  <resources/>
  <connections/>
