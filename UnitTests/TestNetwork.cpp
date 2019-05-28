@@ -8,6 +8,7 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
+using namespace std::chrono_literals;
 
 TEST(TestNetwork, CelerMessageMapper)
 {
@@ -243,14 +244,12 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    class ServerConnListener : public ServerConnectionListener
    {
    public:
-      ServerConnListener(const std::shared_ptr<spdlog::logger> &logger
-         , const std::shared_ptr<ZmqBIP15XServerConnection> &conn)
-         : ServerConnectionListener(), logger_(logger), connection_(conn) {}
+      ServerConnListener(const std::shared_ptr<spdlog::logger> &logger)
+         : ServerConnectionListener(), logger_(logger) {}
       ~ServerConnListener() noexcept override = default;
 
       bool onReady(int cur = 0, int total = 0);
 
-   protected:
       void OnDataFromClient(const std::string &clientId, const std::string &data) override {
          logger_->debug("[{}] {} from {} #{}", __func__, data.size()
             , BinaryData(clientId).toHexStr(), clientPktCnt);
@@ -300,9 +299,8 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
          logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
       }
 
-   private:
       std::shared_ptr<spdlog::logger>  logger_;
-      std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
+      ZmqBIP15XServerConnection *connection_{};
       bool prom1Set_ = false;
       bool prom2Set_ = false;
    };
@@ -388,6 +386,11 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
       std::shared_ptr<spdlog::logger>  logger_;
    };
 
+   // Create listeners before clients to prevent dangling pointer use after destruction
+   const auto srvLsn = std::make_unique<ServerConnListener>(TestEnv::logger());
+   const auto client2Lsn = std::make_unique<AnotherClientConnListener>(TestEnv::logger());
+   const auto clientLsn = std::make_unique<ClientConnListener>(TestEnv::logger());
+
    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
       TestEnv::logger(), true, "", "", true);
    const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
@@ -395,10 +398,9 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
       std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
       TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+   srvLsn->connection_ = serverConn.get();
    const auto serverKey = serverConn->getOwnPubKey();
    clientConn->SetContext(zmqContext);
-   const auto srvLsn = std::make_shared<ServerConnListener>(TestEnv::logger(), serverConn);
-   const auto clientLsn = std::make_shared<ClientConnListener>(TestEnv::logger());
 
    const std::string host = "127.0.0.1";
    std::string port;
@@ -427,10 +429,10 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    for (const auto &clientPkt : packets) {
       clientConn->send(clientPkt);
    }
+   ASSERT_EQ(clientPktsFut2.wait_for(1000ms), std::future_status::ready);
    EXPECT_TRUE(clientPktsFut2.get());
    EXPECT_TRUE(clientConn->closeConnection());
 
-   const auto client2Lsn = std::make_shared<AnotherClientConnListener>(TestEnv::logger());
    const auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
       TestEnv::logger(), true, "", "", true);
    client2Conn->SetContext(zmqContext);
@@ -438,13 +440,10 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    ASSERT_TRUE(client2Conn->openConnection(host, port, client2Lsn.get()));
    EXPECT_TRUE(connectFut2.get());
    EXPECT_TRUE(client2Conn->closeConnection());
-
-   serverConn.reset();  // This is needed to detach listener before it's destroyed
 }
 
 
 static auto await(std::atomic<bool>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 100 }) {
-    using namespace std::chrono_literals;
     const auto napTime = 10ms;
     for (auto elapsed = 0ms; elapsed < deadline; elapsed += napTime) {
         if (what.load()) {
@@ -690,7 +689,6 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
 
     const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
     const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
-    using namespace std::chrono_literals;
 
     struct Messages {
         size_t clientMsgs;
