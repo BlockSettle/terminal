@@ -76,7 +76,7 @@ public:
    void activateAutoSign(const std::string &walletId
       , bs::wallet::QPasswordData passwordData
       , bool activate
-      , const std::function<void(bool)> &cb);
+      , const std::function<void(bool success, const std::string& errorMsg)> &cb);
 
    NetworkType netType() const { return netType_; }
 

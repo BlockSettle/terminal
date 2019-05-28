@@ -39,8 +39,19 @@ void QMLStatusUpdater::clearConnections()
 }
 
 void QMLStatusUpdater::deactivateAutoSign()
-{
-   adapter_->deactivateAutoSign();
+{   
+//   emit autoSignActiveChanged();
+//   auto cb = [this, walletId, jsCallback] (bool success) {
+//      QJSValueList args;
+//      args << QJSValue(success);
+//      QMetaObject::invokeMethod(this, [this, args, jsc=jsCallback] {
+//         if (jsc.isCallable()) {
+//            return jsc.call(args);
+//         }
+//      });
+//   };
+
+//   adapter_->activateAutoSign(walletId.toStdString(), passwordData, false, cb);
 }
 
 void QMLStatusUpdater::activateAutoSign(const QString &walletId
@@ -49,18 +60,15 @@ void QMLStatusUpdater::activateAutoSign(const QString &walletId
                                         , QJSValue jsCallback)
 {
    emit autoSignActiveChanged();
-   auto cb = [this, walletId, jsCallback] (bool success) {
+   auto cb = [this, walletId, jsCallback] (bool success, const std::string &error) {
       QJSValueList args;
-      args << QJSValue(success);
-      QMetaObject::invokeMethod(this, [this, args, jsc=jsCallback] {
-         if (jsc.isCallable()) {
-            return jsc.call(args);
-         }
+      args << QJSValue(success) << QString::fromStdString(error);
+      QMetaObject::invokeMethod(this, [this, args, jsCallback] {
+         invokeJsCallBack(jsCallback, args);
       });
    };
 
-   adapter_->activateAutoSign(walletId, passwordData, true, cb);
-   emit autoSignRequiresPwd(walletId);
+   adapter_->activateAutoSign(walletId.toStdString(), passwordData, true, cb);
 }
 
 void QMLStatusUpdater::onAutoSignActivated(const std::string &walletId)
@@ -144,5 +152,15 @@ void QMLStatusUpdater::xbtSpent(const qint64 value, bool autoSign)
    else {
       manualSignSpent_ += value;
       emit manualSignSpentChanged();
+   }
+}
+
+QJSValue QMLStatusUpdater::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
+{
+   if (jsCallback.isCallable()) {
+      return jsCallback.call(args);
+   }
+   else {
+      return QJSValue();
    }
 }

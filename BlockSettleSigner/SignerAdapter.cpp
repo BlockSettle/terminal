@@ -242,12 +242,12 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
 void SignerAdapter::activateAutoSign(const std::string &walletId
    , bs::wallet::QPasswordData passwordData
    , bool activate
-   , const std::function<void(bool)> &cb)
+   , const std::function<void(bool success, const std::string& errorMsg)> &cb)
 {
    signer::AutoSignActRequest request;
-   request.set_wallet_id(walletId);
+   request.set_rootwalletid(walletId);
    request.set_password(passwordData.binaryPassword().toBinStr());
-   request.set_activate(activate);
+   request.set_activateautosign(activate);
    const auto reqId = listener_->send(signer::AutoSignActType, request.SerializeAsString());
    listener_->setAutoSignCb(reqId, cb);
 }
