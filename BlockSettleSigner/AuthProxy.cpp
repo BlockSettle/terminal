@@ -47,8 +47,8 @@ void AuthSignWalletObject::connectToServer()
    connect(autheIDClient_.get(), &AutheIDClient::succeeded, this, [this](const std::string &encKey, const SecureBinaryData &password){
       emit succeeded(QString::fromStdString(encKey), password);
    });
-   connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](const QString &text){
-      emit failed(text);
+   connect(autheIDClient_.get(), &AutheIDClient::failed, this, [this](QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError){
+      emit failed(AutheIDClient::errorString(authError));
    });
    connect(autheIDClient_.get(), &AutheIDClient::userCancelled, this, &AuthSignWalletObject::userCancelled);
 }

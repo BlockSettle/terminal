@@ -121,7 +121,7 @@ static int GuiApp(int &argc, char** argv)
    QApplication app(argc, argv);
 #endif
 
-   app.setQuitOnLastWindowClosed(false);
+   QApplication::setQuitOnLastWindowClosed(false);
 
    QFileInfo localStyleSheetFile(QLatin1String("stylesheet.css"));
 

@@ -1,8 +1,8 @@
 #include <QCommandLineParser>
 #include <QDir>
-#include <QSettings>
 #include <QStandardPaths>
 #include <QMetaEnum>
+#include <QMessageBox>
 #include "BIP150_151.h"
 #include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
@@ -195,6 +195,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
       }
    }
    else {
+      QMessageBox::critical(nullptr, tr("Error"), tr("Please start blocksettle_signer instead"));
       return false;
    }
 
