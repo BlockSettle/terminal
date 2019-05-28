@@ -1,7 +1,27 @@
 {
-   "latest_version" : "0.15.13",
-   "release_date" : "24 May 2019",
+   "latest_version" : "0.15.14",
+   "release_date" : "27 May 2019",
    "changes" : [
+      {
+         "version_string" : "0.15.14",
+         "previous_version" : "0.15.13",
+         "release_date" : "27 May 2019",
+         "release_type" : "development",
+         "improvements" :
+         [
+            "Hide icons in all tabs on user logout",
+            "Changed context menu to execute on right click"
+         ],
+         "bug_fixes" :
+         [
+            "Disable rich text in message input field in OTC Chat",
+            "Signer linux startup fixes",
+            "Do not create multiple dirs on Linux",
+            "Do not show two market data agreements dialogs"
+         ],
+         "revision" : "4a693d24",
+         "common_revision" : "578a5c22"
+      },
       {
          "version_string" : "0.15.13",
          "previous_version" : "0.15.12",

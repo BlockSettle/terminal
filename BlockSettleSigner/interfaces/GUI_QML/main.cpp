@@ -103,10 +103,17 @@ static int QMLApp(int argc, char **argv)
 {
    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
    QApplication app(argc, argv);
-   app.setApplicationName(QLatin1String("Signer"));
-   app.setOrganizationDomain(QLatin1String("blocksettle.com"));
-   app.setOrganizationName(QLatin1String("BlockSettle"));
-   app.setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
+
+   QApplication::setOrganizationDomain(QLatin1String("blocksettle.com"));
+#ifdef __linux__
+   // Needed for consistency (headless now uses company name in lowercase on Linux)
+   QApplication::setOrganizationName(QLatin1String("blocksettle"));
+   QApplication::setApplicationName(QLatin1String("signer"));
+#else
+   QApplication::setOrganizationName(QLatin1String("BlockSettle"));
+   QApplication::setApplicationName(QLatin1String("Signer"));
+#endif
+   QApplication::setWindowIcon(QIcon(QStringLiteral(":/images/bs_logo.png")));
 
    // ToDo: support 2.0 styles
    // app.setStyle(QStyleFactory::create(QStringLiteral("Universal")));
