@@ -65,6 +65,8 @@ CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionMan
 
    connect(this, &CelerClient::closingConnection, this, &CelerClient::CloseConnection, Qt::QueuedConnection);
    RegisterDefaulthandlers();
+
+   celerUserType_ = CelerUserType::Undefined;
 }
 
 bool CelerClient::LoginToServer(const std::string& hostname, const std::string& port
@@ -78,6 +80,8 @@ bool CelerClient::LoginToServer(const std::string& hostname, const std::string& 
    // create user login sequence
    std::string loginString = login;
    sessionToken_.clear();
+
+   celerUserType_ = CelerUserType::Undefined;
 
    auto loginSequence = std::make_shared<CelerLoginSequence>(logger_, login, password);
    auto onLoginSuccess = [this,loginString](const std::string& sessionToken, int32_t heartbeatInterval) {

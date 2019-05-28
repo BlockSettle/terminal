@@ -40,7 +40,7 @@
      <property name="wordWrap">
       <bool>true</bool>
      </property>
-     <property name="h1" stdset="0">
+     <property name="h5" stdset="0">
       <bool>true</bool>
      </property>
     </widget>

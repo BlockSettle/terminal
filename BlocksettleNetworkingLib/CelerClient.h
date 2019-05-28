@@ -43,6 +43,7 @@ public:
 
    enum CelerUserType
    {
+      Undefined,
       Dealing,
       Trading,
       Market
