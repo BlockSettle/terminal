@@ -1474,10 +1474,11 @@ QLineEdit#chatSearchLineEdit:disabled {
 QFrame#usersFrame, #roomsFrame {
     background-color: #1c2835; }
     
-QFrame#chatSearchPopupFrame {
+QFrame#chatSearchPopupFrame, QFrame#chatFoundUserList {
     background-color: #1c2835; }
     
-QLabel#chatSearchPopupLabel {
+QLabel#chatSearchPopupLabel,
+QTreeView#searchResultTreeView {
     background-color: #1c2835;
     font-family: 'Open Sans', arial, sans-serif;
     font-size: 11px;

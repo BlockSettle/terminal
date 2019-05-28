@@ -47,7 +47,9 @@ void SearchWidget::init()
 
    ui_->searchResultTreeView->setHeaderHidden(true);
    ui_->searchResultTreeView->setRootIsDecorated(false);
-   ui_->searchResultTreeView->setFixedHeight(ui_->chatSearchLineEdit->height() * 3);
+   int minHeight = static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2);
+   ui_->searchResultTreeView->setMaximumHeight(minHeight * 3);
+   ui_->searchResultTreeView->setMinimumHeight(minHeight);
    ui_->searchResultTreeView->setVisible(false);
    ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::NoSelection);
    ui_->searchResultTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -101,13 +103,8 @@ void SearchWidget::setListVisible(bool value)
 {
    bool hasUsers = ui_->searchResultTreeView->model()->rowCount() > 0;
    ui_->searchResultTreeView->setVisible(value && hasUsers);
+   ui_->searchResultTreeView->scrollToTop();
    ui_->notFoundLabel->setVisible(value && !hasUsers);
-   if (value) {
-      ui_->chatUsersVerticalSpacer_->changeSize(
-               20, kMaxContentHeight - ui_->chatSearchLineEdit->height() * 3);
-   } else {
-      ui_->chatUsersVerticalSpacer_->changeSize(20, kMaxContentHeight);
-   }
    layout()->update();
    listVisibleTimer_->stop();
 }
