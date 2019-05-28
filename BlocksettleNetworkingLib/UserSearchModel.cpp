@@ -4,7 +4,7 @@
 
 #include <QSize>
 
-constexpr int kRowHeigth = 25;
+constexpr int kRowHeigth = 20;
 
 UserSearchModel::UserSearchModel(QObject *parent) : QAbstractListModel(parent)
 {

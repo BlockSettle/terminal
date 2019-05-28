@@ -53,6 +53,7 @@ public slots:
    void setSearchText(QString value);
 
 private slots:
+   void resetTreeView();
    void showContextMenu(const QPoint &pos);
 
 signals:
