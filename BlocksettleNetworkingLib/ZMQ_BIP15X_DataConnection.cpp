@@ -14,46 +14,37 @@ namespace {
    const int HEARTBEAT_PACKET_SIZE = 23;
 } // namespace
 
+
+ZmqBIP15XDataConnectionParams::ZmqBIP15XDataConnectionParams()
+{
+   heartbeatInterval = ZmqBIP15XServerConnection::getDefaultHeartbeatInterval();
+}
+
+void ZmqBIP15XDataConnectionParams::setLocalHeartbeatInterval()
+{
+   heartbeatInterval = ZmqBIP15XServerConnection::getLocalHeartbeatInterval();
+}
+
 // The constructor to use.
 //
 // INPUT:  Logger object. (const shared_ptr<spdlog::logger>&)
-//         Ephemeral peer usage. Not recommended. (const bool&)
-//         The directory containing the file with the non-ephemeral key. (const std::string)
-//         The file with the non-ephemeral key. (const std::string)
-//         A flag for a monitored socket. (const bool&)
-//         A flag indicating if the connection will make a key cookie. (bool)
-//         A flag indicating if the connection will read a key cookie. (bool)
-//         The path to the key cookie to read or write. (const std::string)
+//         Params. (ZmqBIP15XDataConnectionParams)
 // OUTPUT: None
-ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
-   const shared_ptr<spdlog::logger>& logger, const bool ephemeralPeers
-   , const std::string& ownKeyFileDir, const std::string& ownKeyFileName
-   , const bool monitored, const bool makeClientCookie
-   , const bool readServerCookie, const std::string& cookieNamePath)
-   : ZmqDataConnection(logger, monitored)
-   , bipIDCookiePath_(cookieNamePath)
-   , useServerIDCookie_(readServerCookie)
-   , makeClientIDCookie_(makeClientCookie)
+ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger>& logger
+   , const ZmqBIP15XDataConnectionParams &params)
+   : ZmqDataConnection(logger, true) // we need monitoring events
+   , bipIDCookiePath_(params.cookiePath)
+   , cookie_(params.cookie)
    , lastHeartbeatReply_(std::chrono::steady_clock::now())
-   , heartbeatInterval_(ZmqBIP15XServerConnection::getDefaultHeartbeatInterval())
+   , heartbeatInterval_(params.heartbeatInterval)
 {
-   if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
+   if (!params.ephemeralPeers && (params.ownKeyFileDir.empty() || params.ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
          "wallet file is specified.");
    }
 
-   if (makeClientIDCookie_ && useServerIDCookie_) {
-      throw std::runtime_error("Cannot read client ID cookie and create ID " \
-         "cookie at the same time. Connection is incomplete.");
-   }
-
-   if (makeClientIDCookie_ && bipIDCookiePath_.empty()) {
+   if (cookie_ != BIP15XCookie::NotUsed && bipIDCookiePath_.empty()) {
       throw std::runtime_error("ID cookie creation requested but no name " \
-         "supplied. Connection is incomplete.");
-   }
-
-   if (useServerIDCookie_ && bipIDCookiePath_.empty()) {
-      throw std::runtime_error("ID cookie reading requested but no name " \
          "supplied. Connection is incomplete.");
    }
 
@@ -62,9 +53,9 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    currentReadMessage_.reset();
 
    // In general, load the server key from a special Armory wallet file.
-   if (!ephemeralPeers) {
+   if (!params.ephemeralPeers) {
       authPeers_ = make_shared<AuthorizedPeers>(
-         ownKeyFileDir, ownKeyFileName);
+         params.ownKeyFileDir, params.ownKeyFileName);
    }
    else {
       authPeers_ = make_shared<AuthorizedPeers>();
@@ -73,7 +64,7 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(
    // Create a random four-byte ID for the client.
    msgID_ = READ_UINT32_LE(CryptoPRNG::generateRandom(4));
 
-   if (makeClientIDCookie_) {
+   if (cookie_ == BIP15XCookie::MakeClient) {
       genBIPIDCookie();
    }
 
@@ -109,7 +100,7 @@ ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
    hbThread_.join();
 
    // If it exists, delete the identity cookie.
-   if (makeClientIDCookie_) {
+   if (cookie_ == BIP15XCookie::MakeClient) {
 //      const string absCookiePath =
 //         SystemFilePaths::appDataLocation() + "/" + bipIDCookieName_;
       if (SystemFileUtils::fileExist(bipIDCookiePath_)) {
@@ -637,7 +628,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       serverPubkeyProm_ = make_shared<promise<bool>>();
 
       // If it's a local connection, get a cookie with the server's key.
-      if (useServerIDCookie_) {
+      if (cookie_ == BIP15XCookie::ReadServer) {
          // Read the cookie with the key to check.
          BinaryData cookieKey(static_cast<size_t>(BTC_ECKEY_COMPRESSED_LENGTH));
          if (!getServerIDCookie(cookieKey)) {
@@ -861,7 +852,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 // OUTPUT: N/A
 // RETURN: N/A
 void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
-   if (makeClientIDCookie_) {
+   if (cookie_ == BIP15XCookie::MakeClient) {
       logger_->error("[{}] Cannot use callbacks when using cookies.", __func__);
       return;
    }
@@ -927,11 +918,6 @@ void ZmqBIP15XDataConnection::updatePeerKeys(const std::vector<std::pair<std::st
    }
 }
 
-void ZmqBIP15XDataConnection::setLocalHeartbeatInterval()
-{
-   heartbeatInterval_ = ZmqBIP15XServerConnection::getLocalHeartbeatInterval();
-}
-
 // If the user is presented with a new remote server ID key it doesn't already
 // know about, verify the key. A promise will also be used in case any functions
 // are waiting on verification results.
@@ -943,7 +929,7 @@ void ZmqBIP15XDataConnection::setLocalHeartbeatInterval()
 bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
    , const string& srvAddrPort)
 {
-   if (useServerIDCookie_) {
+   if (cookie_ == BIP15XCookie::ReadServer) {
       // If we get here, it's because the cookie add failed or the cookie was
       // incorrect. Satisfy the promise to prevent lockup.
       logger_->error("[{}] Server ID key cookie could not be verified", __func__);
@@ -997,7 +983,7 @@ bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::getServerIDCookie(BinaryData& cookieBuf)
 {
-   if (!useServerIDCookie_) {
+   if (cookie_ != BIP15XCookie::ReadServer) {
       return false;
    }
 
@@ -1028,7 +1014,7 @@ bool ZmqBIP15XDataConnection::getServerIDCookie(BinaryData& cookieBuf)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::genBIPIDCookie()
 {
-   if (!makeClientIDCookie_) {
+   if (cookie_ != BIP15XCookie::MakeClient) {
       logger_->error("[{}] ID cookie creation requested but not allowed."
       , __func__);
       return false;

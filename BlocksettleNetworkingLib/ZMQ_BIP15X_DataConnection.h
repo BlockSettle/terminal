@@ -38,14 +38,48 @@
 // New key + Callbacks - Depends on what the user wants.
 // Previously verified key - Accept the key and skip the callbacks.
 
+enum class BIP15XCookie
+{
+   // Cookie won't be used
+   NotUsed,
+
+   // Connection will make a key cookie
+   MakeClient,
+
+   // Connection will read a key cookie (server's public key)
+   ReadServer,
+};
+
+struct ZmqBIP15XDataConnectionParams
+{
+
+   // The directory containing the file with the non-ephemeral key
+   std::string ownKeyFileDir;
+
+   // The file name with the non-ephemeral key
+   std::string ownKeyFileName;
+
+   // File where cookie will be stored or read from.
+   // Must be set cookie is used.
+   std::string cookiePath{};
+
+   // Ephemeral peer usage. Not recommended
+   bool ephemeralPeers{false};
+
+   BIP15XCookie cookie{BIP15XCookie::NotUsed};
+
+   // Initialized to ZmqBIP15XServerConnection::getDefaultHeartbeatInterval() by default
+   std::chrono::milliseconds heartbeatInterval;
+
+   ZmqBIP15XDataConnectionParams();
+
+   void setLocalHeartbeatInterval();
+};
+
 class ZmqBIP15XDataConnection : public ZmqDataConnection
 {
 public:
-   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const bool ephemeralPeers = false, const std::string& ownKeyFileDir = ""
-      , const std::string& ownKeyFileName = "", const bool monitored = false
-      , const bool makeClientCookie = false, const bool readServerCookie = false
-      , const std::string& cookiePath = "");
+   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger, const ZmqBIP15XDataConnectionParams &params);
    ~ZmqBIP15XDataConnection() noexcept override;
 
    using cbNewKey = std::function<void(const std::string &oldKey, const std::string &newKey
@@ -67,7 +101,6 @@ public:
    bool genBIPIDCookie();
    void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
    void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
-   void setLocalHeartbeatInterval();
 
    // Overridden functions from ZmqDataConnection.
    bool send(const std::string& data) override; // Send data from outside class.
@@ -117,8 +150,7 @@ private:
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
    const std::string bipIDCookiePath_;
-   const bool useServerIDCookie_;
-   const bool makeClientIDCookie_;
+   const BIP15XCookie cookie_;
    uint32_t msgID_ = 0;
    std::function<void()>   cbCompleted_ = nullptr;
 
