@@ -37,7 +37,7 @@ def GetDigitRevisions(revisionString):
    revisions = revisionString.split('.')
 
    if len(revisions) != 3:
-      raise 'Ivalid revision string'
+      raise 'Invalid revision string'
 
    return [ int(r) for r in revisions]
 
@@ -145,9 +145,9 @@ def UpdateLinuxRevision(filePath, revisionString):
          else:
             writeResult = f.write(l)
 
-# SET(BS_VERSION_MAJOR 0 )
-# SET(BS_VERSION_MINOR 15 )
-# SET(BS_VERSION_PATCH 14 )
+# SET(BS_VERSION_MAJOR XXX )
+# SET(BS_VERSION_MINOR XXX )
+# SET(BS_VERSION_PATCH XXX )
 def UpdateCmakeFile(filePath, revisionString):
    revisionDigits = GetDigitRevisions(revisionString)
    if len(revisionDigits) != 3:
