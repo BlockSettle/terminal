@@ -133,7 +133,7 @@ private:
    void onRawDataReceived(const std::string& rawData) override;
    ZmqContext::sock_ptr CreateDataSocket();
    bool recvData();
-   void triggerHeartbeat();
+   void triggerHeartbeatCheck();
 
    void notifyOnError(DataConnectionListener::DataConnectionError errorCode);
 
@@ -168,11 +168,8 @@ private:
 
    cbNewKey cbNewKey_;
 
-   std::atomic<std::chrono::steady_clock::time_point> lastHeartbeatReply_;
-   std::atomic_bool        hbThreadRunning_;
-   std::thread             hbThread_;
-   std::mutex              hbMutex_;
-   std::condition_variable hbCondVar_;
+   std::chrono::steady_clock::time_point lastHeartbeatSend_{};
+   std::chrono::steady_clock::time_point lastHeartbeatReply_{};
    std::atomic_bool        fatalError_{false};
    std::atomic_bool        serverSendsHeartbeat_{false};
    std::chrono::milliseconds heartbeatInterval_;

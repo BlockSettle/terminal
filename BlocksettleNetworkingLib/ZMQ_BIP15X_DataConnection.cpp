@@ -19,6 +19,8 @@ namespace
    const int StreamSocketIndex = 1;
    const int MonitorSocketIndex = 2;
 
+   const std::chrono::seconds kHearthbeatCheckPeriod(1);
+
 } // namespace
 
 
@@ -80,38 +82,10 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
    if (cookie_ == BIP15XCookie::MakeClient) {
       genBIPIDCookie();
    }
-
-   const auto &heartbeatProc = [this] {
-      auto lastHeartbeat = std::chrono::steady_clock::now();
-      while (hbThreadRunning_) {
-         {
-            std::unique_lock<std::mutex> lock(hbMutex_);
-            hbCondVar_.wait_for(lock, std::chrono::seconds{ 1 });
-            if (!hbThreadRunning_) {
-               break;
-            }
-         }
-         if (!bip151Connection_ || (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)) {
-            continue;
-         }
-         const auto curTime = std::chrono::steady_clock::now();
-         const auto diff = curTime - lastHeartbeat;
-         if (diff > heartbeatInterval_) {
-            lastHeartbeat = curTime;
-            triggerHeartbeat();
-         }
-      }
-   };
-   hbThreadRunning_ = true;
-   hbThread_ = std::thread(heartbeatProc);
 }
 
 ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
 {
-   hbThreadRunning_ = false;
-   hbCondVar_.notify_one();
-   hbThread_.join();
-
    // If it exists, delete the identity cookie.
    if (cookie_ == BIP15XCookie::MakeClient) {
 //      const string absCookiePath =
@@ -205,13 +179,16 @@ void ZmqBIP15XDataConnection::listenFunction()
 
    bool isConnected = false;
 
-   while (true) {
-      int result = zmq_poll(poll_items, 3, -1);
+   while (!fatalError_) {
+      int periodMs = std::chrono::duration_cast<std::chrono::milliseconds>(kHearthbeatCheckPeriod).count();
+      int result = zmq_poll(poll_items, 3, periodMs);
       if (result == -1) {
          logger_->error("[{}] poll failed for {} : {}", __func__
             , connectionName_, zmq_strerror(zmq_errno()));
          break;
       }
+
+      triggerHeartbeatCheck();
 
       if (poll_items[ControlSocketIndex].revents & ZMQ_POLLIN) {
          MessageHolder   command;
@@ -364,17 +341,18 @@ bool ZmqBIP15XDataConnection::send(const string& data)
 // INPUT:  N/A
 // OUTPUT: N/A
 // RETURN: N/A
-void ZmqBIP15XDataConnection::triggerHeartbeat()
+void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
 {
-   if (bip151Connection_->getBIP150State() != BIP150State::SUCCESS) {
-      logger_->error("[ZmqBIP15XDataConnection::{}] {} invalid state: {}"
-         , __func__, connectionName_, (int)bip151Connection_->getBIP150State());
+   if (!bip151HandshakeCompleted_) {
       return;
    }
-   BIP151Connection* connPtr = nullptr;
-   if (bip151HandshakeCompleted_) {
-      connPtr = bip151Connection_.get();
+
+   const auto curTime = std::chrono::steady_clock::now();
+   const auto diff = curTime - lastHeartbeatSend_;
+   if (diff < heartbeatInterval_) {
+      return;
    }
+   lastHeartbeatSend_ = curTime;
 
    // If a rekey is needed, rekey before encrypting. Estimate the size of the
    // final packet first in order to get the # of bytes transmitted.
@@ -382,7 +360,7 @@ void ZmqBIP15XDataConnection::triggerHeartbeat()
 
    ZmqBIP15XSerializedMessage msg;
    BinaryData emptyPayload;
-   msg.construct(emptyPayload.getDataVector(), connPtr, ZMQ_MSGTYPE_HEARTBEAT, msgID_);
+   msg.construct(emptyPayload.getDataVector(), bip151Connection_.get(), ZMQ_MSGTYPE_HEARTBEAT, msgID_);
 
    // An error message is already logged elsewhere if the send fails.
    // sendPacket already sets the timestamp.
@@ -394,7 +372,7 @@ void ZmqBIP15XDataConnection::triggerHeartbeat()
       return;
    }
 
-   auto lastHeartbeatDiff = std::chrono::steady_clock::now() - lastHeartbeatReply_.load();
+   auto lastHeartbeatDiff = std::chrono::steady_clock::now() - lastHeartbeatReply_;
    if (lastHeartbeatDiff > heartbeatInterval_ * 2) {
       notifyOnError(DataConnectionListener::HeartbeatWaitFailed);
    }
@@ -408,8 +386,6 @@ void ZmqBIP15XDataConnection::notifyOnError(DataConnectionListener::DataConnecti
    }
 
    fatalError_ = true;
-   // Do not send anything when connection fails, client will need to restart connection
-   closeConnection();
    DataConnection::notifyOnError(errorCode);
 }
 
