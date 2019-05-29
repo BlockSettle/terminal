@@ -5,6 +5,7 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <deque>
 #include <spdlog/spdlog.h>
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
@@ -114,15 +115,11 @@ public:
    bool SetZMQTransport(ZMQTransport transport);
 
 private:
-   enum SocketIndex {
-      ControlSocketIndex = 0,
-      StreamSocketIndex,
-      MonitorSocketIndex
-   };
-
-   enum class InternalCommandCode {
-      Send = 0,
-      Stop
+   enum class InternalCommandCode
+   {
+      Invalid,
+      Send,
+      Stop,
    };
 
    bool startBIP151Handshake(const std::function<void()> &cbCompleted);
@@ -131,7 +128,7 @@ private:
    }
 
    // Use to send a packet that this class has generated.
-   bool sendPacket(const std::string& data);
+   void sendPacket(const std::string& data);
 
    // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
@@ -151,7 +148,11 @@ private:
    void listenFunction();
    void resetConnectionObjects();
    bool ConfigureDataSocket(const ZmqContext::sock_ptr& socket);
+   void sendCommand(InternalCommandCode command);
+   void sendPendingData();
+   void sendDisconnectMsg();
 
+   std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    bool  serverPubkeySignalled_ = false;
    std::shared_ptr<AuthorizedPeers> authPeers_;
@@ -161,7 +162,6 @@ private:
    uint32_t innerRekeyCount_ = 0;
    ZmqBIP15XMsgFragments currentReadMessage_;
    BinaryData leftOverData_;
-   std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
    const std::string bipIDCookiePath_;
@@ -180,12 +180,9 @@ private:
    std::atomic_bool        serverSendsHeartbeat_{false};
    std::chrono::milliseconds heartbeatInterval_;
    std::shared_ptr<ZmqContext>      context_;
-   std::shared_ptr<spdlog::logger>  logger_;
 
    std::string                      connectionName_;
 
-   std::atomic_flag                 lockFlag_ = ATOMIC_FLAG_INIT;
-   std::atomic_flag                 controlSocketLock_ = ATOMIC_FLAG_INIT;
    ZmqContext::sock_ptr             dataSocket_;
    ZmqContext::sock_ptr             monSocket_;
    std::string                      hostAddr_;
@@ -197,13 +194,10 @@ private:
    ZmqContext::sock_ptr             threadMasterSocket_;
    ZmqContext::sock_ptr             threadSlaveSocket_;
 
-   bool                             isConnected_;
-
-   std::vector<std::string>         sendQueue_;
-
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
 
-   std::shared_ptr<bool>            continueExecution_ = nullptr;
+   std::vector<std::string>         pendingData_;
+   std::mutex                       pendingDataMutex_;
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__
