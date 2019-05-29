@@ -78,8 +78,10 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
 bool ChatTreeModelWrapper::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
    // sort contact list
-   if (left.data(Role::ItemTypeRole).value<NodeType>() == NodeType::ContactsElement &&
-       right.data(Role::ItemTypeRole).value<NodeType>() == NodeType::ContactsElement) {
+   auto leftNodeType = left.data(Role::ItemTypeRole).value<NodeType>();
+   auto rightNodeType = right.data(Role::ItemTypeRole).value<NodeType>();
+
+   if (leftNodeType == NodeType::ContactsElement && rightNodeType == NodeType::ContactsElement) {
 
       auto leftContactStatus = left.data(Role::ContactStatusRole).value<ContactStatus>();
       auto leftOnlineStatus = left.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
@@ -128,6 +130,9 @@ bool ChatTreeModelWrapper::lessThan(const QModelIndex &left, const QModelIndex &
       }
    }
 
+   if (left < right) {
+      return false;
+   }
    return true;
 }
 
