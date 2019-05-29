@@ -249,7 +249,7 @@ void ZmqBIP15XDataConnection::listenFunction()
          // but they always came in pairs
          //case ZMQ_EVENT_HANDSHAKE_SUCCEEDED:
             if (!isConnected) {
-               notifyOnConnected();
+               startBIP151Handshake();
                isConnected = true;
             }
             break;
@@ -358,13 +358,6 @@ bool ZmqBIP15XDataConnection::send(const string& data)
    return true;
 }
 
-void ZmqBIP15XDataConnection::notifyOnConnected()
-{
-   startBIP151Handshake([this] {
-      DataConnection::notifyOnConnected();
-   });
-}
-
 // A function that is used to trigger heartbeats. Required because ZMQ is unable
 // to tell, via a data socket connection, when a client has disconnected.
 //
@@ -439,11 +432,9 @@ bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
 // INPUT:  None
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-bool ZmqBIP15XDataConnection::startBIP151Handshake(
-   const std::function<void()> &cbCompleted)
+bool ZmqBIP15XDataConnection::startBIP151Handshake()
 {
    ZmqBIP15XSerializedMessage msg;
-   cbCompleted_ = cbCompleted;
    BinaryData nullPayload;
 
    msg.construct(nullPayload.getDataVector(), nullptr, ZMQ_MSGTYPE_AEAD_SETUP,
@@ -1007,9 +998,8 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 
       logger_->info("[processHandshake] BIP 150 handshake with server complete "
          "- connection to {} is ready and fully secured", srvId);
-      if (cbCompleted_) {
-         cbCompleted_();
-      }
+
+      notifyOnConnected();
       break;
    }
 

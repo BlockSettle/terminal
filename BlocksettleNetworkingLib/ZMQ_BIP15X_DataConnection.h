@@ -122,7 +122,7 @@ private:
       Stop,
    };
 
-   bool startBIP151Handshake(const std::function<void()> &cbCompleted);
+   bool startBIP151Handshake();
    bool handshakeCompleted() {
       return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
    }
@@ -130,9 +130,7 @@ private:
    // Use to send a packet that this class has generated.
    void sendPacket(const std::string& data);
 
-   // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
-   void notifyOnConnected() override;
    ZmqContext::sock_ptr CreateDataSocket();
    bool recvData();
    void triggerHeartbeat();
@@ -167,7 +165,6 @@ private:
    const std::string bipIDCookiePath_;
    const BIP15XCookie cookie_;
    uint32_t msgID_ = 0;
-   std::function<void()>   cbCompleted_ = nullptr;
 
    cbNewKey cbNewKey_;
 
