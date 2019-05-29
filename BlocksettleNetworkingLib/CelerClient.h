@@ -41,6 +41,14 @@ public:
       UndefinedError
    };
 
+   enum CelerUserType
+   {
+      Undefined,
+      Dealing,
+      Trading,
+      Market
+   };
+
    using message_handler = std::function<bool (const std::string&)>;
 
 public:
@@ -65,6 +73,7 @@ public:
    std::string userName() const;
    std::string userId() const;
    const QString& userType() const;
+   CelerUserType celerUserType() const;
 
    bool tradingAllowed() const;
 
@@ -132,6 +141,7 @@ private:
    std::string sessionToken_;
    std::string userName_;
    QString userType_;
+   CelerUserType celerUserType_;
    CelerProperty userId_;
    CelerProperty bitcoinParticipant_;
 
