@@ -7,6 +7,7 @@
 #include "SystemFileUtils.h"
 #include "BIP150_151.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
+#include "ZmqHelperFunctions.h"
 
 using namespace std;
 
@@ -32,12 +33,19 @@ void ZmqBIP15XDataConnectionParams::setLocalHeartbeatInterval()
 // OUTPUT: None
 ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger>& logger
    , const ZmqBIP15XDataConnectionParams &params)
-   : ZmqDataConnection(logger, true) // we need monitoring events
+   : logger_(logger)
    , bipIDCookiePath_(params.cookiePath)
    , cookie_(params.cookie)
    , lastHeartbeatReply_(std::chrono::steady_clock::now())
    , heartbeatInterval_(params.heartbeatInterval)
+   , dataSocket_(ZmqContext::CreateNullSocket())
+   , monSocket_(ZmqContext::CreateNullSocket())
+   , threadMasterSocket_(ZmqContext::CreateNullSocket())
+   , threadSlaveSocket_(ZmqContext::CreateNullSocket())
 {
+   assert(logger_);
+   continueExecution_ = std::make_shared<bool>(false);
+
    if (!params.ephemeralPeers && (params.ownKeyFileDir.empty() || params.ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
          "wallet file is specified.");
@@ -173,6 +181,130 @@ void ZmqBIP15XDataConnection::rekeyIfNeeded(size_t dataSize)
    }
 }
 
+void ZmqBIP15XDataConnection::listenFunction()
+{
+   zmq_pollitem_t  poll_items[3];
+   memset(&poll_items, 0, sizeof(poll_items));
+
+   poll_items[ControlSocketIndex].socket = threadSlaveSocket_.get();
+   poll_items[ControlSocketIndex].events = ZMQ_POLLIN;
+
+   poll_items[StreamSocketIndex].socket = dataSocket_.get();
+   poll_items[StreamSocketIndex].events = ZMQ_POLLIN;
+
+   poll_items[MonitorSocketIndex].socket = monSocket_.get();
+   poll_items[MonitorSocketIndex].events = ZMQ_POLLIN;
+
+   SPDLOG_DEBUG(logger_, "[{}] poll thread started for {}", __func__
+      , connectionName_);
+   int result;
+
+   auto executionFlag = continueExecution_;
+
+   while(*executionFlag) {
+      result = zmq_poll(poll_items, monSocket_ ? 3 : 2, -1);
+      if (result == -1) {
+         logger_->error("[{}] poll failed for {} : {}", __func__
+            , connectionName_, zmq_strerror(zmq_errno()));
+         break;
+      }
+
+      if (poll_items[ControlSocketIndex].revents & ZMQ_POLLIN) {
+         MessageHolder   command;
+
+         int recv_result = zmq_msg_recv(&command, poll_items[ControlSocketIndex].socket, ZMQ_DONTWAIT);
+         if (recv_result == -1) {
+            logger_->error("[{}] failed to recv command on {} : {}", __func__
+               , connectionName_, zmq_strerror(zmq_errno()));
+            break;
+         }
+
+         auto command_code = InternalCommandCode(command.ToInt());
+         if (command_code == InternalCommandCode::Send) {
+            std::vector<std::string> tmpBuf;
+            {
+               FastLock locker(lockFlag_);
+               tmpBuf = std::move(sendQueue_);
+               sendQueue_.clear();
+            }
+            for (const auto &sendBuf : tmpBuf) {
+               int result = zmq_send(dataSocket_.get(), socketId_.c_str(), socketId_.size(), ZMQ_SNDMORE);
+               if (result != (int)socketId_.size()) {
+                  logger_->error("[{}] {} failed to send socket id {}"
+                     , __func__, connectionName_, zmq_strerror(zmq_errno()));
+                  continue;
+               }
+
+               result = zmq_send(dataSocket_.get(), sendBuf.data(), sendBuf.size(), ZMQ_SNDMORE);
+               if (result != (int)sendBuf.size()) {
+                  logger_->error("[{}] {} failed to send data frame {}"
+                     , __func__, connectionName_, zmq_strerror(zmq_errno()));
+                  continue;
+               }
+            }
+         }
+         else if (command_code == InternalCommandCode::Stop) {
+            break;
+         } else {
+            logger_->error("[{}] unexpected command code {} for {}", __func__
+               , int(command_code), connectionName_);
+            break;
+         }
+      }
+
+      if (poll_items[StreamSocketIndex].revents & ZMQ_POLLIN) {
+         if (!recvData()) {
+            break;
+         }
+      }
+
+      if (poll_items[MonitorSocketIndex].revents & ZMQ_POLLIN) {
+         switch (bs::network::get_monitor_event(monSocket_.get())) {
+         case ZMQ_EVENT_CONNECTED:
+         // NOTE: for ZMQ based connections this event might better suited than ZMQ_EVENT_CONNECTED
+         // but they always came in pairs
+         //case ZMQ_EVENT_HANDSHAKE_SUCCEEDED:
+            if (!isConnected_) {
+               notifyOnConnected();
+               isConnected_ = true;
+            }
+            break;
+
+         case ZMQ_EVENT_DISCONNECTED:
+            if (isConnected_) {
+               notifyOnDisconnected();
+               isConnected_ = false;
+            }
+            break;
+         default:
+            break;
+         }
+      }
+   }
+}
+
+void ZmqBIP15XDataConnection::resetConnectionObjects()
+{
+   // do not clean connectionName_ for debug purpose
+   socketId_.clear();
+
+   dataSocket_.reset();
+   threadMasterSocket_.reset();
+   threadSlaveSocket_.reset();
+}
+
+bool ZmqBIP15XDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr &socket)
+{
+   int lingerPeriod = 0;
+   int result = zmq_setsockopt(socket.get(), ZMQ_LINGER, &lingerPeriod, sizeof(lingerPeriod));
+   if (result != 0) {
+      logger_->error("[{}] {} failed to set linger interval: {}", __func__
+         , connectionName_, zmq_strerror(zmq_errno()));
+      return false;
+   }
+   return true;
+}
+
 void ZmqBIP15XDataConnection::rekey()
 {
    if (!bip150HandshakeCompleted_) {
@@ -190,14 +322,17 @@ void ZmqBIP15XDataConnection::rekey()
 
    auto& packet = rekeyPacket.getNextPacket();
    if (!sendPacket(packet.toBinStr())) {
-      if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-            "rekey: {} (result={})", __func__, connectionName_
-            , zmq_strerror(zmq_errno()));
-      }
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+         "rekey: {} (result={})", __func__, connectionName_
+         , zmq_strerror(zmq_errno()));
    }
    bip151Connection_->rekeyOuterSession();
    ++outerRekeyCount_;
+}
+
+bool ZmqBIP15XDataConnection::isActive() const
+{
+   return dataSocket_ != nullptr;
 }
 
 // An internal send function to be used when this class constructs a packet. The
@@ -220,11 +355,9 @@ bool ZmqBIP15XDataConnection::sendPacket(const string& data)
       result = zmq_send(dataSocket_.get(), data.c_str(), data.size(), 0);
    }
    if (result != (int)data.size()) {
-      if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
-            "data: {} (result={}, data size={})", __func__, connectionName_
-            , zmq_strerror(zmq_errno()), result, data.size());
-      }
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to send "
+         "data: {} (result={}, data size={})", __func__, connectionName_
+         , zmq_strerror(zmq_errno()), result, data.size());
       return false;
    }
 
@@ -291,7 +424,7 @@ bool ZmqBIP15XDataConnection::send(const string& data)
 void ZmqBIP15XDataConnection::notifyOnConnected()
 {
    startBIP151Handshake([this] {
-      ZmqDataConnection::notifyOnConnected();
+      DataConnection::notifyOnConnected();
    });
 }
 
@@ -350,6 +483,19 @@ void ZmqBIP15XDataConnection::notifyOnError(DataConnectionListener::DataConnecti
    // Do not send anything when connection fails, client will need to restart connection
    closeConnection();
    DataConnection::notifyOnError(errorCode);
+}
+
+bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
+{
+   switch(transport) {
+   case ZMQTransport::TCPTransport:
+   case ZMQTransport::InprocTransport:
+      zmqTransport_ = transport;
+      return true;
+   }
+
+   logger_->error("[{}] undefined transport", __func__);
+   return false;
 }
 
 // Kick off the BIP 151 handshake. This is the first function to call once the
@@ -429,11 +575,127 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
    , const std::string &port, DataConnectionListener *listener)
 {
    // BIP 151 connection setup. Technically should be per-socket or something
-// similar but data connections will only connect to one machine at a time.
+   // similar but data connections will only connect to one machine at a time.
    auto lbds = getAuthPeerLambda();
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
 
-   return ZmqDataConnection::openConnection(host, port, listener);
+   assert(context_ != nullptr);
+   assert(listener != nullptr);
+
+   if (isActive()) {
+      logger_->error("[{}] connection active. You should close it first: {}."
+         , __func__, connectionName_);
+      return false;
+   }
+
+   hostAddr_ = host;
+   hostPort_ = port;
+   std::string tempConnectionName = context_->GenerateConnectionName(host, port);
+
+   char buf[256];
+   size_t  buf_size = 256;
+
+   // create stream socket ( connected to server )
+   ZmqContext::sock_ptr tempDataSocket = CreateDataSocket();
+   if (tempDataSocket == nullptr) {
+      logger_->error("[{}] failed to create data socket socket {} : {}"
+         , __func__, tempConnectionName, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   if (!ConfigureDataSocket(tempDataSocket)) {
+      logger_->error("[{}] failed to configure data socket socket {}"
+         , __func__, tempConnectionName);
+      return false;
+   }
+
+   // connect socket to server ( connection state will be changed in listen thread )
+   std::string endpoint = ZmqContext::CreateConnectionEndpoint(zmqTransport_, host, port);
+   if (endpoint.empty()) {
+      logger_->error("[{}] failed to generate connection address", __func__);
+      return false;
+   }
+
+   int result = 0;
+   std::string controlEndpoint = std::string("inproc://") + tempConnectionName;
+
+   // create master and slave paired sockets to control connection and resend data
+   ZmqContext::sock_ptr tempThreadMasterSocket = context_->CreateInternalControlSocket();
+   if (tempThreadMasterSocket == nullptr) {
+      logger_->error("[{}] failed to create ThreadMasterSocket socket {}: {}"
+         , __func__, tempConnectionName, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   result = zmq_bind(tempThreadMasterSocket.get(), controlEndpoint.c_str());
+   if (result != 0) {
+      logger_->error("[{}] failed to bind ThreadMasterSocket socket {}: {}"
+         , __func__, tempConnectionName, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   ZmqContext::sock_ptr tempThreadSlaveSocket = context_->CreateInternalControlSocket();
+   if (tempThreadSlaveSocket == nullptr) {
+      logger_->error("[{}] failed to create ThreadSlaveSocket socket {} : {}"
+         , __func__, tempConnectionName, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   result = zmq_connect(tempThreadSlaveSocket.get(), controlEndpoint.c_str());
+   if (result != 0) {
+      logger_->error("[{}] failed to connect ThreadSlaveSocket socket {}"
+         , __func__, tempConnectionName);
+      return false;
+   }
+
+   int rc = zmq_socket_monitor(tempDataSocket.get(), ("inproc://mon-" + tempConnectionName).c_str(), ZMQ_EVENT_ALL);
+   if (rc != 0) {
+      logger_->error("[{}] Failed to create monitor socket: {}", __func__
+         , zmq_strerror(zmq_errno()));
+      return false;
+   }
+   auto tempMonSocket = context_->CreateMonitorSocket();
+   rc = zmq_connect(tempMonSocket.get(), ("inproc://mon-" + tempConnectionName).c_str());
+   if (rc != 0) {
+      logger_->error("[{}] Failed to connect monitor socket: {}", __func__
+         , zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   monSocket_ = std::move(tempMonSocket);
+
+   result = zmq_connect(tempDataSocket.get(), endpoint.c_str());
+   if (result != 0) {
+      logger_->error("[{}] failed to connect socket to {}", __func__
+         , endpoint);
+      return false;
+   }
+
+   // get socket id
+   result = zmq_getsockopt(tempDataSocket.get(), ZMQ_IDENTITY, buf, &buf_size);
+   if (result != 0) {
+      logger_->error("[{}] failed to get socket Id {}", __func__
+         , tempConnectionName);
+      return false;
+   }
+
+   // ok, move temp data to members
+   connectionName_ = std::move(tempConnectionName);
+   socketId_ = std::string(buf, buf_size);
+   dataSocket_ = std::move(tempDataSocket);
+   threadMasterSocket_ = std::move(tempThreadMasterSocket);
+   threadSlaveSocket_ = std::move(tempThreadSlaveSocket);
+   isConnected_ = false;
+
+   setListener(listener);
+
+   // and start thread
+   *continueExecution_ = true;
+   listenThread_ = std::thread(&ZmqBIP15XDataConnection::listenFunction, this);
+
+   SPDLOG_DEBUG(logger_, "[{}] starting connection for {}", __func__
+      , connectionName_);
+   return true;
 }
 
 // Close the connection.
@@ -464,10 +726,36 @@ bool ZmqBIP15XDataConnection::closeConnection()
       serverPubkeyProm_->set_value(false);
       serverPubkeySignalled_ = true;
    }
-   bool rc = ZmqDataConnection::closeConnection();
+
+   if (!isActive()) {
+      SPDLOG_DEBUG(logger_, "[{}] connection already stopped {}", __func__
+         , connectionName_);
+      return true;
+   }
+
+   SPDLOG_DEBUG(logger_, "[{}] stopping {}", __func__, connectionName_);
+
+   if (std::this_thread::get_id() == listenThread_.get_id()) {
+      //connectino is closed in callback
+      listenThread_.detach();
+      *continueExecution_ = false;
+   }
+   else {
+      int command = int(InternalCommandCode::Stop);
+      int result = zmq_send(threadMasterSocket_.get(), static_cast<void*>(&command), sizeof(command), 0);
+      if (result == -1) {
+         logger_->error("[{}] failed to send stop command for {} : {}"
+            , __func__, connectionName_, zmq_strerror(zmq_errno()));
+         return false;
+      }
+
+      listenThread_.join();
+   }
+   resetConnectionObjects();
+
    bip151Connection_.reset();
    currentReadMessage_.reset();
-   return rc;
+   return true;
 }
 
 // The function that processes raw ZMQ connection data. It processes the BIP
@@ -482,11 +770,8 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
    auto payloadRef = currentReadMessage_.insertDataAndGetRef(payload);
    auto result = currentReadMessage_.message_.parsePacket(payloadRef);
    if (!result) {
-      if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
-            "(connection {})", __func__, connectionName_);
-      }
-
+      logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
+         "(connection {})", __func__, connectionName_);
       currentReadMessage_.reset();
       notifyOnError(DataConnectionListener::SerializationFailed);
       return;
@@ -508,10 +793,8 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
    // If we're still handshaking, take the next step. (No fragments allowed.)
    if (currentReadMessage_.message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(currentReadMessage_.message_)) {
-         if (logger_) {
-            logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
-               "(connection {})", __func__, connectionName_);
-         }
+         logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
+            "(connection {})", __func__, connectionName_);
 
          notifyOnError(DataConnectionListener::HandshakeFailed);
          return;
@@ -527,10 +810,8 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
 
    // We shouldn't get here but just in case....
    if (!bip151Connection_ || (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)) {
-      if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
-            "is incomplete (connection {})", __func__, connectionName_);
-      }
+      logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
+         "is incomplete (connection {})", __func__, connectionName_);
       if (bip151Connection_) {
          notifyOnError(DataConnectionListener::HandshakeFailed);
       }
@@ -553,7 +834,7 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
 
    currentReadMessage_.reset();
    // Pass the final data up the chain.
-   ZmqDataConnection::notifyOnData(inMsg.toBinStr());
+   notifyOnData(inMsg.toBinStr());
 }
 
 // Create the data socket.
@@ -577,11 +858,9 @@ bool ZmqBIP15XDataConnection::recvData()
 
    int result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
    if (result == -1) {
-      if (logger_) {
-         logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to recv data "
-            "frame from stream: {}" , __func__, connectionName_
-            , zmq_strerror(zmq_errno()));
-      }
+      logger_->error("[ZmqBIP15XDataConnection::{}] {} failed to recv data "
+         "frame from stream: {}" , __func__, connectionName_
+         , zmq_strerror(zmq_errno()));
       return false;
    }
 

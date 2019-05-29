@@ -76,7 +76,7 @@ struct ZmqBIP15XDataConnectionParams
    void setLocalHeartbeatInterval();
 };
 
-class ZmqBIP15XDataConnection : public ZmqDataConnection
+class ZmqBIP15XDataConnection : public DataConnection
 {
 public:
    ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger, const ZmqBIP15XDataConnectionParams &params);
@@ -84,10 +84,6 @@ public:
 
    using cbNewKey = std::function<void(const std::string &oldKey, const std::string &newKey
       , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
-   using invokeCB = std::function<void(const std::string&
-      , const std::string&
-      , std::shared_ptr<std::promise<bool>>
-      , const cbNewKey&)>;
 
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection& operator= (const ZmqBIP15XDataConnection&) = delete;
@@ -110,7 +106,25 @@ public:
 
    void rekey();
 
-protected:
+   void SetContext(const std::shared_ptr<ZmqContext>& context) {
+      context_ = context;
+   }
+
+   bool isActive() const;
+   bool SetZMQTransport(ZMQTransport transport);
+
+private:
+   enum SocketIndex {
+      ControlSocketIndex = 0,
+      StreamSocketIndex,
+      MonitorSocketIndex
+   };
+
+   enum class InternalCommandCode {
+      Send = 0,
+      Stop
+   };
+
    bool startBIP151Handshake(const std::function<void()> &cbCompleted);
    bool handshakeCompleted() {
       return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
@@ -122,21 +136,22 @@ protected:
    // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
    void notifyOnConnected() override;
-   ZmqContext::sock_ptr CreateDataSocket() override;
-   bool recvData() override;
+   ZmqContext::sock_ptr CreateDataSocket();
+   bool recvData();
    void triggerHeartbeat();
 
    void notifyOnError(DataConnectionListener::DataConnectionError errorCode);
 
-private:
    void ProcessIncomingData(BinaryData& payload);
    bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
    bool verifyNewIDKey(const BinaryDataRef& newKey
       , const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
    void rekeyIfNeeded(size_t dataSize);
+   void listenFunction();
+   void resetConnectionObjects();
+   bool ConfigureDataSocket(const ZmqContext::sock_ptr& socket);
 
-private:
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    bool  serverPubkeySignalled_ = false;
    std::shared_ptr<AuthorizedPeers> authPeers_;
@@ -164,6 +179,31 @@ private:
    std::atomic_bool        fatalError_{false};
    std::atomic_bool        serverSendsHeartbeat_{false};
    std::chrono::milliseconds heartbeatInterval_;
+   std::shared_ptr<ZmqContext>      context_;
+   std::shared_ptr<spdlog::logger>  logger_;
+
+   std::string                      connectionName_;
+
+   std::atomic_flag                 lockFlag_ = ATOMIC_FLAG_INIT;
+   std::atomic_flag                 controlSocketLock_ = ATOMIC_FLAG_INIT;
+   ZmqContext::sock_ptr             dataSocket_;
+   ZmqContext::sock_ptr             monSocket_;
+   std::string                      hostAddr_;
+   std::string                      hostPort_;
+   std::string                      socketId_;
+
+   std::thread                      listenThread_;
+
+   ZmqContext::sock_ptr             threadMasterSocket_;
+   ZmqContext::sock_ptr             threadSlaveSocket_;
+
+   bool                             isConnected_;
+
+   std::vector<std::string>         sendQueue_;
+
+   ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
+
+   std::shared_ptr<bool>            continueExecution_ = nullptr;
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__
