@@ -120,17 +120,6 @@ TEST_F(TestWallet, BIP44_primary)
    EXPECT_EQ(wallet->description(), "test");
    EXPECT_EQ(wallet->walletId(), "35ADZst46");
 
-   const auto grpAuth = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
-   ASSERT_NE(grpAuth, nullptr);
-
-   {
-      auto lock = wallet->lockForEncryption(passphrase);
-      const auto leafAuth = grpAuth->createLeaf(0, 5);
-      ASSERT_NE(leafAuth, nullptr);
-      EXPECT_EQ(leafAuth->getRootId().toHexStr(), "3bf4e8d1");
-      EXPECT_EQ(leafAuth->type(), bs::core::wallet::Type::Authentication);
-   }
-
    const auto grpXbt = wallet->getGroup(wallet->getXBTGroupType());
    ASSERT_NE(grpXbt, nullptr);
 
@@ -804,6 +793,245 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(originalSet.size(), 16);
       EXPECT_EQ(loadedSet.size(), 16);
       EXPECT_EQ(originalSet, loadedSet);
+   }
+}
+
+TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
+{
+   //setup bip32 node
+   BIP32_Node base_node;
+   base_node.initFromSeed(SecureBinaryData("test seed"));
+
+   std::vector<bs::Address> extAddrVec;
+   std::set<BinaryData> grabbedAddrHash;
+
+   std::string filename, woFilename;
+   auto&& salt = CryptoPRNG::generateRandom(32);
+
+   SecureBinaryData passphrase("test");
+   {
+      //create a wallet
+      const bs::core::wallet::Seed seed{ SecureBinaryData("test seed"), NetworkType::TestNet };
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         "test", "", seed, passphrase, walletFolder_, envPtr_->logger());
+
+      auto group = walletPtr->createGroup(bs::hd::BlockSettle_Auth);
+      ASSERT_TRUE(group != nullptr);
+
+      auto authGroup = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(group);
+      ASSERT_TRUE(authGroup != nullptr);
+      authGroup->setSalt(salt);
+
+      std::shared_ptr<bs::core::hd::Leaf> leafPtr;
+
+      {
+         auto lock = walletPtr->lockForEncryption(passphrase);
+         leafPtr = group->createLeaf(0x800000b1, 10);
+         ASSERT_TRUE(leafPtr != nullptr);
+         ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
+      }
+
+      auto authLeafPtr = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leafPtr);
+      ASSERT_TRUE(authLeafPtr != nullptr);
+      ASSERT_EQ(authLeafPtr->getSalt(), salt);
+
+      //reproduce the keys as bip32 nodes
+      std::vector<unsigned> derPath = {
+         0x8000002c, //44' 
+         0xc1757468, //Auth' in hexits
+         0x800000b1 
+      };
+
+      for (auto& path : derPath)
+         base_node.derivePrivate(path);
+
+      //grab a bunch of addresses
+      for (unsigned i = 0; i < 5; i++)
+         extAddrVec.push_back(leafPtr->getNewExtAddress());
+
+      //check address maps
+      BIP32_Node ext_node = base_node;
+      ext_node.derivePrivate(0);
+      for (unsigned i = 0; i < 5; i++)
+      {
+         auto addr_node = ext_node;
+         addr_node.derivePrivate(i);
+
+         auto pubKey = addr_node.movePublicKey();
+         auto saltedKey = CryptoECDSA::PubKeyScalarMultiply(pubKey, salt);
+         auto addr_hash = BtcUtils::getHash160(saltedKey);
+         EXPECT_EQ(addr_hash, extAddrVec[i].unprefixed());
+      }
+
+      //check chain use counters
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
+
+      //fetch used address list, turn it into a set, 
+      //same with grabbed addresses, check they match
+      auto usedAddrList = leafPtr->getUsedAddressList();
+      std::set<BinaryData> usedAddrHash;
+      for (auto& addr : usedAddrList)
+         usedAddrHash.insert(addr.unprefixed());
+
+      grabbedAddrHash.insert(extAddrVec.begin(), extAddrVec.end());
+
+      ASSERT_EQ(grabbedAddrHash.size(), 5);
+      EXPECT_EQ(usedAddrHash.size(), 5);
+      EXPECT_EQ(usedAddrHash, grabbedAddrHash);
+
+      //wallet object will be destroyed when on scope out
+      filename = walletPtr->getFileName();
+   }
+
+   {
+      //load from file
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         filename, NetworkType::TestNet, "", envPtr_->logger());
+
+      //run checks anew
+      auto groupPtr = walletPtr->getGroup(bs::hd::BlockSettle_Auth);
+      ASSERT_TRUE(groupPtr != nullptr);
+
+      auto authGroupPtr = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(groupPtr);
+      ASSERT_TRUE(authGroupPtr != nullptr);
+      EXPECT_EQ(authGroupPtr->getSalt(), salt);
+
+      auto leafPtr = groupPtr->getLeafByPath(0xb1);
+      ASSERT_TRUE(leafPtr != nullptr);
+      ASSERT_TRUE(leafPtr->hasExtOnlyAddresses());
+
+      auto authLeafPtr = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leafPtr);
+      ASSERT_TRUE(authLeafPtr != nullptr);
+      EXPECT_EQ(authLeafPtr->getSalt(), salt);
+
+      //fetch used address list, turn it into a set, 
+      auto usedAddrList = leafPtr->getUsedAddressList();
+      std::set<BinaryData> usedAddrHash;
+      for (auto& addr : usedAddrList)
+         usedAddrHash.insert(addr.unprefixed());
+
+      //test it vs grabbed addresses
+      EXPECT_EQ(usedAddrHash.size(), 5);
+      EXPECT_EQ(usedAddrHash, grabbedAddrHash);
+
+      //check chain use counters
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
+
+      //grab new address
+      {
+         auto newAddr = leafPtr->getNewExtAddress();
+         BIP32_Node ext_node = base_node;
+         ext_node.derivePrivate(0);
+         ext_node.derivePrivate(5);
+      
+         auto pubKey = ext_node.movePublicKey();
+         auto saltedKey = CryptoECDSA::PubKeyScalarMultiply(pubKey, salt);
+         auto addr_hash = BtcUtils::getHash160(saltedKey);
+         EXPECT_EQ(addr_hash, newAddr);
+
+         extAddrVec.push_back(newAddr);
+         grabbedAddrHash.insert(newAddr);
+      }
+
+      ////////////////
+      //create WO copy
+      auto woCopy = walletPtr->createWatchingOnly();
+      EXPECT_TRUE(woCopy->isWatchingOnly());
+
+      auto groupWO = woCopy->getGroup(bs::hd::BlockSettle_Auth);
+      ASSERT_TRUE(groupWO != nullptr);
+
+      auto authGroupWO = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(groupWO);
+      ASSERT_TRUE(authGroupWO != nullptr);
+      EXPECT_EQ(authGroupWO->getSalt(), salt);
+
+      auto leafWO = groupWO->getLeafByPath(0xb1);
+      ASSERT_TRUE(leafWO != nullptr);
+      EXPECT_TRUE(leafWO->hasExtOnlyAddresses());
+      EXPECT_TRUE(leafWO->isWatchingOnly());
+
+      auto authLeafWO = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leafWO);
+      ASSERT_TRUE(authLeafWO != nullptr);
+      EXPECT_EQ(authLeafWO->getSalt(), salt);
+
+      //fetch used address list, turn it into a set, 
+      auto woAddrList = leafPtr->getUsedAddressList();
+      std::set<BinaryData> woAddrHash;
+      for (auto& addr : woAddrList)
+         woAddrHash.insert(addr.unprefixed());
+
+      //test it vs grabbed addresses
+      EXPECT_EQ(woAddrHash.size(), 6);
+      EXPECT_EQ(woAddrHash, grabbedAddrHash);
+
+      //check chain use counters
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 6);
+      EXPECT_EQ(leafWO->getExtAddressCount(), 6);
+      EXPECT_EQ(leafWO->getIntAddressCount(), 6);
+
+      //exiting this scope will destroy both loaded wallet and wo copy object
+      woFilename = woCopy->getFileName();
+
+      //let's make sure the code isn't trying sneak the real wallet on us 
+      //instead of the WO copy
+      ASSERT_NE(woFilename, filename);
+   }
+   
+   {
+      //load wo from file
+      auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
+         woFilename, NetworkType::TestNet, "", envPtr_->logger());
+
+      EXPECT_TRUE(walletPtr->isWatchingOnly());
+
+      //run checks one last time
+      auto groupWO = walletPtr->getGroup(bs::hd::BlockSettle_Auth);
+      ASSERT_TRUE(groupWO != nullptr);
+
+      auto authGroupWO = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(groupWO);
+      ASSERT_TRUE(authGroupWO != nullptr);
+      EXPECT_EQ(authGroupWO->getSalt(), salt);
+
+      auto leafWO = authGroupWO->getLeafByPath(0xb1);
+      ASSERT_TRUE(leafWO != nullptr);
+      ASSERT_TRUE(leafWO->hasExtOnlyAddresses());
+
+      auto authLeafWO = std::dynamic_pointer_cast<bs::core::hd::AuthLeaf>(leafWO);
+      ASSERT_TRUE(authLeafWO != nullptr);
+      EXPECT_EQ(authLeafWO->getSalt(), salt);
+      ASSERT_TRUE(leafWO->isWatchingOnly());
+
+      //fetch used address list, turn it into a set, 
+      auto usedAddrList = leafWO->getUsedAddressList();
+      std::set<BinaryData> usedAddrHash;
+      for (auto& addr : usedAddrList)
+         usedAddrHash.insert(addr.unprefixed());
+
+      //test it vs grabbed addresses
+      EXPECT_EQ(usedAddrHash.size(), 6);
+      EXPECT_EQ(usedAddrHash, grabbedAddrHash);
+
+      //check chain use counters
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 6);
+      EXPECT_EQ(leafWO->getExtAddressCount(), 6);
+      EXPECT_EQ(leafWO->getIntAddressCount(), 6);
+
+      //grab new address
+      {
+         auto newAddr = leafWO->getNewExtAddress();
+         BIP32_Node ext_node = base_node;
+         ext_node.derivePrivate(0);
+         ext_node.derivePrivate(6);
+
+         auto pubKey = ext_node.movePublicKey();
+         auto saltedKey = CryptoECDSA::PubKeyScalarMultiply(pubKey, salt);
+         auto addr_hash = BtcUtils::getHash160(saltedKey);
+         EXPECT_EQ(addr_hash, newAddr);
+      }
    }
 }
 

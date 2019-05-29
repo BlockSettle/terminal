@@ -97,7 +97,9 @@ void TestSettlement::SetUp()
 
       std::shared_ptr<bs::core::hd::Leaf> authLeaf;
       bs::Address authAddr;
-      auto authGrp = hdWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+      auto grpPtr = hdWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+      auto authGrp = std::dynamic_pointer_cast<bs::core::hd::AuthGroup>(grpPtr);
+      authGrp->setSalt(CryptoPRNG::generateRandom(32));
       {
          auto lock = hdWallet->lockForEncryption(passphrase_);
          authLeaf = authGrp->createLeaf(0);
