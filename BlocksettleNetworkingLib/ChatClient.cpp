@@ -1351,7 +1351,11 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
                                                       : GetNextRequestorId());
    const QString targetId = Chat::OTCRoomKey;
    const uint64_t submitTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-   const uint64_t expireTimestamp = QDateTime::currentDateTimeUtc().addSecs(1*30).toMSecsSinceEpoch();
+   const uint64_t expireTimestamp = true
+                                    ? 0 //If this zero, server will setup expired itself (60 secs default)
+                                    : QDateTime::currentDateTimeUtc().addSecs(10*60).toMSecsSinceEpoch();
+
+
 
    auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
       , serverRequestId, requestorId, targetId, submitTimestamp, expireTimestamp, request);
