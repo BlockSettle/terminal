@@ -42,6 +42,7 @@ namespace Chat {
       const bs::network::OTCRequest& otcRequest() const;
 
       void setServerRequestId(const QString &serverRequestId);
+      void setExpireTimestamp(const uint64_t &expireTimestamp);
 
    private:
       const QString clientRequestId_;
@@ -50,7 +51,7 @@ namespace Chat {
       const QString targetId_;
 
       const uint64_t submitTimestamp_;
-      const uint64_t expireTimestamp_;
+      uint64_t expireTimestamp_;
 
       const bs::network::OTCRequest otcRequest_;
    };

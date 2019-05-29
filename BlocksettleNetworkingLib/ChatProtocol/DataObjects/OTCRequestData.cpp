@@ -113,5 +113,10 @@ void OTCRequestData::setServerRequestId(const QString &serverRequestId)
     serverRequestId_ = serverRequestId;
 }
 
+void OTCRequestData::setExpireTimestamp(const uint64_t &expireTimestamp)
+{
+    expireTimestamp_ = expireTimestamp;
+}
+
 //namespace Chat end
     }
