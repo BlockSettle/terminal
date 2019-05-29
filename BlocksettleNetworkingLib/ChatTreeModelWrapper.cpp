@@ -1,6 +1,10 @@
 #include "ChatTreeModelWrapper.h"
+#include "ChatClientDataModel.h"
 
-#include "ChatClientTree/TreeItem.h"
+using NodeType = ChatUIDefinitions::ChatTreeNodeType;
+using Role = ChatClientDataModel::Role;
+using OnlineStatus = ChatContactElement::OnlineStatus;
+using ContactStatus = Chat::ContactStatus;
 
 ChatTreeModelWrapper::ChatTreeModelWrapper(QObject *parent)
    : QSortFilterProxyModel(parent)
@@ -52,23 +56,79 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
       return false;
    }
    switch (item->getType()) {
-   case ChatUIDefinitions::ChatTreeNodeType::RootNode: {
+   case NodeType::RootNode: {
       return true;
    }
-   case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
+   case NodeType::CategoryGroupNode:
       return item->getChildren().size() > 0;
-   case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
+   case NodeType::SearchElement:
       return true;
-   case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-   case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-   case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
-   case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
-   case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
+   case NodeType::RoomsElement:
+   case NodeType::ContactsElement:
+   case NodeType::AllUsersElement:
+   case NodeType::OTCReceivedResponsesElement:
+   case NodeType::OTCSentResponsesElement: {
       return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
    }
    default:
       return false;
    }
+}
+
+bool ChatTreeModelWrapper::lessThan(const QModelIndex &left, const QModelIndex &right) const
+{
+   // sort contact list
+   if (left.data(Role::ItemTypeRole).value<NodeType>() == NodeType::ContactsElement &&
+       right.data(Role::ItemTypeRole).value<NodeType>() == NodeType::ContactsElement) {
+
+      auto leftContactStatus = left.data(Role::ContactStatusRole).value<ContactStatus>();
+      auto leftOnlineStatus = left.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
+
+      auto rightContactStatus = right.data(Role::ContactStatusRole).value<ContactStatus>();
+      auto rightOnlineStatus = right.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
+
+      // contacts with online status are placed at the top of the list
+      if (leftOnlineStatus == OnlineStatus::Online && leftContactStatus == ContactStatus::Accepted) {
+         return false;
+      }
+      if (rightOnlineStatus == OnlineStatus::Online && rightContactStatus == ContactStatus::Accepted) {
+         return true;
+      }
+
+      // contacts with offline status are placed at the middle of the list
+      if (leftOnlineStatus == OnlineStatus::Offline && leftContactStatus == ContactStatus::Accepted) {
+         return false;
+      }
+      if (rightOnlineStatus == OnlineStatus::Offline && rightContactStatus == ContactStatus::Accepted) {
+         return true;
+      }
+      
+      //contacts with incoming status are placed at the bottom of the list, but before outgoing
+      if (leftContactStatus == ContactStatus::Incoming) {
+         return false;
+      }
+      if (rightContactStatus == ContactStatus::Incoming) {
+         return true;
+      }
+      
+      //contacts with outgoing status are placed at the bottom of the list, but before rejected
+      if (leftContactStatus == ContactStatus::Outgoing) {
+         return false;
+      }
+      if (rightContactStatus == ContactStatus::Outgoing) {
+         return true;
+      }      
+      
+      //contacts with rejected status are placed at the bottom of the list,
+      if (leftContactStatus == ContactStatus::Rejected) {
+         return false;
+      }
+      if (rightContactStatus == ContactStatus::Rejected) {
+         return true;
+      }
+   }
+
+   return true;
 }
 
 void ChatTreeModelWrapper::resetTree()
