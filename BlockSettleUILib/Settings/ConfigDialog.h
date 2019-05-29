@@ -19,19 +19,12 @@ class SettingsPage : public QWidget
    Q_OBJECT
 
 public:
-   SettingsPage(QWidget *parent) : QWidget(parent) {}
+   SettingsPage(QWidget *parent);
 
    virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
       , const std::shared_ptr<SignersProvider> &signersProvider
-      , std::shared_ptr<SignContainer> signContainer) {
-      appSettings_ = appSettings;
-      armoryServersProvider_ = armoryServersProvider;
-      signersProvider_ = signersProvider;
-      signContainer_ = signContainer;
-      initSettings();
-      display();
-   }
+      , std::shared_ptr<SignContainer> signContainer);
 
 public slots:
    virtual void initSettings() {}

@@ -55,6 +55,8 @@ public:
 
    QList<SignerHost> signers() const;
    SignerHost getCurrentSigner() const;
+   // Switch to local remote signer ("Local GUI Signer Mode")
+   void switchToLocalFullGUI(const QString &host, const QString &port);
 
    int indexOfCurrent() const;   // index of server which set in ini file
    int indexOfConnected() const;   // index of server currently connected

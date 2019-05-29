@@ -159,6 +159,8 @@ public:
    static int GetDefaultArmoryRemotePort(NetworkType networkType);
    int GetArmoryRemotePort(NetworkType networkType = NetworkType::Invalid) const;
 
+   static QString localSignerDefaultName();
+
    QString GetSettingsPath() const;
 
    QString  GetHomeDir() const;

@@ -157,7 +157,7 @@ void SignerSettingsPage::apply()
 
 void SignerSettingsPage::initSettings()
 {
-   signersModel_ = new SignersModel(signersProvider_);
+   signersModel_ = new SignersModel(signersProvider_, this);
    signersModel_->setSingleColumnMode(true);
    signersModel_->setHighLightSelectedServer(false);
    ui_->comboBoxRemoteSigner->setModel(signersModel_);
