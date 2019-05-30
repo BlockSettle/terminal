@@ -233,7 +233,9 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
    }
 
    // Need to disconnect connection because otherwise it will continue send error responses over and over
-   connection_->closeConnection();
+   QMetaObject::invokeMethod(this, [this] {
+      connection_->closeConnection();
+   });
 }
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)

@@ -594,6 +594,8 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::closeConnection()
 {
+   assert(std::this_thread::get_id() != listenThread_.get_id());
+
    if (!isActive()) {
       SPDLOG_DEBUG(logger_, "[{}] connection already stopped {}", __func__
          , connectionName_);
