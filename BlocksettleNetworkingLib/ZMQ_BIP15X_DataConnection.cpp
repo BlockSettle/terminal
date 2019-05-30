@@ -481,7 +481,6 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
    // similar but data connections will only connect to one machine at a time.
    auto lbds = getAuthPeerLambda();
    bip151Connection_ = make_shared<BIP151Connection>(lbds);
-
    assert(context_ != nullptr);
    assert(listener != nullptr);
 
@@ -491,6 +490,7 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
       return false;
    }
 
+   fatalError_ = false;
    hostAddr_ = host;
    hostPort_ = port;
    std::string tempConnectionName = context_->GenerateConnectionName(host, port);
