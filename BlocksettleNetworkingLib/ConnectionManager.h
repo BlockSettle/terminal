@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 namespace spdlog {
    class logger;
@@ -14,8 +15,6 @@ class PublisherConnection;
 class ServerConnection;
 class SubscriberConnection;
 class ZmqContext;
-class ZmqSecuredDataConnection;
-class ZmqSecuredServerConnection;
 class QNetworkAccessManager;
 class ZmqBIP15XDataConnection;
 class ZmqBIP15XServerConnection;
@@ -46,13 +45,13 @@ public:
    std::shared_ptr<DataConnection>     CreateGenoaClientConnection(
       bool monitored = false) const;
 
-   std::shared_ptr<ZmqSecuredServerConnection>  CreateSecuredServerConnection() const;
-   std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
-      bool monitored = false) const;
    std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
-      bool ephemeral = true) const;
+      bool ephemeral = true, const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = "", bool makeClientCookie = false
+      , bool readServerCookie = false, const std::string& cookieName = "") const;
    std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(
-      bool ephemeral = false) const;
+      bool ephemeral = false, const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = "") const;
 
    std::shared_ptr<ServerConnection>   CreatePubBridgeServerConnection() const;
 

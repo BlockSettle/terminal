@@ -4,10 +4,6 @@
 #include "EncryptionUtils.h"
 #include "ArmoryConnection.h"
 
-namespace {
-   int kArmoryServerColumns = 5;
-}
-
 ArmoryServersViewModel::ArmoryServersViewModel(const std::shared_ptr<ArmoryServersProvider> &serversProvider
                                                , QObject *parent)
    : QAbstractTableModel(parent)
@@ -19,7 +15,7 @@ ArmoryServersViewModel::ArmoryServersViewModel(const std::shared_ptr<ArmoryServe
 
 int ArmoryServersViewModel::columnCount(const QModelIndex&) const
 {
-   return kArmoryServerColumns;
+   return static_cast<int>(ArmoryServersViewModel::ColumnsCount);
 }
 
 int ArmoryServersViewModel::rowCount(const QModelIndex&) const

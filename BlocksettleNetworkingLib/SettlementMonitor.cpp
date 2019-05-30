@@ -96,7 +96,7 @@ void bs::SettlementMonitor::checkNewEntries()
 void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb](Tx tx) {
+   const auto &cbTX = [this, entry, cb](const Tx &tx) {
       if (!tx.isInitialized()) {
          logger_->error("[bs::SettlementMonitor::IsPayInTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
@@ -120,7 +120,7 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
 void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
    , std::function<void(bool)> cb) const
 {
-   const auto &cbTX = [this, entry, cb](Tx tx) {
+   const auto &cbTX = [this, entry, cb](const Tx &tx) {
       if (!tx.isInitialized()) {
          logger_->error("[bs::SettlementMonitor::IsPayOutTransaction] TX not initialized for {}."
             , entry.getTxHash().toHexStr());
@@ -138,7 +138,7 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          txOutIdx[op.getTxHash()].insert(op.getTxOutIndex());
       }
 
-      const auto &cbTXs = [this, txOutIdx, cb](std::vector<Tx> txs) {
+      const auto &cbTXs = [this, txOutIdx, cb](const std::vector<Tx> &txs) {
          for (const auto &prevTx : txs) {
             const auto &itIdx = txOutIdx.find(prevTx.getThisHash());
             if (itIdx == txOutIdx.end()) {
@@ -219,7 +219,7 @@ void bs::PayoutSigner::WhichSignature(const Tx& tx
    auto result = std::make_shared<Result>();
    result->value = value;
 
-   const auto &cbProcess = [result, ae, tx, cb, logger](std::vector<Tx> txs) {
+   const auto &cbProcess = [result, ae, tx, cb, logger](const std::vector<Tx> &txs) {
       for (const auto &prevTx : txs) {
          const auto &txHash = prevTx.getThisHash();
          for (const auto &txOutIdx : result->txOutIdx[txHash]) {
@@ -302,7 +302,7 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
    const auto amount = entry.getValue();
    const uint64_t value = amount < 0 ? -amount : amount;
 
-   const auto &cbTX = [this, value, cb](Tx tx) {
+   const auto &cbTX = [this, value, cb](const Tx &tx) {
       bs::PayoutSigner::WhichSignature(tx, value, addressEntry_, logger_, armory_, cb);
    };
 

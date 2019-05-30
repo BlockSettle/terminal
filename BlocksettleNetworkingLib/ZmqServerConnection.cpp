@@ -173,12 +173,10 @@ void ZmqServerConnection::listenFunction()
 
    logger_->debug("[{}] poll thread started for {}", __func__, connectionName_);
 
-   int result;
-
    int errorCount = 0;
 
    while(true) {
-      result = zmq_poll(poll_items, 3, -1);
+      int result = zmq_poll(poll_items, 3, -1);
       if (result == -1) {
          errorCount++;
          if ((zmq_errno() != EINTR) || (errorCount > 10)) {

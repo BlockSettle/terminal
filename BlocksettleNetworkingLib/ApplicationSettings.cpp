@@ -26,7 +26,12 @@ static const QString bitcoinDirName = QLatin1String(".bitcoin");
 static const QString armoryDBAppPathName = QLatin1String("/usr/bin/ArmoryDB");
 #endif
 
+#ifdef __linux__
+// Needed for consistency (headless now uses company name in lowercase on Linux)
+static const QString SettingsCompanyName = QLatin1String("blocksettle");
+#else
 static const QString SettingsCompanyName = QLatin1String("BlockSettle");
+#endif
 
 static const QString LogFileName = QLatin1String("bs_terminal.log");
 static const QString LogMsgFileName = QLatin1String("bs_terminal_messages.log");
@@ -91,9 +96,13 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String(MAINNET_ARMORY_BLOCKSETTLE_ADDRESS)) },
       { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), MAINNET_ARMORY_BLOCKSETTLE_PORT) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
+   #ifdef PRODUCTION_BUILD
       { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.36")) },
+   #else
+      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.45")) },
+   #endif
       { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
-      { pubBridgePubKey,         SettingDef(QString(), QLatin1String("AEJL[u[3-i>v#4D?v3Te!B}S0nO7cG!QOsmI*--g")) },
+      { pubBridgePubKey,         SettingDef(QLatin1String("PubBridgePubKey"), QString()) },
       { envConfiguration,        SettingDef(QLatin1String("envConfiguration"), 0) },
       { celerHost,               SettingDef(QString()) },
       { celerPort,               SettingDef(QString()) },
@@ -103,14 +112,14 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { mdhsPort,                SettingDef(QString()) },
       { chatServerHost,          SettingDef(QString()) },
       { chatServerPort,          SettingDef(QString()) },
-      { chatServerPubKey,        SettingDef(QString(), QLatin1String("@:2IFYqVXa}+eRpKW9Q310j4cB%%nKe8$-v6bSOg")) },
+      { chatServerPubKey,        SettingDef(QLatin1String("ChatServerPubKey"), QString()) },
       { chatPrivKey,             SettingDef(QString()) },
       { chatPubKey,              SettingDef(QString()) },
       { chatDbFile,              SettingDef(QString(), AppendToWritableDir(QLatin1String("chat.db"))) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
-      { signerHost,              SettingDef(QLatin1String("SignerHost"), QLatin1String("127.0.0.1")) },
-      { signerPort,              SettingDef(QLatin1String("SignerPort"), 23456) },
+      { localSignerPort,         SettingDef(QLatin1String("SignerPort"), 23456) },
       { signerRunMode,           SettingDef(QLatin1String("SignerRunMode"), 1) },
+      { signerIndex,             SettingDef(QLatin1String("SignerIndex"), -1) },
       { signerOfflineDir,        SettingDef(QLatin1String("SignerOfflineDir"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)) },
       { autoSignSpendLimit,      SettingDef(QLatin1String("AutoSignSpendLimit"), 0.0) },
       { launchToTray,            SettingDef(QLatin1String("LaunchToTray"), false) },
@@ -129,6 +138,9 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { dropQN,                  SettingDef(QLatin1String("DropQNifSecUnavail"), false) },
       { GUI_main_geometry,       SettingDef(QLatin1String("GUI/main/geometry")) },
       { GUI_main_tab,            SettingDef(QLatin1String("GUI/main/tab")) },
+      { ChartProduct,            SettingDef(QLatin1String("GUI/chart/product"), QLatin1String("XBT/EUR")) },
+      { ChartTimeframe,          SettingDef(QLatin1String("GUI/chart/timeframe"), 7) },
+      { ChartCandleCount,        SettingDef(QLatin1String("GUI/chart/candleCount"), 150) },
       { Filter_MD_RFQ,           SettingDef(QLatin1String("Filter/MD/RFQ")) },
       { Filter_MD_RFQ_Portfolio, SettingDef(QLatin1String("Filter/MD/RFQ_Portfolio")) },
       { Filter_MD_QN,            SettingDef(QLatin1String("Filter/MD/QN")) },
@@ -151,11 +163,15 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { MDLicenseAccepted,                SettingDef(QLatin1String("MDLicenseAccepted"), false) },
       { authPrivKey,                      SettingDef(QLatin1String("AuthPrivKey")) },
       { zmqLocalSignerPubKeyFilePath,     SettingDef(QLatin1String("ZmqLocalSignerPubKeyFilePath"), AppendToWritableDir(zmqSignerKeyFileName)) },
-      { zmqRemoteSignerPubKey,            SettingDef(QLatin1String("ZmqRemoteSignerPubKey")) },
+      { remoteSigners,                    SettingDef(QLatin1String("RemoteSigners"), QStringList()
+         << QString::fromLatin1("%1:127.0.0.1:23456:").arg(localSignerDefaultName())) },
       { rememberLoginUserName,            SettingDef(QLatin1String("RememberLoginUserName"), true) },
       { armoryServers,                    SettingDef(QLatin1String("ArmoryServers")) },
-      { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys")) },
-      { twoWayAuth,                       SettingDef(QLatin1String("TwoWayAuth"), false) }
+      { defaultArmoryServersKeys,         SettingDef(QLatin1String("DefaultArmoryServersKeys"), QStringList()
+         << QLatin1String("0350ac2d232e0b0fb5c68a821ff8e50e42608aa62c5755485e6caa8bc14e5918ea")       // mainnet Armory cluster key
+         << QLatin1String("02ed6116a7844cae8a1dc4d5fb27922594b79cc41df081d84d2f36983757904de5")) },   // testnet Armory cluster key
+      { twoWaySignerAuth,        SettingDef(QLatin1String("TwoWaySignerAuth"), true) },
+      { dontLoadCCList,          SettingDef(QLatin1String("DontLoadCCList"), false) }
    };
 }
 
@@ -208,6 +224,8 @@ bool ApplicationSettings::isDefault(Setting set) const
 
 void ApplicationSettings::set(Setting s, const QVariant &val, bool toFile)
 {
+   bool changed = false;
+
    if (val.isValid()) {
       FastLock lock(lock_);
       auto itSD = settingDefs_.find(s);
@@ -216,13 +234,18 @@ void ApplicationSettings::set(Setting s, const QVariant &val, bool toFile)
          itSD->second.read = true;
          if (val != itSD->second.value) {
             itSD->second.value = val;
-            emit settingChanged(s, val);
+            changed = true;
          }
 
          if (toFile && !itSD->second.path.isEmpty()) {
             settings_.setValue(itSD->second.path, val);
          }
       }
+   }
+
+   lock_.clear();
+   if (changed) {
+      emit settingChanged(s, val);
    }
 }
 
@@ -528,6 +551,11 @@ int ApplicationSettings::GetArmoryRemotePort(NetworkType networkType) const
          (networkType == NetworkType::Invalid) ? get<NetworkType>(netType) : networkType);
    }
    return port;
+}
+
+QString ApplicationSettings::localSignerDefaultName()
+{
+   return tr("Local GUI Signer Mode");
 }
 
 int ApplicationSettings::GetDefaultArmoryLocalPort(NetworkType networkType)

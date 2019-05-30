@@ -409,17 +409,17 @@
             </property>
             <column>
              <property name="text">
-              <string>Type</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
               <string>Address</string>
              </property>
             </column>
             <column>
              <property name="text">
               <string>Amount</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Wallet</string>
              </property>
             </column>
            </widget>
@@ -475,17 +475,17 @@
             </property>
             <column>
              <property name="text">
-              <string>Type</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
               <string>Address</string>
              </property>
             </column>
             <column>
              <property name="text">
               <string>Amount</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Wallet</string>
              </property>
             </column>
            </widget>

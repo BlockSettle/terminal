@@ -190,4 +190,26 @@ class DerivationScheme_ECDH : public DerivationScheme
 
 };
 
+////////////////////////////////////////////////////////////////////////////////
+class DerivationScheme_BIP32_Salted : public DerivationScheme_BIP32
+{
+private:
+   const SecureBinaryData& salt_;
+
+public:
+   DerivationScheme_BIP32_Salted(
+      SecureBinaryData& salt,
+      SecureBinaryData& chainCode,
+      unsigned depth, unsigned leafId) :
+   DerivationScheme_BIP32(chainCode, depth, leafId),
+      salt_(std::move(salt))
+   {}
+};
+
+////////////////////////////////////////////////////////////////////////////////
+class DerivationScheme_ECDH : public DerivationScheme
+{
+
+};
+
 #endif

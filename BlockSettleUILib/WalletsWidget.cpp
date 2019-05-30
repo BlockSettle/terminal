@@ -9,6 +9,8 @@
 #include <QMenu>
 #include <QModelIndex>
 #include <QSortFilterProxyModel>
+#include <QScrollBar>
+#include <QItemSelectionModel>
 
 #include "AddressDetailDialog.h"
 #include "AddressListModel.h"
@@ -19,7 +21,6 @@
 #include "NewWalletSeedDialog.h"
 #include "SelectAddressDialog.h"
 #include "SignContainer.h"
-#include "WalletImporter.h"
 #include "WalletsViewModel.h"
 #include "WalletWarningDialog.h"
 #include "Wallets/SyncHDWallet.h"
@@ -27,13 +28,7 @@
 #include "Wallets/SyncWalletsManager.h"
 #include "TreeViewWithEnterKey.h"
 #include "NewWalletSeedConfirmDialog.h"
-#include "ManageEncryption/VerifyWalletBackupDialog.h"
 #include "ManageEncryption/WalletDeleteDialog.h"
-#include "ManageEncryption/CreateWalletDialog.h"
-#include "ManageEncryption/CreateWalletDialog.h"
-#include "ManageEncryption/ImportWalletDialog.h"
-#include "ManageEncryption/ImportWalletTypeDialog.h"
-#include "ManageEncryption/WalletBackupDialog.h"
 #include "ManageEncryption/RootWalletPropertiesDialog.h"
 
 #include "SignerUiDefs.h"
@@ -212,6 +207,8 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
       ui_->pushButtonExternal, ui_->pushButtonUsed}) {
          connect(button, &QPushButton::toggled, this, &WalletsWidget::onFilterSettingsChanged);
    }
+
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &WalletsWidget::onWalletsSynchronized, Qt::QueuedConnection);
 }
 
 void WalletsWidget::setUsername(const QString& username)
@@ -257,6 +254,13 @@ void WalletsWidget::InitWalletsView(const std::string& defaultWalletId)
    connect(ui_->treeViewWallets->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::updateAddresses);
    connect(walletsModel_, &WalletsViewModel::updateAddresses, this, &WalletsWidget::updateAddresses);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletBalanceChanged, this, &WalletsWidget::onWalletBalanceChanged, Qt::QueuedConnection);
+   connect(ui_->treeViewAddresses->model(), &QAbstractItemModel::layoutChanged, this, &WalletsWidget::treeViewAddressesLayoutChanged);
+   connect(ui_->treeViewAddresses->selectionModel(), &QItemSelectionModel::selectionChanged, this, &WalletsWidget::treeViewAddressesSelectionChanged);
+
+   connect(ui_->treeViewWallets->horizontalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
+   connect(ui_->treeViewWallets->verticalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
+   connect(ui_->treeViewAddresses->horizontalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
+   connect(ui_->treeViewAddresses->verticalScrollBar(), &QScrollBar::valueChanged, this, &WalletsWidget::scrollChanged);
 }
 
 std::vector<std::shared_ptr<bs::sync::Wallet>> WalletsWidget::getSelectedWallets() const
@@ -392,8 +396,83 @@ void WalletsWidget::updateAddresses()
    if (selectedWallets == prevSelectedWallets_) {
       return;
    }
+
+   if (ui_->treeViewWallets->selectionModel()->hasSelection()) {
+      prevSelectedWalletRow_ = ui_->treeViewWallets->selectionModel()->selectedIndexes().first().row();
+   }
+   
    addressModel_->setWallets(selectedWallets);
    prevSelectedWallets_ = selectedWallets;
+
+   keepSelection();
+}
+
+void WalletsWidget::keepSelection()
+{
+   // keep wallet row selection (highlighting)
+   if (!ui_->treeViewWallets->selectionModel()->hasSelection() && prevSelectedWalletRow_ != -1) {
+      auto index = ui_->treeViewWallets->model()->index(prevSelectedWalletRow_, 0);
+      if (index.isValid())
+         ui_->treeViewWallets->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+   }
+   ui_->treeViewWallets->horizontalScrollBar()->setValue(walletsScrollPos_.x());
+   ui_->treeViewWallets->verticalScrollBar()->setValue(walletsScrollPos_.y());
+
+
+   // keep address row selection (highlighting)
+   if (!ui_->treeViewAddresses->selectionModel()->hasSelection() && prevSelectedAddressRow_ != -1) {
+      auto index = ui_->treeViewAddresses->model()->index(prevSelectedAddressRow_, 0);
+      if (index.isValid())
+         ui_->treeViewAddresses->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+   }
+   ui_->treeViewAddresses->horizontalScrollBar()->setValue(addressesScrollPos_.x());
+   ui_->treeViewAddresses->verticalScrollBar()->setValue(addressesScrollPos_.y());
+}
+
+void WalletsWidget::treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+   if (ui_->treeViewAddresses->selectionModel()->hasSelection()) {
+      prevSelectedAddressRow_ = ui_->treeViewAddresses->selectionModel()->selectedIndexes().first().row();
+   }
+}
+
+void WalletsWidget::treeViewAddressesLayoutChanged()
+{
+   // keep address row selection (highlighting)
+   if (!ui_->treeViewAddresses->selectionModel()->hasSelection() && prevSelectedAddressRow_ != -1) {
+      auto index = ui_->treeViewAddresses->model()->index(prevSelectedAddressRow_, 0);
+      if (index.isValid())
+         ui_->treeViewAddresses->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+   }
+}
+
+void WalletsWidget::scrollChanged()
+{
+   if (ui_->treeViewWallets->model()->rowCount() > 0) {
+      walletsScrollPos_.setX(ui_->treeViewWallets->horizontalScrollBar()->value());
+      walletsScrollPos_.setY(ui_->treeViewWallets->verticalScrollBar()->value());
+   }
+
+   if (ui_->treeViewAddresses->model()->rowCount() > 0) {
+      addressesScrollPos_.setX(ui_->treeViewAddresses->horizontalScrollBar()->value());
+      addressesScrollPos_.setY(ui_->treeViewAddresses->verticalScrollBar()->value());
+   }
+}
+
+void WalletsWidget::onWalletsSynchronized()
+{
+   if (walletsManager_->hasPrimaryWallet()) {
+      for (size_t i = 0; i < walletsManager_->hdWalletsCount(); ++i) {
+         const auto hdWallet = walletsManager_->getHDWallet(i);
+         if (hdWallet->isPrimary()) {
+            ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(i, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            break;
+         }
+      }
+   }
+   else if (walletsManager_->hdWalletsCount() > 0){
+      ui_->treeViewWallets->selectionModel()->select(walletsModel_->index(0, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+   }
 }
 
 void WalletsWidget::onWalletBalanceChanged(std::string walletId)
@@ -433,115 +512,12 @@ bool WalletsWidget::CreateNewWallet(bool report)
 {
    int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::DialogType::CreateWallet);
    return true;
-
-//   NetworkType netType = appSettings_->get<NetworkType>(ApplicationSettings::netType);
-
-//   bs::core::wallet::Seed walletSeed(netType, CryptoPRNG::generateRandom(32));
-
-//   EasyCoDec::Data easyData = walletSeed.toEasyCodeChecksum();
-
-//   const auto walletId = walletSeed.getWalletId();
-
-//   NewWalletSeedDialog newWalletSeedDialog(QString::fromStdString(walletId)
-//      , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);
-
-//   int result = newWalletSeedDialog.exec();
-//   if (!result) {
-//      return false;
-//   }
-//   // get the user to confirm the seed
-//   NewWalletSeedConfirmDialog dlg(walletId, netType
-//      , QString::fromStdString(easyData.part1), QString::fromStdString(easyData.part2), this);
-//   result = dlg.exec();
-//   if (!result) {
-//      return false;
-//   }
-//   std::shared_ptr<bs::sync::hd::Wallet> newWallet;
-////   CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-////      , appSettings_->GetHomeDir(), walletSeed, walletId, username_, appSettings_, this);
-//   CreateWalletDialog createWalletDialog(walletsManager_, signingContainer_
-//      , walletSeed, walletId, username_, appSettings_, connectionManager_, logger_, this);
-//   if (createWalletDialog.exec() == QDialog::Accepted) {
-//      if (createWalletDialog.walletCreated()) {
-//         newWallet = walletsManager_->getHDWalletById(walletId);
-//         if (!newWallet) {
-//            showError(tr("Failed to find newly created wallet"));
-//            return false;
-//         }
-
-//         if (report) {
-//            BSMessageBox(BSMessageBox::success
-//               , tr("%1Wallet Created").arg(createWalletDialog.isNewWalletPrimary() ? tr("Primary ") : QString())
-//               , tr("Wallet \"%1\" Successfully Created").arg(QString::fromStdString(newWallet->name())), this).exec();
-//         }
-
-//         return true;
-//      } else {
-//         showError(tr("Failed to create wallet"));
-//         return false;
-//      }
-//   } else {
-//      return false;
-//   }
 }
 
 bool WalletsWidget::ImportNewWallet(bool report)
 {
    int createReqId_ = signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ImportWallet);
    return true;
-
-//   bool disablePrimaryImport = false;
-
-//   if (!walletsManager_->hasPrimaryWallet() && assetManager_->privateShares(true).empty()) {
-//      BSMessageBox q(BSMessageBox::warning, tr("Private Market Import"), tr("Private Market data is missing")
-//         , tr("You do not have Private Market data available in the BlockSettle Terminal. You must first log "
-//            "into the BlockSettle trading network from the main menu. A successful login will cause the proper data to be "
-//            "automatically downloaded. Without this data, you will be unable to receive your Private Market "
-//            "balances. Are you absolutely certain that you wish to proceed an import that doesn't include "
-//            "Private Market data? (Upon receiving the data, you will have to re-import the wallet in order to "
-//            "use the data.)"), this);
-//      q.exec();
-//      disablePrimaryImport = true;
-//   }
-
-//   // if signer is not ready - import WO only
-//   ImportWalletTypeDialog importWalletDialog(signingContainer_->isOffline(), this);
-
-//   if (importWalletDialog.exec() == QDialog::Accepted) {
-//      if (importWalletDialog.type() == ImportWalletTypeDialog::Full) {
-//         ImportWalletDialog createImportedWallet(walletsManager_
-//                                                    , signingContainer_
-//                                                    , assetManager_
-//                                                    , authMgr_, armory_
-//                                                    , importWalletDialog.GetSeedData()
-//                                                    , importWalletDialog.GetChainCodeData()
-//                                                    , appSettings_
-//                                                    , connectionManager_
-//                                                    , logger_
-//                                                    , username_
-//                                                    , importWalletDialog.GetName()
-//                                                    , importWalletDialog.GetDescription()
-//                                                    , disablePrimaryImport
-//                                                    , this);
-
-//         if (createImportedWallet.exec() == QDialog::Accepted) {
-//            const auto &importer = createImportedWallet.getWalletImporter();
-
-//            const auto &walletId = createImportedWallet.getWalletId();
-//            walletImporters_[walletId] = importer;
-
-//            if (report) {
-//               BSMessageBox(BSMessageBox::success
-//                  , tr("%1Wallet Imported").arg(createImportedWallet.ImportedAsPrimary() ? tr("Primary ") : QString())
-//                  , tr("Wallet \"%1\" Successfully Imported").arg(createImportedWallet.getNewWalletName()), this).exec();
-//            }
-//         }
-//      }
-//      else {   //TODO: decide on WO wallet import later
-//      }
-//   }
-
-//   return true;
 }
 
 void WalletsWidget::shortcutActivated(ShortcutType s)
@@ -705,17 +681,17 @@ void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
 
 void WalletsWidget::onDeleteWallet()
 {
-   const auto action = qobject_cast<QAction *>(sender());
-   const auto walletId = action ? action->data().toString() : QString();
-   if (walletId.isEmpty()) {
-      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
-      return;
-   }
-   const auto &wallet = walletsManager_->getWalletById(walletId.toStdString());
-   if (!wallet) {
-      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
-      return;
-   }
-   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, connectionManager_
-                      , logger_, this).exec();
+//   const auto action = qobject_cast<QAction *>(sender());
+//   const auto walletId = action ? action->data().toString() : QString();
+//   if (walletId.isEmpty()) {
+//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to delete wallet"), this).exec();
+//      return;
+//   }
+//   const auto &wallet = walletsManager_->getWalletById(walletId.toStdString());
+//   if (!wallet) {
+//      BSMessageBox(BSMessageBox::critical, tr("Wallet Delete"), tr("Failed to find wallet with id %1").arg(walletId), this).exec();
+//      return;
+//   }
+//   WalletDeleteDialog(wallet, walletsManager_, signingContainer_, appSettings_, connectionManager_
+//                      , logger_, this).exec();
 }

@@ -39,7 +39,7 @@ class UserScriptHandler : public QObject
 
 signals:
    void aqScriptLoaded(const QString &fileName);
-   void failedToLoad(const QString &error);
+   void failedToLoad(const QString &fileName, const QString &error);
    void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
    void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
@@ -114,7 +114,7 @@ signals:
    void deinitAQ(bool deleteAq);
    void stateChanged(bool enabled);
    void aqScriptLoaded(const QString &fileName);
-   void failedToLoad(const QString &error);
+   void failedToLoad(const QString &fileName, const QString &error);
    void pullQuoteNotif(const QString &reqId, const QString &reqSessToken);
    void sendQuote(const bs::network::QuoteReqNotification &qrn, double price);
 
@@ -128,8 +128,6 @@ public:
       QObject *parent);
    ~UserScriptRunner() noexcept override;
 
-   bool isEnabled() const;
-
    void setWalletsManager(const std::shared_ptr<bs::sync::WalletsManager> &);
 
    std::shared_ptr<TransactionData> getTransactionData(const std::string &reqId) const;
@@ -140,13 +138,10 @@ public slots:
    void enableAQ(const QString &fileName);
    void disableAQ();
 
-private slots:
-   void failedToLoadScript();
-
 private:
    QThread *thread_;
    UserScriptHandler *script_;
-   bool enabled_;
+   std::shared_ptr<spdlog::logger> logger_;
 }; // class UserScriptRunner
 
 #endif // USERSCRIPTRUNNER_H_INCLUDED

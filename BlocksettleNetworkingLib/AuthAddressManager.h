@@ -12,6 +12,7 @@
 #include <QThreadPool>
 #include "CommonTypes.h"
 #include "WalletEncryption.h"
+#include "ZMQ_BIP15X_DataConnection.h"
 
 #include "bs_communication.pb.h"
 
@@ -45,7 +46,8 @@ class AuthAddressManager : public QObject
 
 public:
    AuthAddressManager(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<ArmoryConnection> &);
+      , const std::shared_ptr<ArmoryConnection> &
+      , const ZmqBIP15XDataConnection::cbNewKey &);
    ~AuthAddressManager() noexcept;
 
    AuthAddressManager(const AuthAddressManager&) = delete;
@@ -163,6 +165,7 @@ private:
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ArmoryConnection>      armory_;
+   ZmqBIP15XDataConnection::cbNewKey      cbApproveConn_ = nullptr;
    std::shared_ptr<ApplicationSettings>   settings_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AuthSignManager>       authSignManager_;
@@ -170,8 +173,8 @@ protected:
    std::shared_ptr<CelerClient>           celerClient_;
    std::shared_ptr<AddressVerificator>    addressVerificator_;
 
-   std::atomic_flag                                lockCommands_ = ATOMIC_FLAG_INIT;
-   std::set<std::shared_ptr<RequestReplyCommand>>  activeCommands_;
+   std::map<int, std::unique_ptr<RequestReplyCommand>>  activeCommands_;
+   int requestId_{};
 
    mutable std::atomic_flag                  lockList_ = ATOMIC_FLAG_INIT;
    std::vector<bs::Address>                  addresses_;

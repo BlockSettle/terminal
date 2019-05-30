@@ -21,39 +21,30 @@ MdhsClient::MdhsClient(
 {
 }
 
-MdhsClient::~MdhsClient() noexcept
-{
-   FastLock locker(lockCommands_);
-   for (auto &cmd : activeCommands_) {
-      cmd->DropResult();
-   }
-}
+MdhsClient::~MdhsClient() noexcept = default;
 
 void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
 {
-   const auto apiConnection = connectionManager_->CreateGenoaClientConnection();
-   auto command = std::make_shared<RequestReplyCommand>("MdhsClient", apiConnection, logger_);
+   requestId_ += 1;
+   int requestId = requestId_;
 
-   command->SetReplyCallback([command, this](const std::string& data) -> bool
-   {
-      command->CleanupCallbacks();
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
-      return OnDataReceived(data);
+   auto apiConnection = connectionManager_->CreateGenoaClientConnection();
+   auto command = std::make_unique<RequestReplyCommand>("MdhsClient", apiConnection, logger_);
+
+   command->SetReplyCallback([requestId, this](const std::string& data) -> bool {
+      QMetaObject::invokeMethod(this, [this, requestId, data] {
+         activeCommands_.erase(requestId);
+         emit DataReceived(data);
+      });
+      return true;
    });
 
-   command->SetErrorCallback([command, this](const std::string& message)
-   {
+   command->SetErrorCallback([requestId, this](const std::string& message) {
       logger_->error("Failed to get history data from mdhs: {}", message);
-      command->CleanupCallbacks();
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
+      QMetaObject::invokeMethod(this, [this, requestId] {
+         activeCommands_.erase(requestId);
+      });
    });
-
-   {
-      FastLock locker(lockCommands_);
-      activeCommands_.emplace(command);
-   }
 
    if (!command->ExecuteRequest(
       appSettings_->get<std::string>(ApplicationSettings::mdhsHost),
@@ -61,14 +52,8 @@ void MdhsClient::SendRequest(const MarketDataHistoryRequest& request)
       request.SerializeAsString()))
    {
       logger_->error("Failed to send request for mdhs.");
-      command->CleanupCallbacks();
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
+      return;
    }
-}
 
-bool MdhsClient::OnDataReceived(const std::string& data)
-{
-   emit DataReceived(data);
-   return true;
+   activeCommands_.emplace(requestId, std::move(command));
 }

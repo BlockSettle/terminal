@@ -107,6 +107,9 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
       auto row = createRow(addr, wallet);
       addressRows_.emplace_back(std::move(row));
    } else {
+      if ((wallets_.size() > 1) && (wallet->type() == bs::core::wallet::Type::ColorCoin)) {
+         return;  // don't populate PM addresses when multiple wallets selected
+      }
       std::vector<bs::Address> addressList;
       switch (addrType_) {
       case AddressType::External:
@@ -131,16 +134,15 @@ void AddressListModel::updateWallet(const std::shared_ptr<bs::sync::Wallet> &wal
          row.addrIndex = i;
          row.comment = QString::fromStdString(wallet->getAddressComment(addr));
 
-         if (row.walletName == QLatin1Literal("0"))
-            addressRows_.emplace_back(std::move(row));
+         addressRows_.emplace_back(std::move(row));
       }
    }
 }
 
 void AddressListModel::updateWalletData()
 {
-   auto nbTxNs = std::make_shared<int>(addressRows_.size());
-   auto nbBalances = std::make_shared<int>(addressRows_.size());
+   auto nbTxNs = std::make_shared<int>((int)addressRows_.size());
+   auto nbBalances = std::make_shared<int>((int)addressRows_.size());
 
    auto addrTxNs = std::make_shared<std::vector<uint32_t>>();
    addrTxNs->resize(addressRows_.size());

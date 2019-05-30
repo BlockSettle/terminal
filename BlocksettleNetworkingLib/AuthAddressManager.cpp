@@ -21,8 +21,9 @@ using namespace Blocksettle::Communication;
 
 
 AuthAddressManager::AuthAddressManager(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<ArmoryConnection> &armory)
-   : QObject(nullptr), logger_(logger), armory_(armory)
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const ZmqBIP15XDataConnection::cbNewKey &cb)
+   : QObject(nullptr), logger_(logger), armory_(armory), cbApproveConn_(cb)
 {}
 
 void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSettings
@@ -109,15 +110,7 @@ void AuthAddressManager::onAuthWalletChanged()
    emit AuthWalletChanged();
 }
 
-AuthAddressManager::~AuthAddressManager() noexcept
-{
-   addressVerificator_.reset();
-   FastLock lock(lockList_);
-   FastLock locker(lockCommands_);
-   for (auto &cmd : activeCommands_) {
-      cmd->DropResult();
-   }
-}
+AuthAddressManager::~AuthAddressManager() noexcept = default;
 
 size_t AuthAddressManager::GetAddressCount()
 {
@@ -254,7 +247,7 @@ bool AuthAddressManager::Verify(const bs::Address &address)
       return false;
    }
 
-   const auto &cbInputs = [this, address](std::vector<UTXO> inputs) {
+   const auto &cbInputs = [this, address](const std::vector<UTXO> &inputs) {
       std::set<BinaryData> txHashSet;
       std::vector<UTXO> utxos;
       const auto &initialTxHash = GetInitialTxHash(address);
@@ -264,7 +257,7 @@ bool AuthAddressManager::Verify(const bs::Address &address)
             utxos.emplace_back(std::move(utxo));
          }
       }
-      const auto &cbTXs = [this, address, utxos](std::vector<Tx> txs) {
+      const auto &cbTXs = [this, address, utxos](const std::vector<Tx> &txs) {
          for (const auto &tx : txs) {
             const bs::TxChecker txChecker(tx);
             for (const auto &utxo : utxos) {
@@ -750,55 +743,41 @@ bool AuthAddressManager::SendGetBSAddressListRequest()
 
 bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::string& data)
 {
-   const auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
+   auto connection = connectionManager_->CreateZMQBIP15XDataConnection();
+   connection->setCBs(cbApproveConn_);
 
-   // Define the callback that will be used to determine if the signer's BIP
-   // 150 identity key, if it has changed, will be accepted. It needs strings
-   // for the old and new keys, and a promise to set once the user decides.
-   //
-   // NB: This may need to be altered later. The PuB key should be hard-coded
-   // and respected.
-   ZmqBIP15XDataConnection::cbNewKey ourNewKeyCB =
-      [this](const std::string& oldKey, const std::string& newKey
-      , std::shared_ptr<std::promise<bool>> newKeyProm)->void
-   {
-      logger_->info("[AuthAddressManager::{}] Temporary kludge for accepting "
-         "the public bridge ID key. Need to check against a hard-coded value."
-         , __func__);
-      newKeyProm->set_value(true);
-   };
-   connection->setCBs(ourNewKeyCB);
+   requestId_ += 1;
+   int requestId = requestId_;
 
-   auto command = std::make_shared<RequestReplyCommand>(name, connection, logger_);
+   auto command = std::make_unique<RequestReplyCommand>(name, connection, logger_);
 
-   command->SetReplyCallback([command, this](const std::string& data) {
+   command->SetReplyCallback([requestId, this](const std::string& data) {
       OnDataReceived(data);
-      command->CleanupCallbacks();
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
+
+      QMetaObject::invokeMethod(this, [this, requestId] {
+         activeCommands_.erase(requestId);
+      });
       return true;
    });
 
-   command->SetErrorCallback([command, this](const std::string& message) {
-      logger_->error("[AuthAddressManager::{}] error callback: {}", command->GetName(), message);
-      command->CleanupCallbacks();
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
+   command->SetErrorCallback([requestId, this](const std::string& message) {
+      QMetaObject::invokeMethod(this, [this, requestId, message] {
+         auto it = activeCommands_.find(requestId);
+         if (it != activeCommands_.end()) {
+            logger_->error("[AuthAddressManager::{}] error callback: {}", it->second->GetName(), message);
+            activeCommands_.erase(it);
+         }
+      });
    });
-
-   {
-      FastLock locker(lockCommands_);
-      activeCommands_.insert(command);
-   }
 
    if (!command->ExecuteRequest(settings_->get<std::string>(ApplicationSettings::pubBridgeHost)
          , settings_->get<std::string>(ApplicationSettings::pubBridgePort)
          , data, true)) {
       logger_->error("[AuthAddressManager::SubmitRequestToPB] failed to send request {}", name);
-      FastLock locker(lockCommands_);
-      activeCommands_.erase(command);
       return false;
    }
+
+   activeCommands_.emplace(requestId, std::move(command));
 
    return true;
 }

@@ -44,7 +44,7 @@ public:
       , Blocksettle::Communication::headless::CreateHDWalletRequest &request);
 
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
-   ~HeadlessContainer() noexcept = default;
+   ~HeadlessContainer() noexcept override = default;
 
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
@@ -117,8 +117,6 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
 };
 
-bool KillHeadlessProcess();
-
 
 class RemoteSigner : public HeadlessContainer
 {
@@ -130,8 +128,10 @@ public:
       , const std::shared_ptr<ApplicationSettings>& appSettings
       , OpMode opMode = OpMode::Remote
       , const bool ephemeralDataConnKeys = true
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
-   ~RemoteSigner() noexcept = default;
+   ~RemoteSigner() noexcept override = default;
 
    bool Start() override;
    bool Stop() override;
@@ -140,6 +140,7 @@ public:
    bool isOffline() const override;
    bool hasUI() const override;
    SecureBinaryData getOwnPubKey() const { return connection_->getOwnPubKey(); }
+   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &keys) { connection_->updatePeerKeys(keys); }
 
    void setTargetDir(const QString& targetDir) override;
    QString targetDir() const override;
@@ -152,12 +153,15 @@ protected slots:
    void onAuthenticated();
    void onConnected();
    void onDisconnected();
-   void onConnError(const QString &err);
+   void onConnError(ConnectionError error, const QString &details);
    void onPacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
    void ConnectHelper();
    void Authenticate();
+   // Recreates new ZmqBIP15XDataConnection because it can't gracefully handle server restart
+   void RecreateConnection();
+   void ScheduleRestart();
 
    bs::signer::RequestId signOffline(const bs::core::wallet::TXSignRequest &txSignReq);
 
@@ -166,14 +170,17 @@ protected:
    const QString                              port_;
    const NetworkType                          netType_;
    const bool                                 ephemeralDataConnKeys_;
+   const std::string                          ownKeyFileDir_;
+   const std::string                          ownKeyFileName_;
    std::shared_ptr<ZmqBIP15XDataConnection>   connection_;
    std::shared_ptr<ApplicationSettings>       appSettings_;
-   const ZmqBIP15XDataConnection::cbNewKey cbNewKey_;
+   const ZmqBIP15XDataConnection::cbNewKey    cbNewKey_;
 
 private:
    std::shared_ptr<ConnectionManager> connectionManager_;
    mutable std::mutex   mutex_;
    bool headlessConnFinished_ = false;
+   bool isRestartScheduled_{false};
 };
 
 class LocalSigner : public RemoteSigner
@@ -184,21 +191,22 @@ public:
       , NetworkType, const QString &port
       , const std::shared_ptr<ConnectionManager>& connectionManager
       , const std::shared_ptr<ApplicationSettings>& appSettings
-      , SignContainer::OpMode mode = OpMode::Local
-      , const bool ephemeralDataConnKeys = false
+      , const bool startSignerProcess = true
+      , const std::string& ownKeyFileDir = ""
+      , const std::string& ownKeyFileName = ""
       , double asSpendLimit = 0
       , const ZmqBIP15XDataConnection::cbNewKey& inNewKeyCB = nullptr);
-   ~LocalSigner() noexcept = default;
+   ~LocalSigner() noexcept override;
 
    bool Start() override;
    bool Stop() override;
 
 protected:
    virtual QStringList args() const;
-   virtual QString pidFileName() const;
 
 private:
    const QString  homeDir_;
+   const bool     startProcess_;
    const double   asSpendLimit_;
    std::shared_ptr<QProcess>  headlessProcess_;
 };
@@ -221,13 +229,14 @@ public:
       , bool updateId = true);
    bs::signer::RequestId newRequestId() { return ++id_; }
    bool hasUI() const { return hasUI_; }
+   bool isReady() const { return isReady_; }
 
 signals:
    void authenticated();
    void authFailed();
    void connected();
    void disconnected();
-   void error(const QString &err);
+   void error(HeadlessContainer::ConnectionError error, const QString &details);
    void PacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
@@ -235,7 +244,9 @@ private:
    std::shared_ptr<DataConnection>  connection_;
    const NetworkType                netType_;
    bs::signer::RequestId            id_ = 0;
-   bool     hasUI_ = false;
+   // This will be updated from background thread
+   std::atomic<bool>                hasUI_{false};
+   std::atomic<bool>                isReady_{false};
 };
 
 #endif // __HEADLESS_CONTAINER_H__

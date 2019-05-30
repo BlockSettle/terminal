@@ -2,6 +2,7 @@
 #define __MESSAGE_BOX_H__
 
 #include <QDialog>
+#include <QVariant>
 #include <memory>
 
 namespace Ui
@@ -14,7 +15,7 @@ class BSMessageBox : public QDialog
 Q_OBJECT
 
 public:
-   enum messageBoxType {
+   enum Type {
       info = 1,
       success = 2,
       question = 3,
@@ -22,15 +23,15 @@ public:
       critical = 5
    };
 
-   BSMessageBox(messageBoxType mbType
+   BSMessageBox(Type mbType
       , const QString& title, const QString& text
       , QWidget* parent = nullptr);
 
-   BSMessageBox(messageBoxType mbType
-      , const QString& title, const QString& text, const QString& details
+   BSMessageBox(Type mbType
+      , const QString& title, const QString& text, const QString& description
       , QWidget* parent = nullptr);
 
-   BSMessageBox(messageBoxType mbType
+   BSMessageBox(Type mbType
       , const QString& title, const QString& text
       , const QString& description, const QString& details
       , QWidget* parent = nullptr);
@@ -44,6 +45,7 @@ public:
 
    void setOkVisible(bool visible);
    void setCancelVisible(bool visible);
+
 protected slots:
    void onDetailsPressed();
 
@@ -51,7 +53,7 @@ private:
    bool detailsVisible() const;
    void hideDetails();
    void showDetails();
-   void setType(messageBoxType type);
+   void setType(Type type);
 
 private:
    std::unique_ptr<Ui::BSMessageBox> ui_;
@@ -82,4 +84,19 @@ public:
    MessageBoxWalletCreateAbort(QWidget *parent = nullptr);
 };
 
+class MessageBoxIdKey : public BSMessageBox {
+public:
+   MessageBoxIdKey(Type mbType
+      , const QString& title, const QString& text
+      , const QString& description, const QString& details
+      , QWidget* parent = nullptr)
+      : BSMessageBox(mbType, title, text, description, details, parent) {
+      setProperty("messageBoxIdKey", true);
+   }
+
+   MessageBoxIdKey(Type mbType
+      , const QString& title, const QString& text, const QString& description
+      , QWidget* parent = nullptr)
+      : MessageBoxIdKey(mbType, title, text, description, QString(), parent) {}
+};
 #endif // __MESSAGE_BOX_H__

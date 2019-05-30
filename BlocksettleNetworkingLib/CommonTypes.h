@@ -14,6 +14,12 @@
 #include "com/celertech/marketdata/api/enums/ProductTypeProto.pb.h"
 #include "com/celertech/marketdata/api/enums/MarketDataEntryTypeProto.pb.h"
 
+#include "ChatCommonTypes.h"
+
+#ifndef NDEBUG
+#include <stdexcept>
+#endif
+
 namespace bs {
    namespace network {
 
@@ -359,28 +365,6 @@ namespace bs {
          uint64_t    amount;
          std::string product;
          uint64_t    timestamp;
-      };
-
-      enum OTCRangeID
-      {
-         Range1_5,
-         Range5_10,
-         Range10_50,
-         Range50_100,
-         Range100_250,
-         Range250plus
-      };
-
-      struct OTCPriceRange
-      {
-         uint64_t lower;
-         uint64_t upper;
-      };
-
-      struct OTCQuantityRange
-      {
-         uint64_t lower;
-         uint64_t upper;
       };
 
    }  //namespace network

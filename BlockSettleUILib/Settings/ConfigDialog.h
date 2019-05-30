@@ -7,6 +7,9 @@
 #include "ArmoryServersProvider.h"
 #include "SignContainer.h"
 
+class ArmoryServersProvider;
+class SignersProvider;
+
 namespace Ui {
    class ConfigDialog;
 }
@@ -16,17 +19,12 @@ class SettingsPage : public QWidget
    Q_OBJECT
 
 public:
-   SettingsPage(QWidget *parent) : QWidget(parent) {}
+   SettingsPage(QWidget *parent);
 
    virtual void init(const std::shared_ptr<ApplicationSettings> &appSettings
-                     , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
-                     , std::shared_ptr<SignContainer> signContainer) {
-      appSettings_ = appSettings;
-      armoryServersProvider_ = armoryServersProvider;
-      signContainer_ = signContainer;
-      initSettings();
-      display();
-   }
+      , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+      , const std::shared_ptr<SignersProvider> &signersProvider
+      , std::shared_ptr<SignContainer> signContainer);
 
 public slots:
    virtual void initSettings() {}
@@ -40,6 +38,7 @@ signals:
 protected:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
+   std::shared_ptr<SignersProvider>       signersProvider_;
    std::shared_ptr<SignContainer>         signContainer_;
 };
 
@@ -51,6 +50,7 @@ Q_OBJECT
 public:
    ConfigDialog(const std::shared_ptr<ApplicationSettings>& appSettings
      , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+     , const std::shared_ptr<SignersProvider> &signersProvider
      , std::shared_ptr<SignContainer> signContainer
      , QWidget* parent = nullptr);
    ~ConfigDialog() override;
@@ -71,6 +71,7 @@ private:
    std::unique_ptr<Ui::ConfigDialog> ui_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<ArmoryServersProvider> armoryServersProvider_;
+   std::shared_ptr<SignersProvider>       signersProvider_;
    std::vector<SettingsPage *>            pages_;
    ApplicationSettings::State             prevState_;
    std::shared_ptr<SignContainer>         signContainer_;

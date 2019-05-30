@@ -22,8 +22,6 @@ class ConnectionManager;
 namespace spdlog { class logger; }
 class MdhsClient;
 
-using namespace Blocksettle::Communication::TradeHistory;
-
 #include <QItemDelegate>
 #include <QPainter>
 
@@ -31,7 +29,7 @@ class ComboBoxDelegate : public QItemDelegate
 {
    Q_OBJECT
 public:
-   explicit ComboBoxDelegate(QObject *parent = 0);
+   explicit ComboBoxDelegate(QObject *parent = nullptr);
 protected:
    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
@@ -43,7 +41,7 @@ class ChartWidget : public QWidget
 
 public:
     explicit ChartWidget(QWidget* pParent = nullptr);
-    ~ChartWidget();
+    ~ChartWidget() override;
     void SendEoDRequest();
     void init(const std::shared_ptr<ApplicationSettings>&
               , const std::shared_ptr<MarketDataProvider>&
@@ -51,6 +49,7 @@ public:
               , const std::shared_ptr<spdlog::logger>&);
 
     void setAuthorized(bool authorized);
+    void disconnect();
 
 protected slots:
    void OnDataReceived(const std::string& data);
@@ -69,11 +68,13 @@ protected slots:
    void OnWheelScroll(QWheelEvent* event);
    void OnAutoScaleBtnClick();
    void OnResetBtnClick();
+   void resizeEvent(QResizeEvent* event) override;
    bool isBeyondUpperLimit(QCPRange newRange, int interval);
    bool isBeyondLowerLimit(QCPRange newRange, int interval);
-   void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oneRange);
-   static QString ProductTypeToString(TradeHistoryTradeType type);
+   void OnVolumeAxisRangeChanged(QCPRange newRange, QCPRange oldRange);
+   static QString ProductTypeToString(Blocksettle::Communication::TradeHistory::TradeHistoryTradeType type);
    void SetupCrossfire();
+   void SetupLastPrintFlag();
 
    void OnLoadingNetworkSettings();
    void OnMDConnecting();
@@ -93,7 +94,7 @@ protected:
    void UpdateChart(const int& interval);
    void InitializeCustomPlot();
    quint64 IntervalWidth(int interval = -1, int count = 1, const QDateTime& specialDate = {}) const;
-   static int FractionSizeForProduct(TradeHistoryTradeType type);
+   static int FractionSizeForProduct(Blocksettle::Communication::TradeHistory::TradeHistoryTradeType type);
    void ProcessProductsListResponse(const std::string& data);
    void ProcessOhlcHistoryResponse(const std::string& data);
    void ProcessEodResponse(const std::string& data);
@@ -105,8 +106,8 @@ protected:
 
    void DrawCrossfire(QMouseEvent* event);
 
-   void AddNewCandle();
-   void ModifyCandle();
+   void UpdatePrintFlag();
+
    void UpdatePlot(const int& interval, const qint64& timestamp);
 
    bool needLoadNewData(const QCPRange& range, QSharedPointer<QCPFinancialDataContainer> data) const;
@@ -126,7 +127,7 @@ private:
    std::shared_ptr<spdlog::logger>					logger_;
 
    bool                                         isProductListInitialized_{ false };
-   std::map<std::string, TradeHistoryTradeType> productTypesMapper;
+   std::map<std::string, Blocksettle::Communication::TradeHistory::TradeHistoryTradeType> productTypesMapper;
 
    QSharedPointer<QCPAxisTickerDateTime> dateTimeTicker{ new QCPAxisTickerDateTime };
 
@@ -135,13 +136,15 @@ private:
    bool eodUpdated_{ false };
    bool eodRequestSent_{ false };
 
-   constexpr static int requestLimit{ 100 };
-   constexpr static int candleViewLimit{ 60 };
+   constexpr static int requestLimit{ 200 };
+   constexpr static int candleViewLimit{ 150 };
    constexpr static qint64 candleCountOnScreenLimit{ 1500 };
 
    Blocksettle::Communication::MarketDataHistory::OhlcCandle lastCandle_;
 
    double prevRequestStamp{ 0.0 };
+
+   double zoomDiff_{ 0.0 };
 
    Ui::ChartWidget *ui_;
    QButtonGroup dateRange_;
@@ -149,6 +152,9 @@ private:
    QCPFinancial *candlesticksChart_;
    QCPBars *volumeChart_;
    QCPAxisRect *volumeAxisRect_;
+
+   QCPItemText *   lastPrintFlag_{ nullptr };
+   bool isHigh_ { true };
 
    QCPItemLine* horLine;
    QCPItemLine* vertLine;

@@ -20,7 +20,7 @@ void bs::TxAddressChecker::containsInputAddress(Tx tx, std::function<void(bool)>
    }
    OutPoint op = in.getOutPoint();
 
-   const auto &cbTX = [this, op, cb, lotsize, value](Tx prevTx) {
+   const auto &cbTX = [this, op, cb, lotsize, value](const Tx &prevTx) {
       if (!prevTx.isInitialized()) {
          cb(false);
          return;
@@ -112,7 +112,7 @@ void CheckRecipSigner::hasInputAddress(const bs::Address &addr, std::function<vo
    auto checker = std::make_shared<TxAddressChecker>(addr, armory_);
    resultFound_ = false;
 
-   const auto &cbTXs = [this, cb, checker, lotsize](std::vector<Tx> txs) {
+   const auto &cbTXs = [this, cb, checker, lotsize](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          const auto &cbContains = [this, cb, tx, checker](bool contains) {
             txHashSet_.erase(tx.getThisHash());
@@ -206,7 +206,7 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
       return false;
    }
 
-   const auto &cbTXs = [this, result, cb](std::vector<Tx> txs) {
+   const auto &cbTXs = [this, result, cb](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          if (!result) {
             return;
@@ -223,7 +223,7 @@ bool CheckRecipSigner::GetInputAddressList(const std::shared_ptr<spdlog::logger>
          }
       }
    };
-   const auto &cbOutputTXs = [this, cbTXs, cb](std::vector<Tx> txs) {
+   const auto &cbOutputTXs = [this, cbTXs, cb](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          for (size_t i = 0; i < tx.getNumTxIn(); ++i) {
             TxIn in = tx.getTxInCopy((int)i);
@@ -300,7 +300,7 @@ void TxChecker::hasSpender(const bs::Address &addr, const std::shared_ptr<Armory
    };
    auto result = std::make_shared<Result>();
 
-   const auto &cbTXs = [result, addr, cb](std::vector<Tx> txs) {
+   const auto &cbTXs = [result, addr, cb](const std::vector<Tx> &txs) {
       for (const auto &tx : txs) {
          for (const auto &txOutIdx : result->txOutIdx[tx.getThisHash()]) {
             const TxOut prevOut = tx.getTxOutCopy(txOutIdx);

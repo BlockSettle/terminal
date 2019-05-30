@@ -8,8 +8,6 @@
 #include "SubscriberConnection.h"
 #include "ZmqContext.h"
 #include "ZmqDataConnection.h"
-#include "ZmqSecuredDataConnection.h"
-#include "ZmqSecuredServerConnection.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
@@ -105,34 +103,31 @@ std::shared_ptr<DataConnection> ConnectionManager::CreateGenoaClientConnection(b
    return connection;
 }
 
-std::shared_ptr<ZmqSecuredServerConnection> ConnectionManager::CreateSecuredServerConnection() const
-{
-   return std::make_shared<ZmqSecuredServerConnection>(logger_, zmqContext_);
-}
-
-std::shared_ptr<ZmqSecuredDataConnection> ConnectionManager::CreateSecuredDataConnection(bool monitored) const
-{
-   auto connection = std::make_shared<ZmqSecuredDataConnection>(logger_
-      , monitored);
-   connection->SetContext(zmqContext_);
-
-   return connection;
-}
-
-std::shared_ptr<ZmqBIP15XServerConnection>
-   ConnectionManager::CreateZMQBIP15XChatServerConnection(bool ephemeral) const
+std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XChatServerConnection(
+   bool ephemeral, const std::string& ownKeyFileDir, const std::string& ownKeyFileName) const
 {
    BinaryData bdID = CryptoPRNG::generateRandom(8);
+   auto cbTrustedClients = [this]() -> std::vector<std::string> {
+      return zmqTrustedTerminals_;
+   };
+
    return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
-      , zmqTrustedTerminals_, READ_UINT64_LE(bdID.getPtr()), ephemeral);
+      , READ_UINT64_LE(bdID.getPtr()), cbTrustedClients, ephemeral
+      , ownKeyFileDir, ownKeyFileName, false);
 }
 
-std::shared_ptr<ZmqBIP15XDataConnection>
-   ConnectionManager::CreateZMQBIP15XDataConnection(bool ephemeral) const
+std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(
+   bool ephemeral, const std::string& ownKeyFileDir, const std::string& ownKeyFileName
+   , bool makeClientCookie, bool readServerCookie, const std::string& cookieName) const
 {
    auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_
       , ephemeral
-      , true); // Monitor the conn. It relies on a connection event.
+      , ownKeyFileDir
+      , ownKeyFileName
+      , true  // Monitor the conn. It relies on a connection event.
+      , makeClientCookie
+      , readServerCookie
+      , cookieName);
    connection->SetContext(zmqContext_);
 
    return connection;

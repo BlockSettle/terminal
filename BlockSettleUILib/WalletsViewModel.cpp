@@ -167,8 +167,8 @@ protected:
 
    QString getState() const {
       switch (state_) {
-      case State::Connected:     return QObject::tr("Connected");
-      case State::Offline:       return QObject::tr("Offline");
+      case State::Connected:     return QObject::tr("Full");
+      case State::Offline:       return QObject::tr("Watching-Only");
       default:    return {};
       }
    }
@@ -396,7 +396,7 @@ QVariant WalletsViewModel::headerData(int section, Qt::Orientation orientation, 
          case WalletColumns::ColumnName:
             return tr("Name");
          case WalletColumns::ColumnState:
-            return tr("Signer state");
+            return tr("Wallet type");
          case WalletColumns::ColumnNbAddresses:
             return tr("# Used Addrs");
          case WalletColumns::ColumnID:
@@ -485,7 +485,7 @@ void WalletsViewModel::onHDWalletError(unsigned int id, std::string)
    }
    const auto walletId = hdInfoReqIds_[id];
    hdInfoReqIds_.erase(id);
-   const auto state = WalletNode::State::Offline;
+   const auto state = WalletNode::State::Undefined;
    signerStates_[walletId] = state;
    for (int i = 0; i < rootNode_->nbChildren(); i++) {
       auto hdNode = rootNode_->child(i);
@@ -553,10 +553,7 @@ void WalletsViewModel::LoadWallets(bool keepSelection)
             hdNode->setState(WalletNode::State::Offline);
          }
          else {
-            const auto stateIt = signerStates_.find(hdWallet->walletId());
-            if (stateIt != signerStates_.end()) {
-               hdNode->setState(stateIt->second);
-            }
+            hdNode->setState(WalletNode::State::Connected);
          }
       }
    }

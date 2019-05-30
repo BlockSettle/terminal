@@ -4,6 +4,7 @@
 #include <memory>
 #include <unordered_map>
 #include <QWidget>
+#include <QItemSelection>
 #include "Address.h"
 #include "TabWithShortcut.h"
 
@@ -32,7 +33,6 @@ class AuthAddressManager;
 class QAction;
 class QMenu;
 class SignContainer;
-class WalletImporter;
 class WalletsViewModel;
 class ConnectionManager;
 
@@ -71,6 +71,7 @@ private:
 
    int getUIFilterSettings() const;
    void updateAddressFilters(int filterSettings);
+   void keepSelection();
 
 signals:
    void showContextMenu(QMenu *, QPoint);
@@ -93,6 +94,10 @@ private slots:
    void onEnterKeyInWalletsPressed(const QModelIndex &index);
    void onShowContextMenu(QMenu *, QPoint);
    void onWalletBalanceChanged(std::string);
+   void treeViewAddressesSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+   void treeViewAddressesLayoutChanged();
+   void scrollChanged();
+   void onWalletsSynchronized();
 
 private:
    std::unique_ptr<Ui::WalletsWidget> ui_;
@@ -108,7 +113,6 @@ private:
    WalletsViewModel        *  walletsModel_;
    AddressListModel        *  addressModel_;
    AddressSortFilterModel  *  addressSortFilterModel_;
-   std::unordered_map<std::string, std::shared_ptr<WalletImporter>>  walletImporters_;
    QAction  *  actCopyAddr_ = nullptr;
    QAction  *  actEditComment_ = nullptr;
    QAction  *  actRevokeSettl_ = nullptr;
@@ -118,6 +122,10 @@ private:
    unsigned int   revokeReqId_ = 0;
    QString username_;
    std::vector<std::shared_ptr<bs::sync::Wallet>>  prevSelectedWallets_;
+   int prevSelectedWalletRow_;
+   int prevSelectedAddressRow_;
+   QPoint walletsScrollPos_;
+   QPoint addressesScrollPos_;
 };
 
 #endif // __WALLETS_WIDGET_H__

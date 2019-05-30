@@ -116,7 +116,7 @@ bool Wallet::isBalanceAvailable() const
 BTCNumericTypes::balance_type Wallet::getSpendableBalance() const
 {
    if (!isBalanceAvailable()) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    return spendableBalance_;
 }
@@ -132,7 +132,7 @@ BTCNumericTypes::balance_type Wallet::getUnconfirmedBalance() const
 BTCNumericTypes::balance_type Wallet::getTotalBalance() const
 {
    if (!isBalanceAvailable()) {
-      return -1;
+      return std::numeric_limits<double>::infinity();
    }
    return totalBalance_;
 }

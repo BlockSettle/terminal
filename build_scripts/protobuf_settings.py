@@ -9,7 +9,7 @@ from component_configurator import Configurator
 class ProtobufSettings(Configurator):
     def __init__(self, settings):
         Configurator.__init__(self, settings)
-        self._version = '3.6.1'
+        self._version = '3.7.1'
         self._package_name = 'protobuf-' + self._version
         self._package_name_url = 'protobuf-cpp-' + self._version
         self._script_revision = '1'
@@ -111,6 +111,8 @@ class ProtobufSettings(Configurator):
         # copy headers
         self.filter_copy(os.path.join(self.get_build_dir(), 'src'), os.path.join(self.get_install_dir(), 'include'),
                          '.h')
+        self.filter_copy(os.path.join(self.get_build_dir(), 'src'), os.path.join(self.get_install_dir(), 'include'),
+                         '.inc', False)
 
         return True
 

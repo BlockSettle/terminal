@@ -65,6 +65,8 @@ CelerClient::CelerClient(const std::shared_ptr<ConnectionManager>& connectionMan
 
    connect(this, &CelerClient::closingConnection, this, &CelerClient::CloseConnection, Qt::QueuedConnection);
    RegisterDefaulthandlers();
+
+   celerUserType_ = CelerUserType::Undefined;
 }
 
 bool CelerClient::LoginToServer(const std::string& hostname, const std::string& port
@@ -79,12 +81,14 @@ bool CelerClient::LoginToServer(const std::string& hostname, const std::string& 
    std::string loginString = login;
    sessionToken_.clear();
 
+   celerUserType_ = CelerUserType::Undefined;
+
    auto loginSequence = std::make_shared<CelerLoginSequence>(logger_, login, password);
    auto onLoginSuccess = [this,loginString](const std::string& sessionToken, int32_t heartbeatInterval) {
      loginSuccessCallback(loginString, sessionToken, heartbeatInterval);
    };
    auto onLoginFailed = [this](const std::string& errorMessage) {
-     this->loginFailedCallback(errorMessage);
+     loginFailedCallback(errorMessage);
    };
    loginSequence->SetCallbackFunctions(onLoginSuccess, onLoginFailed);
 
@@ -139,10 +143,13 @@ void CelerClient::loginSuccessCallback(const std::string& userName, const std::s
 
          if (bp && bd) {
             userType_ = tr("Dealing Participant");
+            celerUserType_ = CelerUserType::Dealing;
          } else if (bp && !bd) {
-            userType_ = tr("Market Participant");
+            userType_ = tr("Trading Participant");
+            celerUserType_ = CelerUserType::Trading;
          } else {
-            userType_ = tr("Market Data Participant");
+            userType_ = tr("Market Participant");
+            celerUserType_ = CelerUserType::Market;
          }
 
          emit OnConnectedToServer();
@@ -475,6 +482,11 @@ std::string CelerClient::userId() const
 const QString& CelerClient::userType() const
 {
    return userType_;
+}
+
+CelerClient::CelerUserType CelerClient::celerUserType() const
+{
+   return celerUserType_;
 }
 
 std::unordered_set<std::string> CelerClient::GetSubmittedAuthAddressSet() const

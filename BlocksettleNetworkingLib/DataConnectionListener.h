@@ -11,7 +11,8 @@ public:
       UndefinedSocketError,
       HostNotFoundError,
       HandshakeFailed,
-      SerializationFailed
+      SerializationFailed,
+      HeartbeatWaitFailed,
    };
 
 public:

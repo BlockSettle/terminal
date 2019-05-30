@@ -87,6 +87,32 @@ BTCNumericTypes::balance_type UiUtils::amountToBtc(BTCNumericTypes::balance_type
    return value;
 }
 
+namespace UiUtils {
+   template <> QString displayAmount(double value)
+   {
+      if (std::isinf(value)) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(value, 'f', GetAmountPrecisionXBT()));
+   }
+
+   template <> QString displayAmount(uint64_t value)
+   {
+      if (value == UINT64_MAX) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
+   }
+
+   template <> QString displayAmount(int64_t value)
+   {
+      if (value == INT64_MAX) {
+         return CommonUiUtilsText::tr("Loading...");
+      }
+      return UnifyValueString(QLocale().toString(amountToBtc(value), 'f', GetAmountPrecisionXBT()));
+   }
+}
+
 static int addLeaves(QComboBox *comboBox, int &index, const QString &prefix, const std::string &defWalletId
    , const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves, const std::shared_ptr<SignContainer> &container)
 {
@@ -236,7 +262,6 @@ QPixmap UiUtils::getQRCode(const QString& address, int size)
          return QPixmap::fromImage(image);
       }
    } else {
-      qDebug() << "Error encoding QR code" << strerror(errno);
       return QPixmap();
    }
 }
@@ -279,6 +304,27 @@ QString UiUtils::displayQuantity(double quantity, const std::string& currency)
 QString UiUtils::displayQty(double quantity, const std::string &currency)
 {
    return displayQty(quantity, QString::fromStdString(currency));
+}
+
+double UiUtils::truncatePriceForAsset(double price, bs::network::Asset::Type at)
+{
+   unsigned int multiplier = 0;
+
+   switch(at) {
+   case bs::network::Asset::SpotFX:
+      multiplier = 10000;
+      break;
+   case bs::network::Asset::SpotXBT:
+      multiplier = 100;
+      break;
+   case bs::network::Asset::PrivateMarket:
+      multiplier = 1000000;
+      break;
+   default:
+      return 0;
+   }
+
+   return (double)((int)(price*multiplier)) / multiplier;
 }
 
 QString UiUtils::displayPriceForAssetType(double price, bs::network::Asset::Type at)
@@ -386,7 +432,7 @@ QString UiUtils::displayAddress(const QString &addr)
 
 QString UiUtils::displayShortAddress(const QString &addr, const uint maxLength)
 {
-   if ((maxLength < 5) || (addr.length() <= maxLength)) {
+   if ((maxLength < 5) || ((uint)addr.length() <= maxLength)) {
       return addr;
    }
 
