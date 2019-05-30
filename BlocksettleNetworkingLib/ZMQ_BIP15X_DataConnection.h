@@ -108,6 +108,7 @@ public:
    // Do not call from callbacks!
    bool closeConnection() override;
 
+   // Only for tests
    void rekey();
 
    void SetContext(const std::shared_ptr<ZmqContext>& context) {
@@ -134,6 +135,7 @@ private:
    void sendPacket(const std::string& data);
 
    void onRawDataReceived(const std::string& rawData) override;
+
    ZmqContext::sock_ptr CreateDataSocket();
    bool recvData();
    void triggerHeartbeatCheck();

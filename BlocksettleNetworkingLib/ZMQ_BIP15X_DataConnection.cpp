@@ -271,6 +271,8 @@ bool ZmqBIP15XDataConnection::ConfigureDataSocket(const ZmqContext::sock_ptr &so
 
 void ZmqBIP15XDataConnection::rekey()
 {
+   logger_->debug("[ZmqBIP15XDataConnection::{}] rekeying", __func__);
+
    if (!bip150HandshakeCompleted_) {
       logger_->error("[ZmqBIP15XDataConnection::{}] Can't rekey before BIP150 "
          "handshake is complete", __func__);
