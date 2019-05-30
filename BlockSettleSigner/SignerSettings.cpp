@@ -1,8 +1,8 @@
 #include <QCommandLineParser>
 #include <QDir>
-#include <QSettings>
 #include <QStandardPaths>
 #include <QMetaEnum>
+#include <QMessageBox>
 #include "BIP150_151.h"
 #include "BtcDefinitions.h"
 #include "BlockDataManagerConfig.h"
@@ -56,8 +56,7 @@ SignerSettings::~SignerSettings() = default;
 
 void SignerSettings::settingChanged(int setting)
 {
-   auto s = signer::Setting(setting);
-   switch (s) {
+   switch (static_cast<signer::Setting>(setting)) {
    case signer::OfflineMode:
       emit offlineChanged();
       break;
@@ -92,12 +91,13 @@ void SignerSettings::settingChanged(int setting)
    case signer::TrustedTerminals:
       emit trustedTerminalsChanged();
       break;
-   case signer::StartupBIP150CTX:
-      emit startupBIP150CTXChanged();
+   case signer::TwoWaySignerAuth:
+      emit twoWaySignerAuthChanged();
       break;
    default:
       break;
    }
+   emit changed(setting);
 
    HeadlessSettings::saveSettings(*d_, fileName_);
 }
@@ -195,6 +195,7 @@ bool SignerSettings::loadSettings(const QStringList &args)
       }
    }
    else {
+      QMessageBox::critical(nullptr, tr("Error"), tr("Please start blocksettle_signer instead"));
       return false;
    }
 
@@ -275,9 +276,9 @@ QStringList SignerSettings::trustedTerminals() const
    return result;
 }
 
-bool SignerSettings::startupBIP150CTX() const
+bool SignerSettings::twoWaySignerAuth() const
 {
-   return d_->startup_bip150_ctx();
+   return d_->two_way_signer_auth();
 }
 
 QString SignerSettings::dirDocuments() const
@@ -378,10 +379,10 @@ void SignerSettings::setTrustedTerminals(const QStringList &val)
    settingChanged(signer::Setting::TrustedTerminals);
 }
 
-void SignerSettings::setStartupBIP150CTX(bool val)
+void SignerSettings::setTwoWaySignerAuth(bool val)
 {
-   d_->set_startup_bip150_ctx(val);
-   settingChanged(signer::Setting::StartupBIP150CTX);
+   d_->set_two_way_signer_auth(val);
+   settingChanged(signer::Setting::TwoWaySignerAuth);
 }
 
 QString SignerSettings::secondsToIntervalStr(int s)

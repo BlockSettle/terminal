@@ -51,5 +51,4 @@ QtObject {
     property color comboBoxItemBgHighlightedColor: buttonsMainColor
     property color comboBoxItemTextColor: textColor
     property color comboBoxItemTextHighlightedColor: textColor
-
 }

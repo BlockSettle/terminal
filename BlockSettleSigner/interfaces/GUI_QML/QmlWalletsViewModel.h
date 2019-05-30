@@ -38,8 +38,8 @@ public:
       Leaf
    };
 
-   QmlWalletNode(QmlWalletsViewModel *vm, Type type, int row = 0, QmlWalletNode *parent = nullptr)
-      : viewModel_(vm), parent_(parent), row_(row), type_(type) {}
+   QmlWalletNode(QmlWalletsViewModel *vm, Type type, bool isWO=false, int row = 0, QmlWalletNode *parent = nullptr)
+      : viewModel_(vm), parent_(parent), row_(row), type_(type), isWO_(isWO) {}
    virtual ~QmlWalletNode() { clear(); }
 
    virtual std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const { return {}; }
@@ -56,6 +56,7 @@ public:
    int row() const { return row_; }
    const std::string &name() const { return name_; }
    Type type() const { return type_; }
+   bool isWO() const { return isWO_; }
 
    QmlWalletNode *findByWalletId(const std::string &walletId);
 
@@ -66,6 +67,7 @@ protected:
    int                  row_;
    Type                 type_ = Type::Unknown;
    QList<QmlWalletNode *> children_;
+   const bool           isWO_;
 };
 
 
@@ -103,6 +105,7 @@ public:
    {
       ColumnName,
       ColumnID,
+      ColumnType,
       ColumnDescription,
       ColumnEmpty,
       ColumnCount
@@ -117,7 +120,8 @@ public:
       IsHDRootRole,
       RootWalletIdRole,
       IsEncryptedRole,
-      EncKeyRole
+      EncKeyRole,
+      WalletTypeRole
    };
    Q_ENUM(Roles)
 

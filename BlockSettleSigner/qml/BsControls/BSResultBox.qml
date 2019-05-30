@@ -9,7 +9,7 @@ import com.blocksettle.WalletInfo 1.0
 BSMessageBox {
     id: root
 
-    property WalletInfo walletInfo: WalletInfo{walletId: "asdf"}
+    property WalletInfo walletInfo: WalletInfo{walletId: "<>"}
     property bool result_: true
 
     property variant titles: [
@@ -18,12 +18,14 @@ BSMessageBox {
         , "Wallet encryption"
         , "Wallet encryption"
         , "Wallet encryption"
+        , "Wallet encryption"
     ]
 
     property variant textsSuccess: [
           "Wallet successfully created."
         , "Wallet successfully imported."
-        , "New password successfully set."
+        , "Password encryption successful."
+        , "Auth eID encryption successful."
         , "Device successfully added."
         , "Device successfully removed."
     ]
@@ -32,6 +34,7 @@ BSMessageBox {
           "Failed to create new Wallet."
         , "Failed to import new Wallet."
         , "Failed to set new password."
+        , "Failed to set Auth EId encryption."
         , "Failed to add new device."
         , "Failed to remove device."
     ]
@@ -42,9 +45,10 @@ BSMessageBox {
     enum ResultType {
         WalletCreate = 0,
         WalletImport = 1,
-        EncryptionChange = 2,
-        AddDevice = 3,
-        RemoveDevice = 4
+        EncryptionChangeToPassword = 2,
+        EncryptionChangeToAuth = 3,
+        AddDevice = 4,
+        RemoveDevice = 5
     }
 
     title: titles[resultType]

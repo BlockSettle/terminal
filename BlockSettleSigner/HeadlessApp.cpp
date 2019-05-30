@@ -75,6 +75,8 @@ void HeadlessAppObj::start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
+   adapterLsn_->sendStatusUpdate();
+
    ready_ = true;
    onlineProcessing();
 }
@@ -116,20 +118,29 @@ void HeadlessAppObj::startInterface()
    }
 
 #ifdef __APPLE__
-   std::string guiPath = SystemFilePaths::applicationDir()
+   std::string guiPath = SystemFilePaths::applicationDirIfKnown()
       + "/Blocksettle Signer Gui.app/Contents/MacOS/Blocksettle Signer GUI";
 #else
-   std::string guiPath = SystemFilePaths::applicationDir() + "/bs_signer_gui";
+
+   std::string guiPath = SystemFilePaths::applicationDirIfKnown();
+
+   if (guiPath.empty()) {
+      guiPath = "bs_signer_gui";
+   } else {
+      guiPath = guiPath + "/bs_signer_gui";
+
 #ifdef WIN32
-   guiPath += ".exe";
-#endif
+      guiPath += ".exe";
 #endif
 
-   if (!SystemFileUtils::fileExist(guiPath)) {
-      logger_->error("[{}] {} doesn't exist"
-         , __func__, guiPath);
-      return;
+      if (!SystemFileUtils::fileExist(guiPath)) {
+         logger_->error("[{}] {} doesn't exist"
+            , __func__, guiPath);
+         return;
+      }
    }
+#endif
+
    logger_->debug("[{}] process path: {}", __func__, guiPath);
 
 /*
@@ -239,13 +250,24 @@ void HeadlessAppObj::onlineProcessing()
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
          , walletsMgr_, settings_->getWalletsDir(), settings_->netType());
    }
+
    listener_->SetLimits(settings_->limits());
-   if (!connection_->BindConnection(settings_->listenAddress()
-      , settings_->listenPort(), listener_.get())) {
+
+   bool result = connection_->BindConnection(settings_->listenAddress()
+      , settings_->listenPort(), listener_.get());
+
+   if (!result) {
       logger_->error("Failed to bind to {}:{}"
          , settings_->listenAddress(), settings_->listenPort());
-      throw std::runtime_error("failed to bind listening socket");
+
+      // Abort only if lightgui used, fullgui should just show error message instead
+      if (settings_->runMode() == bs::signer::RunMode::lightgui) {
+         throw std::runtime_error("failed to bind listening socket");
+      }
    }
+
+   signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
+   adapterLsn_->sendStatusUpdate();
 
    if (cbReady_) {
       // Needed to setup SignerAdapterListener callbacks
@@ -393,5 +415,40 @@ void HeadlessAppObj::addPendingAutoSignReq(const std::string &walletId)
 {
    if (listener_) {
       listener_->addPendingAutoSignReq(walletId);
+   }
+}
+
+void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
+{
+   const auto prevTrustedTerminals = settings_->trustedTerminals();
+   if (!settings_->update(settings)) {
+      logger_->error("[{}] failed to update settings", __func__);
+      return;
+   }
+   const auto trustedTerminals = settings_->trustedTerminals();
+   if (connection_ && (trustedTerminals != prevTrustedTerminals)) {
+      std::vector<std::pair<std::string, BinaryData>> updatedKeys;
+      for (const auto &key : trustedTerminals) {
+         const auto colonIndex = key.find(':');
+         if (colonIndex == std::string::npos) {
+            logger_->error("[{}] Trusted client list key entry ({}) is malformed"
+               , __func__, key);
+            continue;
+         }
+
+         try {
+            const SecureBinaryData inKey = READHEX(key.substr(colonIndex + 1));
+            if (inKey.isNull()) {
+               throw std::invalid_argument("no or malformed key data");
+            }
+            updatedKeys.push_back({ key.substr(0, colonIndex), inKey });
+         }
+         catch (const std::exception &e) {
+            logger_->error("[{}] Trusted client list key entry ({}) has invalid key: {}"
+               , __func__, key, e.what());
+         }
+      }
+      logger_->info("[{}] Updating {} trusted keys", __func__, updatedKeys.size());
+      connection_->updatePeerKeys(updatedKeys);
    }
 }

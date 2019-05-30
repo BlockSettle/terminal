@@ -58,8 +58,19 @@ bs::signer::RequestId SignAdapterContainer::DeleteHDRoot(const std::string &root
 
 void SignAdapterContainer::syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &cb)
 {
+   const auto &cbWrap = [this, cb](std::vector<bs::sync::WalletInfo> wi) {
+      woWallets_.clear();
+      for (const auto &wallet : wi) {
+         if (wallet.watchOnly && (wallet.format == bs::sync::WalletFormat::HD)) {
+            woWallets_.insert(wallet.id);
+         }
+      }
+      if (cb) {
+         cb(wi);
+      }
+   };
    const auto reqId = listener_->send(signer::SyncWalletInfoType, "");
-   listener_->setWalleteInfoCb(reqId, cb);
+   listener_->setWalletInfoCb(reqId, cbWrap);
 }
 
 void SignAdapterContainer::syncHDWallet(const std::string &id, const std::function<void(bs::sync::HDWalletData)> &cb)

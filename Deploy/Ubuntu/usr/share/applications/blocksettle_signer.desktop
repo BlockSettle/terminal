@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BlockSettle Signer
+GenericName=BlockSettle Signer
+Comment=BlockSettle Signer
+Categories=Qt;Network
+Exec=/usr/bin/blocksettle_signer
+Icon=blocksettle
+StartupNotify=false
+Terminal=false

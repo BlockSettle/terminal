@@ -72,6 +72,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       onSyncWallet(packet.data(), packet.id());
       break;
    case signer::CreateWOType:
+   case signer::ImportWoWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
    case signer::GetDecryptedNodeType:
@@ -97,6 +98,9 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       break;
    case signer::HeadlessPubKeyRequestType:
       onHeadlessPubKey(packet.data(), packet.id());
+      break;
+   case signer::UpdateStatusType:
+      onUpdateStatus(packet.data());
       break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
@@ -283,7 +287,7 @@ void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::sign
       const auto format = (wallet.format() == signer::WalletFormatHD) ? bs::sync::WalletFormat::HD
          : bs::sync::WalletFormat::Settlement;
       result.push_back({ format, wallet.id(), wallet.name(), wallet.description()
-         , parent_->netType() });
+         , parent_->netType(), wallet.watching_only() });
    }
    itCb->second(result);
    cbWalletInfo_.erase(itCb);
@@ -502,8 +506,24 @@ void SignerInterfaceListener::onHeadlessPubKey(const std::string &data, bs::sign
    cbHeadlessPubKeyReqs_.erase(itCb);
 }
 
+void SignerInterfaceListener::onUpdateStatus(const std::string &data)
+{
+   signer::UpdateStatus evt;
+   if (!evt.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   if (evt.signer_bind_status() == signer::BindFailed) {
+      QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
+   }
+}
+
 void SignerInterfaceListener::shutdown()
 {
-   // For some reasons QApplication::quit does not work reliable
-   std::exit(0);
+   QMetaObject::invokeMethod(qApp, [] {
+      // For some reasons QApplication::quit does not work reliable.
+      // Run it on main thread because otherwise it causes crash on Linux when atexit callbacks are called.
+      std::exit(0);
+   });
 }

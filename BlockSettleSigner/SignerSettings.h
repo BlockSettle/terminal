@@ -6,8 +6,6 @@
 #include "SignerDefs.h"
 #include "SignerUiDefs.h"
 
-class QSettings;
-
 namespace Blocksettle { namespace Communication { namespace signer {
    class Settings;
 } } }
@@ -32,7 +30,7 @@ class SignerSettings : public QObject
    Q_PROPERTY(QString autoSignWallet READ autoSignWallet WRITE setAutoSignWallet NOTIFY autoSignWalletChanged)
    Q_PROPERTY(bool hideEidInfoBox READ hideEidInfoBox WRITE setHideEidInfoBox NOTIFY hideEidInfoBoxChanged)
    Q_PROPERTY(QStringList trustedTerminals READ trustedTerminals WRITE setTrustedTerminals NOTIFY trustedTerminalsChanged)
-   Q_PROPERTY(bool startupBIP150CTX READ startupBIP150CTX WRITE setStartupBIP150CTX NOTIFY startupBIP150CTXChanged)
+   Q_PROPERTY(bool twoWaySignerAuth READ twoWaySignerAuth WRITE setTwoWaySignerAuth NOTIFY twoWaySignerAuthChanged)
 
 public:
    SignerSettings();
@@ -68,7 +66,7 @@ public:
    bs::signer::Limits limits() const;
    bool hideEidInfoBox() const;
    QStringList trustedTerminals() const;
-   bool startupBIP150CTX() const;
+   bool twoWaySignerAuth() const;
 
    QString dirDocuments() const;
    bs::signer::ui::RunMode runMode() const { return runMode_; }
@@ -87,7 +85,10 @@ public:
    void setLimitManualPwKeepStr(const QString &val);
    void setHideEidInfoBox(bool val);
    void setTrustedTerminals(const QStringList &val);
-   void setStartupBIP150CTX(bool val);
+   void setTwoWaySignerAuth(bool val);
+
+   using Settings = Blocksettle::Communication::signer::Settings;
+   const std::unique_ptr<Settings> &get() const { return d_; }
 
    static QString secondsToIntervalStr(int);
    static int intervalStrToSeconds(const QString &);
@@ -106,11 +107,10 @@ signals:
    void autoSignWalletChanged();
    void hideEidInfoBoxChanged();
    void trustedTerminalsChanged();
-   void startupBIP150CTXChanged();
+   void twoWaySignerAuthChanged();
+   void changed(int);
 
 private:
-   using Settings = Blocksettle::Communication::signer::Settings;
-
    void settingChanged(int setting);
    bool verifyServerIDKey();
 

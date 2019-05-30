@@ -37,8 +37,8 @@ class QmlWalletRootNode : public QmlWalletNode
 {
 public:
    QmlWalletRootNode(QmlWalletsViewModel *vm, const std::string &name, const std::string &desc
-      , QmlWalletNode::Type type, int row, QmlWalletNode *parent)
-      : QmlWalletNode(vm, type, row, parent), desc_(desc)
+      , QmlWalletNode::Type type, bool isWO, int row, QmlWalletNode *parent)
+      : QmlWalletNode(vm, type, isWO, row, parent), desc_(desc)
    {
       name_ = name;
    }
@@ -52,6 +52,8 @@ public:
             return QString::fromStdString(desc_);
          case QmlWalletsViewModel::WalletColumns::ColumnID:
             return QString::fromStdString(id());
+         case QmlWalletsViewModel::WalletColumns::ColumnType:
+            return isWO() ? QObject::tr("Watching-Only") : QObject::tr("Full");
          default:
             return QVariant();
          }
@@ -108,12 +110,14 @@ protected:
 class QmlWalletLeafNode : public QmlWalletRootNode
 {
 public:
-   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, int row, QmlWalletNode *parent)
-      : QmlWalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, row, parent)
+   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::Wallet> &wallet, bool isWO
+      , int row, QmlWalletNode *parent)
+      : QmlWalletRootNode(vm, wallet->shortName(), wallet->description(), Type::Leaf, isWO, row, parent)
       , wallet_(wallet)
    { }
-   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet, int row, QmlWalletNode *parent)
-      : QmlWalletRootNode(vm, "Settlement", "Settlement wallet", Type::Leaf, row, parent)
+   QmlWalletLeafNode(QmlWalletsViewModel *vm, const std::shared_ptr<bs::sync::SettlementWallet> &wallet
+      , int row, QmlWalletNode *parent)
+      : QmlWalletRootNode(vm, "Settlement", "Settlement wallet", Type::Leaf, false, row, parent)
       , wallet_(wallet)
    { }
 
@@ -134,15 +138,15 @@ private:
 class QmlWalletGroupNode : public QmlWalletRootNode
 {
 public:
-   QmlWalletGroupNode(QmlWalletsViewModel *vm, const std::string &name, const std::string &desc, QmlWalletNode::Type type
-      , int row, QmlWalletNode *parent)
-      : QmlWalletRootNode(vm, name, desc, type, row, parent) {}
+   QmlWalletGroupNode(QmlWalletsViewModel *vm, const std::string &name, const std::string &desc
+      , QmlWalletNode::Type type, bool isWO, int row, QmlWalletNode *parent)
+      : QmlWalletRootNode(vm, name, desc, type, isWO, row, parent) {}
 
    std::vector<std::shared_ptr<bs::sync::Wallet>> wallets() const override { return wallets_; }
 
    void addLeaves(const std::vector<std::shared_ptr<bs::sync::Wallet>> &leaves) {
       for (const auto &leaf : leaves) {
-         const auto leafNode = new QmlWalletLeafNode(viewModel_, leaf, nbChildren(), this);
+         const auto leafNode = new QmlWalletLeafNode(viewModel_, leaf, isWO_, nbChildren(), this);
          add(leafNode);
          wallets_.push_back(leaf);
       }
@@ -153,7 +157,7 @@ void QmlWalletRootNode::addGroups(const std::vector<std::shared_ptr<bs::sync::hd
 {
    for (const auto &group : groups) {
       const auto groupNode = new QmlWalletGroupNode(viewModel_, group->name(), {}
-         , getNodeType(group->type()), nbChildren(), this);
+         , getNodeType(group->type()), isWO_, nbChildren(), this);
       add(groupNode);
       groupNode->addLeaves(group->getAllLeaves());
    }
@@ -226,6 +230,8 @@ QVariant QmlWalletsViewModel::headerData(int section, Qt::Orientation orientatio
          return tr("Name");
       case WalletColumns::ColumnID:
          return tr("ID");
+      case WalletColumns::ColumnType:
+         return tr("Type");
       default:
          return QVariant();
       }
@@ -279,16 +285,17 @@ static QmlWalletNode::Type getHDWalletType(const std::shared_ptr<bs::sync::hd::W
 
 void QmlWalletsViewModel::loadWallets()
 {
-   const auto hdCount = walletsManager_->hdWalletsCount();
    beginResetModel();
    rootNode_->clear();
-   for (unsigned int i = 0; i < hdCount; i++) {
-      const auto &hdWallet = walletsManager_->getHDWallet(i);
+   for (unsigned int i = 0; i < walletsManager_->hdWalletsCount(); i++) {
+      const auto hdWallet = walletsManager_->getHDWallet(i);
       if (!hdWallet) {
          continue;
       }
+      const auto walletType = getHDWalletType(hdWallet, walletsManager_);
+      const bool isWO = walletsManager_->isWatchingOnly(hdWallet->walletId());
       const auto hdNode = new QmlWalletRootNode(this, hdWallet->name(), hdWallet->description()
-         , getHDWalletType(hdWallet, walletsManager_), rootNode_->nbChildren(), rootNode_.get());
+         , walletType, isWO, rootNode_->nbChildren(), rootNode_.get());
       hdNode->setHdWallet(hdWallet);
       rootNode_->add(hdNode);
       hdNode->addGroups(hdWallet->getGroups());
@@ -317,6 +324,8 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
          }
          hdWallet = parent ? parent->hdWallet() : nullptr;
       }
+      const bool isGroup = ((node->type() == QmlWalletNode::Type::GroupBitcoin) || (node->type() == QmlWalletNode::Type::GroupAuth)
+         || (node->type() == QmlWalletNode::Type::GroupCC));
 
       switch (role) {
       case NameRole:       return node->data(static_cast<int>(WalletColumns::ColumnName), Qt::DisplayRole);
@@ -344,6 +353,7 @@ QVariant QmlWalletsViewModel::data(const QModelIndex &index, int role) const
       case RootWalletIdRole:  return hdWallet ? QString::fromStdString(hdWallet->walletId()) : QString();
       case IsHDRootRole:   return ((node->type() == QmlWalletNode::Type::WalletPrimary)
                                  || (node->type() == QmlWalletNode::Type::WalletRegular));
+      case WalletTypeRole: return (isGroup ? QVariant() : node->data(static_cast<int>(WalletColumns::ColumnType), Qt::DisplayRole));
       default:    break;
       }
    }
@@ -360,6 +370,7 @@ QHash<int, QByteArray> QmlWalletsViewModel::roleNames() const
       { IsHDRootRole, QByteArrayLiteral("isHdRoot") },
       { RootWalletIdRole, QByteArrayLiteral("rootWalletId") },
       { IsEncryptedRole, QByteArrayLiteral("isEncrypted") },
-      { EncKeyRole, QByteArrayLiteral("encryptionKey") }
+      { EncKeyRole, QByteArrayLiteral("encryptionKey") },
+      { WalletTypeRole, QByteArrayLiteral("walletType") }
    };
 }
