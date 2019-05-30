@@ -85,6 +85,10 @@ public:
 
    unsigned int topBlock() const { return topBlock_; }
 
+   using RegisterWalletCb = std::function<void(const std::string &regId)>;
+   using WalletsHistoryCb = std::function<void(const std::vector<ClientClasses::LedgerEntry>&)>;
+   using LedgerDelegateCb = std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>;
+
    virtual std::string registerWallet(
       const std::string &walletId, const std::vector<BinaryData> &addrVec, 
       const std::function<void(const std::string &)> &, bool asNew = false);
@@ -129,6 +133,9 @@ public:
    bool unsetRefreshCb(unsigned int);
 
    std::shared_ptr<AsyncClient::BlockDataViewer> bdv(void) const;
+
+   using StringCb = std::function<void(const std::string &)>;
+   using BIP151Cb = std::function<bool(const BinaryData&, const std::string&)>;
 
 protected:
    void setupConnection(NetworkType, const std::string &host, const std::string &port

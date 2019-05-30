@@ -102,8 +102,11 @@ WalletsManager::HDWalletPtr WalletsManager::loadWoWallet(const std::string &wall
 
    try {
       logger_->debug("Loading BIP44 WO-wallet from {}", fileName);
-      const auto wallet = std::make_shared<hd::Wallet>(walletsPath + "/" + fileName
-         , logger_);
+
+      //this needs fixed, nettype is assumed for the sake of building
+      const auto wallet = std::make_shared<hd::Wallet>(
+         fileName, NetworkType::MainNet, walletsPath, logger_);
+
       if (!wallet->isWatchingOnly()) {
          logger_->error("Wallet {} is not watching-only", fileName);
          return nullptr;
