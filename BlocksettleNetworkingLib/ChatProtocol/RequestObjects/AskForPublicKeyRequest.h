@@ -1,4 +1,5 @@
-#pragma once
+#ifndef AskForPublicKeyRequest_h__
+#define AskForPublicKeyRequest_h__
 
 #include "Request.h"
 
@@ -27,3 +28,5 @@ namespace Chat {
       std::string peerId_;
    };
 }
+
+#endif // AskForPublicKeyRequest_h__

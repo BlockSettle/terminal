@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RequestHandler_h__
+#define RequestHandler_h__
 
 namespace Chat {
    
@@ -52,3 +53,5 @@ namespace Chat {
       virtual void OnSessionPublicKeyRequest(const SessionPublicKeyRequest&) = 0;
    };
 }
+
+#endif // RequestHandler_h__

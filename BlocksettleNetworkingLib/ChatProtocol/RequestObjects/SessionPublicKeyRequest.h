@@ -1,5 +1,5 @@
-#ifndef SESSION_PUBLIC_KEY_REQUEST
-#define SESSION_PUBLIC_KEY_REQUEST
+#ifndef SessionPublicKeyRequest_h__
+#define SessionPublicKeyRequest_h__
 
 #include <disable_warnings.h>
 #include "Request.h"
@@ -53,4 +53,4 @@ namespace Chat {
 
 }
 
-#endif //SESSION_PUBLIC_KEY_REQUEST
+#endif // SessionPublicKeyRequest_h__

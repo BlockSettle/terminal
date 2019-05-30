@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SendOwnPublicKeyRequest_h__
+#define SendOwnPublicKeyRequest_h__
 
 #include "Request.h"
 
@@ -22,15 +23,17 @@ namespace Chat {
          const std::string& clientId,
          const std::string& jsonData);
 
-      void handle(RequestHandler &) override;
+      void handle(RequestHandler&) override;
 
       const std::string& getReceivingNodeId() const;
       const std::string& getSendingNodeId() const;
       const BinaryData& getSendingNodePublicKey() const;
-      
+
    private:
       std::string receivingNodeId_;
       std::string sendingNodeId_;
       BinaryData sendingNodePublicKey_;
    };
 }
+
+#endif // SendOwnPublicKeyRequest_h__

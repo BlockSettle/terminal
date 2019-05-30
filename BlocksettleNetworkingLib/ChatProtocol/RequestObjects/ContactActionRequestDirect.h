@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ContactActionRequestDirect_h__
+#define ContactActionRequestDirect_h__
 
 #include "Request.h"
 
@@ -21,3 +22,5 @@ namespace Chat {
       BinaryData senderPublicKey_;
    };
 }
+
+#endif // ContactActionRequestDirect_h__

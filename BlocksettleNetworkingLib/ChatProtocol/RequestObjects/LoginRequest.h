@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LoginRequest_h__
+#define LoginRequest_h__
 
 #include "Request.h"
 
@@ -54,3 +55,5 @@ namespace Chat {
       void handle(RequestHandler &) override;
    };
 }
+
+#endif // LoginRequest_h__
