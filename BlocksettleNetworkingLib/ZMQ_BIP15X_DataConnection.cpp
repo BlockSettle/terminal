@@ -241,6 +241,9 @@ void ZmqBIP15XDataConnection::listenFunction()
             break;
          }
       }
+
+      // Try to send pending data after callbacks if any
+      sendPendingData();
    }
 }
 
@@ -330,7 +333,11 @@ bool ZmqBIP15XDataConnection::send(const string& data)
       pendingData_.push_back(data);
    }
 
-   sendCommand(InternalCommandCode::Send);
+   // Notify listening thread that there is new data.
+   // If this is called from listening thread pendingData_ will be processed right after callbacks.
+   if (std::this_thread::get_id() != listenThread_.get_id()) {
+      sendCommand(InternalCommandCode::Send);
+   }
 
    return true;
 }
@@ -594,6 +601,7 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::closeConnection()
 {
+   // Do not call from callbacks!
    assert(std::this_thread::get_id() != listenThread_.get_id());
 
    if (!isActive()) {

@@ -99,10 +99,13 @@ public:
    void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
    void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
 
-   // Overridden functions from ZmqDataConnection.
-   bool send(const std::string& data) override; // Send data from outside class.
+   // Could be called from callbacks and control thread (where openConnection was called, main thread usually)
+   bool send(const std::string& data) override;
+
    bool openConnection(const std::string &host, const std::string &port
       , DataConnectionListener *) override;
+
+   // Do not call from callbacks!
    bool closeConnection() override;
 
    void rekey();
