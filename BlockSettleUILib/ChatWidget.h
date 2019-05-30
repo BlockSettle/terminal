@@ -64,6 +64,7 @@ public:
    bool hasUnreadMessages();
    void switchToChat(const QString& chatId);
    void setCelerClient(std::shared_ptr<CelerClient> celerClient);
+   void updateChat(const bool &isChatTab);
 
 public slots:
    void onLoggedOut();
@@ -147,6 +148,7 @@ private:
    QSpacerItem *chatUsersVerticalSpacer_;
    QTimer *popupVisibleTimer_;
    bool isChatMessagesSelected_;
+   bool isChatTab_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
