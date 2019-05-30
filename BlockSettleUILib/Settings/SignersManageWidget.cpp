@@ -61,16 +61,21 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
 
    resetForm();
 
+   setRowSelected(signersProvider->indexOfCurrent());
+}
+
+void SignerKeysWidget::setRowSelected(int row)
+{
    QModelIndex currentIndex;
-   if (signersProvider->signers().size() >= 0) {
-      int indexOfCurrent = signersProvider->indexOfCurrent();
-      if (indexOfCurrent < 0 || indexOfCurrent >= signersProvider->signers().size()) {
+   if (signersProvider_->signers().size() >= 0) {
+      int indexOfCurrent = row;
+      if (indexOfCurrent < 0 || indexOfCurrent >= signersProvider_->signers().size()) {
          indexOfCurrent = 0;
       }
       currentIndex = signersModel_->index(indexOfCurrent, 0);
    }
    ui_->tableViewSignerKeys->selectionModel()->select(currentIndex
-      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
+                                                      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
 SignerKeysWidget::~SignerKeysWidget() = default;
@@ -89,6 +94,8 @@ void SignerKeysWidget::onAddSignerKey()
 
    signersProvider_->add(signerHost);
    resetForm();
+
+   setRowSelected(signersProvider_->signers().size() - 1);
 }
 
 void SignerKeysWidget::onDeleteSignerKey()
@@ -104,6 +111,8 @@ void SignerKeysWidget::onDeleteSignerKey()
 
    signersProvider_->remove(selectedRow);
    resetForm();
+
+   setRowSelected(selectedRow);
 }
 
 void SignerKeysWidget::onEdit()

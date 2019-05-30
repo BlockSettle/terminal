@@ -19,6 +19,8 @@ public:
       , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent = nullptr);
    ~SignerKeysWidget();
 
+   void setRowSelected(int row);
+
 public slots:
    void onAddSignerKey();
    void onDeleteSignerKey();
