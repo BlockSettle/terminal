@@ -20,8 +20,6 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    ui_->spinBoxPort->setMaximum(USHRT_MAX);
 
    ui_->tableViewSignerKeys->setModel(signersModel_);
-   ui_->tableViewSignerKeys->selectionModel()->select(signersModel_->index(signersProvider->indexOfCurrent(), 0)
-      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 
    int defaultSectionSize = ui_->tableViewSignerKeys->horizontalHeader()->defaultSectionSize();
    ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(0, defaultSectionSize * 2);
@@ -62,6 +60,17 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    });
 
    resetForm();
+
+   QModelIndex currentIndex;
+   if (signersProvider->signers().size() >= 0) {
+      int indexOfCurrent = signersProvider->indexOfCurrent();
+      if (indexOfCurrent < 0 || indexOfCurrent >= signersProvider->signers().size()) {
+         indexOfCurrent = 0;
+      }
+      currentIndex = signersModel_->index(indexOfCurrent, 0);
+   }
+   ui_->tableViewSignerKeys->selectionModel()->select(currentIndex
+      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
 SignerKeysWidget::~SignerKeysWidget() = default;
