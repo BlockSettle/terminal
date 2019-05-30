@@ -381,7 +381,7 @@ void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
       return;
    }
 
-   auto lastHeartbeatDiff = std::chrono::steady_clock::now() - lastHeartbeatReply_;
+   auto lastHeartbeatDiff = curTime - lastHeartbeatReply_;
    if (lastHeartbeatDiff > heartbeatInterval_ * 2) {
       notifyOnError(DataConnectionListener::HeartbeatWaitFailed);
    }
