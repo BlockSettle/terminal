@@ -40,14 +40,25 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
       break;
 
-   case SignContainer::OpMode::Remote:
+   case SignContainer::OpMode::Remote: {
       showHost(true);
-      ui_->comboBoxRemoteSigner->setCurrentIndex(appSettings_->get<int>(ApplicationSettings::signerIndex));
+      if (ui_->comboBoxRemoteSigner->count() == 0) {
+         appSettings_->reset(ApplicationSettings::remoteSigners, true);
+         signersModel_->update();
+      }
+      int signerIndex = appSettings_->get<int>(ApplicationSettings::signerIndex);
+      if (ui_->comboBoxRemoteSigner->count() == 0) {
+         signerIndex = -1;
+      } else if (signerIndex < 0 || signerIndex >= ui_->comboBoxRemoteSigner->count()) {
+         signerIndex = 0;
+      }
+      ui_->comboBoxRemoteSigner->setCurrentIndex(signerIndex);
       showPort(false);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
       showSignerKeySettings(true);
       break;
+   }
 
    default:    break;
    }
