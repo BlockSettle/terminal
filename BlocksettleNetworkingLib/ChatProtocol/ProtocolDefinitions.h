@@ -18,44 +18,46 @@ namespace Chat
 {
    enum class RequestType
    {
-       RequestHeartbeatPing
-   ,   RequestLogin
-   ,   RequestLogout
-   ,   RequestSendMessage
-   ,   RequestMessages
-   ,   RequestOnlineUsers
-   ,   RequestAskForPublicKey
-   ,   RequestSendOwnPublicKey
-   ,   RequestChangeMessageStatus
-   ,   RequestContactsActionDirect
-   ,   RequestContactsActionServer
-   ,   RequestChatroomsList
-   ,   RequestSendRoomMessage
-   ,   RequestContactsList
-   ,   RequestSearchUsers
+      RequestHeartbeatPing,
+      RequestLogin,
+      RequestLogout,
+      RequestSendMessage,
+      RequestMessages,
+      RequestOnlineUsers,
+      RequestAskForPublicKey,
+      RequestSendOwnPublicKey,
+      RequestChangeMessageStatus,
+      RequestContactsActionDirect,
+      RequestContactsActionServer,
+      RequestChatroomsList,
+      RequestSendRoomMessage,
+      RequestContactsList,
+      RequestSearchUsers,
+      RequestSessionPublicKey
    };
 
 
    enum class ResponseType
    {
-       ResponseHeartbeatPong
-   ,   ResponseLogin
-   ,   ResponseMessages
-   ,   ResponseSuccess
-   ,   ResponseError
-   ,   ResponseUsersList
-   ,   ResponseAskForPublicKey
-   ,   ResponseSendOwnPublicKey
-   ,   ResponsePendingMessage
-   ,   ResponseSendMessage
-   ,   ResponseChangeMessageStatus
-   ,   ResponseContactsActionDirect
-   ,   ResponseContactsActionServer
-   ,   ResponseChatroomsList
-   ,   ResponseRoomMessages
-   ,   ResponseContactsList
-   ,   ResponseSearchUsers
-   ,   ResponseLogout
+      ResponseHeartbeatPong,
+      ResponseLogin,
+      ResponseMessages,
+      ResponseSuccess,
+      ResponseError,
+      ResponseUsersList,
+      ResponseAskForPublicKey,
+      ResponseSendOwnPublicKey,
+      ResponsePendingMessage,
+      ResponseSendMessage,
+      ResponseChangeMessageStatus,
+      ResponseContactsActionDirect,
+      ResponseContactsActionServer,
+      ResponseChatroomsList,
+      ResponseRoomMessages,
+      ResponseContactsList,
+      ResponseSearchUsers,
+      ResponseLogout,
+      ResponseSendSessionPublicKey
    };
    
    enum class ContactsAction {
@@ -133,6 +135,7 @@ namespace Chat
    static const QString EncryptionTypeKey = QStringLiteral("encryption_type");
    static const QString GlobalRoomKey = QStringLiteral("global_chat");
    static const QString OTCRoomKey = QStringLiteral("otc_chat");
+   static const QString SenderSessionPublicKeyKey = QStringLiteral("sender_session_public_key");
 
    template <typename T>
    class Message

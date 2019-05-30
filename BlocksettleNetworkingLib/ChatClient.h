@@ -93,7 +93,7 @@ public:
    void HandleCommonOTCRequestRejected(const std::string& rejectReason);
 
    // HandleCommonOTCRequestCancelled - OTC request sent to common OTC room was
-   //    cancelled by requestor. Could be both ours and someone else
+   //    canceled by requester. Could be both ours and someone else
    void HandleCommonOTCRequestCancelled(const QString& serverOTCId);
 
    void HandleCommonOTCRequestExpired(const QString& serverOTCId);
@@ -153,7 +153,7 @@ public:
    //    Can result in signals
    //       OTCRequestAccepted - request sent to OTC chat and was accepted
    //       OTCRequestRejected - OTC request was rejected by chat server.
-   //    If return false - no signals will be emited
+   //    If return false - no signals will be emitted
    // Returns:
    //    true - request was submitted
    //    false - request was not delivered to chat server.
@@ -181,7 +181,7 @@ signals:
    // we got a new OTC request from someone in OTC chat
    void NewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
 
-   // OTC request was pulledby requestor. We should receive it even if it our own.
+   // OTC request was pulled by requester. We should receive it even if it our own.
    // we could not just remove OTC, it should be initiated by chat server
    void OTCRequestCancelled(const QString& serverOTCId);
 
@@ -243,13 +243,15 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
 
+   std::unique_ptr<ChatDB>                                     chatDb_;
+   std::map<QString, BinaryData>                               contactPublicKeys_;
 
+   // [ receiver_id, pair <LocalSessionPrivateKey, RemoteSessionPublicKey> ]
+   std::map<QString, std::pair<SecureBinaryData, BinaryData>>  sessionKeys_;
 
-   std::unique_ptr<ChatDB>                   chatDb_;
-   std::map<QString, BinaryData>     pubKeys_;
-   std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
-   std::shared_ptr<UserHasher>               hasher_;
-   std::map<QString, Botan::SecureVector<uint8_t>>   userNonces_;
+   std::shared_ptr<ZmqBIP15XDataConnection>                    connection_;
+   std::shared_ptr<UserHasher>                                 hasher_;
+   std::map<QString, Botan::SecureVector<uint8_t>>             userNonces_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
    std::map<QString, std::queue<QString>>    enqueued_messages_;
@@ -308,7 +310,7 @@ private:
    QString           ownSubmittedOTCId_;
    QString           ownServerOTCId_;
 
-   // based on server reqest id
+   // based on server request id
    std::unordered_set<std::string> aliveOtcRequests_;
 
    // ModelChangesHandler interface

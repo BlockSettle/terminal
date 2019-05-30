@@ -115,7 +115,7 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    connect(this, &ChatClient::ForceLogoutSignal, this, &ChatClient::onForceLogoutSignal, Qt::QueuedConnection);
 
    chatDb_ = make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
-   if (!chatDb_->loadKeys(pubKeys_)) {
+   if (!chatDb_->loadKeys(contactPublicKeys_)) {
       throw std::runtime_error("failed to load chat public keys");
    }
 
@@ -180,8 +180,8 @@ void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
       emit ConnectedToServer();
       model_->setCurrentUser(currentUserId_);
       readDatabase();
-      auto request1 = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentUserId_);
-      sendRequest(request1);
+      auto messagesRequest = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentUserId_);
+      sendRequest(messagesRequest);
 //      auto request2 = std::make_shared<Chat::ContactsListRequest>("", currentUserId_);
 //      sendRequest(request2);
    }
@@ -258,15 +258,17 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
       case Chat::ContactsAction::Accept: {
          actionString = "ContactsAction::Accept";
          QString senderId = QString::fromStdString(response.senderId());
-         pubKeys_[senderId] = response.getSenderPublicKey();
+         contactPublicKeys_[senderId] = response.getSenderPublicKey();
          chatDb_->addKey(senderId, response.getSenderPublicKey());
+
          auto contactNode = model_->findContactNode(senderId.toStdString());
-         if (contactNode){
+         if (contactNode) {
             auto data = contactNode->getContactData();
             data->setContactStatus(Chat::ContactStatus::Accepted);
             contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
             model_->notifyContactChanged(data);
          }
+
          addOrUpdateContact(senderId, Chat::ContactStatus::Accepted);
          auto requestS =
                std::make_shared<Chat::ContactActionRequestServer>(
@@ -307,7 +309,7 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
          QString userId = QString::fromStdString(response.receiverId());
          QString contactId = QString::fromStdString(response.senderId());
          BinaryData pk = response.getSenderPublicKey();
-         pubKeys_[contactId] = response.getSenderPublicKey();
+         contactPublicKeys_[contactId] = response.getSenderPublicKey();
          chatDb_->addKey(contactId, response.getSenderPublicKey());
 
          auto contactNode = model_->findContactNode(response.senderId());
@@ -446,7 +448,7 @@ void ChatClient::OnContactsListResponse(const Chat::ContactsListResponse & respo
          model_->notifyContactChanged(citem);
       }
       contactsListStr << QString::fromStdString(remote->toJsonString());
-      pubKeys_[remote->getContactId()] = remote->getContactPublicKey();
+      contactPublicKeys_[remote->getContactId()] = remote->getContactPublicKey();
       addOrUpdateContact(remote->getContactId(),
                          remote->getContactStatus(),
                          remote->getDisplayName());
@@ -573,11 +575,6 @@ void ChatClient::sendHeartbeat()
    }
 }
 
-//void ChatClient::onMessageRead(const std::shared_ptr<Chat::MessageData>& message)
-//{
-//   addMessageState(message, Chat::MessageData::State::Read);
-//}
-
 void ChatClient::onForceLogoutSignal()
 {
    logout(false);
@@ -661,9 +658,9 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
       switch (msg->encryptionType()) {
          case Chat::MessageData::EncryptionType::AEAD: {
 
-            const auto& itPublicKey = pubKeys_.find(msg->senderId());
+            const auto& itPublicKey = contactPublicKeys_.find(msg->senderId());
 
-            if (itPublicKey == pubKeys_.end()) {
+            if (itPublicKey == contactPublicKeys_.end()) {
                logger_->error("[ChatClient::{}] Can't find public key for sender {}",
                               __func__, msg->senderId().toStdString());
                msg->setFlag(Chat::MessageData::State::Invalid);
@@ -740,7 +737,7 @@ void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &respon
    }
    // Save received public key of peer.
    const auto peerId = QString::fromStdString(response.getSendingNodeId());
-   pubKeys_[peerId] = response.getSendingNodePublicKey();
+   contactPublicKeys_[peerId] = response.getSendingNodePublicKey();
    chatDb_->addKey(peerId, response.getSendingNodePublicKey());
 
    // Run over enqueued messages if any, and try to send them all now.
@@ -818,8 +815,8 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       }
    }
 
-   const auto &itPub = pubKeys_.find(receiver);
-   if (itPub == pubKeys_.end()) {
+   const auto &contactPublicKeyIterator = contactPublicKeys_.find(receiver);
+   if (contactPublicKeyIterator == contactPublicKeys_.end()) {
       // Ask for public key from peer. Enqueue the message to be sent, once we receive the
       // necessary public key.
       enqueued_messages_[receiver].push(message);
@@ -831,6 +828,13 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
          receiver.toStdString());
       sendRequest(request);
       return result;
+   }
+
+   const auto& sessionKeysIterator = sessionKeys_.find(receiver);
+   if (sessionKeysIterator == sessionKeys_.end()) {
+      enqueued_messages_[receiver].push(message);
+
+
    }
 
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
@@ -865,7 +869,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
                                     appSettings_->GetAuthKeys().first.size());
    enc->setPrivateKey(localPrivateKey);
 
-   BinaryData remotePublicKey(itPub->second);
+   BinaryData remotePublicKey(contactPublicKeyIterator->second);
    enc->setPublicKey(remotePublicKey);
 
    enc->setNonce(nonce);
@@ -1036,7 +1040,7 @@ void ChatClient::acceptFriendRequest(const QString &friendUserId)
             BinaryData(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size()));
 
    sendRequest(requestDirect);
-   BinaryData publicKey = pubKeys_[friendUserId];
+   BinaryData publicKey = contactPublicKeys_[friendUserId];
    auto requestRemote =
          std::make_shared<Chat::ContactActionRequestServer>(
             "",
@@ -1064,7 +1068,7 @@ void ChatClient::declineFriendRequest(const QString &friendUserId)
             Chat::ContactsAction::Reject,
             BinaryData(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size()));
    sendRequest(request);
-   BinaryData publicKey = pubKeys_[friendUserId];
+   BinaryData publicKey = contactPublicKeys_[friendUserId];
    auto requestRemote =
          std::make_shared<Chat::ContactActionRequestServer>(
             "",
@@ -1313,7 +1317,7 @@ bool ChatClient::decryptIESMessage(std::shared_ptr<Chat::MessageData>& message)
       message->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
       return true;
    }
-   catch (std::exception & e) {
+   catch (std::exception &) {
       logger_->error("Failed to decrypt msg from DB {}", message->id().toStdString());
       message->setFlag(Chat::MessageData::State::Invalid);
       return false;
