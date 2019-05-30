@@ -467,6 +467,7 @@ void ChatClient::OnChatroomsList(const Chat::ChatroomsListResponse& response)
       rooms << QString::fromStdString(room->toJsonString());
       chatDb_->removeRoomMessages(room->getId());
    }
+   emit RoomsInserted();
    logger_->debug("[ChatClient::OnChatroomsList]: Received chatroom list from server: {}",
                   rooms.join(QLatin1String(", ")).prepend(QLatin1Char('[')).append(QLatin1Char(']')).toStdString()
                   );
