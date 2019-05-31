@@ -605,9 +605,10 @@ void WalletsWidget::onEditAddrComment()
       return;
    }
    bool isOk = false;
+   const auto oldComment = curWallet_->getAddressComment(curAddress_);
    const auto comment = QInputDialog::getText(this, tr("Edit Comment")
       , tr("Enter new comment for address %1:").arg(QString::fromStdString(curAddress_.display()))
-      , QLineEdit::Normal, QString::fromStdString(curWallet_->getAddressComment(curAddress_)), &isOk);
+      , QLineEdit::Normal, QString::fromStdString(oldComment), &isOk);
    if (isOk) {
       if (!curWallet_->setAddressComment(curAddress_, comment.toStdString())) {
          BSMessageBox(BSMessageBox::critical, tr("Address Comment"), tr("Failed to save comment")).exec();

@@ -197,7 +197,7 @@ void CreateTransactionDialog::loadFees()
       std::map<unsigned int, float> values;
       std::set<unsigned int>  levels;
    };
-   auto result = new Result;
+   auto result = std::make_shared<Result>();
 
    for (const auto &feeLevel : feeLevels) {
       result->levels.insert(feeLevel.first);
@@ -208,11 +208,14 @@ void CreateTransactionDialog::loadFees()
          result->values[level] = fee;
          if (result->levels.empty()) {
             emit feeLoadingCompleted(result->values);
-            delete result;
          }
       };
       walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee, this);
    }
+/*   const auto &cbFees = [this](const std::map<unsigned int, float> &feeMap) {
+      emit feeLoadingCompleted(feeMap);
+   };
+   walletsManager_->getFeeSchedule(cbFees);*/
 }
 
 void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)

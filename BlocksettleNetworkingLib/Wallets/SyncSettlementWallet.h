@@ -47,8 +47,8 @@ namespace bs {
          bs::core::wallet::TXSignRequest createPayoutTXRequest(const UTXO &, const bs::Address &recvAddr, float feePerByte);
          UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash, const double amount) const;
 
-         bs::Address getNewExtAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
-         bs::Address getNewIntAddress(AddressEntryType) override { return {}; }  // can't generate address without input data
+         void getNewExtAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
+         void getNewIntAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
 
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;

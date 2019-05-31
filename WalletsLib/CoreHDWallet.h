@@ -63,8 +63,8 @@ namespace bs {
             size_t getNumGroups() const { return groups_.size(); }
             std::vector<std::shared_ptr<Group>> getGroups() const;
             virtual size_t getNumLeaves() const;
-            std::vector<std::shared_ptr<bs::core::Wallet>> getLeaves() const;
-            std::shared_ptr<bs::core::Wallet> getLeaf(const std::string &id) const;
+            std::vector<std::shared_ptr<Leaf>> getLeaves() const;
+            std::shared_ptr<Leaf> getLeaf(const std::string &id) const;
 
             virtual std::string walletId() const { return walletPtr_->getID(); }
             std::string name() const { return name_; }

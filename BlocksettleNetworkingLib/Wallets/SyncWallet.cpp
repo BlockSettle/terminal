@@ -151,6 +151,20 @@ std::vector<uint64_t> Wallet::getAddrBalance(const bs::Address &addr) const
    return iter->second;
 }
 
+uint64_t Wallet::getAddrTxN(const bs::Address &addr) const
+{
+   if (!isBalanceAvailable())
+      throw std::runtime_error("uninitialized db connection");
+
+   std::unique_lock<std::mutex> lock(addrMapsMtx_);
+
+   auto iter = addressTxNMap_.find(addr.prefixed());
+   if (iter == addressTxNMap_.end())
+      return 0;
+
+   return iter->second;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ////
 //// Combined DB fetch methods
@@ -169,8 +183,7 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
    const auto &cbBalances = [this, cb]
    (ReturnMessage<std::map<std::string, CombinedBalances>> balanceVector)->void
    {
-      try
-      {
+      try {
          auto&& bv = balanceVector.get();
 
          //reset wallet balance and count, as these values are not diffs
@@ -179,8 +192,7 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
          unconfirmedBalance_ = 0;
          addrCount_ = 0;
 
-         for (auto& wltBal : bv)
-         {
+         for (auto& wltBal : bv) {
             //wallet balance
             totalBalance_ += static_cast<BTCNumericTypes::balance_type>(
                wltBal.second.walletBalanceAndCount_[0]) / BTCNumericTypes::BalanceDivider;
@@ -197,23 +209,21 @@ bool Wallet::updateBalances(const std::function<void(void)> &cb)
                wltBal.second.addressBalances_, addressBalanceMap_);
          }
 
-         if(cb)
+         if (cb)
             cb();
       }
-      catch (const std::exception &e)
-      {
+      catch (const std::exception &e) {
          if (logger_)
          {
-            logger_->error("[hd::Leaf::updateBalances] Return data error " \
-               "- {}", e.what());
+            logger_->error("[hd::Leaf::updateBalances] return balance data error: {}"
+               , e.what());
          }
       }
    };
 
    std::vector<std::string> walletIDs;
    walletIDs.push_back(walletId());
-   try
-   {
+   try {
       walletIDs.push_back(walletIdInt());
    }
    catch (std::exception&)
@@ -485,8 +495,12 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryObje
 
       const auto regId = armory_->registerWallet(
          walletId(), getAddrHashes(), cbRegister, asNew);
-      logger_->debug("register wallet {}, {} addresses = {}", walletId(), getAddrHashes().size(), regId);
+      logger_->debug("[{}] register wallet {}, {} addresses = {}"
+         , __func__, walletId(), getAddrHashes().size(), regId);
       return { regId };
+   }
+   else {
+      logger_->error("[{}] no armory", __func__);
    }
    return {};
 }
@@ -499,9 +513,19 @@ void Wallet::unregisterWallet()
 
 void Wallet::firstInit(bool force)
 {
-   if (!firstInit_ || force)
-   {
-      updateBalances();
+   if (!firstInit_ || force) {
+      auto cbCounter = std::make_shared<std::atomic_int>(2);
+      const auto &cbBalTxN = [this, cbCounter] {
+         (*cbCounter)--;
+         if ((*cbCounter <= 0)) {
+            QMetaObject::invokeMethod(this, [this] {
+               emit balanceUpdated(walletId());
+               emit balanceChanged(walletId());
+            });
+         }
+      };
+      updateBalances(cbBalTxN);
+      getAddressTxnCounts(cbBalTxN);
       firstInit_ = true;
    }
 }
@@ -571,10 +595,15 @@ bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> 
    , bool isRBF, bs::Address changeAddress, const uint64_t& origFee)
 {
    const auto &cbNewChangeAddr = [this](std::string &index) -> bs::Address {
-      const auto result = getNewChangeAddress();
-      setAddressComment(result, wallet::Comment::toString(wallet::Comment::ChangeAddress));
-      index = getAddressIndex(result);
-      return result;
+      auto promPtr = std::make_shared<std::promise<bs::Address>>();
+      auto fut = promPtr->get_future();
+      const auto &cbAddr = [this, &index, promPtr](const bs::Address &addr) {
+         setAddressComment(addr, wallet::Comment::toString(wallet::Comment::ChangeAddress));
+         index = getAddressIndex(addr);
+         promPtr->set_value(addr);
+      };
+      getNewChangeAddress(cbAddr);
+      return fut.get();
    };
    const auto &cbChangeAddr = [changeAddress, cbNewChangeAddr](std::string &index) {
       if (changeAddress.isNull()) {
@@ -735,18 +764,35 @@ int Wallet::addAddress(
             idxCopy = addr.display();
       }
 
-      signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
+//!      signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
+      // signContainer_->syncAddressBatch(...)
    }
 
    return (usedAddresses_.size() - 1);
+}
+
+void Wallet::syncAddresses()
+{
+   if (armory_) {
+      registerWallet();
+   }
+   if (signContainer_) {
+      std::set<BinaryData> addrSet;
+      for (const auto &addr : getUsedAddressList()) {
+         addrSet.insert(addr.id());
+      }
+      signContainer_->syncAddressBatch(walletId(), addrSet, [this](bs::sync::SyncState) {});
+   }
 }
 
 void Wallet::newAddresses(
    const std::vector<std::pair<std::string, AddressEntryType>> &inData, 
    const CbAddresses &cb, bool persistent)
 {
-   if (signContainer_)
-      signContainer_->syncNewAddresses(walletId(), inData, cb);
+   if (signContainer_) {
+      //! signContainer_->syncNewAddresses(walletId(), inData, cb);
+      // signContainer_->syncNewAddresses(...)
+   }
    else {
       if (logger_) {
          logger_->warn("[{}] no signer set", __func__);

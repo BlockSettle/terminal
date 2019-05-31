@@ -56,10 +56,10 @@ void wallet::MetaData::set(const std::shared_ptr<AssetEntryMeta> &value)
    data_[value->key()] = value;
 }
 
-void wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
+bool wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
 {
    if (!env || !db) {
-      return;
+      return false;
    }
    for (const auto value : data_) {
       if (!value.second->needsCommit()) {
@@ -87,6 +87,7 @@ void wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
       }
       value.second->doNotCommit();
    }
+   return true;
 }
 
 void wallet::MetaData::readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db)
@@ -279,10 +280,11 @@ wallet::Seed::Seed(const SecureBinaryData &seed, NetworkType netType)
 
 std::string wallet::Seed::getWalletId() const
 {
-   if (walletId_.empty()) 
-   {
-      auto& pubkey = node_.getPublicKey();
-      walletId_ = wallet::computeID(pubkey).toBinStr();
+   if (walletId_.empty()) {
+      const SecureBinaryData hmacMasterMsg("MetaEntry");
+      const auto &pubkey = node_.getPublicKey();
+      auto &&masterID = BtcUtils::getHMAC256(pubkey, hmacMasterMsg);
+      walletId_ = BtcUtils::computeID(masterID).toBinStr();
    }
    return walletId_;
 }
@@ -384,8 +386,7 @@ bool Wallet::setAddressComment(const bs::Address &address, const std::string &co
       return false;
    }
    set(std::make_shared<wallet::AssetEntryComment>(nbMetaData_++, address.id(), comment));
-   write(getDBEnv(), getDB());
-   return true;
+   return write(getDBEnv(), getDB());
 }
 
 std::string Wallet::getTransactionComment(const BinaryData &txHash)
@@ -404,8 +405,7 @@ bool Wallet::setTransactionComment(const BinaryData &txHash, const std::string &
       return false;
    }
    set(std::make_shared<wallet::AssetEntryComment>(nbMetaData_++, txHash, comment));
-   write(getDBEnv(), getDB());
-   return true;
+   return write(getDBEnv(), getDB());
 }
 
 std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const

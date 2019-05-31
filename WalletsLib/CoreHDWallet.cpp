@@ -85,7 +85,7 @@ void hd::Wallet::loadFromFile(
       throw std::invalid_argument(std::string("Invalid file path: ") + fullname);
    }
    if (!SystemFileUtils::fileExist(fullname)) {
-      throw std::runtime_error("Wallet file does not exist");
+      throw std::runtime_error("Wallet file " + fullname + " does not exist");
    }
 
    //load armory wallet
@@ -121,11 +121,10 @@ size_t hd::Wallet::getNumLeaves() const
    return result;
 }
 
-std::vector<std::shared_ptr<bs::core::Wallet>> hd::Wallet::getLeaves() const
+std::vector<std::shared_ptr<hd::Leaf>> hd::Wallet::getLeaves() const
 {
-   std::vector<std::shared_ptr<bs::core::Wallet>> leaves;
-   for (const auto &group : groups_) 
-   {
+   std::vector<std::shared_ptr<hd::Leaf>> leaves;
+   for (const auto &group : groups_) {
       const auto &groupLeaves = group.second->getAllLeaves();
       for (const auto &leaf : groupLeaves) 
          leaves.push_back(leaf);
@@ -134,10 +133,9 @@ std::vector<std::shared_ptr<bs::core::Wallet>> hd::Wallet::getLeaves() const
    return leaves;
 }
 
-std::shared_ptr<bs::core::Wallet> hd::Wallet::getLeaf(const std::string &id) const
+std::shared_ptr<hd::Leaf> hd::Wallet::getLeaf(const std::string &id) const
 {
-   for (const auto &group : groups_)
-   {
+   for (const auto &group : groups_) {
       auto leafPtr = group.second->getLeafById(id);
       if (leafPtr != nullptr)
          return leafPtr;
@@ -317,8 +315,7 @@ void hd::Wallet::readFromDB()
       CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
 
       dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
-      while (dbIter.isValid()) 
-      {
+      while (dbIter.isValid()) {
          
          auto iterkey = dbIter.key();
          auto itervalue = dbIter.value();
@@ -335,8 +332,7 @@ void hd::Wallet::readFromDB()
          if (valsize != brrVal.getSizeRemaining())
             throw WalletException("entry val size mismatch");
          
-         try 
-         {
+         try {
             const auto group = hd::Group::deserialize(walletPtr_,
                keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
                  , name_, desc_, netType_, logger_);
@@ -348,6 +344,9 @@ void hd::Wallet::readFromDB()
 
          dbIter.advance();
       }
+   }
+   for (const auto &leaf : getLeaves()) {
+      leaf->setDB(db_);
    }
 }
 

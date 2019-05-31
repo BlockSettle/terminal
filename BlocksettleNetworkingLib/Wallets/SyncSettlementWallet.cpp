@@ -159,7 +159,8 @@ void SettlementWallet::newAddress(const CbAddress &cb, const BinaryData &settlem
    };
    const auto index = settlementId.toHexStr() + "." + buyAuthPubKey.toHexStr() + "."
       + sellAuthPubKey.toHexStr();
-   signContainer_->syncNewAddress(walletId(), index, AddressEntryType_Default, cbSettlAddr);
+//!   signContainer_->syncNewAddress(walletId(), index, AddressEntryType_Default, cbSettlAddr);
+   // signContainer_->syncAddressBatch(...);
 }
 
 std::string SettlementWallet::getAddressIndex(const bs::Address &addr)

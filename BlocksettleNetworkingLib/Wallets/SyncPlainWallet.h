@@ -43,9 +43,9 @@ namespace bs {
          void setDescription(const std::string &desc) override { desc_ = desc; }
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Bitcoin; }
 
-         bs::Address getNewExtAddress(AddressEntryType aet) override;
-         bs::Address getNewIntAddress(AddressEntryType aet) override {
-            return getNewExtAddress(aet);
+         void getNewExtAddress(const CbAddress &, AddressEntryType aet) override;
+         void getNewIntAddress(const CbAddress &cb, AddressEntryType aet) override {
+            getNewExtAddress(cb, aet);
          }
          size_t getUsedAddressCount() const override { return usedAddresses_.size(); }
          std::string getAddressIndex(const bs::Address &) override;

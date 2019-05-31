@@ -15,20 +15,12 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger> &logger, un
    : logger_(logger), nbBackupFilesToKeep_(nbBackups)
 {}
 
-WalletsManager::~WalletsManager() noexcept
-{
-   // These really ought to be called elsewhere, when the appropriate binaries
-   // shut down.
-   /*shutdownBIP151CTX();
-   btc_ecc_stop();*/
-}
-
 void WalletsManager::reset()
 {
    hdWallets_.clear();
    walletNames_.clear();
    hdWalletsId_.clear();
-   settlementWallet_.reset();
+//   settlementWallet_.reset();
 }
 
 void WalletsManager::loadWallets(NetworkType netType, const std::string &walletsPath
@@ -47,31 +39,13 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
    size_t current = 0;
 
    for (const auto &file : fileList) {
-      if (file.find(SettlementWallet::fileNamePrefix()) == 0) {
-         if (settlementWallet_) {
-            logger_->warn("Can't load more than 1 settlement wallet from {}", file);
-            continue;
-         }
-         logger_->debug("Loading settlement wallet from {} ({})", file, (int)netType);
-         try {
-            settlementWallet_ = std::make_shared<SettlementWallet>(netType
-               , walletsPath + "/" + file);
-
-            current++;
-            if (cbProgress) {
-               cbProgress(current, totalCount);
-            }
-         }
-         catch (const std::exception &e) {
-            logger_->error("Failed to load settlement wallet: {}", e.what());
-         }
-      }
       if (!isWalletFile(file)) {
          continue;
       }
       try {
          logger_->debug("Loading BIP44 wallet from {}", file);
-         const auto wallet = std::make_shared<hd::Wallet>(file, netType , "", logger_);
+         const auto wallet = std::make_shared<hd::Wallet>(file, netType
+            , walletsPath, logger_);
          current++;
          if (cbProgress) {
             cbProgress(current, totalCount);
@@ -102,8 +76,8 @@ WalletsManager::HDWalletPtr WalletsManager::loadWoWallet(NetworkType netType
 
    try {
       logger_->debug("Loading BIP44 WO-wallet from {}", fileName);
-      const auto wallet = std::make_shared<hd::Wallet>(walletsPath + "/" + fileName
-         , netType, "", logger_);
+      const auto wallet = std::make_shared<hd::Wallet>(fileName
+         , netType, walletsPath, logger_);
       if (!wallet->isWatchingOnly()) {
          logger_->error("Wallet {} is not watching-only", fileName);
          return nullptr;
@@ -159,6 +133,7 @@ bool WalletsManager::isWalletFile(const std::string &fileName) const
    return true;
 }
 
+#if 0
 WalletsManager::WalletPtr WalletsManager::createSettlementWallet(NetworkType netType, const std::string &walletsPath)
 {
    logger_->debug("Creating settlement wallet");
@@ -186,6 +161,7 @@ WalletsManager::WalletPtr WalletsManager::getAuthWallet() const
    }
    return group->getLeafByPath(0u);
 }
+#endif   //0
 
 WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
 {
@@ -233,16 +209,15 @@ const WalletsManager::HDWalletPtr WalletsManager::getHDRootForLeaf(const std::st
 
 WalletsManager::WalletPtr WalletsManager::getWalletById(const std::string& walletId) const
 {
-   for (const auto &hdWallet : hdWallets_)
-   {
+   for (const auto &hdWallet : hdWallets_) {
       auto leafPtr = hdWallet.second->getLeaf(walletId);
       if (leafPtr != nullptr)
          return leafPtr;
    }
 
-   if (settlementWallet_ && (settlementWallet_->walletId() == walletId)) {
+/*   if (settlementWallet_ && (settlementWallet_->walletId() == walletId)) {
       return settlementWallet_;
-   }
+   }*/
    return nullptr;
 }
 
@@ -261,9 +236,9 @@ WalletsManager::WalletPtr WalletsManager::getWalletByAddress(const bs::Address &
       }
    }
 
-   if ((settlementWallet_ != nullptr) && settlementWallet_->containsAddress(addr))
+/*   if ((settlementWallet_ != nullptr) && settlementWallet_->containsAddress(addr))
       return settlementWallet_;
-
+*/
    return nullptr;
 }
 
@@ -311,9 +286,9 @@ bool WalletsManager::deleteWalletFile(const WalletPtr &wallet)
          }
       }
 
-      if (wallet == settlementWallet_) {
+/*      if (wallet == settlementWallet_) {
          settlementWallet_ = nullptr;
-      }
+      }*/
       eraseWallet(wallet);
    }
 

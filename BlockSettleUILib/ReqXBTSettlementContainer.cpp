@@ -84,12 +84,22 @@ void ReqXBTSettlementContainer::acceptSpotXBT(const SecureBinaryData &password)
 {
    emit info(tr("Waiting for transactions signing..."));
    if (clientSells_) {
-      const auto hasChange = transactionData_->GetTransactionSummary().hasChange;
-      const auto changeAddr = hasChange ? transactionData_->getWallet()->getNewChangeAddress() : bs::Address();
-      const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
-      payinSignId_ = signContainer_->signTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
-         , password);
-      payoutPassword_ = password;
+      const auto &cbSign = [this, password](const bs::Address &changeAddr) {
+         const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
+         payinSignId_ = signContainer_->signTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
+            , password);
+         payoutPassword_ = password;
+      };
+
+      if (transactionData_->GetTransactionSummary().hasChange) {
+         const auto &cbAddr = [cbSign](const bs::Address &addr) {
+            cbSign(addr);
+         };
+         transactionData_->getWallet()->getNewChangeAddress(cbAddr);
+      }
+      else {
+         cbSign({});
+      }
    }
    else {
       try {    // create payout based on dealer TX

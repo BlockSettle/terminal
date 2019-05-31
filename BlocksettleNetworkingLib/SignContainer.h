@@ -94,7 +94,6 @@ public:
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) = 0;
    virtual bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) = 0;
    virtual bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
-   virtual bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) = 0;
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
    virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
    virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
@@ -106,23 +105,11 @@ public:
    virtual void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) = 0;
    virtual void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) = 0;
    virtual void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) = 0;
-   virtual void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &) = 0;
-   virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
    
    virtual void syncAddressBatch(const std::string &walletId,
-      const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>)
-   {
-      throw std::runtime_error("needs implemented, check InprocSigner for sample code");
-   }
-   
+      const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>) = 0;
    virtual void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
-      const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &)
-   {
-      //check InprocSigner for a working example
-      throw std::runtime_error("child class lacks implementation of extendAddressChain");
-   }
+      const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) = 0;
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }
@@ -144,8 +131,6 @@ signals:
 
    void HDLeafCreated(bs::signer::RequestId id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void HDWalletCreated(bs::signer::RequestId id, std::shared_ptr<bs::sync::hd::Wallet>);
-   void DecryptedRootKey(bs::signer::RequestId id, const SecureBinaryData &privKey, const SecureBinaryData &chainCode
-      , std::string walletId);
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);

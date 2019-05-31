@@ -106,6 +106,7 @@ namespace bs {
          virtual void firstInit(bool force = false);
 
          virtual std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
+         virtual uint64_t getAddrTxN(const bs::Address &addr) const;
 
          virtual bool isWatchingOnly() const { return false; }
          virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
@@ -126,10 +127,10 @@ namespace bs {
          virtual size_t getIntAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getWalletAddressCount() const { return addrCount_; }
 
-         virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
-         virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) 
-            { return getNewIntAddress(aet); }
+         virtual void getNewExtAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
+         virtual void getNewIntAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) = 0;
+         virtual void getNewChangeAddress(const CbAddress &cb, AddressEntryType aet = AddressEntryType_Default)
+            { getNewIntAddress(cb, aet); }
 
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
@@ -137,6 +138,7 @@ namespace bs {
          //Adds an arbitrary address identified by index
          virtual int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true);
 
+         void syncAddresses();
          //Request a bunch of addresses identified by index and aet - returns a vector of address-index pairs
          virtual void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &, const CbAddresses &
             , bool persistent = true);
@@ -189,8 +191,8 @@ namespace bs {
          void walletReset();
          void walletReady(const QString &id);
 
-         void balanceUpdated(std::string walletId, std::vector<uint64_t>) const;
-         void balanceChanged(std::string walletId, std::vector<uint64_t>) const;
+         void balanceUpdated(std::string walletId) const;
+         void balanceChanged(std::string walletId) const;
          void metaDataChanged();
 
       protected:

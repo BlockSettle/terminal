@@ -287,9 +287,11 @@ std::string bs::Address::display(Format format) const
       }
 
    case Auto:
+   case Binary:
       switch (aet_) {
-      case AddressEntryType_P2SH:
       case AddressEntryType_P2PKH:
+      case AddressEntryType_P2SH:
+      case (AddressEntryType_P2SH + AddressEntryType_P2WPKH):
          result = BtcUtils::scrAddrToBase58(fullAddress).toBinStr();
          break;
 
@@ -302,7 +304,6 @@ std::string bs::Address::display(Format format) const
          return fullAddress.toHexStr();
       }
       break;
-
    default:
       throw std::logic_error("unsupported address format");
    }

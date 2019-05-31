@@ -556,6 +556,7 @@ private:
    BinaryData ID_;
    std::shared_ptr<LMDBEnv> dbEnv_ = nullptr;
    LMDB* db_ = nullptr;
+   bool addrHashMapUpdated_ = false;
 
 private:
    void commit(void); //used for initial commit to disk

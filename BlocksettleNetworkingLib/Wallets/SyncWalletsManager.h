@@ -89,7 +89,7 @@ namespace bs {
          BTCNumericTypes::balance_type getUnconfirmedBalance() const;
          BTCNumericTypes::balance_type getTotalBalance() const;
 
-         std::vector<std::string> registerWallets();
+         void registerWallets();
          void unregisterWallets();
 
          bool getTransactionDirection(Tx, const std::string &walletId
@@ -104,6 +104,7 @@ namespace bs {
          void adoptNewWallet(const HDWalletPtr &);
 
          bool estimatedFeePerByte(const unsigned int blocksToWait, std::function<void(float)>, QObject *obj = nullptr);
+         bool getFeeSchedule(const std::function<void(const std::map<unsigned int, float> &)> &);
 
          //run after registration to update address chain usage counters
          void trackAddressChainUse(std::function<void(bool)>);
@@ -194,6 +195,7 @@ namespace bs {
          WalletPtr                           authAddressWallet_;
          BinaryData                          userId_;
          std::shared_ptr<SettlementWallet>   settlementWallet_;
+         std::unordered_set<std::string>     pendingRegIds_;
 
          struct CCInfo {
             std::string desc;

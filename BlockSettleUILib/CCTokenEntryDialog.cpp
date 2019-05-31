@@ -135,15 +135,15 @@ void CCTokenEntryDialog::accept()
       reject();
       return;
    }
-   const auto address = ccWallet_->getNewExtAddress();
-
-   if (ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
-      ui_->pushButtonOk->setEnabled(false);
-   }
-   else {
-      onCCSubmitFailed(QString::fromStdString(address.display())
-         , tr("Submission to PB failed"));
-   }
+   const auto &cbAddr = [this](const bs::Address &address) {
+      if (ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
+         ui_->pushButtonOk->setEnabled(false);
+      } else {
+         onCCSubmitFailed(QString::fromStdString(address.display())
+            , tr("Submission to PB failed"));
+      }
+   };
+   ccWallet_->getNewExtAddress(cbAddr);
 }
 
 void CCTokenEntryDialog::onCCAddrSubmitted(const QString)

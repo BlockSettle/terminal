@@ -95,8 +95,8 @@ namespace sync {
       NetworkType netType = NetworkType::Invalid;
 
       //flag value, signifies the higest index entries are unset if not changed from UINT32_MAX
-      unsigned highestExtIndex_ = UINT32_MAX; 
-      unsigned highestIntIndex_ = UINT32_MAX;
+      unsigned int highestExtIndex = UINT32_MAX; 
+      unsigned int highestIntIndex = UINT32_MAX;
 
       std::vector<AddressData>   addresses;
       std::vector<AddressData>   addrPool;

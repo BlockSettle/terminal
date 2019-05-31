@@ -31,26 +31,27 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
    if (!signContainer_)
       return;
 
-   const auto &cbProcess = [this, cbDone](HDWalletData data) 
+   const auto &cbProcess = [this, cbDone](HDWalletData data)
    {
-      for (const auto &grpData : data.groups) 
-      {
+      for (const auto &grpData : data.groups) {
          auto group = createGroup(grpData.type, grpData.extOnly);
-         if (!group) 
-         {
+         if (!group) {
             LOG(logger_, error, "[hd::Wallet::synchronize] failed to create group {}", (uint32_t)grpData.type);
             continue;
          }
 
-         for (const auto &leafData : grpData.leaves) 
-         {
+         for (const auto &leafData : grpData.leaves) {
             auto leaf = group->createLeaf(leafData.index, leafData.id);
-            if (!leaf) 
-            {
+            if (!leaf) {
                LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{} with id {}"
                   , (uint32_t)grpData.type, leafData.index, leafData.id);
                continue;
             }
+
+            bs::hd::Path path;
+            path.append(grpData.type);
+            path.append(leafData.index);
+            leaf->init(path);
          }
       }
 
@@ -59,15 +60,13 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
       for (const auto &leaf : leaves)
          leafIds->insert(leaf->walletId());
 
-      for (const auto &leaf : leaves) 
-      {
+      for (const auto &leaf : leaves) {
          const auto &cbLeafDone = [leafIds, cbDone, id=leaf->walletId()] 
          {
             leafIds->erase(id);
             if (leafIds->empty() && cbDone)
                cbDone();
          };
-
          leaf->synchronize(cbLeafDone);
       }
    };
@@ -237,8 +236,8 @@ std::vector<std::string> hd::Wallet::registerWallet(
    const std::shared_ptr<ArmoryObject> &armory, bool asNew)
 {
    std::vector<std::string> result;
-   for (const auto &leaf : getLeaves()) 
-   {
+   logger_->debug("[{}] {} leaves", __func__, getLeaves().size());
+   for (const auto &leaf : getLeaves()) {
       auto&& regIDs = leaf->registerWallet(armory, asNew);
       result.insert(result.end(), regIDs.begin(), regIDs.end());
    }

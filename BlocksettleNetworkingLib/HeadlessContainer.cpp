@@ -354,22 +354,6 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
    }
 }
 
-void HeadlessContainer::ProcessGetRootKeyResponse(unsigned int id, const std::string &data)
-{
-   headless::GetRootKeyResponse response;
-   if (!response.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse GetRootKey reply");
-      emit Error(id, "failed to parse");
-      return;
-   }
-   if (response.decryptedprivkey().empty()) {
-      emit Error(id, response.walletid());
-   }
-   else {
-      emit DecryptedRootKey(id, response.decryptedprivkey(), response.chaincode(), response.walletid());
-   }
-}
-
 void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data)
 {
    headless::GetHDWalletInfoResponse response;
@@ -684,21 +668,6 @@ bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::Dia
    return Send(packet);
 }
 
-bs::signer::RequestId HeadlessContainer::getDecryptedRootKey(const std::string &walletId
-   , const SecureBinaryData &password)
-{
-   headless::GetRootKeyRequest request;
-   request.set_rootwalletid(walletId);
-   if (!password.isNull()) {
-      request.set_password(password.toHexStr());
-   }
-
-   headless::RequestPacket packet;
-   packet.set_type(headless::GetRootKeyRequestType);
-   packet.set_data(request.SerializeAsString());
-   return Send(packet);
-}
-
 bs::signer::RequestId HeadlessContainer::GetInfo(const std::string &rootWalletId)
 {
    if (rootWalletId.empty()) {
@@ -792,65 +761,49 @@ void HeadlessContainer::syncTxComment(const std::string &walletId, const BinaryD
    Send(packet);
 }
 
-static headless::AddressType mapFrom(AddressEntryType aet)
+void HeadlessContainer::extendAddressChain(
+   const std::string &walletId, unsigned count, bool extInt,
+   const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
 {
-   switch (aet) {
-   case AddressEntryType_Default:   return headless::AddressType_Default;
-   case AddressEntryType_P2PKH:     return headless::AddressType_P2PKH;
-   case AddressEntryType_P2PK:      return headless::AddressType_P2PK;
-   case AddressEntryType_P2WPKH:    return headless::AddressType_P2WPKH;
-   case AddressEntryType_Multisig:  return headless::AddressType_Multisig;
-   case AddressEntryType_P2SH:      return headless::AddressType_P2SH;
-   case AddressEntryType_P2WSH:     return headless::AddressType_P2WSH;
-   default:    return headless::AddressType_Default;
-   }
-}
+   headless::ExtendAddressChainRequest request;
+   request.set_wallet_id(walletId);
+   request.set_count(count);
+   request.set_ext_int(extInt);
 
-void HeadlessContainer::syncNewAddress(const std::string &walletId, const std::string &index
-   , AddressEntryType aet, const std::function<void(const bs::Address &)> &cb)
-{
-   const auto &cbWrap = [cb](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
-      if (!addrs.empty()) {
-         cb(addrs[0].first);
-      }
-      else {
+   headless::RequestPacket packet;
+   packet.set_type(headless::ExtendAddressChainType);
+   packet.set_data(request.SerializeAsString());
+   const auto reqId = Send(packet);
+   if (!reqId) {
+      if (cb) {
          cb({});
       }
-   };
-
-   headless::SyncAddressesRequest request;
-   request.set_walletid(walletId);
-   request.set_persistent(true);
-   auto idx = request.add_indices();
-   idx->set_index(index);
-   idx->set_addrtype(mapFrom(aet));
-
-   headless::RequestPacket packet;
-   packet.set_type(headless::SyncAddressesType);
-   packet.set_data(request.SerializeAsString());
-   const auto reqId = Send(packet);
-   cbNewAddrsMap_[reqId] = cbWrap;
+      return;
+   }
+   cbExtAddrsMap_[reqId] = cb;
 }
 
-void HeadlessContainer::syncNewAddresses(const std::string &walletId
-   , const std::vector<std::pair<std::string, AddressEntryType>> &indices
-   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
-   , bool persistent)
+void HeadlessContainer::syncAddressBatch(
+   const std::string &walletId, const std::set<BinaryData>& addrSet,
+   std::function<void(bs::sync::SyncState)> cb)
 {
    headless::SyncAddressesRequest request;
-   request.set_walletid(walletId);
-   for (const auto &index : indices) {
-      auto idx = request.add_indices();
-      idx->set_index(index.first);
-      idx->set_addrtype(mapFrom(index.second));
+   request.set_wallet_id(walletId);
+   for (const auto &addr : addrSet) {
+      request.add_addresses(addr.toBinStr());
    }
-   request.set_persistent(persistent);
 
    headless::RequestPacket packet;
    packet.set_type(headless::SyncAddressesType);
    packet.set_data(request.SerializeAsString());
    const auto reqId = Send(packet);
-   cbNewAddrsMap_[reqId] = cb;
+   if (!reqId) {
+      if (cb) {
+         cb(bs::sync::SyncState::Failure);
+      }
+      return;
+   }
+   cbSyncAddrsMap_[reqId] = cb;
 }
 
 static NetworkType mapFrom(headless::NetworkType netType)
@@ -984,6 +937,10 @@ void HeadlessContainer::ProcessSyncWallet(unsigned int id, const std::string &da
    }
    result.encryptionRank = { response.keyrank().m(), response.keyrank().n() };
 
+   result.netType = mapFrom(response.nettype());
+   result.highestExtIndex = response.highest_ext_index();
+   result.highestIntIndex = response.highest_int_index();
+
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto addrInfo = response.addresses(i);
       const bs::Address addr(addrInfo.address());
@@ -1009,6 +966,16 @@ void HeadlessContainer::ProcessSyncWallet(unsigned int id, const std::string &da
    cbWalletMap_.erase(itCb);
 }
 
+static bs::sync::SyncState mapFrom(headless::SyncState state)
+{
+   switch (state) {
+   case headless::SyncState_Success:      return bs::sync::SyncState::Success;
+   case headless::SyncState_NothingToDo:  return bs::sync::SyncState::NothingToDo;
+   case headless::SyncState_Failure:      return bs::sync::SyncState::Failure;
+   }
+   return bs::sync::SyncState::Failure;
+}
+
 void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string &data)
 {
    headless::SyncAddressesResponse response;
@@ -1017,30 +984,40 @@ void HeadlessContainer::ProcessSyncAddresses(unsigned int id, const std::string 
       emit Error(id, "failed to parse");
       return;
    }
-   const auto itCb = cbNewAddrsMap_.find(id);
-   if (itCb == cbNewAddrsMap_.end()) {
+   const auto itCb = cbSyncAddrsMap_.find(id);
+   if (itCb == cbSyncAddrsMap_.end()) {
       logger_->error("[{}] no callback found for id {}", __func__, id);
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
 
+   const auto result = mapFrom(response.state());
+   itCb->second(result);
+   cbSyncAddrsMap_.erase(itCb);
+}
+
+void HeadlessContainer::ProcessExtAddrChain(unsigned int id, const std::string &data)
+{
+   headless::ExtendAddressChainResponse response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[{}] Failed to parse reply", __func__);
+      emit Error(id, "failed to parse");
+      return;
+   }
+   const auto itCb = cbExtAddrsMap_.find(id);
+   if (itCb == cbExtAddrsMap_.end()) {
+      logger_->error("[{}] no callback found for id {}", __func__, id);
+      emit Error(id, "no callback found for id " + std::to_string(id));
+      return;
+   }
+   logger_->debug("[{}]", __func__);
    std::vector<std::pair<bs::Address, std::string>> result;
    for (int i = 0; i < response.addresses_size(); ++i) {
-      const auto addrInfo = response.addresses(i);
-      try {
-         const bs::Address addr(addrInfo.address());
-         if (addr.isNull()) {
-            logger_->debug("[{}] addr #{} is null", __func__, i);
-            continue;
-         }
-         result.push_back({ std::move(addr), addrInfo.index() });
-      }
-      catch (const std::exception &e) {
-         logger_->error("[{}] failed to create address: {}", __func__, e.what());
-      }
+      const auto &addr = response.addresses(i);
+      result.push_back({ addr.address(), addr.index() });
    }
    itCb->second(result);
-   cbNewAddrsMap_.erase(itCb);
+   cbExtAddrsMap_.erase(itCb);
 }
 
 
@@ -1255,6 +1232,7 @@ void RemoteSigner::onConnError(ConnectionError error, const QString &details)
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 {
+   logger_->debug("[{}] {}/{}", __func__, (int)packet.type(), packet.id());
    signRequests_.erase(packet.id());
 
    switch (packet.type()) {
@@ -1274,10 +1252,6 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
    case headless::CreateHDWalletRequestType:
       ProcessCreateHDWalletResponse(packet.id(), packet.data());
-      break;
-
-   case headless::GetRootKeyRequestType:
-      ProcessGetRootKeyResponse(packet.id(), packet.data());
       break;
 
    case headless::GetHDWalletInfoRequestType:
@@ -1313,6 +1287,10 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 
    case headless::SyncAddressesType:
       ProcessSyncAddresses(packet.id(), packet.data());
+      break;
+
+   case headless::ExtendAddressChainType:
+      ProcessExtAddrChain(packet.id(), packet.data());
       break;
 
    case headless::WalletsListUpdatedType:

@@ -19,7 +19,7 @@ hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::
    , walletId_(walletId), type_(type)
    , name_(name), desc_(desc), isExtOnly_(extOnlyAddresses)
    , rescanWalletId_(walletId + "_rescan")
-{ }
+{}
 
 hd::Leaf::~Leaf() = default;
 
@@ -33,12 +33,12 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       netType_ = data.netType;
       emit metaDataChanged();
 
-      if (data.highestExtIndex_ == UINT32_MAX ||
-         data.highestIntIndex_ == UINT32_MAX)
+      if (data.highestExtIndex == UINT32_MAX ||
+         data.highestIntIndex == UINT32_MAX)
          throw WalletException("unintialized addr chain use index");
 
-      lastExtIdx_ = data.highestExtIndex_;
-      lastIntIdx_ = data.highestIntIndex_;
+      lastExtIdx_ = data.highestExtIndex;
+      lastIntIdx_ = data.highestIntIndex;
 
       for (const auto &addr : data.addresses) 
       {
@@ -328,15 +328,6 @@ void hd::Leaf::firstInit(bool force)
    firstInit_ = true;
 }
 
-void hd::Leaf::activateHiddenAddress(const bs::Address &addr)
-{
-   const auto itAddr = poolByAddr_.find(addr);
-   if (itAddr == poolByAddr_.end()) {
-      return;
-   }
-   createAddressWithPath(itAddr->second, false);
-}
-
 void hd::Leaf::reset()
 {
    lastIntIdx_ = lastExtIdx_ = 0;
@@ -393,21 +384,21 @@ bool hd::Leaf::containsHiddenAddress(const bs::Address &addr) const
 }
 
 // Return an external-facing address.
-bs::Address hd::Leaf::getNewExtAddress(AddressEntryType aet)
+void hd::Leaf::getNewExtAddress(const CbAddress &cb, AddressEntryType aet)
 {
-   return createAddress(aet, false);
+   createAddress(cb, aet, false);
 }
 
 // Return an internal-facing address.
-bs::Address hd::Leaf::getNewIntAddress(AddressEntryType aet)
+void hd::Leaf::getNewIntAddress(const CbAddress &cb, AddressEntryType aet)
 {
-   return createAddress(aet, true);
+   createAddress(cb, aet, true);
 }
 
 // Return a change address.
-bs::Address hd::Leaf::getNewChangeAddress(AddressEntryType aet)
+void hd::Leaf::getNewChangeAddress(const CbAddress &cb, AddressEntryType aet)
 {
-   return createAddress(aet, isExtOnly_ ? false : true);
+   createAddress(cb, aet, isExtOnly_ ? false : true);
 }
 
 std::vector<BinaryData> hd::Leaf::getAddrHashes() const
@@ -454,15 +445,13 @@ std::vector<std::string> hd::Leaf::registerWallet(
 {
    setArmory(armory);
 
-   if (armory_) 
-   {
+   if (armory_) {
       const auto addrsExt = getAddrHashesExt();
       std::vector<std::string> regIds;
       auto notif_count = std::make_shared<unsigned>(0);
       const auto &cbRegistered = [this, notif_count](const std::string &)
       {
-         if (!this->isExtOnly_)
-         {
+         if (!this->isExtOnly_) {
             if ((*notif_count)++ == 0)
                return;
          }
@@ -476,8 +465,7 @@ std::vector<std::string> hd::Leaf::registerWallet(
          armory_->bdv()->instantiateWallet(walletId()));
       regIds.push_back(regIdExt_);
 
-      if (!isExtOnly_) 
-      {
+      if (!isExtOnly_) {
          const auto addrsInt = getAddrHashesInt();
          regIdInt_ = armory_->registerWallet(
             walletIdInt(), addrsInt, cbRegistered, asNew);
@@ -485,6 +473,8 @@ std::vector<std::string> hd::Leaf::registerWallet(
             armory_->bdv()->instantiateWallet(walletIdInt()));
          regIds.push_back(regIdInt_);
       }
+      logger_->debug("[{}] registered {}/{} addresses in {}, {} regIds", __func__
+         , getAddrHashesExt().size(), getAddrHashesInt().size(), walletId(), regIds.size());
       return regIds;
    }
    return {};
@@ -500,50 +490,58 @@ void hd::Leaf::unregisterWallet()
    btcWalletInt_.reset();
 }
 
-bs::Address hd::Leaf::createAddress(AddressEntryType aet, bool isInternal)
+void hd::Leaf::createAddress(const CbAddress &cb, AddressEntryType aet, bool isInternal)
 {
    bs::hd::Path addrPath;
-   if (isInternal && !isExtOnly_)
-   {
+   if (isInternal && !isExtOnly_) {
       addrPath.append(addrTypeInternal);
       addrPath.append(lastIntIdx_++);
    }
-   else 
-   {
+   else {
       addrPath.append(addrTypeExternal);
       addrPath.append(lastExtIdx_++);
    }
-   return createAddress({ addrPath, aet });
+   createAddress(cb, { addrPath, aet });
 }
 
-bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, bool signal)
+void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
 {
-   bs::Address result;
    AddrPoolKey keyCopy = key;
    if (key.aet == AddressEntryType_Default)
       keyCopy.aet = defaultAET_;
 
-   auto swapKey = [this, &result, &keyCopy](void)->bool
-   {   
+   const auto &swapKey = [this, keyCopy](void) -> bs::Address
+   {
+      bs::Address result;
       const auto addrPoolIt = addressPool_.find(keyCopy);
-      if (addrPoolIt != addressPool_.end())
-      {
+      if (addrPoolIt != addressPool_.end()) {
          result = std::move(addrPoolIt->second);
          addressPool_.erase(addrPoolIt->first);
          poolByAddr_.erase(result);
-         return true;
       }
-
-      return false;
+      return result;
    };
 
-   if (!swapKey())
-   {
-      auto promPtr = std::make_shared<std::promise<bool>>();
-      auto fut = promPtr->get_future();
-      auto topUpCb = [promPtr](void)
+   const auto &cbAddAddr = [this, cb, keyCopy](const bs::Address &addr) {
+      addAddress(addr, keyCopy.path.toString(), keyCopy.aet);
+      if (cb) {
+         cb(addr);
+      }
+   };
+
+   const auto result = swapKey();
+   if (result.isNull()) {
+      auto topUpCb = [this, keyCopy, swapKey, cbAddAddr, cb](void)
       {
-         promPtr->set_value(true);
+         const auto result = swapKey();
+         if (result.isNull()) {
+            logger_->error("[{}] failed to find {}/{} after topping up the pool"
+               , __func__, keyCopy.path.toString(), (int)keyCopy.aet);
+            cb(result);
+         }
+         else {
+            cbAddAddr(result);
+         }
       };
 
       bool extInt = true;
@@ -551,25 +549,18 @@ bs::Address hd::Leaf::createAddress(const AddrPoolKey &key, bool signal)
          extInt = false;
 
       topUpAddressPool(extInt, topUpCb);
-      fut.wait();
-
-      if (!swapKey())
-         throw std::range_error("did not increase address pool enough");
    }
-
-   addAddress(result, key.path.toString(), keyCopy.aet);
-
-   if (signal) {
-      emit addressAdded();
+   else {
+      cbAddAddr(result);
    }
-
-   return result;
 }
 
 void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
 {
-   if (!signContainer_)
+   if (!signContainer_) {
+      logger_->error("[{}] uninited signer container", __func__);
       throw std::runtime_error("uninitialized sign container");
+   }
 
    auto fillUpAddressPoolCallback = [this, cb](
       const std::vector<std::pair<bs::Address, std::string>>& addrVec)
@@ -608,7 +599,7 @@ void hd::Leaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
          fut.wait();
       }
       
-      if(cb)
+      if (cb)
          cb();
    };
 
@@ -732,7 +723,11 @@ bool hd::Leaf::getHistoryPage(uint32_t id, std::function<void(const Wallet *wall
 
 std::string hd::Leaf::getAddressIndex(const bs::Address &addr)
 {
-   return getPathForAddress(addr).toString();
+   const auto path = getPathForAddress(addr);
+   if (path.length()) {
+      return path.toString();
+   }
+   return {};
 }
 
 bool hd::Leaf::isExternalAddress(const bs::Address &addr) const
@@ -756,48 +751,6 @@ bool hd::Leaf::addressIndexExists(const std::string &index) const
       }
    }
    return false;
-}
-
-bs::Address hd::Leaf::createAddressWithIndex(const std::string &index, AddressEntryType aet, bool signal)
-{
-   return createAddressWithPath({ bs::hd::Path::fromString(index), aet }, signal);
-}
-
-bs::Address hd::Leaf::createAddressWithPath(const AddrPoolKey &key, bool signal)
-{
-   if (key.path.length() < 2) {
-      return {};
-   }
-   auto addrPath = key.path;
-   if (key.path.length() > 2) {
-      addrPath.clear();
-      addrPath.append(key.path.get(-2));
-      addrPath.append(key.path.get(-1));
-   }
-   for (const auto &addr : addressMap_) {
-      if (addr.first.path == addrPath) {
-         return addr.second;
-      }
-   }
-   auto &lastIndex = (key.path.get(-2) == addrTypeInternal) ? lastIntIdx_ : lastExtIdx_;
-   const auto addrIndex = key.path.get(-1);
-   const int nbAddresses = addrIndex - lastIndex;
-   if (nbAddresses > 0) {
-      std::vector<std::pair<std::string, AddressEntryType>> request;
-      for (bs::hd::Path::Elem i = lastIndex + 1; i < lastIndex + nbAddresses + 1; i++) {
-         bs::hd::Path addrPath({ key.path.get(-2), i });
-         request.push_back({ addrPath.toString(), key.aet });
-      }
-      const auto &cbNewAddrs = [this](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
-         for (const auto &addr : addrs) {
-            addAddress(addr.first, addr.second, addr.first.getType(), false);
-         }
-      };
-      newAddresses(request, cbNewAddrs);
-      lastIndex += nbAddresses;
-   }
-   lastIndex++;
-   return createAddress({ addrPath, key.aet }, signal);
 }
 
 void hd::Leaf::onSaveToWallet(const std::vector<PooledAddress> &addresses)
@@ -895,13 +848,17 @@ hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, con
    poolAET_ = { AddressEntryType_P2WPKH };
 }
 
-bs::Address hd::AuthLeaf::createAddress(const AddrPoolKey &key, bool signal)
+void hd::AuthLeaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
 {
    if (userId_.isNull()) {
       tempAddresses_.insert(key);
-      return {};
+      if (cb) {
+         cb({});
+      }
    }
-   return hd::Leaf::createAddress(key, signal);
+   else {
+      hd::Leaf::createAddress(cb, key);
+   }
 }
 
 void hd::AuthLeaf::topUpAddressPool(bool extInt, const std::function<void()> &cb)
@@ -923,7 +880,7 @@ void hd::AuthLeaf::setUserId(const BinaryData &userId)
    }
 
    for (const auto &addr : tempAddresses_) {
-      createAddress(addr, false);
+      createAddress([](const bs::Address &) {}, addr);
       lastExtIdx_ = std::max(lastExtIdx_, addr.path.get(-1) + 1);
    }
    topUpAddressPool(true);

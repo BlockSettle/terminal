@@ -61,9 +61,9 @@ std::vector<std::shared_ptr<hd::Leaf>> hd::Group::getLeaves() const
    return result;
 }
 
-std::vector<std::shared_ptr<bs::core::Wallet>> hd::Group::getAllLeaves() const
+std::vector<std::shared_ptr<hd::Leaf>> hd::Group::getAllLeaves() const
 {
-   std::vector<std::shared_ptr<bs::core::Wallet>> result;
+   std::vector<std::shared_ptr<hd::Leaf>> result;
    result.reserve(leaves_.size());
    for (const auto &leaf : leaves_) {
       result.emplace_back(leaf.second);

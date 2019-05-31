@@ -26,19 +26,23 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    }
 
    const auto &cbAddr = [this, copyButton, closeButton](const bs::Address &addr) {
-      closeButton->setEnabled(true);
-      if (!addr.isValid()) {
-         return;
-      }
-      if (address_.isNull()) {
+      if (addr.isValid()) {
          address_ = addr;
-         displayAddress();
-         wallet_->registerWallet();
+         emit wallet_->addressAdded();
+         QMetaObject::invokeMethod(this, [this, copyButton, closeButton] {
+            closeButton->setEnabled(true);
+            displayAddress();
+            copyButton->setEnabled(true);
+         });
+         wallet_->syncAddresses();
       }
-      copyButton->setEnabled(true);
+      else {
+         QMetaObject::invokeMethod(this, [this] {
+            ui_->lineEditNewAddress->setText(tr("Invalid address"));
+         });
+      }
    };
-   address_ = wallet_->getNewExtAddress(isNested ? AddressEntryType_P2SH : AddressEntryType_P2WPKH);
-   cbAddr(address_);
+   wallet_->getNewExtAddress(cbAddr, isNested ? AddressEntryType_P2SH : AddressEntryType_P2WPKH);
 
    if (address_.isNull()) {
       copyButton->setEnabled(false);
@@ -47,7 +51,6 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    else {
       displayAddress();
    }
-
 }
 
 NewAddressDialog::~NewAddressDialog() = default;

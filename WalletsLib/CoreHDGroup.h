@@ -31,8 +31,8 @@ namespace bs {
             std::shared_ptr<hd::Leaf> getLeafByPath(bs::hd::Path::Elem) const;
             std::shared_ptr<hd::Leaf> getLeafByPath(const std::string &key) const;
             std::shared_ptr<hd::Leaf> getLeafById(const std::string &id) const;
-            std::vector<std::shared_ptr<hd::Leaf>> getLeaves() const;
-            std::vector<std::shared_ptr<bs::core::Wallet>> getAllLeaves() const;
+            std::vector<std::shared_ptr<Leaf>> getLeaves() const;
+            std::vector<std::shared_ptr<Leaf>> getAllLeaves() const;
             
             std::shared_ptr<Leaf> createLeaf(
                bs::hd::Path::Elem, unsigned lookup = UINT32_MAX);

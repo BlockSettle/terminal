@@ -70,9 +70,9 @@ namespace bs {
             size_t getAddressPoolSize() const { return addressPool_.size(); }
 
             bool isExternalAddress(const Address &) const override;
-            bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) override;
-            bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) override;
+            void getNewExtAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) override;
+            void getNewIntAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) override;
+            void getNewChangeAddress(const CbAddress &, AddressEntryType aet = AddressEntryType_Default) override;
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &
@@ -131,12 +131,9 @@ namespace bs {
             using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
 
          protected:
-            virtual bs::Address createAddress(const AddrPoolKey &, bool signal = true);
+            virtual void createAddress(const CbAddress &cb, const AddrPoolKey &);
             void reset();
             bs::hd::Path getPathForAddress(const bs::Address &) const;
-            void activateHiddenAddress(const bs::Address &);
-            bs::Address createAddressWithIndex(const std::string &index, AddressEntryType, bool signal = true);
-            bs::Address createAddressWithPath(const AddrPoolKey &, bool signal = true);
             virtual void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr);
             void postOnline();
 
@@ -213,7 +210,7 @@ namespace bs {
             std::set<AddrPoolKey>   activeScanAddresses_;
 
          private:
-            bs::Address createAddress(AddressEntryType aet, bool isInternal = false);
+            void createAddress(const CbAddress &, AddressEntryType aet, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
             void onScanComplete();
@@ -235,8 +232,7 @@ namespace bs {
             void setUserId(const BinaryData &) override;
 
          protected:
-            bs::Address createAddress(
-               const AddrPoolKey &, bool signal = true) override;
+            void createAddress(const CbAddress &, const AddrPoolKey &) override;
             void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr) override;
 
          private:

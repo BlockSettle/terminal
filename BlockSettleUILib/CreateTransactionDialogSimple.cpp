@@ -165,11 +165,15 @@ void CreateTransactionDialogSimple::showAdvanced()
 
 bs::Address CreateTransactionDialogSimple::getChangeAddress() const
 {
-   bs::Address result;
+   auto promAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futAddr = promAddr->get_future();
+   const auto &cbAddr = [promAddr](const bs::Address &addr) {
+      promAddr->set_value(addr);
+   };
    if (transactionData_->GetTransactionSummary().hasChange) {
-      result = transactionData_->getWallet()->getNewChangeAddress();
+      transactionData_->getWallet()->getNewChangeAddress(cbAddr);
    }
-   return result;
+   return futAddr.get();
 }
 
 void CreateTransactionDialogSimple::createTransaction()

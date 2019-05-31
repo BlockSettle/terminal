@@ -526,8 +526,13 @@ bs::Address RFQTicketXBT::recvAddress() const
    }
 
    if (index == 0) {
-      const auto &addr = recvWallet_->getNewIntAddress();
-      return addr;
+      auto promAddr = std::make_shared<std::promise<bs::Address>>();
+      auto futAddr = promAddr->get_future();
+      const auto &cbAddr = [promAddr](const bs::Address &addr) {
+         promAddr->set_value(addr);
+      };
+      recvWallet_->getNewIntAddress(cbAddr);
+      return futAddr.get();
    }
    return recvWallet_->getExtAddressList()[index - 1];
 }
@@ -705,8 +710,13 @@ void RFQTicketXBT::submitButtonClicked()
                throw std::runtime_error("CC coin selection is missing");
             }
             const auto &inputs = ccCoinSel_->GetSelectedTransactions();
-            const auto &changeAddr = wallet->getNewChangeAddress();
-            const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, changeAddr);
+            auto promAddr = std::make_shared<std::promise<bs::Address>>();
+            auto futAddr = promAddr->get_future();
+            const auto &cbAddr = [promAddr](const bs::Address &addr) {
+               promAddr->set_value(addr);
+            }; //TODO: refactor this
+            wallet->getNewChangeAddress(cbAddr);
+            const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, futAddr.get());
             rfq.coinTxInput = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, rfq.requestId);
          } catch (const std::exception &e) {

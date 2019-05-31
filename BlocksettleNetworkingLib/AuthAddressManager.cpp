@@ -167,7 +167,10 @@ bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
 
 bool AuthAddressManager::CreateNewAuthAddress()
 {
-   authWallet_->getNewExtAddress();
+   const auto &cbAddr = [this](const bs::Address &) {
+      emit authWallet_->addressAdded();
+   };
+   authWallet_->getNewExtAddress(cbAddr);
    return true;
 }
 
@@ -342,24 +345,26 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
             }
             changeVal -= fee;
 
-            const auto recipAddress = wallet->getNewChangeAddress();
-            const auto &recip = recipAddress.getRecipient(txMultiReq->inputs.cbegin()->first.getValue() + changeVal);
-            if (!recip) {
-               logger_->error("[AuthAddressManager::RevokeAddress] failed to create recipient");
-               emit Error(tr("Failed to construct revoke transaction"));
-               return;
-            }
-            txMultiReq->recipients.push_back(recip);
+            const auto &cbRecipAddr = [this, txMultiReq, changeVal, utxos](const bs::Address &recipAddress) {
+               const auto &recip = recipAddress.getRecipient(txMultiReq->inputs.cbegin()->first.getValue() + changeVal);
+               if (!recip) {
+                  logger_->error("[AuthAddressManager::RevokeAddress] failed to create recipient");
+                  emit Error(tr("Failed to construct revoke transaction"));
+                  return;
+               }
+               txMultiReq->recipients.push_back(recip);
 
-            if (utxos.size() > 1) {
-               logger_->warn("[AuthAddressManager::RevokeAddress] TX size is greater than expected ({} more inputs)", utxos.size() - 1);
-               emit Info(tr("Revoke transaction size is greater than expected"));
-            }
+               if (utxos.size() > 1) {
+                  logger_->warn("[AuthAddressManager::RevokeAddress] TX size is greater than expected ({} more inputs)", utxos.size() - 1);
+                  emit Info(tr("Revoke transaction size is greater than expected"));
+               }
 
-            const auto id = signingContainer_->signMultiTXRequest(*txMultiReq);
-            if (id) {
-               signIdsRevoke_.insert(id);
-            }
+               const auto id = signingContainer_->signMultiTXRequest(*txMultiReq);
+               if (id) {
+                  signIdsRevoke_.insert(id);
+               }
+            };
+            wallet->getNewChangeAddress(cbRecipAddr);
          };
          wallet->getSpendableTxOutList(cbFeeUTXOs, fee);
       };

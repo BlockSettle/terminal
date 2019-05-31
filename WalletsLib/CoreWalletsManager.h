@@ -16,6 +16,7 @@ namespace spdlog {
 namespace bs {
    namespace core {
       namespace hd {
+         class Leaf;
          class Wallet;
       }
 
@@ -23,11 +24,11 @@ namespace bs {
       {
       public:
          using CbProgress = std::function<void(size_t cur, size_t total)>;
-         using WalletPtr = std::shared_ptr<bs::core::Wallet>;
+         using WalletPtr = std::shared_ptr<bs::core::hd::Leaf>;
          using HDWalletPtr = std::shared_ptr<bs::core::hd::Wallet>;
 
          WalletsManager(const std::shared_ptr<spdlog::logger> &, unsigned int nbBackups = 10);
-         ~WalletsManager() noexcept;
+         ~WalletsManager() noexcept = default;
 
          WalletsManager(const WalletsManager&) = delete;
          WalletsManager& operator = (const WalletsManager&) = delete;
@@ -46,10 +47,10 @@ namespace bs {
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
 
          WalletPtr createSettlementWallet(NetworkType, const std::string &walletsPath);
-         WalletPtr getSettlementWallet() const { return settlementWallet_; }
-         void setSettlementWallet(const std::shared_ptr<bs::core::SettlementWallet> &wallet) {
-            settlementWallet_ = wallet; }
-         WalletPtr getAuthWallet() const;
+//         WalletPtr getSettlementWallet() const { return settlementWallet_; }
+/*         void setSettlementWallet(const std::shared_ptr<bs::core::SettlementWallet> &wallet) {
+            settlementWallet_ = wallet; }*/
+//         WalletPtr getAuthWallet() const;
          HDWalletPtr getPrimaryWallet() const;
 
          size_t getHDWalletsCount() const { return hdWalletsId_.size(); }
@@ -80,7 +81,7 @@ namespace bs {
          //std::vector<BinaryData>             walletsId_;
          std::vector<std::string>            hdWalletsId_;
          //BinaryData                          chainCode_;
-         std::shared_ptr<SettlementWallet>   settlementWallet_;
+//         std::shared_ptr<SettlementWallet>   settlementWallet_;
       };
 
    }  //namespace core

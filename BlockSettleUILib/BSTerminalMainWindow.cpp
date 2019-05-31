@@ -427,6 +427,7 @@ void BSTerminalMainWindow::LoadWallets()
 
       if (readyToRegisterWallets_) {
          readyToRegisterWallets_ = false;
+         logMgr_->logger()->debug("Ready to register wallets");
          walletsMgr_->registerWallets();
       }
    });
@@ -773,7 +774,7 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 
 void BSTerminalMainWindow::CompleteDBConnection()
 {
-   logMgr_->logger("ui")->debug("BSTerminalMainWindow::CompleteDBConnection");
+   logMgr_->logger("ui")->debug("BSTerminalMainWindow::CompleteDBConnection {}", walletsMgr_->hdWalletsCount());
    if (walletsMgr_ && walletsMgr_->hdWalletsCount()) {
       walletsMgr_->registerWallets();
    }

@@ -719,9 +719,14 @@ bs::Address TransactionData::GetFallbackRecvAddress()
       return fallbackRecvAddress_;
    }
    if (wallet_ != nullptr) {
-      const auto addr = wallet_->getNewExtAddress();
+      auto promAddr = std::make_shared<std::promise<bs::Address>>();
+      auto futAddr = promAddr->get_future();
+      const auto &cbAddr = [promAddr](const bs::Address &addr) {
+         promAddr->set_value(addr);
+      };
+      wallet_->getNewExtAddress(cbAddr);
 //      wallet_->registerWallet();  //TODO: register only when address callback is invoked
-      fallbackRecvAddress_ = addr;
+      fallbackRecvAddress_ = futAddr.get();  //TODO: refactor this
    }
    return fallbackRecvAddress_;
 }
@@ -777,9 +782,14 @@ bs::core::wallet::TXSignRequest TransactionData::createPartialTXRequest(uint64_t
    , const std::vector<std::shared_ptr<ScriptRecipient>> &recipients, const BinaryData &prevData
    , const std::vector<UTXO> &utxos)
 {
-   const auto &changeAddr = wallet_->getNewChangeAddress();
+   auto promAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futAddr = promAddr->get_future();
+   const auto &cbAddr = [promAddr](const bs::Address &addr) {
+      promAddr->set_value(addr);
+   };    //TODO: refactor this
+   wallet_->getNewChangeAddress(cbAddr);
    auto txReq = wallet_->createPartialTXRequest(spendVal, utxos.empty() ? inputs() : utxos
-      , changeAddr, feePerByte, recipients, prevData);
+      , futAddr.get(), feePerByte, recipients, prevData);
    txReq.populateUTXOs = true;
    return txReq;
 }

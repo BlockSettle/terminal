@@ -309,8 +309,7 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 
       return addrPath;
    }
-   catch (std::exception&)
-   {
+   catch (std::exception &e) {
       return {};
    }
 }
@@ -680,6 +679,15 @@ std::shared_ptr<AssetEntry_BIP32Root> hd::Leaf::getRootAsset() const
       throw AccountException("unexpected root ptr type");
 
    return rootSingle;
+}
+
+void hd::Leaf::setDB(LMDB *db)
+{
+   if (!db) {
+      return;
+   }
+   db_ = db;
+   MetaData::readFromDB(getDBEnv(), db);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

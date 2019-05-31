@@ -31,9 +31,9 @@ namespace bs {
    namespace sync {
       enum class SyncState
       {
-         SyncState_Success,
-         SyncState_NothingToDo,
-         SyncState_Failure
+         Success,
+         NothingToDo,
+         Failure
       };
    }
 
@@ -99,7 +99,7 @@ namespace bs {
                return nullptr;
             }
             void set(const std::shared_ptr<AssetEntryMeta> &value);
-            void write(const std::shared_ptr<LMDBEnv> env, LMDB *db);
+            bool write(const std::shared_ptr<LMDBEnv> env, LMDB *db);
             void readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db);
             std::map<BinaryData, std::shared_ptr<AssetEntryMeta>> fetchAll() const { return data_; }
          };

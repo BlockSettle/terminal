@@ -18,10 +18,12 @@ namespace bs {
    namespace core {
       namespace hd {
          class Group;
+         class Wallet;
 
          class Leaf : public bs::core::Wallet
          {
             friend class hd::Group;
+            friend class hd::Wallet;
 
          public:
             Leaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger, 
@@ -113,6 +115,7 @@ namespace bs {
 
             std::shared_ptr<LMDBEnv> getDBEnv() { return accountPtr_->getDbEnv(); }
             LMDB* getDB() { return db_; }
+            virtual void setDB(LMDB *);
 
          protected:
             static const bs::hd::Path::Elem  addrTypeExternal_ = 0u;

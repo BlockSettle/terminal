@@ -63,16 +63,14 @@ void WalletsManager::syncWallets(const CbProgress &cb)
       for (const auto &info : wi)
          walletIds->insert(info.id);
 
-      for (const auto &info : wi) 
-      {
-         const auto &cbDone = [this, walletIds, id=info.id, total=wi.size(), cb] 
+      for (const auto &info : wi) {
+         const auto &cbDone = [this, walletIds, id=info.id, total=wi.size(), cb]
          {
             walletIds->erase(id);
             if (cb)
                cb(total - walletIds->size(), total);
 
-            if (walletIds->empty()) 
-            {
+            if (walletIds->empty()) {
                logger_->debug("[WalletsManager::syncWallets] all wallets synchronized");
                emit walletsSynchronized();
                emit walletChanged();
@@ -82,28 +80,24 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          logger_->debug("[WalletsManager::syncWallets] syncing wallet {} ({} {})"
             , info.id, info.name, (int)info.format);
          
-         switch (info.format) 
+         switch (info.format) {
+         case bs::sync::WalletFormat::HD:
          {
-         case bs::sync::WalletFormat::HD: 
-         {
-            try 
-            {
+            try {
                const auto hdWallet = std::make_shared<hd::Wallet>(info.netType, info.id, info.name,
                   info.description, signContainer_.get(), logger_);
 
-               if (hdWallet) 
-               {
-                  const auto &cbHDWalletDone = [this, hdWallet, cbDone] 
-                  {
+               if (hdWallet) {
+                  const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
+                     logger_->debug("[WalletsManager::syncWallets] synced HD wallet {}"
+                        , hdWallet->walletId());
                      saveWallet(hdWallet);
                      cbDone();
                   };
-
                   hdWallet->synchronize(cbHDWalletDone);
                }
             }
-            catch (const std::exception &e) 
-            {
+            catch (const std::exception &e) {
                logger_->error("[WalletsManager::syncWallets] failed to create HD wallet "
                   "{}: {}", info.id, e.what());
                cbDone();
@@ -111,16 +105,14 @@ void WalletsManager::syncWallets(const CbProgress &cb)
             break;
          }
 
-         case bs::sync::WalletFormat::Settlement: 
+         case bs::sync::WalletFormat::Settlement:
          {
-            if (settlementWallet_) 
-            {
+            if (settlementWallet_) {
                logger_->error("[WalletsManager::syncWallets] more than one settlement "
                   "wallet is not supported");
                cbDone();
             }
-            else 
-            {
+            else {
                const auto settlWallet = std::make_shared<SettlementWallet>(
                   info.id, info.name, info.description, signContainer_.get(), logger_);
                
@@ -153,13 +145,11 @@ void WalletsManager::syncWallets(const CbProgress &cb)
       }
    };
 
-   if (!signContainer_) 
-   {
+   if (!signContainer_) {
       logger_->error("[WalletsManager::{}] signer is not set - aborting"
          , __func__);
       return;
    }
-
    signContainer_->syncWalletInfo(cbWalletInfo);
 }
 
@@ -210,9 +200,9 @@ void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
    connect(wallet.get(), &Wallet::walletReady, this, &WalletsManager::onWalletReady);
    connect(wallet.get(), &Wallet::addressAdded, [this] { emit walletChanged(); });
    connect(wallet.get(), &Wallet::walletReset, [this] { emit walletChanged(); });
-   connect(wallet.get(), &Wallet::balanceUpdated, [this](std::string walletId, std::vector<uint64_t>) {
+   connect(wallet.get(), &Wallet::balanceUpdated, [this](std::string walletId) {
       emit walletBalanceUpdated(walletId); });
-   connect(wallet.get(), &Wallet::balanceChanged, [this](std::string walletId, std::vector<uint64_t>) {
+   connect(wallet.get(), &Wallet::balanceChanged, [this](std::string walletId) {
       emit walletBalanceChanged(walletId); });
 }
 
@@ -253,9 +243,9 @@ void WalletsManager::setSettlementWallet(const std::shared_ptr<bs::sync::Settlem
    connect(wallet.get(), &Wallet::walletReady, this, &WalletsManager::onWalletReady);
    connect(wallet.get(), &Wallet::addressAdded, [this] { emit walletChanged(); });
    connect(wallet.get(), &Wallet::walletReset, [this] { emit walletChanged(); });
-   connect(wallet.get(), &Wallet::balanceUpdated, [this](std::string walletId, std::vector<uint64_t>) {
+   connect(wallet.get(), &Wallet::balanceUpdated, [this](std::string walletId) {
       emit walletBalanceUpdated(walletId); });
-   connect(wallet.get(), &Wallet::balanceChanged, [this](std::string walletId, std::vector<uint64_t>) {
+   connect(wallet.get(), &Wallet::balanceChanged, [this](std::string walletId) {
       emit walletBalanceChanged(walletId); });
 }
 
@@ -491,11 +481,30 @@ void WalletsManager::onNewBlock()
 
 void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
 {
-   if (!online) {
+   if (pendingRegIds_.empty()) {
+      return;
+   }
+   bool idFound = false;
+   for (const auto &id : ids) {
+      const auto &itId = pendingRegIds_.find(id.toBinStr());
+      if (itId != pendingRegIds_.end()) {
+         idFound = true;
+         pendingRegIds_.erase(itId);
+      }
+   }
+   if (!online || !idFound) {
       return;
    }
    if (settlementWallet_) {   //TODO: check for refresh id
       settlementWallet_->refreshWallets(ids);
+   }
+
+   if (pendingRegIds_.empty()) {
+      logger_->debug("[{}] all pending registrations are refreshed", __func__);
+      trackAddressChainUse([this](bool result) {
+         logger_->debug("[WalletsManager] address chain use result: {}", result);
+      });
+      updateWallets();
    }
 
    emit blockchainEvent();
@@ -504,8 +513,8 @@ void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
 void WalletsManager::onStateChanged(ArmoryConnection::State state)
 {
    if (state == ArmoryConnection::State::Ready) {
-      logger_->debug("[WalletsManager::{}] - DB ready", __func__);
-      resumeRescan();
+      logger_->debug("[{}] DB ready", __func__);
+//      resumeRescan();
       updateWallets();
       emit walletsReady();
    }
@@ -637,28 +646,24 @@ bool WalletsManager::deleteWallet(const HDWalletPtr &wallet)
    return result;
 }
 
-std::vector<std::string> WalletsManager::registerWallets()
+void WalletsManager::registerWallets()
 {
-   std::vector<std::string> result;
    if (!armory_) {
-      return result;
+      return;
    }
    if (empty()) {
       logger_->debug("[WalletsManager::{}] - No wallets to register.", __func__);
-      return result;
+      return;
    }
-   for (auto &it : wallets_) 
-   {
+   for (auto &it : wallets_) {
       auto&& ids = it.second->registerWallet(armory_);
-      result.insert(result.end(), ids.begin(), ids.end());
+      pendingRegIds_.insert(ids.begin(), ids.end());
    }
-   if (settlementWallet_) 
-   {
+   if (settlementWallet_) {
       auto&& ids = settlementWallet_->registerWallet(armory_);
-      result.insert(result.end(), ids.begin(), ids.end());
+      pendingRegIds_.insert(ids.begin(), ids.end());
    }
-
-   return result;
+   logger_->debug("[{}] {} entries in pendingRegIds", __func__, pendingRegIds_.size());
 }
 
 void WalletsManager::unregisterWallets()
@@ -673,20 +678,13 @@ void WalletsManager::unregisterWallets()
 
 void WalletsManager::updateWallets(bool force)
 {
-   /***
-   This code is triggered without checking if the wallets are actually
-   registered. Such a common event as NewBlock will trigger this, while
-   the trigger itself is a Qt signal connected to WalletsManager. In 
-   other words, there is not even an attempt to check that the underlying
-   wallets are registered, as adding a new wallet object to the 
-   WalletsManager object while online but before registering said wallet 
-   will trigger a DB side "unknown wallet" error from this call, which
-   may or may not be handled gracefully on this end.
-   ***/
+   logger_->debug("[{}] {}", __func__, force);
    for (auto &it : wallets_) {
-      it.second->firstInit(force);
+      if (it.second->isRegistered()) {
+         it.second->firstInit(force);
+      }
    }
-   if (settlementWallet_) {
+   if (settlementWallet_ && settlementWallet_->isRegistered()) {
       settlementWallet_->firstInit(force);
    }
 }
@@ -766,7 +764,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
          }
          for (const auto idx : itIdx->second) {
             TxOut prevOut = prevTx.getTxOutCopy((int)idx);
-            const bs::Address addr(prevOut.getScrAddressStr());
+            const auto addr = bs::Address::fromTxOut(prevOut);
             const auto &addrWallet = getWalletByAddress(addr);
             ((addrWallet == wallet) ? ourIns : otherIns) = true;
             if (addrWallet && (addrWallet->type() == bs::core::wallet::Type::ColorCoin)) {
@@ -869,7 +867,7 @@ bool WalletsManager::getTransactionMainAddress(const Tx &tx, const std::string &
    for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
       TxOut out = tx.getTxOutCopy((int)i);
       const auto addr = bs::Address::fromTxOut(out);
-      bool isOurs = (getWalletByAddress(addr.id()) == wallet);
+      bool isOurs = (getWalletByAddress(addr) == wallet);
       if ((isOurs == isReceiving) || (isOurs && isSettlement)) {
          addresses.insert(addr);
       }
@@ -1011,7 +1009,7 @@ void WalletsManager::onWalletsListUpdated()
             QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletCreated(hdWallet); });
             logger_->debug("[WalletsManager::onWalletsListUpdated] found new wallet {} "
                "- starting address scan for it", hdWalletId);
-            startWalletRescan(hdWallet);
+//            startWalletRescan(hdWallet);
          }
       }
       for (const auto &hdWalletId : hdWalletIds) {
@@ -1019,6 +1017,7 @@ void WalletsManager::onWalletsListUpdated()
             QMetaObject::invokeMethod(this, [this, hdWalletId] { emit walletDeleted(hdWalletId); });
          }
       }
+      logger_->debug("[WalletsManager] wallets list updated");
       registerWallets();
    };
    reset();
@@ -1209,8 +1208,15 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
       }
       invokeFeeCallbacks(blocks, feePerByte_[blocks]);
    };
-   armory_->estimateFee(blocks, cbFee);
-   return true;
+   return armory_->estimateFee(blocks, cbFee);
+}
+
+bool WalletsManager::getFeeSchedule(const std::function<void(const std::map<unsigned int, float> &)> &cb)
+{
+   if (!armory_) {
+      return false;
+   }
+   return armory_->getFeeSchedule(cb);
 }
 
 void WalletsManager::resumeRescan()
@@ -1293,8 +1299,7 @@ void WalletsManager::trackAddressChainUse(
 
    auto ctr = std::make_shared<std::atomic<unsigned>>(0);
    auto wltCount = wallets_.size();
-   auto state = std::make_shared<bs::sync::SyncState>(
-      bs::sync::SyncState::SyncState_NothingToDo);
+   auto state = std::make_shared<bs::sync::SyncState>(bs::sync::SyncState::NothingToDo);
 
    for (auto &it : wallets_)
    {
@@ -1302,13 +1307,13 @@ void WalletsManager::trackAddressChainUse(
       {
          switch (st)
          {
-         case bs::sync::SyncState::SyncState_Failure:
+         case bs::sync::SyncState::Failure:
             *state = st;
             break;
 
-         case bs::sync::SyncState::SyncState_Success:
+         case bs::sync::SyncState::Success:
          {
-            if (*state == bs::sync::SyncState::SyncState_NothingToDo)
+            if (*state == bs::sync::SyncState::NothingToDo)
                *state = st;
             break;
          }
@@ -1321,13 +1326,13 @@ void WalletsManager::trackAddressChainUse(
          {
             switch (*state)
             {
-            case bs::sync::SyncState::SyncState_Failure:
+            case bs::sync::SyncState::Failure:
             {
                cb(false);
                return;
             }
 
-            case bs::sync::SyncState::SyncState_Success:
+            case bs::sync::SyncState::Success:
             {
                auto progLbd = [cb](int curr, int tot)->void
                {

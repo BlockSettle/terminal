@@ -857,21 +857,26 @@ void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
 
 bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
 {
-   bs::Address result;
    if (transactionData_->GetTransactionSummary().hasChange) {
       if (changeAddressFixed_) {
-         result = selectedChangeAddress_;
+         return selectedChangeAddress_;
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
-         result = transactionData_->getWallet()->getNewChangeAddress(
-            ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
-         transactionData_->getWallet()->setAddressComment(result, bs::sync::wallet::Comment::toString(
-            bs::sync::wallet::Comment::ChangeAddress));
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [this, promAddr](const bs::Address &addr) {
+            transactionData_->getWallet()->setAddressComment(addr
+               , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
+            promAddr->set_value(addr);
+         };
+         transactionData_->getWallet()->getNewChangeAddress(cbAddr
+            , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
+         return futAddr.get();
       } else {
-         result = selectedChangeAddress_;
+         return selectedChangeAddress_;
       }
    }
-   return result;
+   return {};
 }
 
 void CreateTransactionDialogAdvanced::onCreatePressed()
