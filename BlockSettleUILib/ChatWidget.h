@@ -31,7 +31,6 @@ class ChatClient;
 class ConnectionManager;
 class ApplicationSettings;
 class ChatWidgetState;
-class ChatSearchPopup;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
 class CelerClient;
@@ -142,10 +141,8 @@ private:
 
    std::string serverPublicKey_;
    QString  currentChat_;
-   ChatSearchPopup *popup_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   QTimer *popupVisibleTimer_;
    bool isChatMessagesSelected_;
 
 private:
@@ -166,8 +163,7 @@ private:
    bool isRoom();
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
-   void initPopup();
-   void setPopupVisible(const bool &value);
+   void initSearchWidget();
 
    bool eventFilter(QObject *sender, QEvent *event) override;
 
