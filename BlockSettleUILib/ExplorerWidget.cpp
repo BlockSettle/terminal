@@ -12,8 +12,8 @@
 // Overloaded constuctor. Does basic setup and Qt signal connection.
 ExplorerWidget::ExplorerWidget(QWidget *parent) :
    TabWithShortcut(parent)
-   , expTimer_(new QTimer)
    , ui_(new Ui::ExplorerWidget())
+   , expTimer_(new QTimer)
    , searchHistoryPosition_(-1)
 {
    ui_->setupUi(this);
