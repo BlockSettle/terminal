@@ -27,6 +27,47 @@ SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::l
 
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
 {
+   QMetaObject::invokeMethod(this, [this, data] {
+      processData(data);
+   });
+}
+
+void SignerInterfaceListener::OnConnected()
+{
+   logger_->info("[SignerInterfaceListener] connected");
+   send(signer::HeadlessReadyType, "");
+}
+
+void SignerInterfaceListener::OnDisconnected()
+{
+   // Signer interface should not be used without signer, we could quit safely
+   logger_->info("[SignerInterfaceListener] disconnected, shutdown");
+   shutdown();
+}
+
+void SignerInterfaceListener::OnError(DataConnectionError errorCode)
+{
+   logger_->info("[SignerInterfaceListener] error {}, shutdown", errorCode);
+   shutdown();
+}
+
+bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
+{
+   logger_->debug("send packet {}", signer::PacketType_Name(pt));
+
+   const auto reqId = seq_++;
+   signer::Packet packet;
+   packet.set_id(reqId);
+   packet.set_type(pt);
+   packet.set_data(data);
+   if (!connection_->send(packet.SerializeAsString())) {
+      return 0;
+   }
+   return reqId;
+}
+
+void SignerInterfaceListener::processData(const std::string &data)
+{
    signer::Packet packet;
    if (!packet.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse packet", __func__);
@@ -106,40 +147,6 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
    }
-}
-
-void SignerInterfaceListener::OnConnected()
-{
-   logger_->info("[SignerInterfaceListener] connected");
-   send(signer::HeadlessReadyType, "");
-}
-
-void SignerInterfaceListener::OnDisconnected()
-{
-   // Signer interface should not be used without signer, we could quit safely
-   logger_->info("[SignerInterfaceListener] disconnected, shutdown");
-   shutdown();
-}
-
-void SignerInterfaceListener::OnError(DataConnectionError errorCode)
-{
-   logger_->info("[SignerInterfaceListener] error {}, shutdown", errorCode);
-   shutdown();
-}
-
-bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
-{
-   logger_->debug("send packet {}", signer::PacketType_Name(pt));
-
-   const auto reqId = seq_++;
-   signer::Packet packet;
-   packet.set_id(reqId);
-   packet.set_type(pt);
-   packet.set_data(data);
-   if (!connection_->send(packet.SerializeAsString())) {
-      return 0;
-   }
-   return reqId;
 }
 
 void SignerInterfaceListener::onReady(const std::string &data)
