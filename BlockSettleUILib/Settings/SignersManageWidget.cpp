@@ -50,13 +50,7 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
       resetForm();
 
       // save to settings right after row highlight
-      if (!ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
-         int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
-
-         if (index < signersProvider_->signers().size()) {
-            signersProvider_->setupSigner(index, false);
-         }
-      }
+      setupSignerFromSelected(false);
    });
 
    resetForm();
@@ -164,16 +158,7 @@ void SignerKeysWidget::resetForm()
 
 void SignerKeysWidget::onSelect()
 {
-   if (ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
-      return;
-   }
-
-   int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
-   if (index >= signersProvider_->signers().size()) {
-      return;
-   }
-
-   signersProvider_->setupSigner(index);
+   setupSignerFromSelected(true);
 }
 
 void SignerKeysWidget::onKeyImport()
@@ -189,4 +174,16 @@ void SignerKeysWidget::onKeyImport()
    }
 }
 
+void SignerKeysWidget::setupSignerFromSelected(bool save)
+{
+   if (ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
+      return;
+   }
 
+   int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
+   if (index >= signersProvider_->signers().size()) {
+      return;
+   }
+
+   signersProvider_->setupSigner(index, save);
+}

@@ -11,6 +11,7 @@
 SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    : SettingsPage{parent}
    , ui_{new Ui::SignerSettingsPage{}}
+   , reset_{false}
 {
    ui_->setupUi(this);
    ui_->widgetTwoWayAuth->hide();
@@ -66,7 +67,9 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
 
 void SignerSettingsPage::display()
 {
-   const auto modeIndex = appSettings_->get<int>(ApplicationSettings::signerRunMode);
+   const auto modeIndex = reset_
+         ? appSettings_->get<int>(ApplicationSettings::signerRunMode)
+         : ui_->comboBoxRunMode->currentIndex() + 1;
    SignContainer::OpMode opMode = static_cast<SignContainer::OpMode>(modeIndex);
    onModeChanged(opMode);
    ui_->comboBoxRunMode->setCurrentIndex(modeIndex - 1);
@@ -75,6 +78,7 @@ void SignerSettingsPage::display()
 
 void SignerSettingsPage::reset()
 {
+   reset_ = true;
    for (const auto &setting : {ApplicationSettings::signerRunMode
       , ApplicationSettings::localSignerPort, ApplicationSettings::signerOfflineDir
       , ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
@@ -82,6 +86,7 @@ void SignerSettingsPage::reset()
       appSettings_->reset(setting, false);
    }
    display();
+   reset_ = false;
 }
 
 void SignerSettingsPage::showHost(bool show)
@@ -174,4 +179,14 @@ void SignerSettingsPage::initSettings()
    ui_->comboBoxRemoteSigner->setModel(signersModel_);
 
    connect(signersProvider_.get(), &SignersProvider::dataChanged, this, &SignerSettingsPage::display);
+}
+
+void SignerSettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
+                              , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+                              , const std::shared_ptr<SignersProvider> &signersProvider
+                              , std::shared_ptr<SignContainer> signContainer)
+{
+   reset_ = true;
+   SettingsPage::init(appSettings, armoryServersProvider, signersProvider, signContainer);
+   reset_ = false;
 }

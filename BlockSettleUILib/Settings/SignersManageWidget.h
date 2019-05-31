@@ -32,6 +32,9 @@ public slots:
 signals:
    void needClose();
 
+private:
+   void setupSignerFromSelected(bool save);
+
 private slots:
    void resetForm();
 
