@@ -28,6 +28,7 @@
 #include <QQmlContext>
 #include <QGuiApplication>
 #include <QSplashScreen>
+#include <QQuickWindow>
 
 #include <spdlog/spdlog.h>
 
@@ -242,7 +243,14 @@ void QMLAppObj::SetRootObject(QObject *obj)
 void QMLAppObj::raiseQmlWindow()
 {
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   auto window = qobject_cast<QQuickWindow*>(rootObj_);
+   if (window) {
+      window->setWindowState(Qt::WindowMinimized);
+   }
    QGuiApplication::processEvents();
+   if (window) {
+      window->setWindowState(Qt::WindowActive);
+   }
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
 }
 
