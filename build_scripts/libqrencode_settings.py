@@ -49,6 +49,8 @@ class LibQREncode(Configurator):
         if self._project_settings.get_link_mode() == "shared":
             command.append('-DBUILD_SHARED_LIBS=YES')
 
+        command.append('-DCMAKE_INSTALL_PREFIX=' + self.get_install_dir())
+
         result = subprocess.call(command)
 
         return result == 0
@@ -95,22 +97,10 @@ class LibQREncode(Configurator):
 
     def make_x(self):
         command = ['make', '-j', str(multiprocessing.cpu_count())]
-
         result = subprocess.call(command)
         return result == 0
 
     def install_x(self):
-        lib_dir = self.get_build_dir()
-        include_dir = self.get_unpacked_sources_dir()
-
-        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-        install_include_dir = os.path.join(self.get_install_dir(), 'include')
-
-        if self._project_settings.get_link_mode() == 'shared':
-            self.filter_copy(lib_dir, install_lib_dir, '.so', False)
-        else:
-            self.filter_copy(lib_dir, install_lib_dir, '.a')
-
-        self.filter_copy(include_dir, install_include_dir, '.h')
-
-        return True
+        command = ['make', 'install']
+        result = subprocess.call(command)
+        return result == 0
