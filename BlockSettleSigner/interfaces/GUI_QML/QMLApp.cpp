@@ -92,7 +92,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
          if (splashScreen_) {
-            splashScreen_->close();
+            splashScreen_->deleteLater();
             splashScreen_ = nullptr;
          }
       }
@@ -144,7 +144,7 @@ void QMLAppObj::onWalletsSynced()
 {
    logger_->debug("[{}]", __func__);
    if (splashScreen_) {
-      splashScreen_->close();
+      splashScreen_->deleteLater();
       splashScreen_ = nullptr;
    }
    walletsModel_->setWalletsManager(walletsMgr_);
