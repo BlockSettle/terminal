@@ -74,6 +74,9 @@ public:
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
+   void OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &) override;
+   void OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &) override;
+   void OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -318,4 +321,8 @@ private:
 public:
    void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
 };
+
+
+
+
 #endif   // CHAT_CLIENT_H

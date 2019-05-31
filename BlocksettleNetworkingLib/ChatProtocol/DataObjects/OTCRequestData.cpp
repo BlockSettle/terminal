@@ -1,5 +1,5 @@
 #include "OTCRequestData.h"
-
+#include "../ProtocolDefinitions.h"
 #include <QDateTime>
 
 namespace Chat {
@@ -7,13 +7,42 @@ namespace Chat {
 QJsonObject OTCRequestData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
+   data[OTCRequestIdClientKey] = clientRequestId_;
+   data[OTCRequestIdServerKey] = serverRequestId_;
+   data[OTCRequestorIdKey] = requestorId_;
+   data[OTCTargetIdKey] = targetId_;
+   data[OTCSubmitTimestampKey] = QString::number(submitTimestamp_);
+   data[OTCExpiredTimestampKey] = QString::number(expireTimestamp_);
+   data[OTCRqSideKey] = static_cast<int>(otcRequest_.side);
+   data[OTCRqRangeIdKey] = static_cast<int>(otcRequest_.amountRange);
 
    return data;
 }
 
 std::shared_ptr<OTCRequestData> OTCRequestData::fromJSON(const std::string& jsonData)
 {
-   return nullptr;
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+
+   QString clientRequestId = data[OTCRequestIdClientKey].toString();
+   QString serverRequestId = data[OTCRequestIdServerKey].toString();
+   QString requestorId = data[OTCRequestorIdKey].toString();
+   QString targetId = data[OTCTargetIdKey].toString();
+   uint64_t submitTimestamp = data[OTCSubmitTimestampKey].toString().toULongLong();
+   uint64_t expireTimestamp = data[OTCExpiredTimestampKey].toString().toULongLong();
+   bs::network::ChatOTCSide::Type side =
+         static_cast<bs::network::ChatOTCSide::Type>(data[OTCRqSideKey].toInt());
+   bs::network::OTCRangeID::Type range =
+         static_cast<bs::network::OTCRangeID::Type>(data[OTCRqRangeIdKey].toInt());
+
+   bs::network::OTCRequest otcRq{side, range, false, false};
+
+   return std::make_shared<OTCRequestData>(clientRequestId,
+                                           serverRequestId,
+                                           requestorId,
+                                           targetId,
+                                           submitTimestamp,
+                                           expireTimestamp,
+                                           otcRq);
 }
 
 OTCRequestData::OTCRequestData(const QString& clientRequestId
@@ -79,5 +108,15 @@ const bs::network::OTCRequest& OTCRequestData::otcRequest() const
    return otcRequest_;
 }
 
-//namespace Chat end
+void OTCRequestData::setServerRequestId(const QString &serverRequestId)
+{
+    serverRequestId_ = serverRequestId;
 }
+
+void OTCRequestData::setExpireTimestamp(const uint64_t &expireTimestamp)
+{
+    expireTimestamp_ = expireTimestamp;
+}
+
+//namespace Chat end
+    }
