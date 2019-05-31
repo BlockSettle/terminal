@@ -3,7 +3,7 @@ Version: 0.15.15
 Section: x11
 Priority: optional
 Architecture: amd64
-Depends: libc6 (>= 2.3.5-1), libstdc++6 (>= 6.3.0), libx11-xcb1 (>= 2:1.6.0),
+Depends: desktop-file-utils, libc6 (>= 2.3.5-1), libstdc++6 (>= 6.3.0), libx11-xcb1 (>= 2:1.6.0),
          zlib1g (>= 1:1.2.1), libxcb-xinerama0 (>= 1.10),
          xdg-utils, libx11-6, libxcb-xkb1, libxcb-render-util0, libxcb-xfixes0,
          libxcb-randr0, libxcb-image0, libxcb-keysyms1, libxcb-icccm4,
