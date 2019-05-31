@@ -10,6 +10,7 @@
 #include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatTreeModelWrapper.h"
+#include "CelerClient.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -34,7 +35,8 @@ enum class OTCPages : int
    OTCPullOwnOTCRequestPage,
    OTCCreateResponsePage,
    OTCNegotiateRequestPage,
-   OTCNegotiateResponsePage
+   OTCNegotiateResponsePage,
+   OTCParticipantShieldPage
 };
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
@@ -300,6 +302,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
    connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
    connect(client_.get(), &ChatClient::ContactRequestAccepted, this, &ChatWidget::onContactRequestAccepted);
+   connect(client_.get(), &ChatClient::RoomsInserted, this, &ChatWidget::selectGlobalRoom);
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const QString &userId) {
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {userId});
    });
@@ -490,6 +493,11 @@ void ChatWidget::switchToChat(const QString& chatId)
    onUserClicked(chatId);
 }
 
+void ChatWidget::setCelerClient(std::shared_ptr<CelerClient> celerClient)
+{
+   celerClient_ = celerClient;
+}
+
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
@@ -522,7 +530,6 @@ void ChatWidget::onSearchUserTextEdited(const QString& text)
 void ChatWidget::onConnectedToServer()
 {
    changeState(State::LoggedIn);
-   connect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
 }
 
 void ChatWidget::onContactRequestAccepted(const QString &userId)
@@ -693,8 +700,15 @@ void ChatWidget::OTCSwitchToCommonRoom()
 {
    const auto currentSeletion = ui_->treeViewOTCRequests->selectionModel()->selection();
    if (currentSeletion.indexes().isEmpty()) {
-      DisplayCorrespondingOTCRequestWidget();
-   } else {
+      // OTC available only for trading and dealing participants
+      if (celerClient_ && (celerClient_->celerUserType() == CelerClient::CelerUserType::Dealing || celerClient_->celerUserType() == CelerClient::CelerUserType::Trading)) {
+         DisplayCorrespondingOTCRequestWidget();
+      }
+      else {
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCParticipantShieldPage));
+      }
+   } 
+   else {
       ui_->treeViewOTCRequests->selectionModel()->clearSelection();
    }
 }
@@ -878,21 +892,21 @@ void ChatWidget::onNewMessagesPresent(std::map<QString, std::shared_ptr<Chat::Me
 
 void ChatWidget::selectGlobalRoom()
 {
-   // find all indexes
-   QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
-                                                               Qt::DisplayRole,
-                                                               QLatin1String("*"),
-                                                               -1,
-                                                               Qt::MatchWildcard|Qt::MatchRecursive);
-
-   // select Global room
-   for (auto index : indexes) {
-      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
-         if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey) {
-            disconnect(ui_->treeViewUsers->model(), &QAbstractItemModel::dataChanged, this, &ChatWidget::selectGlobalRoom);
-            onRoomClicked(Chat::GlobalRoomKey);
-            ui_->treeViewUsers->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            break;
+   if (currentChat_.isEmpty()) {
+      // find all indexes
+      QModelIndexList indexes = ui_->treeViewUsers->model()->match(ui_->treeViewUsers->model()->index(0,0),
+                                                                  Qt::DisplayRole,
+                                                                  QLatin1String("*"),
+                                                                  -1,
+                                                                  Qt::MatchWildcard|Qt::MatchRecursive);
+      // select Global room
+      for (auto index : indexes) {
+         if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
+            if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey) {
+               ui_->treeViewUsers->setCurrentIndex(index);
+               onRoomClicked(Chat::GlobalRoomKey);
+               break;
+            }
          }
       }
    }

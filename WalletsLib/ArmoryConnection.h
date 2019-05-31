@@ -86,7 +86,7 @@ public:
    unsigned int topBlock() const { return topBlock_; }
 
    using RegisterWalletCb = std::function<void(const std::string &regId)>;
-   using WalletsHistoryCb = std::function<void (const std::vector<ClientClasses::LedgerEntry>&)>;
+   using WalletsHistoryCb = std::function<void(const std::vector<ClientClasses::LedgerEntry>&)>;
    using LedgerDelegateCb = std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>;
 
    virtual std::string registerWallet(const std::string &walletId
@@ -171,7 +171,6 @@ protected:
    std::unordered_map<
       std::string, std::function<void(const std::string &)>> registrationCallbacks_;
    std::mutex registrationCallbacksMutex_;
-//   std::unordered_map<std::string, RegisterWalletCb>  preOnlineRegIds_;
 
    mutable std::atomic_flag      txCbLock_ = ATOMIC_FLAG_INIT;
    std::map<BinaryData, std::vector<TxCb>>   txCallbacks_;

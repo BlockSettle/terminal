@@ -15,8 +15,6 @@ class PublisherConnection;
 class ServerConnection;
 class SubscriberConnection;
 class ZmqContext;
-class ZmqSecuredDataConnection;
-class ZmqSecuredServerConnection;
 class QNetworkAccessManager;
 class ZmqBIP15XDataConnection;
 class ZmqBIP15XServerConnection;
@@ -47,9 +45,6 @@ public:
    std::shared_ptr<DataConnection>     CreateGenoaClientConnection(
       bool monitored = false) const;
 
-   std::shared_ptr<ZmqSecuredServerConnection>  CreateSecuredServerConnection() const;
-   std::shared_ptr<ZmqSecuredDataConnection>    CreateSecuredDataConnection(
-      bool monitored = false) const;
    std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
       bool ephemeral = true, const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = "", bool makeClientCookie = false

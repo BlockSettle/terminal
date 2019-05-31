@@ -250,8 +250,6 @@ namespace bs {
          virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
          virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
 
-         virtual void setChainCode(const BinaryData &) {}
-
          bool operator ==(const Wallet &w) const { return (w.walletId() == walletId()); }
          bool operator !=(const Wallet &w) const { return (w.walletId() != walletId()); }
 

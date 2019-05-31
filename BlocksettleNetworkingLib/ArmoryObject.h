@@ -21,6 +21,7 @@ public:
    std::string registerWallet(const std::string &walletId
       , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &
       , bool asNew = false) override;
+
    bool getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &) override;
 
    // If context is not null and cbInMainThread is true then the callback will be called
