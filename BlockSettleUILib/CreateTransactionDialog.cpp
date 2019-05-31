@@ -50,8 +50,8 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    , armory_(armory)
    , walletsManager_(walletManager)
    , signContainer_(container)
-   , loadFeeSuggestions_(loadFeeSuggestions)
    , logger_(logger)
+   , loadFeeSuggestions_(loadFeeSuggestions)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
