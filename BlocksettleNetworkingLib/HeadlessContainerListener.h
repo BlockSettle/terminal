@@ -108,7 +108,7 @@ private:
 
    bool AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
-      , const std::string &error, const BinaryData &tx = {}, bool cancelledByUser = false);
+      , bs::sync::TxErrorCode errorCode, const BinaryData &tx = {});
    void CreateHDWalletResponse(const std::string &clientId, unsigned int id, const std::string &errorOrWalletId
       , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}
       , const std::shared_ptr<bs::core::hd::Wallet> &wallet = nullptr);
@@ -124,7 +124,7 @@ private:
    bool CreateHDWallet(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDWallet &request
       , NetworkType, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
-      , const std::string &prompt, const PasswordReceivedCb &cb, bool autoSign);
+      , const std::string &prompt, const PasswordReceivedCb &cb);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
       , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
       , const std::string &prompt, const PasswordsReceivedCb &cb);

@@ -85,6 +85,21 @@ namespace sync {
       std::string comment;
    };
 
+   enum class TxErrorCode
+   {
+      NoError = 0,
+      Canceled,
+      SpendLimitExceed,
+      FailedToParse,
+      InvalidTxRequest,
+      WalletNotFound,
+      MissingPassword,
+      MissingAuthKeys,
+      MissingSettlementWallet,
+      MissingAuthWallet,
+      InternalError
+   };
+
    struct WalletData
    {
       std::vector<bs::wallet::EncryptionType>   encryptionTypes;

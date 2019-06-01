@@ -72,12 +72,12 @@ public:
    virtual bool Disconnect() { return true; }
 
    virtual bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
+      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) = 0;
    virtual bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, const PasswordType& password = {}) = 0;
+      , const PasswordType& password = {}) = 0;
    virtual bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::Address &authAddr, const std::string &settlementId, bool autoSign = false
+      , const bs::Address &authAddr, const std::string &settlementId
       , const PasswordType& password = {}) = 0;
 
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
@@ -127,7 +127,7 @@ signals:
    void connectionError(ConnectionError error, const QString &details);
    void ready();
    void Error(bs::signer::RequestId id, std::string error);
-   void TXSigned(bs::signer::RequestId id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void TXSigned(bs::signer::RequestId id, BinaryData signedTX, bs::sync::TxErrorCode result);
 
    void PasswordRequested(bs::hd::WalletInfo walletInfo, std::string prompt);
 

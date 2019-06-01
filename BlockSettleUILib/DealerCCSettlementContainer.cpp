@@ -27,7 +27,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
 {
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerCCSettlementContainer::onTXSigned);
+   //connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerCCSettlementContainer::onTXSigned);
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 
@@ -122,7 +122,7 @@ bool DealerCCSettlementContainer::accept(const SecureBinaryData &password)
    txReq.inputs = utxoAdapter_->get(id());
    logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
       , wallet_->name(), txReq.inputs.size());
-   signId_ = signingContainer_->signPartialTXRequest(txReq, autoSign_, password);
+   //signId_ = signingContainer_->signPartialTXRequest(txReq, autoSign_, password);
    emit info(tr("Waiting for TX half signing..."));
    return true;
 }

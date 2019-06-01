@@ -271,10 +271,10 @@ void HeadlessContainer::ProcessSignTXResponse(unsigned int id, const std::string
    headless::SignTXReply response;
    if (!response.ParseFromString(data)) {
       logger_->error("[HeadlessContainer] Failed to parse SignTXReply");
-      emit TXSigned(id, {}, "failed to parse", false);
+      emit TXSigned(id, {}, bs::sync::TxErrorCode::FailedToParse);
       return;
    }
-   emit TXSigned(id, response.signedtx(), response.error(), response.cancelledbyuser());
+   emit TXSigned(id, response.signedtx(), static_cast<bs::sync::TxErrorCode>(response.errorcode()));
 }
 
 void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
@@ -398,7 +398,7 @@ void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::stri
 }
 
 bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password
+   , SignContainer::TXSignMode mode, const PasswordType& password
    , bool keepDuplicatedRecipients)
 {
    if (!txSignReq.isValid()) {
@@ -408,9 +408,9 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
    headless::SignTXRequest request;
    request.set_walletid(txSignReq.walletId);
    request.set_keepduplicatedrecipients(keepDuplicatedRecipients);
-   if (autoSign) {
-      request.set_applyautosignrules(true);
-   }
+//   if (autoSign) {
+//      request.set_applyautosignrules(true);
+//   }
    if (txSignReq.populateUTXOs) {
       request.set_populateutxos(true);
    }
@@ -464,14 +464,14 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
 }
 
 unsigned int HeadlessContainer::signPartialTXRequest(const bs::core::wallet::TXSignRequest &req
-   , bool autoSign, const PasswordType& password)
+   , const PasswordType& password)
 {
-   return signTXRequest(req, autoSign, TXSignMode::Partial, password);
+   return signTXRequest(req, TXSignMode::Partial, password);
 }
 
 bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::Address &authAddr, const std::string &settlementId
-   , bool autoSign, const PasswordType& password)
+   , const PasswordType& password)
 {
    if ((txSignReq.inputs.size() != 1) || (txSignReq.recipients.size() != 1) || settlementId.empty()) {
       logger_->error("[HeadlessContainer] Invalid PayoutTXSignRequest");
@@ -482,9 +482,9 @@ bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wal
    request.set_recipient(txSignReq.recipients[0]->getSerializedScript().toBinStr());
    request.set_authaddress(authAddr.display());
    request.set_settlementid(settlementId);
-   if (autoSign) {
-      request.set_applyautosignrules(autoSign);
-   }
+//   if (autoSign) {
+//      request.set_applyautosignrules(autoSign);
+//   }
 
    if (!password.isNull()) {
       request.set_password(password.toHexStr());
@@ -1235,11 +1235,11 @@ void RemoteSigner::onDisconnected()
    woWallets_.clear();
 
    // signRequests_ will be empty after that
-   std::set<bs::signer::RequestId> tmpReqs = std::move(signRequests_);
+//   std::set<bs::signer::RequestId> tmpReqs = std::move(signRequests_);
 
-   for (const auto &id : tmpReqs) {
-      emit TXSigned(id, {}, "signer disconnected", false);
-   }
+//   for (const auto &id : tmpReqs) {
+//      emit TXSigned(id, {}, "signer disconnected", false);
+//   }
 
    emit disconnected();
 
@@ -1336,91 +1336,94 @@ QString RemoteSigner::targetDir() const
 }
 
 bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password
+   , SignContainer::TXSignMode mode, const PasswordType& password
    , bool keepDuplicatedRecipients)
 {
    if (isWalletOffline(txSignReq.walletId)) {
       return signOffline(txSignReq);
    }
-   return HeadlessContainer::signTXRequest(txSignReq, autoSign, mode, password, keepDuplicatedRecipients);
+   return HeadlessContainer::signTXRequest(txSignReq, mode, password, keepDuplicatedRecipients);
 }
 
 bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRequest &txSignReq)
 {
-   if (!txSignReq.isValid()) {
-      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
-      return 0;
-   }
+   // Offline signing deprecated???
+   return  0;
 
-   Blocksettle::Storage::Signer::TXRequest request;
-   request.set_walletid(txSignReq.walletId);
+//   if (!txSignReq.isValid()) {
+//      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+//      return 0;
+//   }
 
-   for (const auto &utxo : txSignReq.inputs) {
-      auto input = request.add_inputs();
-      input->set_utxo(utxo.serialize().toBinStr());
-      const auto addr = bs::Address::fromUTXO(utxo);
-      input->mutable_address()->set_address(addr.display());
-   }
+//   Blocksettle::Storage::Signer::TXRequest request;
+//   request.set_walletid(txSignReq.walletId);
 
-   for (const auto &recip : txSignReq.recipients) {
-      request.add_recipients(recip->getSerializedScript().toBinStr());
-   }
+//   for (const auto &utxo : txSignReq.inputs) {
+//      auto input = request.add_inputs();
+//      input->set_utxo(utxo.serialize().toBinStr());
+//      const auto addr = bs::Address::fromUTXO(utxo);
+//      input->mutable_address()->set_address(addr.display());
+//   }
 
-   if (txSignReq.fee) {
-      request.set_fee(txSignReq.fee);
-   }
-   if (txSignReq.RBF) {
-      request.set_rbf(true);
-   }
+//   for (const auto &recip : txSignReq.recipients) {
+//      request.add_recipients(recip->getSerializedScript().toBinStr());
+//   }
 
-   if (txSignReq.change.value) {
-      auto change = request.mutable_change();
-      change->mutable_address()->set_address(txSignReq.change.address.display());
-      change->mutable_address()->set_index(txSignReq.change.index);
-      change->set_value(txSignReq.change.value);
-   }
+//   if (txSignReq.fee) {
+//      request.set_fee(txSignReq.fee);
+//   }
+//   if (txSignReq.RBF) {
+//      request.set_rbf(true);
+//   }
 
-   if (!txSignReq.comment.empty()) {
-      request.set_comment(txSignReq.comment);
-   }
+//   if (txSignReq.change.value) {
+//      auto change = request.mutable_change();
+//      change->mutable_address()->set_address(txSignReq.change.address.display());
+//      change->mutable_address()->set_index(txSignReq.change.index);
+//      change->set_value(txSignReq.change.value);
+//   }
 
-   Blocksettle::Storage::Signer::File fileContainer;
-   auto container = fileContainer.add_payload();
-   container->set_type(Blocksettle::Storage::Signer::RequestFileType);
-   container->set_data(request.SerializeAsString());
+//   if (!txSignReq.comment.empty()) {
+//      request.set_comment(txSignReq.comment);
+//   }
 
-   const auto timestamp = std::to_string(QDateTime::currentDateTime().toSecsSinceEpoch());
-   const auto targetDir = appSettings_->get<std::string>(ApplicationSettings::signerOfflineDir);
-   const std::string fileName = targetDir + "/" + txSignReq.walletId + "_" + timestamp + ".bin";
+//   Blocksettle::Storage::Signer::File fileContainer;
+//   auto container = fileContainer.add_payload();
+//   container->set_type(Blocksettle::Storage::Signer::RequestFileType);
+//   container->set_data(request.SerializeAsString());
 
-   const auto reqId = listener_->newRequestId();
-   QFile f(QString::fromStdString(fileName));
-   if (f.exists()) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "request file " + fileName + " already exists", false);
-      });
-      return reqId;
-   }
-   if (!f.open(QIODevice::WriteOnly)) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "failed to open " + fileName + " for writing", false);
-      });
-      return reqId;
-   }
+//   const auto timestamp = std::to_string(QDateTime::currentDateTime().toSecsSinceEpoch());
+//   const auto targetDir = appSettings_->get<std::string>(ApplicationSettings::signerOfflineDir);
+//   const std::string fileName = targetDir + "/" + txSignReq.walletId + "_" + timestamp + ".bin";
 
-   const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
-   if (f.write(data) != data.size()) {
-      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "failed to write to " + fileName, false);
-      });
-      return reqId;
-   }
-   f.close();
+//   const auto reqId = listener_->newRequestId();
+//   QFile f(QString::fromStdString(fileName));
+//   if (f.exists()) {
+//      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+//         emit TXSigned(reqId, {}, "request file " + fileName + " already exists", false);
+//      });
+//      return reqId;
+//   }
+//   if (!f.open(QIODevice::WriteOnly)) {
+//      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+//         emit TXSigned(reqId, {}, "failed to open " + fileName + " for writing", false);
+//      });
+//      return reqId;
+//   }
 
-   QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-      emit TXSigned(reqId, fileName, {}, false);
-   });
-   return reqId;
+//   const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
+//   if (f.write(data) != data.size()) {
+//      QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+//         emit TXSigned(reqId, {}, "failed to write to " + fileName, false);
+//      });
+//      return reqId;
+//   }
+//   f.close();
+
+//   QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+//      emit TXSigned(reqId, fileName, {}, false);
+//   });
+//   return reqId;
 }
 
 

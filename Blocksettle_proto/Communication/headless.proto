@@ -92,19 +92,18 @@ message SignTXRequest
    bytes          unsignedState = 6;
    Change         change = 7;
    bool           populateUTXOs = 8;
-   bool           applyAutoSignRules = 9;
    string         password = 10;
    bool           keepDuplicatedRecipients = 11;
 }
 
 message SignTXReply
 {
+   uint32 errorCode = 1;
    oneof result {
-      bytes signedTX = 1;
-      string   error = 2;
+      bytes signedTX = 2;
+      string   errorString = 3;
    }
-   Change   change = 3;
-   bool     cancelledByUser = 4;
+   Change   change = 4;
 }
 
 message CancelSignTx
@@ -118,7 +117,6 @@ message SignPayoutTXRequest
    bytes    recipient = 2;
    string   authAddress = 3;
    bytes    settlementId = 4;
-   bool     applyAutoSignRules = 7;
    string   password = 8;
 }
 

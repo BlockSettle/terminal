@@ -10,6 +10,7 @@
 #include <QPoint>
 #include <QString>
 #include "CoreWallet.h"
+#include "SignerUiDefs.h"
 
 namespace bs {
    namespace sync {
@@ -94,7 +95,7 @@ protected slots:
    virtual void selectedWalletChanged(int, bool resetInputs = false
       , const std::function<void()> &cbInputsReset = nullptr);
    virtual void onMaxPressed();
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::sync::TxErrorCode result);
    void updateCreateButtonText();
    void onSignerAuthenticated();
 

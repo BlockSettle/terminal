@@ -46,13 +46,13 @@ public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
    ~HeadlessContainer() noexcept override = default;
 
-   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) override;
    bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, const PasswordType& password = {}) override;
+      , const PasswordType& password = {}) override;
    bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override;
+      , const std::string &settlementId, const PasswordType& password = {}) override;
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
@@ -145,7 +145,7 @@ public:
    void setTargetDir(const QString& targetDir) override;
    QString targetDir() const override;
 
-   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
    , bool keepDuplicatedRecipients = false) override;
 

@@ -246,7 +246,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
    headless::SignTXRequest request;
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[HeadlessContainerListener] failed to parse SignTXRequest");
-      SignTXResponse(clientId, packet.id(), reqType, "failed to parse");
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::FailedToParse);
       return false;
    }
    uint64_t inputVal = 0;
@@ -268,7 +268,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       txSignReq.recipients.push_back(recip);
       outputVal += recip->getValue();
    }
-   int64_t value = outputVal;
+   uint64_t value = outputVal;
 
    txSignReq.fee = request.fee();
    txSignReq.RBF = request.rbf();
@@ -293,7 +293,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
 
    if (!txSignReq.isValid()) {
       logger_->error("[HeadlessContainerListener] invalid SignTXRequest");
-      SignTXResponse(clientId, packet.id(), reqType, "missing critical data");
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::InvalidTxRequest);
       return false;
    }
 
@@ -302,39 +302,47 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
    const auto wallet = walletsMgr_->getWalletById(txSignReq.walletId);
    if (!wallet) {
       logger_->error("[HeadlessContainerListener] failed to find wallet {}", txSignReq.walletId);
-      SignTXResponse(clientId, packet.id(), reqType, "failed to find wallet " + txSignReq.walletId);
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::WalletNotFound);
       return false;
    }
    const auto rootWalletId = walletsMgr_->getHDRootForLeaf(txSignReq.walletId)->walletId();
 
+
+   // check manual spend limit
    if ((wallet->type() == bs::core::wallet::Type::Bitcoin)
-      && !CheckSpendLimit(value, request.applyautosignrules(), rootWalletId)) {
-      SignTXResponse(clientId, packet.id(), reqType, "spend limit exceeded");
+      && !CheckSpendLimit(value, false, rootWalletId)) {
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::SpendLimitExceed);
       return false;
    }
 
    const auto onPassword = [this, wallet, txSignReq, rootWalletId, clientId, id = packet.id(), partial
-      , reqType, value, autoSign = request.applyautosignrules()
+      , reqType, value
       , keepDuplicatedRecipients = request.keepduplicatedrecipients()] (const SecureBinaryData &pass,
             bool cancelledByUser) {
+      if (cancelledByUser) {
+         logger_->error("[HeadlessContainerListener] transaction canceled for wallet {}", wallet->name());
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::Canceled);
+         return;
+      }
+
       try {
          if (!wallet->encryptionTypes().empty() && pass.isNull()) {
             logger_->error("[HeadlessContainerListener] empty password for wallet {}", wallet->name());
-            SignTXResponse(clientId, id, reqType, "missing password for encrypted wallet", {}, cancelledByUser);
+            SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::MissingPassword);
             return;
          }
          const auto tx = partial ? wallet->signPartialTXRequest(txSignReq, pass)
             : wallet->signTXRequest(txSignReq, pass, keepDuplicatedRecipients);
-         SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::NoError, tx);
 
-         onXbtSpent(value, autoSign);
+         onXbtSpent(value, false);
          if (callbacks_) {
-            callbacks_->xbtSpent(value, autoSign);
+            callbacks_->xbtSpent(value, false);
          }
       }
       catch (const std::exception &e) {
          logger_->error("[HeadlessContainerListener] failed to sign {} TX request: {}", partial ? "partial" : "full", e.what());
-         SignTXResponse(clientId, id, reqType, std::string("failed to sign: ") + e.what());
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::InternalError);
          passwords_.erase(wallet->walletId());
          passwords_.erase(rootWalletId);
          if (callbacks_) {
@@ -349,7 +357,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
    }
 
    const std::string prompt = std::string("Outgoing ") + (partial ? "Partial " : "" ) + "Transaction";
-   return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onPassword, request.applyautosignrules());
+   return RequestPasswordIfNeeded(clientId, txSignReq, prompt, onPassword);
 }
 
 bool HeadlessContainerListener::onCancelSignTx(const std::string &, headless::RequestPacket packet)
@@ -373,21 +381,21 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
    headless::SignPayoutTXRequest request;
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[HeadlessContainerListener] failed to parse SignPayoutTXRequest");
-      SignTXResponse(clientId, packet.id(), reqType, "failed to parse");
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::FailedToParse);
       return false;
    }
 
    const auto settlWallet = std::dynamic_pointer_cast<bs::core::SettlementWallet>(walletsMgr_->getSettlementWallet());
    if (!settlWallet) {
       logger_->error("[HeadlessContainerListener] Settlement wallet is missing");
-      SignTXResponse(clientId, packet.id(), reqType, "no settlement wallet");
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::MissingSettlementWallet);
       return false;
    }
 
    const auto &authWallet = walletsMgr_->getAuthWallet();
    if (!authWallet) {
       logger_->error("[HeadlessContainerListener] Auth wallet is missing");
-      SignTXResponse(clientId, packet.id(), reqType, "no auth wallet");
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::MissingAuthWallet);
       return false;
    }
 
@@ -413,13 +421,13 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
             bool cancelledByUser) {
       if (!authWallet->encryptionTypes().empty() && pass.isNull()) {
          logger_->error("[HeadlessContainerListener] no password for encrypted auth wallet");
-         SignTXResponse(clientId, id, reqType, "password required, but empty received");
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::MissingPassword);
       }
 
       const auto authKeys = authWallet->getKeyPairFor(authAddr, pass);
       if (authKeys.privKey.isNull() || authKeys.pubKey.isNull()) {
          logger_->error("[HeadlessContainerListener] failed to get priv/pub keys for {}", authAddr.display());
-         SignTXResponse(clientId, id, reqType, "no auth priv/pub keys found");
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::MissingAuthKeys);
          passwords_.erase(authWallet->walletId());
          passwords_.erase(rootWalletId);
          if (callbacks_) {
@@ -430,11 +438,11 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
 
       try {
          const auto tx = settlWallet->signPayoutTXRequest(txSignReq, authKeys, settlementId);
-         SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::NoError, tx);
       }
       catch (const std::exception &e) {
          logger_->error("[HeadlessContainerListener] failed to sign PayoutTX request: {}", e.what());
-         SignTXResponse(clientId, id, reqType, std::string("failed to sign: ") + e.what());
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::InternalError);
       }
    };
 
@@ -448,7 +456,7 @@ bool HeadlessContainerListener::onSignPayoutTXRequest(const std::string &clientI
       << std::setprecision(8) << utxo.getValue() / BTCNumericTypes::BalanceDivider
       << " XBT:\n Settlement ID: " << settlementId.toHexStr();
 
-   return RequestPasswordIfNeeded(clientId, txSignReq, ssPrompt.str(), onAuthPassword, request.applyautosignrules());
+   return RequestPasswordIfNeeded(clientId, txSignReq, ssPrompt.str(), onAuthPassword);
 }
 
 bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId, const headless::RequestPacket &packet)
@@ -457,7 +465,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
    headless::SignTXMultiRequest request;
    if (!request.ParseFromString(packet.data())) {
       logger_->error("[HeadlessContainerListener] failed to parse SignTXMultiRequest");
-      SignTXResponse(clientId, packet.id(), reqType, "failed to parse");
+      SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::FailedToParse);
       return false;
    }
 
@@ -468,7 +476,7 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
       const auto &wallet = walletsMgr_->getWalletById(request.walletids(i));
       if (!wallet) {
          logger_->error("[HeadlessContainerListener] failed to find wallet with id {}", request.walletids(i));
-         SignTXResponse(clientId, packet.id(), reqType, "failed to find wallet " + request.walletids(i));
+         SignTXResponse(clientId, packet.id(), reqType, bs::sync::TxErrorCode::WalletNotFound);
          return false;
       }
       walletMap[wallet->walletId()] = wallet;
@@ -480,27 +488,25 @@ bool HeadlessContainerListener::onSignMultiTXRequest(const std::string &clientId
                                  (const std::unordered_map<std::string, SecureBinaryData> &walletPasswords) {
       try {
          const auto tx = bs::core::SignMultiInputTX(txMultiReq, walletPasswords, walletMap);
-         SignTXResponse(clientId, id, reqType, {}, tx);
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::NoError, tx);
       }
       catch (const std::exception &e) {
          logger_->error("[HeadlessContainerListener] failed to sign multi TX request: {}", e.what());
-         SignTXResponse(clientId, id, reqType, std::string("failed to sign: ") + e.what());
+         SignTXResponse(clientId, id, reqType, bs::sync::TxErrorCode::InternalError);
       }
    };
    return RequestPasswordsIfNeeded(++reqSeqNo_, clientId, txMultiReq, walletMap, prompt, cbOnAllPasswords);
 }
 
 void HeadlessContainerListener::SignTXResponse(const std::string &clientId, unsigned int id, headless::RequestType reqType
-   , const std::string &error, const BinaryData &tx, bool cancelledByUser)
+   , bs::sync::TxErrorCode errorCode, const BinaryData &tx)
 {
    headless::SignTXReply response;
-   if (tx.isNull()) {
-      response.set_error(error);
-   }
-   else {
+   response.set_errorcode(static_cast<uint32_t>(errorCode));
+
+   if (!tx.isNull()) {
       response.set_signedtx(tx.toBinStr());
    }
-   response.set_cancelledbyuser(cancelledByUser);
 
    headless::RequestPacket packet;
    packet.set_id(id);
@@ -559,7 +565,7 @@ void HeadlessContainerListener::passwordReceived(const std::string &walletId,
 
 bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clientId
    , const bs::core::wallet::TXSignRequest &txReq
-   , const std::string &prompt, const PasswordReceivedCb &cb, bool autoSign)
+   , const std::string &prompt, const PasswordReceivedCb &cb)
 {
    const auto &wallet = walletsMgr_->getWalletById(txReq.walletId);
    if (!wallet) {
@@ -568,7 +574,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
    bool needPassword = !wallet->encryptionTypes().empty();
    SecureBinaryData password;
    std::string walletId = wallet->walletId();
-   if (needPassword && autoSign) {
+   if (needPassword) {
       const auto &hdRoot = walletsMgr_->getHDRootForLeaf(walletId);
       if (hdRoot) {
          walletId = hdRoot->walletId();
@@ -1100,15 +1106,9 @@ void HeadlessContainerListener::activateAutoSign(const std::string &walletId
       return;
    }
    if (!wallet->encryptionTypes().empty()) {
-      if (password.isNull()) {
-         // This will happen when user cancels autosign.
-         // Do not send reason text in this case, because it's used as an error message is set.
-         deactivateAutoSign(walletId, {});
-         return;
-      }
       const auto decrypted = wallet->getRootNode(password);
       if (!decrypted) {
-         deactivateAutoSign(walletId, "failed to decrypt root node");
+
          return;
       }
    }

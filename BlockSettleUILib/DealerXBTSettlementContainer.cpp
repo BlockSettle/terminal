@@ -75,7 +75,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    });
    addrVerificator_->SetBSAddressList(bsAddresses);
 
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
+   //connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerXBTSettlementContainer::onTXSigned);
 }
 
 bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
@@ -83,8 +83,8 @@ bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
    if (weSell_) {
       try {
          const auto txReq = transactionData_->getSignTXRequest();
-         payinSignId_ = signingContainer_->signTXRequest(txReq, autoSign_
-            , SignContainer::TXSignMode::Full, password);
+//         payinSignId_ = signingContainer_->signTXRequest(txReq, autoSign_
+//            , SignContainer::TXSignMode::Full, password);
       }
       catch (const std::exception &e) {
          logger_->error("[DealerXBTSettlementContainer::onAccepted] Failed to sign pay-in: {}", e.what());
@@ -114,8 +114,8 @@ bool DealerXBTSettlementContainer::accept(const SecureBinaryData &password)
             const auto txReq = settlWallet_->createPayoutTXRequest(input
                , receivingAddress, transactionData_->feePerByte());
             const auto authAddr = bs::Address::fromPubKey(authKey_, AddressEntryType_P2WPKH);
-            payoutSignId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlIdStr_
-               , autoSign_, password);
+//            payoutSignId_ = signingContainer_->signPayoutTXRequest(txReq, authAddr, settlIdStr_
+//               , autoSign_, password);
          }
          catch (const std::exception &e) {
             logger_->error("[DealerSettlDialog::onAccepted] Failed to sign pay-out: {}", e.what());

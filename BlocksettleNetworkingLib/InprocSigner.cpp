@@ -50,7 +50,7 @@ bool InprocSigner::Start()
 // a password should be passed directly to signing methods
 
 bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq,
-   bool, TXSignMode mode, const PasswordType &password, bool)
+   TXSignMode mode, const PasswordType &password, bool)
 {
    if (!txSignReq.isValid()) {
       logger_->error("[{}] Invalid TXSignRequest", __func__);
@@ -70,22 +70,27 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
       } else {
          signedTx = wallet->signPartialTXRequest(txSignReq, password);
       }
-      QTimer::singleShot(1, [this, reqId, signedTx] {emit TXSigned(reqId, signedTx, {}, false); });
+      QTimer::singleShot(1, [this, reqId, signedTx] {
+         emit TXSigned(reqId, signedTx, bs::sync::TxErrorCode::NoError);
+      });
    }
    catch (const std::exception &e) {
-      QTimer::singleShot(1, [this, reqId, e] { emit TXSigned(reqId, {}, e.what(), false); });
+      QTimer::singleShot(1, [this, reqId, e] {
+         //emit TXSigned(reqId, {}, e.what(), false);
+         emit TXSigned(reqId, {}, bs::sync::TxErrorCode::InternalError);
+      });
    }
    return reqId;
 }
 
 bs::signer::RequestId InprocSigner::signPartialTXRequest(const bs::core::wallet::TXSignRequest &txReq
-   , bool autoSign, const PasswordType &password)
+   , const PasswordType &password)
 {
-   return signTXRequest(txReq, autoSign, TXSignMode::Partial, password);
+   return signTXRequest(txReq, TXSignMode::Partial, password);
 }
 
 bs::signer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , const bs::Address &authAddr, const std::string &settlementId, bool autoSign, const PasswordType &password)
+   , const bs::Address &authAddr, const std::string &settlementId, const PasswordType &password)
 {
    if (!txSignReq.isValid()) {
       logger_->error("[{}] Invalid TXSignRequest", __func__);
@@ -110,9 +115,14 @@ bs::signer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::
    const auto reqId = seqId_++;
    try {
       const auto signedTx = settlWallet->signPayoutTXRequest(txSignReq, authKeys, settlementId);
-      QTimer::singleShot(1, [this, reqId, signedTx] {emit TXSigned(reqId, signedTx, {}, false); });
+      QTimer::singleShot(1, [this, reqId, signedTx] {
+         emit TXSigned(reqId, signedTx, bs::sync::TxErrorCode::NoError);
+      });
    } catch (const std::exception &e) {
-      QTimer::singleShot(1, [this, reqId, e] { emit TXSigned(reqId, {}, e.what(), false); });
+      QTimer::singleShot(1, [this, reqId, e] {
+         //emit TXSigned(reqId, {}, e.what(), false);
+         emit TXSigned(reqId, {}, bs::sync::TxErrorCode::InternalError);
+      });
    }
    return reqId;
 }
