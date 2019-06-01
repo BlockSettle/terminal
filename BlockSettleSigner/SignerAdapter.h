@@ -74,7 +74,7 @@ public:
    void getHeadlessPubKey(const std::function<void(const std::string &)> &);
 
    void activateAutoSign(const std::string &walletId
-      , bs::wallet::QPasswordData passwordData
+      , bs::wallet::QPasswordData *passwordData
       , bool activate
       , const std::function<void(bool success, const std::string& errorMsg)> &cb);
 

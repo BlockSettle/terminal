@@ -255,16 +255,16 @@ void SignerInterfaceListener::onXbtSpent(const std::string &data)
 
 void SignerInterfaceListener::onAutoSignActivate(const std::string &data)
 {
-   signer::AutoSignActEvent evt;
+   signer::AutoSignActRequest evt;
    if (!evt.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   if (evt.activated()) {
-      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignActivated(evt.wallet_id()); });
+   if (evt.activateautosign()) {
+      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignActivated(evt.rootwalletid()); });
    }
    else {
-      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignDeactivated(evt.wallet_id()); });
+      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignDeactivated(evt.rootwalletid()); });
    }
 }
 

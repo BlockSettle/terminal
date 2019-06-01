@@ -55,7 +55,7 @@ void QMLStatusUpdater::deactivateAutoSign()
 }
 
 void QMLStatusUpdater::activateAutoSign(const QString &walletId
-                                        , bs::wallet::QPasswordData passwordData
+                                        , bs::wallet::QPasswordData *passwordData
                                         , bool activate
                                         , QJSValue jsCallback)
 {
@@ -68,7 +68,7 @@ void QMLStatusUpdater::activateAutoSign(const QString &walletId
       });
    };
 
-   adapter_->activateAutoSign(walletId.toStdString(), passwordData, true, cb);
+   adapter_->activateAutoSign(walletId.toStdString(), passwordData, activate, cb);
 }
 
 void QMLStatusUpdater::onAutoSignActivated(const std::string &walletId)

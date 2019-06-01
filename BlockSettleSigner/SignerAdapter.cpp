@@ -77,7 +77,7 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
 void SignerAdapter::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
    , const SecureBinaryData &password, const std::function<void(const BinaryData &)> &cb)
 {
-   const auto reqId = signContainer_->signTXRequest(txReq, false, SignContainer::TXSignMode::Full, password, true);
+   const auto reqId = signContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full, password, true);
    listener_->setTxSignCb(reqId, cb);
 }
 
@@ -240,13 +240,13 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
 }
 
 void SignerAdapter::activateAutoSign(const std::string &walletId
-   , bs::wallet::QPasswordData passwordData
+   , bs::wallet::QPasswordData *passwordData
    , bool activate
    , const std::function<void(bool success, const std::string& errorMsg)> &cb)
 {
    signer::AutoSignActRequest request;
    request.set_rootwalletid(walletId);
-   request.set_password(passwordData.binaryPassword().toBinStr());
+   request.set_password(passwordData->binaryPassword().toBinStr());
    request.set_activateautosign(activate);
    const auto reqId = listener_->send(signer::AutoSignActType, request.SerializeAsString());
    listener_->setAutoSignCb(reqId, cb);

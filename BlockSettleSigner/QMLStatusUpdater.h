@@ -44,7 +44,7 @@ public:
 
    Q_INVOKABLE void deactivateAutoSign();
    Q_INVOKABLE void activateAutoSign(const QString &walletId
-                                     , bs::wallet::QPasswordData passwordData
+                                     , bs::wallet::QPasswordData *passwordData
                                      , bool activate
                                      , QJSValue jsCallback);
 

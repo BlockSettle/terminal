@@ -10,6 +10,7 @@ import com.blocksettle.QPasswordData 1.0
 
 import "StyledControls"
 import "BsControls"
+import "js/helper.js" as JsHelper
 
 Item {
     id: root
@@ -79,6 +80,21 @@ Item {
                         if (checked) {
                             var walletInfo = qmlFactory.createWalletInfo(signerSettings.autoSignWallet)
 
+                            var autoSignCallback = function(success, errorMsg) {
+                                if (success) {
+                                    JsHelper.messageBox(BSMessageBox.Type.Success
+                                        , qsTr("Wallet Auto Sign")
+                                        , qsTr("Auto Signing enabled for wallet %1")
+                                            .arg(walletInfo.rootId))
+                                }
+                                else {
+                                    JsHelper.messageBox(BSMessageBox.Type.Critical
+                                        , qsTr("Wallet Auto Sign")
+                                        , qsTr("Failed to enable auto signing.")
+                                        , errorString)
+                                }
+                            }
+
                             if (walletInfo.encType === QPasswordData.Password) {
                                 console.log("passwordDialog Password ")
 
@@ -86,12 +102,20 @@ Item {
                                 passwordDialog.type = BSPasswordInput.Type.Request
                                 passwordDialog.open()
                                 passwordDialog.bsAccepted.connect(function() {
-                                    console.log("passwordDialog " + passwordDialog.enteredPassword)
+                                    var passwordData = qmlFactory.createPasswordData()
+                                    passwordData.encType = QPasswordData.Password
+                                    passwordData.encKey = ""
+                                    passwordData.textPassword = passwordDialog.enteredPassword
+
+                                    signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
                                 })
                             }
                             else if (walletInfo.encType === QPasswordData.Auth) {
                                 console.log("passwordDialog Auth ")
 
+                                JsHelper.requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
+                                    signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
+                                })
                             }
 
                             //signerStatus.activateAutoSign()
