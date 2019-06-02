@@ -126,7 +126,8 @@ namespace bs {
          CounterpartyOffline,
          CounterpartyNotFound,
          RequestLimitToTargetExceeded,
-         RequestsAmountExceeded
+         RequestsAmountExceeded,
+         RequestAlreadyExpired
       };
    }
 }
