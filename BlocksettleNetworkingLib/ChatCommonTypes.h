@@ -100,22 +100,22 @@ namespace bs {
 
       struct OTCRequest
       {
-         ChatOTCSide::Type        side;
-         OTCRangeID::Type  amountRange;
+         ChatOTCSide::Type    side;
+         OTCRangeID::Type     amountRange;
 
          // XXX
          // ownRequest - temporary field used for test purpose until OTC goes through chat server
-         bool              ownRequest;
+         bool                 ownRequest;
 
          // fakeReplyRequired - chat server will simulate "reply"
-         bool              fakeReplyRequired;
+         bool                 fakeReplyRequired;
       };
 
       struct OTCResponse
       {
-         QString     serverRequestId;
-         QString     requestorId;
-         QString     initialTargetId;
+         std::string     serverRequestId;
+         std::string     requestorId;
+         std::string     initialTargetId;
 
          OTCPriceRange     priceRange;
          OTCQuantityRange  quantityRange;

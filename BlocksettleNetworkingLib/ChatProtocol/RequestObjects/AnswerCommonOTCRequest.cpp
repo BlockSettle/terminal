@@ -39,12 +39,12 @@ const std::shared_ptr<OTCResponseData> AnswerCommonOTCRequest::getOtcResponseDat
    return otcResponseData_;
 }
 
-QString AnswerCommonOTCRequest::getResponsedId() const
+std::string AnswerCommonOTCRequest::getResponsedId() const
 {
    return otcResponseData_->responderId();
 }
 
-QString AnswerCommonOTCRequest::getRequestorId() const
+std::string AnswerCommonOTCRequest::getRequestorId() const
 {
    return otcResponseData_->requestorId();
 }
