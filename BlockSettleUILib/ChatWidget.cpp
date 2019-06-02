@@ -284,7 +284,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    auto proxyModel = client_->getProxyModel();
    ui_->treeViewUsers->setModel(proxyModel.get());
    ui_->treeViewUsers->setSortingEnabled(true);
-   ui_->treeViewUsers->sortByColumn(0, Qt::DescendingOrder);
+   ui_->treeViewUsers->sortByColumn(0, Qt::AscendingOrder);
    connect(proxyModel.get(), &ChatTreeModelWrapper::treeUpdated,
            ui_->treeViewUsers, &QTreeView::expandAll);
 //   ui_->treeViewUsers->expandAll();

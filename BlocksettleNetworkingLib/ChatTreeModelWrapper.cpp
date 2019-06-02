@@ -77,10 +77,10 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
 
 bool ChatTreeModelWrapper::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
-   // sort contact list
    auto leftNodeType = left.data(Role::ItemTypeRole).value<NodeType>();
    auto rightNodeType = right.data(Role::ItemTypeRole).value<NodeType>();
-
+   
+   // sort contact list by online status
    if (leftNodeType == NodeType::ContactsElement && rightNodeType == NodeType::ContactsElement) {
 
       auto leftContactStatus = left.data(Role::ContactStatusRole).value<ContactStatus>();
@@ -89,51 +89,40 @@ bool ChatTreeModelWrapper::lessThan(const QModelIndex &left, const QModelIndex &
       auto rightContactStatus = right.data(Role::ContactStatusRole).value<ContactStatus>();
       auto rightOnlineStatus = right.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
 
-      // contacts with online status are placed at the top of the list
-      if (leftOnlineStatus == OnlineStatus::Online && leftContactStatus == ContactStatus::Accepted) {
-         return false;
-      }
-      if (rightOnlineStatus == OnlineStatus::Online && rightContactStatus == ContactStatus::Accepted) {
-         return true;
+      if (leftContactStatus != rightContactStatus) {
+         return leftContactStatus < rightContactStatus;
       }
 
-      // contacts with offline status are placed at the middle of the list
-      if (leftOnlineStatus == OnlineStatus::Offline && leftContactStatus == ContactStatus::Accepted) {
-         return false;
-      }
-      if (rightOnlineStatus == OnlineStatus::Offline && rightContactStatus == ContactStatus::Accepted) {
-         return true;
-      }
-      
-      //contacts with incoming status are placed at the bottom of the list, but before outgoing
-      if (leftContactStatus == ContactStatus::Incoming) {
-         return false;
-      }
-      if (rightContactStatus == ContactStatus::Incoming) {
-         return true;
-      }
-      
-      //contacts with outgoing status are placed at the bottom of the list, but before rejected
-      if (leftContactStatus == ContactStatus::Outgoing) {
-         return false;
-      }
-      if (rightContactStatus == ContactStatus::Outgoing) {
-         return true;
-      }      
-      
-      //contacts with rejected status are placed at the bottom of the list,
-      if (leftContactStatus == ContactStatus::Rejected) {
-         return false;
-      }
-      if (rightContactStatus == ContactStatus::Rejected) {
-         return true;
+      if (leftOnlineStatus != rightOnlineStatus) {
+         return leftOnlineStatus < rightOnlineStatus;
       }
    }
 
-   if (left < right) {
-      return false;
+   // sort category nodes alphabetically
+   else if (leftNodeType == NodeType::CategoryGroupNode && rightNodeType == NodeType::CategoryGroupNode) {
+      auto leftString = left.data(Role::CategoryGroupDisplayName).toString();
+      auto rightString = right.data(Role::CategoryGroupDisplayName).toString();
+
+      return QString::localeAwareCompare(leftString, rightString) < 0;
    }
-   return true;
+
+   // sort room nodes alphabetically
+   else if (leftNodeType == NodeType::RoomsElement && rightNodeType == NodeType::RoomsElement) {
+      auto leftString = left.data(Role::RoomIdRole).toString();
+      auto rightString = right.data(Role::RoomIdRole).toString();
+
+      if (left.data(Role::RoomTitleRole).isValid()) {
+         leftString = left.data(Role::RoomTitleRole).toString();
+      }
+
+      if (right.data(Role::RoomTitleRole).isValid()) {
+         rightString = right.data(Role::RoomTitleRole).toString();
+      }
+
+      return QString::localeAwareCompare(leftString, rightString) < 0;
+   }
+
+   return QSortFilterProxyModel::lessThan(left, right);
 }
 
 void ChatTreeModelWrapper::resetTree()
