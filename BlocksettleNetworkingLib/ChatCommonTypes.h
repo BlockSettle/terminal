@@ -120,6 +120,14 @@ namespace bs {
          OTCPriceRange     priceRange;
          OTCQuantityRange  quantityRange;
       };
+
+      enum class OTCRequestRejectReason
+      {
+         CounterpartyOffline,
+         CounterpartyNotFound,
+         RequestLimitToTargetExceeded,
+         RequestsAmountExceeded
+      };
    }
 }
 
