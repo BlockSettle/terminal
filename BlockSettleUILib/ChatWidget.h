@@ -31,9 +31,9 @@ class ChatClient;
 class ConnectionManager;
 class ApplicationSettings;
 class ChatWidgetState;
-class ChatSearchPopup;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
+class CelerClient;
 
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
@@ -62,6 +62,7 @@ public:
    void logout();
    bool hasUnreadMessages();
    void switchToChat(const QString& chatId);
+   void setCelerClient(std::shared_ptr<CelerClient> celerClient);
 
 public slots:
    void onLoggedOut();
@@ -136,13 +137,12 @@ private:
 
    std::shared_ptr<ChatClient>      client_;
    std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<CelerClient>     celerClient_;
 
    std::string serverPublicKey_;
    QString  currentChat_;
-   ChatSearchPopup *popup_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   QTimer *popupVisibleTimer_;
    bool isChatMessagesSelected_;
 
 private:
@@ -163,8 +163,7 @@ private:
    bool isRoom();
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
-   void initPopup();
-   void setPopupVisible(const bool &value);
+   void initSearchWidget();
 
    bool eventFilter(QObject *sender, QEvent *event) override;
 

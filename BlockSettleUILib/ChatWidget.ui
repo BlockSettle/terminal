@@ -119,45 +119,12 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QLabel" name="label_3">
+           <widget class="SearchWidget" name="searchWidget" native="true">
             <property name="minimumSize">
              <size>
               <width>0</width>
-              <height>25</height>
+              <height>100</height>
              </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>25</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>USERS</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-            <property name="headerLabel" stdset="0">
-             <bool>true</bool>
-            </property>
-            <property name="headerPanel" stdset="0">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="ChatSearchLineEdit" name="chatSearchLineEdit">
-            <property name="locale">
-             <locale language="English" country="UnitedStates"/>
-            </property>
-            <property name="placeholderText">
-             <string>Enter email or email hash</string>
             </property>
            </widget>
           </item>
@@ -403,14 +370,14 @@
                        <height>0</height>
                       </size>
                      </property>
+                     <property name="text">
+                      <string>Time</string>
+                     </property>
                      <property name="minimumSizeLinux" stdset="0">
                       <size>
                        <width>110</width>
                        <height>0</height>
                       </size>
-                     </property>
-                     <property name="text">
-                      <string>Time</string>
                      </property>
                     </widget>
                    </item>
@@ -454,14 +421,14 @@
                    </item>
                    <item>
                     <widget class="QLabel" name="messageLabel">
-                     <property name="text">
-                      <string>Message</string>
-                     </property>
                      <property name="minimumSize">
                       <size>
                        <width>50</width>
                        <height>0</height>
                       </size>
+                     </property>
+                     <property name="text">
+                      <string>Message</string>
                      </property>
                     </widget>
                    </item>
@@ -637,6 +604,7 @@
             <widget class="CreateOTCResponseWidget" name="widgetCreateOTCResponse"/>
             <widget class="OTCNegotiationRequestWidget" name="widgetNegotiateRequest"/>
             <widget class="OTCNegotiationResponseWidget" name="widgetNegotiateResponse"/>
+            <widget class="OTCParticipantShield" name="widgetParticipantShield"/>
            </widget>
           </item>
          </layout>
@@ -649,11 +617,6 @@
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>ChatSearchLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header location="global">ChatSearchLineEdit.h</header>
-  </customwidget>
   <customwidget>
    <class>BSChatInput</class>
    <extends>QTextEdit</extends>
@@ -715,6 +678,18 @@
    <header>PullOwnOTCRequestWidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>SearchWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">SearchWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCParticipantShield</class>
+   <extends>QWidget</extends>
+   <header>OTCParticipantShield.h</header>
+   <container>1</container>
+  </customwidget>  
  </customwidgets>
  <resources/>
  <connections/>
