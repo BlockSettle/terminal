@@ -1,6 +1,9 @@
 #!/bin/sh
 
-xdg-icon-resource install --novendor --context apps --size 64 /usr/share/blocksettle/blocksettle.png blocksettle
-xdg-icon-resource install --novendor --context apps --size 64 /usr/share/blocksettle/blocksettle_signer.png blocksettle_signer
+for SIZE in 32 48 64 128 256
+do
+	xdg-icon-resource install --novendor --context apps --size $SIZE /usr/share/blocksettle/blocksettle_$SIZE.png blocksettle
+	xdg-icon-resource install --novendor --context apps --size $SIZE /usr/share/blocksettle/blocksettle_signer_$SIZE.png blocksettle_signer
+done
 
 update-desktop-database

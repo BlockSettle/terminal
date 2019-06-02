@@ -1,616 +1,554 @@
 {
-   "latest_version" : "0.15.14",
-   "release_date" : "27 May 2019",
-   "changes" : [
+   "latest_version": "0.15.16",
+   "release_date": "31 May 2019",
+   "changes": [
       {
-         "version_string" : "0.15.14",
-         "previous_version" : "0.15.13",
-         "release_date" : "27 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
+         "version_string": "0.15.16",
+         "previous_version": "0.15.15",
+         "release_date": "31 May 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Add OTC protocol",
+            "Improve search input"
+         ],
+         "bug_fixes": [
+            "Fix password dialog focus",
+            "Fix data race in signer GUI",
+            "Fix linux icons"
+         ],
+         "revision": "2f0ca243",
+         "common_revision": "e5bcd9b0"
+      },
+      {
+         "version_string": "0.15.15",
+         "previous_version": "0.15.14",
+         "release_date": "29 May 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Add script to automate new release (#264)",
+            "OTC available to Trading and Dealing Participants"
+         ],
+         "bug_fixes": [
+            "Fix to select global room",
+            "Fix switch to local full GUI signer (#948)"
+         ],
+         "revision": "49b912a6",
+         "common_revision": "32cdd70d"
+      },
+      {
+         "version_string": "0.15.14",
+         "previous_version": "0.15.13",
+         "release_date": "27 May 2019",
+         "release_type": "development",
+         "improvements": [
             "Hide icons in all tabs on user logout",
             "Changed context menu to execute on right click"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Disable rich text in message input field in OTC Chat",
             "Signer linux startup fixes",
             "Do not create multiple dirs on Linux",
             "Do not show two market data agreements dialogs"
          ],
-         "revision" : "4a693d24",
-         "common_revision" : "578a5c22"
+         "revision": "4a693d24",
+         "common_revision": "578a5c22"
       },
       {
-         "version_string" : "0.15.13",
-         "previous_version" : "0.15.12",
-         "release_date" : "24 May 2019",
-         "release_type" : "prod",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.13",
+         "previous_version": "0.15.12",
+         "release_date": "24 May 2019",
+         "release_type": "prod",
+         "improvements": [],
+         "bug_fixes": [
             "Explorer fixes",
             "Various signer and chat fixes",
             "UI fixes and updates"
          ],
-         "revision" : "20be5aef",
-         "common_revision" : "b9a281b7"
+         "revision": "20be5aef",
+         "common_revision": "b9a281b7"
       },
       {
-         "version_string" : "0.15.12",
-         "previous_version" : "0.15.11",
-         "release_date" : "23 May 2019",
-         "release_type" : "prod",
-         "improvements" :
-         [
+         "version_string": "0.15.12",
+         "previous_version": "0.15.11",
+         "release_date": "23 May 2019",
+         "release_type": "prod",
+         "improvements": [
             "Chat updates",
             "In memory TX cache"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Various signer and chat fixes",
             "Cancel RFQ"
          ],
-         "revision" : "afce6aaf",
-         "common_revision" : "0264818a"
+         "revision": "afce6aaf",
+         "common_revision": "0264818a"
       },
       {
-         "version_string" : "0.15.11",
-         "previous_version" : "0.15.10",
-         "release_date" : "22 May 2019",
-         "release_type" : "prod",
-         "improvements" :
-         [
+         "version_string": "0.15.11",
+         "previous_version": "0.15.10",
+         "release_date": "22 May 2019",
+         "release_type": "prod",
+         "improvements": [
             "Chat updates"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Various signer and chat fixes"
          ],
-         "revision" : "fbc1bc46",
-         "common_revision" : "da9134ae"
+         "revision": "fbc1bc46",
+         "common_revision": "da9134ae"
       },
       {
-         "version_string" : "0.15.10",
-         "previous_version" : "0.15.9",
-         "release_date" : "20 May 2019",
-         "release_type" : "prod",
-         "improvements" :
-         [
+         "version_string": "0.15.10",
+         "previous_version": "0.15.9",
+         "release_date": "20 May 2019",
+         "release_type": "prod",
+         "improvements": [
             "Initial OTC UI test flow"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Various signer and chat fixes"
          ],
-         "revision" : "b903edba",
-         "common_revision" : "42c21fbc"
+         "revision": "b903edba",
+         "common_revision": "42c21fbc"
       },
       {
-         "version_string" : "0.15.9",
-         "previous_version" : "0.15.8",
-         "release_date" : "17 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.9",
+         "previous_version": "0.15.8",
+         "release_date": "17 May 2019",
+         "release_type": "development",
+         "improvements": [],
+         "bug_fixes": [
             "Various signer and chat fixes",
             "Wallet import fixes ( 1863 )"
          ],
-         "revision" : "ff6428be",
-         "common_revision" : "22695e0a"
+         "revision": "ff6428be",
+         "common_revision": "22695e0a"
       },
       {
-         "version_string" : "0.15.8",
-         "previous_version" : "0.15.7",
-         "release_date" : "17 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.8",
+         "previous_version": "0.15.7",
+         "release_date": "17 May 2019",
+         "release_type": "development",
+         "improvements": [],
+         "bug_fixes": [
             "Various signer and chat fixes",
             "Save settings for chart view",
             "Wallet import fixes ( 1862 )"
          ],
-         "revision" : "27ac2b43",
-         "common_revision" : "a8dd50c3"
+         "revision": "27ac2b43",
+         "common_revision": "a8dd50c3"
       },
       {
-         "version_string" : "0.15.7",
-         "previous_version" : "0.15.6",
-         "release_date" : "14 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.7",
+         "previous_version": "0.15.6",
+         "release_date": "14 May 2019",
+         "release_type": "development",
+         "improvements": [],
+         "bug_fixes": [
             "Various signer and chat fixes"
          ],
-         "revision" : "78bc563a",
-         "common_revision" : "8a16bec7"
+         "revision": "78bc563a",
+         "common_revision": "8a16bec7"
       },
       {
-         "version_string" : "0.15.6",
-         "previous_version" : "0.15.5",
-         "release_date" : "13 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.6",
+         "previous_version": "0.15.5",
+         "release_date": "13 May 2019",
+         "release_type": "development",
+         "improvements": [],
+         "bug_fixes": [
             "Various signer and chat fixes"
          ],
-         "revision" : "4000352b",
-         "common_revision" : "2a0f4803"
+         "revision": "4000352b",
+         "common_revision": "2a0f4803"
       },
       {
-         "version_string" : "0.15.5",
-         "previous_version" : "0.15.4",
-         "release_date" : "09 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.5",
+         "previous_version": "0.15.4",
+         "release_date": "09 May 2019",
+         "release_type": "development",
+         "improvements": [],
+         "bug_fixes": [
             "Various signer and chat fixes"
          ],
-         "revision" : "4e697bfb",
-         "common_revision" : "d0829e32"
+         "revision": "4e697bfb",
+         "common_revision": "d0829e32"
       },
       {
-         "version_string" : "0.15.4",
-         "previous_version" : "0.15.3",
-         "release_date" : "08 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.4",
+         "previous_version": "0.15.3",
+         "release_date": "08 May 2019",
+         "release_type": "development",
+         "improvements": [],
+         "bug_fixes": [
             "Various signer and chat fixes"
          ],
-         "revision" : "81cbb46d",
-         "common_revision" : "f7df26fd"
+         "revision": "81cbb46d",
+         "common_revision": "f7df26fd"
       },
       {
-         "version_string" : "0.15.3",
-         "previous_version" : "0.15.2",
-         "release_date" : "07 May 2019",
-         "release_type" : "development",
-         "improvements" :
-         [
+         "version_string": "0.15.3",
+         "previous_version": "0.15.2",
+         "release_date": "07 May 2019",
+         "release_type": "development",
+         "improvements": [
             "Remote signer connections management",
             "Some OTC UI mockups"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Qt back to 5.12.2",
             "Signer UI fixes",
             "Disconnect signer fixes",
             "Signer connection fixes",
             "Various chat fixes"
          ],
-         "revision" : "001bedb7",
-         "common_revision" : "b8913997"
+         "revision": "001bedb7",
+         "common_revision": "b8913997"
       },
       {
-         "version_string" : "0.15.2",
-         "previous_version" : "0.15.1",
-         "release_date" : "03 May 2019",
-         "improvements" :
-         [
+         "version_string": "0.15.2",
+         "previous_version": "0.15.1",
+         "release_date": "03 May 2019",
+         "improvements": [
             "Moved to qt 5.12.3"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Signer TX fixes"
          ],
-         "revision" : "eab31638",
-         "common_revision" : "113b9387"
+         "revision": "eab31638",
+         "common_revision": "113b9387"
       },
       {
-         "version_string" : "0.15.1",
-         "previous_version" : "0.15.0",
-         "release_date" : "03 May 2019",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.15.1",
+         "previous_version": "0.15.0",
+         "release_date": "03 May 2019",
+         "improvements": [],
+         "bug_fixes": [
             "Signer TX cancel",
             "EOD charting fixes",
             "Crash fixes"
          ],
-         "revision" : "7fd01165",
-         "common_revision" : "93f66109"
+         "revision": "7fd01165",
+         "common_revision": "93f66109"
       },
       {
-         "version_string" : "0.15.0",
-         "previous_version" : "0.14.18",
-         "release_date" : "02 May 2019",
-         "improvements" :
-         [
+         "version_string": "0.15.0",
+         "previous_version": "0.14.18",
+         "release_date": "02 May 2019",
+         "improvements": [
             "Better error handling",
             "Remove curve ZMQ code",
             "Chat rooms updates",
             "Chat AEAD"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Wallet list after delete",
             "Terminal shutdown fix",
             "Heartbeat fixes",
             "FX MD in XBT section"
          ],
-         "revision" : "fa38b6d4",
-         "common_revision" : "b1bb7586"
+         "revision": "fa38b6d4",
+         "common_revision": "b1bb7586"
       },
       {
-         "version_string" : "0.14.18",
-         "previous_version" : "0.14.17",
-         "release_date" : "27 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.18",
+         "previous_version": "0.14.17",
+         "release_date": "27 April 2019",
+         "improvements": [
             "Charting EOD"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Various BIP fixed"
          ],
-         "revision" : "4142e5b5",
-         "common_revision" : "d37fdf8e"
+         "revision": "4142e5b5",
+         "common_revision": "d37fdf8e"
       },
       {
-         "version_string" : "0.14.17",
-         "previous_version" : "0.14.16",
-         "release_date" : "27 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.17",
+         "previous_version": "0.14.16",
+         "release_date": "27 April 2019",
+         "improvements": [
             "Chat tree enhancements"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Signer TX dialog fixes",
             "WO fixes",
             "UI fixes",
             "ZMQ BIP fixes"
          ],
-         "revision" : "762c3d52",
-         "common_revision" : "3f038999"
+         "revision": "762c3d52",
+         "common_revision": "3f038999"
       },
       {
-         "version_string" : "0.14.16",
-         "previous_version" : "0.14.15",
-         "release_date" : "26 April 2019",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.14.16",
+         "previous_version": "0.14.15",
+         "release_date": "26 April 2019",
+         "improvements": [],
+         "bug_fixes": [
             "WO wallet loading",
             "Minor UI fixes and improvements",
             "XBT MD prices fix"
          ],
-         "revision" : "1511ae97",
-         "common_revision" : "096b178c"
+         "revision": "1511ae97",
+         "common_revision": "096b178c"
       },
       {
-         "version_string" : "0.14.15",
-         "previous_version" : "0.14.14",
-         "release_date" : "22 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.15",
+         "previous_version": "0.14.14",
+         "release_date": "22 April 2019",
+         "improvements": [
             "Remove offline signer settings"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "WO wallet loading",
             "Minor UI fixes and improvements"
          ],
-         "revision" : "46de3e7e",
-         "common_revision" : "d9522e79"
+         "revision": "46de3e7e",
+         "common_revision": "d9522e79"
       },
       {
-         "version_string" : "0.14.14",
-         "previous_version" : "0.14.13",
-         "release_date" : "19 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.14",
+         "previous_version": "0.14.13",
+         "release_date": "19 April 2019",
+         "improvements": [
             "TX weight warning"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Settings loading",
             "Fee fixes"
          ],
-         "revision" : "3a9159f7",
-         "common_revision" : "a87c5791"
+         "revision": "3a9159f7",
+         "common_revision": "a87c5791"
       },
       {
-         "version_string" : "0.14.13",
-         "previous_version" : "0.14.12",
-         "release_date" : "16 April 2019",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.14.13",
+         "previous_version": "0.14.12",
+         "release_date": "16 April 2019",
+         "improvements": [],
+         "bug_fixes": [
             "Trusted terminals list in signer fix"
          ]
       },
       {
-         "version_string" : "0.14.12",
-         "previous_version" : "0.14.11",
-         "release_date" : "15 April 2019",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.14.12",
+         "previous_version": "0.14.11",
+         "release_date": "15 April 2019",
+         "improvements": [],
+         "bug_fixes": [
             "Path creation fixes for signer"
          ]
       },
       {
-         "version_string" : "0.14.11",
-         "previous_version" : "0.14.10",
-         "release_date" : "12 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.11",
+         "previous_version": "0.14.10",
+         "release_date": "12 April 2019",
+         "improvements": [
             "Remove Qt dependencie from signer",
             "Basic UI for OTC"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Some BIP fixes"
          ]
       },
       {
-         "version_string" : "0.14.10",
-         "previous_version" : "0.14.9",
-         "release_date" : "11 April 2019",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.14.10",
+         "previous_version": "0.14.9",
+         "release_date": "11 April 2019",
+         "improvements": [],
+         "bug_fixes": [
             "Signer fixes",
             "Fix wallet delete",
             "fix BIP rekeying"
          ]
       },
       {
-         "version_string" : "0.14.9",
-         "previous_version" : "0.14.8",
-         "release_date" : "10 April 2019",
-         "improvements" :
-         [
-         ],
-         "bug_fixes" :
-         [
+         "version_string": "0.14.9",
+         "previous_version": "0.14.8",
+         "release_date": "10 April 2019",
+         "improvements": [],
+         "bug_fixes": [
             "Bip15* server connection fixes"
          ]
       },
       {
-         "version_string" : "0.14.8",
-         "previous_version" : "0.14.7",
-         "release_date" : "10 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.8",
+         "previous_version": "0.14.7",
+         "release_date": "10 April 2019",
+         "improvements": [
             "Two way auth in signer"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Multiple UI fixes"
          ]
       },
       {
-         "version_string" : "0.14.7",
-         "previous_version" : "0.14.6",
-         "release_date" : "09 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.7",
+         "previous_version": "0.14.6",
+         "release_date": "09 April 2019",
+         "improvements": [
             "Disable unsubscribe from MD when logged in",
             "Charting improvements"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Bitcoin explorer timeout"
          ]
       },
       {
-         "version_string" : "0.14.6",
-         "previous_version" : "0.14.5",
-         "release_date" : "08 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.6",
+         "previous_version": "0.14.5",
+         "release_date": "08 April 2019",
+         "improvements": [
             "BIP 151 connection used for all PuB requests"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Charting fixes and improvements"
          ]
       },
       {
-         "version_string" : "0.14.5",
-         "previous_version" : "0.14.4",
-         "release_date" : "04 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.5",
+         "previous_version": "0.14.4",
+         "release_date": "04 April 2019",
+         "improvements": [
             "debug output redirect from child process",
             "dialogs invoke updated"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "chat fixes"
          ]
       },
       {
-         "version_string" : "0.14.4",
-         "previous_version" : "0.14.3",
-         "release_date" : "03 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.4",
+         "previous_version": "0.14.3",
+         "release_date": "03 April 2019",
+         "improvements": [
             "OTC in chat",
             "ZMQ heartbeats",
             "BIP151 rekeying",
             "Unused ZMQ settings removed"
          ],
-         "bug_fixes" :
-         [
-         ]
+         "bug_fixes": []
       },
       {
-         "version_string" : "0.14.3",
-         "previous_version" : "0.14.2",
-         "release_date" : "02 April 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.3",
+         "previous_version": "0.14.2",
+         "release_date": "02 April 2019",
+         "improvements": [
             "OHLC product list view"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Fix OHLC stuck",
             "Signer path"
          ]
       },
       {
-         "version_string" : "0.14.2",
-         "previous_version" : "0.14.1",
-         "release_date" : "28 March 2019",
-         "improvements" :
-         [
+         "version_string": "0.14.2",
+         "previous_version": "0.14.1",
+         "release_date": "28 March 2019",
+         "improvements": [
             "Split signer process and signer UI"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Fix connection to MDHS"
          ]
       },
       {
-         "version_string" : "0.14.1",
-         "previous_version" : "0.13.6",
-         "improvements" :
-         [
+         "version_string": "0.14.1",
+         "previous_version": "0.13.6",
+         "improvements": [
             "Switch to BIP150/151 for signer conneciton"
          ]
       },
       {
-         "version_string" : "0.13.6",
-         "previous_version" : "0.13.5",
-         "improvements" :
-         [
+         "version_string": "0.13.6",
+         "previous_version": "0.13.5",
+         "improvements": [
             "untracked changes"
          ]
       },
       {
-         "version_string" : "0.13.5",
-         "previous_version" : "0.13.4",
-         "improvements" :
-         [
+         "version_string": "0.13.5",
+         "previous_version": "0.13.4",
+         "improvements": [
             "Context menu for unsettled trades"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Logo replaced",
             "Armory startup path fixed",
             "Armory settings"
          ]
       },
       {
-         "version_string" : "0.13.4",
-         "previous_version" : "0.13.3",
-         "improvements" :
-         [
+         "version_string": "0.13.4",
+         "previous_version": "0.13.3",
+         "improvements": [
             "Minor UI improvements"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Create TX fixes"
          ]
       },
       {
-         "version_string" : "0.13.3",
-         "previous_version" : "0.13.2",
-         "improvements" :
-         [
+         "version_string": "0.13.3",
+         "previous_version": "0.13.2",
+         "improvements": [
             "Minor UI improvements"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Create TX fixes"
          ]
       },
       {
-         "version_string" : "0.13.2",
-         "previous_version" : "0.13.1",
-         "improvements" :
-         [
+         "version_string": "0.13.2",
+         "previous_version": "0.13.1",
+         "improvements": [
             "Chat updates",
             "MD from BS server"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "New address creation",
             "Various fee calculations"
          ]
       },
       {
-         "version_string" : "0.13.1",
-         "previous_version" : "0.13.0",
-         "improvements" :
-         [
+         "version_string": "0.13.1",
+         "previous_version": "0.13.0",
+         "improvements": [
             "Chat page updates",
             "Armory Environment select"
          ]
       },
       {
-         "version_string" : "0.13.0",
-         "previous_version" : "0.12.12",
-         "improvements" :
-         [
+         "version_string": "0.13.0",
+         "previous_version": "0.12.12",
+         "improvements": [
             "Isolate wallet code",
             "Armory Environment select"
          ]
       },
       {
-         "version_string" : "0.12.12",
-         "previous_version" : "0.12.11",
-         "improvements" :
-         [
+         "version_string": "0.12.12",
+         "previous_version": "0.12.11",
+         "improvements": [
             "Version checker",
             "Env select"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "Armory connection in release build"
          ]
       },
       {
-         "version_string" : "0.12.11",
-         "previous_version" : "0.12.10",
-         "improvements" :
-         [
+         "version_string": "0.12.11",
+         "previous_version": "0.12.10",
+         "improvements": [
             "login updates"
          ]
       },
       {
-         "version_string" : "0.12.10",
-         "improvements" :
-         [
+         "version_string": "0.12.10",
+         "improvements": [
             "BIP150/151"
          ],
-         "bug_fixes" :
-         [
+         "bug_fixes": [
             "couple of crashes",
             "signer connection"
          ]
