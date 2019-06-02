@@ -111,6 +111,8 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    qRegisterMetaType<std::shared_ptr<Chat::OTCResponseData>>();
    qRegisterMetaType<std::shared_ptr<Chat::OTCUpdateData>>();
 
+   chatSessionKeyPtr_ = std::make_shared<Chat::ChatSessionKey>(logger);
+
    //This is required (with Qt::QueuedConnection), because of ZmqBIP15XDataConnection crashes when delete it from this (callback) thread
    connect(this, &ChatClient::ForceLogoutSignal, this, &ChatClient::onForceLogoutSignal, Qt::QueuedConnection);
 
@@ -830,11 +832,30 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       return result;
    }
 
-   const auto& sessionKeysIterator = sessionKeys_.find(receiver);
-   if (sessionKeysIterator == sessionKeys_.end()) {
+   const auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(receiver.toStdString());
+   if (chatSessionKeyDataPtr == nullptr) {
       enqueued_messages_[receiver].push(message);
 
+      chatSessionKeyPtr_->generateLocalKeysForUser(receiver.toStdString());
 
+      BinaryData remotePublicKey(contactPublicKeyIterator->second);
+
+      try {
+         BinaryData encryptedLocalPublicKey = chatSessionKeyPtr_->iesEncryptLocalPublicKey(receiver.toStdString(), remotePublicKey);
+
+         auto request = std::make_shared<Chat::SessionPublicKeyRequest>(
+            "",
+            currentUserId_,
+            receiver.toStdString(),
+            encryptedLocalPublicKey.toHexStr());
+
+         sendRequest(request);
+      } catch (std::exception& e) {
+         logger_->error("[ChatClient::{}] Failed to encrypt msg by ies {}", __func__, e.what());
+         return result;
+      }
+
+      return result;
    }
 
    logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());

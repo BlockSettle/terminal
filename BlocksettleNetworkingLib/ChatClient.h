@@ -9,6 +9,7 @@
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "Encryption/ChatSessionKey.h"
 
 #include <queue>
 #include <unordered_set>
@@ -246,8 +247,7 @@ private:
    std::unique_ptr<ChatDB>                                     chatDb_;
    std::map<QString, BinaryData>                               contactPublicKeys_;
 
-   // [ receiver_id, pair <LocalSessionPrivateKey, RemoteSessionPublicKey> ]
-   std::map<QString, std::pair<SecureBinaryData, BinaryData>>  sessionKeys_;
+   Chat::ChatSessionKeyPtr  chatSessionKeyPtr_;
 
    std::shared_ptr<ZmqBIP15XDataConnection>                    connection_;
    std::shared_ptr<UserHasher>                                 hasher_;
