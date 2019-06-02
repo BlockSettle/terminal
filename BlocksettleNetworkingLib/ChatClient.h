@@ -206,6 +206,7 @@ signals:
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
    void readDatabase();
+   bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey);
 
 signals:
    void ConnectedToServer();

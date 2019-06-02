@@ -27,9 +27,9 @@ namespace Chat {
          data[SenderSessionPublicKeyKey].toString().toStdString());
    }
 
-   void ReplySessionPublicKeyRequest::handle(RequestHandler&)
+   void ReplySessionPublicKeyRequest::handle(RequestHandler& handler)
    {
-
+      handler.OnReplySessionPublicKeyRequest(*this);
    }
 
 }

@@ -12,7 +12,7 @@ namespace Chat {
 
       return data;
    }
-   
+
    std::shared_ptr<Request> SessionPublicKeyRequest::fromJSON(
       const std::string& clientId,
       const std::string& jsonData)
@@ -27,9 +27,9 @@ namespace Chat {
          data[SenderSessionPublicKeyKey].toString().toStdString());
    }
 
-   void SessionPublicKeyRequest::handle(RequestHandler&)
+   void SessionPublicKeyRequest::handle(RequestHandler& handler)
    {
-
+      handler.OnSessionPublicKeyRequest(*this);
    }
 
 }

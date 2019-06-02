@@ -24,6 +24,8 @@ namespace Chat {
       bool updateRemotePublicKeyForUser(const std::string &receiverId, const BinaryData &remotePublicKey) const;
       BinaryData iesEncryptLocalPublicKey(const std::string& receiverId, const BinaryData& remotePublicKey) const;
 
+      bool isExchangeForUserSucceeded(const std::string &receiverId);
+
    private:
       ChatSessionDataPtrList _chatSessionKeyDataList;
       std::shared_ptr<spdlog::logger> logger_ = nullptr;

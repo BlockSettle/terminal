@@ -37,9 +37,9 @@ namespace Chat {
          data[SenderSessionPublicKeyKey].toString().toStdString());
    }
 
-   void SessionPublicKeyResponse::handle(ResponseHandler&)
+   void SessionPublicKeyResponse::handle(ResponseHandler& handler)
    {
-
+      handler.OnSessionPublicKeyResponse(*this);
    }
 
 }

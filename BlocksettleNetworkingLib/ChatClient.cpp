@@ -834,7 +834,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    }
 
    const auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(receiver.toStdString());
-   if (chatSessionKeyDataPtr == nullptr) {
+   if (chatSessionKeyDataPtr == nullptr || !chatSessionKeyPtr_->isExchangeForUserSucceeded(receiver.toStdString())) {
       enqueued_messages_[receiver].push(message);
 
       chatSessionKeyPtr_->generateLocalKeysForUser(receiver.toStdString());
@@ -1556,32 +1556,10 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
 
 void ChatClient::OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse& response)
 {
-   // decrypt by ies received public key
-   std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
-   SecureBinaryData localPrivateKey(appSettings_->GetAuthKeys().first.data(), appSettings_->GetAuthKeys().first.size());
-   dec->setPrivateKey(localPrivateKey);
-   dec->setData(response.senderSessionPublicKey());
-
-   Botan::SecureVector<uint8_t> decodedData;
-   try {
-      dec->finish(decodedData);
-   }
-   catch (std::exception&) {
-      logger_->error("[ChatClient::{}] Failed to decrypt public key by ies.", __func__);
+   if (!decodeAndUpdateIncomingSessionPublicKey(response.senderId(), response.senderSessionPublicKey())) {
+      logger_->error("[ChatClient::{}] Failed updating remote public key!", __func__);
       return;
    }
-
-   BinaryData remoteSessionPublicKey(decodedData.data(), decodedData.size());
-
-   const auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(response.senderId());
-
-   if (chatSessionKeyDataPtr == nullptr) {
-      // create new local private and public session keys for sender
-      // keys always are assigned to remote peer id 
-      Chat::ChatSessionKeyDataPtr chatSessionKeyDataPtr = chatSessionKeyPtr_->generateLocalKeysForUser(response.senderId());
-   }
-
-   chatSessionKeyDataPtr->setRemotePublicKey(remoteSessionPublicKey);
 
    // encode own session public key by ies and send as reply
    const auto& contactPublicKeyIterator = contactPublicKeys_.find(QString::fromStdString(response.senderId()));
@@ -1612,5 +1590,48 @@ void ChatClient::OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse
 
 void ChatClient::OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse& response)
 {
+   if (!decodeAndUpdateIncomingSessionPublicKey(response.senderId(), response.senderSessionPublicKey())) {
+      logger_->error("[ChatClient::{}] Failed updating remote public key!", __func__);
+      return;
+   }
 
+   // Run over enqueued messages if any, and try to send them all now.
+   std::queue<QString>& messages = enqueued_messages_[QString::fromStdString(
+      response.senderId())];
+   while (!messages.empty()) {
+      sendOwnMessage(messages.front(), QString::fromStdString(response.senderId()));
+      messages.pop();
+   }
+}
+
+bool ChatClient::decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey)
+{
+   // decrypt by ies received public key
+   std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
+   SecureBinaryData localPrivateKey(appSettings_->GetAuthKeys().first.data(), appSettings_->GetAuthKeys().first.size());
+   dec->setPrivateKey(localPrivateKey);
+   dec->setData(encodedPublicKey);
+
+   Botan::SecureVector<uint8_t> decodedData;
+   try {
+      dec->finish(decodedData);
+   }
+   catch (std::exception&) {
+      logger_->error("[ChatClient::{}] Failed to decrypt public key by ies.", __func__);
+      return false;
+   }
+
+   BinaryData remoteSessionPublicKey(decodedData.data(), decodedData.size());
+
+   const auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(senderId);
+
+   if (chatSessionKeyDataPtr == nullptr) {
+      // create new local private and public session keys for sender
+      // keys always are assigned to remote peer id 
+      Chat::ChatSessionKeyDataPtr chatSessionKeyDataPtr = chatSessionKeyPtr_->generateLocalKeysForUser(senderId);
+   }
+
+   chatSessionKeyDataPtr->setRemotePublicKey(remoteSessionPublicKey);
+
+   return true;
 }
