@@ -20,6 +20,7 @@ namespace Chat {
    class SendRoomMessageRequest;
    class SearchUsersRequest;
    class SessionPublicKeyRequest;
+   class ReplySessionPublicKeyRequest;
    
    class RequestHandler
    {
@@ -51,6 +52,7 @@ namespace Chat {
       virtual void OnSearchUsersRequest(const SearchUsersRequest&) = 0;
 
       virtual void OnSessionPublicKeyRequest(const SessionPublicKeyRequest&) = 0;
+      virtual void OnReplySessionPublicKeyRequest(const ReplySessionPublicKeyRequest&) = 0;
    };
 }
 

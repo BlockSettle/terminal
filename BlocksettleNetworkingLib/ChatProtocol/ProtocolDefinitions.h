@@ -33,7 +33,8 @@ namespace Chat
       RequestSendRoomMessage,
       RequestContactsList,
       RequestSearchUsers,
-      RequestSessionPublicKey
+      RequestSessionPublicKey,
+      RequestReplySessionPublicKey
    };
 
 
@@ -58,7 +59,8 @@ namespace Chat
       ResponseSearchUsers,
       ResponseLogout,
       ResponseSendSessionPublicKey,
-      ResponseSessionPublicKey
+      ResponseSessionPublicKey,
+      ResponseReplySessionPublicKey
    };
    
    enum class ContactsAction {

@@ -19,6 +19,7 @@
 #include "ResponseObjects/SearchUsersResponse.h"
 #include "ResponseObjects/LogoutResponse.h"
 #include "ResponseObjects/SessionPublicKeyResponse.h"
+#include "ResponseObjects/ReplySessionPublicKeyResponse.h"
 
 #include "ResponseHandler.h"
 

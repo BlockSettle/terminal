@@ -17,28 +17,30 @@
 #include "ContactsListRequest.h"
 #include "SearchUsersRequest.h"
 #include "SessionPublicKeyRequest.h"
+#include "ReplySessionPublicKeyRequest.h"
 
 using namespace Chat;
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
 
-   { "RequestHeartbeatPing"       ,   RequestType::RequestHeartbeatPing       },
-   { "RequestLogin"               ,   RequestType::RequestLogin               },
-   { "RequestLogout"              ,   RequestType::RequestLogout              },
-   { "RequestMessages"            ,   RequestType::RequestMessages            },
-   { "RequestSendMessage"         ,   RequestType::RequestSendMessage         },
-   { "RequestOnlineUsers"         ,   RequestType::RequestOnlineUsers         },
-   { "RequestAskForPublicKey"     ,   RequestType::RequestAskForPublicKey     },
-   { "RequestSendOwnPublicKey"    ,   RequestType::RequestSendOwnPublicKey    },
-   { "RequestChangeMessageStatus" ,   RequestType::RequestChangeMessageStatus },
-   { "RequestContactsActionDirect",   RequestType::RequestContactsActionDirect},
-   { "RequestContactsActionServer",   RequestType::RequestContactsActionServer},
-   { "RequestChatroomsList"       ,   RequestType::RequestChatroomsList       },
-   { "RequestSendRoomMessage"     ,   RequestType::RequestSendRoomMessage     },
-   { "RequestContactsList"        ,   RequestType::RequestContactsList        },
-   { "RequestSearchUsers"         ,   RequestType::RequestSearchUsers         },
-   { "RequestSessionPublicKey"    ,   RequestType::RequestSessionPublicKey    },
+   { "RequestHeartbeatPing"         ,   RequestType::RequestHeartbeatPing           },
+   { "RequestLogin"                 ,   RequestType::RequestLogin                   },
+   { "RequestLogout"                ,   RequestType::RequestLogout                  },
+   { "RequestMessages"              ,   RequestType::RequestMessages                },
+   { "RequestSendMessage"           ,   RequestType::RequestSendMessage             },
+   { "RequestOnlineUsers"           ,   RequestType::RequestOnlineUsers             },
+   { "RequestAskForPublicKey"       ,   RequestType::RequestAskForPublicKey         },
+   { "RequestSendOwnPublicKey"      ,   RequestType::RequestSendOwnPublicKey        },
+   { "RequestChangeMessageStatus"   ,   RequestType::RequestChangeMessageStatus     },
+   { "RequestContactsActionDirect"  ,   RequestType::RequestContactsActionDirect    },
+   { "RequestContactsActionServer"  ,   RequestType::RequestContactsActionServer    },
+   { "RequestChatroomsList"         ,   RequestType::RequestChatroomsList           },
+   { "RequestSendRoomMessage"       ,   RequestType::RequestSendRoomMessage         },
+   { "RequestContactsList"          ,   RequestType::RequestContactsList            },
+   { "RequestSearchUsers"           ,   RequestType::RequestSearchUsers             },
+   { "RequestSessionPublicKey"      ,   RequestType::RequestSessionPublicKey        },
+   { "RequestReplySessionPublicKey" ,   RequestType::RequestReplySessionPublicKey   },
 
 };
 
@@ -46,22 +48,23 @@ static std::map<std::string, RequestType> RequestTypeFromString
 static std::map<RequestType, std::string> RequestTypeToString
 {
 
-   { RequestType::RequestHeartbeatPing       ,   "RequestHeartbeatPing"       },
-   { RequestType::RequestLogin               ,   "RequestLogin"               },
-   { RequestType::RequestLogout              ,   "RequestLogout"              },
-   { RequestType::RequestMessages            ,   "RequestMessages"            },
-   { RequestType::RequestSendMessage         ,   "RequestSendMessage"         },
-   { RequestType::RequestOnlineUsers         ,   "RequestOnlineUsers"         },
-   { RequestType::RequestAskForPublicKey     ,   "RequestAskForPublicKey"     },
-   { RequestType::RequestSendOwnPublicKey    ,   "RequestSendOwnPublicKey"    },
-   { RequestType::RequestChangeMessageStatus ,   "RequestChangeMessageStatus" },
-   { RequestType::RequestContactsActionDirect,   "RequestContactsActionDirect"},
-   { RequestType::RequestContactsActionServer,   "RequestContactsActionServer"},
-   { RequestType::RequestChatroomsList       ,   "RequestChatroomsList"       },
-   { RequestType::RequestSendRoomMessage     ,   "RequestSendRoomMessage"     },
-   { RequestType::RequestContactsList        ,   "RequestContactsList"        },
-   { RequestType::RequestSearchUsers         ,   "RequestSearchUsers"         },
-   { RequestType::RequestSessionPublicKey    ,   "RequestSessionPublicKey"    },
+   { RequestType::RequestHeartbeatPing          ,   "RequestHeartbeatPing"             },
+   { RequestType::RequestLogin                  ,   "RequestLogin"                     },
+   { RequestType::RequestLogout                 ,   "RequestLogout"                    },
+   { RequestType::RequestMessages               ,   "RequestMessages"                  },
+   { RequestType::RequestSendMessage            ,   "RequestSendMessage"               },
+   { RequestType::RequestOnlineUsers            ,   "RequestOnlineUsers"               },
+   { RequestType::RequestAskForPublicKey        ,   "RequestAskForPublicKey"           },
+   { RequestType::RequestSendOwnPublicKey       ,   "RequestSendOwnPublicKey"          },
+   { RequestType::RequestChangeMessageStatus    ,   "RequestChangeMessageStatus"       },
+   { RequestType::RequestContactsActionDirect   ,   "RequestContactsActionDirect"      },
+   { RequestType::RequestContactsActionServer   ,   "RequestContactsActionServer"      },
+   { RequestType::RequestChatroomsList          ,   "RequestChatroomsList"             },
+   { RequestType::RequestSendRoomMessage        ,   "RequestSendRoomMessage"           },
+   { RequestType::RequestContactsList           ,   "RequestContactsList"              },
+   { RequestType::RequestSearchUsers            ,   "RequestSearchUsers"               },
+   { RequestType::RequestSessionPublicKey       ,   "RequestSessionPublicKey"          },
+   { RequestType::RequestReplySessionPublicKey  ,   "RequestReplySessionPublicKey"     },
 
 };
 
@@ -165,6 +168,9 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
       case RequestType::RequestSessionPublicKey:
          return SessionPublicKeyRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestReplySessionPublicKey:
+         return ReplySessionPublicKeyRequest::fromJSON(clientId, jsonData);
 
       default:
          break;

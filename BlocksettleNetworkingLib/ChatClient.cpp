@@ -20,6 +20,7 @@
 #include "Encryption/AEAD_Decryption.h"
 #include "Encryption/IES_Encryption.h"
 #include "Encryption/IES_Decryption.h"
+#include "Encryption/ChatSessionKeyData.h"
 
 #include <QDateTime>
 #include <QDebug>
@@ -1554,6 +1555,62 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
 }
 
 void ChatClient::OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse& response)
+{
+   // decrypt by ies received public key
+   std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
+   SecureBinaryData localPrivateKey(appSettings_->GetAuthKeys().first.data(), appSettings_->GetAuthKeys().first.size());
+   dec->setPrivateKey(localPrivateKey);
+   dec->setData(response.senderSessionPublicKey());
+
+   Botan::SecureVector<uint8_t> decodedData;
+   try {
+      dec->finish(decodedData);
+   }
+   catch (std::exception&) {
+      logger_->error("[ChatClient::{}] Failed to decrypt public key by ies.", __func__);
+      return;
+   }
+
+   BinaryData remoteSessionPublicKey(decodedData.data(), decodedData.size());
+
+   const auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(response.senderId());
+
+   if (chatSessionKeyDataPtr == nullptr) {
+      // create new local private and public session keys for sender
+      // keys always are assigned to remote peer id 
+      Chat::ChatSessionKeyDataPtr chatSessionKeyDataPtr = chatSessionKeyPtr_->generateLocalKeysForUser(response.senderId());
+   }
+
+   chatSessionKeyDataPtr->setRemotePublicKey(remoteSessionPublicKey);
+
+   // encode own session public key by ies and send as reply
+   const auto& contactPublicKeyIterator = contactPublicKeys_.find(QString::fromStdString(response.senderId()));
+   if (contactPublicKeyIterator == contactPublicKeys_.end()) {
+      // this should not happen
+      logger_->error("[ChatClient::{}] Cannot find remote public key!", __func__);
+      return;
+   }
+
+   BinaryData remotePublicKey(contactPublicKeyIterator->second);
+
+   try {
+      BinaryData encryptedLocalPublicKey = chatSessionKeyPtr_->iesEncryptLocalPublicKey(response.senderId(), remotePublicKey);
+
+      auto request = std::make_shared<Chat::ReplySessionPublicKeyRequest>(
+         "",
+         currentUserId_,
+         response.senderId(),
+         encryptedLocalPublicKey);
+
+      sendRequest(request);
+   }
+   catch (std::exception& e) {
+      logger_->error("[ChatClient::{}] Failed to encrypt msg by ies {}", __func__, e.what());
+      return;
+   }
+}
+
+void ChatClient::OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse& response)
 {
 
 }

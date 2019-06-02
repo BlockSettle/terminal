@@ -19,6 +19,7 @@ namespace Chat {
    class SearchUsersResponse;
    class LogoutResponse;
    class SessionPublicKeyResponse;
+   class ReplySessionPublicKeyResponse;
    
    class ResponseHandler
    {
@@ -49,6 +50,7 @@ namespace Chat {
       virtual void OnSearchUsersResponse(const SearchUsersResponse&) = 0;
 
       virtual void OnSessionPublicKeyResponse(const SessionPublicKeyResponse&) = 0;
+      virtual void OnReplySessionPublicKeyResponse(const ReplySessionPublicKeyResponse&) = 0;
    };
 }
 

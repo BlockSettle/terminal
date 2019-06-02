@@ -16,6 +16,7 @@
 #include "RequestObjects/ContactsListRequest.h"
 #include "RequestObjects/SearchUsersRequest.h"
 #include "RequestObjects/SessionPublicKeyRequest.h"
+#include "RequestObjects/ReplySessionPublicKeyRequest.h"
 
 #include "RequestHandler.h"
 
