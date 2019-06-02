@@ -847,7 +847,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
             "",
             currentUserId_,
             receiver.toStdString(),
-            encryptedLocalPublicKey.toHexStr());
+            encryptedLocalPublicKey);
 
          sendRequest(request);
       } catch (std::exception& e) {

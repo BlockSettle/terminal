@@ -43,7 +43,7 @@ namespace Chat {
 
       std::string senderId() const { return senderId_; }
       std::string receiverId() const { return receiverId_; }
-      BinaryData senderSessionPublicKey() const { return BinaryData::CreateFromHex(senderSessionPublicKey_); }
+      std::string senderSessionPublicKey() const { return senderSessionPublicKey_; }
 
    private:
       std::string senderId_;
