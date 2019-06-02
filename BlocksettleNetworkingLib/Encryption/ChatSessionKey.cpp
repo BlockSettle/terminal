@@ -68,9 +68,6 @@ namespace Chat {
 
    bool ChatSessionKey::updateRemotePublicKeyForUser(const std::string &receiverId, const BinaryData &remotePublicKey) const
    {
-      // TODO: remove
-      logger_->debug("UPDATE DECRYPTED: {}", remotePublicKey.toHexStr());
-
       auto chatSessionDataPtr = findSessionForUser(receiverId);
 
       if (chatSessionDataPtr == nullptr) {
@@ -94,9 +91,6 @@ namespace Chat {
       enc->setPublicKey(remotePublicKey);
       enc->setData(chatSessionDataPtr->localPublicKey().toHexStr());
 
-      // TODO: remove
-      logger_->debug("ENCRYPT: {}", chatSessionDataPtr->localPublicKey().toHexStr());
-
       try {
          Botan::SecureVector<uint8_t> encodedData;
          enc->finish(encodedData);
@@ -118,7 +112,7 @@ namespace Chat {
          return false;
       }
 
-      if (chatSessionDataPtr->remotePublicKey().getSize() != kPrivateKeySize) {
+      if (chatSessionDataPtr->remotePublicKey().getSize() == 0) {
          return false;
       }
 
