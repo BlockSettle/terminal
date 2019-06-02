@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SendOwnPublicKeyResponse_h__
+#define SendOwnPublicKeyResponse_h__
 
 #include "Response.h"
 
@@ -36,3 +37,5 @@ namespace Chat {
    };
    
 }
+
+#endif // SendOwnPublicKeyResponse_h__

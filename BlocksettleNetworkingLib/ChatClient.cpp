@@ -1552,3 +1552,8 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
                       crecord->getContactStatus(),
                       crecord->getDisplayName());
 }
+
+void ChatClient::OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse& response)
+{
+
+}

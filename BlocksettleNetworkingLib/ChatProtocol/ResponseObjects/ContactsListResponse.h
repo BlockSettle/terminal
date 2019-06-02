@@ -1,7 +1,8 @@
-#ifndef CONTACTSLISTRESPONSE_H
-#define CONTACTSLISTRESPONSE_H
+#ifndef ContactsListResponse_h__
+#define ContactsListResponse_h__
 
 #include "ListResponse.h"
+
 namespace Chat {
 
    class ContactsListResponse : public ListResponse
@@ -17,4 +18,4 @@ namespace Chat {
    };
 }
 
-#endif // CONTACTSLISTRESPONSE_H
+#endif // ContactsListResponse_h__

@@ -57,7 +57,8 @@ namespace Chat
       ResponseContactsList,
       ResponseSearchUsers,
       ResponseLogout,
-      ResponseSendSessionPublicKey
+      ResponseSendSessionPublicKey,
+      ResponseSessionPublicKey
    };
    
    enum class ContactsAction {

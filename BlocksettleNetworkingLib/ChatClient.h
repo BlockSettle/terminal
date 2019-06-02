@@ -73,6 +73,7 @@ public:
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
+   void OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse&) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;

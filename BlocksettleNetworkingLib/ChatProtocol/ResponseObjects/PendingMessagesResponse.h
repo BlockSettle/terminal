@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PendingMessagesResponse_h__
+#define PendingMessagesResponse_h__
 
 #include "Response.h"
 
@@ -15,3 +16,5 @@ namespace Chat {
       QString messageId_;
    };
 }
+
+#endif // PendingMessagesResponse_h__

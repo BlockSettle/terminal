@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ResponseObjects_h__
+#define ResponseObjects_h__
 
 #include "ResponseObjects/AskForPublicKeyResponse.h"
 #include "ResponseObjects/ChatroomsListResponse.h"
@@ -17,5 +18,8 @@
 #include "ResponseObjects/ContactsListResponse.h"
 #include "ResponseObjects/SearchUsersResponse.h"
 #include "ResponseObjects/LogoutResponse.h"
+#include "ResponseObjects/SessionPublicKeyResponse.h"
 
 #include "ResponseHandler.h"
+
+#endif // ResponseObjects_h__
