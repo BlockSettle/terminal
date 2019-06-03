@@ -629,44 +629,6 @@ ELSE(WIN32)
       FIND_PACKAGE( Fontconfig REQUIRED )
 
       IF(BSTERMINAL_SHARED_LIBS)
-         SET( TMP_LIBS
-            libQt5XcbQpa.a
-            libQt5ServiceSupport.a
-            libQt5ThemeSupport.a
-            libQt5EventDispatcherSupport.a
-            libQt5FontDatabaseSupport.a
-            libQt5LinuxAccessibilitySupport.a
-            libQt5AccessibilitySupport.a
-            libQt5EdidSupport.a )
-
-         FOREACH(lib_name ${TMP_LIBS})
-            IF(NOT EXISTS ${QT5_LIB_ROOT}/${lib_name})
-               MESSAGE(FATAL_ERROR "Could not locate required Qt lib ${QT5_LIB_ROOT}/${lib_name}")
-            ENDIF()
-
-            LIST(APPEND QT_LINUX_LIBS ${QT5_LIB_ROOT}/${lib_name})
-         ENDFOREACH(lib_name)
-
-         SET( OS_SPECIFIC_LIBS
-            Fontconfig::Fontconfig
-            freetype
-            X11::XCB
-            X11
-            Xi
-            SM
-            ICE
-            Xrender
-            ${XCB_LIBRARIES}
-            xkbcommon-x11
-            xkbcommon
-            dbus-1
-            ${ZLIB_LIBRARIES}
-            png
-            m
-            double-conversion
-            dl
-            cups
-            ${CMAKE_THREAD_LIBS_INIT} )
 
       ELSE(BSTERMINAL_SHARED_LIBS)
          SET(QT_LIBS
