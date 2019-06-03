@@ -1,7 +1,14 @@
 #include "ContactActionRequestServer.h"
 
 namespace Chat {
-   ContactActionRequestServer::ContactActionRequestServer(const std::string& clientId, const std::string& senderId, const std::string& contactId, ContactsActionServer action, ContactStatus status, autheid::PublicKey publicKey)
+   ContactActionRequestServer::ContactActionRequestServer(
+         const std::string& clientId,
+         const std::string& senderId,
+         const std::string& contactId,
+         ContactsActionServer action,
+         ContactStatus status,
+         autheid::PublicKey publicKey)
+
       : Request (RequestType::RequestContactsActionServer, clientId)
       , senderId_(senderId)
       , contactUserId_(contactId)

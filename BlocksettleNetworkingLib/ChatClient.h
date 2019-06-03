@@ -29,6 +29,7 @@ class ChatClientDataModel;
 class ConnectionManager;
 class UserHasher;
 class ZmqBIP15XDataConnection;
+class UserSearchModel;
 class ChatTreeModelWrapper;
 
 class ChatClient : public QObject
@@ -53,6 +54,7 @@ public:
    ChatClient& operator = (ChatClient&&) = delete;
 
    std::shared_ptr<ChatClientDataModel> getDataModel();
+   std::shared_ptr<UserSearchModel> getUserSearchModel();
    std::shared_ptr<ChatTreeModelWrapper> getProxyModel();
 
    std::string loginToServer(const std::string& email, const std::string& jwt
@@ -72,6 +74,9 @@ public:
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
+   void OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &) override;
+   void OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &) override;
+   void OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -262,6 +267,7 @@ private:
 
    autheid::PrivateKey  ownPrivKey_;
    std::shared_ptr<ChatClientDataModel> model_;
+   std::shared_ptr<UserSearchModel> userSearchModel_;
    std::shared_ptr<ChatTreeModelWrapper> proxyModel_;
 
    // ChatItemActionsHandler interface
@@ -315,4 +321,8 @@ private:
 public:
    void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
 };
+
+
+
+
 #endif   // CHAT_CLIENT_H

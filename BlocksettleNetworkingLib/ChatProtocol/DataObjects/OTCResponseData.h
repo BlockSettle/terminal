@@ -57,9 +57,11 @@ namespace Chat {
       bs::network::OTCPriceRange    priceRange() const;
       bs::network::OTCQuantityRange quantityRange() const;
 
+      void setServerResponseId(const QString &serverResponseId);
+
    private:
       const QString clientResponseId_;
-      const QString serverResponseId_;
+      QString serverResponseId_;
       const QString negotiationChannelId_;
       const QString serverRequestId_;
       const QString requestorId_;
