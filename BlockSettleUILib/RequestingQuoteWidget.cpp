@@ -116,7 +116,6 @@ void  RequestingQuoteWidget::onOrderFailed(const std::string& quoteId, const std
 bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 {
    if (quote.requestId == rfq_.requestId) {
-      window()->setWindowTitle(tr("Quote Response"));
       quote_ = quote;
       if (quote_.product.empty()) {
          quote_.product = rfq_.product;

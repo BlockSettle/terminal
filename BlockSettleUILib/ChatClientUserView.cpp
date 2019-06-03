@@ -182,6 +182,26 @@ void ChatClientUserView::setCurrentUserChat(const QString &userId)
    }
 }
 
+void ChatClientUserView::updateCurrentChat()
+{
+   auto proxyModel = qobject_cast<const QAbstractProxyModel*>(currentIndex().model());
+   QModelIndex index = proxyModel ? proxyModel->mapToSource(currentIndex()) : currentIndex();
+   TreeItem *item = static_cast<TreeItem*>(index.internalPointer());
+   if (!watchers_.empty() && item) {
+      switch (item->getType()) {
+         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
+            auto element = static_cast<CategoryElement*>(item);
+            updateDependUI(element);
+            notifyCurrentChanged(element);
+         }
+         break;
+         default:
+            break;
+      }
+   }
+}
+
 void ChatClientUserView::onCustomContextMenu(const QPoint & point)
 {
    if (!contextMenu_) {

@@ -50,8 +50,8 @@ CreateTransactionDialog::CreateTransactionDialog(const std::shared_ptr<ArmoryCon
    , armory_(armory)
    , walletsManager_(walletManager)
    , signContainer_(container)
-   , loadFeeSuggestions_(loadFeeSuggestions)
    , logger_(logger)
+   , loadFeeSuggestions_(loadFeeSuggestions)
 {
    qRegisterMetaType<std::map<unsigned int, float>>();
 }
@@ -144,9 +144,9 @@ void CreateTransactionDialog::clear()
 void CreateTransactionDialog::reject()
 {
    if (broadcasting_) {
-      BSMessageBox confirmExit(BSMessageBox::question, tr("Abort transaction broadcasting")
-         , tr("You are about to abort transaction sending")
-         , tr("Are you sure you wish to abort the signing and sending process?"), this);
+      BSMessageBox confirmExit(BSMessageBox::question, tr("Abort transaction broadcast")
+         , tr("Abort transaction broadcast?")
+         , tr("Are you sure you wish to abort the signing and broadcast process?"), this);
       //confirmExit.setExclamationIcon();
       if (confirmExit.exec() != QDialog::Accepted) {
          return;
