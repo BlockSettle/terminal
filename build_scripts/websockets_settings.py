@@ -11,7 +11,7 @@ class WebsocketsSettings(Configurator):
         self._version = '3.1.0'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
-        self._script_revision = '3'
+        self._script_revision = '4'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
