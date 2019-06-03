@@ -1,5 +1,5 @@
 #include "OTCUpdateData.h"
-
+#include "../ProtocolDefinitions.h"
 #include <QDateTime>
 
 namespace Chat {
@@ -7,13 +7,33 @@ namespace Chat {
 QJsonObject OTCUpdateData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
+   data[OTCRequestIdServerKey] = serverRequestId_;
+   data[OTCUpdateIdClientKey] = clientUpdateId_;
+   data[OTCUpdateIdServerKey] = serverUpdateId_;
+   data[OTCUpdateTimestampKey] = QString::number(updateTimestamp_);
+   data[OTCUpdateAmountKey] = amount_;
+   data[OTCUpdatePriceKey] = price_;
 
    return data;
 }
 
 std::shared_ptr<OTCUpdateData> OTCUpdateData::fromJSON(const std::string& jsonData)
 {
-   return nullptr;
+   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+
+   QString serverRequestId = data[OTCRequestIdServerKey].toString();
+   QString clientUpdateId = data[OTCUpdateIdClientKey].toString();
+   QString serverUpdateId = data[OTCUpdateIdServerKey].toString();
+   uint64_t updateTimestamp = data[OTCUpdateTimestampKey].toString().toULongLong();
+   double amount = data[OTCUpdateAmountKey].toDouble();
+   double price = data[OTCUpdatePriceKey].toDouble();
+
+   return std::make_shared<OTCUpdateData>(serverRequestId,
+                                          clientUpdateId,
+                                          serverUpdateId,
+                                          updateTimestamp,
+                                          amount,
+                                          price);
 }
 
 OTCUpdateData::OTCUpdateData(  const QString& serverRequestId

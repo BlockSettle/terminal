@@ -18,6 +18,9 @@ namespace Chat {
    class PendingMessagesResponse;
    class SendRoomMessageRequest;
    class SearchUsersRequest;
+   class GenCommonOTCRequest;
+   class AnswerCommonOTCRequest;
+   class UpdateCommonOTCRequest;
    
    class RequestHandler
    {
@@ -46,6 +49,11 @@ namespace Chat {
       virtual void OnRequestChatroomsList(const ChatroomsListRequest &) = 0;
       
       virtual void OnSendRoomMessage(const SendRoomMessageRequest& ) = 0;
+
       virtual void OnSearchUsersRequest(const SearchUsersRequest& ) = 0;
+
+      virtual void OnGenCommonOTCRequest(const GenCommonOTCRequest&) = 0;
+      virtual void OnAnswerCommonOTCRequest(const AnswerCommonOTCRequest&) = 0;
+      virtual void OnUpdateCommonOTCRequest(const UpdateCommonOTCRequest&) = 0;
    };
 }
