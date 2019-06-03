@@ -9,6 +9,8 @@
 #include "EncryptionUtils.h"
 #include "ServerConnectionListener.h"
 #include "SignerDefs.h"
+#include "BSErrorCode.h"
+
 #include "headless.pb.h"
 
 namespace spdlog {
@@ -38,7 +40,7 @@ public:
    virtual void txSigned(const BinaryData &) = 0;
    virtual void cancelTxSign(const BinaryData &) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
-//   virtual void asAct(const std::string &) = 0;
+//   virtual void autoSignsActivate(const std::string &) = 0;
 //   virtual void asDeact(const std::string &) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
 };
@@ -63,8 +65,8 @@ public:
 
    void passwordReceived(const std::string &walletId
       , const SecureBinaryData &password, bool cancelledByUser);
-   void activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
-   void deactivateAutoSign(const std::string &walletId = {}, const std::string &reason = {});
+   bs::error::ErrorCode activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
+   bs::error::ErrorCode deactivateAutoSign(const std::string &walletId = {}, const std::string &reason = {});
    //void addPendingAutoSignReq(const std::string &walletId);
    void walletsListUpdated();
 
@@ -108,7 +110,7 @@ private:
 
    bool AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
-      , bs::sync::TxErrorCode errorCode, const BinaryData &tx = {});
+      , bs::error::ErrorCode errorCode, const BinaryData &tx = {});
    void CreateHDWalletResponse(const std::string &clientId, unsigned int id, const std::string &errorOrWalletId
       , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}
       , const std::shared_ptr<bs::core::hd::Wallet> &wallet = nullptr);

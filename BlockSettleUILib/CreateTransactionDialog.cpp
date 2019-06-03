@@ -307,7 +307,7 @@ void CreateTransactionDialog::onMaxPressed()
    lineEditAmount()->setEnabled(true);
 }
 
-void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, bs::sync::TxErrorCode result)
+void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)
 {
    if (!pendingTXSignId_ || (pendingTXSignId_ != id)) {
       return;
@@ -316,13 +316,13 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    pendingTXSignId_ = 0;
    QString detailedText;
 
-   if (result == bs::sync::TxErrorCode::Canceled) {
+   if (result == bs::error::ErrorCode::TxCanceled) {
       stopBroadcasting();
       return;
    }
 
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   if (result == bs::sync::TxErrorCode::NoError && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
+   if (result == bs::error::ErrorCode::NoError && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
       BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
          , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
          , this).exec();
@@ -349,7 +349,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
       return;
    }
 
-   if (result == bs::sync::TxErrorCode::NoError) {
+   if (result == bs::error::ErrorCode::NoError) {
       if (armory_->broadcastZC(signedTX)) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
@@ -362,7 +362,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
       detailedText = tr("Failed to communicate to armory to broadcast transaction. Maybe Armory is offline");
    }
    else {
-      detailedText = bs::signer::ui::TxErrorCodeString(result);
+      detailedText = bs::error::ErrorCodeToString(result);
    }
 
    MessageBoxBroadcastError(detailedText, this).exec();

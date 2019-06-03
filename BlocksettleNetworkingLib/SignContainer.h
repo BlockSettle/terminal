@@ -127,7 +127,7 @@ signals:
    void connectionError(ConnectionError error, const QString &details);
    void ready();
    void Error(bs::signer::RequestId id, std::string error);
-   void TXSigned(bs::signer::RequestId id, BinaryData signedTX, bs::sync::TxErrorCode result);
+   void TXSigned(bs::signer::RequestId id, BinaryData signedTX, bs::error::ErrorCode result);
 
    void PasswordRequested(bs::hd::WalletInfo walletInfo, std::string prompt);
 

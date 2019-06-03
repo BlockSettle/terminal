@@ -271,10 +271,10 @@ void HeadlessContainer::ProcessSignTXResponse(unsigned int id, const std::string
    headless::SignTXReply response;
    if (!response.ParseFromString(data)) {
       logger_->error("[HeadlessContainer] Failed to parse SignTXReply");
-      emit TXSigned(id, {}, bs::sync::TxErrorCode::FailedToParse);
+      emit TXSigned(id, {}, bs::error::ErrorCode::FailedToParse);
       return;
    }
-   emit TXSigned(id, response.signedtx(), static_cast<bs::sync::TxErrorCode>(response.errorcode()));
+   emit TXSigned(id, response.signedtx(), static_cast<bs::error::ErrorCode>(response.errorcode()));
 }
 
 void HeadlessContainer::ProcessPasswordRequest(const std::string &data)

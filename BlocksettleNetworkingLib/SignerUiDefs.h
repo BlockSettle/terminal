@@ -4,7 +4,7 @@
 #include "QObject"
 #include "QString"
 #include "WalletEncryption.h"
-#include "SignerDefs.h"
+#include "BSErrorCode.h"
 
 namespace bs {
    namespace signer {
@@ -51,33 +51,6 @@ namespace bs {
          cli
       };
       Q_ENUM_NS(RunMode)
-
-      inline QString TxErrorCodeString(bs::sync::TxErrorCode errorCode) {
-         switch (errorCode) {
-         case bs::sync::TxErrorCode::NoError:
-            return QObject::tr("");
-         case bs::sync::TxErrorCode::Canceled:
-            return QObject::tr("Transaction canceled");
-         case bs::sync::TxErrorCode::SpendLimitExceed:
-            return QObject::tr("Spend limit exceeded");
-         case bs::sync::TxErrorCode::FailedToParse:
-            return QObject::tr("Failed to parse Sign TX Request");
-         case bs::sync::TxErrorCode::InvalidTxRequest:
-            return QObject::tr("Tx Request is invalid, missing critical data");
-         case bs::sync::TxErrorCode::WalletNotFound:
-            return QObject::tr("Failed to find wallet");
-         case bs::sync::TxErrorCode::MissingPassword:
-            return QObject::tr("Missing password for encrypted wallet");
-         case bs::sync::TxErrorCode::MissingAuthKeys:
-            return QObject::tr("Missing auth priv/pub keys for encrypted wallet");
-         case bs::sync::TxErrorCode::MissingSettlementWallet:
-            return QObject::tr("Missing settlement wallet");
-         case bs::sync::TxErrorCode::MissingAuthWallet:
-            return QObject::tr("Missing Auth wallet");
-         default:
-            return QObject::tr("Unknown error");
-         }
-      }
 
       }  // namespace ui
    }  // namespace signer
