@@ -36,7 +36,9 @@ enum class OTCPages : int
    OTCCreateResponsePage,
    OTCNegotiateRequestPage,
    OTCNegotiateResponsePage,
-   OTCParticipantShieldPage
+   OTCParticipantShieldPage,
+   OTCContactShieldPage,
+   OTCContactNetStatusShieldPage
 };
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
@@ -570,6 +572,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             if (room) {
                setIsRoom(true);
                currentChat_ = room->getId();
+               OTCSwitchToRoom(room);
             }
          }
          break;
@@ -578,25 +581,15 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             if (contact) {
                setIsRoom(false);
                currentChat_ = contact->getContactId();
+               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+               OTCSwitchToContact(contact, cElement->getOnlineStatus()
+                                  == ChatContactElement::OnlineStatus::Online);
             }
          }
          break;
          default:
             break;
 
-      }
-
-      if (IsOTCChatRoom(currentChat_)) {
-         ui_->stackedWidgetMessages->setCurrentIndex(1);
-         OTCSwitchToCommonRoom();
-      } else {
-         ui_->stackedWidgetMessages->setCurrentIndex(0);
-         // XXX: DM OTC request not supported yet. Do not remove commented code
-         // if (IsGlobalChatRoom(currentChat_)) {
-            OTCSwitchToGlobalRoom();
-         // } else {
-            // OTCSwitchToDMRoom();
-         // }
       }
    }
 }
@@ -610,6 +603,28 @@ void ChatWidget::onMessageChanged(std::shared_ptr<Chat::MessageData> message)
 
 void ChatWidget::onElementUpdated(CategoryElement *element)
 {
+   if (element) {
+      switch (element->getType()) {
+         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
+            auto room = std::dynamic_pointer_cast<Chat::RoomData>(element->getDataObject());
+            if (room && currentChat_ == room->getId()) {
+               OTCSwitchToRoom(room);
+            }
+         }
+         break;
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+            auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(element->getDataObject());
+            if (contact && currentChat_ == contact->getContactId()) {
+                ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+               OTCSwitchToContact(contact, cElement->getOnlineStatus()
+                                  == ChatContactElement::OnlineStatus::Online);
+            }
+         }
+         break;
+         default:
+            break;
+      }
+   }
 #if 0
    qDebug() << __func__ << " " << QString::fromStdString(element->getDataObject()->toJsonString());
 #endif
@@ -688,6 +703,37 @@ void ChatWidget::OTCSwitchToDMRoom()
 void ChatWidget::OTCSwitchToGlobalRoom()
 {
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
+}
+
+void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room)
+{
+   if (room->isTradingAvailable()) {
+      ui_->stackedWidgetMessages->setCurrentIndex(1);
+      OTCSwitchToCommonRoom();
+   } else {
+      ui_->stackedWidgetMessages->setCurrentIndex(0);
+      // XXX: DM OTC request not supported yet. Do not remove commented code
+       //if (IsGlobalChatRoom(currentChat_)) {
+         OTCSwitchToGlobalRoom();
+//       } else {
+//         OTCSwitchToDMRoom();
+//       }
+   }
+}
+
+void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact,
+                                    bool onlineStatus)
+{
+   if (contact->getContactStatus() == Chat::ContactStatus::Accepted) {
+      if (onlineStatus) {
+         DisplayCreateOTCWidget();
+      } else {
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
+      }
+   } else {
+      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactShieldPage));
+   }
+
 }
 
 void ChatWidget::OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
