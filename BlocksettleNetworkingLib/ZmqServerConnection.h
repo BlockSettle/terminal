@@ -53,6 +53,8 @@ protected:
 
    virtual bool ReadFromDataSocket() = 0;
 
+   virtual void onPeriodicCheck();
+
    virtual bool QueueDataToSend(const std::string& clientId, const std::string& data
       , const SendResultCb &cb, bool sendMore);
 
@@ -67,9 +69,11 @@ protected:
 
    std::unordered_map<std::string, std::string> clientInfo_; // ClientID & related string
 
-private:
    void stopServer();
 
+   void requestPeriodicCheck();
+   std::thread::id listenThreadId() const;
+private:
    // run in thread
    void listenFunction();
 

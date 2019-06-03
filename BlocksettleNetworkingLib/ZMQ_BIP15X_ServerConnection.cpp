@@ -8,6 +8,12 @@
 
 using namespace std;
 
+namespace {
+
+   const auto kHeartbeatsCheck = std::chrono::seconds(1);
+
+} // namespace
+
 // A call resetting the encryption-related data for individual connections.
 //
 // INPUT:  None
@@ -44,10 +50,10 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , const std::string& ownKeyFileName, const bool& makeServerCookie
    , const bool& readClientCookie, const std::string& cookiePath)
    : ZmqServerConnection(logger, context), id_(id)
+   , cbTrustedClients_(cbTrustedClients)
    , useClientIDCookie_(readClientCookie)
    , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
-   , cbTrustedClients_(cbTrustedClients)
    , heartbeatInterval_(getDefaultHeartbeatInterval())
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
@@ -81,7 +87,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    if (makeServerIDCookie_) {
       genBIPIDCookie();
    }
-   heartbeatThread();
 }
 
 // A specialized server connection constructor with limited options. Used only
@@ -103,8 +108,10 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , const bool& makeServerCookie, const bool& readClientCookie
    , const std::string& cookiePath)
    : ZmqServerConnection(logger, context)
-   , cbTrustedClients_(cbTrustedClients), makeServerIDCookie_(makeServerCookie)
-   , useClientIDCookie_(readClientCookie), bipIDCookiePath_(cookiePath)
+   , cbTrustedClients_(cbTrustedClients)
+   , useClientIDCookie_(readClientCookie)
+   , makeServerIDCookie_(makeServerCookie)
+   , bipIDCookiePath_(cookiePath)
 {
    if (makeServerIDCookie_ && readClientCookie) {
       throw std::runtime_error("Cannot read client ID cookie and create ID " \
@@ -136,15 +143,13 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    if (makeServerIDCookie_) {
       genBIPIDCookie();
    }
-
-   heartbeatThread();
 }
 
-ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
+ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection() noexcept
 {
-   hbThreadRunning_ = false;
-   hbCondVar_.notify_one();
-   hbThread_.join();
+   // TODO: Send disconnect messages to the clients
+
+   stopServer();
 
    // If it exists, delete the identity cookie.
    if (makeServerIDCookie_) {
@@ -155,49 +160,6 @@ ZmqBIP15XServerConnection::~ZmqBIP15XServerConnection()
          }
       }
    }
-}
-
-// The thread running the server heartbeat.
-//
-// INPUT:  None
-// OUTPUT: None
-// RETURN: None
-void ZmqBIP15XServerConnection::heartbeatThread()
-{
-   const auto &heartbeatProc = [this] {
-      while (hbThreadRunning_) {
-         {
-            std::unique_lock<std::mutex> lock(hbMutex_);
-            hbCondVar_.wait_for(lock, std::chrono::seconds{ 1 });
-            if (!hbThreadRunning_) {
-               break;
-            }
-         }
-         const auto curTime = std::chrono::steady_clock::now();
-         std::vector<std::string> timedOutClients;
-
-         {
-            FastLock locker{heartbeatsLock_};
-
-            for (const auto &hbTime : lastHeartbeats_) {
-               const auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - hbTime.second);
-               if (diff > heartbeatInterval_ * 2) {
-                  timedOutClients.push_back(hbTime.first);
-               }
-            }
-         }
-
-         for (const auto &client : timedOutClients) {
-            logger_->debug("[ZmqBIP15XServerConnection] client {} timed out"
-               , BinaryData(client).toHexStr());
-            resetBIP151Connection(client);
-            notifyListenerOnDisconnectedClient(client);
-         }
-      }
-   };
-
-   hbThreadRunning_ = true;
-   hbThread_ = std::thread(heartbeatProc);
 }
 
 // Create the data socket.
@@ -252,6 +214,38 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
    return true;
 }
 
+void ZmqBIP15XServerConnection::onPeriodicCheck()
+{
+   ZmqServerConnection::onPeriodicCheck();
+
+   PendingMsgsMap pendingMsgs;
+   PendingMsgs pendingMsgsToAll;
+   {
+      std::lock_guard<std::mutex> lock(pendingDataMutex_);
+      pendingMsgs = std::move(pendingData_);
+      pendingMsgsToAll = std::move(pendingDataToAll_);
+   }
+
+   for (const auto &clientItem : pendingMsgs) {
+      for (const PendingMsg &msg : clientItem.second) {
+         sendData(clientItem.first, msg);
+      }
+   }
+
+   if (!pendingMsgsToAll.empty()) {
+      for (const auto &clientItem : socketConnMap_) {
+         const auto &socketConn = clientItem.second;
+         if (socketConn->encData_->getBIP150State() == BIP150State::SUCCESS) {
+            for (const PendingMsg &msg : pendingMsgsToAll) {
+               sendData(clientItem.first, msg);
+            }
+         }
+      }
+   }
+
+   checkHeartbeats();
+}
+
 // The send function for the data connection. Ideally, this should not be used
 // before the handshake is completed, but it is possible to use at any time.
 // Whether or not the raw data is used, it will be placed in a
@@ -265,78 +259,17 @@ bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 bool ZmqBIP15XServerConnection::SendDataToClient(const string& clientId
    , const string& data, const SendResultCb& cb)
 {
-   BIP151Connection* connPtr = nullptr;
-
-   auto connection = GetConnection(clientId);
-   if (connection == nullptr) {
-      logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] missing client connection {}"
-         , BinaryData(clientId).toHexStr());
-      return false;
-   }
-
-   if (connection->bip151HandshakeCompleted_) {
-      connPtr = connection->encData_.get();
-   }
-
-   // Check if we need to do a rekey before sending the data.
-   if (connection->bip150HandshakeCompleted_) {
-      bool needsRekey = false;
-      auto rightNow = chrono::steady_clock::now();
-
-      // Rekey off # of bytes sent or length of time since last rekey.
-      if (connPtr->rekeyNeeded(data.size())) {
-         needsRekey = true;
-      }
-      else {
-         auto time_sec = chrono::duration_cast<chrono::seconds>(
-            rightNow - connection->outKeyTimePoint_);
-         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS) {
-            needsRekey = true;
-         }
-      }
-
-      if (needsRekey) {
-         connection->outKeyTimePoint_ = rightNow;
-         rekey(clientId);
-      }
-   }
-
    {
-      std::unique_lock<std::mutex> lock(rekeyMutex_);
-      if (rekeyStarted_.find(clientId) != rekeyStarted_.end()) {
-         pendingData_[clientId].push_back({ data, cb });
-         return true;
-      }
+      std::lock_guard<std::mutex> lock(pendingDataMutex_);
+      pendingData_[clientId].push_back({ data, cb });
    }
 
-   // Encrypt data here if the BIP 150 handshake is complete.
-   if (connection->encData_ && connection->encData_->getBIP150State() == BIP150State::SUCCESS) {
-      const BinaryData payload(data);
-      ZmqBIP15XSerializedMessage msg;
-      msg.construct(payload.getDataVector(), connPtr
-         , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, connection->msgID_);
-
-      // Cycle through all packets.
-      while (!msg.isDone()) {
-         auto& packet = msg.getNextPacket();
-         if (packet.getSize() == 0) {
-            logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] failed to "
-               "serialize data (size {})", data.size());
-            return false;
-         }
-
-         if (!QueueDataToSend(clientId, packet.toBinStr(), cb, false)) {
-            logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] fragment send failed"
-               , data.size());
-            return false;
-         }
-      }
-
-      return true;
+   if (std::this_thread::get_id() != listenThreadId()) {
+      // Call onPeriodicCheck from listening thread
+      requestPeriodicCheck();
    }
 
-   // Queue up the untouched data for straight transmission.
-   return QueueDataToSend(clientId, data, cb, false);
+   return true;
 }
 
 void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
@@ -353,10 +286,6 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
       return;
    }
 
-   {
-      std::unique_lock<std::mutex> lock(rekeyMutex_);
-      rekeyStarted_.insert(clientId);
-   }
    const auto connPtr = connection->encData_.get();
    BinaryData rekeyData(BIP151PUBKEYSIZE);
    memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
@@ -365,36 +294,12 @@ void ZmqBIP15XServerConnection::rekey(const std::string &clientId)
    rekeyPacket.construct(rekeyData.getRef(), connPtr, ZMQ_MSGTYPE_AEAD_REKEY);
    auto& packet = rekeyPacket.getNextPacket();
 
-   const auto &cbSent = [this, connection] (const std::string &clientId, const std::string &, bool result)
-   {
-      if (!result) {
-         logger_->error("[ZmqBIP15XServerConnection::rekey] failed to send rekey");
-         return;
-      }
-      logger_->debug("[ZmqBIP15XServerConnection::rekey] rekeying session for {}"
-         , BinaryData(clientId).toHexStr());
-      connection->encData_->rekeyOuterSession();
-      ++connection->outerRekeyCount_;
+   logger_->debug("[ZmqBIP15XServerConnection::rekey] rekeying session for {}"
+      , BinaryData(clientId).toHexStr());
+   connection->encData_->rekeyOuterSession();
+   ++connection->outerRekeyCount_;
 
-      {
-         std::unique_lock<std::mutex> lock(rekeyMutex_);
-         rekeyStarted_.erase(clientId);
-      }
-
-      const auto itData = pendingData_.find(clientId);
-      if ((itData != pendingData_.end()) && !itData->second.empty()) {
-         for (const auto &data : itData->second) {
-            SendDataToClient(itData->first, std::get<0>(data), std::get<1>(data));
-         }
-         itData->second.clear();
-      }
-   };
-
-   if (!QueueDataToSend(clientId, packet.toBinStr(), cbSent, false)) {
-      logger_->error("[ZmqBIP15XServerConnection::{}] {} failed to send "
-         "rekey: {} (result={})", __func__, connectionName_
-         , zmq_strerror(zmq_errno()));
-   }
+   sendToDataSocket(clientId, packet.toBinStr());
 }
 
 void ZmqBIP15XServerConnection::setLocalHeartbeatInterval()
@@ -423,21 +328,17 @@ const chrono::milliseconds ZmqBIP15XServerConnection::getLocalHeartbeatInterval(
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XServerConnection::SendDataToAllClients(const std::string& data, const SendResultCb &cb)
 {
-   unsigned int successCount = 0;
-
-   decltype(socketConnMap_) connectionMapCopy;
-
    {
-      FastLock locker{connectionsLock_};
-      connectionMapCopy = socketConnMap_;
+      std::lock_guard<std::mutex> lock(pendingDataMutex_);
+      pendingDataToAll_.push_back({ data, cb });
    }
 
-   for (const auto &it : connectionMapCopy) {
-      if (SendDataToClient(it.first, data, cb)) {
-         successCount++;
-      }
+   if (std::this_thread::get_id() != listenThreadId()) {
+      // Call onPeriodicCheck from listening thread
+      requestPeriodicCheck();
    }
-   return (successCount == connectionMapCopy.size());
+
+   return true;
 }
 
 // The function that processes raw ZMQ connection data. It processes the BIP
@@ -524,7 +425,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       BinaryData emptyPayload;
       heartbeatPacket.construct(emptyPayload.getDataVector(), connData->encData_.get(), ZMQ_MSGTYPE_HEARTBEAT);
       auto& packet = heartbeatPacket.getNextPacket();
-      QueueDataToSend(clientID, packet.toBinStr(), {}, false);
+      sendToDataSocket(clientID, packet.toBinStr());
       return;
    }
    else if (connData->currentReadMessage_.message_.getType() >
@@ -894,19 +795,15 @@ void ZmqBIP15XServerConnection::resetBIP151Connection(const string& clientID)
 
    bool connectionErased = false;
 
-   {
-      FastLock locker{connectionsLock_};
-      auto it = socketConnMap_.find(clientID);
-      if (it != socketConnMap_.end()) {
-         socketConnMap_.erase(it);
-         connectionErased = true;
-      } else {
-         connectionErased = false;
-      }
+   auto it = socketConnMap_.find(clientID);
+   if (it != socketConnMap_.end()) {
+      socketConnMap_.erase(it);
+      connectionErased = true;
+   } else {
+      connectionErased = false;
    }
 
    if (connectionErased) {
-      FastLock locker{heartbeatsLock_};
       auto it = lastHeartbeats_.find(clientID);
       if (it != lastHeartbeats_.end()) {
          lastHeartbeats_.erase(it);
@@ -935,7 +832,7 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
    const string& clientID)
 {
    auto connection = GetConnection(clientID);
-   if (nullptr != connection) {
+   if (connection) {
       return connection;
    }
 
@@ -977,17 +874,13 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
 
 bool ZmqBIP15XServerConnection::AddConnection(const std::string& clientId, const std::shared_ptr<ZmqBIP15XPerConnData>& connection)
 {
-   {
-      FastLock locker{connectionsLock_};
-
-      auto it = socketConnMap_.find(clientId);
-      if (it != socketConnMap_.end()) {
-         logger_->error("[ZmqBIP15XServerConnection::AddConnection] connection already saved for {}", BinaryData(clientId).toHexStr());
-         return false;
-      }
-
-      socketConnMap_.emplace(clientId, connection);
+   auto it = socketConnMap_.find(clientId);
+   if (it != socketConnMap_.end()) {
+      logger_->error("[ZmqBIP15XServerConnection::AddConnection] connection already saved for {}", BinaryData(clientId).toHexStr());
+      return false;
    }
+
+   socketConnMap_.emplace(clientId, connection);
 
    logger_->debug("[ZmqBIP15XServerConnection::AddConnection] adding new connection for client {}", BinaryData(clientId).toHexStr());
    return true;
@@ -995,8 +888,6 @@ bool ZmqBIP15XServerConnection::AddConnection(const std::string& clientId, const
 
 std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::GetConnection(const std::string& clientId)
 {
-   FastLock locker{connectionsLock_};
-
    auto it = socketConnMap_.find(clientId);
    if (it == socketConnMap_.end()) {
       return nullptr;
@@ -1005,10 +896,123 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::GetConnection(c
    return it->second;
 }
 
+void ZmqBIP15XServerConnection::sendData(const std::string &clientId, const PendingMsg &pendingMsg)
+{
+   BIP151Connection* connPtr = nullptr;
+
+   auto connection = GetConnection(clientId);
+   if (connection == nullptr) {
+      logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] missing client connection {}"
+         , BinaryData(clientId).toHexStr());
+      return;
+   }
+
+   if (connection->bip151HandshakeCompleted_) {
+      connPtr = connection->encData_.get();
+   }
+
+   // Check if we need to do a rekey before sending the data.
+   if (connection->bip150HandshakeCompleted_) {
+      bool needsRekey = false;
+      auto rightNow = chrono::steady_clock::now();
+
+      // Rekey off # of bytes sent or length of time since last rekey.
+      if (connPtr->rekeyNeeded(pendingMsg.data.size())) {
+         needsRekey = true;
+      }
+      else {
+         auto time_sec = chrono::duration_cast<chrono::seconds>(
+            rightNow - connection->outKeyTimePoint_);
+         if (time_sec.count() >= ZMQ_AEAD_REKEY_INVERVAL_SECS) {
+            needsRekey = true;
+         }
+      }
+
+      if (needsRekey) {
+         connection->outKeyTimePoint_ = rightNow;
+         rekey(clientId);
+      }
+   }
+
+   // Encrypt data here if the BIP 150 handshake is complete.
+   if (connection->encData_ && connection->encData_->getBIP150State() == BIP150State::SUCCESS) {
+      const BinaryData payload(pendingMsg.data);
+      ZmqBIP15XSerializedMessage msg;
+      msg.construct(payload.getDataVector(), connPtr
+         , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, connection->msgID_);
+
+      // Cycle through all packets.
+      while (!msg.isDone()) {
+         auto& packet = msg.getNextPacket();
+         if (packet.getSize() == 0) {
+            logger_->error("[ZmqBIP15XServerConnection::SendDataToClient] failed to "
+               "serialize data (size {})", pendingMsg.data.size());
+            return;
+         }
+
+         std::string encData = packet.toBinStr();
+         bool result = sendToDataSocket(clientId, encData);
+         if (pendingMsg.cb) {
+            pendingMsg.cb(clientId, encData, result);
+         }
+      }
+
+      return;
+   }
+
+   // Send untouched data for straight transmission
+   bool result = sendToDataSocket(clientId, pendingMsg.data);
+   if (pendingMsg.cb) {
+      pendingMsg.cb(clientId, pendingMsg.data, result);
+   }
+}
+
+bool ZmqBIP15XServerConnection::sendToDataSocket(const string &clientId, const string &data)
+{
+   int result = zmq_send(dataSocket_.get(), clientId.data(), clientId.size(), ZMQ_SNDMORE);
+   if (result != int(clientId.size())) {
+      logger_->error("[{}] {} failed to send client id {}", __func__
+         , connectionName_, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   result = zmq_send(dataSocket_.get(), data.data(), data.size(), 0);
+   if (result != int(data.size())) {
+      logger_->error("[{}] {} failed to send client id {}", __func__
+         , connectionName_, zmq_strerror(zmq_errno()));
+      return false;
+   }
+
+   return true;
+}
+
+void ZmqBIP15XServerConnection::checkHeartbeats()
+{
+   auto now = std::chrono::steady_clock::now();
+   if (now - lastHeartbeatsCheck_ < kHeartbeatsCheck) {
+      return;
+   }
+   lastHeartbeatsCheck_ = now;
+
+   std::vector<std::string> timedOutClients;
+
+   for (const auto &hbTime : lastHeartbeats_) {
+      const auto diff = now - hbTime.second;
+      if (diff > heartbeatInterval_ * 2) {
+         timedOutClients.push_back(hbTime.first);
+      }
+   }
+
+   for (const auto &client : timedOutClients) {
+      logger_->debug("[ZmqBIP15XServerConnection] client {} timed out"
+         , BinaryData(client).toHexStr());
+      resetBIP151Connection(client);
+      notifyListenerOnDisconnectedClient(client);
+   }
+}
+
 void ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp(const std::string& clientId)
 {
-   FastLock locker{heartbeatsLock_};
-
    auto currentTime = std::chrono::steady_clock::now();
 
    auto it = lastHeartbeats_.find(clientId);

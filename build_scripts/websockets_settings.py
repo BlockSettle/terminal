@@ -11,7 +11,7 @@ class WebsocketsSettings(Configurator):
         self._version = '3.1.0'
         self._package_name = 'libwebsockets'
         self._package_url = 'https://github.com/warmcat/libwebsockets/archive/v' + self._version + '.zip'
-        self._script_revision = '3'
+        self._script_revision = '4'
 
     def get_package_name(self):
         return self._package_name + '-' + self._version
@@ -64,6 +64,8 @@ class WebsocketsSettings(Configurator):
 
         command.append('-G')
         command.append(self._project_settings.get_cmake_generator())
+
+        command.append('-DCMAKE_INSTALL_PREFIX=' + self.get_install_dir())
 
         print(command)
         env_vars = os.environ.copy()
@@ -123,21 +125,10 @@ class WebsocketsSettings(Configurator):
 
     def make_x(self):
         command = ['make', '-j', str(multiprocessing.cpu_count())]
-
         result = subprocess.call(command)
         return result == 0
 
     def install_x(self):
-        lib_dir = os.path.join(self.get_build_dir(), 'lib')
-        include_dir = os.path.join(self.get_build_dir(), 'include')
-
-        install_lib_dir = os.path.join(self.get_install_dir(), 'lib')
-        install_include_dir = os.path.join(self.get_install_dir(), 'include')
-
-        if self._project_settings.get_link_mode() == 'shared':
-            self.filter_copy(lib_dir, install_lib_dir, '.so')
-        self.filter_copy(lib_dir, install_lib_dir, '.a')
-
-        self.filter_copy(include_dir, install_include_dir)
-
-        return True
+        command = ['make', 'install']
+        result = subprocess.call(command)
+        return result == 0

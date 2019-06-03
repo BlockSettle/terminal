@@ -22,6 +22,7 @@ public:
    void setActiveChatLabel(QLabel * label);
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
    void setCurrentUserChat(const QString &userId);
+   void updateCurrentChat();
 
 public slots:
    void onCustomContextMenu(const QPoint &);
