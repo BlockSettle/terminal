@@ -90,21 +90,6 @@ public:
       owner_->sendData(signer::XbtSpentType, evt.SerializeAsString());
    }
 
-//   void autoSignsActivate(const std::string &walletId) override
-//   {
-//      signer::AutoSignActResponse response;
-//      evt.set_dialogname(dialogName);
-//      evt.set_variantdata(data);
-//      owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
-
-//      autoSign(true, walletId);
-//   }
-
-//   void asDeact(const std::string &walletId) override
-//   {
-//      autoSign(false, walletId);
-//   }
-
    void customDialog(const std::string &dialogName, const std::string &data) override
    {
       signer::CustomDialogRequest evt;
@@ -112,14 +97,6 @@ public:
       evt.set_variantdata(data);
       owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
    }
-
-//   void autoSign(bool act, const std::string &walletId)
-//   {
-//      signer::AutoSignActRequest evt;
-//      evt.set_activated(act);
-//      evt.set_wallet_id(walletId);
-//      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
-//   }
 
    SignerAdapterListener *owner_{};
 };

@@ -53,8 +53,6 @@ public:
 
    bs::error::ErrorCode activateAutoSign(const std::string &walletId, bool activate, const SecureBinaryData& password);
 
-//   void deactivateAutoSign();
-//   void addPendingAutoSignReq(const std::string &walletId);
    void close();
    void walletsListUpdated();
 

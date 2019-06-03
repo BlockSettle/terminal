@@ -404,20 +404,6 @@ void HeadlessAppObj::walletsListUpdated()
    }
 }
 
-//void HeadlessAppObj::deactivateAutoSign()
-//{
-//   if (listener_) {
-//      listener_->deactivateAutoSign();
-//   }
-//}
-
-//void HeadlessAppObj::addPendingAutoSignReq(const std::string &walletId)
-//{
-//   if (listener_) {
-//      listener_->addPendingAutoSignReq(walletId);
-//   }
-//}
-
 bs::error::ErrorCode HeadlessAppObj::activateAutoSign(const std::string &walletId, bool activate, const SecureBinaryData &password)
 {
    if (listener_) {

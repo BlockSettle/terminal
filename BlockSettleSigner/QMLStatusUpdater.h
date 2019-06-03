@@ -42,7 +42,6 @@ public:
    void setSocketOk(bool);
    void clearConnections();
 
-   Q_INVOKABLE void deactivateAutoSign(const QString &walletId, QJSValue jsCallback);
    Q_INVOKABLE void activateAutoSign(const QString &walletId
       , bs::wallet::QPasswordData *passwordData
       , bool activate

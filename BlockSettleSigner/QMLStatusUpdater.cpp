@@ -39,20 +39,6 @@ void QMLStatusUpdater::clearConnections()
    emit connectionsChanged();
 }
 
-void QMLStatusUpdater::deactivateAutoSign(const QString &walletId, QJSValue jsCallback)
-{   
-//   auto cb = [this, walletId, jsCallback] (bs::error::ErrorCode errorCode) {
-//      QJSValueList args;
-//      args << QJSValue(errorCode == bs::error::ErrorCode::NoError) << bs::error::ErrorCodeToString(errorCode);
-//      QMetaObject::invokeMethod(this, [this, args, jsCallback] {
-//         invokeJsCallBack(jsCallback, args);
-//      });
-//   };
-
-//   adapter_->activateAutoSign(walletId.toStdString(), passwordData, activate, cb);
-//   //emit autoSignActiveChanged();
-}
-
 void QMLStatusUpdater::activateAutoSign(const QString &walletId
                                         , bs::wallet::QPasswordData *passwordData
                                         , bool activate
