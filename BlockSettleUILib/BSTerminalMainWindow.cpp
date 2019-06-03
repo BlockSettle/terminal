@@ -721,6 +721,7 @@ void BSTerminalMainWindow::InitChatView()
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
+   connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
 
    if (NotificationCenter::instance() != nullptr) {
       connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick,
@@ -1649,6 +1650,13 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
 
    connectSigner();
    connectArmory();
+}
+
+void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
+{   
+   const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
+   const bool isChatTab = index == chatIndex;
+   ui_->widgetChat->updateChat(isChatTab);
 }
 
 // A function that puts Armory online if certain conditions are met. The primary

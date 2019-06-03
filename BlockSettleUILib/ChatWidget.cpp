@@ -474,6 +474,17 @@ void ChatWidget::setCelerClient(std::shared_ptr<CelerClient> celerClient)
    celerClient_ = celerClient;
 }
 
+void ChatWidget::updateChat(const bool &isChatTab)
+{
+   isChatTab_ = isChatTab;
+
+   ui_->textEditMessages->setIsChatTab(isChatTab_);
+
+   if (isChatTab_) {
+      ui_->treeViewUsers->updateCurrentChat();
+   }
+}
+
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
@@ -518,6 +529,10 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
    if (event->type() == QEvent::WindowActivate) {
       // hide tab icon on window activate event
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
+      
+      if (isChatTab_) {
+         ui_->treeViewUsers->updateCurrentChat();
+      }
    }
 
    // copy selected messages by keyboard shortcut
