@@ -41,6 +41,11 @@ private:
    bool saveOrder(qint64 orderId
                   , qint64 timestamp
                   , const QString &settlementDate);
+   bool removeOrder(qint64 orderId);
+   bool removeOrdersBefore(qint64 timestamp);
+
+private slots:
+   void cleanOldFilledOrders();
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
