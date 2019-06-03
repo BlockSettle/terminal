@@ -33,6 +33,7 @@ namespace Chat
    ,   RequestGenCommonOTC
    ,   RequestAnswerCommonOTC
    ,   RequestUpdateCommonOTC
+   ,   RequestPullOTC
    };
 
 

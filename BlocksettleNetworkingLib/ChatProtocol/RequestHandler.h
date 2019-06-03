@@ -21,6 +21,7 @@ namespace Chat {
    class GenCommonOTCRequest;
    class AnswerCommonOTCRequest;
    class UpdateCommonOTCRequest;
+   class PullOwnOTCRequest;
    
    class RequestHandler
    {
@@ -55,5 +56,6 @@ namespace Chat {
       virtual void OnGenCommonOTCRequest(const GenCommonOTCRequest&) = 0;
       virtual void OnAnswerCommonOTCRequest(const AnswerCommonOTCRequest&) = 0;
       virtual void OnUpdateCommonOTCRequest(const UpdateCommonOTCRequest&) = 0;
+      virtual void OnPullOTCRequest(const PullOwnOTCRequest&) = 0;
    };
 }

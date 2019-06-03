@@ -656,21 +656,32 @@ void ChatWidget::OnOTCRequestCreated()
 
    auto otcRequest = bs::network::OTCRequest{side, range, ownOTC, replyRequired};
 
-   if (!client_->SubmitCommonOTCRequest(otcRequest)) {
-      logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit request to OTC chat");
-      return;
+   if (currentChat_ == Chat::OTCRoomKey) {
+      if (!client_->SubmitCommonOTCRequest(otcRequest)) {
+         logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit request to OTC chat");
+         return;
+      }
+
+      if (ownOTC) {
+         otcSubmitted_ = true;
+         submittedOtc_ = otcRequest;
+         DisplayOwnSubmittedOTC();
+      }
+   } else {
+      client_->SubmitPrivateOTCRequest(currentChat_, otcRequest);
    }
 
-   if (ownOTC) {
-      otcSubmitted_ = true;
-      submittedOtc_ = otcRequest;
-      DisplayOwnSubmittedOTC();
-   }
+
 }
 
 void ChatWidget::OnPullOwnOTCRequest(const QString& otcId)
 {
-   client_->PullCommonOTCRequest(otcId);
+   if (currentChat_ == Chat::OTCRoomKey) {
+      client_->PullCommonOTCRequest(otcId);
+   } else {
+      client_->PullPrivateOTCRequest(currentChat_, otcId);
+   }
+
 }
 
 void ChatWidget::OnOTCResponseCreated()
@@ -741,9 +752,19 @@ void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room)
 void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact,
                                     bool onlineStatus)
 {
+   ui_->stackedWidgetMessages->setCurrentIndex(0);
    if (contact->getContactStatus() == Chat::ContactStatus::Accepted) {
       if (onlineStatus) {
-         DisplayCreateOTCWidget();
+         auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
+         if (!cNode->isHaveActiveOTC()) {
+            return DisplayCreateOTCWidget();
+         } else if (cNode->getActiveOtcRequest()->requestorId() == contact->getContactId()){
+            ui_->widgetCreateOTCResponse->SetActiveOTCRequest(cNode->getActiveOtcRequest());
+            ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
+         } else {
+            ui_->widgetPullOwnOTCRequest->DisplayActiveOTC(cNode->getActiveOtcRequest());
+            ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
+         }
       } else {
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
       }
