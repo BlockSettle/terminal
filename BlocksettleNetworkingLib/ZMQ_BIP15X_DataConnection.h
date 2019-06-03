@@ -140,7 +140,9 @@ private:
    bool recvData();
    void triggerHeartbeatCheck();
 
-   void notifyOnError(DataConnectionListener::DataConnectionError errorCode);
+   void onConnected();
+   void onDisconnected();
+   void onError(DataConnectionListener::DataConnectionError errorCode);
 
    void ProcessIncomingData(BinaryData& payload);
    bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
@@ -173,30 +175,32 @@ private:
 
    cbNewKey cbNewKey_;
 
-   std::chrono::steady_clock::time_point lastHeartbeatSend_{};
-   std::chrono::steady_clock::time_point lastHeartbeatReply_{};
-   std::atomic_bool        fatalError_{false};
-   std::atomic_bool        serverSendsHeartbeat_{false};
    std::chrono::milliseconds heartbeatInterval_;
    std::shared_ptr<ZmqContext>      context_;
 
-   std::string                      connectionName_;
-
    ZmqContext::sock_ptr             dataSocket_;
    ZmqContext::sock_ptr             monSocket_;
+   ZmqContext::sock_ptr             threadMasterSocket_;
+   ZmqContext::sock_ptr             threadSlaveSocket_;
+
+   std::string                      connectionName_;
    std::string                      hostAddr_;
    std::string                      hostPort_;
    std::string                      socketId_;
 
    std::thread                      listenThread_;
 
-   ZmqContext::sock_ptr             threadMasterSocket_;
-   ZmqContext::sock_ptr             threadSlaveSocket_;
-
    ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
 
    std::vector<std::string>         pendingData_;
    std::mutex                       pendingDataMutex_;
+
+   // Reset this in openConnection
+   bool                             isConnected_{};
+   bool                             fatalError_{};
+   bool                             serverSendsHeartbeat_{};
+   std::chrono::steady_clock::time_point lastHeartbeatSend_{};
+   std::chrono::steady_clock::time_point lastHeartbeatReply_{};
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__

@@ -14,6 +14,7 @@ public:
       HandshakeFailed,
       SerializationFailed,
       HeartbeatWaitFailed,
+      ConnectionTimeout,
    };
 
 public:

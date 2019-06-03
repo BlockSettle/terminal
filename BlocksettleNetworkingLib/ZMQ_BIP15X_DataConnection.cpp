@@ -19,8 +19,6 @@ namespace
    const int StreamSocketIndex = 1;
    const int MonitorSocketIndex = 2;
 
-   const std::chrono::seconds kHearthbeatCheckPeriod(1);
-
 } // namespace
 
 
@@ -177,10 +175,16 @@ void ZmqBIP15XDataConnection::listenFunction()
    SPDLOG_DEBUG(logger_, "[{}] poll thread started for {}", __func__
       , connectionName_);
 
-   bool isConnected = false;
+   bool tcpConnected = false;
+   bool stopThread = false;
 
-   while (!fatalError_) {
-      int periodMs = std::chrono::duration_cast<std::chrono::milliseconds>(kHearthbeatCheckPeriod).count();
+   auto connectionStarted = std::chrono::steady_clock::now();
+
+   while (!fatalError_ && !stopThread) {
+      // Wake up from time to time to check heartbeats and connection timeout.
+      // periodMs should be small enough.
+      int periodMs = std::max(1, int(std::chrono::duration_cast<std::chrono::milliseconds>(heartbeatInterval_).count() / 10));
+
       int result = zmq_poll(poll_items, 3, periodMs);
       if (result == -1) {
          logger_->error("[{}] poll failed for {} : {}", __func__
@@ -188,13 +192,17 @@ void ZmqBIP15XDataConnection::listenFunction()
          break;
       }
 
+      if (!isConnected_ && std::chrono::steady_clock::now() - connectionStarted > 2 * heartbeatInterval_) {
+         onError(DataConnectionListener::ConnectionTimeout);
+      }
+
       triggerHeartbeatCheck();
 
       if (poll_items[ControlSocketIndex].revents & ZMQ_POLLIN) {
          MessageHolder   command;
 
-         int recv_result = zmq_msg_recv(&command, poll_items[ControlSocketIndex].socket, ZMQ_DONTWAIT);
-         if (recv_result == -1) {
+         int recvResult = zmq_msg_recv(&command, poll_items[ControlSocketIndex].socket, ZMQ_DONTWAIT);
+         if (recvResult == -1) {
             logger_->error("[{}] failed to recv command on {} : {}", __func__
                , connectionName_, zmq_strerror(zmq_errno()));
             break;
@@ -206,8 +214,8 @@ void ZmqBIP15XDataConnection::listenFunction()
                break;
             case InternalCommandCode::Stop:
                sendDisconnectMsg();
-               // quit from listen thread
-               return;
+               stopThread = true;
+               break;
             default:
                assert(false);
          }
@@ -222,19 +230,15 @@ void ZmqBIP15XDataConnection::listenFunction()
       if (poll_items[MonitorSocketIndex].revents & ZMQ_POLLIN) {
          switch (bs::network::get_monitor_event(monSocket_.get())) {
          case ZMQ_EVENT_CONNECTED:
-         // NOTE: for ZMQ based connections this event might better suited than ZMQ_EVENT_CONNECTED
-         // but they always came in pairs
-         //case ZMQ_EVENT_HANDSHAKE_SUCCEEDED:
-            if (!isConnected) {
+            if (!tcpConnected) {
                startBIP151Handshake();
-               isConnected = true;
+               tcpConnected = true;
             }
             break;
 
          case ZMQ_EVENT_DISCONNECTED:
-            if (isConnected) {
-               notifyOnDisconnected();
-               isConnected = false;
+            if (isConnected_) {
+               onDisconnected();
             }
             break;
          default:
@@ -244,6 +248,10 @@ void ZmqBIP15XDataConnection::listenFunction()
 
       // Try to send pending data after callbacks if any
       sendPendingData();
+   }
+
+   if (isConnected_) {
+      onDisconnected();
    }
 }
 
@@ -383,19 +391,41 @@ void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
 
    auto lastHeartbeatDiff = curTime - lastHeartbeatReply_;
    if (lastHeartbeatDiff > heartbeatInterval_ * 2) {
-      notifyOnError(DataConnectionListener::HeartbeatWaitFailed);
+      onError(DataConnectionListener::HeartbeatWaitFailed);
    }
 }
 
-void ZmqBIP15XDataConnection::notifyOnError(DataConnectionListener::DataConnectionError errorCode)
+void ZmqBIP15XDataConnection::onConnected()
 {
+   assert(std::this_thread::get_id() == listenThread_.get_id());
+   assert(!isConnected_);
+   isConnected_ = true;
+   notifyOnConnected();
+}
+
+void ZmqBIP15XDataConnection::onDisconnected()
+{
+   assert(std::this_thread::get_id() == listenThread_.get_id());
+   assert(isConnected_);
+   isConnected_ = false;
+   notifyOnDisconnected();
+}
+
+void ZmqBIP15XDataConnection::onError(DataConnectionListener::DataConnectionError errorCode)
+{
+   assert(std::this_thread::get_id() == listenThread_.get_id());
+
    // Notify about error only once
    if (fatalError_) {
       return;
    }
 
+   if (isConnected_) {
+      onDisconnected();
+   }
+
    fatalError_ = true;
-   DataConnection::notifyOnError(errorCode);
+   notifyOnError(errorCode);
 }
 
 bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
@@ -472,7 +502,7 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
             logger_->error("[ZmqBIP15XDataConnection::{}] Packet [{} bytes] "
                "from {} decryption failed - Error {}"
                , __func__, payload.getSize(), connectionName_, result);
-            notifyOnError(DataConnectionListener::SerializationFailed);
+            onError(DataConnectionListener::SerializationFailed);
             return;
          }
       }
@@ -499,7 +529,12 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
       return false;
    }
 
+   isConnected_ = false;
    fatalError_ = false;
+   serverSendsHeartbeat_ = false;
+   lastHeartbeatSend_ = std::chrono::steady_clock::time_point{};
+   lastHeartbeatReply_ = std::chrono::steady_clock::time_point{};
+
    hostAddr_ = host;
    hostPort_ = port;
    std::string tempConnectionName = context_->GenerateConnectionName(host, port);
@@ -649,7 +684,7 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
       logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
          "(connection {})", __func__, connectionName_);
       currentReadMessage_.reset();
-      notifyOnError(DataConnectionListener::SerializationFailed);
+      onError(DataConnectionListener::SerializationFailed);
       return;
    }
 
@@ -672,7 +707,7 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
          logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
             "(connection {})", __func__, connectionName_);
 
-         notifyOnError(DataConnectionListener::HandshakeFailed);
+         onError(DataConnectionListener::HandshakeFailed);
          return;
       }
 
@@ -689,7 +724,7 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
       logger_->error("[ZmqBIP15XDataConnection::{}] Encryption handshake "
          "is incomplete (connection {})", __func__, connectionName_);
       if (bip151Connection_) {
-         notifyOnError(DataConnectionListener::HandshakeFailed);
+         onError(DataConnectionListener::HandshakeFailed);
       }
       return;
    }
@@ -987,7 +1022,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       logger_->info("[processHandshake] BIP 150 handshake with server complete "
          "- connection to {} is ready and fully secured", srvId);
 
-      notifyOnConnected();
+      onConnected();
       break;
    }
 
@@ -1091,7 +1126,7 @@ bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
          serverPubkeyProm_->set_value(false);
          serverPubkeySignalled_ = true;
       }
-      notifyOnError(DataConnectionListener::HandshakeFailed);
+      onError(DataConnectionListener::HandshakeFailed);
       return false;
    }
 
@@ -1100,7 +1135,7 @@ bool ZmqBIP15XDataConnection::verifyNewIDKey(const BinaryDataRef& newKey
 
    if (!cbNewKey_) {
       logger_->error("[{}] no server key callback is set - aborting handshake", __func__);
-      notifyOnError(DataConnectionListener::HandshakeFailed);
+      onError(DataConnectionListener::HandshakeFailed);
       return false;
    }
 
@@ -1274,5 +1309,7 @@ void ZmqBIP15XDataConnection::sendDisconnectMsg()
    const auto pkt = msg.getNextPacket();
    sendPacket(pkt.toBinStr());
 
-   notifyOnDisconnected();
+   if (isConnected_) {
+      onDisconnected();
+   }
 }
