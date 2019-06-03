@@ -1,7 +1,29 @@
 {
-   "latest_version": "0.15.16",
-   "release_date": "31 May 2019",
+   "latest_version": "0.15.17",
+   "release_date": "03 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.15.17",
+         "previous_version": "0.15.16",
+         "release_date": "03 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Remove address tail when copy address details",
+            "Update mainnet hardcoded key",
+            "Add contacts sorting",
+            "More secured processing of armory keys."
+         ],
+         "bug_fixes": [
+            "Fix WO wallet export.",
+            "Dev fix for linux build with shared libs",
+            "BIP150/151 connection fixes",
+            "Fix message read status when focus on other tabs",
+            "UI fixes for RFQ dialog",
+            "Fix confirmations number sorting in the explorer"
+         ],
+         "revision": "83f5534d",
+         "common_revision": "bd597c31"
+      },
       {
          "version_string": "0.15.16",
          "previous_version": "0.15.15",
