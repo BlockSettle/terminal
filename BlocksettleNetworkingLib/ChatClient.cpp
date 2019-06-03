@@ -62,11 +62,6 @@ std::string ChatClient::GetNextServerResponseId()
    return std::string("server_response_") + std::to_string(nextResponseId_++);
 }
 
-std::string ChatClient::GetNextNegotiationChannelId()
-{
-   return std::string("otc_channel_") + std::to_string(negotiationChannelId_++);
-}
-
 void ChatClient::ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
 {
    const auto expireInterval = liveOTCRequest->expireTimestamp() - QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
@@ -1394,7 +1389,6 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
                   {
                      const std::string clientResponseId = GetNextResponseId();
                      const std::string serverResponseId = GetNextServerResponseId();
-                     const std::string negotiationChannelId = GetNextNegotiationChannelId();
                      const std::string serverRequestId = liveRequest->serverRequestId();
                      const std::string requestorId = liveRequest->requestorId();
                      const std::string initialTargetId = liveRequest->targetId();
@@ -1404,7 +1398,7 @@ bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
                      const auto quantityRange = bs::network::OTCRangeID::toQuantityRange(liveRequest->otcRequest().amountRange);
 
                      auto response = std::make_shared<Chat::OTCResponseData>(clientResponseId
-                        , serverResponseId, negotiationChannelId, serverRequestId
+                        , serverResponseId, serverRequestId
                         , requestorId, initialTargetId, responderId
                         , responseTimestamp, priceRange, quantityRange);
 
@@ -1513,7 +1507,6 @@ bool ChatClient::SubmitCommonOTCResponse(const bs::network::OTCResponse& respons
 {
    const std::string clientResponseId = GetNextResponseId();
    const std::string serverResponseId = GetNextServerResponseId();
-   const std::string negotiationChannelId = GetNextNegotiationChannelId();
    const std::string serverRequestId = response.serverRequestId;
    const std::string requestorId = response.requestorId;
    const std::string initialTargetId = response.initialTargetId;
@@ -1523,7 +1516,7 @@ bool ChatClient::SubmitCommonOTCResponse(const bs::network::OTCResponse& respons
    const auto quantityRange = response.quantityRange;
 
    auto liveResponse = std::make_shared<Chat::OTCResponseData>(clientResponseId
-      , serverResponseId, negotiationChannelId, serverRequestId, requestorId
+      , serverResponseId, serverRequestId, requestorId
       , initialTargetId, responderId, responseTimestamp, priceRange, quantityRange);
 
    //HandleAcceptedCommonOTCResponse(liveResponse);

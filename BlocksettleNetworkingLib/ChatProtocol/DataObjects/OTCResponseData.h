@@ -26,7 +26,6 @@ namespace Chat {
 
       OTCResponseData(const std::string& clientResponseId
                       , const std::string& serverResponseId
-                      , const std::string& negotiationChannelId
                       , const std::string& serverRequestId
                       , const std::string& requestorId
                       , const std::string& initialTargetId
@@ -39,8 +38,6 @@ namespace Chat {
 
       std::string clientResponseId() const;
       std::string serverResponseId() const;
-
-      std::string negotiationChannelId() const;
 
       std::string serverRequestId() const;
 
@@ -62,7 +59,6 @@ namespace Chat {
    private:
       const std::string clientResponseId_;
       std::string serverResponseId_;
-      const std::string negotiationChannelId_;
       const std::string serverRequestId_;
       const std::string requestorId_;
       const std::string initialTargetId_;

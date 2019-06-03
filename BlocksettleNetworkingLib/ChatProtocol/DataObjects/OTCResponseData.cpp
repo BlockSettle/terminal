@@ -11,7 +11,6 @@ QJsonObject OTCResponseData::toJson() const
    QJsonObject data = DataObject::toJson();
    data[OTCResponseIdClientKey] = QString::fromStdString(clientResponseId_);
    data[OTCResponseIdServerKey] = QString::fromStdString(serverResponseId_);
-   data[OTCNegotiationChannelIdKey] = QString::fromStdString(negotiationChannelId_);
    data[OTCRequestIdServerKey] = QString::fromStdString(serverRequestId_);
    data[OTCRequestorIdKey] = QString::fromStdString(requestorId_);
    data[OTCTargetIdKey] = QString::fromStdString(initialTargetId_);
@@ -35,7 +34,6 @@ std::shared_ptr<OTCResponseData> OTCResponseData::fromJSON(const std::string& js
 
    const auto clientResponseId = data[OTCResponseIdClientKey].toString().toStdString();
    const auto serverResponseId = data[OTCResponseIdServerKey].toString().toStdString();
-   const auto negotiationChannelId = data[OTCNegotiationChannelIdKey].toString().toStdString();
    const auto serverRequestId = data[OTCRequestIdServerKey].toString().toStdString();
    const auto requestorId = data[OTCRequestorIdKey].toString().toStdString();
    const auto initialTargetId = data[OTCTargetIdKey].toString().toStdString();
@@ -52,7 +50,6 @@ std::shared_ptr<OTCResponseData> OTCResponseData::fromJSON(const std::string& js
 
    return std::make_shared<OTCResponseData>(clientResponseId,
                                            serverResponseId,
-                                           negotiationChannelId,
                                            serverRequestId,
                                            requestorId,
                                            initialTargetId,
@@ -72,7 +69,6 @@ OTCResponseData::OTCResponseData(const std::string& clientResponseId
   : DataObject(DataObject::Type::OTCResponseData)
   , clientResponseId_{clientResponseId}
   , serverResponseId_{}
-  , negotiationChannelId_{}
   , serverRequestId_{serverRequestId}
   , requestorId_{requestorId}
   , initialTargetId_{initialTargetId}
@@ -84,7 +80,6 @@ OTCResponseData::OTCResponseData(const std::string& clientResponseId
 
 OTCResponseData::OTCResponseData(const std::string& clientResponseId
                       , const std::string& serverResponseId
-                      , const std::string& negotiationChannelId
                       , const std::string& serverRequestId
                       , const std::string& requestorId
                       , const std::string& initialTargetId
@@ -95,7 +90,6 @@ OTCResponseData::OTCResponseData(const std::string& clientResponseId
   : DataObject(DataObject::Type::OTCResponseData)
   , clientResponseId_{clientResponseId}
   , serverResponseId_{serverResponseId}
-  , negotiationChannelId_{negotiationChannelId}
   , serverRequestId_{serverRequestId}
   , requestorId_{requestorId}
   , initialTargetId_{initialTargetId}
@@ -113,11 +107,6 @@ std::string OTCResponseData::clientResponseId() const
 std::string OTCResponseData::serverResponseId() const
 {
   return serverResponseId_;
-}
-
-std::string OTCResponseData::negotiationChannelId() const
-{
-  return negotiationChannelId_;
 }
 
 std::string OTCResponseData::serverRequestId() const

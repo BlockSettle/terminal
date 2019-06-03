@@ -297,7 +297,6 @@ private:
    std::string GetNextServerOTCId();
    std::string GetNextResponseId();
    std::string GetNextServerResponseId();
-   std::string GetNextNegotiationChannelId();
    void ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
    /////////////////////////////////////////////////////////////////////////////
 
