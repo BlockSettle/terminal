@@ -8,11 +8,13 @@ class DataConnectionListener
 public:
    enum DataConnectionError
    {
+      NoError,
       UndefinedSocketError,
       HostNotFoundError,
       HandshakeFailed,
       SerializationFailed,
       HeartbeatWaitFailed,
+      ConnectionTimeout,
    };
 
 public:

@@ -70,9 +70,9 @@ namespace Chat
 
    enum class ContactStatus {
       Accepted,
-      Rejected,
       Incoming,
-      Outgoing
+      Outgoing,
+      Rejected
    };
 
    enum class UserStatus {
@@ -135,6 +135,7 @@ namespace Chat
    static const QString RoomSendUserUpdatesKey = QStringLiteral("room_send_user_updates");
    static const QString RoomDisplayUserListKey = QStringLiteral("room_display_user_list");
    static const QString RoomDisplayTrayNotificationKey = QStringLiteral("room_display_tray_notification");
+   static const QString RoomIsTradingAvailableKey = QStringLiteral("room_is_trading_available");
    static const QString UserIdKey = QStringLiteral("user_id");
    static const QString DisplayNameKey = QStringLiteral("display_name");
    static const QString SearchIdPatternKey = QStringLiteral("search_id_pattern");
