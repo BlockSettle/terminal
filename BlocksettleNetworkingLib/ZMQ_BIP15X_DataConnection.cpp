@@ -42,7 +42,6 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
    : logger_(logger)
    , bipIDCookiePath_(params.cookiePath)
    , cookie_(params.cookie)
-   , lastHeartbeatReply_(std::chrono::steady_clock::now())
    , heartbeatInterval_(params.heartbeatInterval)
    , dataSocket_(ZmqContext::CreateNullSocket())
    , monSocket_(ZmqContext::CreateNullSocket())
@@ -532,8 +531,6 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
    isConnected_ = false;
    fatalError_ = false;
    serverSendsHeartbeat_ = false;
-   lastHeartbeatSend_ = std::chrono::steady_clock::time_point{};
-   lastHeartbeatReply_ = std::chrono::steady_clock::time_point{};
 
    hostAddr_ = host;
    hostPort_ = port;
@@ -1017,7 +1014,11 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
       // Rekey.
       bip151Connection_->bip150HandshakeRekey();
       bip150HandshakeCompleted_ = true;
-      outKeyTimePoint_ = chrono::steady_clock::now();
+
+      auto now = chrono::steady_clock::now();
+      outKeyTimePoint_ = now;
+      lastHeartbeatReply_ = now;
+      lastHeartbeatSend_ = now;
 
       logger_->info("[processHandshake] BIP 150 handshake with server complete "
          "- connection to {} is ready and fully secured", srvId);
