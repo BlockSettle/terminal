@@ -130,6 +130,7 @@ public:
       ChartProduct,
       ChartTimeframe,
       ChartCandleCount,
+      TradesDbFile,
       _last
    };
 

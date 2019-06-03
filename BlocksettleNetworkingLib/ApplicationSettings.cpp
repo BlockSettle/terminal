@@ -116,6 +116,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { chatPrivKey,             SettingDef(QString()) },
       { chatPubKey,              SettingDef(QString()) },
       { chatDbFile,              SettingDef(QString(), AppendToWritableDir(QLatin1String("chat.db"))) },
+      { TradesDbFile,            SettingDef(QString(), AppendToWritableDir(QLatin1String("trades.db"))) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { localSignerPort,         SettingDef(QLatin1String("SignerPort"), 23456) },
       { signerRunMode,           SettingDef(QLatin1String("SignerRunMode"), 1) },

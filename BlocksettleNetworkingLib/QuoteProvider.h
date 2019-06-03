@@ -39,6 +39,8 @@ namespace bs {
 
 class AssetManager;
 class CelerClient;
+class ApplicationSettings;
+class TradesDB;
 
 class QuoteProvider : public QObject
 {
@@ -49,9 +51,10 @@ public:
 
 public:
    QuoteProvider(const std::shared_ptr<AssetManager> &assetManager
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<spdlog::logger>& logger
       , bool debugTraffic = true);
-   ~QuoteProvider() noexcept = default;
+   ~QuoteProvider() noexcept;
 
    QuoteProvider(const QuoteProvider&) = delete;
    QuoteProvider& operator = (const QuoteProvider&) = delete;
@@ -126,6 +129,7 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AssetManager>    assetManager_;
    std::shared_ptr<CelerClient>     celerClient_;
+   std::unique_ptr<TradesDB>        tradesDb_;
    std::unordered_map<std::string, bs::network::RFQ>   submittedRFQs_;
    bs::PayinsContainer              dealerPayins_;
 

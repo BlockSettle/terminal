@@ -12,6 +12,8 @@
 #include "CelerSubmitRFQSequence.h"
 #include "CurrencyPair.h"
 #include "FastLock.h"
+#include "ApplicationSettings.h"
+#include "TradesDB.h"
 
 #include "DownstreamQuoteProto.pb.h"
 #include "DownstreamOrderProto.pb.h"
@@ -114,15 +116,19 @@ bool bs::PayinsContainer::erase(const std::string& settlementId)
 
 
 QuoteProvider::QuoteProvider(const std::shared_ptr<AssetManager>& assetManager
+      , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<spdlog::logger>& logger
       , bool debugTraffic)
  : logger_(logger)
  , assetManager_(assetManager)
+ , tradesDb_(std::make_unique<TradesDB>(logger, appSettings->get<QString>(ApplicationSettings::TradesDbFile)))
  , dealerPayins_(logger)
- , debugTraffic_(debugTraffic)
  , celerLoggedInTimestampUtcInMillis_(0)
+ , debugTraffic_(debugTraffic)
 {
 }
+
+QuoteProvider::~QuoteProvider() noexcept = default;
 
 void QuoteProvider::ConnectToCelerClient(const std::shared_ptr<CelerClient>& celerClient)
 {
@@ -610,7 +616,11 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
    }
 
    if (!resync && (response.orderstatus() == FILLED)) {
-      emit quoteOrderFilled(response.quoteid());
+      if (!tradesDb_->checkOrder(response.orderid()
+                                 , response.createdtimestamputcinmillis()
+                                 , QString::fromStdString(response.leg(0).settlementdate()))) {
+         emit quoteOrderFilled(response.quoteid());
+      }
    }
 
    Order order;

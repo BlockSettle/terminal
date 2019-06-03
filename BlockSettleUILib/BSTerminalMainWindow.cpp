@@ -1686,7 +1686,7 @@ void BSTerminalMainWindow::InitWidgets()
 
    ui_->widgetRFQ->initWidgets(mdProvider_, applicationSettings_);
 
-   auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, logMgr_->logger("message"));
+   auto quoteProvider = std::make_shared<QuoteProvider>(assetManager_, applicationSettings_, logMgr_->logger("message"));
    quoteProvider->ConnectToCelerClient(celerConnection_);
 
    auto dialogManager = std::make_shared<DialogManager>(geometry());
