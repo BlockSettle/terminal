@@ -65,6 +65,7 @@ public:
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    void setClient(std::shared_ptr<ChatClient> client);
    void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
+   void setIsChatTab(const bool &isChatTab);
    QString getFormattedTextFromSelection();
 
 signals:
@@ -132,6 +133,7 @@ private:
    QAction *userAddContactAction_;
    QAction *userRemoveContactAction_;
    bool isGroupRoom_;
+   bool isChatTab_;
 
    QImage statusImageOffline_;
    QImage statusImageConnecting_;

@@ -9,6 +9,7 @@ namespace spdlog {
    class logger;
 };
 
+struct ZmqBIP15XDataConnectionParams;
 class ArmoryServersProvider;
 class DataConnection;
 class PublisherConnection;
@@ -46,9 +47,8 @@ public:
       bool monitored = false) const;
 
    std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection(
-      bool ephemeral = true, const std::string& ownKeyFileDir = ""
-      , const std::string& ownKeyFileName = "", bool makeClientCookie = false
-      , bool readServerCookie = false, const std::string& cookieName = "") const;
+         const ZmqBIP15XDataConnectionParams &params) const;
+   std::shared_ptr<ZmqBIP15XDataConnection>   CreateZMQBIP15XDataConnection() const;
    std::shared_ptr<ZmqBIP15XServerConnection> CreateZMQBIP15XChatServerConnection(
       bool ephemeral = false, const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = "") const;

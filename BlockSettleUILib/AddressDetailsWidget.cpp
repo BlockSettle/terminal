@@ -203,8 +203,7 @@ void AddressDetailsWidget::loadTransactions()
                     UiUtils::displayDateTime(QDateTime::fromTime_t(curTXEntry.second.txTime)));
       item->setText(colTxId, // Flip Armory's TXID byte order: internal -> RPC
                     QString::fromStdString(curTXEntry.first.toHexStr(true)));
-      item->setText(colConfs,
-                    QString::number(armory_->getConfirmationsNumber(curTXEntry.second.blockNum)));
+      item->setData(colConfs, Qt::DisplayRole, armory_->getConfirmationsNumber(curTXEntry.second.blockNum));
       item->setText(colInputsNum, QString::number(tx.getNumTxIn()));
       item->setText(colOutputsNum, QString::number(tx.getNumTxOut()));
       item->setText(colOutputAmt, UiUtils::displayAmount(curTXEntry.second.value));

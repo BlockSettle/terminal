@@ -4,7 +4,10 @@
 #include <QClipboard>
 #include <QToolTip>
 #include <QDebug>
+#include <QRegularExpression>
 #include <QTimer>
+
+const QRegularExpression kRxSuffix(QStringLiteral(R"(\s\[.*\]$)"), QRegularExpression::CaseInsensitiveOption);
 
 CustomLabel::CustomLabel(QWidget *parent) :
     QLabel(parent)
@@ -19,10 +22,15 @@ void CustomLabel::mouseReleaseEvent(QMouseEvent *ev) {
    if (ev->button() == Qt::RightButton) {
       if (property("copyToClipboard").toBool()) {
          QClipboard *clipboard = QApplication::clipboard();
-         clipboard->setText(text());
+         // Clean
+         QString value = text();
+         if (property("trimSuffix").toBool()) {
+            value.remove(kRxSuffix);
+         }
+         clipboard->setText(value);
          // placing the tooltip in a timer because mouseReleaseEvent messes with it otherwise
          QTimer::singleShot(50, [=] {
-            QToolTip::showText(this->mapToGlobal(QPoint(0, 3)), tr("Copied '") + text() + tr("' to clipboard."), this);
+            QToolTip::showText(this->mapToGlobal(QPoint(0, 3)), tr("Copied '%1' to clipboard.").arg(value), this);
          });
       }
    }

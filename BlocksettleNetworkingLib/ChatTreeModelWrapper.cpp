@@ -1,6 +1,10 @@
 #include "ChatTreeModelWrapper.h"
+#include "ChatClientDataModel.h"
 
-#include "ChatClientTree/TreeItem.h"
+using NodeType = ChatUIDefinitions::ChatTreeNodeType;
+using Role = ChatClientDataModel::Role;
+using OnlineStatus = ChatContactElement::OnlineStatus;
+using ContactStatus = Chat::ContactStatus;
 
 ChatTreeModelWrapper::ChatTreeModelWrapper(QObject *parent)
    : QSortFilterProxyModel(parent)
@@ -52,23 +56,73 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
       return false;
    }
    switch (item->getType()) {
-   case ChatUIDefinitions::ChatTreeNodeType::RootNode: {
+   case NodeType::RootNode: {
       return true;
    }
-   case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
+   case NodeType::CategoryGroupNode:
       return item->getChildren().size() > 0;
-   case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
+   case NodeType::SearchElement:
       return true;
-   case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-   case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
-   case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
-   case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
-   case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
+   case NodeType::RoomsElement:
+   case NodeType::ContactsElement:
+   case NodeType::AllUsersElement:
+   case NodeType::OTCReceivedResponsesElement:
+   case NodeType::OTCSentResponsesElement: {
       return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
    }
    default:
       return false;
    }
+}
+
+bool ChatTreeModelWrapper::lessThan(const QModelIndex &left, const QModelIndex &right) const
+{
+   auto leftNodeType = left.data(Role::ItemTypeRole).value<NodeType>();
+   auto rightNodeType = right.data(Role::ItemTypeRole).value<NodeType>();
+   
+   // sort contact list by online status
+   if (leftNodeType == NodeType::ContactsElement && rightNodeType == NodeType::ContactsElement) {
+
+      auto leftContactStatus = left.data(Role::ContactStatusRole).value<ContactStatus>();
+      auto leftOnlineStatus = left.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
+
+      auto rightContactStatus = right.data(Role::ContactStatusRole).value<ContactStatus>();
+      auto rightOnlineStatus = right.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
+
+      if (leftContactStatus != rightContactStatus) {
+         return leftContactStatus < rightContactStatus;
+      }
+
+      if (leftOnlineStatus != rightOnlineStatus) {
+         return leftOnlineStatus < rightOnlineStatus;
+      }
+   }
+
+   // sort category nodes alphabetically
+   else if (leftNodeType == NodeType::CategoryGroupNode && rightNodeType == NodeType::CategoryGroupNode) {
+      auto leftString = left.data(Role::CategoryGroupDisplayName).toString();
+      auto rightString = right.data(Role::CategoryGroupDisplayName).toString();
+
+      return QString::localeAwareCompare(leftString, rightString) < 0;
+   }
+
+   // sort room nodes alphabetically
+   else if (leftNodeType == NodeType::RoomsElement && rightNodeType == NodeType::RoomsElement) {
+      auto leftString = left.data(Role::RoomIdRole).toString();
+      auto rightString = right.data(Role::RoomIdRole).toString();
+
+      if (left.data(Role::RoomTitleRole).isValid()) {
+         leftString = left.data(Role::RoomTitleRole).toString();
+      }
+
+      if (right.data(Role::RoomTitleRole).isValid()) {
+         rightString = right.data(Role::RoomTitleRole).toString();
+      }
+
+      return QString::localeAwareCompare(leftString, rightString) < 0;
+   }
+
+   return QSortFilterProxyModel::lessThan(left, right);
 }
 
 void ChatTreeModelWrapper::resetTree()
