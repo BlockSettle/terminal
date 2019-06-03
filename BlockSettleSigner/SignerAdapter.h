@@ -6,6 +6,7 @@
 #include "CoreWallet.h"
 #include "SignerDefs.h"
 #include "QPasswordData.h"
+#include "BSErrorCode.h"
 
 namespace bs {
    namespace sync {
@@ -76,7 +77,7 @@ public:
    void activateAutoSign(const std::string &walletId
       , bs::wallet::QPasswordData *passwordData
       , bool activate
-      , const std::function<void(bool success, const std::string& errorMsg)> &cb);
+      , const std::function<void(bs::error::ErrorCode errorCode)> &cb);
 
    NetworkType netType() const { return netType_; }
 

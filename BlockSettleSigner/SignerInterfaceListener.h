@@ -72,7 +72,7 @@ public:
    void setHeadlessPubKeyCb(bs::signer::RequestId reqId, const std::function<void(const std::string &pubKey)> &cb) {
       cbHeadlessPubKeyReqs_[reqId] = cb;
    }
-   void setAutoSignCb(bs::signer::RequestId reqId, const std::function<void(bool success, const std::string& errorMsg)> &cb) {
+   void setAutoSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbAutoSignReqs_[reqId] = cb;
    }
 
@@ -84,7 +84,7 @@ private:
    void onPasswordRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
    void onXbtSpent(const std::string &data);
-   void onAutoSignActivate(const std::string &data);
+   void onAutoSignActivated(const std::string &data, bs::signer::RequestId reqId);
    void onSyncWalletInfo(const std::string &data, bs::signer::RequestId);
    void onSyncHDWallet(const std::string &data, bs::signer::RequestId);
    void onSyncWallet(const std::string &data, bs::signer::RequestId);
@@ -117,7 +117,7 @@ private:
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbCreateHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbDeleteHDWalletReqs_;
    std::map<bs::signer::RequestId, std::function<void(const std::string &pubKey)>> cbHeadlessPubKeyReqs_;
-   std::map<bs::signer::RequestId, std::function<void(bool success, const std::string& errorMsg)>> cbAutoSignReqs_;
+   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode errorCode)>> cbAutoSignReqs_;
 };
 
 

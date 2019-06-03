@@ -8,6 +8,7 @@
 #include "HeadlessSettings.h"
 #include "ServerConnection.h"
 #include "SystemFileUtils.h"
+#include "BSErrorCode.h"
 
 using namespace Blocksettle::Communication;
 
@@ -89,8 +90,13 @@ public:
       owner_->sendData(signer::XbtSpentType, evt.SerializeAsString());
    }
 
-//   void asAct(const std::string &walletId) override
+//   void autoSignsActivate(const std::string &walletId) override
 //   {
+//      signer::AutoSignActResponse response;
+//      evt.set_dialogname(dialogName);
+//      evt.set_variantdata(data);
+//      owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
+
 //      autoSign(true, walletId);
 //   }
 
@@ -188,7 +194,7 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
       rc = onReconnect(packet.data());
       break;
    case signer::AutoSignActType:
-      rc = onAutoSignRequest(packet.data());
+      rc = onAutoSignRequest(packet.data(), packet.id());
       break;
    case signer::ChangePasswordRequestType:
       rc = onChangePassword(packet.data(), packet.id());
@@ -558,7 +564,7 @@ bool SignerAdapterListener::onReconnect(const std::string &data)
    return true;
 }
 
-bool SignerAdapterListener::onAutoSignRequest(const std::string &data)
+bool SignerAdapterListener::onAutoSignRequest(const std::string &data, bs::signer::RequestId reqId)
 {
    signer::AutoSignActRequest request;
    if (!request.ParseFromString(data)) {
@@ -566,7 +572,16 @@ bool SignerAdapterListener::onAutoSignRequest(const std::string &data)
       return false;
    }
 
-   app_->activateAutoSign(request.rootwalletid(), request.activateautosign(), SecureBinaryData(request.password()));
+   bs::error::ErrorCode result = app_->activateAutoSign(request.rootwalletid(), request.activateautosign()
+      , SecureBinaryData(request.password()));
+
+   signer::AutoSignActResponse response;
+   response.set_errorcode(static_cast<uint32_t>(result));
+   response.set_rootwalletid(request.rootwalletid());
+   response.set_autosignactive(request.activateautosign());
+
+   sendData(signer::AutoSignActType, response.SerializeAsString(), reqId);
+
    return true;
 }
 

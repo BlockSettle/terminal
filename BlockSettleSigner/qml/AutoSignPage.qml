@@ -7,6 +7,8 @@ import com.blocksettle.WalletsProxy 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QmlFactory 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.AutheIDClient 1.0
+import com.blocksettle.AuthSignWalletObject 1.0
 
 import "StyledControls"
 import "BsControls"
@@ -15,6 +17,13 @@ import "js/helper.js" as JsHelper
 Item {
     id: root
     property int currentIndex: 0
+
+    Connections {
+        target: signerStatus
+        onAutoSignActiveChanged: {
+            autoSignSwitch.checked = signerStatus.autoSignActive
+        }
+    }
 
     ScrollView {
         anchors.fill: parent
@@ -73,13 +82,18 @@ Item {
                 }
 
                 CustomSwitch {
+                    id: autoSignSwitch
                     Layout.alignment: Qt.AlignRight
                     visible: !signerStatus.offline
                     checked: signerStatus.autoSignActive
                     onClicked: {
-                        if (checked) {
-                            var walletInfo = qmlFactory.createWalletInfo(signerSettings.autoSignWallet)
+                        var walletInfo = qmlFactory.createWalletInfo(signerSettings.autoSignWallet)
+                        var newState = checked
+                        // don't change switch state by click
+                        // change state by received signal
+                        checked = !newState
 
+                        if (newState) {
                             var autoSignCallback = function(success, errorMsg) {
                                 if (success) {
                                     JsHelper.messageBox(BSMessageBox.Type.Success
@@ -96,8 +110,6 @@ Item {
                             }
 
                             if (walletInfo.encType === QPasswordData.Password) {
-                                console.log("passwordDialog Password ")
-
                                 var passwordDialog = Qt.createComponent("BsControls/BSPasswordInput.qml").createObject(mainWindow);
                                 passwordDialog.type = BSPasswordInput.Type.Request
                                 passwordDialog.open()
@@ -111,17 +123,29 @@ Item {
                                 })
                             }
                             else if (walletInfo.encType === QPasswordData.Auth) {
-                                console.log("passwordDialog Auth ")
-
                                 JsHelper.requesteIdAuth(AutheIDClient.SignWallet, walletInfo, function(passwordData){
                                     signerStatus.activateAutoSign(walletInfo.rootId, passwordData, true, autoSignCallback)
                                 })
                             }
 
-                            //signerStatus.activateAutoSign()
                         }
                         else {
-                            //signerStatus.deactivateAutoSign()
+                            var autoSignDisableCallback = function(success, errorMsg) {
+                                if (success) {
+                                    JsHelper.messageBox(BSMessageBox.Type.Success
+                                        , qsTr("Wallet Auto Sign")
+                                        , qsTr("Auto Signing disabled for wallet %1")
+                                            .arg(walletInfo.rootId))
+                                }
+                                else {
+                                    JsHelper.messageBox(BSMessageBox.Type.Critical
+                                        , qsTr("Wallet Auto Sign")
+                                        , qsTr("Failed to disable auto signing.")
+                                        , errorString)
+                                }
+                            }
+
+                            signerStatus.activateAutoSign(walletInfo.rootId, 0, false, autoSignDisableCallback)
                         }
                     }
                 }
