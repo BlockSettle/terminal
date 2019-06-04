@@ -5,6 +5,8 @@
 #include <QStandardPaths>
 #include <SecureBinaryData.h>
 
+const QRegExp kRxAddress(QStringLiteral(R"(^(((?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|(^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$))$)"));
+
 SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget *parent) :
@@ -58,6 +60,10 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    resetForm();
 
    setRowSelected(signersProvider->indexOfCurrent());
+
+   auto validator = new QRegExpValidator(this);
+   validator->setRegExp(kRxAddress);
+   ui_->lineEditAddress->setValidator(validator);
    onFormChanged();
 }
 
@@ -162,7 +168,7 @@ void SignerKeysWidget::resetForm()
 void SignerKeysWidget::onFormChanged()
 {
    ui_->pushButtonAddSignerKey->setEnabled(!ui_->lineEditName->text().isEmpty()
-                                           && !ui_->lineEditAddress->text().isEmpty());
+                                           && ui_->lineEditAddress->hasAcceptableInput());
 }
 
 void SignerKeysWidget::onSelect()
