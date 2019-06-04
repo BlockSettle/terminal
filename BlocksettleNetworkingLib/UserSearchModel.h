@@ -22,6 +22,7 @@ public:
 
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+   Qt::ItemFlags flags(const QModelIndex &index) const override;
 
 private:
    std::vector<std::pair<QString,bool>> users_;

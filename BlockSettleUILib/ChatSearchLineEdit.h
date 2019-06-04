@@ -21,6 +21,9 @@ private:
    // QWidget interface
 protected:
    void keyPressEvent(QKeyEvent *event) override;
+
+signals:
+   void keyDownPressed();
 };
 
 

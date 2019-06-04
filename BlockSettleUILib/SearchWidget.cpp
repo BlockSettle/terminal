@@ -23,6 +23,8 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::searchUserTextEdited);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
            this, &SearchWidget::searchTextChanged);
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyDownPressed,
+           this, &SearchWidget::focusResults);
    connect(ui_->searchResultTreeView, &QTreeView::customContextMenuRequested,
            this, &SearchWidget::showContextMenu);
 }
@@ -53,7 +55,7 @@ void SearchWidget::init()
    ui_->searchResultTreeView->setHeaderHidden(true);
    ui_->searchResultTreeView->setRootIsDecorated(false);
    ui_->searchResultTreeView->setVisible(false);
-   ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::NoSelection);
+   ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
    ui_->searchResultTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
 
    ui_->notFoundLabel->setVisible(false);
@@ -158,4 +160,13 @@ void SearchWidget::showContextMenu(const QPoint &pos)
       action->setStatusTip(tr("Click to add user to contact list"));
    }
    menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));
+}
+
+void SearchWidget::focusResults()
+{
+   if (ui_->searchResultTreeView->isVisible()) {
+      ui_->searchResultTreeView->setFocus();
+      auto index = ui_->searchResultTreeView->model()->index(0, 0);
+      ui_->searchResultTreeView->setCurrentIndex(index);
+   }
 }

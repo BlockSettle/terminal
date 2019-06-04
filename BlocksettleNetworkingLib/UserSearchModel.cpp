@@ -45,3 +45,9 @@ QVariant UserSearchModel::data(const QModelIndex &index, int role) const
       return QVariant();
    }
 }
+
+Qt::ItemFlags UserSearchModel::flags(const QModelIndex &index) const
+{
+   Q_UNUSED(index)
+   return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}
