@@ -115,7 +115,6 @@ bool bs::PayinsContainer::erase(const std::string& settlementId)
 
 
 QuoteProvider::QuoteProvider(const std::shared_ptr<AssetManager>& assetManager
-      , const std::shared_ptr<ApplicationSettings> &appSettings
       , const std::shared_ptr<spdlog::logger>& logger
       , bool debugTraffic)
  : logger_(logger)
