@@ -125,9 +125,24 @@ namespace bs {
       {
          CounterpartyOffline,
          CounterpartyNotFound,
+         // InvalidTarget - ATM returned when trying to send to self
+         InvalidTarget,
          RequestLimitToTargetExceeded,
          RequestsAmountExceeded,
          RequestAlreadyExpired
+      };
+
+      enum class OTCResponseRejectReason
+      {
+         // RequestNotAvailableForReply - request was pulled, closed or expired
+         RequestNotAvailableForReply,
+         // InvalidTarget - ATM returned when trying to reply to self
+         InvalidTarget,
+         // RequestAlreadyResponded - responder already have active response to that request
+         RequestAlreadyResponded,
+         // RequestResponseLimitExceeded - request have reached max number of
+         // replies ( reject reeason for requests to common room)
+         RequestResponseLimitExceeded
       };
    }
 }
