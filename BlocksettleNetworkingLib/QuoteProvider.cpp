@@ -13,7 +13,6 @@
 #include "CurrencyPair.h"
 #include "FastLock.h"
 #include "ApplicationSettings.h"
-#include "TradesDB.h"
 
 #include "DownstreamQuoteProto.pb.h"
 #include "DownstreamOrderProto.pb.h"
@@ -121,7 +120,6 @@ QuoteProvider::QuoteProvider(const std::shared_ptr<AssetManager>& assetManager
       , bool debugTraffic)
  : logger_(logger)
  , assetManager_(assetManager)
- , tradesDb_(std::make_unique<TradesDB>(logger, appSettings->get<QString>(ApplicationSettings::TradesDbFile)))
  , dealerPayins_(logger)
  , celerLoggedInTimestampUtcInMillis_(0)
  , debugTraffic_(debugTraffic)
@@ -616,9 +614,7 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
    }
 
    if (!resync && (response.orderstatus() == FILLED)) {
-      if (!tradesDb_->checkOrder(response.orderid()
-                                 , response.createdtimestamputcinmillis()
-                                 , QString::fromStdString(response.leg(0).settlementdate()))) {
+      if (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
          emit quoteOrderFilled(response.quoteid());
       }
    }

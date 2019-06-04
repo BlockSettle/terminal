@@ -40,7 +40,6 @@ namespace bs {
 class AssetManager;
 class CelerClient;
 class ApplicationSettings;
-class TradesDB;
 
 class QuoteProvider : public QObject
 {
@@ -129,7 +128,6 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<AssetManager>    assetManager_;
    std::shared_ptr<CelerClient>     celerClient_;
-   std::unique_ptr<TradesDB>        tradesDb_;
    std::unordered_map<std::string, bs::network::RFQ>   submittedRFQs_;
    bs::PayinsContainer              dealerPayins_;
 
