@@ -195,14 +195,25 @@ void HeadlessListener::OnDataReceived(const std::string& data)
 
 void HeadlessListener::OnConnected()
 {
+   if (isConnected_) {
+      logger_->error("already connected");
+      return;
+   }
+
+   isConnected_ = true;
    logger_->debug("[HeadlessListener] Connected");
    emit connected();
 }
 
 void HeadlessListener::OnDisconnected()
 {
+   if (!isConnected_) {
+      return;
+   }
+
    logger_->debug("[HeadlessListener] Disconnected");
    isReady_ = false;
+   isConnected_ = false;
    emit disconnected();
 }
 
@@ -1102,29 +1113,25 @@ bool RemoteSigner::Stop()
 
 bool RemoteSigner::Connect()
 {
-   QtConcurrent::run(this, &RemoteSigner::ConnectHelper);
-   headlessConnFinished_ = true;
-   return true;
-}
-
-void RemoteSigner::ConnectHelper()
-{
    if (!connection_) {
       logger_->error("[{}] connection not created", __func__);
-      emit disconnected();
-      return;
+      return false;
    }
-   if (!connection_->isActive()) {
-      if (connection_->openConnection(host_.toStdString(), port_.toStdString()
-         , listener_.get())) {
-         emit connected();
-      }
-      else {
-         logger_->error("[HeadlessContainer] Failed to open connection to "
-            "headless container");
-         return;
-      }
+
+   if (connection_->isActive()) {
+      return true;
    }
+
+   bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
+   if (!result) {
+      logger_->error("[HeadlessContainer] Failed to open connection to "
+         "headless container");
+      return false;
+   }
+
+   emit connected();
+   headlessConnFinished_ = true;
+   return true;
 }
 
 bool RemoteSigner::Disconnect()
@@ -1132,10 +1139,6 @@ bool RemoteSigner::Disconnect()
    if (!connection_) {
       return true;
    }
-/*   headless::RequestPacket packet;
-   packet.set_type(headless::DisconnectionRequestType);
-   packet.set_data("");    // This code produces crashes on terminal shutdown
-   Send(packet);*/         // and its purpose is obscure to me
 
    return connection_->closeConnection();
 }

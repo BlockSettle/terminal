@@ -428,8 +428,8 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       sendToDataSocket(clientID, packet.toBinStr());
       return;
    }
-   else if (connData->currentReadMessage_.message_.getType() >
-      ZMQ_MSGTYPE_AEAD_THRESHOLD) {
+
+   if (connData->currentReadMessage_.message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(connData->currentReadMessage_.message_, clientID)) {
          if (logger_) {
             logger_->error("[ZmqBIP15XServerConnection::{}] Handshake failed "

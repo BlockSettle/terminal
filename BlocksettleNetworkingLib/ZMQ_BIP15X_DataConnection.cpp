@@ -43,6 +43,10 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
    , bipIDCookiePath_(params.cookiePath)
    , cookie_(params.cookie)
    , heartbeatInterval_(params.heartbeatInterval)
+   // There is some obscure problem with ZMQ if same context reused:
+   // ZMQ recreates TCP connections for closed ZMQ sockets.
+   // Using new context fixes this problem.
+   , context_(new ZmqContext(logger))
    , dataSocket_(ZmqContext::CreateNullSocket())
    , monSocket_(ZmqContext::CreateNullSocket())
    , threadMasterSocket_(ZmqContext::CreateNullSocket())

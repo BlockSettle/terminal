@@ -111,10 +111,6 @@ public:
    // Only for tests
    void rekey();
 
-   void SetContext(const std::shared_ptr<ZmqContext>& context) {
-      context_ = context;
-   }
-
    bool isActive() const;
    bool SetZMQTransport(ZMQTransport transport);
 
