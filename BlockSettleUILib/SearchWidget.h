@@ -56,6 +56,7 @@ private slots:
    void resetTreeView();
    void showContextMenu(const QPoint &pos);
    void focusResults();
+   void onItemClicked(const QModelIndex &index);
 
 signals:
    void searchUserTextEdited(const QString &text);

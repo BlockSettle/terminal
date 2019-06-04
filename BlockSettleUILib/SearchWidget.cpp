@@ -27,6 +27,8 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::focusResults);
    connect(ui_->searchResultTreeView, &QTreeView::customContextMenuRequested,
            this, &SearchWidget::showContextMenu);
+   connect(ui_->searchResultTreeView, &QTreeView::activated,
+           this, &SearchWidget::onItemClicked);
 }
 
 SearchWidget::~SearchWidget()
@@ -168,5 +170,19 @@ void SearchWidget::focusResults()
       ui_->searchResultTreeView->setFocus();
       auto index = ui_->searchResultTreeView->model()->index(0, 0);
       ui_->searchResultTreeView->setCurrentIndex(index);
+   }
+}
+
+void SearchWidget::onItemClicked(const QModelIndex &index)
+{
+   if (!index.isValid()) {
+      return;
+   }
+   bool isInContacts = index.data(UserSearchModel::IsInContacts).toBool();
+   QString id = index.data(Qt::DisplayRole).toString();
+   if (isInContacts) {
+      emit removeFriendRequired(id);
+   } else {
+      emit addFriendRequied(id);
    }
 }
