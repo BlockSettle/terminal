@@ -26,7 +26,8 @@ namespace Chat {
                bool isPrivate = false,
                bool sendUserUpdates = true,
                bool displayUserList = true,
-               bool displayTrayNotification = true);
+               bool displayTrayNotification = true,
+               bool isTradingAvailable = false);
 
       QString getId();
       QString getOwnerId();
@@ -42,6 +43,8 @@ namespace Chat {
       bool displayTrayNotification() const;
       void setDisplayTrayNotification(const bool &displayTrayNotification);
 
+      bool isTradingAvailable() const;
+
    private:
       QString id_;
       QString ownerId_;
@@ -52,6 +55,7 @@ namespace Chat {
       bool displayUserList_;
       bool haveNewMessage_;
       bool displayTrayNotification_;
+      bool isTradingAvailable_;
       //QList<UserRecord> userList_;
 
 

@@ -285,6 +285,11 @@ void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, con
    tableFormat.setColumnWidthConstraints(col_widths);
 }
 
+void ChatMessagesTextEdit::setIsChatTab(const bool &isChatTab)
+{
+   isChatTab_ = isChatTab;
+}
+
 QString ChatMessagesTextEdit::getFormattedTextFromSelection()
 {
    QString text;
@@ -504,16 +509,17 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::MessageDat
 
 void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>>& messages, bool isFirstFetch)
 {
-
    for (const auto& message: messages) {
       messages_[currentChatId_].push_back(message);
    }
    for (const auto& message : messages) {
       insertMessage(message);
    }
-   for (const auto& message : messages) {
-      if (messageReadHandler_ && !(message->state() & (int)Chat::MessageData::State::Read) ){
-         messageReadHandler_->onMessageRead(message);
+   if (isChatTab_ && QApplication::activeWindow()) {
+      for (const auto& message : messages) {
+         if (messageReadHandler_ && !(message->state() & (int)Chat::MessageData::State::Read) ){
+            messageReadHandler_->onMessageRead(message);
+         }
       }
    }
    return;

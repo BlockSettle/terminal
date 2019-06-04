@@ -124,7 +124,11 @@ void ArmoryObject::setupConnection(const ArmorySettings &settings, const BIP151C
    // Add BIP 150 server keys
    BinaryData serverBIP15xKey;
    if (!settings.armoryDBKey.isEmpty()) {
-      serverBIP15xKey = READHEX(settings.armoryDBKey.toStdString());
+      try {
+         serverBIP15xKey = READHEX(settings.armoryDBKey.toStdString());
+      } catch (const std::exception &e) {
+         logger_->error("invalid armory key detected: {}: {}", settings.armoryDBKey.toStdString(), e.what());
+      }
    }
 
    const auto &cbError = [this](const std::string &errDesc) {

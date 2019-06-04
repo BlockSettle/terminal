@@ -6,7 +6,13 @@ namespace Chat {
    class ContactActionRequestServer : public Request
    {
    public:
-      ContactActionRequestServer(const std::string& clientId, const std::string& senderId, const std::string& contactId, ContactsActionServer action, ContactStatus status, autheid::PublicKey publicKey);
+      ContactActionRequestServer(const std::string& clientId,
+                                 const std::string& senderId,
+                                 const std::string& contactId,
+                                 ContactsActionServer action,
+                                 ContactStatus status,
+                                 autheid::PublicKey publicKey);
+
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId, const std::string& jsonData);
       void handle(RequestHandler &) override;
