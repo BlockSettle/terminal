@@ -17,5 +17,6 @@
 #include "RequestObjects/GenCommonOTCRequest.h"
 #include "RequestObjects/AnswerCommonOTCRequest.h"
 #include "RequestObjects/UpdateCommonOTCRequest.h"
+#include "RequestObjects/PullOwnOTCRequest.h"
 
 #include "RequestHandler.h"

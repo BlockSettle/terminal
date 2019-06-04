@@ -1,7 +1,7 @@
 #pragma once
 
 namespace Chat {
-   
+
    class HeartbeatPingRequest;
    class LoginRequest;
    class LogoutRequest;
@@ -21,7 +21,8 @@ namespace Chat {
    class GenCommonOTCRequest;
    class AnswerCommonOTCRequest;
    class UpdateCommonOTCRequest;
-   
+   class PullOwnOTCRequest;
+
    class RequestHandler
    {
    public:
@@ -30,24 +31,24 @@ namespace Chat {
       virtual void OnLogin(const LoginRequest &) = 0;
       virtual void OnLogout(const LogoutRequest &) = 0;
       virtual void OnSendMessage(const SendMessageRequest &) = 0;
-   
+
       // Asking peer to send us their public key.
       virtual void OnAskForPublicKey(const AskForPublicKeyRequest &) = 0;
-   
+
       // Sending our public key to the peer who asked for it.
       virtual void OnSendOwnPublicKey(const SendOwnPublicKeyRequest &) = 0;
-   
+
       virtual void OnOnlineUsers(const OnlineUsersRequest &) = 0;
       virtual void OnRequestMessages(const MessagesRequest &) = 0;
-      
+
       virtual void OnRequestChangeMessageStatus(const MessageChangeStatusRequest &) = 0;
-      
+
       virtual void OnRequestContactsActionDirect(const ContactActionRequestDirect &) = 0;
       virtual void OnRequestContactsActionServer(const ContactActionRequestServer &) = 0;
       virtual void OnRequestContactsList(const ContactsListRequest &) = 0;
-      
+
       virtual void OnRequestChatroomsList(const ChatroomsListRequest &) = 0;
-      
+
       virtual void OnSendRoomMessage(const SendRoomMessageRequest& ) = 0;
 
       virtual void OnSearchUsersRequest(const SearchUsersRequest& ) = 0;
@@ -55,5 +56,6 @@ namespace Chat {
       virtual void OnGenCommonOTCRequest(const GenCommonOTCRequest&) = 0;
       virtual void OnAnswerCommonOTCRequest(const AnswerCommonOTCRequest&) = 0;
       virtual void OnUpdateCommonOTCRequest(const UpdateCommonOTCRequest&) = 0;
+      virtual void OnPullOTCRequest(const PullOwnOTCRequest&) = 0;
    };
 }

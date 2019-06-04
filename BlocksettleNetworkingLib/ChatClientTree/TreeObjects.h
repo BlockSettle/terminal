@@ -26,6 +26,7 @@ public:
 
    ChatContactElement(std::shared_ptr<Chat::ContactRecordData> data)
       : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, std::vector<ChatUIDefinitions::ChatTreeNodeType>{ChatUIDefinitions::ChatTreeNodeType::MessageDataNode}, data)
+      , activeOtcRequest_(nullptr)
    {}
 
    std::shared_ptr<Chat::ContactRecordData> getContactData() const;
@@ -36,8 +37,13 @@ public:
 
    bool isChildSupported(const TreeItem *item) const override;
 
+   bool isHaveActiveOTC() const;
+   std::shared_ptr<Chat::OTCRequestData> getActiveOtcRequest() const;
+   void setActiveOtcRequest(const std::shared_ptr<Chat::OTCRequestData> &activeOtcRequest);
+
 protected:
    OnlineStatus onlineStatus_;
+   std::shared_ptr<Chat::OTCRequestData> activeOtcRequest_;
 };
 
 class ChatSearchElement : public CategoryElement {
