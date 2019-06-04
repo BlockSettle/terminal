@@ -35,6 +35,8 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    connect(ui_->pushButtonSelect, &QPushButton::clicked, this, &SignerKeysWidget::onSelect);
    connect(ui_->pushButtonKeyImport, &QPushButton::clicked, this, &SignerKeysWidget::onKeyImport);
 
+   connect(ui_->lineEditName, &QLineEdit::textChanged, this, &SignerKeysWidget::onFormChanged);
+   connect(ui_->lineEditAddress, &QLineEdit::textChanged, this, &SignerKeysWidget::onFormChanged);
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this](){
       emit needClose();
@@ -56,6 +58,7 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    resetForm();
 
    setRowSelected(signersProvider->indexOfCurrent());
+   onFormChanged();
 }
 
 void SignerKeysWidget::setRowSelected(int row)
@@ -154,6 +157,12 @@ void SignerKeysWidget::resetForm()
    ui_->lineEditAddress->clear();
    ui_->lineEditKey->clear();
    ui_->spinBoxPort->setValue(23456);
+}
+
+void SignerKeysWidget::onFormChanged()
+{
+   ui_->pushButtonAddSignerKey->setEnabled(!ui_->lineEditName->text().isEmpty()
+                                           && !ui_->lineEditAddress->text().isEmpty());
 }
 
 void SignerKeysWidget::onSelect()

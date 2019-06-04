@@ -37,6 +37,7 @@ private:
 
 private slots:
    void resetForm();
+   void onFormChanged();
 
 private:
    std::unique_ptr<Ui::SignerKeysWidget> ui_;
