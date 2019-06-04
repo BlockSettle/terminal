@@ -1,6 +1,7 @@
 #ifndef CHATHANDLEINTERFACES_H
 #define CHATHANDLEINTERFACES_H
 #include <memory>
+#include <map>
 #include <QString>
 
 namespace Chat {

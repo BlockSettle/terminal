@@ -120,6 +120,9 @@ public:
 
    /////////////////////////////////////////////////////////////////////////////
 
+   void HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+   void HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
    std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
@@ -163,15 +166,18 @@ public:
    //    true - request was submitted
    //    false - request was not delivered to chat server.
    bool SubmitCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool SubmitPrivateOTCRequest(const QString& targetId, const bs::network::OTCRequest& request);
 
    // cancel current OTC request sent to OTC chat
    bool PullCommonOTCRequest(const QString& serverOTCId);
+   bool PullPrivateOTCRequest(const QString& targetId, const QString& serverOTCId);
 
    bool SubmitCommonOTCResponse(const bs::network::OTCResponse& response);
 
 private:
    // OTC related messaging endpoint
    bool sendCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool sendPrivateOTCRequest(const QString& targetId, const bs::network::OTCRequest& request);
    bool sendPullCommonOTCRequest();
    bool sendCommonOTCResponse();
 
