@@ -5,6 +5,6 @@ GenericName=BlockSettle Signer
 Comment=BlockSettle Signer
 Categories=Qt;Network
 Exec=/usr/bin/blocksettle_signer
-Icon=blocksettle
+Icon=blocksettle_signer
 StartupNotify=false
 Terminal=false

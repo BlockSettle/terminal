@@ -21,8 +21,10 @@ class SignerAdapter;
 
 using namespace Blocksettle::Communication;
 
-class SignerInterfaceListener : public DataConnectionListener
+class SignerInterfaceListener : public QObject, public DataConnectionListener
 {
+   Q_OBJECT
+
 public:
    SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<ZmqBIP15XDataConnection> &conn, SignerAdapter *parent);
@@ -72,6 +74,8 @@ public:
    }
 
 private:
+   void processData(const std::string &);
+
    void onReady(const std::string &data);
    void onPeerConnected(const std::string &data, bool connected);
    void onPasswordRequested(const std::string &data);

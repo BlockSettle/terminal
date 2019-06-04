@@ -27,13 +27,17 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
 {
    const auto zmqContext = std::make_shared<ZmqContext>(logger);
 
+   ZmqBIP15XDataConnectionParams params;
+   params.ephemeralPeers = true;
+   params.setLocalHeartbeatInterval();
+
    // When creating the client connection, we need to generate a cookie for the
    // server connection in order to enable verification. We also need to add
    // the key we got on the command line to the list of trusted keys.
-   const std::string absCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
-   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true
-      , "", "", true, true, false, absCookiePath);
+   params.cookie = BIP15XCookie::MakeClient;
+   params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
+
+   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, params);
    adapterConn->SetContext(zmqContext);
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
@@ -45,8 +49,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort + "_1";
       adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
    }
-
-   adapterConn->setLocalHeartbeatInterval();
 
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
    if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
