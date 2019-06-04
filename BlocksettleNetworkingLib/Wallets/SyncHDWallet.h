@@ -63,7 +63,8 @@ namespace bs {
             std::vector<std::string> registerWallet(
                const std::shared_ptr<ArmoryObject> &, bool asNew = false);
             void setArmory(const std::shared_ptr<ArmoryObject> &);
-            bool startRescan(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr, const cb_scan_write_last &cbw = nullptr);
+            void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &);
+            void startRescan();
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
 
@@ -80,7 +81,6 @@ namespace bs {
             void onGroupChanged();
             void onLeafAdded(QString id);
             void onLeafDeleted(QString id);
-            void onScanComplete(const std::string &leafId);
 
          protected:
             const std::string walletId_;
@@ -96,8 +96,6 @@ namespace bs {
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
             std::vector<SecureBinaryData>          encryptionKeys_;
             std::pair<unsigned int, unsigned int>  encryptionRank_{ 0,0 };
-
-            void rescanBlockchain(const cb_scan_notify &, const cb_scan_read_last &, const cb_scan_write_last &);
 
          private:
             std::unordered_set<std::string>  scannedLeaves_;

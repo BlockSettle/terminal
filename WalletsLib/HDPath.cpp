@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <stdexcept>
 #include "HDPath.h"
 
 using namespace bs;

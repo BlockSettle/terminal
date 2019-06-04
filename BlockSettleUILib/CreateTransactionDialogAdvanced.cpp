@@ -835,6 +835,9 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
       ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
       feeSelectionChanged(index);
    }
+   if (feeValues.empty()) {
+      feeSelectionChanged(0);
+   }
 }
 
 void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePerByte)
@@ -871,7 +874,9 @@ bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
          };
          transactionData_->getWallet()->getNewChangeAddress(cbAddr
             , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
-         return futAddr.get();
+         const auto changeAddr = futAddr.get();
+         transactionData_->getWallet()->syncAddresses();
+         return changeAddr;
       } else {
          return selectedChangeAddress_;
       }
@@ -1137,9 +1142,9 @@ void CreateTransactionDialogAdvanced::updateManualFeeControls()
    int itemIndex = ui_->comboBoxFeeSuggestions->currentIndex();
    int itemCount = ui_->comboBoxFeeSuggestions->count();
 
-   ui_->doubleSpinBoxFeesManualPerByte->setVisible(itemCount > 2 && itemIndex == itemCount - 2);
+   ui_->doubleSpinBoxFeesManualPerByte->setVisible(itemCount >= 2 && itemIndex == itemCount - 2);
 
-   const bool totalFeeSelected = (itemCount > 2) && (itemIndex == itemCount - 1);
+   const bool totalFeeSelected = (itemCount >= 2) && (itemIndex == itemCount - 1);
    ui_->spinBoxFeesManualTotal->setVisible(totalFeeSelected);
    if (totalFeeSelected) {
       ui_->spinBoxFeesManualTotal->setValue((int)transactionData_->totalFee());

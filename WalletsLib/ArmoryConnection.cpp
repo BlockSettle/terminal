@@ -507,7 +507,7 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
          }
       }
    };
-   const auto &cbWrap = [this, cbProcess, nbBlocks]
+   const auto &cbWrap = [this, cbProcess, cb, nbBlocks]
                         (ReturnMessage<ClientClasses::FeeEstimateStruct> feeStruct) {
       try {
          cbProcess(feeStruct.get());
@@ -515,6 +515,9 @@ bool ArmoryConnection::estimateFee(unsigned int nbBlocks, const FloatCb &cb)
       catch (const std::exception &e) {
          logger_->error("[estimateFee (cbWrap)] Return data error - {} - {} "
             "blocks", e.what(), nbBlocks);
+         if (cb) {
+            cb(std::numeric_limits<float>::infinity());
+         }
       }
    };
    bdv_->estimateFee(nbBlocks, FEE_STRAT_CONSERVATIVE, cbWrap);

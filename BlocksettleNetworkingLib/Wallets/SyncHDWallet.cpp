@@ -245,17 +245,39 @@ std::vector<std::string> hd::Wallet::registerWallet(
    return result;
 }
 
-bool hd::Wallet::startRescan(const hd::Wallet::cb_scan_notify &cb, const cb_scan_read_last &cbr
-   , const cb_scan_write_last &cbw)
+void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &cb)
 {
-   {
-      QMutexLocker lock(&mtxGroups_);
-      if (!scannedLeaves_.empty()) {
-         return false;
-      }
+   auto stateMap = std::make_shared<std::map<std::string, bs::sync::SyncState>>();
+   const auto &leaves = getLeaves();
+   const auto nbLeaves = leaves.size();
+   for (const auto &leaf : leaves) {
+      const auto &cbScanLeaf = [this, leaf, nbLeaves, stateMap, cb](bs::sync::SyncState state) {
+         (*stateMap)[leaf->walletId()] = state;
+         if (stateMap->size() == nbLeaves) {
+            bs::sync::SyncState hdState = bs::sync::SyncState::Success;
+            for (const auto &st : *stateMap) {
+               if (st.second > hdState) {
+                  hdState = st.second;
+               }
+            }
+            if (cb) {
+               cb(hdState);
+            }
+         }
+      };
+      leaf->trackChainAddressUse(cbScanLeaf);
    }
-   QtConcurrent::run(this, &hd::Wallet::rescanBlockchain, cb, cbr, cbw);
-   return true;
+}
+
+void hd::Wallet::startRescan()
+{
+   const auto &cbScanned = [this](bs::sync::SyncState state) {
+      if (logger_) {
+         logger_->debug("Wallet rescan result: {}", (int)state);
+      }
+      emit scanComplete(walletId());
+   };
+   trackChainAddressUse(cbScanned);
 }
 
 bool hd::Wallet::deleteRemotely()
@@ -264,28 +286,6 @@ bool hd::Wallet::deleteRemotely()
       return false;
    }
    return (signContainer_->DeleteHDRoot(walletId_) > 0);
-}
-
-void hd::Wallet::rescanBlockchain(const hd::Wallet::cb_scan_notify &cb, const cb_scan_read_last &cbr
-   , const cb_scan_write_last &cbw)
-{
-   QMutexLocker lock(&mtxGroups_);
-   for (const auto &group : groups_) {
-      group.second->rescanBlockchain(cb, cbr, cbw);
-      for (const auto &leaf : group.second->getLeaves()) {
-         scannedLeaves_.insert(leaf->walletId());
-         connect(leaf.get(), &hd::Leaf::scanComplete, this, &hd::Wallet::onScanComplete);
-      }
-   }
-}
-
-void hd::Wallet::onScanComplete(const std::string &leafId)
-{
-   QMutexLocker lock(&mtxGroups_);
-   scannedLeaves_.erase(leafId);
-   if (scannedLeaves_.empty()) {
-      emit scanComplete(walletId());
-   }
 }
 
 bool hd::Wallet::isPrimary() const

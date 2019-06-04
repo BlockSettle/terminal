@@ -302,6 +302,7 @@ message SyncHDWalletResponse
    message Group {
       uint32 type = 1;
       repeated Leaf leaves = 2;
+      bool ext_only = 3;
    }
 
    string walletId = 1;

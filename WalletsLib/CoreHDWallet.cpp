@@ -420,12 +420,7 @@ std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly() const
    //copy group and leaf structure
    for (auto& groupPair : groups_)
    {
-      auto newGroup = std::make_shared<hd::Group>(
-         woCopy->walletPtr_,
-         groupPair.second->path(), netType_, extOnlyFlag_,
-         logger_);
-
-      newGroup->copyLeaves(groupPair.second.get());
+      auto newGroup = groupPair.second->getCopy(woCopy->walletPtr_);
       woCopy->addGroup(newGroup);
    }
 

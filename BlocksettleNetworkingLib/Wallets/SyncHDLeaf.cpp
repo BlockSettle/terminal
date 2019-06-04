@@ -670,7 +670,7 @@ bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
 
 bool hd::Leaf::hasId(const std::string &id) const
 {
-   return ((walletId() == id) || (walletIdInt() == id));
+   return ((walletId() == id) || (!isExtOnly_ && (walletIdInt() == id)));
 }
 
 int hd::Leaf::addAddress(const bs::Address &addr, const std::string &index, AddressEntryType aet, bool sync)

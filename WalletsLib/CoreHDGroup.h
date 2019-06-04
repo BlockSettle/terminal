@@ -53,6 +53,9 @@ namespace bs {
             virtual std::set<AddressEntryType> getAddressTypeSet(void) const;
             bool isExtOnly(void) const { return isExtOnly_; }
 
+            virtual std::shared_ptr<hd::Group> getCopy(
+               std::shared_ptr<AssetWallet_Single>) const;
+
          protected:
             bool needsCommit() const { return needsCommit_; }
             void committed() { needsCommit_ = false; }
@@ -73,8 +76,7 @@ namespace bs {
             LMDB* db_ = nullptr;
 
          private:
-            BinaryData serialize() const;
-            void copyLeaves(hd::Group*);
+            virtual BinaryData serialize() const;
 
             static std::shared_ptr<Group> deserialize(
                std::shared_ptr<AssetWallet_Single>, 
@@ -83,13 +85,17 @@ namespace bs {
                , const std::string &desc
                , NetworkType netType
                , const std::shared_ptr<spdlog::logger> &logger);
-            void deserialize(BinaryDataRef value);
+            virtual void deserialize(BinaryDataRef value);
             void commit(bool force = false);
             void putDataToDB(const BinaryData&, const BinaryData&);
          };
 
          class AuthGroup : public Group
          {
+         private:
+            BinaryData serialize() const override;
+            void deserialize(BinaryDataRef value) override;
+
          public:
             AuthGroup(std::shared_ptr<AssetWallet_Single>,
                const bs::hd::Path &path,
@@ -100,15 +106,20 @@ namespace bs {
 
             void shutdown(void) override;
             std::set<AddressEntryType> getAddressTypeSet(void) const override;
+            void setSalt(const SecureBinaryData&);
+            const SecureBinaryData& getSalt(void) const { return salt_; }
+
+            std::shared_ptr<hd::Group> getCopy(
+               std::shared_ptr<AssetWallet_Single>) const override;
 
          protected:
             bool addLeaf(const std::shared_ptr<Leaf> &) override;
             std::shared_ptr<Leaf> newLeaf() const override;
-            void initLeaf(std::shared_ptr<Leaf> &, const bs::hd::Path &) const;
+            void initLeaf(std::shared_ptr<Leaf> &, const bs::hd::Path &,
+               unsigned lookup = UINT32_MAX) const override;
             void serializeLeaves(BinaryWriter &) const override;
 
-            BinaryData  chainCode_;
-            std::unordered_map<bs::hd::Path::Elem, std::shared_ptr<Leaf>>  tempLeaves_;
+            SecureBinaryData salt_;
          };
 
 

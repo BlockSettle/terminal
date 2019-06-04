@@ -257,6 +257,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       if (utxo.isInitialized()) {
          txSignReq.inputs.push_back(utxo);
          inputVal += utxo.getValue();
+         logger_->debug("[{}] UTXO {}, addr {}", __func__, utxo.getTxHash().toHexStr(true), bs::Address::fromUTXO(utxo).display());
       }
    }
 
@@ -317,9 +318,16 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       , keepDuplicatedRecipients = request.keepduplicatedrecipients()] (const SecureBinaryData &pass,
             bool cancelledByUser) {
       try {
-         const auto tx = partial ? wallet->signPartialTXRequest(txSignReq)
-            : wallet->signTXRequest(txSignReq);
-         SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
+         if (cancelledByUser) {
+            return;
+         }
+         logger_->debug("SignTX partial: {}, populate UTXOs: {}", partial, txSignReq.populateUTXOs);
+         {
+            auto passLock = wallet->lockForEncryption(pass);
+            const auto tx = partial ? wallet->signPartialTXRequest(txSignReq)
+               : wallet->signTXRequest(txSignReq);
+            SignTXResponse(clientId, id, reqType, {}, tx, cancelledByUser);
+         }
 
          onXbtSpent(value, autoSign);
          if (callbacks_) {
@@ -338,6 +346,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
    };
 
    if (!request.password().empty()) {
+      logger_->debug("[{}] password: {}", __func__, request.password());
       onPassword(BinaryData::CreateFromHex(request.password()), false);
       return true;
    }
@@ -558,6 +567,7 @@ bool HeadlessContainerListener::RequestPasswordIfNeeded(const std::string &clien
 {
    const auto &wallet = walletsMgr_->getWalletById(txReq.walletId);
    if (!wallet) {
+      logger_->error("[{}] failed to find wallet {}", __func__, txReq.walletId);
       return false;
    }
    bool needPassword = !wallet->encryptionTypes().empty();
@@ -1196,6 +1206,7 @@ bool HeadlessContainerListener::onSyncHDWallet(const std::string &clientId, head
       for (const auto &group : hdWallet->getGroups()) {
          auto groupData = response.add_groups();
          groupData->set_type(group->index());
+         groupData->set_ext_only(hdWallet->isExtOnly());
 
          for (const auto &leaf : group->getLeaves()) {
             auto leafData = groupData->add_leaves();

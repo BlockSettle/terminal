@@ -205,7 +205,9 @@ void CreateTransactionDialog::loadFees()
    for (const auto &feeLevel : feeLevels) {
       const auto &cbFee = [this, result, level=feeLevel.first](float fee) {
          result->levels.erase(level);
-         result->values[level] = fee;
+         if (fee < std::numeric_limits<float>::infinity()) {
+            result->values[level] = fee;
+         }
          if (result->levels.empty()) {
             emit feeLoadingCompleted(result->values);
          }
@@ -335,6 +337,12 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
    }
 
    try {
+      if (!error.empty()) {
+         throw std::runtime_error(error);
+      }
+      if (signedTX.isNull()) {
+         throw std::runtime_error("Empty signed TX data received");
+      }
       const Tx tx(signedTX);
       if (tx.isInitialized() && (tx.getTxWeight() >= kTransactionWeightLimit)) {
          BSMessageBox mBox(BSMessageBox::question, tr("Oversized Transaction")

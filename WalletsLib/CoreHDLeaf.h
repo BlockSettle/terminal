@@ -8,6 +8,9 @@
 #include "CoreWallet.h"
 #include "HDPath.h"
 
+#define LEAF_KEY        0x00002001
+#define AUTH_LEAF_KEY   0x00002002
+
 namespace spdlog {
    class logger;
 }
@@ -17,6 +20,7 @@ namespace bs {
 
    namespace core {
       namespace hd {
+         class AuthGroup;
          class Group;
          class Wallet;
 
@@ -32,9 +36,11 @@ namespace bs {
 
             virtual void init(
                std::shared_ptr<AssetWallet_Single>, 
-               const BinaryData& addrAccId,
-               const bs::hd::Path &);
-            virtual bool copyTo(std::shared_ptr<hd::Leaf> &) const;
+               const BinaryData& addrAccId);
+            virtual std::shared_ptr<hd::Leaf> getCopy(
+               std::shared_ptr<AssetWallet_Single>) const;
+            
+            void setPath(const bs::hd::Path&);
 
             std::string walletId() const override;
             std::string shortName() const override { return suffix_; }
@@ -79,9 +85,10 @@ namespace bs {
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
-            BinaryData serialize() const;
+            virtual BinaryData serialize() const;
 
-            static std::pair<BinaryData, bs::hd::Path> deserialize(const BinaryData &ser);
+            static std::pair<std::shared_ptr<hd::Leaf>, BinaryData> deserialize(
+               const BinaryData &ser, NetworkType netType, std::shared_ptr<spdlog::logger> logger);
 
             void shutdown(void);
             std::string getFilename(void) const;
@@ -95,6 +102,10 @@ namespace bs {
             virtual bs::hd::Path::Elem getIntPath(void) const { return addrTypeInternal_; }
 
             std::shared_ptr<AssetEntry_BIP32Root> getRootAsset(void) const;
+
+         public:
+            static const bs::hd::Path::Elem  addrTypeExternal_ = 0u;
+            static const bs::hd::Path::Elem  addrTypeInternal_ = 1u;
 
          protected:
             void reset();
@@ -118,9 +129,6 @@ namespace bs {
             virtual void setDB(LMDB *);
 
          protected:
-            static const bs::hd::Path::Elem  addrTypeExternal_ = 0u;
-            static const bs::hd::Path::Elem  addrTypeInternal_ = 1u;
-
             mutable std::string     walletId_, walletIdInt_;
             wallet::Type            type_;
             bs::hd::Path            path_;
@@ -145,8 +153,23 @@ namespace bs {
 
          class AuthLeaf : public Leaf
          {
+            friend class hd::Leaf;
+            friend class hd::AuthGroup;
+
+         private:
+            SecureBinaryData salt_;
+
+         private:
+            void setSalt(const SecureBinaryData& salt) { salt_= salt; }
+
          public:
             AuthLeaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger);
+            
+            std::shared_ptr<hd::Leaf> getCopy(
+               std::shared_ptr<AssetWallet_Single>) const override;
+            BinaryData serialize() const override;
+
+            const SecureBinaryData& getSalt(void) const { return salt_; }
          };
 
 

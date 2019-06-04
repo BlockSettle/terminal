@@ -80,8 +80,7 @@ namespace bs {
          std::unordered_set<std::string>     walletNames_;
          //std::vector<BinaryData>             walletsId_;
          std::vector<std::string>            hdWalletsId_;
-         //BinaryData                          chainCode_;
-//         std::shared_ptr<SettlementWallet>   settlementWallet_;
+         std::shared_ptr<SettlementWallet>   settlementWallet_;
       };
 
    }  //namespace core

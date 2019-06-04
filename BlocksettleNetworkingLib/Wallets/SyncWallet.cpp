@@ -517,6 +517,8 @@ void Wallet::firstInit(bool force)
       auto cbCounter = std::make_shared<std::atomic_int>(2);
       const auto &cbBalTxN = [this, cbCounter] {
          (*cbCounter)--;
+         logger_->debug("[{}] {} tot={} spend={} unconf={}", __func__
+            , *cbCounter, totalBalance_, spendableBalance_, unconfirmedBalance_);
          if ((*cbCounter <= 0)) {
             QMetaObject::invokeMethod(this, [this] {
                emit balanceUpdated(walletId());

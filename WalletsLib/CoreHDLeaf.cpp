@@ -21,17 +21,8 @@ hd::Leaf::~Leaf()
 
 void hd::Leaf::init(
    std::shared_ptr<AssetWallet_Single> walletPtr,
-   const BinaryData& addrAccId,
-   const bs::hd::Path &path)
+   const BinaryData& addrAccId)
 {
-   if (path != path_) {
-      path_ = path;
-      suffix_.clear();
-      suffix_ = bs::hd::Path::elemToKey(index());
-
-      walletName_ = path_.toString();
-   }
-
    reset();
    auto accPtr = walletPtr->getAccountForID(addrAccId);
    if (accPtr == nullptr)
@@ -49,11 +40,29 @@ void hd::Leaf::init(
    }
 }
 
-bool hd::Leaf::copyTo(std::shared_ptr<hd::Leaf> &leaf) const
+std::shared_ptr<hd::Leaf> hd::Leaf::getCopy(
+   std::shared_ptr<AssetWallet_Single> wltPtr) const
 {
-   leaf->reset();
-   leaf->accountPtr_ = accountPtr_;
-   return true;
+   if (wltPtr == nullptr)
+      throw AccountException("empty wallet ptr");
+
+   auto leafCopy = std::make_shared<hd::Leaf>(netType_, logger_, type());
+   leafCopy->setPath(path());
+   leafCopy->init(wltPtr, getRootId());
+
+   return leafCopy;
+}
+
+void hd::Leaf::setPath(const bs::hd::Path& path)
+{
+   if (path == path_)
+      return;
+ 
+   path_ = path;
+   suffix_.clear();
+   suffix_ = bs::hd::Path::elemToKey(index());
+
+   walletName_ = path_.toString();
 }
 
 void hd::Leaf::reset()
@@ -371,10 +380,10 @@ bs::Address hd::Leaf::getAddressByIndex(
       if (addrPtr->getType() != accountPtr_->getAddressType())
          throw AccountException("type mismatch for instantiated address");
    }
-   else if (addrPtr->getType() != aet)
+/*   else if (addrPtr->getType() != aet)
    {
       throw AccountException("type mismatch for instantiated address");
-   }
+   }*/
 
    return bs::Address(addrPtr->getHash(), aet);
 }
@@ -393,9 +402,12 @@ BinaryData hd::Leaf::serialize() const
    // format revision - should always be <= 10
    bw.put_uint32_t(2);   
 
+   bw.put_uint32_t(LEAF_KEY);
+
    //address account id
-   bw.put_var_int(accountPtr_->getID().getSize());
-   bw.put_BinaryData(accountPtr_->getID());
+   auto&& rootID = getRootId();
+   bw.put_var_int(rootID.getSize());
+   bw.put_BinaryData(rootID);
 
    //path
    bw.put_var_int(path_.length());
@@ -409,7 +421,8 @@ BinaryData hd::Leaf::serialize() const
    return finalBW.getData();
 }
 
-std::pair<BinaryData, bs::hd::Path> hd::Leaf::deserialize(const BinaryData &ser)
+std::pair<std::shared_ptr<hd::Leaf>, BinaryData> hd::Leaf::deserialize(
+   const BinaryData &ser, NetworkType netType, std::shared_ptr<spdlog::logger> logger)
 {
    BinaryRefReader brr(ser);
 
@@ -417,6 +430,9 @@ std::pair<BinaryData, bs::hd::Path> hd::Leaf::deserialize(const BinaryData &ser)
    auto ver = brr.get_uint32_t();
    if (ver != 2)
       throw WalletException("unexpected leaf version");
+
+   //type
+   auto key = brr.get_uint32_t();
 
    //address account id
    auto len = brr.get_var_int();
@@ -428,7 +444,33 @@ std::pair<BinaryData, bs::hd::Path> hd::Leaf::deserialize(const BinaryData &ser)
    for (unsigned i = 0; i < count; i++)
       path.append(brr.get_uint32_t());
 
-   return std::make_pair(id, path);
+   std::shared_ptr<hd::Leaf> leafPtr;
+
+   switch (key)
+   {
+   case LEAF_KEY:
+   {
+      leafPtr = std::make_shared<hd::Leaf>(netType, logger);
+      break;
+   }
+
+   case AUTH_LEAF_KEY:
+   {
+      len = brr.get_var_int();
+      auto&& salt = brr.get_BinaryData(len);
+
+      auto authPtr = std::make_shared<hd::AuthLeaf>(netType, logger);
+      authPtr->setSalt(salt);
+      leafPtr = authPtr;
+      break;
+   }
+
+   default:
+      throw AccountException("unknown leaf type");
+   }
+
+   leafPtr->setPath(path);
+   return std::make_pair(leafPtr, id);
 }
 
 std::shared_ptr<ResolverFeed> hd::Leaf::getResolver() const
@@ -619,9 +661,9 @@ std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(
    if (aeType != AddressEntryType_Default && result.first.getType() != aeType)
       throw AccountException("did not get expected address entry type");
 
-   auto resultIndex = addressIndex(result.first);
-   if(resultIndex != addrIndex)
-      throw AccountException("did not get expected address index");
+/*   auto resultIndex = addressIndex(result.first);
+   if (resultIndex != addrIndex)
+      throw AccountException("did not get expected address index");*/
 
    result.second = true;
    return result;
@@ -695,3 +737,48 @@ void hd::Leaf::setDB(LMDB *db)
 hd::AuthLeaf::AuthLeaf(NetworkType netType, std::shared_ptr<spdlog::logger> logger)
    : Leaf(netType, logger, wallet::Type::Authentication)
 {}
+
+BinaryData hd::AuthLeaf::serialize() const
+{
+   BinaryWriter bw;
+
+   // format revision - should always be <= 10
+   bw.put_uint32_t(2);
+
+   //type
+   bw.put_uint32_t(AUTH_LEAF_KEY);
+
+   //address account id
+   auto&& rootID = getRootId();
+   bw.put_var_int(rootID.getSize());
+   bw.put_BinaryData(rootID);
+
+   //path
+   bw.put_var_int(path_.length());
+   for (unsigned i = 0; i < path_.length(); i++)
+      bw.put_uint32_t(path_.get(i));
+
+   //salt
+   bw.put_var_int(salt_.getSize());
+   bw.put_BinaryData(salt_);
+
+   //size wrapper
+   BinaryWriter finalBW;
+   finalBW.put_var_int(bw.getSize());
+   finalBW.put_BinaryData(bw.getData());
+   return finalBW.getData();
+}
+
+std::shared_ptr<hd::Leaf> hd::AuthLeaf::getCopy(
+   std::shared_ptr<AssetWallet_Single> wltPtr) const
+{
+   if (wltPtr == nullptr)
+      throw AccountException("empty wallet ptr");
+
+   auto leafCopy = std::make_shared<hd::AuthLeaf>(netType_, logger_);
+   leafCopy->setSalt(salt_);
+   leafCopy->setPath(path());
+   leafCopy->init(wltPtr, getRootId());
+
+   return leafCopy;
+}

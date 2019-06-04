@@ -592,8 +592,9 @@ public:
       //short of that, try to get the asset for this key
       auto assetPair = getAssetPairForKey(key);
       if (assetPair.first == nullptr ||
-         assetPair.second == AddressEntryType_Default)
+         assetPair.second == AddressEntryType_Default) {
          throw std::runtime_error("could not resolve key");
+      }
 
       auto addrPtr = AddressEntry::instantiate(
          assetPair.first, assetPair.second);
@@ -643,7 +644,7 @@ public:
       auto assetSingle =
          std::dynamic_pointer_cast<AssetEntry_Single>(assetPair.first);
       if (assetSingle == nullptr)
-         throw std::logic_error("invalid pubkey");
+         throw std::logic_error("invalid asset");
 
       return wltPtr_->getDecryptedPrivateKeyForAsset(assetSingle);
 

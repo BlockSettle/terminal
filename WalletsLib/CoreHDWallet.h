@@ -40,9 +40,9 @@ namespace bs {
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
 
             //stand in for the botched bs encryption code. too expensive to clean up after this mess
-            virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
+            virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
             virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-            virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
+            virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 1, 1 }; }
 
             ~Wallet(void);
 
@@ -56,6 +56,7 @@ namespace bs {
             bool isPrimary() const;
             NetworkType networkType() const { return netType_; }
             void setExtOnly(void);
+            bool isExtOnly() const { return extOnlyFlag_; }
 
             std::shared_ptr<Group> getGroup(bs::hd::CoinType ct) const;
             std::shared_ptr<Group> createGroup(bs::hd::CoinType ct);

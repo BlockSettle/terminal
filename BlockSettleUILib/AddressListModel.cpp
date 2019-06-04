@@ -37,6 +37,8 @@ AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManage
            , &AddressListModel::updateData);
    connect(walletsMgr.get(), &bs::sync::WalletsManager::blockchainEvent, this
            , &AddressListModel::updateData);
+   connect(walletsMgr.get(), &bs::sync::WalletsManager::walletBalanceUpdated
+      , this, &AddressListModel::updateData);
 }
 
 bool AddressListModel::setWallets(const Wallets &wallets)

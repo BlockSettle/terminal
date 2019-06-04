@@ -889,6 +889,7 @@ void HeadlessContainer::ProcessSyncHDWallet(unsigned int id, const std::string &
       const auto groupInfo = response.groups(i);
       bs::sync::HDWalletData::Group group;
       group.type = static_cast<bs::hd::CoinType>(groupInfo.type());
+      group.extOnly = groupInfo.ext_only();
       for (int j = 0; j < groupInfo.leaves_size(); ++j) {
          const auto leafInfo = groupInfo.leaves(j);
          if (isWoRoot) {
@@ -1232,7 +1233,6 @@ void RemoteSigner::onConnError(ConnectionError error, const QString &details)
 
 void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
 {
-   logger_->debug("[{}] {}/{}", __func__, (int)packet.type(), packet.id());
    signRequests_.erase(packet.id());
 
    switch (packet.type()) {

@@ -475,7 +475,7 @@ BTCNumericTypes::balance_type WalletsManager::getBalanceSum(
 void WalletsManager::onNewBlock()
 {
    logger_->debug("[WalletsManager::{}] new Block", __func__);
-   updateWallets();
+   updateWallets(true);
    emit blockchainEvent();
 }
 
@@ -514,7 +514,6 @@ void WalletsManager::onStateChanged(ArmoryConnection::State state)
 {
    if (state == ArmoryConnection::State::Ready) {
       logger_->debug("[{}] DB ready", __func__);
-//      resumeRescan();
       updateWallets();
       emit walletsReady();
    }
@@ -549,6 +548,7 @@ void WalletsManager::onWalletImported(const std::string &walletId)
    logger_->debug("[WalletsManager::{}] - HD wallet {} imported", __func__
       , walletId);
    updateWallets(true);
+   emit walletChanged();
    emit walletImportFinished(walletId);
 }
 
@@ -678,7 +678,6 @@ void WalletsManager::unregisterWallets()
 
 void WalletsManager::updateWallets(bool force)
 {
-   logger_->debug("[{}] {}", __func__, force);
    for (auto &it : wallets_) {
       if (it.second->isRegistered()) {
          it.second->firstInit(force);
@@ -978,17 +977,8 @@ void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
 
 void WalletsManager::startWalletRescan(const HDWalletPtr &hdWallet)
 {
-   const auto &cbr = [this](const std::string &walletId) -> unsigned int {
-      return 0;
-   };
-   const auto &cbw = [this](const std::string &walletId, unsigned int idx) {
-      appSettings_->SetWalletScanIndex(walletId, idx);
-   };
-
    if (armory_->state() == ArmoryConnection::State::Ready) {
-      hdWallet->startRescan([this](bs::sync::hd::Group *grp, bs::hd::Path::Elem wallet, bool isValid) {
-         logger_->debug("[WalletsManager::startWalletRescan] finished scan of {}: {}", wallet, isValid);
-      }, cbr, cbw);
+      hdWallet->startRescan();
    }
    else {
       logger_->error("[{}] invalid Armory state {}", __func__, (int)armory_->state());
@@ -1009,7 +999,7 @@ void WalletsManager::onWalletsListUpdated()
             QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletCreated(hdWallet); });
             logger_->debug("[WalletsManager::onWalletsListUpdated] found new wallet {} "
                "- starting address scan for it", hdWalletId);
-//            startWalletRescan(hdWallet);
+            hdWallet->startRescan();
          }
       }
       for (const auto &hdWalletId : hdWalletIds) {
@@ -1123,6 +1113,7 @@ void WalletsManager::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
    if (!ourZCentries.empty()) {
       emit newTransactions(ourZCentries);
    }
+   updateWallets(true);
 }
 
 void WalletsManager::onZeroConfInvalidated(const std::vector<bs::TXEntry> entries)
@@ -1189,6 +1180,10 @@ bool WalletsManager::estimatedFeePerByte(unsigned int blocksToWait, std::functio
       return true;
    }
    const auto &cbFee = [this, blocks](float fee) {
+      if (fee == std::numeric_limits<float>::infinity()) {
+         invokeFeeCallbacks(blocks, fee);
+         return;
+      }
       fee *= BTCNumericTypes::BalanceDivider / 1000.0;
       if (fee != 0) {
          if (fee < 5) {
@@ -1217,42 +1212,6 @@ bool WalletsManager::getFeeSchedule(const std::function<void(const std::map<unsi
       return false;
    }
    return armory_->getFeeSchedule(cb);
-}
-
-void WalletsManager::resumeRescan()
-{
-   if (!appSettings_) {
-      return;
-   }
-   std::unordered_map<std::string, std::shared_ptr<bs::sync::hd::Wallet>> rootWallets;
-   for (const auto &resumeIdx : appSettings_->UnfinishedWalletsRescan()) {
-      const auto &rootWallet = getHDRootForLeaf(resumeIdx.first);
-      if (!rootWallet) {
-         continue;
-      }
-      rootWallets[rootWallet->walletId()] = rootWallet;
-   }
-   if (rootWallets.empty()) {
-      return;
-   }
-
-   const auto &cbr = [this] (const std::string &walletId) -> unsigned int {
-      return appSettings_->GetWalletScanIndex(walletId);
-   };
-   const auto &cbw = [this] (const std::string &walletId, unsigned int idx) {
-      appSettings_->SetWalletScanIndex(walletId, idx);
-   };
-   logger_->debug("[WalletsManager::{}] - Resuming blockchain rescan for {} "
-      "root wallet[s]", __func__, rootWallets.size());
-   for (const auto &rootWallet : rootWallets) {
-      if (rootWallet.second->startRescan(nullptr, cbr, cbw)) {
-         emit walletImportStarted(rootWallet.first);
-      }
-      else {
-         logger_->warn("[WalletsManager::{}] - Rescan for {} is already in "
-            "progress", __func__, rootWallet.second->name());
-      }
-   }
 }
 
 void WalletsManager::trackAddressChainUse(

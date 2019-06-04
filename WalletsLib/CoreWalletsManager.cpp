@@ -53,7 +53,6 @@ void WalletsManager::loadWallets(NetworkType netType, const std::string &wallets
          if ((netType != NetworkType::Invalid) && (netType != wallet->networkType())) {
             logger_->warn("[{}] Network type mismatch: loading {}, wallet has {}", __func__, (int)netType, (int)wallet->networkType());
          }
-
          saveWallet(wallet);
       }
       catch (const std::exception &e) {

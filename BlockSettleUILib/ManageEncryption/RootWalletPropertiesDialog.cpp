@@ -275,34 +275,11 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
    }
 }
 
-void RootWalletPropertiesDialog::startWalletScan()
-{
-   const auto walletsMgr = walletsManager_;
-   const auto &settings = appSettings_;
-
-   const auto &cbr = [walletsMgr](const std::string &walletId) -> unsigned int {
-      const auto &wallet = walletsMgr->getWalletById(walletId);
-      return wallet ? wallet->getUsedAddressCount() : 0;
-   };
-   const auto &cbw = [settings](const std::string &walletId, unsigned int idx) {
-      settings->SetWalletScanIndex(walletId, idx);
-   };
-
-   if (wallet_->startRescan(nullptr, cbr, cbw)) {
-      emit walletsManager_->walletImportStarted(wallet_->walletId());
-   }
-   else {
-      BSMessageBox(BSMessageBox::warning, tr("Wallet rescan")
-         , tr("Wallet blockchain rescan is already in progress"), this).exec();
-   }
-   accept();
-}
-
 void RootWalletPropertiesDialog::onRescanBlockchain()
 {
    ui_->buttonBar->setEnabled(false);
 
-   if (wallet_->isPrimary()) {
+/*   if (wallet_->isPrimary()) {
       for (const auto &cc : assetMgr_->privateShares(true)) {
          bs::hd::Path path;
          path.append(bs::hd::purpose | 0x80000000);
@@ -316,7 +293,9 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
    }
    else {
       startWalletScan();
-   }
+   }*/
+   wallet_->startRescan();
+   accept();
 }
 
 void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
@@ -330,7 +309,8 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, const std::sha
       group->addLeaf(leaf);
 
       if (createCCWalletReqs_.empty()) {
-         startWalletScan();
+         wallet_->startRescan();
+         accept();
       }
    }
 }
