@@ -24,6 +24,7 @@ namespace {
    constexpr int kStartTimeout = 5000;
 
    // When remote signer will try to reconnect
+   constexpr auto kLocalReconnectPeriod = std::chrono::seconds(10);
    constexpr auto kRemoteReconnectPeriod = std::chrono::milliseconds(100);
 
 } // namespace
@@ -1200,7 +1201,8 @@ void RemoteSigner::ScheduleRestart()
    }
 
    isRestartScheduled_ = true;
-   QTimer::singleShot(kRemoteReconnectPeriod, this, [this] {
+   auto timeout = isLocal() ? kLocalReconnectPeriod : kRemoteReconnectPeriod;
+   QTimer::singleShot(timeout, this, [this] {
       isRestartScheduled_ = false;
       RecreateConnection();
       Start();
