@@ -8,6 +8,7 @@
 #include "HeadlessSettings.h"
 #include "ServerConnection.h"
 #include "SystemFileUtils.h"
+#include "BSErrorCode.h"
 
 using namespace Blocksettle::Communication;
 
@@ -89,30 +90,12 @@ public:
       owner_->sendData(signer::XbtSpentType, evt.SerializeAsString());
    }
 
-   void asAct(const std::string &walletId) override
-   {
-      autoSign(true, walletId);
-   }
-
-   void asDeact(const std::string &walletId) override
-   {
-      autoSign(false, walletId);
-   }
-
    void customDialog(const std::string &dialogName, const std::string &data) override
    {
       signer::CustomDialogRequest evt;
       evt.set_dialogname(dialogName);
       evt.set_variantdata(data);
       owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
-   }
-
-   void autoSign(bool act, const std::string &walletId)
-   {
-      signer::AutoSignActEvent evt;
-      evt.set_activated(act);
-      evt.set_wallet_id(walletId);
-      owner_->sendData(signer::AutoSignActType, evt.SerializeAsString());
    }
 
    SignerAdapterListener *owner_{};
@@ -188,7 +171,7 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
       rc = onReconnect(packet.data());
       break;
    case signer::AutoSignActType:
-      rc = onAutoSignRequest(packet.data());
+      rc = onAutoSignRequest(packet.data(), packet.id());
       break;
    case signer::ChangePasswordRequestType:
       rc = onChangePassword(packet.data(), packet.id());
@@ -558,19 +541,24 @@ bool SignerAdapterListener::onReconnect(const std::string &data)
    return true;
 }
 
-bool SignerAdapterListener::onAutoSignRequest(const std::string &data)
+bool SignerAdapterListener::onAutoSignRequest(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::AutoSignActEvent request;
+   signer::AutoSignActRequest request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   if (request.activated() && !request.wallet_id().empty()) {
-      app_->addPendingAutoSignReq(request.wallet_id());
-   }
-   else {
-      app_->deactivateAutoSign();
-   }
+
+   bs::error::ErrorCode result = app_->activateAutoSign(request.rootwalletid(), request.activateautosign()
+      , SecureBinaryData(request.password()));
+
+   signer::AutoSignActResponse response;
+   response.set_errorcode(static_cast<uint32_t>(result));
+   response.set_rootwalletid(request.rootwalletid());
+   response.set_autosignactive(request.activateautosign());
+
+   sendData(signer::AutoSignActType, response.SerializeAsString(), reqId);
+
    return true;
 }
 

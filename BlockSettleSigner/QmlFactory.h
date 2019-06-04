@@ -72,10 +72,11 @@ public:
    }
 
    // WalletInfo
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo();
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const QString &walletId);
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const std::string &walletId) { return createWalletInfo(QString::fromStdString(walletId)); }
-   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename);
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo() const;
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const QString &walletId) const;
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(const std::string &walletId) const { return createWalletInfo(QString::fromStdString(walletId)); }
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfo(int index) const;
+   Q_INVOKABLE bs::hd::WalletInfo *createWalletInfoFromDigitalBackup(const QString &filename) const;
 
    // Auth
    // used for signing

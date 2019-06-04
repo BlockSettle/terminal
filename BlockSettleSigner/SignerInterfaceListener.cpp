@@ -101,7 +101,7 @@ void SignerInterfaceListener::processData(const std::string &data)
       onXbtSpent(packet.data());
       break;
    case signer::AutoSignActType:
-      onAutoSignActivate(packet.data());
+      onAutoSignActivated(packet.data(), packet.id());
       break;
    case signer::SyncWalletInfoType:
       onSyncWalletInfo(packet.data(), packet.id());
@@ -260,19 +260,33 @@ void SignerInterfaceListener::onXbtSpent(const std::string &data)
    });
 }
 
-void SignerInterfaceListener::onAutoSignActivate(const std::string &data)
+void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::AutoSignActEvent evt;
-   if (!evt.ParseFromString(data)) {
+   signer::AutoSignActResponse response;
+   if (!response.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   if (evt.activated()) {
-      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignActivated(evt.wallet_id()); });
+
+   const auto &itCb = cbAutoSignReqs_.find(reqId);
+   if (itCb == cbAutoSignReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
    }
-   else {
-      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignDeactivated(evt.wallet_id()); });
+
+   bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
+   if (result == bs::error::ErrorCode::NoError) {
+      if (response.autosignactive()) {
+         QMetaObject::invokeMethod(parent_, [this, response] { emit parent_->autoSignActivated(response.rootwalletid()); });
+      }
+      else {
+         QMetaObject::invokeMethod(parent_, [this, response] { emit parent_->autoSignDeactivated(response.rootwalletid()); });
+      }
    }
+
+   itCb->second(result);
+   cbAutoSignReqs_.erase(itCb);
 }
 
 void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)

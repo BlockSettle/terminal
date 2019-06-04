@@ -154,7 +154,7 @@ CustomTitleDialogWindow {
                                            , qsTr("Wallet Name: %1\nWallet ID: %2\nBackup location: '%3'").arg(walletInfo.name).arg(walletInfo.walletId).arg(exportDir))
 
                                 mb.bsAccepted.connect(function(){ acceptAnimated() })
-                            })
+                        })
                     }
                 }
             }
