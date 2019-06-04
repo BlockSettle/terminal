@@ -244,7 +244,6 @@ message AutoSignActEvent
 {
    string   rootWalletId = 1;
    bool     autoSignActive = 2;
-   string   error = 3;
 }
 
 

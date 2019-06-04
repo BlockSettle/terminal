@@ -40,8 +40,6 @@ public:
    virtual void txSigned(const BinaryData &) = 0;
    virtual void cancelTxSign(const BinaryData &) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
-//   virtual void autoSignsActivate(const std::string &) = 0;
-//   virtual void asDeact(const std::string &) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
 };
 
@@ -118,8 +116,7 @@ private:
       , const std::string &errorOrId);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
-//   void AutoSignActiveResponse(const std::string &clientId, const std::string &walletId, bool active
-//      , const std::string &error = {}, unsigned int id = 0);
+   void AutoSignActivatedEvent(const std::string &walletId, bool active);
 
    bool CreateHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDLeaf &request
       , const std::vector<bs::wallet::PasswordData> &pwdData);

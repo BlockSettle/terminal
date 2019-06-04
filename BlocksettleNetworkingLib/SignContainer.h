@@ -138,7 +138,7 @@ signals:
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);
-   void AutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
+   void AutoSignStateChanged(const std::string &walletId, bool active);
    // Notified from remote/local signer when wallets list is updated
    void walletsListUpdated();
 

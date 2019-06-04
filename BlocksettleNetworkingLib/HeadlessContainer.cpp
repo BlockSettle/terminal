@@ -394,7 +394,7 @@ void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::stri
       emit Error(id, "failed to parse");
       return;
    }
-   emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive(), event.error());
+   emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive());
 }
 
 bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
