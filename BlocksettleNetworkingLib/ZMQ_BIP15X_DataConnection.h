@@ -5,6 +5,7 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <deque>
 #include <spdlog/spdlog.h>
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
@@ -38,22 +39,52 @@
 // New key + Callbacks - Depends on what the user wants.
 // Previously verified key - Accept the key and skip the callbacks.
 
-class ZmqBIP15XDataConnection : public ZmqDataConnection
+enum class BIP15XCookie
+{
+   // Cookie won't be used
+   NotUsed,
+
+   // Connection will make a key cookie
+   MakeClient,
+
+   // Connection will read a key cookie (server's public key)
+   ReadServer,
+};
+
+struct ZmqBIP15XDataConnectionParams
+{
+
+   // The directory containing the file with the non-ephemeral key
+   std::string ownKeyFileDir;
+
+   // The file name with the non-ephemeral key
+   std::string ownKeyFileName;
+
+   // File where cookie will be stored or read from.
+   // Must be set cookie is used.
+   std::string cookiePath{};
+
+   // Ephemeral peer usage. Not recommended
+   bool ephemeralPeers{false};
+
+   BIP15XCookie cookie{BIP15XCookie::NotUsed};
+
+   // Initialized to ZmqBIP15XServerConnection::getDefaultHeartbeatInterval() by default
+   std::chrono::milliseconds heartbeatInterval;
+
+   ZmqBIP15XDataConnectionParams();
+
+   void setLocalHeartbeatInterval();
+};
+
+class ZmqBIP15XDataConnection : public DataConnection
 {
 public:
-   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger
-      , const bool ephemeralPeers = false, const std::string& ownKeyFileDir = ""
-      , const std::string& ownKeyFileName = "", const bool monitored = false
-      , const bool makeClientCookie = false, const bool readServerCookie = false
-      , const std::string& cookiePath = "");
+   ZmqBIP15XDataConnection(const std::shared_ptr<spdlog::logger>& logger, const ZmqBIP15XDataConnectionParams &params);
    ~ZmqBIP15XDataConnection() noexcept override;
 
    using cbNewKey = std::function<void(const std::string &oldKey, const std::string &newKey
       , const std::string& srvAddrPort, const std::shared_ptr<std::promise<bool>> &prompt)>;
-   using invokeCB = std::function<void(const std::string&
-      , const std::string&
-      , std::shared_ptr<std::promise<bool>>
-      , const cbNewKey&)>;
 
    ZmqBIP15XDataConnection(const ZmqBIP15XDataConnection&) = delete;
    ZmqBIP15XDataConnection& operator= (const ZmqBIP15XDataConnection&) = delete;
@@ -67,43 +98,66 @@ public:
    bool genBIPIDCookie();
    void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
    void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
-   void setLocalHeartbeatInterval();
 
-   // Overridden functions from ZmqDataConnection.
-   bool send(const std::string& data) override; // Send data from outside class.
+   // Could be called from callbacks and control thread (where openConnection was called, main thread usually)
+   bool send(const std::string& data) override;
+
    bool openConnection(const std::string &host, const std::string &port
       , DataConnectionListener *) override;
+
+   // Do not call from callbacks!
    bool closeConnection() override;
 
+   // Only for tests
    void rekey();
 
-protected:
-   bool startBIP151Handshake(const std::function<void()> &cbCompleted);
+   void SetContext(const std::shared_ptr<ZmqContext>& context) {
+      context_ = context;
+   }
+
+   bool isActive() const;
+   bool SetZMQTransport(ZMQTransport transport);
+
+private:
+   enum class InternalCommandCode
+   {
+      Invalid,
+      Send,
+      Stop,
+   };
+
+   bool startBIP151Handshake();
    bool handshakeCompleted() {
       return (bip150HandshakeCompleted_ && bip151HandshakeCompleted_);
    }
 
    // Use to send a packet that this class has generated.
-   bool sendPacket(const std::string& data);
+   void sendPacket(const std::string& data);
 
-   // Overridden functions from ZmqDataConnection.
    void onRawDataReceived(const std::string& rawData) override;
-   void notifyOnConnected() override;
-   ZmqContext::sock_ptr CreateDataSocket() override;
-   bool recvData() override;
-   void triggerHeartbeat();
 
-   void notifyOnError(DataConnectionListener::DataConnectionError errorCode);
+   ZmqContext::sock_ptr CreateDataSocket();
+   bool recvData();
+   void triggerHeartbeatCheck();
 
-private:
+   void onConnected();
+   void onDisconnected();
+   void onError(DataConnectionListener::DataConnectionError errorCode);
+
    void ProcessIncomingData(BinaryData& payload);
    bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
    bool verifyNewIDKey(const BinaryDataRef& newKey
       , const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
    void rekeyIfNeeded(size_t dataSize);
+   void listenFunction();
+   void resetConnectionObjects();
+   bool ConfigureDataSocket(const ZmqContext::sock_ptr& socket);
+   void sendCommand(InternalCommandCode command);
+   void sendPendingData();
+   void sendDisconnectMsg();
 
-private:
+   std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    bool  serverPubkeySignalled_ = false;
    std::shared_ptr<AuthorizedPeers> authPeers_;
@@ -113,25 +167,40 @@ private:
    uint32_t innerRekeyCount_ = 0;
    ZmqBIP15XMsgFragments currentReadMessage_;
    BinaryData leftOverData_;
-   std::atomic_flag lockSocket_ = ATOMIC_FLAG_INIT;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
    const std::string bipIDCookiePath_;
-   const bool useServerIDCookie_;
-   const bool makeClientIDCookie_;
+   const BIP15XCookie cookie_;
    uint32_t msgID_ = 0;
-   std::function<void()>   cbCompleted_ = nullptr;
 
    cbNewKey cbNewKey_;
 
-   std::atomic<std::chrono::steady_clock::time_point> lastHeartbeatReply_;
-   std::atomic_bool        hbThreadRunning_;
-   std::thread             hbThread_;
-   std::mutex              hbMutex_;
-   std::condition_variable hbCondVar_;
-   std::atomic_bool        fatalError_{false};
-   std::atomic_bool        serverSendsHeartbeat_{false};
    std::chrono::milliseconds heartbeatInterval_;
+   std::shared_ptr<ZmqContext>      context_;
+
+   ZmqContext::sock_ptr             dataSocket_;
+   ZmqContext::sock_ptr             monSocket_;
+   ZmqContext::sock_ptr             threadMasterSocket_;
+   ZmqContext::sock_ptr             threadSlaveSocket_;
+
+   std::string                      connectionName_;
+   std::string                      hostAddr_;
+   std::string                      hostPort_;
+   std::string                      socketId_;
+
+   std::thread                      listenThread_;
+
+   ZMQTransport                     zmqTransport_ = ZMQTransport::TCPTransport;
+
+   std::vector<std::string>         pendingData_;
+   std::mutex                       pendingDataMutex_;
+
+   // Reset this in openConnection
+   bool                             isConnected_{};
+   bool                             fatalError_{};
+   bool                             serverSendsHeartbeat_{};
+   std::chrono::steady_clock::time_point lastHeartbeatSend_{};
+   std::chrono::steady_clock::time_point lastHeartbeatReply_{};
 };
 
 #endif // __ZMQ_BIP15X_DATACONNECTION_H__
