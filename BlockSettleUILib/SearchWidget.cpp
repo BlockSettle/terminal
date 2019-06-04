@@ -46,8 +46,9 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
 
 void SearchWidget::init()
 {
-   setFixedHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
-                  ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
+   setMaximumHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
+                    ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
+   setMinimumHeight(kBottomSpace + ui_->chatSearchLineEdit->height());
 
    ui_->searchResultTreeView->setHeaderHidden(true);
    ui_->searchResultTreeView->setRootIsDecorated(false);
