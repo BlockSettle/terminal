@@ -31,7 +31,6 @@ class ChatClient;
 class ConnectionManager;
 class ApplicationSettings;
 class ChatWidgetState;
-class ChatSearchPopup;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
 class CelerClient;
@@ -64,6 +63,7 @@ public:
    bool hasUnreadMessages();
    void switchToChat(const QString& chatId);
    void setCelerClient(std::shared_ptr<CelerClient> celerClient);
+   void updateChat(const bool &isChatTab);
 
 public slots:
    void onLoggedOut();
@@ -114,6 +114,9 @@ private:
    void OTCSwitchToCommonRoom();
    void OTCSwitchToDMRoom();
    void OTCSwitchToGlobalRoom();
+   void OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room);
+   void OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact, bool onlineStatus);
+
 
    // used to display proper widget if OTC room selected.
    // either create OTC or Pull OTC, if was submitted
@@ -142,11 +145,10 @@ private:
 
    std::string serverPublicKey_;
    QString  currentChat_;
-   ChatSearchPopup *popup_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   QTimer *popupVisibleTimer_;
    bool isChatMessagesSelected_;
+   bool isChatTab_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
@@ -166,8 +168,7 @@ private:
    bool isRoom();
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
-   void initPopup();
-   void setPopupVisible(const bool &value);
+   void initSearchWidget();
 
    bool eventFilter(QObject *sender, QEvent *event) override;
 

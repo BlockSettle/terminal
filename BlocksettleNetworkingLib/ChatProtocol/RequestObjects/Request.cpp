@@ -16,6 +16,10 @@
 #include "SendRoomMessageRequest.h"
 #include "ContactsListRequest.h"
 #include "SearchUsersRequest.h"
+#include "GenCommonOTCRequest.h"
+#include "AnswerCommonOTCRequest.h"
+#include "UpdateCommonOTCRequest.h"
+#include "PullOwnOTCRequest.h"
 
 using namespace Chat;
 
@@ -36,6 +40,10 @@ static std::map<std::string, RequestType> RequestTypeFromString
    ,   { "RequestSendRoomMessage"     ,   RequestType::RequestSendRoomMessage     }
    ,   { "RequestContactsList"        ,   RequestType::RequestContactsList        }
    ,   { "RequestSearchUsers"         ,   RequestType::RequestSearchUsers         }
+   ,   { "RequestGenCommonOTC"        ,   RequestType::RequestGenCommonOTC        }
+   ,   { "RequestAnswerCommonOTC"     ,   RequestType::RequestAnswerCommonOTC     }
+   ,   { "RequestUpdateCommonOTC"     ,   RequestType::RequestUpdateCommonOTC     }
+   ,   { "RequestPullOTC"             ,   RequestType::RequestPullOTC             }
 };
 
 
@@ -56,6 +64,10 @@ static std::map<RequestType, std::string> RequestTypeToString
    ,   { RequestType::RequestSendRoomMessage     ,   "RequestSendRoomMessage"     }
    ,   { RequestType::RequestContactsList        ,   "RequestContactsList"        }
    ,   { RequestType::RequestSearchUsers         ,   "RequestSearchUsers"         }
+   ,   { RequestType::RequestGenCommonOTC        ,   "RequestGenCommonOTC"        }
+   ,   { RequestType::RequestAnswerCommonOTC     ,   "RequestAnswerCommonOTC"     }
+   ,   { RequestType::RequestUpdateCommonOTC     ,   "RequestUpdateCommonOTC"     }
+   ,   { RequestType::RequestPullOTC             ,   "RequestPullOTC"             }
 };
 
 template <typename T>
@@ -140,6 +152,18 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
       case RequestType::RequestSearchUsers:
          return SearchUsersRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestGenCommonOTC:
+         return GenCommonOTCRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestAnswerCommonOTC:
+         return AnswerCommonOTCRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestUpdateCommonOTC:
+         return UpdateCommonOTCRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestPullOTC:
+         return PullOwnOTCRequest::fromJSON(clientId, jsonData);
 
       default:
          break;

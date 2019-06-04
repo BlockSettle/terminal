@@ -29,6 +29,7 @@ class ChatClientDataModel;
 class ConnectionManager;
 class UserHasher;
 class ZmqBIP15XDataConnection;
+class UserSearchModel;
 class ChatTreeModelWrapper;
 
 class ChatClient : public QObject
@@ -53,6 +54,7 @@ public:
    ChatClient& operator = (ChatClient&&) = delete;
 
    std::shared_ptr<ChatClientDataModel> getDataModel();
+   std::shared_ptr<UserSearchModel> getUserSearchModel();
    std::shared_ptr<ChatTreeModelWrapper> getProxyModel();
 
    std::string loginToServer(const std::string& email, const std::string& jwt
@@ -72,6 +74,9 @@ public:
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
+   void OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &) override;
+   void OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &) override;
+   void OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -114,6 +119,9 @@ public:
    void HandleOTCUpdate(const std::shared_ptr<Chat::OTCUpdateData>& update);
 
    /////////////////////////////////////////////////////////////////////////////
+
+   void HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+   void HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
 
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
@@ -158,15 +166,18 @@ public:
    //    true - request was submitted
    //    false - request was not delivered to chat server.
    bool SubmitCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool SubmitPrivateOTCRequest(const QString& targetId, const bs::network::OTCRequest& request);
 
    // cancel current OTC request sent to OTC chat
    bool PullCommonOTCRequest(const QString& serverOTCId);
+   bool PullPrivateOTCRequest(const QString& targetId, const QString& serverOTCId);
 
    bool SubmitCommonOTCResponse(const bs::network::OTCResponse& response);
 
 private:
    // OTC related messaging endpoint
    bool sendCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool sendPrivateOTCRequest(const QString& targetId, const bs::network::OTCRequest& request);
    bool sendPullCommonOTCRequest();
    bool sendCommonOTCResponse();
 
@@ -262,6 +273,7 @@ private:
 
    autheid::PrivateKey  ownPrivKey_;
    std::shared_ptr<ChatClientDataModel> model_;
+   std::shared_ptr<UserSearchModel> userSearchModel_;
    std::shared_ptr<ChatTreeModelWrapper> proxyModel_;
 
    // ChatItemActionsHandler interface
@@ -315,4 +327,8 @@ private:
 public:
    void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
 };
+
+
+
+
 #endif   // CHAT_CLIENT_H

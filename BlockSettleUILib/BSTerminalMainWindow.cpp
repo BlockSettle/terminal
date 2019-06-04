@@ -237,60 +237,64 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
-      if (data.empty()) {
-         showError(title, tr("Empty reply from BlockSettle server"));
-      }
-      cmdPuBSettings_->resetConnection();
-      Blocksettle::Communication::GetNetworkSettingsResponse response;
-      if (!response.ParseFromString(data)) {
-         showError(title, tr("Invalid reply from BlockSettle server"));
-         return false;
-      }
+      QMetaObject::invokeMethod(this, [this, data, title, cb, populateAppSettings] {
+         if (data.empty()) {
+            showError(title, tr("Empty reply from BlockSettle server"));
+         }
+         cmdPuBSettings_->resetConnection();
+         Blocksettle::Communication::GetNetworkSettingsResponse response;
+         if (!response.ParseFromString(data)) {
+            showError(title, tr("Invalid reply from BlockSettle server"));
+            return;
+         }
 
-      if (response.has_celer()) {
-         networkSettings_.celer = { response.celer().host(), response.celer().port() };
-         networkSettings_.isSet = true;
-      }
-      else {
-         showError(title, tr("Missing Celer connection settings"));
-         return false;
-      }
+         if (response.has_celer()) {
+            networkSettings_.celer = { response.celer().host(), response.celer().port() };
+            networkSettings_.isSet = true;
+         }
+         else {
+            showError(title, tr("Missing Celer connection settings"));
+            return;
+         }
 
-      if (response.has_marketdata()) {
-         networkSettings_.marketData = { response.marketdata().host(), response.marketdata().port() };
-         networkSettings_.isSet = true;
-      }
-      else {
-         showError(title, tr("Missing MD connection settings"));
-         return false;
-      }
+         if (response.has_marketdata()) {
+            networkSettings_.marketData = { response.marketdata().host(), response.marketdata().port() };
+            networkSettings_.isSet = true;
+         }
+         else {
+            showError(title, tr("Missing MD connection settings"));
+            return;
+         }
 
-      if (response.has_mdhs()) {
-         networkSettings_.mdhs = { response.mdhs().host(), response.mdhs().port() };
-         networkSettings_.isSet = true;
-      }
-      // else {
-         // showError(title, tr("Missing MDHS connection settings"));
-         // return false;
-      // }
+         if (response.has_mdhs()) {
+            networkSettings_.mdhs = { response.mdhs().host(), response.mdhs().port() };
+            networkSettings_.isSet = true;
+         }
+         // else {
+            // showError(title, tr("Missing MDHS connection settings"));
+            // return false;
+         // }
 
-      if (response.has_chat()) {
-         networkSettings_.chat = { response.chat().host(), response.chat().port() };
-         networkSettings_.isSet = true;
-      }
-      else {
-         showError(title, tr("Missing Chat connection settings"));
-         return false;
-      }
+         if (response.has_chat()) {
+            networkSettings_.chat = { response.chat().host(), response.chat().port() };
+            networkSettings_.isSet = true;
+         }
+         else {
+            showError(title, tr("Missing Chat connection settings"));
+            return;
+         }
 
-      populateAppSettings(networkSettings_);
-      cb();
+         populateAppSettings(networkSettings_);
+         cb();
+      });
       return true;
    });
    cmdPuBSettings_->SetErrorCallback([this, title](const std::string& message) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] error: {}", message);
-      showError(title, tr("Failed to obtain network settings from BlockSettle server"));
-      cmdPuBSettings_->resetConnection();
+      QMetaObject::invokeMethod(this, [this, title] {
+         showError(title, tr("Failed to obtain network settings from BlockSettle server"));
+         cmdPuBSettings_->resetConnection();
+      });
    });
 
    if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
@@ -713,6 +717,7 @@ void BSTerminalMainWindow::InitChatView()
 
    //connect(ui_->widgetChat, &ChatWidget::LoginFailed, this, &BSTerminalMainWindow::onAutheIDFailed);
    connect(ui_->widgetChat, &ChatWidget::LogOut, this, &BSTerminalMainWindow::onLogout);
+   connect(ui_->tabWidget, &QTabWidget::currentChanged, this, &BSTerminalMainWindow::onTabWidgetCurrentChanged);
 
    if (NotificationCenter::instance() != nullptr) {
       connect(NotificationCenter::instance(), &NotificationCenter::newChatMessageClick,
@@ -1595,6 +1600,13 @@ void BSTerminalMainWindow::onArmoryNeedsReconnect()
 
    connectSigner();
    connectArmory();
+}
+
+void BSTerminalMainWindow::onTabWidgetCurrentChanged(const int &index)
+{   
+   const int chatIndex = ui_->tabWidget->indexOf(ui_->widgetChat);
+   const bool isChatTab = index == chatIndex;
+   ui_->widgetChat->updateChat(isChatTab);
 }
 
 // A function that puts Armory online if certain conditions are met. The primary

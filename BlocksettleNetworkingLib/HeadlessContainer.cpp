@@ -232,7 +232,9 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
    }
 
    // Need to disconnect connection because otherwise it will continue send error responses over and over
-   connection_->closeConnection();
+   QMetaObject::invokeMethod(this, [this] {
+      connection_->closeConnection();
+   });
 }
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
@@ -1164,21 +1166,22 @@ void RemoteSigner::RecreateConnection()
 {
    logger_->info("[{}] Restart connection...", __func__);
 
-   const bool makeClientCookie = false;
-   // Server's cookies are not available in remote mode
-   const bool readServerCookie = (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc);
 
-   std::string absCookiePath;
-   if (readServerCookie) {
-      absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+   ZmqBIP15XDataConnectionParams params;
+   params.ephemeralPeers = ephemeralDataConnKeys_;
+   params.ownKeyFileDir = ownKeyFileDir_;
+   params.ownKeyFileName = ownKeyFileName_;
+   params.setLocalHeartbeatInterval();
+
+   // Server's cookies are not available in remote mode
+   if (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc) {
+      params.cookie = BIP15XCookie::ReadServer;
+      params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    }
 
    try {
-      connection_ = connectionManager_->CreateZMQBIP15XDataConnection(
-         ephemeralDataConnKeys_, ownKeyFileDir_, ownKeyFileName_, makeClientCookie
-         , readServerCookie, absCookiePath);
+      connection_ = connectionManager_->CreateZMQBIP15XDataConnection(params);
       connection_->setCBs(cbNewKey_);
-      connection_->setLocalHeartbeatInterval();
 
       headlessConnFinished_ = false;
    }

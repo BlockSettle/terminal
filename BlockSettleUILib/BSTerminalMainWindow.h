@@ -121,6 +121,8 @@ private slots:
 
    void onArmoryNeedsReconnect();
 
+   void onTabWidgetCurrentChanged(const int &index);
+
 private:
    std::unique_ptr<Ui::BSTerminalMainWindow> ui_;
    QAction *action_send_ = nullptr;
