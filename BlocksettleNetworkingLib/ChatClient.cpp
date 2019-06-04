@@ -1519,7 +1519,9 @@ void ChatClient::HandleCommonOTCRequestCancelled(const QString& serverOTCId)
 
 void ChatClient::HandleAcceptedCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
 {
-   model_->insertOTCSentResponse(response->serverResponseId().toStdString());
+   std::string otcId = response->serverResponseId().toStdString();
+   model_->insertOTCSentResponse(response);
+   model_->insertOTCSentResponseData(response);
 }
 
 void ChatClient::HandleRejectedCommonOTCResponse(const QString& otcId, const std::string& reason)
@@ -1534,7 +1536,7 @@ void ChatClient::HandleCommonOTCResponse(const std::shared_ptr<Chat::OTCResponse
    logger_->debug("[ChatClient::HandleCommonOTCResponse] OTCResponseData: {}",
                   response->toJsonString());
 
-   model_->insertOTCReceivedResponse(response->serverResponseId().toStdString());
+   model_->insertOTCReceivedResponse(response);
 }
 
 void ChatClient::HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData> &liveOTCRequest)

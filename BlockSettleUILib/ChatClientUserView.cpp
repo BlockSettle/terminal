@@ -242,6 +242,11 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
             label_->setText(QObject::tr("CHAT #") + room->getUserId());
          }
       } break;
+      case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
+         if (label_){
+            label_->setText(QObject::tr("Trading with ..."));
+         }
+      } break;
       default:
          break;
 
@@ -285,6 +290,7 @@ void ChatClientUserView::currentChanged(const QModelIndex &current, const QModel
       switch (item->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:
          case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
             auto element = static_cast<CategoryElement*>(item);
             updateDependUI(element);
@@ -312,7 +318,8 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
          }
          break;
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
             auto node = static_cast<CategoryElement*>(item);
             notifyElementUpdated(node);
          }

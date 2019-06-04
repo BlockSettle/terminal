@@ -19,7 +19,7 @@ bool ChatRoomElement::isChildSupported(const TreeItem *item) const
          std::string user = root->currentUser();
          auto room = std::dynamic_pointer_cast<Chat::RoomData>(getDataObject());
          if (room){
-            auto mNode = static_cast<const TreeMessageNode*>(item);
+            auto mNode = dynamic_cast<const TreeMessageNode*>(item);
             if (mNode){
 //             bool forCurrentUser = (mNode->getMessage()->getSenderId().toStdString() == user
 //                             || mNode->getMessage()->getReceiverId().toStdString() == user);
@@ -55,7 +55,7 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
          std::string user = root->currentUser();
          auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(getDataObject());
          if (contact) {
-            auto mNode = static_cast<const TreeMessageNode*>(item);
+            auto mNode = dynamic_cast<const TreeMessageNode*>(item);
             if (mNode) {
                bool forCurrentUser = (mNode->getMessage()->senderId().toStdString() == user
                                    || mNode->getMessage()->receiverId().toStdString() == user);
@@ -106,4 +106,29 @@ std::shared_ptr<Chat::UserData> ChatUserElement::getUserData() const
 std::shared_ptr<Chat::UserData> ChatSearchElement::getUserData() const
 {
    return std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
+}
+
+std::shared_ptr<Chat::OTCResponseData> OTCSentResponseElement::getOTCResponse() const
+{
+   return std::dynamic_pointer_cast<Chat::OTCResponseData>(getDataObject());
+}
+
+std::string OTCSentResponseElement::otcId() const
+{
+   return getOTCResponse()->serverResponseId().toStdString();
+}
+
+std::shared_ptr<Chat::OTCResponseData> OTCReceivedResponseElement::getOTCResponse() const
+{
+   return std::dynamic_pointer_cast<Chat::OTCResponseData>(getDataObject());
+}
+
+std::string OTCReceivedResponseElement::otcId() const
+{
+   return getOTCResponse()->serverResponseId().toStdString();
+}
+
+std::shared_ptr<Chat::DataObject> DisplayableDataNode::getDataObject() const
+{
+   return data_;
 }
