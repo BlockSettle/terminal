@@ -24,7 +24,7 @@ namespace {
    constexpr int kStartTimeout = 5000;
 
    // When remote signer will try to reconnect
-   constexpr auto kRemoteReconnectPeriod = std::chrono::seconds(10);
+   constexpr auto kRemoteReconnectPeriod = std::chrono::milliseconds(100);
 
 } // namespace
 
