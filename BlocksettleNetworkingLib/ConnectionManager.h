@@ -9,6 +9,7 @@ namespace spdlog {
    class logger;
 };
 
+struct ZmqBIP15XDataConnectionParams;
 class ArmoryServersProvider;
 class DataConnection;
 class PublisherConnection;
@@ -17,7 +18,6 @@ class SubscriberConnection;
 class ZmqContext;
 class QNetworkAccessManager;
 class ZmqBIP15XDataConnection;
-class ZmqBIP15XDataConnectionParams;
 class ZmqBIP15XServerConnection;
 
 class ConnectionManager
