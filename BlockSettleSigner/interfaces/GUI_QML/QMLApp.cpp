@@ -259,6 +259,11 @@ void QMLAppObj::hideQmlWindow()
    QMetaObject::invokeMethod(rootObj_, "hideWindow");
 }
 
+QString QMLAppObj::getUrlPath(const QUrl &url)
+{
+   return url.path();
+}
+
 void QMLAppObj::onPasswordAccepted(const QString &walletId
                                    , bs::wallet::QPasswordData *passwordData
                                    , bool cancelledByUser)

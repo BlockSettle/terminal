@@ -202,7 +202,15 @@ void HeadlessAppObj::onlineProcessing()
                continue;
             }
 
-            SecureBinaryData inKey = READHEX(i.substr(colonIndex + 1));
+            SecureBinaryData inKey;
+            std::string hexValue = i.substr(colonIndex + 1);
+            try {
+               inKey = READHEX(hexValue);
+            } catch (const std::exception &e) {
+               logger_->error("invalid trusted terminal key found: {}: {}", hexValue, e.what());
+               continue;
+            }
+
             if (inKey.isNull()) {
                logger_->error("[{}] Trusted client list key entry {} has no key."
                   , __func__, i);
@@ -228,7 +236,15 @@ void HeadlessAppObj::onlineProcessing()
          }
 
          // We're using a cookie. Only the one key in the cookie will be trusted.
-         BinaryData termIDKey = READHEX(termIDKeyStr);
+         BinaryData termIDKey;
+         try {
+            termIDKey = READHEX(termIDKeyStr);
+         } catch (const std::exception &e) {
+            logger_->error("[{}] Local connection requested but key is invalid: {}: {}"
+               , __func__, termIDKeyStr, e.what());
+            return retKeys;
+         }
+
          if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
             logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
                "ID key", __func__);
