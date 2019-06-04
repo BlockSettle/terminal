@@ -21,7 +21,7 @@ CustomTitleDialogWindow {
     // || true  // !!! ONLY FOR TESTING!!!
 
 
-    property QSeed seed: QSeed{}
+    property QSeed seed
 
     title: curPage === 1 ? qsTr("Save your Root Private Key") : qsTr("Confirm Seed")
 

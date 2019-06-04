@@ -182,13 +182,13 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
    }
    if (!seed.empty()) {
       if (seed.hasPrivateKey()) {
-         wallet->set_privatekey(seed.privateKey().toBinStr());
-         wallet->set_chaincode(seed.chainCode().toBinStr());
+         wallet->set_privatekey(seed.toXpriv().toBinStr());
       } else if (!seed.seed().isNull()) {
          wallet->set_seed(seed.seed().toBinStr());
       }
    }
    const auto reqId = listener_->send(signer::CreateHDWalletType, request.SerializeAsString());
+   logger_->debug("[{}] sent request: {}", __func__, reqId);
    listener_->setCreateHDWalletCb(reqId, cb);
 }
 

@@ -202,23 +202,25 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
 std::shared_ptr<bs::core::hd::Wallet> WalletsProxy::getWoWallet(const bs::sync::WatchingOnlyWallet &wo) const
 {
    try {
-      auto result = std::make_shared<bs::core::hd::Wallet>(wo.id, wo.netType, false, wo.name, logger_
-         , wo.description);
+      auto result = std::make_shared<bs::core::hd::Wallet>(wo.name, wo.description, wo.netType
+         , SecureBinaryData{}, "", logger_);
       for (const auto &groupEntry : wo.groups) {
          auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
          for (const auto &leafEntry : groupEntry.leaves) {
-            auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
+/*            auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
                , leafEntry.chainCode.isNull() ? BinaryData(BTC_BIP32_CHAINCODE_SIZE) : leafEntry.chainCode
-               , wo.netType);
-            auto leaf = group->createLeaf(leafEntry.index, pubNode);
+               , wo.netType);*/
+            auto leaf = group->createLeaf(leafEntry.index/*, pubNode*/);
             if (!leaf) {
                logger_->error("[WalletsProxy] failed to create WO leaf {} for {}"
                   , leafEntry.index, wo.id);
                continue;
             }
-            for (const auto &addr : leafEntry.addresses) {
+            leaf->extendAddressChain(leafEntry.addresses.size(), true);
+            leaf->extendAddressChain(leafEntry.addresses.size(), false);
+/*            for (const auto &addr : leafEntry.addresses) {
                leaf->createAddressWithIndex(addr.index, true, addr.aet);
-            }
+            }*/
          }
       }
       return result;
@@ -244,7 +246,7 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          return;
       }
       try {
-         woWallet->saveToFile(path.toStdString());
+//         woWallet->saveToFile(path.toStdString());  // should be save automatically now
          QMetaObject::invokeMethod(this, [this, jsCallback] {
             QJSValueList args;
             args << QJSValue(true) << QStringLiteral("");
@@ -282,11 +284,14 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
          return;
       }
 
-      EasyCoDec::Data easyData, edChainCode;
+      std::string privKeyString;
+      EasyCoDec::Data seedData;
       try {
-         easyData = bs::core::wallet::Seed(NetworkType::Invalid, privKey).toEasyCodeChecksum();
-         if (!chainCode.isNull()) {
-            edChainCode = bs::core::wallet::Seed(NetworkType::Invalid, chainCode).toEasyCodeChecksum();
+         if (privKey.isNull()) {
+            seedData = bs::core::wallet::Seed(chainCode, NetworkType::Invalid).toEasyCodeChecksum();
+         }
+         else {
+            privKeyString = privKey.toBinStr();
          }
       } catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to encode private key: {}", e.what());
@@ -301,9 +306,9 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
 #endif
       if (isPrintable) {
          try {
-            WalletBackupPdfWriter pdfWriter(walletId, QString::fromStdString(easyData.part1),
-               QString::fromStdString(easyData.part2), QPixmap(QLatin1String(":/FULL_LOGO")),
-               UiUtils::getQRCode(QString::fromStdString(easyData.part1 + "\n" + easyData.part2)));
+            WalletBackupPdfWriter pdfWriter(walletId, QString::fromStdString(seedData.part1),
+               QString::fromStdString(seedData.part2), QPixmap(QLatin1String(":/FULL_LOGO")),
+               UiUtils::getQRCode(QString::fromStdString(seedData.part1 + "\n" + seedData.part2)));
             if (!pdfWriter.write(fn)) {
                throw std::runtime_error("write failure");
             }
@@ -328,7 +333,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
             });
             return;
          }
-         WalletBackupFile backupData(walletId.toStdString(), name, desc, easyData, edChainCode);
+         WalletBackupFile backupData(walletId.toStdString(), name, desc, seedData, privKeyString);
          f.write(QByteArray::fromStdString(backupData.Serialize()));
       }
       QMetaObject::invokeMethod(this, [this, jsCallback] {
@@ -397,11 +402,8 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
    try {
       auto result = std::make_shared<bs::sync::hd::Wallet>(wo.netType, wo.id, wo.name, wo.description, logger_);
       for (const auto &groupEntry : wo.groups) {
-         auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
+         auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type), false);
          for (const auto &leafEntry : groupEntry.leaves) {
-            auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
-               , leafEntry.chainCode.isNull() ? BinaryData(BTC_BIP32_CHAINCODE_SIZE) : leafEntry.chainCode
-               , wo.netType);
             group->createLeaf(leafEntry.index, leafEntry.id);
          }
       }

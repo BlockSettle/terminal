@@ -239,7 +239,7 @@ CustomTitleDialogWindow {
 
             CustomPasswordTextInput {
                 id: tfPassword
-                visible: walletInfo.encType === QPasswordData.Password
+                visible: true //walletInfo.encType === QPasswordData.Password
                 focus: true
                 //placeholderText: qsTr("Password")
                 Layout.fillWidth: true
@@ -330,17 +330,17 @@ CustomTitleDialogWindow {
                 anchors.bottom: parent.bottom
                 enabled: tfPassword.text.length || acceptable
                 onClicked: {
-                    if (walletInfo.encType === QPasswordData.Password) {
+//                    if (walletInfo.encType === QPasswordData.Password) {
                         passwordData.textPassword = tfPassword.text
                         passwordData.encType = QPasswordData.Password
                         acceptAnimated()
-                    }
+/*                    }
                     else if (walletInfo.encType === QPasswordData.Auth) {
                     }
                     else {
                         passwordData.encType = QPasswordData.Unencrypted
                         acceptAnimated()
-                    }
+                    }*/
                 }
             }
         }

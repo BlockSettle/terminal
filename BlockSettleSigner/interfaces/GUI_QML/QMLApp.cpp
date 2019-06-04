@@ -359,6 +359,7 @@ void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantM
    }
 
    if (!isDialogCorrect) {
+      logger_->error("[{}] unknown signer dialog {}", __func__, dialogName.toStdString());
       throw(std::logic_error("Unknown signer dialog"));
       return;
    }
