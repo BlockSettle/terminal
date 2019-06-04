@@ -668,7 +668,12 @@ void ChatWidget::OnOTCRequestCreated()
          DisplayOwnSubmittedOTC();
       }
    } else {
-      client_->SubmitPrivateOTCRequest(currentChat_, otcRequest);
+
+      if (!client_->SubmitPrivateOTCRequest(currentChat_, otcRequest)) {
+         logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit"
+                        " OTC request to {}", currentChat_.toStdString());
+         return;
+      }
    }
 
 

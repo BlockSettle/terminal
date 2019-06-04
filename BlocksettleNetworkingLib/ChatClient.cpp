@@ -1433,9 +1433,14 @@ bool ChatClient::sendPrivateOTCRequest(const QString &targetId, const bs::networ
 {
    const QString clientRequestId = QString::fromStdString(GetNextOTCId());
    const QString serverRequestId = QString::fromStdString(GetNextServerOTCId());
-   const QString requestorId = QString::fromStdString(request.ownRequest
-                                                      ? currentUserId_
-                                                      : GetNextRequestorId());
+
+   QString requestor = QString::fromStdString(currentUserId_);
+   QString target = targetId;
+
+   if (!request.ownRequest) {
+      requestor =  targetId;
+      target = QString::fromStdString(currentUserId_);
+   }
 
    const uint64_t submitTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
    const uint64_t expireTimestamp = true
@@ -1445,7 +1450,7 @@ bool ChatClient::sendPrivateOTCRequest(const QString &targetId, const bs::networ
 
 
    auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
-      , serverRequestId, requestorId, targetId, submitTimestamp, expireTimestamp, request);
+      , serverRequestId, requestor, target, submitTimestamp, expireTimestamp, request);
 
    auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
    sendRequest(otcRequest);
@@ -1526,7 +1531,8 @@ void ChatClient::HandleRejectedCommonOTCResponse(const QString& otcId, const std
 //    sent to common OTC chat room
 void ChatClient::HandleCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
 {
-   logger_->debug("[ChatClient::HandleCommonOTCResponse] OTCResponseData: {}", response->toJsonString());
+   logger_->debug("[ChatClient::HandleCommonOTCResponse] OTCResponseData: {}",
+                  response->toJsonString());
 
    model_->insertOTCReceivedResponse(response->serverResponseId().toStdString());
 }
@@ -1535,21 +1541,28 @@ void ChatClient::HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTC
 {
    auto cNode = model_->findContactNode(liveOTCRequest->targetId().toStdString());
 
-   if (cNode){
-      cNode->setActiveOtcRequest(liveOTCRequest);
-      model_->notifyContactChanged(cNode->getContactData());
+   if (!cNode){
+      logger_->error("[ChatClient::HandlePrivateOTCRequest] OTC request for {}"
+                     "accepted but corresponding node on found",
+                     liveOTCRequest->targetId().toStdString());
    }
+
+   cNode->setActiveOtcRequest(liveOTCRequest);
+   model_->notifyContactChanged(cNode->getContactData());
 
 }
 
 void ChatClient::HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData> &liveOTCRequest)
 {
-   auto cNode = model_->findContactNode(liveOTCRequest->targetId().toStdString());
+   auto cNode = model_->findContactNode(liveOTCRequest->requestorId().toStdString());
 
-   if (cNode){
-      cNode->setActiveOtcRequest(liveOTCRequest);
-      model_->notifyContactChanged(cNode->getContactData());
+   if (!cNode){
+      logger_->error("[ChatClient::HandlePrivateOTCRequest]  Not found corresponding node"
+                     " {} for accepted OTC", liveOTCRequest->requestorId().toStdString());
    }
+
+   cNode->setActiveOtcRequest(liveOTCRequest);
+   model_->notifyContactChanged(cNode->getContactData());
 }
 
 // cancel current OTC request sent to OTC chat
@@ -1568,6 +1581,20 @@ bool ChatClient::PullCommonOTCRequest(const QString& serverOTCId)
 
 bool ChatClient::PullPrivateOTCRequest(const QString &targetId, const QString &serverOTCId)
 {
+   auto cNode = model_->findContactNode(targetId.toStdString());
+
+   if (!cNode) {
+      logger_->error("[ChatClient::PullPrivateOTCRequest] Target {} not found",
+                     targetId.toStdString());
+      return false;
+   }
+
+   if (cNode->getActiveOtcRequest()->clientRequestId() != serverOTCId) {
+      logger_->error("[ChatClient::PullPrivateOTCRequest] invalid OTC ID for {}",
+                     targetId.toStdString());
+      return false;
+   }
+
    auto request = std::make_shared<Chat::PullOwnOTCRequest>("", targetId, serverOTCId);
    sendRequest(request);
    return true;
@@ -1613,8 +1640,6 @@ void ChatClient::onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData
 
 void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &response)
 {
-   //TODO: Implement!
-
    logger_->debug("[ChatClient::OnGenCommonOTCResponse] {}", response.getData());
 
    if (response.otcRequestData()->targetId() == Chat::OTCRoomKey) {
