@@ -114,6 +114,9 @@ private:
    void OTCSwitchToCommonRoom();
    void OTCSwitchToDMRoom();
    void OTCSwitchToGlobalRoom();
+   void OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room);
+   void OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact, bool onlineStatus);
+
 
    // used to display proper widget if OTC room selected.
    // either create OTC or Pull OTC, if was submitted
