@@ -1530,6 +1530,7 @@ void ChatClient::HandleCommonOTCResponse(const std::shared_ptr<Chat::OTCResponse
    logger_->debug("[ChatClient::HandleCommonOTCResponse] OTCResponseData: {}",
                   response->toJsonString());
    model_->insertOTCReceivedResponse(response);
+   model_->insertOTCReceivedResponseData(response);
 }
 
 void ChatClient::HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData> &liveOTCRequest)
@@ -1537,7 +1538,7 @@ void ChatClient::HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTC
    auto cNode = model_->findContactNode(liveOTCRequest->targetId());
 
    if (!cNode){
-      logger_->error("[ChatClient::HandlePrivateOTCRequest] OTC request for {}"
+      logger_->error("[ChatClient::HandlePrivateOTCRequestAccepted] OTC request for {}"
                      "accepted but corresponding node on found",
                      liveOTCRequest->targetId());
    }
@@ -1545,6 +1546,21 @@ void ChatClient::HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTC
    cNode->setActiveOtcRequest(liveOTCRequest);
    model_->notifyContactChanged(cNode->getContactData());
 
+}
+
+void ChatClient::HandlePrivateOTCRequestRejected(const std::shared_ptr<Chat::OTCRequestData> &rejectedOTC, const std::string &rejectReason)
+{
+   //TODO: Implement!
+   logger_->error("[ChatClient::HandlePrivateOTCRequestRejected] OTC request rejected. Reason: {}\n"
+                  "Request: {}", rejectReason,
+                  rejectedOTC->toJsonString());
+}
+
+void ChatClient::HandlePrivateOTCRequestCancelled(const std::shared_ptr<Chat::OTCRequestData> &cancelledOTC)
+{
+   //TODO: Implement!
+   logger_->error("[ChatClient::HandlePrivateOTCRequestCancelled] OTC request Cancelled.\n"
+                  "Request: {}", cancelledOTC->toJsonString());
 }
 
 void ChatClient::HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData> &liveOTCRequest)
@@ -1661,10 +1677,22 @@ void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &respon
             break;
       }
    } else {
-      if (response.otcRequestData()->requestorId() == model_->currentUser()){
-         HandlePrivateOTCRequestAccepted(response.otcRequestData());
-      } else {
-         HandlePrivateOTCRequest(response.otcRequestData());
+      switch (response.getResult()) {
+         case Chat::OTCResult::Accepted:
+            if (response.otcRequestData()->requestorId() == model_->currentUser()){
+               HandlePrivateOTCRequestAccepted(response.otcRequestData());
+            } else {
+               HandlePrivateOTCRequest(response.otcRequestData());
+            }
+            break;
+         case Chat::OTCResult::Rejected:
+            HandlePrivateOTCRequestRejected(response.otcRequestData(), response.getMessage().toStdString());
+            break;
+         case Chat::OTCResult::Canceled:
+            HandlePrivateOTCRequestCancelled(response.otcRequestData());
+            break;
+         default:
+            break;
       }
    }
 

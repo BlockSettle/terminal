@@ -57,6 +57,7 @@ public:
 
    // insert channel for response client receive for own OTC
    bool insertOTCReceivedResponse(const std::shared_ptr<Chat::OTCResponseData> &response);
+   bool insertOTCReceivedResponseData(std::shared_ptr<Chat::DataObject> data);
 
    // QAbstractItemModel interface
 public:

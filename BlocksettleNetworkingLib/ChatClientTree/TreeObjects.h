@@ -98,13 +98,13 @@ class OTCSentResponseElement : public CategoryElement
 public:
    OTCSentResponseElement(std::shared_ptr<Chat::OTCResponseData> response)
       : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement,
-        std::vector<ChatUIDefinitions::ChatTreeNodeType>{
+                        std::vector<ChatUIDefinitions::ChatTreeNodeType>{
                         ChatUIDefinitions::ChatTreeNodeType::OTCSentResponseNode,
                         ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
                         ChatUIDefinitions::ChatTreeNodeType::OTCSentUpdateNode,
                         ChatUIDefinitions::ChatTreeNodeType::OTCReceivedUpdateNode,
-                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode,
-        }, response)
+                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode },
+                        response)
    {}
 
    ~OTCSentResponseElement() override = default;
@@ -118,7 +118,14 @@ class OTCReceivedResponseElement : public CategoryElement
 {
 public:
    OTCReceivedResponseElement(std::shared_ptr<Chat::OTCResponseData> response)
-      : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement, std::vector<ChatUIDefinitions::ChatTreeNodeType>{ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode}, response)
+      : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement,
+                        std::vector<ChatUIDefinitions::ChatTreeNodeType>{
+                        ChatUIDefinitions::ChatTreeNodeType::OTCSentResponseNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCSentUpdateNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedUpdateNode,
+                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode},
+                        response)
    {}
 
    ~OTCReceivedResponseElement() override = default;
