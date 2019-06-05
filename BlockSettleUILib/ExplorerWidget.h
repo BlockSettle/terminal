@@ -7,8 +7,6 @@
 #include <QWidget>
 #include <memory>
 
-#define EXP_TIMEOUT 10000 // Milliseconds
-
 namespace Ui {
    class ExplorerWidget;
 }

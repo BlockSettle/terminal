@@ -119,10 +119,12 @@ QuoteProvider::QuoteProvider(const std::shared_ptr<AssetManager>& assetManager
  : logger_(logger)
  , assetManager_(assetManager)
  , dealerPayins_(logger)
- , debugTraffic_(debugTraffic)
  , celerLoggedInTimestampUtcInMillis_(0)
+ , debugTraffic_(debugTraffic)
 {
 }
+
+QuoteProvider::~QuoteProvider() noexcept = default;
 
 void QuoteProvider::ConnectToCelerClient(const std::shared_ptr<CelerClient>& celerClient)
 {
@@ -610,7 +612,9 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
    }
 
    if (!resync && (response.orderstatus() == FILLED)) {
-      emit quoteOrderFilled(response.quoteid());
+      if (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
+         emit quoteOrderFilled(response.quoteid());
+      }
    }
 
    Order order;
