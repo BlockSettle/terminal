@@ -137,6 +137,22 @@ namespace bs {
          // replies ( reject reeason for requests to common room)
          RequestResponseLimitExceeded
       };
+
+      enum class OTCUpdateRejectReason
+      {
+         // TradingClosed - response or request were closed already
+         TradingClosed,
+         // TradeAlreadyAccepted - could not update trade that was accepted
+         TradeAlreadyAccepted,
+         // NoUpdateFromRequestorReceived - requestor shoudl send first update
+         NoUpdateFromRequestorReceived,
+         // PriceNotInrange price in update not in initial range
+         PriceNotInrange,
+         // AmountNotInRange amount not in initial range
+         AmountNotInRange,
+         // AccessDenied - update sender is neither requestor or responder
+         AccessDenied
+      };
    }
 }
 

@@ -10,6 +10,7 @@ QJsonObject OTCUpdateData::toJson() const
    data[OTCResponseIdServerKey] = QString::fromStdString(serverResponseId_);
    data[OTCUpdateIdClientKey] = QString::fromStdString(clientUpdateId_);
    data[OTCUpdateSenderIdKey] = QString::fromStdString(updateSenderId_);
+   data[OTCUpdateReceiverIdKey] = QString::fromStdString(updateReceiverId_);
    data[OTCUpdateTimestampKey] = QString::number(updateTimestamp_);
    data[OTCUpdateAmountKey] = amount_;
    data[OTCUpdatePriceKey] = price_;
@@ -24,6 +25,7 @@ std::shared_ptr<OTCUpdateData> OTCUpdateData::fromJSON(const std::string& jsonDa
    const std::string serverResponseId = data[OTCResponseIdServerKey].toString().toStdString();
    const std::string clientUpdateId = data[OTCUpdateIdClientKey].toString().toStdString();
    const std::string updateSenderId = data[OTCUpdateSenderIdKey].toString().toStdString();
+   const std::string updateReceiverId = data[OTCUpdateReceiverIdKey].toString().toStdString();
    uint64_t updateTimestamp = data[OTCUpdateTimestampKey].toString().toULongLong();
    double amount = data[OTCUpdateAmountKey].toDouble();
    double price = data[OTCUpdatePriceKey].toDouble();
@@ -31,6 +33,7 @@ std::shared_ptr<OTCUpdateData> OTCUpdateData::fromJSON(const std::string& jsonDa
    return std::make_shared<OTCUpdateData>(serverResponseId,
                                           clientUpdateId,
                                           updateSenderId,
+                                          updateReceiverId,
                                           updateTimestamp,
                                           amount,
                                           price);
@@ -41,7 +44,7 @@ OTCUpdateData::OTCUpdateData(  const std::string& serverResponseId
                              , const std::string& updateSenderId
                              , const double amount
                              , const double price)
- : OTCUpdateData(serverResponseId, clientUpdateId, updateSenderId
+ : OTCUpdateData(serverResponseId, clientUpdateId, updateSenderId, ""
                  , static_cast<uint64_t>(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
                  , amount, price)
 {}
@@ -49,6 +52,7 @@ OTCUpdateData::OTCUpdateData(  const std::string& serverResponseId
 OTCUpdateData::OTCUpdateData(  const std::string& serverResponseId
                              , const std::string& clientUpdateId
                              , const std::string& updateSenderId
+                             , const std::string& updateReceiverId
                              , const uint64_t updateTimestamp
                              , const double amount
                              , const double price)
@@ -56,6 +60,7 @@ OTCUpdateData::OTCUpdateData(  const std::string& serverResponseId
   , serverResponseId_{serverResponseId}
   , clientUpdateId_{clientUpdateId}
   , updateSenderId_{updateSenderId}
+  , updateReceiverId_{updateReceiverId}
   , updateTimestamp_{updateTimestamp}
   , amount_{amount}
   , price_{price}
@@ -76,9 +81,24 @@ std::string OTCUpdateData::updateSenderId() const
    return updateSenderId_;
 }
 
+std::string OTCUpdateData::updateReceiverId() const
+{
+   return updateReceiverId_;
+}
+
+void OTCUpdateData::setUpdateReceiverId(const std::string& receiverId)
+{
+   updateReceiverId_ = receiverId;
+}
+
 uint64_t OTCUpdateData::updateTimestamp() const
 {
    return updateTimestamp_;
+}
+
+void OTCUpdateData::setCurrentUpdateTimestamp()
+{
+   updateTimestamp_ = static_cast<uint64_t>(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
 }
 
 double OTCUpdateData::amount() const
