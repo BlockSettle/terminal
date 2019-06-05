@@ -100,25 +100,49 @@ namespace bs {
 
       struct OTCRequest
       {
-         ChatOTCSide::Type        side;
-         OTCRangeID::Type  amountRange;
+         ChatOTCSide::Type    side;
+         OTCRangeID::Type     amountRange;
 
          // XXX
          // ownRequest - temporary field used for test purpose until OTC goes through chat server
-         bool              ownRequest;
+         bool                 ownRequest;
 
          // fakeReplyRequired - chat server will simulate "reply"
-         bool              fakeReplyRequired;
+         bool                 fakeReplyRequired;
       };
 
       struct OTCResponse
       {
-         QString     serverRequestId;
-         QString     requestorId;
-         QString     initialTargetId;
+         std::string     serverRequestId;
+         std::string     requestorId;
+         std::string     initialTargetId;
 
          OTCPriceRange     priceRange;
          OTCQuantityRange  quantityRange;
+      };
+
+      enum class OTCRequestRejectReason
+      {
+         CounterpartyOffline,
+         CounterpartyNotFound,
+         // InvalidTarget - ATM returned when trying to send to self
+         InvalidTarget,
+         RequestLimitToTargetExceeded,
+         RequestsAmountExceeded,
+         RequestAlreadyExpired
+      };
+
+      enum class OTCResponseRejectReason
+      {
+         // RequestNotAvailableForReply - request was pulled, closed or expired
+         RequestNotAvailableForReply,
+         // InvalidTarget - ATM returned when trying to reply to self
+         InvalidTarget,
+         // RequestAlreadyResponded - responder already have active response to that request
+         RequestAlreadyResponded,
+         // RequestResponseLimitExceeded - request have reached max number of
+         // replies ( reject reeason for requests to common room)
+         RequestResponseLimitExceeded
       };
    }
 }

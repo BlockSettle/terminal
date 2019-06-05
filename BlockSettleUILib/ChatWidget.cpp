@@ -609,7 +609,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             auto response = std::dynamic_pointer_cast<Chat::OTCResponseData>(element->getDataObject());
             if (response) {
                setIsRoom(false);
-               currentChat_ = response->serverResponseId();
+               currentChat_ = QString::fromStdString(response->serverResponseId());
             }
          }
          break;
@@ -678,7 +678,7 @@ void ChatWidget::OnOTCRequestCreated()
       }
    } else {
 
-      if (!client_->SubmitPrivateOTCRequest(currentChat_, otcRequest)) {
+      if (!client_->SubmitPrivateOTCRequest(currentChat_.toStdString(), otcRequest)) {
          logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit"
                         " OTC request to {}", currentChat_.toStdString());
          return;
@@ -691,9 +691,9 @@ void ChatWidget::OnOTCRequestCreated()
 void ChatWidget::OnPullOwnOTCRequest(const QString& otcId)
 {
    if (currentChat_ == Chat::OTCRoomKey) {
-      client_->PullCommonOTCRequest(otcId);
+      client_->PullCommonOTCRequest(otcId.toStdString());
    } else {
-      client_->PullPrivateOTCRequest(currentChat_, otcId);
+      client_->PullPrivateOTCRequest(currentChat_.toStdString(), otcId.toStdString());
    }
 
 }
@@ -772,7 +772,7 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
          auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
          if (!cNode->isHaveActiveOTC()) {
             return DisplayCreateOTCWidget();
-         } else if (cNode->getActiveOtcRequest()->requestorId() == contact->getContactId()){
+         } else if (cNode->getActiveOtcRequest()->requestorId() == contact->getContactId().toStdString()){
             ui_->widgetCreateOTCResponse->SetActiveOTCRequest(cNode->getActiveOtcRequest());
             ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
          } else {
@@ -820,7 +820,7 @@ void ChatWidget::OnNewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestD
    otcRequestViewModel_->AddLiveOTCRequest(otcRequest);
 }
 
-void ChatWidget::OnOTCRequestCancelled(const QString& otcId)
+void ChatWidget::OnOTCRequestCancelled(const std::string& otcId)
 {
    if (IsOwnOTCId(otcId)) {
       OnOwnOTCPulled();
@@ -829,7 +829,7 @@ void ChatWidget::OnOTCRequestCancelled(const QString& otcId)
    }
 }
 
-bool ChatWidget::IsOwnOTCId(const QString& otcId) const
+bool ChatWidget::IsOwnOTCId(const std::string &otcId) const
 {
    return otcAccepted_ && (otcId == ownActiveOTC_->serverRequestId());
 }
@@ -840,17 +840,17 @@ void ChatWidget::OnOwnOTCPulled()
    otcRequestViewModel_->RemoveOTCByID(ownActiveOTC_->serverRequestId());
 }
 
-void ChatWidget::OnOTCCancelled(const QString& otcId)
+void ChatWidget::OnOTCCancelled(const std::string &otcId)
 {
    otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
-void ChatWidget::OnOTCRequestExpired(const QString& otcId)
+void ChatWidget::OnOTCRequestExpired(const std::string& otcId)
 {
    otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
-void ChatWidget::OnOwnOTCRequestExpired(const QString& otcId)
+void ChatWidget::OnOwnOTCRequestExpired(const std::string& otcId)
 {
    otcSubmitted_ = otcAccepted_ = false;
    otcRequestViewModel_->RemoveOTCByID(otcId);

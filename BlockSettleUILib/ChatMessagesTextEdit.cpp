@@ -154,7 +154,7 @@ QString ChatMessagesTextEdit::dataOtc(const int &row, const ChatMessagesTextEdit
       case Column::User:
       {
          static const auto ownSender = tr("you");
-         QString sender = otc->responderId();
+         QString sender = QString::fromStdString(otc->responderId());
 
          if (sender == ownUserId_) {
             return ownSender;
@@ -179,7 +179,7 @@ QString ChatMessagesTextEdit::dataOtc(const int &row, const ChatMessagesTextEdit
       }
       case Column::Status:{
 
-         if (otc->responderId() != ownUserId_){
+         if (otc->responderId() != ownUserId_.toStdString()){
 //            if (!(otc->state() & static_cast<int>(Chat::MessageData::State::Read))){
 //               //emit MessageRead(message);
 //            }
@@ -210,11 +210,11 @@ QString ChatMessagesTextEdit::dataOtc(const int &row, const ChatMessagesTextEdit
       case Column::Message: {
 
          QString text = QLatin1String("[%1] %2");
-         text = text.arg(otc->serverResponseId().chopped(5).append(QLatin1String("...")));
+         text = text.arg(QString::fromStdString(otc->serverResponseId()).chopped(5).append(QLatin1String("...")));
 
          QString display;
 
-         if(otc->responderId() == ownUserId_){
+         if(otc->responderId() == ownUserId_.toStdString()){
             display.append(QLatin1String("BID SUBMITTED: "));
          } else {
             display.append(QLatin1String("BID RECEIVED: "));
@@ -773,7 +773,7 @@ void ChatMessagesTextEdit::onElementSelected(CategoryElement *element)
       case Chat::DataObject::Type::OTCResponseData: {
          auto otcResponse = std::dynamic_pointer_cast<Chat::OTCResponseData>(data);
          if (otcResponse) {
-            switchToChat(otcResponse->serverResponseId(), false);
+            switchToChat(QString::fromStdString(otcResponse->serverResponseId()), false);
             onMessagesUpdate(displayData, true);
          }
       }

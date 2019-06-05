@@ -115,7 +115,7 @@ std::shared_ptr<Chat::OTCResponseData> OTCSentResponseElement::getOTCResponse() 
 
 std::string OTCSentResponseElement::otcId() const
 {
-   return getOTCResponse()->serverResponseId().toStdString();
+   return getOTCResponse()->serverResponseId();
 }
 
 std::shared_ptr<Chat::OTCResponseData> OTCReceivedResponseElement::getOTCResponse() const
@@ -125,7 +125,7 @@ std::shared_ptr<Chat::OTCResponseData> OTCReceivedResponseElement::getOTCRespons
 
 std::string OTCReceivedResponseElement::otcId() const
 {
-   return getOTCResponse()->serverResponseId().toStdString();
+   return getOTCResponse()->serverResponseId();
 }
 
 std::shared_ptr<Chat::DataObject> DisplayableDataNode::getDataObject() const
