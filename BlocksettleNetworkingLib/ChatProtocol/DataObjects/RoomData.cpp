@@ -88,11 +88,7 @@ std::shared_ptr<RoomData> RoomData::fromJSON(const std::string& jsonData)
    bool sendUserUpdates = data[RoomSendUserUpdatesKey].toBool();
    bool displayUserList = data[RoomDisplayUserListKey].toBool();
    bool displayTrayNotification = data[RoomDisplayTrayNotificationKey].toBool();
-
-   //Default bool value is temp, while it will not be supported by server
-   bool isTradingAvailable =
-         data[RoomIsTradingAvailableKey]
-                             .toBool(id == Chat::OTCRoomKey); // TODO: Add to server
+   bool isTradingAvailable = data[RoomIsTradingAvailableKey].toBool();
 
    return std::make_shared<RoomData>(id, ownerId,
                                      title, roomKey,
