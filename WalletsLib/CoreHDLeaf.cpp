@@ -564,9 +564,7 @@ std::string hd::Leaf::getFilename() const
 
 void hd::Leaf::shutdown()
 {
-   if (db_ != nullptr)
-   {
-      db_->close();
+   if (db_ != nullptr) {
       delete db_;
       db_ = nullptr;
    }
@@ -723,13 +721,9 @@ std::shared_ptr<AssetEntry_BIP32Root> hd::Leaf::getRootAsset() const
    return rootSingle;
 }
 
-void hd::Leaf::setDB(LMDB *db)
+void hd::Leaf::readMetaData()
 {
-   if (!db) {
-      return;
-   }
-   db_ = db;
-   MetaData::readFromDB(getDBEnv(), db);
+   MetaData::readFromDB(getDBEnv(), db_);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

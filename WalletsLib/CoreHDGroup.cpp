@@ -288,9 +288,7 @@ void hd::Group::shutdown()
       leaf.second->shutdown();
    leaves_.clear();
 
-   if (db_ != nullptr)
-   {
-      db_->close();
+   if (db_ != nullptr) {
       delete db_;
       db_ = nullptr;
    }

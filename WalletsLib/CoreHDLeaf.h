@@ -126,7 +126,7 @@ namespace bs {
 
             std::shared_ptr<LMDBEnv> getDBEnv() { return accountPtr_->getDbEnv(); }
             LMDB* getDB() { return db_; }
-            virtual void setDB(LMDB *);
+            void readMetaData();
 
          protected:
             mutable std::string     walletId_, walletIdInt_;

@@ -201,9 +201,7 @@ void hd::Wallet::shutdown()
       group.second->shutdown();
    groups_.clear();
 
-   if (db_ != nullptr)
-   {
-      db_->close();
+   if (db_ != nullptr) {
       delete db_;
       db_ = nullptr;
    }
@@ -346,7 +344,7 @@ void hd::Wallet::readFromDB()
       }
    }
    for (const auto &leaf : getLeaves()) {
-      leaf->setDB(db_);
+      leaf->readMetaData();
    }
 }
 
