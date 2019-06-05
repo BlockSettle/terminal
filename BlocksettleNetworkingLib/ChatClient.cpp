@@ -62,16 +62,6 @@ std::string ChatClient::GetNextServerResponseId()
    return std::string("server_response_") + std::to_string(nextResponseId_++);
 }
 
-void ChatClient::ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
-{
-   const auto expireInterval = liveOTCRequest->expireTimestamp() - QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-
-   QTimer::singleShot(expireInterval, [this, otcId = liveOTCRequest->serverRequestId()]
-   {
-      HandleCommonOTCRequestExpired(otcId);
-   });
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
@@ -1334,7 +1324,7 @@ void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
 
 bool ChatClient::SubmitCommonOTCRequest(const bs::network::OTCRequest& request)
 {
-   if (request.ownRequest && !ownSubmittedOTCId_.empty()) {
+   if (!ownSubmittedOTCId_.empty()) {
       logger_->debug("[ChatClient::SubmitCommonOTCRequest] already have own OTC");
       return false;
    }
@@ -1359,82 +1349,25 @@ bool ChatClient::SubmitPrivateOTCRequest(const std::string &targetId, const bs::
 
 bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
 {
-   // XXX - do actual send and return true if message was sent to chat server
-
-   // all down is part of a flow simulation
-
-   const bool simulateResponse = request.ownRequest && request.fakeReplyRequired;
-
    const auto clientRequestId = GetNextOTCId();
-   const auto serverRequestId = GetNextServerOTCId();
-   const auto requestorId = request.ownRequest
-                              ? currentUserId_
-                              : GetNextRequestorId();
+   const auto requestorId = currentUserId_;
    const auto targetId = Chat::OTCRoomKey.toStdString();
-   const uint64_t submitTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-   const uint64_t expireTimestamp = true
-                                    ? 0 //If this zero, server will setup expired itself (60 secs default)
-                                    : QDateTime::currentDateTimeUtc().addSecs(10*60).toMSecsSinceEpoch();
-
-
 
    auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
-      , serverRequestId, requestorId, targetId, submitTimestamp, expireTimestamp, request);
+      , requestorId, targetId, request);
 
    auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
    sendRequest(otcRequest);
    ownSubmittedOTCId_ = liveRequest->clientRequestId();
-   return true;
-
-   if (request.ownRequest) {
-      ownSubmittedOTCId_ = liveRequest->clientRequestId();
-
-      // simulate 1 second delay on accept response
-      QTimer::singleShot(acceptCommonOTCTimeout, [this, liveRequest, simulateResponse]
-         {
-            HandleCommonOTCRequestAccepted(liveRequest);
-
-            if (simulateResponse) {
-               QTimer::singleShot(simulateResponseToMyCommonOTCTimeout, [this, liveRequest]
-                  {
-                     const std::string clientResponseId = GetNextResponseId();
-                     const std::string serverResponseId = GetNextServerResponseId();
-                     const std::string serverRequestId = liveRequest->serverRequestId();
-                     const std::string requestorId = liveRequest->requestorId();
-                     const std::string initialTargetId = liveRequest->targetId();
-                     const std::string responderId = GetNextResponderId();
-                     const uint64_t responseTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-                     const auto priceRange = bs::network::OTCPriceRange{3300, 3700};
-                     const auto quantityRange = bs::network::OTCRangeID::toQuantityRange(liveRequest->otcRequest().amountRange);
-
-                     auto response = std::make_shared<Chat::OTCResponseData>(clientResponseId
-                        , serverResponseId, serverRequestId
-                        , requestorId, initialTargetId, responderId
-                        , responseTimestamp, priceRange, quantityRange);
-
-                     HandleCommonOTCResponse(response);
-                  });
-            }
-         });
-   } else {
-      HandleCommonOTCRequest(liveRequest);
-   }
-
    return true;
 }
 
 bool ChatClient::sendPrivateOTCRequest(const std::string &targetId, const bs::network::OTCRequest &request)
 {
    const auto clientRequestId = GetNextOTCId();
-   const auto serverRequestId = GetNextServerOTCId();
 
    auto requestor = currentUserId_;
    auto target = targetId;
-
-   if (!request.ownRequest) {
-      requestor =  targetId;
-      target = currentUserId_;
-   }
 
    const uint64_t submitTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
    const uint64_t expireTimestamp = true
@@ -1444,7 +1377,7 @@ bool ChatClient::sendPrivateOTCRequest(const std::string &targetId, const bs::ne
 
 
    auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
-      , serverRequestId, requestor, target, submitTimestamp, expireTimestamp, request);
+      , requestor, target, request);
 
    auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
    sendRequest(otcRequest);
@@ -1455,7 +1388,6 @@ bool ChatClient::sendPrivateOTCRequest(const std::string &targetId, const bs::ne
 void ChatClient::HandleCommonOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
 {
    aliveOtcRequests_.emplace(liveOTCRequest->serverRequestId());
-   ScheduleForExpire(liveOTCRequest);
 
    emit NewOTCRequestReceived(liveOTCRequest);
 }

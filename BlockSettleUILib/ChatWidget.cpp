@@ -651,10 +651,8 @@ void ChatWidget::OnOTCRequestCreated()
 {
    const auto side = ui_->widgetCreateOTCRequest->GetSide();
    const auto range = ui_->widgetCreateOTCRequest->GetRange();
-   const bool ownOTC = ui_->widgetCreateOTCRequest->SendAsOwn();
-   const bool replyRequired = ui_->widgetCreateOTCRequest->ReplyRequired();
 
-   auto otcRequest = bs::network::OTCRequest{side, range, ownOTC, replyRequired};
+   auto otcRequest = bs::network::OTCRequest{side, range};
 
    if (currentChat_ == Chat::OTCRoomKey) {
       if (!client_->SubmitCommonOTCRequest(otcRequest)) {
@@ -662,11 +660,9 @@ void ChatWidget::OnOTCRequestCreated()
          return;
       }
 
-      if (ownOTC) {
-         otcSubmitted_ = true;
-         submittedOtc_ = otcRequest;
-         DisplayOwnSubmittedOTC();
-      }
+      otcSubmitted_ = true;
+      submittedOtc_ = otcRequest;
+      DisplayOwnSubmittedOTC();
    } else {
 
       if (!client_->SubmitPrivateOTCRequest(currentChat_.toStdString(), otcRequest)) {
@@ -675,8 +671,6 @@ void ChatWidget::OnOTCRequestCreated()
          return;
       }
    }
-
-
 }
 
 void ChatWidget::OnPullOwnOTCRequest(const QString& otcId)
@@ -974,6 +968,6 @@ void ChatWidget::onBSChatInputSelectionChanged()
 }
 
 void ChatWidget::onChatMessagesSelectionChanged()
-{   
+{
    isChatMessagesSelected_ = true;
 }
