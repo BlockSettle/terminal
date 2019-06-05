@@ -148,18 +148,26 @@ void SearchWidget::showContextMenu(const QPoint &pos)
    if (!index.isValid()) {
       return;
    }
-   bool isInContacts = index.data(UserSearchModel::IsInContacts).toBool();
+   auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
    QString id = index.data(Qt::DisplayRole).toString();
-   if (isInContacts) {
-      auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
-         emit removeFriendRequired(id);
-      });
-      action->setStatusTip(tr("Click to remove user from contact list"));
-   } else {
+   switch (status) {
+   case UserSearchModel::UserStatus::ContactUnknown: {
       auto action = menu->addAction(tr("Add to contacts"), [this, id] {
          emit addFriendRequied(id);
       });
       action->setStatusTip(tr("Click to add user to contact list"));
+      break;
+   }
+   case UserSearchModel::UserStatus::ContactAdded:
+   case UserSearchModel::UserStatus::ContactPending: {
+      auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
+         emit removeFriendRequired(id);
+      });
+      action->setStatusTip(tr("Click to remove user from contact list"));
+      break;
+   }
+   default:
+      return;
    }
    menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));
 }
@@ -178,11 +186,19 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
    if (!index.isValid()) {
       return;
    }
-   bool isInContacts = index.data(UserSearchModel::IsInContacts).toBool();
    QString id = index.data(Qt::DisplayRole).toString();
-   if (isInContacts) {
-      emit removeFriendRequired(id);
-   } else {
+   auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
+   switch (status) {
+   case UserSearchModel::UserStatus::ContactUnknown: {
       emit addFriendRequied(id);
+      break;
+   }
+   case UserSearchModel::UserStatus::ContactAdded:
+   case UserSearchModel::UserStatus::ContactPending: {
+      emit removeFriendRequired(id);
+      break;
+   }
+   default:
+      return;
    }
 }

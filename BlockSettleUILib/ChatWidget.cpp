@@ -354,7 +354,7 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData
 
 void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
 {
-   std::vector<std::pair<QString,bool>> userInfoList;
+   std::vector<UserSearchModel::UserInfo> userInfoList;
    QString searchText = ui_->searchWidget->searchText();
    bool isEmail = kRxEmail.match(searchText).hasMatch();
    QString hash = client_->deriveKey(searchText);
@@ -364,7 +364,11 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
          if (isEmail && userId != hash) {
             continue;
          }
-         userInfoList.emplace_back(userId, client_->isFriend(userId));
+         auto status = UserSearchModel::UserStatus::ContactUnknown;
+         if (client_->isFriend(userId)) {
+            status = UserSearchModel::UserStatus::ContactAdded;
+         }
+         userInfoList.emplace_back(userId, status);
       }
    }
    client_->getUserSearchModel()->setUsers(userInfoList);
