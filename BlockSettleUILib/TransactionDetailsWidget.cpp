@@ -119,12 +119,16 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
    // get the transaction data from armory
    std::string txidStr = rpcTXID.getRPCTXID().toHexStr();
    const auto &cbTX = [this, txidStr](const Tx &tx) {
-      if (tx.isInitialized()) {
-         processTxData(tx);
+      if (!tx.isInitialized()) {
+         if (logger_) {
+            logger_->error("[{}] TXID {} is not initialized.", __func__, txidStr);
+         }
+         ui_->tranID->setText(tr("%1 (load failed)").arg(QString::fromStdString(txidStr)));
+         emit finished();
+         return;
       }
-      else if (logger_) {
-         logger_->error("[{}] TXID {} is not initialized.", __func__, txidStr);
-      }
+
+      processTxData(tx);
    };
 
    // The TXID passed to Armory *must* be in internal order!
