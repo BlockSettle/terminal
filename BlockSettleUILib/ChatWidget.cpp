@@ -41,8 +41,6 @@ enum class OTCPages : int
    OTCContactNetStatusShieldPage
 };
 
-constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
-
 const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
                                   QRegularExpression::CaseInsensitiveOption);
 
@@ -390,10 +388,16 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
    }
    client_->getUserSearchModel()->setUsers(userInfoList);
 
-   ui_->searchWidget->setListVisible(true);
+   bool visible = true;
+   if (isEmail) {
+      // TODO
+   } else {
+      visible &= !userInfoList.empty();
+   }
+   ui_->searchWidget->setListVisible(visible);
 
    // hide popup after a few sec
-   if (users.size() == 0) {
+   if (visible && userInfoList.empty()) {
       ui_->searchWidget->startListAutoHide();
    }
 }
