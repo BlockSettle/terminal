@@ -25,8 +25,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    , const NetworkType netType, const BinaryData* inSrvIDKey)
    : QObject(nullptr), logger_(logger), netType_(netType)
 {
-   const auto zmqContext = std::make_shared<ZmqContext>(logger);
-
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = true;
    params.setLocalHeartbeatInterval();
@@ -38,7 +36,6 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
 
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, params);
-   //adapterConn->SetContext(zmqContext);
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
       adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
