@@ -122,7 +122,7 @@ void OTCRequestViewModel::AddLiveOTCRequest(const std::shared_ptr<Chat::OTCReque
    endInsertRows();
 }
 
-bool OTCRequestViewModel::RemoveOTCByID(const QString& serverRequestId)
+bool OTCRequestViewModel::RemoveOTCByID(const std::string& serverRequestId)
 {
    // XXX simple solution. Not sure at what number of OTC requests this will start to slow down UI
    // will move to internal pointers and maps a bit later

@@ -38,7 +38,7 @@ std::shared_ptr<OTCRequestData> GenCommonOTCRequest::getOtcRequestData() const
    return otcRequestData_;
 }
 
-QString GenCommonOTCRequest::getSenderId() const
+std::string GenCommonOTCRequest::getSenderId() const
 {
    return otcRequestData_->requestorId();
 }
