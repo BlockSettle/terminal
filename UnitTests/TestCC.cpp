@@ -117,17 +117,35 @@ void TestCC::SetUp()
    if (!xbtWallet_)
       return;
 
-   genesisAddr_ = xbtWallet_->getNewExtAddress(
+   auto promGenAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futGenAddr = promGenAddr->get_future();
+   const auto &cbGenAddr = [promGenAddr](const bs::Address &addr) {
+      promGenAddr->set_value(addr);
+   };
+   xbtWallet_->getNewExtAddress(cbGenAddr,
       AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+   genesisAddr_ = futGenAddr.get();
    ccWallet_->setData(genesisAddr_.display());
    sendTo(initialAmount_ * COIN, genesisAddr_);
    mineBlocks(6);
 
-   recvAddr_ = xbtWallet_->getNewExtAddress();
+   auto promRecvAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futRecvAddr = promRecvAddr->get_future();
+   const auto &cbRecvAddr = [promRecvAddr](const bs::Address &addr) {
+      promRecvAddr->set_value(addr);
+   };
+   xbtWallet_->getNewExtAddress(cbRecvAddr);
+   recvAddr_ = futRecvAddr.get();
    auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
    ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
 
-   auto addr = ccWallet_->getNewExtAddress();
+   auto promAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futAddr = promAddr->get_future();
+   const auto &cbAddr = [promAddr](const bs::Address &addr) {
+      promAddr->set_value(addr);
+   };
+   ccWallet_->getNewExtAddress(cbAddr);
+   const auto addr = futAddr.get();
    auto promFund = std::make_shared<std::promise<bool>>();
    auto futFund = promFund->get_future();
    const auto &cbInputs = [this, xbtLeaf, addr, promFund](std::vector<UTXO> inputs) 
@@ -217,7 +235,13 @@ TEST_F(TestCC, DISABLED_TX_buy)
 {
    const float feePerByte = 7.5;
    const double qtyCC = 100;
-   const auto ccRecvAddr = ccWallet_->getNewExtAddress();
+   auto promRecvAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futRecvAddr = promRecvAddr->get_future();
+   const auto &cbRecvAddr = [promRecvAddr](const bs::Address &addr) {
+      promRecvAddr->set_value(addr);
+   };
+   ccWallet_->getNewExtAddress(cbRecvAddr);
+   const auto ccRecvAddr = futRecvAddr.get();
    const double price = 0.005;
    const uint64_t spendVal2 = qtyCC * price * BTCNumericTypes::BalanceDivider;
 
@@ -229,7 +253,14 @@ TEST_F(TestCC, DISABLED_TX_buy)
       const uint64_t spendVal1 = qtyCC * ccLotSize_;
       const auto recipient1 = ccRecvAddr.getRecipient(spendVal1);
       ASSERT_NE(recipient1, nullptr);
-      const auto changeAddr1 = ccWallet_->getNewChangeAddress();
+
+      auto promChange1Addr = std::make_shared<std::promise<bs::Address>>();
+      auto futChange1Addr = promChange1Addr->get_future();
+      const auto &cbChange1Addr = [promChange1Addr](const bs::Address &addr) {
+         promChange1Addr->set_value(addr);
+      };
+      ccWallet_->getNewChangeAddress(cbChange1Addr);
+      const auto changeAddr1 = futChange1Addr.get();
       auto txReq1 = ccWallet_->createPartialTXRequest(spendVal1, inputs1, changeAddr1, 0, { recipient1 });
 
       // requester uses dealer's TX
@@ -237,7 +268,13 @@ TEST_F(TestCC, DISABLED_TX_buy)
          [this, qtyCC, spendVal2, txReq1, feePerByte, &txHash](std::vector<UTXO> inputs2) {
          const auto recipient2 = recvAddr_.getRecipient(spendVal2);
          ASSERT_NE(recipient2, nullptr);
-         const auto changeAddr2 = xbtWallet_->getNewChangeAddress();
+         auto promChange2Addr = std::make_shared<std::promise<bs::Address>>();
+         auto futChange2Addr = promChange2Addr->get_future();
+         const auto &cbChange2Addr = [promChange2Addr](const bs::Address &addr) {
+            promChange2Addr->set_value(addr);
+         };
+         xbtWallet_->getNewChangeAddress(cbChange2Addr);
+         const auto changeAddr2 = futChange2Addr.get();
          auto txReq2 = xbtWallet_->createPartialTXRequest(spendVal2, inputs2, changeAddr2, feePerByte
             , { recipient2 }, txReq1.serializeState());
 
@@ -322,7 +359,13 @@ TEST_F(TestCC, DISABLED_TX_sell)
 {
    const float feePerByte = 8.5;
    const double qtyCC = 100;
-   const auto ccRecvAddr = ccWallet_->getNewExtAddress();
+   auto promRecvAddr = std::make_shared<std::promise<bs::Address>>();
+   auto futRecvAddr = promRecvAddr->get_future();
+   const auto &cbRecvAddr = [promRecvAddr](const bs::Address &addr) {
+      promRecvAddr->set_value(addr);
+   };
+   ccWallet_->getNewExtAddress(cbRecvAddr);
+   const auto ccRecvAddr = futRecvAddr.get();
    const double price = 0.005;
    const uint64_t spendVal2 = qtyCC * price * BTCNumericTypes::BalanceDivider;
 
@@ -332,7 +375,13 @@ TEST_F(TestCC, DISABLED_TX_sell)
       [this, qtyCC, spendVal2, feePerByte, ccRecvAddr, &txHash](std::vector<UTXO> inputs1) 
    {
       const uint64_t spendVal1 = qtyCC * ccLotSize_;
-      const auto changeAddr1 = ccWallet_->getNewChangeAddress();
+      auto promChange1Addr = std::make_shared<std::promise<bs::Address>>();
+      auto futChange1Addr = promChange1Addr->get_future();
+      const auto &cbChange1Addr = [promChange1Addr](const bs::Address &addr) {
+         promChange1Addr->set_value(addr);
+      };
+      ccWallet_->getNewChangeAddress(cbChange1Addr);
+      const auto changeAddr1 = futChange1Addr.get();
       auto txReq1 = ccWallet_->createPartialTXRequest(spendVal1, inputs1, changeAddr1);
 
       // dealer uses requester's TX
@@ -342,7 +391,13 @@ TEST_F(TestCC, DISABLED_TX_sell)
       {
          const auto recipient2 = recvAddr_.getRecipient(spendVal2);
          ASSERT_NE(recipient2, nullptr);
-         const auto changeAddr2 = xbtWallet_->getNewChangeAddress();
+         auto promChange2Addr = std::make_shared<std::promise<bs::Address>>();
+         auto futChange2Addr = promChange2Addr->get_future();
+         const auto &cbChange2Addr = [promChange2Addr](const bs::Address &addr) {
+            promChange2Addr->set_value(addr);
+         };
+         xbtWallet_->getNewChangeAddress(cbChange2Addr);
+         const auto changeAddr2 = futChange2Addr.get();
          auto txReq2 = xbtWallet_->createPartialTXRequest(spendVal2, inputs2, changeAddr2, feePerByte
             , { recipient2 }, txReq1.serializeState());
 

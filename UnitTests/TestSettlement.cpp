@@ -142,7 +142,7 @@ void TestSettlement::SetUp()
    for (const auto &wallet : syncMgr_->getAllWallets())
       wallet->updateBalances(balLBD);
 
-   const auto settlWallet = syncMgr_->getWalletById(walletsMgr_->getSettlementWallet()->walletId());
+   const auto settlWallet = syncMgr_->getSettlementWallet();
    settlWallet->updateBalances(balLBD);
    connect(settlWallet.get(), &bs::sync::Wallet::walletReady, this, &TestSettlement::onWalletReady);
    settlementId_ = CryptoPRNG::generateRandom(32);

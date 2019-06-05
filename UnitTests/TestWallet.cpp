@@ -626,17 +626,30 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
       //grab addresses from sync wallet
 
+      const auto &lbdGetSyncAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [promAddr](const bs::Address &addr) {
+            promAddr->set_value(addr);
+         };
+         if (ext) {
+            syncWallet->getNewExtAddress(cbAddr, aet);
+         }
+         else {
+            syncWallet->getNewChangeAddress(cbAddr, aet);
+         }
+         return futAddr.get();
+      };
+
       //p2wpkh
-      for (unsigned i = 0; i < 5; i++)
-      {
-         auto addr = syncWallet->getNewExtAddress();
+      for (unsigned i = 0; i < 5; i++) {
+         const auto addr = lbdGetSyncAddress(true);
          extAddrVec.push_back(addr);
       }
 
       //nested p2wpkh
-      for (unsigned i = 0; i < 4; i++)
-      {
-         auto addr = syncWallet->getNewExtAddress(
+      for (unsigned i = 0; i < 4; i++) {
+         const auto addr = lbdGetSyncAddress(true,
             AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
          extAddrVec.push_back(addr);
       }
@@ -644,7 +657,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       //change addresses, p2wpkh
       for (unsigned i = 0; i < 5; i++)
       {
-         auto addr = syncWallet->getNewChangeAddress();
+         const auto addr = lbdGetSyncAddress(false);
          intAddrVec.push_back(addr);
       }
 
@@ -731,8 +744,22 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(loadedSet.size(), 14);
       EXPECT_EQ(originalSet, loadedSet);
 
+      const auto &lbdGetSyncAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [promAddr](const bs::Address &addr) {
+            promAddr->set_value(addr);
+         };
+         if (ext) {
+            syncWallet->getNewExtAddress(cbAddr, aet);
+         } else {
+            syncWallet->getNewIntAddress(cbAddr, aet);
+         }
+         return futAddr.get();
+      };
+
       //grab new address, check it has the expected bip32 index
-      auto newAddrExt = syncWallet->getNewExtAddress();
+      auto newAddrExt = lbdGetSyncAddress(true);
       BIP32_Node ext_node = base_node;
       ext_node.derivePrivate(0);
       ext_node.derivePrivate(9);
@@ -740,7 +767,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(newAddrExtHash, newAddrExt.unprefixed());
       extAddrVec.push_back(newAddrExt);
 
-      auto newAddrInt = syncWallet->getNewIntAddress();
+      auto newAddrInt = lbdGetSyncAddress(false);
       BIP32_Node int_node = base_node;
       int_node.derivePrivate(1);
       int_node.derivePrivate(5);
@@ -868,18 +895,29 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
       EXPECT_EQ(syncLeaf->getAddressPoolSize(), 60);
 
       //grab addresses from sync wallet
+      const auto &lbdGetSyncAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [promAddr](const bs::Address &addr) {
+            promAddr->set_value(addr);
+         };
+         if (ext) {
+            syncWallet->getNewExtAddress(cbAddr, aet);
+         } else {
+            syncWallet->getNewChangeAddress(cbAddr, aet);
+         }
+         return futAddr.get();
+      };
 
       //p2wpkh
-      for (unsigned i = 0; i < 10; i++)
-      {
-         auto addr = syncWallet->getNewExtAddress();
+      for (unsigned i = 0; i < 10; i++) {
+         auto addr = lbdGetSyncAddress(true);
          extAddrVec.push_back(addr);
       }
 
       //change addresses, p2wpkh
-      for (unsigned i = 0; i < 10; i++)
-      {
-         auto addr = syncWallet->getNewChangeAddress();
+      for (unsigned i = 0; i < 10; i++) {
+         auto addr = lbdGetSyncAddress(false);
          intAddrVec.push_back(addr);
       }
 
@@ -896,7 +934,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
 
       {
          //pull 1 more external address, should trigger top up
-         auto addr = syncWallet->getNewExtAddress();
+         auto addr = lbdGetSyncAddress(true);
          extAddrVec.push_back(addr);
 
          /***
@@ -906,9 +944,19 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
          EXPECT_EQ(syncLeaf->getAddressPoolSize(), 339);
       }
 
+      const auto &lbdGetIntAddress = [syncWallet](AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [promAddr](const bs::Address &addr) {
+            promAddr->set_value(addr);
+         };
+         syncWallet->getNewIntAddress(cbAddr, aet);
+         return futAddr.get();
+      };
+
       {
          //pull 1 more internal address, should trigger top up
-         auto addr = syncWallet->getNewIntAddress();
+         auto addr = lbdGetIntAddress();
          intAddrVec.push_back(addr);
 
          /***
@@ -921,8 +969,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
       //check address maps
       BIP32_Node ext_node = base_node;
       ext_node.derivePrivate(0);
-      for (unsigned i = 0; i < 11; i++)
-      {
+      for (unsigned i = 0; i < 11; i++) {
          auto addr_node = ext_node;
          addr_node.derivePrivate(i);
          auto addr_hash = BtcUtils::getHash160(addr_node.getPublicKey());
@@ -940,18 +987,16 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
       }
 
       //grab another 20 external addresses, shouldn't trigger top up
-      for (unsigned i = 0; i < 20; i++)
-      {
-         auto addr = syncWallet->getNewExtAddress();
+      for (unsigned i = 0; i < 20; i++) {
+         auto addr = lbdGetSyncAddress(true);
          extAddrVec.push_back(addr);
       }
       EXPECT_EQ(syncLeaf->getAddressPoolSize(), 378);
 
       //grab another 20 internal addresses, should trigger top up
 
-      for (unsigned i = 0; i < 20; i++)
-      {
-         auto addr = syncWallet->getNewIntAddress();
+      for (unsigned i = 0; i < 20; i++) {
+         const auto addr = lbdGetIntAddress();
          intAddrVec.push_back(addr);
       }
       EXPECT_EQ(syncLeaf->getAddressPoolSize(), 418);
@@ -1292,6 +1337,16 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    //check wallet has 10 assets per account
    ASSERT_EQ(syncLeaf->getAddressPoolSize(), 60);
 
+   const auto &lbdGetExtAddress = [syncWallet](AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+      auto promAddr = std::make_shared<std::promise<bs::Address>>();
+      auto futAddr = promAddr->get_future();
+      const auto &cbAddr = [promAddr](const bs::Address &addr) {
+         promAddr->set_value(addr);
+      };
+      syncWallet->getNewExtAddress(cbAddr, aet);
+      return futAddr.get();
+   };
+
    /***
    Grab 11 external addresses, we should have an address pool
    extention event, resulting in a pool of 360 hashes
@@ -1299,7 +1354,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
 
    std::vector<bs::Address> addrVec;
    for (unsigned i = 0; i < 12; i++)
-      addrVec.push_back(syncWallet->getNewExtAddress());
+      addrVec.push_back(lbdGetExtAddress());
 
    EXPECT_EQ(syncLeaf->getAddressPoolSize(), 348);
 
@@ -1435,15 +1490,30 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //check wallet has 10 assets per account
       ASSERT_EQ(syncLeaf->getAddressPoolSize(), 60);
 
+      const auto &lbdGetAddress = [syncWallet](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [promAddr](const bs::Address &addr) {
+            promAddr->set_value(addr);
+         };
+         if (ext) {
+            syncWallet->getNewExtAddress(cbAddr, aet);
+         }
+         else {
+            syncWallet->getNewIntAddress(cbAddr, aet);
+         }
+         return futAddr.get();
+      };
+
       //pull 13 ext addresses
       for (unsigned i = 0; i < 12; i++)
-         extVec.push_back(syncWallet->getNewExtAddress());
-      extVec.push_back(syncWallet->getNewExtAddress(
+         extVec.push_back(lbdGetAddress(true));
+      extVec.push_back(lbdGetAddress(true,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
 
       //pull 60 int addresses
       for (unsigned i = 0; i < 60; i++)
-         intVec.push_back(syncWallet->getNewIntAddress());
+         intVec.push_back(lbdGetAddress(false));
 
       //mine coins to ext[12]
       auto armoryInstance = envPtr_->armoryInstance();
@@ -1472,7 +1542,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
 
       //send coins to ext[13]
-      extVec.push_back(syncWallet->getNewExtAddress());
+      extVec.push_back(lbdGetAddress(true));
 
       auto promPtr1 = std::make_shared<std::promise<bool>>();
       auto fut1 = promPtr1->get_future();
@@ -1638,12 +1708,27 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //check address list matches
       EXPECT_EQ(extAddrList, extVec);
 
+      const auto &lbdLeafGetAddress = [syncLeaf](bool ext, AddressEntryType aet = AddressEntryType_Default) -> bs::Address {
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [promAddr](const bs::Address &addr) {
+            promAddr->set_value(addr);
+         };
+         if (ext) {
+            syncLeaf->getNewExtAddress(cbAddr, aet);
+         }
+         else {
+            syncLeaf->getNewIntAddress(cbAddr, aet);
+         }
+         return futAddr.get();
+      };
+
       //pull more addresses
-      extVec.push_back(syncLeaf->getNewExtAddress(
+      extVec.push_back(lbdLeafGetAddress(true,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
 
       for (unsigned i = 0; i < 5; i++)
-         intVec.push_back(syncLeaf->getNewIntAddress());
+         intVec.push_back(lbdLeafGetAddress(false));
 
       //check chain length
       EXPECT_EQ(syncLeaf->getExtAddressCount(), 15);
