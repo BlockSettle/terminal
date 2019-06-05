@@ -646,14 +646,14 @@ bool WalletsManager::deleteWallet(const HDWalletPtr &wallet)
    return result;
 }
 
-void WalletsManager::registerWallets()
+std::vector<std::string> WalletsManager::registerWallets()
 {
    if (!armory_) {
-      return;
+      return {};
    }
    if (empty()) {
       logger_->debug("[WalletsManager::{}] - No wallets to register.", __func__);
-      return;
+      return {};
    }
    for (auto &it : wallets_) {
       auto&& ids = it.second->registerWallet(armory_);
@@ -663,7 +663,9 @@ void WalletsManager::registerWallets()
       auto&& ids = settlementWallet_->registerWallet(armory_);
       pendingRegIds_.insert(ids.begin(), ids.end());
    }
-   logger_->debug("[{}] {} entries in pendingRegIds", __func__, pendingRegIds_.size());
+   std::vector<std::string> result;
+   result.insert(result.end(), pendingRegIds_.cbegin(), pendingRegIds_.cend());
+   return result;
 }
 
 void WalletsManager::unregisterWallets()
