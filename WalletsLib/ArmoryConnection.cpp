@@ -298,14 +298,14 @@ bool ArmoryConnection::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)
 bool ArmoryConnection::addGetTxCallback(const BinaryData &hash, const TxCb &cb)
 {
    FastLock lock(txCbLock_);
+
    const auto &it = txCallbacks_.find(hash);
    if (it != txCallbacks_.end()) {
       it->second.push_back(cb);
       return true;
    }
-   else {
-      txCallbacks_[hash].push_back(cb);
-   }
+
+   txCallbacks_[hash].push_back(cb);
    return false;
 }
 
@@ -369,28 +369,39 @@ bool ArmoryConnection::getTXsByHash(const std::set<BinaryData> &hashes, const TX
       return false;
    }
 
-   auto hashSet = std::make_shared<std::set<BinaryData>>(hashes);
-   auto result = std::make_shared<std::vector<Tx>>();
-   const auto origHashes = hashes;
-
-   const auto &cbAppendTx = [this, hashSet, result, cb](Tx tx) {
-      const auto &txHash = tx.getThisHash();
-      hashSet->erase(txHash);
-      result->emplace_back(tx);
-      if (hashSet->empty()) {
-         if (cb) {
-            cb(*result);
-         }
-      }
+   struct Data
+   {
+      std::mutex m;
+      std::set<BinaryData> hashSet;
+      std::vector<Tx> result;
    };
-   const auto &cbUpdateTx = [this, cbAppendTx](Tx tx) {
+
+   auto data = std::make_shared<Data>();
+   data->hashSet = hashes;
+
+   const auto &cbAppendTx = [this, data, cb](const Tx &tx) {
       if (!tx.isInitialized()) {
          logger_->error("[getTXsByHash (cbUpdateTx)] received uninitialized TX");
       }
-      cbAppendTx(tx);
+
+      bool isEmpty;
+      {
+         std::lock_guard<std::mutex> lock(data->m);
+         const auto &txHash = tx.getThisHash();
+         data->hashSet.erase(txHash);
+         data->result.emplace_back(tx);
+         isEmpty = data->hashSet.empty();
+      }
+
+      if (isEmpty) {
+         if (cb) {
+            cb(data->result);
+         }
+      }
    };
-   for (const auto &hash : origHashes) {
-      if (addGetTxCallback(hash, cbUpdateTx)) {
+
+   for (const auto &hash : hashes) {
+      if (addGetTxCallback(hash, cbAppendTx)) {
          continue;
       }
       bdv_->getTxByHash(hash, [this, hash](ReturnMessage<Tx> tx)->void {
