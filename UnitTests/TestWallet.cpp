@@ -109,9 +109,10 @@ TEST_F(TestWallet, BIP44_primary)
    SecureBinaryData passphrase("passphrase");
    ASSERT_NE(envPtr_->walletsMgr(), nullptr);
 
+   const bs::core::wallet::Seed seed{ SecureBinaryData("Sample test seed")
+      , NetworkType::TestNet };
    envPtr_->walletsMgr()->createWallet("primary", "test"
-      , { SecureBinaryData("Sample test seed"), NetworkType::TestNet }
-      , walletFolder_, passphrase, true);
+      , seed, walletFolder_, passphrase, true);
    EXPECT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
 
    auto wltMgr = envPtr_->walletsMgr();
@@ -119,6 +120,7 @@ TEST_F(TestWallet, BIP44_primary)
    ASSERT_NE(wallet, nullptr);
    EXPECT_EQ(wallet->name(), "primary");
    EXPECT_EQ(wallet->description(), "test");
+   EXPECT_EQ(wallet->walletId(), seed.getWalletId());
    EXPECT_EQ(wallet->walletId(), "35ADZst46");
 
    const auto grpAuth = wallet->getGroup(bs::hd::CoinType::BlockSettle_Auth);
@@ -489,6 +491,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       //load from file
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          filename, NetworkType::TestNet, "", envPtr_->logger());
+      StaticLogger::loggerPtr->debug("walletPtr: {}", (void*)walletPtr.get());
 
       //run checks anew
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
@@ -546,6 +549,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
    }
 
    {
+      int noop = 0;
       //load wo from file
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          woFilename, NetworkType::TestNet, "", envPtr_->logger());
@@ -610,14 +614,26 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
       //create sync manager
       auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "tx_cache");
+         envPtr_->logger(), "");
 
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
-      syncMgr->syncWallets();
+      auto promSync = std::make_shared<std::promise<bool>>();
+      auto futSync = promSync->get_future();
+      const auto &cbSync = [promSync](int cur, int total) {
+         if ((cur < 0) || (total < 0)) {
+            promSync->set_value(false);
+            return;
+         }
+         if (cur == total) {
+            promSync->set_value(true);
+         }
+      };
+      syncMgr->syncWallets(cbSync);
+      EXPECT_TRUE(futSync.get());
 
       //grab sync wallet
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
@@ -655,8 +671,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       }
 
       //change addresses, p2wpkh
-      for (unsigned i = 0; i < 5; i++)
-      {
+      for (unsigned i = 0; i < 5; i++) {
          const auto addr = lbdGetSyncAddress(false);
          intAddrVec.push_back(addr);
       }
@@ -665,6 +680,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 14);
       EXPECT_EQ(syncWallet->getExtAddressCount(), 9);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 5);
+      syncWallet->syncAddresses();
 
       //check address maps
       BIP32_Node ext_node = base_node;
@@ -708,14 +724,26 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
       //create sync manager
       auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "tx_cache");
+         envPtr_->logger(), "");
 
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
-      syncMgr->syncWallets();
+      auto promSync = std::make_shared<std::promise<bool>>();
+      auto futSync = promSync->get_future();
+      const auto &cbSync = [promSync](int cur, int total) {
+         if ((cur < 0) || (total < 0)) {
+            promSync->set_value(false);
+            return;
+         }
+         if (cur == total) {
+            promSync->set_value(true);
+         }
+      };
+      syncMgr->syncWallets(cbSync);
+      EXPECT_TRUE(futSync.get());
 
       //grab sync wallet
       auto groupPtr = walletPtr->getGroup(bs::hd::Bitcoin_test);
@@ -723,8 +751,11 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto syncWallet = syncMgr->getWalletById(leafPtr->walletId());
 
       //check used addr count
+      EXPECT_EQ(syncWallet->getUsedAddressCount(), leafPtr->getUsedAddressCount());
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 14);
+      EXPECT_EQ(syncWallet->getExtAddressCount(), leafPtr->getExtAddressCount());
       EXPECT_EQ(syncWallet->getExtAddressCount(), 9);
+      EXPECT_EQ(syncWallet->getIntAddressCount(), leafPtr->getIntAddressCount());
       EXPECT_EQ(syncWallet->getIntAddressCount(), 5);
 
       //check used addresses match
@@ -779,6 +810,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 16);
       EXPECT_EQ(syncWallet->getExtAddressCount(), 10);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 6);
+       syncWallet->syncAddresses();
 
       //create WO copy
       auto WOcopy = walletPtr->createWatchingOnly();
@@ -797,7 +829,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
 
       //create sync manager
       auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "tx_cache");
+         envPtr_->logger(), "");
 
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
@@ -812,9 +844,9 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto syncWallet = syncMgr->getWalletById(leafPtr->walletId());
 
       //check used addr count
-      EXPECT_EQ(syncWallet->getUsedAddressCount(), 16);
-      EXPECT_EQ(syncWallet->getExtAddressCount(), 10);
-      EXPECT_EQ(syncWallet->getIntAddressCount(), 6);
+      EXPECT_EQ(syncWallet->getUsedAddressCount(), leafPtr->getUsedAddressCount() /*16*/);
+      EXPECT_EQ(syncWallet->getExtAddressCount(), leafPtr->getExtAddressCount() /*10*/);
+      EXPECT_EQ(syncWallet->getIntAddressCount(), leafPtr->getIntAddressCount() /*6*/);
 
       //check used addresses match
       auto&& usedAddrList = syncWallet->getUsedAddressList();
@@ -830,7 +862,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
          loadedSet.insert(addr.prefixed());
 
       EXPECT_EQ(originalSet.size(), 16);
-      EXPECT_EQ(loadedSet.size(), 16);
+      EXPECT_EQ(originalSet.size(), loadedSet.size());
       EXPECT_EQ(originalSet, loadedSet);
    }
 }
@@ -869,7 +901,7 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
 
       //create sync manager
       auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "tx_cache");
+         envPtr_->logger(), "");
 
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();

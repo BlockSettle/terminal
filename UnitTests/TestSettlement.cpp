@@ -75,7 +75,7 @@ void TestSettlement::SetUp()
    const auto amount = initialTransferAmount_ * COIN;
 
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
-   walletsMgr_->createSettlementWallet(NetworkType::TestNet, {});
+//   walletsMgr_->createSettlementWallet(NetworkType::TestNet, {});
 
    for (size_t i = 0; i < nbParties_; i++) {
       auto hdWallet = std::make_shared<bs::core::hd::Wallet>(
@@ -120,6 +120,7 @@ void TestSettlement::SetUp()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
    syncMgr_->setSignContainer(inprocSigner);
    syncMgr_->syncWallets();
+   EXPECT_TRUE(syncMgr_->createSettlementWallet());
 
    auto regIDs = syncMgr_->registerWallets();
    ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
