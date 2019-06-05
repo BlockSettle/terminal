@@ -48,8 +48,10 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
    return QWidget::eventFilter(watched, event);
 }
 
-void SearchWidget::init()
+void SearchWidget::init(std::shared_ptr<ChatSearchActionsHandler> handler)
 {
+   ui_->chatSearchLineEdit->setActionsHandler(handler);
+
    setMaximumHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
                     ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
    setMinimumHeight(kBottomSpace + ui_->chatSearchLineEdit->height());

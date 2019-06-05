@@ -234,7 +234,7 @@ signals:
    void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
    void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
    void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
-   void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
+   void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered);
    void NewContactRequest(const QString &userId);
    void ContactRequestAccepted(const QString &userId);
    void RoomsInserted();
@@ -322,6 +322,8 @@ private:
 
    // based on server reqest id
    std::unordered_set<std::string> aliveOtcRequests_;
+
+   bool              emailEntered_ = false;
 
    // ModelChangesHandler interface
 public:

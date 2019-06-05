@@ -508,7 +508,8 @@ void ChatClient::OnSearchUsersResponse(const Chat::SearchUsersResponse & respons
    for (auto user : userList){
       users << QString::fromStdString(user->toJsonString());
    }
-   emit SearchUserListReceived(userList);
+   emit SearchUserListReceived(userList, emailEntered_);
+   emailEntered_ = false;
    logger_->debug("[ChatClient::OnSearchUsersResponse]: Received user list from server: "
                   "{}",
                   users.join(QLatin1String(", ")).prepend(QLatin1Char('[')).append(QLatin1Char(']')).toStdString()
@@ -1276,6 +1277,7 @@ void ChatClient::onActionSearchUsers(const std::string &text)
       //and search must be triggerred if pattern have length >= 3
       return;
    }
+   emailEntered_ = true;
    sendSearchUsersRequest(pattern);
 }
 

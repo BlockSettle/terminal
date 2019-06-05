@@ -350,7 +350,7 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData
    }
 }
 
-void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
+void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered)
 {
    std::vector<UserSearchModel::UserInfo> userInfoList;
    QString searchText = ui_->searchWidget->searchText();
@@ -390,7 +390,7 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
 
    bool visible = true;
    if (isEmail) {
-      // TODO
+      visible &= emailEntered || !userInfoList.empty();
    } else {
       visible &= !userInfoList.empty();
    }
@@ -440,8 +440,8 @@ void ChatWidget::changeState(ChatWidget::State state)
 
 void ChatWidget::initSearchWidget()
 {
+   ui_->searchWidget->init(client_);
    ui_->searchWidget->setSearchModel(client_->getUserSearchModel());
-   ui_->searchWidget->init();
    connect(ui_->searchWidget, &SearchWidget::addFriendRequied,
            this, &ChatWidget::onSendFriendRequest);
    connect(ui_->searchWidget, &SearchWidget::removeFriendRequired,

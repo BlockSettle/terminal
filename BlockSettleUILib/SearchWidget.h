@@ -6,6 +6,7 @@
 #include <memory>
 
 class QAbstractItemModel;
+class ChatSearchActionsHandler;
 
 namespace Ui {
    class SearchWidget;
@@ -38,7 +39,7 @@ public:
 
    bool eventFilter(QObject *watched, QEvent *event) override;
 
-   void init();
+   void init(std::shared_ptr<ChatSearchActionsHandler> handler);
 
    bool isLineEditEnabled() const;
    bool isListVisible() const;
