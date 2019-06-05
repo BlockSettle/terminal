@@ -1020,6 +1020,7 @@ void ChatClient::sendFriendRequest(const QString &friendUserId)
             Chat::ContactsAction::Request,
             appSettings_->GetAuthKeys().second);
    sendRequest(request);
+   addOrUpdateContact(friendUserId, Chat::ContactStatus::Outgoing);
 }
 
 void ChatClient::acceptFriendRequest(const QString &friendUserId)
@@ -1112,6 +1113,16 @@ void ChatClient::clearSearch()
 bool ChatClient::isFriend(const QString &userId)
 {
    return chatDb_->isContactExist(userId);
+}
+
+Chat::ContactRecordData ChatClient::getContact(const QString &userId) const
+{
+   Chat::ContactRecordData contact(QString(),
+                                   QString(),
+                                   Chat::ContactStatus::Accepted,
+                                   autheid::PublicKey());
+   chatDb_->getContact(userId, contact);
+   return contact;
 }
 
 QString ChatClient::getUserId()

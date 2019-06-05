@@ -150,6 +150,7 @@ public:
    QString deriveKey(const QString& email) const;
    void clearSearch();
    bool isFriend(const QString &userId);
+   Chat::ContactRecordData getContact(const QString &userId) const;
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
    bool decryptIESMessage(std::shared_ptr<Chat::MessageData>& message);
    QString getUserId();

@@ -365,8 +365,23 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
             continue;
          }
          auto status = UserSearchModel::UserStatus::ContactUnknown;
-         if (client_->isFriend(userId)) {
-            status = UserSearchModel::UserStatus::ContactAdded;
+         auto contact = client_->getContact(userId);
+         if (contact.isValid()) {
+            auto contactStatus = contact.getContactStatus();
+            switch (contactStatus) {
+            case Chat::ContactStatus::Accepted:
+               status = UserSearchModel::UserStatus::ContactAdded;
+               break;
+            case Chat::ContactStatus::Incoming:
+            case Chat::ContactStatus::Outgoing:
+               status = UserSearchModel::UserStatus::ContactPending;
+               break;
+            case Chat::ContactStatus::Rejected:
+               status = UserSearchModel::UserStatus::ContactRejected;
+               break;
+            /*default:
+               break;*/
+            }
          }
          userInfoList.emplace_back(userId, status);
       }

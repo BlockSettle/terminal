@@ -6,11 +6,12 @@
 #include <QtGui/QColor>
 
 constexpr int kRowHeigth = 20;
-const QColor kContactUnknown = Qt::gray;
-const QColor kContactAdded = QColor(0x00c8f8);
-const QColor kContactPendingIncoming = Qt::darkYellow;
-const QColor kContactPendingOutgoing = Qt::darkGreen;
-const QColor kContactRejected = Qt::darkRed;
+
+const QColor kContactUnknown           = QColor(0xc0c0c0);
+const QColor kContactAdded             = QColor(0x00c8f8);
+const QColor kContactPendingIncoming   = QColor(0xffa834);
+const QColor kContactPendingOutgoing   = QColor(0xa0bc5d);
+const QColor kContactRejected          = QColor(0xc4362f);
 
 UserSearchModel::UserSearchModel(QObject *parent) : QAbstractListModel(parent)
 {
@@ -45,8 +46,7 @@ QVariant UserSearchModel::data(const QModelIndex &index, int role) const
    case Qt::DisplayRole:
       return QVariant::fromValue(users_.at(static_cast<size_t>(index.row())).first);
    case UserSearchModel::UserStatusRole: {
-      auto status = users_.at(static_cast<size_t>(index.row())).second;
-      return QVariant::fromValue(status == UserStatus::ContactAdded);
+      return QVariant::fromValue(users_.at(static_cast<size_t>(index.row())).second);
    }
    case Qt::SizeHintRole:
       return QVariant::fromValue(QSize(20, kRowHeigth));

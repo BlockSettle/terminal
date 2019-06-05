@@ -31,6 +31,8 @@ namespace Chat {
 
        void setUserId(const QString &userId);
 
+       bool isValid() const;
+
     private:
        QString userId_;
        QString contactId_;
