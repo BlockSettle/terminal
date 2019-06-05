@@ -102,7 +102,7 @@ public:
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
-      
+
       NotificationCenter::notify(bs::ui::NotifyType::LogOut, {});
    }
 
@@ -531,7 +531,7 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
    if (event->type() == QEvent::WindowActivate) {
       // hide tab icon on window activate event
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
-      
+
       if (isChatTab_) {
          ui_->treeViewUsers->updateCurrentChat();
       }
@@ -716,7 +716,7 @@ void ChatWidget::OTCSwitchToCommonRoom()
       else {
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCParticipantShieldPage));
       }
-   } 
+   }
    else {
       ui_->treeViewOTCRequests->selectionModel()->clearSelection();
    }
