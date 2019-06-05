@@ -1368,7 +1368,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addrVec[10].getRecipient(50 * COIN);
+   auto recipient = addrVec[10].getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
@@ -1379,7 +1379,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    ***/
 
    curHeight = envPtr_->armoryConnection()->topBlock();
-   recipient = addrVec[0].getRecipient(50 * COIN);
+   recipient = addrVec[0].getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
@@ -1421,7 +1421,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
       [this, leaf, syncLeaf, addrVec, promPtr1]
    (std::vector<UTXO> inputs)->void
    {
-      const auto recipient = addrVec[11].getRecipient(25 * COIN);
+      const auto recipient = addrVec[11].getRecipient((uint64_t)(25 * COIN));
       const auto txReq = syncLeaf->createTXRequest(inputs, { recipient });
       BinaryData txSigned;
       {
@@ -1520,7 +1520,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       unsigned blockCount = 6;
 
       unsigned curHeight = envPtr_->armoryConnection()->topBlock();
-      auto recipient = extVec[12].getRecipient(50 * COIN);
+      auto recipient = extVec[12].getRecipient((uint64_t)(50 * COIN));
       armoryInstance->mineNewBlock(recipient.get(), blockCount);
       envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
@@ -1564,7 +1564,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          std::vector<UTXO> utxos;
          utxos.push_back(inputs[0]);
 
-         const auto recipient = extVec[13].getRecipient(25 * COIN);
+         const auto recipient = extVec[13].getRecipient((uint64_t)(25 * COIN));
          const auto txReq = syncLeaf->createTXRequest(
             utxos, { recipient }, 0, false, intVec[41]);
 
@@ -1701,7 +1701,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       EXPECT_EQ(syncLeaf->getIntAddressCount(), 42);
 
       //check ext[12] is p2sh_p2wpkh
-      auto& extAddrList = syncLeaf->getExtAddressList();
+      const auto &extAddrList = syncLeaf->getExtAddressList();
       EXPECT_EQ(extAddrList[12].getType(),
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
 
@@ -1814,7 +1814,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       EXPECT_EQ(syncLeaf->getIntAddressCount(), 47);
 
       //check ext[12] & [15] are p2sh_p2wpkh
-      auto& extAddrList = syncLeaf->getExtAddressList();
+      const auto &extAddrList = syncLeaf->getExtAddressList();
       EXPECT_EQ(extAddrList[12].getType(),
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
       EXPECT_EQ(extAddrList[14].getType(),
@@ -1872,7 +1872,7 @@ TEST_F(TestWalletWithArmory, Comments)
    unsigned blockCount = 7;
 
    const auto &curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addr.getRecipient(50 * COIN);
+   auto recipient = addr.getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
@@ -1942,7 +1942,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addr1.getRecipient(50 * COIN);
+   auto recipient = addr1.getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
@@ -2072,7 +2072,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
-   auto recipient = addr1.getRecipient(50 * COIN);
+   auto recipient = addr1.getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
