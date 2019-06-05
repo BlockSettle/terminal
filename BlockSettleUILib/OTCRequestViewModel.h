@@ -26,7 +26,7 @@ public:
 
 public:
    void AddLiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc);
-   bool RemoveOTCByID(const std::__1::string &serverRequestId);
+   bool RemoveOTCByID(const std::string &serverRequestId);
 
    std::shared_ptr<Chat::OTCRequestData> GetOTCRequest(const QModelIndex& index);
 
