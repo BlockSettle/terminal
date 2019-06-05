@@ -39,7 +39,6 @@ namespace bs {
 
 class AssetManager;
 class CelerClient;
-class ApplicationSettings;
 
 class QuoteProvider : public QObject
 {

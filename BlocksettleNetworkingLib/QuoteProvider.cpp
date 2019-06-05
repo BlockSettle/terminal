@@ -12,7 +12,6 @@
 #include "CelerSubmitRFQSequence.h"
 #include "CurrencyPair.h"
 #include "FastLock.h"
-#include "ApplicationSettings.h"
 
 #include "DownstreamQuoteProto.pb.h"
 #include "DownstreamOrderProto.pb.h"
