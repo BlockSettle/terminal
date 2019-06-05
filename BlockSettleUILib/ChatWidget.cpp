@@ -370,11 +370,13 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
             auto contactStatus = contact.getContactStatus();
             switch (contactStatus) {
             case Chat::ContactStatus::Accepted:
-               status = UserSearchModel::UserStatus::ContactAdded;
+               status = UserSearchModel::UserStatus::ContactAccepted;
                break;
             case Chat::ContactStatus::Incoming:
+               status = UserSearchModel::UserStatus::ContactPendingIncoming;
+               break;
             case Chat::ContactStatus::Outgoing:
-               status = UserSearchModel::UserStatus::ContactPending;
+               status = UserSearchModel::UserStatus::ContactPendingOutgoing;
                break;
             case Chat::ContactStatus::Rejected:
                status = UserSearchModel::UserStatus::ContactRejected;

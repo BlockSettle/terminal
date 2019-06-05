@@ -158,8 +158,9 @@ void SearchWidget::showContextMenu(const QPoint &pos)
       action->setStatusTip(tr("Click to add user to contact list"));
       break;
    }
-   case UserSearchModel::UserStatus::ContactAdded:
-   case UserSearchModel::UserStatus::ContactPending: {
+   case UserSearchModel::UserStatus::ContactAccepted:
+   case UserSearchModel::UserStatus::ContactPendingIncoming:
+   case UserSearchModel::UserStatus::ContactPendingOutgoing: {
       auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
          emit removeFriendRequired(id);
       });
@@ -193,8 +194,9 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
       emit addFriendRequied(id);
       break;
    }
-   case UserSearchModel::UserStatus::ContactAdded:
-   case UserSearchModel::UserStatus::ContactPending: {
+   case UserSearchModel::UserStatus::ContactAccepted:
+   case UserSearchModel::UserStatus::ContactPendingIncoming:
+   case UserSearchModel::UserStatus::ContactPendingOutgoing: {
       emit removeFriendRequired(id);
       break;
    }

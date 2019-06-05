@@ -18,8 +18,9 @@ public:
    };
    enum class UserStatus {
       ContactUnknown,
-      ContactAdded,
-      ContactPending,
+      ContactAccepted,
+      ContactPendingIncoming,
+      ContactPendingOutgoing,
       ContactRejected
    };
    Q_ENUM(UserStatus)

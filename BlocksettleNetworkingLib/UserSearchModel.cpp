@@ -55,9 +55,11 @@ QVariant UserSearchModel::data(const QModelIndex &index, int role) const
       switch (status) {
       case UserSearchModel::UserStatus::ContactUnknown:
          return QVariant::fromValue(kContactUnknown);
-      case UserSearchModel::UserStatus::ContactAdded:
+      case UserSearchModel::UserStatus::ContactAccepted:
          return QVariant::fromValue(kContactAdded);
-      case UserSearchModel::UserStatus::ContactPending:
+      case UserSearchModel::UserStatus::ContactPendingIncoming:
+         return QVariant::fromValue(kContactPendingIncoming);
+      case UserSearchModel::UserStatus::ContactPendingOutgoing:
          return QVariant::fromValue(kContactPendingOutgoing);
       default:
          return QVariant();
