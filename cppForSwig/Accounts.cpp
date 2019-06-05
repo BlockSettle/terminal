@@ -1318,8 +1318,6 @@ const pair<BinaryData, AddressEntryType>&
 void AddressAccount::updateAddressHashMap()
 {
    ReentrantLock lock(this);
-   if (addrHashMapUpdated_)
-      return;
 
    for (auto account : assetAccounts_)
    {
@@ -1335,7 +1333,6 @@ void AddressAccount::updateAddressHashMap()
          }
       }
    }
-   addrHashMapUpdated_ = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

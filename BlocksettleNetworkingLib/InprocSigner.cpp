@@ -356,16 +356,15 @@ void InprocSigner::syncWallet(const std::string &id, const std::function<void(bs
 
       size_t addrCnt = 0;
       for (const auto &addr : wallet->getUsedAddressList()) {
-//         const auto index = wallet->getAddressIndex(addr);
+         const auto index = wallet->getAddressIndex(addr);
          const auto comment = wallet->getAddressComment(addr);
-         result.addresses.push_back({std::to_string(addrCnt++), addr, comment});
+         result.addresses.push_back({index, addr, comment});
       }
 
-/*      for (const auto &addr : wallet->getPooledAddressList()) 
-      {
+      for (const auto &addr : wallet->getPooledAddressList()) {
          const auto index = wallet->getAddressIndex(addr);
          result.addrPool.push_back({ index, addr, ""});
-      }*/
+      }
 
       for (const auto &txComment : wallet->getAllTxComments())
          result.txComments.push_back({txComment.first, txComment.second});

@@ -165,8 +165,8 @@ namespace bs {
                AddressEntryType_P2WPKH };
 
             std::set<AddrPoolKey>   tempAddresses_;
-            std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressPool_;
-            std::map<bs::Address, AddrPoolKey>           poolByAddr_;
+            std::map<AddrPoolKey, bs::Address>  addressPool_;
+            std::map<bs::Address, AddrPoolKey>  poolByAddr_;
 
          private:
             std::unordered_map<AddrPoolKey, bs::Address, AddrPoolHasher>   addressMap_;

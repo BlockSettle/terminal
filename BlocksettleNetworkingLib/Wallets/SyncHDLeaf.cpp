@@ -40,22 +40,21 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       lastExtIdx_ = data.highestExtIndex;
       lastIntIdx_ = data.highestIntIndex;
 
-      for (const auto &addr : data.addresses) 
-      {
+      for (const auto &addr : data.addresses) {
          addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
       }
 
-      for (const auto &addr : data.addrPool) 
-      {  
+      for (const auto &addr : data.addrPool) {
          //addPool normally won't contain comments
          const auto path = bs::hd::Path::fromString(addr.index);
          addressPool_[{ path, addr.address.getType() }] = addr.address;
          poolByAddr_[addr.address] = { path, addr.address.getType() };
       }
 
-      for (const auto &txComment : data.txComments) 
+      for (const auto &txComment : data.txComments) {
          setTransactionComment(txComment.txHash, txComment.comment, false);
+      }
 
       if (cbDone)
          cbDone();

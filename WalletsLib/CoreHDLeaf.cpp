@@ -380,10 +380,10 @@ bs::Address hd::Leaf::getAddressByIndex(
       if (addrPtr->getType() != accountPtr_->getAddressType())
          throw AccountException("type mismatch for instantiated address");
    }
-/*   else if (addrPtr->getType() != aet)
+   else if (addrPtr->getType() != aet)
    {
-      throw AccountException("type mismatch for instantiated address");
-   }*/
+      throw AccountException("type mismatch for instantiated address " + std::to_string(id));
+   }
 
    return bs::Address(addrPtr->getHash(), aet);
 }
@@ -509,16 +509,15 @@ std::vector<bs::Address> hd::Leaf::getExtAddressList() const
    return addrVec;
 }
 
+unsigned hd::Leaf::getUsedAddressCount() const
+{
+   return getExtAddressCount() + getIntAddressCount();
+}
+
 unsigned hd::Leaf::getExtAddressCount() const
 {
    return accountPtr_->getOuterAccount()->getHighestUsedIndex() + 1;
 }
-
-unsigned hd::Leaf::getUsedAddressCount() const
-{
-   return getExtAddressCount();
-}
-
 
 std::vector<bs::Address> hd::Leaf::getIntAddressList() const
 {
@@ -659,9 +658,9 @@ std::pair<bs::Address, bool> hd::Leaf::synchronizeUsedAddressChain(
    if (aeType != AddressEntryType_Default && result.first.getType() != aeType)
       throw AccountException("did not get expected address entry type");
 
-/*   auto resultIndex = addressIndex(result.first);
+   auto resultIndex = addressIndex(result.first);
    if (resultIndex != addrIndex)
-      throw AccountException("did not get expected address index");*/
+      throw AccountException("did not get expected address index");
 
    result.second = true;
    return result;
