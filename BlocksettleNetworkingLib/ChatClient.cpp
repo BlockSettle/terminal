@@ -1461,7 +1461,7 @@ bool ChatClient::PullCommonOTCRequest(const std::string& serverOTCId)
       return false;
    }
 
-   auto request = std::make_shared<Chat::PullOwnOTCRequest>("", Chat::OTCRoomKey.toStdString(), serverOTCId);
+   auto request = std::make_shared<Chat::PullOwnOTCRequest>("", currentUserId_, serverOTCId);
    sendRequest(request);
    return true;
 }
@@ -1482,7 +1482,7 @@ bool ChatClient::PullPrivateOTCRequest(const std::string &targetId, const std::s
       return false;
    }
 
-   auto request = std::make_shared<Chat::PullOwnOTCRequest>("", targetId, serverOTCId);
+   auto request = std::make_shared<Chat::PullOwnOTCRequest>("", currentUserId_, serverOTCId);
    sendRequest(request);
    return true;
 }
