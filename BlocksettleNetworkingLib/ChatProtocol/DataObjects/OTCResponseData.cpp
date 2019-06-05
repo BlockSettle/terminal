@@ -9,13 +9,12 @@ namespace Chat {
 QJsonObject OTCResponseData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
-   data[OTCResponseIdClientKey] = clientResponseId_;
-   data[OTCResponseIdServerKey] = serverResponseId_;
-   data[OTCNegotiationChannelIdKey] = negotiationChannelId_;
-   data[OTCRequestIdServerKey] = serverRequestId_;
-   data[OTCRequestorIdKey] = requestorId_;
-   data[OTCTargetIdKey] = initialTargetId_;
-   data[OTCResponderIdKey] = responderId_;
+   data[OTCResponseIdClientKey] = QString::fromStdString(clientResponseId_);
+   data[OTCResponseIdServerKey] = QString::fromStdString(serverResponseId_);
+   data[OTCRequestIdServerKey] = QString::fromStdString(serverRequestId_);
+   data[OTCRequestorIdKey] = QString::fromStdString(requestorId_);
+   data[OTCTargetIdKey] = QString::fromStdString(initialTargetId_);
+   data[OTCResponderIdKey] = QString::fromStdString(responderId_);
    data[OTCResponseTimestampKey] = QString::number(responseTimestamp_);
 
    QJsonObject priceRangeObj =  {{OTCLowerKey, QString::number(priceRange_.lower)},
@@ -33,13 +32,12 @@ std::shared_ptr<OTCResponseData> OTCResponseData::fromJSON(const std::string& js
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-   QString clientResponseId = data[OTCResponseIdClientKey].toString();
-   QString serverResponseId = data[OTCResponseIdServerKey].toString();
-   QString negotiationChannelId = data[OTCNegotiationChannelIdKey].toString();
-   QString serverRequestId = data[OTCRequestIdServerKey].toString();
-   QString requestorId = data[OTCRequestorIdKey].toString();
-   QString initialTargetId = data[OTCTargetIdKey].toString();
-   QString responderId = data[OTCResponderIdKey].toString();
+   const auto clientResponseId = data[OTCResponseIdClientKey].toString().toStdString();
+   const auto serverResponseId = data[OTCResponseIdServerKey].toString().toStdString();
+   const auto serverRequestId = data[OTCRequestIdServerKey].toString().toStdString();
+   const auto requestorId = data[OTCRequestorIdKey].toString().toStdString();
+   const auto initialTargetId = data[OTCTargetIdKey].toString().toStdString();
+   const auto responderId = data[OTCResponderIdKey].toString().toStdString();
    uint64_t responseTimestamp = data[OTCResponseTimestampKey].toString().toULongLong();
 
    QJsonObject pro = data[OTCPriceRangeObjectKey].toObject();
@@ -52,7 +50,6 @@ std::shared_ptr<OTCResponseData> OTCResponseData::fromJSON(const std::string& js
 
    return std::make_shared<OTCResponseData>(clientResponseId,
                                            serverResponseId,
-                                           negotiationChannelId,
                                            serverRequestId,
                                            requestorId,
                                            initialTargetId,
@@ -62,17 +59,16 @@ std::shared_ptr<OTCResponseData> OTCResponseData::fromJSON(const std::string& js
                                            quantityRange);
 }
 
-OTCResponseData::OTCResponseData(const QString& clientResponseId
-                      , const QString& serverRequestId
-                      , const QString& requestorId
-                      , const QString& initialTargetId
-                      , const QString& responderId
+OTCResponseData::OTCResponseData(const std::string& clientResponseId
+                      , const std::string& serverRequestId
+                      , const std::string& requestorId
+                      , const std::string& initialTargetId
+                      , const std::string& responderId
                       , const bs::network::OTCPriceRange& priceRange
                       , const bs::network::OTCQuantityRange& quantityRange)
   : DataObject(DataObject::Type::OTCResponseData)
   , clientResponseId_{clientResponseId}
   , serverResponseId_{}
-  , negotiationChannelId_{}
   , serverRequestId_{serverRequestId}
   , requestorId_{requestorId}
   , initialTargetId_{initialTargetId}
@@ -82,20 +78,18 @@ OTCResponseData::OTCResponseData(const QString& clientResponseId
   , quantityRange_{quantityRange}
 {}
 
-OTCResponseData::OTCResponseData(const QString& clientResponseId
-                      , const QString& serverResponseId
-                      , const QString& negotiationChannelId
-                      , const QString& serverRequestId
-                      , const QString& requestorId
-                      , const QString& initialTargetId
-                      , const QString& responderId
+OTCResponseData::OTCResponseData(const std::string& clientResponseId
+                      , const std::string& serverResponseId
+                      , const std::string& serverRequestId
+                      , const std::string& requestorId
+                      , const std::string& initialTargetId
+                      , const std::string& responderId
                       , const uint64_t responseTimestamp
                       , const bs::network::OTCPriceRange& priceRange
                       , const bs::network::OTCQuantityRange& quantityRange)
   : DataObject(DataObject::Type::OTCResponseData)
   , clientResponseId_{clientResponseId}
   , serverResponseId_{serverResponseId}
-  , negotiationChannelId_{negotiationChannelId}
   , serverRequestId_{serverRequestId}
   , requestorId_{requestorId}
   , initialTargetId_{initialTargetId}
@@ -105,37 +99,32 @@ OTCResponseData::OTCResponseData(const QString& clientResponseId
   , quantityRange_{quantityRange}
 {}
 
-QString OTCResponseData::clientResponseId() const
+std::string OTCResponseData::clientResponseId() const
 {
   return clientResponseId_;
 }
 
-QString OTCResponseData::serverResponseId() const
+std::string OTCResponseData::serverResponseId() const
 {
   return serverResponseId_;
 }
 
-QString OTCResponseData::negotiationChannelId() const
-{
-  return negotiationChannelId_;
-}
-
-QString OTCResponseData::serverRequestId() const
+std::string OTCResponseData::serverRequestId() const
 {
   return serverRequestId_;
 }
 
-QString OTCResponseData::requestorId() const
+std::string OTCResponseData::requestorId() const
 {
   return requestorId_;
 }
 
-QString OTCResponseData::initialTargetId() const
+std::string OTCResponseData::initialTargetId() const
 {
   return initialTargetId_;
 }
 
-QString OTCResponseData::responderId() const
+std::string OTCResponseData::responderId() const
 {
   return responderId_;
 }
@@ -155,7 +144,7 @@ bs::network::OTCQuantityRange OTCResponseData::quantityRange() const
   return quantityRange_;
 }
 
-void OTCResponseData::setServerResponseId(const QString &serverResponseId)
+void OTCResponseData::setServerResponseId(const std::string &serverResponseId)
 {
     serverResponseId_ = serverResponseId;
 }

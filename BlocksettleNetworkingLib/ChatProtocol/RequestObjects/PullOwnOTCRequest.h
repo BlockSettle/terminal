@@ -6,20 +6,20 @@ namespace Chat {
    class PullOwnOTCRequest : public Request
    {
    public:
-      PullOwnOTCRequest(const std::string &clientId, const QString& targetId, const QString& serverOTCId);
+      PullOwnOTCRequest(const std::string &clientId, const std::string& targetId, const std::string& serverOTCId);
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId
                                                , const std::string& jsonData);
       void handle(RequestHandler&) override;
 
 
-      QString targetId() const;
+      std::string targetId() const;
 
-      QString serverOTCId() const;
+      std::string serverOTCId() const;
 
    private:
-      QString targetId_;
-      QString serverOTCId_;
+      std::string targetId_;
+      std::string serverOTCId_;
    };
 }
 

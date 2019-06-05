@@ -99,9 +99,9 @@ private slots:
    void OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
    void OnOTCOwnRequestRejected(const QString& reason);
    void OnNewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
-   void OnOTCRequestCancelled(const QString& otcId);
-   void OnOTCRequestExpired(const QString& otcId);
-   void OnOwnOTCRequestExpired(const QString& otcId);
+   void OnOTCRequestCancelled(const std::string& otcId);
+   void OnOTCRequestExpired(const std::string& otcId);
+   void OnOwnOTCRequestExpired(const std::string& otcId);
 
 signals:
    void LoginFailed();
@@ -129,9 +129,9 @@ private:
    void DisplayOwnSubmittedOTC();
    void DisplayOwnLiveOTC();
 
-   bool IsOwnOTCId(const QString& otcId) const;
+   bool IsOwnOTCId(const std::string& otcId) const;
    void OnOwnOTCPulled();
-   void OnOTCCancelled(const QString& otcId);
+   void OnOTCCancelled(const std::string& otcId);
 
    bool IsOTCChatSelected() const;
    void UpdateOTCRoomWidgetIfRequired();
