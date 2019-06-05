@@ -770,7 +770,7 @@ bool AuthAddressManager::SubmitRequestToPB(const std::string& name, const std::s
       });
    });
 
-   if (!command->ExecuteRequest(settings_->pubBridgeHost(), std::to_string(settings_->pubBridgePort())
+   if (!command->ExecuteRequest(settings_->pubBridgeHost(), settings_->pubBridgePort()
          , data, true)) {
       logger_->error("[AuthAddressManager::SubmitRequestToPB] failed to send request {}", name);
       return false;

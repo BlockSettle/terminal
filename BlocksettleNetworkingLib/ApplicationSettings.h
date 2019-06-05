@@ -183,7 +183,7 @@ public:
    std::pair<autheid::PrivateKey, autheid::PublicKey> GetAuthKeys();
 
    std::string pubBridgeHost() const;
-   int pubBridgePort() const;
+   std::string pubBridgePort() const;
 
 signals:
    void settingChanged(int setting, QVariant value);

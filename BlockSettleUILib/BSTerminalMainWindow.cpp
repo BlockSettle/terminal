@@ -299,7 +299,7 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
    });
 
    if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->pubBridgeHost()
-      , std::to_string(applicationSettings_->pubBridgePort()), reqPkt.SerializeAsString(), true)) {
+      , applicationSettings_->pubBridgePort(), reqPkt.SerializeAsString(), true)) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] failed to send request");
       showError(title, tr("Failed to retrieve network settings due to invalid connection to BlockSettle server"));
    }

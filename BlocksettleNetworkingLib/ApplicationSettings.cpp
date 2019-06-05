@@ -710,7 +710,7 @@ std::string ApplicationSettings::pubBridgeHost() const
    return "";
 }
 
-int ApplicationSettings::pubBridgePort() const
+std::string ApplicationSettings::pubBridgePort() const
 {
    auto env = EnvConfiguration(get<int>(ApplicationSettings::envConfiguration));
 
@@ -718,11 +718,11 @@ int ApplicationSettings::pubBridgePort() const
       case PROD:
       case UAT:
       case Staging:
-         return 9091;
+         return "9091";
       case Custom:
-         return get<int>(ApplicationSettings::customPubBridgePort);
+         return get<std::string>(ApplicationSettings::customPubBridgePort);
    }
 
    assert(false);
-   return 0;
+   return "";
 }

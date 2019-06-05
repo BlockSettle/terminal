@@ -319,7 +319,7 @@ std::string CCFileManager::GetPuBHost() const
 
 std::string CCFileManager::GetPuBPort() const
 {
-   return std::to_string(appSettings_->pubBridgePort());
+   return appSettings_->pubBridgePort();
 }
 
 std::string CCFileManager::GetPuBKey() const
