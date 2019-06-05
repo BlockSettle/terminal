@@ -61,7 +61,7 @@ namespace Chat
    ,   ResponseAnswerCommonOTC
    ,   ResponseUpdateCommonOTC
    };
-   
+
    enum class ContactsAction {
       Accept,
       Reject,
@@ -98,7 +98,7 @@ namespace Chat
       Canceled,
       Expired,
    };
-   
+
    static const QString VersionKey   = QStringLiteral("version");
    static const QString NameKey      = QStringLiteral("name");
    static const QString TypeKey      = QStringLiteral("type");
@@ -192,15 +192,15 @@ namespace Chat
       T messageType_;
       std::string version_;
    };
-   
+
    template <typename T>
    std::string serializeData(const T* thisPtr)
    {
       auto data = QJsonDocument(thisPtr->toJson());
       QString serializedData = QString::fromUtf8(data.toJson());
       return serializedData.toStdString();
-   } 
-   
+   }
+
    autheid::PublicKey publicKeyFromString(const std::string &s);
    std::string publicKeyToString(const autheid::PublicKey &k);
 
