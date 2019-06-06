@@ -44,6 +44,8 @@ public:
    // Sent to GUI status update message
    void sendStatusUpdate();
 
+   void resetConnection();
+
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnClientConnected(const std::string &clientId) override;

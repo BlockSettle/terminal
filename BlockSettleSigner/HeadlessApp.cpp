@@ -89,8 +89,13 @@ void HeadlessAppObj::start()
 void HeadlessAppObj::stop()
 {
    adapterConnection_.reset();
+   adapterLsn_->resetConnection();
+
    connection_.reset();
+   listener_->resetConnection();
+
    adapterLsn_.reset();
+
    listener_.reset();
 }
 

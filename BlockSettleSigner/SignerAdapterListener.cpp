@@ -259,6 +259,10 @@ void SignerAdapterListener::setCallbacks()
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
    , bs::signer::RequestId reqId)
 {
+   if (connection_) {
+      return false;
+   }
+
    signer::Packet packet;
    packet.set_type(pt);
    packet.set_data(data);
@@ -284,6 +288,11 @@ void SignerAdapterListener::sendStatusUpdate()
    signer::UpdateStatus evt;
    evt.set_signer_bind_status(signer::BindStatus(app_->signerBindStatus()));
    sendData(signer::UpdateStatusType, evt.SerializeAsString());
+}
+
+void SignerAdapterListener::resetConnection()
+{
+   connection_ = nullptr;
 }
 
 bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
