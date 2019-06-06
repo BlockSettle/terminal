@@ -16,36 +16,45 @@ namespace Chat {
    public:
       OTCUpdateData() = delete;
 
-      OTCUpdateData(const QString& serverRequestId
-                    , const QString& clientUpdateId
+      OTCUpdateData(const std::string& serverResponseId
+                    , const std::string& clientUpdateId
+                    , const std::string& updateSenderId
                     , const double amount
                     , const double price);
 
-      OTCUpdateData(const QString& serverRequestId
-                    , const QString& clientUpdateId
-                    , const QString& serverUpdateId
+      OTCUpdateData(const std::string& serverResponseId
+                    , const std::string& clientUpdateId
+                    , const std::string& updateSenderId
+                    , const std::string& updateReceiverId
                     , const uint64_t updateTimestamp
                     , const double amount
                     , const double price);
 
       ~OTCUpdateData() override = default;
 
-      QString serverRequestId() const;
+      std::string serverResponseId() const;
+      std::string clientUpdateId() const;
 
-      QString clientUpdateId() const;
-      QString serverUpdateId() const;
+      std::string updateSenderId() const;
+
+      std::string updateReceiverId() const;
 
       uint64_t updateTimestamp() const;
 
       double   amount() const;
       double   price() const;
+
+      void     setUpdateReceiverId(const std::string& receiverId);
+      void     setCurrentUpdateTimestamp();
+
    private:
-      const QString  serverRequestId_;
-      const QString  clientUpdateId_;
-      const QString  serverUpdateId_;
-      const uint64_t updateTimestamp_;
-      const double   amount_;
-      const double   price_;
+      const std::string serverResponseId_;
+      const std::string clientUpdateId_;
+      const std::string updateSenderId_;
+      std::string       updateReceiverId_;
+      uint64_t          updateTimestamp_;
+      const double      amount_;
+      const double      price_;
    };
 }
 

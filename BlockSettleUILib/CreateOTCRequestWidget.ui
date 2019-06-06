@@ -413,32 +413,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBoxDevTools">
-     <property name="title">
-      <string>Development tools ( temp )</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_4">
-      <item>
-       <widget class="QCheckBox" name="checkBoxSendAsOwn">
-        <property name="text">
-         <string>Send as own OTC</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBoxGetReply">
-        <property name="text">
-         <string>Get fake reply</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
