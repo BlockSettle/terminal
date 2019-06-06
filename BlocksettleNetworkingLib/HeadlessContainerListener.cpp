@@ -11,15 +11,13 @@
 
 using namespace Blocksettle::Communication;
 
-HeadlessContainerListener::HeadlessContainerListener(ServerConnection *connection
-   , const std::shared_ptr<spdlog::logger> &logger
+HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::shared_ptr<DispatchQueue> &queue
    , const std::string &walletsPath, NetworkType netType
    , bool wo, const bool &backupEnabled)
    : ServerConnectionListener()
    , logger_(logger)
-   , connection_(connection)
    , walletsMgr_(walletsMgr)
    , queue_(queue)
    , walletsPath_(walletsPath)
@@ -28,7 +26,6 @@ HeadlessContainerListener::HeadlessContainerListener(ServerConnection *connectio
    , watchingOnly_(wo)
    , backupEnabled_(backupEnabled)
 {
-   assert(connection);
 }
 
 void HeadlessContainerListener::setCallbacks(HeadlessContainerCallbacks *callbacks)
@@ -1185,9 +1182,9 @@ void HeadlessContainerListener::walletsListUpdated()
    sendData(packet.SerializeAsString());
 }
 
-void HeadlessContainerListener::resetConnection()
+void HeadlessContainerListener::resetConnection(ServerConnection *connection)
 {
-   connection_ = nullptr;
+   connection_ = connection;
 }
 
 static headless::NetworkType mapFrom(NetworkType netType)

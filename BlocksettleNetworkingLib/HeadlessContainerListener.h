@@ -47,8 +47,7 @@ public:
 class HeadlessContainerListener : public ServerConnectionListener
 {
 public:
-   HeadlessContainerListener(ServerConnection *connection
-      , const std::shared_ptr<spdlog::logger> &logger
+   HeadlessContainerListener(const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::core::WalletsManager> &
       , const std::shared_ptr<DispatchQueue> &
       , const std::string &walletsPath
@@ -70,7 +69,7 @@ public:
    void addPendingAutoSignReq(const std::string &walletId);
    void walletsListUpdated();
 
-   void resetConnection();
+   void resetConnection(ServerConnection *connection);
 
 protected:
    bool isAutoSignActive(const std::string &walletId) const;
