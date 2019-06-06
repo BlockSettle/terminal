@@ -119,7 +119,6 @@ std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XCha
 std::shared_ptr<ZmqBIP15XDataConnection> ConnectionManager::CreateZMQBIP15XDataConnection(const ZmqBIP15XDataConnectionParams &params) const
 {
    auto connection = std::make_shared<ZmqBIP15XDataConnection>(logger_, params);
-   connection->SetContext(zmqContext_);
    return connection;
 }
 

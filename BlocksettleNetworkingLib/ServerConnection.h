@@ -30,18 +30,14 @@ public:
    virtual bool SendDataToAllClients(const std::string&, const SendResultCb &cb = nullptr) { return false; }
 
    void callConnAcceptedCB(const std::string& clientID) {
-      // If the function doesn't exist yet, catch the error and move on.
-      try {
+      if (cbConnAccepted_) {
          cbConnAccepted_(clientID);
       }
-      catch(const std::bad_function_call& e) {}
    }
    void callConnClosedCB(const std::string& clientID) {
-      // If the function doesn't exist yet, catch the error and move on.
-      try {
+      if (cbConnClosed_) {
          cbConnClosed_(clientID);
       }
-      catch(const std::bad_function_call& e) {}
    }
 
 protected:

@@ -22,18 +22,11 @@ CreateOTCRequestWidget::CreateOTCRequestWidget(QWidget* parent)
    ui_->comboBoxRange->addItem(tr("250+"), static_cast<int>(bs::network::OTCRangeID::Type::Range250plus));
 
    connect(ui_->comboBoxRange, SIGNAL(activated(int)), this, SLOT(OnRangeSelected(int)));
-   connect(ui_->checkBoxSendAsOwn, &QCheckBox::stateChanged, this, &CreateOTCRequestWidget::onSendAsOwnChanged);
 
    connect(ui_->pushButtonSubmit, &QPushButton::pressed, this, &CreateOTCRequestWidget::RequestCreated);
 }
 
 CreateOTCRequestWidget::~CreateOTCRequestWidget() = default;
-
-void CreateOTCRequestWidget::onSendAsOwnChanged()
-{
-   ui_->checkBoxGetReply->setEnabled(ui_->checkBoxSendAsOwn->isChecked());
-   ui_->checkBoxGetReply->setChecked(ui_->checkBoxSendAsOwn->isChecked());
-}
 
 void CreateOTCRequestWidget::setSubmitButtonEnabled(bool enabled)
 {
@@ -76,14 +69,4 @@ bs::network::ChatOTCSide::Type CreateOTCRequestWidget::GetSide() const
 bs::network::OTCRangeID::Type CreateOTCRequestWidget::GetRange() const
 {
    return static_cast<bs::network::OTCRangeID::Type>(ui_->comboBoxRange->itemData(ui_->comboBoxRange->currentIndex()).toInt());
-}
-
-bool CreateOTCRequestWidget::SendAsOwn() const
-{
-   return ui_->checkBoxSendAsOwn->isChecked();
-}
-
-bool CreateOTCRequestWidget::ReplyRequired() const
-{
-   return ui_->checkBoxGetReply->isChecked();
 }
