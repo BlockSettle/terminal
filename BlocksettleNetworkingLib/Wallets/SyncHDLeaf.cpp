@@ -18,7 +18,6 @@ hd::Leaf::Leaf(const std::string &walletId, const std::string &name, const std::
    : bs::sync::Wallet(container, logger)
    , walletId_(walletId), type_(type)
    , name_(name), desc_(desc), isExtOnly_(extOnlyAddresses)
-   , rescanWalletId_(walletId + "_rescan")
 {}
 
 hd::Leaf::~Leaf() = default;
@@ -73,7 +72,7 @@ void hd::Leaf::setArmory(const std::shared_ptr<ArmoryObject> &armory)
    }
 }
 
-void hd::Leaf::init(const bs::hd::Path &path)
+void hd::Leaf::setPath(const bs::hd::Path &path)
 {
    if (path != path_) {
       path_ = path;
@@ -94,157 +93,6 @@ std::vector<BinaryData> hd::Leaf::getRegAddresses(const std::vector<PooledAddres
       result.push_back(addr.second.prefixed());
    }
    return result;
-}
-
-void hd::Leaf::fillPortion(bs::hd::Path::Elem start, const std::function<void()> &cb, unsigned int size)
-{
-   currentPortion_.activeAddresses.clear();
-   currentPortion_.addresses.clear();
-   currentPortion_.addresses.reserve(size * 4);
-   currentPortion_.poolKeyByAddr.clear();
-   currentPortion_.start = start;
-   currentPortion_.end = start + size - 1;
-
-   std::vector<std::pair<std::string, AddressEntryType>> request;
-   for (bs::hd::Path::Elem addrType : {0, 1}) {
-      for (const auto aet : { AddressEntryType_P2SH, AddressEntryType_P2WPKH }) {
-         for (bs::hd::Path::Elem i = start; i < start + size; i++) {
-            bs::hd::Path addrPath({ addrType, i });
-            request.push_back({ addrPath.toString(), aet });
-         }
-      }
-   }
-   const auto &cbAddrs = [this, cb](const std::vector<std::pair<bs::Address, std::string>> &addrs) {
-      for (const auto &addr : addrs) {
-         const auto path = bs::hd::Path::fromString(addr.second);
-         currentPortion_.addresses.push_back({ {path, addr.first.getType()}, addr.first });
-         currentPortion_.poolKeyByAddr[addr.first] = { path, addr.first.getType() };
-      }
-      if (cb) {
-         cb();
-      }
-   };
-   newAddresses(request, cbAddrs, false);
-}
-
-void hd::Leaf::scanAddresses(unsigned int startIdx, unsigned int portionSize
-   , const std::function<void(const std::string &walletId, unsigned int idx)> &cbw)
-{
-   if (startIdx == UINT32_MAX) {    // special index to skip rescan for particular wallet
-      onScanComplete();
-      return;
-   }
-   const auto &cbPortion = [this]() {
-      if (!armory_) {
-         logger_->error("[sync::hd::Leaf::scanAddresses] {} armory is not set", walletId());
-         return;
-      }
-      currentPortion_.registered = true;
-      rescanRegId_ = armory_->registerWallet(rescanWalletId_
-         , getRegAddresses(currentPortion_.addresses), nullptr, true);
-   };
-
-   portionSize_ = portionSize;
-   cbWriteLast_ = cbw;
-   fillPortion(startIdx, cbPortion, portionSize);
-   if (cbWriteLast_) {
-      cbWriteLast_(walletId_, startIdx);
-   }
-}
-
-void hd::Leaf::processPortion()
-{
-   if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
-      return;
-   }
-
-   processing_ = (int)currentPortion_.start;
-   currentPortion_.registered = false;
-
-   const auto &cbProcess = [this] {
-      if (!currentPortion_.activeAddresses.empty()) {
-         std::sort(currentPortion_.activeAddresses.begin(), currentPortion_.activeAddresses.end()
-            , [](const PooledAddress &a, const PooledAddress &b)
-         { return (a.first.path < b.first.path) && (a.first.aet < b.first.aet); });
-         onSaveToWallet(currentPortion_.activeAddresses);
-
-         if (cbWriteLast_) {
-            cbWriteLast_(walletId_, currentPortion_.end + 1);
-         }
-
-         const auto &cbPortion = [this]() {
-            currentPortion_.registered = true;
-            rescanRegId_ = armory_->registerWallet(
-               rescanWalletId_, getRegAddresses(currentPortion_.addresses), {});
-         };
-         fillPortion(currentPortion_.end + 1, cbPortion, portionSize_);
-      }
-      else {
-         currentPortion_.start = currentPortion_.end = 0;
-         currentPortion_.addresses.clear();
-         processing_ = -1;
-         rescanWallet_.reset();
-
-         if (cbWriteLast_) {
-            cbWriteLast_(walletId_, UINT32_MAX);
-         }
-         onScanComplete();
-      }
-   };
-
-   const auto &cbTXs = [this, cbProcess](const std::vector<Tx> &txs) {
-      std::set<BinaryData> opTxHashes;
-      std::map<BinaryData, std::set<uint32_t>> opTxIndices;
-
-      for (const auto &tx : txs) {
-         for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-            TxOut out = tx.getTxOutCopy((int)i);
-            const auto addr = bs::Address::fromTxOut(out);
-            const auto &itAddr = currentPortion_.poolKeyByAddr.find(addr);
-            if (itAddr != currentPortion_.poolKeyByAddr.end()) {
-               currentPortion_.activeAddresses.push_back({ itAddr->second, itAddr->first });
-            }
-         }
-         for (size_t i = 0; i < tx.getNumTxIn(); i++) {
-            auto in = tx.getTxInCopy((int)i);
-            OutPoint op = in.getOutPoint();
-            opTxHashes.insert(op.getTxHash());
-            opTxIndices[op.getTxHash()].insert(op.getTxOutIndex());
-         }
-      }
-
-      const auto &cbInputs = [this, opTxIndices, cbProcess](const std::vector<Tx> &inputs) {
-         for (const auto &prevTx : inputs) {
-            const auto &itIdx = opTxIndices.find(prevTx.getThisHash());
-            if (itIdx == opTxIndices.end()) {
-               continue;
-            }
-            for (const auto txOutIdx : itIdx->second) {
-               const auto addr = bs::Address::fromTxOut(prevTx.getTxOutCopy(txOutIdx));
-               const auto &itAddr = currentPortion_.poolKeyByAddr.find(addr);
-               if (itAddr != currentPortion_.poolKeyByAddr.end()) {
-                  currentPortion_.activeAddresses.push_back({ itAddr->second, itAddr->first });
-               }
-            }
-         }
-         cbProcess();
-      };
-      armory_->getTXsByHash(opTxHashes, cbInputs);
-   };
-
-   const auto &cbHistory = [this, cbTXs, cbProcess](std::vector<ClientClasses::LedgerEntry> entries) {
-      if (entries.empty()) {
-         cbProcess();
-      }
-      else {
-         std::set<BinaryData> txHashes;
-         for (const auto &entry : entries) {
-            txHashes.insert(entry.getTxHash());
-         }
-         armory_->getTXsByHash(txHashes, cbTXs);
-      }
-   };
-   armory_->getWalletsHistory({ rescanWalletId_ }, cbHistory);
 }
 
 void hd::Leaf::onZeroConfReceived(const std::vector<bs::TXEntry>)
@@ -285,15 +133,6 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
          }
       }
    }
-
-   if (!currentPortion_.registered || (processing_ == (int)currentPortion_.start)) {
-      return;
-   }
-   const auto &it = std::find(ids.begin(), ids.end(), rescanRegId_);
-   if (it == ids.end()) {
-      return;
-   }
-   processPortion();
 }
 
 void hd::Leaf::postOnline()
@@ -307,10 +146,10 @@ void hd::Leaf::postOnline()
    if (btcWalletInt_) {
       btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
    }
-   bs::sync::Wallet::firstInit();
+   bs::sync::Wallet::init();
 }
 
-void hd::Leaf::firstInit(bool force)
+void hd::Leaf::init(bool force)
 {
    if (firstInit_ && !force)
       return;
@@ -320,12 +159,14 @@ void hd::Leaf::firstInit(bool force)
    }
    postOnline();
 
-   if (activateAddressesInvoked_ || !armory_) {
-      return;
+   if (firstInit_ && force) {
+      bs::sync::Wallet::init(force);
    }
 
+   if (activateAddressesInvoked_) {
+      return;
+   }
    activateAddressesInvoked_ = true;
-   firstInit_ = true;
 }
 
 void hd::Leaf::reset()
@@ -448,15 +289,14 @@ std::vector<std::string> hd::Leaf::registerWallet(
    if (armory_) {
       const auto addrsExt = getAddrHashesExt();
       std::vector<std::string> regIds;
-      auto notif_count = std::make_shared<unsigned>(0);
-      const auto &cbRegistered = [this, notif_count](const std::string &)
+      auto notifCount = std::make_shared<unsigned>(0);
+      const auto &cbRegistered = [this, notifCount](const std::string &)
       {
-         if (!this->isExtOnly_) {
-            if ((*notif_count)++ == 0)
+         if (!isExtOnly_) {
+            if ((*notifCount)++ == 0)
                return;
          }
-
-         this->setRegistered();
+         setRegistered();
       };
 
       regIdExt_ = armory_->registerWallet(
@@ -753,52 +593,6 @@ bool hd::Leaf::addressIndexExists(const std::string &index) const
    return false;
 }
 
-void hd::Leaf::onSaveToWallet(const std::vector<PooledAddress> &addresses)
-{
-   for (const auto &addr : addresses) {
-      activeScanAddresses_.insert(addr.first);
-   }
-}
-
-void hd::Leaf::onScanComplete()
-{
-   reset();
-
-   const bool hasAddresses = !activeScanAddresses_.empty();
-   if (hasAddresses) 
-   {
-      std::vector<std::pair<std::string, AddressEntryType>> newAddrReq;
-      newAddrReq.reserve(activeScanAddresses_.size());
-      for (const auto &addr : activeScanAddresses_)
-         newAddrReq.push_back({ addr.path.toString(), addr.aet });
-
-      const auto &cbAddrsAdded = 
-         [this](const std::vector<std::pair<bs::Address, std::string>> &addrs) 
-      {
-         for (const auto &addr : addrs)
-            addAddress(addr.first, addr.second, addr.first.getType(), false);
-
-         topUpAddressPool(true);
-         registerWallet(armory_, true);
-      };
-
-      newAddresses(newAddrReq, cbAddrsAdded);
-      activeScanAddresses_.clear();
-
-      emit addressAdded();
-      emit scanComplete(walletId());
-      
-      if (cbScanNotify_)
-         cbScanNotify_(index(), hasAddresses);
-   }
-   else 
-   {
-      emit scanComplete(walletId());
-      if (cbScanNotify_)
-         cbScanNotify_(index(), hasAddresses);
-   }
-}
-
 bs::hd::Path::Elem hd::Leaf::getLastAddrPoolIndex(bs::hd::Path::Elem addrType) const
 {
    bs::hd::Path::Elem result = 0;
@@ -974,7 +768,7 @@ void hd::CCLeaf::validationProc()
    }
    validationEnded_ = true;
    refreshInvalidUTXOs();
-   hd::Leaf::firstInit();
+   hd::Leaf::init();
 
    if (!validationStarted_) {
       return;
@@ -1115,7 +909,7 @@ void hd::CCLeaf::findInvalidUTXOs(const std::vector<UTXO> &utxos, std::function<
    }
 }
 
-void hd::CCLeaf::firstInit(bool force)
+void hd::CCLeaf::init(bool force)
 {
    if (force) {
       validationStarted_ = false;
@@ -1129,7 +923,7 @@ void hd::CCLeaf::firstInit(bool force)
 void hd::CCLeaf::onStateChanged(ArmoryConnection::State state)
 {
    if (state == ArmoryConnection::State::Ready) {
-      firstInit(true);
+      init(true);
    }
 }
 

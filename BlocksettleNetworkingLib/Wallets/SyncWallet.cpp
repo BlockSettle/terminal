@@ -511,14 +511,12 @@ void Wallet::unregisterWallet()
    historyCache_.clear();
 }
 
-void Wallet::firstInit(bool force)
+void Wallet::init(bool force)
 {
    if (!firstInit_ || force) {
       auto cbCounter = std::make_shared<std::atomic_int>(2);
       const auto &cbBalTxN = [this, cbCounter] {
          (*cbCounter)--;
-         logger_->debug("[{}] {} tot={} spend={} unconf={}", __func__
-            , *cbCounter, totalBalance_, spendableBalance_, unconfirmedBalance_);
          if ((*cbCounter <= 0)) {
             QMetaObject::invokeMethod(this, [this] {
                emit balanceUpdated(walletId());
@@ -748,26 +746,14 @@ bool Wallet::getLedgerDelegateForAddress(const bs::Address &addr
    return false;
 }
 
-int Wallet::addAddress(
-   const bs::Address &addr, const std::string &index, 
-   AddressEntryType aet, bool sync)
+int Wallet::addAddress(const bs::Address &addr, const std::string &index
+   , AddressEntryType aet, bool sync)
 {
    if (!addr.isNull())
       usedAddresses_.push_back(addr);
 
-   if (sync && signContainer_) 
-   {
-      std::string idxCopy = index;
-      if (idxCopy.empty() && !addr.isNull()) 
-      {
-         aet = addr.getType();
-         idxCopy = getAddressIndex(addr);
-         if (idxCopy.empty()) 
-            idxCopy = addr.display();
-      }
-
-//!      signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
-      // signContainer_->syncAddressBatch(...)
+   if (sync && signContainer_) {
+      syncAddresses();
    }
 
    return (usedAddresses_.size() - 1);
@@ -783,22 +769,7 @@ void Wallet::syncAddresses()
       for (const auto &addr : getUsedAddressList()) {
          addrSet.insert(addr.id());
       }
-      signContainer_->syncAddressBatch(walletId(), addrSet, [this](bs::sync::SyncState) {});
-   }
-}
-
-void Wallet::newAddresses(
-   const std::vector<std::pair<std::string, AddressEntryType>> &inData, 
-   const CbAddresses &cb, bool persistent)
-{
-   if (signContainer_) {
-      //! signContainer_->syncNewAddresses(walletId(), inData, cb);
-      // signContainer_->syncNewAddresses(...)
-   }
-   else {
-      if (logger_) {
-         logger_->warn("[{}] no signer set", __func__);
-      }
+      signContainer_->syncAddressBatch(walletId(), addrSet, [](bs::sync::SyncState) {});
    }
 }
 

@@ -103,7 +103,7 @@ namespace bs {
          virtual BTCNumericTypes::balance_type getSpendableBalance() const;
          virtual BTCNumericTypes::balance_type getUnconfirmedBalance() const;
          virtual BTCNumericTypes::balance_type getTotalBalance() const;
-         virtual void firstInit(bool force = false);
+         virtual void init(bool force = false);
 
          virtual std::vector<uint64_t> getAddrBalance(const bs::Address &addr) const;
          virtual uint64_t getAddrTxN(const bs::Address &addr) const;
@@ -139,9 +139,6 @@ namespace bs {
          virtual int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true);
 
          void syncAddresses();
-         //Request a bunch of addresses identified by index and aet - returns a vector of address-index pairs
-         virtual void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &, const CbAddresses &
-            , bool persistent = true);
 
          virtual bool getLedgerDelegateForAddress(const bs::Address &
             , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &

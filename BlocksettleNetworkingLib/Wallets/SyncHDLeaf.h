@@ -36,14 +36,13 @@ namespace bs {
                , bool extOnlyAddresses = false);
             ~Leaf() override;
 
-            virtual void init(const bs::hd::Path &);
+            virtual void setPath(const bs::hd::Path &);
             void synchronize(const std::function<void()> &cbDone) override;
 
-            void firstInit(bool force = false) override;
+            void init(bool force = false) override;
             
             const std::string& walletId() const override;
             const std::string& walletIdInt() const override;
-
 
             std::string description() const override;
             void setDescription(const std::string &desc) override { desc_ = desc; }
@@ -92,10 +91,6 @@ namespace bs {
             std::vector<BinaryData> getAddrHashes() const override;
             std::vector<BinaryData> getAddrHashesExt() const;
             std::vector<BinaryData> getAddrHashesInt() const;
-
-            void setScanCompleteCb(const cb_complete_notify &cb) { cbScanNotify_ = cb; }
-            void scanAddresses(unsigned int startIdx = 0, unsigned int portionSize = 100
-               , const std::function<void(const std::string &walletId, unsigned int idx)> &cbw = nullptr);
 
             virtual void merge(const std::shared_ptr<Wallet>) override;
 
@@ -191,35 +186,13 @@ namespace bs {
 
             std::string regIdExt_, regIdInt_;
 
-            struct Portion {
-               std::vector<PooledAddress>  addresses;
-               std::map<bs::Address, AddrPoolKey>  poolKeyByAddr;
-               bs::hd::Path::Elem   start;
-               bs::hd::Path::Elem   end;
-               std::atomic_bool  registered;
-               std::vector<PooledAddress> activeAddresses;
-               Portion() : start(0), end(0), registered(false) {}
-            };
-
-            std::shared_ptr<AsyncClient::BtcWallet>   rescanWallet_;
-            const std::string       rescanWalletId_;
-            std::string             rescanRegId_;
-            unsigned int            portionSize_ = 100;
-            Portion                 currentPortion_;
-            std::atomic_int         processing_;
-            std::set<AddrPoolKey>   activeScanAddresses_;
-
          private:
             void createAddress(const CbAddress &, AddressEntryType aet, bool isInternal = false);
             AddrPoolKey getAddressIndexForAddr(const BinaryData &addr) const;
             AddrPoolKey addressIndex(const bs::Address &) const;
-            void onScanComplete();
-            void onSaveToWallet(const std::vector<PooledAddress> &);
             bs::hd::Path::Elem getLastAddrPoolIndex(bs::hd::Path::Elem) const;
 
             static std::vector<BinaryData> getRegAddresses(const std::vector<PooledAddress> &src);
-            void fillPortion(bs::hd::Path::Elem start, const std::function<void()> &cb, unsigned int size = 100);
-            void processPortion();
          };
 
 
@@ -254,7 +227,7 @@ namespace bs {
 
             void setData(const std::string &) override;
             void setData(uint64_t data) override { lotSizeInSatoshis_ = data; }
-            void firstInit(bool force) override;
+            void init(bool force) override;
 
             bool getSpendableZCList(std::function<void(std::vector<UTXO>)>
                , QObject *);

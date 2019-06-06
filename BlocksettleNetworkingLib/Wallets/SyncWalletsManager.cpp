@@ -500,7 +500,6 @@ void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
    }
 
    if (pendingRegIds_.empty()) {
-      logger_->debug("[{}] all pending registrations are refreshed", __func__);
       trackAddressChainUse([this](bool result) {
          logger_->debug("[WalletsManager] address chain use result: {}", result);
       });
@@ -682,11 +681,11 @@ void WalletsManager::updateWallets(bool force)
 {
    for (auto &it : wallets_) {
       if (it.second->isRegistered()) {
-         it.second->firstInit(force);
+         it.second->init(force);
       }
    }
    if (settlementWallet_ && settlementWallet_->isRegistered()) {
-      settlementWallet_->firstInit(force);
+      settlementWallet_->init(force);
    }
 }
 
@@ -1076,7 +1075,7 @@ void WalletsManager::onCCInfoLoaded()
    for (const auto &hdWallet : hdWallets_) {
       for (const auto &leaf : hdWallet.second->getLeaves()) {
          if (leaf->type() == bs::core::wallet::Type::ColorCoin) {
-            leaf->firstInit();
+            leaf->init();
          }
       }
    }

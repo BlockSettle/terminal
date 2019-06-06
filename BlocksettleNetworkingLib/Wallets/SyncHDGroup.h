@@ -70,8 +70,6 @@ namespace bs {
             using cb_scan_read_last = std::function<unsigned int(const std::string &walletId)>;
             using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
-            virtual void rescanBlockchain(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr
-               , const cb_scan_write_last &cbw = nullptr);
             virtual void initLeaf(std::shared_ptr<hd::Leaf> &, const bs::hd::Path &) const;
 //            void copyLeaf(std::shared_ptr<hd::Group> &target, bs::hd::Path::Elem leafIndex
 //               , const std::shared_ptr<hd::Leaf> &) const;

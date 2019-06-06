@@ -47,11 +47,6 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
                   , (uint32_t)grpData.type, leafData.index, leafData.id);
                continue;
             }
-
-            bs::hd::Path path;
-            path.append(grpData.type);
-            path.append(leafData.index);
-            leaf->init(path);
          }
       }
 

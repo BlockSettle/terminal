@@ -147,21 +147,7 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
    if (!path.length()) {
       return;
    }
-   leaf->init(path);
-}
-
-void hd::Group::rescanBlockchain(const hd::Group::cb_scan_notify &cb, const hd::Group::cb_scan_read_last &cbr
-   , const hd::Group::cb_scan_write_last &cbw)
-{
-   bs::hd::Path::Elem wallet;
-   for (const auto &leaf : leaves_) {
-      const unsigned int startIdx = cbr ? cbr(leaf.second->walletId()) : 0;
-      leaf.second->scanAddresses(startIdx, scanPortion_, cbw);
-      wallet = leaf.second->index();
-   }
-   if (cb) {
-      cb(this, leaves_.empty() ? UINT32_MAX : wallet, true);
-   }
+   leaf->setPath(path);
 }
 
 /*void hd::Group::copyLeaf(std::shared_ptr<hd::Group> &target, bs::hd::Path::Elem leafIndex
