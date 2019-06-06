@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessSettings.h"
 #include "HeadlessContainerListener.h"
@@ -37,7 +38,7 @@ public:
    {
       if (owner_->settings_->runMode() == bs::signer::RunMode::lightgui) {
          owner_->logger_->info("Quit because terminal disconnected unexpectedly and lightgui used");
-         std::exit(0);
+         owner_->queue_->quit();
       }
    }
 
@@ -127,9 +128,14 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , const std::shared_ptr<ZmqBIP15XServerConnection> &conn
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
+   , const std::shared_ptr<DispatchQueue> &queue
    , const std::shared_ptr<HeadlessSettings> &settings)
    : ServerConnectionListener(), app_(app)
-   , connection_(conn), logger_(logger), walletsMgr_(walletsMgr), settings_(settings)
+   , connection_(conn)
+   , logger_(logger)
+   , walletsMgr_(walletsMgr)
+   , queue_(queue)
+   , settings_(settings)
 {
    app_->setReadyCallback([this](bool result) {
       ready_ = result;
@@ -143,6 +149,33 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
 SignerAdapterListener::~SignerAdapterListener() noexcept = default;
 
 void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const std::string &data)
+{
+   queue_->dispatch([this, clientId, data] {
+      // Process all data on main thread (no need to worry about data races)
+      processData(clientId, data);
+   });
+}
+
+void SignerAdapterListener::OnClientConnected(const std::string &clientId)
+{
+   logger_->debug("[SignerAdapterListener] client {} connected", toHex(clientId));
+}
+
+void SignerAdapterListener::OnClientDisconnected(const std::string &clientId)
+{
+   logger_->debug("[SignerAdapterListener] client {} disconnected", toHex(clientId));
+
+   shutdownIfNeeded();
+}
+
+void SignerAdapterListener::onClientError(const std::string &clientId, const std::string &error)
+{
+   logger_->debug("[SignerAdapterListener] client {} error: {}", toHex(clientId), error);
+
+   shutdownIfNeeded();
+}
+
+void SignerAdapterListener::processData(const std::string &clientId, const std::string &data)
 {
    signer::Packet packet;
    if (!packet.ParseFromString(data)) {
@@ -215,25 +248,6 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    if (!rc) {
       sendData(packet.type(), "", packet.id());
    }
-}
-
-void SignerAdapterListener::OnClientConnected(const std::string &clientId)
-{
-   logger_->debug("[SignerAdapterListener] client {} connected", toHex(clientId));
-}
-
-void SignerAdapterListener::OnClientDisconnected(const std::string &clientId)
-{
-   logger_->debug("[SignerAdapterListener] client {} disconnected", toHex(clientId));
-
-   shutdownIfNeeded();
-}
-
-void SignerAdapterListener::onClientError(const std::string &clientId, const std::string &error)
-{
-   logger_->debug("[SignerAdapterListener] client {} error: {}", toHex(clientId), error);
-
-   shutdownIfNeeded();
 }
 
 void SignerAdapterListener::setCallbacks()

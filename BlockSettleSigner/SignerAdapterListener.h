@@ -21,10 +21,10 @@ namespace bs {
    }
 }
 class HeadlessAppObj;
-class HeadlessContainerListener;
 class ServerConnection;
 class HeadlessSettings;
 class HeadlessContainerCallbacksImpl;
+class DispatchQueue;
 
 class SignerAdapterListener : public ServerConnectionListener
 {
@@ -33,6 +33,7 @@ public:
       , const std::shared_ptr<ZmqBIP15XServerConnection> &conn
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
+      , const std::shared_ptr<DispatchQueue> &queue
       , const std::shared_ptr<HeadlessSettings> &settings);
    ~SignerAdapterListener() noexcept override;
 
@@ -49,7 +50,8 @@ protected:
    void OnClientDisconnected(const std::string &clientId) override;
    void onClientError(const std::string& clientId, const std::string &error) override;
 
-private:
+   void processData(const std::string &clientId, const std::string &data);
+
    void setCallbacks();
 
    bool sendData(Blocksettle::Communication::signer::PacketType, const std::string &data
@@ -86,6 +88,7 @@ private:
    std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
+   std::shared_ptr<DispatchQueue> queue_;
    std::shared_ptr<HeadlessSettings>   settings_;
    bool  ready_ = false;
    std::unique_ptr<HeadlessContainerCallbacksImpl> callbacks_;

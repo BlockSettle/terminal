@@ -10,6 +10,7 @@
 
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
 #include "HeadlessSettings.h"
@@ -21,8 +22,10 @@
 
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<HeadlessSettings> &params)
-   : logger_(logger), settings_(params)
+   , const std::shared_ptr<HeadlessSettings> &params, const std::shared_ptr<DispatchQueue> &queue)
+   : logger_(logger)
+   , settings_(params)
+   , queue_(queue)
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
@@ -42,7 +45,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
       , zmqContext, cbTrustedClientsSL, "", ""
       , makeServerCookie, readClientCookie, absCookiePath);
    adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn
-      , logger_, walletsMgr_, params);
+      , logger_, walletsMgr_, queue_, params);
 
    adapterConn->setLocalHeartbeatInterval();
 
@@ -264,7 +267,7 @@ void HeadlessAppObj::onlineProcessing()
 
    if (!listener_) {
       listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
-         , walletsMgr_, settings_->getWalletsDir(), settings_->netType());
+         , walletsMgr_, queue_, settings_->getWalletsDir(), settings_->netType());
    }
 
    listener_->SetLimits(settings_->limits());
@@ -410,7 +413,7 @@ void HeadlessAppObj::setCallbacks(HeadlessContainerCallbacks *callbacks)
 
 void HeadlessAppObj::close()
 {
-   exit(0);
+   queue_->quit();
 }
 
 void HeadlessAppObj::walletsListUpdated()

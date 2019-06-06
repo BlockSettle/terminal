@@ -31,12 +31,14 @@ class OfflineProcessor;
 class SignerSettings;
 class ZmqBIP15XServerConnection;
 class HeadlessContainerCallbacks;
+class DispatchQueue;
 
 class HeadlessAppObj
 {
 public:
    HeadlessAppObj(const std::shared_ptr<spdlog::logger> &
-      , const std::shared_ptr<HeadlessSettings> &);
+      , const std::shared_ptr<HeadlessSettings> &
+      , const std::shared_ptr<DispatchQueue>&);
 
    ~HeadlessAppObj() noexcept = default;
 
@@ -64,9 +66,9 @@ private:
    void onlineProcessing();
 
 private:
-
    std::shared_ptr<spdlog::logger>  logger_;
    const std::shared_ptr<HeadlessSettings>      settings_;
+   const std::shared_ptr<DispatchQueue>         queue_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
    std::shared_ptr<HeadlessContainerListener>   listener_;

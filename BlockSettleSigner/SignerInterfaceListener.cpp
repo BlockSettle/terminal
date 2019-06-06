@@ -528,9 +528,5 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
 
 void SignerInterfaceListener::shutdown()
 {
-   QMetaObject::invokeMethod(qApp, [] {
-      // For some reasons QApplication::quit does not work reliable.
-      // Run it on main thread because otherwise it causes crash on Linux when atexit callbacks are called.
-      std::exit(0);
-   });
+   QApplication::quit();
 }
