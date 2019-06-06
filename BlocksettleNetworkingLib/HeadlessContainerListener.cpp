@@ -57,6 +57,10 @@ bool HeadlessContainerListener::disconnect(const std::string &clientId)
 
 bool HeadlessContainerListener::sendData(const std::string &data, const std::string &clientId)
 {
+   if (!connection_) {
+      return false;
+   }
+
    bool sentOk = false;
    if (clientId.empty()) {
       for (const auto &clientId : connectedClients_) {
@@ -122,17 +126,21 @@ void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, co
 void HeadlessContainerListener::OnPeerConnected(const std::string &ip)
 {
    logger_->debug("[{}] IP {} connected", __func__, ip);
-   if (callbacks_) {
-      callbacks_->peerConn(ip);
-   }
+   queue_->dispatch([this, ip] {
+      if (callbacks_) {
+         callbacks_->peerConn(ip);
+      }
+   });
 }
 
 void HeadlessContainerListener::OnPeerDisconnected(const std::string &ip)
 {
    logger_->debug("[{}] IP {} disconnected", __func__, ip);
-   if (callbacks_) {
-      callbacks_->peerDisconn(ip);
-   }
+   queue_->dispatch([this, ip] {
+      if (callbacks_) {
+         callbacks_->peerDisconn(ip);
+      }
+   });
 }
 
 bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::headless::RequestType reqType) const
@@ -157,6 +165,10 @@ bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::hea
 
 bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, headless::RequestPacket packet)
 {
+   if (!connection_) {
+      return false;
+   }
+
    connection_->GetClientInfo(clientId);
    if (!isRequestAllowed(packet.type())) {
       logger_->info("[{}] request {} is not applicable at this state", __func__, (int)packet.type());
@@ -1171,6 +1183,11 @@ void HeadlessContainerListener::walletsListUpdated()
    headless::RequestPacket packet;
    packet.set_type(headless::WalletsListUpdatedType);
    sendData(packet.SerializeAsString());
+}
+
+void HeadlessContainerListener::resetConnection()
+{
+   connection_ = nullptr;
 }
 
 static headless::NetworkType mapFrom(NetworkType netType)

@@ -70,6 +70,8 @@ public:
    void addPendingAutoSignReq(const std::string &walletId);
    void walletsListUpdated();
 
+   void resetConnection();
+
 protected:
    bool isAutoSignActive(const std::string &walletId) const;
 
