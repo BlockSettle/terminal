@@ -28,6 +28,7 @@
 #include <QQmlContext>
 #include <QGuiApplication>
 #include <QSplashScreen>
+#include <QQuickWindow>
 
 #include <spdlog/spdlog.h>
 
@@ -92,7 +93,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(walletsProxy_.get(), &WalletsProxy::walletsChanged, [this] {
       if (walletsProxy_->walletsLoaded()) {
          if (splashScreen_) {
-            splashScreen_->close();
+            splashScreen_->deleteLater();
             splashScreen_ = nullptr;
          }
       }
@@ -144,7 +145,7 @@ void QMLAppObj::onWalletsSynced()
 {
    logger_->debug("[{}]", __func__);
    if (splashScreen_) {
-      splashScreen_->close();
+      splashScreen_->deleteLater();
       splashScreen_ = nullptr;
    }
    walletsModel_->setWalletsManager(walletsMgr_);
@@ -242,13 +243,25 @@ void QMLAppObj::SetRootObject(QObject *obj)
 void QMLAppObj::raiseQmlWindow()
 {
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
+   auto window = qobject_cast<QQuickWindow*>(rootObj_);
+   if (window) {
+      window->setWindowState(Qt::WindowMinimized);
+   }
    QGuiApplication::processEvents();
+   if (window) {
+      window->setWindowState(Qt::WindowActive);
+   }
    QMetaObject::invokeMethod(rootObj_, "raiseWindow");
 }
 
 void QMLAppObj::hideQmlWindow()
 {
    QMetaObject::invokeMethod(rootObj_, "hideWindow");
+}
+
+QString QMLAppObj::getUrlPath(const QUrl &url)
+{
+   return url.path();
 }
 
 void QMLAppObj::onPasswordAccepted(const QString &walletId
