@@ -116,6 +116,7 @@ private:
    void OTCSwitchToGlobalRoom();
    void OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room);
    void OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact, bool onlineStatus);
+   void OTCSwitchToResponse(std::shared_ptr<Chat::OTCResponseData>& response);
 
 
    // used to display proper widget if OTC room selected.

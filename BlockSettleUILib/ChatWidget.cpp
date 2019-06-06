@@ -619,6 +619,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             if (response) {
                setIsRoom(false);
                currentChat_ = QString::fromStdString(response->serverResponseId());
+               OTCSwitchToResponse(response);
             }
          }
          break;
@@ -795,6 +796,11 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
       ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactShieldPage));
    }
 
+}
+
+void ChatWidget::OTCSwitchToResponse(std::shared_ptr<Chat::OTCResponseData> &response)
+{
+   ui_->stackedWidgetMessages->setCurrentIndex(0);
 }
 
 void ChatWidget::OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest)

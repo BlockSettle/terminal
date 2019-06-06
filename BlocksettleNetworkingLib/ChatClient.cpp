@@ -1600,7 +1600,7 @@ bool ChatClient::PullPrivateOTCRequest(const std::string &targetId, const std::s
       return false;
    }
 
-   if (cNode->getActiveOtcRequest()->clientRequestId() != serverOTCId) {
+   if (cNode->getActiveOtcRequest()->serverRequestId() != serverOTCId) {
       logger_->error("[ChatClient::PullPrivateOTCRequest] invalid OTC ID for {}"
                      , targetId);
       return false;

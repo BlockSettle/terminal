@@ -29,7 +29,8 @@ enum class ChatTreeNodeType : uint32_t
    OTCReceivedResponseNode = 1024,
    OTCSentResponseNode = 2048,
    OTCReceivedUpdateNode = 4096,
-   OTCSentUpdateNode = 8192
+   OTCSentUpdateNode = 8192,
+   OTCRequestNode = 16384
 };
 
 Q_ENUM_NS(ChatUIDefinitions::ChatTreeNodeType)

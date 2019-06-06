@@ -25,7 +25,15 @@ public:
    Q_ENUM(OnlineStatus)
 
    ChatContactElement(std::shared_ptr<Chat::ContactRecordData> data)
-      : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, std::vector<ChatUIDefinitions::ChatTreeNodeType>{ChatUIDefinitions::ChatTreeNodeType::MessageDataNode}, data)
+      : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+                        std::vector<ChatUIDefinitions::ChatTreeNodeType>{
+                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCRequestNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCSentResponseNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCSentUpdateNode,
+                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedUpdateNode},
+                        data)
       , activeOtcRequest_(nullptr)
    {}
 
