@@ -274,7 +274,10 @@ bool Wallet::getSpendableTxOutList(
          if (logger_ != nullptr) {
             logger_->error(
                "[bs::sync::Wallet::getSpendableTxOutList] Return data " \
-               "error {} - value {}", e.what(), val);
+               "error: {}", e.what());
+         }
+         if (cb) {
+            cb({});
          }
       }
    };
@@ -599,13 +602,19 @@ bs::core::wallet::TXSignRequest Wallet::createTXRequest(const std::vector<UTXO> 
       auto fut = promPtr->get_future();
       const auto &cbAddr = [this, &index, promPtr](const bs::Address &addr) {
          setAddressComment(addr, wallet::Comment::toString(wallet::Comment::ChangeAddress));
-         index = getAddressIndex(addr);
+         try {
+            index = getAddressIndex(addr);
+         }
+         catch (const std::exception &e) {
+            logger_->error("[sync::Wallet::createTXRequest] failed to get {} index: {}"
+               , addr.display(), e.what());
+         }
          promPtr->set_value(addr);
       };
       getNewChangeAddress(cbAddr);
       return fut.get();
    };
-   const auto &cbChangeAddr = [changeAddress, cbNewChangeAddr](std::string &index) {
+   const auto &cbChangeAddr = [this, changeAddress, cbNewChangeAddr](std::string &index) {
       if (changeAddress.isNull()) {
          return cbNewChangeAddr(index);
       }
