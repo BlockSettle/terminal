@@ -1,3 +1,6 @@
+#ifndef DISPATCH_QUEUE_H
+#define DISPATCH_QUEUE_H
+
 #include <functional>
 #include <queue>
 #include <mutex>
@@ -42,3 +45,5 @@ private:
 
    bool quit_{false};
 };
+
+#endif // DISPATCH_QUEUE_H

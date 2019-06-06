@@ -47,7 +47,7 @@ public:
 class HeadlessContainerListener : public ServerConnectionListener
 {
 public:
-   HeadlessContainerListener(const std::shared_ptr<ServerConnection> &conn
+   HeadlessContainerListener(ServerConnection *connection
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::core::WalletsManager> &
       , const std::shared_ptr<DispatchQueue> &
@@ -138,8 +138,8 @@ private:
    bool isRequestAllowed(Blocksettle::Communication::headless::RequestType) const;
 
 private:
-   std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
+   ServerConnection                    *connection_{};
    std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
    std::shared_ptr<DispatchQueue>      queue_;
    const std::string                   walletsPath_;
