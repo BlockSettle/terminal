@@ -367,7 +367,7 @@ bs::Address hd::Leaf::getAddressByIndex(
    //extInt: true for external/outer account, false for internal/inner account
 
    BinaryWriter accBw;
-   accBw.put_uint32_t(0);
+   accBw.put_BinaryData(accountPtr_->getID());
    if (extInt)
       accBw.put_BinaryData(accountPtr_->getOuterAccountID());
    else

@@ -766,8 +766,7 @@ int Wallet::addAddress(
             idxCopy = addr.display();
       }
 
-//!      signContainer_->syncNewAddress(walletId(), idxCopy, aet, [](const bs::Address &) {});
-      // signContainer_->syncAddressBatch(...)
+      signContainer_->syncNewAddress(walletId(), idxCopy, aet, nullptr);
    }
 
    return (usedAddresses_.size() - 1);
@@ -792,8 +791,7 @@ void Wallet::newAddresses(
    const CbAddresses &cb, bool persistent)
 {
    if (signContainer_) {
-      //! signContainer_->syncNewAddresses(walletId(), inData, cb);
-      // signContainer_->syncNewAddresses(...)
+      signContainer_->syncNewAddresses(walletId(), inData, cb);
    }
    else {
       if (logger_) {
