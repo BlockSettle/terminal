@@ -78,7 +78,6 @@ private:
    std::unique_ptr<ZmqBIP15XServerConnection>   guiConnection_;
 
    ProcessControl             guiProcess_;
-   bool ready_{false};
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 };
 

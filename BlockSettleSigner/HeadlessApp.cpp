@@ -85,7 +85,6 @@ void HeadlessAppObj::start()
 
    guiListener_->sendStatusUpdate();
 
-   ready_ = true;
    onlineProcessing();
 }
 
@@ -173,9 +172,6 @@ void HeadlessAppObj::startInterface()
 
 void HeadlessAppObj::onlineProcessing()
 {
-   if (!ready_) {
-      return;
-   }
    if (terminalConnection_) {
       logger_->debug("[{}] already online", __func__);
       return;
