@@ -87,7 +87,7 @@ TEST(TestUi, RFQ_entry_CC_sell)
    TestEnv env(StaticLogger::loggerPtr);
    env.requireAssets();
    env.walletsMgr()->createWallet("Primary", "", NetworkType::TestNet
-      , env.appSettings()->GetHomeDir().toStdString(), true);
+      , env.appSettings()->GetHomeDir().toStdString(), {}, true);
    ASSERT_NE(env.walletsMgr()->getPrimaryWallet(), nullptr);
    const auto priWallet = env.walletsMgr()->getPrimaryWallet();
    const auto ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
