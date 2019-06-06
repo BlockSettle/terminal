@@ -73,11 +73,11 @@ private:
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
 
    // Declare listeners before connections (they should be destroyed after)
-   std::unique_ptr<HeadlessContainerListener>   listener_;
-   std::unique_ptr<SignerAdapterListener>       adapterLsn_;
+   std::unique_ptr<HeadlessContainerListener>   terminalListener_;
+   std::unique_ptr<SignerAdapterListener>       guiListener_;
 
-   std::unique_ptr<ZmqBIP15XServerConnection>   connection_;
-   std::unique_ptr<ZmqBIP15XServerConnection>   adapterConnection_;
+   std::unique_ptr<ZmqBIP15XServerConnection>   terminalConnection_;
+   std::unique_ptr<ZmqBIP15XServerConnection>   guiConnection_;
 
    ProcessControl             guiProcess_;
    std::function<void(bool)>  cbReady_;

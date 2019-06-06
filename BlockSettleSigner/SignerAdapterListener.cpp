@@ -259,7 +259,7 @@ void SignerAdapterListener::setCallbacks()
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
    , bs::signer::RequestId reqId)
 {
-   if (connection_) {
+   if (!connection_) {
       return false;
    }
 

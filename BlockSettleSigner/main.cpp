@@ -103,8 +103,8 @@ void sigHandler(int signal)
 
 int main(int argc, char** argv)
 {
-#ifndef WIN32
    g_signalStatus = 0;
+#ifndef WIN32
    std::signal(SIGINT, sigHandler);
    std::signal(SIGTERM, sigHandler);
 #endif
