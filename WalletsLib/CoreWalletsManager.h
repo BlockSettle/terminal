@@ -63,7 +63,7 @@ namespace bs {
 
          HDWalletPtr createWallet(const std::string& name, const std::string& description
             , bs::core::wallet::Seed, const std::string &folder, 
-            const SecureBinaryData& passprase, bool primary = false);
+            const SecureBinaryData& passprase, bool primary);
          void addWallet(const HDWalletPtr &);
 
       private:

@@ -387,6 +387,61 @@ void InprocSigner::syncTxComment(const std::string &walletId, const BinaryData &
       wallet->setTransactionComment(txHash, comment);
 }
 
+void InprocSigner::syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType aet
+   , const std::function<void(const bs::Address &)> &cb)
+{
+   const auto &cbAddrs = [cb](const std::vector<std::pair<bs::Address, std::string>> &outAddrs) {
+      if (outAddrs.size() == 1) {
+         if (cb)
+            cb(outAddrs[0].first);
+      }
+      else {
+         if (cb)
+            cb({});
+      }
+   };
+   syncNewAddresses(walletId, { {index, aet} }, cbAddrs);
+}
+
+void InprocSigner::syncNewAddresses(const std::string &walletId
+   , const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
+   , bool persistent)
+{
+   std::vector<std::pair<bs::Address, std::string>> result;
+   const auto wallet = walletsMgr_->getWalletById(walletId);
+   if (wallet == nullptr)
+   {
+      if (cb)
+         cb(result);
+      return;
+   }
+
+   result.reserve(inData.size());
+   for (const auto &in : inData)
+   {
+      std::string index;
+      try
+      {
+         const bs::Address addr(in.first);
+         if (addr.isValid())
+            index = wallet->getAddressIndex(addr);
+      }
+      catch (const std::exception&)
+      {
+      }
+
+      if (index.empty())
+         index = in.first;
+
+      result.push_back({
+         wallet->synchronizeUsedAddressChain(in.first, in.second).first, in.first });
+   }
+
+   if (cb)
+      cb(result);
+}
+
 void InprocSigner::extendAddressChain(
    const std::string &walletId, unsigned count, bool extInt,
    const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb)
@@ -439,7 +494,7 @@ void InprocSigner::syncAddressBatch(
    }
    catch (AccountException&)
    {
-      //failure to find even on of the addresses means the wallet chain needs 
+      //failure to find even one of the addresses means the wallet chain needs 
       //extended further
       cb(bs::sync::SyncState::Failure);
    }

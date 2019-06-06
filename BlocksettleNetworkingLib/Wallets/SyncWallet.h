@@ -162,6 +162,8 @@ namespace bs {
          virtual bool deleteRemotely() { return false; } //stub
          virtual void merge(const std::shared_ptr<Wallet>) = 0;
 
+         void newAddresses(const std::vector<std::pair<std::string, AddressEntryType>> &inData,
+            const CbAddresses &cb);
          void trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb);
          size_t getActiveAddressCount(void);
 

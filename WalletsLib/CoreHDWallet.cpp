@@ -61,6 +61,11 @@ void hd::Wallet::initNew(const wallet::Seed &seed,
    {
       //empty account structure, will be set at group creation
       std::set<std::shared_ptr<AccountType>> accountTypes;
+      
+      auto& node = seed.getNode();
+      if (node.getPrivateKey().getSize() != 32 &&
+         node.getPublicKey().getSize() != 33)
+         throw WalletException("invalid seed node");
 
       walletPtr_ = AssetWallet_Single::createFromBIP32Node(
          seed.getNode(),

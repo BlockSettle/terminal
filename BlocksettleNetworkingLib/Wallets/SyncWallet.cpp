@@ -761,8 +761,18 @@ int Wallet::addAddress(const bs::Address &addr, const std::string &index
    if (!addr.isNull())
       usedAddresses_.push_back(addr);
 
-   if (sync && signContainer_) {
-      syncAddresses();
+   if (sync && signContainer_) 
+   {
+      std::string idxCopy = index;
+      if (idxCopy.empty() && !addr.isNull()) 
+      {
+         aet = addr.getType();
+         idxCopy = getAddressIndex(addr);
+         if (idxCopy.empty()) 
+            idxCopy = addr.display();
+      }
+
+      signContainer_->syncNewAddress(walletId(), idxCopy, aet, nullptr);
    }
 
    return (usedAddresses_.size() - 1);
@@ -779,6 +789,20 @@ void Wallet::syncAddresses()
          addrSet.insert(addr.id());
       }
       signContainer_->syncAddressBatch(walletId(), addrSet, [](bs::sync::SyncState) {});
+   }
+}
+
+void Wallet::newAddresses(
+   const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const CbAddresses &cb)
+{
+   if (signContainer_) {
+      signContainer_->syncNewAddresses(walletId(), inData, cb);
+   }
+   else {
+      if (logger_) {
+         logger_->warn("[{}] no signer set", __func__);
+      }
    }
 }
 

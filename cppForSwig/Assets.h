@@ -32,6 +32,7 @@ public:
 #define PRIVKEY_BYTE             0x82
 #define ENCRYPTIONKEY_BYTE       0x83
 #define WALLET_SEED_BYTE         0x84
+#define ECDH_SALT_PREFIX         0x85
 
 #define METADATA_COMMENTS_PREFIX 0x90
 #define METADATA_AUTHPEER_PREFIX 0x91
