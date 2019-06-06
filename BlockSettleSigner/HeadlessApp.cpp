@@ -59,6 +59,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
 
    terminalListener_ = std::make_unique<HeadlessContainerListener>(logger_
       , walletsMgr_, queue_, settings_->getWalletsDir(), settings_->netType());
+   terminalListener_->setCallbacks(guiListener_->callbacks());
 }
 
 HeadlessAppObj::~HeadlessAppObj() noexcept = default;
@@ -71,7 +72,6 @@ void HeadlessAppObj::start()
       , settings_->getWalletsDir());
    const auto &cbProgress = [this](int cur, int total) {
       logger_->debug("Loaded wallet {} of {}", cur, total);
-      guiListener_->onReady(cur, total);
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
       , cbProgress);
@@ -295,11 +295,6 @@ void HeadlessAppObj::onlineProcessing()
 
    signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
    guiListener_->sendStatusUpdate();
-
-   if (cbReady_) {
-      // Needed to setup SignerAdapterListener callbacks
-      cbReady_(true);
-   }
 }
 
 ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
@@ -403,11 +398,6 @@ void HeadlessAppObj::passwordReceived(const std::string &walletId
    , const SecureBinaryData &password, bool cancelledByUser)
 {
    terminalListener_->passwordReceived(walletId, password, cancelledByUser);
-}
-
-void HeadlessAppObj::setCallbacks(HeadlessContainerCallbacks *callbacks)
-{
-   terminalListener_->setCallbacks(callbacks);
 }
 
 void HeadlessAppObj::close()

@@ -20,11 +20,12 @@ namespace bs {
       class WalletsManager;
    }
 }
-class HeadlessAppObj;
-class ServerConnection;
-class HeadlessSettings;
-class HeadlessContainerCallbacksImpl;
 class DispatchQueue;
+class HeadlessAppObj;
+class HeadlessContainerCallbacks;
+class HeadlessContainerCallbacksImpl;
+class HeadlessSettings;
+class ServerConnection;
 
 class SignerAdapterListener : public ServerConnectionListener
 {
@@ -39,13 +40,12 @@ public:
 
    ZmqBIP15XServerConnection *getServerConn() const { return connection_; }
 
-   bool onReady(int cur = 0, int total = 0);
-
    // Sent to GUI status update message
    void sendStatusUpdate();
 
    void resetConnection();
 
+   HeadlessContainerCallbacks *callbacks() const;
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnClientConnected(const std::string &clientId) override;
@@ -53,8 +53,6 @@ protected:
    void onClientError(const std::string& clientId, const std::string &error) override;
 
    void processData(const std::string &clientId, const std::string &data);
-
-   void setCallbacks();
 
    bool sendData(Blocksettle::Communication::signer::PacketType, const std::string &data
       , bs::signer::RequestId reqId = 0);
@@ -83,6 +81,7 @@ protected:
    void walletsListUpdated();
    void shutdownIfNeeded();
 
+   bool sendReady();
 private:
    friend class HeadlessContainerCallbacksImpl;
 
@@ -92,7 +91,6 @@ private:
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<DispatchQueue> queue_;
    std::shared_ptr<HeadlessSettings>   settings_;
-   bool  ready_ = false;
    std::unique_ptr<HeadlessContainerCallbacksImpl> callbacks_;
 };
 

@@ -136,14 +136,8 @@ SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
    , walletsMgr_(walletsMgr)
    , queue_(queue)
    , settings_(settings)
+   , callbacks_(new HeadlessContainerCallbacksImpl(this))
 {
-   app_->setReadyCallback([this](bool result) {
-      ready_ = result;
-      if (result) {
-         setCallbacks();
-      }
-      onReady();
-   });
 }
 
 SignerAdapterListener::~SignerAdapterListener() noexcept = default;
@@ -185,7 +179,7 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    bool rc = false;
    switch (packet.type()) {
    case::signer::HeadlessReadyType:
-      rc = onReady();
+      rc = sendReady();
       break;
    case signer::SignTxRequestType:
       rc = onSignTxReq(packet.data(), packet.id());
@@ -250,12 +244,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
    }
 }
 
-void SignerAdapterListener::setCallbacks()
-{
-   callbacks_.reset(new HeadlessContainerCallbacksImpl(this));
-   app_->setCallbacks(callbacks_.get());
-}
-
 bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &data
    , bs::signer::RequestId reqId)
 {
@@ -273,16 +261,6 @@ bool SignerAdapterListener::sendData(signer::PacketType pt, const std::string &d
    return connection_->SendDataToAllClients(packet.SerializeAsString());
 }
 
-bool SignerAdapterListener::onReady(int cur, int total)
-{
-   signer::ReadyEvent evt;
-   evt.set_ready(ready_);
-   evt.set_cur_wallet(cur);
-   evt.set_total_wallets(total);
-   sendData(signer::HeadlessReadyType, evt.SerializeAsString());
-   return true;
-}
-
 void SignerAdapterListener::sendStatusUpdate()
 {
    signer::UpdateStatus evt;
@@ -293,6 +271,11 @@ void SignerAdapterListener::sendStatusUpdate()
 void SignerAdapterListener::resetConnection()
 {
    connection_ = nullptr;
+}
+
+HeadlessContainerCallbacks *SignerAdapterListener::callbacks() const
+{
+   return callbacks_.get();
 }
 
 bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
@@ -775,4 +758,9 @@ void SignerAdapterListener::shutdownIfNeeded()
       logger_->info("terminal disconnect detected, shutdown...");
       app_->close();
    }
+}
+
+bool SignerAdapterListener::sendReady()
+{
+   return sendData(signer::HeadlessReadyType, {});
 }

@@ -44,8 +44,6 @@ public:
 
    void start();
    void stop();
-   void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
-   void setCallbacks(HeadlessContainerCallbacks *callbacks);
 
    void reloadWallets(const std::string &, const std::function<void()> &);
    void reconnect(const std::string &listenAddr, const std::string &port);
@@ -80,7 +78,6 @@ private:
    std::unique_ptr<ZmqBIP15XServerConnection>   guiConnection_;
 
    ProcessControl             guiProcess_;
-   std::function<void(bool)>  cbReady_;
    bool ready_{false};
    std::atomic<bs::signer::BindStatus> signerBindStatus_{bs::signer::BindStatus::Inactive};
 };
