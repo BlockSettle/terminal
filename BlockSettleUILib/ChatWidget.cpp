@@ -390,9 +390,9 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
 
    bool visible = true;
    if (isEmail) {
-      visible &= emailEntered || !userInfoList.empty();
+      visible = emailEntered || !userInfoList.empty();
    } else {
-      visible &= !userInfoList.empty();
+      visible = !userInfoList.empty();
    }
    ui_->searchWidget->setListVisible(visible);
 
