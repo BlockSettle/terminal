@@ -39,6 +39,7 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
 
    connect(ui_->lineEditName, &QLineEdit::textChanged, this, &SignerKeysWidget::onFormChanged);
    connect(ui_->lineEditAddress, &QLineEdit::textChanged, this, &SignerKeysWidget::onFormChanged);
+   connect(ui_->spinBoxPort, QOverload<int>::of(&QSpinBox::valueChanged), this, &SignerKeysWidget::onFormChanged);
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this](){
       emit needClose();
@@ -167,8 +168,22 @@ void SignerKeysWidget::resetForm()
 
 void SignerKeysWidget::onFormChanged()
 {
-   ui_->pushButtonAddSignerKey->setEnabled(!ui_->lineEditName->text().isEmpty()
-                                           && ui_->lineEditAddress->hasAcceptableInput());
+   bool acceptable = ui_->lineEditAddress->hasAcceptableInput();
+   bool exists = false;
+   bool valid = false;
+   if (acceptable) {
+      SignerHost signerHost;
+      signerHost.name = ui_->lineEditName->text();
+      signerHost.address = ui_->lineEditAddress->text();
+      signerHost.port = ui_->spinBoxPort->value();
+      signerHost.key = ui_->lineEditKey->text();
+      valid = signerHost.isValid();
+      if (valid) {
+         exists = signersProvider_->indexOf(signerHost.name) != -1
+               || signersProvider_->indexOf(signerHost) != -1;
+      }
+   }
+   ui_->pushButtonAddSignerKey->setEnabled(valid && acceptable && !exists);
 }
 
 void SignerKeysWidget::onSelect()
