@@ -4,6 +4,7 @@
 ChatSearchLineEdit::ChatSearchLineEdit(QWidget *parent)
    : QLineEdit(parent)
    , handler_(nullptr)
+   , resetOnNextInput_(false)
 {
    connect(this, &QLineEdit::textChanged, this, &ChatSearchLineEdit::onTextChanged);
 }
@@ -11,6 +12,11 @@ ChatSearchLineEdit::ChatSearchLineEdit(QWidget *parent)
 void ChatSearchLineEdit::setActionsHandler(std::shared_ptr<ChatSearchActionsHandler> handler)
 {
    handler_ = handler;
+}
+
+void ChatSearchLineEdit::setResetOnNextInput(bool value)
+{
+   resetOnNextInput_ = value;
 }
 
 void ChatSearchLineEdit::onTextChanged(const QString &text)
@@ -25,6 +31,10 @@ ChatSearchLineEdit::~ChatSearchLineEdit() = default;
 
 void ChatSearchLineEdit::keyPressEvent(QKeyEvent * e)
 {
+   if (resetOnNextInput_) {
+      clear();
+      resetOnNextInput_ = false;
+   }
    switch (e->key()) {
    case Qt::Key_Enter:     //Qt::Key_Enter   - Numpad Enter key
    case Qt::Key_Return:    //Qt::Key_Return  - Main Enter key

@@ -45,6 +45,7 @@ public:
    bool isListVisible() const;
    QString searchText() const;
    void setSearchModel(const std::shared_ptr<QAbstractItemModel> &model);
+   void clearSearchLineOnNextInput();
 
 public slots:
    void clearLineEdit();

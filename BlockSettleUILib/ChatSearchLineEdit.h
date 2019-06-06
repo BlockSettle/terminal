@@ -13,10 +13,12 @@ public:
    ChatSearchLineEdit(QWidget *parent = nullptr);
    virtual ~ChatSearchLineEdit() override;
    void setActionsHandler(std::shared_ptr<ChatSearchActionsHandler> handler);
+   void setResetOnNextInput(bool value);
 private:
    void onTextChanged(const QString& text);
 private:
    std::shared_ptr<ChatSearchActionsHandler> handler_;
+   bool resetOnNextInput_;
 
    // QWidget interface
 protected:

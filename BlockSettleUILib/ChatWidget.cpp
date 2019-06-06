@@ -391,6 +391,9 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
    bool visible = true;
    if (isEmail) {
       visible = emailEntered || !userInfoList.empty();
+      if (visible) {
+         ui_->searchWidget->clearSearchLineOnNextInput();
+      }
    } else {
       visible = !userInfoList.empty();
    }

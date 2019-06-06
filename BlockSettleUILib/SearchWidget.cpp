@@ -106,6 +106,11 @@ void SearchWidget::setSearchModel(const std::shared_ptr<QAbstractItemModel> &mod
            this, &SearchWidget::resetTreeView);
 }
 
+void SearchWidget::clearSearchLineOnNextInput()
+{
+   ui_->chatSearchLineEdit->setResetOnNextInput(true);
+}
+
 void SearchWidget::clearLineEdit()
 {
    ui_->chatSearchLineEdit->clear();
