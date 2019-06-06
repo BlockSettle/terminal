@@ -34,7 +34,7 @@ std::shared_ptr<OTCRequestData> OTCRequestData::fromJSON(const std::string& json
    bs::network::OTCRangeID::Type range =
          static_cast<bs::network::OTCRangeID::Type>(data[OTCRqRangeIdKey].toInt());
 
-   bs::network::OTCRequest otcRq{side, range, false, false};
+   bs::network::OTCRequest otcRq{side, range};
 
    return std::make_shared<OTCRequestData>(clientRequestId,
                                            serverRequestId,
