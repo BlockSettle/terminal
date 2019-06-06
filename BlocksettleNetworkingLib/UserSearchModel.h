@@ -9,6 +9,8 @@ namespace Chat {
    class UserData;
 }
 
+class ChatSearchListViewItemStyle;
+
 class UserSearchModel : public QAbstractListModel
 {
    Q_OBJECT
@@ -27,8 +29,10 @@ public:
 
    typedef std::pair<QString,UserStatus> UserInfo;
    explicit UserSearchModel(QObject *parent = nullptr);
+   ~UserSearchModel() override;
 
    void setUsers(const std::vector<UserInfo> &users);
+   void setItemStyle(std::shared_ptr<QObject> itemStyle);
 
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
@@ -36,6 +40,7 @@ public:
 
 private:
    std::vector<UserInfo> users_;
+   std::shared_ptr<QObject> itemStyle_;
 };
 
 #endif // USERSEARCHMODEL_H

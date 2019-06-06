@@ -7,15 +7,17 @@
 
 constexpr int kRowHeigth = 20;
 
-const QColor kContactUnknown           = QColor(0xc0c0c0);
-const QColor kContactAdded             = QColor(0x00c8f8);
-const QColor kContactPendingIncoming   = QColor(0xffa834);
-const QColor kContactPendingOutgoing   = QColor(0xa0bc5d);
-const QColor kContactRejected          = QColor(0xc4362f);
+constexpr char kContactUnknown[]          = "color_contact_unknown";
+constexpr char kContactAdded[]            = "color_contact_accepted";
+constexpr char kContactPendingIncoming[]  = "color_contact_incoming";
+constexpr char kContactPendingOutgoing[]  = "color_contact_outgoing";
+//constexpr char kContactRejected[]         = "color_contact_rejected";
 
 UserSearchModel::UserSearchModel(QObject *parent) : QAbstractListModel(parent)
 {
 }
+
+UserSearchModel::~UserSearchModel() = default;
 
 void UserSearchModel::setUsers(const std::vector<UserInfo> &users)
 {
@@ -26,6 +28,11 @@ void UserSearchModel::setUsers(const std::vector<UserInfo> &users)
       users_.push_back(user);
    }
    endResetModel();
+}
+
+void UserSearchModel::setItemStyle(std::shared_ptr<QObject> itemStyle)
+{
+   itemStyle_ = itemStyle;
 }
 
 int UserSearchModel::rowCount(const QModelIndex &parent) const
@@ -51,16 +58,19 @@ QVariant UserSearchModel::data(const QModelIndex &index, int role) const
    case Qt::SizeHintRole:
       return QVariant::fromValue(QSize(20, kRowHeigth));
    case Qt::ForegroundRole: {
+      if (!itemStyle_) {
+         return QVariant();
+      }
       auto status = users_.at(static_cast<size_t>(index.row())).second;
       switch (status) {
       case UserSearchModel::UserStatus::ContactUnknown:
-         return QVariant::fromValue(kContactUnknown);
+         return itemStyle_->property(kContactUnknown);
       case UserSearchModel::UserStatus::ContactAccepted:
-         return QVariant::fromValue(kContactAdded);
+         return itemStyle_->property(kContactAdded);
       case UserSearchModel::UserStatus::ContactPendingIncoming:
-         return QVariant::fromValue(kContactPendingIncoming);
+         return itemStyle_->property(kContactPendingIncoming);
       case UserSearchModel::UserStatus::ContactPendingOutgoing:
-         return QVariant::fromValue(kContactPendingOutgoing);
+         return itemStyle_->property(kContactPendingOutgoing);
       default:
          return QVariant();
       }

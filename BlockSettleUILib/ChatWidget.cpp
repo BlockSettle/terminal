@@ -11,6 +11,7 @@
 #include "ChatTreeModelWrapper.h"
 #include "UserSearchModel.h"
 #include "CelerClient.h"
+#include "ChatSearchListViewItemStyle.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -445,6 +446,7 @@ void ChatWidget::initSearchWidget()
 {
    ui_->searchWidget->init(client_);
    ui_->searchWidget->setSearchModel(client_->getUserSearchModel());
+   client_->getUserSearchModel()->setItemStyle(std::make_shared<ChatSearchListViewItemStyle>());
    connect(ui_->searchWidget, &SearchWidget::addFriendRequied,
            this, &ChatWidget::onSendFriendRequest);
    connect(ui_->searchWidget, &SearchWidget::removeFriendRequired,
