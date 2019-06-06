@@ -1603,7 +1603,16 @@ void ChatClient::HandleRejectedPrivateOTCResponse(const std::string &otcId, cons
 
 void ChatClient::HandlePrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData> &response)
 {
+   auto cNode = model_->findContactNode(response->responderId());
 
+   if (!cNode){
+      logger_->error("[ChatClient::HandlePrivateOTCResponse]  Not found corresponding node"
+                     " {} for accepted OTC", response->requestorId());
+   }
+
+   cNode->setActiveOtcResponse(response);
+   model_->insertPrivateOTCReceivedResponseData(response);
+   model_->notifyContactChanged(cNode->getContactData());
 }
 
 // cancel current OTC request sent to OTC chat
