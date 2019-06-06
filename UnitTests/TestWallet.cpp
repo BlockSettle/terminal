@@ -2315,7 +2315,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    const auto addr2 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
    const auto addr3 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
    const auto changeAddr = leafPtr_->getNewChangeAddress(AddressEntryType_P2WPKH);
-   EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
+   EXPECT_EQ(leafPtr_->getUsedAddressCount(), 4);
 
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
