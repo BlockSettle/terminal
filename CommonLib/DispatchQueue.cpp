@@ -30,23 +30,20 @@ void DispatchQueue::tryProcess(std::chrono::milliseconds period)
 {
    std::unique_lock<std::mutex> lock(lock_);
 
-   bool result = cv_.wait_for(lock, period, [this] {
-      return (q_.size() || quit_);
+   cv_.wait_for(lock, period, [this] {
+      return (!q_.empty() || quit_);
    });
 
-   if (!result) {
+   if (q_.empty()) {
       return;
    }
 
-   if(!quit_ && !q_.empty())
-   {
-      auto op = std::move(q_.front());
-      q_.pop();
+   auto op = std::move(q_.front());
+   q_.pop();
 
-      lock.unlock();
+   lock.unlock();
 
-      op();
-   }
+   op();
 }
 
 void DispatchQueue::quit()
