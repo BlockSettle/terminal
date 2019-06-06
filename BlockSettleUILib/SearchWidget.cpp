@@ -56,12 +56,7 @@ void SearchWidget::init(std::shared_ptr<ChatSearchActionsHandler> handler)
                     ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
    setMinimumHeight(kBottomSpace + ui_->chatSearchLineEdit->height());
 
-   ui_->searchResultTreeView->setHeaderHidden(true);
-   ui_->searchResultTreeView->setRootIsDecorated(false);
    ui_->searchResultTreeView->setVisible(false);
-   ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::SingleSelection);
-   ui_->searchResultTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
-
    ui_->notFoundLabel->setVisible(false);
 
    qApp->installEventFilter(this);
