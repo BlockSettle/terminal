@@ -27,6 +27,7 @@ static int process(const std::shared_ptr<spdlog::logger> &logger
    auto queue = std::make_shared<DispatchQueue>();
 
    HeadlessAppObj appObj(logger, settings, queue);
+
    appObj.start();
 
    while (!queue->done()) {
@@ -38,6 +39,9 @@ static int process(const std::shared_ptr<spdlog::logger> &logger
          g_signalStatus = 0;
       }
    }
+
+   // Stop all background processing just in case
+   appObj.stop();
 
    return EXIT_SUCCESS;
 }

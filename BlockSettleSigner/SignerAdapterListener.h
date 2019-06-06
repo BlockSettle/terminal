@@ -30,14 +30,14 @@ class SignerAdapterListener : public ServerConnectionListener
 {
 public:
    SignerAdapterListener(HeadlessAppObj *app
-      , const std::shared_ptr<ZmqBIP15XServerConnection> &conn
+      , ZmqBIP15XServerConnection *connection
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
       , const std::shared_ptr<DispatchQueue> &queue
       , const std::shared_ptr<HeadlessSettings> &settings);
    ~SignerAdapterListener() noexcept override;
 
-   std::shared_ptr<ZmqBIP15XServerConnection> getServerConn() const { return connection_; }
+   ZmqBIP15XServerConnection *getServerConn() const { return connection_; }
 
    bool onReady(int cur = 0, int total = 0);
 
@@ -85,7 +85,7 @@ private:
    friend class HeadlessContainerCallbacksImpl;
 
    HeadlessAppObj *  app_;
-   std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
+   ZmqBIP15XServerConnection *connection_{};
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
    std::shared_ptr<DispatchQueue> queue_;

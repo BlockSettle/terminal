@@ -125,13 +125,13 @@ static std::string toHex(const std::string &binData)
 }
 
 SignerAdapterListener::SignerAdapterListener(HeadlessAppObj *app
-   , const std::shared_ptr<ZmqBIP15XServerConnection> &conn
+   , ZmqBIP15XServerConnection *connection
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
    , const std::shared_ptr<DispatchQueue> &queue
    , const std::shared_ptr<HeadlessSettings> &settings)
    : ServerConnectionListener(), app_(app)
-   , connection_(conn)
+   , connection_(connection)
    , logger_(logger)
    , walletsMgr_(walletsMgr)
    , queue_(queue)

@@ -40,9 +40,10 @@ public:
       , const std::shared_ptr<HeadlessSettings> &
       , const std::shared_ptr<DispatchQueue>&);
 
-   ~HeadlessAppObj() noexcept = default;
+   ~HeadlessAppObj() noexcept;
 
    void start();
+   void stop();
    void setReadyCallback(const std::function<void(bool)> &cb) { cbReady_ = cb; }
    void setCallbacks(HeadlessContainerCallbacks *callbacks);
 
@@ -58,7 +59,7 @@ public:
 
    void updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &);
 
-   std::shared_ptr<ZmqBIP15XServerConnection> connection() const;
+   ZmqBIP15XServerConnection* connection() const;
    bs::signer::BindStatus signerBindStatus() const { return signerBindStatus_; }
 
 private:
@@ -70,9 +71,14 @@ private:
    const std::shared_ptr<HeadlessSettings>      settings_;
    const std::shared_ptr<DispatchQueue>         queue_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
-   std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
-   std::shared_ptr<HeadlessContainerListener>   listener_;
-   std::shared_ptr<SignerAdapterListener>       adapterLsn_;
+
+   // Declare listeners before connections (they should be destroyed after)
+   std::unique_ptr<HeadlessContainerListener>   listener_;
+   std::unique_ptr<SignerAdapterListener>       adapterLsn_;
+
+   std::unique_ptr<ZmqBIP15XServerConnection>   connection_;
+   std::unique_ptr<ZmqBIP15XServerConnection>   adapterConnection_;
+
    ProcessControl             guiProcess_;
    std::function<void(bool)>  cbReady_;
    bool ready_{false};
