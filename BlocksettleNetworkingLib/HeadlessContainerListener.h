@@ -25,6 +25,7 @@ namespace bs {
    class Wallet;
 }
 class ServerConnection;
+class DispatchQueue;
 
 class HeadlessContainerCallbacks
 {
@@ -49,6 +50,7 @@ public:
    HeadlessContainerListener(const std::shared_ptr<ServerConnection> &conn
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::core::WalletsManager> &
+      , const std::shared_ptr<DispatchQueue> &
       , const std::string &walletsPath
       , NetworkType netType
       , bool watchingOnly = false
@@ -139,6 +141,7 @@ private:
    std::shared_ptr<ServerConnection>   connection_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager> walletsMgr_;
+   std::shared_ptr<DispatchQueue>      queue_;
    const std::string                   walletsPath_;
    const std::string                   backupPath_;
    const NetworkType                   netType_;

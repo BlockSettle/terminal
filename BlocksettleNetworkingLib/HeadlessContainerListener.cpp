@@ -4,6 +4,7 @@
 #include "ConnectionManager.h"
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "DispatchQueue.h"
 #include "ServerConnection.h"
 #include "WalletEncryption.h"
 
@@ -13,12 +14,14 @@ using namespace Blocksettle::Communication;
 HeadlessContainerListener::HeadlessContainerListener(const std::shared_ptr<ServerConnection> &conn
    , const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
+   , const std::shared_ptr<DispatchQueue> &queue
    , const std::string &walletsPath, NetworkType netType
    , bool wo, const bool &backupEnabled)
    : ServerConnectionListener()
    , connection_(conn)
    , logger_(logger)
    , walletsMgr_(walletsMgr)
+   , queue_(queue)
    , walletsPath_(walletsPath)
    , backupPath_(walletsPath + "/../backup")
    , netType_(netType)
@@ -82,31 +85,39 @@ static std::string toHex(const std::string &binData)
 void HeadlessContainerListener::OnClientConnected(const std::string &clientId)
 {
    logger_->debug("[HeadlessContainerListener] client {} connected", toHex(clientId));
-   connectedClients_.insert(clientId);
+
+   queue_->dispatch([this, clientId] {
+      connectedClients_.insert(clientId);
+   });
 }
 
 void HeadlessContainerListener::OnClientDisconnected(const std::string &clientId)
 {
    logger_->debug("[HeadlessContainerListener] client {} disconnected", toHex(clientId));
-   connectedClients_.erase(clientId);
 
-   if (callbacks_) {
-      callbacks_->clientDisconn(clientId);
-   }
+   queue_->dispatch([this, clientId] {
+      connectedClients_.erase(clientId);
+
+      if (callbacks_) {
+         callbacks_->clientDisconn(clientId);
+      }
+   });
 }
 
 void HeadlessContainerListener::OnDataFromClient(const std::string &clientId, const std::string &data)
 {
-   headless::RequestPacket packet;
-   if (!packet.ParseFromString(data)) {
-      logger_->error("[{}] failed to parse request packet", __func__);
-      return;
-   }
+   queue_->dispatch([this, clientId, data] {
+      headless::RequestPacket packet;
+      if (!packet.ParseFromString(data)) {
+         logger_->error("[{}] failed to parse request packet", __func__);
+         return;
+      }
 
-   if (!onRequestPacket(clientId, packet)) {
-      packet.set_data("");
-      sendData(packet.SerializeAsString(), clientId);
-   }
+      if (!onRequestPacket(clientId, packet)) {
+         packet.set_data("");
+         sendData(packet.SerializeAsString(), clientId);
+      }
+   });
 }
 
 void HeadlessContainerListener::OnPeerConnected(const std::string &ip)
