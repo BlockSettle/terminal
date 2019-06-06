@@ -17,6 +17,7 @@ ELSE(CMAKE_BUILD_TYPE STREQUAL "Debug")
 ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 add_definitions(-DNOMINMAX)
+add_definitions(-DCOINBASE_MATURITY_TESTS)
 
 # Force Armory to ignore Crypto++ and use libbtc instead.
 add_definitions(-DLIBBTC_ONLY)

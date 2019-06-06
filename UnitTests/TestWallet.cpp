@@ -191,7 +191,7 @@ TEST_F(TestWallet, BIP44_address)
 
    const auto chgAddr = leaf->getNewChangeAddress();
    EXPECT_EQ(chgAddr.display(), "tb1q7p4fdj9prly96qg3aq97v627q6cstwlze2jh3g");
-   EXPECT_EQ(leaf->getUsedAddressCount(), 1);
+   EXPECT_EQ(leaf->getUsedAddressCount(), 2);
 
    EXPECT_TRUE(wallet->eraseFile());
 }
@@ -454,7 +454,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       }
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 15);
       EXPECT_EQ(leafPtr->getExtAddressCount(), 10);
       EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
 
@@ -500,7 +500,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 15);
       EXPECT_EQ(leafPtr->getExtAddressCount(), 10);
       EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
 
@@ -525,7 +525,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       EXPECT_EQ(woAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafWO->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 15);
       EXPECT_EQ(leafWO->getExtAddressCount(), 10);
       EXPECT_EQ(leafWO->getIntAddressCount(), 5);
 
@@ -563,7 +563,7 @@ TEST_F(TestWallet, CreateDestroyLoad)
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 15);
       EXPECT_EQ(leafPtr->getExtAddressCount(), 10);
       EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
    }
@@ -924,7 +924,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       }
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
       EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
       EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
 
@@ -977,7 +977,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafPtr->getUsedAddressCount(), 5);
+      EXPECT_EQ(leafPtr->getUsedAddressCount(), 10);
       EXPECT_EQ(leafPtr->getExtAddressCount(), 5);
       EXPECT_EQ(leafPtr->getIntAddressCount(), 5);
 
@@ -1029,7 +1029,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       EXPECT_EQ(woAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafWO->getUsedAddressCount(), 6);
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 12);
       EXPECT_EQ(leafWO->getExtAddressCount(), 6);
       EXPECT_EQ(leafWO->getIntAddressCount(), 6);
 
@@ -1076,7 +1076,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
       EXPECT_EQ(usedAddrHash, grabbedAddrHash);
 
       //check chain use counters
-      EXPECT_EQ(leafWO->getUsedAddressCount(), 6);
+      EXPECT_EQ(leafWO->getUsedAddressCount(), 12);
       EXPECT_EQ(leafWO->getExtAddressCount(), 6);
       EXPECT_EQ(leafWO->getIntAddressCount(), 6);
 
@@ -2145,10 +2145,12 @@ TEST_F(TestWalletWithArmory, Comments)
    auto cbTxOutList = [wallet, syncWallet, addr, txComment, promPtr, passphrase]
       (std::vector<UTXO> inputs)->void
    {
-      const auto txReq = syncWallet->createTXRequest(
-         inputs, 
-         { addr.getRecipient((uint64_t)12000) }, 
-         345);
+      if (inputs.empty()) {
+         promPtr->set_value(false);
+      }
+      ASSERT_FALSE(inputs.empty());
+      const auto recip = addr.getRecipient((uint64_t)12000);
+      const auto txReq = syncWallet->createTXRequest(inputs, { recip }, 345);
 
       BinaryData txData;
       {
@@ -2165,18 +2167,17 @@ TEST_F(TestWalletWithArmory, Comments)
    };
 
    EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX));
-   fut.wait();
+   EXPECT_TRUE(fut.get());
 }
 
 TEST_F(TestWalletWithArmory, ZCBalance)
 {
-   const auto addr1 = leafPtr_->getNewExtAddress(
-      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+   const auto addr1 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
    const auto addr2 = leafPtr_->getNewExtAddress(
       AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
    const auto changeAddr = leafPtr_->getNewChangeAddress(
       AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
-   EXPECT_EQ(leafPtr_->getUsedAddressCount(), 2);
+   EXPECT_EQ(leafPtr_->getUsedAddressCount(), 3);
 
    //add an extra address not part of the wallet
    bs::Address otherAddr(
@@ -2216,6 +2217,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    syncLeaf->updateBalances(waitOnBalance);
    balFut.wait();
    EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 250);
+   EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance(), 0);
 
    //spend these coins
    const uint64_t amount = 0.05 * BTCNumericTypes::BalanceDivider;
@@ -2273,9 +2275,10 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    syncLeaf->updateBalances(cbBalance);
    fut2.wait();
 
-   auto leafBal = syncLeaf->getTotalBalance();
-   EXPECT_EQ(syncLeaf->getTotalBalance(), 
+   EXPECT_EQ(syncLeaf->getTotalBalance(),
       double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getUnconfirmedBalance()
+      , double(amount) / BTCNumericTypes::BalanceDivider);
 
    auto bal = syncLeaf->getAddrBalance(addr1);
    ASSERT_EQ(bal.size(), 3);
