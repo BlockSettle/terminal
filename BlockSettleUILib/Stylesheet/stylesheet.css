@@ -1506,8 +1506,17 @@ QTreeView#treeViewUsers:item {
     background-color: #1c2835;
     selection-background-color: #3a8ab4;
     border: 1px solid transparent;}
+
+ChatSearchListVew#searchResultTreeView:item {
+    font-size: 11px;
+    background-color: #1c2835;
+/*    selection-background-color: #3a8ab4;*/
+    border: 1px solid transparent;}
     
 QTreeView#treeViewUsers:item:selected {
+    background-color: #3a8ab4; }
+
+ChatSearchListVew#searchResultTreeView:item:selected {
     background-color: #3a8ab4; }
     
 ChatUserListTreeViewStyle {

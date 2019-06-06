@@ -25,10 +25,14 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::searchTextChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyDownPressed,
            this, &SearchWidget::focusResults);
-   connect(ui_->searchResultTreeView, &QTreeView::customContextMenuRequested,
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::customContextMenuRequested,
            this, &SearchWidget::showContextMenu);
-   connect(ui_->searchResultTreeView, &QTreeView::activated,
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::activated,
            this, &SearchWidget::onItemClicked);
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveRequired,
+           this, &SearchWidget::leaveSearchResults);
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveWithCloseRequired,
+           this, &SearchWidget::leaveAndCloseSearchResults);
 }
 
 SearchWidget::~SearchWidget()
@@ -126,6 +130,7 @@ void SearchWidget::setListVisible(bool value)
    bool hasUsers = ui_->searchResultTreeView->model()->rowCount() > 0;
    ui_->searchResultTreeView->setVisible(value && hasUsers);
    ui_->searchResultTreeView->scrollToTop();
+   ui_->searchResultTreeView->setCurrentIndex(QModelIndex());
    ui_->notFoundLabel->setVisible(value && !hasUsers);
    layout()->update();
    listVisibleTimer_->stop();
@@ -205,4 +210,20 @@ void SearchWidget::onItemClicked(const QModelIndex &index)
    default:
       return;
    }
+}
+
+void SearchWidget::leaveSearchResults()
+{
+   ui_->chatSearchLineEdit->setFocus();
+   ui_->searchResultTreeView->clearSelection();
+   auto currentIndex = ui_->searchResultTreeView->currentIndex();
+   ui_->searchResultTreeView
+         ->selectionModel()
+         ->setCurrentIndex(currentIndex, QItemSelectionModel::Deselect);
+}
+
+void SearchWidget::leaveAndCloseSearchResults()
+{
+   ui_->chatSearchLineEdit->setFocus();
+   setListVisible(false);
 }

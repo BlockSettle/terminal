@@ -59,6 +59,8 @@ private slots:
    void showContextMenu(const QPoint &pos);
    void focusResults();
    void onItemClicked(const QModelIndex &index);
+   void leaveSearchResults();
+   void leaveAndCloseSearchResults();
 
 signals:
    void searchUserTextEdited(const QString &text);
