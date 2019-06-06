@@ -7,6 +7,13 @@
 #include <spdlog/spdlog.h>
 #include <zmq.h>
 
+namespace
+{
+
+   const std::chrono::seconds kHearthbeatCheckPeriod(1);
+
+} // namespace
+
 ZmqServerConnection::ZmqServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context)
@@ -175,8 +182,10 @@ void ZmqServerConnection::listenFunction()
 
    int errorCount = 0;
 
-   while(true) {
-      int result = zmq_poll(poll_items, 3, -1);
+   while (true) {
+      int periodMs = std::chrono::duration_cast<std::chrono::milliseconds>(kHearthbeatCheckPeriod).count();
+      int result = zmq_poll(poll_items, 3, periodMs);
+
       if (result == -1) {
          errorCount++;
          if ((zmq_errno() != EINTR) || (errorCount > 10)) {
@@ -232,7 +241,7 @@ void ZmqServerConnection::listenFunction()
                   listener_->OnPeerConnected(cliIP);
                }
             }
-               break;
+            break;
 
             case ZMQ_EVENT_DISCONNECTED :
             case ZMQ_EVENT_CLOSED :
@@ -246,14 +255,23 @@ void ZmqServerConnection::listenFunction()
                   connectedPeers_.erase(it);
                }
             }
-               break;
+            break;
          }
       }
+
+      onPeriodicCheck();
    }
 
    zmq_socket_monitor(dataSocket_.get(), nullptr, ZMQ_EVENT_ALL);
    dataSocket_ = context_->CreateNullSocket();
    monSocket_ = context_->CreateNullSocket();
+
+   if (listener_) {
+      for (const auto &peer : connectedPeers_) {
+         listener_->OnPeerDisconnected(peer.second);
+      }
+   }
+   connectedPeers_.clear();
 
    logger_->debug("[{}] poll thread stopped for {}", __func__, connectionName_);
 }
@@ -283,6 +301,16 @@ void ZmqServerConnection::stopServer()
    }
 
    listenThread_.join();
+}
+
+void ZmqServerConnection::requestPeriodicCheck()
+{
+   SendDataCommand();
+}
+
+std::thread::id ZmqServerConnection::listenThreadId() const
+{
+   return listenThread_.get_id();
 }
 
 bool ZmqServerConnection::SendDataCommand()
@@ -350,6 +378,10 @@ bool ZmqServerConnection::QueueDataToSend(const std::string& clientId, const std
    }
 
    return SendDataCommand();
+}
+
+void ZmqServerConnection::onPeriodicCheck()
+{
 }
 
 void ZmqServerConnection::SendDataToDataSocket()

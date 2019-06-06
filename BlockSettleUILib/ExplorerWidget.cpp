@@ -9,18 +9,24 @@
 #include <QStringListModel>
 #include <QToolTip>
 
+namespace {
+
+   constexpr auto ExplorerTimeout = std::chrono::seconds(10);
+
+} // namespace
+
 // Overloaded constuctor. Does basic setup and Qt signal connection.
 ExplorerWidget::ExplorerWidget(QWidget *parent) :
    TabWithShortcut(parent)
-   , expTimer_(new QTimer)
    , ui_(new Ui::ExplorerWidget())
+   , expTimer_(new QTimer)
    , searchHistoryPosition_(-1)
 {
    ui_->setupUi(this);
    ui_->searchBox->setReadOnly(true);
 
    // Set up the explorer expiration timer.
-   expTimer_->setInterval(EXP_TIMEOUT);
+   expTimer_->setInterval(ExplorerTimeout);
    expTimer_->setSingleShot(true);
    connect(expTimer_.get(), &QTimer::timeout, this, &ExplorerWidget::onExpTimeout);
    connect(ui_->Transaction, &TransactionDetailsWidget::finished, expTimer_.get(), &QTimer::stop);

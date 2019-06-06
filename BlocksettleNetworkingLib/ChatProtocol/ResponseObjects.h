@@ -20,6 +20,9 @@
 #include "ResponseObjects/LogoutResponse.h"
 #include "ResponseObjects/SessionPublicKeyResponse.h"
 #include "ResponseObjects/ReplySessionPublicKeyResponse.h"
+#include "ResponseObjects/GenCommonOTCResponse.h"
+#include "ResponseObjects/AnswerCommonOTCResponse.h"
+#include "ResponseObjects/UpdateCommonOTCResponse.h"
 
 #include "ResponseHandler.h"
 

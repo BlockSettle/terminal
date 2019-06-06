@@ -73,14 +73,29 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
    return byTypes && byData;
 }
 
+bool ChatContactElement::isHaveActiveOTC() const
+{
+   return activeOtcRequest_ != nullptr;
+}
+
+std::shared_ptr<Chat::OTCRequestData> ChatContactElement::getActiveOtcRequest() const
+{
+   return activeOtcRequest_;
+}
+
+void ChatContactElement::setActiveOtcRequest(const std::shared_ptr<Chat::OTCRequestData> &activeOtcRequest)
+{
+   activeOtcRequest_ = activeOtcRequest;
+}
+
 ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
 {
-    return onlineStatus_;
+   return onlineStatus_;
 }
 
 void ChatContactElement::setOnlineStatus(const OnlineStatus &onlineStatus)
 {
-    onlineStatus_ = onlineStatus;
+   onlineStatus_ = onlineStatus;
 }
 
 std::shared_ptr<Chat::UserData> ChatUserElement::getUserData() const

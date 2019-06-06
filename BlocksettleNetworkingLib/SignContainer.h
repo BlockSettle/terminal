@@ -60,6 +60,7 @@ public:
       HeartbeatWaitFailed,
       InvalidProtocol,
       NetworkTypeMismatch,
+      ConnectionTimeout,
    };
    Q_ENUM(ConnectionError)
 
@@ -119,6 +120,8 @@ public:
 
    virtual void setTargetDir(const QString& targetDir) {}
    virtual QString targetDir() const { return QString(); }
+
+   bool isLocal() const { return mode_ == OpMode::Local || mode_ == OpMode::LocalInproc; }
 
 signals:
    void connected();

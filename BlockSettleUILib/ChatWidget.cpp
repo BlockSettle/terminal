@@ -4,12 +4,12 @@
 #include "ApplicationSettings.h"
 #include "ChatClient.h"
 #include "ChatClientDataModel.h"
-#include "ChatSearchPopup.h"
 #include "NotificationCenter.h"
 #include "OTCRequestViewModel.h"
 #include "UserHasher.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatTreeModelWrapper.h"
+#include "UserSearchModel.h"
 #include "CelerClient.h"
 
 #include <QApplication>
@@ -36,10 +36,15 @@ enum class OTCPages : int
    OTCCreateResponsePage,
    OTCNegotiateRequestPage,
    OTCNegotiateResponsePage,
-   OTCParticipantShieldPage
+   OTCParticipantShieldPage,
+   OTCContactShieldPage,
+   OTCContactNetStatusShieldPage
 };
 
 constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
+
+const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
+                                  QRegularExpression::CaseInsensitiveOption);
 
 bool IsOTCChatRoom(const QString& chatRoom)
 {
@@ -92,8 +97,8 @@ public:
       chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
       chat_->ui_->input_textEdit->setVisible(false);
       chat_->ui_->input_textEdit->setEnabled(false);
-      chat_->ui_->chatSearchLineEdit->clear();
-      chat_->ui_->chatSearchLineEdit->setEnabled(false);
+      chat_->ui_->searchWidget->clearLineEdit();
+      chat_->ui_->searchWidget->setLineEditEnabled(false);
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
@@ -134,7 +139,7 @@ public:
       chat_->ui_->input_textEdit->setText(QLatin1Literal(""));
       chat_->ui_->input_textEdit->setVisible(true);
       chat_->ui_->input_textEdit->setEnabled(true);
-      chat_->ui_->chatSearchLineEdit->setEnabled(true);
+      chat_->ui_->searchWidget->setLineEditEnabled(true);
       chat_->ui_->treeViewUsers->expandAll();
       chat_->ui_->labelUserName->setText(chat_->client_->getUserId());
 
@@ -244,7 +249,6 @@ public:
 ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChatWidget)
-   , popup_(nullptr)
    , needsToStartFirstRoom_(false)
 {
    ui_->setupUi(this);
@@ -283,6 +287,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    model->setNewMessageMonitor(this);
    auto proxyModel = client_->getProxyModel();
    ui_->treeViewUsers->setModel(proxyModel.get());
+   ui_->treeViewUsers->setSortingEnabled(true);
+   ui_->treeViewUsers->sortByColumn(0, Qt::AscendingOrder);
    connect(proxyModel.get(), &ChatTreeModelWrapper::treeUpdated,
            ui_->treeViewUsers, &QTreeView::expandAll);
 //   ui_->treeViewUsers->expandAll();
@@ -308,7 +314,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    });
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
-   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textEdited, this, &ChatWidget::onSearchUserTextEdited);
+   connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
    connect(ui_->textEditMessages, &QTextEdit::selectionChanged, this, &ChatWidget::onChatMessagesSelectionChanged);
 
 //   connect(client_.get(), &ChatClient::SearchUserListReceived,
@@ -332,7 +338,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 
 
    changeState(State::LoggedOut); //Initial state is LoggedOut
-   initPopup();
+   initSearchWidget();
 }
 
 
@@ -348,19 +354,27 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData
 
 void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
 {
-   if (users.size() > 0) {
-      std::shared_ptr<Chat::UserData> firstUser = users.at(0);
-      popup_->setUserID(firstUser->getUserId());
-      popup_->setUserIsInContacts(client_->isFriend(firstUser->getUserId()));
-   } else {
-      popup_->setUserID(QString());
+   std::vector<std::pair<QString,bool>> userInfoList;
+   QString searchText = ui_->searchWidget->searchText();
+   bool isEmail = kRxEmail.match(searchText).hasMatch();
+   QString hash = client_->deriveKey(searchText);
+   for (const auto &user : users) {
+      if (user) {
+         QString userId = user->getUserId();
+         if (isEmail && userId != hash) {
+            continue;
+         }
+         userInfoList.emplace_back(userId, client_->isFriend(userId));
+      }
    }
+   client_->getUserSearchModel()->setUsers(userInfoList);
 
-   setPopupVisible(true);
+   ui_->searchWidget->setListVisible(true);
 
    // hide popup after a few sec
-   if (users.size() == 0)
-      popupVisibleTimer_->start(kShowEmptyFoundUserListTimeoutMs);
+   if (users.size() == 0) {
+      ui_->searchWidget->startListAutoHide();
+   }
 }
 
 void ChatWidget::onUserClicked(const QString& userId)
@@ -399,6 +413,16 @@ void ChatWidget::changeState(ChatWidget::State state)
    }
 }
 
+void ChatWidget::initSearchWidget()
+{
+   ui_->searchWidget->setSearchModel(client_->getUserSearchModel());
+   ui_->searchWidget->init();
+   connect(ui_->searchWidget, &SearchWidget::addFriendRequied,
+           this, &ChatWidget::onSendFriendRequest);
+   connect(ui_->searchWidget, &SearchWidget::removeFriendRequired,
+           this, &ChatWidget::onRemoveFriendRequest);
+}
+
 void ChatWidget::onSendButtonClicked()
 {
    return stateCurrent_->onSendButtonClicked();
@@ -407,52 +431,6 @@ void ChatWidget::onSendButtonClicked()
 void ChatWidget::onMessagesUpdated()
 {
    return stateCurrent_->onMessagesUpdated();
-}
-
-void ChatWidget::initPopup()
-{
-   // create popup
-   popup_ = new ChatSearchPopup(this);
-   popup_->setGeometry(0, 0, ui_->chatSearchLineEdit->width(), static_cast<int>(ui_->chatSearchLineEdit->height() * 1.2));
-   popup_->setVisible(false);
-   connect(popup_, &ChatSearchPopup::sendFriendRequest, this, &ChatWidget::onSendFriendRequest);
-   connect(popup_, &ChatSearchPopup::removeFriendRequest, this, &ChatWidget::onRemoveFriendRequest);
-   qApp->installEventFilter(this);
-
-   // insert popup under chat search line edit
-   QVBoxLayout *boxLayout = qobject_cast<QVBoxLayout*>(ui_->chatSearchLineEdit->parentWidget()->layout());
-   int index = boxLayout->indexOf(ui_->chatSearchLineEdit) + 1;
-   boxLayout->insertWidget(index, popup_);
-
-   // create spacer under popup
-   chatUsersVerticalSpacer_ = new QSpacerItem(20, 40);
-   boxLayout->insertSpacerItem(index+1, chatUsersVerticalSpacer_);
-
-   // create timer
-   popupVisibleTimer_ = new QTimer();
-   popupVisibleTimer_->setSingleShot(true);
-   connect(popupVisibleTimer_, &QTimer::timeout, [=]() {
-      setPopupVisible(false);
-   });
-}
-
-void ChatWidget::setPopupVisible(const bool &value)
-{
-   if (popup_ != NULL)
-      popup_->setVisible(value);
-
-   // resize spacer
-   if (chatUsersVerticalSpacer_ != NULL) {
-      if (value)
-         chatUsersVerticalSpacer_->changeSize(20, 13);
-      else
-         chatUsersVerticalSpacer_->changeSize(20, 40);
-      ui_->chatSearchLineEdit->parentWidget()->layout()->update();
-   }
-
-   if (popupVisibleTimer_ != NULL) {
-      popupVisibleTimer_->stop();
-   }
 }
 
 std::string ChatWidget::login(const std::string& email, const std::string& jwt
@@ -498,6 +476,17 @@ void ChatWidget::setCelerClient(std::shared_ptr<CelerClient> celerClient)
    celerClient_ = celerClient;
 }
 
+void ChatWidget::updateChat(const bool &isChatTab)
+{
+   isChatTab_ = isChatTab;
+
+   ui_->textEditMessages->setIsChatTab(isChatTab_);
+
+   if (isChatTab_) {
+      ui_->treeViewUsers->updateCurrentChat();
+   }
+}
+
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
@@ -509,16 +498,16 @@ void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
    ui_->treeViewUsers->setCurrentUserChat(userId);
 }
 
-void ChatWidget::onSearchUserTextEdited(const QString& text)
+void ChatWidget::onSearchUserTextEdited(const QString& /*text*/)
 {
-   QString userToAdd = ui_->chatSearchLineEdit->text();
+   QString userToAdd = ui_->searchWidget->searchText();
    if (userToAdd.isEmpty() || userToAdd.length() < 3) {
-      setPopupVisible(false);
+      ui_->searchWidget->setListVisible(false);
+      client_->getUserSearchModel()->setUsers({});
       return;
    }
 
-   QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
-   QRegularExpressionMatch match = rx_email.match(userToAdd);
+   QRegularExpressionMatch match = kRxEmail.match(userToAdd);
    if (match.hasMatch()) {
       userToAdd = client_->deriveKey(userToAdd);
    } else if (UserHasher::KeyLength < userToAdd.length()) {
@@ -539,16 +528,13 @@ void ChatWidget::onContactRequestAccepted(const QString &userId)
 
 bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
 {
-   if ( popup_->isVisible() && event->type() == QEvent::MouseButtonRelease) {
-      QPoint pos = popup_->mapFromGlobal(QCursor::pos());
-
-      if (!popup_->rect().contains(pos))
-         setPopupVisible(false);
-   }
-
    if (event->type() == QEvent::WindowActivate) {
       // hide tab icon on window activate event
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, {});
+      
+      if (isChatTab_) {
+         ui_->treeViewUsers->updateCurrentChat();
+      }
    }
 
    // copy selected messages by keyboard shortcut
@@ -570,13 +556,13 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
 void ChatWidget::onSendFriendRequest(const QString &userId)
 {
    client_->sendFriendRequest(userId);
-   setPopupVisible(false);
+   ui_->searchWidget->setListVisible(false);
 }
 
 void ChatWidget::onRemoveFriendRequest(const QString &userId)
 {
    client_->removeContact(userId);
-   setPopupVisible(false);
+   ui_->searchWidget->setListVisible(false);
 }
 
 void ChatWidget::onRoomClicked(const QString& roomId)
@@ -603,6 +589,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             if (room) {
                setIsRoom(true);
                currentChat_ = room->getId();
+               OTCSwitchToRoom(room);
             }
          }
          break;
@@ -611,25 +598,15 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             if (contact) {
                setIsRoom(false);
                currentChat_ = contact->getContactId();
+               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+               OTCSwitchToContact(contact, cElement->getOnlineStatus()
+                                  == ChatContactElement::OnlineStatus::Online);
             }
          }
          break;
          default:
             break;
 
-      }
-
-      if (IsOTCChatRoom(currentChat_)) {
-         ui_->stackedWidgetMessages->setCurrentIndex(1);
-         OTCSwitchToCommonRoom();
-      } else {
-         ui_->stackedWidgetMessages->setCurrentIndex(0);
-         // XXX: DM OTC request not supported yet. Do not remove commented code
-         // if (IsGlobalChatRoom(currentChat_)) {
-            OTCSwitchToGlobalRoom();
-         // } else {
-            // OTCSwitchToDMRoom();
-         // }
       }
    }
 }
@@ -643,6 +620,28 @@ void ChatWidget::onMessageChanged(std::shared_ptr<Chat::MessageData> message)
 
 void ChatWidget::onElementUpdated(CategoryElement *element)
 {
+   if (element) {
+      switch (element->getType()) {
+         case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
+            auto room = std::dynamic_pointer_cast<Chat::RoomData>(element->getDataObject());
+            if (room && currentChat_ == room->getId()) {
+               OTCSwitchToRoom(room);
+            }
+         }
+         break;
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+            auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(element->getDataObject());
+            if (contact && currentChat_ == contact->getContactId()) {
+                ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+               OTCSwitchToContact(contact, cElement->getOnlineStatus()
+                                  == ChatContactElement::OnlineStatus::Online);
+            }
+         }
+         break;
+         default:
+            break;
+      }
+   }
 #if 0
    qDebug() << __func__ << " " << QString::fromStdString(element->getDataObject()->toJsonString());
 #endif
@@ -657,21 +656,37 @@ void ChatWidget::OnOTCRequestCreated()
 
    auto otcRequest = bs::network::OTCRequest{side, range, ownOTC, replyRequired};
 
-   if (!client_->SubmitCommonOTCRequest(otcRequest)) {
-      logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit request to OTC chat");
-      return;
+   if (currentChat_ == Chat::OTCRoomKey) {
+      if (!client_->SubmitCommonOTCRequest(otcRequest)) {
+         logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit request to OTC chat");
+         return;
+      }
+
+      if (ownOTC) {
+         otcSubmitted_ = true;
+         submittedOtc_ = otcRequest;
+         DisplayOwnSubmittedOTC();
+      }
+   } else {
+
+      if (!client_->SubmitPrivateOTCRequest(currentChat_.toStdString(), otcRequest)) {
+         logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit"
+                        " OTC request to {}", currentChat_.toStdString());
+         return;
+      }
    }
 
-   if (ownOTC) {
-      otcSubmitted_ = true;
-      submittedOtc_ = otcRequest;
-      DisplayOwnSubmittedOTC();
-   }
+
 }
 
 void ChatWidget::OnPullOwnOTCRequest(const QString& otcId)
 {
-   client_->PullCommonOTCRequest(otcId);
+   if (currentChat_ == Chat::OTCRoomKey) {
+      client_->PullCommonOTCRequest(otcId.toStdString());
+   } else {
+      client_->PullPrivateOTCRequest(currentChat_.toStdString(), otcId.toStdString());
+   }
+
 }
 
 void ChatWidget::OnOTCResponseCreated()
@@ -723,6 +738,47 @@ void ChatWidget::OTCSwitchToGlobalRoom()
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
 }
 
+void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room)
+{
+   if (room->isTradingAvailable()) {
+      ui_->stackedWidgetMessages->setCurrentIndex(1);
+      OTCSwitchToCommonRoom();
+   } else {
+      ui_->stackedWidgetMessages->setCurrentIndex(0);
+      // XXX: DM OTC request not supported yet. Do not remove commented code
+       //if (IsGlobalChatRoom(currentChat_)) {
+         OTCSwitchToGlobalRoom();
+//       } else {
+//         OTCSwitchToDMRoom();
+//       }
+   }
+}
+
+void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact,
+                                    bool onlineStatus)
+{
+   ui_->stackedWidgetMessages->setCurrentIndex(0);
+   if (contact->getContactStatus() == Chat::ContactStatus::Accepted) {
+      if (onlineStatus) {
+         auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
+         if (!cNode->isHaveActiveOTC()) {
+            return DisplayCreateOTCWidget();
+         } else if (cNode->getActiveOtcRequest()->requestorId() == contact->getContactId().toStdString()){
+            ui_->widgetCreateOTCResponse->SetActiveOTCRequest(cNode->getActiveOtcRequest());
+            ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
+         } else {
+            ui_->widgetPullOwnOTCRequest->DisplayActiveOTC(cNode->getActiveOtcRequest());
+            ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
+         }
+      } else {
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
+      }
+   } else {
+      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactShieldPage));
+   }
+
+}
+
 void ChatWidget::OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
 {
    // add own OTC request to model
@@ -755,7 +811,7 @@ void ChatWidget::OnNewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestD
    otcRequestViewModel_->AddLiveOTCRequest(otcRequest);
 }
 
-void ChatWidget::OnOTCRequestCancelled(const QString& otcId)
+void ChatWidget::OnOTCRequestCancelled(const std::string& otcId)
 {
    if (IsOwnOTCId(otcId)) {
       OnOwnOTCPulled();
@@ -764,7 +820,7 @@ void ChatWidget::OnOTCRequestCancelled(const QString& otcId)
    }
 }
 
-bool ChatWidget::IsOwnOTCId(const QString& otcId) const
+bool ChatWidget::IsOwnOTCId(const std::string &otcId) const
 {
    return otcAccepted_ && (otcId == ownActiveOTC_->serverRequestId());
 }
@@ -775,17 +831,17 @@ void ChatWidget::OnOwnOTCPulled()
    otcRequestViewModel_->RemoveOTCByID(ownActiveOTC_->serverRequestId());
 }
 
-void ChatWidget::OnOTCCancelled(const QString& otcId)
+void ChatWidget::OnOTCCancelled(const std::string &otcId)
 {
    otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
-void ChatWidget::OnOTCRequestExpired(const QString& otcId)
+void ChatWidget::OnOTCRequestExpired(const std::string& otcId)
 {
    otcRequestViewModel_->RemoveOTCByID(otcId);
 }
 
-void ChatWidget::OnOwnOTCRequestExpired(const QString& otcId)
+void ChatWidget::OnOwnOTCRequestExpired(const std::string& otcId)
 {
    otcSubmitted_ = otcAccepted_ = false;
    otcRequestViewModel_->RemoveOTCByID(otcId);

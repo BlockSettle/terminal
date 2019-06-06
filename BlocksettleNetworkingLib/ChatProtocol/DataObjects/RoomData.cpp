@@ -2,7 +2,11 @@
 #include "../ProtocolDefinitions.h"
 using namespace Chat;
 
-RoomData::RoomData(const QString& roomId, const QString& ownerId, const QString& roomTitle, const QString& roomKey, bool isPrivate, bool sendUserUpdates, bool displayUserList, bool displayTrayNotification)
+RoomData::RoomData(const QString& roomId, const QString& ownerId,
+                   const QString& roomTitle, const QString& roomKey,
+                   bool isPrivate, bool sendUserUpdates,
+                   bool displayUserList, bool displayTrayNotification,
+                   bool isTradingAvailable)
    : DataObject (DataObject::Type::RoomData)
    , id_(roomId)
    , ownerId_(ownerId)
@@ -11,8 +15,9 @@ RoomData::RoomData(const QString& roomId, const QString& ownerId, const QString&
    , isPrivate_(isPrivate)
    , sendUserUpdates_(sendUserUpdates)
    , displayUserList_(displayUserList)
-   , displayTrayNotification_(displayTrayNotification)
    , haveNewMessage_(false)
+   , displayTrayNotification_(displayTrayNotification)
+   , isTradingAvailable_(isTradingAvailable)
 {}
 
 QString RoomData::getId() {return id_;}
@@ -49,6 +54,11 @@ void RoomData::setDisplayTrayNotification(const bool &displayTrayNotification)
    displayTrayNotification_ = displayTrayNotification;
 }
 
+bool RoomData::isTradingAvailable() const
+{
+    return isTradingAvailable_;
+}
+
 QJsonObject RoomData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
@@ -61,6 +71,7 @@ QJsonObject RoomData::toJson() const
    data[RoomSendUserUpdatesKey] = sendUserUpdates_;
    data[RoomDisplayUserListKey] = displayUserList_;
    data[RoomDisplayTrayNotificationKey] = displayTrayNotification_;
+   data[RoomIsTradingAvailableKey] = isTradingAvailable_;
 
    return data;
 }
@@ -77,6 +88,11 @@ std::shared_ptr<RoomData> RoomData::fromJSON(const std::string& jsonData)
    bool sendUserUpdates = data[RoomSendUserUpdatesKey].toBool();
    bool displayUserList = data[RoomDisplayUserListKey].toBool();
    bool displayTrayNotification = data[RoomDisplayTrayNotificationKey].toBool();
+   bool isTradingAvailable = data[RoomIsTradingAvailableKey].toBool();
 
-   return std::make_shared<RoomData>(id, ownerId, title, roomKey, isPrivate, sendUserUpdates, displayUserList, displayTrayNotification);
+   return std::make_shared<RoomData>(id, ownerId,
+                                     title, roomKey,
+                                     isPrivate, sendUserUpdates,
+                                     displayUserList, displayTrayNotification,
+                                     isTradingAvailable);
 }

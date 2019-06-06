@@ -20,6 +20,9 @@ namespace Chat {
    class LogoutResponse;
    class SessionPublicKeyResponse;
    class ReplySessionPublicKeyResponse;
+   class GenCommonOTCResponse;
+   class AnswerCommonOTCResponse;
+   class UpdateCommonOTCResponse;
    
    class ResponseHandler
    {
@@ -51,6 +54,10 @@ namespace Chat {
 
       virtual void OnSessionPublicKeyResponse(const SessionPublicKeyResponse&) = 0;
       virtual void OnReplySessionPublicKeyResponse(const ReplySessionPublicKeyResponse&) = 0;
+
+      virtual void OnGenCommonOTCResponse(const GenCommonOTCResponse&) = 0;
+      virtual void OnAnswerCommonOTCResponse(const AnswerCommonOTCResponse&) = 0;
+      virtual void OnUpdateCommonOTCResponse(const UpdateCommonOTCResponse&) = 0;
    };
 }
 

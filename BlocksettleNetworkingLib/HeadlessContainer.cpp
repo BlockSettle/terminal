@@ -24,7 +24,8 @@ namespace {
    constexpr int kStartTimeout = 5000;
 
    // When remote signer will try to reconnect
-   constexpr auto kRemoteReconnectPeriod = std::chrono::seconds(10);
+   constexpr auto kLocalReconnectPeriod = std::chrono::seconds(10);
+   constexpr auto kRemoteReconnectPeriod = std::chrono::milliseconds(100);
 
 } // namespace
 
@@ -195,14 +196,25 @@ void HeadlessListener::OnDataReceived(const std::string& data)
 
 void HeadlessListener::OnConnected()
 {
+   if (isConnected_) {
+      logger_->error("already connected");
+      return;
+   }
+
+   isConnected_ = true;
    logger_->debug("[HeadlessListener] Connected");
    emit connected();
 }
 
 void HeadlessListener::OnDisconnected()
 {
+   if (!isConnected_) {
+      return;
+   }
+
    logger_->debug("[HeadlessListener] Disconnected");
    isReady_ = false;
+   isConnected_ = false;
    emit disconnected();
 }
 
@@ -225,15 +237,15 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
          emit error(HeadlessContainer::SerializationFailed, tr("serialization failed"));
          break;
       case HeartbeatWaitFailed:
-         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("Connection lost"));
+         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("connection lost"));
+         break;
+      case ConnectionTimeout:
+         emit error(HeadlessContainer::ConnectionTimeout, tr("connection timeout"));
          break;
       default:
          emit error(HeadlessContainer::UnknownError, tr("unknown error"));
          break;
    }
-
-   // Need to disconnect connection because otherwise it will continue send error responses over and over
-   connection_->closeConnection();
 }
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
@@ -1102,29 +1114,25 @@ bool RemoteSigner::Stop()
 
 bool RemoteSigner::Connect()
 {
-   QtConcurrent::run(this, &RemoteSigner::ConnectHelper);
-   headlessConnFinished_ = true;
-   return true;
-}
-
-void RemoteSigner::ConnectHelper()
-{
    if (!connection_) {
       logger_->error("[{}] connection not created", __func__);
-      emit disconnected();
-      return;
+      return false;
    }
-   if (!connection_->isActive()) {
-      if (connection_->openConnection(host_.toStdString(), port_.toStdString()
-         , listener_.get())) {
-         emit connected();
-      }
-      else {
-         logger_->error("[HeadlessContainer] Failed to open connection to "
-            "headless container");
-         return;
-      }
+
+   if (connection_->isActive()) {
+      return true;
    }
+
+   bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
+   if (!result) {
+      logger_->error("[HeadlessContainer] Failed to open connection to "
+         "headless container");
+      return false;
+   }
+
+   emit connected();
+   headlessConnFinished_ = true;
+   return true;
 }
 
 bool RemoteSigner::Disconnect()
@@ -1132,10 +1140,6 @@ bool RemoteSigner::Disconnect()
    if (!connection_) {
       return true;
    }
-/*   headless::RequestPacket packet;
-   packet.set_type(headless::DisconnectionRequestType);
-   packet.set_data("");    // This code produces crashes on terminal shutdown
-   Send(packet);*/         // and its purpose is obscure to me
 
    return connection_->closeConnection();
 }
@@ -1163,21 +1167,22 @@ void RemoteSigner::RecreateConnection()
 {
    logger_->info("[{}] Restart connection...", __func__);
 
-   const bool makeClientCookie = false;
-   // Server's cookies are not available in remote mode
-   const bool readServerCookie = (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc);
 
-   std::string absCookiePath;
-   if (readServerCookie) {
-      absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+   ZmqBIP15XDataConnectionParams params;
+   params.ephemeralPeers = ephemeralDataConnKeys_;
+   params.ownKeyFileDir = ownKeyFileDir_;
+   params.ownKeyFileName = ownKeyFileName_;
+   params.setLocalHeartbeatInterval();
+
+   // Server's cookies are not available in remote mode
+   if (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc) {
+      params.cookie = BIP15XCookie::ReadServer;
+      params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    }
 
    try {
-      connection_ = connectionManager_->CreateZMQBIP15XDataConnection(
-         ephemeralDataConnKeys_, ownKeyFileDir_, ownKeyFileName_, makeClientCookie
-         , readServerCookie, absCookiePath);
+      connection_ = connectionManager_->CreateZMQBIP15XDataConnection(params);
       connection_->setCBs(cbNewKey_);
-      connection_->setLocalHeartbeatInterval();
 
       headlessConnFinished_ = false;
    }
@@ -1196,7 +1201,8 @@ void RemoteSigner::ScheduleRestart()
    }
 
    isRestartScheduled_ = true;
-   QTimer::singleShot(kRemoteReconnectPeriod, this, [this] {
+   auto timeout = isLocal() ? kLocalReconnectPeriod : kRemoteReconnectPeriod;
+   QTimer::singleShot(timeout, this, [this] {
       isRestartScheduled_ = false;
       RecreateConnection();
       Start();

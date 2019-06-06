@@ -44,14 +44,13 @@ bool CCPubConnection::SubmitRequestToPB(const std::string &name, const std::stri
 
    cmdPuB_ = std::make_shared<RequestReplyCommand>(name, connection, logger_);
 
-   cmdPuB_->SetReplyCallback([this](const std::string& data) {
+   cmdPuB_->SetReplyCallback([this] (const std::string& data) {
       OnDataReceived(data);
 
-      // CleanupCallbacks will destroy this functional object (invalidating `this` field).
-      // Make a copy before that to prevent crash.
-      CCPubConnection *thisCopy = this;
-      thisCopy->cmdPuB_->CleanupCallbacks();
-      thisCopy->cmdPuB_->resetConnection();
+      QMetaObject::invokeMethod(this, [this] {
+         cmdPuB_->CleanupCallbacks();
+         cmdPuB_->resetConnection();
+      });
       return true;
    });
 
@@ -59,10 +58,10 @@ bool CCPubConnection::SubmitRequestToPB(const std::string &name, const std::stri
       logger_->error("[CCPubConnection::SubmitRequestToPB] error callback {}: {}"
          , cmdPuB_->GetName(), message);
 
-      // Fix possible crash, see notes above
-      CCPubConnection *thisCopy = this;
-      thisCopy->cmdPuB_->CleanupCallbacks();
-      thisCopy->cmdPuB_->resetConnection();
+      QMetaObject::invokeMethod(this, [this] {
+         cmdPuB_->CleanupCallbacks();
+         cmdPuB_->resetConnection();
+      });
    });
 
    if (!cmdPuB_->ExecuteRequest(GetPuBHost(), GetPuBPort(), data, true)) {

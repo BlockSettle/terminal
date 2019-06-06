@@ -18,12 +18,15 @@
 #include "SearchUsersRequest.h"
 #include "SessionPublicKeyRequest.h"
 #include "ReplySessionPublicKeyRequest.h"
+#include "GenCommonOTCRequest.h"
+#include "AnswerCommonOTCRequest.h"
+#include "UpdateCommonOTCRequest.h"
+#include "PullOwnOTCRequest.h"
 
 using namespace Chat;
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-
    { "RequestHeartbeatPing"         ,   RequestType::RequestHeartbeatPing           },
    { "RequestLogin"                 ,   RequestType::RequestLogin                   },
    { "RequestLogout"                ,   RequestType::RequestLogout                  },
@@ -41,13 +44,15 @@ static std::map<std::string, RequestType> RequestTypeFromString
    { "RequestSearchUsers"           ,   RequestType::RequestSearchUsers             },
    { "RequestSessionPublicKey"      ,   RequestType::RequestSessionPublicKey        },
    { "RequestReplySessionPublicKey" ,   RequestType::RequestReplySessionPublicKey   },
-
+   { "RequestGenCommonOTC"          ,   RequestType::RequestGenCommonOTC            },
+   { "RequestAnswerCommonOTC"       ,   RequestType::RequestAnswerCommonOTC         },
+   { "RequestUpdateCommonOTC"       ,   RequestType::RequestUpdateCommonOTC         },
+   { "RequestPullOTC"               ,   RequestType::RequestPullOTC                 },
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-
    { RequestType::RequestHeartbeatPing          ,   "RequestHeartbeatPing"             },
    { RequestType::RequestLogin                  ,   "RequestLogin"                     },
    { RequestType::RequestLogout                 ,   "RequestLogout"                    },
@@ -65,7 +70,10 @@ static std::map<RequestType, std::string> RequestTypeToString
    { RequestType::RequestSearchUsers            ,   "RequestSearchUsers"               },
    { RequestType::RequestSessionPublicKey       ,   "RequestSessionPublicKey"          },
    { RequestType::RequestReplySessionPublicKey  ,   "RequestReplySessionPublicKey"     },
-
+   { RequestType::RequestGenCommonOTC           ,   "RequestGenCommonOTC"              },
+   { RequestType::RequestAnswerCommonOTC        ,   "RequestAnswerCommonOTC"           },
+   { RequestType::RequestUpdateCommonOTC        ,   "RequestUpdateCommonOTC"           },
+   { RequestType::RequestPullOTC                ,   "RequestPullOTC"                   },
 };
 
 template <typename T>
@@ -171,6 +179,18 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
       case RequestType::RequestReplySessionPublicKey:
          return ReplySessionPublicKeyRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestGenCommonOTC:
+         return GenCommonOTCRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestAnswerCommonOTC:
+         return AnswerCommonOTCRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestUpdateCommonOTC:
+         return UpdateCommonOTCRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestPullOTC:
+         return PullOwnOTCRequest::fromJSON(clientId, jsonData);
 
       default:
          break;

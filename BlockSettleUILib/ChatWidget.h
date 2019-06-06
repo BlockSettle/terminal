@@ -31,7 +31,6 @@ class ChatClient;
 class ConnectionManager;
 class ApplicationSettings;
 class ChatWidgetState;
-class ChatSearchPopup;
 class OTCRequestViewModel;
 class ChatTreeModelWrapper;
 class CelerClient;
@@ -64,6 +63,7 @@ public:
    bool hasUnreadMessages();
    void switchToChat(const QString& chatId);
    void setCelerClient(std::shared_ptr<CelerClient> celerClient);
+   void updateChat(const bool &isChatTab);
 
 public slots:
    void onLoggedOut();
@@ -99,9 +99,9 @@ private slots:
    void OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
    void OnOTCOwnRequestRejected(const QString& reason);
    void OnNewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
-   void OnOTCRequestCancelled(const QString& otcId);
-   void OnOTCRequestExpired(const QString& otcId);
-   void OnOwnOTCRequestExpired(const QString& otcId);
+   void OnOTCRequestCancelled(const std::string& otcId);
+   void OnOTCRequestExpired(const std::string& otcId);
+   void OnOwnOTCRequestExpired(const std::string& otcId);
 
 signals:
    void LoginFailed();
@@ -114,6 +114,9 @@ private:
    void OTCSwitchToCommonRoom();
    void OTCSwitchToDMRoom();
    void OTCSwitchToGlobalRoom();
+   void OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room);
+   void OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact, bool onlineStatus);
+
 
    // used to display proper widget if OTC room selected.
    // either create OTC or Pull OTC, if was submitted
@@ -126,9 +129,9 @@ private:
    void DisplayOwnSubmittedOTC();
    void DisplayOwnLiveOTC();
 
-   bool IsOwnOTCId(const QString& otcId) const;
+   bool IsOwnOTCId(const std::string& otcId) const;
    void OnOwnOTCPulled();
-   void OnOTCCancelled(const QString& otcId);
+   void OnOTCCancelled(const std::string& otcId);
 
    bool IsOTCChatSelected() const;
    void UpdateOTCRoomWidgetIfRequired();
@@ -142,11 +145,10 @@ private:
 
    std::string serverPublicKey_;
    QString  currentChat_;
-   ChatSearchPopup *popup_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
-   QTimer *popupVisibleTimer_;
    bool isChatMessagesSelected_;
+   bool isChatTab_;
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
@@ -166,8 +168,7 @@ private:
    bool isRoom();
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
-   void initPopup();
-   void setPopupVisible(const bool &value);
+   void initSearchWidget();
 
    bool eventFilter(QObject *sender, QEvent *event) override;
 

@@ -2,7 +2,7 @@
 #define RequestHandler_h__
 
 namespace Chat {
-   
+
    class HeartbeatPingRequest;
    class LoginRequest;
    class LogoutRequest;
@@ -21,12 +21,17 @@ namespace Chat {
    class SearchUsersRequest;
    class SessionPublicKeyRequest;
    class ReplySessionPublicKeyRequest;
-   
+   class GenCommonOTCRequest;
+   class AnswerCommonOTCRequest;
+   class UpdateCommonOTCRequest;
+   class PullOwnOTCRequest;
+
    class RequestHandler
    {
    public:
       virtual ~RequestHandler() = default;
       virtual void OnHeartbeatPing(const HeartbeatPingRequest& request) = 0;
+
       virtual void OnLogin(const LoginRequest&) = 0;
       virtual void OnLogout(const LogoutRequest&) = 0;
       virtual void OnSendMessage(const SendMessageRequest&) = 0;
@@ -53,6 +58,11 @@ namespace Chat {
 
       virtual void OnSessionPublicKeyRequest(const SessionPublicKeyRequest&) = 0;
       virtual void OnReplySessionPublicKeyRequest(const ReplySessionPublicKeyRequest&) = 0;
+
+      virtual void OnGenCommonOTCRequest(const GenCommonOTCRequest&) = 0;
+      virtual void OnAnswerCommonOTCRequest(const AnswerCommonOTCRequest&) = 0;
+      virtual void OnUpdateCommonOTCRequest(const UpdateCommonOTCRequest&) = 0;
+      virtual void OnPullOTCRequest(const PullOwnOTCRequest&) = 0;
    };
 }
 

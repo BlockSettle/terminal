@@ -30,6 +30,7 @@ class ChatClientDataModel;
 class ConnectionManager;
 class UserHasher;
 class ZmqBIP15XDataConnection;
+class UserSearchModel;
 class ChatTreeModelWrapper;
 
 class ChatClient : public QObject
@@ -54,6 +55,7 @@ public:
    ChatClient& operator = (ChatClient&&) = delete;
 
    std::shared_ptr<ChatClientDataModel> getDataModel();
+   std::shared_ptr<UserSearchModel> getUserSearchModel();
    std::shared_ptr<ChatTreeModelWrapper> getProxyModel();
 
    std::string loginToServer(const std::string& email, const std::string& jwt
@@ -73,8 +75,13 @@ public:
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
+
    void OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse&) override;
    void OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse&) override;
+
+   void OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &) override;
+   void OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &) override;
+   void OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &) override;
 
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -96,10 +103,10 @@ public:
    void HandleCommonOTCRequestRejected(const std::string& rejectReason);
 
    // HandleCommonOTCRequestCancelled - OTC request sent to common OTC room was
-   //    canceled by requester. Could be both ours and someone else
-   void HandleCommonOTCRequestCancelled(const QString& serverOTCId);
+   //    cancelled by requestor. Could be both ours and someone else
+   void HandleCommonOTCRequestCancelled(const std::string& serverOTCId);
 
-   void HandleCommonOTCRequestExpired(const QString& serverOTCId);
+   void HandleCommonOTCRequestExpired(const std::string& serverOTCId);
 
    // HandleAcceptedCommonOTCResponse - chat server accepts our response to
    //    OTC request in OTC chat room
@@ -107,7 +114,7 @@ public:
 
    // HandleRejectedCommonOTCResponse - chat server accepts our response to
    //    OTC request in OTC chat room
-   void HandleRejectedCommonOTCResponse(const QString& otcId, const std::string& reason);
+   void HandleRejectedCommonOTCResponse(const std::string& otcId, const std::string& reason);
 
    // HandleCommonOTCResponse - handle response we receive to our OTC request
    //    sent to common OTC chat room
@@ -117,6 +124,9 @@ public:
    void HandleOTCUpdate(const std::shared_ptr<Chat::OTCUpdateData>& update);
 
    /////////////////////////////////////////////////////////////////////////////
+
+   void HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+   void HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
 
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
@@ -161,15 +171,18 @@ public:
    //    true - request was submitted
    //    false - request was not delivered to chat server.
    bool SubmitCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool SubmitPrivateOTCRequest(const std::string& targetId, const bs::network::OTCRequest& request);
 
    // cancel current OTC request sent to OTC chat
-   bool PullCommonOTCRequest(const QString& serverOTCId);
+   bool PullCommonOTCRequest(const std::string& serverOTCId);
+   bool PullPrivateOTCRequest(const std::string& targetId, const std::string& serverOTCId);
 
    bool SubmitCommonOTCResponse(const bs::network::OTCResponse& response);
 
 private:
    // OTC related messaging endpoint
    bool sendCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool sendPrivateOTCRequest(const std::string& targetId, const bs::network::OTCRequest& request);
    bool sendPullCommonOTCRequest();
    bool sendCommonOTCResponse();
 
@@ -186,18 +199,18 @@ signals:
 
    // OTC request was pulled by requester. We should receive it even if it our own.
    // we could not just remove OTC, it should be initiated by chat server
-   void OTCRequestCancelled(const QString& serverOTCId);
+   void OTCRequestCancelled(const std::string& serverOTCId);
 
    // OTC request expired and is not settled
-   void OTCRequestExpired(const QString& serverOTCId);
+   void OTCRequestExpired(const std::string& serverOTCId);
 
    // own OTC request sent to OTC chat expired
-   void OwnOTCRequestExpired(const QString& serverOTCId);
+   void OwnOTCRequestExpired(const std::string& serverOTCId);
 
    // CommonOTCResponseAccepted/CommonOTCResponseRejected - chat server accepted/rejected our
    //    response to OTC from common OTC chat
    void CommonOTCResponseAccepted(const std::shared_ptr<Chat::OTCResponseData>& otcResponse);
-   void CommonOTCResponseRejected(const QString& serverOTCId, const QString& reason);
+   void CommonOTCResponseRejected(const std::string& serverOTCId, const QString& reason);
 
    // CommonOTCResponseReceived - we get response to our request sent to common
    //    OTC chat room
@@ -267,6 +280,7 @@ private:
 
    autheid::PrivateKey  ownPrivKey_;
    std::shared_ptr<ChatClientDataModel> model_;
+   std::shared_ptr<UserSearchModel> userSearchModel_;
    std::shared_ptr<ChatTreeModelWrapper> proxyModel_;
 
    // ChatItemActionsHandler interface
@@ -296,7 +310,6 @@ private:
    std::string GetNextServerOTCId();
    std::string GetNextResponseId();
    std::string GetNextServerResponseId();
-   std::string GetNextNegotiationChannelId();
    void ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
    /////////////////////////////////////////////////////////////////////////////
 
@@ -310,8 +323,8 @@ private:
    uint64_t          nextResponseId_ = 1;
    uint64_t          negotiationChannelId_ = 1;
 
-   QString           ownSubmittedOTCId_;
-   QString           ownServerOTCId_;
+   std::string       ownSubmittedOTCId_;
+   std::string       ownServerOTCId_;
 
    // based on server request id
    std::unordered_set<std::string> aliveOtcRequests_;
@@ -320,4 +333,5 @@ private:
 public:
    void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
 };
+
 #endif   // CHAT_CLIENT_H

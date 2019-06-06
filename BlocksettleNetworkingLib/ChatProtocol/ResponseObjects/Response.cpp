@@ -22,6 +22,9 @@ using namespace Chat;
 #include "LogoutResponse.h"
 #include "SessionPublicKeyResponse.h"
 #include "ReplySessionPublicKeyResponse.h"
+#include "GenCommonOTCResponse.h"
+#include "AnswerCommonOTCResponse.h"
+#include "UpdateCommonOTCResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
@@ -45,6 +48,9 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    { "ResponseLogout"                  ,   ResponseType::ResponseLogout                   },
    { "ResponseSessionPublicKey"        ,   ResponseType::ResponseSessionPublicKey         },
    { "ResponseReplySessionPublicKey"   ,   ResponseType::ResponseReplySessionPublicKey    },
+   { "ResponseGenCommonOTC"            ,   ResponseType::ResponseGenCommonOTC             },
+   { "ResponseAnswerCommonOTC"         ,   ResponseType::ResponseAnswerCommonOTC          },
+   { "ResponseUpdateCommonOTC"         ,   ResponseType::ResponseUpdateCommonOTC          },
 };
 
 
@@ -70,6 +76,9 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    { ResponseType::ResponseLogout                  ,  "ResponseLogout"                 },
    { ResponseType::ResponseSessionPublicKey        ,  "ResponseSessionPublicKey"       },
    { ResponseType::ResponseReplySessionPublicKey   ,  "ResponseReplySessionPublicKey"  },
+   { ResponseType::ResponseGenCommonOTC            ,  "ResponseGenCommonOTC"           },
+   { ResponseType::ResponseAnswerCommonOTC         ,  "ResponseAnswerCommonOTC"        },
+   { ResponseType::ResponseUpdateCommonOTC         ,  "ResponseUpdateCommonOTC"        },
 };
 
 template <typename T>
@@ -155,6 +164,15 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseReplySessionPublicKey:
          return ReplySessionPublicKeyResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseGenCommonOTC:
+         return GenCommonOTCResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseAnswerCommonOTC:
+         return AnswerCommonOTCResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseUpdateCommonOTC:
+         return UpdateCommonOTCResponse::fromJSON(jsonData);
 
       default:
          break;
