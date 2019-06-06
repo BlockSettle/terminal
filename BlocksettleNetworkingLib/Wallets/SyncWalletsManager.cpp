@@ -1317,6 +1317,8 @@ void WalletsManager::trackAddressChainUse(
          leafPtr->trackChainAddressUse(trackLbd);
       };
 
-      leafPtr->getAddressTxnCounts(countLbd);
+      if (!leafPtr->getAddressTxnCounts(countLbd)) {
+         cb(false);
+      }
    }
 }

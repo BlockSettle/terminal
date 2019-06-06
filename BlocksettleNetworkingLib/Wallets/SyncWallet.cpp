@@ -384,12 +384,18 @@ bool Wallet::getAddressTxnCounts(std::function<void(void)> cb)
    auto cbCounts = [this, cb]
       (ReturnMessage<std::map<std::string, CombinedCounts>> counts)->void
    {
-      auto&& countMap = counts.get();
+      try {
+         auto&& countMap = counts.get();
 
-      for (auto& countPair : countMap)
-      {
-         updateMap<std::map<BinaryData, uint64_t>>(
-            countPair.second.addressTxnCounts_, addressTxNMap_);
+         for (auto& countPair : countMap) {
+            updateMap<std::map<BinaryData, uint64_t>>(
+               countPair.second.addressTxnCounts_, addressTxNMap_);
+         }
+      }
+      catch (const std::exception &e) {
+         if (logger_) {
+            logger_->error("[sync::Wallet::getAddressTxnCounts] failed: {}", e.what());
+         }
       }
 
       if (cb)
