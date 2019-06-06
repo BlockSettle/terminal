@@ -270,12 +270,18 @@ void RootItem::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
       if (chatNode && chatNode->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)) {
          for (auto child : chatNode->getChildren()) {
             CategoryElement * elem = static_cast<CategoryElement*>(child);
-            auto msg = std::dynamic_pointer_cast<Chat::MessageData>(elem->getDataObject());
-            if (message->id() == msg->id()) {
-               emit itemChanged(elem);
+            switch (elem->getDataObject()->getType()) {
+               case Chat::DataObject::Type::MessageData: {
+                  auto msg = std::dynamic_pointer_cast<Chat::MessageData>(elem->getDataObject());
+                  if (message->id() == msg->id()) {
+                     emit itemChanged(chatNode);
+                  }
+               } break;
+               default:
+                  emit itemChanged(chatNode);
+                  break;
             }
          }
-         emit itemChanged(chatNode);
       }
    }
 }

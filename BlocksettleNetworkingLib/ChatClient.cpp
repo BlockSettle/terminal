@@ -1544,6 +1544,7 @@ void ChatClient::HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTC
    }
 
    cNode->setActiveOtcRequest(liveOTCRequest);
+   model_->insertPrivateOTCReceivedResponseData(liveOTCRequest);
    model_->notifyContactChanged(cNode->getContactData());
 
 }
@@ -1554,6 +1555,8 @@ void ChatClient::HandlePrivateOTCRequestRejected(const std::shared_ptr<Chat::OTC
    logger_->error("[ChatClient::HandlePrivateOTCRequestRejected] OTC request rejected. Reason: {}\n"
                   "Request: {}", rejectReason,
                   rejectedOTC->toJsonString());
+
+
 }
 
 void ChatClient::HandlePrivateOTCRequestCancelled(const std::shared_ptr<Chat::OTCRequestData> &cancelledOTC)
@@ -1573,7 +1576,34 @@ void ChatClient::HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestD
    }
 
    cNode->setActiveOtcRequest(liveOTCRequest);
+   model_->insertPrivateOTCReceivedResponseData(liveOTCRequest);
    model_->notifyContactChanged(cNode->getContactData());
+}
+
+void ChatClient::HandleAcceptedPrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData> &response)
+{
+   auto cNode = model_->findContactNode(response->requestorId());
+
+   if (!cNode){
+      logger_->error("[ChatClient::HandleAcceptedPrivateOTCResponse] OTC response for {}"
+                     "accepted but corresponding node on found",
+                     response->initialTargetId());
+      return;
+   }
+
+   cNode->setActiveOtcResponse(response);
+   model_->insertPrivateOTCReceivedResponseData(response);
+   model_->notifyContactChanged(cNode->getContactData());
+}
+
+void ChatClient::HandleRejectedPrivateOTCResponse(const std::string &otcId, const std::string &reason)
+{
+
+}
+
+void ChatClient::HandlePrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData> &response)
+{
+
 }
 
 // cancel current OTC request sent to OTC chat
@@ -1703,25 +1733,46 @@ void ChatClient::OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &
 {
    //TODO: Implement!
    logger_->debug("[ChatClient::OnAnswerCommonOTCResponse] {}", response.getData());
+   if (response.otcResponseData()->initialTargetId() == Chat::OTCRoomKey.toStdString()) {
+      switch (response.getResult()) {
+         case Chat::OTCResult::Accepted:
+            //Server sent Accepted to each participant on the OTCResponse target
+            //Client determine by itself if this is his own request
 
-   switch (response.getResult()) {
-      case Chat::OTCResult::Accepted:
-         //Server sent Accepted to each participant on the OTCResponse target
-         //Client determine by itself if this is his own request
+            if (response.otcResponseData()->responderId() == model_->currentUser()){
+               HandleAcceptedCommonOTCResponse(response.otcResponseData());
+            } else {
+               HandleCommonOTCResponse(response.otcResponseData());
+            }
+            break;
+         case Chat::OTCResult::Rejected:
+            //Server sent Rejected only to requestor, other clients don't know about this
+            HandleRejectedCommonOTCResponse(response.otcResponseData()->serverRequestId()
+                                            , response.getMessage().toStdString());
+            break;
+         default:
+            break;
+      }
+   } else {
+      switch (response.getResult()) {
+         case Chat::OTCResult::Accepted:
+            //Server sent Accepted to each participant on the OTCResponse target
+            //Client determine by itself if this is his own request
 
-         if (response.otcResponseData()->responderId() == model_->currentUser()){
-            HandleAcceptedCommonOTCResponse(response.otcResponseData());
-         } else {
-            HandleCommonOTCResponse(response.otcResponseData());
-         }
-         break;
-      case Chat::OTCResult::Rejected:
-         //Server sent Rejected only to requestor, other clients don't know about this
-         HandleRejectedCommonOTCResponse(response.otcResponseData()->serverRequestId()
-                                         , response.getMessage().toStdString());
-         break;
-      default:
-         break;
+            if (response.otcResponseData()->responderId() == model_->currentUser()){
+               HandleAcceptedPrivateOTCResponse(response.otcResponseData());
+            } else {
+               HandlePrivateOTCResponse(response.otcResponseData());
+            }
+            break;
+         case Chat::OTCResult::Rejected:
+            //Server sent Rejected only to requestor, other clients don't know about this
+            HandleRejectedPrivateOTCResponse(response.otcResponseData()->serverRequestId()
+                                            , response.getMessage().toStdString());
+            break;
+         default:
+            break;
+      }
    }
 
    return;

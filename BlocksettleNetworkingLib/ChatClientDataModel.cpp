@@ -665,3 +665,37 @@ bool ChatClientDataModel::insertOTCReceivedResponseData(std::shared_ptr<Chat::Da
 
    return res;
 }
+
+bool ChatClientDataModel::insertPrivateOTCReceivedResponseData(std::shared_ptr<Chat::DataObject> data)
+{
+   DisplayableDataNode * item = nullptr;
+    switch (data->getType()) {
+       case Chat::DataObject::Type::MessageData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+                                           ChatUIDefinitions::ChatTreeNodeType::MessageDataNode,
+                                           data);
+          break;
+       case Chat::DataObject::Type::OTCResponseData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+                                  ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
+                                  data);
+          break;
+       case Chat::DataObject::Type::OTCUpdateData:
+          break;
+       case Chat::DataObject::Type::OTCRequestData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+                                  ChatUIDefinitions::ChatTreeNodeType::OTCRequestNode,
+                                  data);
+          break;
+       default:
+          break;
+    }
+
+   bool res = insertDisplayableDataNode(item);
+
+   if (!res && item){
+      delete  item;
+   }
+
+   return res;
+}

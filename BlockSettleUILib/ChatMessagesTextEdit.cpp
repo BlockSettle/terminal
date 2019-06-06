@@ -50,8 +50,10 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
    switch(messages_[currentChatId_][row]->getType()) {
       case Chat::DataObject::Type::MessageData:
          return dataMessage(row, column);
+      case Chat::DataObject::Type::OTCRequestData:
+         return dataOtcRequest(row, column);
       case Chat::DataObject::Type::OTCResponseData:
-         return dataOtc(row, column);
+         return dataOtcResponse(row, column);
       default:
          return QLatin1String("[unk]");
    }
@@ -139,7 +141,108 @@ QString ChatMessagesTextEdit::dataMessage(const int &row, const ChatMessagesText
    return QString();
 }
 
-QString ChatMessagesTextEdit::dataOtc(const int &row, const ChatMessagesTextEdit::Column &column)
+QString ChatMessagesTextEdit::dataOtcRequest(const int &row, const ChatMessagesTextEdit::Column &column)
+{
+   std::shared_ptr<Chat::OTCRequestData> otc =
+         std::dynamic_pointer_cast<Chat::OTCRequestData>(messages_[currentChatId_][row]);
+
+   switch (column) {
+      case Column::Time:
+      {
+         const auto dateTime = QDateTime::fromMSecsSinceEpoch(otc->submitTimestamp());
+         return toHtmlText(dateTime.toString(QString::fromUtf8("MM/dd/yy hh:mm:ss")));
+      }
+
+      case Column::User:
+      {
+         static const auto ownSender = tr("you");
+         QString sender = QString::fromStdString(otc->requestorId());
+
+         if (sender == ownUserId_) {
+            return ownSender;
+         }
+
+         auto contactItem = client_->getDataModel()->findContactItem(sender.toStdString());
+         if (contactItem == nullptr) {
+            if (isGroupRoom_) {
+               return toHtmlUsername(sender);
+            }
+            return sender;
+         }
+
+         if (contactItem->hasDisplayName()) {
+            if (isGroupRoom_) {
+               return toHtmlUsername(contactItem->getDisplayName(), sender);
+            }
+            return contactItem->getDisplayName();
+         }
+
+         return sender;
+      }
+      case Column::Status:{
+
+         if (otc->requestorId() != ownUserId_.toStdString()){
+//            if (!(otc->state() & static_cast<int>(Chat::MessageData::State::Read))){
+//               //emit MessageRead(message);
+//            }
+            return QLatin1String("out");
+
+         }
+
+         return QLatin1String("in");
+         /*
+         int state = otc->state();
+         QString status = QLatin1String("Sending");
+
+         if (state & static_cast<int>(Chat::MessageData::State::Sent)){
+            status = QLatin1String("Sent");
+         }
+
+         if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
+            status = QLatin1String("Delivered");
+         }
+
+         if (state & static_cast<int>(Chat::MessageData::State::Read)){
+            status = QLatin1String("Read");
+         }
+         return status;
+         */
+      }
+
+      case Column::Message: {
+
+         QString text = QLatin1String("[%1] %2");
+         text = text.arg(QString::fromStdString(otc->serverRequestId()).chopped(5).append(QLatin1String("...")));
+
+         QString display;
+
+         if(otc->requestorId() == ownUserId_.toStdString()){
+            display.append(QLatin1String("REQUEST SUBMITTED: "));
+         } else {
+            display.append(QLatin1String("REQUEST RECEIVED: "));
+         }
+         display.append(QString::fromStdString(bs::network::ChatOTCSide::toString(otc->otcRequest().side)));
+         display.append(QLatin1String(" [Amount: "));
+         display.append(QString::fromStdString(bs::network::OTCRangeID::toString(otc->otcRequest().amountRange)));
+         display.append(QLatin1String("]"));
+
+//         if (otc->state() & static_cast<int>(Chat::MessageData::State::Invalid)) {
+//            return toHtmlInvalid(text.arg(QLatin1String("INVALID MESSAGE!")));
+//         } else if (otc->encryptionType() == Chat::MessageData::EncryptionType::IES) {
+//            return toHtmlInvalid(text.arg(QLatin1String("IES ENCRYPTED!")));
+//         } else if ( otc->encryptionType() == Chat::MessageData::EncryptionType::AEAD) {
+//            return toHtmlInvalid(text.arg(QLatin1String("AEAD ENCRYPTED!")));
+//         }
+         return toHtmlText(display);
+      }
+      default:
+         break;
+   }
+
+   return QString();
+}
+
+QString ChatMessagesTextEdit::dataOtcResponse(const int &row, const ChatMessagesTextEdit::Column &column)
 {
    std::shared_ptr<Chat::OTCResponseData> otc =
          std::dynamic_pointer_cast<Chat::OTCResponseData>(messages_[currentChatId_][row]);
@@ -183,11 +286,11 @@ QString ChatMessagesTextEdit::dataOtc(const int &row, const ChatMessagesTextEdit
 //            if (!(otc->state() & static_cast<int>(Chat::MessageData::State::Read))){
 //               //emit MessageRead(message);
 //            }
-            return QString();
+            return QLatin1String("out");
 
          }
 
-         return QLatin1String("otc");
+         return QLatin1String("in");
          /*
          int state = otc->state();
          QString status = QLatin1String("Sending");
@@ -238,6 +341,116 @@ QString ChatMessagesTextEdit::dataOtc(const int &row, const ChatMessagesTextEdit
 //         } else if ( otc->encryptionType() == Chat::MessageData::EncryptionType::AEAD) {
 //            return toHtmlInvalid(text.arg(QLatin1String("AEAD ENCRYPTED!")));
 //         }
+         return toHtmlText(display);
+      }
+      default:
+         break;
+   }
+
+   return QString();
+}
+
+QString ChatMessagesTextEdit::dataOtcUpdate(const int &row, const ChatMessagesTextEdit::Column &column)
+{
+   std::shared_ptr<Chat::OTCUpdateData> otc =
+         std::dynamic_pointer_cast<Chat::OTCUpdateData>(messages_[currentChatId_][row]);
+
+   switch (column) {
+      case Column::Time:
+      {
+         const auto dateTime = QDateTime::fromMSecsSinceEpoch(otc->updateTimestamp());
+         return toHtmlText(dateTime.toString(QString::fromUtf8("MM/dd/yy hh:mm:ss")));
+      }
+
+      case Column::User:
+      {
+         static const auto ownSender = tr("you");
+         return  ownSender;
+         QString sender;// = QString::fromStdString(otc->responderId());
+
+         if (sender == ownUserId_) {
+            return ownSender;
+         }
+
+         auto contactItem = client_->getDataModel()->findContactItem(sender.toStdString());
+         if (contactItem == nullptr) {
+            if (isGroupRoom_) {
+               return toHtmlUsername(sender);
+            }
+            return sender;
+         }
+
+         if (contactItem->hasDisplayName()) {
+            if (isGroupRoom_) {
+               return toHtmlUsername(contactItem->getDisplayName(), sender);
+            }
+            return contactItem->getDisplayName();
+         }
+
+         return sender;
+      }
+      case Column::Status:{
+
+//         if (otc->responderId() != ownUserId_.toStdString()){
+////            if (!(otc->state() & static_cast<int>(Chat::MessageData::State::Read))){
+////               //emit MessageRead(message);
+////            }
+//            return QString();
+
+//         }
+
+         return QLatin1String("update");
+         /*
+         int state = otc->state();
+         QString status = QLatin1String("Sending");
+
+         if (state & static_cast<int>(Chat::MessageData::State::Sent)){
+            status = QLatin1String("Sent");
+         }
+
+         if (state & static_cast<int>(Chat::MessageData::State::Acknowledged)){
+            status = QLatin1String("Delivered");
+         }
+
+         if (state & static_cast<int>(Chat::MessageData::State::Read)){
+            status = QLatin1String("Read");
+         }
+         return status;
+         */
+      }
+
+      case Column::Message: {
+
+         QString text = QLatin1String("[%1] %2");
+         //text = text.arg(QString::fromStdString().chopped(5).append(QLatin1String("...")));
+
+         QString display;
+
+//         if(otc->responderId() == ownUserId_.toStdString()){
+//            display.append(QLatin1String("UPDATE RECEIVED: "));
+//         } else {
+//            display.append(QLatin1String("BID RECEIVED: "));
+//         }
+
+//         display.append(QString::number(otc->priceRange().lower));
+//         display.append(QLatin1String("-"));
+//         display.append(QString::number(otc->priceRange().upper));
+//         display.append(QLatin1String(" EUR @ 1 XBT "));
+
+//         display.append(QLatin1String("[Quantity: "));
+//         display.append(QString::number(otc->quantityRange().lower));
+//         display.append(QLatin1String("-"));
+//         display.append(QString::number(otc->quantityRange().upper));
+//         display.append(QLatin1String("]"));
+
+//         if (otc->state() & static_cast<int>(Chat::MessageData::State::Invalid)) {
+//            return toHtmlInvalid(text.arg(QLatin1String("INVALID MESSAGE!")));
+//         } else if (otc->encryptionType() == Chat::MessageData::EncryptionType::IES) {
+//            return toHtmlInvalid(text.arg(QLatin1String("IES ENCRYPTED!")));
+//         } else if ( otc->encryptionType() == Chat::MessageData::EncryptionType::AEAD) {
+//            return toHtmlInvalid(text.arg(QLatin1String("AEAD ENCRYPTED!")));
+//         }
+         display.append(QLatin1String("UPDATE RECEIVED"));
          return toHtmlText(display);
       }
       default:

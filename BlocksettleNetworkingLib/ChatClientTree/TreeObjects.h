@@ -35,6 +35,7 @@ public:
                         ChatUIDefinitions::ChatTreeNodeType::OTCReceivedUpdateNode},
                         data)
       , activeOtcRequest_(nullptr)
+      , activeOtcResponse_(nullptr)
    {}
 
    std::shared_ptr<Chat::ContactRecordData> getContactData() const;
@@ -46,12 +47,18 @@ public:
    bool isChildSupported(const TreeItem *item) const override;
 
    bool isHaveActiveOTC() const;
+   bool isOTCResponsePresented() const;
+
    std::shared_ptr<Chat::OTCRequestData> getActiveOtcRequest() const;
+   std::shared_ptr<Chat::OTCResponseData> getActiveOtcResponse() const;
    void setActiveOtcRequest(const std::shared_ptr<Chat::OTCRequestData> &activeOtcRequest);
+   void setActiveOtcResponse(const std::shared_ptr<Chat::OTCResponseData> &activeOtcResponse);
+
 
 protected:
    OnlineStatus onlineStatus_;
    std::shared_ptr<Chat::OTCRequestData> activeOtcRequest_;
+   std::shared_ptr<Chat::OTCResponseData> activeOtcResponse_;
 };
 
 class ChatSearchElement : public CategoryElement {
