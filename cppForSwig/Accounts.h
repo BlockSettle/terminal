@@ -30,6 +30,7 @@
 #define BIP32_SEGWIT_OUTER_ACCOUNT_DERIVATIONID 0x10000000
 #define BIP32_SEGWIT_INNER_ACCOUNT_DERIVATIONID 0x10000001
 
+#define ECDH_ASSET_ACCOUTID 0x20000000
 
 #define ADDRESS_ACCOUNT_PREFIX   0xD0
 #define ASSET_ACCOUNT_PREFIX     0xE1
@@ -47,6 +48,12 @@ public:
    {}
 };
 
+enum AssetAccountTypeEnum
+{
+   AssetAccountTypeEnum_Plain = 0,
+   AssetAccountTypeEnum_ECDH
+};
+
 enum AccountTypeEnum
 {
    /*
@@ -54,7 +61,7 @@ enum AccountTypeEnum
    outer and inner account are the same
    uncompressed P2PKH, compresed P2SH-P2PK, P2SH-P2WPKH
    */
-   AccountTypeEnum_ArmoryLegacy,
+   AccountTypeEnum_ArmoryLegacy = 0,
 
    /*
    BIP32 derivation scheme, provided by the user
@@ -84,6 +91,12 @@ enum AccountTypeEnum
    carried by derScheme object.
    */
    AccountTypeEnum_BIP32_Salted,
+
+   /*
+   Stealth address account. Has a single key pair, ECDH it with custom
+   salts per asset.
+   */
+   AccountTypeEnum_ECDH,
    
    AccountTypeEnum_BIP44,
    AccountTypeEnum_Custom
@@ -101,21 +114,52 @@ enum MetaAccountType
 struct AccountType
 {
 protected:
+   std::set<AddressEntryType> addressTypes_;
+   AddressEntryType defaultAddressEntryType_;
+   bool isMain_ = false;
+
+public:
+   //tors
+   AccountType()
+   {}
+
+   virtual ~AccountType() = 0;
+
+   //locals
+   void setMain(bool ismain) { isMain_ = ismain; }
+   const bool isMain(void) const { return isMain_; }
+
+   const std::set<AddressEntryType>& getAddressTypes(void) const 
+   { return addressTypes_; }
+
+   AddressEntryType getDefaultAddressEntryType(void) const 
+   { return defaultAddressEntryType_; }
+
+   void setAddressTypes(const std::set<AddressEntryType>&);
+   void setDefaultAddressType(AddressEntryType);
+
+   //virtuals
+   virtual AccountTypeEnum type(void) const = 0;
+   virtual BinaryData getAccountID(void) const = 0;
+   virtual BinaryData getOuterAccountID(void) const = 0;
+   virtual BinaryData getInnerAccountID(void) const = 0;
+   virtual bool isWatchingOnly(void) const = 0;
+};
+
+////////////////////
+struct AccountType_WithRoot : public AccountType
+{
+protected:
    SecureBinaryData privateRoot_;
    SecureBinaryData publicRoot_;
    mutable SecureBinaryData chainCode_;
 
-   bool isMain_ = false;
-
-   std::set<AddressEntryType> addressTypes_;
-   AddressEntryType defaultAddressEntryType_;
-
 protected:
-   AccountType()
+   AccountType_WithRoot()
    {}
 
 public:
-   AccountType(
+   AccountType_WithRoot(
       SecureBinaryData& privateRoot,
       SecureBinaryData& publicRoot,
       SecureBinaryData& chainCode) : 
@@ -134,24 +178,13 @@ public:
    }
 
    //virtuals
-   virtual ~AccountType(void) = 0;
+   virtual ~AccountType_WithRoot(void) = 0;
    virtual const SecureBinaryData& getChaincode(void) const = 0;
    virtual const SecureBinaryData& getPrivateRoot(void) const = 0;
    virtual const SecureBinaryData& getPublicRoot(void) const = 0;
    
-   virtual BinaryData getAccountID(void) const = 0;
-   virtual BinaryData getOuterAccountID(void) const = 0;
-   virtual BinaryData getInnerAccountID(void) const = 0;
-
    //locals
-   void setMain(bool ismain) { isMain_ = ismain; }
-   const bool isMain(void) const { return isMain_; }
-   virtual AccountTypeEnum type(void) const = 0;
-
-   const std::set<AddressEntryType>& getAddressTypes(void) const { return addressTypes_; }
-   AddressEntryType getDefaultAddressEntryType(void) const { return defaultAddressEntryType_; }
-
-   bool isWatchingOnly(void) const
+   bool isWatchingOnly(void) const override
    {
       return privateRoot_.getSize() == 0 &&
          publicRoot_.getSize() > 0 &&
@@ -160,14 +193,14 @@ public:
 };
 
 ////////////////////
-struct AccountType_ArmoryLegacy : public AccountType
+struct AccountType_ArmoryLegacy : public AccountType_WithRoot
 {
 public:
    AccountType_ArmoryLegacy(
       SecureBinaryData& privateRoot,
       SecureBinaryData& publicRoot,
       SecureBinaryData& chainCode) :
-      AccountType(
+      AccountType_WithRoot(
       privateRoot, publicRoot, chainCode)
    {
       //uncompressed p2pkh
@@ -201,7 +234,7 @@ public:
 };
 
 ////////////////////
-struct AccountType_BIP32 : public AccountType
+struct AccountType_BIP32 : public AccountType_WithRoot
 {   
    friend struct AccountType_BIP32_Custom;
 private:
@@ -231,7 +264,7 @@ public:
       SecureBinaryData& chainCode,
       const std::vector<unsigned>& derivationPath,
       unsigned depth, unsigned leafId) :
-      AccountType(privateRoot, publicRoot, chainCode),
+      AccountType_WithRoot(privateRoot, publicRoot, chainCode),
       derivationPath_(derivationPath),
       depth_(depth), leafId_(leafId)
    {
@@ -398,8 +431,6 @@ public:
    void setNodes(const std::set<unsigned>& nodes);
    void setOuterAccountID(const BinaryData&);
    void setInnerAccountID(const BinaryData&);
-   void setAddressTypes(const std::set<AddressEntryType>&);
-   void setDefaultAddressType(AddressEntryType);
    void setAddressLookup(unsigned count) { addressLookup_ = count; }
 };
 
@@ -435,9 +466,45 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+class AccountType_ECDH : public AccountType
+{
+private:
+   const SecureBinaryData privateKey_;
+   const SecureBinaryData publicKey_;
+
+   //ECDH accounts are always single
+   const BinaryData accountID_;
+
+public:
+   //tor
+   AccountType_ECDH(
+      const SecureBinaryData& privKey,
+      const SecureBinaryData& pubKey) :
+      privateKey_(privKey), publicKey_(pubKey),
+      accountID_(WRITE_UINT32_BE(ECDH_ASSET_ACCOUTID))
+   {
+      //run checks
+      if (privateKey_.getSize() == 0 && publicKey_.getSize() == 0)
+         throw AccountException("invalid key length");
+   }
+
+   //local
+   const SecureBinaryData& getPrivKey(void) const { return privateKey_; }
+   const SecureBinaryData& getPubKey(void) const { return publicKey_; }
+
+   //virtual
+   AccountTypeEnum type(void) const override { return AccountTypeEnum_ECDH; }
+   BinaryData getAccountID(void) const override;
+   BinaryData getOuterAccountID(void) const override { return accountID_; }
+   BinaryData getInnerAccountID(void) const override { return accountID_; }
+   virtual bool isWatchingOnly(void) const override;
+};
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 class AssetAccount : protected Lockable
 {
+   friend class AssetAccount_ECDH;
    friend class AddressAccount;
 
 private:
@@ -455,7 +522,7 @@ private:
 
    //<assetID, <address type, prefixed address hash>>
    std::map<BinaryData, std::map<AddressEntryType, BinaryData>> addrHashMap_;
-   bool updateHashMap_ = true;
+   unsigned lastHashedAsset_ = UINT32_MAX;
 
 private:
    size_t writeAssetEntry(std::shared_ptr<AssetEntry>);
@@ -490,6 +557,9 @@ private:
    std::shared_ptr<Asset_PrivateKey> fillPrivateKey(
       std::shared_ptr<DecryptedDataContainer> ddc,
       const BinaryData& id);
+
+   virtual unsigned getLookup(void) const { return DERIVATION_LOOKUP; }
+   virtual uint8_t type(void) const { return AssetAccountTypeEnum_Plain; }
 
 public:
    AssetAccount(
@@ -534,6 +604,27 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+class AssetAccount_ECDH : public AssetAccount
+{
+private:
+   unsigned getLookup(void) const override { return 1; }
+   uint8_t type(void) const override { return AssetAccountTypeEnum_ECDH; }
+
+public:
+   AssetAccount_ECDH(
+      const BinaryData& ID,
+      const BinaryData& parentID,
+      std::shared_ptr<AssetEntry> root,
+      std::shared_ptr<DerivationScheme> scheme,
+      std::shared_ptr<LMDBEnv> dbEnv, LMDB* db) :
+      AssetAccount(ID, parentID, root, scheme, dbEnv, db)
+   {}
+
+   unsigned addSalt(const SecureBinaryData&);
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 class AddressAccount : public Lockable
 {
@@ -552,6 +643,9 @@ private:
 
    //<prefixed address hash, <assetID, address type>>
    std::map<BinaryData, std::pair<BinaryData, AddressEntryType>> addressHashes_;
+
+   //account id, asset id
+   std::map<BinaryData, BinaryData> topHashedAssetId_;
 
    BinaryData ID_;
    std::shared_ptr<LMDBEnv> dbEnv_ = nullptr;

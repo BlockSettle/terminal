@@ -263,7 +263,7 @@ const BinaryData& AssetWallet_Single::createBIP32Account(
    shared_ptr<AccountType_BIP32_Legacy> accountTypePtr = nullptr;
    if(root->getPrivKey() != nullptr)
    {
-      //try to decrypt the root's private to get full derivation
+      //try to decrypt the root's private key to get full derivation
       try
       {
          //lock for decryption

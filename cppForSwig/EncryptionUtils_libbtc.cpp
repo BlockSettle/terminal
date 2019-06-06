@@ -133,6 +133,9 @@ SecureBinaryData CryptoAES::DecryptCBC(const SecureBinaryData & data,
 SecureBinaryData CryptoECDSA::ComputePublicKey(
    SecureBinaryData const & cppPrivKey, bool compressed) const
 {
+   if (cppPrivKey.getSize() != 32)
+      throw runtime_error("invalid priv key size");
+
    btc_key pkey;
    btc_privkey_init(&pkey);
    memcpy(pkey.privkey, cppPrivKey.getPtr(), 32);

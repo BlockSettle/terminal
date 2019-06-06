@@ -22,7 +22,8 @@ DerivationScheme::~DerivationScheme()
 {}
 
 ////////////////////////////////////////////////////////////////////////////////
-shared_ptr<DerivationScheme> DerivationScheme::deserialize(BinaryDataRef data)
+shared_ptr<DerivationScheme> DerivationScheme::deserialize(
+   BinaryDataRef data, LMDB* db)
 {
    BinaryRefReader brr(data);
 
@@ -81,6 +82,49 @@ shared_ptr<DerivationScheme> DerivationScheme::deserialize(BinaryDataRef data)
 
       break;
 
+   }
+
+   case DERIVATIONSCHEME_BIP32_ECDH:
+   {
+      //id
+      auto len = brr.get_var_int();
+      auto id = brr.get_BinaryData(len);
+
+      //saltMap
+      map<unsigned, SecureBinaryData> saltMap;
+
+      BinaryWriter bwKey;
+      bwKey.put_uint8_t(ECDH_SALT_PREFIX);
+      bwKey.put_BinaryData(id);
+
+      BinaryDataRef keyBdr = bwKey.getDataRef();
+      CharacterArrayRef carKey(keyBdr.getSize(), keyBdr.getPtr());
+
+      auto dbIter = db->begin();
+      dbIter.seek(carKey, LMDB::Iterator::Seek_GE);
+      while (dbIter.isValid())
+      {
+         auto& key = dbIter.key();
+         BinaryDataRef key_bdr((uint8_t*)key.mv_data, key.mv_size);
+         if (!key_bdr.startsWith(keyBdr) || 
+             key_bdr.getSize() != keyBdr.getSize() + 4)
+            break;
+
+         auto saltIdBdr = key_bdr.getSliceCopy(keyBdr.getSize(), 4);
+         auto saltId = READ_UINT32_BE(saltIdBdr);
+
+         auto value = dbIter.value();
+         BinaryDataRef value_bdr((uint8_t*)value.mv_data, value.mv_size);
+         BinaryRefReader bdrData(value_bdr);
+         auto len = bdrData.get_var_int();
+         auto&& salt = bdrData.get_SecureBinaryData(len);
+
+         saltMap.emplace(make_pair(saltId, move(salt)));
+         ++dbIter;
+      }
+
+      derScheme = make_shared<DerivationScheme_ECDH>(id, saltMap);
+      break;
    }
 
    default:
@@ -345,13 +389,11 @@ vector<shared_ptr<AssetEntry>> DerivationScheme_BIP32::extendPublicChain(
    shared_ptr<AssetEntry> rootAsset,
    unsigned start, unsigned end)
 {      
-   
    auto rootSingle = dynamic_pointer_cast<AssetEntry_Single>(rootAsset);
 
    auto nextAsset = [this, rootSingle](
       unsigned derivationIndex)->shared_ptr<AssetEntry>
    {
-
       //get pubkey
       auto pubkey = rootSingle->getPubKey();
       auto& pubkeyData = pubkey->getCompressedKey();
@@ -427,8 +469,10 @@ DerivationScheme_BIP32_Salted::computeNextPrivateEntry(
       privKeyID, encryptedNextPrivKey, move(newCipher));
 
    //instantiate and return new asset entry
-   return make_shared<AssetEntry_Single>(
+   auto assetptr = make_shared<AssetEntry_Single>(
       index, full_id, saltedPubKey, nextPrivKey);
+
+   return assetptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -473,4 +517,223 @@ BinaryData DerivationScheme_BIP32_Salted::serialize() const
    final.put_BinaryData(bw.getData());
 
    return final.getData();   
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//// DerivationScheme_ECDH
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+const SecureBinaryData& DerivationScheme_ECDH::getChaincode() const
+{
+   throw DerivationSchemeException("no chaincode for ECDH derivation scheme");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+BinaryData DerivationScheme_ECDH::serialize() const
+{
+   BinaryWriter bw;
+   bw.put_uint8_t(DERIVATIONSCHEME_BIP32_ECDH);
+
+   //id
+   bw.put_var_int(id_.getSize());
+   bw.put_BinaryData(id_);
+   
+   //length wrapper
+   BinaryWriter final;
+   final.put_var_int(bw.getSize());
+   final.put_BinaryData(bw.getData());
+
+   return final.getData();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+unsigned DerivationScheme_ECDH::addSalt(const SecureBinaryData& salt, LMDB* db)
+{
+   if (salt.getSize() != 32)
+      throw DerivationSchemeException("salt is too small");
+
+   unsigned id = 0;
+   if (saltMap_.size() != 0)
+   {
+      auto iter = saltMap_.rbegin();
+      if (iter->first == UINT32_MAX)
+         throw DerivationSchemeException("exhausted ECDH salt map allocation");
+
+      id = iter->first + 1;
+   }
+
+   auto insertIter = saltMap_.insert(make_pair(id, salt));
+   if (!insertIter.second)
+      throw DerivationSchemeException("failed to insert salt");
+
+   //update on disk
+   putSalt(id, salt, db);
+
+   //return insert index
+   return insertIter.first->first;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DerivationScheme_ECDH::putSalt(
+   unsigned id, const SecureBinaryData& salt, LMDB* db)
+{
+   //update on disk
+   BinaryWriter bwKey;
+   bwKey.put_uint8_t(ECDH_SALT_PREFIX);
+   bwKey.put_BinaryData(id_);
+   bwKey.put_uint32_t(id, BE);
+
+   BinaryWriter bwData;
+   bwData.put_var_int(salt.getSize());
+   bwData.put_BinaryData(salt);
+
+   CharacterArrayRef carKey(bwKey.getSize(), bwKey.getDataRef().getPtr());
+   CharacterArrayRef carData(bwData.getSize(), bwData.getDataRef().getPtr());
+   db->insert(carKey, carData);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void DerivationScheme_ECDH::putAllSalts(LMDB* db)
+{
+   //expects live read-write db tx
+   for (auto& saltPair : saltMap_)
+      putSalt(saltPair.first, saltPair.second, db);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<shared_ptr<AssetEntry>> DerivationScheme_ECDH::extendPublicChain(
+   shared_ptr<AssetEntry> root, unsigned start, unsigned end)
+{
+   auto rootSingle = dynamic_pointer_cast<AssetEntry_Single>(root);
+   if (rootSingle == nullptr)
+      throw DerivationSchemeException("unexpected root asset type");
+
+   auto nextAsset = [this, rootSingle](
+      unsigned derivationIndex)->shared_ptr<AssetEntry>
+   {
+      //get pubkey
+      auto pubkey = rootSingle->getPubKey();
+      auto& pubkeyData = pubkey->getCompressedKey();
+
+      return computeNextPublicEntry(pubkeyData,
+         rootSingle->getAccountID(), derivationIndex);
+   };
+
+   vector<shared_ptr<AssetEntry>> assetVec;
+
+   for (unsigned i = start; i <= end; i++)
+   {
+      auto newAsset = nextAsset(i);
+      assetVec.push_back(newAsset);
+   }
+
+   return assetVec;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetEntry_Single> DerivationScheme_ECDH::computeNextPublicEntry(
+   const SecureBinaryData& pubKey,
+   const BinaryData& full_id, unsigned index)
+{
+   if (pubKey.getSize() != 33)
+      throw DerivationSchemeException("unexpected pubkey size");
+
+   //get salt
+   auto saltIter = saltMap_.find(index);
+   if (saltIter == saltMap_.end())
+      throw DerivationSchemeException("missing salt for id");
+
+   if (saltIter->second.getSize() != 32)
+      throw DerivationSchemeException("unexpected salt size");
+
+   //salt root pubkey
+   auto&& saltedPubkey = CryptoECDSA::PubKeyScalarMultiply(
+      pubKey, saltIter->second);
+
+   return make_shared<AssetEntry_Single>(
+      index, full_id,
+      saltedPubkey, nullptr);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+vector<shared_ptr<AssetEntry>> DerivationScheme_ECDH::extendPrivateChain(
+   shared_ptr<DecryptedDataContainer> ddc,
+   shared_ptr<AssetEntry> rootAsset, unsigned start, unsigned end)
+{
+   //throws if the wallet is locked or the asset is missing its private key
+
+   auto rootAsset_single = dynamic_pointer_cast<AssetEntry_Single>(rootAsset);
+   if (rootAsset_single == nullptr)
+      throw DerivationSchemeException("invalid root asset object");
+
+   auto nextAsset = [this, ddc, rootAsset_single](
+      unsigned derivationIndex)->shared_ptr<AssetEntry>
+   {
+      //sanity checks
+      auto privkey = rootAsset_single->getPrivKey();
+      if (privkey == nullptr)
+         throw AssetUnavailableException();
+      auto& privkeyData =
+         ddc->getDecryptedPrivateData(privkey);
+
+      auto& account_id = rootAsset_single->getAccountID();
+      return computeNextPrivateEntry(
+         ddc,
+         privkeyData, move(privkey->copyCipher()),
+         account_id, derivationIndex);
+   };
+
+   if (ddc == nullptr)
+      throw AssetUnavailableException();
+
+   ReentrantLock lock(ddc.get());
+
+   vector<shared_ptr<AssetEntry>> assetVec;
+
+   for (unsigned i = start; i <= end; i++)
+   {
+      auto newAsset = nextAsset(i);
+      assetVec.push_back(newAsset);
+   }
+
+   return assetVec;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+shared_ptr<AssetEntry_Single>
+DerivationScheme_ECDH::computeNextPrivateEntry(
+   shared_ptr<DecryptedDataContainer> ddc,
+   const SecureBinaryData& privKeyData, unique_ptr<Cipher> cipher,
+   const BinaryData& accountID, unsigned index)
+{
+   //get salt
+   auto saltIter = saltMap_.find(index);
+   if (saltIter == saltMap_.end())
+      throw DerivationSchemeException("missing salt for id");
+
+   if (saltIter->second.getSize() != 32)
+      throw DerivationSchemeException("unexpected salt size");
+
+   //salt root privkey
+   auto&& saltedPrivKey = CryptoECDSA::PrivKeyScalarMultiply(
+      privKeyData, saltIter->second);
+
+   //compute salted pubkey
+   auto&& saltedPubKey = CryptoECDSA().ComputePublicKey(saltedPrivKey, true);
+
+   //encrypt the new privkey
+   auto&& newCipher = cipher->getCopy(); //copying a cypher cycles the IV
+   auto&& encryptedNextPrivKey = ddc->encryptData(
+      newCipher.get(), saltedPrivKey);
+
+   //instantiate new encrypted key object
+   auto privKeyID = accountID;
+   privKeyID.append(WRITE_UINT32_BE(index));
+   auto nextPrivKey = make_shared<Asset_PrivateKey>(
+      privKeyID, encryptedNextPrivKey, move(newCipher));
+
+   //instantiate and return new asset entry
+   return make_shared<AssetEntry_Single>(
+      index, accountID, saltedPubKey, nextPrivKey);
 }
