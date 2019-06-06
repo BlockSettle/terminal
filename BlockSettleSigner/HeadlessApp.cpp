@@ -275,6 +275,7 @@ void HeadlessAppObj::onlineProcessing()
    terminalConnection_->setLocalHeartbeatInterval();
 
    terminalListener_->SetLimits(settings_->limits());
+   terminalListener_->resetConnection(terminalConnection_.get());
 
    bool result = terminalConnection_->BindConnection(settings_->listenAddress()
       , settings_->listenPort(), terminalListener_.get());
