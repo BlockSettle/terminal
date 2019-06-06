@@ -23,6 +23,8 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::searchUserTextEdited);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
            this, &SearchWidget::searchTextChanged);
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
+           this, &SearchWidget::onInputTextChanged);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyDownPressed,
            this, &SearchWidget::focusResults);
    connect(ui_->searchResultTreeView, &ChatSearchListVew::customContextMenuRequested,
@@ -226,4 +228,11 @@ void SearchWidget::leaveAndCloseSearchResults()
 {
    ui_->chatSearchLineEdit->setFocus();
    setListVisible(false);
+}
+
+void SearchWidget::onInputTextChanged(const QString &text)
+{
+   if (text.isEmpty()) {
+      setListVisible(false);
+   }
 }

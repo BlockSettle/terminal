@@ -61,6 +61,7 @@ private slots:
    void onItemClicked(const QModelIndex &index);
    void leaveSearchResults();
    void leaveAndCloseSearchResults();
+   void onInputTextChanged(const QString &text);
 
 signals:
    void searchUserTextEdited(const QString &text);
