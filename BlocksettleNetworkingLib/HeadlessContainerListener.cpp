@@ -163,6 +163,7 @@ bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::hea
 bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, headless::RequestPacket packet)
 {
    if (!connection_) {
+      logger_->error("[HeadlessContainerListener::{}] connection_ is not set");
       return false;
    }
 
