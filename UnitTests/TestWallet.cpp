@@ -1962,6 +1962,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       //check ext[12] is p2sh_p2wpkh
       const auto &extAddrList = syncLeaf->getExtAddressList();
+      ASSERT_EQ(extAddrList.size(), 14);
       EXPECT_EQ(extAddrList[12].getType(),
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
 
@@ -2145,10 +2146,12 @@ TEST_F(TestWalletWithArmory, Comments)
    auto cbTxOutList = [wallet, syncWallet, addr, txComment, promPtr, passphrase]
       (std::vector<UTXO> inputs)->void
    {
-      const auto txReq = syncWallet->createTXRequest(
-         inputs, 
-         { addr.getRecipient((uint64_t)12000) }, 
-         345);
+      if (inputs.empty()) {
+         promPtr->set_value(false);
+      }
+      ASSERT_FALSE(inputs.empty());
+      const auto recip = addr.getRecipient((uint64_t)12000);
+      const auto txReq = syncWallet->createTXRequest(inputs, { recip }, 345);
 
       BinaryData txData;
       {
@@ -2165,13 +2168,12 @@ TEST_F(TestWalletWithArmory, Comments)
    };
 
    EXPECT_TRUE(syncWallet->getSpendableTxOutList(cbTxOutList, UINT64_MAX));
-   fut.wait();
+   EXPECT_TRUE(fut.get());
 }
 
 TEST_F(TestWalletWithArmory, ZCBalance)
 {
-   const auto addr1 = leafPtr_->getNewExtAddress(
-      AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
+   const auto addr1 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
    const auto addr2 = leafPtr_->getNewExtAddress(
       AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
    const auto changeAddr = leafPtr_->getNewChangeAddress(
@@ -2216,6 +2218,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    syncLeaf->updateBalances(waitOnBalance);
    balFut.wait();
    EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 250);
+   EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance(), 0);
 
    //spend these coins
    const uint64_t amount = 0.05 * BTCNumericTypes::BalanceDivider;
@@ -2273,9 +2276,10 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    syncLeaf->updateBalances(cbBalance);
    fut2.wait();
 
-   auto leafBal = syncLeaf->getTotalBalance();
-   EXPECT_EQ(syncLeaf->getTotalBalance(), 
+   EXPECT_EQ(syncLeaf->getTotalBalance(),
       double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getUnconfirmedBalance()  // not sure this is the correct calculation though
+      , double(250 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
 
    auto bal = syncLeaf->getAddrBalance(addr1);
    ASSERT_EQ(bal.size(), 3);
