@@ -38,13 +38,13 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, params);
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
-      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
+      adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
 
       // Temporary (?) kludge: Sometimes, the key gets checked with "_1" at the
       // end of the checked key name. This should be checked and corrected
       // elsewhere, but for now, add a kludge to keep the code happy.
       connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort + "_1";
-      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
+      adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
    }
 
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
