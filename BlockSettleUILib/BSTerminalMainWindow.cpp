@@ -528,17 +528,17 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
       , resultHost, resultPort, netType, connectionManager_, applicationSettings_
       , SignContainer::OpMode::Remote, false, keyFileDir, keyFileName, ourNewKeyCB);
 
-   std::vector<std::pair<std::string, BinaryData>> keys;
+   ZmqBIP15XPeers peers;
    for (const auto &signer : signersProvider_->signers()) {
       try {
          const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-         keys.push_back({ signer.serverId(), signerKey });
+         peers.push_back(ZmqBIP15XPeer(signer.serverId(), signerKey));
       }
       catch (const std::exception &e) {
          logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
       }
    }
-   remoteSigner->updatePeerKeys(keys);
+   remoteSigner->updatePeerKeys(peers);
 
    return remoteSigner;
 }
