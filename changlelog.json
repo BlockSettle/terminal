@@ -1,7 +1,23 @@
 {
-   "latest_version": "0.15.17",
-   "release_date": "03 Jun 2019",
+   "latest_version": "0.15.18",
+   "release_date": "05 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.15.18",
+         "previous_version": "0.15.17",
+         "release_date": "05 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix explorer timeout poput",
+            "OTC request widget for DM chat"
+         ],
+         "bug_fixes": [
+            "Singer timeout fixes",
+            "Fix armory connection crash"
+         ],
+         "revision": "8c2a5522",
+         "common_revision": "ba68df0c"
+      },
       {
          "version_string": "0.15.17",
          "previous_version": "0.15.16",
