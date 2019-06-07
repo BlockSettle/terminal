@@ -25,88 +25,9 @@ namespace {
 
    // When remote signer will try to reconnect
    constexpr auto kLocalReconnectPeriod = std::chrono::seconds(10);
-   constexpr auto kRemoteReconnectPeriod = std::chrono::milliseconds(100);
+   constexpr auto kRemoteReconnectPeriod = std::chrono::seconds(1);
 
 } // namespace
-
-#ifdef Q_OS_WIN
-#include <windows.h>
-#include <tlhelp32.h>
-#define TERM_SUCCESS_CLEAN 0
-#define TERM_SUCCESS_KILL 1
-#define TERM_FAILED 2
-
-#ifndef MAKEULONGLONG
-#define MAKEULONGLONG(ldw, hdw) ((ULONGLONG(hdw) << 32) | ((ldw) & 0xFFFFFFFF))
-#endif
-
-#ifndef MAXULONGLONG
-#define MAXULONGLONG ((ULONGLONG)~((ULONGLONG)0))
-#endif
-
-static DWORD WINAPI GetWinMainThreadId(DWORD dwProcID)
-{
-   DWORD dwMainThreadID = 0;
-   ULONGLONG ullMinCreateTime = MAXULONGLONG;
-
-   HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-   if (hThreadSnap != INVALID_HANDLE_VALUE) {
-      THREADENTRY32 th32;
-      th32.dwSize = sizeof(THREADENTRY32);
-      BOOL bOK = TRUE;
-      for (bOK = Thread32First(hThreadSnap, &th32); bOK;
-           bOK = Thread32Next(hThreadSnap, &th32)) {
-         if (th32.th32OwnerProcessID == dwProcID) {
-            HANDLE hThread = OpenThread(THREAD_QUERY_INFORMATION, TRUE, th32.th32ThreadID);
-            if (hThread) {
-               FILETIME afTimes[4] = {0};
-               if (GetThreadTimes(hThread,
-                                  &afTimes[0], &afTimes[1], &afTimes[2], &afTimes[3])) {
-                  ULONGLONG ullTest = MAKEULONGLONG(afTimes[0].dwLowDateTime,
-                        afTimes[0].dwHighDateTime);
-                  if (ullTest && ullTest < ullMinCreateTime) {
-                     ullMinCreateTime = ullTest;
-                     dwMainThreadID = th32.th32ThreadID; // let it be main... :)
-                  }
-               }
-               CloseHandle(hThread);
-            }
-         }
-      }
-      CloseHandle(hThreadSnap);
-   }
-
-   return dwMainThreadID;
-}
-
-static DWORD WINAPI TerminateWinApp(DWORD dwPID, DWORD dwTimeout)
-{
-   HANDLE   hProc ;
-   DWORD   dwRet ;
-
-   hProc = OpenProcess(SYNCHRONIZE|PROCESS_TERMINATE, FALSE, dwPID);
-   if (hProc == NULL) {
-      return TERM_FAILED ;
-   }
-
-   PostThreadMessage(GetWinMainThreadId(dwPID), WM_QUIT, 0, 0);
-
-
-   // Wait on the handle. If it signals, great. If it times out,
-   // then you kill it.
-   if(WaitForSingleObject(hProc, dwTimeout) != WAIT_OBJECT_0) {
-      dwRet = (TerminateProcess(hProc, 0) ? TERM_SUCCESS_KILL : TERM_FAILED);
-   }
-   else {
-      dwRet = TERM_SUCCESS_CLEAN ;
-   }
-
-   CloseHandle(hProc) ;
-
-   return dwRet;
-}
-
-#endif // Q_OS_WIN
 
 using namespace Blocksettle::Communication;
 Q_DECLARE_METATYPE(headless::RequestPacket)
@@ -466,8 +387,6 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
    case TXSignMode::Partial:
       packet.set_type(headless::SignPartialTXRequestType);
       break;
-
-   default:    break;
    }
    packet.set_data(request.SerializeAsString());
    const auto id = Send(packet);

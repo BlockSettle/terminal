@@ -1002,7 +1002,8 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
             "failed - AUTH_CHALLENGE not processed");
          return false;
       }
-      else if (challengeResult == 1) {
+
+      if (challengeResult == 1) {
          goodChallenge = false;
       }
 
