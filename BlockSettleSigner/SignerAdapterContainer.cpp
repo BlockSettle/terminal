@@ -30,13 +30,13 @@ bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet
    for (const auto &recip : txReq.recipients) {
       evt->add_recipients(recip->getSerializedScript().toBinStr());
    }
+   evt->set_fee(txReq.fee);
    evt->set_rbf(txReq.RBF);
    if (txReq.change.value) {
       auto change = evt->mutable_change();
       change->set_address(txReq.change.address.display());
       change->set_index(txReq.change.index);
       change->set_value(txReq.change.value);
-   evt->set_fee(txReq.fee);
    }
 
    return listener_->send(signer::SignTxRequestType, request.SerializeAsString());
