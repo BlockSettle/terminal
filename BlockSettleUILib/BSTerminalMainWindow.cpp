@@ -606,6 +606,8 @@ void BSTerminalMainWindow::SignerReady()
    //InitWidgets();
 
    signContainer_->SetUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+
+   lastSignerError_ = SignContainer::NoError;
 }
 
 void BSTerminalMainWindow::InitConnections()
@@ -943,6 +945,12 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError error, const QString &details)
 {
    updateControlEnabledState();
+
+   // Prevent showing multiple signer error dialogs (for example network mismatch)
+   if (error == lastSignerError_) {
+      return;
+   }
+   lastSignerError_ = error;
 
    if (error != SignContainer::ConnectionTimeout || signContainer_->isLocal()) {
       showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));

@@ -238,8 +238,11 @@ private:
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;
 
+   SignContainer::ConnectionError lastSignerError_{};
+
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
+
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__
