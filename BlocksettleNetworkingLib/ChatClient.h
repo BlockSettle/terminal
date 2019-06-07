@@ -121,7 +121,14 @@ public:
    /////////////////////////////////////////////////////////////////////////////
 
    void HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+   void HandlePrivateOTCRequestRejected(const std::shared_ptr<Chat::OTCRequestData>& rejectedOTC,
+                                        const std::string& rejectReason);
+   void HandlePrivateOTCRequestCancelled(const std::shared_ptr<Chat::OTCRequestData>& cancelledOTC);
    void HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+
+   void HandleAcceptedPrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response);
+   void HandleRejectedPrivateOTCResponse(const std::string& otcId, const std::string& reason);
+   void HandlePrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response);
 
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
