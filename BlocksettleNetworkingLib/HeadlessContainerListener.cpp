@@ -265,7 +265,7 @@ bool HeadlessContainerListener::onSignTXRequest(const std::string &clientId, con
       txSignReq.recipients.push_back(recip);
       outputVal += recip->getValue();
    }
-   uint64_t value = outputVal;
+   int64_t value = outputVal;
 
    txSignReq.fee = request.fee();
    txSignReq.RBF = request.rbf();
