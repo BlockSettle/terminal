@@ -20,6 +20,16 @@ struct SignerHost
       return !(*this == other);
    }
 
+   bool isValid() const {
+      if (port < 1 || port > USHRT_MAX) {
+         return false;
+      }
+      if (name.isEmpty()) {
+         return false;
+      }
+      return true;
+   }
+
    static SignerHost fromTextSettings(const QString &text) {
       SignerHost signer;
       if (text.split(QStringLiteral(":")).size() != 4) {

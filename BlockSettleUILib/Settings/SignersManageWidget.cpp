@@ -5,6 +5,8 @@
 #include <QStandardPaths>
 #include <SecureBinaryData.h>
 
+const QRegExp kRxAddress(QStringLiteral(R"(^(((?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|(^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9])$))$)"));
+
 SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signersProvider
    , const std::shared_ptr<ApplicationSettings> &appSettings
    , QWidget *parent) :
@@ -20,8 +22,6 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    ui_->spinBoxPort->setMaximum(USHRT_MAX);
 
    ui_->tableViewSignerKeys->setModel(signersModel_);
-   ui_->tableViewSignerKeys->selectionModel()->select(signersModel_->index(signersProvider->indexOfCurrent(), 0)
-      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 
    int defaultSectionSize = ui_->tableViewSignerKeys->horizontalHeader()->defaultSectionSize();
    ui_->tableViewSignerKeys->horizontalHeader()->resizeSection(0, defaultSectionSize * 2);
@@ -37,6 +37,9 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
    connect(ui_->pushButtonSelect, &QPushButton::clicked, this, &SignerKeysWidget::onSelect);
    connect(ui_->pushButtonKeyImport, &QPushButton::clicked, this, &SignerKeysWidget::onKeyImport);
 
+   connect(ui_->lineEditName, &QLineEdit::textChanged, this, &SignerKeysWidget::onFormChanged);
+   connect(ui_->lineEditAddress, &QLineEdit::textChanged, this, &SignerKeysWidget::onFormChanged);
+   connect(ui_->spinBoxPort, QOverload<int>::of(&QSpinBox::valueChanged), this, &SignerKeysWidget::onFormChanged);
 
    connect(ui_->pushButtonClose, &QPushButton::clicked, this, [this](){
       emit needClose();
@@ -52,16 +55,31 @@ SignerKeysWidget::SignerKeysWidget(const std::shared_ptr<SignersProvider> &signe
       resetForm();
 
       // save to settings right after row highlight
-      if (!ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
-         int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
-
-         if (index < signersProvider_->signers().size()) {
-            signersProvider_->setupSigner(index, false);
-         }
-      }
+      setupSignerFromSelected(false);
    });
 
    resetForm();
+
+   setRowSelected(signersProvider->indexOfCurrent());
+
+   auto validator = new QRegExpValidator(this);
+   validator->setRegExp(kRxAddress);
+   ui_->lineEditAddress->setValidator(validator);
+   onFormChanged();
+}
+
+void SignerKeysWidget::setRowSelected(int row)
+{
+   QModelIndex currentIndex;
+   if (signersProvider_->signers().size() >= 0) {
+      int indexOfCurrent = row;
+      if (indexOfCurrent < 0 || indexOfCurrent >= signersProvider_->signers().size()) {
+         indexOfCurrent = 0;
+      }
+      currentIndex = signersModel_->index(indexOfCurrent, 0);
+   }
+   ui_->tableViewSignerKeys->selectionModel()->select(currentIndex
+                                                      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
 SignerKeysWidget::~SignerKeysWidget() = default;
@@ -80,6 +98,8 @@ void SignerKeysWidget::onAddSignerKey()
 
    signersProvider_->add(signerHost);
    resetForm();
+
+   setRowSelected(signersProvider_->signers().size() - 1);
 }
 
 void SignerKeysWidget::onDeleteSignerKey()
@@ -95,6 +115,8 @@ void SignerKeysWidget::onDeleteSignerKey()
 
    signersProvider_->remove(selectedRow);
    resetForm();
+
+   setRowSelected(selectedRow);
 }
 
 void SignerKeysWidget::onEdit()
@@ -144,18 +166,29 @@ void SignerKeysWidget::resetForm()
    ui_->spinBoxPort->setValue(23456);
 }
 
+void SignerKeysWidget::onFormChanged()
+{
+   bool acceptable = ui_->lineEditAddress->hasAcceptableInput();
+   bool exists = false;
+   bool valid = false;
+   if (acceptable) {
+      SignerHost signerHost;
+      signerHost.name = ui_->lineEditName->text();
+      signerHost.address = ui_->lineEditAddress->text();
+      signerHost.port = ui_->spinBoxPort->value();
+      signerHost.key = ui_->lineEditKey->text();
+      valid = signerHost.isValid();
+      if (valid) {
+         exists = signersProvider_->indexOf(signerHost.name) != -1
+               || signersProvider_->indexOf(signerHost) != -1;
+      }
+   }
+   ui_->pushButtonAddSignerKey->setEnabled(valid && acceptable && !exists);
+}
+
 void SignerKeysWidget::onSelect()
 {
-   if (ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
-      return;
-   }
-
-   int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
-   if (index >= signersProvider_->signers().size()) {
-      return;
-   }
-
-   signersProvider_->setupSigner(index);
+   setupSignerFromSelected(true);
 }
 
 void SignerKeysWidget::onKeyImport()
@@ -171,4 +204,16 @@ void SignerKeysWidget::onKeyImport()
    }
 }
 
+void SignerKeysWidget::setupSignerFromSelected(bool save)
+{
+   if (ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().isEmpty()) {
+      return;
+   }
 
+   int index = ui_->tableViewSignerKeys->selectionModel()->selectedIndexes().first().row();
+   if (index >= signersProvider_->signers().size()) {
+      return;
+   }
+
+   signersProvider_->setupSigner(index, save);
+}

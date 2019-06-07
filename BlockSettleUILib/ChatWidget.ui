@@ -595,7 +595,7 @@
              <number>0</number>
             </property>
             <property name="currentIndex">
-             <number>9</number>
+             <number>3</number>
             </property>
             <widget class="OTCLoginRequiredShield" name="widgetLoginRequiredShield"/>
             <widget class="OTCGeneralRoomShield" name="widgetGeneralShield"/>

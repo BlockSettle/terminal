@@ -99,9 +99,9 @@ public:
 
    // HandleCommonOTCRequestCancelled - OTC request sent to common OTC room was
    //    cancelled by requestor. Could be both ours and someone else
-   void HandleCommonOTCRequestCancelled(const QString& serverOTCId);
+   void HandleCommonOTCRequestCancelled(const std::string& serverOTCId);
 
-   void HandleCommonOTCRequestExpired(const QString& serverOTCId);
+   void HandleCommonOTCRequestExpired(const std::string& serverOTCId);
 
    // HandleAcceptedCommonOTCResponse - chat server accepts our response to
    //    OTC request in OTC chat room
@@ -109,7 +109,7 @@ public:
 
    // HandleRejectedCommonOTCResponse - chat server accepts our response to
    //    OTC request in OTC chat room
-   void HandleRejectedCommonOTCResponse(const QString& otcId, const std::string& reason);
+   void HandleRejectedCommonOTCResponse(const std::string& otcId, const std::string& reason);
 
    // HandleCommonOTCResponse - handle response we receive to our OTC request
    //    sent to common OTC chat room
@@ -119,6 +119,9 @@ public:
    void HandleOTCUpdate(const std::shared_ptr<Chat::OTCUpdateData>& update);
 
    /////////////////////////////////////////////////////////////////////////////
+
+   void HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+   void HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
 
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
@@ -163,15 +166,18 @@ public:
    //    true - request was submitted
    //    false - request was not delivered to chat server.
    bool SubmitCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool SubmitPrivateOTCRequest(const std::string& targetId, const bs::network::OTCRequest& request);
 
    // cancel current OTC request sent to OTC chat
-   bool PullCommonOTCRequest(const QString& serverOTCId);
+   bool PullCommonOTCRequest(const std::string& serverOTCId);
+   bool PullPrivateOTCRequest(const std::string& targetId, const std::string& serverOTCId);
 
    bool SubmitCommonOTCResponse(const bs::network::OTCResponse& response);
 
 private:
    // OTC related messaging endpoint
    bool sendCommonOTCRequest(const bs::network::OTCRequest& request);
+   bool sendPrivateOTCRequest(const std::string& targetId, const bs::network::OTCRequest& request);
    bool sendPullCommonOTCRequest();
    bool sendCommonOTCResponse();
 
@@ -188,18 +194,18 @@ signals:
 
    // OTC request was pulledby requestor. We should receive it even if it our own.
    // we could not just remove OTC, it should be initiated by chat server
-   void OTCRequestCancelled(const QString& serverOTCId);
+   void OTCRequestCancelled(const std::string& serverOTCId);
 
    // OTC request expired and is not settled
-   void OTCRequestExpired(const QString& serverOTCId);
+   void OTCRequestExpired(const std::string& serverOTCId);
 
    // own OTC request sent to OTC chat expired
-   void OwnOTCRequestExpired(const QString& serverOTCId);
+   void OwnOTCRequestExpired(const std::string& serverOTCId);
 
    // CommonOTCResponseAccepted/CommonOTCResponseRejected - chat server accepted/rejected our
    //    response to OTC from common OTC chat
    void CommonOTCResponseAccepted(const std::shared_ptr<Chat::OTCResponseData>& otcResponse);
-   void CommonOTCResponseRejected(const QString& serverOTCId, const QString& reason);
+   void CommonOTCResponseRejected(const std::string& serverOTCId, const QString& reason);
 
    // CommonOTCResponseReceived - we get response to our request sent to common
    //    OTC chat room
@@ -289,30 +295,16 @@ public:
    void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
 
 private:
-   /////////////////////////////////////////////////////////////////////////////
-   // OTC simulation methods
-   std::string GetNextRequestorId();
-   std::string GetNextResponderId();
    std::string GetNextOTCId();
-   std::string GetNextServerOTCId();
    std::string GetNextResponseId();
-   std::string GetNextServerResponseId();
-   std::string GetNextNegotiationChannelId();
-   void ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
-   /////////////////////////////////////////////////////////////////////////////
 
 private:
    // OTC temp fields. will be removed after OTC goes through chat server
    uint64_t          nextOtcId_ = 1;
-   const std::string baseFakeRequestorId_ = "fake_req";
-   uint64_t          nextRequestorId_ = 1;
-   const std::string baseFakeResponderId_ = "fake_resp";
-   uint64_t          nextResponderId_ = 1;
    uint64_t          nextResponseId_ = 1;
-   uint64_t          negotiationChannelId_ = 1;
 
-   QString           ownSubmittedOTCId_;
-   QString           ownServerOTCId_;
+   std::string       ownSubmittedOTCId_;
+   std::string       ownServerOTCId_;
 
    // based on server reqest id
    std::unordered_set<std::string> aliveOtcRequests_;

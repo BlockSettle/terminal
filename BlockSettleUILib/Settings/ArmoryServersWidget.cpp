@@ -19,8 +19,6 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
 
    ui_->tableViewArmory->setModel(armoryServersModel_);
    ui_->tableViewArmory->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-   ui_->tableViewArmory->selectionModel()->select(armoryServersModel_->index(armoryServersProvider->indexOfCurrent(), 0)
-      , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 //   int defaultSectionSize = ui_->tableViewArmory->horizontalHeader()->defaultSectionSize();
 //   ui_->tableViewArmory->horizontalHeader()->resizeSection(0, defaultSectionSize * 2);
 //   ui_->tableViewArmory->horizontalHeader()->resizeSection(1, defaultSectionSize);
@@ -58,13 +56,7 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
       resetForm();
       
       // save to settings right after row highlight
-      if (isStartupDialog_ && !ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty()) {
-         int index = ui_->tableViewArmory->selectionModel()->selectedIndexes().first().row();
-        
-         if (index < armoryServersProvider_->servers().size()) {
-            armoryServersProvider_->setupServer(index, false);
-         }
-      }
+      setupServerFromSelected(false);
    });
 
    connect(ui_->comboBoxNetworkType, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -78,6 +70,8 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
    });
 
    resetForm();
+
+   setRowSelected(armoryServersProvider_->indexOfCurrent());
 }
 
 void ArmoryServersWidget::adaptForStartupDialog()
@@ -86,6 +80,20 @@ void ArmoryServersWidget::adaptForStartupDialog()
    ui_->tableViewArmory->hideColumn(4);
 
    isStartupDialog_ = true;
+}
+
+void ArmoryServersWidget::setRowSelected(int row)
+{
+   QModelIndex currentIndex;
+   if (armoryServersProvider_->servers().size() >= 0) {
+      int indexOfCurrent = row;
+      if (indexOfCurrent < 0 || indexOfCurrent >= armoryServersProvider_->servers().size()) {
+         indexOfCurrent = 0;
+      }
+      currentIndex = armoryServersModel_->index(indexOfCurrent, 0);
+   }
+   ui_->tableViewArmory->selectionModel()->select(currentIndex
+                                                  , QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
 ArmoryServersWidget::~ArmoryServersWidget() = default;
@@ -109,6 +117,7 @@ void ArmoryServersWidget::onAddServer()
    bool ok = armoryServersProvider_->add(server);
    if (ok) {
       resetForm();
+      setRowSelected(armoryServersProvider_->servers().size() - 1);
    }
 }
 
@@ -117,11 +126,14 @@ void ArmoryServersWidget::onDeleteServer()
    if (ui_->tableViewArmory->selectionModel()->selectedRows(0).isEmpty()) {
       return;
    }
+
+   int selectedRow = ui_->tableViewArmory->selectionModel()->selectedRows(0).first().row();
    // dont delete default servers
-   if (ui_->tableViewArmory->selectionModel()->selectedRows(0).first().row() < ArmoryServersProvider::kDefaultServersCount) {
+   if (selectedRow < ArmoryServersProvider::kDefaultServersCount) {
       return;
    }
-   armoryServersProvider_->remove(ui_->tableViewArmory->selectionModel()->selectedRows(0).first().row());
+   armoryServersProvider_->remove(selectedRow);
+   setRowSelected(selectedRow);
 }
 
 void ArmoryServersWidget::onEdit()
@@ -147,16 +159,7 @@ void ArmoryServersWidget::onEdit()
 
 void ArmoryServersWidget::onSelect()
 {
-   if (ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty()) {
-      return;
-   }
-
-   int index = ui_->tableViewArmory->selectionModel()->selectedIndexes().first().row();
-   if (index >= armoryServersProvider_->servers().size()) {
-      return;
-   }
-
-   armoryServersProvider_->setupServer(index);
+   setupServerFromSelected(true);
 }
 
 void ArmoryServersWidget::onSave()
@@ -191,6 +194,20 @@ void ArmoryServersWidget::onSave()
 void ArmoryServersWidget::onConnect()
 {
 //   emit reconnectArmory();
+}
+
+void ArmoryServersWidget::setupServerFromSelected(bool save)
+{
+   if (ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty()) {
+      return;
+   }
+
+   int index = ui_->tableViewArmory->selectionModel()->selectedIndexes().first().row();
+   if (index >= armoryServersProvider_->servers().size()) {
+      return;
+   }
+
+   armoryServersProvider_->setupServer(index, save);
 }
 
 void ArmoryServersWidget::resetForm()

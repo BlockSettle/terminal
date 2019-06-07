@@ -43,6 +43,10 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
    , bipIDCookiePath_(params.cookiePath)
    , cookie_(params.cookie)
    , heartbeatInterval_(params.heartbeatInterval)
+   // There is some obscure problem with ZMQ if same context reused:
+   // ZMQ recreates TCP connections for closed ZMQ sockets.
+   // Using new context fixes this problem.
+   , context_(new ZmqContext(logger))
    , dataSocket_(ZmqContext::CreateNullSocket())
    , monSocket_(ZmqContext::CreateNullSocket())
    , threadMasterSocket_(ZmqContext::CreateNullSocket())
@@ -363,12 +367,12 @@ void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
       return;
    }
 
-   const auto curTime = std::chrono::steady_clock::now();
-   const auto diff = curTime - lastHeartbeatSend_;
-   if (diff < heartbeatInterval_) {
+   const auto now = std::chrono::steady_clock::now();
+   const auto idlePeriod = now - lastHeartbeatSend_;
+   if (idlePeriod < heartbeatInterval_) {
       return;
    }
-   lastHeartbeatSend_ = curTime;
+   lastHeartbeatSend_ = now;
 
    // If a rekey is needed, rekey before encrypting. Estimate the size of the
    // final packet first in order to get the # of bytes transmitted.
@@ -388,7 +392,13 @@ void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
       return;
    }
 
-   auto lastHeartbeatDiff = curTime - lastHeartbeatReply_;
+   if (idlePeriod > heartbeatInterval_ * 2) {
+      logger_->debug("[ZmqBIP15XDataConnection:{}] hibernation detected, reset server's last timestamp", __func__);
+      lastHeartbeatReply_ = now;
+      return;
+   }
+
+   auto lastHeartbeatDiff = now - lastHeartbeatReply_;
    if (lastHeartbeatDiff > heartbeatInterval_ * 2) {
       onError(DataConnectionListener::HeartbeatWaitFailed);
    }

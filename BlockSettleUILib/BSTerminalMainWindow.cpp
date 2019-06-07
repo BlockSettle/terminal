@@ -593,7 +593,6 @@ bool BSTerminalMainWindow::InitSigningContainer()
 
 void BSTerminalMainWindow::SignerReady()
 {
-   lastSignerError_ = SignContainer::NoError;
    updateControlEnabledState();
 
    if (signContainer_->hasUI()) {
@@ -943,13 +942,11 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 
 void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError error, const QString &details)
 {
-   if (lastSignerError_ == error) {
-      return;
-   }
-
-   lastSignerError_ = error;
    updateControlEnabledState();
-   showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+
+   if (error != SignContainer::ConnectionTimeout || signContainer_->isLocal()) {
+      showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+   }
 }
 
 void BSTerminalMainWindow::onReceive()

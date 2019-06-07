@@ -15,7 +15,7 @@ PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() noexcept = default;
 
 void PullOwnOTCRequestWidget::OnPullPressed()
 {
-   emit PullOTCRequested(currentOtcId_);
+   emit PullOTCRequested(QString::fromStdString(currentOtcId_));
 }
 
 void PullOwnOTCRequestWidget::DisplayActiveOTC(const std::shared_ptr<Chat::OTCRequestData>& otc)
