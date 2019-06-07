@@ -882,6 +882,7 @@ bool HeadlessContainerListener::onDeleteHDWallet(headless::RequestPacket &packet
    return false;
 }
 
+// FIXME: needs to review and reimplement setLimits at all
 //bool HeadlessContainerListener::onSetLimits(const std::string &clientId, headless::RequestPacket &packet)
 //{
 //   headless::SetLimitsRequest request;
@@ -1050,7 +1051,7 @@ bool HeadlessContainerListener::CheckSpendLimit(uint64_t value, bool autoSign, c
       if (value > limits_.autoSignSpendXBT) {
          logger_->warn("[HeadlessContainerListener] requested auto-sign spend {} exceeds limit {}", value
             , limits_.autoSignSpendXBT);
-         deactivateAutoSign(walletId, "spend limit reached");
+         deactivateAutoSign(walletId, bs::error::ErrorCode::TxSpendLimitExceed);
          return false;
       }
    }
@@ -1083,7 +1084,6 @@ bs::error::ErrorCode HeadlessContainerListener::activateAutoSign(const std::stri
 
    const auto &wallet = walletId.empty() ? walletsMgr_->getPrimaryWallet() : walletsMgr_->getHDWalletById(walletId);
    if (!wallet) {
-      deactivateAutoSign(walletId, "wallet missing");
       return bs::error::ErrorCode::WalletNotFound;
    }
    if (!wallet->encryptionTypes().empty()) {
@@ -1101,9 +1101,9 @@ bs::error::ErrorCode HeadlessContainerListener::activateAutoSign(const std::stri
 }
 
 bs::error::ErrorCode HeadlessContainerListener::deactivateAutoSign(const std::string &walletId
-   , const std::string &reason)
+   , bs::error::ErrorCode reason)
 {
-   logger_->info("Deactivate AutoSign for {} ({})", walletId, reason);
+   logger_->info("Deactivate AutoSign for {} (error code: {})", walletId, static_cast<int>(reason));
 
    if (walletId.empty()) {
       passwords_.clear();

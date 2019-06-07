@@ -76,8 +76,7 @@ bs::signer::RequestId InprocSigner::signTXRequest(const bs::core::wallet::TXSign
    }
    catch (const std::exception &e) {
       QTimer::singleShot(1, [this, reqId, e] {
-         //emit TXSigned(reqId, {}, e.what(), false);
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError);
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, e.what());
       });
    }
    return reqId;
@@ -120,8 +119,7 @@ bs::signer::RequestId InprocSigner::signPayoutTXRequest(const bs::core::wallet::
       });
    } catch (const std::exception &e) {
       QTimer::singleShot(1, [this, reqId, e] {
-         //emit TXSigned(reqId, {}, e.what(), false);
-         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError);
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::InternalError, e.what());
       });
    }
    return reqId;

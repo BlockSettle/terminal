@@ -102,7 +102,7 @@ private slots:
    void VerifyWalletAddresses();
    void onAuthWalletChanged();
    void authAddressAdded();
-   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result);
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason);
    void onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onWalletFailed(unsigned int id, std::string errMsg);
 

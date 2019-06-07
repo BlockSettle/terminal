@@ -16,7 +16,6 @@ enum RequestType
    CreateHDWalletRequestType   = 8;
    DeleteHDWalletRequestType   = 9;
    GetRootKeyRequestType       = 10;
-   //SetLimitsRequestType        = 11;
    AutoSignActType             = 11;
    GetHDWalletInfoRequestType  = 12;
    DisconnectionRequestType    = 13;

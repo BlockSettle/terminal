@@ -64,7 +64,7 @@ public:
    void passwordReceived(const std::string &walletId
       , const SecureBinaryData &password, bool cancelledByUser);
    bs::error::ErrorCode activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
-   bs::error::ErrorCode deactivateAutoSign(const std::string &walletId = {}, const std::string &reason = {});
+   bs::error::ErrorCode deactivateAutoSign(const std::string &walletId = {}, bs::error::ErrorCode reason = bs::error::ErrorCode::NoError);
    //void addPendingAutoSignReq(const std::string &walletId);
    void walletsListUpdated();
 

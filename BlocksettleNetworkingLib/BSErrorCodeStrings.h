@@ -34,7 +34,12 @@ inline QString ErrorCodeToString(bs::error::ErrorCode errorCode) {
       return QObject::tr("Transaction canceled");
    case bs::error::ErrorCode::TxSpendLimitExceed:
       return QObject::tr("Spend limit exceeded");
-
+   case bs::error::ErrorCode::TxRequestFileExist:
+      return QObject::tr("TX request file already exist");
+   case bs::error::ErrorCode::TxFailedToOpenRequestFile:
+      return QObject::tr("Failed to open TX request file");
+   case bs::error::ErrorCode::TxFailedToWriteRequestFile:
+      return QObject::tr("Failed to write TX request file");
    default:
       return QObject::tr("Unknown error");
    }

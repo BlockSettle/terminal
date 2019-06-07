@@ -27,7 +27,8 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
 {
-   //connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerCCSettlementContainer::onTXSigned);
+   // FIXME: Settlement containers will be reimplemented to use another function
+   // connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerCCSettlementContainer::onTXSigned);
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 

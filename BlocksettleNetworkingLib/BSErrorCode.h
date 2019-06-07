@@ -19,7 +19,10 @@ enum class ErrorCode
    // TX signing error codes
    TxInvalidRequest,
    TxCanceled,
-   TxSpendLimitExceed
+   TxSpendLimitExceed,
+   TxRequestFileExist,
+   TxFailedToOpenRequestFile,
+   TxFailedToWriteRequestFile
 };
 }
 }
