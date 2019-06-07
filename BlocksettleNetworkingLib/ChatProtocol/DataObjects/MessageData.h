@@ -51,6 +51,7 @@ namespace Chat {
       QString messageData() const { return messageData_; }
       void setMessageData(const QString& messageData);
       void setMessageData(const std::shared_ptr<DataObject>& data);
+      void setMessageData(const QString& messageData, Type content);
       int state() const { return state_; }
       std::string jsonAssociatedData() const;
 
@@ -74,8 +75,6 @@ namespace Chat {
 
       Type content() const;
 
-   private:
-      void setMessageData(const QString& messageData, Type content);
    private:
       QString id_;
       QString senderId_;

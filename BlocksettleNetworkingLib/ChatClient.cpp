@@ -863,7 +863,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessagePrivate(
 
    messageData.setMessageData(
             QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encodedData.data()),
-                                           int(encodedData.size())).toBase64()));
+                                           int(encodedData.size())).toBase64()), messageData.content());
    messageData.setEncryptionType(Chat::MessageData::EncryptionType::AEAD);
 
    auto request = std::make_shared<Chat::SendMessageRequest>("", messageData.toJsonString());
