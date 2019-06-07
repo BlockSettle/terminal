@@ -121,6 +121,7 @@ namespace Chat
    static const QString PublicKeyKey = QStringLiteral("public_key");
    static const QString CommandKey = QStringLiteral("cmd");
    static const QString MessageIdKey = QStringLiteral("message_id");
+   static const QString MessageContentTypeKey = QStringLiteral("message_content_type");
    static const QString ClientMessageIdKey = QStringLiteral("client_message_id");
    static const QString MessageResultKey = QStringLiteral("message_result");
    static const QString ContactIdKey = QStringLiteral("contact_id");
