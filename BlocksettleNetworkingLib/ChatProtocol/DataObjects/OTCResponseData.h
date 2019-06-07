@@ -16,57 +16,53 @@ namespace Chat {
    public:
       OTCResponseData() = delete;
 
-      OTCResponseData(const QString& clientResponseId
-                      , const QString& serverRequestId
-                      , const QString& requestorId
-                      , const QString& initialTargetId
-                      , const QString& responderId
+      OTCResponseData(const std::string& clientResponseId
+                      , const std::string& serverRequestId
+                      , const std::string& requestorId
+                      , const std::string& initialTargetId
+                      , const std::string& responderId
                       , const bs::network::OTCPriceRange& priceRange
                       , const bs::network::OTCQuantityRange& quantityRange);
 
-      OTCResponseData(const QString& clientResponseId
-                      , const QString& serverResponseId
-                      , const QString& negotiationChannelId
-                      , const QString& serverRequestId
-                      , const QString& requestorId
-                      , const QString& initialTargetId
-                      , const QString& responderId
+      OTCResponseData(const std::string& clientResponseId
+                      , const std::string& serverResponseId
+                      , const std::string& serverRequestId
+                      , const std::string& requestorId
+                      , const std::string& initialTargetId
+                      , const std::string& responderId
                       , const uint64_t responseTimestamp
                       , const bs::network::OTCPriceRange& priceRange
                       , const bs::network::OTCQuantityRange& quantityRange);
 
       ~OTCResponseData() override = default;
 
-      QString clientResponseId() const;
-      QString serverResponseId() const;
+      std::string clientResponseId() const;
+      std::string serverResponseId() const;
 
-      QString negotiationChannelId() const;
-
-      QString serverRequestId() const;
+      std::string serverRequestId() const;
 
       // requestorId - who sent request
-      QString requestorId() const;
+      std::string requestorId() const;
       // initialTargetId - where it was sent
-      QString initialTargetId() const;
+      std::string initialTargetId() const;
 
       //responderId - current user id
-      QString responderId() const;
+      std::string responderId() const;
 
       uint64_t responseTimestamp() const;
 
       bs::network::OTCPriceRange    priceRange() const;
       bs::network::OTCQuantityRange quantityRange() const;
 
-      void setServerResponseId(const QString &serverResponseId);
+      void setServerResponseId(const std::string &serverResponseId);
 
    private:
-      const QString clientResponseId_;
-      QString serverResponseId_;
-      const QString negotiationChannelId_;
-      const QString serverRequestId_;
-      const QString requestorId_;
-      const QString initialTargetId_;
-      const QString responderId_;
+      const std::string clientResponseId_;
+      std::string serverResponseId_;
+      const std::string serverRequestId_;
+      const std::string requestorId_;
+      const std::string initialTargetId_;
+      const std::string responderId_;
       const uint64_t responseTimestamp_;
       const bs::network::OTCPriceRange    priceRange_;
       const bs::network::OTCQuantityRange quantityRange_;

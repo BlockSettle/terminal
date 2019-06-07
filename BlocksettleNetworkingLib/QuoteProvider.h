@@ -51,7 +51,7 @@ public:
    QuoteProvider(const std::shared_ptr<AssetManager> &assetManager
       , const std::shared_ptr<spdlog::logger>& logger
       , bool debugTraffic = true);
-   ~QuoteProvider() noexcept = default;
+   ~QuoteProvider() noexcept;
 
    QuoteProvider(const QuoteProvider&) = delete;
    QuoteProvider& operator = (const QuoteProvider&) = delete;

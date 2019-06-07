@@ -297,9 +297,8 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
       });
    });
 
-   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePort)
-      , reqPkt.SerializeAsString(), true)) {
+   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->pubBridgeHost()
+      , applicationSettings_->pubBridgePort(), reqPkt.SerializeAsString(), true)) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] failed to send request");
       showError(title, tr("Failed to retrieve network settings due to invalid connection to BlockSettle server"));
    }
@@ -593,7 +592,6 @@ bool BSTerminalMainWindow::InitSigningContainer()
 
 void BSTerminalMainWindow::SignerReady()
 {
-   lastSignerError_ = SignContainer::NoError;
    updateControlEnabledState();
 
    LoadWallets();
@@ -937,13 +935,11 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 
 void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError error, const QString &details)
 {
-   if (lastSignerError_ == error) {
-      return;
-   }
-
-   lastSignerError_ = error;
    updateControlEnabledState();
-   showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+
+   if (error != SignContainer::ConnectionTimeout || signContainer_->isLocal()) {
+      showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+   }
 }
 
 void BSTerminalMainWindow::onReceive()

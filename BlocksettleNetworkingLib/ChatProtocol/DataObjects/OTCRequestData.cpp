@@ -7,10 +7,10 @@ namespace Chat {
 QJsonObject OTCRequestData::toJson() const
 {
    QJsonObject data = DataObject::toJson();
-   data[OTCRequestIdClientKey] = clientRequestId_;
-   data[OTCRequestIdServerKey] = serverRequestId_;
-   data[OTCRequestorIdKey] = requestorId_;
-   data[OTCTargetIdKey] = targetId_;
+   data[OTCRequestIdClientKey] = QString::fromStdString(clientRequestId_);
+   data[OTCRequestIdServerKey] = QString::fromStdString(serverRequestId_);
+   data[OTCRequestorIdKey] = QString::fromStdString(requestorId_);
+   data[OTCTargetIdKey] = QString::fromStdString(targetId_);
    data[OTCSubmitTimestampKey] = QString::number(submitTimestamp_);
    data[OTCExpiredTimestampKey] = QString::number(expireTimestamp_);
    data[OTCRqSideKey] = static_cast<int>(otcRequest_.side);
@@ -23,10 +23,10 @@ std::shared_ptr<OTCRequestData> OTCRequestData::fromJSON(const std::string& json
 {
    QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-   QString clientRequestId = data[OTCRequestIdClientKey].toString();
-   QString serverRequestId = data[OTCRequestIdServerKey].toString();
-   QString requestorId = data[OTCRequestorIdKey].toString();
-   QString targetId = data[OTCTargetIdKey].toString();
+   const auto clientRequestId = data[OTCRequestIdClientKey].toString().toStdString();
+   const auto serverRequestId = data[OTCRequestIdServerKey].toString().toStdString();
+   const auto requestorId = data[OTCRequestorIdKey].toString().toStdString();
+   const auto targetId = data[OTCTargetIdKey].toString().toStdString();
    uint64_t submitTimestamp = data[OTCSubmitTimestampKey].toString().toULongLong();
    uint64_t expireTimestamp = data[OTCExpiredTimestampKey].toString().toULongLong();
    bs::network::ChatOTCSide::Type side =
@@ -34,7 +34,7 @@ std::shared_ptr<OTCRequestData> OTCRequestData::fromJSON(const std::string& json
    bs::network::OTCRangeID::Type range =
          static_cast<bs::network::OTCRangeID::Type>(data[OTCRqRangeIdKey].toInt());
 
-   bs::network::OTCRequest otcRq{side, range, false, false};
+   bs::network::OTCRequest otcRq{side, range};
 
    return std::make_shared<OTCRequestData>(clientRequestId,
                                            serverRequestId,
@@ -45,9 +45,9 @@ std::shared_ptr<OTCRequestData> OTCRequestData::fromJSON(const std::string& json
                                            otcRq);
 }
 
-OTCRequestData::OTCRequestData(const QString& clientRequestId
-                               , const QString& requestorId
-                               , const QString& targetId
+OTCRequestData::OTCRequestData(const std::string& clientRequestId
+                               , const std::string& requestorId
+                               , const std::string& targetId
                                , const bs::network::OTCRequest& otcRequest)
   : DataObject(DataObject::Type::OTCRequestData)
   , clientRequestId_{clientRequestId}
@@ -59,8 +59,8 @@ OTCRequestData::OTCRequestData(const QString& clientRequestId
   , otcRequest_{otcRequest}
 {}
 
-OTCRequestData::OTCRequestData(const QString& clientRequestId, const QString& serverRequestId
-                               , const QString& requestorId, const QString& targetId
+OTCRequestData::OTCRequestData(const std::string& clientRequestId, const std::string& serverRequestId
+                               , const std::string& requestorId, const std::string& targetId
                                , uint64_t submitTimestamp, uint64_t expireTimestamp
                                , const bs::network::OTCRequest& otcRequest)
   : DataObject(DataObject::Type::OTCRequestData)
@@ -73,22 +73,22 @@ OTCRequestData::OTCRequestData(const QString& clientRequestId, const QString& se
   , otcRequest_{otcRequest}
 {}
 
-QString OTCRequestData::clientRequestId() const
+std::string OTCRequestData::clientRequestId() const
 {
    return clientRequestId_;
 }
 
-QString OTCRequestData::serverRequestId() const
+std::string OTCRequestData::serverRequestId() const
 {
    return serverRequestId_;
 }
 
-QString OTCRequestData::requestorId() const
+std::string OTCRequestData::requestorId() const
 {
    return requestorId_;
 }
 
-QString OTCRequestData::targetId() const
+std::string OTCRequestData::targetId() const
 {
    return targetId_;
 }
@@ -108,7 +108,7 @@ const bs::network::OTCRequest& OTCRequestData::otcRequest() const
    return otcRequest_;
 }
 
-void OTCRequestData::setServerRequestId(const QString &serverRequestId)
+void OTCRequestData::setServerRequestId(const std::string &serverRequestId)
 {
     serverRequestId_ = serverRequestId;
 }

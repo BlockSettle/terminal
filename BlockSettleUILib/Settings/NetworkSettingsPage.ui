@@ -804,7 +804,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QLabel" name="label_2">
+          <widget class="QLabel" name="labelCustomPubBridgeHost">
            <property name="minimumSize">
             <size>
              <width>130</width>
@@ -829,7 +829,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEditPublicBridgeHost"/>
+          <widget class="QLineEdit" name="lineEditCustomPubBridgeHost"/>
          </item>
         </layout>
        </widget>
@@ -853,7 +853,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QLabel" name="label_3">
+          <widget class="QLabel" name="labelCustomPubBridgePort">
            <property name="minimumSize">
             <size>
              <width>130</width>
@@ -878,7 +878,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QSpinBox" name="spinBoxPublicBridgePort">
+          <widget class="QSpinBox" name="spinBoxCustomPubBridgePort">
            <property name="maximum">
             <number>65535</number>
            </property>

@@ -29,7 +29,7 @@ signals:
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;
 
-   QString currentOtcId_;
+   std::string currentOtcId_;
 };
 
 #endif // __PULL_OWN_OTC_REQUEST_WIDGET_H__

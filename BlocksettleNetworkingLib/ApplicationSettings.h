@@ -60,8 +60,8 @@ public:
       armoryDbIp,
       armoryDbPort,
       armoryPathName,
-      pubBridgeHost,
-      pubBridgePort,
+      customPubBridgeHost,
+      customPubBridgePort,
       pubBridgePubKey,
       envConfiguration,
       celerHost,
@@ -181,6 +181,9 @@ public:
    std::vector<std::pair<std::string, unsigned int>> UnfinishedWalletsRescan();
 
    std::pair<autheid::PrivateKey, autheid::PublicKey> GetAuthKeys();
+
+   std::string pubBridgeHost() const;
+   std::string pubBridgePort() const;
 
 signals:
    void settingChanged(int setting, QVariant value);

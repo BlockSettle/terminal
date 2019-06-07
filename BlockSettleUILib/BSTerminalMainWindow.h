@@ -239,8 +239,6 @@ private:
 
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
-
-   SignContainer::ConnectionError lastSignerError_{SignContainer::NoError};
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

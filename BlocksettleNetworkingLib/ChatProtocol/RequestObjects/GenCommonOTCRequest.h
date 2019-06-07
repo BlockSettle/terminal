@@ -12,7 +12,7 @@ namespace Chat {
                                                , const std::string& jsonData);
       void handle(RequestHandler&) override;
       std::shared_ptr<OTCRequestData> getOtcRequestData() const;
-      QString getSenderId() const;
+      std::string getSenderId() const;
 
    private:
       std::shared_ptr<OTCRequestData> otcRequestData_;

@@ -10,7 +10,8 @@ using namespace std;
 
 namespace {
 
-   const auto kHeartbeatsCheck = std::chrono::seconds(1);
+   // How often we should check heartbeats in one heartbeatInterval_.
+   const int kHeartbeatsCheckCount = 5;
 
 } // namespace
 
@@ -54,7 +55,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    , useClientIDCookie_(readClientCookie)
    , makeServerIDCookie_(makeServerCookie)
    , bipIDCookiePath_(cookiePath)
-   , heartbeatInterval_(getDefaultHeartbeatInterval())
 {
    if (!ephemeralPeers && (ownKeyFileDir.empty() || ownKeyFileName.empty())) {
       throw std::runtime_error("Client requested static ID key but no key " \
@@ -428,8 +428,8 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       sendToDataSocket(clientID, packet.toBinStr());
       return;
    }
-   else if (connData->currentReadMessage_.message_.getType() >
-      ZMQ_MSGTYPE_AEAD_THRESHOLD) {
+
+   if (connData->currentReadMessage_.message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
       if (!processAEADHandshake(connData->currentReadMessage_.message_, clientID)) {
          if (logger_) {
             logger_->error("[ZmqBIP15XServerConnection::{}] Handshake failed "
@@ -989,10 +989,18 @@ bool ZmqBIP15XServerConnection::sendToDataSocket(const string &clientId, const s
 void ZmqBIP15XServerConnection::checkHeartbeats()
 {
    auto now = std::chrono::steady_clock::now();
-   if (now - lastHeartbeatsCheck_ < kHeartbeatsCheck) {
+   auto idlePeriod = now - lastHeartbeatsCheck_;
+   lastHeartbeatsCheck_ = now;
+
+   if (idlePeriod < heartbeatInterval_ / kHeartbeatsCheckCount) {
       return;
    }
-   lastHeartbeatsCheck_ = now;
+
+   if (idlePeriod > heartbeatInterval_ * 2) {
+      logger_->debug("[ZmqBIP15XServerConnection:{}] hibernation detected, reset client's last timestamps", __func__);
+      lastHeartbeats_.clear();
+      return;
+   }
 
    std::vector<std::string> timedOutClients;
 

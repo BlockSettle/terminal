@@ -157,7 +157,6 @@ protected slots:
    void onPacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
-   void ConnectHelper();
    void Authenticate();
    // Recreates new ZmqBIP15XDataConnection because it can't gracefully handle server restart
    void RecreateConnection();
@@ -247,6 +246,7 @@ private:
    // This will be updated from background thread
    std::atomic<bool>                hasUI_{false};
    std::atomic<bool>                isReady_{false};
+   bool                             isConnected_{false};
 };
 
 #endif // __HEADLESS_CONTAINER_H__

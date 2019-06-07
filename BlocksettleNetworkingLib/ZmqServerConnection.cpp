@@ -266,14 +266,19 @@ void ZmqServerConnection::listenFunction()
    dataSocket_ = context_->CreateNullSocket();
    monSocket_ = context_->CreateNullSocket();
 
+   if (listener_) {
+      for (const auto &peer : connectedPeers_) {
+         listener_->OnPeerDisconnected(peer.second);
+      }
+   }
+   connectedPeers_.clear();
+
    logger_->debug("[{}] poll thread stopped for {}", __func__, connectionName_);
 }
 
 void ZmqServerConnection::stopServer()
 {
    if (!isActive()) {
-      logger_->debug("[{}] connection already stopped {}", __func__
-         , connectionName_);
       return;
    }
 
