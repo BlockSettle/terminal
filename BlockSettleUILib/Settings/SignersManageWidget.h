@@ -19,6 +19,8 @@ public:
       , const std::shared_ptr<ApplicationSettings> &appSettings, QWidget *parent = nullptr);
    ~SignerKeysWidget();
 
+   void setRowSelected(int row);
+
 public slots:
    void onAddSignerKey();
    void onDeleteSignerKey();
@@ -30,8 +32,12 @@ public slots:
 signals:
    void needClose();
 
+private:
+   void setupSignerFromSelected(bool save);
+
 private slots:
    void resetForm();
+   void onFormChanged();
 
 private:
    std::unique_ptr<Ui::SignerKeysWidget> ui_;
