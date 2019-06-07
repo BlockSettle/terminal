@@ -272,6 +272,10 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="RFQReplyLoginRequiredShield" name="loginRequired"/>
      <widget class="QWidget" name="RFQWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -397,6 +401,12 @@
    <class>bs::ui::RFQDealerReply</class>
    <extends>QWidget</extends>
    <header>RFQDealerReply.h</header>
+  </customwidget>
+  <customwidget>
+   <class>RFQReplyLoginRequiredShield</class>
+   <extends>QWidget</extends>
+   <header>RFQReplyLoginRequiredShield.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
