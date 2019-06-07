@@ -35,6 +35,8 @@ std::string ChatClient::GetNextResponseId()
    return std::string("client_response_") + std::to_string(nextResponseId_++);
 }
 
+
+
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::RoomData>)
@@ -749,9 +751,22 @@ void ChatClient::OnError(DataConnectionError errorCode)
 std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       const QString &message, const QString &receiver)
 {
+   return sendOwnMessagePrivate(message, Chat::DataObject::Type::MessageData, receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
+      const std::shared_ptr<Chat::DataObject> data, const QString &receiver)
+{
+   return sendOwnMessagePrivate(QString::fromStdString(data->toJsonString()),
+                                data->getType(), receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessagePrivate(
+      const QString &message, Chat::DataObject::Type content, const QString& receiver)
+{
    Chat::MessageData messageData(QString::fromStdString(currentUserId_), receiver,
       QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr()),
-      QDateTime::currentDateTimeUtc(), message);
+      QDateTime::currentDateTimeUtc(), message, content);
    auto result = std::make_shared<Chat::MessageData>(messageData);
 
    if (!chatDb_->isContactExist(messageData.receiverId()))
@@ -1350,8 +1365,8 @@ bool ChatClient::sendPrivateOTCRequest(const std::string &targetId, const bs::ne
    auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
       , requestor, target, request);
 
-   auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
-   sendRequest(otcRequest);
+   //auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
+   sendOwnMessage(liveRequest, QString::fromStdString(targetId));
 
    return true;
 }
