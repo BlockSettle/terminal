@@ -649,7 +649,7 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
                   dec->finish(decodedData);
 
                   msg->setMessageData(QString::fromUtf8((char*)decodedData.data(),
-                                                        (int)decodedData.size()));
+                                                        (int)decodedData.size()), msg->content());
                   msg->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
                }
                catch (std::exception & e) {
