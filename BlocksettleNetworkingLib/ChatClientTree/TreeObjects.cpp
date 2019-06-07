@@ -107,9 +107,9 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
          break;
          case Chat::DataObject::Type::OTCUpdateData: {
             auto otcUpdate = dynamic_cast<const Chat::OTCUpdateData*>(item);
-            if (otcUpdate && isHaveActiveOTC()) {
-               bool forThisElement = getActiveOtcRequest()->serverRequestId() ==
-                                     otcUpdate->serverRequestId().toStdString();
+            if (otcUpdate && isOTCResponsePresented()) {
+               bool forThisElement = getActiveOtcResponse()->serverResponseId() ==
+                                     otcUpdate->serverResponseId();
                byData = forThisElement;
             }
          }
