@@ -11,6 +11,7 @@
 SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    : SettingsPage{parent}
    , ui_{new Ui::SignerSettingsPage{}}
+   , reset_{false}
 {
    ui_->setupUi(this);
    ui_->widgetTwoWayAuth->hide();
@@ -40,14 +41,25 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
       ui_->spinBoxAsSpendLimit->setValue(appSettings_->get<double>(ApplicationSettings::autoSignSpendLimit));
       break;
 
-   case SignContainer::OpMode::Remote:
+   case SignContainer::OpMode::Remote: {
       showHost(true);
-      ui_->comboBoxRemoteSigner->setCurrentIndex(appSettings_->get<int>(ApplicationSettings::signerIndex));
+      if (ui_->comboBoxRemoteSigner->count() == 0) {
+         appSettings_->reset(ApplicationSettings::remoteSigners, true);
+         signersModel_->update();
+      }
+      int signerIndex = appSettings_->get<int>(ApplicationSettings::signerIndex);
+      if (ui_->comboBoxRemoteSigner->count() == 0) {
+         signerIndex = -1;
+      } else if (signerIndex < 0 || signerIndex >= ui_->comboBoxRemoteSigner->count()) {
+         signerIndex = 0;
+      }
+      ui_->comboBoxRemoteSigner->setCurrentIndex(signerIndex);
       showPort(false);
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
       showSignerKeySettings(true);
       break;
+   }
 
    default:    break;
    }
@@ -55,7 +67,9 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
 
 void SignerSettingsPage::display()
 {
-   const auto modeIndex = appSettings_->get<int>(ApplicationSettings::signerRunMode);
+   const auto modeIndex = reset_
+         ? appSettings_->get<int>(ApplicationSettings::signerRunMode)
+         : ui_->comboBoxRunMode->currentIndex() + 1;
    SignContainer::OpMode opMode = static_cast<SignContainer::OpMode>(modeIndex);
    onModeChanged(opMode);
    ui_->comboBoxRunMode->setCurrentIndex(modeIndex - 1);
@@ -64,6 +78,7 @@ void SignerSettingsPage::display()
 
 void SignerSettingsPage::reset()
 {
+   reset_ = true;
    for (const auto &setting : {ApplicationSettings::signerRunMode
       , ApplicationSettings::localSignerPort, ApplicationSettings::signerOfflineDir
       , ApplicationSettings::remoteSigners, ApplicationSettings::autoSignSpendLimit
@@ -71,6 +86,7 @@ void SignerSettingsPage::reset()
       appSettings_->reset(setting, false);
    }
    display();
+   reset_ = false;
 }
 
 void SignerSettingsPage::showHost(bool show)
@@ -163,4 +179,14 @@ void SignerSettingsPage::initSettings()
    ui_->comboBoxRemoteSigner->setModel(signersModel_);
 
    connect(signersProvider_.get(), &SignersProvider::dataChanged, this, &SignerSettingsPage::display);
+}
+
+void SignerSettingsPage::init(const std::shared_ptr<ApplicationSettings> &appSettings
+                              , const std::shared_ptr<ArmoryServersProvider> &armoryServersProvider
+                              , const std::shared_ptr<SignersProvider> &signersProvider
+                              , std::shared_ptr<SignContainer> signContainer)
+{
+   reset_ = true;
+   SettingsPage::init(appSettings, armoryServersProvider, signersProvider, signContainer);
+   reset_ = false;
 }

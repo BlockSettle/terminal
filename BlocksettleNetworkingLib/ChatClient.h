@@ -302,26 +302,13 @@ public:
    void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
 
 private:
-   /////////////////////////////////////////////////////////////////////////////
-   // OTC simulation methods
-   std::string GetNextRequestorId();
-   std::string GetNextResponderId();
    std::string GetNextOTCId();
-   std::string GetNextServerOTCId();
    std::string GetNextResponseId();
-   std::string GetNextServerResponseId();
-   void ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
-   /////////////////////////////////////////////////////////////////////////////
 
 private:
    // OTC temp fields. will be removed after OTC goes through chat server
    uint64_t          nextOtcId_ = 1;
-   const std::string baseFakeRequestorId_ = "fake_req";
-   uint64_t          nextRequestorId_ = 1;
-   const std::string baseFakeResponderId_ = "fake_resp";
-   uint64_t          nextResponderId_ = 1;
    uint64_t          nextResponseId_ = 1;
-   uint64_t          negotiationChannelId_ = 1;
 
    std::string       ownSubmittedOTCId_;
    std::string       ownServerOTCId_;
