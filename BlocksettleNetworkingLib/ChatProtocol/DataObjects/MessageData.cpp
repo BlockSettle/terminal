@@ -154,4 +154,9 @@ namespace Chat {
       messageData_ = messageData;
       content_ = content;
    }
-}
+
+   DataObject::Type MessageData::content() const
+   {
+      return content_;
+   }
+   }

@@ -72,6 +72,8 @@ namespace Chat {
       MessageData::EncryptionType encryptionType() const;
       void setEncryptionType(const MessageData::EncryptionType &type);
 
+      Type content() const;
+
    private:
       void setMessageData(const QString& messageData, Type content);
    private:
