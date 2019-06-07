@@ -96,14 +96,14 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { armoryDbIp,              SettingDef(QLatin1String("ArmoryDBIP"), QLatin1String(MAINNET_ARMORY_BLOCKSETTLE_ADDRESS)) },
       { armoryDbPort,            SettingDef(QLatin1String("ArmoryDBPort"), MAINNET_ARMORY_BLOCKSETTLE_PORT) },
       { armoryPathName,          SettingDef(QString(), armoryDBAppPathName) },
-   #ifdef PRODUCTION_BUILD
-      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.36")) },
-   #else
-      { pubBridgeHost,           SettingDef(QLatin1String("PublicBridgeHost"), QLatin1String("185.213.153.45")) },
-   #endif
-      { pubBridgePort,           SettingDef(QLatin1String("PublicBridgePort"), 9091) },
+      { customPubBridgeHost,     SettingDef(QLatin1String("CustomPubBridgeHost"), QString()) },
+      { customPubBridgePort,     SettingDef(QLatin1String("CustomPubBridgePort"), 9091) },
       { pubBridgePubKey,         SettingDef(QLatin1String("PubBridgePubKey"), QString()) },
-      { envConfiguration,        SettingDef(QLatin1String("envConfiguration"), 0) },
+   #ifdef PRODUCTION_BUILD
+      { envConfiguration,        SettingDef(QLatin1String("envConfiguration"), int(PROD)) },
+   #else
+      { envConfiguration,        SettingDef(QLatin1String("envConfiguration"), int(Staging)) },
+   #endif
       { celerHost,               SettingDef(QString()) },
       { celerPort,               SettingDef(QString()) },
       { mdServerHost,            SettingDef(QString()) },
@@ -425,8 +425,9 @@ bool ApplicationSettings::LoadApplicationSettings(const QStringList& argList)
 
 void ApplicationSettings::SetDefaultSettings(bool toFile)
 {
-   reset(pubBridgeHost, toFile);
-   reset(pubBridgePort, toFile);
+   reset(envConfiguration, toFile);
+   reset(customPubBridgeHost, toFile);
+   reset(customPubBridgePort, toFile);
 
    reset(celerHost, toFile);
    reset(celerPort, toFile);
@@ -688,4 +689,40 @@ std::pair<autheid::PrivateKey, autheid::PublicKey> ApplicationSettings::GetAuthK
    }
    authPubKey_ = autheid::getPublicKey(authPrivKey_);
    return { authPrivKey_, authPubKey_ };
+}
+
+std::string ApplicationSettings::pubBridgeHost() const
+{
+   auto env = EnvConfiguration(get<int>(ApplicationSettings::envConfiguration));
+
+   switch (env) {
+      case PROD:
+         return "185.213.153.36";
+      case UAT:
+         return "185.213.153.44";
+      case Staging:
+         return "185.213.153.45";
+      case Custom:
+         return get<std::string>(ApplicationSettings::customPubBridgeHost);
+   }
+
+   assert(false);
+   return "";
+}
+
+std::string ApplicationSettings::pubBridgePort() const
+{
+   auto env = EnvConfiguration(get<int>(ApplicationSettings::envConfiguration));
+
+   switch (env) {
+      case PROD:
+      case UAT:
+      case Staging:
+         return "9091";
+      case Custom:
+         return get<std::string>(ApplicationSettings::customPubBridgePort);
+   }
+
+   assert(false);
+   return "";
 }
