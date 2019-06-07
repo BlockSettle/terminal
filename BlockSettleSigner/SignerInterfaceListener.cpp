@@ -151,18 +151,8 @@ void SignerInterfaceListener::processData(const std::string &data)
 
 void SignerInterfaceListener::onReady(const std::string &data)
 {
-   signer::ReadyEvent evt;
-   if (!evt.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
-      return;
-   }
-   if (evt.ready()) {
-      QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
-   }
-   else {
-      logger_->info("[SignerInterfaceListener::{}] received 'non-ready' event {} of {}"
-         , __func__, evt.cur_wallet(), evt.total_wallets());
-   }
+   logger_->info("received ready signal");
+   QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
 }
 
 void SignerInterfaceListener::onPeerConnected(const std::string &data, bool connected)
@@ -528,9 +518,5 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
 
 void SignerInterfaceListener::shutdown()
 {
-   QMetaObject::invokeMethod(qApp, [] {
-      // For some reasons QApplication::quit does not work reliable.
-      // Run it on main thread because otherwise it causes crash on Linux when atexit callbacks are called.
-      std::exit(0);
-   });
+   QApplication::quit();
 }
