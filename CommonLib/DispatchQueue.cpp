@@ -6,17 +6,17 @@ DispatchQueue::~DispatchQueue() = default;
 
 void DispatchQueue::dispatch(const Function& op)
 {
-	std::unique_lock<std::mutex> lock(lock_);
-	q_.push(op);
-	lock.unlock();
-	cv_.notify_all();
+   std::unique_lock<std::mutex> lock(lock_);
+   q_.push(op);
+   lock.unlock();
+   cv_.notify_all();
 }
 
 void DispatchQueue::dispatch(Function&& op)
 {
-	std::unique_lock<std::mutex> lock(lock_);
-	q_.push(std::move(op));
-	lock.unlock();
+   std::unique_lock<std::mutex> lock(lock_);
+   q_.push(std::move(op));
+   lock.unlock();
    cv_.notify_all();
 }
 
