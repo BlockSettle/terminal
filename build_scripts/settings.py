@@ -13,8 +13,9 @@ class Settings:
         self._build_scripts_root = os.path.abspath(os.path.join(self._project_root, 'build_scripts'))
         self._root_dir = os.path.abspath(os.path.join(self._project_root, '..'))
         self._3rdparty_dir = os.getenv('DEV_3RD_ROOT', os.path.join(self._root_dir, '3rd'))
-        self._downloads_dir = os.getenv('DEV_3RD_DOWNLOADS', os.path.join(self._3rdparty_dir, 'downloads'))
-        self._sources_dir = os.path.join(self._downloads_dir, 'unpacked_sources')
+        download_dir_orig = os.path.join(self._3rdparty_dir, 'downloads')
+        self._downloads_dir = os.getenv('DEV_3RD_DOWNLOADS', download_dir_orig)
+        self._sources_dir = os.path.join(download_dir_orig, 'unpacked_sources')
 
         if link_mode == 'shared':
             self._common_build_dir = os.path.join(self._3rdparty_dir, build_mode + '-' + link_mode)
