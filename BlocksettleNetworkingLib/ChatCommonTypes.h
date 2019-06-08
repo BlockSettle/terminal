@@ -16,10 +16,10 @@ namespace bs {
             Sell
          };
 
-         static const char *toString(Type side) {
+         static std::string toString(Type side) {
             switch (side) {
-               case Buy:   return QT_TR_NOOP("BUY");
-               case Sell:  return QT_TR_NOOP("SELL");
+               case Buy:   return "BUY";
+               case Sell:  return "SELL";
                default:    return "unknown";
             }
          }
@@ -106,10 +106,6 @@ namespace bs {
 
       struct OTCResponse
       {
-         std::string     serverRequestId;
-         std::string     requestorId;
-         std::string     initialTargetId;
-
          OTCPriceRange     priceRange;
          OTCQuantityRange  quantityRange;
       };

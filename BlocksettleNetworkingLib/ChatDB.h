@@ -54,7 +54,7 @@ public:
    ChatDB(ChatDB&&) = delete;
    ChatDB& operator = (ChatDB&&) = delete;
 
-   bool add(const Chat::MessageData &);
+   bool add(const std::shared_ptr<Chat::MessageData>&);
    bool syncMessageId(const QString& localId, const QString& serverId);
    bool updateMessageStatus(const QString& messageId, int ustatus);
 

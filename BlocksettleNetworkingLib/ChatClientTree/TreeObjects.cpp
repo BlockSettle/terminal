@@ -79,41 +79,42 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
             }
          }
          break;
-         case Chat::DataObject::Type::OTCRequestData: {
-            auto otcRequest = std::dynamic_pointer_cast<Chat::OTCRequestData>(data);
-            if (otcRequest) {
-               bool forCurrentUser = (otcRequest->requestorId() == user
-                                      || otcRequest->targetId() == user);
+         // XXXOTC
+         // case Chat::DataObject::Type::OTCRequestData: {
+         //    auto otcRequest = std::dynamic_pointer_cast<Chat::OTCRequestData>(data);
+         //    if (otcRequest) {
+         //       bool forCurrentUser = (otcRequest->senderId() == user
+         //                              || otcRequest->receiverId() == user);
 
-               bool forThisElement = forCurrentUser &&
-                                     (otcRequest->requestorId() == contact->getContactId().toStdString()
-                                      || otcRequest->targetId() == contact->getContactId().toStdString());
-               byData = forThisElement;
-            }
-         }
-         break;
-         case Chat::DataObject::Type::OTCResponseData: {
-            auto otcResponse = std::dynamic_pointer_cast<Chat::OTCResponseData>(data);
-            if (otcResponse) {
-               bool forCurrentUser = (otcResponse->responderId() == user
-                                      || otcResponse->requestorId() == user);
+         //       bool forThisElement = forCurrentUser &&
+         //                             (otcRequest->senderId() == contact->getContactId()
+         //                              || otcRequest->receiverId() == contact->getContactId());
+         //       byData = forThisElement;
+         //    }
+         // }
+         // break;
+         // case Chat::DataObject::Type::OTCResponseData: {
+         //    auto otcResponse = std::dynamic_pointer_cast<Chat::OTCResponseData>(data);
+         //    if (otcResponse) {
+         //       bool forCurrentUser = (otcResponse->responderId() == user
+         //                              || otcResponse->requestorId() == user);
 
-               bool forThisElement = forCurrentUser &&
-                                     (otcResponse->responderId() == contact->getContactId().toStdString()
-                                      || otcResponse->requestorId() == contact->getContactId().toStdString());
-               byData = forThisElement;
-            }
-         }
-         break;
-         case Chat::DataObject::Type::OTCUpdateData: {
-            auto otcUpdate = dynamic_cast<const Chat::OTCUpdateData*>(item);
-            if (otcUpdate && isOTCResponsePresented()) {
-               bool forThisElement = getActiveOtcResponse()->serverResponseId() ==
-                                     otcUpdate->serverResponseId();
-               byData = forThisElement;
-            }
-         }
-         break;
+         //       bool forThisElement = forCurrentUser &&
+         //                             (otcResponse->responderId() == contact->getContactId().toStdString()
+         //                              || otcResponse->requestorId() == contact->getContactId().toStdString());
+         //       byData = forThisElement;
+         //    }
+         // }
+         // break;
+         // case Chat::DataObject::Type::OTCUpdateData: {
+         //    auto otcUpdate = dynamic_cast<const Chat::OTCUpdateData*>(item);
+         //    if (otcUpdate && isOTCResponsePresented()) {
+         //       bool forThisElement = getActiveOtcResponse()->serverResponseId() ==
+         //                             otcUpdate->serverResponseId();
+         //       byData = forThisElement;
+         //    }
+         // }
+         // break;
          default:
             break;
       }

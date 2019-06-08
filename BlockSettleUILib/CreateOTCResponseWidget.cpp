@@ -92,10 +92,6 @@ bs::network::OTCResponse CreateOTCResponseWidget::GetCurrentOTCResponse() const
 {
    bs::network::OTCResponse response;
 
-   response.serverRequestId = currentOtcRequest_->serverRequestId();
-   response.requestorId = currentOtcRequest_->requestorId();
-   response.initialTargetId = currentOtcRequest_->targetId();
-
    response.priceRange = GetResponsePriceRange();
    response.quantityRange = GetResponseQuantityRange();
 

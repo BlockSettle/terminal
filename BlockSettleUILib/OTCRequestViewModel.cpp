@@ -101,12 +101,14 @@ QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr
 
    case ColumnDuration:
       {
-         auto currentTimestamp = QDateTime::currentDateTime().toMSecsSinceEpoch();
-         if (currentTimestamp >= otc->expireTimestamp()) {
-            return 0;
-         }
+         // XXXOTC
+         // auto currentTimestamp = QDateTime::currentDateTime().toMSecsSinceEpoch();
+         // if (currentTimestamp >= otc->expireTimestamp()) {
+         //    return 0;
+         // }
 
-         return static_cast<int>((otc->expireTimestamp() - currentTimestamp)/60000);
+         // return static_cast<int>((otc->expireTimestamp() - currentTimestamp)/60000);
+         return 0;
       }
    }
 
@@ -124,17 +126,18 @@ void OTCRequestViewModel::AddLiveOTCRequest(const std::shared_ptr<Chat::OTCReque
 
 bool OTCRequestViewModel::RemoveOTCByID(const std::string& serverRequestId)
 {
+   //XXXOTC
    // XXX simple solution. Not sure at what number of OTC requests this will start to slow down UI
    // will move to internal pointers and maps a bit later
-   for (int i=0; i < currentRequests_.size(); ++i) {
-      if (currentRequests_[i]->serverRequestId() == serverRequestId) {
-         beginRemoveRows(QModelIndex{}, i, i);
-         currentRequests_.erase(currentRequests_.begin() + i);
-         endRemoveRows();
+   // for (int i=0; i < currentRequests_.size(); ++i) {
+   //    if (currentRequests_[i]->serverRequestId() == serverRequestId) {
+   //       beginRemoveRows(QModelIndex{}, i, i);
+   //       currentRequests_.erase(currentRequests_.begin() + i);
+   //       endRemoveRows();
 
-         return true;
-      }
-   }
+   //       return true;
+   //    }
+   // }
 
    return false;
 }

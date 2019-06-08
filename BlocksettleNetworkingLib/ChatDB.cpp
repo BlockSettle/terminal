@@ -149,23 +149,23 @@ bool ChatDB::isRoomMessagesExist(const QString &roomId)
    return false;
 }
 
-bool ChatDB::add(const Chat::MessageData &msg)
+bool ChatDB::add(const std::shared_ptr<Chat::MessageData>& msg)
 {
    QSqlQuery qryAdd(db_);
 
    qryAdd.prepare(QLatin1String("INSERT INTO messages(id, timestamp, sender, receiver, state, encryption, nonce, enctext, reference)"\
                                 " VALUES(:id, :tstamp, :sid, :rid, :state, :enctype, :nonce, :enctxt, :ref);"));
-   qryAdd.bindValue(QLatin1String(":id"), msg.id());
-   qryAdd.bindValue(QLatin1String(":tstamp"), msg.dateTime());
-   qryAdd.bindValue(QLatin1String(":sid"), msg.senderId());
-   qryAdd.bindValue(QLatin1String(":rid"), msg.receiverId());
-   qryAdd.bindValue(QLatin1String(":state"), msg.state());
-   qryAdd.bindValue(QLatin1String(":enctype"), static_cast<int>(msg.encryptionType()));
+   qryAdd.bindValue(QLatin1String(":id"), msg->id());
+   qryAdd.bindValue(QLatin1String(":tstamp"), msg->dateTime());
+   qryAdd.bindValue(QLatin1String(":sid"), msg->senderId());
+   qryAdd.bindValue(QLatin1String(":rid"), msg->receiverId());
+   qryAdd.bindValue(QLatin1String(":state"), msg->state());
+   qryAdd.bindValue(QLatin1String(":enctype"), static_cast<int>(msg->encryptionType()));
    qryAdd.bindValue(QLatin1String(":nonce"),
-                    QByteArray(reinterpret_cast<char*>(msg.nonce().data()),
-                               static_cast<int>(msg.nonce().size()))
+                    QByteArray(reinterpret_cast<char*>(msg->nonce().data()),
+                               static_cast<int>(msg->nonce().size()))
                     );
-   qryAdd.bindValue(QLatin1String(":enctxt"), msg.messageData());
+   qryAdd.bindValue(QLatin1String(":enctxt"), msg->messagePayload());
    qryAdd.bindValue(QLatin1String(":ref"), QString());
 
 //   qryAdd.bindValue(0, msg.getId());
@@ -192,7 +192,7 @@ bool ChatDB::syncMessageId(const QString& localId, const QString& serverId)
    query.bindValue(QLatin1String(":server_mid"), serverId);
    query.bindValue(QLatin1String(":local_mid"), localId);
    query.bindValue(QLatin1String(":set_flags"), static_cast<int>(Chat::MessageData::State::Sent));
-   
+
    if (!query.exec()) {
       logger_->error("[ChatDB::syncMessageId] failed to synchronize local message id with server message id; Error: {}",
                      query.lastError().text().toStdString()
@@ -213,7 +213,7 @@ bool ChatDB::updateMessageStatus(const QString& messageId, int ustatus)
    query.prepare(cmd);
    query.bindValue(QLatin1String(":mid"), messageId);
    query.bindValue(QLatin1String(":state"), ustatus);
-   
+
    if (!query.exec()) {
       logger_->error("[ChatDB::updateMessageStatus] failed to update message status with server message id: {}; Error: {}\nQuery: {}",
                      messageId.toStdString(),
@@ -250,15 +250,17 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
       int state = query.value(QLatin1String("state")).toInt();
       QByteArray nonce = query.value(QLatin1String("nonce")).toByteArray();
       Chat::MessageData::EncryptionType encryption = static_cast<Chat::MessageData::EncryptionType>(query.value(QLatin1String("encryption")).toInt());
+
       const auto msg = std::make_shared<Chat::MessageData>(senderId,
                                                            receiverId,
                                                            id,
                                                            timestamp,
-                                                           messageData,
+                                                           QString{},
                                                            state);
       msg->setNonce(Botan::SecureVector<uint8_t>(nonce.begin(), nonce.end()));
-      msg->setEncryptionType(encryption);
-      records.push_back(msg);
+
+
+      records.push_back(msg->CreateEncryptedMessage(encryption, messageData));
    }
    std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a
       , const std::shared_ptr<Chat::MessageData> &b) {
@@ -283,6 +285,7 @@ std::vector<std::shared_ptr<Chat::MessageData> > ChatDB::getRoomMessages(const Q
 
    std::vector<std::shared_ptr<Chat::MessageData>> records;
    while (query.next()) {
+      // will create decrypted message with plain text
       const auto msg = std::make_shared<Chat::MessageData>(query.value(0).toString()
          , query.value(1).toString(), query.value(2).toString(), query.value(3).toDateTime()
          , query.value(4).toString(), query.value(5).toInt());

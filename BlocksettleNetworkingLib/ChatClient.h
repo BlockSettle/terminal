@@ -158,7 +158,7 @@ public:
    void clearSearch();
    bool isFriend(const QString &userId);
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
-   bool decryptIESMessage(std::shared_ptr<Chat::MessageData>& message);
+   std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
    QString getUserId();
 
 public:
@@ -222,6 +222,9 @@ private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
    void readDatabase();
 
+   std::shared_ptr<Chat::MessageData> sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& message
+                                                             , const QString &receiver);
+
 signals:
    void ConnectedToServer();
    void ConnectionClosed();
@@ -261,8 +264,6 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
 
-
-
    std::unique_ptr<ChatDB>                   chatDb_;
    std::map<QString, autheid::PublicKey>     pubKeys_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
@@ -270,7 +271,8 @@ private:
    std::map<QString, Botan::SecureVector<uint8_t>>   userNonces_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
-   std::map<QString, std::queue<QString>>    enqueued_messages_;
+   using messages_queue = std::queue<std::shared_ptr<Chat::MessageData> >;
+   std::map<QString, messages_queue>    enqueued_messages_;
 
    QTimer            heartbeatTimer_;
 
