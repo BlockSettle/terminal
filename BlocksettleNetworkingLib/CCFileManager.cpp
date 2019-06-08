@@ -31,8 +31,14 @@ CCFileManager::CCFileManager(const std::shared_ptr<spdlog::logger> &logger
 
 void CCFileManager::onPubSettingsChanged(int setting, QVariant)
 {
-   if ((setting == ApplicationSettings::pubBridgeHost) || (setting == ApplicationSettings::pubBridgePort)) {
-      RemoveAndDisableFileSave();
+   switch (setting) {
+      case ApplicationSettings::customPubBridgeHost:
+      case ApplicationSettings::customPubBridgePort:
+      case ApplicationSettings::envConfiguration:
+         RemoveAndDisableFileSave();
+         break;
+      default:
+         break;
    }
 }
 
@@ -308,12 +314,12 @@ bool CCFileManager::VerifySignature(const std::string& data, const std::string& 
 
 std::string CCFileManager::GetPuBHost() const
 {
-   return appSettings_->get<std::string>(ApplicationSettings::pubBridgeHost);
+   return appSettings_->pubBridgeHost();
 }
 
 std::string CCFileManager::GetPuBPort() const
 {
-   return appSettings_->get<std::string>(ApplicationSettings::pubBridgePort);
+   return appSettings_->pubBridgePort();
 }
 
 std::string CCFileManager::GetPuBKey() const
