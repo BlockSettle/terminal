@@ -1,10 +1,12 @@
 #include "ChatClient.h"
 #include "ChatProtocol/ChatProtocol.h"
 
+#include <disable_warnings.h>
 #include <spdlog/spdlog.h>
 #include <botan/bigint.h>
 #include <botan/base64.h>
 #include <botan/auto_rng.h>
+#include <enable_warnings.h>
 
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatDB.h"

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ProtocolDefinitions_h__
+#define ProtocolDefinitions_h__
 
 #include <memory>
 
@@ -8,9 +9,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
-#include "EncryptionUtils.h"
-
 #include <disable_warnings.h>
+#include <../cppForSwig/EncryptionUtils.h>
 #include <BinaryData.h>
 #include <enable_warnings.h>
 
@@ -211,13 +211,10 @@ namespace Chat
       return serializedData.toStdString();
    }
 
-   autheid::PublicKey publicKeyFromString(const std::string &s);
-   std::string publicKeyToString(const autheid::PublicKey &k);
-
 } //namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ContactStatus)
 Q_DECLARE_METATYPE(Chat::UserStatus)
 Q_DECLARE_METATYPE(Chat::OTCResult)
 
-
+#endif // ProtocolDefinitions_h__

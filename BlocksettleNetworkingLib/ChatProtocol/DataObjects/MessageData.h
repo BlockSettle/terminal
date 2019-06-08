@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MessageData_h__
+#define MessageData_h__
 
 #include "DataObject.h"
 #include <memory>
@@ -87,3 +88,5 @@ namespace Chat {
       Type content_;
    };
 }
+
+#endif // MessageData_h__
