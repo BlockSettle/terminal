@@ -35,11 +35,6 @@ private slots:
    void displayEnvironmentSettings();
 
 private:
-   void DetectEnvironmentSettings();
-
-
-
-private:
    std::unique_ptr<Ui::NetworkSettingsPage> ui_;
    ArmoryServersViewModel *armoryServerModel_;
    bool disableSettingUpdate_{false};

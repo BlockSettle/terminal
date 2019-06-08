@@ -22,6 +22,7 @@ public:
    ~ArmoryServersWidget();
 
    void adaptForStartupDialog();
+   void setRowSelected(int row);
 
 public slots:
    void onAddServer();
@@ -34,6 +35,9 @@ public slots:
 signals:
    void reconnectArmory();
    void needClose();
+
+private:
+   void setupServerFromSelected(bool save);
 
 private slots:
    void resetForm();

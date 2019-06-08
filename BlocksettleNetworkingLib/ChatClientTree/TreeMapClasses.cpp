@@ -50,7 +50,7 @@ bool RootItem::insertSearchUserObject(std::shared_ptr<Chat::UserData> data)
 }
 
 
-TreeItem * RootItem::resolveMessageTargetNode(TreeMessageNode * messageNode)
+TreeItem * RootItem::resolveMessageTargetNode(DisplayableDataNode * messageNode)
 {
    if (!messageNode){
       return nullptr;
@@ -91,6 +91,26 @@ TreeItem* RootItem::findChatNode(const std::string &chatId)
                   break;
 
             }
+         }
+      }
+
+      if (child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement)) {
+         for (auto cchild : child->getChildren()) {
+            auto sentResponse = static_cast<OTCSentResponseElement*>(cchild);
+            if (sentResponse->otcId() == chatId) {
+               return sentResponse;
+            }
+
+         }
+      }
+
+      if (child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement)) {
+         for (auto cchild : child->getChildren()) {
+            auto receivedResponse = static_cast<OTCReceivedResponseElement*>(cchild);
+            if (receivedResponse->otcId() == chatId) {
+               return receivedResponse;
+            }
+
          }
       }
    }
@@ -187,7 +207,7 @@ std::string RootItem::currentUser() const
    return currentUser_;
 }
 
-bool RootItem::insertMessageNode(TreeMessageNode * messageNode)
+bool RootItem::insertMessageNode(DisplayableDataNode * messageNode)
 {
    for (auto categoryGroup : children_ ) {
       if (categoryGroup->isChildTypeSupported(messageNode->targetParentType_)) {
@@ -250,12 +270,18 @@ void RootItem::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
       if (chatNode && chatNode->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::MessageDataNode)) {
          for (auto child : chatNode->getChildren()) {
             CategoryElement * elem = static_cast<CategoryElement*>(child);
-            auto msg = std::dynamic_pointer_cast<Chat::MessageData>(elem->getDataObject());
-            if (message->id() == msg->id()) {
-               emit itemChanged(elem);
+            switch (elem->getDataObject()->getType()) {
+               case Chat::DataObject::Type::MessageData: {
+                  auto msg = std::dynamic_pointer_cast<Chat::MessageData>(elem->getDataObject());
+                  if (message->id() == msg->id()) {
+                     emit itemChanged(chatNode);
+                  }
+               } break;
+               default:
+                  emit itemChanged(chatNode);
+                  break;
             }
          }
-         emit itemChanged(chatNode);
       }
    }
 }
@@ -278,7 +304,7 @@ bool CategoryElement::updateNewItemsFlag()
 
 
    for (const auto child : children_) {
-      auto messageNode = static_cast<TreeMessageNode*>(child);
+      auto messageNode = dynamic_cast<TreeMessageNode*>(child);
 
       if (!messageNode) {
          return false;
@@ -302,9 +328,9 @@ bool CategoryElement::getNewItemsFlag() const
 }
 
 // insert channel for response that client send to OTC requests
-bool RootItem::insertOTCSentResponseObject(const std::string& otcId)
+bool RootItem::insertOTCSentResponseObject(const std::shared_ptr<Chat::OTCResponseData> &response)
 {
-   auto otcRequestNode = new OTCSentResponseElement(otcId);
+   auto otcRequestNode = new OTCSentResponseElement(response);
    bool insertResult = insertNode(otcRequestNode);
    if (!insertResult) {
       delete otcRequestNode;
@@ -315,9 +341,9 @@ bool RootItem::insertOTCSentResponseObject(const std::string& otcId)
 }
 
 // insert channel for response client receive for own OTC
-bool RootItem::insertOTCReceivedResponseObject(const std::string& otcId)
+bool RootItem::insertOTCReceivedResponseObject(const std::shared_ptr<Chat::OTCResponseData> &response)
 {
-   auto otcRequestNode = new OTCReceivedResponseElement(otcId);
+   auto otcRequestNode = new OTCReceivedResponseElement(response);
    bool insertResult = insertNode(otcRequestNode);
    if (!insertResult) {
       delete otcRequestNode;

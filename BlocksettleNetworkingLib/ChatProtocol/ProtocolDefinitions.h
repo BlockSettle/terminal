@@ -69,7 +69,7 @@ namespace Chat
       ResponseAnswerCommonOTC,
       ResponseUpdateCommonOTC,
    };
-   
+
    enum class ContactsAction {
       Accept,
       Reject,
@@ -106,7 +106,7 @@ namespace Chat
       Canceled,
       Expired,
    };
-   
+
    static const QString VersionKey   = QStringLiteral("version");
    static const QString NameKey      = QStringLiteral("name");
    static const QString TypeKey      = QStringLiteral("type");
@@ -129,6 +129,7 @@ namespace Chat
    static const QString PublicKeyKey = QStringLiteral("public_key");
    static const QString CommandKey = QStringLiteral("cmd");
    static const QString MessageIdKey = QStringLiteral("message_id");
+   static const QString MessageContentTypeKey = QStringLiteral("message_content_type");
    static const QString ClientMessageIdKey = QStringLiteral("client_message_id");
    static const QString MessageResultKey = QStringLiteral("message_result");
    static const QString ContactIdKey = QStringLiteral("contact_id");
@@ -165,6 +166,8 @@ namespace Chat
    static const QString OTCUpdateIdServerKey = QStringLiteral("otc_update_id_server");
    static const QString OTCRequestorIdKey = QStringLiteral("otc_requestor_id");
    static const QString OTCResponderIdKey = QStringLiteral("otc_responder_id");
+   static const QString OTCUpdateSenderIdKey = QStringLiteral("otc_update_sender_id");
+   static const QString OTCUpdateReceiverIdKey = QStringLiteral("otc_update_receiver_id");
    static const QString OTCTargetIdKey = QStringLiteral("otc_target_id");
    static const QString OTCSubmitTimestampKey = QStringLiteral("otc_submit_timestamp");
    static const QString OTCExpiredTimestampKey = QStringLiteral("otc_expired_timestamp");
@@ -199,15 +202,18 @@ namespace Chat
       T messageType_;
       std::string version_;
    };
-   
+
    template <typename T>
    std::string serializeData(const T* thisPtr)
    {
       auto data = QJsonDocument(thisPtr->toJson());
       QString serializedData = QString::fromUtf8(data.toJson());
       return serializedData.toStdString();
-   } 
-   
+   }
+
+   autheid::PublicKey publicKeyFromString(const std::string &s);
+   std::string publicKeyToString(const autheid::PublicKey &k);
+
 } //namespace Chat
 
 Q_DECLARE_METATYPE(Chat::ContactStatus)

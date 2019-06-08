@@ -126,10 +126,19 @@ public:
    /////////////////////////////////////////////////////////////////////////////
 
    void HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+   void HandlePrivateOTCRequestRejected(const std::shared_ptr<Chat::OTCRequestData>& rejectedOTC,
+                                        const std::string& rejectReason);
+   void HandlePrivateOTCRequestCancelled(const std::shared_ptr<Chat::OTCRequestData>& cancelledOTC);
    void HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
+
+   void HandleAcceptedPrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response);
+   void HandleRejectedPrivateOTCResponse(const std::string& otcId, const std::string& reason);
+   void HandlePrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response);
 
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
+
+   std::shared_ptr<Chat::MessageData> sendOwnMessage(const std::shared_ptr<Chat::DataObject> data, const QString &receiver);
    std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
          const QString& message, const QString &receiver);
 
@@ -302,26 +311,17 @@ public:
    void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
 
 private:
-   /////////////////////////////////////////////////////////////////////////////
-   // OTC simulation methods
-   std::string GetNextRequestorId();
-   std::string GetNextResponderId();
    std::string GetNextOTCId();
-   std::string GetNextServerOTCId();
    std::string GetNextResponseId();
-   std::string GetNextServerResponseId();
-   void ScheduleForExpire(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest);
-   /////////////////////////////////////////////////////////////////////////////
+
+   std::shared_ptr<Chat::MessageData> sendOwnMessagePrivate(const QString& message,
+                                                            Chat::DataObject::Type content,
+                                                            const QString& receiver);
 
 private:
    // OTC temp fields. will be removed after OTC goes through chat server
    uint64_t          nextOtcId_ = 1;
-   const std::string baseFakeRequestorId_ = "fake_req";
-   uint64_t          nextRequestorId_ = 1;
-   const std::string baseFakeResponderId_ = "fake_resp";
-   uint64_t          nextResponderId_ = 1;
    uint64_t          nextResponseId_ = 1;
-   uint64_t          negotiationChannelId_ = 1;
 
    std::string       ownSubmittedOTCId_;
    std::string       ownServerOTCId_;

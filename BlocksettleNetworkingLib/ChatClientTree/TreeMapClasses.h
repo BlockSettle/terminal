@@ -5,7 +5,7 @@
 
 #include "ChatProtocol/DataObjects.h"
 
-class TreeMessageNode;
+class DisplayableDataNode;
 class ChatContactElement;
 
 class RootItem : public TreeItem
@@ -22,7 +22,7 @@ public:
    bool insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline = false);
    bool insertGeneralUserObject(std::shared_ptr<Chat::UserData> data);
    bool insertSearchUserObject(std::shared_ptr<Chat::UserData> data);
-   TreeItem* resolveMessageTargetNode(TreeMessageNode *massageNode);
+   TreeItem* resolveMessageTargetNode(DisplayableDataNode *massageNode);
    TreeItem* findChatNode(const std::string& chatId);
    std::vector<std::shared_ptr<Chat::ContactRecordData>> getAllContacts();
    bool removeContactNode(const std::string& contactId);
@@ -37,13 +37,13 @@ public:
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
 
    // insert channel for response that client send to OTC requests
-   bool insertOTCSentResponseObject(const std::string& otcId);
+   bool insertOTCSentResponseObject(const std::shared_ptr<Chat::OTCResponseData>& response);
 
    // insert channel for response client receive for own OTC
-   bool insertOTCReceivedResponseObject(const std::string& otcId);
+   bool insertOTCReceivedResponseObject(const std::shared_ptr<Chat::OTCResponseData> &response);
 
 private:
-   bool insertMessageNode(TreeMessageNode * messageNode);
+   bool insertMessageNode(DisplayableDataNode *messageNode);
    bool insertNode(TreeItem* item);
    TreeItem* findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType type);
    std::string currentUser_;
@@ -75,7 +75,7 @@ public:
    std::shared_ptr<Chat::DataObject> getDataObject() const {return dataObject_;}
    bool updateNewItemsFlag();
    bool getNewItemsFlag() const;
-   private:
+protected:
    std::shared_ptr<Chat::DataObject> dataObject_;
    bool newItemsFlag_;
 };

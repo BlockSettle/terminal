@@ -102,13 +102,6 @@ namespace bs {
       {
          ChatOTCSide::Type    side;
          OTCRangeID::Type     amountRange;
-
-         // XXX
-         // ownRequest - temporary field used for test purpose until OTC goes through chat server
-         bool                 ownRequest;
-
-         // fakeReplyRequired - chat server will simulate "reply"
-         bool                 fakeReplyRequired;
       };
 
       struct OTCResponse
@@ -143,6 +136,22 @@ namespace bs {
          // RequestResponseLimitExceeded - request have reached max number of
          // replies ( reject reeason for requests to common room)
          RequestResponseLimitExceeded
+      };
+
+      enum class OTCUpdateRejectReason
+      {
+         // TradingClosed - response or request were closed already
+         TradingClosed,
+         // TradeAlreadyAccepted - could not update trade that was accepted
+         TradeAlreadyAccepted,
+         // NoUpdateFromRequestorReceived - requestor shoudl send first update
+         NoUpdateFromRequestorReceived,
+         // PriceNotInrange price in update not in initial range
+         PriceNotInrange,
+         // AmountNotInRange amount not in initial range
+         AmountNotInRange,
+         // AccessDenied - update sender is neither requestor or responder
+         AccessDenied
       };
    }
 }
