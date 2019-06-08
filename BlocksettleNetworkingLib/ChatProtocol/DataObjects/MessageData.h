@@ -33,8 +33,16 @@ namespace Chat {
 
       MessageData(const QString &sender, const QString &receiver,
          const QString &id, const QDateTime &dateTime,
+         const QString& messageData, Type content,
+         int state = static_cast<int>(State::Undefined));
+
+      MessageData(const QString &sender, const QString &receiver,
+         const QString &id, const QDateTime &dateTime,
          const QString& messageData,
-         int state = (int)State::Undefined);
+         int state = static_cast<int>(State::Undefined));
+
+      MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime,
+         const std::shared_ptr<DataObject>& data, int state);
 
       QString senderId() const { return senderId_; }
       QString receiverId() const { return receiverId_; }
@@ -42,6 +50,8 @@ namespace Chat {
       QDateTime dateTime() const { return dateTime_; }
       QString messageData() const { return messageData_; }
       void setMessageData(const QString& messageData);
+      void setMessageData(const std::shared_ptr<DataObject>& data);
+      void setMessageData(const QString& messageData, Type content);
       int state() const { return state_; }
       std::string jsonAssociatedData() const;
 
@@ -63,6 +73,8 @@ namespace Chat {
       MessageData::EncryptionType encryptionType() const;
       void setEncryptionType(const MessageData::EncryptionType &type);
 
+      Type content() const;
+
    private:
       QString id_;
       QString senderId_;
@@ -72,5 +84,6 @@ namespace Chat {
       int state_;
       Botan::SecureVector<uint8_t> nonce_;
       EncryptionType encryptionType_;
+      Type content_;
    };
 }
