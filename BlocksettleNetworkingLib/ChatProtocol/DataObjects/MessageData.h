@@ -74,6 +74,9 @@ namespace Chat {
                   , const MessageData::EncryptionType &type
                   , const QString& encryptedPayload);
 
+   private:
+      MessageData(const MessageData& source);
+   public:
 
       std::shared_ptr<MessageData> CreateEncryptedMessage(const MessageData::EncryptionType &type, const QString& messagePayload);
       std::shared_ptr<MessageData> CreateDecryptedMessage(const QString& messagePayload);

@@ -20,9 +20,6 @@ using namespace Chat;
 #include "ContactsListResponse.h"
 #include "SearchUsersResponse.h"
 #include "LogoutResponse.h"
-#include "GenCommonOTCResponse.h"
-#include "AnswerCommonOTCResponse.h"
-#include "UpdateCommonOTCResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
@@ -44,9 +41,6 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
    ,   { "ResponseContactsList"        ,   ResponseType::ResponseContactsList        }
    ,   { "ResponseSearchUsers"         ,   ResponseType::ResponseSearchUsers         }
    ,   { "ResponseLogout"              ,   ResponseType::ResponseLogout              }
-   ,   { "ResponseGenCommonOTC"        ,   ResponseType::ResponseGenCommonOTC        }
-   ,   { "ResponseAnswerCommonOTC"     ,   ResponseType::ResponseAnswerCommonOTC     }
-   ,   { "ResponseUpdateCommonOTC"     ,   ResponseType::ResponseUpdateCommonOTC     }
 };
 
 
@@ -70,9 +64,6 @@ static std::map<ResponseType, std::string> ResponseTypeToString
    ,   { ResponseType::ResponseContactsList        ,  "ResponseContactsList"        }
    ,   { ResponseType::ResponseSearchUsers         ,  "ResponseSearchUsers"         }
    ,   { ResponseType::ResponseLogout              ,  "ResponseLogout"              }
-   ,   { ResponseType::ResponseGenCommonOTC        ,  "ResponseGenCommonOTC"        }
-   ,   { ResponseType::ResponseAnswerCommonOTC     ,  "ResponseAnswerCommonOTC"     }
-   ,   { ResponseType::ResponseUpdateCommonOTC     ,  "ResponseUpdateCommonOTC"     }
 };
 
 template <typename T>
@@ -123,22 +114,22 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseSendOwnPublicKey:
          return SendOwnPublicKeyResponse::fromJSON(jsonData);
-      
+
      case ResponseType::ResponsePendingMessage:
         return PendingMessagesResponse::fromJSON(jsonData);
-        
+
       case ResponseType::ResponseSendMessage:
          return SendMessageResponse::fromJSON(jsonData);
-         
+
       case ResponseType::ResponseChangeMessageStatus:
          return MessageChangeStatusResponse::fromJSON(jsonData);
-      
+
       case ResponseType::ResponseContactsActionDirect:
          return ContactsActionResponseDirect::fromJSON(jsonData);
 
       case ResponseType::ResponseContactsActionServer:
          return ContactsActionResponseServer::fromJSON(jsonData);
-      
+
       case ResponseType::ResponseChatroomsList:
          return ChatroomsListResponse::fromJSON(jsonData);
       case ResponseType::ResponseRoomMessages:
@@ -153,15 +144,6 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
       case ResponseType::ResponseLogout:
          return std::make_shared<LogoutResponse>();
 
-      case ResponseType::ResponseGenCommonOTC:
-         return GenCommonOTCResponse::fromJSON(jsonData);
-
-      case ResponseType::ResponseAnswerCommonOTC:
-         return AnswerCommonOTCResponse::fromJSON(jsonData);
-
-      case ResponseType::ResponseUpdateCommonOTC:
-         return UpdateCommonOTCResponse::fromJSON(jsonData);
-
       default:
          break;
    }
@@ -172,7 +154,7 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 PendingResponse::PendingResponse(ResponseType type, const QString& id)
    : Response(type), id_(id)
 {
-   
+
 }
 
 QJsonObject PendingResponse::toJson() const

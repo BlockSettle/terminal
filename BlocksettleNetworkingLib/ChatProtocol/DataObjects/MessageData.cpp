@@ -53,18 +53,10 @@ namespace Chat {
    }
 
    MessageData::MessageData(const MessageData& source, const QJsonObject& jsonData)
-      : DataObject(DataObject::Type::MessageData)
-      , id_{source.id_}
-      , senderId_{source.senderId_}
-      , receiverId_{source.receiverId_}
-      , dateTime_{source.dateTime_}
-      , state_{source.state_}
-      , nonce_{source.nonce_}
-      , direction_{source.direction_}
-      , encryptionType_{EncryptionType::Unencrypted}
-      , messagePayload_{source.messagePayload_}
-      , rawType_{RawMessageDataType::TextMessage}
+      : MessageData(source)
    {
+      rawType_ = RawMessageDataType::TextMessage;
+      encryptionType_ = EncryptionType::Unencrypted;
       displayText_ = jsonData[QLatin1String("message_text")].toString();
    }
 
@@ -88,19 +80,11 @@ namespace Chat {
    }
 
    MessageData::MessageData(const MessageData& source, RawMessageDataType rawType)
-   : DataObject(DataObject::Type::MessageData)
-   , id_{source.id_}
-   , senderId_{source.senderId_}
-   , receiverId_{source.receiverId_}
-   , dateTime_{source.dateTime_}
-   , state_{source.state_}
-   , nonce_{source.nonce_}
-   , direction_{source.direction_}
-   , encryptionType_{EncryptionType::Unencrypted}
-   , displayText_{source.displayText_}
-   , messagePayload_{source.messagePayload_}
-   , rawType_{rawType}
-   {}
+      : MessageData(source)
+   {
+      encryptionType_ = EncryptionType::Unencrypted;
+      rawType_ = rawType;
+   }
 
    MessageData::MessageData(const QString &sender, const QString &receiver
                   , const QString &id, const QDateTime &dateTime
@@ -117,6 +101,32 @@ namespace Chat {
    {
       messagePayload_ = serializePayload();
    }
+
+   MessageData::MessageData(const MessageData& source
+               , const MessageData::EncryptionType &type
+               , const QString& encryptedPayload)
+      : MessageData(source)
+   {
+      encryptionType_ = type;
+      displayText_ = QString{};
+      messagePayload_ = encryptedPayload;
+      rawType_ = RawMessageDataType::TextMessage;
+   }
+
+   MessageData::MessageData(const MessageData& source)
+      : DataObject(DataObject::Type::MessageData)
+      , id_{source.id_}
+      , senderId_{source.senderId_}
+      , receiverId_{source.receiverId_}
+      , dateTime_{source.dateTime_}
+      , state_{source.state_}
+      , nonce_{source.nonce_}
+      , direction_{source.direction_}
+      , encryptionType_{source.encryptionType_}
+      , displayText_{source.displayText_}
+      , messagePayload_{source.messagePayload_}
+      , rawType_{source.rawType_}
+   {}
 
    MessageData::MessageDirection MessageData::messageDirectoin() const
    {
@@ -260,6 +270,11 @@ namespace Chat {
    QString MessageData::displayText() const
    {
       return displayText_;
+   }
+
+   QString MessageData::messagePayload() const
+   {
+      return messagePayload_;
    }
 
    void MessageData::updatePayload(const QString& payload)

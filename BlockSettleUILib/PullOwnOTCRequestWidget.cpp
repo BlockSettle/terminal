@@ -15,14 +15,13 @@ PullOwnOTCRequestWidget::~PullOwnOTCRequestWidget() noexcept = default;
 
 void PullOwnOTCRequestWidget::OnPullPressed()
 {
-   emit PullOTCRequested(QString::fromStdString(currentOtcId_));
+   emit PullOTCRequested();
 }
 
 void PullOwnOTCRequestWidget::DisplayActiveOTC(const std::shared_ptr<Chat::OTCRequestData>& otc)
 {
    ui_->labelSide->setText(QString::fromStdString(bs::network::ChatOTCSide::toString(otc->otcRequest().side)));
    ui_->labelRange->setText(QString::fromStdString(bs::network::OTCRangeID::toString(otc->otcRequest().amountRange)));
-   currentOtcId_ = otc->serverRequestId();
 
    ui_->pushButtonPull->setEnabled(true);
 }
@@ -33,5 +32,4 @@ void PullOwnOTCRequestWidget::DisplaySubmittedOTC(const bs::network::OTCRequest&
 
    ui_->labelSide->setText(QString::fromStdString(bs::network::ChatOTCSide::toString(otc.side)));
    ui_->labelRange->setText(QString::fromStdString(bs::network::OTCRangeID::toString(otc.amountRange)));
-   currentOtcId_.clear();
 }

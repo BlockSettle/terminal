@@ -123,35 +123,6 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
    return byTypes && byData;
 }
 
-bool ChatContactElement::isHaveActiveOTC() const
-{
-   return activeOtcRequest_ != nullptr;
-}
-
-bool ChatContactElement::isOTCResponsePresented() const
-{
-   return activeOtcResponse_ != nullptr;
-}
-
-std::shared_ptr<Chat::OTCRequestData> ChatContactElement::getActiveOtcRequest() const
-{
-   return activeOtcRequest_;
-}
-
-void ChatContactElement::setActiveOtcRequest(const std::shared_ptr<Chat::OTCRequestData> &activeOtcRequest)
-{
-   activeOtcRequest_ = activeOtcRequest;
-}
-
-void ChatContactElement::setActiveOtcResponse(const std::shared_ptr<Chat::OTCResponseData> &activeOtcResponse)
-{
-   activeOtcResponse_ = activeOtcResponse;
-}
-
-std::shared_ptr<Chat::OTCResponseData> ChatContactElement::getActiveOtcResponse() const
-{
-   return activeOtcResponse_;
-}
 
 ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
 {
@@ -173,25 +144,6 @@ std::shared_ptr<Chat::UserData> ChatSearchElement::getUserData() const
    return std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
 }
 
-std::shared_ptr<Chat::OTCResponseData> OTCSentResponseElement::getOTCResponse() const
-{
-   return std::dynamic_pointer_cast<Chat::OTCResponseData>(getDataObject());
-}
-
-std::string OTCSentResponseElement::otcId() const
-{
-   return getOTCResponse()->serverResponseId();
-}
-
-std::shared_ptr<Chat::OTCResponseData> OTCReceivedResponseElement::getOTCResponse() const
-{
-   return std::dynamic_pointer_cast<Chat::OTCResponseData>(getDataObject());
-}
-
-std::string OTCReceivedResponseElement::otcId() const
-{
-   return getOTCResponse()->serverResponseId();
-}
 
 std::shared_ptr<Chat::DataObject> DisplayableDataNode::getDataObject() const
 {

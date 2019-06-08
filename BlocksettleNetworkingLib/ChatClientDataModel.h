@@ -51,15 +51,6 @@ public:
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
    void setNewMessageMonitor(NewMessageMonitor* monitor);
 
-   // insert channel for response that client send to OTC requests
-   bool insertOTCSentResponse(const std::shared_ptr<Chat::OTCResponseData> &response);
-   bool insertOTCSentResponseData(std::shared_ptr<Chat::DataObject> data);
-
-   // insert channel for response client receive for own OTC
-   bool insertOTCReceivedResponse(const std::shared_ptr<Chat::OTCResponseData> &response);
-   bool insertOTCReceivedResponseData(std::shared_ptr<Chat::DataObject> data);
-   bool insertPrivateOTCReceivedResponseData(std::shared_ptr<Chat::DataObject> data);
-
    // QAbstractItemModel interface
 public:
    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;

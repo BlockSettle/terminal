@@ -11,10 +11,7 @@ namespace Chat {
             MessageData,
             RoomData,
             ContactRecordData,
-            UserData,
-            OTCRequestData,
-            OTCResponseData,
-            OTCUpdateData
+            UserData
          };
    protected:
       DataObject(Type type);

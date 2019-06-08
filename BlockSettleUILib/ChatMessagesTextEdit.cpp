@@ -660,14 +660,6 @@ void ChatMessagesTextEdit::onElementSelected(CategoryElement *element)
          }
       }
          break;
-      case Chat::DataObject::Type::OTCResponseData: {
-         auto otcResponse = std::dynamic_pointer_cast<Chat::OTCResponseData>(data);
-         if (otcResponse) {
-            switchToChat(QString::fromStdString(otcResponse->serverResponseId()), false);
-            onMessagesUpdate(displayData, true);
-         }
-      }
-         break;
       default:
          return;
    }
