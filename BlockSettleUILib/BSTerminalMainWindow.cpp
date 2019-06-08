@@ -409,6 +409,8 @@ void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
 
+   wasWalletsRegistered_ = false;
+
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
@@ -429,8 +431,8 @@ void BSTerminalMainWindow::LoadWallets()
          }
       });
 
-      if (readyToRegisterWallets_) {
-         readyToRegisterWallets_ = false;
+      if (readyToRegisterWallets_ && !wasWalletsRegistered_) {
+         wasWalletsRegistered_ = true;
          walletsMgr_->registerWallets();
       }
    });
@@ -765,11 +767,8 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
    case ArmoryConnection::State::Offline:
       QMetaObject::invokeMethod(this, &BSTerminalMainWindow::ArmoryIsOffline);
       break;
-   case ArmoryConnection::State::Scanning:
-   case ArmoryConnection::State::Error:
-   case ArmoryConnection::State::Closing:
+   default:
       break;
-   default:    break;
    }
 }
 
