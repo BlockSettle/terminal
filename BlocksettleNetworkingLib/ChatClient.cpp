@@ -200,6 +200,8 @@ void ChatClient::OnLogoutResponse(const Chat::LogoutResponse & response)
 {
    logger_->debug("[ChatClient::OnLogoutResponse]: Server sent logout response with data: {}", response.getData());
    emit ForceLogoutSignal();
+
+   chatSessionKeyPtr_->clearAll();
 }
 
 void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response)
@@ -639,6 +641,9 @@ void ChatClient::OnUsersList(const Chat::UsersListResponse &response)
                status = ChatContactElement::OnlineStatus::Offline;
                break;
          }
+         // if status changed clear session keys for contact 
+         chatSessionKeyPtr_->clearSessionForUser(user);
+
          contact->setOnlineStatus(status);
          model_->notifyContactChanged(contact->getContactData());
       }
@@ -1716,7 +1721,7 @@ void ChatClient::OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicK
 bool ChatClient::decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey)
 {
    BinaryData test(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size());
-   logger_->debug("MY PUBLIC KEY: {}", test.toHexStr());
+
    // decrypt by ies received public key
    std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
    SecureBinaryData localPrivateKey(appSettings_->GetAuthKeys().first.data(), appSettings_->GetAuthKeys().first.size());
@@ -1737,14 +1742,7 @@ bool ChatClient::decodeAndUpdateIncomingSessionPublicKey(const std::string& send
 
    BinaryData remoteSessionPublicKey = BinaryData::CreateFromHex(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()).toStdString());
 
-   auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(senderId);
-
-   if (chatSessionKeyDataPtr == nullptr) {
-      // create new local private and public session keys for sender
-      // keys always are assigned to remote peer id 
-      chatSessionKeyPtr_->generateLocalKeysForUser(senderId);
-   }
-
+   chatSessionKeyPtr_->generateLocalKeysForUser(senderId);
    chatSessionKeyPtr_->updateRemotePublicKeyForUser(senderId, remoteSessionPublicKey);
 
    return true;

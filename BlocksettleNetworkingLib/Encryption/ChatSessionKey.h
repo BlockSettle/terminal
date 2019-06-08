@@ -25,6 +25,8 @@ namespace Chat {
       BinaryData iesEncryptLocalPublicKey(const std::string& receiverId, const BinaryData& remotePublicKey) const;
 
       bool isExchangeForUserSucceeded(const std::string &receiverId);
+      void clearSessionForUser(const std::string& receiverId);
+      void clearAll();
 
    private:
       ChatSessionDataPtrList _chatSessionKeyDataList;

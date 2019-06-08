@@ -119,4 +119,24 @@ namespace Chat {
       return true;
    }
 
+   void ChatSessionKey::clearSessionForUser(const std::string& receiverId)
+   {
+
+      auto chatSessionDataPtrIterator = std::remove_if(_chatSessionKeyDataList.begin(), _chatSessionKeyDataList.end(), [receiverId](const ChatSessionKeyDataPtr& chatSessionDataPtr)
+      {
+         return chatSessionDataPtr->receiverId().compare(receiverId) == 0;
+      });
+
+      if (chatSessionDataPtrIterator == _chatSessionKeyDataList.end()) {
+         return;
+      }
+
+      _chatSessionKeyDataList.erase(chatSessionDataPtrIterator);
+   }
+
+   void ChatSessionKey::clearAll()
+   {
+      _chatSessionKeyDataList.clear();
+   }
+
 }
