@@ -384,7 +384,7 @@ Item {
 
                         var dlg = JsHelper.messageBox(BSMessageBox.Type.Question, "Two-way authorization", "Disable two-way authorization?")
                         dlg.bsAccepted.connect(function() {
-                            signerSettings.twoWaySignerAuth = true
+                            signerSettings.twoWaySignerAuth = false
                         })
                         dlg.bsRejected.connect(function() {
                             checked = true

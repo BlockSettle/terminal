@@ -87,10 +87,12 @@ static int HeadlessApp(int argc, char **argv)
       logger = logMgr.logger();
    }
 
-   // Enable terminal key checks only if two way auth is enabled and lightgui used
-   bool publicRequester = !settings->twoWaySignerAuth() || (settings->runMode() == bs::signer::RunMode::lightgui);
+   // Enable terminal key checks if two way auth is enabled (or lightgui is used).
+   // This also affects GUI connection because the flag works globally for now.
+   // So if remote signer has two-way auth disabled GUI connection will be less secure too.
+   const bool twyWayEnabled = settings->twoWaySignerAuth() || (settings->runMode() == bs::signer::RunMode::lightgui);
    startupBIP151CTX();
-   startupBIP150CTX(4, publicRequester);
+   startupBIP150CTX(4, !twyWayEnabled);
 
    logger->info("Starting BS Signer...");
 
