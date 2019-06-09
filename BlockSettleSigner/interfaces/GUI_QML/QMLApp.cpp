@@ -268,9 +268,10 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
                                    , bs::wallet::QPasswordData *passwordData
                                    , bool cancelledByUser)
 {
-   //SecureBinaryData decodedPwd = passwordData->password;
    logger_->debug("Password for wallet {} was accepted", walletId.toStdString());
-   adapter_->passwordReceived(walletId.toStdString(), passwordData->password, cancelledByUser);
+   adapter_->passwordReceived(walletId.toStdString()
+      , cancelledByUser ? bs::error::ErrorCode::TxCanceled : bs::error::ErrorCode::NoError
+      , passwordData->password);
    if (offlinePasswordRequests_.find(walletId.toStdString()) != offlinePasswordRequests_.end()) {
       offlineProc_->passwordEntered(walletId.toStdString(), passwordData->password);
       offlinePasswordRequests_.erase(walletId.toStdString());

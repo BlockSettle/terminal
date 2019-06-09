@@ -47,7 +47,7 @@ public:
    void setOnline(bool);
    void reconnect(const QString &address, const QString &port);
    void setLimits(bs::signer::Limits);
-   void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+   void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
    using ResultCb = std::function<void(bool, const std::string&)>;
    void createWallet(const std::string &name, const std::string &desc, bs::core::wallet::Seed

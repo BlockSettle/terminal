@@ -83,7 +83,7 @@ void SignerAdapter::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
 void SignerAdapter::createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
    , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &cb)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    request.set_wallet_id(walletId.toStdString());
    request.set_password(password.toBinStr());
    const auto reqId = listener_->send(signer::CreateWOType, request.SerializeAsString());
@@ -93,7 +93,7 @@ void SignerAdapter::createWatchingOnlyWallet(const QString &walletId, const Secu
 void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
    , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    request.set_wallet_id(walletId);
    request.set_password(password.toBinStr());
    const auto reqId = listener_->send(signer::GetDecryptedNodeType, request.SerializeAsString());
@@ -147,12 +147,12 @@ void SignerAdapter::syncSettings(const std::unique_ptr<Blocksettle::Communicatio
 }
 
 void SignerAdapter::passwordReceived(const std::string &walletId
-   , const SecureBinaryData &password, bool cancelledByUser)
+   , bs::error::ErrorCode result, const SecureBinaryData &password)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    request.set_wallet_id(walletId);
    request.set_password(password.toBinStr());
-   request.set_cancelled_by_user(cancelledByUser);
+   request.set_errorcode(static_cast<uint32_t>(result));
    listener_->send(signer::PasswordReceivedType, request.SerializeAsString());
 }
 

@@ -49,7 +49,7 @@ public:
    void reconnect(const std::string &listenAddr, const std::string &port);
    void setOnline(bool);
    void setLimits(bs::signer::Limits);
-   void passwordReceived(const std::string &walletId, const SecureBinaryData &, bool cancelledByUser);
+   void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
    bs::error::ErrorCode activateAutoSign(const std::string &walletId, bool activate, const SecureBinaryData& password);
 

@@ -419,7 +419,7 @@ bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wal
 
 bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
@@ -442,7 +442,7 @@ bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::Requ
 
 bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
@@ -496,12 +496,12 @@ bool SignerAdapterListener::onSyncSettings(const std::string &data)
 
 bool SignerAdapterListener::onPasswordReceived(const std::string &data)
 {
-   signer::DecryptWalletRequest request;
+   signer::DecryptWalletEvent request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   app_->passwordReceived(request.wallet_id(), request.password(), request.cancelled_by_user());
+   app_->passwordReceived(request.wallet_id(), static_cast<bs::error::ErrorCode>(request.errorcode()), request.password());
    return true;
 }
 

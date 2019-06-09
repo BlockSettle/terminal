@@ -34,10 +34,16 @@ public:
       , const std::string &settlementId, const PasswordType& password = {}) override {
       return 0;
    }
+
+   bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &settlementInfo
+      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
+      , bool keepDuplicatedRecipients = false
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override {return 0;}
+
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
 
-   void SendPassword(const std::string &walletId, const PasswordType &password,
-      bool cancelledByUser) override {}
+   void SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password) override {}
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
 
    bs::signer::RequestId SetUserId(const BinaryData &) override { return 0; }

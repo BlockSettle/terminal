@@ -19,6 +19,7 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 
+using namespace bs::error;
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<HeadlessSettings> &params)
@@ -390,11 +391,11 @@ void HeadlessAppObj::setLimits(bs::signer::Limits limits)
    }
 }
 
-void HeadlessAppObj::passwordReceived(const std::string &walletId
-   , const SecureBinaryData &password, bool cancelledByUser)
+void HeadlessAppObj::passwordReceived(const std::string &walletId, ErrorCode result
+   , const SecureBinaryData &password)
 {
    if (listener_) {
-      listener_->passwordReceived(walletId, password, cancelledByUser);
+      listener_->passwordReceived(walletId, result, password);
    }
 }
 
