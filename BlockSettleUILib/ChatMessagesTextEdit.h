@@ -85,8 +85,8 @@ protected:
 
    QString data(const int &row, const Column &column);
    QString dataMessage(const int &row, const Column &column);
-   QString dataOtcRequest(const int &row, const Column &column, std::shared_ptr<Chat::OTCRequestData> otc);
-   QString dataOtcResponse(const int &row, const Column &column, std::shared_ptr<Chat::OTCResponseData> otc);
+   QString dataOtcRequest(const int &row, const Column &column);
+   QString dataOtcResponse(const int &row, const Column &column);
    QString dataOtcUpdate(const int &row, const Column &column);
    QImage statusImage(const int &row);
 
