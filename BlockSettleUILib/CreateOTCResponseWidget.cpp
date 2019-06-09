@@ -15,10 +15,13 @@ CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)
 
 CreateOTCResponseWidget::~CreateOTCResponseWidget() = default;
 
-void CreateOTCResponseWidget::SetActiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc)
+void CreateOTCResponseWidget::SetRequestToRespond(const std::shared_ptr<Chat::OTCRequestData>& otc)
 {
    SetSide(otc->otcRequest().side);
    SetRange(otc->otcRequest().amountRange);
+
+   ui_->pushButtonSubmit->setVisible(true);
+   ui_->pushButtonPull->setVisible(false);
 
    currentOtcRequest_ = otc;
 }

@@ -759,12 +759,12 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
                } else {
                   if (cNode->haveResponse()) {
                      // display pull own response
-                     //ui_->widgetCreateOTCResponse->SetSubmittedResponse(cNode->GetOTCResponse());
-                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
+                     // ui_->widgetCreateOTCResponse->SetSubmittedResponse(cNode->GetOTCResponse());
+                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
                   } else {
                      // display response widget
-                     //ui_->widgetCreateOTCResponse->SetRequestToRespond(cNode->getOTCRequest());
-                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
+                     ui_->widgetCreateOTCResponse->SetRequestToRespond(cNode->getOTCRequest());
+                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
                   }
                }
             }

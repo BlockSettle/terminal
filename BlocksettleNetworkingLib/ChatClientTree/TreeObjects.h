@@ -43,6 +43,8 @@ public:
    bool isOTCRequestor() const;
    bool haveUpdates() const;
    bool haveResponse() const;
+
+   std::shared_ptr<Chat::OTCRequestData> getOTCRequest() const;
 protected:
    void onChildAdded(TreeItem* item) override;
 private:

@@ -198,3 +198,8 @@ void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageDa
       break;
    }
 }
+
+std::shared_ptr<Chat::OTCRequestData> ChatContactElement::getOTCRequest() const
+{
+   return otcRequest_;
+}

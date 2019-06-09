@@ -19,7 +19,7 @@ public:
    CreateOTCResponseWidget(QWidget* parent = nullptr);
    ~CreateOTCResponseWidget() override;
 
-   void SetActiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc);
+   void SetRequestToRespond(const std::shared_ptr<Chat::OTCRequestData>& otc);
 
    bs::network::OTCResponse GetCurrentOTCResponse() const;
 
