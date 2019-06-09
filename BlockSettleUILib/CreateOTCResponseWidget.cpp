@@ -19,7 +19,7 @@ CreateOTCResponseWidget::~CreateOTCResponseWidget() = default;
 void CreateOTCResponseWidget::SetRequestToRespond(const std::shared_ptr<Chat::OTCRequestData>& otc)
 {
    ui_->pushButtonSubmit->setVisible(true);
-   ui_->pushButtonPull->setVisible(false);
+   ui_->pushButtonPull->setText(tr("Reject"));
 
    InitUIFromRequest(otc);
 }
@@ -45,7 +45,7 @@ void CreateOTCResponseWidget::SetSubmittedResponse(const std::shared_ptr<Chat::O
    ui_->widgetAmountRange->setEnabled(false);
 
    ui_->pushButtonSubmit->setVisible(false);
-   ui_->pushButtonPull->setVisible(true);
+   ui_->pushButtonPull->setText(tr("Pull"));
 }
 
 void CreateOTCResponseWidget::OnCreateResponse()
