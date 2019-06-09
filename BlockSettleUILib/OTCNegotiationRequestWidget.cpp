@@ -12,7 +12,6 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
    ui_->setupUi(this);
 
    ui_->headerLabel->setText(tr("OTC Request Negotiation"));
-   ui_->labelQuantityValue->hide();
 
    ui_->spinBoxOffer->setAccelerated(true);
    ui_->spinBoxQuantity->setAccelerated(true);
