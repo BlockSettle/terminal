@@ -67,10 +67,10 @@ void OTCNegotiationRequestWidget::SetUpdateData(const std::shared_ptr<Chat::OTCU
 {
    DisplayResponse(initialResponse);
    initialUpdate_ = false;
-   changed_ = false;
    ui_->spinBoxOffer->setValue(update->otcUpdate().price);
    ui_->spinBoxQuantity->setValue(update->otcUpdate().amount);
    ui_->pushButtonAccept->setText(tr("Accept"));
+   changed_ = false;
 }
 
 bs::network::OTCUpdate OTCNegotiationRequestWidget::GetUpdate() const
