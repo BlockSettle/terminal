@@ -30,8 +30,6 @@ namespace Chat {
       static QString serializeCloseRequest();
 
    private:
-      bool                       updateValid_ = false;;
-      bs::network::OTCUpdate     otcUpdate_;
       QString                    displayText_;
    };
 

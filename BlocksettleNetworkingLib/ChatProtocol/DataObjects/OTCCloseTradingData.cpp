@@ -46,13 +46,9 @@ namespace Chat
 
    void OTCCloseTradingData::updateDisplayString()
    {
-      if (updateValid_) {
-         QString format = QLatin1String("%1 CLOSE");
+      QString format = QLatin1String("%1 CLOSE");
 
-         displayText_ = format.arg(directionToText(messageDirectoin()));
-      } else {
-         displayText_ = QLatin1String("Invalid");
-      }
+      displayText_ = format.arg(directionToText(messageDirectoin()));
    }
 //namespace Chat end
 }
