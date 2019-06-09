@@ -684,7 +684,17 @@ void ChatWidget::OnOTCRequestCreated()
 }
 
 void ChatWidget::OnCreateResponse()
-{}
+{
+   if (currentChat_ == Chat::OTCRoomKey) {
+      // XXXOTC
+      // submit cancel to room
+   } else {
+      auto response = ui_->widgetCreateOTCResponse->GetCurrentOTCResponse();
+      if (!client_->SubmitPrivateOTCResponse(response, currentChat_)) {
+         logger_->error("[ChatWidget::OnCancelCurrentTrading] failed to submit response");
+      }
+   }
+}
 
 void ChatWidget::OnCancelCurrentTrading()
 {
