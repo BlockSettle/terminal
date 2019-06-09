@@ -743,11 +743,11 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
                } else {
                   if (cNode->haveResponse()) {
                      // display requester update from response
-                     // ui_->widgetNegotiateRequest->SetResponseData(cNode->GetOTCResponse());
+                     // ui_->widgetNegotiateRequest->SetResponseData(cNode->getOTCResponse());
                      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
                   } else {
                      // display own request for pull
-                     // ui_->widgetPullOwnOTCRequest->setRequestData(cNode->getOTCRequest());
+                     ui_->widgetPullOwnOTCRequest->setRequestData(cNode->getOTCRequest());
                      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
                   }
                }
@@ -759,7 +759,7 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
                } else {
                   if (cNode->haveResponse()) {
                      // display pull own response
-                     // ui_->widgetCreateOTCResponse->SetSubmittedResponse(cNode->GetOTCResponse());
+                     ui_->widgetCreateOTCResponse->SetSubmittedResponse(cNode->getOTCResponse(), cNode->getOTCRequest());
                      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
                   } else {
                      // display response widget

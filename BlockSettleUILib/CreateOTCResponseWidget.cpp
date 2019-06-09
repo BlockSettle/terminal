@@ -17,13 +17,34 @@ CreateOTCResponseWidget::~CreateOTCResponseWidget() = default;
 
 void CreateOTCResponseWidget::SetRequestToRespond(const std::shared_ptr<Chat::OTCRequestData>& otc)
 {
-   SetSide(otc->otcRequest().side);
-   SetRange(otc->otcRequest().amountRange);
-
    ui_->pushButtonSubmit->setVisible(true);
    ui_->pushButtonPull->setVisible(false);
 
-   currentOtcRequest_ = otc;
+   InitUIFromRequest(otc);
+}
+
+void CreateOTCResponseWidget::InitUIFromRequest(const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
+{
+   ui_->widgetPriceRange->setEnabled(true);
+
+   SetSide(otcRequest->otcRequest().side);
+   SetRange(otcRequest->otcRequest().amountRange);
+}
+
+void CreateOTCResponseWidget::SetSubmittedResponse(const std::shared_ptr<Chat::OTCResponseData>& otcResponse, const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
+{
+   InitUIFromRequest(otcRequest);
+
+   ui_->widgetPriceRange->SetLowerValue(otcResponse->otcResponse().priceRange.lower);
+   ui_->widgetPriceRange->SetUpperValue(otcResponse->otcResponse().priceRange.upper);
+   ui_->widgetPriceRange->setEnabled(false);
+
+   ui_->widgetAmountRange->SetLowerValue(otcResponse->otcResponse().quantityRange.lower);
+   ui_->widgetAmountRange->SetUpperValue(otcResponse->otcResponse().quantityRange.upper);
+   ui_->widgetAmountRange->setEnabled(false);
+
+   ui_->pushButtonSubmit->setVisible(false);
+   ui_->pushButtonPull->setVisible(true);
 }
 
 void CreateOTCResponseWidget::OnCreateResponse()

@@ -44,7 +44,9 @@ public:
    bool haveUpdates() const;
    bool haveResponse() const;
 
-   std::shared_ptr<Chat::OTCRequestData> getOTCRequest() const;
+   std::shared_ptr<Chat::OTCRequestData>  getOTCRequest() const;
+   std::shared_ptr<Chat::OTCResponseData> getOTCResponse() const;
+
 protected:
    void onChildAdded(TreeItem* item) override;
 private:
@@ -53,6 +55,7 @@ protected:
    OnlineStatus onlineStatus_;
 
    std::shared_ptr<Chat::OTCRequestData> otcRequest_ = nullptr;
+   std::shared_ptr<Chat::OTCResponseData> otcResponse_ = nullptr;
 };
 
 class ChatSearchElement : public CategoryElement {

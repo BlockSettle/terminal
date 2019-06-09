@@ -140,7 +140,7 @@ bool ChatContactElement::haveUpdates() const
 
 bool ChatContactElement::haveResponse() const
 {
-   return false;
+   return otcResponse_ != nullptr;
 }
 
 ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
@@ -202,4 +202,9 @@ void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageDa
 std::shared_ptr<Chat::OTCRequestData> ChatContactElement::getOTCRequest() const
 {
    return otcRequest_;
+}
+
+std::shared_ptr<Chat::OTCResponseData> ChatContactElement::getOTCResponse() const
+{
+   return otcResponse_;
 }
