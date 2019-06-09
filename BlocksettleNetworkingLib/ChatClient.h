@@ -84,6 +84,9 @@ public:
          const QString& message, const QString &receiver);
    std::shared_ptr<Chat::MessageData> SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
                                                               , const QString &receiver);
+   std::shared_ptr<Chat::MessageData> SubmitPrivateCancel(const QString &receiver);
+   std::shared_ptr<Chat::MessageData> SubmitPrivateUpdate(const bs::network::OTCUpdate& update
+                                                          , const QString &receiver);
 
    std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
          const QString& message, const QString &receiver);

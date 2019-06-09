@@ -27,6 +27,7 @@ namespace Chat
       otcResponse_.priceRange.upper = jsonData[QLatin1String("price_high")].toInt();
       otcResponse_.quantityRange.lower = jsonData[QLatin1String("amount_low")].toInt();
       otcResponse_.quantityRange.upper = jsonData[QLatin1String("amount_high")].toInt();
+      otcResponse_.side = static_cast<bs::network::ChatOTCSide::Type>(jsonData[QLatin1String("side")].toInt());
 
       resopnseValid_ = true;
 
@@ -63,6 +64,7 @@ namespace Chat
       data[QLatin1String("price_high")] = static_cast<int>(otcResponse.priceRange.upper);
       data[QLatin1String("amount_low")] = static_cast<int>(otcResponse.quantityRange.lower);
       data[QLatin1String("amount_high")] = static_cast<int>(otcResponse.quantityRange.upper);
+      data[QLatin1String("side")] = static_cast<int>(otcResponse.side);
 
       QJsonDocument doc(data);
       return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
@@ -71,10 +73,11 @@ namespace Chat
    void OTCResponseData::updateDisplayString()
    {
       if (resopnseValid_) {
-         QString format = QLatin1String("%1 BID : %2-%3 EUR @ %4-%5 XBT");
+         QString format = QLatin1String("%1 BID %2 : %3-%4 EUR @ %5-%6 XBT");
 
          displayText_ = format
             .arg(directionToText(messageDirectoin()))
+            .arg(QString::fromStdString(bs::network::ChatOTCSide::toString(otcResponse_.side)))
             .arg(QString::number(otcResponse_.priceRange.lower))
             .arg(QString::number(otcResponse_.priceRange.upper))
             .arg(QString::number(otcResponse_.quantityRange.lower))

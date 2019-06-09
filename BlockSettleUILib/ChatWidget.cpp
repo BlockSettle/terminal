@@ -275,6 +275,14 @@ ChatWidget::ChatWidget(QWidget *parent)
 
    connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::PullOTCRequested, this, &ChatWidget::OnCancelCurrentTrading);
    connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::ResponseRejected, this, &ChatWidget::OnCancelCurrentTrading);
+
+   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::TradeUpdated, this, &ChatWidget::OnUpdateTradeRequestor);
+   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::TradeAccepted, this, &ChatWidget::OnAcceptTradeRequestor);
+   connect(ui_->widgetNegotiateRequest, &OTCNegotiationRequestWidget::TradeRejected, this, &ChatWidget::OnCancelCurrentTrading);
+
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeUpdated, this, &ChatWidget::OnUpdateTradeResponder);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeAccepted, this, &ChatWidget::OnAcceptTradeResponder);
+   connect(ui_->widgetNegotiateResponse, &OTCNegotiationResponseWidget::TradeRejected, this, &ChatWidget::OnCancelCurrentTrading);
 }
 
 ChatWidget::~ChatWidget() = default;
@@ -680,7 +688,37 @@ void ChatWidget::OnCreateResponse()
 
 void ChatWidget::OnCancelCurrentTrading()
 {
+   if (currentChat_ == Chat::OTCRoomKey) {
+      // XXXOTC
+      // submit cancel to room
+   } else {
+      if (!client_->SubmitPrivateCancel(currentChat_)) {
+         logger_->error("[ChatWidget::OnCancelCurrentTrading] failed to submit cancel");
+      }
+   }
 }
+
+void ChatWidget::OnUpdateTradeRequestor()
+{
+   auto update = ui_->widgetNegotiateRequest->GetUpdate();
+   if (!client_->SubmitPrivateUpdate(update, currentChat_)) {
+      logger_->error("[ChatWidget::OnUpdateTradeRequestor] failed to submit update");
+   }
+}
+
+void ChatWidget::OnAcceptTradeRequestor()
+{}
+
+void ChatWidget::OnUpdateTradeResponder()
+{
+   auto update = ui_->widgetNegotiateResponse->GetUpdate();
+   if (!client_->SubmitPrivateUpdate(update, currentChat_)) {
+      logger_->error("[ChatWidget::OnCancelCurrentTrading] failed to submit update");
+   }
+}
+
+void ChatWidget::OnAcceptTradeResponder()
+{}
 
 void ChatWidget::SetOTCLoggedInState()
 {
@@ -749,12 +787,12 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
             if (cNode->isOTCRequestor()) {
                if (cNode->haveUpdates()) {
                   // display requester update from update
-                  // ui_->widgetNegotiateRequest->SetUpdateData(cNode->GetLastOTCUpdate());
+                  ui_->widgetNegotiateRequest->SetUpdateData(cNode->getLastOTCUpdate(), cNode->getOTCResponse());
                   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
                } else {
                   if (cNode->haveResponse()) {
                      // display requester update from response
-                     // ui_->widgetNegotiateRequest->SetResponseData(cNode->getOTCResponse());
+                     ui_->widgetNegotiateRequest->SetResponseData(cNode->getOTCResponse());
                      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
                   } else {
                      // display own request for pull
@@ -765,7 +803,7 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
             } else {
                if (cNode->haveUpdates()) {
                   // display responder update from update
-                  // ui_->widgetNegotiateResponse->SetUpdateData(cNode->GetLastOTCUpdate());
+                  ui_->widgetNegotiateResponse->SetUpdateData(cNode->getLastOTCUpdate(), cNode->getOTCResponse());
                   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
                } else {
                   if (cNode->haveResponse()) {

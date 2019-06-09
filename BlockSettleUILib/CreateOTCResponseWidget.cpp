@@ -55,6 +55,8 @@ void CreateOTCResponseWidget::OnCreateResponse()
 
 void CreateOTCResponseWidget::SetSide(const bs::network::ChatOTCSide::Type& side)
 {
+   side_ = side;
+
    if (side == bs::network::ChatOTCSide::Sell) {
       ui_->labelSide->setText(tr("Sell"));
    } else if (side == bs::network::ChatOTCSide::Buy) {
@@ -119,6 +121,7 @@ bs::network::OTCResponse CreateOTCResponseWidget::GetCurrentOTCResponse() const
 {
    bs::network::OTCResponse response;
 
+   response.side = side_;
    response.priceRange = GetResponsePriceRange();
    response.quantityRange = GetResponseQuantityRange();
 

@@ -135,7 +135,7 @@ bool ChatContactElement::isOTCRequestor() const
 
 bool ChatContactElement::haveUpdates() const
 {
-   return false;
+   return lastUpdate_ != nullptr;
 }
 
 bool ChatContactElement::haveResponse() const
@@ -194,6 +194,15 @@ void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageDa
    case Chat::MessageData::RawMessageDataType::OTCReqeust:
       otcRequest_ = std::dynamic_pointer_cast<Chat::OTCRequestData>(messageData);
       break;
+   case Chat::MessageData::RawMessageDataType::OTCResponse:
+      otcResponse_ = std::dynamic_pointer_cast<Chat::OTCResponseData>(messageData);
+      break;
+   case Chat::MessageData::RawMessageDataType::OTCUpdate:
+      lastUpdate_ = std::dynamic_pointer_cast<Chat::OTCUpdateData>(messageData);
+      break;
+   case Chat::MessageData::RawMessageDataType::OTCCloseTrading:
+      cleanupTrading();
+      break;
    default:
       break;
    }
@@ -209,8 +218,14 @@ std::shared_ptr<Chat::OTCResponseData> ChatContactElement::getOTCResponse() cons
    return otcResponse_;
 }
 
+std::shared_ptr<Chat::OTCUpdateData> ChatContactElement::getLastOTCUpdate() const
+{
+   return lastUpdate_;
+}
+
 void ChatContactElement::cleanupTrading()
 {
    otcRequest_ = nullptr;
    otcResponse_ = nullptr;
+   lastUpdate_ = nullptr;
 }

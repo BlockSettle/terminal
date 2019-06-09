@@ -756,6 +756,29 @@ std::shared_ptr<Chat::MessageData> ChatClient::SubmitPrivateOTCRequest(const bs:
    return sendMessageDataRequest(otcMessageData, receiver);
 }
 
+std::shared_ptr<Chat::MessageData> ChatClient::SubmitPrivateCancel(const QString &receiver)
+{
+   auto otcMessageData = std::make_shared<Chat::OTCCloseTradingData>(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc());
+
+   logger_->debug("[ChatClient::SubmitPrivateCancel] to {}", receiver.toStdString());
+
+   return sendMessageDataRequest(otcMessageData, receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::SubmitPrivateUpdate(const bs::network::OTCUpdate& update, const QString &receiver)
+{
+   auto otcMessageData = std::make_shared<Chat::OTCUpdateData>(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc()
+      , update);
+
+   logger_->debug("[ChatClient::SubmitPrivateUpdate] to {}", receiver.toStdString());
+
+   return sendMessageDataRequest(otcMessageData, receiver);
+}
+
 std::shared_ptr<Chat::MessageData> ChatClient::sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& messageData
                                                                       , const QString &receiver)
 {

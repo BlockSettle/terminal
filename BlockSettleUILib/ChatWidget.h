@@ -92,6 +92,11 @@ private slots:
    void OnCreateResponse();
    void OnCancelCurrentTrading();
 
+   void OnUpdateTradeRequestor();
+   void OnAcceptTradeRequestor();
+   void OnUpdateTradeResponder();
+   void OnAcceptTradeResponder();
+
    void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
 signals:
@@ -119,7 +124,6 @@ private:
    void DisplayCreateOTCWidget();
    void DisplayOwnSubmittedOTC();
    void DisplayOwnLiveOTC();
-
 
    bool IsOTCChatSelected() const;
    void UpdateOTCRoomWidgetIfRequired();

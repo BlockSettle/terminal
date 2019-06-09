@@ -42,7 +42,8 @@ signals:
    void ResponseRejected();
 
 private:
-   std::unique_ptr<Ui::CreateOTCResponseWidget> ui_;
+   std::unique_ptr<Ui::CreateOTCResponseWidget>    ui_;
+   bs::network::ChatOTCSide::Type                  side_;
 };
 
 #endif // __CREATE_OTC_RESPONSE_WIDGET_H__

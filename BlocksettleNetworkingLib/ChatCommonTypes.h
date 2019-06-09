@@ -106,8 +106,9 @@ namespace bs {
 
       struct OTCResponse
       {
-         OTCPriceRange     priceRange;
-         OTCQuantityRange  quantityRange;
+         ChatOTCSide::Type    side;
+         OTCPriceRange        priceRange;
+         OTCQuantityRange     quantityRange;
       };
 
       struct OTCUpdate

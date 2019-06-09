@@ -46,6 +46,7 @@ public:
 
    std::shared_ptr<Chat::OTCRequestData>  getOTCRequest() const;
    std::shared_ptr<Chat::OTCResponseData> getOTCResponse() const;
+   std::shared_ptr<Chat::OTCUpdateData>   getLastOTCUpdate() const;
 
    void cleanupTrading();
 
@@ -56,8 +57,9 @@ private:
 protected:
    OnlineStatus onlineStatus_;
 
-   std::shared_ptr<Chat::OTCRequestData> otcRequest_ = nullptr;
+   std::shared_ptr<Chat::OTCRequestData>  otcRequest_ = nullptr;
    std::shared_ptr<Chat::OTCResponseData> otcResponse_ = nullptr;
+   std::shared_ptr<Chat::OTCUpdateData>       lastUpdate_ = nullptr;
 };
 
 class ChatSearchElement : public CategoryElement {
