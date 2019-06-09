@@ -258,6 +258,7 @@ std::vector<std::shared_ptr<Chat::MessageData>> ChatDB::getUserMessages(const QS
                                                            QString{},
                                                            state);
       msg->setNonce(Botan::SecureVector<uint8_t>(nonce.begin(), nonce.end()));
+      msg->setLoadedFromHistory();
 
 
       records.push_back(msg->CreateEncryptedMessage(encryption, messageData));
@@ -289,6 +290,7 @@ std::vector<std::shared_ptr<Chat::MessageData> > ChatDB::getRoomMessages(const Q
       const auto msg = std::make_shared<Chat::MessageData>(query.value(0).toString()
          , query.value(1).toString(), query.value(2).toString(), query.value(3).toDateTime()
          , query.value(4).toString(), query.value(5).toInt());
+      msg->setLoadedFromHistory();
       records.push_back(msg);
    }
    std::sort(records.begin(), records.end(), [](const std::shared_ptr<Chat::MessageData> &a

@@ -178,7 +178,9 @@ void ChatContactElement::onChildAdded(TreeItem* item)
          auto messagePayloadType = messageData->messageDataType();
          auto messageDirection = messageData->messageDirectoin();
 
-         if ((messageDirection != Chat::MessageData::MessageDirection::NotSet) && (messagePayloadType != Chat::MessageData::RawMessageDataType::TextMessage)) {
+         if ((messageDirection != Chat::MessageData::MessageDirection::NotSet)
+             && (messagePayloadType != Chat::MessageData::RawMessageDataType::TextMessage)
+             && !messageData->loadedFromHistory()) {
             processOTCMessage(messageData);
          }
       }

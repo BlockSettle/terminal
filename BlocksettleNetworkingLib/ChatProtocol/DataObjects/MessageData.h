@@ -121,6 +121,9 @@ namespace Chat {
 
       static QString directionToText(MessageDirection direction);
 
+      bool loadedFromHistory() const;
+      void setLoadedFromHistory();
+
    protected:
       void updatePayload(const QString& payload);
 
@@ -140,5 +143,6 @@ namespace Chat {
       QString              messagePayload_;
 
       RawMessageDataType   rawType_ = RawMessageDataType::Undefined;
+      bool loadedFromHistory_ = false;
    };
 }

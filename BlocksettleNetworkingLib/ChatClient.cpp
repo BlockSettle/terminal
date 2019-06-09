@@ -933,7 +933,7 @@ void ChatClient::retrieveUserMessages(const QString &userId)
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
-            decryptIESMessage(msg);
+            msg = decryptIESMessage(msg);
          }
          model_->insertContactsMessage(msg);
       }
@@ -946,7 +946,7 @@ void ChatClient::retrieveRoomMessages(const QString& roomId)
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
-            decryptIESMessage(msg);
+            msg = decryptIESMessage(msg);
          }
          model_->insertRoomMessage(msg);
       }

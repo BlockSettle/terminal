@@ -126,6 +126,7 @@ namespace Chat {
       , displayText_{source.displayText_}
       , messagePayload_{source.messagePayload_}
       , rawType_{source.rawType_}
+      , loadedFromHistory_{source.loadedFromHistory_}
    {}
 
    MessageData::RawMessageDataType MessageData::messageDataType() const
@@ -291,6 +292,16 @@ namespace Chat {
    void MessageData::updatePayload(const QString& payload)
    {
       messagePayload_ = payload;
+   }
+
+   bool MessageData::loadedFromHistory() const
+   {
+      return loadedFromHistory_;
+   }
+
+   void MessageData::setLoadedFromHistory()
+   {
+      loadedFromHistory_ = true;
    }
 }
 
