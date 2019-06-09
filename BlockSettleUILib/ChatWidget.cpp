@@ -661,6 +661,7 @@ void ChatWidget::OnOTCRequestCreated()
 
    if (currentChat_ == Chat::OTCRoomKey) {
       // XXXOTC
+      // submit request to OTC room
    } else {
       if (!client_->SubmitPrivateOTCRequest(otcRequest, currentChat_)) {
          logger_->error("[ChatWidget::OnOTCRequestCreated] failed to submit"
@@ -680,12 +681,19 @@ void ChatWidget::SetLoggedOutOTCState()
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCLoginRequiredShieldPage));
 }
 
+bool ChatWidget::TradingAvailableForUser() const
+{
+   return celerClient_
+      && (   celerClient_->celerUserType() == CelerClient::CelerUserType::Dealing
+          || celerClient_->celerUserType() == CelerClient::CelerUserType::Trading);
+}
+
 void ChatWidget::OTCSwitchToCommonRoom()
 {
    const auto currentSeletion = ui_->treeViewOTCRequests->selectionModel()->selection();
    if (currentSeletion.indexes().isEmpty()) {
       // OTC available only for trading and dealing participants
-      if (celerClient_ && (celerClient_->celerUserType() == CelerClient::CelerUserType::Dealing || celerClient_->celerUserType() == CelerClient::CelerUserType::Trading)) {
+      if (TradingAvailableForUser()) {
          DisplayCorrespondingOTCRequestWidget();
       }
       else {
@@ -695,11 +703,6 @@ void ChatWidget::OTCSwitchToCommonRoom()
    else {
       ui_->treeViewOTCRequests->selectionModel()->clearSelection();
    }
-}
-
-void ChatWidget::OTCSwitchToDMRoom()
-{
-   DisplayCreateOTCWidget();
 }
 
 void ChatWidget::OTCSwitchToGlobalRoom()
@@ -714,58 +717,66 @@ void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room)
       OTCSwitchToCommonRoom();
    } else {
       ui_->stackedWidgetMessages->setCurrentIndex(0);
-      // XXX: DM OTC request not supported yet. Do not remove commented code
-       //if (IsGlobalChatRoom(currentChat_)) {
-         OTCSwitchToGlobalRoom();
-//       } else {
-//         OTCSwitchToDMRoom();
-//       }
+      OTCSwitchToGlobalRoom();
    }
 }
 
 void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact,
                                     bool onlineStatus)
 {
-   // XXXOTC
-   // ui_->stackedWidgetMessages->setCurrentIndex(0);
-   // if (contact->getContactStatus() == Chat::ContactStatus::Accepted) {
-   //    if (onlineStatus) {
-   //       auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
-   //       if (!cNode->isHaveActiveOTC()) {
-   //          return DisplayCreateOTCWidget();
-   //       }
+   ui_->stackedWidgetMessages->setCurrentIndex(0);
 
-   //       if (cNode->isOTCResponsePresented()) {
-   //          auto response = cNode->getActiveOtcResponse();
-   //          if (response->responderId() == contact->getContactId().toStdString()) {
+   if (!TradingAvailableForUser()) {
+      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCParticipantShieldPage));
+      return;
+   }
 
-   //             ui_->widgetNegotiateRequest->DisplayResponse(bs::network::Side::Buy,
-   //                                                          response->priceRange(), response->quantityRange());
-   //             ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
-   //          } else {
-   //             ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
-   //          }
-
-   //       } else {
-   //          if (cNode->getActiveOtcRequest()->requestorId() == contact->getContactId().toStdString()){
-
-   //             ui_->widgetCreateOTCResponse->SetActiveOTCRequest(cNode->getActiveOtcRequest());
-   //             ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCCreateResponsePage));
-
-   //          } else {
-
-   //             ui_->widgetPullOwnOTCRequest->DisplayActiveOTC(cNode->getActiveOtcRequest());
-   //             ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
-
-   //          }
-   //       }
-
-   //    } else {
-   //       ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
-   //    }
-   // } else {
-   //    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactShieldPage));
-   // }
+   if (contact->getContactStatus() == Chat::ContactStatus::Accepted) {
+      if (onlineStatus) {
+         auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
+         if (cNode->OTCTradingStarted()) {
+            if (cNode->isOTCRequestor()) {
+               if (cNode->haveUpdates()) {
+                  // display requester update from update
+                  // ui_->widgetNegotiateRequest->SetUpdateData(cNode->GetLastOTCUpdate());
+                  ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
+               } else {
+                  if (cNode->haveResponse()) {
+                     // display requester update from response
+                     // ui_->widgetNegotiateRequest->SetResponseData(cNode->GetOTCResponse());
+                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateRequestPage));
+                  } else {
+                     // display own request for pull
+                     // ui_->widgetPullOwnOTCRequest->setRequestData(cNode->getOTCRequest());
+                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCPullOwnOTCRequestPage));
+                  }
+               }
+            } else {
+               if (cNode->haveUpdates()) {
+                  // display responder update from update
+                  // ui_->widgetNegotiateResponse->SetUpdateData(cNode->GetLastOTCUpdate());
+                  ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
+               } else {
+                  if (cNode->haveResponse()) {
+                     // display pull own response
+                     //ui_->widgetCreateOTCResponse->SetSubmittedResponse(cNode->GetOTCResponse());
+                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
+                  } else {
+                     // display response widget
+                     //ui_->widgetCreateOTCResponse->SetRequestToRespond(cNode->getOTCRequest());
+                     ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCNegotiateResponsePage));
+                  }
+               }
+            }
+         } else {
+            DisplayCreateOTCWidget();
+         }
+      } else {
+         ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
+      }
+   } else {
+      ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactShieldPage));
+   }
 }
 
 void ChatWidget::OTCSwitchToResponse(std::shared_ptr<Chat::OTCResponseData> &response)
@@ -783,6 +794,7 @@ void ChatWidget::UpdateOTCRoomWidgetIfRequired()
    }
 }
 
+// OTC request selected in OTC room
 void ChatWidget::OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &)
 {
    // if (!selected.indexes().isEmpty()) {

@@ -128,6 +128,11 @@ namespace Chat {
       , rawType_{source.rawType_}
    {}
 
+   MessageData::RawMessageDataType MessageData::messageDataType() const
+   {
+      return rawType_;
+   }
+
    MessageData::MessageDirection MessageData::messageDirectoin() const
    {
       return direction_;

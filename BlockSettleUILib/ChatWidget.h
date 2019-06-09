@@ -101,7 +101,6 @@ private:
    void SetLoggedOutOTCState();
 
    void OTCSwitchToCommonRoom();
-   void OTCSwitchToDMRoom();
    void OTCSwitchToGlobalRoom();
    void OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room);
    void OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact, bool onlineStatus);
@@ -122,6 +121,8 @@ private:
 
    bool IsOTCChatSelected() const;
    void UpdateOTCRoomWidgetIfRequired();
+
+   bool TradingAvailableForUser() const;
 
 private:
    QScopedPointer<Ui::ChatWidget> ui_;

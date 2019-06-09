@@ -123,6 +123,25 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
    return byTypes && byData;
 }
 
+bool ChatContactElement::OTCTradingStarted() const
+{
+   return otcRequest_ != nullptr;
+}
+
+bool ChatContactElement::isOTCRequestor() const
+{
+   return otcRequest_->messageDirectoin() == Chat::MessageData::MessageDirection::Sent;
+}
+
+bool ChatContactElement::haveUpdates() const
+{
+   return false;
+}
+
+bool ChatContactElement::haveResponse() const
+{
+   return false;
+}
 
 ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
 {
@@ -148,4 +167,34 @@ std::shared_ptr<Chat::UserData> ChatSearchElement::getUserData() const
 std::shared_ptr<Chat::DataObject> DisplayableDataNode::getDataObject() const
 {
    return data_;
+}
+
+void ChatContactElement::onChildAdded(TreeItem* item)
+{
+   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode) {
+      auto messageNode = dynamic_cast<TreeMessageNode*>(item);
+      if (messageNode) {
+         auto messageData = messageNode->getMessage();
+         auto messagePayloadType = messageData->messageDataType();
+         auto messageDirection = messageData->messageDirectoin();
+
+         if ((messageDirection != Chat::MessageData::MessageDirection::NotSet) && (messagePayloadType != Chat::MessageData::RawMessageDataType::TextMessage)) {
+            processOTCMessage(messageData);
+         }
+      }
+   }
+}
+
+void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData)
+{
+   auto messagePayloadType = messageData->messageDataType();
+   auto messageDirection = messageData->messageDirectoin();
+
+   switch (messagePayloadType) {
+   case Chat::MessageData::RawMessageDataType::OTCReqeust:
+      otcRequest_ = std::dynamic_pointer_cast<Chat::OTCRequestData>(messageData);
+      break;
+   default:
+      break;
+   }
 }

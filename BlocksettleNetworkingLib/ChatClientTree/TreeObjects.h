@@ -39,8 +39,18 @@ public:
 
    bool isChildSupported(const TreeItem *item) const override;
 
+   bool OTCTradingStarted() const;
+   bool isOTCRequestor() const;
+   bool haveUpdates() const;
+   bool haveResponse() const;
+protected:
+   void onChildAdded(TreeItem* item) override;
+private:
+   void processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData);
 protected:
    OnlineStatus onlineStatus_;
+
+   std::shared_ptr<Chat::OTCRequestData> otcRequest_ = nullptr;
 };
 
 class ChatSearchElement : public CategoryElement {
