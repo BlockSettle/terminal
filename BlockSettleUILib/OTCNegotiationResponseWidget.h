@@ -25,6 +25,11 @@ public:
    OTCNegotiationResponseWidget(OTCNegotiationResponseWidget&&) = delete;
    OTCNegotiationResponseWidget& operator = (OTCNegotiationResponseWidget&&) = delete;
 
+signals:
+   void TradeUpdated();
+   void TradeAccepted();
+   void TradeRejected();
+
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;
 };

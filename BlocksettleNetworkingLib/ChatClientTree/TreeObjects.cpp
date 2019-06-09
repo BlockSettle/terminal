@@ -208,3 +208,9 @@ std::shared_ptr<Chat::OTCResponseData> ChatContactElement::getOTCResponse() cons
 {
    return otcResponse_;
 }
+
+void ChatContactElement::cleanupTrading()
+{
+   otcRequest_ = nullptr;
+   otcResponse_ = nullptr;
+}

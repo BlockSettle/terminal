@@ -11,6 +11,7 @@ CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)
    ui_->widgetPriceRange->SetRange(3000, 4000);
 
    connect(ui_->pushButtonSubmit, &QPushButton::pressed, this, &CreateOTCResponseWidget::OnCreateResponse);
+   connect(ui_->pushButtonPull, &QPushButton::pressed, this, &CreateOTCResponseWidget::ResponseRejected);
 }
 
 CreateOTCResponseWidget::~CreateOTCResponseWidget() = default;
@@ -54,10 +55,12 @@ void CreateOTCResponseWidget::OnCreateResponse()
 
 void CreateOTCResponseWidget::SetSide(const bs::network::ChatOTCSide::Type& side)
 {
-   if (side == bs::network::Side::Sell) {
+   if (side == bs::network::ChatOTCSide::Sell) {
       ui_->labelSide->setText(tr("Sell"));
-   } else {
+   } else if (side == bs::network::ChatOTCSide::Buy) {
       ui_->labelSide->setText(tr("Buy"));
+   } else {
+      ui_->labelSide->setText(tr("Undefined"));
    }
 }
 

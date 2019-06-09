@@ -28,7 +28,7 @@ namespace Chat {
       void messageDirectionUpdate() override;
 
    private:
-      static QString serializeResponseData(const bs::network::OTCResponse otcResponse);
+      static QString serializeResponseData(const bs::network::OTCResponse& otcResponse);
 
       void updateDisplayString();
 

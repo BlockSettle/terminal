@@ -7,10 +7,6 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 
-//const bs::network::OTCRequest& otcRequest
-// data[OTCRqSideKey] = static_cast<int>(otcRequest_.side);
-// data[OTCRqRangeIdKey] = static_cast<int>(otcRequest_.amountRange);
-
 namespace Chat
 {
    OTCResponseData::OTCResponseData(const QString &sender, const QString &receiver,
@@ -57,11 +53,11 @@ namespace Chat
       return otcResponse_;
    }
 
-   QString OTCResponseData::serializeResponseData(const bs::network::OTCResponse otcResponse)
+   QString OTCResponseData::serializeResponseData(const bs::network::OTCResponse& otcResponse)
    {
       QJsonObject data;
 
-      data[QLatin1String("raw_message_type")] = static_cast<int>(RawMessageDataType::OTCReqeust);
+      data[QLatin1String("raw_message_type")] = static_cast<int>(RawMessageDataType::OTCResponse);
 
       data[QLatin1String("price_low")] = static_cast<int>(otcResponse.priceRange.lower);
       data[QLatin1String("price_high")] = static_cast<int>(otcResponse.priceRange.upper);

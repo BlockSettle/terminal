@@ -33,7 +33,8 @@ namespace Chat {
          TextMessage,
          OTCReqeust,
          OTCResponse,
-         OTCUpdate
+         OTCUpdate,
+         OTCCloseTrading
       };
 
       enum class EncryptionType {

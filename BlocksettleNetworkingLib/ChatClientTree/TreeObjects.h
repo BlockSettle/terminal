@@ -47,6 +47,8 @@ public:
    std::shared_ptr<Chat::OTCRequestData>  getOTCRequest() const;
    std::shared_ptr<Chat::OTCResponseData> getOTCResponse() const;
 
+   void cleanupTrading();
+
 protected:
    void onChildAdded(TreeItem* item) override;
 private:

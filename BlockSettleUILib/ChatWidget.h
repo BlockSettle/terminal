@@ -89,6 +89,8 @@ private slots:
 
    // OTC UI slots
    void OnOTCRequestCreated();
+   void OnCreateResponse();
+   void OnCancelCurrentTrading();
 
    void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 

@@ -25,6 +25,11 @@ public:
    OTCNegotiationRequestWidget(OTCNegotiationRequestWidget&&) = delete;
    OTCNegotiationRequestWidget& operator = (OTCNegotiationRequestWidget&&) = delete;
 
+signals:
+   void TradeUpdated();
+   void TradeAccepted();
+   void TradeRejected();
+
 public:
    void DisplayResponse(const bs::network::Side::Type& side, const bs::network::OTCPriceRange& priceRange, const bs::network::OTCQuantityRange& amountRange);
 

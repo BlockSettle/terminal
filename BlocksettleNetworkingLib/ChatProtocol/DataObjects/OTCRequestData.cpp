@@ -7,10 +7,6 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 
-//const bs::network::OTCRequest& otcRequest
-// data[OTCRqSideKey] = static_cast<int>(otcRequest_.side);
-// data[OTCRqRangeIdKey] = static_cast<int>(otcRequest_.amountRange);
-
 namespace Chat
 {
    OTCRequestData::OTCRequestData(const QString &sender, const QString &receiver,

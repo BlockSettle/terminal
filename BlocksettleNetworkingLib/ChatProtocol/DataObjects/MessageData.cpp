@@ -1,13 +1,13 @@
 #include "MessageData.h"
 
 #include "../ProtocolDefinitions.h"
-
 #include "OTCRequestData.h"
+#include "OTCResponseData.h"
+#include "OTCUpdateData.h"
+#include "OTCCloseTradingData.h"
 
 #include <QDebug>
-//data[QString::fromLatin1("raw_message_type")] = static_cast<int>(rawType_);
-//rawType_ = static_cast<RawMessageDataType>(data[QString::fromLatin1("raw_message_type")]);
-//RawMessageDataType rawType = static_cast<RawMessageDataType>(data[QString::fromLatin1("raw_message_type")]);
+
 namespace Chat {
 
    QString MessageData::serializePayload()
@@ -267,6 +267,12 @@ namespace Chat {
          return std::make_shared<MessageData>(*this, jsonObject);
       case RawMessageDataType::OTCReqeust:
          return std::make_shared<OTCRequestData>(*this, jsonObject);
+      case RawMessageDataType::OTCResponse:
+         return std::make_shared<OTCResponseData>(*this, jsonObject);
+      case RawMessageDataType::OTCUpdate:
+         return std::make_shared<OTCUpdateData>(*this, jsonObject);
+      case RawMessageDataType::OTCCloseTrading:
+         return std::make_shared<OTCCloseTradingData>(*this, jsonObject);
       default:
          return nullptr;
       }

@@ -39,6 +39,7 @@ private slots:
 
 signals:
    void ResponseCreated();
+   void ResponseRejected();
 
 private:
    std::unique_ptr<Ui::CreateOTCResponseWidget> ui_;

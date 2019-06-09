@@ -271,6 +271,10 @@ ChatWidget::ChatWidget(QWidget *parent)
    qRegisterMetaType<std::vector<std::string>>();
 
    connect(ui_->widgetCreateOTCRequest, &CreateOTCRequestWidget::RequestCreated, this, &ChatWidget::OnOTCRequestCreated);
+   connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::ResponseCreated, this, &ChatWidget::OnCreateResponse);
+
+   connect(ui_->widgetPullOwnOTCRequest, &PullOwnOTCRequestWidget::PullOTCRequested, this, &ChatWidget::OnCancelCurrentTrading);
+   connect(ui_->widgetCreateOTCResponse, &CreateOTCResponseWidget::ResponseRejected, this, &ChatWidget::OnCancelCurrentTrading);
 }
 
 ChatWidget::~ChatWidget() = default;
@@ -671,6 +675,13 @@ void ChatWidget::OnOTCRequestCreated()
    }
 }
 
+void ChatWidget::OnCreateResponse()
+{}
+
+void ChatWidget::OnCancelCurrentTrading()
+{
+}
+
 void ChatWidget::SetOTCLoggedInState()
 {
    OTCSwitchToGlobalRoom();
@@ -732,8 +743,8 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
    }
 
    if (contact->getContactStatus() == Chat::ContactStatus::Accepted) {
+      auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
       if (onlineStatus) {
-         auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
          if (cNode->OTCTradingStarted()) {
             if (cNode->isOTCRequestor()) {
                if (cNode->haveUpdates()) {
@@ -773,6 +784,7 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
          }
       } else {
          ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactNetStatusShieldPage));
+         cNode->cleanupTrading();
       }
    } else {
       ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCContactShieldPage));
