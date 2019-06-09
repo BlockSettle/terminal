@@ -50,16 +50,10 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
    switch(messages_[currentChatId_][row]->getType()) {
       case Chat::DataObject::Type::MessageData:
          return dataMessage(row, column);
-      case Chat::DataObject::Type::OTCRequestData:{
-         std::shared_ptr<Chat::OTCRequestData> otc =
-               std::dynamic_pointer_cast<Chat::OTCRequestData>(messages_[currentChatId_][row]);
-         return dataOtcRequest(row, column, otc);
-      }
-      case Chat::DataObject::Type::OTCResponseData: {
-         std::shared_ptr<Chat::OTCResponseData> otc =
-               std::dynamic_pointer_cast<Chat::OTCResponseData>(messages_[currentChatId_][row]);
-         return dataOtcResponse(row, column, otc);
-      }
+      case Chat::DataObject::Type::OTCRequestData:
+         return dataOtcRequest(row, column);
+      case Chat::DataObject::Type::OTCResponseData:
+         return dataOtcResponse(row, column);
       default:
          return QLatin1String("[unk]");
    }
@@ -69,20 +63,6 @@ QString ChatMessagesTextEdit::dataMessage(const int &row, const ChatMessagesText
 {
    std::shared_ptr<Chat::MessageData> message =
          std::dynamic_pointer_cast<Chat::MessageData>(messages_[currentChatId_][row]);
-
-   switch (message->content()) {
-      case Chat::DataObject::Type::OTCRequestData: {
-          auto request = Chat::OTCRequestData::fromJSON(message->messageData().toStdString());
-         return dataOtcRequest(row, column, request);
-      }
-      case Chat::DataObject::Type::OTCResponseData: {
-         auto response = Chat::OTCResponseData::fromJSON(message->messageData().toStdString());
-         return dataOtcResponse(row, column, response);
-      }
-      default:
-         break;
-   }
-
    switch (column) {
       case Column::Time:
       {
@@ -161,8 +141,11 @@ QString ChatMessagesTextEdit::dataMessage(const int &row, const ChatMessagesText
    return QString();
 }
 
-QString ChatMessagesTextEdit::dataOtcRequest(const int &row, const ChatMessagesTextEdit::Column &column, std::shared_ptr<Chat::OTCRequestData> otc)
+QString ChatMessagesTextEdit::dataOtcRequest(const int &row, const ChatMessagesTextEdit::Column &column)
 {
+   std::shared_ptr<Chat::OTCRequestData> otc =
+         std::dynamic_pointer_cast<Chat::OTCRequestData>(messages_[currentChatId_][row]);
+
    switch (column) {
       case Column::Time:
       {
@@ -227,6 +210,10 @@ QString ChatMessagesTextEdit::dataOtcRequest(const int &row, const ChatMessagesT
       }
 
       case Column::Message: {
+
+         QString text = QLatin1String("[%1] %2");
+         text = text.arg(QString::fromStdString(otc->serverRequestId()).chopped(5).append(QLatin1String("...")));
+
          QString display;
 
          if(otc->requestorId() == ownUserId_.toStdString()){
@@ -255,8 +242,11 @@ QString ChatMessagesTextEdit::dataOtcRequest(const int &row, const ChatMessagesT
    return QString();
 }
 
-QString ChatMessagesTextEdit::dataOtcResponse(const int &row, const ChatMessagesTextEdit::Column &column, std::shared_ptr<Chat::OTCResponseData> otc)
+QString ChatMessagesTextEdit::dataOtcResponse(const int &row, const ChatMessagesTextEdit::Column &column)
 {
+   std::shared_ptr<Chat::OTCResponseData> otc =
+         std::dynamic_pointer_cast<Chat::OTCResponseData>(messages_[currentChatId_][row]);
+
    switch (column) {
       case Column::Time:
       {
@@ -321,6 +311,10 @@ QString ChatMessagesTextEdit::dataOtcResponse(const int &row, const ChatMessages
       }
 
       case Column::Message: {
+
+         QString text = QLatin1String("[%1] %2");
+         text = text.arg(QString::fromStdString(otc->serverResponseId()).chopped(5).append(QLatin1String("...")));
+
          QString display;
 
          if(otc->responderId() == ownUserId_.toStdString()){

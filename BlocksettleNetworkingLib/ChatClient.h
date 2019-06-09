@@ -137,8 +137,6 @@ public:
 
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
-
-   std::shared_ptr<Chat::MessageData> sendOwnMessage(const std::shared_ptr<Chat::DataObject> data, const QString &receiver);
    std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
          const QString& message, const QString &receiver);
 
@@ -313,10 +311,6 @@ public:
 private:
    std::string GetNextOTCId();
    std::string GetNextResponseId();
-
-   std::shared_ptr<Chat::MessageData> sendOwnMessagePrivate(const QString& message,
-                                                            Chat::DataObject::Type content,
-                                                            const QString& receiver);
 
 private:
    // OTC temp fields. will be removed after OTC goes through chat server

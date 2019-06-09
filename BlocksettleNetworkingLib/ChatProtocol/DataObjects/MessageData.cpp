@@ -8,10 +8,8 @@ namespace Chat {
 
    const size_t NONCE_SIZE = 24;
 
-   MessageData::MessageData(const QString &senderId, const QString &receiverId,
-                            const QString &id, const QDateTime &dateTime,
-                            const QString &messageData, DataObject::Type content,
-                            int state)
+   MessageData::MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime,
+      const QString& messageData, int state)
       : DataObject(DataObject::Type::MessageData),
       id_(id),
       senderId_(senderId),
@@ -19,39 +17,19 @@ namespace Chat {
       dateTime_(dateTime),
       messageData_(messageData),
       state_(state),
-      encryptionType_(EncryptionType::Unencrypted),
-      content_(content)
-   {
-   }
-
-   MessageData::MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime,
-      const QString& messageData, int state)
-      : MessageData(senderId, receiverId, id, dateTime, messageData, Type::MessageData, state)
-   {
-   }
-
-   MessageData::MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime,
-      const std::shared_ptr<DataObject>& data, int state)
-      : MessageData(senderId, receiverId, id, dateTime,
-                    QString::fromStdString(data->toJsonString()), data->getType(),
-                    state)
+      encryptionType_(EncryptionType::Unencrypted)
    {
    }
 
    void MessageData::setMessageData(const QString& messageData)
    {
-      setMessageData(messageData, Type::MessageData);
-   }
-
-   void MessageData::setMessageData(const std::shared_ptr<DataObject> &data)
-   {
-      setMessageData(QString::fromStdString(data->toJsonString()), data->getType());
+      messageData_ = messageData;
    }
 
    QJsonObject MessageData::toJson() const
    {
       QJsonObject data = DataObject::toJson();
-      data[MessageContentTypeKey] = static_cast<int>(content_);
+
       data[SenderIdKey] = senderId_;
       data[ReceiverIdKey] = receiverId_;
       data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
@@ -79,9 +57,6 @@ namespace Chat {
    {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-      Type content = static_cast<Type>(data[MessageContentTypeKey].toInt(
-                                          static_cast<int>(Type::MessageData)));
-
       QString senderId = data[SenderIdKey].toString();
       QString receiverId = data[ReceiverIdKey].toString();
       QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
@@ -91,7 +66,7 @@ namespace Chat {
       QByteArray local_nonce = QByteArray::fromBase64(data[Nonce].toString().toLocal8Bit());
       Botan::SecureVector<uint8_t> nonce(local_nonce.begin(), local_nonce.end());
 
-      std::shared_ptr<MessageData> msg = std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, content, state);
+      std::shared_ptr<MessageData> msg = std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
       msg->setNonce(nonce);
       msg->setEncryptionType(static_cast<EncryptionType>(data[EncryptionTypeKey].toInt()));
       return msg;
@@ -148,15 +123,4 @@ namespace Chat {
    {
       encryptionType_ = type;
    }
-
-   void MessageData::setMessageData(const QString &messageData, DataObject::Type content)
-   {
-      messageData_ = messageData;
-      content_ = content;
-   }
-
-   DataObject::Type MessageData::content() const
-   {
-      return content_;
-   }
-   }
+}
