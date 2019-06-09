@@ -48,14 +48,15 @@ void OTCNegotiationResponseWidget::DisplayResponse(const std::shared_ptr<Chat::O
    ui_->spinBoxQuantity->setMinimum(amountRange.lower);
    ui_->spinBoxQuantity->setMaximum(amountRange.upper);
    ui_->spinBoxQuantity->setValue(amountRange.lower);
+
+   changed_ = false;
 }
 
 void OTCNegotiationResponseWidget::SetUpdateData(const std::shared_ptr<Chat::OTCUpdateData>& update
                                                 , const std::shared_ptr<Chat::OTCResponseData>& initialResponse)
 {
-   changed_ = false;
-
    DisplayResponse(initialResponse);
+
    ui_->spinBoxOffer->setValue(update->otcUpdate().price);
    ui_->spinBoxQuantity->setValue(update->otcUpdate().amount);
 
