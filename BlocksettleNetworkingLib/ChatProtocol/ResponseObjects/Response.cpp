@@ -4,66 +4,72 @@
 
 using namespace Chat;
 
-#include "HeartbeatPongResponse.h"
-#include "UsersListResponse.h"
-#include "MessagesResponse.h"
 #include "AskForPublicKeyResponse.h"
-#include "SendOwnPublicKeyResponse.h"
-#include "LoginResponse.h"
-#include "SendMessageResponse.h"
-#include "MessageChangeStatusResponse.h"
+#include "ChatroomsListResponse.h"
 #include "ContactsActionResponseDirect.h"
 #include "ContactsActionResponseServer.h"
-#include "ChatroomsListResponse.h"
-#include "PendingMessagesResponse.h"
-#include "RoomMessagesResponse.h"
 #include "ContactsListResponse.h"
-#include "SearchUsersResponse.h"
+#include "HeartbeatPongResponse.h"
+#include "LoginResponse.h"
 #include "LogoutResponse.h"
+#include "MessageChangeStatusResponse.h"
+#include "MessagesResponse.h"
+#include "PendingMessagesResponse.h"
+#include "ReplySessionPublicKeyResponse.h"
+#include "RoomMessagesResponse.h"
+#include "SearchUsersResponse.h"
+#include "SendMessageResponse.h"
+#include "SendOwnPublicKeyResponse.h"
+#include "SessionPublicKeyResponse.h"
+#include "UsersListResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-       { "ResponseError"               ,   ResponseType::ResponseError               }
-   ,   { "ResponseHeartbeatPong"       ,   ResponseType::ResponseHeartbeatPong       }
-   ,   { "ResponseLogin"               ,   ResponseType::ResponseLogin               }
-   ,   { "ResponseMessages"            ,   ResponseType::ResponseMessages            }
-   ,   { "ResponseSuccess"             ,   ResponseType::ResponseSuccess             }
-   ,   { "ResponseUsersList"           ,   ResponseType::ResponseUsersList           }
-   ,   { "ResponseAskForPublicKey"     ,   ResponseType::ResponseAskForPublicKey     }
-   ,   { "ResponseSendOwnPublicKey"    ,   ResponseType::ResponseSendOwnPublicKey    }
-   ,   { "ResponsePendingMessage"      ,   ResponseType::ResponsePendingMessage      }
-   ,   { "ResponseSendMessage"         ,   ResponseType::ResponseSendMessage         }
-   ,   { "ResponseChangeMessageStatus" ,   ResponseType::ResponseChangeMessageStatus }
-   ,   { "ResponseContactsActionDirect",   ResponseType::ResponseContactsActionDirect}
-   ,   { "ResponseContactsActionServer",   ResponseType::ResponseContactsActionServer}
-   ,   { "ResponseChatroomsList"       ,   ResponseType::ResponseChatroomsList       }
-   ,   { "ResponseRoomMessages"        ,   ResponseType::ResponseRoomMessages        }
-   ,   { "ResponseContactsList"        ,   ResponseType::ResponseContactsList        }
-   ,   { "ResponseSearchUsers"         ,   ResponseType::ResponseSearchUsers         }
-   ,   { "ResponseLogout"              ,   ResponseType::ResponseLogout              }
+   { "ResponseError"                   ,   ResponseType::ResponseError                    },
+   { "ResponseHeartbeatPong"           ,   ResponseType::ResponseHeartbeatPong            },
+   { "ResponseLogin"                   ,   ResponseType::ResponseLogin                    },
+   { "ResponseMessages"                ,   ResponseType::ResponseMessages                 },
+   { "ResponseSuccess"                 ,   ResponseType::ResponseSuccess                  },
+   { "ResponseUsersList"               ,   ResponseType::ResponseUsersList                },
+   { "ResponseAskForPublicKey"         ,   ResponseType::ResponseAskForPublicKey          },
+   { "ResponseSendOwnPublicKey"        ,   ResponseType::ResponseSendOwnPublicKey         },
+   { "ResponsePendingMessage"          ,   ResponseType::ResponsePendingMessage           },
+   { "ResponseSendMessage"             ,   ResponseType::ResponseSendMessage              },
+   { "ResponseChangeMessageStatus"     ,   ResponseType::ResponseChangeMessageStatus      },
+   { "ResponseContactsActionDirect"    ,   ResponseType::ResponseContactsActionDirect     },
+   { "ResponseContactsActionServer"    ,   ResponseType::ResponseContactsActionServer     },
+   { "ResponseChatroomsList"           ,   ResponseType::ResponseChatroomsList            },
+   { "ResponseRoomMessages"            ,   ResponseType::ResponseRoomMessages             },
+   { "ResponseContactsList"            ,   ResponseType::ResponseContactsList             },
+   { "ResponseSearchUsers"             ,   ResponseType::ResponseSearchUsers              },
+   { "ResponseLogout"                  ,   ResponseType::ResponseLogout                   },
+   { "ResponseSessionPublicKey"        ,   ResponseType::ResponseSessionPublicKey         },
+   { "ResponseReplySessionPublicKey"   ,   ResponseType::ResponseReplySessionPublicKey    }
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-       { ResponseType::ResponseError               ,  "ResponseError"               }
-   ,   { ResponseType::ResponseHeartbeatPong       ,  "ResponseHeartbeatPong"       }
-   ,   { ResponseType::ResponseLogin               ,  "ResponseLogin"               }
-   ,   { ResponseType::ResponseMessages            ,  "ResponseMessages"            }
-   ,   { ResponseType::ResponseSuccess             ,  "ResponseSuccess"             }
-   ,   { ResponseType::ResponseUsersList           ,  "ResponseUsersList"           }
-   ,   { ResponseType::ResponseAskForPublicKey     ,  "ResponseAskForPublicKey"     }
-   ,   { ResponseType::ResponseSendOwnPublicKey    ,  "ResponseSendOwnPublicKey"    }
-   ,   { ResponseType::ResponsePendingMessage      ,  "ResponsePendingMessage"      }
-   ,   { ResponseType::ResponseSendMessage         ,  "ResponseSendMessage"         }
-   ,   { ResponseType::ResponseChangeMessageStatus ,  "ResponseChangeMessageStatus" }
-   ,   { ResponseType::ResponseContactsActionDirect,  "ResponseContactsActionDirect"}
-   ,   { ResponseType::ResponseContactsActionServer,  "ResponseContactsActionServer"}
-   ,   { ResponseType::ResponseChatroomsList       ,  "ResponseChatroomsList"       }
-   ,   { ResponseType::ResponseRoomMessages        ,  "ResponseRoomMessages"        }
-   ,   { ResponseType::ResponseContactsList        ,  "ResponseContactsList"        }
-   ,   { ResponseType::ResponseSearchUsers         ,  "ResponseSearchUsers"         }
-   ,   { ResponseType::ResponseLogout              ,  "ResponseLogout"              }
+   { ResponseType::ResponseError                   ,  "ResponseError"                  },
+   { ResponseType::ResponseHeartbeatPong           ,  "ResponseHeartbeatPong"          },
+   { ResponseType::ResponseLogin                   ,  "ResponseLogin"                  },
+   { ResponseType::ResponseMessages                ,  "ResponseMessages"               },
+   { ResponseType::ResponseSuccess                 ,  "ResponseSuccess"                },
+   { ResponseType::ResponseUsersList               ,  "ResponseUsersList"              },
+   { ResponseType::ResponseAskForPublicKey         ,  "ResponseAskForPublicKey"        },
+   { ResponseType::ResponseSendOwnPublicKey        ,  "ResponseSendOwnPublicKey"       },
+   { ResponseType::ResponsePendingMessage          ,  "ResponsePendingMessage"         },
+   { ResponseType::ResponseSendMessage             ,  "ResponseSendMessage"            },
+   { ResponseType::ResponseChangeMessageStatus     ,  "ResponseChangeMessageStatus"    },
+   { ResponseType::ResponseContactsActionDirect    ,  "ResponseContactsActionDirect"   },
+   { ResponseType::ResponseContactsActionServer    ,  "ResponseContactsActionServer"   },
+   { ResponseType::ResponseChatroomsList           ,  "ResponseChatroomsList"          },
+   { ResponseType::ResponseRoomMessages            ,  "ResponseRoomMessages"           },
+   { ResponseType::ResponseContactsList            ,  "ResponseContactsList"           },
+   { ResponseType::ResponseSearchUsers             ,  "ResponseSearchUsers"            },
+   { ResponseType::ResponseLogout                  ,  "ResponseLogout"                 },
+   { ResponseType::ResponseSessionPublicKey        ,  "ResponseSessionPublicKey"       },
+   { ResponseType::ResponseReplySessionPublicKey   ,  "ResponseReplySessionPublicKey"  }
 };
 
 template <typename T>
@@ -143,6 +149,12 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseLogout:
          return std::make_shared<LogoutResponse>();
+
+      case ResponseType::ResponseSessionPublicKey:
+         return SessionPublicKeyResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseReplySessionPublicKey:
+         return ReplySessionPublicKeyResponse::fromJSON(jsonData);
 
       default:
          break;

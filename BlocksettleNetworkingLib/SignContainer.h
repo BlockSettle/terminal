@@ -73,12 +73,12 @@ public:
    virtual bool Disconnect() { return true; }
 
    virtual bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
+      , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) = 0;
    virtual bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, const PasswordType& password = {}) = 0;
+      , const PasswordType& password = {}) = 0;
    virtual bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &
-      , const bs::Address &authAddr, const std::string &settlementId, bool autoSign = false
+      , const bs::Address &authAddr, const std::string &settlementId
       , const PasswordType& password = {}) = 0;
 
    virtual bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) = 0;
@@ -97,7 +97,7 @@ public:
    virtual bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) = 0;
    virtual bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) = 0;
    virtual bs::signer::RequestId GetInfo(const std::string &rootWalletId) = 0;
-   virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
+   //virtual void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) = 0;
    virtual void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) {}
    virtual bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog
       , const QVariantMap &data = QVariantMap()) = 0;
@@ -130,7 +130,7 @@ signals:
    void connectionError(ConnectionError error, const QString &details);
    void ready();
    void Error(bs::signer::RequestId id, std::string error);
-   void TXSigned(bs::signer::RequestId id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void TXSigned(bs::signer::RequestId id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason = {});
 
    void PasswordRequested(bs::hd::WalletInfo walletInfo, std::string prompt);
 
@@ -141,7 +141,7 @@ signals:
    void QWalletInfo(unsigned int id, const bs::hd::WalletInfo &);
    void UserIdSet();
    void PasswordChanged(const std::string &walletId, bool success);
-   void AutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
+   void AutoSignStateChanged(const std::string &walletId, bool active);
    // Notified from remote/local signer when wallets list is updated
    void walletsListUpdated();
 

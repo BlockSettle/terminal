@@ -1,5 +1,5 @@
-#ifndef LOGOUTRESPONSE_H
-#define LOGOUTRESPONSE_H
+#ifndef LogoutResponse_h__
+#define LogoutResponse_h__
 
 #include "Response.h"
 
@@ -13,4 +13,4 @@ namespace Chat {
    };
 }
 
-#endif // LOGOUTRESPONSE_H
+#endif // LogoutResponse_h__

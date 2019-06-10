@@ -1,4 +1,6 @@
-#pragma once
+#ifndef RoomData_h__
+#define RoomData_h__
+
 #include "DataObject.h"
 
 namespace Chat {
@@ -68,3 +70,5 @@ namespace Chat {
    using RoomDataPtr = std::shared_ptr<RoomData>;
    using RoomDataListPtr = QList<RoomDataPtr>;
 }
+
+#endif // RoomData_h__

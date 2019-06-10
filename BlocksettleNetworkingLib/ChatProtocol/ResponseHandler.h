@@ -1,22 +1,25 @@
-#pragma once
+#ifndef ResponseHandler_h__
+#define ResponseHandler_h__
 
 namespace Chat {
-   class HeartbeatPongResponse;
-   class UsersListResponse;
-   class MessagesResponse;
    class AskForPublicKeyResponse;
-   class SendOwnPublicKeyResponse;
-   class LoginResponse;
-   class SendMessageResponse;
-   class MessageChangeStatusResponse;
+   class ChatroomsListResponse;
    class ContactsActionResponseDirect;
    class ContactsActionResponseServer;
    class ContactsListResponse;
-   class ChatroomsListResponse;
-   class SendRoomMessageResponse;
+   class HeartbeatPongResponse;
+   class LoginResponse;
+   class LogoutResponse;
+   class MessageChangeStatusResponse;
+   class MessagesResponse;
+   class ReplySessionPublicKeyResponse;
    class RoomMessagesResponse;
    class SearchUsersResponse;
-   class LogoutResponse;
+   class SendMessageResponse;
+   class SendOwnPublicKeyResponse;
+   class SendRoomMessageResponse;
+   class SessionPublicKeyResponse;
+   class UsersListResponse;
 
    class ResponseHandler
    {
@@ -45,5 +48,10 @@ namespace Chat {
       virtual void OnRoomMessages(const RoomMessagesResponse&) = 0;
 
       virtual void OnSearchUsersResponse(const SearchUsersResponse&) = 0;
+
+      virtual void OnSessionPublicKeyResponse(const SessionPublicKeyResponse&) = 0;
+      virtual void OnReplySessionPublicKeyResponse(const ReplySessionPublicKeyResponse&) = 0;
    };
 }
+
+#endif // ResponseHandler_h__

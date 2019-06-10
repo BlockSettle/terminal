@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MessageData_h__
+#define MessageData_h__
 
 #include "DataObject.h"
 #include <memory>
@@ -146,3 +147,5 @@ namespace Chat {
       bool loadedFromHistory_ = false;
    };
 }
+
+#endif // MessageData_h__

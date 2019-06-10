@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MessageChangeStatusRequest_h__
+#define MessageChangeStatusRequest_h__
 
 #include "Request.h"
 
@@ -20,3 +21,5 @@ namespace Chat {
       int messageState_;
    };
 }
+
+#endif // MessageChangeStatusRequest_h__

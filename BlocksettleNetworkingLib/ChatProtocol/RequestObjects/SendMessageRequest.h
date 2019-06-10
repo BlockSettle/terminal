@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SendMessageRequest_h__
+#define SendMessageRequest_h__
 
 #include "Request.h"
 
@@ -18,3 +19,5 @@ namespace Chat {
       std::string messageData_;
    };
 }
+
+#endif // SendMessageRequest_h__

@@ -1,6 +1,11 @@
-#pragma once
+#ifndef SendOwnPublicKeyResponse_h__
+#define SendOwnPublicKeyResponse_h__
 
 #include "Response.h"
+
+#include <disable_warnings.h>
+#include <BinaryData.h>
+#include <enable_warnings.h>
 
 namespace Chat {
    
@@ -13,7 +18,7 @@ namespace Chat {
       SendOwnPublicKeyResponse(
          const std::string& receivingNodeId,
          const std::string& sendingNodeId,
-         const autheid::PublicKey& sendingNodePublicKey);
+         const BinaryData& sendingNodePublicKey);
 
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(
@@ -23,12 +28,14 @@ namespace Chat {
 
       const std::string& getReceivingNodeId() const;
       const std::string& getSendingNodeId() const;
-      const autheid::PublicKey& getSendingNodePublicKey() const;
+      const BinaryData& getSendingNodePublicKey() const;
 
    private:
       std::string receivingNodeId_;
       std::string sendingNodeId_;
-      autheid::PublicKey sendingNodePublicKey_;
+      BinaryData sendingNodePublicKey_;
    };
    
 }
+
+#endif // SendOwnPublicKeyResponse_h__

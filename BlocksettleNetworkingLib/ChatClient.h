@@ -9,6 +9,7 @@
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "Encryption/ChatSessionKey.h"
 
 #include <queue>
 #include <unordered_set>
@@ -75,6 +76,10 @@ public:
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
 
+
+   void OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse&) override;
+   void OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse&) override;
+
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
    void OnDisconnected() override;
@@ -119,10 +124,10 @@ public:
    std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
    QString getUserId();
 
-
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
    void readDatabase();
+   bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey);
 
    std::shared_ptr<Chat::MessageData> sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& message
                                                              , const QString &receiver);
@@ -166,11 +171,14 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
 
-   std::unique_ptr<ChatDB>                   chatDb_;
-   std::map<QString, autheid::PublicKey>     pubKeys_;
-   std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
-   std::shared_ptr<UserHasher>               hasher_;
-   std::map<QString, Botan::SecureVector<uint8_t>>   userNonces_;
+   std::unique_ptr<ChatDB>                                     chatDb_;
+   std::map<QString, BinaryData>                               contactPublicKeys_;
+
+   Chat::ChatSessionKeyPtr  chatSessionKeyPtr_;
+
+   std::shared_ptr<ZmqBIP15XDataConnection>                    connection_;
+   std::shared_ptr<UserHasher>                                 hasher_;
+   std::map<QString, Botan::SecureVector<uint8_t>>             userNonces_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
    using messages_queue = std::queue<std::shared_ptr<Chat::MessageData> >;
@@ -209,8 +217,5 @@ public:
 public:
    void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
 };
-
-
-
 
 #endif   // CHAT_CLIENT_H

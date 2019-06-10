@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MessageChangeStatusResponse_h__
+#define MessageChangeStatusResponse_h__
 
 #include "Response.h"
 
@@ -23,3 +24,5 @@ namespace Chat {
    };
    
 }
+
+#endif // MessageChangeStatusResponse_h__

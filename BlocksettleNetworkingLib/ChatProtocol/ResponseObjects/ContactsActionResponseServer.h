@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ContactsActionResponseServer_h__
+#define ContactsActionResponseServer_h__
 
 #include "Response.h"
 
@@ -28,3 +29,5 @@ namespace Chat {
    };
    
 }
+
+#endif // ContactsActionResponseServer_h__

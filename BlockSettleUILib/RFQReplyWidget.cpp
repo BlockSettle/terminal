@@ -281,8 +281,12 @@ void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
    if (!hdWallet) {
       return;
    }
-   if (signingContainer_->isReady()) {
-      signingContainer_->setLimits(hdWallet->walletId(), {}, active);
+
+
+   if (signingContainer_->isReady()) {      
+      // not implemented yet
+      signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign
+         , {{ QLatin1String("rootId"), hdWalletId }});
    }
 }
 

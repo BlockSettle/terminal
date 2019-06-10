@@ -1,5 +1,5 @@
-#ifndef SEARCHUSERSREQUEST_H
-#define SEARCHUSERSREQUEST_H
+#ifndef SearchUsersRequest_h__
+#define SearchUsersRequest_h__
 
 #include "Request.h"
 
@@ -23,4 +23,4 @@ namespace Chat {
     };
 }
 
-#endif // SEARCHUSERSREQUEST_H
+#endif // SearchUsersRequest_h__

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UsersListResponse_h__
+#define UsersListResponse_h__
 
 #include "ListResponse.h"
 
@@ -23,3 +24,5 @@ namespace Chat {
    };
 
 }
+
+#endif // UsersListResponse_h__

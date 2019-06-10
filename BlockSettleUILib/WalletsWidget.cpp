@@ -654,16 +654,15 @@ void WalletsWidget::onRevokeSettlement()
    settlWallet->getInputFor(ae, cbSettlInput, false);
 }
 
-void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX,
-   std::string error, bool cancelledByUser)
+void WalletsWidget::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)
 {
    if (!revokeReqId_ || (revokeReqId_ != id)) {
       return;
    }
    revokeReqId_ = 0;
    const auto &title = tr("Settlement Revoke");
-   if (!error.empty()) {
-      BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), QString::fromStdString(error)).exec();
+   if (result != bs::error::ErrorCode::NoError) {
+      BSMessageBox(BSMessageBox::critical, title, tr("Failed to sign revoke pay-out"), bs::error::ErrorCodeToString(result)).exec();
       return;
    }
 
