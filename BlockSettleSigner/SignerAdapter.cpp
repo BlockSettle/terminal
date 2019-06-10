@@ -76,7 +76,7 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
 void SignerAdapter::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
    , const SecureBinaryData &password, const std::function<void(const BinaryData &)> &cb)
 {
-   const auto reqId = signContainer_->signTXRequest(txReq, false, SignContainer::TXSignMode::Full, password, true);
+   const auto reqId = signContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full, password, true);
    listener_->setTxSignCb(reqId, cb);
 }
 
@@ -209,9 +209,9 @@ void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::fun
 }
 
 void SignerAdapter::changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-     , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
-     , bool addNew, bool removeOld, bool dryRun
-     , const std::function<void(bool)> &cb)
+   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
+   , bool addNew, bool removeOld, bool dryRun
+   , const std::function<void(bool)> &cb)
 {
    if (walletId.empty()) {
       logger_->error("[HeadlessContainer] no walletId for ChangePassword");
@@ -238,19 +238,19 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
    listener_->setChangePwCb(reqId, cb);
 }
 
-void SignerAdapter::addPendingAutoSignReq(const std::string &walletId)
+void SignerAdapter::activateAutoSign(const std::string &walletId
+   , bs::wallet::QPasswordData *passwordData
+   , bool activate
+   , const std::function<void(bs::error::ErrorCode errorCode)> &cb)
 {
-   signer::AutoSignActEvent request;
-   request.set_activated(true);
-   request.set_wallet_id(walletId);
-   listener_->send(signer::AutoSignActType, request.SerializeAsString());
-}
-
-void SignerAdapter::deactivateAutoSign()
-{
-   signer::AutoSignActEvent request;
-   request.set_activated(false);
-   listener_->send(signer::AutoSignActType, request.SerializeAsString());
+   signer::AutoSignActRequest request;
+   request.set_rootwalletid(walletId);
+   if (passwordData) {
+      request.set_password(passwordData->binaryPassword().toBinStr());
+   }
+   request.set_activateautosign(activate);
+   const auto reqId = listener_->send(signer::AutoSignActType, request.SerializeAsString());
+   listener_->setAutoSignCb(reqId, cb);
 }
 
 void SignerAdapter::walletsListUpdated()

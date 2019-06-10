@@ -25,13 +25,13 @@ public:
    {}
    ~SignAdapterContainer() noexcept = default;
 
-   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
    , bool keepDuplicatedRecipients = false) override;
    bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, const PasswordType& password = {}) override { return 0; }
+      , const PasswordType& password = {}) override { return 0; }
    bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override {
+      , const std::string &settlementId, const PasswordType& password = {}) override {
       return 0;
    }
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
@@ -50,7 +50,7 @@ public:
    bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
    bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
-   void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
+   //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
 
    void syncWalletInfo(const std::function<void(std::vector<bs::sync::WalletInfo>)> &) override;
