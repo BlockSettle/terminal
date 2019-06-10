@@ -17,19 +17,16 @@ public:
    PullOwnOTCRequestWidget(QWidget* parent = nullptr );
    ~PullOwnOTCRequestWidget() noexcept override;
 
-   void DisplayActiveOTC(const std::shared_ptr<Chat::OTCRequestData>& otc);
-   void DisplaySubmittedOTC(const bs::network::OTCRequest& otc);
+   void setRequestData(const std::shared_ptr<Chat::OTCRequestData>& otc);
 
 private slots:
    void OnPullPressed();
 
 signals:
-   void PullOTCRequested(const QString& otcId);
+   void PullOTCRequested();
 
 private:
    std::unique_ptr<Ui::PullOwnOTCRequestWidget> ui_;
-
-   std::string currentOtcId_;
 };
 
 #endif // __PULL_OWN_OTC_REQUEST_WIDGET_H__

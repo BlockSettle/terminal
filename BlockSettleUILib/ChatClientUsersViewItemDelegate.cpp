@@ -31,10 +31,6 @@ void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptio
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
       case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
          return paintUserElement(painter, option, index);
-      case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
-         return paintOTCReceivedResponsesElement(painter, option, index);
-      case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:
-         return paintOTCSentResponsesElement(painter, option, index);
       default:
          return QStyledItemDelegate::paint(painter, option, index);
    }
@@ -145,22 +141,6 @@ void ChatClientUsersViewItemDelegate::paintUserElement(QPainter *painter, const 
          break;
    }
    itemOption.text = index.data(Role::UserIdRole).toString();
-   QStyledItemDelegate::paint(painter, itemOption, index);
-}
-
-void ChatClientUsersViewItemDelegate::paintOTCReceivedResponsesElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-   QStyleOptionViewItem itemOption(option);
-
-   itemOption.text = tr("Received OTC");
-   QStyledItemDelegate::paint(painter, itemOption, index);
-}
-
-void ChatClientUsersViewItemDelegate::paintOTCSentResponsesElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-{
-   QStyleOptionViewItem itemOption(option);
-
-   itemOption.text = tr("Sent OTC");
    QStyledItemDelegate::paint(painter, itemOption, index);
 }
 

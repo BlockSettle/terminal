@@ -13,6 +13,8 @@
 #include "CommonTypes.h"
 #include "WalletEncryption.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "BSErrorCode.h"
+#include "BSErrorCodeStrings.h"
 
 #include "bs_communication.pb.h"
 
@@ -100,7 +102,7 @@ private slots:
    void VerifyWalletAddresses();
    void onAuthWalletChanged();
    void authAddressAdded();
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string error, bool cancelledByUser);
+   void onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason);
    void onWalletCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &);
    void onWalletFailed(unsigned int id, std::string errMsg);
 

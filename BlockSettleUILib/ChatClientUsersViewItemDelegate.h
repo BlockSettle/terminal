@@ -23,8 +23,6 @@ protected:
    void paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const ;
    void paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
    void paintUserElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
-   void paintOTCReceivedResponsesElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
-   void paintOTCSentResponsesElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
 private:
    ChatUsersViewItemStyle itemStyle_;

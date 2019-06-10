@@ -4,7 +4,7 @@ namespace Chat {
    SendOwnPublicKeyResponse::SendOwnPublicKeyResponse(
          const std::string& receivingNodeId,
          const std::string& sendingNodeId,
-         const autheid::PublicKey& sendingNodePublicKey)
+         const BinaryData& sendingNodePublicKey)
       : Response(ResponseType::ResponseSendOwnPublicKey)
       , receivingNodeId_(receivingNodeId)
       , sendingNodeId_(sendingNodeId)
@@ -18,8 +18,7 @@ namespace Chat {
    
       data[SenderIdKey] = QString::fromStdString(sendingNodeId_);
       data[ReceiverIdKey] = QString::fromStdString(receivingNodeId_);
-      data[PublicKeyKey] = QString::fromStdString(
-         publicKeyToString(sendingNodePublicKey_));
+      data[PublicKeyKey] = QString::fromStdString(sendingNodePublicKey_.toHexStr());
       return data;
    }
    
@@ -31,7 +30,7 @@ namespace Chat {
       return std::make_shared<SendOwnPublicKeyResponse>(
          data[SenderIdKey].toString().toStdString(),
          data[ReceiverIdKey].toString().toStdString(), 
-         publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+         BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString()));
    }
    
    void SendOwnPublicKeyResponse::handle(ResponseHandler& handler)
@@ -47,7 +46,7 @@ namespace Chat {
       return sendingNodeId_;
    }
    
-   const autheid::PublicKey& SendOwnPublicKeyResponse::getSendingNodePublicKey() const {
+   const BinaryData& SendOwnPublicKeyResponse::getSendingNodePublicKey() const {
       return sendingNodePublicKey_;
    }
 }

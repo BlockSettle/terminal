@@ -46,13 +46,13 @@ public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
    ~HeadlessContainer() noexcept override = default;
 
-   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) override;
    bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, const PasswordType& password = {}) override;
+      , const PasswordType& password = {}) override;
    bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override;
+      , const std::string &settlementId, const PasswordType& password = {}) override;
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
@@ -70,7 +70,7 @@ public:
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override;
-   void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override;
+   //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override;
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
 
    void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) override;
@@ -96,7 +96,7 @@ protected:
    void ProcessCreateHDWalletResponse(unsigned int id, const std::string &data);
    bs::signer::RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
    void ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data);
-   void ProcessSetLimitsResponse(unsigned int id, const std::string &data);
+   void ProcessAutoSignActEvent(unsigned int id, const std::string &data);
    void ProcessSyncWalletInfo(unsigned int id, const std::string &data);
    void ProcessSyncHDWallet(unsigned int id, const std::string &data);
    void ProcessSyncWallet(unsigned int id, const std::string &data);
@@ -145,7 +145,7 @@ public:
    void setTargetDir(const QString& targetDir) override;
    QString targetDir() const override;
 
-   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
    , bool keepDuplicatedRecipients = false) override;
 

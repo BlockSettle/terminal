@@ -56,9 +56,8 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
       return false;
    }
    switch (item->getType()) {
-   case NodeType::RootNode: {
+   case NodeType::RootNode:
       return true;
-   }
    case NodeType::CategoryGroupNode:
       return item->getChildren().size() > 0;
    case NodeType::SearchElement:
@@ -66,10 +65,7 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
    case NodeType::RoomsElement:
    case NodeType::ContactsElement:
    case NodeType::AllUsersElement:
-   case NodeType::OTCReceivedResponsesElement:
-   case NodeType::OTCSentResponsesElement: {
       return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
-   }
    default:
       return false;
    }
@@ -79,7 +75,7 @@ bool ChatTreeModelWrapper::lessThan(const QModelIndex &left, const QModelIndex &
 {
    auto leftNodeType = left.data(Role::ItemTypeRole).value<NodeType>();
    auto rightNodeType = right.data(Role::ItemTypeRole).value<NodeType>();
-   
+
    // sort contact list by online status
    if (leftNodeType == NodeType::ContactsElement && rightNodeType == NodeType::ContactsElement) {
 

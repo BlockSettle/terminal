@@ -36,12 +36,6 @@ public:
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
 
-   // insert channel for response that client send to OTC requests
-   bool insertOTCSentResponseObject(const std::shared_ptr<Chat::OTCResponseData>& response);
-
-   // insert channel for response client receive for own OTC
-   bool insertOTCReceivedResponseObject(const std::shared_ptr<Chat::OTCResponseData> &response);
-
 private:
    bool insertMessageNode(DisplayableDataNode *messageNode);
    bool insertNode(TreeItem* item);

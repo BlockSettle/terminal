@@ -40,7 +40,9 @@ ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlo
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
    connect(signContainer_.get(), &SignContainer::QWalletInfo, this, &ReqXBTSettlementContainer::onWalletInfo);
-   connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
+
+   // FIXME: Settlement containers will be reimplemented to use another function
+   //connect(signContainer_.get(), &SignContainer::TXSigned, this, &ReqXBTSettlementContainer::onTXSigned);
 
    connect(this, &ReqXBTSettlementContainer::timerExpired, this, &ReqXBTSettlementContainer::onTimerExpired);
 
@@ -70,7 +72,7 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
       const auto authAddr = bs::Address::fromPubKey(userKey_, AddressEntryType_P2WPKH);
       logger_->debug("[ReqXBTSettlementContainer] pay-out fee={}, payin hash={}", txReq.fee, payinHash.toHexStr(true));
 
-      return signContainer_->signPayoutTXRequest(txReq, authAddr, wallet->getAddressIndex(settlAddr_), false, password);
+      //return signContainer_->signPayoutTXRequest(txReq, authAddr, wallet->getAddressIndex(settlAddr_), false, password);
    }
    catch (const std::exception &e) {
       logger_->warn("[ReqXBTSettlementContainer] failed to create pay-out transaction based on {}: {}"
@@ -84,22 +86,12 @@ void ReqXBTSettlementContainer::acceptSpotXBT(const SecureBinaryData &password)
 {
    emit info(tr("Waiting for transactions signing..."));
    if (clientSells_) {
-      const auto &cbSign = [this, password](const bs::Address &changeAddr) {
-         const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
-         payinSignId_ = signContainer_->signTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
-            , password);
-         payoutPassword_ = password;
-      };
-
-      if (transactionData_->GetTransactionSummary().hasChange) {
-         const auto &cbAddr = [cbSign](const bs::Address &addr) {
-            cbSign(addr);
-         };
-         transactionData_->getWallet()->getNewChangeAddress(cbAddr);
-      }
-      else {
-         cbSign({});
-      }
+      const auto hasChange = transactionData_->GetTransactionSummary().hasChange;
+      const auto changeAddr = hasChange ? transactionData_->getWallet()->getNewChangeAddress() : bs::Address();
+      const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
+//      payinSignId_ = signContainer_->signTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
+//         , password);
+      payoutPassword_ = password;
    }
    else {
       try {    // create payout based on dealer TX

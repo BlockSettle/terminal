@@ -92,7 +92,7 @@ namespace bs {
          void quoteReqNotifStatusChanged(const network::QuoteReqNotification &);
          void onMDUpdate(bs::network::Asset::Type, const QString &security, bs::network::MDFields);
          void onBestQuotePrice(const QString reqId, double price, bool own);
-         void onAutoSignStateChanged(const std::string &walletId, bool active, const std::string &error);
+         void onAutoSignStateChanged(const std::string &walletId, bool active);
          void onCelerConnected();
          void onCelerDisconnected();
 

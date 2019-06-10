@@ -16,10 +16,10 @@ namespace bs {
             Sell
          };
 
-         static const char *toString(Type side) {
+         static std::string toString(Type side) {
             switch (side) {
-               case Buy:   return QT_TR_NOOP("BUY");
-               case Sell:  return QT_TR_NOOP("SELL");
+               case Buy:   return "BUY";
+               case Sell:  return "SELL";
                default:    return "unknown";
             }
          }
@@ -106,52 +106,15 @@ namespace bs {
 
       struct OTCResponse
       {
-         std::string     serverRequestId;
-         std::string     requestorId;
-         std::string     initialTargetId;
-
-         OTCPriceRange     priceRange;
-         OTCQuantityRange  quantityRange;
+         ChatOTCSide::Type    side;
+         OTCPriceRange        priceRange;
+         OTCQuantityRange     quantityRange;
       };
 
-      enum class OTCRequestRejectReason
+      struct OTCUpdate
       {
-         CounterpartyOffline,
-         CounterpartyNotFound,
-         // InvalidTarget - ATM returned when trying to send to self
-         InvalidTarget,
-         RequestLimitToTargetExceeded,
-         RequestsAmountExceeded,
-         RequestAlreadyExpired
-      };
-
-      enum class OTCResponseRejectReason
-      {
-         // RequestNotAvailableForReply - request was pulled, closed or expired
-         RequestNotAvailableForReply,
-         // InvalidTarget - ATM returned when trying to reply to self
-         InvalidTarget,
-         // RequestAlreadyResponded - responder already have active response to that request
-         RequestAlreadyResponded,
-         // RequestResponseLimitExceeded - request have reached max number of
-         // replies ( reject reeason for requests to common room)
-         RequestResponseLimitExceeded
-      };
-
-      enum class OTCUpdateRejectReason
-      {
-         // TradingClosed - response or request were closed already
-         TradingClosed,
-         // TradeAlreadyAccepted - could not update trade that was accepted
-         TradeAlreadyAccepted,
-         // NoUpdateFromRequestorReceived - requestor shoudl send first update
-         NoUpdateFromRequestorReceived,
-         // PriceNotInrange price in update not in initial range
-         PriceNotInrange,
-         // AmountNotInRange amount not in initial range
-         AmountNotInRange,
-         // AccessDenied - update sender is neither requestor or responder
-         AccessDenied
+         uint64_t amount;
+         uint64_t price;
       };
    }
 }

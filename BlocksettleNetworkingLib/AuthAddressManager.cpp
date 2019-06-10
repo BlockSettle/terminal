@@ -174,8 +174,7 @@ bool AuthAddressManager::CreateNewAuthAddress()
    return true;
 }
 
-void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
-   bool cancelledByUser)
+void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result, const std::string &errorReason)
 {
    const auto &itVerify = signIdsVerify_.find(id);
    const auto &itRevoke = signIdsRevoke_.find(id);
@@ -186,7 +185,7 @@ void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, std::s
    signIdsVerify_.erase(id);
    signIdsRevoke_.erase(id);
 
-   if (error.empty()) {
+   if (result == bs::error::ErrorCode::NoError) {
       if (BroadcastTransaction(signedTX)) {
          if (isVerify) {
             emit AuthVerifyTxSent();
@@ -200,8 +199,9 @@ void AuthAddressManager::onTXSigned(unsigned int id, BinaryData signedTX, std::s
       }
    }
    else {
-      logger_->error("[AuthAddressManager::onTXSigned] TX signing failed: {}", error);
-      emit Error(tr("Transaction sign error: %1").arg(QString::fromStdString(error)));
+      logger_->error("[AuthAddressManager::onTXSigned] TX signing failed: {} {}"
+         , bs::error::ErrorCodeToString(result).toStdString(), errorReason);
+      emit Error(tr("Transaction sign error: %1").arg(bs::error::ErrorCodeToString(result)));
    }
 }
 

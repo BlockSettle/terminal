@@ -312,8 +312,7 @@ void CreateTransactionDialog::onMaxPressed()
    lineEditAmount()->setEnabled(true);
 }
 
-void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, std::string error,
-   bool cancelledByUser)
+void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, bs::error::ErrorCode result)
 {
    if (!pendingTXSignId_ || (pendingTXSignId_ != id)) {
       return;
@@ -322,13 +321,13 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
    pendingTXSignId_ = 0;
    QString detailedText;
 
-   if (cancelledByUser) {
+   if (result == bs::error::ErrorCode::TxCanceled) {
       stopBroadcasting();
       return;
    }
 
    const auto walletId = UiUtils::getSelectedWalletId(comboBoxWallets());
-   if (error.empty() && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
+   if (result == bs::error::ErrorCode::NoError && (signContainer_->isOffline() || signContainer_->isWalletOffline(walletId))) {   // Offline signing
       BSMessageBox(BSMessageBox::info, tr("Offline Transaction")
          , tr("Request exported to:\n%1").arg(QString::fromStdString(signedTX.toBinStr()))
          , this).exec();
@@ -361,7 +360,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
       return;
    }
 
-   if (error.empty()) {
+   if (result == bs::error::ErrorCode::NoError) {
       if (armory_->broadcastZC(signedTX)) {
          if (!textEditComment()->document()->isEmpty()) {
             const auto &comment = textEditComment()->document()->toPlainText().toStdString();
@@ -374,7 +373,7 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, s
       detailedText = tr("Failed to communicate to armory to broadcast transaction. Maybe Armory is offline");
    }
    else {
-      detailedText = QString::fromStdString(error);
+      detailedText = bs::error::ErrorCodeToString(result);
    }
 
    MessageBoxBroadcastError(detailedText, this).exec();
@@ -463,8 +462,7 @@ bool CreateTransactionDialog::CreateTransaction()
          txReq_.fee = std::ceil(txReq_.fee * (originalFeePerByte_ / newFeePerByte));
       }
 
-      pendingTXSignId_ = signContainer_->signTXRequest(txReq_, false,
-         SignContainer::TXSignMode::Full, {}, true);
+      pendingTXSignId_ = signContainer_->signTXRequest(txReq_, SignContainer::TXSignMode::Full, {}, true);
       if (!pendingTXSignId_) {
          throw std::logic_error("Signer failed to send request");
       }

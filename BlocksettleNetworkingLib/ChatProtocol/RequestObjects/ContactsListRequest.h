@@ -1,5 +1,5 @@
-#ifndef CONTACTSLISTREQUEST_H
-#define CONTACTSLISTREQUEST_H
+#ifndef ContactsListRequest_h__
+#define ContactsListRequest_h__
 
 #include "Request.h"
 namespace Chat {
@@ -22,4 +22,4 @@ namespace Chat {
 
 }
 
-#endif // CONTACTSLISTREQUEST_H
+#endif // ContactsListRequest_h__

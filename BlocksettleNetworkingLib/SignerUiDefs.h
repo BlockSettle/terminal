@@ -4,6 +4,7 @@
 #include "QObject"
 #include "QString"
 #include "WalletEncryption.h"
+#include "BSErrorCode.h"
 
 namespace bs {
    namespace signer {

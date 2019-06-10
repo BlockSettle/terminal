@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LoginResponse_h__
+#define LoginResponse_h__
 
 #include "Response.h"
 
@@ -26,3 +27,5 @@ namespace Chat {
    };
    
 }
+
+#endif // LoginResponse_h__

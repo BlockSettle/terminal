@@ -816,6 +816,7 @@ void RFQDealerReply::tryEnableAutoSign()
       return;
    }
 
+   // not implemented yet
    signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign
       , {{ QLatin1String("rootId"), walletId }});
 }
@@ -1178,7 +1179,7 @@ void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, dou
    submitReply(transData, qrn, price, cbSubmit);
 }
 
-void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool active, const std::string &error)
+void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool active)
 {
    if (active) {
       return;
@@ -1186,11 +1187,6 @@ void RFQDealerReply::onAutoSignStateChanged(const std::string &walletId, bool ac
 
    ui_->checkBoxAutoSign->setChecked(false);
    updateAutoSignState();
-
-   if (!error.empty()) {
-      BSMessageBox(BSMessageBox::warning, tr("Auto-Sign deactivated"), tr("Signer returned error: %1")
-         .arg(QString::fromStdString(error))).exec();
-   }
 }
 
 void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
