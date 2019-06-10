@@ -12,7 +12,6 @@
 namespace spdlog {
    class logger;
 }
-class HeadlessContainerListener;
 class SignerAdapter;
 
 

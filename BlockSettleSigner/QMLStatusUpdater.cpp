@@ -1,6 +1,5 @@
 #include "QMLStatusUpdater.h"
 #include <spdlog/spdlog.h>
-#include "HeadlessContainerListener.h"
 #include "SignerAdapter.h"
 #include "BSErrorCodeStrings.h"
 
