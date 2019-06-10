@@ -10,7 +10,6 @@
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
 #include "ZmqDataConnection.h"
-#include "ZMQ_BIP15X_Msg.h"
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
@@ -77,6 +76,8 @@ struct ZmqBIP15XDataConnectionParams
    void setLocalHeartbeatInterval();
 };
 
+class ZmqBipMsg;
+
 class ZmqBIP15XDataConnection : public DataConnection
 {
 public:
@@ -128,7 +129,7 @@ private:
    }
 
    // Use to send a packet that this class has generated.
-   void sendPacket(const std::string& data);
+   void sendPacket(const BinaryData& data);
 
    void onRawDataReceived(const std::string& rawData) override;
 
@@ -141,7 +142,7 @@ private:
    void onError(DataConnectionListener::DataConnectionError errorCode);
 
    void ProcessIncomingData(BinaryData& payload);
-   bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
+   bool processAEADHandshake(const ZmqBipMsg& msgObj);
    bool verifyNewIDKey(const BinaryDataRef& newKey
       , const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
@@ -161,13 +162,11 @@ private:
    std::chrono::time_point<std::chrono::steady_clock> outKeyTimePoint_;
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;
-   ZmqBIP15XMsgFragments currentReadMessage_;
    BinaryData leftOverData_;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
    const std::string bipIDCookiePath_;
    const BIP15XCookie cookie_;
-   uint32_t msgID_ = 0;
 
    cbNewKey cbNewKey_;
 

@@ -8,6 +8,7 @@
 #include "BIP150_151.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
 #include "ZmqHelperFunctions.h"
+#include "ZMQ_BIP15X_Msg.h"
 
 using namespace std;
 
@@ -66,8 +67,6 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
 
    outKeyTimePoint_ = chrono::steady_clock::now();
 
-   currentReadMessage_.reset();
-
    // In general, load the server key from a special Armory wallet file.
    if (!params.ephemeralPeers) {
       authPeers_ = make_shared<AuthorizedPeers>(
@@ -76,9 +75,6 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
    else {
       authPeers_ = make_shared<AuthorizedPeers>();
    }
-
-   // Create a random four-byte ID for the client.
-   msgID_ = READ_UINT32_LE(CryptoPRNG::generateRandom(4));
 
    if (cookie_ == BIP15XCookie::MakeClient) {
       genBIPIDCookie();
@@ -293,12 +289,9 @@ void ZmqBIP15XDataConnection::rekey()
    BinaryData rekeyData(BIP151PUBKEYSIZE);
    memset(rekeyData.getPtr(), 0, BIP151PUBKEYSIZE);
 
-   ZmqBIP15XSerializedMessage rekeyPacket;
-   rekeyPacket.construct(rekeyData.getRef(), bip151Connection_.get()
-      , ZMQ_MSGTYPE_AEAD_REKEY);
-
-   auto& packet = rekeyPacket.getNextPacket();
-   sendPacket(packet.toBinStr());
+   auto packet = ZmqBipMsgBuilder(rekeyData.getRef()
+      , ZMQ_MSGTYPE_AEAD_REKEY).encryptIfNeeded(bip151Connection_.get()).build();
+   sendPacket(packet);
    bip151Connection_->rekeyOuterSession();
    ++outerRekeyCount_;
 }
@@ -316,14 +309,14 @@ bool ZmqBIP15XDataConnection::isActive() const
 // INPUT:  The data to send. (const string&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
-void ZmqBIP15XDataConnection::sendPacket(const string& data)
+void ZmqBIP15XDataConnection::sendPacket(const BinaryData& data)
 {
    if (fatalError_) {
       return;
    }
 
-   int result = zmq_send(dataSocket_.get(), data.data(), data.size(), 0);
-   assert(result == int(data.size()));
+   int result = zmq_send(dataSocket_.get(), data.getPtr(), data.getSize(), 0);
+   assert(result == int(data.getSize()));
 }
 
 // The inherited send function for the data connection. It is intended to be
@@ -378,13 +371,12 @@ void ZmqBIP15XDataConnection::triggerHeartbeatCheck()
    // final packet first in order to get the # of bytes transmitted.
    rekeyIfNeeded(HEARTBEAT_PACKET_SIZE);
 
-   ZmqBIP15XSerializedMessage msg;
-   BinaryData emptyPayload;
-   msg.construct(emptyPayload.getDataVector(), bip151Connection_.get(), ZMQ_MSGTYPE_HEARTBEAT, msgID_);
+   auto packet = ZmqBipMsgBuilder(ZMQ_MSGTYPE_HEARTBEAT)
+      .encryptIfNeeded(bip151Connection_.get()).build();
 
    // An error message is already logged elsewhere if the send fails.
    // sendPacket already sets the timestamp.
-   sendPacket(msg.getNextPacket().toBinStr());
+   sendPacket(packet);
 
    // Old servers don't send heartbeats.
    // TODO: Remove this check when all servers are updated.
@@ -458,13 +450,8 @@ bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::startBIP151Handshake()
 {
-   ZmqBIP15XSerializedMessage msg;
-   BinaryData nullPayload;
-
-   msg.construct(nullPayload.getDataVector(), nullptr, ZMQ_MSGTYPE_AEAD_SETUP,
-      0);
-   auto& packet = msg.getNextPacket();
-   sendPacket(packet.toBinStr());
+   auto packet = ZmqBipMsgBuilder(ZMQ_MSGTYPE_AEAD_SETUP).build();
+   sendPacket(packet);
    return true;
 }
 
@@ -503,7 +490,7 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
          // If decryption "fails" but the result indicates fragmentation, save
          // the fragment and wait before doing anything, otherwise treat it as a
          // legit error.
-         if (result <= ZMQ_MESSAGE_PACKET_SIZE && result > -1) {
+         if (result > -1) {
             leftOverData_ = move(payload);
             return;
          }
@@ -669,7 +656,6 @@ bool ZmqBIP15XDataConnection::closeConnection()
    resetConnectionObjects();
 
    bip151Connection_.reset();
-   currentReadMessage_.reset();
    pendingData_.clear();
    bip150HandshakeCompleted_ = false;
    bip151HandshakeCompleted_ = false;
@@ -684,33 +670,23 @@ bool ZmqBIP15XDataConnection::closeConnection()
 // RETURN: None
 void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
 {
-   // Deserialize packet.
-   auto payloadRef = currentReadMessage_.insertDataAndGetRef(payload);
-   auto result = currentReadMessage_.message_.parsePacket(payloadRef);
-   if (!result) {
+   ZmqBipMsg packet = ZmqBipMsg::parsePacket(payload);
+   if (!packet.isValid()) {
       logger_->error("[ZmqBIP15XDataConnection::{}] Deserialization failed "
          "(connection {})", __func__, connectionName_);
-      currentReadMessage_.reset();
       onError(DataConnectionListener::SerializationFailed);
       return;
    }
 
-   // Fragmented messages may not be marked as fragmented when decrypted but may
-   // still be a fragment. That's fine. Just wait for the other fragments.
-   if (!currentReadMessage_.message_.isReady()) {
-      return;
-   }
-
-   if (currentReadMessage_.message_.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
+   if (packet.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
       lastHeartbeatReply_ = std::chrono::steady_clock::now();
-      currentReadMessage_.reset();
       serverSendsHeartbeat_ = true;
       return;
    }
 
    // If we're still handshaking, take the next step. (No fragments allowed.)
-   if (currentReadMessage_.message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
-      if (!processAEADHandshake(currentReadMessage_.message_)) {
+   if (packet.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
+      if (!processAEADHandshake(packet)) {
          logger_->error("[ZmqBIP15XDataConnection::{}] Handshake failed "
             "(connection {})", __func__, connectionName_);
 
@@ -718,13 +694,11 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
          return;
       }
 
-      currentReadMessage_.reset();
       return;
    }
 
    // We can now safely obtain the full message.
-   BinaryData inMsg;
-   currentReadMessage_.message_.getMessage(&inMsg);
+   BinaryDataRef inMsg = packet.getData();
 
    // We shouldn't get here but just in case....
    if (!bip151Connection_ || (bip151Connection_->getBIP150State() != BIP150State::SUCCESS)) {
@@ -736,21 +710,6 @@ void ZmqBIP15XDataConnection::ProcessIncomingData(BinaryData& payload)
       return;
    }
 
-   // For now, ignore the BIP message ID. If we need callbacks later, we can go
-   // back to what's in Armory and add support based off that.
-/*   auto& msgid = currentReadMessage_.message_.getId();
-   switch (msgid)
-   {
-   case ZMQ_CALLBACK_ID:
-   {
-      break;
-   }
-
-   default:
-      break;
-   }*/
-
-   currentReadMessage_.reset();
    // Pass the final data up the chain.
    notifyOnData(inMsg.toBinStr());
 }
@@ -789,23 +748,17 @@ bool ZmqBIP15XDataConnection::recvData()
 
 // The function processing the BIP 150/151 handshake packets.
 //
-// INPUT:  The handshake packet. (const ZmqBIP15XMsgPartial&)
+// INPUT:  The handshake packet. (const ZmqBIP15XMsg&)
 // OUTPUT: None
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XDataConnection::processAEADHandshake(
-   const ZmqBIP15XMsgPartial& msgObj)
+   const ZmqBipMsg& msgObj)
 {
    // Function used to send data out on the wire.
    auto writeData = [this](BinaryData& payload, uint8_t type, bool encrypt) {
-      ZmqBIP15XSerializedMessage msg;
-      BIP151Connection* connPtr = nullptr;
-      if (encrypt) {
-         connPtr = bip151Connection_.get();
-      }
-
-      msg.construct(payload.getDataVector(), connPtr, type, 0);
-      auto& packet = msg.getNextPacket();
-      sendPacket(packet.toBinStr());
+      auto conn = encrypt ? bip151Connection_.get() : nullptr;
+      auto packet = ZmqBipMsgBuilder(payload, type).encryptIfNeeded(conn).build();
+      sendPacket(packet);
    };
 
    //compute server name
@@ -815,7 +768,7 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
 
    // Read the message, get the type, and process as needed. Code mostly copied
    // from Armory.
-   auto msgbdr = msgObj.getSingleBinaryMessage();
+   auto msgbdr = msgObj.getData();
    switch (msgObj.getType()) {
    case ZMQ_MSGTYPE_AEAD_PRESENT_PUBKEY:
    {
@@ -1280,28 +1233,10 @@ void ZmqBIP15XDataConnection::sendPendingData()
       // If we need to rekey, do it before encrypting the data.
       rekeyIfNeeded(data.size());
 
-      ZmqBIP15XSerializedMessage msg;
-      BIP151Connection* connPtr = nullptr;
-      if (bip151HandshakeCompleted_) {
-         connPtr = bip151Connection_.get();
-      }
-
-      BinaryData payload(data);
-      msg.construct(payload.getDataVector(), connPtr
-         , ZMQ_MSGTYPE_FRAGMENTEDPACKET_HEADER, msgID_);
-
-      // Cycle through all packets.
-      while (!msg.isDone())
-      {
-         auto& packet = msg.getNextPacket();
-         if (packet.getSize() == 0) {
-            logger_->error("[ZmqBIP15XClientConnection::{}] failed to "
-               "serialize data (size {})", __func__, data.size());
-            return;
-         }
-
-         sendPacket(packet.toBinStr());
-      }
+      auto connPtr = bip151HandshakeCompleted_ ? bip151Connection_.get() : nullptr;
+      auto packet = ZmqBipMsgBuilder(data, ZMQ_MSGTYPE_SINGLEPACKET)
+         .encryptIfNeeded(connPtr).build();
+      sendPacket(packet);
    }
 }
 
@@ -1311,14 +1246,10 @@ void ZmqBIP15XDataConnection::sendDisconnectMsg()
       return;
    }
 
-   ZmqBIP15XSerializedMessage msg;
-   const BinaryData emptyBD;
-   msg.construct(emptyBD.getDataVector(), bip151Connection_.get()
-      , ZMQ_MSGTYPE_DISCONNECT);
-
+   auto packet = ZmqBipMsgBuilder(ZMQ_MSGTYPE_DISCONNECT)
+      .encryptIfNeeded(bip151Connection_.get()).build();
    // An error message is already logged elsewhere if the send fails.
-   const auto pkt = msg.getNextPacket();
-   sendPacket(pkt.toBinStr());
+   sendPacket(packet);
 
    if (isConnected_) {
       onDisconnected();
