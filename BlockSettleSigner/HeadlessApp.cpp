@@ -407,14 +407,17 @@ void HeadlessAppObj::walletsListUpdated()
    terminalListener_->walletsListUpdated();
 }
 
-void HeadlessAppObj::deactivateAutoSign()
+bs::error::ErrorCode HeadlessAppObj::activateAutoSign(const std::string &walletId, bool activate, const SecureBinaryData &password)
 {
-   terminalListener_->deactivateAutoSign();
-}
-
-void HeadlessAppObj::addPendingAutoSignReq(const std::string &walletId)
-{
-   terminalListener_->addPendingAutoSignReq(walletId);
+   if (terminalListener_) {
+      if (activate) {
+         return terminalListener_->activateAutoSign(walletId, password);
+      }
+      else {
+         return terminalListener_->deactivateAutoSign(walletId);
+      }
+   }
+   return bs::error::ErrorCode::InternalError;
 }
 
 void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)

@@ -70,7 +70,7 @@ protected:
    bool onRequestClose();
    bool onReloadWallets(const std::string &data, bs::signer::RequestId);
    bool onReconnect(const std::string &data);
-   bool onAutoSignRequest(const std::string &data);
+   bool onAutoSignRequest(const std::string &data, bs::signer::RequestId);
    bool onChangePassword(const std::string &data, bs::signer::RequestId);
    bool onCreateHDWallet(const std::string &data, bs::signer::RequestId);
    bool onDeleteHDWallet(const std::string &data, bs::signer::RequestId);

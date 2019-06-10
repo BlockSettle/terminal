@@ -5,6 +5,8 @@
 #include <QObject>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QJSValue>
+#include <QPasswordData.h>
 #include "SignerSettings.h"
 
 namespace spdlog {
@@ -39,8 +41,10 @@ public:
    void setSocketOk(bool);
    void clearConnections();
 
-   Q_INVOKABLE void deactivateAutoSign();
-   Q_INVOKABLE void activateAutoSign();
+   Q_INVOKABLE void activateAutoSign(const QString &walletId
+      , bs::wallet::QPasswordData *passwordData
+      , bool activate
+      , QJSValue jsCallback);
 
 signals:
    void offlineChanged();
@@ -65,6 +69,7 @@ private slots:
    void onAutoSignTick();
    void onPeerConnected(const QString &ip);
    void onPeerDisconnected(const QString &ip);
+   QJSValue invokeJsCallBack(QJSValue jsCallback, QJSValueList args);
 
 private:
    bool offline() const { return settings_->offline(); }

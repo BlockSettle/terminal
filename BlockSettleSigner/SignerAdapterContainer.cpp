@@ -17,7 +17,7 @@
 using namespace Blocksettle::Communication;
 
 bs::signer::RequestId SignAdapterContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txReq
-   , bool autoSign, TXSignMode mode, const PasswordType& password, bool keepDuplicatedRecipients)
+   , TXSignMode mode, const PasswordType& password, bool keepDuplicatedRecipients)
 {
    signer::SignTxRequest request;
    request.set_password(password.toBinStr());
