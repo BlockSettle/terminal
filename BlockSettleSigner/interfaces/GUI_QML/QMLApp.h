@@ -66,7 +66,7 @@ private slots:
                            , bool cancelledByUser);
    void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
    void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
-   void onAutoSignPwdRequested(const std::string &walletId);
+   // void onAutoSignPwdRequested(const std::string &walletId);
    void onOfflineChanged();
    void onListenSocketChanged();
    void onLimitsChanged();
@@ -78,7 +78,7 @@ private slots:
 
 private:
    void settingsConnections();
-   void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
+   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &, const QString &prompt, bool alert = true);
 
    void registerQtTypes();
 

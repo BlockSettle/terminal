@@ -42,42 +42,46 @@ public:
       }
    }
 
-   void pwd(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
+   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
    {
-      signer::PasswordEvent evt;
-      evt.set_wallet_id(txReq.walletId);
-      evt.set_prompt(prompt);
-      if (txReq.autoSign) {
-         evt.set_auto_sign(true);
-      } else {
-         for (const auto &input : txReq.inputs) {
-            evt.add_inputs(input.serialize().toBinStr());
-         }
-         for (const auto &recip : txReq.recipients) {
-            evt.add_recipients(recip->getSerializedScript().toBinStr());
-         }
-         evt.set_fee(txReq.fee);
-         evt.set_rbf(txReq.RBF);
-         if (txReq.change.value) {
-            auto change = evt.mutable_change();
-            change->set_address(txReq.change.address.display());
-            change->set_index(txReq.change.index);
-            change->set_value(txReq.change.value);
-         }
+      signer::SignTxRequest request;
+      request.set_wallet_id(txReq.walletId);
+      request.set_prompt(prompt);
+
+      for (const auto &input : txReq.inputs) {
+         request.add_inputs(input.serialize().toBinStr());
       }
-      owner_->sendData(signer::PasswordRequestType, evt.SerializeAsString());
+      for (const auto &recip : txReq.recipients) {
+         request.add_recipients(recip->getSerializedScript().toBinStr());
+      }
+      request.set_fee(txReq.fee);
+      request.set_rbf(txReq.RBF);
+      if (txReq.change.value) {
+         auto change = request.mutable_change();
+         change->set_address(txReq.change.address.display());
+         change->set_index(txReq.change.index);
+         change->set_value(txReq.change.value);
+      }
+
+      owner_->sendData(signer::SignTxRequestType, request.SerializeAsString());
+   }
+
+   void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &
+      , const Blocksettle::Communication::headless::SettlementInfo &settlementInfo, const std::string &prompt) override
+   {
+
    }
 
    void txSigned(const BinaryData &tx) override
    {
-      signer::TxSignEvent evt;
-      evt.set_tx(tx.toBinStr());
+      signer::SignTxEvent evt;
+      evt.set_signedtx(tx.toBinStr());
       owner_->sendData(signer::TxSignedType, evt.SerializeAsString());
    }
 
    void cancelTxSign(const BinaryData &txHash) override
    {
-      signer::TxSignEvent evt;
+      signer::SignTxCancelRequest evt;
       evt.set_tx_hash(txHash.toBinStr());
       owner_->sendData(signer::CancelTxSignType, evt.SerializeAsString());
    }
@@ -137,8 +141,8 @@ void SignerAdapterListener::OnDataFromClient(const std::string &clientId, const 
    case::signer::HeadlessReadyType:
       rc = onReady();
       break;
-   case signer::SignTxRequestType:
-      rc = onSignTxReq(packet.data(), packet.id());
+   case signer::SignOfflineTxRequestType:
+      rc = onSignOfflineTxRequest(packet.data(), packet.id());
       break;
    case signer::SyncWalletInfoType:
       rc = onSyncWalletInfo(packet.id());
@@ -255,9 +259,9 @@ void SignerAdapterListener::sendStatusUpdate()
    sendData(signer::UpdateStatusType, evt.SerializeAsString());
 }
 
-bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::RequestId reqId)
+bool SignerAdapterListener::onSignOfflineTxRequest(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::SignTxRequest request;
+   signer::SignOfflineTxRequest request;
    if (!request.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
@@ -294,9 +298,9 @@ bool SignerAdapterListener::onSignTxReq(const std::string &data, bs::signer::Req
 
    try {
       const auto tx = wallet->signTXRequest(txReq, request.password());
-      signer::TxSignEvent evt;
-      evt.set_tx(tx.toBinStr());
-      return sendData(signer::SignTxRequestType, evt.SerializeAsString(), reqId);
+      signer::SignTxEvent evt;
+      evt.set_signedtx(tx.toBinStr());
+      return sendData(signer::SignOfflineTxRequestType, evt.SerializeAsString(), reqId);
    }
    catch (const std::exception &e) {
       logger_->error("[SignerAdapterListener::{}] sign error: {}"

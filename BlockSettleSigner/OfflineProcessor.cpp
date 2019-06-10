@@ -267,7 +267,7 @@ void OfflineProcessor::SignTxRequest(const bs::core::wallet::TXSignRequest &txRe
       }
       emit signSuccess();
    };
-   adapter_->signTxRequest(txReq, password, cbSigned);
+   adapter_->signOfflineTxRequest(txReq, password, cbSigned);
 }
 
 void OfflineProcessor::passwordEntered(const std::string &walletId, const SecureBinaryData &password)

@@ -81,8 +81,10 @@ private:
 
    void onReady(const std::string &data);
    void onPeerConnected(const std::string &data, bool connected);
-   void onPasswordRequested(const std::string &data);
+   void onSignTxRequested(const std::string &data);
+   void onSignSettlementTxRequested(const std::string &data);
    void onTxSigned(const std::string &data, bs::signer::RequestId);
+   void onCancelTx(const std::string &data, bs::signer::RequestId);
    void onXbtSpent(const std::string &data);
    void onAutoSignActivated(const std::string &data, bs::signer::RequestId reqId);
    void onSyncWalletInfo(const std::string &data, bs::signer::RequestId);

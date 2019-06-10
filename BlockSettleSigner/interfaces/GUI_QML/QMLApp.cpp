@@ -60,8 +60,8 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
    connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
    connect(adapter_, &SignerAdapter::headlessBindFailed, this, &QMLAppObj::onHeadlessBindFailed);
-   connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
-   connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
+   connect(adapter_, &SignerAdapter::requestPasswordAndSignTx, this, &QMLAppObj::onPasswordRequested);
+   // connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
    connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
 
@@ -69,7 +69,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
 
    statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_, adapter_, logger_);
-   connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
+   //connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
 
    ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);
@@ -281,31 +281,31 @@ void QMLAppObj::onPasswordAccepted(const QString &walletId
 void QMLAppObj::onOfflinePassword(const bs::core::wallet::TXSignRequest &txReq)
 {
    offlinePasswordRequests_.insert(txReq.walletId);
-   requestPassword(txReq, {}, false);
+   requestPasswordForSigningTx(txReq, {}, false);
 }
 
 void QMLAppObj::onPasswordRequested(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt)
 {
-   requestPassword(txReq, prompt);
+   requestPasswordForSigningTx(txReq, prompt);
 }
 
-void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
-{
-   bs::core::wallet::TXSignRequest txReq;
-   QString walletName;
-   txReq.walletId = walletId;
-   if (txReq.walletId.empty()) {
-      const auto wallet = walletsMgr_->getPrimaryWallet();
-      if (wallet) {
-         txReq.walletId = wallet->walletId();
-         walletName = QString::fromStdString(wallet->name());
-      }
-   }
-   requestPassword(txReq, walletName.isEmpty() ? tr("Activate Auto-Signing") :
-      tr("Activate Auto-Signing for %1").arg(walletName));
-}
+//void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
+//{
+//   bs::core::wallet::TXSignRequest txReq;
+//   QString walletName;
+//   txReq.walletId = walletId;
+//   if (txReq.walletId.empty()) {
+//      const auto wallet = walletsMgr_->getPrimaryWallet();
+//      if (wallet) {
+//         txReq.walletId = wallet->walletId();
+//         walletName = QString::fromStdString(wallet->name());
+//      }
+//   }
+//   requestPassword(txReq, walletName.isEmpty() ? tr("Activate Auto-Signing") :
+//      tr("Activate Auto-Signing for %1").arg(walletName));
+//}
 
-void QMLAppObj::requestPassword(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
+void QMLAppObj::requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
 {
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);

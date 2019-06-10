@@ -66,7 +66,7 @@ public:
       , bool addNew, bool removeOld, bool dryRun
       , const std::function<void(bool)> &);
 
-   void signTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
+   void signOfflineTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
       , const std::function<void(const BinaryData &)> &);
    void createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
       , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &);
@@ -91,8 +91,8 @@ signals:
    void headlessBindFailed() const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
-   void requestPassword(const bs::core::wallet::TXSignRequest &, const QString &prompt);
-   void autoSignRequiresPwd(const std::string &walletId);
+   void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
+//   void autoSignRequiresPwd(const std::string &walletId);
    void cancelTxSign(const BinaryData &txHash);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);

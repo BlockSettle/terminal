@@ -25,6 +25,7 @@ public:
    {}
    ~SignAdapterContainer() noexcept = default;
 
+   // Used to sign offline requests from signer
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
    , bool keepDuplicatedRecipients = false) override;
