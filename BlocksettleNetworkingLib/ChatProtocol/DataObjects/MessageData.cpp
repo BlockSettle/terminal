@@ -45,9 +45,8 @@ namespace Chat {
       dateTime_ = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
 
       QByteArray local_nonce = QByteArray::fromBase64(data[Nonce].toString().toLocal8Bit());
-      Botan::SecureVector<uint8_t> nonce(local_nonce.begin(), local_nonce.end());
 
-      nonce_ = nonce;
+      nonce_.assign(local_nonce.begin(), local_nonce.end());
 
       rawType_ = RawMessageDataType::Undefined;
    }
