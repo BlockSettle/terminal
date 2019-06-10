@@ -217,11 +217,24 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
          applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
       }
       if (!settings.mdhs.host.empty()) {
-         applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
-         applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
-      }
-      applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString("192.168.0.106"));
-      applicationSettings_->set(ApplicationSettings::chatServerPort, 9400);
+        applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
+        applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
+     }
+#ifndef NDEBUG
+     QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
+     QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
+     if (!settings.chat.host.empty()) {
+        if (chost.isEmpty())
+         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+        if (cport.isEmpty())
+         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+     }
+#else
+     if (!settings.chat.host.empty()) {
+        applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+        applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+     }
+#endif // NDEBUG
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
