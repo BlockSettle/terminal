@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ContactActionRequestServer_h__
+#define ContactActionRequestServer_h__
 
 #include "Request.h"
 
@@ -6,12 +7,7 @@ namespace Chat {
    class ContactActionRequestServer : public Request
    {
    public:
-      ContactActionRequestServer(const std::string& clientId,
-                                 const std::string& senderId,
-                                 const std::string& contactId,
-                                 ContactsActionServer action,
-                                 ContactStatus status,
-                                 autheid::PublicKey publicKey);
+      ContactActionRequestServer(const std::string& clientId, const std::string& senderId, const std::string& contactId, ContactsActionServer action, ContactStatus status, BinaryData publicKey);
 
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(const std::string& clientId, const std::string& jsonData);
@@ -20,12 +16,14 @@ namespace Chat {
       std::string contactId() const {return contactUserId_;}
       ContactsActionServer getAction() const {return action_;}
       ContactStatus getContactStatus() const {return status_;}
-      autheid::PublicKey getContactPublicKey() const {return contactPublicKey_;}
+      BinaryData getContactPublicKey() const {return contactPublicKey_;}
    private:
       std::string senderId_;
       std::string contactUserId_;
       ContactsActionServer action_;
       ContactStatus status_;
-      autheid::PublicKey contactPublicKey_;
+      BinaryData contactPublicKey_;
    };
 }
+
+#endif // ContactActionRequestServer_h__

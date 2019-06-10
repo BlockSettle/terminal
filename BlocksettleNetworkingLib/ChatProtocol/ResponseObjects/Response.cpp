@@ -20,59 +20,65 @@ using namespace Chat;
 #include "ContactsListResponse.h"
 #include "SearchUsersResponse.h"
 #include "LogoutResponse.h"
+#include "SessionPublicKeyResponse.h"
+#include "ReplySessionPublicKeyResponse.h"
 #include "GenCommonOTCResponse.h"
 #include "AnswerCommonOTCResponse.h"
 #include "UpdateCommonOTCResponse.h"
 
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
-       { "ResponseError"               ,   ResponseType::ResponseError               }
-   ,   { "ResponseHeartbeatPong"       ,   ResponseType::ResponseHeartbeatPong       }
-   ,   { "ResponseLogin"               ,   ResponseType::ResponseLogin               }
-   ,   { "ResponseMessages"            ,   ResponseType::ResponseMessages            }
-   ,   { "ResponseSuccess"             ,   ResponseType::ResponseSuccess             }
-   ,   { "ResponseUsersList"           ,   ResponseType::ResponseUsersList           }
-   ,   { "ResponseAskForPublicKey"     ,   ResponseType::ResponseAskForPublicKey     }
-   ,   { "ResponseSendOwnPublicKey"    ,   ResponseType::ResponseSendOwnPublicKey    }
-   ,   { "ResponsePendingMessage"      ,   ResponseType::ResponsePendingMessage      }
-   ,   { "ResponseSendMessage"         ,   ResponseType::ResponseSendMessage         }
-   ,   { "ResponseChangeMessageStatus" ,   ResponseType::ResponseChangeMessageStatus }
-   ,   { "ResponseContactsActionDirect",   ResponseType::ResponseContactsActionDirect}
-   ,   { "ResponseContactsActionServer",   ResponseType::ResponseContactsActionServer}
-   ,   { "ResponseChatroomsList"       ,   ResponseType::ResponseChatroomsList       }
-   ,   { "ResponseRoomMessages"        ,   ResponseType::ResponseRoomMessages        }
-   ,   { "ResponseContactsList"        ,   ResponseType::ResponseContactsList        }
-   ,   { "ResponseSearchUsers"         ,   ResponseType::ResponseSearchUsers         }
-   ,   { "ResponseLogout"              ,   ResponseType::ResponseLogout              }
-   ,   { "ResponseGenCommonOTC"        ,   ResponseType::ResponseGenCommonOTC        }
-   ,   { "ResponseAnswerCommonOTC"     ,   ResponseType::ResponseAnswerCommonOTC     }
-   ,   { "ResponseUpdateCommonOTC"     ,   ResponseType::ResponseUpdateCommonOTC     }
+   { "ResponseError"                   ,   ResponseType::ResponseError                    },
+   { "ResponseHeartbeatPong"           ,   ResponseType::ResponseHeartbeatPong            },
+   { "ResponseLogin"                   ,   ResponseType::ResponseLogin                    },
+   { "ResponseMessages"                ,   ResponseType::ResponseMessages                 },
+   { "ResponseSuccess"                 ,   ResponseType::ResponseSuccess                  },
+   { "ResponseUsersList"               ,   ResponseType::ResponseUsersList                },
+   { "ResponseAskForPublicKey"         ,   ResponseType::ResponseAskForPublicKey          },
+   { "ResponseSendOwnPublicKey"        ,   ResponseType::ResponseSendOwnPublicKey         },
+   { "ResponsePendingMessage"          ,   ResponseType::ResponsePendingMessage           },
+   { "ResponseSendMessage"             ,   ResponseType::ResponseSendMessage              },
+   { "ResponseChangeMessageStatus"     ,   ResponseType::ResponseChangeMessageStatus      },
+   { "ResponseContactsActionDirect"    ,   ResponseType::ResponseContactsActionDirect     },
+   { "ResponseContactsActionServer"    ,   ResponseType::ResponseContactsActionServer     },
+   { "ResponseChatroomsList"           ,   ResponseType::ResponseChatroomsList            },
+   { "ResponseRoomMessages"            ,   ResponseType::ResponseRoomMessages             },
+   { "ResponseContactsList"            ,   ResponseType::ResponseContactsList             },
+   { "ResponseSearchUsers"             ,   ResponseType::ResponseSearchUsers              },
+   { "ResponseLogout"                  ,   ResponseType::ResponseLogout                   },
+   { "ResponseSessionPublicKey"        ,   ResponseType::ResponseSessionPublicKey         },
+   { "ResponseReplySessionPublicKey"   ,   ResponseType::ResponseReplySessionPublicKey    },
+   { "ResponseGenCommonOTC"            ,   ResponseType::ResponseGenCommonOTC             },
+   { "ResponseAnswerCommonOTC"         ,   ResponseType::ResponseAnswerCommonOTC          },
+   { "ResponseUpdateCommonOTC"         ,   ResponseType::ResponseUpdateCommonOTC          },
 };
 
 
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
-       { ResponseType::ResponseError               ,  "ResponseError"               }
-   ,   { ResponseType::ResponseHeartbeatPong       ,  "ResponseHeartbeatPong"       }
-   ,   { ResponseType::ResponseLogin               ,  "ResponseLogin"               }
-   ,   { ResponseType::ResponseMessages            ,  "ResponseMessages"            }
-   ,   { ResponseType::ResponseSuccess             ,  "ResponseSuccess"             }
-   ,   { ResponseType::ResponseUsersList           ,  "ResponseUsersList"           }
-   ,   { ResponseType::ResponseAskForPublicKey     ,  "ResponseAskForPublicKey"     }
-   ,   { ResponseType::ResponseSendOwnPublicKey    ,  "ResponseSendOwnPublicKey"    }
-   ,   { ResponseType::ResponsePendingMessage      ,  "ResponsePendingMessage"      }
-   ,   { ResponseType::ResponseSendMessage         ,  "ResponseSendMessage"         }
-   ,   { ResponseType::ResponseChangeMessageStatus ,  "ResponseChangeMessageStatus" }
-   ,   { ResponseType::ResponseContactsActionDirect,  "ResponseContactsActionDirect"}
-   ,   { ResponseType::ResponseContactsActionServer,  "ResponseContactsActionServer"}
-   ,   { ResponseType::ResponseChatroomsList       ,  "ResponseChatroomsList"       }
-   ,   { ResponseType::ResponseRoomMessages        ,  "ResponseRoomMessages"        }
-   ,   { ResponseType::ResponseContactsList        ,  "ResponseContactsList"        }
-   ,   { ResponseType::ResponseSearchUsers         ,  "ResponseSearchUsers"         }
-   ,   { ResponseType::ResponseLogout              ,  "ResponseLogout"              }
-   ,   { ResponseType::ResponseGenCommonOTC        ,  "ResponseGenCommonOTC"        }
-   ,   { ResponseType::ResponseAnswerCommonOTC     ,  "ResponseAnswerCommonOTC"     }
-   ,   { ResponseType::ResponseUpdateCommonOTC     ,  "ResponseUpdateCommonOTC"     }
+   { ResponseType::ResponseError                   ,  "ResponseError"                  },
+   { ResponseType::ResponseHeartbeatPong           ,  "ResponseHeartbeatPong"          },
+   { ResponseType::ResponseLogin                   ,  "ResponseLogin"                  },
+   { ResponseType::ResponseMessages                ,  "ResponseMessages"               },
+   { ResponseType::ResponseSuccess                 ,  "ResponseSuccess"                },
+   { ResponseType::ResponseUsersList               ,  "ResponseUsersList"              },
+   { ResponseType::ResponseAskForPublicKey         ,  "ResponseAskForPublicKey"        },
+   { ResponseType::ResponseSendOwnPublicKey        ,  "ResponseSendOwnPublicKey"       },
+   { ResponseType::ResponsePendingMessage          ,  "ResponsePendingMessage"         },
+   { ResponseType::ResponseSendMessage             ,  "ResponseSendMessage"            },
+   { ResponseType::ResponseChangeMessageStatus     ,  "ResponseChangeMessageStatus"    },
+   { ResponseType::ResponseContactsActionDirect    ,  "ResponseContactsActionDirect"   },
+   { ResponseType::ResponseContactsActionServer    ,  "ResponseContactsActionServer"   },
+   { ResponseType::ResponseChatroomsList           ,  "ResponseChatroomsList"          },
+   { ResponseType::ResponseRoomMessages            ,  "ResponseRoomMessages"           },
+   { ResponseType::ResponseContactsList            ,  "ResponseContactsList"           },
+   { ResponseType::ResponseSearchUsers             ,  "ResponseSearchUsers"            },
+   { ResponseType::ResponseLogout                  ,  "ResponseLogout"                 },
+   { ResponseType::ResponseSessionPublicKey        ,  "ResponseSessionPublicKey"       },
+   { ResponseType::ResponseReplySessionPublicKey   ,  "ResponseReplySessionPublicKey"  },
+   { ResponseType::ResponseGenCommonOTC            ,  "ResponseGenCommonOTC"           },
+   { ResponseType::ResponseAnswerCommonOTC         ,  "ResponseAnswerCommonOTC"        },
+   { ResponseType::ResponseUpdateCommonOTC         ,  "ResponseUpdateCommonOTC"        },
 };
 
 template <typename T>
@@ -152,6 +158,12 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
       case ResponseType::ResponseLogout:
          return std::make_shared<LogoutResponse>();
+
+      case ResponseType::ResponseSessionPublicKey:
+         return SessionPublicKeyResponse::fromJSON(jsonData);
+
+      case ResponseType::ResponseReplySessionPublicKey:
+         return ReplySessionPublicKeyResponse::fromJSON(jsonData);
 
       case ResponseType::ResponseGenCommonOTC:
          return GenCommonOTCResponse::fromJSON(jsonData);

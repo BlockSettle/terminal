@@ -9,6 +9,7 @@
 #include "DataConnectionListener.h"
 #include "SecureBinaryData.h"
 #include "ZMQ_BIP15X_DataConnection.h"
+#include "Encryption/ChatSessionKey.h"
 
 #include <queue>
 #include <unordered_set>
@@ -74,6 +75,10 @@ public:
    void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
    void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
    void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
+
+   void OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse&) override;
+   void OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse&) override;
+
    void OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &) override;
    void OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse &) override;
    void OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse &) override;
@@ -168,7 +173,7 @@ public:
    //    Can result in signals
    //       OTCRequestAccepted - request sent to OTC chat and was accepted
    //       OTCRequestRejected - OTC request was rejected by chat server.
-   //    If return false - no signals will be emited
+   //    If return false - no signals will be emitted
    // Returns:
    //    true - request was submitted
    //    false - request was not delivered to chat server.
@@ -199,7 +204,7 @@ signals:
    // we got a new OTC request from someone in OTC chat
    void NewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
 
-   // OTC request was pulledby requestor. We should receive it even if it our own.
+   // OTC request was pulled by requester. We should receive it even if it our own.
    // we could not just remove OTC, it should be initiated by chat server
    void OTCRequestCancelled(const std::string& serverOTCId);
 
@@ -221,6 +226,7 @@ signals:
 private:
    void sendRequest(const std::shared_ptr<Chat::Request>& request);
    void readDatabase();
+   bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey);
 
 signals:
    void ConnectedToServer();
@@ -261,13 +267,14 @@ private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<spdlog::logger>        logger_;
 
+   std::unique_ptr<ChatDB>                                     chatDb_;
+   std::map<QString, BinaryData>                               contactPublicKeys_;
 
+   Chat::ChatSessionKeyPtr  chatSessionKeyPtr_;
 
-   std::unique_ptr<ChatDB>                   chatDb_;
-   std::map<QString, autheid::PublicKey>     pubKeys_;
-   std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
-   std::shared_ptr<UserHasher>               hasher_;
-   std::map<QString, Botan::SecureVector<uint8_t>>   userNonces_;
+   std::shared_ptr<ZmqBIP15XDataConnection>                    connection_;
+   std::shared_ptr<UserHasher>                                 hasher_;
+   std::map<QString, Botan::SecureVector<uint8_t>>             userNonces_;
 
    // Queue of messages to be sent for each receiver, once we received the public key.
    std::map<QString, std::queue<QString>>    enqueued_messages_;
@@ -313,15 +320,12 @@ private:
    std::string       ownSubmittedOTCId_;
    std::string       ownServerOTCId_;
 
-   // based on server reqest id
+   // based on server request id
    std::unordered_set<std::string> aliveOtcRequests_;
 
    // ModelChangesHandler interface
 public:
    void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
 };
-
-
-
 
 #endif   // CHAT_CLIENT_H

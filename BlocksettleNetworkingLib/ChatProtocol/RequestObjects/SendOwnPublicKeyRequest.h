@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SendOwnPublicKeyRequest_h__
+#define SendOwnPublicKeyRequest_h__
 
 #include "Request.h"
 
@@ -15,22 +16,24 @@ namespace Chat {
          const std::string& clientId,
          const std::string& receivingNodeId,
          const std::string& sendingNodeId,
-         const autheid::PublicKey& sendingNodePublicKey);
+         const BinaryData& sendingNodePublicKey);
 
       QJsonObject toJson() const override;
       static std::shared_ptr<Request> fromJSON(
          const std::string& clientId,
          const std::string& jsonData);
 
-      void handle(RequestHandler &) override;
+      void handle(RequestHandler&) override;
 
       const std::string& getReceivingNodeId() const;
       const std::string& getSendingNodeId() const;
-      const autheid::PublicKey& getSendingNodePublicKey() const;
-      
+      const BinaryData& getSendingNodePublicKey() const;
+
    private:
       std::string receivingNodeId_;
       std::string sendingNodeId_;
-      autheid::PublicKey sendingNodePublicKey_;
+      BinaryData sendingNodePublicKey_;
    };
 }
+
+#endif // SendOwnPublicKeyRequest_h__

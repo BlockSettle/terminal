@@ -5,7 +5,7 @@ namespace Chat {
          const std::string& clientId,
          const std::string& receivingNodeId,
          const std::string& sendingNodeId,
-         const autheid::PublicKey& sendingNodePublicKey)
+         const BinaryData& sendingNodePublicKey)
       : Request(RequestType::RequestSendOwnPublicKey, clientId)
       , receivingNodeId_(receivingNodeId)
       , sendingNodeId_(sendingNodeId)
@@ -19,8 +19,7 @@ namespace Chat {
    
       data[SenderIdKey] = QString::fromStdString(sendingNodeId_);
       data[ReceiverIdKey] = QString::fromStdString(receivingNodeId_);
-      data[PublicKeyKey] = QString::fromStdString(
-         publicKeyToString(sendingNodePublicKey_));
+      data[PublicKeyKey] = QString::fromStdString(sendingNodePublicKey_.toHexStr());
       return data;
    }
    
@@ -34,7 +33,7 @@ namespace Chat {
          clientId,
          data[SenderIdKey].toString().toStdString(),
          data[ReceiverIdKey].toString().toStdString(), 
-         publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+         BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString()));
    }
    
    void SendOwnPublicKeyRequest::handle(RequestHandler& handler)
@@ -50,7 +49,7 @@ namespace Chat {
       return sendingNodeId_;
    }
    
-   const autheid::PublicKey& SendOwnPublicKeyRequest::getSendingNodePublicKey() const {
+   const BinaryData& SendOwnPublicKeyRequest::getSendingNodePublicKey() const {
       return sendingNodePublicKey_;
    }
 }

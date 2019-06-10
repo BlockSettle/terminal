@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MessageData_h__
+#define MessageData_h__
 
 #include "DataObject.h"
 #include <memory>
@@ -74,3 +75,5 @@ namespace Chat {
       EncryptionType encryptionType_;
    };
 }
+
+#endif // MessageData_h__

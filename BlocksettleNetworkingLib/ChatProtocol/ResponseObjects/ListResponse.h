@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ListResponse_h__
+#define ListResponse_h__
 
 #include "Response.h"
 
@@ -15,3 +16,5 @@ namespace Chat {
       std::vector<std::string> dataList_;
    };
 }
+
+#endif // ListResponse_h__

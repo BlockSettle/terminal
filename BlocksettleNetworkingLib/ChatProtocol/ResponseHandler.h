@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ResponseHandler_h__
+#define ResponseHandler_h__
 
 namespace Chat {
    class HeartbeatPongResponse;
@@ -17,6 +18,8 @@ namespace Chat {
    class RoomMessagesResponse;
    class SearchUsersResponse;
    class LogoutResponse;
+   class SessionPublicKeyResponse;
+   class ReplySessionPublicKeyResponse;
    class GenCommonOTCResponse;
    class AnswerCommonOTCResponse;
    class UpdateCommonOTCResponse;
@@ -49,8 +52,13 @@ namespace Chat {
 
       virtual void OnSearchUsersResponse(const SearchUsersResponse&) = 0;
 
+      virtual void OnSessionPublicKeyResponse(const SessionPublicKeyResponse&) = 0;
+      virtual void OnReplySessionPublicKeyResponse(const ReplySessionPublicKeyResponse&) = 0;
+
       virtual void OnGenCommonOTCResponse(const GenCommonOTCResponse&) = 0;
       virtual void OnAnswerCommonOTCResponse(const AnswerCommonOTCResponse&) = 0;
       virtual void OnUpdateCommonOTCResponse(const UpdateCommonOTCResponse&) = 0;
    };
 }
+
+#endif // ResponseHandler_h__

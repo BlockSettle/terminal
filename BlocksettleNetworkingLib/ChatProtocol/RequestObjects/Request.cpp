@@ -16,6 +16,8 @@
 #include "SendRoomMessageRequest.h"
 #include "ContactsListRequest.h"
 #include "SearchUsersRequest.h"
+#include "SessionPublicKeyRequest.h"
+#include "ReplySessionPublicKeyRequest.h"
 #include "GenCommonOTCRequest.h"
 #include "AnswerCommonOTCRequest.h"
 #include "UpdateCommonOTCRequest.h"
@@ -25,49 +27,53 @@ using namespace Chat;
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-       { "RequestHeartbeatPing"       ,   RequestType::RequestHeartbeatPing       }
-   ,   { "RequestLogin"               ,   RequestType::RequestLogin               }
-   ,   { "RequestLogout"              ,   RequestType::RequestLogout              }
-   ,   { "RequestMessages"            ,   RequestType::RequestMessages            }
-   ,   { "RequestSendMessage"         ,   RequestType::RequestSendMessage         }
-   ,   { "RequestOnlineUsers"         ,   RequestType::RequestOnlineUsers         }
-   ,   { "RequestAskForPublicKey"     ,   RequestType::RequestAskForPublicKey     }
-   ,   { "RequestSendOwnPublicKey"    ,   RequestType::RequestSendOwnPublicKey    }
-   ,   { "RequestChangeMessageStatus" ,   RequestType::RequestChangeMessageStatus }
-   ,   { "RequestContactsActionDirect",   RequestType::RequestContactsActionDirect}
-   ,   { "RequestContactsActionServer",   RequestType::RequestContactsActionServer}
-   ,   { "RequestChatroomsList"       ,   RequestType::RequestChatroomsList       }
-   ,   { "RequestSendRoomMessage"     ,   RequestType::RequestSendRoomMessage     }
-   ,   { "RequestContactsList"        ,   RequestType::RequestContactsList        }
-   ,   { "RequestSearchUsers"         ,   RequestType::RequestSearchUsers         }
-   ,   { "RequestGenCommonOTC"        ,   RequestType::RequestGenCommonOTC        }
-   ,   { "RequestAnswerCommonOTC"     ,   RequestType::RequestAnswerCommonOTC     }
-   ,   { "RequestUpdateCommonOTC"     ,   RequestType::RequestUpdateCommonOTC     }
-   ,   { "RequestPullOTC"             ,   RequestType::RequestPullOTC             }
+   { "RequestHeartbeatPing"         ,   RequestType::RequestHeartbeatPing           },
+   { "RequestLogin"                 ,   RequestType::RequestLogin                   },
+   { "RequestLogout"                ,   RequestType::RequestLogout                  },
+   { "RequestMessages"              ,   RequestType::RequestMessages                },
+   { "RequestSendMessage"           ,   RequestType::RequestSendMessage             },
+   { "RequestOnlineUsers"           ,   RequestType::RequestOnlineUsers             },
+   { "RequestAskForPublicKey"       ,   RequestType::RequestAskForPublicKey         },
+   { "RequestSendOwnPublicKey"      ,   RequestType::RequestSendOwnPublicKey        },
+   { "RequestChangeMessageStatus"   ,   RequestType::RequestChangeMessageStatus     },
+   { "RequestContactsActionDirect"  ,   RequestType::RequestContactsActionDirect    },
+   { "RequestContactsActionServer"  ,   RequestType::RequestContactsActionServer    },
+   { "RequestChatroomsList"         ,   RequestType::RequestChatroomsList           },
+   { "RequestSendRoomMessage"       ,   RequestType::RequestSendRoomMessage         },
+   { "RequestContactsList"          ,   RequestType::RequestContactsList            },
+   { "RequestSearchUsers"           ,   RequestType::RequestSearchUsers             },
+   { "RequestSessionPublicKey"      ,   RequestType::RequestSessionPublicKey        },
+   { "RequestReplySessionPublicKey" ,   RequestType::RequestReplySessionPublicKey   },
+   { "RequestGenCommonOTC"          ,   RequestType::RequestGenCommonOTC            },
+   { "RequestAnswerCommonOTC"       ,   RequestType::RequestAnswerCommonOTC         },
+   { "RequestUpdateCommonOTC"       ,   RequestType::RequestUpdateCommonOTC         },
+   { "RequestPullOTC"               ,   RequestType::RequestPullOTC                 },
 };
 
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-       { RequestType::RequestHeartbeatPing       ,   "RequestHeartbeatPing"       }
-   ,   { RequestType::RequestLogin               ,   "RequestLogin"               }
-   ,   { RequestType::RequestLogout              ,   "RequestLogout"              }
-   ,   { RequestType::RequestMessages            ,   "RequestMessages"            }
-   ,   { RequestType::RequestSendMessage         ,   "RequestSendMessage"         }
-   ,   { RequestType::RequestOnlineUsers         ,   "RequestOnlineUsers"         }
-   ,   { RequestType::RequestAskForPublicKey     ,   "RequestAskForPublicKey"     }
-   ,   { RequestType::RequestSendOwnPublicKey    ,   "RequestSendOwnPublicKey"    }
-   ,   { RequestType::RequestChangeMessageStatus ,   "RequestChangeMessageStatus" }
-   ,   { RequestType::RequestContactsActionDirect,   "RequestContactsActionDirect"}
-   ,   { RequestType::RequestContactsActionServer,   "RequestContactsActionServer"}
-   ,   { RequestType::RequestChatroomsList       ,   "RequestChatroomsList"       }
-   ,   { RequestType::RequestSendRoomMessage     ,   "RequestSendRoomMessage"     }
-   ,   { RequestType::RequestContactsList        ,   "RequestContactsList"        }
-   ,   { RequestType::RequestSearchUsers         ,   "RequestSearchUsers"         }
-   ,   { RequestType::RequestGenCommonOTC        ,   "RequestGenCommonOTC"        }
-   ,   { RequestType::RequestAnswerCommonOTC     ,   "RequestAnswerCommonOTC"     }
-   ,   { RequestType::RequestUpdateCommonOTC     ,   "RequestUpdateCommonOTC"     }
-   ,   { RequestType::RequestPullOTC             ,   "RequestPullOTC"             }
+   { RequestType::RequestHeartbeatPing          ,   "RequestHeartbeatPing"             },
+   { RequestType::RequestLogin                  ,   "RequestLogin"                     },
+   { RequestType::RequestLogout                 ,   "RequestLogout"                    },
+   { RequestType::RequestMessages               ,   "RequestMessages"                  },
+   { RequestType::RequestSendMessage            ,   "RequestSendMessage"               },
+   { RequestType::RequestOnlineUsers            ,   "RequestOnlineUsers"               },
+   { RequestType::RequestAskForPublicKey        ,   "RequestAskForPublicKey"           },
+   { RequestType::RequestSendOwnPublicKey       ,   "RequestSendOwnPublicKey"          },
+   { RequestType::RequestChangeMessageStatus    ,   "RequestChangeMessageStatus"       },
+   { RequestType::RequestContactsActionDirect   ,   "RequestContactsActionDirect"      },
+   { RequestType::RequestContactsActionServer   ,   "RequestContactsActionServer"      },
+   { RequestType::RequestChatroomsList          ,   "RequestChatroomsList"             },
+   { RequestType::RequestSendRoomMessage        ,   "RequestSendRoomMessage"           },
+   { RequestType::RequestContactsList           ,   "RequestContactsList"              },
+   { RequestType::RequestSearchUsers            ,   "RequestSearchUsers"               },
+   { RequestType::RequestSessionPublicKey       ,   "RequestSessionPublicKey"          },
+   { RequestType::RequestReplySessionPublicKey  ,   "RequestReplySessionPublicKey"     },
+   { RequestType::RequestGenCommonOTC           ,   "RequestGenCommonOTC"              },
+   { RequestType::RequestAnswerCommonOTC        ,   "RequestAnswerCommonOTC"           },
+   { RequestType::RequestUpdateCommonOTC        ,   "RequestUpdateCommonOTC"           },
+   { RequestType::RequestPullOTC                ,   "RequestPullOTC"                   },
 };
 
 template <typename T>
@@ -99,37 +105,51 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return std::make_shared<HeartbeatPingRequest>(clientId);
 
       case RequestType::RequestLogin:
-        return std::make_shared<LoginRequest>(clientId
-                 , data[AuthIdKey].toString().toStdString()
-                 , data[JwtKey].toString().toStdString());
+        return std::make_shared<LoginRequest>(
+           clientId,
+           data[AuthIdKey].toString().toStdString(),
+           data[JwtKey].toString().toStdString(),
+           data[PublicKeyKey].toString().toStdString()
+           );
 
       case RequestType::RequestSendMessage:
          return SendMessageRequest::fromJSON(clientId, jsonData);
 
       case RequestType::RequestOnlineUsers:
-         return std::make_shared<OnlineUsersRequest>(clientId
-                 , data[AuthIdKey].toString().toStdString());
+         return std::make_shared<OnlineUsersRequest>(
+            clientId,
+            data[AuthIdKey].toString().toStdString()
+            );
 
       case RequestType::RequestMessages:
-         return std::make_shared<MessagesRequest>(clientId
-                 , data[SenderIdKey].toString().toStdString()
-                 , data[ReceiverIdKey].toString().toStdString());
+         return std::make_shared<MessagesRequest>(
+            clientId,
+            data[SenderIdKey].toString().toStdString(),
+            data[ReceiverIdKey].toString().toStdString()
+            );
 
       case RequestType::RequestLogout:
-         return std::make_shared<LogoutRequest>(clientId
-                 , data[AuthIdKey].toString().toStdString()
-                 , data[JwtKey].toString().toStdString());
+         return std::make_shared<LogoutRequest>(
+            clientId,
+            data[AuthIdKey].toString().toStdString(),
+            data[JwtKey].toString().toStdString(),
+            data[PublicKeyKey].toString().toStdString()
+            );
 
       case RequestType::RequestAskForPublicKey:
-         return std::make_shared<AskForPublicKeyRequest>(clientId,
-               data[SenderIdKey].toString().toStdString(),
-               data[ReceiverIdKey].toString().toStdString());
+         return std::make_shared<AskForPublicKeyRequest>(
+            clientId,
+            data[SenderIdKey].toString().toStdString(),
+            data[ReceiverIdKey].toString().toStdString()
+            );
 
       case RequestType::RequestSendOwnPublicKey:
-         return std::make_shared<SendOwnPublicKeyRequest>(clientId
-            , data[ReceiverIdKey].toString().toStdString()
-            , data[SenderIdKey].toString().toStdString()
-            , publicKeyFromString(data[PublicKeyKey].toString().toStdString()));
+         return std::make_shared<SendOwnPublicKeyRequest>(
+            clientId,
+            data[ReceiverIdKey].toString().toStdString(),
+            data[SenderIdKey].toString().toStdString(),
+            BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString())
+            );
 
       case RequestType::RequestChangeMessageStatus:
          return MessageChangeStatusRequest::fromJSON(clientId, jsonData);
@@ -141,8 +161,9 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
          return ContactActionRequestServer::fromJSON(clientId, jsonData);
 
       case RequestType::RequestChatroomsList:
-         return std::make_shared<ChatroomsListRequest>(clientId
-               , data[SenderIdKey].toString().toStdString());
+         return std::make_shared<ChatroomsListRequest>(
+            clientId,
+            data[SenderIdKey].toString().toStdString());
 
       case RequestType::RequestSendRoomMessage:
          return SendRoomMessageRequest::fromJSON(clientId, jsonData);
@@ -152,6 +173,12 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
       case RequestType::RequestSearchUsers:
          return SearchUsersRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestSessionPublicKey:
+         return SessionPublicKeyRequest::fromJSON(clientId, jsonData);
+
+      case RequestType::RequestReplySessionPublicKey:
+         return ReplySessionPublicKeyRequest::fromJSON(clientId, jsonData);
 
       case RequestType::RequestGenCommonOTC:
          return GenCommonOTCRequest::fromJSON(clientId, jsonData);

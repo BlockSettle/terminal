@@ -1,4 +1,5 @@
-#pragma once
+#ifndef Request_h__
+#define Request_h__
 
 #include "../ProtocolDefinitions.h"
 #include "../RequestHandler.h"
@@ -24,3 +25,5 @@ namespace Chat {
    };
 
 }
+
+#endif // Request_h__
