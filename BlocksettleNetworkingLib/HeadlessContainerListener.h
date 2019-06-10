@@ -9,6 +9,8 @@
 #include "EncryptionUtils.h"
 #include "ServerConnectionListener.h"
 #include "SignerDefs.h"
+#include "BSErrorCode.h"
+
 #include "headless.pb.h"
 
 namespace spdlog {
@@ -39,8 +41,6 @@ public:
    virtual void txSigned(const BinaryData &) = 0;
    virtual void cancelTxSign(const BinaryData &) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
-   virtual void asAct(const std::string &) = 0;
-   virtual void asDeact(const std::string &) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
 };
 
@@ -64,9 +64,9 @@ public:
 
    void passwordReceived(const std::string &walletId
       , const SecureBinaryData &password, bool cancelledByUser);
-   void activateAutoSign(const std::string &clientId, const std::string &walletId, const SecureBinaryData &password);
-   void deactivateAutoSign(const std::string &clientId = {}, const std::string &walletId = {}, const std::string &reason = {});
-   void addPendingAutoSignReq(const std::string &walletId);
+   bs::error::ErrorCode activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
+   bs::error::ErrorCode deactivateAutoSign(const std::string &walletId = {}, bs::error::ErrorCode reason = bs::error::ErrorCode::NoError);
+   //void addPendingAutoSignReq(const std::string &walletId);
    void walletsListUpdated();
 
    void resetConnection(ServerConnection *connection);
@@ -98,7 +98,7 @@ private:
    bool onSetUserId(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCreateHDWallet(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onDeleteHDWallet(Blocksettle::Communication::headless::RequestPacket &packet);
-   bool onSetLimits(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
+   //bool onSetLimits(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onGetRootKey(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onGetHDWalletInfo(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
    bool onCancelSignTx(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
@@ -111,7 +111,7 @@ private:
 
    bool AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
-      , const std::string &error, const BinaryData &tx = {}, bool cancelledByUser = false);
+      , bs::error::ErrorCode errorCode, const BinaryData &tx = {});
    void CreateHDWalletResponse(const std::string &clientId, unsigned int id, const std::string &errorOrWalletId
       , const BinaryData &pubKey = {}, const BinaryData &chainCode = {}
       , const std::shared_ptr<bs::core::hd::Wallet> &wallet = nullptr);
@@ -119,15 +119,14 @@ private:
       , const std::string &errorOrId);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
-   void AutoSignActiveResponse(const std::string &clientId, const std::string &walletId, bool active
-      , const std::string &error = {}, unsigned int id = 0);
+   void AutoSignActivatedEvent(const std::string &walletId, bool active);
 
    bool CreateHDLeaf(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDLeaf &request
       , const std::vector<bs::wallet::PasswordData> &pwdData);
    bool CreateHDWallet(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDWallet &request
       , NetworkType, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
-      , const std::string &prompt, const PasswordReceivedCb &cb, bool autoSign);
+      , const std::string &prompt, const PasswordReceivedCb &cb);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
       , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
       , const std::string &prompt, const PasswordsReceivedCb &cb);
@@ -152,7 +151,7 @@ private:
 
    std::unordered_map<std::string, std::vector<PasswordReceivedCb>>  passwordCallbacks_;
    std::unordered_map<std::string, SecureBinaryData>                 passwords_;
-   std::unordered_set<std::string>  autoSignPwdReqs_;
+   //std::unordered_set<std::string>  autoSignPwdReqs_;
 
    struct TempPasswords {
       std::unordered_map<std::string, std::unordered_set<std::string>>  rootLeaves;

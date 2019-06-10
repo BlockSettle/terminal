@@ -30,7 +30,9 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    bs::UtxoReservation::addAdapter(utxoAdapter_);
 
    connect(signingContainer_.get(), &SignContainer::QWalletInfo, this, &ReqCCSettlementContainer::onWalletInfo);
-   connect(signingContainer_.get(), &SignContainer::TXSigned, this, &ReqCCSettlementContainer::onTXSigned);
+
+   // FIXME: Settlement containers will be reimplemented to use another function
+   // connect(signingContainer_.get(), &SignContainer::TXSigned, this, &ReqCCSettlementContainer::onTXSigned);
 
    const auto &signingWallet = transactionData_->getSigningWallet();
    if (signingWallet) {
@@ -191,7 +193,7 @@ bool ReqCCSettlementContainer::createCCSignedTXdata(const SecureBinaryData &pass
       }
    }
 
-   ccSignId_ = signingContainer_->signPartialTXRequest(ccTxData_, false, password);
+   //ccSignId_ = signingContainer_->signPartialTXRequest(ccTxData_, false, password);
    logger_->debug("[CCSettlementTransactionWidget::createCCSignedTXdata] {} recipients", ccTxData_.recipients.size());
    return (ccSignId_ > 0);
 }
