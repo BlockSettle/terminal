@@ -32,6 +32,16 @@ int RangeWidget::GetUpperValue() const
    return ui_->widgetRangeSlider->GetUpperValue();
 }
 
+void RangeWidget::SetLowerValue(int value)
+{
+   ui_->widgetRangeSlider->SetLowerValue(value);
+}
+
+void RangeWidget::SetUpperValue(int value)
+{
+   ui_->widgetRangeSlider->SetUpperValue(value);
+}
+
 
 void RangeWidget::onLowerValueChanged(int newLower)
 {

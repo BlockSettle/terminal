@@ -79,41 +79,42 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
             }
          }
          break;
-         case Chat::DataObject::Type::OTCRequestData: {
-            auto otcRequest = std::dynamic_pointer_cast<Chat::OTCRequestData>(data);
-            if (otcRequest) {
-               bool forCurrentUser = (otcRequest->requestorId() == user
-                                      || otcRequest->targetId() == user);
+         // XXXOTC
+         // case Chat::DataObject::Type::OTCRequestData: {
+         //    auto otcRequest = std::dynamic_pointer_cast<Chat::OTCRequestData>(data);
+         //    if (otcRequest) {
+         //       bool forCurrentUser = (otcRequest->senderId() == user
+         //                              || otcRequest->receiverId() == user);
 
-               bool forThisElement = forCurrentUser &&
-                                     (otcRequest->requestorId() == contact->getContactId().toStdString()
-                                      || otcRequest->targetId() == contact->getContactId().toStdString());
-               byData = forThisElement;
-            }
-         }
-         break;
-         case Chat::DataObject::Type::OTCResponseData: {
-            auto otcResponse = std::dynamic_pointer_cast<Chat::OTCResponseData>(data);
-            if (otcResponse) {
-               bool forCurrentUser = (otcResponse->responderId() == user
-                                      || otcResponse->requestorId() == user);
+         //       bool forThisElement = forCurrentUser &&
+         //                             (otcRequest->senderId() == contact->getContactId()
+         //                              || otcRequest->receiverId() == contact->getContactId());
+         //       byData = forThisElement;
+         //    }
+         // }
+         // break;
+         // case Chat::DataObject::Type::OTCResponseData: {
+         //    auto otcResponse = std::dynamic_pointer_cast<Chat::OTCResponseData>(data);
+         //    if (otcResponse) {
+         //       bool forCurrentUser = (otcResponse->responderId() == user
+         //                              || otcResponse->requestorId() == user);
 
-               bool forThisElement = forCurrentUser &&
-                                     (otcResponse->responderId() == contact->getContactId().toStdString()
-                                      || otcResponse->requestorId() == contact->getContactId().toStdString());
-               byData = forThisElement;
-            }
-         }
-         break;
-         case Chat::DataObject::Type::OTCUpdateData: {
-            auto otcUpdate = dynamic_cast<const Chat::OTCUpdateData*>(item);
-            if (otcUpdate && isOTCResponsePresented()) {
-               bool forThisElement = getActiveOtcResponse()->serverResponseId() ==
-                                     otcUpdate->serverResponseId();
-               byData = forThisElement;
-            }
-         }
-         break;
+         //       bool forThisElement = forCurrentUser &&
+         //                             (otcResponse->responderId() == contact->getContactId().toStdString()
+         //                              || otcResponse->requestorId() == contact->getContactId().toStdString());
+         //       byData = forThisElement;
+         //    }
+         // }
+         // break;
+         // case Chat::DataObject::Type::OTCUpdateData: {
+         //    auto otcUpdate = dynamic_cast<const Chat::OTCUpdateData*>(item);
+         //    if (otcUpdate && isOTCResponsePresented()) {
+         //       bool forThisElement = getActiveOtcResponse()->serverResponseId() ==
+         //                             otcUpdate->serverResponseId();
+         //       byData = forThisElement;
+         //    }
+         // }
+         // break;
          default:
             break;
       }
@@ -122,34 +123,24 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
    return byTypes && byData;
 }
 
-bool ChatContactElement::isHaveActiveOTC() const
+bool ChatContactElement::OTCTradingStarted() const
 {
-   return activeOtcRequest_ != nullptr;
+   return otcRequest_ != nullptr;
 }
 
-bool ChatContactElement::isOTCResponsePresented() const
+bool ChatContactElement::isOTCRequestor() const
 {
-   return activeOtcResponse_ != nullptr;
+   return otcRequest_->messageDirectoin() == Chat::MessageData::MessageDirection::Sent;
 }
 
-std::shared_ptr<Chat::OTCRequestData> ChatContactElement::getActiveOtcRequest() const
+bool ChatContactElement::haveUpdates() const
 {
-   return activeOtcRequest_;
+   return lastUpdate_ != nullptr;
 }
 
-void ChatContactElement::setActiveOtcRequest(const std::shared_ptr<Chat::OTCRequestData> &activeOtcRequest)
+bool ChatContactElement::haveResponse() const
 {
-   activeOtcRequest_ = activeOtcRequest;
-}
-
-void ChatContactElement::setActiveOtcResponse(const std::shared_ptr<Chat::OTCResponseData> &activeOtcResponse)
-{
-   activeOtcResponse_ = activeOtcResponse;
-}
-
-std::shared_ptr<Chat::OTCResponseData> ChatContactElement::getActiveOtcResponse() const
-{
-   return activeOtcResponse_;
+   return otcResponse_ != nullptr;
 }
 
 ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
@@ -172,27 +163,70 @@ std::shared_ptr<Chat::UserData> ChatSearchElement::getUserData() const
    return std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
 }
 
-std::shared_ptr<Chat::OTCResponseData> OTCSentResponseElement::getOTCResponse() const
-{
-   return std::dynamic_pointer_cast<Chat::OTCResponseData>(getDataObject());
-}
-
-std::string OTCSentResponseElement::otcId() const
-{
-   return getOTCResponse()->serverResponseId();
-}
-
-std::shared_ptr<Chat::OTCResponseData> OTCReceivedResponseElement::getOTCResponse() const
-{
-   return std::dynamic_pointer_cast<Chat::OTCResponseData>(getDataObject());
-}
-
-std::string OTCReceivedResponseElement::otcId() const
-{
-   return getOTCResponse()->serverResponseId();
-}
 
 std::shared_ptr<Chat::DataObject> DisplayableDataNode::getDataObject() const
 {
    return data_;
+}
+
+void ChatContactElement::onChildAdded(TreeItem* item)
+{
+   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode) {
+      auto messageNode = dynamic_cast<TreeMessageNode*>(item);
+      if (messageNode) {
+         auto messageData = messageNode->getMessage();
+         auto messagePayloadType = messageData->messageDataType();
+         auto messageDirection = messageData->messageDirectoin();
+
+         if ((messageDirection != Chat::MessageData::MessageDirection::NotSet)
+             && (messagePayloadType != Chat::MessageData::RawMessageDataType::TextMessage)
+             && !messageData->loadedFromHistory()) {
+            processOTCMessage(messageData);
+         }
+      }
+   }
+}
+
+void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData)
+{
+   auto messagePayloadType = messageData->messageDataType();
+
+   switch (messagePayloadType) {
+   case Chat::MessageData::RawMessageDataType::OTCReqeust:
+      otcRequest_ = std::dynamic_pointer_cast<Chat::OTCRequestData>(messageData);
+      break;
+   case Chat::MessageData::RawMessageDataType::OTCResponse:
+      otcResponse_ = std::dynamic_pointer_cast<Chat::OTCResponseData>(messageData);
+      break;
+   case Chat::MessageData::RawMessageDataType::OTCUpdate:
+      lastUpdate_ = std::dynamic_pointer_cast<Chat::OTCUpdateData>(messageData);
+      break;
+   case Chat::MessageData::RawMessageDataType::OTCCloseTrading:
+      cleanupTrading();
+      break;
+   default:
+      break;
+   }
+}
+
+std::shared_ptr<Chat::OTCRequestData> ChatContactElement::getOTCRequest() const
+{
+   return otcRequest_;
+}
+
+std::shared_ptr<Chat::OTCResponseData> ChatContactElement::getOTCResponse() const
+{
+   return otcResponse_;
+}
+
+std::shared_ptr<Chat::OTCUpdateData> ChatContactElement::getLastOTCUpdate() const
+{
+   return lastUpdate_;
+}
+
+void ChatContactElement::cleanupTrading()
+{
+   otcRequest_ = nullptr;
+   otcResponse_ = nullptr;
+   lastUpdate_ = nullptr;
 }

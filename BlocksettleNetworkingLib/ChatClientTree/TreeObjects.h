@@ -27,15 +27,8 @@ public:
    ChatContactElement(std::shared_ptr<Chat::ContactRecordData> data)
       : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
                         std::vector<ChatUIDefinitions::ChatTreeNodeType>{
-                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCRequestNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCSentResponseNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCSentUpdateNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedUpdateNode},
+                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode},
                         data)
-      , activeOtcRequest_(nullptr)
-      , activeOtcResponse_(nullptr)
    {}
 
    std::shared_ptr<Chat::ContactRecordData> getContactData() const;
@@ -46,19 +39,27 @@ public:
 
    bool isChildSupported(const TreeItem *item) const override;
 
-   bool isHaveActiveOTC() const;
-   bool isOTCResponsePresented() const;
+   bool OTCTradingStarted() const;
+   bool isOTCRequestor() const;
+   bool haveUpdates() const;
+   bool haveResponse() const;
 
-   std::shared_ptr<Chat::OTCRequestData> getActiveOtcRequest() const;
-   std::shared_ptr<Chat::OTCResponseData> getActiveOtcResponse() const;
-   void setActiveOtcRequest(const std::shared_ptr<Chat::OTCRequestData> &activeOtcRequest);
-   void setActiveOtcResponse(const std::shared_ptr<Chat::OTCResponseData> &activeOtcResponse);
+   std::shared_ptr<Chat::OTCRequestData>  getOTCRequest() const;
+   std::shared_ptr<Chat::OTCResponseData> getOTCResponse() const;
+   std::shared_ptr<Chat::OTCUpdateData>   getLastOTCUpdate() const;
 
+   void cleanupTrading();
 
 protected:
+   void onChildAdded(TreeItem* item) override;
+private:
+   void processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData);
+protected:
    OnlineStatus onlineStatus_;
-   std::shared_ptr<Chat::OTCRequestData> activeOtcRequest_;
-   std::shared_ptr<Chat::OTCResponseData> activeOtcResponse_;
+
+   std::shared_ptr<Chat::OTCRequestData>  otcRequest_ = nullptr;
+   std::shared_ptr<Chat::OTCResponseData> otcResponse_ = nullptr;
+   std::shared_ptr<Chat::OTCUpdateData>       lastUpdate_ = nullptr;
 };
 
 class ChatSearchElement : public CategoryElement {
@@ -106,48 +107,6 @@ public:
    std::shared_ptr<Chat::MessageData> getMessage() const {
       return std::dynamic_pointer_cast<Chat::MessageData>(data_);
    }
-};
-
-class OTCSentResponseElement : public CategoryElement
-{
-public:
-   OTCSentResponseElement(std::shared_ptr<Chat::OTCResponseData> response)
-      : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement,
-                        std::vector<ChatUIDefinitions::ChatTreeNodeType>{
-                        ChatUIDefinitions::ChatTreeNodeType::OTCSentResponseNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCSentUpdateNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedUpdateNode,
-                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode },
-                        response)
-   {}
-
-   ~OTCSentResponseElement() override = default;
-
-    std::shared_ptr<Chat::OTCResponseData> getOTCResponse() const;
-
-   std::string otcId() const;
-};
-
-class OTCReceivedResponseElement : public CategoryElement
-{
-public:
-   OTCReceivedResponseElement(std::shared_ptr<Chat::OTCResponseData> response)
-      : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement,
-                        std::vector<ChatUIDefinitions::ChatTreeNodeType>{
-                        ChatUIDefinitions::ChatTreeNodeType::OTCSentResponseNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCSentUpdateNode,
-                        ChatUIDefinitions::ChatTreeNodeType::OTCReceivedUpdateNode,
-                        ChatUIDefinitions::ChatTreeNodeType::MessageDataNode},
-                        response)
-   {}
-
-   ~OTCReceivedResponseElement() override = default;
-
-   std::shared_ptr<Chat::OTCResponseData> getOTCResponse() const;
-
-   std::string otcId() const;
 };
 
 /*

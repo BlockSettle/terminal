@@ -1,29 +1,150 @@
 #include "MessageData.h"
 
 #include "../ProtocolDefinitions.h"
+#include "OTCRequestData.h"
+#include "OTCResponseData.h"
+#include "OTCUpdateData.h"
+#include "OTCCloseTradingData.h"
 
 #include <QDebug>
 
 namespace Chat {
 
-   const size_t NONCE_SIZE = 24;
-
-   MessageData::MessageData(const QString& senderId, const QString& receiverId, const QString &id, const QDateTime& dateTime,
-      const QString& messageData, int state)
-      : DataObject(DataObject::Type::MessageData),
-      id_(id),
-      senderId_(senderId),
-      receiverId_(receiverId),
-      dateTime_(dateTime),
-      messageData_(messageData),
-      state_(state),
-      encryptionType_(EncryptionType::Unencrypted)
+   QString MessageData::serializePayload()
    {
+      QJsonObject data;
+
+      data[QLatin1String("raw_message_type")] = static_cast<int>(rawType_);
+      data[QLatin1String("message_text")] = displayText_;
+
+      QJsonDocument doc(data);
+      return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
    }
 
-   void MessageData::setMessageData(const QString& messageData)
+   QString MessageData::directionToText(MessageDirection direction)
    {
-      messageData_ = messageData;
+      switch(direction) {
+      case MessageDirection::Sent:
+         return QLatin1String("Sent");
+      case MessageDirection::Received:
+         return QLatin1String("Received");
+      default:
+         return QLatin1String("<direction not set>");
+      }
+   }
+
+   const size_t NONCE_SIZE = 24;
+
+   MessageData::MessageData(const QJsonObject& data)
+      : DataObject(DataObject::Type::MessageData)
+   {
+      id_ = data[MessageIdKey].toString();
+      senderId_ = data[SenderIdKey].toString();
+      state_ = data[StatusKey].toInt();
+      receiverId_ = data[ReceiverIdKey].toString();
+      dateTime_ = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
+
+      QByteArray local_nonce = QByteArray::fromBase64(data[Nonce].toString().toLocal8Bit());
+
+      nonce_.assign(local_nonce.begin(), local_nonce.end());
+
+      rawType_ = RawMessageDataType::Undefined;
+   }
+
+   MessageData::MessageData(const MessageData& source, const QJsonObject& jsonData)
+      : MessageData(source)
+   {
+      rawType_ = RawMessageDataType::TextMessage;
+      encryptionType_ = EncryptionType::Unencrypted;
+      displayText_ = jsonData[QLatin1String("message_text")].toString();
+   }
+
+   MessageData::MessageData(const QString &sender, const QString &receiver
+                            , const QString &id, const QDateTime &dateTime
+                            , const QString&  messagePayload
+                            , RawMessageDataType rawType
+                            , int state)
+      : DataObject(DataObject::Type::MessageData)
+      , id_(id)
+      , senderId_(sender)
+      , receiverId_(receiver)
+      , dateTime_(dateTime)
+      , state_{state}
+      , encryptionType_{EncryptionType::Unencrypted}
+      , displayText_{}
+      , messagePayload_{messagePayload}
+      , rawType_{rawType}
+   {
+
+   }
+
+   MessageData::MessageData(const MessageData& source, RawMessageDataType rawType)
+      : MessageData(source)
+   {
+      encryptionType_ = EncryptionType::Unencrypted;
+      rawType_ = rawType;
+   }
+
+   MessageData::MessageData(const QString &sender, const QString &receiver
+                  , const QString &id, const QDateTime &dateTime
+                  , const QString& messageText, int state)
+      : DataObject(DataObject::Type::MessageData)
+      , id_(id)
+      , senderId_(sender)
+      , receiverId_(receiver)
+      , dateTime_(dateTime)
+      , state_{state}
+      , encryptionType_{EncryptionType::Unencrypted}
+      , displayText_{messageText}
+      , rawType_{RawMessageDataType::TextMessage}
+   {
+      messagePayload_ = serializePayload();
+   }
+
+   MessageData::MessageData(const MessageData& source
+               , const MessageData::EncryptionType &type
+               , const QString& encryptedPayload)
+      : MessageData(source)
+   {
+      encryptionType_ = type;
+      displayText_ = QString{};
+      messagePayload_ = encryptedPayload;
+      rawType_ = RawMessageDataType::TextMessage;
+   }
+
+   MessageData::MessageData(const MessageData& source)
+      : DataObject(DataObject::Type::MessageData)
+      , id_{source.id_}
+      , senderId_{source.senderId_}
+      , receiverId_{source.receiverId_}
+      , dateTime_{source.dateTime_}
+      , state_{source.state_}
+      , nonce_{source.nonce_}
+      , direction_{source.direction_}
+      , encryptionType_{source.encryptionType_}
+      , displayText_{source.displayText_}
+      , messagePayload_{source.messagePayload_}
+      , rawType_{source.rawType_}
+      , loadedFromHistory_{source.loadedFromHistory_}
+   {}
+
+   MessageData::RawMessageDataType MessageData::messageDataType() const
+   {
+      return rawType_;
+   }
+
+   MessageData::MessageDirection MessageData::messageDirectoin() const
+   {
+      return direction_;
+   }
+
+   void MessageData::messageDirectionUpdate()
+   {}
+
+   void MessageData::setMessageDirection(MessageDirection direction)
+   {
+      direction_ = direction;
+      messageDirectionUpdate();
    }
 
    QJsonObject MessageData::toJson() const
@@ -33,9 +154,10 @@ namespace Chat {
       data[SenderIdKey] = senderId_;
       data[ReceiverIdKey] = receiverId_;
       data[DateTimeKey] = dateTime_.toMSecsSinceEpoch();
-      data[MessageKey] = messageData_;
+      data[MessageKey] = messagePayload();
       data[StatusKey] = state_;
       data[MessageIdKey] = id_;
+
       data[Nonce] = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(nonce_.data()), int(nonce_.size())).toBase64());
       data[EncryptionTypeKey] = static_cast<int>(encryptionType());
       return data;
@@ -57,19 +179,16 @@ namespace Chat {
    {
       QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
 
-      QString senderId = data[SenderIdKey].toString();
-      QString receiverId = data[ReceiverIdKey].toString();
-      QDateTime dtm = QDateTime::fromMSecsSinceEpoch(data[DateTimeKey].toDouble());
-      QString messageData = data[MessageKey].toString();
-      QString id =  data[MessageIdKey].toString();
-      const int state = data[StatusKey].toInt();
-      QByteArray local_nonce = QByteArray::fromBase64(data[Nonce].toString().toLocal8Bit());
-      Botan::SecureVector<uint8_t> nonce(local_nonce.begin(), local_nonce.end());
+      MessageData result{data};
 
-      std::shared_ptr<MessageData> msg = std::make_shared<MessageData>(senderId, receiverId, id, dtm, messageData, state);
-      msg->setNonce(nonce);
-      msg->setEncryptionType(static_cast<EncryptionType>(data[EncryptionTypeKey].toInt()));
-      return msg;
+      const auto encryptionType = static_cast<EncryptionType>(data[EncryptionTypeKey].toInt());
+      const auto payload = data[MessageKey].toString();
+
+      if (encryptionType == EncryptionType::Unencrypted) {
+         return result.CreateDecryptedMessage(payload);
+      }
+
+      return result.CreateEncryptedMessage(encryptionType, payload);
    }
 
    void MessageData::setFlag(const State state)
@@ -119,8 +238,69 @@ namespace Chat {
       return encryptionType_;
    }
 
-   void MessageData::setEncryptionType(const MessageData::EncryptionType &type)
+   std::shared_ptr<MessageData> MessageData::CreateEncryptedMessage(const MessageData::EncryptionType &type, const QString& messagePayload)
    {
-      encryptionType_ = type;
+      if (type == EncryptionType::Unencrypted) {
+         // there is another method for this
+         return CreateDecryptedMessage(messagePayload);
+      }
+
+      return std::make_shared<MessageData>(*this, type, messagePayload);
+   }
+
+   std::shared_ptr<MessageData> MessageData::CreateDecryptedMessage(const QString& messagePayload)
+   {
+      messagePayload_ = messagePayload;
+
+      QJsonParseError error;
+      QJsonDocument doc = QJsonDocument::fromJson(messagePayload.toUtf8(), &error);
+
+      if (error.error != QJsonParseError::NoError) {
+         return nullptr;
+      }
+
+      QJsonObject jsonObject = doc.object();
+      RawMessageDataType rawType = static_cast<RawMessageDataType>(jsonObject[QString::fromLatin1("raw_message_type")].toInt());
+
+      switch (rawType) {
+      case RawMessageDataType::TextMessage:
+         return std::make_shared<MessageData>(*this, jsonObject);
+      case RawMessageDataType::OTCReqeust:
+         return std::make_shared<OTCRequestData>(*this, jsonObject);
+      case RawMessageDataType::OTCResponse:
+         return std::make_shared<OTCResponseData>(*this, jsonObject);
+      case RawMessageDataType::OTCUpdate:
+         return std::make_shared<OTCUpdateData>(*this, jsonObject);
+      case RawMessageDataType::OTCCloseTrading:
+         return std::make_shared<OTCCloseTradingData>(*this, jsonObject);
+      default:
+         return nullptr;
+      }
+   }
+
+   QString MessageData::displayText() const
+   {
+      return displayText_;
+   }
+
+   QString MessageData::messagePayload() const
+   {
+      return messagePayload_;
+   }
+
+   void MessageData::updatePayload(const QString& payload)
+   {
+      messagePayload_ = payload;
+   }
+
+   bool MessageData::loadedFromHistory() const
+   {
+      return loadedFromHistory_;
+   }
+
+   void MessageData::setLoadedFromHistory()
+   {
+      loadedFromHistory_ = true;
    }
 }
+

@@ -67,7 +67,7 @@ TreeItem * RootItem::resolveMessageTargetNode(DisplayableDataNode * messageNode)
 
 TreeItem* RootItem::findChatNode(const std::string &chatId)
 {
-   for (auto child : children_){ // through all categories
+   for (auto child : children_) { // through all categories
       if ( child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::RoomsElement)
         || child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::ContactsElement)) {
          for (auto cchild : child->getChildren()) {
@@ -91,26 +91,6 @@ TreeItem* RootItem::findChatNode(const std::string &chatId)
                   break;
 
             }
-         }
-      }
-
-      if (child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement)) {
-         for (auto cchild : child->getChildren()) {
-            auto sentResponse = static_cast<OTCSentResponseElement*>(cchild);
-            if (sentResponse->otcId() == chatId) {
-               return sentResponse;
-            }
-
-         }
-      }
-
-      if (child->isChildTypeSupported(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement)) {
-         for (auto cchild : child->getChildren()) {
-            auto receivedResponse = static_cast<OTCReceivedResponseElement*>(cchild);
-            if (receivedResponse->otcId() == chatId) {
-               return receivedResponse;
-            }
-
          }
       }
    }
@@ -326,31 +306,3 @@ bool CategoryElement::getNewItemsFlag() const
 {
    return newItemsFlag_;
 }
-
-// insert channel for response that client send to OTC requests
-bool RootItem::insertOTCSentResponseObject(const std::shared_ptr<Chat::OTCResponseData> &response)
-{
-   auto otcRequestNode = new OTCSentResponseElement(response);
-   bool insertResult = insertNode(otcRequestNode);
-   if (!insertResult) {
-      delete otcRequestNode;
-   }
-
-   qDebug() << "Sent response added";
-   return insertResult;
-}
-
-// insert channel for response client receive for own OTC
-bool RootItem::insertOTCReceivedResponseObject(const std::shared_ptr<Chat::OTCResponseData> &response)
-{
-   auto otcRequestNode = new OTCReceivedResponseElement(response);
-   bool insertResult = insertNode(otcRequestNode);
-   if (!insertResult) {
-      delete otcRequestNode;
-   }
-
-   qDebug() << "Received response added";
-
-   return insertResult;
-}
-

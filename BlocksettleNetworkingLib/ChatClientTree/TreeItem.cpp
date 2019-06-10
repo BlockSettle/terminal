@@ -72,7 +72,11 @@ void TreeItem::addChild(TreeItem *item)
    }
    item->setParent(this);
    children_.push_back(item);
+   onChildAdded(item);
 }
+
+void TreeItem::onChildAdded(TreeItem* item)
+{}
 
 void TreeItem::removeChild(TreeItem *item)
 {

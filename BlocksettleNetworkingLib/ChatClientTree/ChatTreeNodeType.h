@@ -20,17 +20,10 @@ enum class ChatTreeNodeType : uint32_t
    RoomsElement = 8,
    ContactsElement = 16,
    AllUsersElement = 32,
-   OTCReceivedResponsesElement = 64,
-   OTCSentResponsesElement = 128,
 
    //Subcategory accept types
-   NoDataNode = 256,
-   MessageDataNode = 512,
-   OTCReceivedResponseNode = 1024,
-   OTCSentResponseNode = 2048,
-   OTCReceivedUpdateNode = 4096,
-   OTCSentUpdateNode = 8192,
-   OTCRequestNode = 16384
+   NoDataNode = 64,
+   MessageDataNode = 128
 };
 
 Q_ENUM_NS(ChatUIDefinitions::ChatTreeNodeType)
