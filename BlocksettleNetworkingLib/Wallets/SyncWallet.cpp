@@ -498,7 +498,7 @@ std::vector<std::string> Wallet::registerWallet(const std::shared_ptr<ArmoryObje
       const auto &cbRegister = [this](const std::string &) 
       {
          logger_->debug("Wallet ready: {}", walletId());
-         this->setRegistered();
+         setRegistered();
          emit walletReady(QString::fromStdString(walletId()));
       };
 
@@ -816,12 +816,12 @@ void Wallet::trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb)
 {
    //1) round up all addresses that have a tx count
    std::set<BinaryData> usedAddrSet;
-   for (auto& addrPair : addressTxNMap_)
-   {
+   for (auto& addrPair : addressTxNMap_) {
       if (addrPair.second != 0)
          usedAddrSet.insert(addrPair.first);
    }
 
+   logger_->debug("[{}] {}: {} used address[es]", __func__, walletId(), usedAddrSet.size());
    //2) send to armory wallet for processing
    signContainer_->syncAddressBatch(walletId(), usedAddrSet, cb);
 }

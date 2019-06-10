@@ -247,7 +247,7 @@ namespace bs {
          std::atomic_bool  heartbeatRunning_ = { false };
          bool isRegistered_ = false;
 
-      public:
+      protected:
          bool firstInit_ = false;
       };
 

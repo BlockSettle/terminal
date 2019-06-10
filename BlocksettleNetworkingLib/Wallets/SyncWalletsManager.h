@@ -196,6 +196,7 @@ namespace bs {
          BinaryData                          userId_;
          std::shared_ptr<SettlementWallet>   settlementWallet_;
          std::unordered_set<std::string>     pendingRegIds_;
+         std::set<std::string>               newWallets_;
 
          struct CCInfo {
             std::string desc;

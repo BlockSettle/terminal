@@ -222,6 +222,7 @@ void hd::Wallet::setUserId(const BinaryData &userId)
 void hd::Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 {
    armory_ = armory;
+
    for (const auto &leaf : getLeaves()) {
       leaf->setArmory(armory);
    }
@@ -255,21 +256,23 @@ void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncSta
                   hdState = st.second;
                }
             }
-            if (cb) {
-               cb(hdState);
-            }
+            leaf->synchronize([this, leaf, cb, hdState] {
+               emit leaf->addressAdded();
+               if (cb) {
+                  cb(hdState);
+               }
+            });
          }
       };
-      leaf->trackChainAddressUse(cbScanLeaf);
+      const bool rc = leaf->getAddressTxnCounts([leaf, cbScanLeaf, this] {
+         leaf->trackChainAddressUse(cbScanLeaf);
+      });
    }
 }
 
 void hd::Wallet::startRescan()
 {
    const auto &cbScanned = [this](bs::sync::SyncState state) {
-      if (logger_) {
-         logger_->debug("Wallet rescan result: {}", (int)state);
-      }
       emit scanComplete(walletId());
    };
    trackChainAddressUse(cbScanned);

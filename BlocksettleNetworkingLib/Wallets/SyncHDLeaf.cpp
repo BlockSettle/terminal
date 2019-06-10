@@ -24,6 +24,8 @@ hd::Leaf::~Leaf() = default;
 
 void hd::Leaf::synchronize(const std::function<void()> &cbDone)
 {
+   reset();
+
    const auto &cbProcess = [this, cbDone](bs::sync::WalletData data) 
    {
       encryptionTypes_ = data.encryptionTypes;
@@ -39,6 +41,8 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       lastExtIdx_ = data.highestExtIndex;
       lastIntIdx_ = data.highestIntIndex;
 
+      logger_->debug("[sync::hd::Leaf::synchronize] {}: last indices {}+{}={} address[es]"
+         , walletId(), lastExtIdx_, lastIntIdx_, data.addresses.size());
       for (const auto &addr : data.addresses) {
          addAddress(addr.address, addr.index, addr.address.getType(), false);
          setAddressComment(addr.address, addr.comment, false);
@@ -103,7 +107,6 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 {
    const auto &cbRegisterExt = [this, online] {
       if (isExtOnly_ || (regIdExt_.empty() && regIdInt_.empty())) {
-         emit walletReady(QString::fromStdString(walletId()));
          if (online) {
             postOnline();
          }
@@ -111,7 +114,6 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
    };
    const auto &cbRegisterInt = [this, online] {
       if (regIdExt_.empty() && regIdInt_.empty()) {
-         emit walletReady(QString::fromStdString(walletId()));
          if (online) {
             postOnline();
          }
@@ -145,7 +147,15 @@ void hd::Leaf::postOnline()
    if (btcWalletInt_) {
       btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
    }
+
+   const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
+      QMetaObject::invokeMethod(this, [this] { emit walletReady(
+         QString::fromStdString(walletId())); });
+   };
    bs::sync::Wallet::init();
+   const bool rc = getAddressTxnCounts([this, cbTrackAddrChain] {
+      trackChainAddressUse(cbTrackAddrChain);
+   });
 }
 
 void hd::Leaf::init(bool force)
@@ -304,16 +314,17 @@ std::vector<std::string> hd::Leaf::registerWallet(
          armory_->bdv()->instantiateWallet(walletId()));
       regIds.push_back(regIdExt_);
 
+      std::vector<BinaryData> addrsInt;
       if (!isExtOnly_) {
-         const auto addrsInt = getAddrHashesInt();
+         addrsInt = getAddrHashesInt();
          regIdInt_ = armory_->registerWallet(
             walletIdInt(), addrsInt, cbRegistered, asNew);
          btcWalletInt_ = std::make_shared<AsyncClient::BtcWallet>(
             armory_->bdv()->instantiateWallet(walletIdInt()));
          regIds.push_back(regIdInt_);
       }
-      logger_->debug("[{}] registered {}/{} addresses in {}, {} regIds", __func__
-         , getAddrHashesExt().size(), getAddrHashesInt().size(), walletId(), regIds.size());
+      logger_->debug("[{}] registered {}+{} addresses in {}, {} regIds", __func__
+         , addrsExt.size(), addrsInt.size(), walletId(), regIds.size());
       return regIds;
    }
    return {};

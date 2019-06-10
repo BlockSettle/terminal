@@ -500,9 +500,12 @@ void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
    }
 
    if (pendingRegIds_.empty()) {
-      trackAddressChainUse([this](bool result) {
-         logger_->debug("[WalletsManager] address chain use result: {}", result);
-      });
+      if (!newWallets_.empty()) {
+         for (const auto &hdWalletId : newWallets_) {
+            hdWallets_[hdWalletId]->startRescan();
+         }
+         newWallets_.clear();
+      }
       updateWallets();
    }
 
@@ -655,12 +658,21 @@ std::vector<std::string> WalletsManager::registerWallets()
       return {};
    }
    for (auto &it : wallets_) {
-      auto&& ids = it.second->registerWallet(armory_);
-      pendingRegIds_.insert(ids.begin(), ids.end());
+      const auto &ids = it.second->registerWallet(armory_);
+      if (ids.empty()) {
+         logger_->error("[{}] failed to register wallet {}", __func__, it.second->walletId());
+      }
+      else {
+         pendingRegIds_.insert(ids.begin(), ids.end());
+      }
    }
    if (settlementWallet_) {
-      auto&& ids = settlementWallet_->registerWallet(armory_);
-      pendingRegIds_.insert(ids.begin(), ids.end());
+      const auto &ids = settlementWallet_->registerWallet(armory_);
+      if (ids.empty()) {
+         logger_->error("[{}] failed to register settlement wallet", __func__);
+      } else {
+         pendingRegIds_.insert(ids.begin(), ids.end());
+      }
    }
    std::vector<std::string> result;
    result.insert(result.end(), pendingRegIds_.cbegin(), pendingRegIds_.cend());
@@ -1000,7 +1012,7 @@ void WalletsManager::onWalletsListUpdated()
             QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletCreated(hdWallet); });
             logger_->debug("[WalletsManager::onWalletsListUpdated] found new wallet {} "
                "- starting address scan for it", hdWalletId);
-            hdWallet->startRescan();
+            newWallets_.insert(hdWalletId);
          }
       }
       for (const auto &hdWalletId : hdWalletIds) {
@@ -1008,7 +1020,6 @@ void WalletsManager::onWalletsListUpdated()
             QMetaObject::invokeMethod(this, [this, hdWalletId] { emit walletDeleted(hdWalletId); });
          }
       }
-      logger_->debug("[WalletsManager] wallets list updated");
       registerWallets();
    };
    reset();

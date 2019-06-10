@@ -1321,7 +1321,7 @@ bool HeadlessContainerListener::onSyncWallet(const std::string &clientId, headle
       packet.set_type(headless::SyncWalletType);
       sendData(packet.SerializeAsString(), clientId);
    };
-   std::thread(lbdSend).detach();
+   lbdSend();
    return true;
 }
 
