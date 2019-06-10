@@ -190,7 +190,6 @@ void ChatContactElement::onChildAdded(TreeItem* item)
 void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData)
 {
    auto messagePayloadType = messageData->messageDataType();
-   auto messageDirection = messageData->messageDirectoin();
 
    switch (messagePayloadType) {
    case Chat::MessageData::RawMessageDataType::OTCReqeust:
