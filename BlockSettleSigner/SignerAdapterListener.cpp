@@ -67,7 +67,7 @@ public:
    }
 
    void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &
-      , const Blocksettle::Communication::headless::SettlementInfo &settlementInfo, const std::string &prompt) override
+      , const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo, const std::string &prompt) override
    {
 
    }
