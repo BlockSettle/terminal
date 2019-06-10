@@ -29,6 +29,12 @@
 
 using namespace bs::ui;
 
+enum class DealingPages : int
+{
+   LoginRequierdPage = 0,
+   DealingPage
+};
+
 RFQReplyWidget::RFQReplyWidget(QWidget* parent)
    : TabWithShortcut(parent)
    , ui_(new Ui::RFQReplyWidget())
@@ -155,8 +161,8 @@ void RFQReplyWidget::init(std::shared_ptr<spdlog::logger> logger
    ui_->treeViewOrders->setModel(ordersModel);
    ui_->treeViewOrders->initWithModel(ordersModel);
 
-   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, ui_->pageRFQReply, &RFQDealerReply::onCelerConnected);
-   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, ui_->pageRFQReply, &RFQDealerReply::onCelerDisconnected);
+   connect(celerClient_.get(), &CelerClient::OnConnectedToServer, this, &RFQReplyWidget::onConnectedToCeler);
+   connect(celerClient_.get(), &CelerClient::OnConnectionClosed, this, &RFQReplyWidget::onDisconnectedFromCeler);
 }
 
 void RFQReplyWidget::onReplied(bs::network::QuoteNotification qn)
@@ -288,6 +294,20 @@ void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
       signingContainer_->customDialogRequest(bs::signer::ui::DialogType::ActivateAutoSign
          , {{ QLatin1String("rootId"), hdWalletId }});
    }
+}
+
+void RFQReplyWidget::onConnectedToCeler()
+{
+   qDebug("GO TO DEALING PAGE");
+   ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
+   ui_->pageRFQReply->onCelerConnected();
+}
+
+void RFQReplyWidget::onDisconnectedFromCeler()
+{
+   qDebug("GO TO LOGIN REQUIRED PAGE");
+   ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::LoginRequierdPage));
+   ui_->pageRFQReply->onCelerDisconnected();
 }
 
 void RFQReplyWidget::saveTxData(QString orderId, std::string txData)
