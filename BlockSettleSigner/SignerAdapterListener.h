@@ -20,37 +20,39 @@ namespace bs {
       class WalletsManager;
    }
 }
+class DispatchQueue;
 class HeadlessAppObj;
-class HeadlessContainerListener;
-class ServerConnection;
-class HeadlessSettings;
+class HeadlessContainerCallbacks;
 class HeadlessContainerCallbacksImpl;
+class HeadlessSettings;
+class ServerConnection;
 
 class SignerAdapterListener : public ServerConnectionListener
 {
 public:
    SignerAdapterListener(HeadlessAppObj *app
-      , const std::shared_ptr<ZmqBIP15XServerConnection> &conn
+      , ZmqBIP15XServerConnection *connection
       , const std::shared_ptr<spdlog::logger> &logger
       , const std::shared_ptr<bs::core::WalletsManager> &walletsMgr
+      , const std::shared_ptr<DispatchQueue> &queue
       , const std::shared_ptr<HeadlessSettings> &settings);
    ~SignerAdapterListener() noexcept override;
 
-   std::shared_ptr<ZmqBIP15XServerConnection> getServerConn() const { return connection_; }
-
-   bool onReady(int cur = 0, int total = 0);
+   ZmqBIP15XServerConnection *getServerConn() const { return connection_; }
 
    // Sent to GUI status update message
    void sendStatusUpdate();
 
+   void resetConnection();
+
+   HeadlessContainerCallbacks *callbacks() const;
 protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnClientConnected(const std::string &clientId) override;
    void OnClientDisconnected(const std::string &clientId) override;
    void onClientError(const std::string& clientId, const std::string &error) override;
 
-private:
-   void setCallbacks();
+   void processData(const std::string &clientId, const std::string &data);
 
    bool sendData(Blocksettle::Communication::signer::PacketType, const std::string &data
       , bs::signer::RequestId reqId = 0);
@@ -79,15 +81,16 @@ private:
    void walletsListUpdated();
    void shutdownIfNeeded();
 
+   bool sendReady();
 private:
    friend class HeadlessContainerCallbacksImpl;
 
    HeadlessAppObj *  app_;
-   std::shared_ptr<ZmqBIP15XServerConnection>   connection_;
+   ZmqBIP15XServerConnection *connection_{};
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<bs::core::WalletsManager>    walletsMgr_;
+   std::shared_ptr<DispatchQueue> queue_;
    std::shared_ptr<HeadlessSettings>   settings_;
-   bool  ready_ = false;
    std::unique_ptr<HeadlessContainerCallbacksImpl> callbacks_;
 };
 
