@@ -347,7 +347,7 @@ void ChatClient::OnContactsActionResponseServer(const Chat::ContactsActionRespon
             chatDb_->removeContact(QString::fromStdString(response.contactId()));
             //TODO: Remove pub key
          }
-         retrySendQueuedMessages(response.contactId());
+         //retrySendQueuedMessages(response.contactId());
       break;
       case Chat::ContactsActionServer::UpdateContactRecord:
          actionString = "ContactsActionServer::UpdateContactRecord";
@@ -404,14 +404,9 @@ void ChatClient::OnContactsListResponse(const Chat::ContactsListResponse & respo
 
    for (auto remote : remoteContacts) {
       auto citem = model_->findContactItem(remote->getContactId().toStdString());
-
       if (!citem) {
-         if (citem->getContactStatus() == Chat::ContactStatus::Accepted) {
-            model_->insertContactObject(remote);
-         } else {
-            model_->insertContactRequestObject(remote);
-         }
-         retrieveUserMessages(remote->getContactId());
+         model_->insertContactObject(remote);
+         //retrieveUserMessages(remote->getContactId());
       } else {
          citem->setContactStatus(remote->getContactStatus());
          model_->notifyContactChanged(citem);
