@@ -198,7 +198,13 @@ QFrame#loginLogo {
   background-image: url(":resources/login-logo.png");
   background-position: center right;
   background-repeat: no-repeat; }
+  
+QFrame#messagesHeaderFrame {
+  background-color: #18202b;}
 
+QWidget#chatTopSeparatorWidget {
+  background-color: #3f4c50;}
+  
 QToolBar {
   background: transparent;
   spacing: 0;

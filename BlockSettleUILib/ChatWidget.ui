@@ -289,7 +289,7 @@
                  <number>0</number>
                 </property>
                 <item>
-                 <widget class="QWidget" name="separatorWidget1" native="true">
+                 <widget class="QWidget" name="chatTopSeparatorWidget" native="true">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                     <horstretch>0</horstretch>
@@ -301,9 +301,6 @@
                     <width>0</width>
                     <height>1</height>
                    </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: #3f4c50;</string>
                   </property>
                  </widget>
                 </item>
@@ -320,9 +317,6 @@
                     <width>0</width>
                     <height>25</height>
                    </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: #18202b;</string>
                   </property>
                   <layout class="QHBoxLayout" name="horizontalLayout">
                    <property name="spacing">

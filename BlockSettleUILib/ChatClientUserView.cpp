@@ -73,7 +73,7 @@ private slots:
 
       BSMessageBox confirmRemoveContact(BSMessageBox::question, tr("Remove contact")
          , tr("Remove %1 as a contact?").arg(currentContact_->hasDisplayName() ? currentContact_->getDisplayName() : currentContact_->getContactId())
-         , tr("Are you sure you wish to remove this contact?"), this);
+         , tr("Are you sure you wish to remove this contact?"), view_->parentWidget());
 
       if (confirmRemoveContact.exec() != QDialog::Accepted) {
          return;
