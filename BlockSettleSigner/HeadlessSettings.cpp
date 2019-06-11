@@ -228,6 +228,11 @@ std::vector<std::string> HeadlessSettings::trustedInterfaces() const
    return result;
 }
 
+bool HeadlessSettings::twoWaySignerAuth() const
+{
+   return d_->two_way_signer_auth();
+}
+
 bool HeadlessSettings::loadSettings(HeadlessSettings::Settings *settings, const std::string &fileName)
 {
    std::ifstream s(fileName);

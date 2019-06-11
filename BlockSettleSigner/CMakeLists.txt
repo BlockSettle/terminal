@@ -19,6 +19,7 @@ SET(SOURCES
    ${BSNetwork}/ZmqStreamServerConnection.cpp
    ${BSNetwork}/ZMQ_BIP15X_ServerConnection.cpp
    ${BSNetwork}/ZMQ_BIP15X_Msg.cpp
+   ${BSNetwork}/ZMQ_BIP15X_Helpers.cpp
 )
 
 SET(HEADERS
