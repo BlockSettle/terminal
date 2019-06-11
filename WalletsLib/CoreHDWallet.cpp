@@ -539,3 +539,32 @@ bs::core::wallet::Seed hd::Wallet::getDecryptedSeed(void) const
    bs::core::wallet::Seed rootObj(clearSeed, netType_);
    return rootObj;
 }
+
+SecureBinaryData hd::Wallet::getDecryptedRootXpriv(void) const
+{
+   /***
+   Expects wallet to be locked and passphrase lambda set
+   ***/
+
+   if (walletPtr_ == nullptr)
+      throw WalletException("uninitialized armory wallet");
+
+   if(walletPtr_->isWatchingOnly())
+      throw WalletException("wallet is watching only");
+
+   auto root = walletPtr_->getRoot();
+   if(!root->hasPrivateKey())
+      throw WalletException("wallet is missing root private key, this shouldnt happen");
+
+   auto rootBip32 = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(root);
+   if (rootBip32 == nullptr)
+      throw WalletException("unexpected wallet root type");
+
+   auto decryptedRootPrivKey = walletPtr_->getDecryptedPrivateKeyForAsset(root);
+   
+   BIP32_Node node;
+   node.initFromPrivateKey(
+      rootBip32->getDepth(), rootBip32->getLeafID(), rootBip32->getFingerPrint(),
+      decryptedRootPrivKey, rootBip32->getChaincode());
+   return node.getBase58();
+}

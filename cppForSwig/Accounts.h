@@ -241,6 +241,7 @@ private:
    const std::vector<unsigned> derivationPath_;
    unsigned depth_ = 0;
    unsigned leafId_ = 0;
+   unsigned fingerPrint_ = 0;
 
    SecureBinaryData derivedRoot_;
    SecureBinaryData derivedChaincode_;
@@ -251,9 +252,9 @@ private:
 protected:
    AccountType_BIP32(
       const std::vector<unsigned>& derivationPath,
-      unsigned depth, unsigned leafId) :
+      unsigned depth, unsigned leafId, unsigned fingerPrint) :
       derivationPath_(derivationPath),
-      depth_(depth), leafId_(leafId)
+      depth_(depth), leafId_(leafId), fingerPrint_(fingerPrint)
    {}
 
 
@@ -296,6 +297,7 @@ public:
    //bip32 locals
    unsigned getDepth(void) const { return depth_; }
    unsigned getLeafID(void) const { return leafId_; }
+   unsigned getFingerPrint(void) const { return fingerPrint_; }
 };
 
 
@@ -397,7 +399,7 @@ public:
    {}
 
    AccountType_BIP32_Custom(void) :
-      AccountType_BIP32(std::vector<unsigned>(), 0, 0)
+      AccountType_BIP32(std::vector<unsigned>(), 0, 0, 0)
    {}
 
    /***

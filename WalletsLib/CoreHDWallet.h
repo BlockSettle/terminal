@@ -87,6 +87,7 @@ namespace bs {
             }
 
             bs::core::wallet::Seed getDecryptedSeed(void) const;
+            SecureBinaryData getDecryptedRootXpriv(void) const;
 
          protected:
             std::string    name_, desc_;
