@@ -19,6 +19,24 @@ ZmqBIP15XDataConnectionParams getTestParams()
    return params;
 }
 
+ZmqBIP15XPeer getPeerKey(const std::string &name, ZmqBIP15XDataConnection *conn)
+{
+   return ZmqBIP15XPeer(name, conn->getOwnPubKey());
+}
+
+ZmqBIP15XPeer getPeerKey(const std::string &host, const std::string &port, ZmqBIP15XServerConnection *conn)
+{
+   std::string name = fmt::format("{}:{}", host, port);
+   return ZmqBIP15XPeer(name, conn->getOwnPubKey());
+}
+
+ZmqBIP15XServerConnection::TrustedClientsCallback getEmptyPeersCallback()
+{
+   return [] () {
+      return ZmqBIP15XPeers();
+   };
+}
+
 TEST(TestNetwork, CelerMessageMapper)
 {
    for (int i = CelerAPI::CelerMessageTypeFirst; i < CelerAPI::CelerMessageTypeLast; i++) {
@@ -195,10 +213,8 @@ TEST(TestNetwork, ZMQ_BIP15X)
    const auto clientConn = std::make_unique<ZmqBIP15XDataConnection>(
       TestEnv::logger(), getTestParams());
    const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
-   std::vector<std::string> trustedClients = {
-      std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
    auto serverConn = std::make_unique<ZmqBIP15XServerConnection>(
-      TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+      TestEnv::logger(), zmqContext, getEmptyPeersCallback());
 //   serverConn->enableClientCookieUsage();
    const auto serverKey = serverConn->getOwnPubKey();
 
@@ -208,8 +224,8 @@ TEST(TestNetwork, ZMQ_BIP15X)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
-   clientConn->addAuthPeer(serverKey, host + ":" + port);
+   serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+   clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
    ASSERT_TRUE(connectFut.get());
 
@@ -402,10 +418,8 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
    const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
       TestEnv::logger(), getTestParams());
    const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
-   std::vector<std::string> trustedClients = {
-      std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-      TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+      TestEnv::logger(), zmqContext, getEmptyPeersCallback());
    srvLsn->connection_ = serverConn.get();
    const auto serverKey = serverConn->getOwnPubKey();
 
@@ -415,8 +429,8 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
-   clientConn->addAuthPeer(serverKey, host + ":" + port);
+   serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+   clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
    EXPECT_TRUE(connectFut1.get());
 
@@ -442,7 +456,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 
    const auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
       TestEnv::logger(), getTestParams());
-   client2Conn->addAuthPeer(serverKey, host + ":" + port);
+   client2Conn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
    ASSERT_TRUE(client2Conn->openConnection(host, port, client2Lsn.get()));
    EXPECT_TRUE(connectFut2.get());
    EXPECT_TRUE(client2Conn->closeConnection());
@@ -565,7 +579,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         std::vector<std::string> trustedClients = {
             std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
         auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-            TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+            TestEnv::logger(), zmqContext, getEmptyPeersCallback());
         const auto serverKey = serverConn->getOwnPubKey();
 
         clientLsn->connected_ = 0;
@@ -579,8 +593,8 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
             port = std::to_string((rand() % 50000) + 10000);
         } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-        serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
-        clientConn->addAuthPeer(serverKey, host + ":" + port);
+        serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+        clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
 
         ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
         
@@ -626,7 +640,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
     std::vector<std::string> trustedClients = {
         std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
     auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-        TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+        TestEnv::logger(), zmqContext, getEmptyPeersCallback());
     const auto serverKey = serverConn->getOwnPubKey();
 
     const std::string host = "127.0.0.1";
@@ -635,8 +649,8 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
         port = std::to_string((rand() % 50000) + 10000);
     } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-    serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
-    clientConn->addAuthPeer(serverKey, host + ":" + port);
+    serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+    clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
 
     struct Messages {
         size_t clientMsgs;
@@ -715,7 +729,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
         std::vector<std::string> trustedClients = {
             std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
         auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-            TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+            TestEnv::logger(), zmqContext, getEmptyPeersCallback());
         const auto serverKey = serverConn->getOwnPubKey();
 
         clientLsn->connected_ = false;
@@ -727,8 +741,8 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
             port = std::to_string((rand() % 50000) + 10000);
         } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-        serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
-        clientConn->addAuthPeer(serverKey, host + ":" + port);
+        serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+        clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
 
         ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
 
@@ -772,7 +786,7 @@ TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
    std::vector<std::string> trustedClients = {
       std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
    auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-      TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+      TestEnv::logger(), zmqContext, getEmptyPeersCallback());
    const auto serverKey = serverConn->getOwnPubKey();
 
    const std::string host = "127.0.0.1";
@@ -781,8 +795,8 @@ TEST(TestNetwork, ZMQ_BIP15X_DisconnectCounters)
       port = std::to_string((rand() % 50000) + 10000);
    } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-   serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
-   clientConn->addAuthPeer(serverKey, host + ":" + port);
+   serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+   clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
 
    ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
 
@@ -837,7 +851,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
     std::vector<std::string> trustedClients = {
         std::string("test:") + clientConn->getOwnPubKey().toHexStr() };
     auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-        TestEnv::logger(), zmqContext, [trustedClients] { return trustedClients; });
+        TestEnv::logger(), zmqContext, getEmptyPeersCallback());
     const auto serverKey = serverConn->getOwnPubKey();
 
     const std::string host = "127.0.0.1";
@@ -846,8 +860,8 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
         port = std::to_string((rand() % 50000) + 10000);
     } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-    serverConn->addAuthPeer(clientConn->getOwnPubKey(), host + ":" + port);
-    clientConn->addAuthPeer(serverKey, host + ":" + port);
+    serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+    clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
 
     ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
 
@@ -865,7 +879,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
     }
 }
 
-TEST(TestNetwork, DISABLED_ZMQ_BIP15X_MalformedData)
+TEST(TestNetwork, ZMQ_BIP15X_MalformedData)
 {
    std::uniform_int_distribution<uint32_t> distribution(0, 255);
    std::mt19937 generator;
@@ -882,7 +896,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_MalformedData)
                TestEnv::logger(), getTestParams());
       const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
       auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
-               TestEnv::logger(), zmqContext, [] { return std::vector<std::string>(); });
+               TestEnv::logger(), zmqContext, getEmptyPeersCallback());
       const auto serverKey = serverConn->getOwnPubKey();
 
       const std::string host = "127.0.0.1";
@@ -891,8 +905,10 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_MalformedData)
          port = std::to_string((rand() % 50000) + 10000);
       } while (!serverConn->BindConnection(host, port, srvLsn.get()));
 
-      clientConn->addAuthPeer(serverKey, host + ":" + port);
-      clientConn2->addAuthPeer(serverKey, host + ":" + port);
+      serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+      serverConn->addAuthPeer(getPeerKey("client2", clientConn2.get()));
+      clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
+      clientConn2->addAuthPeer(getPeerKey(host, port, serverConn.get()));
 
       auto badContext = zmq_ctx_new();
       auto badSocket = zmq_socket(badContext, ZMQ_DEALER);
