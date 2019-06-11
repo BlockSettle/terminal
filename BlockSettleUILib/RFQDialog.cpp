@@ -76,7 +76,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
 
    ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
 
-   QtConcurrent::run([this] { quoteProvider_->SubmitRFQ(rfq_); });
+   quoteProvider_->SubmitRFQ(rfq_);
 
    ui_->stackedWidgetRFQ->setCurrentIndex(RequestingQuoteId);
 }
