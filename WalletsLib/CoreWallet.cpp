@@ -285,6 +285,9 @@ std::string wallet::Seed::getWalletId() const
       const auto &pubkey = node_.getPublicKey();
       auto &&masterID = BtcUtils::getHMAC256(pubkey, hmacMasterMsg);
       walletId_ = BtcUtils::computeID(masterID).toBinStr();
+      if (*(walletId_.rbegin()) == 0) {
+         walletId_.resize(walletId_.size() - 1);
+      }
    }
    return walletId_;
 }
