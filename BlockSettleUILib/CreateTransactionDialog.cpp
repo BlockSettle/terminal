@@ -336,8 +336,8 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    }
 
    try {
-      if (!error.empty()) {
-         throw std::runtime_error(error);
+      if (result != bs::error::ErrorCode::NoError) {
+         throw std::runtime_error("error " + std::to_string(static_cast<int>(result)));
       }
       if (signedTX.isNull()) {
          throw std::runtime_error("Empty signed TX data received");
