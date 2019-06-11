@@ -53,14 +53,21 @@ private:
 
    void construct(const uint8_t *data, int dataSize, uint8_t type);
 public:
+   // Constructs plain packet
    ZmqBipMsgBuilder(const uint8_t *data, int dataSize, uint8_t type);
+
+   // Shotcuts for the first ctor
    ZmqBipMsgBuilder(const std::vector<uint8_t>& data, uint8_t type);
    ZmqBipMsgBuilder(const BinaryDataRef& data, uint8_t type);
    ZmqBipMsgBuilder(const std::string& data, uint8_t type);
+
+   // Constructs plain packet without data
    ZmqBipMsgBuilder(uint8_t type);
 
+   // Encrypts plain packet. If conn is not set this is NOOP.
    ZmqBipMsgBuilder& encryptIfNeeded(BIP151Connection *conn);
 
+   // Returns packet that is ready for send
    BinaryData build();
 };
 
