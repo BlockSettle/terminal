@@ -525,10 +525,12 @@ public:
        logger_->debug("[{}] {}: {}", __func__, BinaryData(clientId).toHexStr(), errStr);
     }
     void OnClientConnected(const std::string &clientId) override {
+       lastConnectedClient_ = clientId;
        ++connected_;
        logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
     }
     void OnClientDisconnected(const std::string &clientId) override {
+       lastDisconnectedClient_ = clientId;
        ++disconnected_;
        logger_->debug("[{}] {}", __func__, BinaryData(clientId).toHexStr());
     }
@@ -537,6 +539,8 @@ public:
     std::atomic<int> connected_{};
     std::atomic<int> disconnected_{};
     std::atomic<int> error_{};
+    std::string lastConnectedClient_;
+    std::string lastDisconnectedClient_;
 
 private:
     std::shared_ptr<spdlog::logger>  logger_;
@@ -986,8 +990,19 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedSndMore)
    ASSERT_TRUE(clientConn->send("test2"));
    ASSERT_TRUE(await(srvLsn->dataRecv_));
 
+   srvLsn->connected_ = 0;
    ASSERT_TRUE(clientConn2->openConnection(host, port, clientLsn2.get()));
    ASSERT_TRUE(await(clientLsn2->connected_));
+   ASSERT_TRUE(await(srvLsn->connected_));
+   ASSERT_TRUE(!srvLsn->lastConnectedClient_.empty());
+
+   srvLsn->dataRecv_ = 0;
+   clientConn2->send("request 2");
+   ASSERT_TRUE(await(srvLsn->dataRecv_));
+
+   clientLsn2->dataRecv_ = 0;
+   serverConn->SendDataToClient(srvLsn->lastConnectedClient_, "reply 2");
+   ASSERT_TRUE(await(clientLsn2->dataRecv_));
 
    ASSERT_EQ(zmq_close(badSocket), 0);
    ASSERT_EQ(zmq_ctx_term(badContext), 0);
