@@ -93,9 +93,9 @@ namespace bs {
             SignContainer  *  signContainer_;
             std::shared_ptr<ArmoryObject>       armory_;
             std::shared_ptr<spdlog::logger>     logger_;
-            std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
+            std::vector<bs::wallet::EncryptionType>   encryptionTypes_{bs::wallet::EncryptionType::Password};
             std::vector<SecureBinaryData>          encryptionKeys_;
-            std::pair<unsigned int, unsigned int>  encryptionRank_{ 0,0 };
+            std::pair<unsigned int, unsigned int>  encryptionRank_{ 1, 1 };
 
          private:
             std::unordered_set<std::string>  scannedLeaves_;
