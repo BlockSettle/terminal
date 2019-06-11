@@ -107,8 +107,9 @@ private slots:
             addAction(tr("Decline friend request"), this, &ChatUsersContextMenu::onDeclineFriendRequest);
             break;
          case Chat::ContactStatus::Outgoing:
-            addAction(tr("This request is not accepted"));
-            addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+         case Chat::ContactStatus::Rejected:
+            //addAction(tr("This request is not accepted"));
+            addAction(tr("Remove this request"), this, &ChatUsersContextMenu::onRemoveFromContacts);
             break;
          default:
             break;
