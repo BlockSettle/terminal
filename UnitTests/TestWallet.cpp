@@ -1420,6 +1420,77 @@ TEST_F(TestWallet, ImportExport_Easy16)
    EXPECT_EQ(addr1, addr3);
 }
 
+TEST_F(TestWallet, SeedPrivKey)
+{
+   SecureBinaryData passphrase("test");
+
+   bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
+   const auto seedPriv = bs::core::wallet::Seed::fromXpriv(seed.toXpriv(), NetworkType::TestNet);
+   EXPECT_EQ(seedPriv.privateKey(), seed.privateKey());
+   EXPECT_EQ(seed.getWalletId(), seedPriv.getWalletId());
+   EXPECT_TRUE(seedPriv.seed().isNull());
+   std::string filename;
+
+   {
+      auto wallet = std::make_shared<bs::core::hd::Wallet>(
+         "test", "", seedPriv, passphrase, walletFolder_, nullptr);
+      EXPECT_EQ(seedPriv.getWalletId(), wallet->walletId());
+
+      auto grp1 = wallet->createGroup(wallet->getXBTGroupType());
+      {
+         auto lock = wallet->lockForEncryption(passphrase);
+         grp1->createLeaf(0u);
+      }
+
+      //grab clear text seed
+      std::shared_ptr<bs::core::wallet::Seed> retroSeed;
+      try {
+         //wallet isn't locked, should throw
+         retroSeed = std::make_shared<bs::core::wallet::Seed>(
+            wallet->getDecryptedSeed());
+         ASSERT_TRUE(false);
+      } catch (...) { }
+
+      try {
+         auto lock = wallet->lockForEncryption(passphrase);
+         retroSeed = std::make_shared<bs::core::wallet::Seed>(
+            wallet->getDecryptedSeed());
+      } catch (...) {
+         ASSERT_TRUE(false);
+      }
+
+      EXPECT_EQ(seedPriv.getNode().getPrivateKey(), retroSeed->getNode().getPrivateKey());
+      EXPECT_EQ(seedPriv.getNode().getChaincode(), retroSeed->getNode().getChaincode());
+
+      filename = wallet->getFileName();
+   }
+
+   {
+      auto wallet = std::make_shared<bs::core::hd::Wallet>(
+         filename, NetworkType::TestNet);
+      auto grp = wallet->getGroup(wallet->getXBTGroupType());
+
+      //grab seed
+      std::shared_ptr<bs::core::wallet::Seed> retroSeed;
+      try {
+         //wallet isn't locked, should throw
+         retroSeed = std::make_shared<bs::core::wallet::Seed>(
+            wallet->getDecryptedSeed());
+         ASSERT_TRUE(false);
+      } catch (...) { }
+
+      try {
+         auto lock = wallet->lockForEncryption(passphrase);
+         retroSeed = std::make_shared<bs::core::wallet::Seed>(
+            wallet->getDecryptedSeed());
+      } catch (...) {
+         ASSERT_TRUE(false);
+      }
+
+      EXPECT_EQ(seed.privateKey(), retroSeed->privateKey());
+   }
+}
+
 TEST_F(TestWallet, ImportExport_xpriv)
 {
    SecureBinaryData passphrase("test");

@@ -196,7 +196,7 @@ TEST(TestNetwork, ZMQ_BIP15X)
       StaticLogger::loggerPtr, zmqContext, [trustedClients] { return trustedClients; });
 //   serverConn->enableClientCookieUsage();
    const auto serverKey = serverConn->getOwnPubKey();
-   clientConn->SetContext(zmqContext);
+//   clientConn->SetContext(zmqContext);
    const auto srvLsn = std::make_shared<ServerConnListener>(StaticLogger::loggerPtr);
    const auto clientLsn = std::make_shared<ClientConnListener>(StaticLogger::loggerPtr);
 
@@ -412,7 +412,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
       StaticLogger::loggerPtr, zmqContext, [trustedClients] { return trustedClients; });
    srvLsn->connection_ = serverConn.get();
    const auto serverKey = serverConn->getOwnPubKey();
-   clientConn->SetContext(zmqContext);
+//   clientConn->SetContext(zmqContext);
 
    const std::string host = "127.0.0.1";
    std::string port;
@@ -451,7 +451,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 
    const auto client2Conn = std::make_shared<ZmqBIP15XDataConnection>(
       StaticLogger::loggerPtr, getTestParams());
-   client2Conn->SetContext(zmqContext);
+//   client2Conn->SetContext(zmqContext);
    serverConn->addAuthPeer(client2Conn->getOwnPubKey(), host + ":" + port);
    client2Conn->addAuthPeer(serverKey, host + ":" + port);
    ASSERT_TRUE(client2Conn->openConnection(host, port, client2Lsn.get()));
@@ -590,7 +590,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientClose)
         auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
            StaticLogger::loggerPtr, zmqContext, [trustedClients] { return trustedClients; });
         const auto serverKey = serverConn->getOwnPubKey();
-        clientConn->SetContext(zmqContext);
+//        clientConn->SetContext(zmqContext);
 
 //        clientLsn->packetCount_ = 0;
 //        srvLsn->packetCount_ = 0;
@@ -654,7 +654,7 @@ TEST(TestNetwork, ZMQ_BIP15X_ClientReopen)
        StaticLogger::loggerPtr, zmqContext, [trustedClients] { return trustedClients; });
     const auto serverKey = serverConn->getOwnPubKey();
     const auto clientKey = clientConn->getOwnPubKey();
-    clientConn->SetContext(zmqContext);
+//    clientConn->SetContext(zmqContext);
 
     const std::string host = "127.0.0.1";
     std::string port;
@@ -757,7 +757,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_Heartbeat)
         auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
            StaticLogger::loggerPtr, zmqContext, [trustedClients] { return trustedClients; });
         const auto serverKey = serverConn->getOwnPubKey();
-        clientConn->SetContext(zmqContext);
+//        clientConn->SetContext(zmqContext);
 
         clientLsn->connected_ = false;
         srvLsn->connected_ = false;
@@ -815,7 +815,7 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
     auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
        StaticLogger::loggerPtr, zmqContext, [trustedClients] { return trustedClients; });
     const auto serverKey = serverConn->getOwnPubKey();
-    clientConn->SetContext(zmqContext);
+//    clientConn->SetContext(zmqContext);
 
     const std::string host = "127.0.0.1";
     std::string port;
