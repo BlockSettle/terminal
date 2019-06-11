@@ -164,10 +164,6 @@ void RFQDialog::reject()
          logger_->warn("[RFQDialog::reject] settlement container failed to cancel");
       }
    }
-
-   // Request should be also cancelled when user closes dialog (BST-1933)
-   ui_->pageRequestingQuote->cancel();
-
    QDialog::reject();
 }
 

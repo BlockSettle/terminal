@@ -254,11 +254,6 @@ void RequestingQuoteWidget::populateDetails(const bs::network::RFQ& rfq, const s
    }
 }
 
-void RequestingQuoteWidget::cancel()
-{
-   onCancel();
-}
-
 void RequestingQuoteWidget::onAccept()
 {
    requestTimer_.stop();

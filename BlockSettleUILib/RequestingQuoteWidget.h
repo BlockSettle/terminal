@@ -31,8 +31,6 @@ public:
    void SetCelerClient(std::shared_ptr<CelerClient> celerClient);
 
    void populateDetails(const bs::network::RFQ& rfq, const std::shared_ptr<TransactionData> &);
-   // Cancel current RFQ
-   void cancel();
 
 public slots:
    void ticker();
