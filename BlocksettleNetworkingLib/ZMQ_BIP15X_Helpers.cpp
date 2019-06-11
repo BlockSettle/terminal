@@ -44,13 +44,11 @@ bool ZmqBIP15XUtils::addAuthPeer(AuthorizedPeers *authPeers, const ZmqBIP15XPeer
 
 void ZmqBIP15XUtils::updatePeerKeys(AuthorizedPeers *authPeers_, const std::vector<ZmqBIP15XPeer> &newPeers)
 {
-   const auto &ownPubKey = authPeers_->getOwnPublicKey();
-
+   // Make a copy of peers map!
    const auto oldPeers = authPeers_->getPeerNameMap();
    for (const auto &oldPeer : oldPeers) {
-      // A bit ugly but should work
-      bool isOwnKey = (std::memcmp(oldPeer.second.pubkey, ownPubKey.pubkey, BTC_ECKEY_COMPRESSED_LENGTH) == 0);
-      if (!isOwnKey) {
+      // Own key pair is also stored here, we should preserve it
+      if (oldPeer.first != "own") {
          authPeers_->eraseName(oldPeer.first);
       }
    }
