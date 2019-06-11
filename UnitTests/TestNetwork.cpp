@@ -938,3 +938,57 @@ TEST(TestNetwork, ZMQ_BIP15X_MalformedData)
       ASSERT_EQ(zmq_ctx_term(badContext), 0);
    }
 }
+
+TEST(TestNetwork, ZMQ_BIP15X_MalformedSndMore)
+{
+   const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
+   const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+   const auto clientLsn2 = std::make_shared<TstClientListener>(TestEnv::logger());
+
+   const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
+            TestEnv::logger(), getTestParams());
+   const auto clientConn2 = std::make_shared<ZmqBIP15XDataConnection>(
+            TestEnv::logger(), getTestParams());
+   const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+   auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
+            TestEnv::logger(), zmqContext, getEmptyPeersCallback());
+   const auto serverKey = serverConn->getOwnPubKey();
+
+   const std::string host = "127.0.0.1";
+   std::string port;
+   do {
+      port = std::to_string((rand() % 50000) + 10000);
+   } while (!serverConn->BindConnection(host, port, srvLsn.get()));
+
+   serverConn->addAuthPeer(getPeerKey("client", clientConn.get()));
+   serverConn->addAuthPeer(getPeerKey("client2", clientConn2.get()));
+   clientConn->addAuthPeer(getPeerKey(host, port, serverConn.get()));
+   clientConn2->addAuthPeer(getPeerKey(host, port, serverConn.get()));
+
+   auto badContext = zmq_ctx_new();
+   auto badSocket = zmq_socket(badContext, ZMQ_DEALER);
+
+   ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
+   ASSERT_TRUE(await(clientLsn->connected_));
+
+   ASSERT_TRUE(clientConn->send("test"));
+   ASSERT_TRUE(await(srvLsn->dataRecv_));
+   srvLsn->dataRecv_ = 0;
+
+   ASSERT_EQ(zmq_connect(badSocket, fmt::format("tcp://{}:{}", host, port).c_str()), 0);
+
+   auto badData = CryptoPRNG::generateRandom(10).toBinStr();
+   ASSERT_EQ(zmq_send(badSocket, badData.data(), badData.size(), ZMQ_SNDMORE), badData.size());
+   ASSERT_EQ(zmq_send(badSocket, badData.data(), badData.size(), 0), badData.size());
+
+   ASSERT_TRUE(await(srvLsn->error_));
+
+   ASSERT_TRUE(clientConn->send("test2"));
+   ASSERT_TRUE(await(srvLsn->dataRecv_));
+
+   ASSERT_TRUE(clientConn2->openConnection(host, port, clientLsn2.get()));
+   ASSERT_TRUE(await(clientLsn2->connected_));
+
+   ASSERT_EQ(zmq_close(badSocket), 0);
+   ASSERT_EQ(zmq_ctx_term(badContext), 0);
+}
