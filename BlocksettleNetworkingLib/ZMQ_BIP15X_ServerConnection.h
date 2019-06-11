@@ -139,7 +139,6 @@ private:
    std::shared_ptr<AuthorizedPeers> authPeers_;
    std::map<std::string, std::shared_ptr<ZmqBIP15XPerConnData>>   socketConnMap_;
 
-   BinaryData leftOverData_;
    TrustedClientsCallback cbTrustedClients_;
    const bool useClientIDCookie_;
    const bool makeServerIDCookie_;

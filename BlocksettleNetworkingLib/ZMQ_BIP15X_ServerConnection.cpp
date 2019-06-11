@@ -357,14 +357,6 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
 
    BinaryData payload(encData);
 
-   // If decryption "failed" due to fragmentation, put the pieces together.
-   // (Unlikely but we need to plan for it.)
-   if (leftOverData_.getSize() != 0) {
-      leftOverData_.append(payload);
-      payload = move(leftOverData_);
-      leftOverData_.clear();
-   }
-
    // Decrypt only if the BIP 151 handshake is complete.
    if (connData->bip151HandshakeCompleted_) {
       //decrypt packet
@@ -372,19 +364,10 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
          payload.getPtr(), payload.getSize(),
          payload.getPtr(), payload.getSize());
 
-      // Failure isn't necessarily a problem if we're dealing with fragments.
       if (result != 0) {
-         // If decryption "fails" but the result indicates fragmentation, save
-         // the fragment and wait before doing anything, otherwise treat it as a
-         // legit error.
-         if (result > -1) {
-            leftOverData_ = move(payload);
-         }
-         else {
-            logger_->error("[ZmqBIP15XServerConnection::{}] Packet decryption failed - Error {}"
-               , __func__, result);
-            notifyListenerOnClientError(clientID, "packet decryption failed");
-         }
+         logger_->error("[ZmqBIP15XServerConnection::{}] Packet decryption failed - Error {}"
+            , __func__, result);
+         notifyListenerOnClientError(clientID, "packet decryption failed");
          return;
       }
 
@@ -392,8 +375,8 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    }
 
    // Deserialize packet.
-   ZmqBipMsg message_ = ZmqBipMsg::parsePacket(payload);
-   if (!message_.isValid()) {
+   ZmqBipMsg msg = ZmqBipMsg::parsePacket(payload);
+   if (!msg.isValid()) {
       if (logger_) {
          logger_->error("[ZmqBIP15XServerConnection::{}] Deserialization failed "
             "(connection {})", __func__, connectionName_);
@@ -403,7 +386,7 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    }
 
    // If we're still handshaking, take the next step. (No fragments allowed.)
-   if (message_.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
+   if (msg.getType() == ZMQ_MSGTYPE_HEARTBEAT) {
       UpdateClientHeartbeatTimestamp(clientID);
 
       auto packet = ZmqBipMsgBuilder(ZMQ_MSGTYPE_HEARTBEAT)
@@ -412,8 +395,8 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
       return;
    }
 
-   if (message_.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
-      if (!processAEADHandshake(message_, clientID)) {
+   if (msg.getType() > ZMQ_MSGTYPE_AEAD_THRESHOLD) {
+      if (!processAEADHandshake(msg, clientID)) {
          if (logger_) {
             logger_->error("[ZmqBIP15XServerConnection::{}] Handshake failed "
                "(connection {})", __func__, connectionName_);
@@ -426,11 +409,10 @@ void ZmqBIP15XServerConnection::ProcessIncomingData(const string& encData
    }
 
    // We can now safely obtain the full message.
-   BinaryDataRef outMsg = message_.getData();
+   BinaryDataRef outMsg = msg.getData();
 
    // We shouldn't get here but just in case....
-   if (connData->encData_->getBIP150State() !=
-      BIP150State::SUCCESS) {
+   if (connData->encData_->getBIP150State() != BIP150State::SUCCESS) {
       if (logger_) {
          logger_->error("[ZmqBIP15XServerConnection::{}] Encryption handshake "
             "is incomplete (connection {})", __func__, connectionName_);
