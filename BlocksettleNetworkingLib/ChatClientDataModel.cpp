@@ -16,8 +16,8 @@ void ChatClientDataModel::initTreeCategoryGroup()
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::RoomsElement, tr("Chat rooms")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, tr("Contacts")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::AllUsersElement, tr("Users")));
-   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement, tr("Received Responses")));
-   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement, tr("Sent Responses")));
+   // root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement, tr("Received Responses")));
+   // root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement, tr("Sent Responses")));
    //root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::SearchElement, tr("Search")));
    endResetModel();
 }
@@ -108,10 +108,15 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
 
 bool ChatClientDataModel::insertMessageNode(TreeMessageNode * messageNode)
 {
+   return insertDisplayableDataNode(messageNode);
+}
+
+bool ChatClientDataModel::insertDisplayableDataNode(DisplayableDataNode *displayableNode)
+{
    //We use this to find target Room node were this message should be
    //It need to do before call beginInsertRows to have access to target children list
    //And make first and last indices calculation for beginInsertRows
-   TreeItem * target = root_->resolveMessageTargetNode(messageNode);
+   TreeItem * target = root_->resolveMessageTargetNode(displayableNode);
 
    if (!target){
       return false;
@@ -125,7 +130,7 @@ bool ChatClientDataModel::insertMessageNode(TreeMessageNode * messageNode)
    //Here we say that for target (parentIndex) will be inserted new children
    //That will have indices from first to last
    beginInsertRows(parentIndex, first, last);
-   bool res = root_->insertMessageNode(messageNode);
+   bool res = root_->insertMessageNode(displayableNode);
    endInsertRows();
 
    return res;
@@ -585,22 +590,4 @@ bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &valu
       default:
          return QAbstractItemModel::setData(index, value, role);
    }
-}
-
-// insert channel for response that client send to OTC requests
-bool ChatClientDataModel::insertOTCSentResponse(const std::string& otcId)
-{
-   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement);
-   bool res = root_->insertOTCSentResponseObject(otcId);
-   endInsertRows();
-   return res;
-}
-
-// insert channel for response client receive for own OTC
-bool ChatClientDataModel::insertOTCReceivedResponse(const std::string& otcId)
-{
-   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement);
-   bool res = root_->insertOTCReceivedResponseObject(otcId);
-   endInsertRows();
-   return res;
 }

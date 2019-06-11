@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ProtocolDefinitions_h__
+#define ProtocolDefinitions_h__
 
 #include <memory>
 
@@ -8,60 +9,60 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
-#include "EncryptionUtils.h"
-#include "autheid_utils.h"
+#include <disable_warnings.h>
+#include <../cppForSwig/EncryptionUtils.h>
+#include <BinaryData.h>
+#include <enable_warnings.h>
 
 namespace Chat
 {
    enum class RequestType
    {
-       RequestHeartbeatPing
-   ,   RequestLogin
-   ,   RequestLogout
-   ,   RequestSendMessage
-   ,   RequestMessages
-   ,   RequestOnlineUsers
-   ,   RequestAskForPublicKey
-   ,   RequestSendOwnPublicKey
-   ,   RequestChangeMessageStatus
-   ,   RequestContactsActionDirect
-   ,   RequestContactsActionServer
-   ,   RequestChatroomsList
-   ,   RequestSendRoomMessage
-   ,   RequestContactsList
-   ,   RequestSearchUsers
-   ,   RequestGenCommonOTC
-   ,   RequestAnswerCommonOTC
-   ,   RequestUpdateCommonOTC
-   ,   RequestPullOTC
+      RequestHeartbeatPing,
+      RequestLogin,
+      RequestLogout,
+      RequestSendMessage,
+      RequestMessages,
+      RequestOnlineUsers,
+      RequestAskForPublicKey,
+      RequestSendOwnPublicKey,
+      RequestChangeMessageStatus,
+      RequestContactsActionDirect,
+      RequestContactsActionServer,
+      RequestChatroomsList,
+      RequestSendRoomMessage,
+      RequestContactsList,
+      RequestSearchUsers,
+      RequestSessionPublicKey,
+      RequestReplySessionPublicKey
    };
 
 
    enum class ResponseType
    {
-       ResponseHeartbeatPong
-   ,   ResponseLogin
-   ,   ResponseMessages
-   ,   ResponseSuccess
-   ,   ResponseError
-   ,   ResponseUsersList
-   ,   ResponseAskForPublicKey
-   ,   ResponseSendOwnPublicKey
-   ,   ResponsePendingMessage
-   ,   ResponseSendMessage
-   ,   ResponseChangeMessageStatus
-   ,   ResponseContactsActionDirect
-   ,   ResponseContactsActionServer
-   ,   ResponseChatroomsList
-   ,   ResponseRoomMessages
-   ,   ResponseContactsList
-   ,   ResponseSearchUsers
-   ,   ResponseLogout
-   ,   ResponseGenCommonOTC
-   ,   ResponseAnswerCommonOTC
-   ,   ResponseUpdateCommonOTC
+      ResponseHeartbeatPong,
+      ResponseLogin,
+      ResponseMessages,
+      ResponseSuccess,
+      ResponseError,
+      ResponseUsersList,
+      ResponseAskForPublicKey,
+      ResponseSendOwnPublicKey,
+      ResponsePendingMessage,
+      ResponseSendMessage,
+      ResponseChangeMessageStatus,
+      ResponseContactsActionDirect,
+      ResponseContactsActionServer,
+      ResponseChatroomsList,
+      ResponseRoomMessages,
+      ResponseContactsList,
+      ResponseSearchUsers,
+      ResponseLogout,
+      ResponseSendSessionPublicKey,
+      ResponseSessionPublicKey,
+      ResponseReplySessionPublicKey
    };
-   
+
    enum class ContactsAction {
       Accept,
       Reject,
@@ -98,7 +99,7 @@ namespace Chat
       Canceled,
       Expired,
    };
-   
+
    static const QString VersionKey   = QStringLiteral("version");
    static const QString NameKey      = QStringLiteral("name");
    static const QString TypeKey      = QStringLiteral("type");
@@ -144,6 +145,7 @@ namespace Chat
    static const QString Nonce = QStringLiteral("nonce");
    static const QString EncryptionTypeKey = QStringLiteral("encryption_type");
    static const QString GlobalRoomKey = QStringLiteral("global_chat");
+   static const QString SenderSessionPublicKeyKey = QStringLiteral("sender_session_public_key");
    static const QString OTCRoomKey = QStringLiteral("otc_chat");
    static const QString OTCDataObjectKey = QStringLiteral("otc_data");
    static const QString OTCRqSideKey = QStringLiteral("otc_rq_side");
@@ -156,6 +158,8 @@ namespace Chat
    static const QString OTCUpdateIdServerKey = QStringLiteral("otc_update_id_server");
    static const QString OTCRequestorIdKey = QStringLiteral("otc_requestor_id");
    static const QString OTCResponderIdKey = QStringLiteral("otc_responder_id");
+   static const QString OTCUpdateSenderIdKey = QStringLiteral("otc_update_sender_id");
+   static const QString OTCUpdateReceiverIdKey = QStringLiteral("otc_update_receiver_id");
    static const QString OTCTargetIdKey = QStringLiteral("otc_target_id");
    static const QString OTCSubmitTimestampKey = QStringLiteral("otc_submit_timestamp");
    static const QString OTCExpiredTimestampKey = QStringLiteral("otc_expired_timestamp");
@@ -170,8 +174,6 @@ namespace Chat
    static const QString OTCUpperKey = QStringLiteral("upper");
    static const QString OTCResultKey = QStringLiteral("otc_result");
    static const QString OTCMessageKey = QStringLiteral("otc_message");
-
-
 
    template <typename T>
    class Message
@@ -192,17 +194,14 @@ namespace Chat
       T messageType_;
       std::string version_;
    };
-   
+
    template <typename T>
    std::string serializeData(const T* thisPtr)
    {
       auto data = QJsonDocument(thisPtr->toJson());
       QString serializedData = QString::fromUtf8(data.toJson());
       return serializedData.toStdString();
-   } 
-   
-   autheid::PublicKey publicKeyFromString(const std::string &s);
-   std::string publicKeyToString(const autheid::PublicKey &k);
+   }
 
 } //namespace Chat
 
@@ -210,4 +209,4 @@ Q_DECLARE_METATYPE(Chat::ContactStatus)
 Q_DECLARE_METATYPE(Chat::UserStatus)
 Q_DECLARE_METATYPE(Chat::OTCResult)
 
-
+#endif // ProtocolDefinitions_h__

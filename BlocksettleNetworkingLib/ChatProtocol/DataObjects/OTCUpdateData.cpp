@@ -1,98 +1,82 @@
 #include "OTCUpdateData.h"
+
 #include "../ProtocolDefinitions.h"
 #include <QDateTime>
 
-namespace Chat {
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 
-QJsonObject OTCUpdateData::toJson() const
+namespace Chat
 {
-   QJsonObject data = DataObject::toJson();
-   data[OTCRequestIdServerKey] = serverRequestId_;
-   data[OTCUpdateIdClientKey] = clientUpdateId_;
-   data[OTCUpdateIdServerKey] = serverUpdateId_;
-   data[OTCUpdateTimestampKey] = QString::number(updateTimestamp_);
-   data[OTCUpdateAmountKey] = amount_;
-   data[OTCUpdatePriceKey] = price_;
+   OTCUpdateData::OTCUpdateData(const QString &sender, const QString &receiver,
+         const QString &id, const QDateTime &dateTime,
+         const bs::network::OTCUpdate& otcUpdate,
+         int state)
+   : MessageData(sender, receiver, id, dateTime, serializeUpdateData(otcUpdate), MessageData::RawMessageDataType::OTCUpdate, state)
+   , updateValid_{true}
+   , otcUpdate_{otcUpdate}
+   {
+      updateDisplayString();
+   }
 
-   return data;
-}
+   OTCUpdateData::OTCUpdateData(const MessageData& source, const QJsonObject& jsonData)
+      : MessageData(source, RawMessageDataType::OTCUpdate)
+   {
+      otcUpdate_.amount = jsonData[QLatin1String("amount")].toInt();
+      otcUpdate_.price = jsonData[QLatin1String("price")].toInt();
 
-std::shared_ptr<OTCUpdateData> OTCUpdateData::fromJSON(const std::string& jsonData)
-{
-   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+      updateValid_ = true;
 
-   QString serverRequestId = data[OTCRequestIdServerKey].toString();
-   QString clientUpdateId = data[OTCUpdateIdClientKey].toString();
-   QString serverUpdateId = data[OTCUpdateIdServerKey].toString();
-   uint64_t updateTimestamp = data[OTCUpdateTimestampKey].toString().toULongLong();
-   double amount = data[OTCUpdateAmountKey].toDouble();
-   double price = data[OTCUpdatePriceKey].toDouble();
+      updateDisplayString();
+   }
 
-   return std::make_shared<OTCUpdateData>(serverRequestId,
-                                          clientUpdateId,
-                                          serverUpdateId,
-                                          updateTimestamp,
-                                          amount,
-                                          price);
-}
+   void OTCUpdateData::messageDirectionUpdate()
+   {
+      updateDisplayString();
+   }
 
-OTCUpdateData::OTCUpdateData(  const QString& serverRequestId
-                             , const QString& clientUpdateId
-                             , const double amount
-                             , const double price)
-  : DataObject(DataObject::Type::OTCUpdateData)
-  , serverRequestId_{serverRequestId}
-  , clientUpdateId_{clientUpdateId}
-  , serverUpdateId_{}
-  , updateTimestamp_{static_cast<uint64_t>(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())}
-  , amount_{amount}
-  , price_{price}
-{}
+   QString OTCUpdateData::displayText() const
+   {
+      return displayText_;
+   }
 
-OTCUpdateData::OTCUpdateData(  const QString& serverRequestId
-                             , const QString& clientUpdateId
-                             , const QString& serverUpdateId
-                             , const uint64_t updateTimestamp
-                             , const double amount
-                             , const double price)
-  : DataObject(DataObject::Type::OTCUpdateData)
-  , serverRequestId_{serverRequestId}
-  , clientUpdateId_{clientUpdateId}
-  , serverUpdateId_{serverUpdateId}
-  , updateTimestamp_{updateTimestamp}
-  , amount_{amount}
-  , price_{price}
-{}
+   bool OTCUpdateData::otcUpdateValid()
+   {
+      return updateValid_;
+   }
 
-QString OTCUpdateData::serverRequestId() const
-{
-   return serverRequestId_;
-}
+   bs::network::OTCUpdate OTCUpdateData::otcUpdate() const
+   {
+      return otcUpdate_;
+   }
 
-QString OTCUpdateData::clientUpdateId() const
-{
-   return clientUpdateId_;
-}
+   QString OTCUpdateData::serializeUpdateData(const bs::network::OTCUpdate& update)
+   {
+      QJsonObject data;
 
-QString OTCUpdateData::serverUpdateId() const
-{
-   return serverUpdateId_;
-}
+      data[QLatin1String("raw_message_type")] = static_cast<int>(RawMessageDataType::OTCUpdate);
 
-uint64_t OTCUpdateData::updateTimestamp() const
-{
-   return updateTimestamp_;
-}
+      data[QLatin1String("amount")] = static_cast<int>(update.amount);
+      data[QLatin1String("price")] = static_cast<int>(update.price);
 
-double OTCUpdateData::amount() const
-{
-   return amount_;
-}
+      QJsonDocument doc(data);
+      return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+   }
 
-double OTCUpdateData::price() const
-{
-   return price_;
-}
+   void OTCUpdateData::updateDisplayString()
+   {
+      if (updateValid_) {
+         QString format = QLatin1String("%1 UPDATE : %2 EUR @ %3 XBT");
 
+         displayText_ = format
+            .arg(directionToText(messageDirectoin()))
+            .arg(QString::number(otcUpdate_.price))
+            .arg(QString::number(otcUpdate_.amount));
+      } else {
+         displayText_ = QLatin1String("Invalid");
+      }
+   }
 //namespace Chat end
 }

@@ -216,24 +216,26 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
          applicationSettings_->set(ApplicationSettings::mdServerHost, QString::fromStdString(settings.marketData.host));
          applicationSettings_->set(ApplicationSettings::mdServerPort, settings.marketData.port);
       }
-     if (!settings.mdhs.host.empty()) {
-        applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
-        applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
-     }
+      if (!settings.mdhs.host.empty()) {
+         applicationSettings_->set(ApplicationSettings::mdhsHost, QString::fromStdString(settings.mdhs.host));
+         applicationSettings_->set(ApplicationSettings::mdhsPort, settings.mdhs.port);
+      }
 #ifndef NDEBUG
-     QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
-     QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
-     if (!settings.chat.host.empty()) {
-        if (chost.isEmpty())
-         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-        if (cport.isEmpty())
-         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-     }
+      QString chost = applicationSettings_->get<QString>(ApplicationSettings::chatServerHost);
+      QString cport = applicationSettings_->get<QString>(ApplicationSettings::chatServerPort);
+      if (!settings.chat.host.empty()) {
+         if (chost.isEmpty()) {
+            applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+         }
+         if (cport.isEmpty()) {
+            applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+         }
+      }
 #else
-     if (!settings.chat.host.empty()) {
-        applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
-        applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
-     }
+      if (!settings.chat.host.empty()) {
+         applicationSettings_->set(ApplicationSettings::chatServerHost, QString::fromStdString(settings.chat.host));
+         applicationSettings_->set(ApplicationSettings::chatServerPort, settings.chat.port);
+      }
 #endif // NDEBUG
    };
 
@@ -298,9 +300,8 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
       });
    });
 
-   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePort)
-      , reqPkt.SerializeAsString(), true)) {
+   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->pubBridgeHost()
+      , applicationSettings_->pubBridgePort(), reqPkt.SerializeAsString(), true)) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] failed to send request");
       showError(title, tr("Failed to retrieve network settings due to invalid connection to BlockSettle server"));
    }

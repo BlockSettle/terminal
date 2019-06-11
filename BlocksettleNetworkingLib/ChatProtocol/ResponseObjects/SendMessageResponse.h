@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SendMessageResponse_h__
+#define SendMessageResponse_h__
 
 #include "Response.h"
 
@@ -30,3 +31,5 @@ namespace Chat {
    };
    
 }
+
+#endif // SendMessageResponse_h__

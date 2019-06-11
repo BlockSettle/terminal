@@ -223,16 +223,6 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="labelQuantityValue">
-          <property name="text">
-           <string>---</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QSpinBox" name="spinBoxQuantity">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -485,7 +475,7 @@
       </item>
      </layout>
     </widget>
-   </item>    
+   </item>
   </layout>
  </widget>
  <resources/>

@@ -38,13 +38,13 @@ public:
    bool isOffline() const override { return false; }
    bool isWalletOffline(const std::string &) const override { return false; }
 
-   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &, bool autoSign = false
+   bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) override;
    bs::signer::RequestId signPartialTXRequest(const bs::core::wallet::TXSignRequest &
-      , bool autoSign = false, const PasswordType& password = {}) override;
+      , const PasswordType& password = {}) override;
    bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
-      , const std::string &settlementId, bool autoSign = false, const PasswordType& password = {}) override;
+      , const std::string &settlementId, const PasswordType& password = {}) override;
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override { return 0; }
    void SendPassword(const std::string &walletId, const PasswordType &password, bool) override {}
@@ -60,7 +60,7 @@ public:
    bs::signer::RequestId getDecryptedRootKey(const std::string &walletId
       , const SecureBinaryData &password = {}) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &) override;
-   void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
+//   void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
 //   bs::signer::RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
 //      , bs::wallet::KeyRank, const SecureBinaryData &oldPass
 //      , bool addNew, bool removeOld, bool dryRun);

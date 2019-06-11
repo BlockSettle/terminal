@@ -19,6 +19,9 @@ public:
    int GetLowerValue() const;
    int GetUpperValue() const;
 
+   void SetLowerValue(int value);
+   void SetUpperValue(int value);
+
 private slots:
    void onLowerValueChanged(int newLower);
    void onUpperValueChanged(int newUpper);

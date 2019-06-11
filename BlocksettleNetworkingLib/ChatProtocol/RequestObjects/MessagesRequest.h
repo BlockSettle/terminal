@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MessagesRequest_h__
+#define MessagesRequest_h__
 
 #include "Request.h"
 
@@ -19,3 +20,5 @@ namespace Chat {
       std::string receiverId_;
    };
 }
+
+#endif // MessagesRequest_h__

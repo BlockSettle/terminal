@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MessagesResponse_h__
+#define MessagesResponse_h__
 
 #include "ListResponse.h"
 
@@ -12,3 +13,5 @@ namespace Chat {
       void handle(ResponseHandler &) override;
    };
 }
+
+#endif // MessagesResponse_h__

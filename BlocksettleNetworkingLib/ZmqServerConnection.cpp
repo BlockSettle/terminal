@@ -279,8 +279,6 @@ void ZmqServerConnection::listenFunction()
 void ZmqServerConnection::stopServer()
 {
    if (!isActive()) {
-      logger_->debug("[{}] connection already stopped {}", __func__
-         , connectionName_);
       return;
    }
 

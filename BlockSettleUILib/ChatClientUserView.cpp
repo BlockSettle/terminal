@@ -242,6 +242,13 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
             label_->setText(QObject::tr("CHAT #") + room->getUserId());
          }
       } break;
+      //XXXOTC
+      // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
+      // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
+      //    if (label_){
+      //       label_->setText(QObject::tr("Trading with ..."));
+      //    }
+      // } break;
       default:
          break;
 
@@ -309,14 +316,15 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
          case ChatUIDefinitions::ChatTreeNodeType::MessageDataNode: {
             auto mnode = static_cast<TreeMessageNode*>(item);
             notifyMessageChanged(mnode->getMessage());
+            break;
          }
-         break;
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         {
             auto node = static_cast<CategoryElement*>(item);
             notifyElementUpdated(node);
+            break;
          }
-         break;
          default:
             break;
       }

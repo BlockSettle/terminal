@@ -1,9 +1,13 @@
-#pragma once
+#ifndef DataObjects_h__
+#define DataObjects_h__
 
-#include "DataObjects/ContactRecordData.h"
-#include "DataObjects/MessageData.h"
-#include "DataObjects/OTCRequestData.h"
-#include "DataObjects/OTCResponseData.h"
-#include "DataObjects/OTCUpdateData.h"
-#include "DataObjects/RoomData.h"
-#include "DataObjects/UserData.h"
+#include "ChatProtocol/DataObjects/ContactRecordData.h"
+#include "ChatProtocol/DataObjects/MessageData.h"
+#include "ChatProtocol/DataObjects/OTCRequestData.h"
+#include "ChatProtocol/DataObjects/OTCResponseData.h"
+#include "ChatProtocol/DataObjects/OTCUpdateData.h"
+#include "ChatProtocol/DataObjects/OTCCloseTradingData.h"
+#include "ChatProtocol/DataObjects/RoomData.h"
+#include "ChatProtocol/DataObjects/UserData.h"
+
+#endif // DataObjects_h__

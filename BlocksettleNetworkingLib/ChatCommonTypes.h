@@ -16,10 +16,10 @@ namespace bs {
             Sell
          };
 
-         static const char *toString(Type side) {
+         static std::string toString(Type side) {
             switch (side) {
-               case Buy:   return QT_TR_NOOP("BUY");
-               case Sell:  return QT_TR_NOOP("SELL");
+               case Buy:   return "BUY";
+               case Sell:  return "SELL";
                default:    return "unknown";
             }
          }
@@ -102,47 +102,19 @@ namespace bs {
       {
          ChatOTCSide::Type    side;
          OTCRangeID::Type     amountRange;
-
-         // XXX
-         // ownRequest - temporary field used for test purpose until OTC goes through chat server
-         bool                 ownRequest;
-
-         // fakeReplyRequired - chat server will simulate "reply"
-         bool                 fakeReplyRequired;
       };
 
       struct OTCResponse
       {
-         std::string     serverRequestId;
-         std::string     requestorId;
-         std::string     initialTargetId;
-
-         OTCPriceRange     priceRange;
-         OTCQuantityRange  quantityRange;
+         ChatOTCSide::Type    side;
+         OTCPriceRange        priceRange;
+         OTCQuantityRange     quantityRange;
       };
 
-      enum class OTCRequestRejectReason
+      struct OTCUpdate
       {
-         CounterpartyOffline,
-         CounterpartyNotFound,
-         // InvalidTarget - ATM returned when trying to send to self
-         InvalidTarget,
-         RequestLimitToTargetExceeded,
-         RequestsAmountExceeded,
-         RequestAlreadyExpired
-      };
-
-      enum class OTCResponseRejectReason
-      {
-         // RequestNotAvailableForReply - request was pulled, closed or expired
-         RequestNotAvailableForReply,
-         // InvalidTarget - ATM returned when trying to reply to self
-         InvalidTarget,
-         // RequestAlreadyResponded - responder already have active response to that request
-         RequestAlreadyResponded,
-         // RequestResponseLimitExceeded - request have reached max number of
-         // replies ( reject reeason for requests to common room)
-         RequestResponseLimitExceeded
+         uint64_t amount;
+         uint64_t price;
       };
    }
 }

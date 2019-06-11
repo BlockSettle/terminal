@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HeartbeatPingRequest_h__
+#define HeartbeatPingRequest_h__
 
 #include "Request.h"
 
@@ -10,3 +11,5 @@ namespace Chat {
          void handle(RequestHandler &) override;
       };
 }
+
+#endif // HeartbeatPingRequest_h__

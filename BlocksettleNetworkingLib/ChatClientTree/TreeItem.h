@@ -38,6 +38,9 @@ public:
    bool isChildTypeSupported(const ChatUIDefinitions::ChatTreeNodeType& childType) const;
    bool isParentSupported(const TreeItem* item) const;
 
+protected:
+   virtual void onChildAdded(TreeItem* item);
+
 signals:
    void itemChanged(TreeItem*);
 protected:

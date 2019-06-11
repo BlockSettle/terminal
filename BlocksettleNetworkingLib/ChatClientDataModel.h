@@ -36,6 +36,7 @@ public:
    bool insertSearchUserObject(std::shared_ptr<Chat::UserData> data);
    bool insertSearchUserList(std::vector<std::shared_ptr<Chat::UserData>> userList);
    bool insertMessageNode(TreeMessageNode *messageNode);
+   bool insertDisplayableDataNode(DisplayableDataNode * displayableNode);
    bool insertRoomMessage(std::shared_ptr<Chat::MessageData> message);
    bool insertContactsMessage(std::shared_ptr<Chat::MessageData> message);
    TreeItem* findChatNode(const std::string& chatId);
@@ -49,12 +50,6 @@ public:
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
    void notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact);
    void setNewMessageMonitor(NewMessageMonitor* monitor);
-
-   // insert channel for response that client send to OTC requests
-   bool insertOTCSentResponse(const std::string& otcId);
-
-   // insert channel for response client receive for own OTC
-   bool insertOTCReceivedResponse(const std::string& otcId);
 
    // QAbstractItemModel interface
 public:

@@ -2,51 +2,42 @@
 #define __OTC_UPDATE_DATA_H__
 
 #include "DataObject.h"
+#include "MessageData.h"
 #include "ChatCommonTypes.h"
+
+#include <string>
 
 namespace Chat {
 
-   class OTCUpdateData : public DataObject
+   class OTCUpdateData : public MessageData
    {
-   // DataObject interface
    public:
-      QJsonObject toJson() const override;
-      static std::shared_ptr<OTCUpdateData> fromJSON(const std::string& jsonData);
+      OTCUpdateData(const QString &sender, const QString &receiver,
+         const QString &id, const QDateTime &dateTime,
+         const bs::network::OTCUpdate& otcUpdate,
+         int state = (int)State::Undefined);
 
-   public:
-      OTCUpdateData() = delete;
-
-      OTCUpdateData(const QString& serverRequestId
-                    , const QString& clientUpdateId
-                    , const double amount
-                    , const double price);
-
-      OTCUpdateData(const QString& serverRequestId
-                    , const QString& clientUpdateId
-                    , const QString& serverUpdateId
-                    , const uint64_t updateTimestamp
-                    , const double amount
-                    , const double price);
+      OTCUpdateData(const MessageData& source, const QJsonObject& jsonData);
 
       ~OTCUpdateData() override = default;
 
-      QString serverRequestId() const;
+      QString displayText() const override;
 
-      QString clientUpdateId() const;
-      QString serverUpdateId() const;
+      bool                       otcUpdateValid();
+      bs::network::OTCUpdate     otcUpdate() const;
+      void messageDirectionUpdate() override;
 
-      uint64_t updateTimestamp() const;
-
-      double   amount() const;
-      double   price() const;
    private:
-      const QString  serverRequestId_;
-      const QString  clientUpdateId_;
-      const QString  serverUpdateId_;
-      const uint64_t updateTimestamp_;
-      const double   amount_;
-      const double   price_;
+      static QString serializeUpdateData(const bs::network::OTCUpdate& update);
+
+      void updateDisplayString();
+
+   private:
+      bool                       updateValid_ = false;;
+      bs::network::OTCUpdate     otcUpdate_;
+      QString                    displayText_;
    };
+
 }
 
 #endif // __OTC_UPDATE_DATA_H__
