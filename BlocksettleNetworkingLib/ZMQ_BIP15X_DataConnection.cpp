@@ -790,11 +790,10 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
             vector<string> keyName;
             string localAddrV4 = hostAddr_ + ":" + hostPort_;
             keyName.push_back(localAddrV4);
-            {
-               std::lock_guard<std::mutex> lock(authPeersMutex_);
-               authPeers_->eraseName(localAddrV4);
-               authPeers_->addPeer(cookieKey, keyName);
-            }
+
+            std::lock_guard<std::mutex> lock(authPeersMutex_);
+            authPeers_->eraseName(localAddrV4);
+            authPeers_->addPeer(cookieKey, keyName);
          }
       }
 
@@ -804,11 +803,9 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
          //we don't have this key, call user prompt lambda
          if (verifyNewIDKey(msgbdr, srvId)) {
             // Add the key. Old keys aren't deleted automatically. Do it to be safe.
-            {
-               std::lock_guard<std::mutex> lock(authPeersMutex_);
-               authPeers_->eraseName(srvId);
-               authPeers_->addPeer(msgbdr.copy(), std::vector<std::string>{ srvId });
-            }
+            std::lock_guard<std::mutex> lock(authPeersMutex_);
+            authPeers_->eraseName(srvId);
+            authPeers_->addPeer(msgbdr.copy(), std::vector<std::string>{ srvId });
          }
       }
       else {

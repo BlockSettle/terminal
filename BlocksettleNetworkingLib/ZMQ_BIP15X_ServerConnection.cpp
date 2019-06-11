@@ -77,10 +77,10 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
 
    // In general, load the client key from a special Armory wallet file.
    if (!ephemeralPeers) {
-       authPeers_ = make_shared<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
+       authPeers_ = std::make_unique<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
    }
    else {
-      authPeers_ = make_shared<AuthorizedPeers>();
+      authPeers_ = std::make_unique<AuthorizedPeers>();
    }
 
    if (makeServerIDCookie_) {
@@ -130,11 +130,11 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    if (!ownKeyFileDir.empty() && !ownKeyFileName.empty()) {
       logger_->debug("[{}] creating/reading static key in {}/{}", __func__
          , ownKeyFileDir, ownKeyFileName);
-      authPeers_ = make_shared<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
+      authPeers_ = std::make_unique<AuthorizedPeers>(ownKeyFileDir, ownKeyFileName);
    }
    else {
       logger_->debug("[{}] creating ephemeral key", __func__);
-      authPeers_ = make_shared<AuthorizedPeers>();
+      authPeers_ = std::make_unique<AuthorizedPeers>();
    }
 
    if (makeServerIDCookie_) {
@@ -481,6 +481,7 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
 
             // Add the host and the key to the list of verified peers. Be sure
             // to erase any old keys first.
+            std::lock_guard<std::mutex> lock(authPeersMutex_);
             authPeers_->eraseName(clientID);
             authPeers_->addPeer(cookieKey, clientID);
          }
@@ -779,7 +780,10 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
 
    assert(cbTrustedClients_);
    auto trustedClients = cbTrustedClients_();
-   ZmqBIP15XUtils::updatePeerKeys(authPeers_.get(), trustedClients);
+   {
+      std::lock_guard<std::mutex> lock(authPeersMutex_);
+      ZmqBIP15XUtils::updatePeerKeys(authPeers_.get(), trustedClients);
+   }
 
    auto lbds = getAuthPeerLambda();
    connection = std::make_shared<ZmqBIP15XPerConnData>();
@@ -949,22 +953,22 @@ void ZmqBIP15XServerConnection::UpdateClientHeartbeatTimestamp(const std::string
 // RETURN: AuthPeersLambdas object with required lambdas.
 AuthPeersLambdas ZmqBIP15XServerConnection::getAuthPeerLambda()
 {
-   auto authPeerPtr = authPeers_;
-
-   auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>&
+   auto getMap = [this](void)->const map<string, btc_pubkey>&
    {
-      return authPeerPtr->getPeerNameMap();
+      std::lock_guard<std::mutex> lock(authPeersMutex_);
+      return authPeers_->getPeerNameMap();
    };
 
-   auto getPrivKey = [authPeerPtr](
-      const BinaryDataRef& pubkey)->const SecureBinaryData&
+   auto getPrivKey = [this](const BinaryDataRef& pubkey)->const SecureBinaryData&
    {
-      return authPeerPtr->getPrivateKey(pubkey);
+      std::lock_guard<std::mutex> lock(authPeersMutex_);
+      return authPeers_->getPrivateKey(pubkey);
    };
 
-   auto getAuthSet = [authPeerPtr](void)->const set<SecureBinaryData>&
+   auto getAuthSet = [this](void)->const set<SecureBinaryData>&
    {
-      return authPeerPtr->getPublicKeySet();
+      std::lock_guard<std::mutex> lock(authPeersMutex_);
+      return authPeers_->getPublicKeySet();
    };
 
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
@@ -1004,11 +1008,13 @@ bool ZmqBIP15XServerConnection::genBIPIDCookie()
 
 void ZmqBIP15XServerConnection::addAuthPeer(const ZmqBIP15XPeer &peer)
 {
+   std::lock_guard<std::mutex> lock(authPeersMutex_);
    ZmqBIP15XUtils::addAuthPeer(authPeers_.get(), peer);
 }
 
 void ZmqBIP15XServerConnection::updatePeerKeys(const ZmqBIP15XPeers &peers)
 {
+   std::lock_guard<std::mutex> lock(authPeersMutex_);
    ZmqBIP15XUtils::updatePeerKeys(authPeers_.get(), peers);
 }
 
@@ -1052,6 +1058,7 @@ bool ZmqBIP15XServerConnection::getClientIDCookie(BinaryData& cookieBuf)
 // RETURN: A buffer with the compressed ECDSA ID pub key. (BinaryData)
 BinaryData ZmqBIP15XServerConnection::getOwnPubKey() const
 {
+   std::lock_guard<std::mutex> lock(authPeersMutex_);
    const auto pubKey = authPeers_->getOwnPublicKey();
    return SecureBinaryData(pubKey.pubkey, pubKey.compressed
       ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);

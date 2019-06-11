@@ -136,7 +136,8 @@ private:
 
    void checkHeartbeats();
 private:
-   std::shared_ptr<AuthorizedPeers> authPeers_;
+   std::unique_ptr<AuthorizedPeers> authPeers_;
+   mutable std::mutex authPeersMutex_;
    std::map<std::string, std::shared_ptr<ZmqBIP15XPerConnData>>   socketConnMap_;
 
    TrustedClientsCallback cbTrustedClients_;
