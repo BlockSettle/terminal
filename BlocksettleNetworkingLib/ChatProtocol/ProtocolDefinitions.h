@@ -33,6 +33,7 @@ namespace Chat
    ,   RequestGenCommonOTC
    ,   RequestAnswerCommonOTC
    ,   RequestUpdateCommonOTC
+   ,   RequestPullOTC
    };
 
 
@@ -60,7 +61,7 @@ namespace Chat
    ,   ResponseAnswerCommonOTC
    ,   ResponseUpdateCommonOTC
    };
-   
+
    enum class ContactsAction {
       Accept,
       Reject,
@@ -97,7 +98,7 @@ namespace Chat
       Canceled,
       Expired,
    };
-   
+
    static const QString VersionKey   = QStringLiteral("version");
    static const QString NameKey      = QStringLiteral("name");
    static const QString TypeKey      = QStringLiteral("type");
@@ -135,6 +136,7 @@ namespace Chat
    static const QString RoomSendUserUpdatesKey = QStringLiteral("room_send_user_updates");
    static const QString RoomDisplayUserListKey = QStringLiteral("room_display_user_list");
    static const QString RoomDisplayTrayNotificationKey = QStringLiteral("room_display_tray_notification");
+   static const QString RoomIsTradingAvailableKey = QStringLiteral("room_is_trading_available");
    static const QString UserIdKey = QStringLiteral("user_id");
    static const QString DisplayNameKey = QStringLiteral("display_name");
    static const QString SearchIdPatternKey = QStringLiteral("search_id_pattern");
@@ -154,6 +156,8 @@ namespace Chat
    static const QString OTCUpdateIdServerKey = QStringLiteral("otc_update_id_server");
    static const QString OTCRequestorIdKey = QStringLiteral("otc_requestor_id");
    static const QString OTCResponderIdKey = QStringLiteral("otc_responder_id");
+   static const QString OTCUpdateSenderIdKey = QStringLiteral("otc_update_sender_id");
+   static const QString OTCUpdateReceiverIdKey = QStringLiteral("otc_update_receiver_id");
    static const QString OTCTargetIdKey = QStringLiteral("otc_target_id");
    static const QString OTCSubmitTimestampKey = QStringLiteral("otc_submit_timestamp");
    static const QString OTCExpiredTimestampKey = QStringLiteral("otc_expired_timestamp");
@@ -190,15 +194,15 @@ namespace Chat
       T messageType_;
       std::string version_;
    };
-   
+
    template <typename T>
    std::string serializeData(const T* thisPtr)
    {
       auto data = QJsonDocument(thisPtr->toJson());
       QString serializedData = QString::fromUtf8(data.toJson());
       return serializedData.toStdString();
-   } 
-   
+   }
+
    autheid::PublicKey publicKeyFromString(const std::string &s);
    std::string publicKeyToString(const autheid::PublicKey &k);
 

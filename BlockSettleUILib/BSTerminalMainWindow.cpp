@@ -238,65 +238,68 @@ void BSTerminalMainWindow::GetNetworkSettingsFromPuB(const std::function<void()>
    };
 
    cmdPuBSettings_->SetReplyCallback([this, title, cb, populateAppSettings](const std::string &data) {
-      if (data.empty()) {
-         showError(title, tr("Empty reply from BlockSettle server"));
-      }
-      cmdPuBSettings_->resetConnection();
-      Blocksettle::Communication::GetNetworkSettingsResponse response;
-      if (!response.ParseFromString(data)) {
-         showError(title, tr("Invalid reply from BlockSettle server"));
-         return false;
-      }
+      QMetaObject::invokeMethod(this, [this, data, title, cb, populateAppSettings] {
+         if (data.empty()) {
+            showError(title, tr("Empty reply from BlockSettle server"));
+         }
+         cmdPuBSettings_->resetConnection();
+         Blocksettle::Communication::GetNetworkSettingsResponse response;
+         if (!response.ParseFromString(data)) {
+            showError(title, tr("Invalid reply from BlockSettle server"));
+            return;
+         }
 
-      if (response.has_celer()) {
-         networkSettings_.celer = { response.celer().host(), response.celer().port() };
-         networkSettings_.isSet = true;
-      }
-      else {
-         showError(title, tr("Missing Celer connection settings"));
-         return false;
-      }
+         if (response.has_celer()) {
+            networkSettings_.celer = { response.celer().host(), response.celer().port() };
+            networkSettings_.isSet = true;
+         }
+         else {
+            showError(title, tr("Missing Celer connection settings"));
+            return;
+         }
 
-      if (response.has_marketdata()) {
-         networkSettings_.marketData = { response.marketdata().host(), response.marketdata().port() };
-         networkSettings_.isSet = true;
-      }
-      else {
-         showError(title, tr("Missing MD connection settings"));
-         return false;
-      }
+         if (response.has_marketdata()) {
+            networkSettings_.marketData = { response.marketdata().host(), response.marketdata().port() };
+            networkSettings_.isSet = true;
+         }
+         else {
+            showError(title, tr("Missing MD connection settings"));
+            return;
+         }
 
-      if (response.has_mdhs()) {
-         networkSettings_.mdhs = { response.mdhs().host(), response.mdhs().port() };
-         networkSettings_.isSet = true;
-      }
-      // else {
-         // showError(title, tr("Missing MDHS connection settings"));
-         // return false;
-      // }
+         if (response.has_mdhs()) {
+            networkSettings_.mdhs = { response.mdhs().host(), response.mdhs().port() };
+            networkSettings_.isSet = true;
+         }
+         // else {
+            // showError(title, tr("Missing MDHS connection settings"));
+            // return false;
+         // }
 
-      if (response.has_chat()) {
-         networkSettings_.chat = { response.chat().host(), response.chat().port() };
-         networkSettings_.isSet = true;
-      }
-      else {
-         showError(title, tr("Missing Chat connection settings"));
-         return false;
-      }
+         if (response.has_chat()) {
+            networkSettings_.chat = { response.chat().host(), response.chat().port() };
+            networkSettings_.isSet = true;
+         }
+         else {
+            showError(title, tr("Missing Chat connection settings"));
+            return;
+         }
 
-      populateAppSettings(networkSettings_);
-      cb();
+         populateAppSettings(networkSettings_);
+         cb();
+      });
       return true;
    });
    cmdPuBSettings_->SetErrorCallback([this, title](const std::string& message) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] error: {}", message);
-      showError(title, tr("Failed to obtain network settings from BlockSettle server"));
-      cmdPuBSettings_->resetConnection();
+      QMetaObject::invokeMethod(this, [this, title] {
+         showError(title, tr("Failed to obtain network settings from BlockSettle server"));
+         cmdPuBSettings_->resetConnection();
+      });
    });
 
-   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->get<std::string>(ApplicationSettings::pubBridgeHost)
-      , applicationSettings_->get<std::string>(ApplicationSettings::pubBridgePort)
-      , reqPkt.SerializeAsString(), true)) {
+   if (!cmdPuBSettings_->ExecuteRequest(applicationSettings_->pubBridgeHost()
+      , applicationSettings_->pubBridgePort(), reqPkt.SerializeAsString(), true)) {
       logMgr_->logger()->error("[GetNetworkSettingsFromPuB] failed to send request");
       showError(title, tr("Failed to retrieve network settings due to invalid connection to BlockSettle server"));
    }
@@ -589,7 +592,6 @@ bool BSTerminalMainWindow::InitSigningContainer()
 
 void BSTerminalMainWindow::SignerReady()
 {
-   lastSignerError_ = SignContainer::NoError;
    updateControlEnabledState();
 
    if (signContainer_->hasUI()) {
@@ -939,13 +941,11 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 
 void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError error, const QString &details)
 {
-   if (lastSignerError_ == error) {
-      return;
-   }
-
-   lastSignerError_ = error;
    updateControlEnabledState();
-   showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+
+   if (error != SignContainer::ConnectionTimeout || signContainer_->isLocal()) {
+      showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+   }
 }
 
 void BSTerminalMainWindow::onReceive()

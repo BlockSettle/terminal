@@ -12,7 +12,11 @@ enum PacketType
    TxSignedType = 4;
    CancelTxSignType = 5;
    XbtSpentType = 6;
+
+   // Send wallet id and wallet password to headless to enable auto signing
+   // Request from ui, response from headless
    AutoSignActType = 7;
+
    SignTxRequestType = 8;
    SyncWalletInfoType = 9;
    SyncHDWalletType = 10;
@@ -24,7 +28,11 @@ enum PacketType
    RequestCloseType = 16;
    ReconnectTerminalType = 17;
    ReloadWalletsType = 18;
+
+   // Execute QML dialog by it's name
+   // Request from headless, no response from ui
    ExecCustomDialogRequestType = 19;
+
    ChangePasswordRequestType   = 20;
 
    // Uses messages from headless
@@ -106,13 +114,6 @@ enum BindStatus
 
 ////////////////////////////////////////////////////////////////////////////////
 
-message ReadyEvent
-{
-   bool  ready = 1;
-   int32 cur_wallet = 2;
-   int32 total_wallets = 3;
-}
-
 message PeerEvent
 {
    string ip_address = 1;
@@ -148,12 +149,6 @@ message XbtSpentEvent
 {
    int64 value = 1;
    bool  auto_sign = 2;
-}
-
-message AutoSignActEvent
-{
-   bool   activated = 1;
-   string wallet_id = 2;
 }
 
 
@@ -329,12 +324,25 @@ message HeadlessPubKeyResponse
    string pubKey = 1;
 }
 
+message AutoSignActRequest
+{
+   string   rootWalletId = 1;
+   bytes    password = 2;
+   bool     activateAutoSign = 3;
+}
+
+message AutoSignActResponse
+{
+   uint32   errorCode = 1;
+   string   rootWalletId = 2;
+   bool     autoSignActive = 3;
+}
+
 // Would be sent from headless process to the GUI when some status changes
 message UpdateStatus
 {
    BindStatus signer_bind_status = 1;
 }
-
 
 message ImportWoWalletRequest
 {

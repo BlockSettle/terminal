@@ -104,10 +104,7 @@ int SignersProvider::indexOfIpPort(const std::string &srvIPPort) const
 
 bool SignersProvider::add(const SignerHost &signer)
 {
-   if (signer.port < 1 || signer.port > USHRT_MAX) {
-      return false;
-   }
-   if (signer.name.isEmpty()) {
+   if (!signer.isValid()) {
       return false;
    }
 
@@ -117,7 +114,7 @@ bool SignersProvider::add(const SignerHost &signer)
       if (s.name == signer.name) {
          return false;
       }
-      if (s.address == signer.address && s.port == signer.port) {
+      if (s == signer) {
          return false;
       }
    }
@@ -132,10 +129,7 @@ bool SignersProvider::add(const SignerHost &signer)
 
 bool SignersProvider::replace(int index, const SignerHost &signer)
 {
-   if (signer.port < 1 || signer.port > USHRT_MAX) {
-      return false;
-   }
-   if (signer.name.isEmpty()) {
+   if (!signer.isValid()) {
       return false;
    }
 
@@ -152,7 +146,7 @@ bool SignersProvider::replace(int index, const SignerHost &signer)
       if (s.name == signer.name) {
          return false;
       }
-      if (s.address == signer.address && s.port == signer.port) {
+      if (s == signer) {
          return false;
       }
    }

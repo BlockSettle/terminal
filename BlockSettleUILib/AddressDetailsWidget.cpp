@@ -357,6 +357,7 @@ void AddressDetailsWidget::getTxData(const std::shared_ptr<AsyncClient::LedgerDe
          }
          if (txHashSet.empty()) {
             logger_->info("[AddressDetailsWidget::getTxData] address participates in no TXs");
+            cbCollectTXs({});
          } else {
             armory_->getTXsByHash(txHashSet, cbCollectTXs);
          }

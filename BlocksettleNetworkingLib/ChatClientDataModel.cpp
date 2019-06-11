@@ -108,10 +108,15 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
 
 bool ChatClientDataModel::insertMessageNode(TreeMessageNode * messageNode)
 {
+   return insertDisplayableDataNode(messageNode);
+}
+
+bool ChatClientDataModel::insertDisplayableDataNode(DisplayableDataNode *displayableNode)
+{
    //We use this to find target Room node were this message should be
    //It need to do before call beginInsertRows to have access to target children list
    //And make first and last indices calculation for beginInsertRows
-   TreeItem * target = root_->resolveMessageTargetNode(messageNode);
+   TreeItem * target = root_->resolveMessageTargetNode(displayableNode);
 
    if (!target){
       return false;
@@ -125,7 +130,7 @@ bool ChatClientDataModel::insertMessageNode(TreeMessageNode * messageNode)
    //Here we say that for target (parentIndex) will be inserted new children
    //That will have indices from first to last
    beginInsertRows(parentIndex, first, last);
-   bool res = root_->insertMessageNode(messageNode);
+   bool res = root_->insertMessageNode(displayableNode);
    endInsertRows();
 
    return res;
@@ -588,19 +593,109 @@ bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &valu
 }
 
 // insert channel for response that client send to OTC requests
-bool ChatClientDataModel::insertOTCSentResponse(const std::string& otcId)
+bool ChatClientDataModel::insertOTCSentResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
 {
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement);
-   bool res = root_->insertOTCSentResponseObject(otcId);
+   bool res = root_->insertOTCSentResponseObject(response);
    endInsertRows();
    return res;
 }
 
+bool ChatClientDataModel::insertOTCSentResponseData(std::shared_ptr<Chat::DataObject> data)
+{
+   DisplayableDataNode * item = nullptr;
+    switch (data->getType()) {
+       case Chat::DataObject::Type::MessageData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement,
+                                           ChatUIDefinitions::ChatTreeNodeType::MessageDataNode,
+                                           data);
+          break;
+       case Chat::DataObject::Type::OTCResponseData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement,
+                                  ChatUIDefinitions::ChatTreeNodeType::OTCSentResponseNode,
+                                  data);
+          break;
+       case Chat::DataObject::Type::OTCUpdateData:
+          break;
+       default:break;
+    }
+
+   bool res = insertDisplayableDataNode(item);
+
+   if (!res && item){
+      delete  item;
+   }
+
+   return res;
+}
+
 // insert channel for response client receive for own OTC
-bool ChatClientDataModel::insertOTCReceivedResponse(const std::string& otcId)
+bool ChatClientDataModel::insertOTCReceivedResponse(const std::shared_ptr<Chat::OTCResponseData> &response)
 {
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement);
-   bool res = root_->insertOTCReceivedResponseObject(otcId);
+   bool res = root_->insertOTCReceivedResponseObject(response);
    endInsertRows();
+   return res;
+}
+
+bool ChatClientDataModel::insertOTCReceivedResponseData(std::shared_ptr<Chat::DataObject> data)
+{
+   DisplayableDataNode * item = nullptr;
+    switch (data->getType()) {
+       case Chat::DataObject::Type::MessageData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement,
+                                           ChatUIDefinitions::ChatTreeNodeType::MessageDataNode,
+                                           data);
+          break;
+       case Chat::DataObject::Type::OTCResponseData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement,
+                                  ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
+                                  data);
+          break;
+       case Chat::DataObject::Type::OTCUpdateData:
+          break;
+       default:break;
+    }
+
+   bool res = insertDisplayableDataNode(item);
+
+   if (!res && item){
+      delete  item;
+   }
+
+   return res;
+}
+
+bool ChatClientDataModel::insertPrivateOTCReceivedResponseData(std::shared_ptr<Chat::DataObject> data)
+{
+   DisplayableDataNode * item = nullptr;
+    switch (data->getType()) {
+       case Chat::DataObject::Type::MessageData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+                                           ChatUIDefinitions::ChatTreeNodeType::MessageDataNode,
+                                           data);
+          break;
+       case Chat::DataObject::Type::OTCResponseData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+                                  ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponseNode,
+                                  data);
+          break;
+       case Chat::DataObject::Type::OTCUpdateData:
+          break;
+       case Chat::DataObject::Type::OTCRequestData:
+          item = new DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+                                  ChatUIDefinitions::ChatTreeNodeType::OTCRequestNode,
+                                  data);
+          break;
+       default:
+          break;
+    }
+
+   bool res = insertDisplayableDataNode(item);
+
+   if (!res && item){
+      delete  item;
+   }
+
    return res;
 }

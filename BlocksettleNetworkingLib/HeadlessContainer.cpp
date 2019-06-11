@@ -24,7 +24,8 @@ namespace {
    constexpr int kStartTimeout = 5000;
 
    // When remote signer will try to reconnect
-   constexpr auto kRemoteReconnectPeriod = std::chrono::seconds(10);
+   constexpr auto kLocalReconnectPeriod = std::chrono::seconds(10);
+   constexpr auto kRemoteReconnectPeriod = std::chrono::milliseconds(100);
 
 } // namespace
 
@@ -195,14 +196,25 @@ void HeadlessListener::OnDataReceived(const std::string& data)
 
 void HeadlessListener::OnConnected()
 {
+   if (isConnected_) {
+      logger_->error("already connected");
+      return;
+   }
+
+   isConnected_ = true;
    logger_->debug("[HeadlessListener] Connected");
    emit connected();
 }
 
 void HeadlessListener::OnDisconnected()
 {
+   if (!isConnected_) {
+      return;
+   }
+
    logger_->debug("[HeadlessListener] Disconnected");
    isReady_ = false;
+   isConnected_ = false;
    emit disconnected();
 }
 
@@ -225,15 +237,15 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
          emit error(HeadlessContainer::SerializationFailed, tr("serialization failed"));
          break;
       case HeartbeatWaitFailed:
-         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("Connection lost"));
+         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("connection lost"));
+         break;
+      case ConnectionTimeout:
+         emit error(HeadlessContainer::ConnectionTimeout, tr("connection timeout"));
          break;
       default:
          emit error(HeadlessContainer::UnknownError, tr("unknown error"));
          break;
    }
-
-   // Need to disconnect connection because otherwise it will continue send error responses over and over
-   connection_->closeConnection();
 }
 
 bs::signer::RequestId HeadlessListener::Send(headless::RequestPacket packet, bool updateId)
@@ -271,10 +283,10 @@ void HeadlessContainer::ProcessSignTXResponse(unsigned int id, const std::string
    headless::SignTXReply response;
    if (!response.ParseFromString(data)) {
       logger_->error("[HeadlessContainer] Failed to parse SignTXReply");
-      emit TXSigned(id, {}, "failed to parse", false);
+      emit TXSigned(id, {}, bs::error::ErrorCode::FailedToParse);
       return;
    }
-   emit TXSigned(id, response.signedtx(), response.error(), response.cancelledbyuser());
+   emit TXSigned(id, response.signedtx(), static_cast<bs::error::ErrorCode>(response.errorcode()));
 }
 
 void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
@@ -386,19 +398,19 @@ void HeadlessContainer::ProcessGetHDWalletInfoResponse(unsigned int id, const st
    }
 }
 
-void HeadlessContainer::ProcessSetLimitsResponse(unsigned int id, const std::string &data)
+void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::string &data)
 {
-   headless::SetLimitsResponse response;
-   if (!response.ParseFromString(data)) {
+   headless::AutoSignActEvent event;
+   if (!event.ParseFromString(data)) {
       logger_->error("[HeadlessContainer] Failed to parse SetLimits reply");
       emit Error(id, "failed to parse");
       return;
    }
-   emit AutoSignStateChanged(response.rootwalletid(), response.autosignactive(), response.error());
+   emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive());
 }
 
 bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password
+   , SignContainer::TXSignMode mode, const PasswordType& password
    , bool keepDuplicatedRecipients)
 {
    if (!txSignReq.isValid()) {
@@ -408,9 +420,9 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
    headless::SignTXRequest request;
    request.set_walletid(txSignReq.walletId);
    request.set_keepduplicatedrecipients(keepDuplicatedRecipients);
-   if (autoSign) {
-      request.set_applyautosignrules(true);
-   }
+//   if (autoSign) {
+//      request.set_applyautosignrules(true);
+//   }
    if (txSignReq.populateUTXOs) {
       request.set_populateutxos(true);
    }
@@ -464,14 +476,14 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
 }
 
 unsigned int HeadlessContainer::signPartialTXRequest(const bs::core::wallet::TXSignRequest &req
-   , bool autoSign, const PasswordType& password)
+   , const PasswordType& password)
 {
-   return signTXRequest(req, autoSign, TXSignMode::Partial, password);
+   return signTXRequest(req, TXSignMode::Partial, password);
 }
 
 bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
    , const bs::Address &authAddr, const std::string &settlementId
-   , bool autoSign, const PasswordType& password)
+   , const PasswordType& password)
 {
    if ((txSignReq.inputs.size() != 1) || (txSignReq.recipients.size() != 1) || settlementId.empty()) {
       logger_->error("[HeadlessContainer] Invalid PayoutTXSignRequest");
@@ -482,9 +494,9 @@ bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wal
    request.set_recipient(txSignReq.recipients[0]->getSerializedScript().toBinStr());
    request.set_authaddress(authAddr.display());
    request.set_settlementid(settlementId);
-   if (autoSign) {
-      request.set_applyautosignrules(autoSign);
-   }
+//   if (autoSign) {
+//      request.set_applyautosignrules(autoSign);
+//   }
 
    if (!password.isNull()) {
       request.set_password(password.toHexStr());
@@ -646,25 +658,25 @@ bs::signer::RequestId HeadlessContainer::SendDeleteHDRequest(const std::string &
    return Send(packet);
 }
 
-void HeadlessContainer::setLimits(const std::string &walletId, const SecureBinaryData &pass
-   , bool autoSign)
-{
-   if (walletId.empty()) {
-      logger_->error("[HeadlessContainer] no walletId for SetLimits");
-      return;
-   }
-   headless::SetLimitsRequest request;
-   request.set_rootwalletid(walletId);
-   if (!pass.isNull()) {
-      request.set_password(pass.toHexStr());
-   }
-   request.set_activateautosign(autoSign);
+//void HeadlessContainer::setLimits(const std::string &walletId, const SecureBinaryData &pass
+//   , bool autoSign)
+//{
+//   if (walletId.empty()) {
+//      logger_->error("[HeadlessContainer] no walletId for SetLimits");
+//      return;
+//   }
+//   headless::SetLimitsRequest request;
+//   request.set_rootwalletid(walletId);
+//   if (!pass.isNull()) {
+//      request.set_password(pass.toHexStr());
+//   }
+//   request.set_activateautosign(autoSign);
 
-   headless::RequestPacket packet;
-   packet.set_type(headless::SetLimitsRequestType);
-   packet.set_data(request.SerializeAsString());
-   Send(packet);
-}
+//   headless::RequestPacket packet;
+//   packet.set_type(headless::SetLimitsRequestType);
+//   packet.set_data(request.SerializeAsString());
+//   Send(packet);
+//}
 
 bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data)
 {
@@ -1102,29 +1114,25 @@ bool RemoteSigner::Stop()
 
 bool RemoteSigner::Connect()
 {
-   QtConcurrent::run(this, &RemoteSigner::ConnectHelper);
-   headlessConnFinished_ = true;
-   return true;
-}
-
-void RemoteSigner::ConnectHelper()
-{
    if (!connection_) {
       logger_->error("[{}] connection not created", __func__);
-      emit disconnected();
-      return;
+      return false;
    }
-   if (!connection_->isActive()) {
-      if (connection_->openConnection(host_.toStdString(), port_.toStdString()
-         , listener_.get())) {
-         emit connected();
-      }
-      else {
-         logger_->error("[HeadlessContainer] Failed to open connection to "
-            "headless container");
-         return;
-      }
+
+   if (connection_->isActive()) {
+      return true;
    }
+
+   bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
+   if (!result) {
+      logger_->error("[HeadlessContainer] Failed to open connection to "
+         "headless container");
+      return false;
+   }
+
+   emit connected();
+   headlessConnFinished_ = true;
+   return true;
 }
 
 bool RemoteSigner::Disconnect()
@@ -1132,10 +1140,6 @@ bool RemoteSigner::Disconnect()
    if (!connection_) {
       return true;
    }
-/*   headless::RequestPacket packet;
-   packet.set_type(headless::DisconnectionRequestType);
-   packet.set_data("");    // This code produces crashes on terminal shutdown
-   Send(packet);*/         // and its purpose is obscure to me
 
    return connection_->closeConnection();
 }
@@ -1163,21 +1167,22 @@ void RemoteSigner::RecreateConnection()
 {
    logger_->info("[{}] Restart connection...", __func__);
 
-   const bool makeClientCookie = false;
-   // Server's cookies are not available in remote mode
-   const bool readServerCookie = (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc);
 
-   std::string absCookiePath;
-   if (readServerCookie) {
-      absCookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
+   ZmqBIP15XDataConnectionParams params;
+   params.ephemeralPeers = ephemeralDataConnKeys_;
+   params.ownKeyFileDir = ownKeyFileDir_;
+   params.ownKeyFileName = ownKeyFileName_;
+   params.setLocalHeartbeatInterval();
+
+   // Server's cookies are not available in remote mode
+   if (opMode() == OpMode::Local || opMode() == OpMode::LocalInproc) {
+      params.cookie = BIP15XCookie::ReadServer;
+      params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "signerServerID";
    }
 
    try {
-      connection_ = connectionManager_->CreateZMQBIP15XDataConnection(
-         ephemeralDataConnKeys_, ownKeyFileDir_, ownKeyFileName_, makeClientCookie
-         , readServerCookie, absCookiePath);
+      connection_ = connectionManager_->CreateZMQBIP15XDataConnection(params);
       connection_->setCBs(cbNewKey_);
-      connection_->setLocalHeartbeatInterval();
 
       headlessConnFinished_ = false;
    }
@@ -1196,7 +1201,8 @@ void RemoteSigner::ScheduleRestart()
    }
 
    isRestartScheduled_ = true;
-   QTimer::singleShot(kRemoteReconnectPeriod, this, [this] {
+   auto timeout = isLocal() ? kLocalReconnectPeriod : kRemoteReconnectPeriod;
+   QTimer::singleShot(timeout, this, [this] {
       isRestartScheduled_ = false;
       RecreateConnection();
       Start();
@@ -1238,7 +1244,7 @@ void RemoteSigner::onDisconnected()
    std::set<bs::signer::RequestId> tmpReqs = std::move(signRequests_);
 
    for (const auto &id : tmpReqs) {
-      emit TXSigned(id, {}, "signer disconnected", false);
+      emit TXSigned(id, {}, bs::error::ErrorCode::TxCanceled, "Signer disconnected");
    }
 
    emit disconnected();
@@ -1287,8 +1293,8 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       emit UserIdSet();
       break;
 
-   case headless::SetLimitsRequestType:
-      ProcessSetLimitsResponse(packet.id(), packet.data());
+   case headless::AutoSignActType:
+      ProcessAutoSignActEvent(packet.id(), packet.data());
       break;
 
    case headless::CreateSettlWalletType:
@@ -1336,13 +1342,13 @@ QString RemoteSigner::targetDir() const
 }
 
 bs::signer::RequestId RemoteSigner::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , bool autoSign, SignContainer::TXSignMode mode, const PasswordType& password
+   , SignContainer::TXSignMode mode, const PasswordType& password
    , bool keepDuplicatedRecipients)
 {
    if (isWalletOffline(txSignReq.walletId)) {
       return signOffline(txSignReq);
    }
-   return HeadlessContainer::signTXRequest(txSignReq, autoSign, mode, password, keepDuplicatedRecipients);
+   return HeadlessContainer::signTXRequest(txSignReq, mode, password, keepDuplicatedRecipients);
 }
 
 bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRequest &txSignReq)
@@ -1397,13 +1403,13 @@ bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRe
    QFile f(QString::fromStdString(fileName));
    if (f.exists()) {
       QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "request file " + fileName + " already exists", false);
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxRequestFileExist, fileName);
       });
       return reqId;
    }
    if (!f.open(QIODevice::WriteOnly)) {
       QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "failed to open " + fileName + " for writing", false);
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxFailedToOpenRequestFile, fileName);
       });
       return reqId;
    }
@@ -1411,14 +1417,14 @@ bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRe
    const auto data = QByteArray::fromStdString(fileContainer.SerializeAsString());
    if (f.write(data) != data.size()) {
       QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-         emit TXSigned(reqId, {}, "failed to write to " + fileName, false);
+         emit TXSigned(reqId, {}, bs::error::ErrorCode::TxFailedToWriteRequestFile, fileName);
       });
       return reqId;
    }
    f.close();
 
    QMetaObject::invokeMethod(this, [this, reqId, fileName] {
-      emit TXSigned(reqId, fileName, {}, false);
+      emit TXSigned(reqId, fileName, bs::error::ErrorCode::NoError);
    });
    return reqId;
 }

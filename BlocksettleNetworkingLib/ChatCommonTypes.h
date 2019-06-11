@@ -100,25 +100,58 @@ namespace bs {
 
       struct OTCRequest
       {
-         ChatOTCSide::Type        side;
-         OTCRangeID::Type  amountRange;
-
-         // XXX
-         // ownRequest - temporary field used for test purpose until OTC goes through chat server
-         bool              ownRequest;
-
-         // fakeReplyRequired - chat server will simulate "reply"
-         bool              fakeReplyRequired;
+         ChatOTCSide::Type    side;
+         OTCRangeID::Type     amountRange;
       };
 
       struct OTCResponse
       {
-         QString     serverRequestId;
-         QString     requestorId;
-         QString     initialTargetId;
+         std::string     serverRequestId;
+         std::string     requestorId;
+         std::string     initialTargetId;
 
          OTCPriceRange     priceRange;
          OTCQuantityRange  quantityRange;
+      };
+
+      enum class OTCRequestRejectReason
+      {
+         CounterpartyOffline,
+         CounterpartyNotFound,
+         // InvalidTarget - ATM returned when trying to send to self
+         InvalidTarget,
+         RequestLimitToTargetExceeded,
+         RequestsAmountExceeded,
+         RequestAlreadyExpired
+      };
+
+      enum class OTCResponseRejectReason
+      {
+         // RequestNotAvailableForReply - request was pulled, closed or expired
+         RequestNotAvailableForReply,
+         // InvalidTarget - ATM returned when trying to reply to self
+         InvalidTarget,
+         // RequestAlreadyResponded - responder already have active response to that request
+         RequestAlreadyResponded,
+         // RequestResponseLimitExceeded - request have reached max number of
+         // replies ( reject reeason for requests to common room)
+         RequestResponseLimitExceeded
+      };
+
+      enum class OTCUpdateRejectReason
+      {
+         // TradingClosed - response or request were closed already
+         TradingClosed,
+         // TradeAlreadyAccepted - could not update trade that was accepted
+         TradeAlreadyAccepted,
+         // NoUpdateFromRequestorReceived - requestor shoudl send first update
+         NoUpdateFromRequestorReceived,
+         // PriceNotInrange price in update not in initial range
+         PriceNotInrange,
+         // AmountNotInRange amount not in initial range
+         AmountNotInRange,
+         // AccessDenied - update sender is neither requestor or responder
+         AccessDenied
       };
    }
 }

@@ -84,13 +84,17 @@ protected:
    };
 
    QString data(const int &row, const Column &column);
+   QString dataMessage(const int &row, const Column &column);
+   QString dataOtcRequest(const int &row, const Column &column);
+   QString dataOtcResponse(const int &row, const Column &column);
+   QString dataOtcUpdate(const int &row, const Column &column);
    QImage statusImage(const int &row);
 
    virtual void contextMenuEvent(QContextMenuEvent *e);
 
 public slots:
-   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);
-   void onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> & messages, bool isFirstFetch);
+   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::DataObject> > &messages, bool isFirstFetch);
+   void onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::DataObject>> & messages, bool isFirstFetch);
    void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
    void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
    void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
@@ -103,7 +107,8 @@ private slots:
    void onTextChanged();
 
 private:
-   using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
+   //using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
+   using MessagesHistory = std::vector<std::shared_ptr<Chat::DataObject>>;
    QMap<QString, MessagesHistory> messages_;
    MessagesHistory messagesToLoadMore_;
    QString currentChatId_;
@@ -116,7 +121,7 @@ private:
 private:
    std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
    void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
-   void insertMessage(std::shared_ptr<Chat::MessageData> message);
+   void insertMessage(std::shared_ptr<Chat::DataObject> message);
    void insertLoadMore();
    void loadMore();
    void setupHighlightPalette();

@@ -595,7 +595,7 @@
              <number>0</number>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>3</number>
             </property>
             <widget class="OTCLoginRequiredShield" name="widgetLoginRequiredShield"/>
             <widget class="OTCGeneralRoomShield" name="widgetGeneralShield"/>
@@ -605,6 +605,8 @@
             <widget class="OTCNegotiationRequestWidget" name="widgetNegotiateRequest"/>
             <widget class="OTCNegotiationResponseWidget" name="widgetNegotiateResponse"/>
             <widget class="OTCParticipantShield" name="widgetParticipantShield"/>
+            <widget class="OTCContactShield" name="widgetContactShield"/>
+            <widget class="OTCContactNetStatusShield" name="widgetContactNetStatusShield"/>
            </widget>
           </item>
          </layout>
@@ -689,7 +691,19 @@
    <extends>QWidget</extends>
    <header>OTCParticipantShield.h</header>
    <container>1</container>
-  </customwidget>  
+  </customwidget>
+  <customwidget>
+   <class>OTCContactShield</class>
+   <extends>QWidget</extends>
+   <header>OTCContactShield.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCContactNetStatusShield</class>
+   <extends>QWidget</extends>
+   <header>OTCContactNetStatusShield.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources/>
  <connections/>
