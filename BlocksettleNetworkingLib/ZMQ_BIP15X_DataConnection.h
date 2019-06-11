@@ -158,8 +158,9 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    bool  serverPubkeySignalled_ = false;
-   std::shared_ptr<AuthorizedPeers> authPeers_;
-   std::shared_ptr<BIP151Connection> bip151Connection_;
+   std::unique_ptr<AuthorizedPeers> authPeers_;
+   mutable std::mutex authPeersMutex_;
+   std::unique_ptr<BIP151Connection> bip151Connection_;
    std::chrono::time_point<std::chrono::steady_clock> outKeyTimePoint_;
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;

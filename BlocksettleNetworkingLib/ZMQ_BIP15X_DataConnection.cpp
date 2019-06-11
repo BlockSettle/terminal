@@ -69,11 +69,11 @@ ZmqBIP15XDataConnection::ZmqBIP15XDataConnection(const shared_ptr<spdlog::logger
 
    // In general, load the server key from a special Armory wallet file.
    if (!params.ephemeralPeers) {
-      authPeers_ = make_shared<AuthorizedPeers>(
+      authPeers_ = std::make_unique<AuthorizedPeers>(
          params.ownKeyFileDir, params.ownKeyFileName);
    }
    else {
-      authPeers_ = make_shared<AuthorizedPeers>();
+      authPeers_ = std::make_unique<AuthorizedPeers>();
    }
 
    if (cookie_ == BIP15XCookie::MakeClient) {
@@ -107,19 +107,19 @@ ZmqBIP15XDataConnection::~ZmqBIP15XDataConnection() noexcept
 // RETURN: AuthPeersLambdas object with required lambdas.
 AuthPeersLambdas ZmqBIP15XDataConnection::getAuthPeerLambda() const
 {
-   auto authPeerPtr = authPeers_;
-
-   auto getMap = [authPeerPtr](void)->const map<string, btc_pubkey>& {
-      return authPeerPtr->getPeerNameMap();
+   auto getMap = [this](void) -> const map<string, btc_pubkey>& {
+      std::lock_guard<std::mutex> lock(authPeersMutex_);
+      return authPeers_->getPeerNameMap();
    };
 
-   auto getPrivKey = [authPeerPtr](
-      const BinaryDataRef& pubkey)->const SecureBinaryData& {
-      return authPeerPtr->getPrivateKey(pubkey);
+   auto getPrivKey = [this](const BinaryDataRef& pubkey) -> const SecureBinaryData& {
+      std::lock_guard<std::mutex> lock(authPeersMutex_);
+      return authPeers_->getPrivateKey(pubkey);
    };
 
-   auto getAuthSet = [authPeerPtr](void)->const set<SecureBinaryData>& {
-      return authPeerPtr->getPublicKeySet();
+   auto getAuthSet = [this](void) -> const set<SecureBinaryData>& {
+      std::lock_guard<std::mutex> lock(authPeersMutex_);
+      return authPeers_->getPublicKeySet();
    };
 
    return AuthPeersLambdas(getMap, getPrivKey, getAuthSet);
@@ -515,7 +515,7 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
    // BIP 151 connection setup. Technically should be per-socket or something
    // similar but data connections will only connect to one machine at a time.
    auto lbds = getAuthPeerLambda();
-   bip151Connection_ = make_shared<BIP151Connection>(lbds);
+   bip151Connection_ = std::make_unique<BIP151Connection>(lbds);
    assert(context_ != nullptr);
    assert(listener != nullptr);
 
@@ -790,8 +790,11 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
             vector<string> keyName;
             string localAddrV4 = hostAddr_ + ":" + hostPort_;
             keyName.push_back(localAddrV4);
-            authPeers_->eraseName(localAddrV4);
-            authPeers_->addPeer(cookieKey, keyName);
+            {
+               std::lock_guard<std::mutex> lock(authPeersMutex_);
+               authPeers_->eraseName(localAddrV4);
+               authPeers_->addPeer(cookieKey, keyName);
+            }
          }
       }
 
@@ -801,8 +804,11 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
          //we don't have this key, call user prompt lambda
          if (verifyNewIDKey(msgbdr, srvId)) {
             // Add the key. Old keys aren't deleted automatically. Do it to be safe.
-            authPeers_->eraseName(srvId);
-            authPeers_->addPeer(msgbdr.copy(), std::vector<std::string>{ srvId });
+            {
+               std::lock_guard<std::mutex> lock(authPeersMutex_);
+               authPeers_->eraseName(srvId);
+               authPeers_->addPeer(msgbdr.copy(), std::vector<std::string>{ srvId });
+            }
          }
       }
       else {
@@ -1034,11 +1040,13 @@ void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
 // RETURN: N/A
 void ZmqBIP15XDataConnection::addAuthPeer(const ZmqBIP15XPeer &peer)
 {
+   std::lock_guard<std::mutex> lock(authPeersMutex_);
    ZmqBIP15XUtils::addAuthPeer(authPeers_.get(), peer);
 }
 
 void ZmqBIP15XDataConnection::updatePeerKeys(const ZmqBIP15XPeers &peers)
 {
+   std::lock_guard<std::mutex> lock(authPeersMutex_);
    ZmqBIP15XUtils::updatePeerKeys(authPeers_.get(), peers);
 }
 
@@ -1176,6 +1184,7 @@ bool ZmqBIP15XDataConnection::genBIPIDCookie()
 // RETURN: A buffer with the compressed ECDSA ID pub key. (BinaryData)
 BinaryData ZmqBIP15XDataConnection::getOwnPubKey() const
 {
+   std::lock_guard<std::mutex> lock(authPeersMutex_);
    const auto pubKey = authPeers_->getOwnPublicKey();
    return BinaryData(pubKey.pubkey, pubKey.compressed
       ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
