@@ -64,7 +64,7 @@ void TestSettlement::SetUp()
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
    coinbaseScrAddr_ = BtcUtils::getHash160(coinbasePubKey_);
    coinbaseFeed_ =
-      std::make_shared<ResolverCoinbase>(coinbasePrivKey_, coinbasePubKey_);
+      std::make_shared<ResolverOneAddress>(coinbasePrivKey_, coinbasePubKey_);
 
    envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
    envPtr_->requireAssets();
@@ -155,7 +155,8 @@ void TestSettlement::SetUp()
 
 void TestSettlement::TearDown()
 {
-   walletsMgr_->reset();
+   if(walletsMgr_ != nullptr)
+      walletsMgr_->reset();
    signWallet_.clear();
    authSignWallet_.clear();
    authWallet_.clear();

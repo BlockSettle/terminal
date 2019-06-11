@@ -63,7 +63,7 @@ void TestCC::SetUp()
    coinbasePubKey_ = CryptoECDSA().ComputePublicKey(coinbasePrivKey_, true);
    coinbaseScrAddr_ = BtcUtils::getHash160(coinbasePubKey_);
    coinbaseFeed_ = 
-      std::make_shared<ResolverCoinbase>(coinbasePrivKey_, coinbasePubKey_);
+      std::make_shared<ResolverOneAddress>(coinbasePrivKey_, coinbasePubKey_);
 
    envPtr_ = std::make_shared<TestEnv>(StaticLogger::loggerPtr);
    envPtr_->requireAssets();
