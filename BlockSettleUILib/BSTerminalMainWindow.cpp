@@ -411,6 +411,8 @@ void BSTerminalMainWindow::LoadWallets()
 {
    logMgr_->logger()->debug("Loading wallets");
 
+   wasWalletsRegistered_ = false;
+
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, [this] {
       ui_->widgetRFQ->setWalletsManager(walletsMgr_);
       ui_->widgetRFQReply->setWalletsManager(walletsMgr_);
@@ -431,8 +433,8 @@ void BSTerminalMainWindow::LoadWallets()
          }
       });
 
-      if (readyToRegisterWallets_) {
-         readyToRegisterWallets_ = false;
+      if (readyToRegisterWallets_ && !wasWalletsRegistered_) {
+         wasWalletsRegistered_ = true;
          walletsMgr_->registerWallets();
       }
    });
@@ -529,17 +531,17 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
       , resultHost, resultPort, netType, connectionManager_, applicationSettings_
       , SignContainer::OpMode::Remote, false, keyFileDir, keyFileName, ourNewKeyCB);
 
-   std::vector<std::pair<std::string, BinaryData>> keys;
+   ZmqBIP15XPeers peers;
    for (const auto &signer : signersProvider_->signers()) {
       try {
          const BinaryData signerKey = BinaryData::CreateFromHex(signer.key.toStdString());
-         keys.push_back({ signer.serverId(), signerKey });
+         peers.push_back(ZmqBIP15XPeer(signer.serverId(), signerKey));
       }
       catch (const std::exception &e) {
          logMgr_->logger()->warn("[{}] invalid signer key: {}", __func__, e.what());
       }
    }
-   remoteSigner->updatePeerKeys(keys);
+   remoteSigner->updatePeerKeys(peers);
 
    return remoteSigner;
 }
@@ -607,6 +609,8 @@ void BSTerminalMainWindow::SignerReady()
    //InitWidgets();
 
    signContainer_->SetUserId(BinaryData::CreateFromHex(celerConnection_->userId()));
+
+   lastSignerError_ = SignContainer::NoError;
 }
 
 void BSTerminalMainWindow::InitConnections()
@@ -765,11 +769,8 @@ void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState
    case ArmoryConnection::State::Offline:
       QMetaObject::invokeMethod(this, &BSTerminalMainWindow::ArmoryIsOffline);
       break;
-   case ArmoryConnection::State::Scanning:
-   case ArmoryConnection::State::Error:
-   case ArmoryConnection::State::Closing:
+   default:
       break;
-   default:    break;
    }
 }
 
@@ -944,6 +945,12 @@ void BSTerminalMainWindow::showError(const QString &title, const QString &text)
 void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError error, const QString &details)
 {
    updateControlEnabledState();
+
+   // Prevent showing multiple signer error dialogs (for example network mismatch)
+   if (error == lastSignerError_) {
+      return;
+   }
+   lastSignerError_ = error;
 
    if (error != SignContainer::ConnectionTimeout || signContainer_->isLocal()) {
       showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));

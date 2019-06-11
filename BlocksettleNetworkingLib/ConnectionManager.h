@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include "ZMQ_BIP15X_Helpers.h"
 
 namespace spdlog {
    class logger;
@@ -25,7 +26,7 @@ class ConnectionManager
 public:
    ConnectionManager(const std::shared_ptr<spdlog::logger>& logger);
    ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
-      , const std::vector<std::string> &zmqTrustedTerminals);
+      , const ZmqBIP15XPeers &zmqTrustedTerminals);
    ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
       , std::shared_ptr<ArmoryServersProvider> armoryServers);
    ~ConnectionManager() noexcept;
@@ -72,7 +73,7 @@ private:
    std::shared_ptr<ZmqContext>            zmqContext_;
    std::shared_ptr<QNetworkAccessManager> nam_;
    std::shared_ptr<ArmoryServersProvider> armoryServers_;
-   std::vector<std::string>               zmqTrustedTerminals_;
+   ZmqBIP15XPeers                         zmqTrustedTerminals_;
 };
 
 #endif // __CONNECTION_MANAGER_H__
