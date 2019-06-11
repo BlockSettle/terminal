@@ -85,6 +85,10 @@ public:
 
    void walletsListUpdated();
 
+   // Requests from headless with callbacks - relacement for signals
+   // TODO: reimlement requestPasswordAndSignTx, cancelTxSign etc
+   void onSignSettlementTxRequest();
+
 signals:
    void ready() const;
    void connectionError() const;

@@ -43,7 +43,7 @@ public:
       }
    }
 
-   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
+   signer::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt)
    {
       signer::SignTxRequest request;
       request.set_wallet_id(txReq.walletId);
@@ -64,13 +64,21 @@ public:
          change->set_value(txReq.change.value);
       }
 
-      owner_->sendData(signer::SignTxRequestType, request.SerializeAsString());
+      return request;
+   }
+   void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const std::string &prompt) override
+   {
+      owner_->sendData(signer::SignTxRequestType, createSignTxRequest(txReq, prompt).SerializeAsString());
    }
 
-   void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &
+   void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &txReq
       , const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo, const std::string &prompt) override
    {
+      signer::SignSettlementTxRequest request;
+      *(request.mutable_signtxrequest()) = createSignTxRequest(txReq, prompt);
+      *(request.mutable_settlementinfo()) = settlementInfo;
 
+      owner_->sendData(signer::SignSettlementTxRequestType, request.SerializeAsString());
    }
 
    void txSigned(const BinaryData &tx) override

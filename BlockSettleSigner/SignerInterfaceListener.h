@@ -8,6 +8,9 @@
 #include "DataConnectionListener.h"
 #include "bs_signer.pb.h"
 
+#include <QJSValueList>
+#include <functional>
+
 namespace bs {
    namespace sync {
       class WalletsManager;
@@ -20,6 +23,77 @@ class ZmqBIP15XDataConnection;
 class SignerAdapter;
 
 using namespace Blocksettle::Communication;
+
+
+//template <typename... T>
+//class Action {
+//public:
+
+//  using bind_type = decltype(std::bind(std::declval<std::function<void(T...)>>(),std::declval<T>()...));
+
+//  template <typename... ConstrT>
+//  Action(std::function<void(T...)> f, ConstrT&&... args)
+//    : bind_(f,std::forward<ConstrT>(args)...)
+//  { }
+
+//  void act()
+//  { bind_(); }
+
+//private:
+//  bind_type bind_;
+//};
+
+//int main()
+//{
+//  Action<int,int> add([](int x, int y)
+//                      { std::cout << (x+y) << std::endl; },
+//                      3, 4);
+
+//  add.act();
+//  return 0;
+//}
+namespace helper
+{
+    template <int... Is>
+    struct index {};
+
+    template <int N, int... Is>
+    struct gen_seq : gen_seq<N - 1, N - 1, Is...> {};
+
+    template <int... Is>
+    struct gen_seq<0, Is...> : index<Is...> {};
+}
+
+template <typename... Ts>
+class Action
+{
+private:
+    std::function<void (Ts...)> f;
+    std::tuple<Ts...> args;
+public:
+    template <typename F, typename... Args>
+    Action(F&& func, Args&&... args)
+        : f(std::forward<F>(func)),
+          args(std::forward<Args>(args)...)
+    {}
+
+    template <typename... Args, int... Is>
+    void func(std::tuple<Args...>& tup, helper::index<Is...>)
+    {
+        f(std::get<Is>(tup)...);
+    }
+
+    template <typename... Args>
+    void func(std::tuple<Args...>& tup)
+    {
+        func(tup, helper::gen_seq<sizeof...(Args)>{});
+    }
+
+    void act()
+    {
+        func(args);
+    }
+};
 
 class SignerInterfaceListener : public QObject, public DataConnectionListener
 {
@@ -74,6 +148,94 @@ public:
    }
    void setAutoSignCb(bs::signer::RequestId reqId, const std::function<void(bs::error::ErrorCode errorCode)> &cb) {
       cbAutoSignReqs_[reqId] = cb;
+   }
+
+   int reqId = 0;
+   std::unordered_map<int, std::function<void(QJSValueList args)>> cbReqs;
+
+//   template <typename T> T read(QJSValueList cbArgs, int index)
+//   {
+//      return static_cast<T>(cbArgs.at(index));
+//   }
+
+//   template <typename... Args>
+//   std::tuple<Args...> parse(QJSValueList cbArgs)
+//   {
+//      return std::make_tuple(read<Args>(cbArgs )...);
+//   }
+
+   // Convert array into a tuple
+   // https://en.cppreference.com/w/cpp/utility/integer_sequence
+   template<typename ... T>
+   auto a2t_impl(QJSValueList &args)
+   {
+      if (args.isEmpty()) {
+         return std::make_tuple(T()...);
+      }
+      QJSValue arg = args.first();
+      args.removeFirst();
+      return std::make_tuple(dynamic_cast<T>(arg)...);
+   }
+
+   template<typename ... T>
+   auto a2t(QJSValueList &args)
+   {
+       return a2t_impl(args);
+   }
+
+   template <typename ...CbType>
+   void invokeQmlMethod(const char *method, std::function<void(CbType... Args)> cb,
+                        QGenericArgument val0 = QGenericArgument(nullptr),
+                        QGenericArgument val1 = QGenericArgument(),
+                        QGenericArgument val2 = QGenericArgument(),
+                        QGenericArgument val3 = QGenericArgument(),
+                        QGenericArgument val4 = QGenericArgument(),
+                        QGenericArgument val5 = QGenericArgument(),
+                        QGenericArgument val6 = QGenericArgument(),
+                        QGenericArgument val7 = QGenericArgument(),
+                        QGenericArgument val8 = QGenericArgument())
+   {
+      reqId++;
+
+      std::function<void(QJSValueList)> serializedCb = [this, cb](QJSValueList cbArgs){
+         std::tuple<CbType ...> args = std::make_tuple<CbType ...>(cbArgs);
+
+         //std::get<0>(args) = cbArgs.at(0);
+
+
+         //std::tuple<CbType ...> args= a2t<CbType...>(cbArgs);
+
+         cb(std::get<CbType>(args)...);
+      };
+
+      //cbReqs.insert(reqId, serializedCb);
+
+
+//      QJSValue jsCallback;
+//      QMetaObject::invokeMethod(rootObj_, "getJsCallback"
+//                                , Q_ARG(QJSValue, qmlFactory->getJsCallback(reqId))
+//                                , Q_RETURN_ARG(QJSValue, jsCallback)
+//                                );
+
+//      QMetaObject::invokeMethod(rootObj_, "invoke"
+//                                , method, jsCallback
+//                                , val0, val1, val2, val3, val4, val5, val6, val7
+//                                );
+
+
+   }
+
+   Q_INVOKABLE void execJsCallback(int reqId, QJSValueList args)
+   {
+      const auto &itCb = cbReqs.find(reqId);
+      if (itCb == cbReqs.end()) {
+         logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+            , __func__, reqId);
+         return;
+      }
+
+      itCb->second(args);
+      cbReqs.erase(itCb);
    }
 
 private:

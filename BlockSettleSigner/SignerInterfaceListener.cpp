@@ -15,6 +15,8 @@
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
 
+//#include "WalletsProxy.h"
+
 
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ZmqBIP15XDataConnection> &conn
@@ -183,11 +185,7 @@ void SignerInterfaceListener::onSignTxRequested(const std::string &data)
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-//   if (evt.auto_sign()) {
-//      QMetaObject::invokeMethod(parent_, [this, evt] {
-//         emit parent_->autoSignRequiresPwd(evt.wallet_id()); });
-//      return;
-//   }
+
    bs::core::wallet::TXSignRequest txReq;
    txReq.walletId = evt.wallet_id();
    for (int i = 0; i < evt.inputs_size(); ++i) {
@@ -213,8 +211,106 @@ void SignerInterfaceListener::onSignTxRequested(const std::string &data)
 
 void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &data)
 {
+//   const auto &cb = [this](QJSValueList cbArgs){
+//      bs::error::ErrorCode result = cbArgs.at(0).toInt();
+//      QString walletId = cbArgs.at(1).toString();
+//      bs::wallet::QPasswordData passwordData = cbArgs.at(2).toString();
 
+//      signer::DecryptWalletEvent request;
+//      request.set_wallet_id(walletId.toStdString());
+//      request.set_password(passwordData.binaryPassword().toBinStr());
+//      request.set_errorcode(static_cast<uint32_t>(result));
+//      send(signer::PasswordReceivedType, request.SerializeAsString());
+//   };
+
+//   const auto &cb = [this](auto result, auto walletId, auto passwordData){
+
+////      signer::DecryptWalletEvent request;
+////      request.set_wallet_id(walletId.toQString().toStdString());
+////      request.set_password(passwordData.binaryPassword().toBinStr());
+////      request.set_errorcode(static_cast<uint32_t>(result));
+////      send(signer::PasswordReceivedType, request.SerializeAsString());
+//   };
+
+   std::function<void(int, QString, bs::wallet::QPasswordData *)> cb = [this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
+
+      signer::DecryptWalletEvent request;
+      request.set_wallet_id(walletId.toStdString());
+      request.set_password(passwordData->binaryPassword().toBinStr());
+      request.set_errorcode(static_cast<uint32_t>(result));
+      send(signer::PasswordReceivedType, request.SerializeAsString());
+   };
+
+   //std::function<void(int, QString &&)> f = cb;
+
+
+   invokeQmlMethod<int, QString, bs::wallet::QPasswordData *>("test", cb
+                   , Q_ARG(int, 1)
+                   , Q_ARG(int, 2));
+
+
+//   QMetaObject::invokeMethod(rootObj_, "test"
+//                             , Q_ARG(int, 1)
+//                             , Q_ARG(int, 2)
+//                             , Q_ARG(int, 3)
+//                             , Q_ARG(QJSValue, qmlFactory->getJsCallback(int reqId))
+//                             );
 }
+
+
+
+//void QmlFactory::invokeQmlMethod(const char *method, std::function<void(QJSValueList args)> cb,
+//                                 QGenericArgument val0 = QGenericArgument(nullptr),
+//                                 QGenericArgument val1 = QGenericArgument(),
+//                                 QGenericArgument val2 = QGenericArgument(),
+//                                 QGenericArgument val3 = QGenericArgument(),
+//                                 QGenericArgument val4 = QGenericArgument(),
+//                                 QGenericArgument val5 = QGenericArgument(),
+//                                 QGenericArgument val6 = QGenericArgument(),
+//                                 QGenericArgument val7 = QGenericArgument(),
+//                                 QGenericArgument val8 = QGenericArgument())
+//{
+
+//   reqId++;
+
+//   const auto &serializedCb = [this](QJSValueList cbArgs){
+//      signer::DecryptWalletEvent request;
+//      request.set_wallet_id(walletId.toQString().toStdString());
+//      request.set_password(passwordData.binaryPassword().toBinStr());
+//      request.set_errorcode(static_cast<uint32_t>(result));
+//      send(signer::PasswordReceivedType, request.SerializeAsString());
+//   };
+
+//   std::unordered_map<int, std::function<void(QJSValueList args)>> cbReqs;
+//   cbReqs.insert(reqId, cb);
+
+
+//   QJSValue jsCallback;
+//   QMetaObject::invokeMethod(rootObj_, "getJsCallback"
+//                             , Q_ARG(QJSValue, qmlFactory->getJsCallback(reqId))
+//                             , Q_RETURN_ARG(QJSValue, jsCallback)
+//                             );
+
+//   QMetaObject::invokeMethod(rootObj_, "invoke"
+//                             , method, jsCallback
+//                             , val0, val1, val2, val3, val4, val5, val6, val7
+//                             );
+//}
+
+
+//QJSValue QmlFactory::getJsCallback(int reqId)
+//{
+//   QJSValue jsCallback;
+//   QMetaObject::invokeMethod(rootObj_, "getJsCallback"
+//                             , Q_ARG(int, reqId)
+//                             , Q_RETURN_ARG(QJSValue, jsCallback)
+//                             );
+//   return jsCallback;
+//}
+
+
+
+
 
 void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {

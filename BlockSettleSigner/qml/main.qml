@@ -156,11 +156,6 @@ ApplicationWindow {
 
         dlg.init()
     }
-
-    function showError(text) {
-        ibFailure.displayMessage(text)
-    }
-
     function raiseWindow() {
         JsHelper.raiseWindow()
     }
@@ -170,5 +165,37 @@ ApplicationWindow {
 
     function customDialogRequest(dialogName, data) {
         QmlDialogs.customDialogRequest(dialogName, data)
+    }
+
+    function showError(text) {
+        ibFailure.displayMessage(text)
+    }
+
+    function getJsCallback(reqId) {
+        return function(argList){ qmlFactory.execJsCallback(reqId, argList)}
+    }
+
+    function test(jsCallback, prompt, txInfo, walletInfo) {
+        // called from QMLAppObj::requestPassword
+
+        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = walletInfo
+        dlg.prompt = prompt
+        dlg.txInfo = txInfo
+
+        dlg.bsAccepted.connect(function() {
+            jsCallback(walletInfo.walletId, dlg.passwordData, false)
+        })
+        dlg.bsRejected.connect(function() {
+            jsCallback(walletInfo.walletId, dlg.passwordData, true)
+        })
+        mainWindow.requestActivate()
+        dlg.open()
+
+        dlg.init()
+    }
+
+    function invoke(method, cb, val0, val1, val2, val3, val4, val5, val6, val7) {
+        eval(method)(cb, val0, val1, val2, val3, val4, val5, val6, val7)
     }
 }
