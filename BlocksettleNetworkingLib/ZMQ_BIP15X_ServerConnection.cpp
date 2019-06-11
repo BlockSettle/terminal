@@ -176,38 +176,47 @@ ZmqContext::sock_ptr ZmqBIP15XServerConnection::CreateDataSocket()
 // RETURN: True if success, false if failure.
 bool ZmqBIP15XServerConnection::ReadFromDataSocket()
 {
+   // There must be at least two parts for the router ZMQ socket
    MessageHolder clientId;
    MessageHolder data;
 
    // The client ID will be sent before the actual data.
-   int result = zmq_msg_recv(&clientId, dataSocket_.get(), ZMQ_DONTWAIT);
-   if ((result == -1) || !clientId.GetSize())
-   {
-      logger_->error("[{}] {} failed to recv header: {}", __func__
+   int rc = zmq_msg_recv(&clientId, dataSocket_.get(), ZMQ_DONTWAIT);
+   if (rc < 0) {
+      logger_->error("[{}] {} failed to recv first message data: {}", __func__
          , connectionName_, zmq_strerror(zmq_errno()));
       return false;
    }
 
-   // Now, we can grab the incoming data, whih includes the message ID once the
-   // handshake is complete.
-   result = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
-   if (result == -1)
-   {
-      logger_->error("[{}] {} failed to recv message data: {}", __func__
+   // Now, we can grab the incoming data
+   rc = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
+   if (rc < 0) {
+      logger_->error("[{}] {} failed to recv second message data: {}", __func__
          , connectionName_, zmq_strerror(zmq_errno()));
       return false;
    }
 
-   // ZMQ should send one chunk of data, and not further fragment the data.
-   if (!data.IsLast())
-   {
-      logger_->error("[{}] {} broken protocol", __func__, connectionName_);
-      return false;
+   bool isValidRequest = data.IsLast();
+
+   if (!isValidRequest) {
+      // Read all messages from the same malfunctional client
+      do {
+         int rc = zmq_msg_recv(&data, dataSocket_.get(), ZMQ_DONTWAIT);
+         if (rc < 0) {
+            logger_->error("[{}] {} failed to recv more messages from malfunctional client: {}"
+               , __func__, connectionName_, zmq_strerror(zmq_errno()));
+            return false;
+         }
+      } while (!data.IsLast());
+
+      logger_->warn("[{}] {} malfunctional client detected", __func__, connectionName_);
+      notifyListenerOnClientError(clientId.ToString(), "multipart ZMQ messages is not supported");
+      // This is client's problem, server is good to proceed
+      return true;
    }
 
    // Process the incoming data.
    ProcessIncomingData(data.ToString(), clientId.ToString());
-
    return true;
 }
 
