@@ -25,28 +25,27 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
    , const NetworkType netType, const BinaryData* inSrvIDKey)
    : QObject(nullptr), logger_(logger), netType_(netType)
 {
-   const auto zmqContext = std::make_shared<ZmqContext>(logger);
+   ZmqBIP15XDataConnectionParams params;
+   params.ephemeralPeers = true;
+   params.setLocalHeartbeatInterval();
 
    // When creating the client connection, we need to generate a cookie for the
    // server connection in order to enable verification. We also need to add
    // the key we got on the command line to the list of trusted keys.
-   const std::string absCookiePath =
-      SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
-   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, true
-      , "", "", true, true, false, absCookiePath);
-   adapterConn->SetContext(zmqContext);
+   params.cookie = BIP15XCookie::MakeClient;
+   params.cookiePath = SystemFilePaths::appDataLocation() + "/" + "adapterClientID";
+
+   auto adapterConn = std::make_shared<ZmqBIP15XDataConnection>(logger, params);
    if (inSrvIDKey) {
       std::string connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort;
-      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
+      adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
 
       // Temporary (?) kludge: Sometimes, the key gets checked with "_1" at the
       // end of the checked key name. This should be checked and corrected
       // elsewhere, but for now, add a kludge to keep the code happy.
       connectAddr = kLocalAddrV4 + ":" + kLocalAddrPort + "_1";
-      adapterConn->addAuthPeer(*inSrvIDKey, connectAddr);
+      adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
    }
-
-   adapterConn->setLocalHeartbeatInterval();
 
    listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
    if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
@@ -77,7 +76,7 @@ std::shared_ptr<bs::sync::WalletsManager> SignerAdapter::getWalletsManager()
 void SignerAdapter::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
    , const SecureBinaryData &password, const std::function<void(const BinaryData &)> &cb)
 {
-   const auto reqId = signContainer_->signTXRequest(txReq, false, SignContainer::TXSignMode::Full, password, true);
+   const auto reqId = signContainer_->signTXRequest(txReq, SignContainer::TXSignMode::Full, password, true);
    listener_->setTxSignCb(reqId, cb);
 }
 
@@ -210,9 +209,9 @@ void SignerAdapter::deleteWallet(const std::string &rootWalletId, const std::fun
 }
 
 void SignerAdapter::changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-     , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
-     , bool addNew, bool removeOld, bool dryRun
-     , const std::function<void(bool)> &cb)
+   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
+   , bool addNew, bool removeOld, bool dryRun
+   , const std::function<void(bool)> &cb)
 {
    if (walletId.empty()) {
       logger_->error("[HeadlessContainer] no walletId for ChangePassword");
@@ -239,19 +238,19 @@ void SignerAdapter::changePassword(const std::string &walletId, const std::vecto
    listener_->setChangePwCb(reqId, cb);
 }
 
-void SignerAdapter::addPendingAutoSignReq(const std::string &walletId)
+void SignerAdapter::activateAutoSign(const std::string &walletId
+   , bs::wallet::QPasswordData *passwordData
+   , bool activate
+   , const std::function<void(bs::error::ErrorCode errorCode)> &cb)
 {
-   signer::AutoSignActEvent request;
-   request.set_activated(true);
-   request.set_wallet_id(walletId);
-   listener_->send(signer::AutoSignActType, request.SerializeAsString());
-}
-
-void SignerAdapter::deactivateAutoSign()
-{
-   signer::AutoSignActEvent request;
-   request.set_activated(false);
-   listener_->send(signer::AutoSignActType, request.SerializeAsString());
+   signer::AutoSignActRequest request;
+   request.set_rootwalletid(walletId);
+   if (passwordData) {
+      request.set_password(passwordData->binaryPassword().toBinStr());
+   }
+   request.set_activateautosign(activate);
+   const auto reqId = listener_->send(signer::AutoSignActType, request.SerializeAsString());
+   listener_->setAutoSignCb(reqId, cb);
 }
 
 void SignerAdapter::walletsListUpdated()

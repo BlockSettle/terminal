@@ -5,6 +5,8 @@
 #include <QObject>
 #include "CoreWallet.h"
 #include "SignerDefs.h"
+#include "QPasswordData.h"
+#include "BSErrorCode.h"
 
 namespace bs {
    namespace sync {
@@ -72,8 +74,10 @@ public:
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
    void getHeadlessPubKey(const std::function<void(const std::string &)> &);
 
-   void addPendingAutoSignReq(const std::string &walletId);
-   void deactivateAutoSign();
+   void activateAutoSign(const std::string &walletId
+      , bs::wallet::QPasswordData *passwordData
+      , bool activate
+      , const std::function<void(bs::error::ErrorCode errorCode)> &cb);
 
    NetworkType netType() const { return netType_; }
 

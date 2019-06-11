@@ -1,7 +1,7 @@
 #include "QMLStatusUpdater.h"
 #include <spdlog/spdlog.h>
-#include "HeadlessContainerListener.h"
 #include "SignerAdapter.h"
+#include "BSErrorCodeStrings.h"
 
 
 QMLStatusUpdater::QMLStatusUpdater(const std::shared_ptr<SignerSettings> &params, SignerAdapter *adapter
@@ -38,17 +38,21 @@ void QMLStatusUpdater::clearConnections()
    emit connectionsChanged();
 }
 
-void QMLStatusUpdater::deactivateAutoSign()
+void QMLStatusUpdater::activateAutoSign(const QString &walletId
+                                        , bs::wallet::QPasswordData *passwordData
+                                        , bool activate
+                                        , QJSValue jsCallback)
 {
-   adapter_->deactivateAutoSign();
-}
+   auto cb = [this, walletId, jsCallback] (bs::error::ErrorCode errorCode) {
+      QJSValueList args;
+      args << QJSValue(errorCode == bs::error::ErrorCode::NoError) << bs::error::ErrorCodeToString(errorCode);
+      QMetaObject::invokeMethod(this, [this, args, jsCallback] {
+         invokeJsCallBack(jsCallback, args);
+      });
+   };
 
-void QMLStatusUpdater::activateAutoSign()
-{
-   emit autoSignActiveChanged();
-   const auto &walletId = settings_->autoSignWallet().toStdString();
-   adapter_->addPendingAutoSignReq(walletId);
-   emit autoSignRequiresPwd(walletId);
+   adapter_->activateAutoSign(walletId.toStdString(), passwordData, activate, cb);
+   //emit autoSignActiveChanged();
 }
 
 void QMLStatusUpdater::onAutoSignActivated(const std::string &walletId)
@@ -70,11 +74,11 @@ void QMLStatusUpdater::onAutoSignDeactivated(const std::string &walletId)
 
 void QMLStatusUpdater::onAutoSignTick()
 {
-   emit autoSignTimeSpentChanged();
+//   emit autoSignTimeSpentChanged();
 
-   if ((settings_->limitAutoSignTime() > 0) && (timeAutoSignSeconds() >= settings_->limitAutoSignTime())) {
-      deactivateAutoSign();
-   }
+//   if ((settings_->limitAutoSignTime() > 0) && (timeAutoSignSeconds() >= settings_->limitAutoSignTime())) {
+//      deactivateAutoSign();
+//   }
 }
 
 void QMLStatusUpdater::onPeerConnected(const QString &ip)
@@ -132,5 +136,15 @@ void QMLStatusUpdater::xbtSpent(const qint64 value, bool autoSign)
    else {
       manualSignSpent_ += value;
       emit manualSignSpentChanged();
+   }
+}
+
+QJSValue QMLStatusUpdater::invokeJsCallBack(QJSValue jsCallback, QJSValueList args)
+{
+   if (jsCallback.isCallable()) {
+      return jsCallback.call(args);
+   }
+   else {
+      return QJSValue();
    }
 }

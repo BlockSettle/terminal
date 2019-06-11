@@ -1,7 +1,108 @@
 {
-   "latest_version": "0.15.15",
-   "release_date": "29 May 2019",
+   "latest_version": "0.16.1",
+   "release_date": "11 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.16.1",
+         "previous_version": "0.16.0",
+         "release_date": "11 Jun 2019",
+         "release_type": "prod",
+         "improvements": [
+            "Sign OSX package",
+            "BIP server stability. Fragmentation removed."
+         ],
+         "bug_fixes": [],
+         "revision": "4a663c37",
+         "common_revision": "732ca6b6"
+      },
+      {
+         "version_string": "0.16.0",
+         "previous_version": "0.15.19",
+         "release_date": "11 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer 2 Way Auth ",
+            "Improve user search",
+            "Update terminal offline notifications",
+            "Updated support for DM OTC trading",
+            "Chat session keys",
+            "PuB environment settings"
+         ],
+         "bug_fixes": [
+            "Signer Auto Sign fixes",
+            "Fix long shutdown on linux"
+         ],
+         "revision": "4de5245b",
+         "common_revision": "9d83deb5"
+      },
+      {
+         "version_string": "0.15.19",
+         "previous_version": "0.15.18",
+         "release_date": "07 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer settings UI improved",
+            "Display OTC dta as text message"
+         ],
+         "bug_fixes": [],
+         "revision": "96ea2446",
+         "common_revision": "29bb858e"
+      },
+      {
+         "version_string": "0.15.18",
+         "previous_version": "0.15.17",
+         "release_date": "05 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Fix explorer timeout poput",
+            "OTC request widget for DM chat"
+         ],
+         "bug_fixes": [
+            "Singer timeout fixes",
+            "Fix armory connection crash"
+         ],
+         "revision": "8c2a5522",
+         "common_revision": "ba68df0c"
+      },
+      {
+         "version_string": "0.15.17",
+         "previous_version": "0.15.16",
+         "release_date": "03 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Remove address tail when copy address details",
+            "Update mainnet hardcoded key",
+            "Add contacts sorting",
+            "More secured processing of armory keys."
+         ],
+         "bug_fixes": [
+            "Fix WO wallet export.",
+            "Dev fix for linux build with shared libs",
+            "BIP150/151 connection fixes",
+            "Fix message read status when focus on other tabs",
+            "UI fixes for RFQ dialog",
+            "Fix confirmations number sorting in the explorer"
+         ],
+         "revision": "83f5534d",
+         "common_revision": "bd597c31"
+      },
+      {
+         "version_string": "0.15.16",
+         "previous_version": "0.15.15",
+         "release_date": "31 May 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Add OTC protocol",
+            "Improve search input"
+         ],
+         "bug_fixes": [
+            "Fix password dialog focus",
+            "Fix data race in signer GUI",
+            "Fix linux icons"
+         ],
+         "revision": "2f0ca243",
+         "common_revision": "e5bcd9b0"
+      },
       {
          "version_string": "0.15.15",
          "previous_version": "0.15.14",

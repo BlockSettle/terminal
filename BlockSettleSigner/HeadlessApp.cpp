@@ -10,6 +10,7 @@
 
 #include "CoreHDWallet.h"
 #include "CoreWalletsManager.h"
+#include "DispatchQueue.h"
 #include "HeadlessApp.h"
 #include "HeadlessContainerListener.h"
 #include "HeadlessSettings.h"
@@ -21,16 +22,17 @@
 
 
 HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
-   , const std::shared_ptr<HeadlessSettings> &params)
-   : logger_(logger), settings_(params)
+   , const std::shared_ptr<HeadlessSettings> &params, const std::shared_ptr<DispatchQueue> &queue)
+   : logger_(logger)
+   , settings_(params)
+   , queue_(queue)
 {
    walletsMgr_ = std::make_shared<bs::core::WalletsManager>(logger);
 
    // Only the SignerListener's cookie will be trusted. Supply an empty set of
    // non-cookie trusted clients.
-   const auto &cbTrustedClientsSL = [this] {
-      std::vector<std::string> emptyTrustedClients;
-      return emptyTrustedClients;
+   const auto &cbTrustedClientsSL = [] {
+      return ZmqBIP15XPeers();
    };
 
    const bool readClientCookie = true;
@@ -38,22 +40,28 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    const std::string absCookiePath = SystemFilePaths::appDataLocation() + "/adapterClientID";
 
    const auto zmqContext = std::make_shared<ZmqContext>(logger_);
-   const auto adapterConn = std::make_shared<ZmqBIP15XServerConnection>(logger_
+   guiConnection_ = std::make_unique<ZmqBIP15XServerConnection>(logger_
       , zmqContext, cbTrustedClientsSL, "", ""
       , makeServerCookie, readClientCookie, absCookiePath);
-   adapterLsn_ = std::make_shared<SignerAdapterListener>(this, adapterConn
-      , logger_, walletsMgr_, params);
+   guiListener_ = std::make_unique<SignerAdapterListener>(this, guiConnection_.get()
+      , logger_, walletsMgr_, queue_, params);
 
-   adapterConn->setLocalHeartbeatInterval();
+   guiConnection_->setLocalHeartbeatInterval();
 
-   if (!adapterConn->BindConnection("127.0.0.1", settings_->interfacePort()
-      , adapterLsn_.get())) {
+   if (!guiConnection_->BindConnection("127.0.0.1", settings_->interfacePort()
+      , guiListener_.get())) {
       logger_->error("Failed to bind adapter connection");
       throw std::runtime_error("failed to bind adapter socket");
    }
 
    logger_->info("BS Signer {} started", SIGNER_VERSION_STRING);
+
+   terminalListener_ = std::make_unique<HeadlessContainerListener>(logger_
+      , walletsMgr_, queue_, settings_->getWalletsDir(), settings_->netType());
+   terminalListener_->setCallbacks(guiListener_->callbacks());
 }
+
+HeadlessAppObj::~HeadlessAppObj() noexcept = default;
 
 void HeadlessAppObj::start()
 {
@@ -63,7 +71,6 @@ void HeadlessAppObj::start()
       , settings_->getWalletsDir());
    const auto &cbProgress = [this](int cur, int total) {
       logger_->debug("Loaded wallet {} of {}", cur, total);
-      adapterLsn_->onReady(cur, total);
    };
    walletsMgr_->loadWallets(settings_->netType(), settings_->getWalletsDir()
       , cbProgress);
@@ -75,10 +82,18 @@ void HeadlessAppObj::start()
       logger_->debug("Loaded {} wallet[s]", walletsMgr_->getHDWalletsCount());
    }
 
-   adapterLsn_->sendStatusUpdate();
+   guiListener_->sendStatusUpdate();
 
-   ready_ = true;
    onlineProcessing();
+}
+
+void HeadlessAppObj::stop()
+{
+   guiConnection_.reset();
+   guiListener_->resetConnection();
+
+   terminalConnection_.reset();
+   terminalListener_->resetConnection(nullptr);
 }
 
 void HeadlessAppObj::startInterface()
@@ -94,7 +109,7 @@ void HeadlessAppObj::startInterface()
          , __func__);
       return;
    case bs::signer::RunMode::lightgui:
-      serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
+      serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting lightgui", __func__);
       args.push_back("--guimode");
       args.push_back("lightgui");
@@ -102,14 +117,12 @@ void HeadlessAppObj::startInterface()
       args.push_back(serverIDKey.toHexStr());
       break;
    case bs::signer::RunMode::fullgui:
-      serverIDKey = adapterLsn_->getServerConn()->getOwnPubKey();
+      serverIDKey = guiListener_->getServerConn()->getOwnPubKey();
       logger_->debug("[{}] starting fullgui", __func__);
       args.push_back("--guimode");
       args.push_back("fullgui");
       args.push_back("--server_id_key");
       args.push_back(serverIDKey.toHexStr());
-      break;
-   default:
       break;
    }
 
@@ -158,10 +171,7 @@ void HeadlessAppObj::startInterface()
 
 void HeadlessAppObj::onlineProcessing()
 {
-   if (!ready_) {
-      return;
-   }
-   if (connection_) {
+   if (terminalConnection_) {
       logger_->debug("[{}] already online", __func__);
       return;
    }
@@ -188,8 +198,8 @@ void HeadlessAppObj::onlineProcessing()
    // The whitelisted key set depends on whether or not the signer is meant to
    // be local (signer invoked with --terminal_id_key) or remote (use a set of
    // trusted terminals).
-   auto getClientIDKeys = [this]() -> std::vector<std::string> {
-      std::vector<std::string> retKeys;
+   auto getClientIDKeys = [this]() -> ZmqBIP15XPeers {
+      ZmqBIP15XPeers retKeys;
 
       if (settings_->getTermIDKeyStr().empty()) {
          // We're using a user-defined, whitelisted key set. Make sure the keys are
@@ -202,20 +212,20 @@ void HeadlessAppObj::onlineProcessing()
                continue;
             }
 
-            SecureBinaryData inKey = READHEX(i.substr(colonIndex + 1));
-            if (inKey.isNull()) {
-               logger_->error("[{}] Trusted client list key entry {} has no key."
-                  , __func__, i);
-               continue;
-            }
+            SecureBinaryData inKey;
+            std::string name = i.substr(0, colonIndex);
+            std::string hexValue = i.substr(colonIndex + 1);
+            try {
+               inKey = READHEX(hexValue);
 
-            if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
-               logger_->error("[{}] Trusted client list key entry ({}) has an "
-                  "invalid ECDSA key ({}).", __func__, i, inKey.toHexStr());
+               if (inKey.isNull()) {
+                  throw std::runtime_error(fmt::format("trusted client list key entry {} has no key", i));
+               }
+
+               retKeys.push_back(ZmqBIP15XPeer(name, inKey));
+            } catch (const std::exception &e) {
+               logger_->error("invalid trusted terminal key found: {}: {}", hexValue, e.what());
                continue;
-            }
-            else {
-               retKeys.push_back(i);
             }
          }
       }
@@ -228,33 +238,30 @@ void HeadlessAppObj::onlineProcessing()
          }
 
          // We're using a cookie. Only the one key in the cookie will be trusted.
-         BinaryData termIDKey = READHEX(termIDKeyStr);
-         if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
-            logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
-               "ID key", __func__);
+         try {
+            BinaryData termIDKey = READHEX(termIDKeyStr);
+            retKeys.push_back(ZmqBIP15XPeer("127.0.0.1", termIDKey));
+         } catch (const std::exception &e) {
+            logger_->error("[{}] Local connection requested but key is invalid: {}: {}"
+               , __func__, termIDKeyStr, e.what());
+            return retKeys;
          }
-
-         std::string trustedTermStr = "127.0.0.1:" + termIDKeyStr;
-         retKeys.push_back(trustedTermStr);
       }
 
       return retKeys;
    };
 
-   connection_ = std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext
+   // This would stop old server if any
+   terminalConnection_ = std::make_unique<ZmqBIP15XServerConnection>(logger_, zmqContext
       , getClientIDKeys, ourKeyFileDir, ourKeyFileName, makeServerCookie, false
       , absTermCookiePath);
-   connection_->setLocalHeartbeatInterval();
+   terminalConnection_->setLocalHeartbeatInterval();
 
-   if (!listener_) {
-      listener_ = std::make_shared<HeadlessContainerListener>(connection_, logger_
-         , walletsMgr_, settings_->getWalletsDir(), settings_->netType());
-   }
+   terminalListener_->SetLimits(settings_->limits());
+   terminalListener_->resetConnection(terminalConnection_.get());
 
-   listener_->SetLimits(settings_->limits());
-
-   bool result = connection_->BindConnection(settings_->listenAddress()
-      , settings_->listenPort(), listener_.get());
+   bool result = terminalConnection_->BindConnection(settings_->listenAddress()
+      , settings_->listenPort(), terminalListener_.get());
 
    if (!result) {
       logger_->error("Failed to bind to {}:{}"
@@ -267,17 +274,12 @@ void HeadlessAppObj::onlineProcessing()
    }
 
    signerBindStatus_ = result ? bs::signer::BindStatus::Succeed : bs::signer::BindStatus::Failed;
-   adapterLsn_->sendStatusUpdate();
-
-   if (cbReady_) {
-      // Needed to setup SignerAdapterListener callbacks
-      cbReady_(true);
-   }
+   guiListener_->sendStatusUpdate();
 }
 
-std::shared_ptr<ZmqBIP15XServerConnection> HeadlessAppObj::connection() const
+ZmqBIP15XServerConnection *HeadlessAppObj::connection() const
 {
-   return connection_;
+   return terminalConnection_.get();
 }
 
 #if 0
@@ -346,7 +348,7 @@ void HeadlessAppObj::reloadWallets(const std::string &walletsDir, const std::fun
 
 void HeadlessAppObj::setOnline(bool value)
 {
-   if (value && connection_ && listener_) {
+   if (value && terminalConnection_) {
       return;
    }
    logger_->info("[{}] changing online state to {}", __func__, value);
@@ -354,8 +356,8 @@ void HeadlessAppObj::setOnline(bool value)
       onlineProcessing();
    }
    else {
-      connection_.reset();
-      listener_.reset();
+      terminalConnection_.reset();
+      terminalListener_->resetConnection(nullptr);
    }
 }
 
@@ -369,53 +371,36 @@ void HeadlessAppObj::reconnect(const std::string &listenAddr, const std::string 
 
 void HeadlessAppObj::setLimits(bs::signer::Limits limits)
 {
-   if (listener_) {
-      listener_->SetLimits(limits);
-   }
+   terminalListener_->SetLimits(limits);
 }
 
 void HeadlessAppObj::passwordReceived(const std::string &walletId
    , const SecureBinaryData &password, bool cancelledByUser)
 {
-   if (listener_) {
-      listener_->passwordReceived(walletId, password, cancelledByUser);
-   }
-}
-
-void HeadlessAppObj::setCallbacks(HeadlessContainerCallbacks *callbacks)
-{
-   if (listener_) {
-      listener_->setCallbacks(callbacks);
-   }
-   else {
-      logger_->error("[{}] attempting to set callbacks on uninited listener", __func__);
-   }
+   terminalListener_->passwordReceived(walletId, password, cancelledByUser);
 }
 
 void HeadlessAppObj::close()
 {
-   exit(0);
+   queue_->quit();
 }
 
 void HeadlessAppObj::walletsListUpdated()
 {
-   if (listener_) {
-      listener_->walletsListUpdated();
-   }
+   terminalListener_->walletsListUpdated();
 }
 
-void HeadlessAppObj::deactivateAutoSign()
+bs::error::ErrorCode HeadlessAppObj::activateAutoSign(const std::string &walletId, bool activate, const SecureBinaryData &password)
 {
-   if (listener_) {
-      listener_->deactivateAutoSign();
+   if (terminalListener_) {
+      if (activate) {
+         return terminalListener_->activateAutoSign(walletId, password);
+      }
+      else {
+         return terminalListener_->deactivateAutoSign(walletId);
+      }
    }
-}
-
-void HeadlessAppObj::addPendingAutoSignReq(const std::string &walletId)
-{
-   if (listener_) {
-      listener_->addPendingAutoSignReq(walletId);
-   }
+   return bs::error::ErrorCode::InternalError;
 }
 
 void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communication::signer::Settings> &settings)
@@ -425,30 +410,34 @@ void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communica
       logger_->error("[{}] failed to update settings", __func__);
       return;
    }
+
    const auto trustedTerminals = settings_->trustedTerminals();
-   if (connection_ && (trustedTerminals != prevTrustedTerminals)) {
-      std::vector<std::pair<std::string, BinaryData>> updatedKeys;
-      for (const auto &key : trustedTerminals) {
-         const auto colonIndex = key.find(':');
+   if (terminalConnection_ && (trustedTerminals != prevTrustedTerminals)) {
+      ZmqBIP15XPeers updatedKeys;
+      for (const auto &line : trustedTerminals) {
+         const auto colonIndex = line.find(':');
          if (colonIndex == std::string::npos) {
             logger_->error("[{}] Trusted client list key entry ({}) is malformed"
-               , __func__, key);
+               , __func__, line);
             continue;
          }
 
          try {
-            const SecureBinaryData inKey = READHEX(key.substr(colonIndex + 1));
+            std::string name = line.substr(0, colonIndex);
+            const SecureBinaryData inKey = READHEX(line.substr(colonIndex + 1));
             if (inKey.isNull()) {
                throw std::invalid_argument("no or malformed key data");
             }
-            updatedKeys.push_back({ key.substr(0, colonIndex), inKey });
+
+            updatedKeys.push_back(ZmqBIP15XPeer(name, inKey));
          }
          catch (const std::exception &e) {
             logger_->error("[{}] Trusted client list key entry ({}) has invalid key: {}"
-               , __func__, key, e.what());
+               , __func__, line, e.what());
          }
       }
+
       logger_->info("[{}] Updating {} trusted keys", __func__, updatedKeys.size());
-      connection_->updatePeerKeys(updatedKeys);
+      terminalConnection_->updatePeerKeys(updatedKeys);
    }
 }

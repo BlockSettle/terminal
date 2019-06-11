@@ -27,6 +27,47 @@ SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::l
 
 void SignerInterfaceListener::OnDataReceived(const std::string &data)
 {
+   QMetaObject::invokeMethod(this, [this, data] {
+      processData(data);
+   });
+}
+
+void SignerInterfaceListener::OnConnected()
+{
+   logger_->info("[SignerInterfaceListener] connected");
+   send(signer::HeadlessReadyType, "");
+}
+
+void SignerInterfaceListener::OnDisconnected()
+{
+   // Signer interface should not be used without signer, we could quit safely
+   logger_->info("[SignerInterfaceListener] disconnected, shutdown");
+   shutdown();
+}
+
+void SignerInterfaceListener::OnError(DataConnectionError errorCode)
+{
+   logger_->info("[SignerInterfaceListener] error {}, shutdown", errorCode);
+   shutdown();
+}
+
+bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
+{
+   logger_->debug("send packet {}", signer::PacketType_Name(pt));
+
+   const auto reqId = seq_++;
+   signer::Packet packet;
+   packet.set_id(reqId);
+   packet.set_type(pt);
+   packet.set_data(data);
+   if (!connection_->send(packet.SerializeAsString())) {
+      return 0;
+   }
+   return reqId;
+}
+
+void SignerInterfaceListener::processData(const std::string &data)
+{
    signer::Packet packet;
    if (!packet.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse packet", __func__);
@@ -60,7 +101,7 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
       onXbtSpent(packet.data());
       break;
    case signer::AutoSignActType:
-      onAutoSignActivate(packet.data());
+      onAutoSignActivated(packet.data(), packet.id());
       break;
    case signer::SyncWalletInfoType:
       onSyncWalletInfo(packet.data(), packet.id());
@@ -108,54 +149,10 @@ void SignerInterfaceListener::OnDataReceived(const std::string &data)
    }
 }
 
-void SignerInterfaceListener::OnConnected()
-{
-   logger_->info("[SignerInterfaceListener] connected");
-   send(signer::HeadlessReadyType, "");
-}
-
-void SignerInterfaceListener::OnDisconnected()
-{
-   // Signer interface should not be used without signer, we could quit safely
-   logger_->info("[SignerInterfaceListener] disconnected, shutdown");
-   shutdown();
-}
-
-void SignerInterfaceListener::OnError(DataConnectionError errorCode)
-{
-   logger_->info("[SignerInterfaceListener] error {}, shutdown", errorCode);
-   shutdown();
-}
-
-bs::signer::RequestId SignerInterfaceListener::send(signer::PacketType pt, const std::string &data)
-{
-   logger_->debug("send packet {}", signer::PacketType_Name(pt));
-
-   const auto reqId = seq_++;
-   signer::Packet packet;
-   packet.set_id(reqId);
-   packet.set_type(pt);
-   packet.set_data(data);
-   if (!connection_->send(packet.SerializeAsString())) {
-      return 0;
-   }
-   return reqId;
-}
-
 void SignerInterfaceListener::onReady(const std::string &data)
 {
-   signer::ReadyEvent evt;
-   if (!evt.ParseFromString(data)) {
-      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
-      return;
-   }
-   if (evt.ready()) {
-      QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
-   }
-   else {
-      logger_->info("[SignerInterfaceListener::{}] received 'non-ready' event {} of {}"
-         , __func__, evt.cur_wallet(), evt.total_wallets());
-   }
+   logger_->info("received ready signal");
+   QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
 }
 
 void SignerInterfaceListener::onPeerConnected(const std::string &data, bool connected)
@@ -253,19 +250,33 @@ void SignerInterfaceListener::onXbtSpent(const std::string &data)
    });
 }
 
-void SignerInterfaceListener::onAutoSignActivate(const std::string &data)
+void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::signer::RequestId reqId)
 {
-   signer::AutoSignActEvent evt;
-   if (!evt.ParseFromString(data)) {
+   signer::AutoSignActResponse response;
+   if (!response.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   if (evt.activated()) {
-      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignActivated(evt.wallet_id()); });
+
+   const auto &itCb = cbAutoSignReqs_.find(reqId);
+   if (itCb == cbAutoSignReqs_.end()) {
+      logger_->error("[SignerInterfaceListener::{}] failed to find callback for id {}"
+         , __func__, reqId);
+      return;
    }
-   else {
-      QMetaObject::invokeMethod(parent_, [this, evt] { emit parent_->autoSignDeactivated(evt.wallet_id()); });
+
+   bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
+   if (result == bs::error::ErrorCode::NoError) {
+      if (response.autosignactive()) {
+         QMetaObject::invokeMethod(parent_, [this, response] { emit parent_->autoSignActivated(response.rootwalletid()); });
+      }
+      else {
+         QMetaObject::invokeMethod(parent_, [this, response] { emit parent_->autoSignDeactivated(response.rootwalletid()); });
+      }
    }
+
+   itCb->second(result);
+   cbAutoSignReqs_.erase(itCb);
 }
 
 void SignerInterfaceListener::onSyncWalletInfo(const std::string &data, bs::signer::RequestId reqId)
@@ -521,9 +532,5 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
 
 void SignerInterfaceListener::shutdown()
 {
-   QMetaObject::invokeMethod(qApp, [] {
-      // For some reasons QApplication::quit does not work reliable.
-      // Run it on main thread because otherwise it causes crash on Linux when atexit callbacks are called.
-      std::exit(0);
-   });
+   QApplication::quit();
 }

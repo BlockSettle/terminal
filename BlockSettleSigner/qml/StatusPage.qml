@@ -82,29 +82,29 @@ Item {
                     }
                 }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 25
+//                RowLayout {
+//                    Layout.fillWidth: true
+//                    Layout.preferredHeight: 25
 
-                    CustomLabel {
-                        Layout.fillWidth: true
-                        text: qsTr("Auto-Sign")
-                    }
-                }
+//                    CustomLabel {
+//                        Layout.fillWidth: true
+//                        text: qsTr("Auto-Sign")
+//                    }
+//                }
 
-                CustomSwitch {
-                    Layout.alignment: Qt.AlignRight
-                    visible: !signerStatus.offline
-                    checked: signerStatus.autoSignActive
-                    onClicked: {
-                        if (checked) {
-                            signerStatus.activateAutoSign()
-                        }
-                        else {
-                            signerStatus.deactivateAutoSign()
-                        }
-                    }
-                }
+//                CustomSwitch {
+//                    Layout.alignment: Qt.AlignRight
+//                    visible: !signerStatus.offline
+//                    checked: signerStatus.autoSignActive
+//                    onClicked: {
+//                        if (checked) {
+//                            signerStatus.activateAutoSign()
+//                        }
+//                        else {
+//                            signerStatus.deactivateAutoSign()
+//                        }
+//                    }
+//                }
 
             }
 

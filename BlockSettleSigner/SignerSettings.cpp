@@ -110,12 +110,12 @@ void SignerSettings::settingChanged(int setting)
 // RETURN: True is success, false if failure.
 bool SignerSettings::getSrvIDKeyBin(BinaryData& keyBuf)
 {
+   // READHEX below must succeed because verifyServerIDKey checks this
    if (!verifyServerIDKey()) {
       return false;
    }
 
    // Make sure the key is a valid public key.
-   keyBuf.resize(BIP151PUBKEYSIZE);
    keyBuf = READHEX(serverIDKeyStr().toStdString());
 
    return true;
@@ -452,17 +452,20 @@ int SignerSettings::intervalStrToSeconds(const QString &s)
 // RETURN: True is success, false if failure.
 bool SignerSettings::verifyServerIDKey()
 {
-   BinaryData keyBuf(BIP151PUBKEYSIZE);
    if (serverIDKeyStr().toStdString().empty()) {
       return false;
    }
 
    // Make sure the key is a valid public key.
-   keyBuf = READHEX(serverIDKeyStr().toStdString());
-   if (keyBuf.getSize() != BIP151PUBKEYSIZE) {
-      return false;
-   }
-   if (!(CryptoECDSA().VerifyPublicKeyValid(keyBuf))) {
+   try {
+      BinaryData keyBuf = READHEX(serverIDKeyStr().toStdString());
+      if (keyBuf.getSize() != BIP151PUBKEYSIZE) {
+         return false;
+      }
+      if (!(CryptoECDSA().VerifyPublicKeyValid(keyBuf))) {
+         return false;
+      }
+   } catch (...) {
       return false;
    }
 
