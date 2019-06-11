@@ -40,8 +40,7 @@ pipeline {
                     steps {
                         sh 'ssh admin@10.1.60.206 "rm -rf ~/Workspace/terminal"'
                         sh 'ssh admin@10.1.60.206 "cd ~/Workspace ; git clone --single-branch --branch ${BRANCH} git@github.com:BlockSettle/terminal.git ; cd terminal ; git submodule init ; git submodule update"'
-                        sh 'ssh admin@10.1.60.206 security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain; security show-keychain-info login.keychain'
-                        sh 'ssh admin@10.1.60.206 "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; ccache -s ; cd /Users/admin/Workspace/terminal/Deploy/MacOSX ; ./package.sh"'
+                        sh 'ssh admin@10.1.60.206 "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; ccache -s ; cd /Users/admin/Workspace/terminal/Deploy/MacOSX ; security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain ; ./package.sh"'
                         sh "scp admin@10.1.60.206:~/Workspace/terminal/Deploy/MacOSX/BlockSettle.dmg ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg"
                     }
                 }
