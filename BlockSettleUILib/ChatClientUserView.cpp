@@ -36,7 +36,8 @@ public:
       //ItemType type = static_cast<ItemType>(currentIndex_.data(Role::ItemTypeRole).toInt());
       TreeItem * item = static_cast<TreeItem*>(currentIndex_.internalPointer());
 
-      if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+      if (item && (item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+                || item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)) {
          auto citem = static_cast<ChatContactElement*>(item);
          currentContact_ = citem->getContactData();
          prepareContactMenu();

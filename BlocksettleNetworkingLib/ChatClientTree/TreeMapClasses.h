@@ -20,12 +20,14 @@ public:
 
    bool insertRoomObject(std::shared_ptr<Chat::RoomData> data);
    bool insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline = false);
+   bool insertContactRequestObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline = false);
    bool insertGeneralUserObject(std::shared_ptr<Chat::UserData> data);
    bool insertSearchUserObject(std::shared_ptr<Chat::UserData> data);
    TreeItem* resolveMessageTargetNode(DisplayableDataNode *massageNode);
    TreeItem* findChatNode(const std::string& chatId);
    std::vector<std::shared_ptr<Chat::ContactRecordData>> getAllContacts();
    bool removeContactNode(const std::string& contactId);
+   bool removeContactRequestNode(const std::string& contactId);
    std::shared_ptr<Chat::ContactRecordData> findContactItem(const std::string& contactId);
    ChatContactElement *findContactNode(const std::string& contactId);
    std::shared_ptr<Chat::MessageData> findMessageItem(const std::string& chatId, const std::string& messgeId);
@@ -54,6 +56,31 @@ public:
    {
    }
 };
+
+//class ContactsAcceptedCategoryGroup : public TreeCategoryGroup
+//{
+//public:
+//   ContactsAcceptedCategoryGroup(const QString& displayName)
+//      :TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, displayName)
+//   {
+//   }
+
+//   bool isChildSupported(const TreeItem *item) const override;
+
+//};
+
+//class ContactsNotAcceptedCategoryGroup : public TreeCategoryGroup
+//{
+//public:
+//   ContactsNotAcceptedCategoryGroup(const QString& displayName)
+//      :TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, displayName)
+//   {
+//   }
+
+//   bool isChildSupported(const TreeItem *item) const override;
+
+//};
+
 
 class CategoryElement : public TreeItem
 {
