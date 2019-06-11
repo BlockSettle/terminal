@@ -30,8 +30,15 @@ ZmqServerConnection::ZmqServerConnection(
 
 ZmqServerConnection::~ZmqServerConnection() noexcept
 {
-   listener_ = nullptr;
    stopServer();
+
+   // Update listener after thread is stopped
+   listener_ = nullptr;
+
+   if (listenThread_.joinable()) {
+      // This is not normally needed but good to have to prevent crash in case stopServer fails
+      listenThread_.join();
+   }
 }
 
 bool ZmqServerConnection::isActive() const
