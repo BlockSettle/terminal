@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ChatroomsListResponse_h__
+#define ChatroomsListResponse_h__
 
 #include "ListResponse.h"
 
@@ -17,3 +18,5 @@ namespace Chat {
    };
    
 }
+
+#endif // ChatroomsListResponse_h__

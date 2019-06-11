@@ -1,4 +1,6 @@
-#pragma once
+#ifndef DataObject_h__
+#define DataObject_h__
+
 #include <memory>
 
 #include <QJsonObject>
@@ -11,10 +13,7 @@ namespace Chat {
             MessageData,
             RoomData,
             ContactRecordData,
-            UserData,
-            OTCRequestData,
-            OTCResponseData,
-            OTCUpdateData
+            UserData
          };
    protected:
       DataObject(Type type);
@@ -30,3 +29,5 @@ namespace Chat {
       Type type_;
    };
 }
+
+#endif // DataObject_h__

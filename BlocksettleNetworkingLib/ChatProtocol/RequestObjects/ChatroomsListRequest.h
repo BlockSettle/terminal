@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ChatroomsListRequest_h__
+#define ChatroomsListRequest_h__
 
 #include "Request.h"
 
@@ -14,3 +15,5 @@ namespace Chat {
       std::string senderId_;
    };
 }
+
+#endif // ChatroomsListRequest_h__

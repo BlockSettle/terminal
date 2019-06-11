@@ -5,39 +5,40 @@
 #include "../ProtocolDefinitions.h"
 
 namespace Chat {
-    class ContactRecordData : public DataObject
-    {
-    public:
-       ContactRecordData(const QString& userId
-                         , const QString& contactId
-                         , ContactStatus status
-                         , autheid::PublicKey publicKey
-                         , const QString& displayName = QString());
+   class ContactRecordData : public DataObject
+   {
+   public:
+      ContactRecordData(const QString& userId,
+         const QString& contactId,
+         ContactStatus status,
+         BinaryData publicKey,
+         const QString& displayName = QString());
 
-       QString getContactForId();
-       QString getContactId();
-       QString getContactDisplayName();
-       ContactStatus getContactStatus();
-       autheid::PublicKey getContactPublicKey();
+      QString getUserId();
+      void setUserId(const QString& userId);
 
-    public:
-       QJsonObject toJson() const override;
-       static std::shared_ptr<ContactRecordData> fromJSON(const std::string& jsonData);
-       void setStatus(const ContactStatus &status);
+      QString getContactId();
+      ContactStatus getContactStatus();
+      void setContactStatus(const ContactStatus& status);
 
-       QString getDisplayName() const;
-       void setDisplayName(const QString &displayName);
-       bool hasDisplayName() const;
+      BinaryData getContactPublicKey();
 
-       void setUserId(const QString &userId);
+      QString getDisplayName() const;
+      void setDisplayName(const QString& displayName);
+      bool hasDisplayName() const;
 
-    private:
-       QString userId_;
-       QString contactId_;
-       ContactStatus status_;
-       autheid::PublicKey publicKey_;
-       QString displayName_;
+      QJsonObject toJson() const override;
+      static std::shared_ptr<ContactRecordData> fromJSON(const std::string& jsonData);
 
-    };
+      bool isValid() const;
+
+   private:
+      QString userId_;
+      QString contactId_;
+      ContactStatus status_;
+      BinaryData publicKey_;
+      QString displayName_;
+
+   };
 }
 #endif // CONTACTRECORDDATA_H

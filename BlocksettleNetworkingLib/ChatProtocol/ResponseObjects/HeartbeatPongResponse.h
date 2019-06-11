@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HeartbeatPongResponse_h__
+#define HeartbeatPongResponse_h__
 
 #include "Response.h"
 
@@ -12,3 +13,5 @@ namespace Chat {
    };
    
 }
+
+#endif // HeartbeatPongResponse_h__

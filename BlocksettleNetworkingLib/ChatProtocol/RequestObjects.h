@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RequestObjects_h__
+#define RequestObjects_h__
 
 #include "RequestObjects/HeartbeatPingRequest.h"
 #include "RequestObjects/LoginRequest.h"
@@ -14,9 +15,9 @@
 #include "RequestObjects/SendRoomMessageRequest.h"
 #include "RequestObjects/ContactsListRequest.h"
 #include "RequestObjects/SearchUsersRequest.h"
-#include "RequestObjects/GenCommonOTCRequest.h"
-#include "RequestObjects/AnswerCommonOTCRequest.h"
-#include "RequestObjects/UpdateCommonOTCRequest.h"
-#include "RequestObjects/PullOwnOTCRequest.h"
+#include "RequestObjects/SessionPublicKeyRequest.h"
+#include "RequestObjects/ReplySessionPublicKeyRequest.h"
 
 #include "RequestHandler.h"
+
+#endif // RequestObjects_h__

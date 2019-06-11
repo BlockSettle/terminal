@@ -3,9 +3,6 @@
 
 #include "ContactRecordData.h"
 #include "MessageData.h"
-#include "OTCRequestData.h"
-#include "OTCResponseData.h"
-#include "OTCUpdateData.h"
 #include "RoomData.h"
 #include "UserData.h"
 
@@ -18,9 +15,6 @@ namespace Chat {
       ,   { "RoomData", DataObject::Type::RoomData}
       ,   { "ContactRecordData", DataObject::Type::ContactRecordData}
       ,   { "UserData", DataObject::Type::UserData}
-      ,   { "OTCRequestData", DataObject::Type::OTCRequestData }
-      ,   { "OTCResponseData", DataObject::Type::OTCResponseData }
-      ,   { "OTCUpdateData", DataObject::Type::OTCUpdateData }
    };
 
    static const std::map<DataObject::Type, std::string> DataObjectTypeToString
@@ -29,9 +23,6 @@ namespace Chat {
       ,   { DataObject::Type::RoomData, "RoomData" }
       ,   { DataObject::Type::ContactRecordData, "ContactRecordData" }
       ,   { DataObject::Type::UserData, "UserData" }
-      ,   { DataObject::Type::OTCRequestData, "OTCRequestData" }
-      ,   { DataObject::Type::OTCResponseData, "OTCResponseData" }
-      ,   { DataObject::Type::OTCUpdateData, "OTCUpdateData" }
    };
 
    DataObject::DataObject(DataObject::Type type)
@@ -83,12 +74,6 @@ namespace Chat {
             return ContactRecordData::fromJSON(jsonData);
          case DataObject::Type::UserData:
             return UserData::fromJSON(jsonData);
-         case DataObject::Type::OTCRequestData:
-            return OTCRequestData::fromJSON(jsonData);
-         case DataObject::Type::OTCResponseData:
-            return OTCResponseData::fromJSON(jsonData);
-         case DataObject::Type::OTCUpdateData:
-            return OTCUpdateData::fromJSON(jsonData);
       }
 
       return nullptr;

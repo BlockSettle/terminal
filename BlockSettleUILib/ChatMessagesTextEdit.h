@@ -85,12 +85,9 @@ protected:
 
    QString data(const int &row, const Column &column);
    QString dataMessage(const int &row, const Column &column);
-   QString dataOtcRequest(const int &row, const Column &column);
-   QString dataOtcResponse(const int &row, const Column &column);
-   QString dataOtcUpdate(const int &row, const Column &column);
    QImage statusImage(const int &row);
 
-   virtual void contextMenuEvent(QContextMenuEvent *e);
+   void contextMenuEvent(QContextMenuEvent *e) override;
 
 public slots:
    void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::DataObject> > &messages, bool isFirstFetch);

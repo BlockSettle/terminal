@@ -26,7 +26,7 @@ ConnectionManager::ConnectionManager(const std::shared_ptr<spdlog::logger>& logg
 }
 
 ConnectionManager::ConnectionManager(const std::shared_ptr<spdlog::logger>& logger
-   , const std::vector<std::string> &zmqTrustedTerminals)
+   , const ZmqBIP15XPeers &zmqTrustedTerminals)
    : logger_(logger), zmqTrustedTerminals_(zmqTrustedTerminals)
 {
    // init network
@@ -106,13 +106,12 @@ std::shared_ptr<DataConnection> ConnectionManager::CreateGenoaClientConnection(b
 std::shared_ptr<ZmqBIP15XServerConnection> ConnectionManager::CreateZMQBIP15XChatServerConnection(
    bool ephemeral, const std::string& ownKeyFileDir, const std::string& ownKeyFileName) const
 {
-   BinaryData bdID = CryptoPRNG::generateRandom(8);
-   auto cbTrustedClients = [this]() -> std::vector<std::string> {
+   auto cbTrustedClients = [this]() {
       return zmqTrustedTerminals_;
    };
 
    return std::make_shared<ZmqBIP15XServerConnection>(logger_, zmqContext_
-      , READ_UINT64_LE(bdID.getPtr()), cbTrustedClients, ephemeral
+      , cbTrustedClients, ephemeral
       , ownKeyFileDir, ownKeyFileName, false);
 }
 

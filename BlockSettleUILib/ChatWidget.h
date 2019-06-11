@@ -79,7 +79,7 @@ private slots:
    void onSendFriendRequest(const QString &userId);
    void onRemoveFriendRequest(const QString &userId);
    void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
-   void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
+   void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered);
    void onSearchUserTextEdited(const QString& text);
    void onConnectedToServer();
    void selectGlobalRoom();
@@ -89,19 +89,15 @@ private slots:
 
    // OTC UI slots
    void OnOTCRequestCreated();
-   void OnOTCResponseCreated();
+   void OnCreateResponse();
+   void OnCancelCurrentTrading();
 
-   void OnPullOwnOTCRequest(const QString& otcId);
+   void OnUpdateTradeRequestor();
+   void OnAcceptTradeRequestor();
+   void OnUpdateTradeResponder();
+   void OnAcceptTradeResponder();
 
    void OnOTCSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
-
-   // OTC chat client slots
-   void OnOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
-   void OnOTCOwnRequestRejected(const QString& reason);
-   void OnNewOTCRequestReceived(const std::shared_ptr<Chat::OTCRequestData>& otcRequest);
-   void OnOTCRequestCancelled(const std::string& otcId);
-   void OnOTCRequestExpired(const std::string& otcId);
-   void OnOwnOTCRequestExpired(const std::string& otcId);
 
 signals:
    void LoginFailed();
@@ -112,7 +108,6 @@ private:
    void SetLoggedOutOTCState();
 
    void OTCSwitchToCommonRoom();
-   void OTCSwitchToDMRoom();
    void OTCSwitchToGlobalRoom();
    void OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room);
    void OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact, bool onlineStatus);
@@ -130,12 +125,10 @@ private:
    void DisplayOwnSubmittedOTC();
    void DisplayOwnLiveOTC();
 
-   bool IsOwnOTCId(const std::string& otcId) const;
-   void OnOwnOTCPulled();
-   void OnOTCCancelled(const std::string& otcId);
-
    bool IsOTCChatSelected() const;
    void UpdateOTCRoomWidgetIfRequired();
+
+   bool TradingAvailableForUser() const;
 
 private:
    QScopedPointer<Ui::ChatWidget> ui_;
@@ -158,13 +151,6 @@ private:
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
-
-   bool                          otcSubmitted_ = false;
-   bs::network::OTCRequest       submittedOtc_;
-
-   bool                          otcAccepted_ = false;
-   std::shared_ptr<Chat::OTCRequestData>   ownActiveOTC_;
-
 private:
    bool isRoom();
    void setIsRoom(bool);

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef OnlineUsersRequest_h__
+#define OnlineUsersRequest_h__
 
 #include "Request.h"
 
@@ -16,3 +17,5 @@ namespace Chat {
       std::string authId_;
    };
 }
+
+#endif // OnlineUsersRequest_h__

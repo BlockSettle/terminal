@@ -45,12 +45,11 @@ void ZmqBIP15XPerConnData::reset()
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
-   , const uint64_t& id
-   , const std::function<std::vector<std::string>()>& cbTrustedClients
+   , const TrustedClientsCallback& cbTrustedClients
    , const bool& ephemeralPeers, const std::string& ownKeyFileDir
    , const std::string& ownKeyFileName, const bool& makeServerCookie
    , const bool& readClientCookie, const std::string& cookiePath)
-   : ZmqServerConnection(logger, context), id_(id)
+   : ZmqServerConnection(logger, context)
    , cbTrustedClients_(cbTrustedClients)
    , useClientIDCookie_(readClientCookie)
    , makeServerIDCookie_(makeServerCookie)
@@ -103,7 +102,7 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
 ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
    const std::shared_ptr<spdlog::logger>& logger
    , const std::shared_ptr<ZmqContext>& context
-   , const std::function<std::vector<std::string>()> &cbTrustedClients
+   , const TrustedClientsCallback &cbTrustedClients
    , const std::string& ownKeyFileDir, const std::string& ownKeyFileName
    , const bool& makeServerCookie, const bool& readClientCookie
    , const std::string& cookiePath)
@@ -137,8 +136,6 @@ ZmqBIP15XServerConnection::ZmqBIP15XServerConnection(
       logger_->debug("[{}] creating ephemeral key", __func__);
       authPeers_ = make_shared<AuthorizedPeers>();
    }
-   BinaryData bdID = CryptoPRNG::generateRandom(8);
-   id_ = READ_UINT64_LE(bdID.getPtr());
 
    if (makeServerIDCookie_) {
       genBIPIDCookie();
@@ -532,14 +529,11 @@ bool ZmqBIP15XServerConnection::processAEADHandshake(
                notifyListenerOnClientError(clientID, "missing client cookie");
                return false;
             }
-            else {
-               // Add the host and the key to the list of verified peers. Be sure
-               // to erase any old keys first.
-               vector<string> keyName;
-               keyName.push_back(clientID);
-               authPeers_->eraseName(clientID);
-               authPeers_->addPeer(cookieKey, keyName);
-            }
+
+            // Add the host and the key to the list of verified peers. Be sure
+            // to erase any old keys first.
+            authPeers_->eraseName(clientID);
+            authPeers_->addPeer(cookieKey, clientID);
          }
 
          //send pubkey message
@@ -837,31 +831,12 @@ std::shared_ptr<ZmqBIP15XPerConnData> ZmqBIP15XServerConnection::setBIP151Connec
    }
 
    assert(cbTrustedClients_);
+   auto trustedClients = cbTrustedClients_();
+   ZmqBIP15XUtils::updatePeerKeys(authPeers_.get(), trustedClients);
+
    auto lbds = getAuthPeerLambda();
-   for (const auto &b : cbTrustedClients_()) {
-      const auto colonIndex = b.find(':');
-      if (colonIndex == std::string::npos) {
-         logger_->error("[{}] Trusted client list is malformed (for {})."
-            , __func__, b);
-         return nullptr;
-      }
-
-      std::string keyHex = b.substr(colonIndex + 1);
-
-      try {
-         const BinaryData inKey = READHEX(keyHex);
-         authPeers_->addPeer(inKey, vector<string>{ clientID });
-      }
-      catch (const std::exception &e) {
-         const BinaryData cID(clientID);
-         logger_->error("[{}] Trusted identity key for client {} is not "
-            "accepted: {}", __func__, cID.toHexStr(), e.what());
-            return nullptr;
-      }
-   }
-
    connection = std::make_shared<ZmqBIP15XPerConnData>();
-   connection->encData_ = make_unique<BIP151Connection>(lbds);
+   connection->encData_ = std::make_unique<BIP151Connection>(lbds);
    connection->outKeyTimePoint_ = chrono::steady_clock::now();
 
    // XXX add connection
@@ -1094,46 +1069,14 @@ bool ZmqBIP15XServerConnection::genBIPIDCookie()
    return true;
 }
 
-void ZmqBIP15XServerConnection::addAuthPeer(const BinaryData& inKey
-   , const std::string& keyName)
+void ZmqBIP15XServerConnection::addAuthPeer(const ZmqBIP15XPeer &peer)
 {
-   if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
-      logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
-         , __func__,  inKey.toHexStr(), keyName);
-      return;
-   }
-   authPeers_->addPeer(inKey, vector<string>{ keyName });
+   ZmqBIP15XUtils::addAuthPeer(authPeers_.get(), peer);
 }
 
-void ZmqBIP15XServerConnection::updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &keys)
+void ZmqBIP15XServerConnection::updatePeerKeys(const ZmqBIP15XPeers &peers)
 {
-   const auto peers = authPeers_->getPeerNameMap();
-   for (const auto &peer : peers) {
-      try {
-         authPeers_->eraseName(peer.first);
-      }
-      catch (const AuthorizedPeersException &) {} // just ignore exception when erasing "own" key
-      catch (const std::exception &e) {
-         logger_->error("[{}] exception when erasing peer key for {}: {}", __func__
-            , peer.first, e.what());
-      }
-      catch (...) {
-         logger_->error("[{}] exception when erasing peer key for {}", __func__, peer.first);
-      }
-   }
-   for (const auto &key : keys) {
-      if (!(CryptoECDSA().VerifyPublicKeyValid(key.second))) {
-         logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
-            , __func__, key.second.toHexStr(), key.first);
-         continue;
-      }
-      try {
-         authPeers_->addPeer(key.second, vector<string>{ key.first });
-      }
-      catch (const std::exception &e) {
-         logger_->error("[{}] failed to add peer {}: {}", __func__, key.first, e.what());
-      }
-   }
+   ZmqBIP15XUtils::updatePeerKeys(authPeers_.get(), peers);
 }
 
 // Get the client's identity public key. Intended for use with local clients.

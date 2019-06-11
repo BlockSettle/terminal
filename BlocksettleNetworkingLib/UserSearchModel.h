@@ -9,22 +9,38 @@ namespace Chat {
    class UserData;
 }
 
+class ChatSearchListViewItemStyle;
+
 class UserSearchModel : public QAbstractListModel
 {
    Q_OBJECT
 public:
    enum CustomRoles {
-      IsInContacts = Qt::UserRole + 1
+      UserStatusRole = Qt::UserRole + 1
    };
-   explicit UserSearchModel(QObject *parent = nullptr);
+   enum class UserStatus {
+      ContactUnknown,
+      ContactAccepted,
+      ContactPendingIncoming,
+      ContactPendingOutgoing,
+      ContactRejected
+   };
+   Q_ENUM(UserStatus)
 
-   void setUsers(const std::vector<std::pair<QString,bool>> &users);
+   typedef std::pair<QString,UserStatus> UserInfo;
+   explicit UserSearchModel(QObject *parent = nullptr);
+   ~UserSearchModel() override;
+
+   void setUsers(const std::vector<UserInfo> &users);
+   void setItemStyle(std::shared_ptr<QObject> itemStyle);
 
    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+   Qt::ItemFlags flags(const QModelIndex &index) const override;
 
 private:
-   std::vector<std::pair<QString,bool>> users_;
+   std::vector<UserInfo> users_;
+   std::shared_ptr<QObject> itemStyle_;
 };
 
 #endif // USERSEARCHMODEL_H
