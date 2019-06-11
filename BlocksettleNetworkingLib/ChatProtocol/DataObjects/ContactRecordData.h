@@ -30,6 +30,8 @@ namespace Chat {
       QJsonObject toJson() const override;
       static std::shared_ptr<ContactRecordData> fromJSON(const std::string& jsonData);
 
+      bool isValid() const;
+
    private:
       QString userId_;
       QString contactId_;

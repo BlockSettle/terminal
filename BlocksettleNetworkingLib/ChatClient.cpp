@@ -462,7 +462,8 @@ void ChatClient::OnSearchUsersResponse(const Chat::SearchUsersResponse & respons
    for (auto user : userList){
       users << QString::fromStdString(user->toJsonString());
    }
-   emit SearchUserListReceived(userList);
+   emit SearchUserListReceived(userList, emailEntered_);
+   emailEntered_ = false;
    logger_->debug("[ChatClient::OnSearchUsersResponse]: Received user list from server: "
                   "{}",
                   users.join(QLatin1String(", ")).prepend(QLatin1Char('[')).append(QLatin1Char(']')).toStdString()
@@ -1051,6 +1052,7 @@ void ChatClient::sendFriendRequest(const QString &friendUserId)
             Chat::ContactsAction::Request,
             BinaryData(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size()));
    sendRequest(request);
+   addOrUpdateContact(friendUserId, Chat::ContactStatus::Outgoing);
 }
 
 void ChatClient::acceptFriendRequest(const QString &friendUserId)
@@ -1144,6 +1146,16 @@ void ChatClient::clearSearch()
 bool ChatClient::isFriend(const QString &userId)
 {
    return chatDb_->isContactExist(userId);
+}
+
+Chat::ContactRecordData ChatClient::getContact(const QString &userId) const
+{
+   Chat::ContactRecordData contact(QString(),
+                                   QString(),
+                                   Chat::ContactStatus::Accepted,
+                                   BinaryData());
+   chatDb_->getContact(userId, contact);
+   return contact;
 }
 
 QString ChatClient::getUserId()
@@ -1302,6 +1314,7 @@ void ChatClient::onActionSearchUsers(const std::string &text)
       //and search must be triggerred if pattern have length >= 3
       return;
    }
+   emailEntered_ = true;
    sendSearchUsersRequest(pattern);
 }
 
