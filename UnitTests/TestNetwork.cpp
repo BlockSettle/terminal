@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <random>
 #include "CelerMessageMapper.h"
 #include "CommonTypes.h"
 #include "IdStringGenerator.h"
@@ -7,6 +8,7 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
+#include "zmq.h"
 
 using namespace std::chrono_literals;
 
@@ -447,7 +449,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 }
 
 
-static auto await(std::atomic<int>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 10000 }) {
+static bool await(std::atomic<int>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 10000 }) {
     const auto napTime = 1ms;
     for (auto elapsed = 0ms; elapsed < deadline; elapsed += napTime) {
         if (what.load()) {
@@ -861,4 +863,62 @@ TEST(TestNetwork, DISABLED_ZMQ_BIP15X_StressTest)
        }
        std::this_thread::sleep_for(1ns);
     }
+}
+
+TEST(TestNetwork, DISABLED_ZMQ_BIP15X_MalformedData)
+{
+   std::uniform_int_distribution<uint32_t> distribution(0, 255);
+   std::mt19937 generator;
+   generator.seed(1);
+
+   for (int i = 0; i < 10; ++i) {
+      const auto srvLsn = std::make_shared<TstServerListener>(TestEnv::logger());
+      const auto clientLsn = std::make_shared<TstClientListener>(TestEnv::logger());
+      const auto clientLsn2 = std::make_shared<TstClientListener>(TestEnv::logger());
+
+      const auto clientConn = std::make_shared<ZmqBIP15XDataConnection>(
+               TestEnv::logger(), getTestParams());
+      const auto clientConn2 = std::make_shared<ZmqBIP15XDataConnection>(
+               TestEnv::logger(), getTestParams());
+      const auto zmqContext = std::make_shared<ZmqContext>(TestEnv::logger());
+      auto serverConn = std::make_shared<ZmqBIP15XServerConnection>(
+               TestEnv::logger(), zmqContext, [] { return std::vector<std::string>(); });
+      const auto serverKey = serverConn->getOwnPubKey();
+
+      const std::string host = "127.0.0.1";
+      std::string port;
+      do {
+         port = std::to_string((rand() % 50000) + 10000);
+      } while (!serverConn->BindConnection(host, port, srvLsn.get()));
+
+      clientConn->addAuthPeer(serverKey, host + ":" + port);
+      clientConn2->addAuthPeer(serverKey, host + ":" + port);
+
+      auto badContext = zmq_ctx_new();
+      auto badSocket = zmq_socket(badContext, ZMQ_DEALER);
+
+      ASSERT_TRUE(clientConn->openConnection(host, port, clientLsn.get()));
+      ASSERT_TRUE(await(clientLsn->connected_));
+
+      ASSERT_TRUE(clientConn->send("test"));
+      ASSERT_TRUE(await(srvLsn->dataRecv_));
+      srvLsn->dataRecv_ = 0;
+
+      ASSERT_EQ(zmq_connect(badSocket, fmt::format("tcp://{}:{}", host, port).c_str()), 0);
+
+      auto badSize = distribution(generator);
+      auto badData = CryptoPRNG::generateRandom(badSize).toBinStr();
+      ASSERT_EQ(zmq_send(badSocket, badData.data(), badData.size(), 0), badData.size());
+
+      ASSERT_TRUE(await(srvLsn->error_));
+
+      ASSERT_TRUE(clientConn->send("test2"));
+      ASSERT_TRUE(await(srvLsn->dataRecv_));
+
+      ASSERT_TRUE(clientConn2->openConnection(host, port, clientLsn2.get()));
+      ASSERT_TRUE(await(clientLsn2->connected_));
+
+      ASSERT_EQ(zmq_close(badSocket), 0);
+      ASSERT_EQ(zmq_ctx_term(badContext), 0);
+   }
 }
