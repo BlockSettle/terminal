@@ -219,9 +219,7 @@ void HeadlessAppObj::onlineProcessing()
                inKey = READHEX(hexValue);
 
                if (inKey.isNull()) {
-                  logger_->error("[{}] Trusted client list key entry {} has no key."
-                     , __func__, i);
-                  continue;
+                  throw std::runtime_error(fmt::format("trusted client list key entry {} has no key", i));
                }
 
                retKeys.push_back(ZmqBIP15XPeer(name, inKey));
