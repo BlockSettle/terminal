@@ -347,7 +347,7 @@ void ChatClient::OnContactsActionResponseServer(const Chat::ContactsActionRespon
             chatDb_->removeContact(QString::fromStdString(response.contactId()));
             //TODO: Remove pub key
          }
-         //retrySendQueuedMessages(response.contactId());
+         eraseQueuedMessages(response.contactId());
       break;
       case Chat::ContactsActionServer::UpdateContactRecord:
          actionString = "ContactsActionServer::UpdateContactRecord";
