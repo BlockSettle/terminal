@@ -343,7 +343,12 @@ void ChatClient::OnContactsActionResponseServer(const Chat::ContactsActionRespon
          actionString = "ContactsActionServer::RemoveContactRecord";
          //removeContact(QString::fromStdString(response.userId()));
          if (response.getActionResult() == Chat::ContactsActionServerResult::Success) {
-            model_->removeContactNode(response.contactId());
+            auto cNode = model_->findContactNode(response.contactId());
+            if (cNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+               model_->removeContactNode(response.contactId());
+            } else {
+               model_->removeContactRequestNode(response.contactId());
+            }
             chatDb_->removeContact(QString::fromStdString(response.contactId()));
             //TODO: Remove pub key
          }
