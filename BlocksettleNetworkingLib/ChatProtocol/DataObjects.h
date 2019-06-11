@@ -6,6 +6,7 @@
 #include "ChatProtocol/DataObjects/OTCRequestData.h"
 #include "ChatProtocol/DataObjects/OTCResponseData.h"
 #include "ChatProtocol/DataObjects/OTCUpdateData.h"
+#include "ChatProtocol/DataObjects/OTCCloseTradingData.h"
 #include "ChatProtocol/DataObjects/RoomData.h"
 #include "ChatProtocol/DataObjects/UserData.h"
 

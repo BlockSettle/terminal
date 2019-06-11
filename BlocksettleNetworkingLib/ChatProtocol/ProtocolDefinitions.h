@@ -34,11 +34,7 @@ namespace Chat
       RequestContactsList,
       RequestSearchUsers,
       RequestSessionPublicKey,
-      RequestReplySessionPublicKey,
-      RequestGenCommonOTC,
-      RequestAnswerCommonOTC,
-      RequestUpdateCommonOTC,
-      RequestPullOTC
+      RequestReplySessionPublicKey
    };
 
 
@@ -64,10 +60,7 @@ namespace Chat
       ResponseLogout,
       ResponseSendSessionPublicKey,
       ResponseSessionPublicKey,
-      ResponseReplySessionPublicKey,
-      ResponseGenCommonOTC,
-      ResponseAnswerCommonOTC,
-      ResponseUpdateCommonOTC,
+      ResponseReplySessionPublicKey
    };
 
    enum class ContactsAction {

@@ -11,6 +11,7 @@
 #include "BIP150_151.h"
 #include "EncryptionUtils.h"
 #include "ZmqServerConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 
 // DESIGN NOTES: Cookies are used for local connections. When the client is
 // invoked by a binary containing a server connection, the binary must be
@@ -47,10 +48,11 @@ class ZmqBipMsg;
 class ZmqBIP15XServerConnection : public ZmqServerConnection
 {
 public:
+   using TrustedClientsCallback = std::function<ZmqBIP15XPeers()>;
+
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
-      , const uint64_t& id
-      , const std::function<std::vector<std::string>()>& trustedClients
+      , const TrustedClientsCallback& trustedClients
       , const bool& ephemeralPeers
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
@@ -59,7 +61,7 @@ public:
       , const std::string& cookiePath = "");
    ZmqBIP15XServerConnection(const std::shared_ptr<spdlog::logger>& logger
       , const std::shared_ptr<ZmqContext>& context
-      , const std::function<std::vector<std::string>()>& cbTrustedClients
+      , const TrustedClientsCallback& cbTrustedClients
       , const std::string& ownKeyFileDir = ""
       , const std::string& ownKeyFileName = ""
       , const bool& makeServerCookie = false
@@ -80,8 +82,8 @@ public:
    bool getClientIDCookie(BinaryData& cookieBuf);
    std::string getCookiePath() const { return bipIDCookiePath_; }
    BinaryData getOwnPubKey() const;
-   void addAuthPeer(const BinaryData& inKey, const std::string& keyName);
-   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
+   void addAuthPeer(const ZmqBIP15XPeer &peer);
+   void updatePeerKeys(const ZmqBIP15XPeers &peers);
 
    // Only for tests
    void rekey(const std::string &clientId);
@@ -138,8 +140,7 @@ private:
    std::map<std::string, std::shared_ptr<ZmqBIP15XPerConnData>>   socketConnMap_;
 
    BinaryData leftOverData_;
-   uint64_t id_;
-   std::function<std::vector<std::string>()> cbTrustedClients_;
+   TrustedClientsCallback cbTrustedClients_;
    const bool useClientIDCookie_;
    const bool makeServerIDCookie_;
    const std::string bipIDCookiePath_;

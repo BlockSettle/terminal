@@ -2,70 +2,40 @@
 #define __OTC_RESPONSE_DATA_H__
 
 #include "DataObject.h"
+#include "MessageData.h"
 #include "ChatCommonTypes.h"
+
+#include <string>
 
 namespace Chat {
 
-   class OTCResponseData : public DataObject
+   class OTCResponseData : public MessageData
    {
-   // DataObject interface
    public:
-      QJsonObject toJson() const override;
-      static std::shared_ptr<OTCResponseData> fromJSON(const std::string& jsonData);
+      OTCResponseData(const QString &sender, const QString &receiver,
+         const QString &id, const QDateTime &dateTime,
+         const bs::network::OTCResponse& otcResponse,
+         int state = (int)State::Undefined);
 
-   public:
-      OTCResponseData() = delete;
-
-      OTCResponseData(const std::string& clientResponseId
-                      , const std::string& serverRequestId
-                      , const std::string& requestorId
-                      , const std::string& initialTargetId
-                      , const std::string& responderId
-                      , const bs::network::OTCPriceRange& priceRange
-                      , const bs::network::OTCQuantityRange& quantityRange);
-
-      OTCResponseData(const std::string& clientResponseId
-                      , const std::string& serverResponseId
-                      , const std::string& serverRequestId
-                      , const std::string& requestorId
-                      , const std::string& initialTargetId
-                      , const std::string& responderId
-                      , const uint64_t responseTimestamp
-                      , const bs::network::OTCPriceRange& priceRange
-                      , const bs::network::OTCQuantityRange& quantityRange);
+      OTCResponseData(const MessageData& source, const QJsonObject& jsonData);
 
       ~OTCResponseData() override = default;
 
-      std::string clientResponseId() const;
-      std::string serverResponseId() const;
+      QString displayText() const override;
 
-      std::string serverRequestId() const;
-
-      // requestorId - who sent request
-      std::string requestorId() const;
-      // initialTargetId - where it was sent
-      std::string initialTargetId() const;
-
-      //responderId - current user id
-      std::string responderId() const;
-
-      uint64_t responseTimestamp() const;
-
-      bs::network::OTCPriceRange    priceRange() const;
-      bs::network::OTCQuantityRange quantityRange() const;
-
-      void setServerResponseId(const std::string &serverResponseId);
+      bool                       otcResponseValid();
+      bs::network::OTCResponse   otcResponse() const;
+      void messageDirectionUpdate() override;
 
    private:
-      const std::string clientResponseId_;
-      std::string serverResponseId_;
-      const std::string serverRequestId_;
-      const std::string requestorId_;
-      const std::string initialTargetId_;
-      const std::string responderId_;
-      const uint64_t responseTimestamp_;
-      const bs::network::OTCPriceRange    priceRange_;
-      const bs::network::OTCQuantityRange quantityRange_;
+      static QString serializeResponseData(const bs::network::OTCResponse& otcResponse);
+
+      void updateDisplayString();
+
+   private:
+      bool                       resopnseValid_ = false;;
+      bs::network::OTCResponse   otcResponse_;
+      QString                    displayText_;
    };
 
 }

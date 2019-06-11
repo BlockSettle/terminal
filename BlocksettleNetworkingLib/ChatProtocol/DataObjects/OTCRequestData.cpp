@@ -2,121 +2,78 @@
 #include "../ProtocolDefinitions.h"
 #include <QDateTime>
 
-namespace Chat {
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 
-QJsonObject OTCRequestData::toJson() const
+namespace Chat
 {
-   QJsonObject data = DataObject::toJson();
-   data[OTCRequestIdClientKey] = QString::fromStdString(clientRequestId_);
-   data[OTCRequestIdServerKey] = QString::fromStdString(serverRequestId_);
-   data[OTCRequestorIdKey] = QString::fromStdString(requestorId_);
-   data[OTCTargetIdKey] = QString::fromStdString(targetId_);
-   data[OTCSubmitTimestampKey] = QString::number(submitTimestamp_);
-   data[OTCExpiredTimestampKey] = QString::number(expireTimestamp_);
-   data[OTCRqSideKey] = static_cast<int>(otcRequest_.side);
-   data[OTCRqRangeIdKey] = static_cast<int>(otcRequest_.amountRange);
+   OTCRequestData::OTCRequestData(const QString &sender, const QString &receiver,
+         const QString &id, const QDateTime &dateTime,
+         const bs::network::OTCRequest& otcRequest,
+         int state)
+   : MessageData(sender, receiver, id, dateTime, serializeRequestData(otcRequest), MessageData::RawMessageDataType::OTCReqeust, state)
+   , requestValid_{true}
+   , otcRequest_{otcRequest}
+   {
+      updateDisplayString();
+   }
 
-   return data;
-}
+   OTCRequestData::OTCRequestData(const MessageData& source, const QJsonObject& jsonData)
+      : MessageData(source, RawMessageDataType::OTCReqeust)
+   {
+      otcRequest_.side = static_cast<bs::network::ChatOTCSide::Type>(jsonData[QLatin1String("side")].toInt());
+      otcRequest_.amountRange = static_cast<bs::network::OTCRangeID::Type>(jsonData[QLatin1String("amount")].toInt());
+      requestValid_ = true;
 
-std::shared_ptr<OTCRequestData> OTCRequestData::fromJSON(const std::string& jsonData)
-{
-   QJsonObject data = QJsonDocument::fromJson(QString::fromStdString(jsonData).toUtf8()).object();
+      updateDisplayString();
+   }
 
-   const auto clientRequestId = data[OTCRequestIdClientKey].toString().toStdString();
-   const auto serverRequestId = data[OTCRequestIdServerKey].toString().toStdString();
-   const auto requestorId = data[OTCRequestorIdKey].toString().toStdString();
-   const auto targetId = data[OTCTargetIdKey].toString().toStdString();
-   uint64_t submitTimestamp = data[OTCSubmitTimestampKey].toString().toULongLong();
-   uint64_t expireTimestamp = data[OTCExpiredTimestampKey].toString().toULongLong();
-   bs::network::ChatOTCSide::Type side =
-         static_cast<bs::network::ChatOTCSide::Type>(data[OTCRqSideKey].toInt());
-   bs::network::OTCRangeID::Type range =
-         static_cast<bs::network::OTCRangeID::Type>(data[OTCRqRangeIdKey].toInt());
+   void OTCRequestData::messageDirectionUpdate()
+   {
+      updateDisplayString();
+   }
 
-   bs::network::OTCRequest otcRq{side, range};
+   QString OTCRequestData::displayText() const
+   {
+      return displayText_;
+   }
 
-   return std::make_shared<OTCRequestData>(clientRequestId,
-                                           serverRequestId,
-                                           requestorId,
-                                           targetId,
-                                           submitTimestamp,
-                                           expireTimestamp,
-                                           otcRq);
-}
+   bool OTCRequestData::otcReqeustValid()
+   {
+      return requestValid_;
+   }
 
-OTCRequestData::OTCRequestData(const std::string& clientRequestId
-                               , const std::string& requestorId
-                               , const std::string& targetId
-                               , const bs::network::OTCRequest& otcRequest)
-  : DataObject(DataObject::Type::OTCRequestData)
-  , clientRequestId_{clientRequestId}
-  , serverRequestId_{} // empty string
-  , requestorId_{requestorId}
-  , targetId_{targetId}
-  , submitTimestamp_{static_cast<uint64_t>(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())}
-  , expireTimestamp_{0}
-  , otcRequest_{otcRequest}
-{}
+   bs::network::OTCRequest OTCRequestData::otcRequest() const
+   {
+      return otcRequest_;
+   }
 
-OTCRequestData::OTCRequestData(const std::string& clientRequestId, const std::string& serverRequestId
-                               , const std::string& requestorId, const std::string& targetId
-                               , uint64_t submitTimestamp, uint64_t expireTimestamp
-                               , const bs::network::OTCRequest& otcRequest)
-  : DataObject(DataObject::Type::OTCRequestData)
-  , clientRequestId_{clientRequestId}
-  , serverRequestId_{serverRequestId}
-  , requestorId_{requestorId}
-  , targetId_{targetId}
-  , submitTimestamp_{submitTimestamp}
-  , expireTimestamp_{expireTimestamp}
-  , otcRequest_{otcRequest}
-{}
+   QString OTCRequestData::serializeRequestData(const bs::network::OTCRequest otcRequest)
+   {
+      QJsonObject data;
 
-std::string OTCRequestData::clientRequestId() const
-{
-   return clientRequestId_;
-}
+      data[QLatin1String("raw_message_type")] = static_cast<int>(RawMessageDataType::OTCReqeust);
+      data[QLatin1String("side")] = static_cast<int>(otcRequest.side);
+      data[QLatin1String("amount")] = static_cast<int>(otcRequest.amountRange);
 
-std::string OTCRequestData::serverRequestId() const
-{
-   return serverRequestId_;
-}
+      QJsonDocument doc(data);
+      return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+   }
 
-std::string OTCRequestData::requestorId() const
-{
-   return requestorId_;
-}
+   void OTCRequestData::updateDisplayString()
+   {
+      if (requestValid_) {
+         QString format = QLatin1String("%1 OTC request: %2 %3 EUR/XBT");
 
-std::string OTCRequestData::targetId() const
-{
-   return targetId_;
-}
-
-uint64_t OTCRequestData::submitTimestamp() const
-{
-   return submitTimestamp_;
-}
-
-uint64_t OTCRequestData::expireTimestamp() const
-{
-   return expireTimestamp_;
-}
-
-const bs::network::OTCRequest& OTCRequestData::otcRequest() const
-{
-   return otcRequest_;
-}
-
-void OTCRequestData::setServerRequestId(const std::string &serverRequestId)
-{
-    serverRequestId_ = serverRequestId;
-}
-
-void OTCRequestData::setExpireTimestamp(const uint64_t &expireTimestamp)
-{
-    expireTimestamp_ = expireTimestamp;
-}
-
+         displayText_ = format
+            .arg(directionToText(messageDirectoin()))
+            .arg(QString::fromStdString(bs::network::ChatOTCSide::toString(otcRequest_.side)))
+            .arg(QString::fromStdString(bs::network::OTCRangeID::toString(otcRequest_.amountRange)));
+      } else {
+         displayText_ = QLatin1String("Invalid");
+      }
+   }
 //namespace Chat end
-    }
+}

@@ -28,25 +28,12 @@
 #include <QDateTime>
 #include <QDebug>
 
-std::string ChatClient::GetNextOTCId()
-{
-   return std::string("client_otc_id_") + std::to_string(nextOtcId_++);
-}
-
-std::string ChatClient::GetNextResponseId()
-{
-   return std::string("client_response_") + std::to_string(nextResponseId_++);
-}
-
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::RoomData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::RoomData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::UserData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::UserData>>)
-Q_DECLARE_METATYPE(std::shared_ptr<Chat::OTCRequestData>)
-Q_DECLARE_METATYPE(std::shared_ptr<Chat::OTCResponseData>)
-Q_DECLARE_METATYPE(std::shared_ptr<Chat::OTCUpdateData>)
 
 namespace {
    const QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
@@ -67,9 +54,6 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::RoomData>>>();
    qRegisterMetaType<std::shared_ptr<Chat::UserData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::UserData>>>();
-   qRegisterMetaType<std::shared_ptr<Chat::OTCRequestData>>();
-   qRegisterMetaType<std::shared_ptr<Chat::OTCResponseData>>();
-   qRegisterMetaType<std::shared_ptr<Chat::OTCUpdateData>>();
 
    chatSessionKeyPtr_ = std::make_shared<Chat::ChatSessionKey>(logger);
 
@@ -622,6 +606,8 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
    std::vector<std::shared_ptr<Chat::MessageData>> messages;
    for (const auto &msgStr : response.getDataList()) {
       auto msg = Chat::MessageData::fromJSON(msgStr);
+      msg->setMessageDirection(Chat::MessageData::MessageDirection::Received);
+
       if (!chatDb_->isContactExist(msg->senderId())) {
          continue;
       }
@@ -647,16 +633,15 @@ void ChatClient::OnMessages(const Chat::MessagesResponse &response)
                dec->setPrivateKey(localPrivateKey);
                dec->setPublicKey(remotePublicKey);
                dec->setNonce(msg->nonce());
-               dec->setData(QByteArray::fromBase64(msg->messageData().toLatin1()).toStdString());
+               dec->setData(QByteArray::fromBase64(msg->messagePayload().toLatin1()).toStdString());
                dec->setAssociatedData(msg->jsonAssociatedData());
 
                try {
                   Botan::SecureVector<uint8_t> decodedData;
                   dec->finish(decodedData);
 
-                  msg->setMessageData(QString::fromUtf8((char*)decodedData.data(),
-                                                        (int)decodedData.size()));
-                  msg->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
+                  // create new instance of decrypted message
+                  msg = msg->CreateDecryptedMessage(QString::fromUtf8((char*)decodedData.data(),(int)decodedData.size()));
                }
                catch (std::exception & e) {
                   logger_->error("[ChatClient::{}] Failed to decrypt aead msg {}", __func__, e.what());
@@ -715,10 +700,9 @@ void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &respon
    chatDb_->addKey(peerId, response.getSendingNodePublicKey());
 
    // Run over enqueued messages if any, and try to send them all now.
-   std::queue<QString>& messages = enqueued_messages_[QString::fromStdString(
-      response.getSendingNodeId())];
+   messages_queue& messages = enqueued_messages_[QString::fromStdString(response.getSendingNodeId())];
    while (!messages.empty()) {
-      sendOwnMessage(messages.front(), QString::fromStdString(response.getSendingNodeId()));
+      sendMessageDataRequest(messages.front(), QString::fromStdString(response.getSendingNodeId()));
       messages.pop();
    }
 }
@@ -758,34 +742,91 @@ void ChatClient::OnError(DataConnectionError errorCode)
 std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       const QString &message, const QString &receiver)
 {
-   Chat::MessageData messageData(QString::fromStdString(currentUserId_), receiver,
-      QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr()),
-      QDateTime::currentDateTimeUtc(), message);
-   auto result = std::make_shared<Chat::MessageData>(messageData);
+   auto messageData = std::make_shared<Chat::MessageData>(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc()
+      , message);
 
-   if (!chatDb_->isContactExist(messageData.receiverId()))
-   {
+   logger_->debug("[ChatClient::sendOwnMessage] {}", message.toStdString());
+
+   return sendMessageDataRequest(messageData, receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
+   , const QString &receiver)
+{
+   auto otcMessageData = std::make_shared<Chat::OTCRequestData>(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc()
+      , otcRequest);
+
+   logger_->debug("[ChatClient::SubmitPrivateOTCRequest] {}", otcMessageData->displayText().toStdString());
+
+   return sendMessageDataRequest(otcMessageData, receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::SubmitPrivateOTCResponse(const bs::network::OTCResponse& otcResponse
+   , const QString &receiver)
+{
+   auto otcMessageData = std::make_shared<Chat::OTCResponseData>(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc()
+      , otcResponse);
+
+   logger_->debug("[ChatClient::SubmitPrivateOTCResponse] {}", otcMessageData->displayText().toStdString());
+
+   return sendMessageDataRequest(otcMessageData, receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::SubmitPrivateCancel(const QString &receiver)
+{
+   auto otcMessageData = std::make_shared<Chat::OTCCloseTradingData>(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc());
+
+   logger_->debug("[ChatClient::SubmitPrivateCancel] to {}", receiver.toStdString());
+
+   return sendMessageDataRequest(otcMessageData, receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::SubmitPrivateUpdate(const bs::network::OTCUpdate& update, const QString &receiver)
+{
+   auto otcMessageData = std::make_shared<Chat::OTCUpdateData>(QString::fromStdString(currentUserId_), receiver
+      , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+      , QDateTime::currentDateTimeUtc()
+      , update);
+
+   logger_->debug("[ChatClient::SubmitPrivateUpdate] to {}", receiver.toStdString());
+
+   return sendMessageDataRequest(otcMessageData, receiver);
+}
+
+std::shared_ptr<Chat::MessageData> ChatClient::sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& messageData
+                                                                      , const QString &receiver)
+{
+   messageData->setMessageDirection(Chat::MessageData::MessageDirection::Sent);
+
+   if (!chatDb_->isContactExist(receiver)) {
       //make friend request before sending direct message.
       //Enqueue the message to be sent, once our friend request accepted.
-      enqueued_messages_[receiver].push(message);
-      sendFriendRequest(messageData.receiverId());
-      return result;
-   }
-   else
-   {
+      enqueued_messages_[receiver].push(messageData);
+      sendFriendRequest(receiver);
+      return messageData;
+   } else {
       // is contact rejected?
       Chat::ContactRecordData contact(QString(),
                                       QString(),
                                       Chat::ContactStatus::Accepted,
                                       BinaryData());
-      chatDb_->getContact(messageData.receiverId(), contact);
+      chatDb_->getContact(messageData->receiverId(), contact);
 
       if (contact.getContactStatus() == Chat::ContactStatus::Rejected)
       {
-         logger_->error("[ChatClient::sendOwnMessage] {}",
-                        "Receiver has rejected state. Discarding message.");
-         result->setFlag(Chat::MessageData::State::Invalid);
-         return result;
+         logger_->error("[ChatClient::sendMessageDataRequest] {}",
+                        "Receiver has rejected state. Discarding message."
+                        , receiver.toStdString());
+         messageData->setFlag(Chat::MessageData::State::Invalid);
+         return messageData;
       }
    }
 
@@ -793,7 +834,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    if (contactPublicKeyIterator == contactPublicKeys_.end()) {
       // Ask for public key from peer. Enqueue the message to be sent, once we receive the
       // necessary public key.
-      enqueued_messages_[receiver].push(message);
+      enqueued_messages_[receiver].push(messageData);
 
       // Send our key to the peer.
       auto request = std::make_shared<Chat::AskForPublicKeyRequest>(
@@ -801,17 +842,17 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
          currentUserId_,
          receiver.toStdString());
       sendRequest(request);
-      return result;
+      return messageData;
    }
 
    const auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(receiver.toStdString());
    if (chatSessionKeyDataPtr == nullptr || !chatSessionKeyPtr_->isExchangeForUserSucceeded(receiver.toStdString())) {
-      enqueued_messages_[receiver].push(message);
+      enqueued_messages_[receiver].push(messageData);
 
       chatSessionKeyPtr_->generateLocalKeysForUser(receiver.toStdString());
 
       BinaryData remotePublicKey(contactPublicKeyIterator->second);
-      logger_->debug("USING PUBLIC KEY: {}", remotePublicKey.toHexStr());
+      logger_->debug("[ChatClient::sendMessageDataRequest] USING PUBLIC KEY: {}", remotePublicKey.toHexStr());
 
       try {
          BinaryData encryptedLocalPublicKey = chatSessionKeyPtr_->iesEncryptLocalPublicKey(receiver.toStdString(), remotePublicKey);
@@ -826,21 +867,21 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
             encryptedString);
 
          sendRequest(request);
-         return result;
+         return messageData;
       } catch (std::exception& e) {
-         logger_->error("[ChatClient::{}] Failed to encrypt msg by ies {}", __func__, e.what());
-         return result;
+         logger_->error("[ChatClient::sendMessageDataRequest] Failed to encrypt msg by ies {}", e.what());
+         return messageData;
       }
    }
 
-   logger_->debug("[ChatClient::sendMessage] {}", message.toStdString());
-
-   if (!encryptByIESAndSaveMessageInDb(std::make_shared<Chat::MessageData>(messageData)))
+   if (!encryptByIESAndSaveMessageInDb(messageData))
    {
-      return result;
+      logger_->error("[ChatClient::sendMessageDataRequest] failed to encrypt. discarding message");
+      messageData->setFlag(Chat::MessageData::State::Invalid);
+      return messageData;
    }
 
-   model_->insertContactsMessage(result);
+   model_->insertContactsMessage(messageData);
 
    // search active message session for given user
    const auto userNoncesIterator = userNonces_.find(receiver);
@@ -848,7 +889,7 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    if (userNoncesIterator == userNonces_.end()) {
       // generate random nonce
       Botan::AutoSeeded_RNG rng;
-      nonce = rng.random_vec(messageData.defaultNonceSize());
+      nonce = rng.random_vec(messageData->defaultNonceSize());
       userNonces_.emplace_hint(userNoncesIterator, receiver, nonce);
    }
    else {
@@ -866,10 +907,10 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
    enc->setPublicKey(chatSessionKeyDataPtr->remotePublicKey());
 
    enc->setNonce(nonce);
-   messageData.setNonce(nonce);
+   messageData->setNonce(nonce);
 
-   enc->setData(messageData.messageData().toStdString());
-   enc->setAssociatedData(messageData.jsonAssociatedData());
+   enc->setData(messageData->messagePayload().toStdString());
+   enc->setAssociatedData(messageData->jsonAssociatedData());
 
    Botan::SecureVector<uint8_t> encodedData;
 
@@ -877,27 +918,26 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
       enc->finish(encodedData);
    }
    catch (std::exception & e) {
-      logger_->error("[ChatClient::{}] Can't encode data {}", __func__, e.what());
-      return result;
+      logger_->error("[ChatClient::sendMessageDataRequest] Can't encode data {}", e.what());
+      messageData->setFlag(Chat::MessageData::State::Invalid);
+      return messageData;
    }
 
-   messageData.setMessageData(
-            QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encodedData.data()),
-                                           int(encodedData.size())).toBase64()));
-   messageData.setEncryptionType(Chat::MessageData::EncryptionType::AEAD);
+   auto encryptedMessage = messageData->CreateEncryptedMessage(Chat::MessageData::EncryptionType::AEAD
+      , QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encodedData.data()), int(encodedData.size())).toBase64()));
 
-   auto request = std::make_shared<Chat::SendMessageRequest>("", messageData.toJsonString());
+   auto request = std::make_shared<Chat::SendMessageRequest>("", encryptedMessage->toJsonString());
    sendRequest(request);
 
-   return result;
+   return messageData;
 }
 
 std::shared_ptr<Chat::MessageData> ChatClient::sendRoomOwnMessage(const QString& message, const QString& receiver)
 {
-   Chat::MessageData msg(QString::fromStdString(currentUserId_), receiver
+   auto roomMessage = std::make_shared<Chat::MessageData>(QString::fromStdString(currentUserId_), receiver
       , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
-      , QDateTime::currentDateTimeUtc(), message);
-   auto result = std::make_shared<Chat::MessageData>(msg);
+      , QDateTime::currentDateTimeUtc()
+      , message);
 
 //   const auto &itPub = pubKeys_.find(receiver);
 //   if (itPub == pubKeys_.end()) {
@@ -920,8 +960,8 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendRoomOwnMessage(const QString&
 //   if (!localEncMsg.encrypt(appSettings_->GetAuthKeys().second)) {
 //      logger_->error("[ChatClient::sendRoomOwnMessage] failed to encrypt by local key");
 //   }
-   chatDb_->add(msg);
-   model_->insertRoomMessage(result);
+   chatDb_->add(roomMessage);
+   model_->insertRoomMessage(roomMessage);
 
 //   if (!msg.encrypt(itPub->second)) {
 //      logger_->error("[ChatClient::sendMessage] failed to encrypt message {}"
@@ -931,9 +971,9 @@ std::shared_ptr<Chat::MessageData> ChatClient::sendRoomOwnMessage(const QString&
    auto request = std::make_shared<Chat::SendRoomMessageRequest>(
                      "",
                      receiver.toStdString(),
-                     msg.toJsonString());
+                     roomMessage->toJsonString());
    sendRequest(request);
-   return result;
+   return roomMessage;
 }
 
 void ChatClient::retrieveUserMessages(const QString &userId)
@@ -942,7 +982,7 @@ void ChatClient::retrieveUserMessages(const QString &userId)
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
-            decryptIESMessage(msg);
+            msg = decryptIESMessage(msg);
          }
          model_->insertContactsMessage(msg);
       }
@@ -955,7 +995,7 @@ void ChatClient::retrieveRoomMessages(const QString& roomId)
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
-            decryptIESMessage(msg);
+            msg = decryptIESMessage(msg);
          }
          model_->insertRoomMessage(msg);
       }
@@ -1234,10 +1274,10 @@ bool ChatClient::onActionIsFriend(const QString& userId)
 void ChatClient::retrySendQueuedMessages(const std::string userId)
 {
    // Run over enqueued messages if any, and try to send them all now.
-   std::queue<QString>& messages = enqueued_messages_[QString::fromStdString(userId)];
+   messages_queue& messages = enqueued_messages_[QString::fromStdString(userId)];
 
    while (!messages.empty()) {
-      sendOwnMessage(messages.front(), QString::fromStdString(userId));
+      sendMessageDataRequest(messages.front(), QString::fromStdString(userId));
       messages.pop();
    }
 }
@@ -1275,17 +1315,15 @@ bool ChatClient::encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::Mess
    BinaryData localPublicKey(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size());
    std::unique_ptr<Encryption::IES_Encryption> enc = Encryption::IES_Encryption::create(logger_);
    enc->setPublicKey(localPublicKey);
-   enc->setData(message->messageData().toStdString());
+   enc->setData(message->messagePayload().toStdString());
 
    try {
       Botan::SecureVector<uint8_t> encodedData;
       enc->finish(encodedData);
 
-      Chat::MessageData encMessageData(message->senderId(), message->receiverId(), message->id(), message->dateTime(),
-         QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encodedData.data()), int(encodedData.size())).toBase64()), message->state());
-      encMessageData.setEncryptionType(Chat::MessageData::EncryptionType::IES);
-      encMessageData.setNonce(message->nonce());
-      chatDb_->add(encMessageData);
+      auto encryptedMessage = message->CreateEncryptedMessage(Chat::MessageData::EncryptionType::IES
+                                                              , QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encodedData.data()), int(encodedData.size())).toBase64()));
+      chatDb_->add(encryptedMessage);
    }
    catch (std::exception & e) {
       logger_->error("[ChatClient::{}] Failed to encrypt msg by ies {}", __func__, e.what());
@@ -1295,25 +1333,23 @@ bool ChatClient::encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::Mess
    return true;
 }
 
-bool ChatClient::decryptIESMessage(std::shared_ptr<Chat::MessageData>& message)
+std::shared_ptr<Chat::MessageData> ChatClient::decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message)
 {
    std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
    SecureBinaryData localPrivateKey(appSettings_->GetAuthKeys().first.data(), appSettings_->GetAuthKeys().first.size());
    dec->setPrivateKey(localPrivateKey);
-   dec->setData(QByteArray::fromBase64(message->messageData().toUtf8()).toStdString());
+   dec->setData(QByteArray::fromBase64(message->messagePayload().toUtf8()).toStdString());
 
    try {
       Botan::SecureVector<uint8_t> decodedData;
       dec->finish(decodedData);
 
-      message->setMessageData(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()));
-      message->setEncryptionType(Chat::MessageData::EncryptionType::Unencrypted);
-      return true;
+      return message->CreateDecryptedMessage(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()));
    }
    catch (std::exception &) {
       logger_->error("Failed to decrypt msg from DB {}", message->id().toStdString());
       message->setFlag(Chat::MessageData::State::Invalid);
-      return false;
+      return message;
    }
 }
 
@@ -1329,273 +1365,6 @@ void ChatClient::onMessageRead(std::shared_ptr<Chat::MessageData> message)
    sendUpdateMessageState(message);
 }
 
-bool ChatClient::SubmitCommonOTCRequest(const bs::network::OTCRequest& request)
-{
-   if (!ownSubmittedOTCId_.empty()) {
-      logger_->debug("[ChatClient::SubmitCommonOTCRequest] already have own OTC");
-      return false;
-   }
-
-   if (!sendCommonOTCRequest(request)) {
-      logger_->error("[ChatClient::SubmitCommonOTCRequest] failed to sendcommon OTC request");
-      return false;
-   }
-
-   return true;
-}
-
-bool ChatClient::SubmitPrivateOTCRequest(const std::string &targetId, const bs::network::OTCRequest &request)
-{
-   if (!sendPrivateOTCRequest(targetId, request)) {
-      logger_->error("[ChatClient::SubmitCommonOTCRequest] failed to send private OTC request");
-      return false;
-   }
-
-   return true;
-}
-
-bool ChatClient::sendCommonOTCRequest(const bs::network::OTCRequest& request)
-{
-   const auto clientRequestId = GetNextOTCId();
-   const auto requestorId = currentUserId_;
-   const auto targetId = Chat::OTCRoomKey.toStdString();
-
-   auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
-      , requestorId, targetId, request);
-
-   auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
-   sendRequest(otcRequest);
-   ownSubmittedOTCId_ = liveRequest->clientRequestId();
-   return true;
-}
-
-bool ChatClient::sendPrivateOTCRequest(const std::string &targetId, const bs::network::OTCRequest &request)
-{
-   const auto clientRequestId = GetNextOTCId();
-
-   auto requestor = currentUserId_;
-   auto target = targetId;
-
-   const uint64_t submitTimestamp = QDateTime::currentDateTimeUtc().toMSecsSinceEpoch();
-   const uint64_t expireTimestamp = true
-                                    ? 0 //If this zero, server will setup expired itself (60 secs default)
-                                    : QDateTime::currentDateTimeUtc().addSecs(10*60).toMSecsSinceEpoch();
-
-
-
-   auto liveRequest = std::make_shared<Chat::OTCRequestData>(clientRequestId
-      , requestor, target, request);
-
-   auto otcRequest = std::make_shared<Chat::GenCommonOTCRequest>("", liveRequest);
-   sendRequest(otcRequest);
-
-   return true;
-}
-
-void ChatClient::HandleCommonOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
-{
-   aliveOtcRequests_.emplace(liveOTCRequest->serverRequestId());
-
-   emit NewOTCRequestReceived(liveOTCRequest);
-}
-
-void ChatClient::HandleCommonOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData>& liveOTCRequest)
-{
-   if (liveOTCRequest->clientRequestId() != ownSubmittedOTCId_) {
-      logger_->error("[ChatClient::HandleCommonOTCRequestAccepted] looks like not ours OTC was accepted");
-      return;
-   }
-
-   ownServerOTCId_ = liveOTCRequest->serverRequestId();
-   aliveOtcRequests_.emplace(liveOTCRequest->serverRequestId());
-
-   emit OTCRequestAccepted(liveOTCRequest);
-}
-
-void ChatClient::HandleCommonOTCRequestRejected(const std::string& rejectReason)
-{
-   emit OTCOwnRequestRejected(QString::fromStdString(rejectReason));
-}
-
-void ChatClient::HandleCommonOTCRequestExpired(const std::string& serverOTCId)
-{
-   if (serverOTCId == ownServerOTCId_) {
-      emit OwnOTCRequestExpired(serverOTCId);
-   } else {
-      emit OTCRequestExpired(serverOTCId);
-   }
-}
-
-void ChatClient::HandleCommonOTCRequestCancelled(const std::string& serverOTCId)
-{
-   if (serverOTCId == ownServerOTCId_) {
-      ownSubmittedOTCId_.clear();
-      ownServerOTCId_.clear();
-   }
-
-   auto it = aliveOtcRequests_.find(serverOTCId);
-   if (it != aliveOtcRequests_.end()) {
-      aliveOtcRequests_.erase(it);
-      emit OTCRequestCancelled(serverOTCId);
-   }
-}
-
-void ChatClient::HandleAcceptedCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
-{
-   std::string otcId = response->serverResponseId();
-   model_->insertOTCSentResponse(response);
-   model_->insertOTCSentResponseData(response);
-}
-
-void ChatClient::HandleRejectedCommonOTCResponse(const std::string& otcId, const std::string& reason)
-{
-   emit CommonOTCResponseRejected(otcId, QString::fromStdString(reason));
-}
-
-// HandleCommonOTCResponse - handle response we receive to our OTC request
-//    sent to common OTC chat room
-void ChatClient::HandleCommonOTCResponse(const std::shared_ptr<Chat::OTCResponseData>& response)
-{
-   logger_->debug("[ChatClient::HandleCommonOTCResponse] OTCResponseData: {}",
-                  response->toJsonString());
-   model_->insertOTCReceivedResponse(response);
-   model_->insertOTCReceivedResponseData(response);
-}
-
-void ChatClient::HandlePrivateOTCRequestAccepted(const std::shared_ptr<Chat::OTCRequestData> &liveOTCRequest)
-{
-   auto cNode = model_->findContactNode(liveOTCRequest->targetId());
-
-   if (!cNode){
-      logger_->error("[ChatClient::HandlePrivateOTCRequestAccepted] OTC request for {}"
-                     "accepted but corresponding node on found",
-                     liveOTCRequest->targetId());
-   }
-
-   cNode->setActiveOtcRequest(liveOTCRequest);
-   model_->insertPrivateOTCReceivedResponseData(liveOTCRequest);
-   model_->notifyContactChanged(cNode->getContactData());
-
-}
-
-void ChatClient::HandlePrivateOTCRequestRejected(const std::shared_ptr<Chat::OTCRequestData> &rejectedOTC, const std::string &rejectReason)
-{
-   //TODO: Implement!
-   logger_->error("[ChatClient::HandlePrivateOTCRequestRejected] OTC request rejected. Reason: {}\n"
-                  "Request: {}", rejectReason,
-                  rejectedOTC->toJsonString());
-
-
-}
-
-void ChatClient::HandlePrivateOTCRequestCancelled(const std::shared_ptr<Chat::OTCRequestData> &cancelledOTC)
-{
-   //TODO: Implement!
-   logger_->error("[ChatClient::HandlePrivateOTCRequestCancelled] OTC request Cancelled.\n"
-                  "Request: {}", cancelledOTC->toJsonString());
-}
-
-void ChatClient::HandlePrivateOTCRequest(const std::shared_ptr<Chat::OTCRequestData> &liveOTCRequest)
-{
-   auto cNode = model_->findContactNode(liveOTCRequest->requestorId());
-
-   if (!cNode){
-      logger_->error("[ChatClient::HandlePrivateOTCRequest]  Not found corresponding node"
-                     " {} for accepted OTC", liveOTCRequest->requestorId());
-   }
-
-   cNode->setActiveOtcRequest(liveOTCRequest);
-   model_->insertPrivateOTCReceivedResponseData(liveOTCRequest);
-   model_->notifyContactChanged(cNode->getContactData());
-}
-
-void ChatClient::HandleAcceptedPrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData> &response)
-{
-   auto cNode = model_->findContactNode(response->requestorId());
-
-   if (!cNode){
-      logger_->error("[ChatClient::HandleAcceptedPrivateOTCResponse] OTC response for {}"
-                     "accepted but corresponding node on found",
-                     response->initialTargetId());
-      return;
-   }
-
-   cNode->setActiveOtcResponse(response);
-   model_->insertPrivateOTCReceivedResponseData(response);
-   model_->notifyContactChanged(cNode->getContactData());
-}
-
-void ChatClient::HandleRejectedPrivateOTCResponse(const std::string &otcId, const std::string &reason)
-{
-
-}
-
-void ChatClient::HandlePrivateOTCResponse(const std::shared_ptr<Chat::OTCResponseData> &response)
-{
-   auto cNode = model_->findContactNode(response->responderId());
-
-   if (!cNode){
-      logger_->error("[ChatClient::HandlePrivateOTCResponse]  Not found corresponding node"
-                     " {} for accepted OTC", response->requestorId());
-   }
-
-   cNode->setActiveOtcResponse(response);
-   model_->insertPrivateOTCReceivedResponseData(response);
-   model_->notifyContactChanged(cNode->getContactData());
-}
-
-// cancel current OTC request sent to OTC chat
-bool ChatClient::PullCommonOTCRequest(const std::string& serverOTCId)
-{
-   if (ownServerOTCId_ != serverOTCId) {
-      logger_->error("[ChatClient::PullCommonOTCRequest] invalid OTC ID");
-      // XXX probably something should be emitted, since chat server will(should) reject pull request
-      return false;
-   }
-
-   auto request = std::make_shared<Chat::PullOwnOTCRequest>("", currentUserId_, serverOTCId);
-   sendRequest(request);
-   return true;
-}
-
-bool ChatClient::PullPrivateOTCRequest(const std::string &targetId, const std::string &serverOTCId)
-{
-   auto cNode = model_->findContactNode(targetId);
-
-   if (!cNode) {
-      logger_->error("[ChatClient::PullPrivateOTCRequest] Target {} not found"
-                     , targetId);
-      return false;
-   }
-
-   if (cNode->getActiveOtcRequest()->serverRequestId() != serverOTCId) {
-      logger_->error("[ChatClient::PullPrivateOTCRequest] invalid OTC ID for {}"
-                     , targetId);
-      return false;
-   }
-
-   auto request = std::make_shared<Chat::PullOwnOTCRequest>("", currentUserId_, serverOTCId);
-   sendRequest(request);
-   return true;
-}
-
-bool ChatClient::SubmitCommonOTCResponse(const bs::network::OTCResponse& response)
-{
-   const std::string clientResponseId = GetNextResponseId();
-   const std::string serverRequestId = response.serverRequestId;
-   const std::string requestorId = response.requestorId;
-   const std::string initialTargetId = response.initialTargetId;
-   const std::string responderId = currentUserId_;
-
-   auto liveResponse = std::make_shared<Chat::OTCResponseData>(clientResponseId
-      , serverRequestId, requestorId
-      , initialTargetId, responderId
-      , response.priceRange, response.quantityRange);
-
-   auto request = std::make_shared<Chat::AnswerCommonOTCRequest>("", liveResponse);
-   sendRequest(request);
-   return true;
-}
 
 void ChatClient::onRoomMessageRead(std::shared_ptr<Chat::MessageData> message)
 {
@@ -1651,15 +1420,15 @@ void ChatClient::OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse
 void ChatClient::OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse& response)
 {
    if (!decodeAndUpdateIncomingSessionPublicKey(response.senderId(), response.senderSessionPublicKey())) {
-      logger_->error("[ChatClient::{}] Failed updating remote public key!", __func__);
+      logger_->error("[ChatClient::OnReplySessionPublicKeyResponse] Failed updating remote public key!");
       return;
    }
 
    // Run over enqueued messages if any, and try to send them all now.
-   std::queue<QString>& messages = enqueued_messages_[QString::fromStdString(
-      response.senderId())];
+   messages_queue messages = enqueued_messages_[QString::fromStdString(response.senderId())];
+
    while (!messages.empty()) {
-      sendOwnMessage(messages.front(), QString::fromStdString(response.senderId()));
+      sendMessageDataRequest(messages.front(), QString::fromStdString(response.senderId()));
       messages.pop();
    }
 }
@@ -1692,111 +1461,4 @@ bool ChatClient::decodeAndUpdateIncomingSessionPublicKey(const std::string& send
    chatSessionKeyPtr_->updateRemotePublicKeyForUser(senderId, remoteSessionPublicKey);
 
    return true;
-}
-
-void ChatClient::OnGenCommonOTCResponse(const Chat::GenCommonOTCResponse &response)
-{
-   logger_->debug("[ChatClient::OnGenCommonOTCResponse] {}", response.getData());
-
-   if (response.otcRequestData()->targetId() == Chat::OTCRoomKey.toStdString()) {
-      switch (response.getResult()) {
-         case Chat::OTCResult::Accepted:
-            //Server sent Accepted to each participant on the OTCRequest target
-            //Client determine by itself if this is his own request
-            if (response.otcRequestData()->requestorId() == model_->currentUser()){
-               HandleCommonOTCRequestAccepted(response.otcRequestData());
-            } else {
-               HandleCommonOTCRequest(response.otcRequestData());
-            }
-            break;
-         case Chat::OTCResult::Rejected:
-            //Server sent Rejected only to requestor, other clients don't know about this
-            HandleCommonOTCRequestRejected(response.getMessage().toStdString());
-            break;
-         case Chat::OTCResult::Canceled:
-            HandleCommonOTCRequestCancelled(response.otcRequestData()->serverRequestId());
-            break;
-         case Chat::OTCResult::Expired:
-            HandleCommonOTCRequestExpired(response.otcRequestData()->serverRequestId());
-            break;
-         default:
-            break;
-      }
-   } else {
-      switch (response.getResult()) {
-         case Chat::OTCResult::Accepted:
-            if (response.otcRequestData()->requestorId() == model_->currentUser()){
-               HandlePrivateOTCRequestAccepted(response.otcRequestData());
-            } else {
-               HandlePrivateOTCRequest(response.otcRequestData());
-            }
-            break;
-         case Chat::OTCResult::Rejected:
-            HandlePrivateOTCRequestRejected(response.otcRequestData(), response.getMessage().toStdString());
-            break;
-         case Chat::OTCResult::Canceled:
-            HandlePrivateOTCRequestCancelled(response.otcRequestData());
-            break;
-         default:
-            break;
-      }
-   }
-
-   return;
-}
-
-void ChatClient::OnAnswerCommonOTCResponse(const Chat::AnswerCommonOTCResponse & response)
-{
-   //TODO: Implement!
-   logger_->debug("[ChatClient::OnAnswerCommonOTCResponse] {}", response.getData());
-   if (response.otcResponseData()->initialTargetId() == Chat::OTCRoomKey.toStdString()) {
-      switch (response.getResult()) {
-         case Chat::OTCResult::Accepted:
-            //Server sent Accepted to each participant on the OTCResponse target
-            //Client determine by itself if this is his own request
-
-            if (response.otcResponseData()->responderId() == model_->currentUser()){
-               HandleAcceptedCommonOTCResponse(response.otcResponseData());
-            } else {
-               HandleCommonOTCResponse(response.otcResponseData());
-            }
-            break;
-         case Chat::OTCResult::Rejected:
-            //Server sent Rejected only to requestor, other clients don't know about this
-            HandleRejectedCommonOTCResponse(response.otcResponseData()->serverRequestId()
-                                            , response.getMessage().toStdString());
-            break;
-         default:
-            break;
-      }
-   } else {
-      switch (response.getResult()) {
-         case Chat::OTCResult::Accepted:
-            //Server sent Accepted to each participant on the OTCResponse target
-            //Client determine by itself if this is his own request
-
-            if (response.otcResponseData()->responderId() == model_->currentUser()){
-               HandleAcceptedPrivateOTCResponse(response.otcResponseData());
-            } else {
-               HandlePrivateOTCResponse(response.otcResponseData());
-            }
-            break;
-         case Chat::OTCResult::Rejected:
-            //Server sent Rejected only to requestor, other clients don't know about this
-            HandleRejectedPrivateOTCResponse(response.otcResponseData()->serverRequestId()
-                                            , response.getMessage().toStdString());
-            break;
-         default:
-            break;
-      }
-   }
-
-   return;
-}
-
-void ChatClient::OnUpdateCommonOTCResponse(const Chat::UpdateCommonOTCResponse & response)
-{
-   //TODO: Implement!
-   logger_->debug("[ChatClient::OnUpdateCommonOTCResponse] {}", response.getData());
-   return;
 }

@@ -955,7 +955,8 @@ bool ZmqBIP15XDataConnection::processAEADHandshake(
             "failed - AUTH_CHALLENGE not processed");
          return false;
       }
-      else if (challengeResult == 1) {
+
+      if (challengeResult == 1) {
          goodChallenge = false;
       }
 
@@ -1031,44 +1032,14 @@ void ZmqBIP15XDataConnection::setCBs(const cbNewKey& inNewKeyCB) {
 //         The server IP address (or host name) and port. (const string)
 // OUTPUT: N/A
 // RETURN: N/A
-void ZmqBIP15XDataConnection::addAuthPeer(const BinaryData& inKey
-   , const std::string& keyName)
+void ZmqBIP15XDataConnection::addAuthPeer(const ZmqBIP15XPeer &peer)
 {
-   if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
-      logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
-         , __func__,  inKey.toHexStr(), keyName);
-      return;
-   }
-   authPeers_->eraseName(keyName);
-   authPeers_->addPeer(inKey, vector<string>{ keyName });
+   ZmqBIP15XUtils::addAuthPeer(authPeers_.get(), peer);
 }
 
-void ZmqBIP15XDataConnection::updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &keys)
+void ZmqBIP15XDataConnection::updatePeerKeys(const ZmqBIP15XPeers &peers)
 {
-   const auto peers = authPeers_->getPeerNameMap();
-   for (const auto &peer : peers) {
-      try {
-         authPeers_->eraseName(peer.first);
-      } catch (const AuthorizedPeersException &) {} // just ignore exception when erasing "own" key
-      catch (const std::exception &e) {
-         logger_->error("[{}] exception when erasing peer key for {}: {}", __func__
-            , peer.first, e.what());
-      } catch (...) {
-         logger_->error("[{}] exception when erasing peer key for {}", __func__, peer.first);
-      }
-   }
-   for (const auto &key : keys) {
-      if (!(CryptoECDSA().VerifyPublicKeyValid(key.second))) {
-         logger_->error("[{}] BIP 150 authorized key ({}) for user {} is invalid."
-            , __func__, key.second.toHexStr(), key.first);
-         continue;
-      }
-      try {
-         authPeers_->addPeer(key.second, vector<string>{ key.first });
-      } catch (const std::exception &e) {
-         logger_->error("[{}] failed to add peer {}: {}", __func__, key.first, e.what());
-      }
-   }
+   ZmqBIP15XUtils::updatePeerKeys(authPeers_.get(), peers);
 }
 
 // If the user is presented with a new remote server ID key it doesn't already

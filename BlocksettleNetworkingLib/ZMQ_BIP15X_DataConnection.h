@@ -10,6 +10,7 @@
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
 #include "ZmqDataConnection.h"
+#include "ZMQ_BIP15X_Helpers.h"
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
@@ -97,8 +98,8 @@ public:
    void setCBs(const cbNewKey& inNewKeyCB);
    BinaryData getOwnPubKey() const;
    bool genBIPIDCookie();
-   void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
-   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
+   void addAuthPeer(const ZmqBIP15XPeer &peer);
+   void updatePeerKeys(const ZmqBIP15XPeers &peers);
 
    // Could be called from callbacks and control thread (where openConnection was called, main thread usually)
    bool send(const std::string& data) override;
