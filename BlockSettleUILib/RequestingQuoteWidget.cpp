@@ -75,7 +75,7 @@ void RequestingQuoteWidget::onCancel()
       emit requestTimedOut();
    } else {
       utxoAdapter_->unreserve(rfq_.requestId);
-      emit cancelRFQ(QString::fromStdString(rfq_.requestId));
+      emit cancelRFQ();
    }
 }
 
