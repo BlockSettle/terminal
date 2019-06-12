@@ -57,6 +57,8 @@ public:
 
    void postSplashscreenActions();
 
+   bool event(QEvent *event) override;
+
 private:
    void setupToolbar();
    void setupMenu();
