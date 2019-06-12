@@ -57,31 +57,6 @@ public:
    }
 };
 
-//class ContactsAcceptedCategoryGroup : public TreeCategoryGroup
-//{
-//public:
-//   ContactsAcceptedCategoryGroup(const QString& displayName)
-//      :TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, displayName)
-//   {
-//   }
-
-//   bool isChildSupported(const TreeItem *item) const override;
-
-//};
-
-//class ContactsNotAcceptedCategoryGroup : public TreeCategoryGroup
-//{
-//public:
-//   ContactsNotAcceptedCategoryGroup(const QString& displayName)
-//      :TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, displayName)
-//   {
-//   }
-
-//   bool isChildSupported(const TreeItem *item) const override;
-
-//};
-
-
 class CategoryElement : public TreeItem
 {
 protected:

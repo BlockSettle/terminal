@@ -344,30 +344,3 @@ bool CategoryElement::getNewItemsFlag() const
 {
    return newItemsFlag_;
 }
-
-//bool ContactsNotAcceptedCategoryGroup::isChildSupported(const TreeItem *item) const
-//{
-//   bool byTypes = TreeItem::isChildSupported(item);
-
-//   if (!byTypes) {
-//      return byTypes;
-//   }
-
-//   auto cNode = dynamic_cast<const ChatContactElement*>(item);
-
-//   return cNode && cNode->getContactData()->getContactStatus() != Chat::ContactStatus::Accepted;
-
-//}
-
-//bool ContactsAcceptedCategoryGroup::isChildSupported(const TreeItem *item) const
-//{
-//   bool byTypes = TreeItem::isChildSupported(item);
-
-//   if (!byTypes) {
-//      return byTypes;
-//   }
-
-//   auto cNode = dynamic_cast<const ChatContactElement*>(item);
-
-//   return cNode && cNode->getContactData()->getContactStatus() == Chat::ContactStatus::Accepted;
-//}
