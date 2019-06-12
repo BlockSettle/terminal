@@ -1,7 +1,27 @@
 {
-   "latest_version": "0.15.19",
-   "release_date": "07 Jun 2019",
+   "latest_version": "0.16.0",
+   "release_date": "11 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.16.0",
+         "previous_version": "0.15.19",
+         "release_date": "11 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Signer 2 Way Auth ",
+            "Improve user search",
+            "Update terminal offline notifications",
+            "Updated support for DM OTC trading",
+            "Chat session keys",
+            "PuB environment settings"
+         ],
+         "bug_fixes": [
+            "Signer Auto Sign fixes",
+            "Fix long shutdown on linux"
+         ],
+         "revision": "4de5245b",
+         "common_revision": "9d83deb5"
+      },
       {
          "version_string": "0.15.19",
          "previous_version": "0.15.18",

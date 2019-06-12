@@ -87,6 +87,13 @@ static int HeadlessApp(int argc, char **argv)
       logger = logMgr.logger();
    }
 
+   // Enable terminal key checks if two way auth is enabled (or lightgui is used).
+   // This also affects GUI connection because the flag works globally for now.
+   // So if remote signer has two-way auth disabled GUI connection will be less secure too.
+   const bool twoWayEnabled = settings->twoWaySignerAuth() || (settings->runMode() == bs::signer::RunMode::lightgui);
+   startupBIP151CTX();
+   startupBIP150CTX(4, !twoWayEnabled);
+
    logger->info("Starting BS Signer...");
 
 #ifdef NDEBUG
@@ -117,8 +124,6 @@ int main(int argc, char** argv)
    // Armory setting designed to allow the ArmoryDB server to not have to verify
    // clients. Prevents us from having to import tons of keys into the server.
    btc_ecc_start();
-   startupBIP151CTX();
-   startupBIP150CTX(4, true);
 
    return HeadlessApp(argc, argv);
 }

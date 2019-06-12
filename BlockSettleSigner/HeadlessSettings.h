@@ -35,13 +35,14 @@ public:
    std::string logFile() const { return logFile_; }
    std::vector<std::string> trustedTerminals() const;
    std::vector<std::string> trustedInterfaces() const;
+   bool twoWaySignerAuth() const;
 
    bs::signer::RunMode runMode() const { return runMode_; }
 
    bool update(const std::unique_ptr<Settings> &);
+
    static bool loadSettings(Settings *settings, const std::string &fileName);
    static bool saveSettings(const Settings &settings, const std::string &fileName);
-
 private:
    std::shared_ptr<spdlog::logger>  logger_;
 
