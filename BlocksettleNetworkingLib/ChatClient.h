@@ -115,6 +115,12 @@ public:
    void sendFriendRequest(const QString &friendUserId);
    void acceptFriendRequest(const QString &friendUserId);
    void declineFriendRequest(const QString &friendUserId);
+
+   void onFriendRequestReceived(const QString& contactId, BinaryData publicKey);
+   void onFriendRequestAccepted(const QString& contactId, BinaryData publicKey);
+   void onFriendRequestRejected(const QString& contactId);
+   void onFriendRequestedRemove(const QString& userId);
+
    void sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
    void sendSearchUsersRequest(const QString& userIdPattern);
    QString deriveKey(const QString& email) const;
