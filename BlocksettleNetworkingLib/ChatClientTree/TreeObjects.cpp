@@ -41,6 +41,16 @@ std::shared_ptr<Chat::ContactRecordData> ChatContactElement::getContactData() co
    return std::dynamic_pointer_cast<Chat::ContactRecordData>(getDataObject());
 }
 
+ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
+{
+   return onlineStatus_;
+}
+
+void ChatContactElement::setOnlineStatus(const OnlineStatus &onlineStatus)
+{
+   onlineStatus_ = onlineStatus;
+}
+
 bool ChatContactElement::isChildSupported(const TreeItem *item) const
 {
    bool byTypes = CategoryElement::isChildSupported(item);
@@ -123,35 +133,27 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
    return byTypes && byData;
 }
 
-bool ChatContactElement::OTCTradingStarted() const
+bool ChatContactCompleteElement::OTCTradingStarted() const
 {
    return otcRequest_ != nullptr;
 }
 
-bool ChatContactElement::isOTCRequestor() const
+bool ChatContactCompleteElement::isOTCRequestor() const
 {
    return otcRequest_->messageDirectoin() == Chat::MessageData::MessageDirection::Sent;
 }
 
-bool ChatContactElement::haveUpdates() const
+bool ChatContactCompleteElement::haveUpdates() const
 {
    return lastUpdate_ != nullptr;
 }
 
-bool ChatContactElement::haveResponse() const
+bool ChatContactCompleteElement::haveResponse() const
 {
    return otcResponse_ != nullptr;
 }
 
-ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
-{
-   return onlineStatus_;
-}
 
-void ChatContactElement::setOnlineStatus(const OnlineStatus &onlineStatus)
-{
-   onlineStatus_ = onlineStatus;
-}
 
 std::shared_ptr<Chat::UserData> ChatUserElement::getUserData() const
 {
@@ -169,7 +171,7 @@ std::shared_ptr<Chat::DataObject> DisplayableDataNode::getDataObject() const
    return data_;
 }
 
-void ChatContactElement::onChildAdded(TreeItem* item)
+void ChatContactCompleteElement::onChildAdded(TreeItem* item)
 {
    if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode) {
       auto messageNode = dynamic_cast<TreeMessageNode*>(item);
@@ -187,7 +189,7 @@ void ChatContactElement::onChildAdded(TreeItem* item)
    }
 }
 
-void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData)
+void ChatContactCompleteElement::processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData)
 {
    auto messagePayloadType = messageData->messageDataType();
 
@@ -209,22 +211,22 @@ void ChatContactElement::processOTCMessage(const std::shared_ptr<Chat::MessageDa
    }
 }
 
-std::shared_ptr<Chat::OTCRequestData> ChatContactElement::getOTCRequest() const
+std::shared_ptr<Chat::OTCRequestData> ChatContactCompleteElement::getOTCRequest() const
 {
    return otcRequest_;
 }
 
-std::shared_ptr<Chat::OTCResponseData> ChatContactElement::getOTCResponse() const
+std::shared_ptr<Chat::OTCResponseData> ChatContactCompleteElement::getOTCResponse() const
 {
    return otcResponse_;
 }
 
-std::shared_ptr<Chat::OTCUpdateData> ChatContactElement::getLastOTCUpdate() const
+std::shared_ptr<Chat::OTCUpdateData> ChatContactCompleteElement::getLastOTCUpdate() const
 {
    return lastUpdate_;
 }
 
-void ChatContactElement::cleanupTrading()
+void ChatContactCompleteElement::cleanupTrading()
 {
    otcRequest_ = nullptr;
    otcResponse_ = nullptr;

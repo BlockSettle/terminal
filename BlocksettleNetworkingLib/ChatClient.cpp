@@ -212,10 +212,16 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
 
          auto contactNode = model_->findContactNode(senderId.toStdString());
          if (contactNode) {
-            auto data = contactNode->getContactData();
-            data->setContactStatus(Chat::ContactStatus::Accepted);
-            contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
-            model_->notifyContactChanged(data);
+            auto holdData = contactNode->getContactData();
+            if (contactNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
+               holdData->setContactStatus(Chat::ContactStatus::Accepted);
+               contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
+               //model_->notifyContactChanged(data);
+               model_->removeContactRequestNode(holdData->getContactId().toStdString());
+               model_->insertContactObject(holdData,
+                                           contactNode->getOnlineStatus()
+                                           == ChatContactElement::OnlineStatus::Online);
+            }
          }
 
          addOrUpdateContact(senderId, Chat::ContactStatus::Accepted);
@@ -263,10 +269,15 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
 
          auto contactNode = model_->findContactNode(response.senderId());
          if (contactNode){
-            auto data = contactNode->getContactData();
-            data->setContactStatus(Chat::ContactStatus::Accepted);
-            contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
-            model_->notifyContactChanged(data);
+            auto holdData = contactNode->getContactData();
+            if (contactNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)
+               holdData->setContactStatus(Chat::ContactStatus::Accepted);
+               contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
+               //model_->notifyContactChanged(data);
+               model_->removeContactRequestNode(holdData->getContactId().toStdString());
+               model_->insertContactObject(holdData,
+                                           contactNode->getOnlineStatus()
+                                           == ChatContactElement::OnlineStatus::Online);
          } else {
             auto contact =
                   std::make_shared<Chat::ContactRecordData>(
@@ -274,7 +285,7 @@ void ChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRespon
                      contactId,
                      Chat::ContactStatus::Incoming,
                      pk);
-            model_->insertContactObject(contact, true);
+            model_->insertContactRequestObject(contact, true);
             addOrUpdateContact(contactId, Chat::ContactStatus::Incoming);
 
             auto requestS =
@@ -327,11 +338,16 @@ void ChatClient::OnContactsActionResponseServer(const Chat::ContactsActionRespon
          actionString = "ContactsActionServer::RemoveContactRecord";
          //removeContact(QString::fromStdString(response.userId()));
          if (response.getActionResult() == Chat::ContactsActionServerResult::Success) {
-            model_->removeContactNode(response.contactId());
+            auto cNode = model_->findContactNode(response.contactId());
+            if (cNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+               model_->removeContactNode(response.contactId());
+            } else {
+               model_->removeContactRequestNode(response.contactId());
+            }
             chatDb_->removeContact(QString::fromStdString(response.contactId()));
             //TODO: Remove pub key
          }
-         retrySendQueuedMessages(response.contactId());
+         eraseQueuedMessages(response.contactId());
       break;
       case Chat::ContactsActionServer::UpdateContactRecord:
          actionString = "ContactsActionServer::UpdateContactRecord";
@@ -388,10 +404,9 @@ void ChatClient::OnContactsListResponse(const Chat::ContactsListResponse & respo
 
    for (auto remote : remoteContacts) {
       auto citem = model_->findContactItem(remote->getContactId().toStdString());
-
       if (!citem) {
          model_->insertContactObject(remote);
-         retrieveUserMessages(remote->getContactId());
+         //retrieveUserMessages(remote->getContactId());
       } else {
          citem->setContactStatus(remote->getContactStatus());
          model_->notifyContactChanged(citem);
@@ -1162,7 +1177,7 @@ void ChatClient::onActionAddToContacts(const QString& userId)
             Chat::ContactStatus::Outgoing,
             BinaryData());
 
-   model_->insertContactObject(record);
+   model_->insertContactRequestObject(record);
    auto requestD =
          std::make_shared<Chat::ContactActionRequestDirect>(
             "",
@@ -1208,7 +1223,9 @@ void ChatClient::onActionAcceptContactRequest(std::shared_ptr<Chat::ContactRecor
 
    addOrUpdateContact(crecord->getContactId(),
                       crecord->getContactStatus(), crecord->getDisplayName());
-   model_->notifyContactChanged(crecord);
+   auto onlineStatus = model_->findContactNode(crecord->getContactId().toStdString())->getOnlineStatus();
+   model_->removeContactRequestNode(crecord->getContactId().toStdString());
+   model_->insertContactObject(crecord, onlineStatus == ChatContactElement::OnlineStatus::Online);
    retrieveUserMessages(crecord->getContactId());
 
    auto request =

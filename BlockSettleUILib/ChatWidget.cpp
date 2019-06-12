@@ -612,6 +612,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
    if (element) {
       switch (element->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
+            //TODO: Change cast
             auto room = std::dynamic_pointer_cast<Chat::RoomData>(element->getDataObject());
             if (room) {
                setIsRoom(true);
@@ -621,6 +622,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
          }
          break;
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+            //TODO: Change cast
             auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(element->getDataObject());
             if (contact) {
                setIsRoom(false);
@@ -670,6 +672,7 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
    if (element) {
       switch (element->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement: {
+            //TODO: Change cast
             auto room = std::dynamic_pointer_cast<Chat::RoomData>(element->getDataObject());
             if (room && currentChat_ == room->getId()) {
                OTCSwitchToRoom(room);
@@ -677,6 +680,7 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
          }
          break;
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+            //TODO: Change cast
             auto contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(element->getDataObject());
             if (contact && currentChat_ == contact->getContactId()) {
                 ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
@@ -821,7 +825,8 @@ void ChatWidget::OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& co
    }
 
    if (contact->getContactStatus() == Chat::ContactStatus::Accepted) {
-      auto cNode = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
+      auto found = client_->getDataModel()->findContactNode(contact->getContactId().toStdString());
+      auto cNode = static_cast<ChatContactCompleteElement*>(found);
       if (onlineStatus) {
          if (cNode->OTCTradingStarted()) {
             if (cNode->isOTCRequestor()) {

@@ -320,6 +320,16 @@ void BSTerminalMainWindow::postSplashscreenActions()
    }
 }
 
+bool BSTerminalMainWindow::event(QEvent *event)
+{
+   if (event->type() == QEvent::WindowActivate) {
+      auto tabChangedSignal = QMetaMethod::fromSignal(&QTabWidget::currentChanged);
+      int currentIndex = ui_->tabWidget->currentIndex();
+      tabChangedSignal.invoke(ui_->tabWidget, Q_ARG(int, currentIndex));
+   }
+   return QMainWindow::event(event);
+}
+
 BSTerminalMainWindow::~BSTerminalMainWindow()
 {
    applicationSettings_->set(ApplicationSettings::GUI_main_geometry, geometry());

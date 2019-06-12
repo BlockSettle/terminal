@@ -1508,22 +1508,26 @@ QTreeView#treeViewUsers {
     font-size: 11px;
     background-color: #1c2835;
     color: #81888f;
-    border: 1px solid transparent; }
+    border: 1px solid transparent;
+    selection-background-color: transparent; }
 
 QTreeView#treeViewUsers:item {
     font-size: 11px;
-    background-color: #1c2835;
-    selection-background-color: #3a8ab4;
+/*    background-color: #1c2835;*/
+/*    selection-background-color: #3a8ab4;*/
     border: 1px solid transparent;}
 
 ChatSearchListVew#searchResultTreeView:item {
     font-size: 11px;
     background-color: #1c2835;
 /*    selection-background-color: #3a8ab4;*/
+    selection-background-color: transparent;
     border: 1px solid transparent;}
     
 QTreeView#treeViewUsers:item:selected {
-    background-color: #3a8ab4; }
+/*    background-color: #3a8ab4;*/
+    background-color: transparent;
+    selection-background-color: transparent; }
 
 ChatSearchListVew#searchResultTreeView:item:selected {
     background-color: #3a8ab4; }
@@ -1549,6 +1553,7 @@ ChatUsersViewItemStyle {
     qproperty-color_contact_incoming: #ffa834;
     qproperty-color_contact_outgoing: #a0bc5d;
     qproperty-color_contact_rejected: #c4362f;
+    qproperty-color_highlight_background: #3a8ab4;
     }
 
 ChatSearchListViewItemStyle {

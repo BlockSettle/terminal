@@ -27,6 +27,7 @@ void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptio
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          return paintRoomsElement(painter, option, index);
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
          return paintContactsElement(painter, option, index);
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
       case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
@@ -39,12 +40,18 @@ void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptio
 void ChatClientUsersViewItemDelegate::paintCategoryNode(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
+
+   if (itemOption.state & QStyle::State_Selected) {
+      painter->save();
+      painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
+      painter->restore();
+   }
+
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorCategoryItem());
 
    itemOption.text = index.data(Role::CategoryGroupDisplayName).toString();
 
    QStyledItemDelegate::paint(painter, itemOption, index);
-
 }
 
 void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
@@ -53,6 +60,12 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
    if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
+   }
+
+   if (itemOption.state & QStyle::State_Selected) {
+      painter->save();
+      painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
+      painter->restore();
    }
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
@@ -75,7 +88,8 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
 void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
-   if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsElement){
+   if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+       && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement){
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
@@ -84,6 +98,12 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
    OnlineStatus onlineStatus = index.data(Role::ContactOnlineStatusRole).value<OnlineStatus>();
    bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
    itemOption.text = index.data(Role::ContactTitleRole).toString();
+
+   if (itemOption.state & QStyle::State_Selected && contactStatus != ContactStatus::Accepted) {
+      painter->save();
+      painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
+      painter->restore();
+   }
 
    switch (contactStatus) {
       case ContactStatus::Accepted:
@@ -109,10 +129,24 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
          break;
    }
 
+   if (option.state & QStyle::State_Selected) {
+      painter->save();
+      switch (onlineStatus) {
+         case OnlineStatus::Online:
+            painter->fillRect(itemOption.rect, itemStyle_.colorContactOnline());
+            break;
+         case OnlineStatus::Offline:
+            painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
+            break;
+      }
+      painter->restore();
+   }
+
    QStyledItemDelegate::paint(painter, itemOption, index);
 
    // draw dot
    if (newMessage) {
+      painter->save();
       QFontMetrics fm(itemOption.font, painter->device());
       auto textRect = fm.boundingRect(itemOption.rect, 0, itemOption.text);
       const QPixmap pixmap(kDotPathname);
@@ -120,6 +154,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
                     itemOption.rect.top() + itemOption.rect.height() / 2 - kDotSize / 2 + 1,
                     kDotSize, kDotSize);
       painter->drawPixmap(r, pixmap, pixmap.rect());
+      painter->restore();
    }
 }
 
@@ -130,6 +165,12 @@ void ChatClientUsersViewItemDelegate::paintUserElement(QPainter *painter, const 
        && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::SearchElement) {
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
+   }
+
+   if (itemOption.state & QStyle::State_Selected) {
+      painter->save();
+      painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
+      painter->restore();
    }
 
    switch (index.data(Role::UserOnlineStatusRole).value<Chat::UserStatus>()) {
