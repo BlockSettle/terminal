@@ -111,15 +111,20 @@ public:
    bool addOrUpdateContact(const QString &userId,
                            Chat::ContactStatus status,
                            const QString &userName = QStringLiteral(""));
-   bool removeContact(const QString &userId);
+   bool removeContactFromDB(const QString &userId);
+
    void sendFriendRequest(const QString &friendUserId);
    void acceptFriendRequest(const QString &friendUserId);
-   void declineFriendRequest(const QString &friendUserId);
+   void rejectFriendRequest(const QString &friendUserId);
+   void removeFriendOrRequest(const QString& userId);
 
    void onFriendRequestReceived(const QString& contactId, BinaryData publicKey);
    void onFriendRequestAccepted(const QString& contactId, BinaryData publicKey);
    void onFriendRequestRejected(const QString& contactId);
    void onFriendRequestedRemove(const QString& userId);
+
+   void requestRemoveFriendToServer(const QString& contactId);
+   void onServerApprovedFriendRemoving(const QString& contactId);
 
    void sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
    void sendSearchUsersRequest(const QString& userIdPattern);
