@@ -110,6 +110,8 @@ void LoginWindow::accept()
 
 void LoginWindow::onAuthPressed()
 {
+   ui_->lineEditUsername->setText(ui_->lineEditUsername->text().trimmed());
+
    if (state_ == Login) {
       autheIDConnection_->authenticate(ui_->lineEditUsername->text().toStdString(), kAuthTimeout);
       setupLoginPage();

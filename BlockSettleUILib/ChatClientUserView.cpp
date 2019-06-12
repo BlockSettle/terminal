@@ -2,6 +2,7 @@
 #include "ChatClientTree/TreeObjects.h"
 #include "ChatClientUsersViewItemDelegate.h"
 #include "ChatClientDataModel.h"
+#include "BSMessageBox.h"
 
 #include <QMenu>
 #include <QAbstractProxyModel>
@@ -69,6 +70,15 @@ private slots:
       if (!handler_){
          return;
       }
+
+      BSMessageBox confirmRemoveContact(BSMessageBox::question, tr("Remove contact")
+         , tr("Remove %1 as a contact?").arg(currentContact_->hasDisplayName() ? currentContact_->getDisplayName() : currentContact_->getContactId())
+         , tr("Are you sure you wish to remove this contact?"), view_->parentWidget());
+
+      if (confirmRemoveContact.exec() != QDialog::Accepted) {
+         return;
+      }
+
       handler_->onActionRemoveFromContacts(currentContact_);
    }
 
