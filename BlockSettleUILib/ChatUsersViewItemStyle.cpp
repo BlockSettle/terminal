@@ -10,6 +10,7 @@ ChatUsersViewItemStyle::ChatUsersViewItemStyle(QWidget *parent)
    , colorContactIncoming_(Qt::darkYellow)
    , colorContactOutgoing_(Qt::darkGreen)
    , colorContactRejected_(Qt::darkRed)
+   , colorHighlightBackground_(Qt::cyan)
 {
 
 }
@@ -59,6 +60,11 @@ QColor ChatUsersViewItemStyle::colorContactRejected() const
    return colorContactRejected_;
 }
 
+QColor ChatUsersViewItemStyle::colorHighlightBackground() const
+{
+   return colorHighlightBackground_;
+}
+
 void ChatUsersViewItemStyle::setColorCategoryItem(QColor colorCategoryItem)
 {
    colorCategoryItem_ = colorCategoryItem;
@@ -102,4 +108,9 @@ void ChatUsersViewItemStyle::setColorContactOutgoing(QColor colorContactOutgoing
 void ChatUsersViewItemStyle::setColorContactRejected(QColor colorContactRejected)
 {
    colorContactRejected_ = colorContactRejected;
+}
+
+void ChatUsersViewItemStyle::setColorHighlightBackground(QColor colorHighlightBackground)
+{
+   colorHighlightBackground_ = colorHighlightBackground;
 }
