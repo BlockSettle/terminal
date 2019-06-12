@@ -15,6 +15,7 @@ void ChatClientDataModel::initTreeCategoryGroup()
    beginResetModel();
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::RoomsElement, tr("Chat rooms")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, tr("Contacts")));
+   root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement, tr("Contact Requests")));
    root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::AllUsersElement, tr("Users")));
    // root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement, tr("Received Responses")));
    // root_->insertItem(new TreeCategoryGroup(ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement, tr("Sent Responses")));
@@ -55,6 +56,22 @@ bool ChatClientDataModel::insertRoomObject(std::shared_ptr<Chat::RoomData> data)
 }
 
 bool ChatClientDataModel::insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
+{
+   if (data->getContactStatus() == Chat::ContactStatus::Accepted) {
+      return insertContactCompleteObject(data, isOnline);
+   }
+   return insertContactRequestObject(data, isOnline);
+}
+
+bool ChatClientDataModel::insertContactRequestObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
+{
+   beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement);
+   bool res = root_->insertContactRequestObject(data, isOnline);
+   endInsertRows();
+   return res;
+}
+
+bool ChatClientDataModel::insertContactCompleteObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
 {
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::ContactsElement);
    bool res = root_->insertContactObject(data, isOnline);
@@ -204,6 +221,38 @@ bool ChatClientDataModel::removeContactNode(const std::string &contactId)
 
    beginRemoveRows(index, first, last);
    bool res = root_->removeContactNode(contactId);
+   endRemoveRows();
+   return res;
+}
+
+bool ChatClientDataModel::removeContactRequestNode(const std::string &contactId)
+{
+   TreeItem * item = root_->findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement);
+
+   //Check if category node exists and have children that could be removed
+   if (!item || item->getChildren().empty()) {
+      return false;
+   }
+
+   //   If exists, we're creating index for this category node,
+   //   for which children count POTENTIALLY could be changed
+   const QModelIndex index = createIndex(item->selfIndex(), 0, item);
+
+   //Trying to find contact node that contains ContactRecordData with contactId
+   ChatContactElement * contactNode = root_->findContactNode(contactId);
+
+   if (!contactNode){
+      //If not found, then nothing to remove, and returning false
+      return false;
+   }
+
+   //If found, we can get index of this contactNode, it can calculate self index in parent
+   const int first = contactNode->selfIndex();
+   //We removing only one item, so should be first==last
+   const int last = first;
+
+   beginRemoveRows(index, first, last);
+   bool res = root_->removeContactRequestNode(contactId);
    endRemoveRows();
    return res;
 }
@@ -386,7 +435,8 @@ QVariant ChatClientDataModel::roomData(const TreeItem *item, int role) const
 
 QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
 {
-   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+   if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+       || item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
       const ChatContactElement * contact_element = static_cast<const ChatContactElement*>(item);
       auto contact = contact_element->getContactData();
 

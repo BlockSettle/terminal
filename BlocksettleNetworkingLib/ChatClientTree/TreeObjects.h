@@ -24,8 +24,8 @@ public:
 
    Q_ENUM(OnlineStatus)
 
-   ChatContactElement(std::shared_ptr<Chat::ContactRecordData> data)
-      : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::ContactsElement,
+   ChatContactElement(ChatUIDefinitions::ChatTreeNodeType contactNodeType, std::shared_ptr<Chat::ContactRecordData> data)
+      : CategoryElement(contactNodeType,
                         std::vector<ChatUIDefinitions::ChatTreeNodeType>{
                         ChatUIDefinitions::ChatTreeNodeType::MessageDataNode},
                         data)
@@ -33,11 +33,22 @@ public:
 
    std::shared_ptr<Chat::ContactRecordData> getContactData() const;
 
-   // TreeItem interface
    OnlineStatus getOnlineStatus() const;
    void setOnlineStatus(const OnlineStatus &onlineStatus);
 
    bool isChildSupported(const TreeItem *item) const override;
+
+protected:
+   OnlineStatus onlineStatus_;
+};
+
+class ChatContactCompleteElement : public ChatContactElement {
+public:
+   ChatContactCompleteElement(std::shared_ptr<Chat::ContactRecordData> data)
+   : ChatContactElement(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, data)
+   {
+
+   }
 
    bool OTCTradingStarted() const;
    bool isOTCRequestor() const;
@@ -55,11 +66,18 @@ protected:
 private:
    void processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData);
 protected:
-   OnlineStatus onlineStatus_;
-
    std::shared_ptr<Chat::OTCRequestData>  otcRequest_ = nullptr;
    std::shared_ptr<Chat::OTCResponseData> otcResponse_ = nullptr;
    std::shared_ptr<Chat::OTCUpdateData>       lastUpdate_ = nullptr;
+};
+
+class ChatContactRequestElement : public ChatContactElement {
+public:
+   ChatContactRequestElement(std::shared_ptr<Chat::ContactRecordData> data)
+   : ChatContactElement(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement, data)
+   {
+
+   }
 };
 
 class ChatSearchElement : public CategoryElement {

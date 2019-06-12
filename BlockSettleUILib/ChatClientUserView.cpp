@@ -37,7 +37,8 @@ public:
       //ItemType type = static_cast<ItemType>(currentIndex_.data(Role::ItemTypeRole).toInt());
       TreeItem * item = static_cast<TreeItem*>(currentIndex_.internalPointer());
 
-      if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+      if (item && (item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+                || item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)) {
          auto citem = static_cast<ChatContactElement*>(item);
          currentContact_ = citem->getContactData();
          prepareContactMenu();
@@ -116,8 +117,9 @@ private slots:
             addAction(tr("Decline friend request"), this, &ChatUsersContextMenu::onDeclineFriendRequest);
             break;
          case Chat::ContactStatus::Outgoing:
-            addAction(tr("This request is not accepted"));
-            addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+         case Chat::ContactStatus::Rejected:
+            //addAction(tr("This request is not accepted"));
+            addAction(tr("Remove this request"), this, &ChatUsersContextMenu::onRemoveFromContacts);
             break;
          default:
             break;

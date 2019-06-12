@@ -27,6 +27,7 @@ void ChatClientUsersViewItemDelegate::paint(QPainter *painter, const QStyleOptio
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          return paintRoomsElement(painter, option, index);
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
          return paintContactsElement(painter, option, index);
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
       case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
@@ -87,7 +88,8 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
 void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
    QStyleOptionViewItem itemOption(option);
-   if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsElement){
+   if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+       && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement){
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
