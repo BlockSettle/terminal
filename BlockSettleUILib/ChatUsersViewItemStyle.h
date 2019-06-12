@@ -15,6 +15,7 @@ class ChatUsersViewItemStyle : public QWidget
    Q_PROPERTY(QColor color_contact_incoming READ colorContactIncoming WRITE setColorContactIncoming)
    Q_PROPERTY(QColor color_contact_outgoing READ colorContactOutgoing WRITE setColorContactOutgoing)
    Q_PROPERTY(QColor color_contact_rejected READ colorContactRejected WRITE setColorContactRejected)
+   Q_PROPERTY(QColor color_highlight_background READ colorHighlightBackground WRITE setColorHighlightBackground)
 private:
    QColor colorCategoryItem_;
    QColor colorRoom_;
@@ -25,7 +26,7 @@ private:
    QColor colorContactIncoming_;
    QColor colorContactOutgoing_;
    QColor colorContactRejected_;
-
+   QColor colorHighlightBackground_;
 
 public:
    explicit ChatUsersViewItemStyle(QWidget *parent = nullptr);
@@ -39,7 +40,7 @@ public:
    QColor colorContactIncoming() const;
    QColor colorContactOutgoing() const;
    QColor colorContactRejected() const;
-
+   QColor colorHighlightBackground() const;
 
 signals:
 
@@ -53,5 +54,6 @@ public slots:
    void setColorContactIncoming(QColor colorContactIncoming);
    void setColorContactOutgoing(QColor colorContactOutgoing);
    void setColorContactRejected(QColor colorContactRejected);
+   void setColorHighlightBackground(QColor colorHighlightBackground);
 };
 #endif // CHATUSERSVIEWITEMSTYLE_H
