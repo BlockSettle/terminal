@@ -71,11 +71,6 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    model_->setModelChangesHandler(this);
    proxyModel_ = std::make_shared<ChatTreeModelWrapper>();
    proxyModel_->setSourceModel(model_.get());
-
-   heartbeatTimer_.setInterval(30 * 1000);
-   heartbeatTimer_.setSingleShot(false);
-   connect(&heartbeatTimer_, &QTimer::timeout, this, &ChatClient::sendHeartbeat);
-   //heartbeatTimer_.start();
 }
 
 ChatClient::~ChatClient() noexcept
@@ -523,13 +518,6 @@ void ChatClient::readDatabase()
    }
 }
 
-void ChatClient::sendHeartbeat()
-{
-   if (loggedIn_ && connection_->isActive()) {
-      sendRequest(std::make_shared<Chat::HeartbeatPingRequest>(currentUserId_));
-   }
-}
-
 void ChatClient::onForceLogoutSignal()
 {
    logout(false);
@@ -548,11 +536,6 @@ void ChatClient::addMessageState(const std::shared_ptr<Chat::MessageData>& messa
    } else {
       message->unsetFlag(state);
    }
-}
-
-void ChatClient::OnHeartbeatPong(const Chat::HeartbeatPongResponse &response)
-{
-   logger_->debug("[ChatClient::OnHeartbeatPong] {}", response.getData());
 }
 
 void ChatClient::OnUsersList(const Chat::UsersListResponse &response)

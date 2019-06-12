@@ -25,7 +25,6 @@ namespace Chat {
    {
    public:
       virtual ~ResponseHandler() = default;
-      virtual void OnHeartbeatPong(const HeartbeatPongResponse &) = 0;
       virtual void OnUsersList(const UsersListResponse &) = 0;
       virtual void OnMessages(const MessagesResponse &) = 0;
 

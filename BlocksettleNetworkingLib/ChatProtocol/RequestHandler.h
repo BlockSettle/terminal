@@ -26,7 +26,6 @@ namespace Chat {
    {
    public:
       virtual ~RequestHandler() = default;
-      virtual void OnHeartbeatPing(const HeartbeatPingRequest& request) = 0;
 
       virtual void OnLogin(const LoginRequest&) = 0;
       virtual void OnLogout(const LogoutRequest&) = 0;

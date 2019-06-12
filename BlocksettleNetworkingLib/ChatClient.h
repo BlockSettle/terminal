@@ -16,7 +16,6 @@
 
 #include <QAbstractItemModel>
 #include <QObject>
-#include <QTimer>
 
 namespace spdlog {
    class logger;
@@ -62,7 +61,6 @@ public:
       , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout(bool send = true);
 
-   void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
    void OnUsersList(const Chat::UsersListResponse &) override;
    void OnMessages(const Chat::MessagesResponse &) override;
    void OnLoginReturned(const Chat::LoginResponse &) override;
@@ -162,7 +160,6 @@ public slots:
 
 private slots:
    void onForceLogoutSignal();
-   void sendHeartbeat();
    void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
    void retrySendQueuedMessages(const std::string userId);
    void eraseQueuedMessages(const std::string userId);
@@ -184,8 +181,6 @@ private:
    // Queue of messages to be sent for each receiver, once we received the public key.
    using messages_queue = std::queue<std::shared_ptr<Chat::MessageData> >;
    std::map<QString, messages_queue>    enqueued_messages_;
-
-   QTimer            heartbeatTimer_;
 
    std::string       currentUserId_;
    std::string       currentJwt_;
