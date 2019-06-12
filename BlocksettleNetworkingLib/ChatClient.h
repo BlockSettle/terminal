@@ -3,13 +3,8 @@
 
 #include "BaseChatClient.h"
 #include "ChatClientTree/TreeObjects.h"
-#include "ChatDB.h"
 #include "ChatHandleInterfaces.h"
-#include "ChatProtocol/ChatProtocol.h"
-#include "ChatCommonTypes.h"
 #include "DataConnectionListener.h"
-#include "SecureBinaryData.h"
-#include "Encryption/ChatSessionKey.h"
 
 #include <queue>
 #include <unordered_set>
@@ -27,12 +22,11 @@ class UserHasher;
 class UserSearchModel;
 class ChatTreeModelWrapper;
 
-class ChatClient : public QObject
-             , public BaseChatClient
-             , public ChatItemActionsHandler
-             , public ChatSearchActionsHandler
-             , public ChatMessageReadHandler
-             , public ModelChangesHandler
+class ChatClient : public BaseChatClient
+                 , public ChatItemActionsHandler
+                 , public ChatSearchActionsHandler
+                 , public ChatMessageReadHandler
+                 , public ModelChangesHandler
 {
    Q_OBJECT
 
@@ -94,14 +88,9 @@ private:
 
 signals:
    void ConnectedToServer();
-   void ConnectionClosed();
-   void ConnectionError(int errorCode);
 
    void LoginFailed();
    void LoggedOut();
-   void UsersReplace(const std::vector<std::string>& users);
-   void UsersAdd(const std::vector<std::string>& users);
-   void UsersDel(const std::vector<std::string>& users);
    void IncomingFriendRequest(const std::vector<std::string>& users);
    void FriendRequestAccepted(const std::vector<std::string>& users);
    void FriendRequestRejected(const std::vector<std::string>& users);
@@ -127,6 +116,13 @@ private slots:
 
 protected:
    BinaryData getOwnAuthPublicKey() const override;
+   SecureBinaryData   getOwnAuthPrivateKey() const override;
+   std::string getChatServerHost() const override;
+   std::string getChatServerPort() const override;
+
+   void OnLoginCompleted() override;
+   void OnLofingFailed() override;
+   void OnLogoutCompleted() override;
 
    // ChatItemActionsHandler interface
 public:
@@ -152,8 +148,6 @@ public:
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;
-
-   std::unique_ptr<ChatDB>                chatDb_;
 
    std::shared_ptr<ChatClientDataModel>   model_;
    std::shared_ptr<UserSearchModel>       userSearchModel_;

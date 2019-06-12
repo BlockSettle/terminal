@@ -1,32 +1,21 @@
 #include "ChatClient.h"
-#include "ChatProtocol/ChatProtocol.h"
 
 #include <disable_warnings.h>
-#include <spdlog/spdlog.h>
 #include <botan/bigint.h>
 #include <botan/base64.h>
 #include <botan/auto_rng.h>
 #include <enable_warnings.h>
 
-#include "ZMQ_BIP15X_DataConnection.h"
 #include "ChatDB.h"
-#include "ConnectionManager.h"
 #include "ApplicationSettings.h"
 #include "autheid_utils.h"
-#include "UserHasher.h"
 #include "ChatClientDataModel.h"
 #include "UserSearchModel.h"
 #include "ChatTreeModelWrapper.h"
-#include <QRegularExpression>
-
-#include "Encryption/AEAD_Encryption.h"
-#include "Encryption/AEAD_Decryption.h"
-#include "Encryption/IES_Encryption.h"
-#include "Encryption/IES_Decryption.h"
-#include "Encryption/ChatSessionKeyData.h"
 
 #include <QDateTime>
 #include <QDebug>
+#include <QRegularExpression>
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
@@ -43,9 +32,8 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
                   , const std::shared_ptr<ApplicationSettings> &appSettings
                   , const std::shared_ptr<spdlog::logger>& logger)
 
-   : connectionManager_(connectionManager)
+   : BaseChatClient{connectionManager, logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile)}
    , appSettings_(appSettings)
-   , logger_(logger)
 {
    qRegisterMetaType<std::shared_ptr<Chat::MessageData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::MessageData>>>();
@@ -54,17 +42,6 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
    qRegisterMetaType<std::shared_ptr<Chat::UserData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::UserData>>>();
 
-   chatSessionKeyPtr_ = std::make_shared<Chat::ChatSessionKey>(logger);
-
-   //This is required (with Qt::QueuedConnection), because of ZmqBIP15XDataConnection crashes when delete it from this (callback) thread
-   connect(this, &ChatClient::ForceLogoutSignal, this, &ChatClient::onForceLogoutSignal, Qt::QueuedConnection);
-
-   chatDb_ = make_unique<ChatDB>(logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile));
-   if (!chatDb_->loadKeys(contactPublicKeys_)) {
-      throw std::runtime_error("failed to load chat public keys");
-   }
-
-   hasher_ = std::make_shared<UserHasher>();
    model_ = std::make_shared<ChatClientDataModel>();
    userSearchModel_ = std::make_shared<UserSearchModel>();
    model_->setModelChangesHandler(this);
@@ -92,57 +69,6 @@ std::shared_ptr<ChatTreeModelWrapper> ChatClient::getProxyModel()
    return proxyModel_;
 }
 
-std::string ChatClient::loginToServer(const std::string& email, const std::string& jwt
-   , const ZmqBIP15XDataConnection::cbNewKey &cb)
-{
-   if (connection_) {
-      logger_->error("[ChatClient::loginToServer] connecting with not purged connection");
-      return {};
-   }
-
-   currentUserId_ = hasher_->deriveKey(email);
-   currentJwt_ = jwt;
-
-   connection_ = connectionManager_->CreateZMQBIP15XDataConnection();
-   connection_->setCBs(cb);
-
-   if (!connection_->openConnection(
-          appSettings_->get<std::string>(ApplicationSettings::chatServerHost),
-          appSettings_->get<std::string>(ApplicationSettings::chatServerPort), this)
-       )
-   {
-      logger_->error("[ChatClient::loginToServer] failed to open ZMQ data connection");
-      connection_.reset();
-   }
-
-   return currentUserId_;
-}
-
-void ChatClient::OnLoginReturned(const Chat::LoginResponse &response)
-{
-   if (response.getStatus() == Chat::LoginResponse::Status::LoginOk) {
-      model_->initTreeCategoryGroup();
-      emit ConnectedToServer();
-      model_->setCurrentUser(currentUserId_);
-      readDatabase();
-      auto messagesRequest = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentUserId_);
-      sendRequest(messagesRequest);
-//      auto request2 = std::make_shared<Chat::ContactsListRequest>("", currentUserId_);
-//      sendRequest(request2);
-   }
-   else {
-      emit LoginFailed();
-   }
-}
-
-void ChatClient::OnLogoutResponse(const Chat::LogoutResponse & response)
-{
-   logger_->debug("[ChatClient::OnLogoutResponse]: Server sent logout response with data: {}", response.getData());
-   emit ForceLogoutSignal();
-
-   chatSessionKeyPtr_->clearAll();
-}
-
 void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response)
 {
    QJsonDocument json(response.toJson());
@@ -168,7 +94,6 @@ void ChatClient::OnSendMessageResponse(const Chat::SendMessageResponse& response
 
 void ChatClient::OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse& response)
 {
-   //TODO: Implement me!
    std::string messageId = response.messageId();
    std::string senderId = response.messageSenderId();
    std::string receiverId = response.messageReceiverId();
@@ -477,24 +402,26 @@ void ChatClient::OnSearchUsersResponse(const Chat::SearchUsersResponse & respons
                   );
 }
 
-void ChatClient::logout(bool send)
+void ChatClient::OnLoginCompleted()
 {
-   if (!connection_) {
-      logger_->error("[ChatClient::logout] Disconnected already");
-      return;
-   }
+   model_->initTreeCategoryGroup();
+   emit ConnectedToServer();
+   model_->setCurrentUser(currentUserId_);
+   readDatabase();
+   auto messagesRequest = std::make_shared<Chat::MessagesRequest>("", currentUserId_, currentUserId_);
+   sendRequest(messagesRequest);
+//      auto request2 = std::make_shared<Chat::ContactsListRequest>("", currentUserId_);
+//      sendRequest(request2);
+}
 
-   if (send) {
-      auto request = std::make_shared<Chat::LogoutRequest>("", currentUserId_, "", "");
-      sendRequest(request);
-   }
+void ChatClient::OnLofingFailed()
+{
+   emit LoginFailed();
+}
 
-   currentUserId_.clear();
-   currentJwt_.clear();
-
-   connection_.reset();
+void ChatClient::OnLogoutCompleted()
+{
    model_->clearModel();
-
    emit LoggedOut();
 }
 
@@ -537,23 +464,10 @@ void ChatClient::addMessageState(const std::shared_ptr<Chat::MessageData>& messa
    }
 }
 
-void ChatClient::OnUsersList(const Chat::UsersListResponse &response)
+void ChatClient::OnUsersList(const Chat::UsersListResponse& response)
 {
-   logger_->debug("Received users list from server: {}", response.getData());
+   logger_->debug("[ChatClient::OnUsersList] Received users list from server: {}", response.getData());
    auto dataList = response.getDataList();
-
-   //This switch for compatibility with old code, if presented somewhere
-   switch (response.command()) {
-      case Chat::UsersListResponse::Command::Replace:
-         emit UsersReplace(dataList);
-         break;
-      case Chat::UsersListResponse::Command::Add:
-         emit UsersAdd(dataList);
-         break;
-      case Chat::UsersListResponse::Command::Delete:
-         emit UsersDel(dataList);
-         break;
-   }
 
    std::for_each(dataList.begin(), dataList.end(), [response, this](const std::string& user)
    {
@@ -671,7 +585,7 @@ void ChatClient::OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response
 
 void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response)
 {
-   logger_->debug("Received public key of peer from server: {}", response.getData());
+   logger_->debug("[ChatClient::OnSendOwnPublicKey] Received public key of peer from server: {}", response.getData());
 
    // Make sure we are the node for which a public key was expected, if not, ignore this call.
    if ( currentUserId_ != response.getReceivingNodeId()) {
@@ -688,38 +602,6 @@ void ChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &respon
       sendMessageDataRequest(messages.front(), QString::fromStdString(response.getSendingNodeId()));
       messages.pop();
    }
-}
-
-void ChatClient::OnDataReceived(const std::string& data)
-{
-   auto response = Chat::Response::fromJSON(data);
-   if (!response) {
-      logger_->error("[ChatClient::OnDataReceived] failed to parse message:\n{}", data);
-      return;
-   }
-   // Process on main thread because otherwise ChatDB could crash
-   QMetaObject::invokeMethod(this, [this, response] {
-      response->handle(*this);
-   });
-}
-
-void ChatClient::OnConnected()
-{
-   logger_->debug("[ChatClient::OnConnected]");
-   BinaryData localPublicKey(appSettings_->GetAuthKeys().second.data(), appSettings_->GetAuthKeys().second.size());
-   auto loginRequest = std::make_shared<Chat::LoginRequest>("", currentUserId_, currentJwt_, localPublicKey.toHexStr());
-   sendRequest(loginRequest);
-}
-
-void ChatClient::OnDisconnected()
-{
-   logger_->debug("[ChatClient::OnDisconnected]");
-   emit ForceLogoutSignal();
-}
-
-void ChatClient::OnError(DataConnectionError errorCode)
-{
-   logger_->debug("[ChatClient::OnError] {}", errorCode);
 }
 
 std::shared_ptr<Chat::MessageData> ChatClient::sendOwnMessage(
@@ -1370,4 +1252,19 @@ BinaryData ChatClient::getOwnAuthPublicKey() const
    const auto publicKey = appSettings_->GetAuthKeys().second;
 
    return BinaryData(publicKey.data(), publicKey.size());
+}
+
+SecureBinaryData ChatClient::getOwnAuthPrivateKey() const
+{
+   return SecureBinaryData{appSettings_->GetAuthKeys().first.data(), appSettings_->GetAuthKeys().first.size()};
+}
+
+std::string ChatClient::getChatServerHost() const
+{
+   return appSettings_->get<std::string>(ApplicationSettings::chatServerHost);
+}
+
+std::string ChatClient::getChatServerPort() const
+{
+   return appSettings_->get<std::string>(ApplicationSettings::chatServerPort);
 }

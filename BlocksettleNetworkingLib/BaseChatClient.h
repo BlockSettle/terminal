@@ -4,17 +4,31 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "DataConnectionListener.h"
 #include "ChatProtocol/ResponseHandler.h"
+#include "ChatProtocol/ChatProtocol.h"
+#include "Encryption/ChatSessionKey.h"
+#include "SecureBinaryData.h"
+#include "ChatCommonTypes.h"
+#include "ChatDB.h"
 
 #include <spdlog/spdlog.h>
 
-class ConnectionManager;
+#include <queue>
+#include <memory>
+#include <map>
 
-class BaseChatClient : public DataConnectionListener
+class ConnectionManager;
+class UserHasher;
+
+class BaseChatClient : public QObject
+                     , public DataConnectionListener
                      , public Chat::ResponseHandler
 {
+   Q_OBJECT
+
 public:
    BaseChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
-                  , const std::shared_ptr<spdlog::logger>& logger);
+                  , const std::shared_ptr<spdlog::logger>& logger
+                  , const QString& dbFile);
    ~BaseChatClient() noexcept;
 
    BaseChatClient(const BaseChatClient&) = delete;
@@ -62,8 +76,23 @@ public:
 
    QString getUserId() const;
 
+private slots:
+   void onCleanupConnection();
+
+signals:
+   void CleanupConnection();
+
 protected:
-   virtual BinaryData getOwnAuthPublicKey() const = 0;
+   virtual BinaryData         getOwnAuthPublicKey() const = 0;
+   virtual SecureBinaryData   getOwnAuthPrivateKey() const = 0;
+   virtual std::string        getChatServerHost() const = 0;
+   virtual std::string        getChatServerPort() const = 0;
+
+   void setSavedKeys(std::map<QString, BinaryData>&& loadedKeys);
+
+   virtual void OnLoginCompleted() = 0;
+   virtual void OnLofingFailed() = 0;
+   virtual void OnLogoutCompleted() = 0;
 
 protected:
    bool sendFriendRequestToServer(const QString &friendUserId);
@@ -71,27 +100,27 @@ protected:
    bool sendDeclientFriendRequestToServer(const QString &friendUserId);
    bool sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
 
-private:
    bool sendRequest(const std::shared_ptr<Chat::Request>& request);
 
    bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey);
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
+   std::unique_ptr<ChatDB>                chatDb_;
+   std::string                            currentUserId_;
 
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
 
-   std::map<QString, BinaryData>                               contactPublicKeys_;
-   Chat::ChatSessionKeyPtr  chatSessionKeyPtr_;
-   std::shared_ptr<ZmqBIP15XDataConnection>                    connection_;
-   std::shared_ptr<UserHasher>                                 hasher_;
-   std::map<QString, Botan::SecureVector<uint8_t>>             userNonces_;
+   std::map<QString, BinaryData>                      contactPublicKeys_;
+   Chat::ChatSessionKeyPtr                            chatSessionKeyPtr_;
+   std::shared_ptr<ZmqBIP15XDataConnection>           connection_;
+   std::shared_ptr<UserHasher>                        hasher_;
+   std::map<QString, Botan::SecureVector<uint8_t>>    userNonces_;
    // Queue of messages to be sent for each receiver, once we received the public key.
    using messages_queue = std::queue<std::shared_ptr<Chat::MessageData> >;
    std::map<QString, messages_queue>    enqueued_messages_;
 
-   std::string       currentUserId_;
    std::string       currentJwt_;
 };
 #endif // __BASE_CHAT_CLIENT_H__
