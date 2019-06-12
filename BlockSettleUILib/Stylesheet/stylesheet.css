@@ -198,7 +198,13 @@ QFrame#loginLogo {
   background-image: url(":resources/login-logo.png");
   background-position: center right;
   background-repeat: no-repeat; }
+  
+QFrame#messagesHeaderFrame {
+  background-color: #18202b;}
 
+QWidget#chatTopSeparatorWidget {
+  background-color: #3f4c50;}
+  
 QToolBar {
   background: transparent;
   spacing: 0;
@@ -871,6 +877,9 @@ QPushButton#signWithEidButton:hover {
   background-color: #3080aa; }
 QPushButton#signWithEidButton:pressed {
   background-color: #4090ba; }
+  
+QPushButton#pushButtonChangeLog {
+  padding-top: 0px;}
 
 QPushButton[left_button=true], QToolButton[left_button=true], [left_button=true][buttonImportant="true"], [left_button=true][buttonSuccess="true"], [left_button=true][buttonWarning="true"] {
   border-width: 1px 0px 1px 1px;
@@ -1478,7 +1487,7 @@ QFrame#chatSearchPopupFrame, QFrame#chatFoundUserList {
     background-color: #1c2835; }
     
 QLabel#chatSearchPopupLabel,
-QTreeView#searchResultTreeView,
+ChatSearchListVew#searchResultTreeView,
 QLabel#notFoundLabel {
     background-color: #1c2835;
     font-family: 'Open Sans', arial, sans-serif;
@@ -1506,8 +1515,17 @@ QTreeView#treeViewUsers:item {
     background-color: #1c2835;
     selection-background-color: #3a8ab4;
     border: 1px solid transparent;}
+
+ChatSearchListVew#searchResultTreeView:item {
+    font-size: 11px;
+    background-color: #1c2835;
+/*    selection-background-color: #3a8ab4;*/
+    border: 1px solid transparent;}
     
 QTreeView#treeViewUsers:item:selected {
+    background-color: #3a8ab4; }
+
+ChatSearchListVew#searchResultTreeView:item:selected {
     background-color: #3a8ab4; }
     
 ChatUserListTreeViewStyle {
@@ -1528,6 +1546,14 @@ ChatUsersViewItemStyle {
     qproperty-color_user_offline: #c0c0c0;
     qproperty-color_contact_online: #00c8f8;
     qproperty-color_contact_offline: #c0c0c0;
+    qproperty-color_contact_incoming: #ffa834;
+    qproperty-color_contact_outgoing: #a0bc5d;
+    qproperty-color_contact_rejected: #c4362f;
+    }
+
+ChatSearchListViewItemStyle {
+    qproperty-color_contact_unknown: #c0c0c0;
+    qproperty-color_contact_accepted: #00c8f8;
     qproperty-color_contact_incoming: #ffa834;
     qproperty-color_contact_outgoing: #a0bc5d;
     qproperty-color_contact_rejected: #c4362f;

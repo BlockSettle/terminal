@@ -6,6 +6,7 @@
 #include <memory>
 
 class QAbstractItemModel;
+class ChatSearchActionsHandler;
 
 namespace Ui {
    class SearchWidget;
@@ -38,12 +39,13 @@ public:
 
    bool eventFilter(QObject *watched, QEvent *event) override;
 
-   void init();
+   void init(std::shared_ptr<ChatSearchActionsHandler> handler);
 
    bool isLineEditEnabled() const;
    bool isListVisible() const;
    QString searchText() const;
    void setSearchModel(const std::shared_ptr<QAbstractItemModel> &model);
+   void clearSearchLineOnNextInput();
 
 public slots:
    void clearLineEdit();
@@ -55,6 +57,11 @@ public slots:
 private slots:
    void resetTreeView();
    void showContextMenu(const QPoint &pos);
+   void focusResults();
+   void onItemClicked(const QModelIndex &index);
+   void leaveSearchResults();
+   void leaveAndCloseSearchResults();
+   void onInputTextChanged(const QString &text);
 
 signals:
    void searchUserTextEdited(const QString &text);

@@ -120,6 +120,7 @@ public:
    QString deriveKey(const QString& email) const;
    void clearSearch();
    bool isFriend(const QString &userId);
+   Chat::ContactRecordData getContact(const QString &userId) const;
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
    std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
    QString getUserId();
@@ -150,7 +151,7 @@ signals:
    void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
    void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
    void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
-   void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
+   void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered);
    void NewContactRequest(const QString &userId);
    void ContactRequestAccepted(const QString &userId);
    void RoomsInserted();
@@ -194,6 +195,8 @@ private:
    std::shared_ptr<ChatClientDataModel> model_;
    std::shared_ptr<UserSearchModel> userSearchModel_;
    std::shared_ptr<ChatTreeModelWrapper> proxyModel_;
+
+   bool              emailEntered_{ false };
 
    // ChatItemActionsHandler interface
 public:

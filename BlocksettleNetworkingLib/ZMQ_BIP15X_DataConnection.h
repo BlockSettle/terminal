@@ -10,7 +10,7 @@
 #include "AuthorizedPeers.h"
 #include "BIP150_151.h"
 #include "ZmqDataConnection.h"
-#include "ZMQ_BIP15X_Msg.h"
+#include "ZMQ_BIP15X_Helpers.h"
 
 // DESIGN NOTES: Remote data connections must have a callback for when unknown
 // server keys are seen. The callback should ask the user if they'll accept
@@ -77,6 +77,8 @@ struct ZmqBIP15XDataConnectionParams
    void setLocalHeartbeatInterval();
 };
 
+class ZmqBipMsg;
+
 class ZmqBIP15XDataConnection : public DataConnection
 {
 public:
@@ -96,8 +98,8 @@ public:
    void setCBs(const cbNewKey& inNewKeyCB);
    BinaryData getOwnPubKey() const;
    bool genBIPIDCookie();
-   void addAuthPeer(const BinaryData& inKey, const std::string& inKeyName);
-   void updatePeerKeys(const std::vector<std::pair<std::string, BinaryData>> &);
+   void addAuthPeer(const ZmqBIP15XPeer &peer);
+   void updatePeerKeys(const ZmqBIP15XPeers &peers);
 
    // Could be called from callbacks and control thread (where openConnection was called, main thread usually)
    bool send(const std::string& data) override;
@@ -128,7 +130,7 @@ private:
    }
 
    // Use to send a packet that this class has generated.
-   void sendPacket(const std::string& data);
+   void sendPacket(const BinaryData& data);
 
    void onRawDataReceived(const std::string& rawData) override;
 
@@ -141,7 +143,7 @@ private:
    void onError(DataConnectionListener::DataConnectionError errorCode);
 
    void ProcessIncomingData(BinaryData& payload);
-   bool processAEADHandshake(const ZmqBIP15XMsgPartial& msgObj);
+   bool processAEADHandshake(const ZmqBipMsg& msgObj);
    bool verifyNewIDKey(const BinaryDataRef& newKey
       , const std::string& srvAddrPort);
    AuthPeersLambdas getAuthPeerLambda() const;
@@ -156,18 +158,17 @@ private:
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<std::promise<bool>> serverPubkeyProm_;
    bool  serverPubkeySignalled_ = false;
-   std::shared_ptr<AuthorizedPeers> authPeers_;
-   std::shared_ptr<BIP151Connection> bip151Connection_;
+   std::unique_ptr<AuthorizedPeers> authPeers_;
+   mutable std::mutex authPeersMutex_;
+   std::unique_ptr<BIP151Connection> bip151Connection_;
    std::chrono::time_point<std::chrono::steady_clock> outKeyTimePoint_;
    uint32_t outerRekeyCount_ = 0;
    uint32_t innerRekeyCount_ = 0;
-   ZmqBIP15XMsgFragments currentReadMessage_;
    BinaryData leftOverData_;
    bool bip150HandshakeCompleted_ = false;
    bool bip151HandshakeCompleted_ = false;
    const std::string bipIDCookiePath_;
    const BIP15XCookie cookie_;
-   uint32_t msgID_ = 0;
 
    cbNewKey cbNewKey_;
 

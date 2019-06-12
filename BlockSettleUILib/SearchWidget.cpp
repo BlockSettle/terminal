@@ -23,8 +23,18 @@ SearchWidget::SearchWidget(QWidget *parent)
            this, &SearchWidget::searchUserTextEdited);
    connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
            this, &SearchWidget::searchTextChanged);
-   connect(ui_->searchResultTreeView, &QTreeView::customContextMenuRequested,
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::textChanged,
+           this, &SearchWidget::onInputTextChanged);
+   connect(ui_->chatSearchLineEdit, &ChatSearchLineEdit::keyDownPressed,
+           this, &SearchWidget::focusResults);
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::customContextMenuRequested,
            this, &SearchWidget::showContextMenu);
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::activated,
+           this, &SearchWidget::onItemClicked);
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveRequired,
+           this, &SearchWidget::leaveSearchResults);
+   connect(ui_->searchResultTreeView, &ChatSearchListVew::leaveWithCloseRequired,
+           this, &SearchWidget::leaveAndCloseSearchResults);
 }
 
 SearchWidget::~SearchWidget()
@@ -44,17 +54,15 @@ bool SearchWidget::eventFilter(QObject *watched, QEvent *event)
    return QWidget::eventFilter(watched, event);
 }
 
-void SearchWidget::init()
+void SearchWidget::init(std::shared_ptr<ChatSearchActionsHandler> handler)
 {
-   setFixedHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
-                  ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
+   ui_->chatSearchLineEdit->setActionsHandler(handler);
 
-   ui_->searchResultTreeView->setHeaderHidden(true);
-   ui_->searchResultTreeView->setRootIsDecorated(false);
+   setMaximumHeight(kBottomSpace + kRowHeigth * kMaxVisibleRows +
+                    ui_->chatSearchLineEdit->height() + kUserListPaddings + kFullHeightMargins);
+   setMinimumHeight(kBottomSpace + ui_->chatSearchLineEdit->height());
+
    ui_->searchResultTreeView->setVisible(false);
-   ui_->searchResultTreeView->setSelectionMode(QAbstractItemView::NoSelection);
-   ui_->searchResultTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
-
    ui_->notFoundLabel->setVisible(false);
 
    qApp->installEventFilter(this);
@@ -99,6 +107,11 @@ void SearchWidget::setSearchModel(const std::shared_ptr<QAbstractItemModel> &mod
            this, &SearchWidget::resetTreeView);
 }
 
+void SearchWidget::clearSearchLineOnNextInput()
+{
+   ui_->chatSearchLineEdit->setResetOnNextInput(true);
+}
+
 void SearchWidget::clearLineEdit()
 {
    ui_->chatSearchLineEdit->clear();
@@ -119,6 +132,7 @@ void SearchWidget::setListVisible(bool value)
    bool hasUsers = ui_->searchResultTreeView->model()->rowCount() > 0;
    ui_->searchResultTreeView->setVisible(value && hasUsers);
    ui_->searchResultTreeView->scrollToTop();
+   ui_->searchResultTreeView->setCurrentIndex(QModelIndex());
    ui_->notFoundLabel->setVisible(value && !hasUsers);
    layout()->update();
    listVisibleTimer_->stop();
@@ -143,18 +157,82 @@ void SearchWidget::showContextMenu(const QPoint &pos)
    if (!index.isValid()) {
       return;
    }
-   bool isInContacts = index.data(UserSearchModel::IsInContacts).toBool();
+   auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
    QString id = index.data(Qt::DisplayRole).toString();
-   if (isInContacts) {
-      auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
-         emit removeFriendRequired(id);
-      });
-      action->setStatusTip(tr("Click to remove user from contact list"));
-   } else {
+   switch (status) {
+   case UserSearchModel::UserStatus::ContactUnknown: {
       auto action = menu->addAction(tr("Add to contacts"), [this, id] {
          emit addFriendRequied(id);
       });
       action->setStatusTip(tr("Click to add user to contact list"));
+      break;
+   }
+   case UserSearchModel::UserStatus::ContactAccepted:
+   case UserSearchModel::UserStatus::ContactPendingIncoming:
+   case UserSearchModel::UserStatus::ContactPendingOutgoing: {
+      auto action = menu->addAction(tr("Remove from contacts"), [this, id] {
+         emit removeFriendRequired(id);
+      });
+      action->setStatusTip(tr("Click to remove user from contact list"));
+      break;
+   }
+   default:
+      return;
    }
    menu->exec(ui_->searchResultTreeView->mapToGlobal(pos));
+}
+
+void SearchWidget::focusResults()
+{
+   if (ui_->searchResultTreeView->isVisible()) {
+      ui_->searchResultTreeView->setFocus();
+      auto index = ui_->searchResultTreeView->model()->index(0, 0);
+      ui_->searchResultTreeView->setCurrentIndex(index);
+   }
+}
+
+void SearchWidget::onItemClicked(const QModelIndex &index)
+{
+   if (!index.isValid()) {
+      return;
+   }
+   QString id = index.data(Qt::DisplayRole).toString();
+   auto status = index.data(UserSearchModel::UserStatusRole).value<UserSearchModel::UserStatus>();
+   switch (status) {
+   case UserSearchModel::UserStatus::ContactUnknown: {
+      emit addFriendRequied(id);
+      break;
+   }
+   case UserSearchModel::UserStatus::ContactAccepted:
+   case UserSearchModel::UserStatus::ContactPendingIncoming:
+   case UserSearchModel::UserStatus::ContactPendingOutgoing: {
+      emit removeFriendRequired(id);
+      break;
+   }
+   default:
+      return;
+   }
+}
+
+void SearchWidget::leaveSearchResults()
+{
+   ui_->chatSearchLineEdit->setFocus();
+   ui_->searchResultTreeView->clearSelection();
+   auto currentIndex = ui_->searchResultTreeView->currentIndex();
+   ui_->searchResultTreeView
+         ->selectionModel()
+         ->setCurrentIndex(currentIndex, QItemSelectionModel::Deselect);
+}
+
+void SearchWidget::leaveAndCloseSearchResults()
+{
+   ui_->chatSearchLineEdit->setFocus();
+   setListVisible(false);
+}
+
+void SearchWidget::onInputTextChanged(const QString &text)
+{
+   if (text.isEmpty()) {
+      setListVisible(false);
+   }
 }

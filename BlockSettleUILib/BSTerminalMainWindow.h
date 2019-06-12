@@ -233,13 +233,17 @@ private:
    QString           loginButtonText_;
    NetworkSettings   networkSettings_;
    bool readyToRegisterWallets_ = false;
+   bool wasWalletsRegistered_ = false;
    bool initialWalletCreateDialogShown_ = false;
    bool armoryKeyDialogShown_ = false;
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;
 
+   SignContainer::ConnectionError lastSignerError_{};
+
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
+
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

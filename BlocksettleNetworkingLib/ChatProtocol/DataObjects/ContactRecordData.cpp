@@ -84,3 +84,8 @@ void ContactRecordData::setUserId(const QString &userId)
 {
    userId_ = userId;
 }
+
+bool ContactRecordData::isValid() const
+{
+   return !userId_.isEmpty();
+}

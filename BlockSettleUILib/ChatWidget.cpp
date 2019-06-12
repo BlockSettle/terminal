@@ -11,6 +11,7 @@
 #include "ChatTreeModelWrapper.h"
 #include "UserSearchModel.h"
 #include "CelerClient.h"
+#include "ChatSearchListViewItemStyle.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -40,8 +41,6 @@ enum class OTCPages : int
    OTCContactShieldPage,
    OTCContactNetStatusShieldPage
 };
-
-constexpr int kShowEmptyFoundUserListTimeoutMs = 3000;
 
 const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
                                   QRegularExpression::CaseInsensitiveOption);
@@ -349,9 +348,9 @@ void ChatWidget::onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData
    }
 }
 
-void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users)
+void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered)
 {
-   std::vector<std::pair<QString,bool>> userInfoList;
+   std::vector<UserSearchModel::UserInfo> userInfoList;
    QString searchText = ui_->searchWidget->searchText();
    bool isEmail = kRxEmail.match(searchText).hasMatch();
    QString hash = client_->deriveKey(searchText);
@@ -361,15 +360,45 @@ void ChatWidget::onSearchUserListReceived(const std::vector<std::shared_ptr<Chat
          if (isEmail && userId != hash) {
             continue;
          }
-         userInfoList.emplace_back(userId, client_->isFriend(userId));
+         auto status = UserSearchModel::UserStatus::ContactUnknown;
+         auto contact = client_->getContact(userId);
+         if (contact.isValid()) {
+            auto contactStatus = contact.getContactStatus();
+            switch (contactStatus) {
+            case Chat::ContactStatus::Accepted:
+               status = UserSearchModel::UserStatus::ContactAccepted;
+               break;
+            case Chat::ContactStatus::Incoming:
+               status = UserSearchModel::UserStatus::ContactPendingIncoming;
+               break;
+            case Chat::ContactStatus::Outgoing:
+               status = UserSearchModel::UserStatus::ContactPendingOutgoing;
+               break;
+            case Chat::ContactStatus::Rejected:
+               status = UserSearchModel::UserStatus::ContactRejected;
+               break;
+            /*default:
+               break;*/
+            }
+         }
+         userInfoList.emplace_back(userId, status);
       }
    }
    client_->getUserSearchModel()->setUsers(userInfoList);
 
-   ui_->searchWidget->setListVisible(true);
+   bool visible = true;
+   if (isEmail) {
+      visible = emailEntered || !userInfoList.empty();
+      if (visible) {
+         ui_->searchWidget->clearSearchLineOnNextInput();
+      }
+   } else {
+      visible = !userInfoList.empty();
+   }
+   ui_->searchWidget->setListVisible(visible);
 
    // hide popup after a few sec
-   if (users.size() == 0) {
+   if (visible && userInfoList.empty()) {
       ui_->searchWidget->startListAutoHide();
    }
 }
@@ -412,8 +441,9 @@ void ChatWidget::changeState(ChatWidget::State state)
 
 void ChatWidget::initSearchWidget()
 {
+   ui_->searchWidget->init(client_);
    ui_->searchWidget->setSearchModel(client_->getUserSearchModel());
-   ui_->searchWidget->init();
+   client_->getUserSearchModel()->setItemStyle(std::make_shared<ChatSearchListViewItemStyle>());
    connect(ui_->searchWidget, &SearchWidget::addFriendRequied,
            this, &ChatWidget::onSendFriendRequest);
    connect(ui_->searchWidget, &SearchWidget::removeFriendRequired,
