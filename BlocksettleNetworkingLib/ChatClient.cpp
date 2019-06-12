@@ -1377,7 +1377,14 @@ std::shared_ptr<Chat::MessageData> ChatClient::decryptIESMessage(const std::shar
       Botan::SecureVector<uint8_t> decodedData;
       dec->finish(decodedData);
 
-      return message->CreateDecryptedMessage(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()));
+
+
+      auto decrypted = message->CreateDecryptedMessage(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()));
+      if (decrypted == nullptr) {
+         logger_->error("Failed to create decrypted message {}", message->id().toStdString());
+         throw std::runtime_error("Failed to create decrypted message:" + message->id().toStdString());
+      }
+      return decrypted;
    }
    catch (std::exception &) {
       logger_->error("Failed to decrypt msg from DB {}", message->id().toStdString());
