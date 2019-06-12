@@ -1117,7 +1117,7 @@ void ChatClient::onFriendRequestAccepted(const QString &contactId, BinaryData pu
             "",
             model_->currentUser(),
             contactId.toStdString(),
-            Chat::ContactsActionServer::UpdateContactRecord,
+            Chat::ContactsActionServer::AddContactRecord,
             Chat::ContactStatus::Accepted, publicKey);
    sendRequest(requestS);
 
