@@ -22,8 +22,9 @@ namespace {
 using namespace Blocksettle::Communication;
 
 SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+   , const std::shared_ptr<QmlBridge> &qmlBridge
    , const NetworkType netType, const BinaryData* inSrvIDKey)
-   : QObject(nullptr), logger_(logger), netType_(netType)
+   : QObject(nullptr), logger_(logger), qmlBridge_(qmlBridge), netType_(netType)
 {
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = true;
@@ -47,7 +48,7 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       adapterConn->addAuthPeer(ZmqBIP15XPeer(connectAddr, *inSrvIDKey));
    }
 
-   listener_ = std::make_shared<SignerInterfaceListener>(logger, adapterConn, this);
+   listener_ = std::make_shared<SignerInterfaceListener>(logger, qmlBridge_, adapterConn, this);
    if (!adapterConn->openConnection(kLocalAddrV4, kLocalAddrPort
       , listener_.get())) {
       throw std::runtime_error("adapter connection failed");

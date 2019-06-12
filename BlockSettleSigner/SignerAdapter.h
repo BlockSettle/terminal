@@ -7,6 +7,7 @@
 #include "SignerDefs.h"
 #include "QPasswordData.h"
 #include "BSErrorCode.h"
+#include "QmlBridge.h"
 
 namespace bs {
    namespace sync {
@@ -33,6 +34,7 @@ class SignerAdapter : public QObject
 
 public:
    SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
+      , const std::shared_ptr<QmlBridge> &qmlBridge
       , const NetworkType netType, const BinaryData* inSrvIDKey = nullptr);
    ~SignerAdapter() override;
 
@@ -111,6 +113,7 @@ private:
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    std::shared_ptr<SignerInterfaceListener>  listener_;
+   std::shared_ptr<QmlBridge>  qmlBridge_;
    bool closeHeadless_{true};
 };
 
