@@ -28,15 +28,15 @@ void QmlBridge::setCtxt(QQmlContext *ctxt)
    ctxt_ = ctxt;
 }
 
-void QmlBridge::execJsCallback(int reqId, const QJSValueList &args)
-{
-   const auto &itCb = cbReqs.find(reqId);
-   if (itCb == cbReqs.end()) {
-      logger_->error("[QmlBridge::{}] failed to find callback for id {}"
-         , __func__, reqId);
-      return;
-   }
+//void QmlBridge::execJsCallback(int reqId, const QJSValueList &args)
+//{
+//   const auto &itCb = cbReqs.find(reqId);
+//   if (itCb == cbReqs.end()) {
+//      logger_->error("[QmlBridge::{}] failed to find callback for id {}"
+//         , __func__, reqId);
+//      return;
+//   }
 
-   itCb->second(args);
-   cbReqs.erase(itCb);
-}
+//   itCb->second(args);
+//   cbReqs.erase(itCb);
+//}

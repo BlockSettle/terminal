@@ -184,32 +184,16 @@ void SignerInterfaceListener::onPeerConnected(const std::string &data, bool conn
 
 void SignerInterfaceListener::onSignTxRequested(const std::string &data)
 {
-   signer::SignTxRequest evt;
-   if (!evt.ParseFromString(data)) {
+   signer::SignTxRequest req;
+   if (!req.ParseFromString(data)) {
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
 
-   bs::core::wallet::TXSignRequest txReq;
-   txReq.walletId = evt.wallet_id();
-   for (int i = 0; i < evt.inputs_size(); ++i) {
-      UTXO utxo;
-      utxo.unserialize(evt.inputs(i));
-      txReq.inputs.emplace_back(std::move(utxo));
-   }
-   for (int i = 0; i < evt.recipients_size(); ++i) {
-      const BinaryData bd(evt.recipients(i));
-      txReq.recipients.push_back(ScriptRecipient::deserialize(bd));
-   }
-   txReq.fee = evt.fee();
-   txReq.RBF = evt.rbf();
-   if (evt.has_change()) {
-      txReq.change.address = evt.change().address();
-      txReq.change.index = evt.change().index();
-      txReq.change.value = evt.change().value();
-   }
-   QMetaObject::invokeMethod(parent_, [this, txReq, evt] {
-      emit parent_->requestPasswordAndSignTx(txReq, QString::fromStdString(evt.prompt()));
+   bs::core::wallet::TXSignRequest txReq = bs::wallet::TXInfo::getCoreSignTxRequest(req);
+
+   QMetaObject::invokeMethod(parent_, [this, txReq, req] {
+      emit parent_->requestPasswordAndSignTx(txReq, QString::fromStdString(req.prompt()));
    });
 }
 
@@ -225,24 +209,26 @@ void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &dat
    signer::SignTxRequest txRequest = request.signtxrequest();
    Internal::SettlementInfo settlementInfo = request.settlementinfo();
 
-   bs::core::wallet::TXSignRequest txReq;
-   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
+   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
-   auto cb = std::make_shared<bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>>([this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
+
+   bs::signer::QmlCallbackBase *cb = new bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>([this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
       signer::DecryptWalletEvent request;
       request.set_wallet_id(walletId.toStdString());
-      request.set_password(passwordData->binaryPassword().toBinStr());
+      if (passwordData) {
+         request.set_password(passwordData->binaryPassword().toBinStr());
+      }
       request.set_errorcode(static_cast<uint32_t>(result));
       send(signer::PasswordReceivedType, request.SerializeAsString());
    });
 
 
 
-   qmlBridge_->invokeQmlMethod<int, QString, bs::wallet::QPasswordData *>("test", cb
-      , QStringLiteral("prompt")
+   qmlBridge_->invokeQmlMethod("test", cb
+      , QString::fromStdString(txRequest.prompt())
       , QVariant::fromValue(txInfo)
-      , QVariant::fromValue(new bs::hd::WalletInfo()));
+      , QVariant::fromValue(new bs::hd::WalletInfo(txRequest.wallet_id())));
 }
 
 

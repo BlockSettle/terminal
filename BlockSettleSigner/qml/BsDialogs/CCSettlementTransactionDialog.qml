@@ -21,7 +21,8 @@ CustomTitleDialogWindow {
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
     property int addressRowHeight: 24
-    property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+    //property int recvAddrHeight: txInfo.recvAddresses.length < 4 ? txInfo.recvAddresses.length * addressRowHeight : addressRowHeight * 3
+    property int recvAddrHeight: 22
 
     id: root
     title: qsTr("Sign Transaction")
