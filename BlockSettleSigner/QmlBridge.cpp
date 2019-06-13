@@ -28,7 +28,7 @@ void QmlBridge::setCtxt(QQmlContext *ctxt)
    ctxt_ = ctxt;
 }
 
-void QmlBridge::execJsCallback(int reqId, QJSValueList args)
+void QmlBridge::execJsCallback(int reqId, const QJSValueList &args)
 {
    const auto &itCb = cbReqs.find(reqId);
    if (itCb == cbReqs.end()) {

@@ -2,6 +2,8 @@
 #include <spdlog/spdlog.h>
 #include <QDataStream>
 #include <QFile>
+#include <QObject>
+#include <QVariant>
 #include <QStandardPaths>
 #include <QApplication>
 #include "CelerClientConnection.h"
@@ -14,9 +16,8 @@
 
 #include "SignerInterfaceListener.h"
 #include "SignerAdapterContainer.h"
+#include "TXInfo.h"
 #include <memory>
-
-//#include "WalletsProxy.h"
 
 
 SignerInterfaceListener::SignerInterfaceListener(const std::shared_ptr<spdlog::logger> &logger
@@ -214,14 +215,19 @@ void SignerInterfaceListener::onSignTxRequested(const std::string &data)
 
 void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &data)
 {
-//   std::function<void(int, QString, bs::wallet::QPasswordData *)> cb = [this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
 
-//      signer::DecryptWalletEvent request;
-////      request.set_wallet_id(walletId.toStdString());
-////      request.set_password(passwordData->binaryPassword().toBinStr());
-//      request.set_errorcode(static_cast<uint32_t>(result));
-//      send(signer::PasswordReceivedType, request.SerializeAsString());
-//   };
+   signer::SignSettlementTxRequest request;
+   if (!request.ParseFromString(data)) {
+      logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
+      return;
+   }
+
+   signer::SignTxRequest txRequest = request.signtxrequest();
+   Internal::SettlementInfo settlementInfo = request.settlementinfo();
+
+   bs::core::wallet::TXSignRequest txReq;
+   bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
+   QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
 
    auto cb = std::make_shared<bs::signer::QmlCallback<int, QString, bs::wallet::QPasswordData *>>([this](int result, const QString &walletId, bs::wallet::QPasswordData *passwordData){
       signer::DecryptWalletEvent request;
@@ -232,12 +238,11 @@ void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &dat
    });
 
 
-//   //Action<int, QString, bs::wallet::QPasswordData *> action(cb);
-
 
    qmlBridge_->invokeQmlMethod<int, QString, bs::wallet::QPasswordData *>("test", cb
-                   , Q_ARG(int, 1)
-                   , Q_ARG(int, 2));
+      , QStringLiteral("prompt")
+      , QVariant::fromValue(txInfo)
+      , QVariant::fromValue(new bs::hd::WalletInfo()));
 }
 
 

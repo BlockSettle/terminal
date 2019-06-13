@@ -195,7 +195,7 @@ ApplicationWindow {
         dlg.init()
     }
 
-    function invoke(method, cb, val0, val1, val2, val3, val4, val5, val6, val7) {
+    function invokeQmlMetod(method, cb, val0, val1, val2, val3, val4, val5, val6, val7) {
         eval(method)(cb, val0, val1, val2, val3, val4, val5, val6, val7)
     }
 }

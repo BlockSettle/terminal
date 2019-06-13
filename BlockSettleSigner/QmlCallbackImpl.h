@@ -81,14 +81,6 @@ public:
       setJsValuesGen<N-1>(jsValues);
    }
 
-//   template <int N>
-//   void setJsValuesGen(const QJSValueList &jsValues) {
-//      setJsValue<N>(jsValues);
-//      if (N > 0) {
-//         setJsValuesGen<N-1>(jsValues);
-//      }
-//   }
-
    template <int Is>
    void setJsValue(const QJSValueList &jsValues)
    {

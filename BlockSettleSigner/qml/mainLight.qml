@@ -157,4 +157,56 @@ ApplicationWindow {
             mainWindow.height = h
         })
     }
+
+    function getJsCallback(reqId) {
+        return function(argList){ qmlFactory.execJsCallback(reqId, argList)}
+    }
+
+    function test(jsCallback, prompt, txInfo, walletInfo) {
+        console.log("test executed")
+        console.log(cb)
+
+        raiseWindow()
+
+        var dlg = Qt.createComponent("BsDialogs/TxSignDialog.qml").createObject(mainWindow)
+        dlg.walletInfo = walletInfo
+        dlg.prompt = prompt
+        dlg.txInfo = txInfo
+
+        dlg.bsAccepted.connect(function() {
+            jsCallback(walletInfo.walletId, dlg.passwordData, false)
+        })
+        dlg.bsRejected.connect(function() {
+            jsCallback(walletInfo.walletId, dlg.passwordData, true)
+        })
+        mainWindow.requestActivate()
+        dlg.open()
+
+        dlg.init()
+    }
+
+    function invokeQmlMetod(method, cb, argList) {
+
+        console.log("invokeQmlMetod")
+
+        var val0 = argList[0];
+        var val1 = argList[1];
+        var val2 = argList[2];
+        var val3 = argList[3];
+        var val4 = argList[4];
+
+        console.log(cb)
+
+
+             if (typeof val4 !== 'undefined') eval(method)(cb, val0, val1, val2, val3, val4)
+        else if (typeof val3 !== 'undefined') eval(method)(cb, val0, val1, val2, val3)
+        else if (typeof val2 !== 'undefined') eval(method)(cb, val0, val1, val2)
+        else if (typeof val1 !== 'undefined') eval(method)(cb, val0, val1)
+        else if (typeof val0 !== 'undefined') eval(method)(cb, val0)
+        else if (cb !== 'undefined')          eval(method)(cb)
+        else                                  eval(method)()
+
+
+
+    }
 }
