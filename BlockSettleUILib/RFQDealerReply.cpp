@@ -7,6 +7,7 @@
 
 #include <QComboBox>
 #include <QFileDialog>
+#include <QLineEdit>
 
 #include "ApplicationSettings.h"
 #include "AssetManager.h"
@@ -141,6 +142,11 @@ void RFQDealerReply::initUi()
    ui_->spinBoxOfferPx->setEnabled(false);
 
    ui_->labelProductGroup->clear();
+
+   ui_->comboBoxAQScript->setEditable(true);
+   ui_->comboBoxAQScript->lineEdit()->setPlaceholderText(tr("Select script..."));
+   ui_->comboBoxAQScript->lineEdit()->setReadOnly(true);
+   ui_->comboBoxAQScript->lineEdit()->setEnabled(false);
 
    validateGUI();
 }
