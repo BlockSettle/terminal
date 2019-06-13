@@ -41,6 +41,11 @@ public:
                              , const ZmqBIP15XDataConnection::cbNewKey &);
    void LogoutFromServer();
 
+   void retrieveUserMessages(const QString &userId);
+   void retrieveRoomMessages(const QString &roomId);
+
+   bool removeContact(const QString &userId);
+
 public:
    void OnDataReceived(const std::string& data) override;
    void OnConnected() override;
@@ -69,6 +74,16 @@ public:
 
    // Called when we asked for a public key of peer, and got result.
    void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
+
+protected:
+
+   bool getContacts(ContactRecordDataList &contactList);
+   bool addOrUpdateContact(const QString &userId,
+                           Chat::ContactStatus status,
+                           const QString &userName = QStringLiteral(""));
+
+   bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
+   std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
 
 public:
    bool sendSearchUsersRequest(const QString& userIdPattern);
@@ -100,9 +115,15 @@ protected:
    bool sendDeclientFriendRequestToServer(const QString &friendUserId);
    bool sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
 
+   std::shared_ptr<Chat::MessageData> sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& message
+                                                             , const QString &receiver);
+
    bool sendRequest(const std::shared_ptr<Chat::Request>& request);
 
    bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey);
+
+   void retrySendQueuedMessages(const std::string userId);
+   void eraseQueuedMessages(const std::string userId);
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;

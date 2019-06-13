@@ -58,33 +58,16 @@ public:
    std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
          const QString& message, const QString &receiver);
 
-// DB related
-   void retrieveUserMessages(const QString &userId);
-   void retrieveRoomMessages(const QString &roomId);
-
-   bool getContacts(ContactRecordDataList &contactList);
-   bool addOrUpdateContact(const QString &userId,
-                           Chat::ContactStatus status,
-                           const QString &userName = QStringLiteral(""));
-   bool removeContact(const QString &userId);
-   Chat::ContactRecordData getContact(const QString &userId) const;
-
-   bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
-
-
-   bool sendFriendRequest(const QString &friendUserId);
+   void sendFriendRequest(const QString &friendUserId);
    void acceptFriendRequest(const QString &friendUserId);
    void declineFriendRequest(const QString &friendUserId);
    void clearSearch();
    bool isFriend(const QString &userId);
 
-   std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
+   Chat::ContactRecordData getContact(const QString &userId) const;
 
 private:
    void readDatabase();
-
-   std::shared_ptr<Chat::MessageData> sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& message
-                                                             , const QString &receiver);
 
 signals:
    void ConnectedToServer();
@@ -104,15 +87,7 @@ signals:
    void ContactRequestAccepted(const QString &userId);
    void RoomsInserted();
 
-   void ForceLogoutSignal();
-public slots:
-   //void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
-
-private slots:
-   void onForceLogoutSignal();
    void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
-   void retrySendQueuedMessages(const std::string userId);
-   void eraseQueuedMessages(const std::string userId);
 
 protected:
    BinaryData getOwnAuthPublicKey() const override;
