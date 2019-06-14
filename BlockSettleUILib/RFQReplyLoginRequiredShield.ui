@@ -32,7 +32,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Login to submit responsive quotes</string>
+      <string>Login to submit Quotes</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
