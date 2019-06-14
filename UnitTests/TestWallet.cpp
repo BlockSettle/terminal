@@ -1085,7 +1085,7 @@ TEST_F(TestWallet, CreateDestroyLoad_AuthLeaf)
    }
 }
 
-TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
+TEST_F(TestWallet, SyncWallet_TriggerPoolExtension)
 {
    SecureBinaryData passphrase("test");
    std::string filename;
