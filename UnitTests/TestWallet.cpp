@@ -792,7 +792,7 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(syncWallet->getUsedAddressCount(), 16);
       EXPECT_EQ(syncWallet->getExtAddressCount(), 10);
       EXPECT_EQ(syncWallet->getIntAddressCount(), 6);
-       syncWallet->syncAddresses();
+      syncWallet->syncAddresses();
 
       //create WO copy
       auto WOcopy = walletPtr->createWatchingOnly();
@@ -1518,6 +1518,13 @@ TEST_F(TestWallet, ImportExport_xpriv)
    catch (...)
    {}
 
+   //grab root
+   {
+      auto lock = wallet3->lockForEncryption(passphrase);
+      auto xpriv3 = wallet3->getDecryptedRootXpriv();
+      EXPECT_EQ(xpriv3, xpriv);
+   }
+
    //check addr & id
    auto leaf3 = grp3->getLeafByPath(0u);
    auto addr3 = leaf3->getAddressByIndex(0, true);
@@ -1705,7 +1712,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    fut1.wait();
 
    //mine 6 more blocks
-   curHeight = envPtr_->armoryConnection()->topBlock();
+    curHeight = envPtr_->armoryConnection()->topBlock();
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
    envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 

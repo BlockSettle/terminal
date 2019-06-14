@@ -84,10 +84,13 @@ TEST(TestUi, Display)
 
 TEST(TestUi, RFQ_entry_CC_sell)
 {
+   SecureBinaryData passphrase("passphrase");
+   bs::core::wallet::Seed seed(CryptoPRNG::generateRandom(32), NetworkType::TestNet);
+
    TestEnv env(StaticLogger::loggerPtr);
    env.requireAssets();
-   env.walletsMgr()->createWallet("Primary", "", NetworkType::TestNet
-      , env.appSettings()->GetHomeDir().toStdString(), {}, true);
+   env.walletsMgr()->createWallet("Primary", "", seed
+      , env.appSettings()->GetHomeDir().toStdString(), passphrase, true);
    ASSERT_NE(env.walletsMgr()->getPrimaryWallet(), nullptr);
    const auto priWallet = env.walletsMgr()->getPrimaryWallet();
    const auto ccGroup = priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);

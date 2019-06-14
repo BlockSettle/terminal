@@ -35,14 +35,14 @@ class ConnectionManager;
 class MarketDataProvider;
 class QuoteProvider;
 
-class ResolverCoinbase : public ResolverFeed
+class ResolverOneAddress : public ResolverFeed
 {
 private:
    SecureBinaryData privKey_;
    BinaryData pubKey_;
 
 public:
-   ResolverCoinbase(
+   ResolverOneAddress(
       const SecureBinaryData& privkey,
       const BinaryData& pubkey) :
       privKey_(privkey), pubKey_(pubkey)
