@@ -120,6 +120,7 @@ namespace bs {
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
+         QString askForAQScript();
 
       private:
          std::unique_ptr<Ui::RFQDealerReply> ui_;

@@ -33,6 +33,8 @@
 
 using namespace bs::ui;
 
+constexpr int kSelectAQFileItemIndex = 1;
+
 RFQDealerReply::RFQDealerReply(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::RFQDealerReply())
@@ -493,7 +495,7 @@ void RFQDealerReply::updateSubmitButton()
    }
 
    if ((currentQRN_.assetType == bs::network::Asset::SpotXBT)
-      && (ui_->authenticationAddressComboBox->currentIndex() == -1)) {
+      && (ui_->authenticationAddressComboBox->currentIndex() <= kSelectAQFileItemIndex)) {
       ui_->pushButtonSubmit->setEnabled(false);
       return;
    }
@@ -884,6 +886,12 @@ bool RFQDealerReply::eventFilter(QObject *watched, QEvent *evt)
    return QWidget::eventFilter(watched, evt);
 }
 
+QString RFQDealerReply::askForAQScript()
+{
+   return QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QString()
+                                       , tr("QML files (*.qml)"));
+}
+
 void RFQDealerReply::showCoinControl()
 {
    if (currentQRN_.assetType == bs::network::Asset::PrivateMarket) {
@@ -913,8 +921,10 @@ void RFQDealerReply::validateGUI()
    ui_->checkBoxAQ->setChecked(aqLoaded_);
 
    // enable toggleswitch only if a script file is already selected
-   bool isValidScript = (ui_->comboBoxAQScript->currentIndex() > 0);
-   ui_->checkBoxAQ->setEnabled(isValidScript && celerConnected_);
+   bool isValidScript = (ui_->comboBoxAQScript->currentIndex() > kSelectAQFileItemIndex);
+   if (!(isValidScript && celerConnected_)) {
+      ui_->checkBoxAQ->setChecked(false);
+   }
    ui_->comboBoxAQScript->setEnabled(celerConnected_);
    ui_->groupBoxAutoSign->setEnabled(celerConnected_);
 }
@@ -947,7 +957,7 @@ void RFQDealerReply::aqFillHistory()
       return;
    }
    ui_->comboBoxAQScript->clear();
-   int curIndex = /*-1*/0;
+   int curIndex = 0;
    ui_->comboBoxAQScript->addItem(tr("Select script..."));
    ui_->comboBoxAQScript->addItem(tr("Load new AQ script"));
    const auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
@@ -957,7 +967,7 @@ void RFQDealerReply::aqFillHistory()
          QFileInfo fi(scripts[i]);
          ui_->comboBoxAQScript->addItem(fi.fileName(), scripts[i]);
          if (scripts[i] == lastScript) {
-            curIndex = i + 2; // note the "Load" row in the head
+            curIndex = i + kSelectAQFileItemIndex + 1; // note the "Load" row in the head
          }
       }
    }
@@ -966,15 +976,12 @@ void RFQDealerReply::aqFillHistory()
 
 void RFQDealerReply::aqScriptChanged(int curIndex)
 {
-   if (curIndex < 0) {
+   if (curIndex < kSelectAQFileItemIndex) {
       return;
    }
 
-   if (curIndex == 0) {
-      //
-   } else if (curIndex == 1) {
-      const auto scriptFN = QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QString()
-         , tr("QML files (*.qml)"));
+   if (curIndex == kSelectAQFileItemIndex) {
+      const auto scriptFN = askForAQScript();
 
       if (scriptFN.isEmpty()) {
          aqFillHistory();
@@ -1023,6 +1030,24 @@ void RFQDealerReply::onAqScriptFailed(const QString &filename, const QString &er
 
 void RFQDealerReply::checkBoxAQClicked()
 {
+   bool isValidScript = (ui_->comboBoxAQScript->currentIndex() > kSelectAQFileItemIndex);
+   if (ui_->checkBoxAQ->isChecked() && !isValidScript) {
+      BSMessageBox question(BSMessageBox::question
+         , tr("Try to enable Auto Quoting")
+         , tr("Auto Quoting Script is not specified. Do you want to select a script from file?"));
+      const bool answerYes = (question.exec() == QDialog::Accepted);
+      if (answerYes) {
+         const auto scriptFileName = askForAQScript();
+         if (scriptFileName.isEmpty()) {
+            ui_->checkBoxAQ->setChecked(false);
+         } else {
+            initAQ(scriptFileName);
+         }
+      } else {
+         ui_->checkBoxAQ->setChecked(false);
+      }
+   }
+
    if (aqLoaded_) {
       aq_->disableAQ();
       aqLoaded_ = false;
