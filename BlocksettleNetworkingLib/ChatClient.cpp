@@ -19,8 +19,6 @@
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::MessageData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::MessageData>>)
-Q_DECLARE_METATYPE(std::shared_ptr<Chat::RoomData>)
-Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::RoomData>>)
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::UserData>)
 Q_DECLARE_METATYPE(std::vector<std::shared_ptr<Chat::UserData>>)
 
@@ -32,13 +30,11 @@ ChatClient::ChatClient(const std::shared_ptr<ConnectionManager>& connectionManag
                   , const std::shared_ptr<ApplicationSettings> &appSettings
                   , const std::shared_ptr<spdlog::logger>& logger)
 
-   : BaseChatClient{connectionManager, logger, appSettings_->get<QString>(ApplicationSettings::chatDbFile)}
-   , appSettings_(appSettings)
+   : BaseChatClient{connectionManager, logger, appSettings->get<QString>(ApplicationSettings::chatDbFile)}
+   , appSettings_{appSettings}
 {
    qRegisterMetaType<std::shared_ptr<Chat::MessageData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::MessageData>>>();
-   qRegisterMetaType<std::shared_ptr<Chat::RoomData>>();
-   qRegisterMetaType<std::vector<std::shared_ptr<Chat::RoomData>>>();
    qRegisterMetaType<std::shared_ptr<Chat::UserData>>();
    qRegisterMetaType<std::vector<std::shared_ptr<Chat::UserData>>>();
 
@@ -120,7 +116,6 @@ void ChatClient::addMessageState(const std::shared_ptr<Chat::MessageData>& messa
                     ? message->receiverId()
                     : message->senderId();
       sendUpdateMessageState(message);
-      emit MessageStatusUpdated(message->id(), chatId, message->state());
    } else {
       message->unsetFlag(state);
    }
@@ -494,4 +489,200 @@ std::string ChatClient::getChatServerHost() const
 std::string ChatClient::getChatServerPort() const
 {
    return appSettings_->get<std::string>(ApplicationSettings::chatServerPort);
+}
+
+void ChatClient::onRoomsLoaded(const std::vector<std::shared_ptr<Chat::RoomData>>& roomsList)
+{
+   for (const auto& room : roomsList) {
+      model_->insertRoomObject(room);
+   }
+   emit RoomsInserted();
+}
+
+void ChatClient::onUserListChanged(Chat::UsersListResponse::Command command, const std::vector<std::string>& userList)
+{
+   for (const auto& user : userList) {
+      auto contact = model_->findContactNode(user);
+      if (contact) {
+         ChatContactElement::OnlineStatus status = ChatContactElement::OnlineStatus::Offline;
+         switch (command) {
+            case Chat::UsersListResponse::Command::Replace:
+               status = ChatContactElement::OnlineStatus::Online;
+               break;
+            case Chat::UsersListResponse::Command::Add:
+               status = ChatContactElement::OnlineStatus::Online;
+               break;
+            case Chat::UsersListResponse::Command::Delete:
+               status = ChatContactElement::OnlineStatus::Offline;
+               break;
+         }
+
+         contact->setOnlineStatus(status);
+         model_->notifyContactChanged(contact->getContactData());
+      }
+   }
+}
+
+void ChatClient::onMessageSent(const QString& receiverId, const QString& localId, const QString& serverId)
+{
+   auto message = model_->findMessageItem(receiverId.toStdString(), localId.toStdString());
+   if (message){
+      message->setId(serverId);
+      message->setFlag(Chat::MessageData::State::Sent);
+      model_->notifyMessageChanged(message);
+   } else {
+      logger_->error("[ChatClient::onMessageSent] message not found: {}"
+                     , localId.toStdString());
+   }
+}
+
+void ChatClient::onMessageStatusChanged(const QString& chatId, const QString& messageId, int newStatus)
+{
+   auto message = model_->findMessageItem(chatId.toStdString(), messageId.toStdString());
+   if (message) {
+      message->updateState(newStatus);
+      model_->notifyMessageChanged(message);
+   }
+}
+
+void ChatClient::onContactAccepted(const QString& contactId)
+{
+   auto contactNode = model_->findContactNode(contactId.toStdString());
+   if (contactNode) {
+      auto holdData = contactNode->getContactData();
+      if (contactNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
+         holdData->setContactStatus(Chat::ContactStatus::Accepted);
+         contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
+         //model_->notifyContactChanged(data);
+         model_->removeContactRequestNode(holdData->getContactId().toStdString());
+         model_->insertContactObject(holdData
+                                     , contactNode->getOnlineStatus() == ChatContactElement::OnlineStatus::Online);
+      }
+   }
+}
+
+void ChatClient::onContactRejected(const QString& contactId)
+{
+   auto contactNode = model_->findContactNode(contactId.toStdString());
+   if (contactNode){
+      auto data = contactNode->getContactData();
+      data->setContactStatus(Chat::ContactStatus::Rejected);
+      contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
+      model_->notifyContactChanged(data);
+   }
+}
+
+void ChatClient::onFriendRequest(const QString& userId, const QString& contactId, const BinaryData& pk)
+{
+   auto contactNode = model_->findContactNode(contactId.toStdString());
+   if (contactNode) {
+      auto holdData = contactNode->getContactData();
+      if (contactNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
+         holdData->setContactStatus(Chat::ContactStatus::Accepted);
+         contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
+         //model_->notifyContactChanged(data);
+         model_->removeContactRequestNode(holdData->getContactId().toStdString());
+         model_->insertContactObject(holdData
+                                    , contactNode->getOnlineStatus() == ChatContactElement::OnlineStatus::Online);
+      }
+   } else {
+      auto contact = std::make_shared<Chat::ContactRecordData>(userId , contactId, Chat::ContactStatus::Incoming, pk);
+
+      model_->insertContactRequestObject(contact, true);
+      addOrUpdateContact(contactId, Chat::ContactStatus::Incoming);
+
+      auto requestS = std::make_shared<Chat::ContactActionRequestServer>(""
+               , currentUserId_
+               , contactId.toStdString()
+               , Chat::ContactsActionServer::AddContactRecord
+               , Chat::ContactStatus::Incoming ,pk);
+      sendRequest(requestS);
+
+      emit NewContactRequest(contactId);
+   }
+}
+
+void ChatClient::onContactRemove(const QString& contactId)
+{
+   auto cNode = model_->findContactNode(contactId.toStdString());
+   if (cNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+      model_->removeContactNode(contactId.toStdString());
+   } else {
+      model_->removeContactRequestNode(contactId.toStdString());
+   }
+}
+
+void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData)
+{
+   model_->insertContactsMessage(messageData);
+}
+
+void ChatClient::onRoomMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData)
+{
+   model_->insertRoomMessage(messageData);
+}
+
+void ChatClient::retrieveUserMessages(const QString &userId)
+{
+   auto messages = chatDb_->getUserMessages(QString::fromStdString(currentUserId_), userId);
+   if (!messages.empty()) {
+      for (auto &msg : messages) {
+         if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
+            msg = decryptIESMessage(msg);
+         }
+         model_->insertContactsMessage(msg);
+      }
+   }
+}
+
+void ChatClient::loadRoomMessagesFromDB(const QString& roomId)
+{
+   auto messages = chatDb_->getRoomMessages(roomId);
+   if (!messages.empty()) {
+      for (auto &msg : messages) {
+         if (msg->encryptionType() == Chat::MessageData::EncryptionType::IES) {
+            msg = decryptIESMessage(msg);
+         }
+         model_->insertRoomMessage(msg);
+      }
+   }
+}
+
+void ChatClient::onContactListLoaded(const std::vector<std::shared_ptr<Chat::ContactRecordData>>& remoteContacts)
+{
+   const auto localContacts = model_->getAllContacts();
+
+   for (auto local : localContacts) {
+      auto rit = std::find_if(remoteContacts.begin(), remoteContacts.end(),
+                              [local](std::shared_ptr<Chat::ContactRecordData> remote)
+      {
+         return local->getContactId() == remote->getContactId();
+      });
+
+      if (rit == remoteContacts.end()) {
+         chatDb_->removeContact(local->getContactId());
+         model_->removeContactNode(local->getContactId().toStdString());
+      }
+   }
+
+   for (auto remote : remoteContacts) {
+      auto citem = model_->findContactItem(remote->getContactId().toStdString());
+      if (!citem) {
+         model_->insertContactObject(remote);
+         //retrieveUserMessages(remote->getContactId());
+      } else {
+         citem->setContactStatus(remote->getContactStatus());
+         model_->notifyContactChanged(citem);
+      }
+
+      addOrUpdateContact(remote->getContactId(), remote->getContactStatus(), remote->getDisplayName());
+   }
+}
+
+void ChatClient::onSearchResult(const std::vector<std::shared_ptr<Chat::UserData>>& userList)
+{
+   model_->insertSearchUserList(userList);
+
+   emit SearchUserListReceived(userList, emailEntered_);
+   emailEntered_ = false;
 }

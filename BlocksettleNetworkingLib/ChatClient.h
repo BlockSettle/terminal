@@ -66,8 +66,13 @@ public:
 
    Chat::ContactRecordData getContact(const QString &userId) const;
 
+   void retrieveUserMessages(const QString &userId);
+   void loadRoomMessagesFromDB(const QString& roomId);
+
 private:
    void readDatabase();
+
+   void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
 
 signals:
    void ConnectedToServer();
@@ -80,14 +85,10 @@ signals:
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void RoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
-   void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
-   void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
    void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered);
    void NewContactRequest(const QString &userId);
    void ContactRequestAccepted(const QString &userId);
    void RoomsInserted();
-
-   void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
 
 protected:
    BinaryData getOwnAuthPublicKey() const override;
@@ -98,6 +99,23 @@ protected:
    void OnLoginCompleted() override;
    void OnLofingFailed() override;
    void OnLogoutCompleted() override;
+
+   void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::RoomData>>& roomsList) override;
+   void onUserListChanged(Chat::UsersListResponse::Command command, const std::vector<std::string>& userList) override;
+   void onContactListLoaded(const std::vector<std::shared_ptr<Chat::ContactRecordData>>& remoteContacts) override;
+
+   void onSearchResult(const std::vector<std::shared_ptr<Chat::UserData>>& userData) override;
+
+   void onDMMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) override;
+   void onRoomMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) override;
+
+   void onMessageSent(const QString& receiverId, const QString& localId, const QString& serverId) override;
+   void onMessageStatusChanged(const QString& chatId, const QString& messageId, int newStatus) override;
+
+   void onContactAccepted(const QString& contactId) override;
+   void onContactRejected(const QString& contactId) override;
+   void onFriendRequest(const QString& userId, const QString& contactId, const BinaryData& pk) override;
+   void onContactRemove(const QString& contactId) override;
 
    // ChatItemActionsHandler interface
 public:

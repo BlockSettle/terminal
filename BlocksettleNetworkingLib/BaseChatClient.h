@@ -29,7 +29,7 @@ public:
    BaseChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
                   , const std::shared_ptr<spdlog::logger>& logger
                   , const QString& dbFile);
-   ~BaseChatClient() noexcept;
+   ~BaseChatClient() noexcept override;
 
    BaseChatClient(const BaseChatClient&) = delete;
    BaseChatClient& operator = (const BaseChatClient&) = delete;
@@ -40,9 +40,6 @@ public:
    std::string LoginToServer(const std::string& email, const std::string& jwt
                              , const ZmqBIP15XDataConnection::cbNewKey &);
    void LogoutFromServer();
-
-   void retrieveUserMessages(const QString &userId);
-   void retrieveRoomMessages(const QString &roomId);
 
    bool removeContact(const QString &userId);
 
@@ -108,6 +105,24 @@ protected:
    virtual void OnLoginCompleted() = 0;
    virtual void OnLofingFailed() = 0;
    virtual void OnLogoutCompleted() = 0;
+
+   virtual void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::RoomData>>& roomsList) = 0;
+   virtual void onUserListChanged(Chat::UsersListResponse::Command command, const std::vector<std::string>& userList) = 0;
+   virtual void onContactListLoaded(const std::vector<std::shared_ptr<Chat::ContactRecordData>>& remoteContacts) = 0;
+
+   virtual void onSearchResult(const std::vector<std::shared_ptr<Chat::UserData>>& userData) = 0;
+
+   // either new message received or ours delivered
+   virtual void onDMMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) = 0;
+   virtual void onRoomMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) = 0;
+
+   virtual void onMessageSent(const QString& receiverId, const QString& localId, const QString& serverId) = 0;
+   virtual void onMessageStatusChanged(const QString& chatId, const QString& messageId, int newStatus) = 0;
+
+   virtual void onContactAccepted(const QString& contactId) = 0;
+   virtual void onContactRejected(const QString& contactId) = 0;
+   virtual void onFriendRequest(const QString& userId, const QString& contactId, const BinaryData& pk) = 0;
+   virtual void onContactRemove(const QString& contactId) = 0;
 
 protected:
    bool sendFriendRequestToServer(const QString &friendUserId);
