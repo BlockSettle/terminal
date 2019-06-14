@@ -504,7 +504,7 @@ void TransactionsWidget::onCreateRBFDialog()
       cbDialog(&txItem);
    }
    else {
-      txItem.initialize(armory_, walletsManager_, cbDialog);
+      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
    }
 }
 
@@ -529,6 +529,6 @@ void TransactionsWidget::onCreateCPFPDialog()
       cbDialog(&txItem);
    }
    else {
-      txItem.initialize(armory_, walletsManager_, cbDialog);
+      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
    }
 }

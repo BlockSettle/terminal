@@ -1,13 +1,10 @@
 #include "SettlementContainer.h"
-#include "ArmoryConnection.h"
 
 using namespace bs;
 
-SettlementContainer::SettlementContainer(const std::shared_ptr<ArmoryObject> &armory)
-   : QObject(nullptr), armory_(armory)
-{
-   connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &SettlementContainer::zcReceived, Qt::QueuedConnection);
-}
+SettlementContainer::SettlementContainer(const std::shared_ptr<ArmoryConnection> &armory)
+   : QObject(nullptr), ArmoryCallbackTarget(armory.get())
+{}
 
 void SettlementContainer::startTimer(const unsigned int durationSeconds)
 {

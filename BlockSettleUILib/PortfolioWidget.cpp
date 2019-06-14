@@ -194,7 +194,7 @@ void PortfolioWidget::onCreateRBFDialog()
       cbDialog(&txItem);
    }
    else {
-      txItem.initialize(armory_, walletsManager_, cbDialog);
+      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
    }
 }
 
@@ -219,7 +219,7 @@ void PortfolioWidget::onCreateCPFPDialog()
       cbDialog(&txItem);
    }
    else {
-      txItem.initialize(armory_, walletsManager_, cbDialog);
+      txItem.initialize(armory_.get(), walletsManager_, cbDialog);
    }
 }
 

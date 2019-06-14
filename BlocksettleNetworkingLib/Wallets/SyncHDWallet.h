@@ -37,6 +37,7 @@ namespace bs {
             Wallet& operator = (Wallet&&) = delete;
 
             void synchronize(const std::function<void()> &cbDone);
+            bool isReady() const;
 
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
             std::vector<SecureBinaryData> encryptionKeys() const;
@@ -61,8 +62,8 @@ namespace bs {
             bool deleteRemotely();
 
             std::vector<std::string> registerWallet(
-               const std::shared_ptr<ArmoryObject> &, bool asNew = false);
-            void setArmory(const std::shared_ptr<ArmoryObject> &);
+               const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
+            void setArmory(const std::shared_ptr<ArmoryConnection> &);
             void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &);
             void startRescan();
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
@@ -88,10 +89,10 @@ namespace bs {
             NetworkType    netType_ = NetworkType::MainNet;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
-            mutable QMutex    mtxGroups_;
+            mutable std::mutex   mtxGroups_;
             BinaryData        userId_;
             SignContainer  *  signContainer_;
-            std::shared_ptr<ArmoryObject>       armory_;
+            std::shared_ptr<ArmoryConnection>   armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_{bs::wallet::EncryptionType::Password};
             std::vector<SecureBinaryData>          encryptionKeys_;

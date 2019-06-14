@@ -420,7 +420,7 @@ std::shared_ptr<bs::sync::Wallet> RFQDealerReply::getXbtWallet()
 
 void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &qrn)
 {
-   if (armory_->state() != ArmoryConnection::State::Ready) {
+   if (armory_->state() != ArmoryState::Ready) {
       return;
    }
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {

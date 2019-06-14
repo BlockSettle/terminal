@@ -15,21 +15,13 @@
 using namespace bs::sync;
 
 WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
-   , const std::shared_ptr<ApplicationSettings>& appSettings, const std::shared_ptr<ArmoryObject> &armory)
-   : QObject(nullptr)
+   , const std::shared_ptr<ApplicationSettings>& appSettings
+   , const std::shared_ptr<ArmoryConnection> &armory)
+   : QObject(nullptr), ArmoryCallbackTarget(armory.get())
    , logger_(logger)
    , appSettings_(appSettings)
-   , armory_(armory)
-{
-   if (armory_) {
-      connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &WalletsManager::onZeroConfReceived, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryObject::zeroConfInvalidated, this, &WalletsManager::onZeroConfInvalidated, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryObject::txBroadcastError, this, &WalletsManager::onBroadcastZCError, Qt::QueuedConnection);
-      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryObject::newBlock, this, &WalletsManager::onNewBlock, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryObject::refresh, this, &WalletsManager::onRefresh, Qt::QueuedConnection);
-   }
-}
+   , armoryPtr_(armory)
+{}
 
 void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &container)
 {
@@ -165,7 +157,7 @@ void WalletsManager::registerSettlementWallet()
    }
    connect(settlementWallet_.get(), &SettlementWallet::walletReady, this, &WalletsManager::onWalletReady);
    if (armory_) {
-      settlementWallet_->registerWallet(armory_);
+      settlementWallet_->registerWallet(armoryPtr_);
    }
 }
 
@@ -279,7 +271,7 @@ void WalletsManager::onHDLeafAdded(QString id)
       leaf->setUserId(userId_);
       addWallet(leaf);
       if (armory_) {
-         leaf->registerWallet(armory_);
+         leaf->registerWallet(armoryPtr_);
       }
 
       if (setAuthWalletFrom(hdWallet.second)) {
@@ -472,52 +464,28 @@ BTCNumericTypes::balance_type WalletsManager::getBalanceSum(
    return balance;
 }
 
-void WalletsManager::onNewBlock()
+void WalletsManager::onNewBlock(unsigned int)
 {
    logger_->debug("[WalletsManager::{}] new Block", __func__);
-   updateWallets(true);
    emit blockchainEvent();
 }
 
-void WalletsManager::onRefresh(std::vector<BinaryData> ids, bool online)
+void WalletsManager::onRefresh(const std::vector<BinaryData> &ids, bool online)
 {
-   if (pendingRegIds_.empty()) {
-      return;
-   }
-   bool idFound = false;
-   for (const auto &id : ids) {
-      const auto &itId = pendingRegIds_.find(id.toBinStr());
-      if (itId != pendingRegIds_.end()) {
-         idFound = true;
-         pendingRegIds_.erase(itId);
-      }
-   }
-   if (!online || !idFound) {
+   if (!online) {
       return;
    }
    if (settlementWallet_) {   //TODO: check for refresh id
       settlementWallet_->refreshWallets(ids);
    }
-
-   if (pendingRegIds_.empty()) {
-      if (!newWallets_.empty()) {
-         for (const auto &hdWalletId : newWallets_) {
-            hdWallets_[hdWalletId]->startRescan();
-         }
-         newWallets_.clear();
-      }
-      updateWallets();
-   }
-
    emit blockchainEvent();
 }
 
-void WalletsManager::onStateChanged(ArmoryConnection::State state)
+void WalletsManager::onStateChanged(ArmoryState state)
 {
-   if (state == ArmoryConnection::State::Ready) {
+   if (state == ArmoryState::Ready) {
       logger_->debug("[{}] DB ready", __func__);
-      updateWallets();
-      emit walletsReady();
+//      emit walletsReady();
    }
    else {
       logger_->debug("[WalletsManager::{}] -  Armory state changed: {}"
@@ -531,7 +499,7 @@ void WalletsManager::onWalletReady(const QString &walletId)
    if (!armory_) {
       return;
    }
-   if (armory_->state() != ArmoryConnection::State::Ready) {
+   if (armory_->state() != ArmoryState::Ready) {
       readyWallets_.insert(walletId);
       auto nbWallets = wallets_.size();
       if (settlementWallet_ != nullptr) {
@@ -539,7 +507,8 @@ void WalletsManager::onWalletReady(const QString &walletId)
       }
       if (readyWallets_.size() >= nbWallets) {
          logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
-         armory_->goOnline();
+         emit walletsReady();
+//         armory_->goOnline();
          readyWallets_.clear();
       }
    }
@@ -549,14 +518,14 @@ void WalletsManager::onWalletImported(const std::string &walletId)
 {
    logger_->debug("[WalletsManager::{}] - HD wallet {} imported", __func__
       , walletId);
-   updateWallets(true);
+//   updateWallets(true);
    emit walletChanged();
    emit walletImportFinished(walletId);
 }
 
 bool WalletsManager::isArmoryReady() const
 {
-   return (armory_ && (armory_->state() == ArmoryConnection::State::Ready));
+   return (armory_ && (armory_->state() == ArmoryState::Ready));
 }
 
 void WalletsManager::eraseWallet(const WalletPtr &wallet)
@@ -648,35 +617,28 @@ bool WalletsManager::deleteWallet(const HDWalletPtr &wallet)
    return result;
 }
 
-std::vector<std::string> WalletsManager::registerWallets()
+void WalletsManager::registerWallets()
 {
    if (!armory_) {
-      return {};
+      logger_->warn("[WalletsManager::{}] armory is not set", __func__);
+      return;
    }
    if (empty()) {
-      logger_->debug("[WalletsManager::{}] - No wallets to register.", __func__);
-      return {};
+      logger_->debug("[WalletsManager::{}] no wallets to register", __func__);
+      return;
    }
    for (auto &it : wallets_) {
-      const auto &ids = it.second->registerWallet(armory_);
+      const auto &ids = it.second->registerWallet(armoryPtr_);
       if (ids.empty()) {
          logger_->error("[{}] failed to register wallet {}", __func__, it.second->walletId());
       }
-      else {
-         pendingRegIds_.insert(ids.begin(), ids.end());
-      }
    }
    if (settlementWallet_) {
-      const auto &ids = settlementWallet_->registerWallet(armory_);
+      const auto &ids = settlementWallet_->registerWallet(armoryPtr_);
       if (ids.empty()) {
          logger_->error("[{}] failed to register settlement wallet", __func__);
-      } else {
-         pendingRegIds_.insert(ids.begin(), ids.end());
       }
    }
-   std::vector<std::string> result;
-   result.insert(result.end(), pendingRegIds_.cbegin(), pendingRegIds_.cend());
-   return result;
 }
 
 void WalletsManager::unregisterWallets()
@@ -686,18 +648,6 @@ void WalletsManager::unregisterWallets()
    }
    if (settlementWallet_) {
       settlementWallet_->unregisterWallet();
-   }
-}
-
-void WalletsManager::updateWallets(bool force)
-{
-   for (auto &it : wallets_) {
-      if (it.second->isRegistered()) {
-         it.second->init(force);
-      }
-   }
-   if (settlementWallet_ && settlementWallet_->isRegistered()) {
-      settlementWallet_->init(force);
    }
 }
 
@@ -814,7 +764,7 @@ bool WalletsManager::getTransactionDirection(Tx tx, const std::string &walletId
                      updateTxDirCache(txKey, Transaction::PayOut, inAddrs, cb);
                   }
                };
-               bs::PayoutSigner::WhichSignature(tx, 0, settlAE, logger_, armory_, cbPayout);
+               bs::PayoutSigner::WhichSignature(tx, 0, settlAE, logger_, armoryPtr_, cbPayout);
                return;
             }
             logger_->warn("[WalletsManager::{}] - failed to get settlement AE"
@@ -990,7 +940,7 @@ void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
 
 void WalletsManager::startWalletRescan(const HDWalletPtr &hdWallet)
 {
-   if (armory_->state() == ArmoryConnection::State::Ready) {
+   if (armory_->state() == ArmoryState::Ready) {
       hdWallet->startRescan();
    }
    else {
@@ -1030,7 +980,7 @@ void WalletsManager::adoptNewWallet(const HDWalletPtr &wallet)
 {
    saveWallet(wallet);
    if (armory_) {
-      wallet->registerWallet(armory_);
+      wallet->registerWallet(armoryPtr_);
    }
    emit newWalletAdded(wallet->walletId());
    emit walletsReady();
@@ -1043,7 +993,7 @@ void WalletsManager::addWallet(const HDWalletPtr &wallet)
    }
    saveWallet(wallet);
    if (armory_) {
-      wallet->registerWallet(armory_);
+      wallet->registerWallet(armoryPtr_);
       emit walletsReady();
    }
 }
@@ -1100,7 +1050,7 @@ void WalletsManager::onCCInfoLoaded()
 //   its own UTXO object while sharing the same UTXO hash.
 // - It is possible, in conjunction with a wallet, to determine if the UTXO is
 //   attached to an internal or external address.
-void WalletsManager::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
+void WalletsManager::onZCReceived(const std::vector<bs::TXEntry> &entries)
 {
    std::vector<bs::TXEntry> ourZCentries;
 
@@ -1125,20 +1075,19 @@ void WalletsManager::onZeroConfReceived(const std::vector<bs::TXEntry> entries)
    if (!ourZCentries.empty()) {
       emit newTransactions(ourZCentries);
    }
-   updateWallets(true);
+//   updateWallets(true);
 }
 
-void WalletsManager::onZeroConfInvalidated(const std::vector<bs::TXEntry> entries)
+void WalletsManager::onZCInvalidated(const std::vector<bs::TXEntry> &entries)
 {
    if (!entries.empty()) {
       emit invalidatedZCs(entries);
    }
 }
 
-void WalletsManager::onBroadcastZCError(const QString &txHash, const QString &errMsg)
+void WalletsManager::onTxBroadcastError(const std::string &txHash, const std::string &errMsg)
 {
-   logger_->error("[WalletsManager::{}] - TX {} error: {}", __func__
-      , txHash.toStdString(), errMsg.toStdString());
+   logger_->error("[WalletsManager::{}] - TX {} error: {}", __func__, txHash, errMsg);
 }
 
 void WalletsManager::invokeFeeCallbacks(unsigned int blocks, float fee)

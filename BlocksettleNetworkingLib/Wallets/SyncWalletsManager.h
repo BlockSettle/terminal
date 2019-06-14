@@ -10,7 +10,7 @@
 #include <QPointer>
 #include <QMutex>
 #include <QDateTime>
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "BTCNumericTypes.h"
 #include "CoreWallet.h"
 #include "SyncWallet.h"
@@ -34,7 +34,7 @@ namespace bs {
       class Wallet;
       class SettlementWallet;
 
-      class WalletsManager : public QObject
+      class WalletsManager : public QObject, public ArmoryCallbackTarget
       {
          Q_OBJECT
       public:
@@ -43,7 +43,7 @@ namespace bs {
          using HDWalletPtr = std::shared_ptr<hd::Wallet>;
 
          WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
-            , const std::shared_ptr<ArmoryObject> &);
+            , const std::shared_ptr<ArmoryConnection> &);
          ~WalletsManager() noexcept;
 
          WalletsManager(const WalletsManager&) = delete;
@@ -89,7 +89,7 @@ namespace bs {
          BTCNumericTypes::balance_type getUnconfirmedBalance() const;
          BTCNumericTypes::balance_type getTotalBalance() const;
 
-         std::vector<std::string> registerWallets();
+         void registerWallets();
          void unregisterWallets();
 
          bool getTransactionDirection(Tx, const std::string &walletId
@@ -132,16 +132,18 @@ namespace bs {
          void onCCSecurityInfo(QString ccProd, QString ccDesc, unsigned long nbSatoshis, QString genesisAddr);
          void onCCInfoLoaded();
 
+      private:
+         void onZCReceived(const std::vector<bs::TXEntry> &) override;
+         void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
+         void onTxBroadcastError(const std::string &txHash, const std::string &errMsg) override;
+         void onRefresh(const std::vector<BinaryData> &ids, bool online) override;
+         void onNewBlock(unsigned int) override;
+         void onStateChanged(ArmoryState) override;
+
       private slots:
-         void onZeroConfReceived(const std::vector<bs::TXEntry>);
-         void onZeroConfInvalidated(const std::vector<bs::TXEntry>);
-         void onBroadcastZCError(const QString &txHash, const QString &errMsg);
          void onWalletReady(const QString &walletId);
          void onHDLeafAdded(QString id);
          void onHDLeafDeleted(QString id);
-         void onNewBlock();
-         void onRefresh(std::vector<BinaryData> ids, bool online);
-         void onStateChanged(ArmoryConnection::State);
          void onWalletImported(const std::string &walletId);
          void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
          void onWalletsListUpdated();
@@ -149,9 +151,6 @@ namespace bs {
       private:
          bool empty() const { return (wallets_.empty() && !settlementWallet_); }
 
-         // notification from block data manager listener ( WalletsManagerBlockListener )
-         void resumeRescan();
-         void updateWallets(bool force = false);
          void registerSettlementWallet();
 
          void addWallet(const WalletPtr &, bool isHDLeaf = false);
@@ -179,7 +178,7 @@ namespace bs {
          std::shared_ptr<SignContainer>         signContainer_;
          std::shared_ptr<spdlog::logger>        logger_;
          std::shared_ptr<ApplicationSettings>   appSettings_;
-         std::shared_ptr<ArmoryObject>          armory_;
+         std::shared_ptr<ArmoryConnection>      armoryPtr_;
 
          using wallet_container_type = std::unordered_map<std::string, WalletPtr>;
          using hd_wallet_container_type = std::unordered_map<std::string, HDWalletPtr>;
@@ -195,7 +194,6 @@ namespace bs {
          WalletPtr                           authAddressWallet_;
          BinaryData                          userId_;
          std::shared_ptr<SettlementWallet>   settlementWallet_;
-         std::unordered_set<std::string>     pendingRegIds_;
          std::set<std::string>               newWallets_;
 
          struct CCInfo {

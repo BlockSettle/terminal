@@ -7,6 +7,7 @@
 
 #include <QMouseEvent>
 #include <QStringListModel>
+#include <QTimer>
 #include <QToolTip>
 
 namespace {
@@ -57,13 +58,12 @@ ExplorerWidget::~ExplorerWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx). Blocks won't
 // be set up for now.
-void ExplorerWidget::init(const std::shared_ptr<ArmoryObject> &armory
+void ExplorerWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<CCFileManager> &ccFileMgr
    , const std::shared_ptr<AuthAddressManager> &authMgr)
 {
-   armory_ = armory;
    logger_ = inLogger;
    authMgr_ = authMgr;
    ui_->Transaction->init(armory, inLogger, walletsMgr, ccFileMgr->ccSecurities());

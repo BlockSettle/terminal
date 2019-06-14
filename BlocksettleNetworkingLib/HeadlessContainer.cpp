@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <spdlog/spdlog.h>

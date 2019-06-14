@@ -17,7 +17,7 @@ namespace bs {
       class WalletsManager;
    }
 }
-class ArmoryObject;
+class ArmoryConnection;
 class AssetManager;
 class SignContainer;
 class TransactionData;
@@ -29,7 +29,7 @@ class ReqCCSettlementContainer : public bs::SettlementContainer
 public:
    ReqCCSettlementContainer(const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<SignContainer> &
-      , const std::shared_ptr<ArmoryObject> &
+      , const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<AssetManager> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const bs::network::RFQ &, const bs::network::Quote &

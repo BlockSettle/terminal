@@ -3,6 +3,7 @@
 #define USERSCRIPTRUNNER_H_INCLUDED
 
 #include <QObject>
+#include <QTimer>
 
 #include <unordered_map>
 #include <memory>

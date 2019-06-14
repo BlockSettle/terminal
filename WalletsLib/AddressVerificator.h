@@ -12,6 +12,7 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include "ArmoryConnection.h"
 #include "AsyncClient.h"
 #include "AuthAddress.h"
 
@@ -23,12 +24,11 @@ namespace ClientClasses {
 }
 
 struct AddressVerificationData;
-class ArmoryConnection;
 
 // once we could connect to a super node we should not wait for refresh signals from armory
 // we could just get info for address.
 // Probably this could be saved for users if they want to use own armory but not in supernode mode
-class AddressVerificator
+class AddressVerificator : ArmoryCallbackTarget
 {
 public:
    using verification_callback = std::function<void (const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)>;
@@ -75,8 +75,6 @@ private:
 
    ExecutionCommand CreateBSAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state);
 
-   void onRefresh(std::vector<BinaryData> ids);
-
    bool AddressWasRegistered(const std::shared_ptr<AuthAddress>& address) const;
    bool RegisterUserAddress(const std::shared_ptr<AuthAddress>& address);
 
@@ -93,9 +91,11 @@ private:
 
    bool IsBSRevokeTranscation(const ClientClasses::LedgerEntry &, const std::shared_ptr<AddressVerificationData>& state);
 
+   void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
+   void onRefresh(const std::vector<BinaryData> &, bool) override;
+
 private:
    std::shared_ptr<spdlog::logger>     logger_;
-   std::shared_ptr<ArmoryConnection>   armory_;
    std::string       walletId_;
    std::string       regId_;
    std::atomic_bool  registered_ = { false };
@@ -127,7 +127,10 @@ private:
 
    std::map<BinaryData, unsigned int> addressRetries_;
 
-   unsigned int reqId_ = 0;
+   std::mutex  cbMutex_;
+   std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbBSaddrs_;
+   std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbValidate_;
+   std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbBSstate_;
 };
 
 #endif // __AUTH_ADDRESS_VERIFICATOR_H__

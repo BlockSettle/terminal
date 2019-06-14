@@ -970,7 +970,7 @@ void RFQTicketXBT::productSelectionChanged()
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
       ui_->lineEditAmount->setEnabled(true);
    } else {
-      bool canTradeXBT = (armory_->state() == ArmoryConnection::State::Ready)
+      bool canTradeXBT = (armory_->state() == ArmoryState::Ready)
          && signingContainer_
          && !signingContainer_->isOffline();
 

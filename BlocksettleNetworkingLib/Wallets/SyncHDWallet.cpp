@@ -69,6 +69,15 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
    signContainer_->syncHDWallet(walletId(), cbProcess);
 }
 
+bool hd::Wallet::isReady() const
+{
+   bool result = true;
+   for (const auto &leaf : getLeaves()) {
+      result &= leaf->isReady();
+   }
+   return result;
+}
+
 std::string hd::Wallet::walletId() const
 {
    return walletId_;
@@ -79,7 +88,7 @@ std::vector<std::shared_ptr<hd::Group>> hd::Wallet::getGroups() const
    std::vector<std::shared_ptr<hd::Group>> result;
    result.reserve(groups_.size());
    {
-      QMutexLocker lock(&mtxGroups_);
+      std::unique_lock<std::mutex> lock(mtxGroups_);
       for (const auto &group : groups_) {
          result.emplace_back(group.second);
       }
@@ -91,7 +100,7 @@ size_t hd::Wallet::getNumLeaves() const
 {
    size_t result = 0;
    {
-      QMutexLocker lock(&mtxGroups_);
+      std::unique_lock<std::mutex> lock(mtxGroups_);
       for (const auto &group : groups_) {
          result += group.second->getNumLeaves();
       }
@@ -104,7 +113,7 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> hd::Wallet::getLeaves() const
    const auto nbLeaves = getNumLeaves();
    if (leaves_.size() != nbLeaves) {
       leaves_.clear();
-      QMutexLocker lock(&mtxGroups_);
+      std::unique_lock<std::mutex> lock(mtxGroups_);
       for (const auto &group : groups_) {
          const auto &groupLeaves = group.second->getAllLeaves();
          for (const auto &leaf : groupLeaves) {
@@ -168,13 +177,13 @@ void hd::Wallet::addGroup(const std::shared_ptr<hd::Group> &group)
       group->setUserId(userId_);
    }
 
-   QMutexLocker lock(&mtxGroups_);
+   std::unique_lock<std::mutex> lock(mtxGroups_);
    groups_[group->index()] = group;
 }
 
 std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
 {
-   QMutexLocker lock(&mtxGroups_);
+   std::unique_lock<std::mutex> lock(mtxGroups_);
    const auto itGroup = groups_.find(static_cast<bs::hd::Path::Elem>(ct));
    if (itGroup == groups_.end()) {
       return nullptr;
@@ -209,7 +218,7 @@ void hd::Wallet::setUserId(const BinaryData &userId)
    std::vector<std::shared_ptr<hd::Group>> groups;
    groups.reserve(groups_.size());
    {
-      QMutexLocker lock(&mtxGroups_);
+      std::unique_lock<std::mutex> lock(mtxGroups_);
       for (const auto &group : groups_) {
          groups.push_back(group.second);
       }
@@ -219,7 +228,7 @@ void hd::Wallet::setUserId(const BinaryData &userId)
    }
 }
 
-void hd::Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
+void hd::Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    armory_ = armory;
 
@@ -229,10 +238,9 @@ void hd::Wallet::setArmory(const std::shared_ptr<ArmoryObject> &armory)
 }
 
 std::vector<std::string> hd::Wallet::registerWallet(
-   const std::shared_ptr<ArmoryObject> &armory, bool asNew)
+   const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    std::vector<std::string> result;
-   logger_->debug("[{}] {} leaves", __func__, getLeaves().size());
    for (const auto &leaf : getLeaves()) {
       auto&& regIDs = leaf->registerWallet(armory, asNew);
       result.insert(result.end(), regIDs.begin(), regIDs.end());

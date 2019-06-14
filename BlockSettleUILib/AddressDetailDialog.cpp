@@ -77,11 +77,10 @@ public:
 
 
 AddressDetailDialog::AddressDetailDialog(const bs::Address& address
-                                     , const std::shared_ptr<bs::sync::Wallet> &wallet
-                         , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
-                               , const std::shared_ptr<ArmoryObject> &armory
-                                 , const std::shared_ptr<spdlog::logger> &logger
-                                         , QWidget* parent)
+   , const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<spdlog::logger> &logger, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AddressDetailDialog())
    , address_(address)
@@ -137,7 +136,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    ui_->inputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->outputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-   if (armory_->state() != ArmoryConnection::State::Ready) {
+   if (armory_->state() != ArmoryState::Ready) {
       ui_->labelError->setText(tr("Armory is not connected"));
       onError();
    }
@@ -145,7 +144,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
       const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
          initModels(delegate);
       };
-      if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate, this)) {
+      if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate)) {
          ui_->labelError->setText(tr("Error loading address info"));
          onError();
       }

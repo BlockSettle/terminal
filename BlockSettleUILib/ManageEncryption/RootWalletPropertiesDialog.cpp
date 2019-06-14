@@ -93,7 +93,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 
    updateWalletDetails(wallet_);
 
-   ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
+   ui_->rescanButton->setEnabled(armory->state() == ArmoryState::Ready);
    ui_->manageEncryptionButton->setEnabled(false);
    walletInfo_ = bs::hd::WalletInfo(wallet_);
 

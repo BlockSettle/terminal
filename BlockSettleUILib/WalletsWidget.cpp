@@ -176,7 +176,7 @@ void WalletsWidget::init(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AssetManager> &assetMgr
    , const std::shared_ptr<AuthAddressManager> &authMgr
-   , const std::shared_ptr<ArmoryObject> &armory)
+   , const std::shared_ptr<ArmoryConnection> &armory)
 {
    logger_ = logger;
    walletsManager_ = manager;

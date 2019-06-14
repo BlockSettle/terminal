@@ -19,7 +19,7 @@ ArmoryEventsPublisher::~ArmoryEventsPublisher() noexcept
 
 bool ArmoryEventsPublisher::isConnectedToArmory() const
 {
-   return armory_ != nullptr;
+   return act_ != nullptr;
 }
 
 void ArmoryEventsPublisher::disconnectFromArmory()
@@ -27,15 +27,12 @@ void ArmoryEventsPublisher::disconnectFromArmory()
    if (isConnectedToArmory()) {
       logger_->debug("[ArmoryEventsPublisher::DisconnectFromArmoryConnection] disposing armory events publisher");
 
-      disconnect(armory_.get(), &ArmoryObject::newBlock, this, &ArmoryEventsPublisher::onNewBlock);
-      disconnect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &ArmoryEventsPublisher::onZeroConfReceived);
-
-      armory_ = nullptr;
+      act_.reset();
       publisher_ = nullptr;
    }
 }
 
-bool ArmoryEventsPublisher::connectToArmory(const std::shared_ptr<ArmoryObject>& armoryConnection)
+bool ArmoryEventsPublisher::connectToArmory(const std::shared_ptr<ArmoryConnection> &armoryConnection)
 {
    if (isConnectedToArmory()) {
       logger_->debug("[ArmoryEventsPublisher::ConnectToArmoryConnection] already connected to armory");
@@ -52,14 +49,7 @@ bool ArmoryEventsPublisher::connectToArmory(const std::shared_ptr<ArmoryObject>&
       return false;
    }
 
-   armory_ = armoryConnection;
-
-   // subscribe to all armory connection signals
-   connect(armoryConnection.get(), &ArmoryObject::newBlock
-      , this, &ArmoryEventsPublisher::onNewBlock, Qt::QueuedConnection);
-   connect(armoryConnection.get(), &ArmoryObject::zeroConfReceived
-      , this, &ArmoryEventsPublisher::onZeroConfReceived, Qt::QueuedConnection);
-
+   act_ = make_unique<PublisherACT>(armoryConnection.get(), this);
    return true;
 }
 
@@ -82,7 +72,7 @@ void ArmoryEventsPublisher::onNewBlock(unsigned int height) const
    }
 }
 
-void ArmoryEventsPublisher::onZeroConfReceived(const std::vector<bs::TXEntry> entries) const
+void ArmoryEventsPublisher::onZeroConfReceived(const std::vector<bs::TXEntry> &entries) const
 {
    Blocksettle::ArmoryEvents::ZCEvent  eventData;
    for (const auto &entry : entries) {

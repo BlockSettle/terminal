@@ -66,15 +66,6 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
    signContainer_->syncWallet(walletId(), cbProcess);
 }
 
-void hd::Leaf::setArmory(const std::shared_ptr<ArmoryObject> &armory)
-{
-   bs::sync::Wallet::setArmory(armory);
-   if (armory_) {
-      connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &hd::Leaf::onZeroConfReceived, Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryObject::refresh, this, &hd::Leaf::onRefresh, Qt::QueuedConnection);
-   }
-}
-
 void hd::Leaf::setPath(const bs::hd::Path &path)
 {
    if (path != path_) {
@@ -98,10 +89,16 @@ std::vector<BinaryData> hd::Leaf::getRegAddresses(const std::vector<PooledAddres
    return result;
 }
 
-void hd::Leaf::onZeroConfReceived(const std::vector<bs::TXEntry>)
+bool hd::Leaf::isOwnId(const std::string &wId) const
 {
-//!   activateAddressesFromLedger(armory_->getZCentries(reqId));
-}  // if ZC is received, then likely wallet already contains the participating address
+   if (wId == walletId()) {
+      return true;
+   }
+   if (!isExtOnly_ && (walletIdInt() == wId)) {
+      return true;
+   }
+   return false;
+}
 
 void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
 {
@@ -125,6 +122,8 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
          if (id.isNull()) {
             continue;
          }
+         logger_->debug("[{}] {}: id={}, extId={}, intId={}", __func__, walletId()
+            , id.toBinStr(), regIdExt_, regIdInt_);
          if (id == regIdExt_) {
             regIdExt_.clear();
             cbRegisterExt();
@@ -149,6 +148,7 @@ void hd::Leaf::postOnline()
    }
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
+      isReady_ = true;
       QMetaObject::invokeMethod(this, [this] { emit walletReady(
          QString::fromStdString(walletId())); });
    };
@@ -163,7 +163,7 @@ void hd::Leaf::init(bool force)
    if (firstInit_ && !force)
       return;
 
-   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
       return;
    }
    postOnline();
@@ -291,7 +291,7 @@ std::vector<BinaryData> hd::Leaf::getAddrHashesInt() const
 }
 
 std::vector<std::string> hd::Leaf::registerWallet(
-   const std::shared_ptr<ArmoryObject> &armory, bool asNew)
+   const std::shared_ptr<ArmoryConnection> &armory, bool asNew)
 {
    setArmory(armory);
 
@@ -305,13 +305,12 @@ std::vector<std::string> hd::Leaf::registerWallet(
             if ((*notifCount)++ == 0)
                return;
          }
-         setRegistered();
+         isRegistered_ = true;
       };
 
       regIdExt_ = armory_->registerWallet(
          walletId(), addrsExt, cbRegistered, asNew);
-      btcWallet_ = std::make_shared<AsyncClient::BtcWallet>(
-         armory_->bdv()->instantiateWallet(walletId()));
+      btcWallet_ = armory_->instantiateWallet(walletId());
       regIds.push_back(regIdExt_);
 
       std::vector<BinaryData> addrsInt;
@@ -319,8 +318,7 @@ std::vector<std::string> hd::Leaf::registerWallet(
          addrsInt = getAddrHashesInt();
          regIdInt_ = armory_->registerWallet(
             walletIdInt(), addrsInt, cbRegistered, asNew);
-         btcWalletInt_ = std::make_shared<AsyncClient::BtcWallet>(
-            armory_->bdv()->instantiateWallet(walletIdInt()));
+         btcWalletInt_ = armory_->instantiateWallet(walletIdInt());
          regIds.push_back(regIdInt_);
       }
       logger_->debug("[{}] registered {}+{} addresses in {}, {} regIds", __func__
@@ -502,20 +500,28 @@ bs::hd::Path hd::Leaf::getPathForAddress(const bs::Address &addr) const
 }
 
 bool hd::Leaf::getLedgerDelegateForAddress(const bs::Address &addr
-   , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb
-   , QObject *context)
+   , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &cb)
 {
-   if (armory_) {
-      const auto path = getPathForAddress(addr);
-      if (path.get(-2) == addrTypeInternal) {
-         return armory_->getLedgerDelegateForAddress(walletIdInt()
-            , addr, cb, context);
-      }
-      else {
-         return armory_->getLedgerDelegateForAddress(walletId(), addr, cb, context);
-      }
+   if (!armory_) {
+      return false;
    }
-   return false;
+   {
+      std::unique_lock<std::mutex> lock(cbMutex_);
+      const auto &itCb = cbLedgerByAddr_.find(addr);
+      if (itCb != cbLedgerByAddr_.end()) {
+         logger_->error("[{}] ledger callback for addr {} already exists", __func__, addr.display());
+         return false;
+      }
+      cbLedgerByAddr_[addr] = cb;
+   }
+
+   const auto path = getPathForAddress(addr);
+   if (path.get(-2) == addrTypeInternal) {
+      return armory_->getLedgerDelegateForAddress(walletIdInt(), addr);
+   }
+   else {
+      return armory_->getLedgerDelegateForAddress(walletId(), addr);
+   }
 }
 
 bool hd::Leaf::hasId(const std::string &id) const
@@ -710,12 +716,11 @@ void hd::CCLeaf::setData(const std::string &data)
    checker_ = std::make_shared<TxAddressChecker>(bs::Address(data), armory_);
 }
 
-void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryObject> &armory)
+void hd::CCLeaf::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    hd::Leaf::setArmory(armory);
    if (armory_) {
-      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this
-         , SLOT(onStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
+      act_ = make_unique<CCWalletACT>(armory_.get(), this);
    }
    if (checker_ && armory) {
       checker_->setArmory(armory);
@@ -772,7 +777,7 @@ void hd::CCLeaf::refreshInvalidUTXOs(const bool& ZConly)
 void hd::CCLeaf::validationProc()
 {
    validationStarted_ = true;
-   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
       validationStarted_ = false;
       return;
    }
@@ -856,7 +861,7 @@ void hd::CCLeaf::validationProc()
          };
          ledger->getPageCount(cbPages);
       };
-      getLedgerDelegateForAddress(addr, cbLedger, this);
+      getLedgerDelegateForAddress(addr, cbLedger);
    }
 }
 
@@ -930,10 +935,10 @@ void hd::CCLeaf::init(bool force)
    }
 }
 
-void hd::CCLeaf::onStateChanged(ArmoryConnection::State state)
+void hd::CCLeaf::CCWalletACT::onStateChanged(ArmoryState state)
 {
-   if (state == ArmoryConnection::State::Ready) {
-      init(true);
+   if (state == ArmoryState::Ready) {
+      parent_->init(true);
    }
 }
 

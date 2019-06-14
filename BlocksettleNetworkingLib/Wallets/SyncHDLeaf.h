@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "HDPath.h"
 #include "SyncWallet.h"
 
@@ -75,16 +75,14 @@ namespace bs {
             std::string getAddressIndex(const bs::Address &) override;
             bool addressIndexExists(const std::string &index) const override;
             bool getLedgerDelegateForAddress(const bs::Address &
-               , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
-               , QObject *context = nullptr) override;
+               , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &);
 
             int addAddress(const bs::Address &, const std::string &index, AddressEntryType, bool sync = true) override;
 
             const bs::hd::Path &path() const { return path_; }
             bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
 
-            void setArmory(const std::shared_ptr<ArmoryObject> &) override;
-            std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryObject> &armory = nullptr
+            std::vector<std::string> registerWallet(const std::shared_ptr<ArmoryConnection> &armory = nullptr
                , bool asNew = false) override;
             void unregisterWallet() override;
 
@@ -98,8 +96,7 @@ namespace bs {
             void scanComplete(const std::string &walletId);
 
          protected slots:
-            virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
-            virtual void onRefresh(std::vector<BinaryData> ids, bool online);
+            void onRefresh(std::vector<BinaryData> ids, bool online) override;
 
          protected:
             struct AddrPoolKey {
@@ -131,6 +128,7 @@ namespace bs {
             bs::hd::Path getPathForAddress(const bs::Address &) const;
             virtual void topUpAddressPool(bool extInt, const std::function<void()> &cb = nullptr);
             void postOnline();
+            bool isOwnId(const std::string &) const override;
 
          protected:
             const bs::hd::Path::Elem   addrTypeExternal = 0u;
@@ -242,11 +240,10 @@ namespace bs {
             QString displaySymbol() const override;
             bool isTxValid(const BinaryData &) const override;
 
-            void setArmory(const std::shared_ptr<ArmoryObject> &) override;
+            void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
          private slots:
             void onZeroConfReceived(const std::vector<bs::TXEntry>) override;
-            void onStateChanged(ArmoryConnection::State);
 
          private:
             void validationProc();
@@ -256,6 +253,14 @@ namespace bs {
             BTCNumericTypes::balance_type correctBalance(BTCNumericTypes::balance_type
                , bool applyCorrection = true) const;
             std::vector<UTXO> filterUTXOs(const std::vector<UTXO> &) const;
+
+            class CCWalletACT : public WalletACT
+            {
+            public:
+               CCWalletACT(ArmoryConnection *armory, Wallet *leaf)
+                  : WalletACT(armory, leaf) {}
+               void onStateChanged(ArmoryState) override;
+            };
 
             std::shared_ptr<TxAddressChecker>   checker_;
             uint64_t       lotSizeInSatoshis_ = 0;

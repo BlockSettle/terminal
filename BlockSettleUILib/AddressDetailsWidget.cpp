@@ -31,7 +31,7 @@ AddressDetailsWidget::AddressDetailsWidget(QWidget *parent)
 AddressDetailsWidget::~AddressDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
-void AddressDetailsWidget::init(const std::shared_ptr<ArmoryObject> &armory
+void AddressDetailsWidget::init(const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
    , const CCFileManager::CCSecurities &ccSecurities)
 {
@@ -39,8 +39,7 @@ void AddressDetailsWidget::init(const std::shared_ptr<ArmoryObject> &armory
    logger_ = inLogger;
    ccSecurities_ = ccSecurities;
 
-   connect(armory_.get(), &ArmoryObject::refresh, this
-           , &AddressDetailsWidget::OnRefresh, Qt::QueuedConnection);
+   act_ = make_unique<AddrDetailsACT>(armory_.get(), this);
 }
 
 void AddressDetailsWidget::setBSAuthAddrs(const std::unordered_set<std::string> &bsAuthAddrs)

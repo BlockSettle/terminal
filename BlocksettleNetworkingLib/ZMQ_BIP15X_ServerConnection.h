@@ -2,7 +2,6 @@
 #define __ZMQ_BIP15X_SERVERCONNECTION_H__
 
 #include <atomic>
-#include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <thread>

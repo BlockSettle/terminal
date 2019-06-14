@@ -10,7 +10,7 @@
 #include <QMutex>
 #include <QPointer>
 #include "Address.h"
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "AsyncClient.h"
 #include "Assets.h"
 #include "BtcDefinitions.h"
@@ -86,7 +86,7 @@ namespace bs {
          virtual void setData(const std::string &) {}
          virtual void setData(uint64_t) {}
 
-         virtual void setArmory(const std::shared_ptr<ArmoryObject> &);
+         virtual void setArmory(const std::shared_ptr<ArmoryConnection> &);
          virtual void setUserId(const BinaryData &) {}
 
          bool operator ==(const Wallet &w) const { return (w.walletId() == walletId()); }
@@ -96,7 +96,7 @@ namespace bs {
          virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
          
          virtual std::vector<std::string> registerWallet(
-            const std::shared_ptr<ArmoryObject> &armory = nullptr, bool asNew = false);
+            const std::shared_ptr<ArmoryConnection> &armory = nullptr, bool asNew = false);
          virtual void unregisterWallet();
 
          virtual bool isBalanceAvailable() const;
@@ -141,8 +141,7 @@ namespace bs {
          void syncAddresses();
 
          virtual bool getLedgerDelegateForAddress(const bs::Address &
-            , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &
-            , QObject *context = nullptr);
+            , const std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> &);
 
          virtual BTCNumericTypes::balance_type getTxBalance(int64_t val) const { return val / BTCNumericTypes::BalanceDivider; }
          virtual QString displayTxValue(int64_t val) const;
@@ -194,8 +193,15 @@ namespace bs {
          void balanceChanged(std::string walletId) const;
          void metaDataChanged();
 
+      protected slots:
+         virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
+         virtual void onNewBlock(unsigned int);
+         virtual void onRefresh(std::vector<BinaryData> ids, bool online);
+
       protected:
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
+
+         virtual bool isOwnId(const std::string &wId) const { return (wId == walletId()); }
 
          template <typename MapT> void updateMap(const MapT &src, MapT &dst) const 
          {
@@ -211,7 +217,7 @@ namespace bs {
 
       public:
          bool isRegistered(void) const { return isRegistered_; }
-         void setRegistered(void) { isRegistered_ = true; }
+         bool isReady() const { return isReady_; }
 
       protected:
          std::string       walletName_;
@@ -219,9 +225,9 @@ namespace bs {
          BTCNumericTypes::balance_type spendableBalance_ = 0;
          BTCNumericTypes::balance_type unconfirmedBalance_ = 0;
          BTCNumericTypes::balance_type totalBalance_ = 0;
-         std::shared_ptr<ArmoryObject> armory_;
-         std::shared_ptr<spdlog::logger> logger_; // May need to be set manually.
-         mutable std::vector<bs::Address> usedAddresses_;
+         std::shared_ptr<ArmoryConnection>   armory_;
+         std::shared_ptr<spdlog::logger>     logger_; // May need to be set manually.
+         mutable std::vector<bs::Address>    usedAddresses_;
          NetworkType netType_ = NetworkType::Invalid;
          mutable std::mutex addrMapsMtx_;
          size_t addrCount_ = 0;
@@ -242,13 +248,41 @@ namespace bs {
          };
          std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
 
+         class WalletACT : public ArmoryCallbackTarget
+         {
+         public:
+            WalletACT(ArmoryConnection *armory, Wallet *leaf)
+               : ArmoryCallbackTarget(armory), parent_(leaf) {}
+            void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
+               parent_->onRefresh(ids, online);
+            }
+            void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {
+               parent_->onZeroConfReceived(zcs);
+            }
+            void onNewBlock(unsigned int block) override {
+               parent_->onNewBlock(block);
+            }
+            void onCombinedBalances(const std::map<std::string, CombinedBalances> &) override;
+            void onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &) override;
+            void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
+         protected:
+            Wallet *parent_;
+         };
+         std::unique_ptr<WalletACT>   act_;
+
       private:
+         std::string regId_;
          mutable std::map<uint32_t, std::vector<ClientClasses::LedgerEntry>>  historyCache_;
-         std::atomic_bool  heartbeatRunning_ = { false };
-         bool isRegistered_ = false;
+         std::vector<std::function<void(void)>> cbTxNs_;
+         std::vector<std::function<void(void)>> cbBalances_;
 
       protected:
          bool firstInit_ = false;
+         bool isRegistered_ = false;
+         std::atomic_bool  isReady_{ false };
+
+         mutable std::mutex   cbMutex_;
+         std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbLedgerByAddr_;
       };
 
 

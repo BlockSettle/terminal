@@ -244,7 +244,7 @@ bool AuthAddressManager::Verify(const bs::Address &address)
       return false;
    }
 
-   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
       logger_->error("[AuthAddressManager::Verify] can't verify without Armory connection");
       emit Error(tr("Missing Armory connection"));
       return false;
