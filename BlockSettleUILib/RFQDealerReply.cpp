@@ -989,19 +989,18 @@ void RFQDealerReply::aqScriptChanged(int curIndex)
       }
 
       // comboBoxAQScript will be updated later from onAqScriptLoaded
+      newLoaded_ = true;
       initAQ(scriptFN);
    } else {
       if (aqLoaded_) {
          deinitAQ();
       }
-      initAQ(ui_->comboBoxAQScript->currentData().toString());
    }
 }
 
 void RFQDealerReply::onAqScriptLoaded(const QString &filename)
 {
    logger_->info("AQ script loaded ({})", filename.toStdString());
-   aqLoaded_ = true;
 
    auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
    if (scripts.indexOf(filename) < 0) {
@@ -1011,7 +1010,13 @@ void RFQDealerReply::onAqScriptLoaded(const QString &filename)
    appSettings_->set(ApplicationSettings::lastAqScript, filename);
    aqFillHistory();
 
-   validateGUI();
+   if (newLoaded_) {
+      newLoaded_ = false;
+      deinitAQ();
+   } else {
+      aqLoaded_ = true;
+      validateGUI();
+   }
 }
 
 void RFQDealerReply::onAqScriptFailed(const QString &filename, const QString &error)

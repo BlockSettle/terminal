@@ -161,6 +161,7 @@ namespace bs {
 
          bool           aqLoaded_ = false;
          bool           celerConnected_ = false;
+         bool           newLoaded_ = false;
 
          std::unordered_map<std::string, double>   bestQPrices_;
 
