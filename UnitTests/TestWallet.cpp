@@ -602,9 +602,6 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       }
 
       //create sync manager
-      auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "");
-
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
@@ -711,10 +708,6 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       auto walletPtr = std::make_shared<bs::core::hd::Wallet>(
          filename, NetworkType::TestNet, "", envPtr_->logger());
 
-      //create sync manager
-      auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "");
-
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
@@ -817,9 +810,6 @@ TEST_F(TestWallet, CreateDestroyLoad_SyncWallet)
       EXPECT_EQ(walletPtr->isWatchingOnly(), true);
 
       //create sync manager
-      auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "");
-
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
@@ -1128,9 +1118,6 @@ TEST_F(TestWallet, SyncWallet_TriggerPoolExtention)
       }
 
       //create sync manager
-      auto connPtr = std::make_shared<ArmoryObject>(
-         envPtr_->logger(), "");
-
       auto inprocSigner = std::make_shared<InprocSigner>(walletPtr, envPtr_->logger());
       inprocSigner->Start();
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
@@ -1420,77 +1407,6 @@ TEST_F(TestWallet, ImportExport_Easy16)
    EXPECT_EQ(addr1, addr3);
 }
 
-TEST_F(TestWallet, SeedPrivKey)
-{
-   SecureBinaryData passphrase("test");
-
-   bs::core::wallet::Seed seed{ CryptoPRNG::generateRandom(32), NetworkType::TestNet };
-   const auto seedPriv = bs::core::wallet::Seed::fromXpriv(seed.toXpriv(), NetworkType::TestNet);
-   EXPECT_EQ(seedPriv.privateKey(), seed.privateKey());
-   EXPECT_EQ(seed.getWalletId(), seedPriv.getWalletId());
-   EXPECT_TRUE(seedPriv.seed().isNull());
-   std::string filename;
-
-   {
-      auto wallet = std::make_shared<bs::core::hd::Wallet>(
-         "test", "", seedPriv, passphrase, walletFolder_, nullptr);
-      EXPECT_EQ(seedPriv.getWalletId(), wallet->walletId());
-
-      auto grp1 = wallet->createGroup(wallet->getXBTGroupType());
-      {
-         auto lock = wallet->lockForEncryption(passphrase);
-         grp1->createLeaf(0u);
-      }
-
-      //grab clear text seed
-      std::shared_ptr<bs::core::wallet::Seed> retroSeed;
-      try {
-         //wallet isn't locked, should throw
-         retroSeed = std::make_shared<bs::core::wallet::Seed>(
-            wallet->getDecryptedSeed());
-         ASSERT_TRUE(false);
-      } catch (...) { }
-
-      try {
-         auto lock = wallet->lockForEncryption(passphrase);
-         retroSeed = std::make_shared<bs::core::wallet::Seed>(
-            wallet->getDecryptedSeed());
-      } catch (...) {
-         ASSERT_TRUE(false);
-      }
-
-      EXPECT_EQ(seedPriv.getNode().getPrivateKey(), retroSeed->getNode().getPrivateKey());
-      EXPECT_EQ(seedPriv.getNode().getChaincode(), retroSeed->getNode().getChaincode());
-
-      filename = wallet->getFileName();
-   }
-
-   {
-      auto wallet = std::make_shared<bs::core::hd::Wallet>(
-         filename, NetworkType::TestNet);
-      auto grp = wallet->getGroup(wallet->getXBTGroupType());
-
-      //grab seed
-      std::shared_ptr<bs::core::wallet::Seed> retroSeed;
-      try {
-         //wallet isn't locked, should throw
-         retroSeed = std::make_shared<bs::core::wallet::Seed>(
-            wallet->getDecryptedSeed());
-         ASSERT_TRUE(false);
-      } catch (...) { }
-
-      try {
-         auto lock = wallet->lockForEncryption(passphrase);
-         retroSeed = std::make_shared<bs::core::wallet::Seed>(
-            wallet->getDecryptedSeed());
-      } catch (...) {
-         ASSERT_TRUE(false);
-      }
-
-      EXPECT_EQ(seed.privateKey(), retroSeed->privateKey());
-   }
-}
-
 TEST_F(TestWallet, ImportExport_xpriv)
 {
    SecureBinaryData passphrase("test");
@@ -1609,6 +1525,7 @@ TEST_F(TestWallet, ImportExport_xpriv)
    EXPECT_EQ(addr1, addr3);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 class TestWalletWithArmory : public ::testing::Test
 {
@@ -1649,17 +1566,27 @@ public:
    std::shared_ptr<TestEnv> envPtr_;
 };
 
-TEST_F(TestWalletWithArmory, AddressChainExtention)
+TEST_F(TestWalletWithArmory, AddressChainExtension)
 {
    auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
    inprocSigner->Start();
    auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
       , envPtr_->appSettings(), envPtr_->armoryConnection());
    syncMgr->setSignContainer(inprocSigner);
-   syncMgr->syncWallets();
+   
+   auto promSync = std::make_shared<std::promise<bool>>();
+   auto futSync = promSync->get_future();
+   const auto &cbSync = [this, promSync](int cur, int total) {
+      if (cur == total) {
+         promSync->set_value(true);
+      }
+   };
+   syncMgr->syncWallets(cbSync);
+   EXPECT_TRUE(futSync.get());
 
-   auto regIDs = syncMgr->registerWallets();
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+   auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+   ASSERT_NE(syncHdWallet, nullptr);
+   syncHdWallet->registerWallet(envPtr_->armoryConnection());
 
    auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
    auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
@@ -1689,13 +1616,15 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
 
    EXPECT_EQ(syncLeaf->getAddressPoolSize(), 348);
 
+   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncLeaf));
+
    /***
    11th address is part of the newly computed assets, we need to
    confirm that it was registered with the db. We will mine some
    coins to it and expect to see a balance.
    ***/
 
-   auto armoryInstance = envPtr_->armoryInstance();
+   const auto armoryInstance = envPtr_->armoryInstance();
    unsigned blockCount = 6;
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
@@ -1778,7 +1707,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtention)
    //mine 6 more blocks
    curHeight = envPtr_->armoryConnection()->topBlock();
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + 6);
+   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
 
    //update balance
    auto promPtr4 = std::make_shared<std::promise<bool>>();
@@ -1809,14 +1738,22 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
-      syncMgr->syncWallets();
 
-      auto regIDs = syncMgr->registerWallets();
-      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+      auto promSync = std::make_shared<std::promise<bool>>();
+      auto futSync = promSync->get_future();
+      const auto &cbSync = [this, promSync](int cur, int total) {
+         if (cur == total) {
+            promSync->set_value(true);
+         }
+      };
+      syncMgr->syncWallets(cbSync);
+      EXPECT_TRUE(futSync.get());
 
       auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
       auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
       ASSERT_TRUE(syncLeaf != nullptr);
+      syncLeaf->registerWallet(envPtr_->armoryConnection());
+      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncLeaf));
 
       //check wallet has 10 assets per account
       ASSERT_EQ(syncLeaf->getAddressPoolSize(), 60);
@@ -1981,10 +1918,21 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
-      syncMgr->syncWallets();
 
-      auto regIDs = syncMgr->registerWallets();
-      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+      auto promSync = std::make_shared<std::promise<bool>>();
+      auto futSync = promSync->get_future();
+      const auto &cbSync = [this, promSync](int cur, int total) {
+         if (cur == total) {
+            promSync->set_value(true);
+         }
+      };
+      syncMgr->syncWallets(cbSync);
+      EXPECT_TRUE(futSync.get());
+
+      const auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+      ASSERT_NE(syncHdWallet, nullptr);
+      syncHdWallet->registerWallet(envPtr_->armoryConnection());
+      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncHdWallet));
 
       auto trackProm = std::make_shared<std::promise<bool>>();
       auto trackFut = trackProm->get_future();
@@ -2030,6 +1978,12 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //check address chain length
       EXPECT_EQ(syncLeaf->getExtAddressCount(), 14);
       EXPECT_EQ(syncLeaf->getIntAddressCount(), 42);
+
+      std::vector<bs::Address> intVecRange;
+      intVecRange.insert(intVecRange.end(), intVec.cbegin(), intVec.cbegin() + 42);
+      const auto &intAddrList = syncLeaf->getIntAddressList();
+      EXPECT_EQ(intAddrList.size(), 42);
+      EXPECT_EQ(intAddrList, intVecRange);
 
       //check ext[12] is p2sh_p2wpkh
       const auto &extAddrList = syncLeaf->getExtAddressList();
@@ -2095,10 +2049,21 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
          , envPtr_->appSettings(), envPtr_->armoryConnection());
       syncMgr->setSignContainer(inprocSigner);
-      syncMgr->syncWallets();
 
-      auto regIDs = syncMgr->registerWallets();
-      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+      auto promSync = std::make_shared<std::promise<bool>>();
+      auto futSync = promSync->get_future();
+      const auto &cbSync = [this, promSync](int cur, int total) {
+         if (cur == total) {
+            promSync->set_value(true);
+         }
+      };
+      syncMgr->syncWallets(cbSync);
+      EXPECT_TRUE(futSync.get());
+
+      const auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+      ASSERT_NE(syncHdWallet, nullptr);
+      syncHdWallet->registerWallet(envPtr_->armoryConnection());
+      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncHdWallet));
 
       auto trackProm = std::make_shared<std::promise<bool>>();
       auto trackFut = trackProm->get_future();
@@ -2147,6 +2112,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       //check ext[12] & [15] are p2sh_p2wpkh
       const auto &extAddrList = syncLeaf->getExtAddressList();
+      ASSERT_EQ(extAddrList.size(), 15);
       EXPECT_EQ(extAddrList[12].getType(),
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH));
       EXPECT_EQ(extAddrList[14].getType(),
@@ -2193,8 +2159,8 @@ TEST_F(TestWalletWithArmory, Comments)
    auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
    
-   auto regIDs = syncMgr->registerWallets();
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+   syncHdWallet->registerWallet(envPtr_->armoryConnection());
+   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncHdWallet));
 
    EXPECT_TRUE(syncWallet->setAddressComment(addr, addrComment));
    EXPECT_EQ(leafPtr_->getAddressComment(addr), addrComment);
@@ -2267,8 +2233,8 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
 
-   auto regIDs = syncMgr->registerWallets();
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+   syncWallet->registerWallet(envPtr_->armoryConnection());
+   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
 
    //mine some coins
    auto armoryInstance = envPtr_->armoryInstance();
@@ -2399,8 +2365,8 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
 
-   auto regIDs = syncMgr->registerWallets();
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+   syncWallet->registerWallet(envPtr_->armoryConnection());
+   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
 
    //mine some coins
    auto armoryInstance = envPtr_->armoryInstance();

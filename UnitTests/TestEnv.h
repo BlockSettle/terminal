@@ -91,7 +91,7 @@ public:
    void shutdown(void);
    
    std::shared_ptr<ApplicationSettings> appSettings() { return appSettings_; }
-   std::shared_ptr<ArmoryObject> armoryConnection() { return armoryConnection_; }
+   std::shared_ptr<ArmoryConnection> armoryConnection() { return armoryConnection_; }
    std::shared_ptr<ArmoryInstance> armoryInstance() { return armoryInstance_; }
    std::shared_ptr<MockAssetManager> assetMgr() { return assetMgr_; }
    std::shared_ptr<MockAuthAddrMgr> authAddrMgr() { return authAddrMgr_; }
@@ -118,7 +118,7 @@ private:
    std::shared_ptr<QuoteProvider>        quoteProvider_;
    std::shared_ptr<bs::core::WalletsManager>       walletsMgr_;
    std::shared_ptr<spdlog::logger>       logger_;
-   std::shared_ptr<ArmoryObject>     armoryConnection_;
+   std::shared_ptr<ArmoryConnection>     armoryConnection_;
    std::shared_ptr<ArmoryInstance>       armoryInstance_;
 };
 

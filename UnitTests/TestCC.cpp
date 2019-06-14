@@ -136,8 +136,8 @@ void TestCC::SetUp()
    };
    xbtWallet_->getNewExtAddress(cbRecvAddr);
    recvAddr_ = futRecvAddr.get();
-   auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+   syncWallet->registerWallet(envPtr_->armoryConnection());
+   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
 
    auto promAddr = std::make_shared<std::promise<bs::Address>>();
    auto futAddr = promAddr->get_future();

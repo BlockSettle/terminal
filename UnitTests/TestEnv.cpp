@@ -8,7 +8,7 @@
 #include "TestEnv.h"
 
 #include "ApplicationSettings.h"
-#include "ArmoryConnection.h"
+#include "ArmoryObject.h"
 #include "ArmorySettings.h"
 #include "AuthAddressManager.h"
 #include "CelerClient.h"
@@ -90,7 +90,7 @@ void TestEnv::requireArmory()
 
    armoryInstance_ = std::make_shared<ArmoryInstance>();
 
-   armoryConnection_ = std::make_shared<ArmoryObject>(logger_, "", false);
+   auto armoryConnection = std::make_shared<ArmoryObject>(logger_, "", false);
    ArmorySettings settings;
    settings.runLocally = false;
    settings.socketType = appSettings()->GetArmorySocketType();
@@ -98,17 +98,18 @@ void TestEnv::requireArmory()
    settings.armoryDBIp = QLatin1String("127.0.0.1");
    settings.armoryDBPort = armoryInstance_->port_;
    settings.dataDir = QLatin1String("armory_regtest_db");
-   armoryConnection_->setupConnection(settings, [](const BinaryData &, const std::string &) { return true; });
+   armoryConnection->setupConnection(settings);
+   armoryConnection_ = armoryConnection;
 
    blockMonitor_ = std::make_shared<BlockchainMonitor>(armoryConnection_);
 
    qDebug() << "Waiting for ArmoryDB connection...";
-   while (armoryConnection_->state() != ArmoryConnection::State::Connected) {
+   while (armoryConnection_->state() != ArmoryState::Connected) {
       QThread::msleep(1);
    }
    qDebug() << "Armory connected - waiting for ready state...";
    armoryConnection_->goOnline();
-   while (armoryConnection_->state() != ArmoryConnection::State::Ready) {
+   while (armoryConnection_->state() != ArmoryState::Ready) {
       QThread::msleep(1);
    }
    logger_->debug("Armory is ready - continue execution");

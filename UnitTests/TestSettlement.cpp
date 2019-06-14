@@ -53,9 +53,6 @@ void TestSettlement::sendTo(uint64_t value, bs::Address& addr)
 }
 
 TestSettlement::TestSettlement()
-   : QObject(nullptr)
-   , receivedPayIn_(false), receivedPayOut_(false)
-   , settlWalletReady_(false)
 {}
 
 void TestSettlement::SetUp()
@@ -124,8 +121,8 @@ void TestSettlement::SetUp()
    syncMgr_->syncWallets();
    EXPECT_TRUE(syncMgr_->createSettlementWallet());
 
-   auto regIDs = syncMgr_->registerWallets();
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
+   syncMgr_->registerWallets();
+//!   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(regIDs));
 
    auto curHeight = envPtr_->armoryConnection()->topBlock();
    mineBlocks(6);
@@ -147,7 +144,6 @@ void TestSettlement::SetUp()
 
    const auto settlWallet = syncMgr_->getSettlementWallet();
    settlWallet->updateBalances(balLBD);
-   connect(settlWallet.get(), &bs::sync::Wallet::walletReady, this, &TestSettlement::onWalletReady);
    settlementId_ = CryptoPRNG::generateRandom(32);
 
    fut.wait();
@@ -163,13 +159,6 @@ void TestSettlement::TearDown()
    fundAddr_.clear();
    hdWallet_.clear();
    userId_.clear();
-}
-
-void TestSettlement::onWalletReady(const QString &id)
-{
-   if (id.toStdString() == syncMgr_->getSettlementWallet()->walletId()) {
-      settlWalletReady_ = true;
-   }
 }
 
 TEST_F(TestSettlement, Initial_balances)

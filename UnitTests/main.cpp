@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QThread>
+#include <QTimer>
 #include <QtPlugin>
 
 #include <gtest/gtest.h>

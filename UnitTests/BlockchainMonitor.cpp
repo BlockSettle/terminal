@@ -1,105 +1,73 @@
 #include "BlockchainMonitor.h"
-#include <QApplication>
-#include <QDateTime>
-#include <QThread>
+#include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWallet.h"
 
 
-BlockchainMonitor::BlockchainMonitor(const std::shared_ptr<ArmoryObject> &armory)
-   : QObject(nullptr), armory_(armory), receivedNewBlock_(false)
-{
-   connect(armory_.get(), &ArmoryObject::newBlock, [this](unsigned int) { receivedNewBlock_ = true; });
-   connect(armory_.get(), &ArmoryObject::zeroConfReceived
-      , [this](std::vector<bs::TXEntry> entries) {
-      zcQueue_.push_back(std::move(entries));
-   });
-   connect(armory_.get(), &ArmoryObject::refresh,
-      [this](std::vector<BinaryData> ids, bool)
-      { refreshQueue_.push_back(move(ids)); }
-   );
-}
+BlockchainMonitor::BlockchainMonitor(const std::shared_ptr<ArmoryConnection> &armory)
+   : ArmoryCallbackTarget(armory.get())
+{}
 
 uint32_t BlockchainMonitor::waitForNewBlocks(uint32_t targetHeight)
 {
    while (!receivedNewBlock_ || (targetHeight && (armory_->topBlock() < targetHeight))) {
-      QApplication::processEvents();
-      QThread::msleep(50);
+      std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
    }
    receivedNewBlock_ = false;
    return armory_->topBlock();
 }
 
-bool BlockchainMonitor::waitForFlag(std::atomic_bool &flag, double timeoutInSec)
+bool BlockchainMonitor::waitForFlag(std::atomic_bool &flag, const std::chrono::milliseconds timeout)
 {
-   const auto curTime = QDateTime::currentDateTime();
-   while (!flag) {
-      QApplication::processEvents();
-      if (curTime.msecsTo(QDateTime::currentDateTime()) > (timeoutInSec * 1000)) {
-         return false;
+   using namespace std::chrono_literals;
+   const auto napTime = 10ms;
+   for (auto elapsed = 0ms; elapsed < timeout; elapsed += napTime) {
+      if (flag) {
+         return true;
       }
-      QThread::msleep(50);
+      std::this_thread::sleep_for(napTime);
    }
-   flag = false;
-   return true;
+   return false;
 }
 
-bool BlockchainMonitor::waitForWalletReady(const std::vector<std::string>& ids, double timeoutInSec)
+bool BlockchainMonitor::waitForWalletReady(const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::chrono::milliseconds timeout)
 {
-   if (ids.size() == 0)
-      return false;
-
-   std::set<BinaryData> idSet;
-   for (auto& id : ids)
-   {
-      BinaryData idBd((const uint8_t*)id.c_str(), id.size());
-      idSet.insert(idBd);
-   }
-
-   const auto curTime = QDateTime::currentDateTime();
-   while (true) 
-   {
-      QApplication::processEvents();
-
-      try
-      {
-         auto&& idVec = refreshQueue_.pop_front();
-         for (auto& id : idVec)
-         {
-            auto iter = idSet.find(id);
-            if (iter != idSet.end())
-               idSet.erase(iter);
-         }
-      }
-      catch (IsEmpty&)
-      {}
-
-      if (idSet.size() == 0)
+   using namespace std::chrono_literals;
+   const auto napTime = 10ms;
+   for (auto elapsed = 0ms; elapsed < timeout; elapsed += napTime) {
+      if (wallet->isReady()) {
          return true;
-
-      if (curTime.msecsTo(QDateTime::currentDateTime()) > (timeoutInSec * 100000000)) {
-         return false;
       }
-      
-      QThread::msleep(100);
+      std::this_thread::sleep_for(napTime);
    }
-   return true;
+   return false;
+}
+
+bool BlockchainMonitor::waitForWalletReady(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
+   , const std::chrono::milliseconds timeout)
+{
+   using namespace std::chrono_literals;
+   const auto napTime = 30ms;
+   for (auto elapsed = 0ms; elapsed < timeout; elapsed += napTime) {
+      if (wallet->isReady()) {
+         return true;
+      }
+      std::this_thread::sleep_for(napTime);
+   }
+   return false;
 }
 
 std::vector<bs::TXEntry> BlockchainMonitor::waitForZC()
 {
-   while (true)
-   {
-      QApplication::processEvents();
-
-      try
-      {
+   while (true) {
+      try {
          auto&& zcVec = zcQueue_.pop_front();
          return zcVec;
       }
       catch (IsEmpty&)
       {}
 
-      QThread::msleep(10);
+      std::this_thread::sleep_for(std::chrono::milliseconds{10});
    }
 }
 
