@@ -370,6 +370,7 @@ public:
 
    //locals
    void changeMasterPassphrase(const SecureBinaryData&);
+   std::shared_ptr<AssetEntry_Single> getRoot(void) const { return root_; }
    const SecureBinaryData& getPublicRoot(void) const;
    std::shared_ptr<AssetEntry> getAccountRoot(const BinaryData& accountID) const;
    const SecureBinaryData& getArmory135Chaincode(void) const;

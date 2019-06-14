@@ -751,7 +751,7 @@ void AddressAccount::make_new(
       {
          //WO
          node.initFromPublicKey(
-            accBip32->getDepth(), accBip32->getLeafID(),
+            accBip32->getDepth(), accBip32->getLeafID(), accBip32->getFingerPrint(),
             accBip32->getPublicRoot(), accBip32->getChaincode());
          
          //check AccountType_BIP32_Custom comments for more info
@@ -765,13 +765,13 @@ void AddressAccount::make_new(
             -1, full_account_id,
             pubkey, nullptr,
             chaincode,
-            node.getDepth(), node.getLeafID());
+            node.getDepth(), node.getLeafID(), node.getFingerPrint());
       }
       else
       {
          //full wallet
          node.initFromPrivateKey(
-            accBip32->getDepth(), accBip32->getLeafID(),
+            accBip32->getDepth(), accBip32->getLeafID(), accBip32->getFingerPrint(),
             accBip32->getPrivateRoot(), accBip32->getChaincode());
 
          //check AccountType_BIP32_Custom comments for more info
@@ -803,7 +803,7 @@ void AddressAccount::make_new(
             -1, full_account_id,
             pubkey, priv_asset,
             chaincode,
-            node.getDepth(), node.getLeafID());
+            node.getDepth(), node.getLeafID(), node.getFingerPrint());
       }
 
       return rootAsset;
@@ -1837,7 +1837,7 @@ void AccountType_BIP32::deriveFromRoot()
          throw AccountException("empty chaincode");
 
       BIP32_Node node;
-      node.initFromPublicKey(depth_, leafId_,
+      node.initFromPublicKey(depth_, leafId_, fingerPrint_,
          publicRoot_, chainCode_);
 
       for (auto& index : derivationPath_)
@@ -1858,7 +1858,7 @@ void AccountType_BIP32::deriveFromRoot()
          
       BIP32_Node node;
       node.initFromPrivateKey(
-         depth_, leafId_, privateRoot_, chainCode_);
+         depth_, leafId_, fingerPrint_, privateRoot_, chainCode_);
 
       //derive
       for (auto& index : derivationPath_)

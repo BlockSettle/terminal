@@ -298,7 +298,7 @@ shared_ptr<AssetEntry_Single>
       throw DerivationSchemeException("illegal: hard derivation");
 
    BIP32_Node node;
-   node.initFromPrivateKey(depth_, leafId_, privKeyData, chainCode_);
+   node.initFromPrivateKey(depth_, leafId_, 0, privKeyData, chainCode_);
    node.derivePrivate(index);
 
    //encrypt the new privkey
@@ -375,7 +375,7 @@ shared_ptr<AssetEntry_Single>
       throw DerivationSchemeException("illegal: hard derivation");
 
    BIP32_Node node;
-   node.initFromPublicKey(depth_, leafId_, pubKey, chainCode_);
+   node.initFromPublicKey(depth_, leafId_, 0, pubKey, chainCode_);
    node.derivePublic(index);
 
    auto nextPubKey = node.movePublicKey();
@@ -447,7 +447,7 @@ DerivationScheme_BIP32_Salted::computeNextPrivateEntry(
 
    BIP32_Node node;
    node.initFromPrivateKey(
-      getDepth(), getLeafId(), privKey, getChaincode());
+      getDepth(), getLeafId(), 0, privKey, getChaincode());
    node.derivePrivate(index);
 
    //salt the key
@@ -487,7 +487,7 @@ DerivationScheme_BIP32_Salted::computeNextPublicEntry(
 
    //compute pub key
    BIP32_Node node;
-   node.initFromPublicKey(getDepth(), getLeafId(), pubKey, getChaincode());
+   node.initFromPublicKey(getDepth(), getLeafId(), 0, pubKey, getChaincode());
    node.derivePublic(index);
    auto nextPubkey = node.movePublicKey();
 

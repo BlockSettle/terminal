@@ -333,7 +333,7 @@ const BinaryData& AssetWallet_Single::createBIP32Account(
          //derive account root
          BIP32_Node bip32Node;
          bip32Node.initFromPrivateKey(
-            root->getDepth(), root->getLeafID(),
+            root->getDepth(), root->getLeafID(), root->getFingerPrint(),
             privKey, chaincode);
          for (auto& path : derPath)
             bip32Node.derivePrivate(path);
@@ -364,7 +364,7 @@ const BinaryData& AssetWallet_Single::createBIP32Account(
 
       BIP32_Node bip32Node;
       bip32Node.initFromPublicKey(
-         root->getDepth(), root->getLeafID(),
+         root->getDepth(), root->getLeafID(), root->getFingerPrint(),
          pubkey, chaincode);
       for (auto& path : derPath)
          bip32Node.derivePublic(path);
@@ -1074,7 +1074,7 @@ shared_ptr<AssetWallet_Single> AssetWallet_Single::initWalletDb(
       rootAssetEntry = make_shared<AssetEntry_BIP32Root>(
          -1, BinaryData(),
          pubkey, rootAsset,
-         chaincode, 0, 0);
+         chaincode, 0, 0, 0);
    }
    else
    {

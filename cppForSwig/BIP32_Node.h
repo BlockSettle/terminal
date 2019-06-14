@@ -38,9 +38,9 @@ public:
 
    void initFromSeed(const SecureBinaryData&);
    void initFromBase58(const SecureBinaryData&);
-   void initFromPrivateKey(uint8_t depth, unsigned leaf_id,
+   void initFromPrivateKey(uint8_t depth, unsigned leaf_id, unsigned fingerprint,
       const SecureBinaryData& privKey, const SecureBinaryData& chaincode);
-   void initFromPublicKey(uint8_t depth, unsigned leaf_id,
+   void initFromPublicKey(uint8_t depth, unsigned leaf_id, unsigned fingerprint,
       const SecureBinaryData& pubKey, const SecureBinaryData& chaincode);
 
    //gets
