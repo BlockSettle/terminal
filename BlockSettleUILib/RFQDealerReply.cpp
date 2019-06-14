@@ -24,6 +24,7 @@
 #include "TxClasses.h"
 #include "UiUtils.h"
 #include "UtxoReserveAdapters.h"
+#include "CustomComboBox.h"
 #include "ManageEncryption/WalletKeysSubmitWidget.h"
 #include "UserScriptRunner.h"
 #include "Wallets/SyncHDWallet.h"
@@ -135,6 +136,7 @@ void RFQDealerReply::initUi()
    ui_->pushButtonSubmit->setEnabled(false);
    ui_->pushButtonPull->setEnabled(false);
    ui_->widgetWallet->hide();
+   ui_->comboBoxAQScript->setFirstItemHidden(true);
 
    ui_->spinBoxBidPx->clear();
    ui_->spinBoxOfferPx->clear();
@@ -142,11 +144,6 @@ void RFQDealerReply::initUi()
    ui_->spinBoxOfferPx->setEnabled(false);
 
    ui_->labelProductGroup->clear();
-
-   ui_->comboBoxAQScript->setEditable(true);
-   ui_->comboBoxAQScript->lineEdit()->setPlaceholderText(tr("Select script..."));
-   ui_->comboBoxAQScript->lineEdit()->setReadOnly(true);
-   ui_->comboBoxAQScript->lineEdit()->setEnabled(false);
 
    validateGUI();
 }
@@ -950,7 +947,8 @@ void RFQDealerReply::aqFillHistory()
       return;
    }
    ui_->comboBoxAQScript->clear();
-   int curIndex = -1;
+   int curIndex = /*-1*/0;
+   ui_->comboBoxAQScript->addItem(tr("Select script..."));
    ui_->comboBoxAQScript->addItem(tr("Load new AQ script"));
    const auto scripts = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
    if (!scripts.isEmpty()) {
@@ -959,7 +957,7 @@ void RFQDealerReply::aqFillHistory()
          QFileInfo fi(scripts[i]);
          ui_->comboBoxAQScript->addItem(fi.fileName(), scripts[i]);
          if (scripts[i] == lastScript) {
-            curIndex = i + 1; // note the "Load" row in the head
+            curIndex = i + 2; // note the "Load" row in the head
          }
       }
    }
@@ -973,6 +971,8 @@ void RFQDealerReply::aqScriptChanged(int curIndex)
    }
 
    if (curIndex == 0) {
+      //
+   } else if (curIndex == 1) {
       const auto scriptFN = QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QString()
          , tr("QML files (*.qml)"));
 
