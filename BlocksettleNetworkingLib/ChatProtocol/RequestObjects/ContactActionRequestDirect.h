@@ -15,11 +15,15 @@ namespace Chat {
       std::string receiverId() const {return receiverId_;}
       ContactsAction getAction() const {return action_;}
       BinaryData getSenderPublicKey() const {return senderPublicKey_;}
+      std::shared_ptr<Chat::MessageData> getMessage() const;
+      void setMessage(const std::shared_ptr<Chat::MessageData> &message);
+
    private:
       std::string senderId_;
       std::string receiverId_;
       ContactsAction action_;
       BinaryData senderPublicKey_;
+      std::shared_ptr<Chat::MessageData> message_;
    };
 }
 
