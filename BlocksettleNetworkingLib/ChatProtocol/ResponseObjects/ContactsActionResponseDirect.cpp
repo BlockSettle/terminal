@@ -7,6 +7,7 @@ namespace Chat {
       , receiverId_(receiverId)
       , action_(action)
       , senderPublicKey_(publicKey)
+      , message_(nullptr)
    {
       
    }
@@ -19,6 +20,9 @@ namespace Chat {
       data[ContactActionKey] = static_cast<int>(action_);
       data[PublicKeyKey] = QString::fromStdString(senderPublicKey_.toHexStr());
 
+      if (message_ != nullptr){
+         data[MessageKey] = message_->toJson();
+      }
       return data;
    }
    
@@ -29,11 +33,25 @@ namespace Chat {
       QString receiverId = data[ReceiverIdKey].toString();
       ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
       BinaryData publicKey = BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString());
-      return std::make_shared<ContactsActionResponseDirect>(senderId.toStdString(), receiverId.toStdString(), action, publicKey);
+      auto response = std::make_shared<ContactsActionResponseDirect>(senderId.toStdString(), receiverId.toStdString(), action, publicKey);
+      if (data.contains(MessageKey)) {
+         response->setMessage(Chat::MessageData::fromJSON(data[MessageKey].toString().toStdString()));
+      }
+      return std::move(response);
    }
    
    void ContactsActionResponseDirect::handle(ResponseHandler& handler)
    {
       return handler.OnContactsActionResponseDirect(*this);
    }
-}
+   
+   std::shared_ptr<Chat::MessageData> ContactsActionResponseDirect::getMessage() const
+   {
+       return message_;
+   }
+   
+   void ContactsActionResponseDirect::setMessage(const std::shared_ptr<Chat::MessageData> &message)
+   {
+       message_ = message;
+   }
+    }
