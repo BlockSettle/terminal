@@ -15,10 +15,9 @@
 ArmoryCallbackTarget::ArmoryCallbackTarget(ArmoryConnection *armory)
    : armory_(armory)
 {
-   if (!armory_) {
-      throw std::runtime_error("no Armory");
+   if (armory_) {
+      armory_->addTarget(this);
    }
-   armory_->addTarget(this);
 }
 
 ArmoryCallbackTarget::~ArmoryCallbackTarget()
