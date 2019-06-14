@@ -32,7 +32,7 @@ void ContactsListResponse::handle(ResponseHandler & handler)
    handler.OnContactsListResponse(*this);
 }
 
-const std::vector<std::shared_ptr<ContactRecordData> > &ContactsListResponse::getContactsList() const
+const std::vector<std::shared_ptr<ContactRecordData>>& ContactsListResponse::getContactsList() const
 {
    return contactsList_;
 }
