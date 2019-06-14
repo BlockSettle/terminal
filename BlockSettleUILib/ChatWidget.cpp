@@ -108,7 +108,7 @@ public:
    std::string login(const std::string& email, const std::string& jwt
       , const ZmqBIP15XDataConnection::cbNewKey &cb) override {
       chat_->logger_->debug("Set user name {}", email);
-      const auto userId = chat_->client_->loginToServer(email, jwt, cb);
+      const auto userId = chat_->client_->LoginToServer(email, jwt, cb);
       chat_->ui_->textEditMessages->setOwnUserId(userId);
       return userId;
    }
@@ -156,7 +156,7 @@ public:
    }
 
    void logout() override {
-      chat_->client_->logout();
+      chat_->client_->LogoutFromServer();
    }
 
    void onLoggedOut() override {
@@ -221,7 +221,7 @@ public:
       chat_->ui_->input_textEdit->setEnabled(!chat_->currentChat_.isEmpty());
       chat_->ui_->labelActiveChat->setText(QObject::tr("CHAT #") + chat_->currentChat_);
       chat_->ui_->textEditMessages->switchToChat(chat_->currentChat_, true);
-      chat_->client_->retrieveRoomMessages(chat_->currentChat_);
+      chat_->client_->loadRoomMessagesFromDB(chat_->currentChat_);
 
       // load draft
       if (chat_->draftMessages_.contains(roomId)) {

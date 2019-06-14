@@ -1,45 +1,32 @@
 #ifndef CHAT_CLIENT_H
 #define CHAT_CLIENT_H
 
+#include "BaseChatClient.h"
 #include "ChatClientTree/TreeObjects.h"
-#include "ChatDB.h"
 #include "ChatHandleInterfaces.h"
-#include "ChatProtocol/ChatProtocol.h"
-#include "ChatCommonTypes.h"
 #include "DataConnectionListener.h"
-#include "SecureBinaryData.h"
-#include "ZMQ_BIP15X_DataConnection.h"
-#include "Encryption/ChatSessionKey.h"
 
 #include <queue>
 #include <unordered_set>
 
 #include <QAbstractItemModel>
 #include <QObject>
-#include <QTimer>
 
-namespace spdlog {
-   class logger;
-}
 namespace Chat {
    class Request;
 }
 
 class ApplicationSettings;
 class ChatClientDataModel;
-class ConnectionManager;
 class UserHasher;
-class ZmqBIP15XDataConnection;
 class UserSearchModel;
 class ChatTreeModelWrapper;
 
-class ChatClient : public QObject
-             , public DataConnectionListener
-             , public Chat::ResponseHandler
-             , public ChatItemActionsHandler
-             , public ChatSearchActionsHandler
-             , public ChatMessageReadHandler
-             , public ModelChangesHandler
+class ChatClient : public BaseChatClient
+                 , public ChatItemActionsHandler
+                 , public ChatSearchActionsHandler
+                 , public ChatMessageReadHandler
+                 , public ModelChangesHandler
 {
    Q_OBJECT
 
@@ -58,33 +45,6 @@ public:
    std::shared_ptr<UserSearchModel> getUserSearchModel();
    std::shared_ptr<ChatTreeModelWrapper> getProxyModel();
 
-   std::string loginToServer(const std::string& email, const std::string& jwt
-      , const ZmqBIP15XDataConnection::cbNewKey &);
-   void logout(bool send = true);
-
-   void OnHeartbeatPong(const Chat::HeartbeatPongResponse &) override;
-   void OnUsersList(const Chat::UsersListResponse &) override;
-   void OnMessages(const Chat::MessagesResponse &) override;
-   void OnLoginReturned(const Chat::LoginResponse &) override;
-   void OnLogoutResponse(const Chat::LogoutResponse &) override;
-   void OnSendMessageResponse(const Chat::SendMessageResponse& ) override;
-   void OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse&) override;
-   void OnContactsActionResponseDirect(const Chat::ContactsActionResponseDirect&) override;
-   void OnContactsActionResponseServer(const Chat::ContactsActionResponseServer&) override;
-   void OnContactsListResponse(const Chat::ContactsListResponse&) override;
-   void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
-   void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
-   void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
-
-
-   void OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse&) override;
-   void OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse&) override;
-
-   void OnDataReceived(const std::string& data) override;
-   void OnConnected() override;
-   void OnDisconnected() override;
-   void OnError(DataConnectionError errorCode) override;
-
    std::shared_ptr<Chat::MessageData> sendOwnMessage(
          const QString& message, const QString &receiver);
    std::shared_ptr<Chat::MessageData> SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
@@ -98,105 +58,64 @@ public:
    std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
          const QString& message, const QString &receiver);
 
-   void retrieveUserMessages(const QString &userId);
-   void retrieveRoomMessages(const QString &roomId);
-
-   // Called when a peer asks for our public key.
-   void OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response) override;
-
-   // Called when we asked for a public key of peer, and got result.
-   void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
-
-   bool getContacts(ContactRecordDataList &contactList);
-   bool addOrUpdateContact(const QString &userId,
-                           Chat::ContactStatus status,
-                           const QString &userName = QStringLiteral(""));
-   bool removeContact(const QString &userId);
    void sendFriendRequest(const QString &friendUserId);
    void acceptFriendRequest(const QString &friendUserId);
    void declineFriendRequest(const QString &friendUserId);
-   void sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
-   void sendSearchUsersRequest(const QString& userIdPattern);
-   QString deriveKey(const QString& email) const;
    void clearSearch();
    bool isFriend(const QString &userId);
+
    Chat::ContactRecordData getContact(const QString &userId) const;
-   bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
-   std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
-   QString getUserId();
+
+   void retrieveUserMessages(const QString &userId);
+   void loadRoomMessagesFromDB(const QString& roomId);
 
 private:
-   void sendRequest(const std::shared_ptr<Chat::Request>& request);
    void readDatabase();
-   bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey);
 
-   std::shared_ptr<Chat::MessageData> sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& message
-                                                             , const QString &receiver);
+   void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
 
 signals:
    void ConnectedToServer();
-   void ConnectionClosed();
-   void ConnectionError(int errorCode);
 
    void LoginFailed();
    void LoggedOut();
-   void UsersReplace(const std::vector<std::string>& users);
-   void UsersAdd(const std::vector<std::string>& users);
-   void UsersDel(const std::vector<std::string>& users);
    void IncomingFriendRequest(const std::vector<std::string>& users);
    void FriendRequestAccepted(const std::vector<std::string>& users);
    void FriendRequestRejected(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void RoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
-   void MessageStatusUpdated(const QString& messageId, const QString& chatId, int newStatus);
-   void RoomsAdd(const std::vector<std::shared_ptr<Chat::RoomData>>& rooms);
    void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered);
    void NewContactRequest(const QString &userId);
    void ContactRequestAccepted(const QString &userId);
    void RoomsInserted();
 
-   void ForceLogoutSignal();
-public slots:
-   //void onMessageRead(const std::shared_ptr<Chat::MessageData>& message);
+protected:
+   BinaryData getOwnAuthPublicKey() const override;
+   SecureBinaryData   getOwnAuthPrivateKey() const override;
+   std::string getChatServerHost() const override;
+   std::string getChatServerPort() const override;
 
-private slots:
-   void onForceLogoutSignal();
-   void sendHeartbeat();
-   void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
-   void retrySendQueuedMessages(const std::string userId);
-   void eraseQueuedMessages(const std::string userId);
+   void OnLoginCompleted() override;
+   void OnLofingFailed() override;
+   void OnLogoutCompleted() override;
 
-private:
-   std::shared_ptr<ConnectionManager>     connectionManager_;
-   std::shared_ptr<ApplicationSettings>   appSettings_;
-   std::shared_ptr<spdlog::logger>        logger_;
+   void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::RoomData>>& roomsList) override;
+   void onUserListChanged(Chat::UsersListResponse::Command command, const std::vector<std::string>& userList) override;
+   void onContactListLoaded(const std::vector<std::shared_ptr<Chat::ContactRecordData>>& remoteContacts) override;
 
-   std::unique_ptr<ChatDB>                                     chatDb_;
-   std::map<QString, BinaryData>                               contactPublicKeys_;
+   void onSearchResult(const std::vector<std::shared_ptr<Chat::UserData>>& userData) override;
 
-   Chat::ChatSessionKeyPtr  chatSessionKeyPtr_;
+   void onDMMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) override;
+   void onRoomMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) override;
 
-   std::shared_ptr<ZmqBIP15XDataConnection>                    connection_;
-   std::shared_ptr<UserHasher>                                 hasher_;
-   std::map<QString, Botan::SecureVector<uint8_t>>             userNonces_;
+   void onMessageSent(const QString& receiverId, const QString& localId, const QString& serverId) override;
+   void onMessageStatusChanged(const QString& chatId, const QString& messageId, int newStatus) override;
 
-   // Queue of messages to be sent for each receiver, once we received the public key.
-   using messages_queue = std::queue<std::shared_ptr<Chat::MessageData> >;
-   std::map<QString, messages_queue>    enqueued_messages_;
-
-   QTimer            heartbeatTimer_;
-
-   std::string       currentUserId_;
-   std::string       currentJwt_;
-   std::atomic_bool  loggedIn_{ false };
-
-   autheid::PrivateKey  ownPrivKey_;
-   std::shared_ptr<ChatClientDataModel> model_;
-   std::shared_ptr<UserSearchModel> userSearchModel_;
-   std::shared_ptr<ChatTreeModelWrapper> proxyModel_;
-
-   bool              emailEntered_{ false };
+   void onContactAccepted(const QString& contactId) override;
+   void onContactRejected(const QString& contactId) override;
+   void onFriendRequest(const QString& userId, const QString& contactId, const BinaryData& pk) override;
+   void onContactRemove(const QString& contactId) override;
 
    // ChatItemActionsHandler interface
 public:
@@ -219,6 +138,15 @@ public:
    // ModelChangesHandler interface
 public:
    void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
+
+private:
+   std::shared_ptr<ApplicationSettings>   appSettings_;
+
+   std::shared_ptr<ChatClientDataModel>   model_;
+   std::shared_ptr<UserSearchModel>       userSearchModel_;
+   std::shared_ptr<ChatTreeModelWrapper>  proxyModel_;
+
+   bool              emailEntered_{ false };
 };
 
 #endif   // CHAT_CLIENT_H
