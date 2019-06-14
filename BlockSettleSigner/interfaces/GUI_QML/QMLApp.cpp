@@ -78,7 +78,11 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    settingsConnections();
 
-   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, adapter_, logger_);
+   qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
+   adapter_->setQmlFactory(qmlFactory_);
+
+   qmlFactory_->setHeadlessPubKey(adapter_->headlessPubKey());
+   connect(adapter_, &SignerAdapter::headlessPubKeyChanged, qmlFactory_.get(), &QmlFactory::setHeadlessPubKey);
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
    connect(qmlFactory_.get(), &QmlFactory::closeEventReceived, this, [this](){
       hideQmlWindow();
@@ -120,6 +124,8 @@ void QMLAppObj::onReady()
 {
    logger_->debug("[{}]", __func__);
    walletsMgr_ = adapter_->getWalletsManager();
+   qmlFactory_->setWalletsManager(walletsMgr_);
+
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsSynchronized, this, &QMLAppObj::onWalletsSynced);
 
    const auto &cbProgress = [this](int cur, int total) {
@@ -149,7 +155,6 @@ void QMLAppObj::onWalletsSynced()
       splashScreen_ = nullptr;
    }
    walletsModel_->setWalletsManager(walletsMgr_);
-   qmlFactory_->setWalletsManager(walletsMgr_);
 }
 
 void QMLAppObj::settingsConnections()

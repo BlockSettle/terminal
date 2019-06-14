@@ -16,10 +16,6 @@ Item {
         title: qsTr("Select wallets directory")
     }
 
-    Component.onCompleted: {
-        qmlFactory.requestHeadlessPubKey()
-    }
-
     Rectangle {
         id: rectHelp
 

@@ -164,6 +164,8 @@ void SignerInterfaceListener::onReady(const std::string &data)
 {
    logger_->info("received ready signal");
    QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
+
+   parent_->getWalletsManager();
 }
 
 void SignerInterfaceListener::onPeerConnected(const std::string &data, bool connected)
@@ -224,18 +226,11 @@ void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &dat
    });
 
 
-
-   qmlBridge_->invokeQmlMethod("test", cb
+   qmlBridge_->invokeQmlMethod("createCCSettlementTransactionDialog", cb
       , QString::fromStdString(txRequest.prompt())
       , QVariant::fromValue(txInfo)
-      , QVariant::fromValue(new bs::hd::WalletInfo(txRequest.wallet_id())));
+      , QVariant::fromValue(qmlFactory_->createWalletInfo(QString::fromStdString(txRequest.wallet_id()))));
 }
-
-
-
-
-
-
 
 void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::RequestId reqId)
 {
@@ -572,4 +567,9 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
 void SignerInterfaceListener::shutdown()
 {
    QApplication::quit();
+}
+
+void SignerInterfaceListener::setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory)
+{
+   qmlFactory_ = qmlFactory;
 }

@@ -25,7 +25,7 @@ CustomTitleDialogWindow {
     property int recvAddrHeight: 22
 
     id: root
-    title: qsTr("Sign Transaction")
+    title: qsTr("Sign Settlement Transaction")
     rejectable: true
     width: 500
     height: 420 + recvAddresses.height - 24

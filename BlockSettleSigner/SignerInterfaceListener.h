@@ -7,6 +7,7 @@
 #include "SignContainer.h"
 #include "DataConnectionListener.h"
 #include "QmlBridge.h"
+#include "QmlFactory.h"
 #include "bs_signer.pb.h"
 
 #include <functional>
@@ -82,6 +83,8 @@ public:
       cbAutoSignReqs_[reqId] = cb;
    }
 
+   void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
+
 private:
    void processData(const std::string &);
 
@@ -109,10 +112,12 @@ private:
    void shutdown();
 
 private:
-   std::shared_ptr<spdlog::logger>  logger_;
+   std::shared_ptr<spdlog::logger>           logger_;
    std::shared_ptr<ZmqBIP15XDataConnection>  connection_;
-   SignerAdapter  *  parent_;
-   bs::signer::RequestId   seq_ = 1;
+   std::shared_ptr<QmlFactory>               qmlFactory_;
+   SignerAdapter                             * parent_;
+
+   bs::signer::RequestId seq_ = 1;
    std::map<bs::signer::RequestId, std::function<void(const BinaryData &)>>      cbSignReqs_;
    std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfo_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletData_;

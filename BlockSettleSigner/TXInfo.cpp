@@ -1,6 +1,5 @@
 #include "TXInfo.h"
 #include "QWalletInfo.h"
-#include "QmlFactory.h"
 
 using namespace bs::wallet;
 using namespace Blocksettle::Communication;

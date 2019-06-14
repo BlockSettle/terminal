@@ -8,6 +8,7 @@
 #include "QPasswordData.h"
 #include "BSErrorCode.h"
 #include "QmlBridge.h"
+#include "QmlFactory.h"
 
 namespace bs {
    namespace sync {
@@ -74,7 +75,7 @@ public:
       , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &);
    void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
-   void getHeadlessPubKey(const std::function<void(const std::string &)> &);
+   void requesttHeadlessPubKey(const std::function<void(const std::string &)> &);
 
    void activateAutoSign(const std::string &walletId
       , bs::wallet::QPasswordData *passwordData
@@ -91,6 +92,10 @@ public:
    // TODO: reimlement requestPasswordAndSignTx, cancelTxSign etc
    void onSignSettlementTxRequest();
 
+   QString headlessPubKey() const;
+
+   void setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory);
+
 signals:
    void ready() const;
    void connectionError() const;
@@ -98,7 +103,6 @@ signals:
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
    void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
-//   void autoSignRequiresPwd(const std::string &walletId);
    void cancelTxSign(const BinaryData &txHash);
    void txSigned(const BinaryData &);
    void xbtSpent(const qint64 value, bool autoSign);
@@ -106,15 +110,19 @@ signals:
    void autoSignDeactivated(const std::string &walletId);
    void customDialogRequest(const QString &dialogName, const QVariantMap &data);
    void bindFailed() const;
+   void headlessPubKeyChanged(const QString &headlessPubKey) const;
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;
    NetworkType netType_;
    std::shared_ptr<SignContainer>   signContainer_;
    std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
+   std::shared_ptr<QmlFactory>               qmlFactory_;
    std::shared_ptr<SignerInterfaceListener>  listener_;
    std::shared_ptr<QmlBridge>  qmlBridge_;
    bool closeHeadless_{true};
+
+   QString headlessPubKey_;
 };
 
 

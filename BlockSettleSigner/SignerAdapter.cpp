@@ -54,6 +54,11 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("adapter connection failed");
    }
 
+   requesttHeadlessPubKey([this](const std::string &key){
+      headlessPubKey_ = QString::fromStdString(key);
+      emit headlessPubKeyChanged(headlessPubKey_);
+   });
+
    signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 
@@ -101,7 +106,7 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
    listener_->setDecryptNodeCb(reqId, cb);
 }
 
-void SignerAdapter::getHeadlessPubKey(const std::function<void (const std::string &)> &cb)
+void SignerAdapter::requesttHeadlessPubKey(const std::function<void (const std::string &)> &cb)
 {
    signer::HeadlessPubKeyRequest request;
    const auto reqId = listener_->send(signer::HeadlessPubKeyRequestType, request.SerializeAsString());
@@ -259,4 +264,15 @@ void SignerAdapter::walletsListUpdated()
    logger_->debug("[{}]", __func__);
    walletsMgr_->reset();
    walletsMgr_->syncWallets();
+}
+
+QString SignerAdapter::headlessPubKey() const
+{
+   return headlessPubKey_;
+}
+
+void SignerAdapter::setQmlFactory(const std::shared_ptr<QmlFactory> &qmlFactory)
+{
+   qmlFactory_ = qmlFactory;
+   listener_->setQmlFactory(qmlFactory);
 }
