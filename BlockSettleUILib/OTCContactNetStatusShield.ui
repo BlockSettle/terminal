@@ -20,7 +20,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>OTC available only for online contacts</string>
+      <string>Contact is offline</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
