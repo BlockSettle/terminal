@@ -32,7 +32,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Login to access OTC</string>
+      <string>Login to access OTC chat</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
