@@ -1477,7 +1477,7 @@
                         </widget>
                        </item>
                        <item alignment="Qt::AlignVCenter">
-                        <widget class="QComboBox" name="comboBoxAQScript"/>
+                        <widget class="CustomComboBox" name="comboBoxAQScript"/>
                        </item>
                       </layout>
                      </widget>
@@ -1930,6 +1930,11 @@
    <class>ToggleSwitch</class>
    <extends>QSlider</extends>
    <header>ToggleSwitch.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomComboBox</class>
+   <extends>QComboBox</extends>
+   <header>CustomComboBox.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -298,14 +298,12 @@ void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)
 
 void RFQReplyWidget::onConnectedToCeler()
 {
-   qDebug("GO TO DEALING PAGE");
    ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::DealingPage));
    ui_->pageRFQReply->onCelerConnected();
 }
 
 void RFQReplyWidget::onDisconnectedFromCeler()
 {
-   qDebug("GO TO LOGIN REQUIRED PAGE");
    ui_->stackedWidget->setCurrentIndex(static_cast<int>(DealingPages::LoginRequierdPage));
    ui_->pageRFQReply->onCelerDisconnected();
 }
