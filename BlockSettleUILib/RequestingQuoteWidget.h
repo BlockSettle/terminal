@@ -42,8 +42,7 @@ public slots:
    void onCelerDisconnected();
 
 signals:
-   void cancelRFQ(const QString &reqId);
-   void requestCancelled();
+   void cancelRFQ();
    void requestTimedOut();
    void quoteAccepted(const QString &reqId, const bs::network::Quote& quote);
    void quoteFinished();
