@@ -209,7 +209,8 @@ void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &dat
    }
 
    signer::SignTxRequest txRequest = request.signtxrequest();
-   Internal::SettlementInfo settlementInfo = request.settlementinfo();
+   bs::sync::SettlementInfo *settlementInfo = new bs::sync::SettlementInfo(request.settlementinfo());
+   QQmlEngine::setObjectOwnership(settlementInfo, QQmlEngine::JavaScriptOwnership);
 
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txRequest);
    QQmlEngine::setObjectOwnership(txInfo, QQmlEngine::JavaScriptOwnership);
@@ -229,6 +230,7 @@ void SignerInterfaceListener::onSignSettlementTxRequested(const std::string &dat
    qmlBridge_->invokeQmlMethod("createCCSettlementTransactionDialog", cb
       , QString::fromStdString(txRequest.prompt())
       , QVariant::fromValue(txInfo)
+      , QVariant::fromValue(settlementInfo)
       , QVariant::fromValue(qmlFactory_->createWalletInfo(QString::fromStdString(txRequest.wallet_id()))));
 }
 

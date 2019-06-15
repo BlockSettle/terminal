@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.2
 
 import com.blocksettle.TXInfo 1.0
+import com.blocksettle.SettlementInfo 1.0
 import com.blocksettle.AutheIDClient 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
@@ -17,6 +18,7 @@ CustomTitleDialogWindow {
     property string prompt
     property WalletInfo walletInfo: WalletInfo{}
     property TXInfo txInfo: TXInfo {}
+    property SettlementInfo settlementInfo: SettlementInfo {}
     property QPasswordData passwordData: QPasswordData{}
     property bool   acceptable: walletInfo.encType === QPasswordData.Password ? tfPassword.text : true
     property AuthSignWalletObject  authSign: AuthSignWalletObject{}
@@ -95,7 +97,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Product Group")
             }
             CustomLabelValue {
-                text: "Product Group"
+                text: settlementInfo.productGroup
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -105,7 +107,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Security ID")
             }
             CustomLabelValue {
-                text: "Security ID"
+                text: settlementInfo.security
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -115,7 +117,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Product")
             }
             CustomLabelValue {
-                text: "Product"
+                text: settlementInfo.product
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -125,7 +127,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Side")
             }
             CustomLabelValue {
-                text: qsTr("Side")
+                text: settlementInfo.side
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -135,7 +137,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Quantity")
             }
             CustomLabelValue {
-                text: qsTr("Quantity")
+                text: settlementInfo.quantity
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -145,7 +147,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Price")
             }
             CustomLabelValue {
-                text: qsTr("Price")
+                text: settlementInfo.price
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -155,7 +157,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Total Value (XBT)")
             }
             CustomLabelValue {
-                text: qsTr("Total Value (XBT)")
+                text: settlementInfo.totalValue
                 Layout.alignment: Qt.AlignRight
             }
         }
@@ -180,7 +182,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Payment")
             }
             CustomLabelValue {
-                text: qsTr("Payment")
+                text: settlementInfo.payment
                 Layout.alignment: Qt.AlignRight
             }
 
@@ -190,7 +192,7 @@ CustomTitleDialogWindow {
                 text: qsTr("Genesis Address")
             }
             CustomLabelValue {
-                text: qsTr("Genesis Address")
+                text: settlementInfo.genesisAddress
                 Layout.alignment: Qt.AlignRight
             }
         }

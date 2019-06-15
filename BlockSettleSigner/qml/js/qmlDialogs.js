@@ -133,7 +133,7 @@ function activateAutoSignDialog(data) {
     signerStatus.activateAutoSign()
 }
 
-function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, walletInfo) {
+function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, settlementInfo, walletInfo) {
     raiseWindow()
 
     var dlg = Qt.createComponent("../BsDialogs/CCSettlementTransactionDialog.qml").createObject(mainWindow)
@@ -142,6 +142,7 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, walletI
     dlg.walletInfo = walletInfo
     dlg.prompt = prompt
     dlg.txInfo = txInfo
+    dlg.settlementInfo = settlementInfo
 
     dlg.bsAccepted.connect(function() {
         jsCallback(0, walletInfo.walletId, dlg.passwordData)

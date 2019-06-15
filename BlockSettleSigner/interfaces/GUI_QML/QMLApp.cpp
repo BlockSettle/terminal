@@ -17,6 +17,7 @@
 #include "SignerSettings.h"
 #include "SignerVersion.h"
 #include "SignerUiDefs.h"
+#include "SignContainer.h"
 #include "TXInfo.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -40,6 +41,7 @@
 
 Q_DECLARE_METATYPE(bs::core::wallet::TXSignRequest)
 Q_DECLARE_METATYPE(bs::wallet::TXInfo)
+Q_DECLARE_METATYPE(bs::sync::SettlementInfo)
 Q_DECLARE_METATYPE(bs::hd::WalletInfo)
 
 QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logger> &logger
@@ -196,6 +198,7 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterType<AuthSignWalletObject>("com.blocksettle.AuthSignWalletObject", 1, 0, "AuthSignWalletObject");
    qmlRegisterType<bs::wallet::TXInfo>("com.blocksettle.TXInfo", 1, 0, "TXInfo");
+   qmlRegisterType<bs::sync::SettlementInfo>("com.blocksettle.SettlementInfo", 1, 0, "SettlementInfo");
    qmlRegisterType<QmlPdfBackup>("com.blocksettle.QmlPdfBackup", 1, 0, "QmlPdfBackup");
    qmlRegisterType<EasyEncValidator>("com.blocksettle.EasyEncValidator", 1, 0, "EasyEncValidator");
    qmlRegisterType<PasswordConfirmValidator>("com.blocksettle.PasswordConfirmValidator", 1, 0, "PasswordConfirmValidator");
