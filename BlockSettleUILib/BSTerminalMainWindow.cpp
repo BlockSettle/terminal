@@ -424,6 +424,7 @@ void BSTerminalMainWindow::LoadWallets()
          logMgr_->logger()->debug("Ready to register wallets");
          walletsMgr_->registerWallets();
       }
+      act_->onRefresh({}, true);
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -734,16 +735,6 @@ void BSTerminalMainWindow::InitTransactionsView()
 
 void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
 {
-   if (!parent_->initialWalletCreateDialogShown_) {
-      if (state == ArmoryState::Connected && parent_->walletsMgr_
-         && parent_->walletsMgr_->hdWalletsCount() == 0) {
-         parent_->initialWalletCreateDialogShown_ = true;
-         QMetaObject::invokeMethod(parent_, [this] {
-            parent_->createWallet(true);
-         });
-      }
-   }
-
    switch (state) {
    case ArmoryState::Ready:
       QMetaObject::invokeMethod(parent_, &BSTerminalMainWindow::CompleteUIOnlineView);
@@ -761,6 +752,18 @@ void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
    case ArmoryState::Closing:
       break;
    default:    break;
+   }
+}
+
+void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &, bool)
+{
+   if (!parent_->initialWalletCreateDialogShown_ && parent_->walletsMgr_
+      && parent_->walletsMgr_->isWalletsReady()
+      && (parent_->walletsMgr_->hdWalletsCount() == 0)) {
+      parent_->initialWalletCreateDialogShown_ = true;
+      QMetaObject::invokeMethod(parent_, [this] {
+         parent_->createWallet(true);
+      });
    }
 }
 

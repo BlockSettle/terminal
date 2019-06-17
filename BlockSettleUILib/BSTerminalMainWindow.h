@@ -247,6 +247,7 @@ private:
       void onZCReceived(const std::vector<bs::TXEntry> &) override;
       void onStateChanged(ArmoryState) override;
       void onTxBroadcastError(const std::string &hash, const std::string &error) override;
+      void onRefresh(const std::vector<BinaryData> &, bool) override;
 
    private:
       BSTerminalMainWindow *parent_;

@@ -56,6 +56,8 @@ namespace bs {
 
          void syncWallets(const CbProgress &cb = nullptr);
 
+         bool isWalletsReady() const;
+
          size_t walletsCount() const { return wallets_.size(); }
          bool hasPrimaryWallet() const;
          bool hasSettlementWallet() const { return (settlementWallet_ != nullptr); }
@@ -214,6 +216,8 @@ namespace bs {
             , std::pair<QPointer<QObject>, std::function<void(float)>>>> feeCallbacks_;
 
          unsigned int createHdReqId_ = 0;
+
+         std::atomic_bool  synchronized_{ false };
       };
 
    }  //namespace sync

@@ -66,6 +66,7 @@ void WalletsManager::syncWallets(const CbProgress &cb)
                logger_->debug("[WalletsManager::syncWallets] all wallets synchronized");
                emit walletsSynchronized();
                emit walletChanged();
+               synchronized_ = true;
             }
          };
 
@@ -133,16 +134,30 @@ void WalletsManager::syncWallets(const CbProgress &cb)
       }
 
       if (wi.empty()) {
+         synchronized_ = true;
          emit walletsSynchronized();
       }
    };
 
+   synchronized_ = false;
    if (!signContainer_) {
       logger_->error("[WalletsManager::{}] signer is not set - aborting"
          , __func__);
       return;
    }
    signContainer_->syncWalletInfo(cbWalletInfo);
+}
+
+bool WalletsManager::isWalletsReady() const
+{
+   bool result = true;
+   if (synchronized_ && hdWallets_.empty()) {
+      return result;
+   }
+   for (const auto &wallet : hdWallets_) {
+      result &= wallet.second->isReady();
+   }
+   return result;
 }
 
 bool WalletsManager::isReadyForTrading() const
@@ -498,6 +513,21 @@ void WalletsManager::onWalletReady(const QString &walletId)
    emit walletReady(walletId);
    if (!armory_) {
       return;
+   }
+   const auto rootWallet = getHDRootForLeaf(walletId.toStdString());
+   if (rootWallet) {
+      const auto &itWallet = newWallets_.find(rootWallet->walletId());
+      if (itWallet != newWallets_.end()) {
+         rootWallet->synchronize([this, walletId] {
+            const auto wallet = getWalletById(walletId.toStdString());
+            if (wallet) {
+               QMetaObject::invokeMethod(this, [wallet] {
+                  emit wallet->addressAdded();
+               });
+            }
+         });
+         newWallets_.erase(itWallet);
+      }
    }
    if (armory_->state() != ArmoryState::Ready) {
       readyWallets_.insert(walletId);
