@@ -337,15 +337,14 @@ std::string ArmoryConnection::registerWallet(const std::string &walletId
       logger_->error("[{}] invalid state: {}", __func__, (int)state_.load());
       return {};
    }
-   
+
+   std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
+
    auto wallet = std::make_shared<AsyncClient::BtcWallet>(
       bdv_->instantiateWallet(walletId));
    const auto &regId = wallet->registerAddresses(addrVec, asNew);
 
-   {
-      std::unique_lock<std::mutex> lock(registrationCallbacksMutex_);
-      registrationCallbacks_[regId] = cb;
-   }
+   registrationCallbacks_[regId] = cb;
 
    return regId;
 

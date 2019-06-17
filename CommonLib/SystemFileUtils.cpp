@@ -9,6 +9,7 @@
 #  include <stdlib.h>
 #  include <dirent.h>
 #  include <glob.h>
+#  include <unistd.h>
 #endif
 #include <algorithm>
 #include <string.h>
