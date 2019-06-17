@@ -31,44 +31,51 @@ OTCNegotiationRequestWidget::OTCNegotiationRequestWidget(QWidget* parent)
 
 OTCNegotiationRequestWidget::~OTCNegotiationRequestWidget() noexcept = default;
 
-void OTCNegotiationRequestWidget::DisplayResponse(const std::shared_ptr<Chat::OTCResponseData>& initialResponse)
+void OTCNegotiationRequestWidget::DisplayResponse(const std::shared_ptr<Chat::Data>& initialResponse)
 {
-   if (initialResponse->otcResponse().side == bs::network::ChatOTCSide::Sell) {
+   assert(initialResponse->has_message() && initialResponse->message().has_otc_response());
+
+   if (initialResponse->message().otc_response().side() == Chat::OTC_SIDE_SELL) {
       ui_->labelSide->setText(tr("Sell"));
-   } else if (initialResponse->otcResponse().side == bs::network::ChatOTCSide::Buy) {
+   } else if (initialResponse->message().otc_response().side() == Chat::OTC_SIDE_BUY) {
       ui_->labelSide->setText(tr("Buy"));
    } else {
       ui_->labelSide->setText(tr("Undefined"));
    }
 
-   auto priceRange = initialResponse->otcResponse().priceRange;
-   auto amountRange = initialResponse->otcResponse().quantityRange;
+   const auto &priceRange = initialResponse->message().otc_response().price();
+   const auto &amountRange = initialResponse->message().otc_response().quantity();
 
-   ui_->spinBoxOffer->setMinimum(priceRange.lower);
-   ui_->spinBoxOffer->setMaximum(priceRange.upper);
-   ui_->spinBoxOffer->setValue(priceRange.lower);
+   ui_->spinBoxOffer->setMinimum(priceRange.lower());
+   ui_->spinBoxOffer->setMaximum(priceRange.upper());
+   ui_->spinBoxOffer->setValue(priceRange.lower());
 
-   ui_->spinBoxQuantity->setMinimum(amountRange.lower);
-   ui_->spinBoxQuantity->setMaximum(amountRange.upper);
-   ui_->spinBoxQuantity->setValue(amountRange.lower);
+   ui_->spinBoxQuantity->setMinimum(amountRange.lower());
+   ui_->spinBoxQuantity->setMaximum(amountRange.upper());
+   ui_->spinBoxQuantity->setValue(amountRange.lower());
 
    changed_ = false;
 }
 
-void OTCNegotiationRequestWidget::SetResponseData(const std::shared_ptr<Chat::OTCResponseData>& initialResponse)
+void OTCNegotiationRequestWidget::SetResponseData(const std::shared_ptr<Chat::Data>& initialResponse)
 {
+   assert(initialResponse->has_message() && initialResponse->message().has_otc_response());
+
    DisplayResponse(initialResponse);
    initialUpdate_ = true;
    ui_->pushButtonAccept->setText(tr("Respond"));
 }
 
-void OTCNegotiationRequestWidget::SetUpdateData(const std::shared_ptr<Chat::OTCUpdateData>& update
-                                                , const std::shared_ptr<Chat::OTCResponseData>& initialResponse)
+void OTCNegotiationRequestWidget::SetUpdateData(const std::shared_ptr<Chat::Data>& update
+                                                , const std::shared_ptr<Chat::Data>& initialResponse)
 {
+   assert(initialResponse->has_message() && initialResponse->message().has_otc_response());
+   assert(update->has_message() && update->message().has_otc_update());
+
    DisplayResponse(initialResponse);
    initialUpdate_ = false;
-   ui_->spinBoxOffer->setValue(update->otcUpdate().price);
-   ui_->spinBoxQuantity->setValue(update->otcUpdate().amount);
+   ui_->spinBoxOffer->setValue(update->message().otc_update().price());
+   ui_->spinBoxQuantity->setValue(update->message().otc_update().amount());
    ui_->pushButtonAccept->setText(tr("Accept"));
    changed_ = false;
 }

@@ -5,6 +5,7 @@
 #include "ChatClientTree/TreeObjects.h"
 #include "ChatHandleInterfaces.h"
 #include "DataConnectionListener.h"
+#include "chat.pb.h"
 
 #include <queue>
 #include <unordered_set>
@@ -45,34 +46,34 @@ public:
    std::shared_ptr<UserSearchModel> getUserSearchModel();
    std::shared_ptr<ChatTreeModelWrapper> getProxyModel();
 
-   std::shared_ptr<Chat::MessageData> sendOwnMessage(
-         const QString& message, const QString &receiver);
-   std::shared_ptr<Chat::MessageData> SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
-                                                              , const QString &receiver);
-   std::shared_ptr<Chat::MessageData> SubmitPrivateOTCResponse(const bs::network::OTCResponse& otcResponse
-                                                              , const QString &receiver);
-   std::shared_ptr<Chat::MessageData> SubmitPrivateCancel(const QString &receiver);
-   std::shared_ptr<Chat::MessageData> SubmitPrivateUpdate(const bs::network::OTCUpdate& update
-                                                          , const QString &receiver);
+   std::shared_ptr<Chat::Data> sendOwnMessage(
+         const std::string& message, const std::string &receiver);
+   std::shared_ptr<Chat::Data> SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
+                                                              , const std::string &receiver);
+   std::shared_ptr<Chat::Data> SubmitPrivateOTCResponse(const bs::network::OTCResponse& otcResponse
+                                                              , const std::string &receiver);
+   std::shared_ptr<Chat::Data> SubmitPrivateCancel(const std::string &receiver);
+   std::shared_ptr<Chat::Data> SubmitPrivateUpdate(const bs::network::OTCUpdate& update
+                                                          , const std::string &receiver);
 
-   std::shared_ptr<Chat::MessageData> sendRoomOwnMessage(
-         const QString& message, const QString &receiver);
+   std::shared_ptr<Chat::Data> sendRoomOwnMessage(
+         const std::string& message, const std::string &receiver);
 
-   void sendFriendRequest(const QString &friendUserId);
-   void acceptFriendRequest(const QString &friendUserId);
-   void declineFriendRequest(const QString &friendUserId);
+   void sendFriendRequest(const std::string &friendUserId);
+   void acceptFriendRequest(const std::string &friendUserId);
+   void declineFriendRequest(const std::string &friendUserId);
    void clearSearch();
-   bool isFriend(const QString &userId);
+   bool isFriend(const std::string &userId);
 
-   Chat::ContactRecordData getContact(const QString &userId) const;
+   Chat::Data_ContactRecord getContact(const std::string &userId) const;
 
-   void retrieveUserMessages(const QString &userId);
-   void loadRoomMessagesFromDB(const QString& roomId);
+   void retrieveUserMessages(const std::string &userId);
+   void loadRoomMessagesFromDB(const std::string& roomId);
 
 private:
-   void readDatabase();
+   void initMessage(Chat::Data *msg, const std::string& receiver);
 
-   void addMessageState(const std::shared_ptr<Chat::MessageData>& message, Chat::MessageData::State state);
+   void readDatabase();
 
 signals:
    void ConnectedToServer();
@@ -84,10 +85,10 @@ signals:
    void FriendRequestRejected(const std::vector<std::string>& users);
    void MessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
    void RoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::MessageData>> &messages, bool isFirstFetch);
-   void MessageIdUpdated(const QString& localId, const QString& serverId,const QString& chatId);
-   void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users, bool emailEntered);
-   void NewContactRequest(const QString &userId);
-   void ContactRequestAccepted(const QString &userId);
+   void MessageIdUpdated(const std::string& localId, const std::string& serverId, const std::string& chatId);
+   void SearchUserListReceived(const std::vector<std::shared_ptr<Chat::Data>>& users, bool emailEntered);
+   void NewContactRequest(const std::string &userId);
+   void ContactRequestAccepted(const std::string &userId);
    void RoomsInserted();
 
 protected:
@@ -100,30 +101,30 @@ protected:
    void OnLofingFailed() override;
    void OnLogoutCompleted() override;
 
-   void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::RoomData>>& roomsList) override;
-   void onUserListChanged(Chat::UsersListResponse::Command command, const std::vector<std::string>& userList) override;
-   void onContactListLoaded(const std::vector<std::shared_ptr<Chat::ContactRecordData>>& remoteContacts) override;
+   void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& roomsList) override;
+   void onUserListChanged(Chat::Command command, const std::vector<std::string>& userList) override;
+   void onContactListLoaded(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts) override;
 
-   void onSearchResult(const std::vector<std::shared_ptr<Chat::UserData>>& userData) override;
+   void onSearchResult(const std::vector<std::shared_ptr<Chat::Data>>& userData) override;
 
-   void onDMMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) override;
-   void onRoomMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) override;
+   void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
+   void onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
 
-   void onMessageSent(const QString& receiverId, const QString& localId, const QString& serverId) override;
-   void onMessageStatusChanged(const QString& chatId, const QString& messageId, int newStatus) override;
+   void onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId) override;
+   void onMessageStatusChanged(const std::string& chatId, const std::string& messageId, int newStatus) override;
 
-   void onContactAccepted(const QString& contactId) override;
-   void onContactRejected(const QString& contactId) override;
-   void onFriendRequest(const QString& userId, const QString& contactId, const BinaryData& pk) override;
-   void onContactRemove(const QString& contactId) override;
+   void onContactAccepted(const std::string& contactId) override;
+   void onContactRejected(const std::string& contactId) override;
+   void onFriendRequest(const std::string& userId, const std::string& contactId, const BinaryData& pk) override;
+   void onContactRemove(const std::string& contactId) override;
 
    // ChatItemActionsHandler interface
 public:
-   void onActionAddToContacts(const QString& userId) override;
-   void onActionRemoveFromContacts(std::shared_ptr<Chat::ContactRecordData> crecord) override;
-   void onActionAcceptContactRequest(std::shared_ptr<Chat::ContactRecordData> crecord) override;
-   void onActionRejectContactRequest(std::shared_ptr<Chat::ContactRecordData> crecord) override;
-   bool onActionIsFriend(const QString& userId) override;
+   void onActionAddToContacts(const std::string& userId) override;
+   void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   bool onActionIsFriend(const std::string& userId) override;
 
    // ChatSearchActionsHandler interface
 public:
@@ -132,12 +133,12 @@ public:
 
    // ChatMessageReadHandler interface
 public:
-   void onMessageRead(std::shared_ptr<Chat::MessageData> message) override;
-   void onRoomMessageRead(std::shared_ptr<Chat::MessageData> message) override;
+   void onMessageRead(std::shared_ptr<Chat::Data> message) override;
+   void onRoomMessageRead(std::shared_ptr<Chat::Data> message) override;
 
    // ModelChangesHandler interface
 public:
-   void onContactUpdatedByInput(std::shared_ptr<Chat::ContactRecordData> crecord) override;
+   void onContactUpdatedByInput(std::shared_ptr<Chat::Data> crecord) override;
 
 private:
    std::shared_ptr<ApplicationSettings>   appSettings_;

@@ -59,8 +59,8 @@ public:
    ~ChatMessagesTextEdit() noexcept override = default;
 
 public:
-   void setOwnUserId(const std::string &userId) { ownUserId_ = QString::fromStdString(userId); }
-   void switchToChat(const QString& chatId, bool isGroupRoom = false);
+   void setOwnUserId(const std::string &userId) { ownUserId_ = userId; }
+   void switchToChat(const std::string& chatId, bool isGroupRoom = false);
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    void setClient(std::shared_ptr<ChatClient> client);
@@ -69,10 +69,10 @@ public:
    QString getFormattedTextFromSelection();
 
 signals:
-   void MessageRead(const std::shared_ptr<Chat::MessageData> &) const;
+   void MessageRead(const std::shared_ptr<Chat::Data> &) const;
    void rowsInserted();
-   void userHaveNewMessageChanged(const QString &userId, const bool &haveNewMessage, const bool &isInCurrentChat);
-   void sendFriendRequest(const QString &userID);
+   void userHaveNewMessageChanged(const std::string &userId, const bool &haveNewMessage, const bool &isInCurrentChat);
+   void sendFriendRequest(const std::string &userID);
 
 protected:
    enum class Column {
@@ -90,11 +90,11 @@ protected:
    void contextMenuEvent(QContextMenuEvent *e) override;
 
 public slots:
-   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::DataObject> > &messages, bool isFirstFetch);
-   void onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::DataObject>> & messages, bool isFirstFetch);
-   void onSingleMessageUpdate(const std::shared_ptr<Chat::MessageData> &);
-   void onMessageIdUpdate(const QString& oldId, const QString& newId,const QString& chatId);
-   void onMessageStatusChanged(const QString& messageId, const QString chatId, int newStatus);
+   void onMessagesUpdate(const std::vector<std::shared_ptr<Chat::Data> > &messages, bool isFirstFetch);
+   void onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::Data>> & messages, bool isFirstFetch);
+   void onSingleMessageUpdate(const std::shared_ptr<Chat::Data> &);
+   void onMessageIdUpdate(const std::string& oldId, const std::string& newId,const std::string& chatId);
+   void onMessageStatusChanged(const std::string& messageId, const std::string &chatId, int newStatus);
    void urlActivated(const QUrl &link);
 
 private slots:
@@ -104,21 +104,21 @@ private slots:
    void onTextChanged();
 
 private:
-   //using MessagesHistory = std::vector<std::shared_ptr<Chat::MessageData>>;
-   using MessagesHistory = std::vector<std::shared_ptr<Chat::DataObject>>;
-   QMap<QString, MessagesHistory> messages_;
+   //using MessagesHistory = std::vector<std::shared_ptr<Chat::Data_Message>>;
+   using MessagesHistory = std::vector<std::shared_ptr<Chat::Data>>;
+   QMap<std::string, MessagesHistory> messages_;
    MessagesHistory messagesToLoadMore_;
-   QString currentChatId_;
-   QString ownUserId_;
-   QString username_;
+   std::string currentChatId_;
+   std::string ownUserId_;
+   std::string username_;
    std::shared_ptr<ChatItemActionsHandler> handler_;
    std::shared_ptr<ChatMessageReadHandler> messageReadHandler_;
    std::shared_ptr<ChatClient> client_;
 
 private:
-   std::shared_ptr<Chat::MessageData> findMessage(const QString& chatId, const QString& messageId);
-   void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
-   void insertMessage(std::shared_ptr<Chat::DataObject> message);
+   std::shared_ptr<Chat::Data> findMessage(const std::string& chatId, const std::string& messageId);
+   void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
+   void insertMessage(std::shared_ptr<Chat::Data> message);
    void insertLoadMore();
    void loadMore();
    void setupHighlightPalette();
@@ -145,7 +145,7 @@ private:
    // ViewItemWatcher interface
 public:
    void onElementSelected(CategoryElement *element) override;
-   void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
+   void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
    void onElementUpdated(CategoryElement *element) override;
    QTextCursor textCursor_;
    QString anchor_;

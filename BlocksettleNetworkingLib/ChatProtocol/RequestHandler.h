@@ -1,59 +1,59 @@
-#ifndef RequestHandler_h__
-#define RequestHandler_h__
+#ifndef REQUEST_HANDLER_H
+#define REQUEST_HANDLER_H
+
+#include <string>
 
 namespace Chat {
 
-   class HeartbeatPingRequest;
-   class LoginRequest;
-   class LogoutRequest;
-   class SendMessageRequest;
-   class AskForPublicKeyRequest;
-   class SendOwnPublicKeyRequest;
-   class OnlineUsersRequest;
-   class MessagesRequest;
-   class MessageChangeStatusRequest;
-   class ContactActionRequestDirect;
-   class ContactActionRequestServer;
-   class ContactsListRequest;
-   class ChatroomsListRequest;
-   class PendingMessagesResponse;
-   class SendRoomMessageRequest;
-   class SearchUsersRequest;
-   class SessionPublicKeyRequest;
-   class ReplySessionPublicKeyRequest;
+   class Request_Login;
+   class Request_Logout;
+   class Request_SendMessage;
+   class Request_AskForPublicKey;
+   class Request_SendOwnPublicKey;
+   class Request_OnlineUsers;
+   class Request_Messages;
+   class Request_MessageChangeStatus;
+   class Request_ModifyContactsDirect;
+   class Request_ModifyContactsServer;
+   class Request_ContactsList;
+   class Request_ChatroomsList;
+   class Request_SendRoomMessage;
+   class Request_SearchUsers;
+   class Request_SessionPublicKey;
+   class Request_ReplySessionPublicKey;
 
    class RequestHandler
    {
    public:
       virtual ~RequestHandler() = default;
 
-      virtual void OnLogin(const LoginRequest&) = 0;
-      virtual void OnLogout(const LogoutRequest&) = 0;
-      virtual void OnSendMessage(const SendMessageRequest&) = 0;
+      virtual void OnLogin(const std::string& clientId, const Request_Login&) = 0;
+      virtual void OnLogout(const std::string& clientId, const Request_Logout&) = 0;
+      virtual void OnSendMessage(const std::string& clientId, const Request_SendMessage&) = 0;
 
       // Asking peer to send us their public key.
-      virtual void OnAskForPublicKey(const AskForPublicKeyRequest&) = 0;
+      virtual void OnAskForPublicKey(const std::string& clientId, const Request_AskForPublicKey&) = 0;
 
       // Sending our public key to the peer who asked for it.
-      virtual void OnSendOwnPublicKey(const SendOwnPublicKeyRequest&) = 0;
+      virtual void OnSendOwnPublicKey(const std::string& clientId, const Request_SendOwnPublicKey&) = 0;
 
-      virtual void OnOnlineUsers(const OnlineUsersRequest&) = 0;
-      virtual void OnRequestMessages(const MessagesRequest&) = 0;
+      virtual void OnOnlineUsers(const std::string& clientId, const Request_OnlineUsers&) = 0;
+      virtual void OnRequestMessages(const std::string& clientId, const Request_Messages&) = 0;
 
-      virtual void OnRequestChangeMessageStatus(const MessageChangeStatusRequest&) = 0;
+      virtual void OnRequestChangeMessageStatus(const std::string& clientId, const Request_MessageChangeStatus&) = 0;
 
-      virtual void OnRequestContactsActionDirect(const ContactActionRequestDirect&) = 0;
-      virtual void OnRequestContactsActionServer(const ContactActionRequestServer&) = 0;
-      virtual void OnRequestContactsList(const ContactsListRequest&) = 0;
+      virtual void OnRequestContactsActionDirect(const std::string& clientId, const Request_ModifyContactsDirect&) = 0;
+      virtual void OnRequestContactsActionServer(const std::string& clientId, const Request_ModifyContactsServer&) = 0;
+      virtual void OnRequestContactsList(const std::string& clientId, const Request_ContactsList&) = 0;
 
-      virtual void OnRequestChatroomsList(const ChatroomsListRequest&) = 0;
+      virtual void OnRequestChatroomsList(const std::string& clientId, const Request_ChatroomsList&) = 0;
 
-      virtual void OnSendRoomMessage(const SendRoomMessageRequest&) = 0;
-      virtual void OnSearchUsersRequest(const SearchUsersRequest&) = 0;
+      virtual void OnSendRoomMessage(const std::string& clientId, const Request_SendRoomMessage&) = 0;
+      virtual void OnSearchUsersRequest(const std::string& clientId, const Request_SearchUsers&) = 0;
 
-      virtual void OnSessionPublicKeyRequest(const SessionPublicKeyRequest&) = 0;
-      virtual void OnReplySessionPublicKeyRequest(const ReplySessionPublicKeyRequest&) = 0;
+      virtual void OnSessionPublicKeyRequest(const std::string& clientId, const Request_SessionPublicKey&) = 0;
+      virtual void OnReplySessionPublicKeyRequest(const std::string& clientId, const Request_ReplySessionPublicKey&) = 0;
    };
 }
 
-#endif // RequestHandler_h__
+#endif // REQUEST_HANDLER_H

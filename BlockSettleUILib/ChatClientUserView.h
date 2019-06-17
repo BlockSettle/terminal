@@ -21,7 +21,7 @@ public:
    void addWatcher(ViewItemWatcher* watcher);
    void setActiveChatLabel(QLabel * label);
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
-   void setCurrentUserChat(const QString &userId);
+   void setCurrentUserChat(const std::string &userId);
    void updateCurrentChat();
 
 public slots:
@@ -31,7 +31,7 @@ private slots:
 private:
    void updateDependUI(CategoryElement * element);
    void notifyCurrentChanged(CategoryElement *element);
-   void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
+   void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
    void notifyElementUpdated(CategoryElement *element);
 private:
    std::list<ViewItemWatcher* > watchers_;

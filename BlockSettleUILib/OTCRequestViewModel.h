@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include "ChatProtocol/DataObjects/OTCRequestData.h"
 #include "CommonTypes.h"
+#include "chat.pb.h"
 
 class OTCRequestViewModel : public QAbstractTableModel
 {
@@ -25,10 +25,10 @@ public:
    void clear();
 
 public:
-   void AddLiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc);
+   void AddLiveOTCRequest(const std::shared_ptr<Chat::Data>& otc);
    bool RemoveOTCByID(const std::string &serverRequestId);
 
-   std::shared_ptr<Chat::OTCRequestData> GetOTCRequest(const QModelIndex& index);
+   std::shared_ptr<Chat::Data> GetOTCRequest(const QModelIndex& index);
 
 private slots:
    // update time left only. do not remove anything
@@ -46,10 +46,10 @@ private:
       ColumnCount
    };
 private:
-   QVariant getRowData(const int column, const std::shared_ptr<Chat::OTCRequestData>& otc) const;
+   QVariant getRowData(const int column, const std::shared_ptr<Chat::Data>& otc) const;
 
 private:
-   std::vector<std::shared_ptr<Chat::OTCRequestData>>  currentRequests_;
+   std::vector<std::shared_ptr<Chat::Data>>  currentRequests_;
    QTimer                                    refreshTicker_;
 };
 
