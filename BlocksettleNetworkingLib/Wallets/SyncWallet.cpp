@@ -544,6 +544,7 @@ void Wallet::onRefresh(std::vector<BinaryData> ids, bool online)
 {
    for (const auto &id : ids) {
       if (id == regId_) {
+         regId_.clear();
          init();
 
          const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
