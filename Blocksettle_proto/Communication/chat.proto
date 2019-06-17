@@ -430,7 +430,6 @@ message Response
 
     oneof data
     {
-        // Keep in sync with ResponseType!
         Login login                                             = 1;
         Messages messages                                       = 2;
         UsersList users_list                                    = 3;
