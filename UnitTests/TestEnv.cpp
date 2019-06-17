@@ -53,8 +53,6 @@ TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 
 void TestEnv::shutdown()
 {
-   const bool armoryExisted = (armoryConnection_ != nullptr);
-
    if (appSettings_ != nullptr)
       QDir(appSettings_->GetHomeDir()).removeRecursively();
 
@@ -68,18 +66,16 @@ void TestEnv::shutdown()
    authAddrMgr_ = nullptr;
    celerConn_ = nullptr;
 
-   armoryConnection_ = nullptr;
-   armoryInstance_ = nullptr;
    assetMgr_ = nullptr;
    connMgr_ = nullptr;
    appSettings_ = nullptr;
 
    walletsMgr_ = nullptr;
 
+   armoryInstance_ = nullptr;
+   armoryConnection_ = nullptr;
+
    QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)).removeRecursively();
-   if (armoryExisted) {
-      QDir(QLatin1String("./fakehomedir")).removeRecursively();
-   }
 }
 
 void TestEnv::requireArmory()

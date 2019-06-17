@@ -1561,8 +1561,6 @@ protected:
    {
       leafPtr_.reset();
       walletPtr_.reset();
-
-      envPtr_->shutdown();
       envPtr_.reset();
    }
 
