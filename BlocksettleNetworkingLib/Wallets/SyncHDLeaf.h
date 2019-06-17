@@ -183,6 +183,7 @@ namespace bs {
             mutable AddrPrefixedHashes addrPrefixedHashes_;
 
             std::string regIdExt_, regIdInt_;
+            std::mutex  regMutex_;
 
          private:
             void createAddress(const CbAddress &, AddressEntryType aet, bool isInternal = false);
