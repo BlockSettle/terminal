@@ -1,6 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.0
+import com.blocksettle.AutheIDClient 1.0
 
 import "../StyledControls"
 import "../BsStyles"
@@ -13,6 +14,7 @@ CustomTitleDialogWindow {
     property string email
     property string walletId
     property string walletName
+    property int requestType
 
     property string centralText : qsTr("Activate Auth eID signing\n Wallet ID: %1\n Wallet Name: %2").arg(walletId).arg(walletName)
     acceptable: false
@@ -23,7 +25,25 @@ CustomTitleDialogWindow {
 
     width: 350
 
-    title: qsTr("Sign With Auth eID")
+    title: qsTr("Sign with Auth eID")
+
+    onRequestTypeChanged: {
+        switch (requestType) {
+        case AutheIDClient.ActivateWallet:
+            root.title = "Activate Auth eID encryption"
+            break
+        case AutheIDClient.DeactivateWallet:
+            root.title = "Deactivate Auth eID encryption"
+            break
+        case AutheIDClient.BackupWallet:
+            root.title = "Backup Wallet"
+            break
+        case AutheIDClient.SignWallet:
+        default:
+            root.title = "Sign with Auth eID"
+            break
+        }
+    }
 
     Timer {
         id: authTimer

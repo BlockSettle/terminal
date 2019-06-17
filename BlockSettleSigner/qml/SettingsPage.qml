@@ -382,7 +382,10 @@ Item {
                             return
                         }
 
-                        var dlg = JsHelper.messageBox(BSMessageBox.Type.Question, "Two-way authorization", "Disable two-way authorization?")
+                        var dlg = JsHelper.messageBox(BSMessageBox.Type.Question, "Two-way Authentication"
+                           , "Disable two-way authentication?"
+                           , "BlockSettle strongly discourages disabling signer side authentication of incoming connections. Do you wish to continue?")
+                        dlg.labelText.color = BSStyle.dialogTitleOrangeColor
                         dlg.bsAccepted.connect(function() {
                             signerSettings.twoWaySignerAuth = false
                         })

@@ -23,29 +23,34 @@ TreeView {
     }
 
     TableViewColumn {
+        id: columnName
         title: qsTr("Name")
         role: "name"
-        width: parent.width / 3.5
+        width: 150
     }
     TableViewColumn {
-        title: qsTr("Description")
-        role: "desc"
-        width: parent.width / 4
-    }
-    TableViewColumn {
+        id: columnId
         title: qsTr("ID")
         role: "walletId"
-        width: parent.width / 6
+        width: 100
     }
     TableViewColumn {
+        id: columnType
         title: qsTr("Type")
         role: "walletType"
-        width: parent.width / 6
+        width: 100
     }
     TableViewColumn {
-        title: qsTr("Encryption Method")
+        id: columnEncryption
+        title: qsTr("Encryption")
         role: "state"
-        width: parent.width / 5
+        width: 100
+    }
+    TableViewColumn {
+        id: columnDescription
+        title: qsTr("Description")
+        role: "desc"
+        width: parent.width - columnName.width - columnId.width - columnType.width - columnEncryption.width - 5
     }
 
     style: TreeViewStyle {
@@ -54,18 +59,26 @@ TreeView {
         textColor: BSStyle.textColor
         frame: Item {}
         headerDelegate: Rectangle {
-            height: textItem.implicitHeight * 1.2
-            width: textItem.implicitWidth
-            color: "transparent"
-            Text {
-                id: textItem
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: styleData.textAlignment
-                text: styleData.value
-                color: textColor
-            }
+                height: Math.round(textItem.implicitHeight * 1.2)
+                width: textItem.implicitWidth
+                color: "transparent"
+                Text {
+                    id: textItem
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: styleData.textAlignment
+                    anchors.leftMargin: horizontalAlignment === Text.AlignLeft ? 12 : 1
+                    anchors.rightMargin: horizontalAlignment === Text.AlignRight ? 8 : 1
+                    text: styleData.value
+                    elide: Text.ElideRight
+                    color: textColor
+                }
+                Rectangle {
+                    width: 1
+                    height: parent.height - 2
+                    y: 1
+                    color: "#777"
+                }
         }
     }
 
