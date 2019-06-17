@@ -545,8 +545,6 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 
 void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::Data>>& messages, bool isFirstFetch)
 {
-   qDebug() << messages.size();
-
    for (const auto& message : messages) {
       insertMessage(message);
    }
