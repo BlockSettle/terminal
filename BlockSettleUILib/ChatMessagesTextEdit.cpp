@@ -14,14 +14,12 @@
 
 #include <set>
 
-const int FIRST_FETCH_MESSAGES_SIZE = 20;
-
 ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    : QTextBrowser(parent), handler_(nullptr), internalStyle_(this)
 {
-   tableFormat.setBorder(0);
-   tableFormat.setCellPadding(0);
-   tableFormat.setCellSpacing(0);
+   tableFormat_.setBorder(0);
+   tableFormat_.setCellPadding(0);
+   tableFormat_.setCellSpacing(0);
 
    setupHighlightPalette();
 
@@ -42,7 +40,7 @@ ChatMessagesTextEdit::ChatMessagesTextEdit(QWidget* parent)
    initUserContextMenu();
 }
 
-QString ChatMessagesTextEdit::data(const int &row, const Column &column)
+QString ChatMessagesTextEdit::data(int row, const Column &column)
 {
    if (messages_[currentChatId_].empty()) {
        return QString();
@@ -58,7 +56,7 @@ QString ChatMessagesTextEdit::data(const int &row, const Column &column)
    return QLatin1String("[unk]");
 }
 
-QString ChatMessagesTextEdit::dataMessage(const int &row, const ChatMessagesTextEdit::Column &column)
+QString ChatMessagesTextEdit::dataMessage(int row, const ChatMessagesTextEdit::Column &column)
 {
    const auto data = messages_[currentChatId_][row];
    const auto &message = data->message();
@@ -140,7 +138,7 @@ QString ChatMessagesTextEdit::dataMessage(const int &row, const ChatMessagesText
    return QString();
 }
 
-QImage ChatMessagesTextEdit::statusImage(const int &row)
+QImage ChatMessagesTextEdit::statusImage(int row)
 {
    auto data = messages_[currentChatId_][row];
    if (!data->has_message()) {
@@ -272,7 +270,7 @@ void ChatMessagesTextEdit::switchToChat(const std::string& chatId, bool isGroupR
    messagesToLoadMore_.clear();
 
    clear();
-   table = NULL;
+   table_ = nullptr;
 
    emit userHaveNewMessageChanged(chatId, false, false);
 }
@@ -299,7 +297,7 @@ void ChatMessagesTextEdit::setColumnsWidth(const int &time, const int &icon, con
    col_widths << QTextLength(QTextLength::FixedLength, icon);
    col_widths << QTextLength(QTextLength::FixedLength, user);
    col_widths << QTextLength(QTextLength::VariableLength, message);
-   tableFormat.setColumnWidthConstraints(col_widths);
+   tableFormat_.setColumnWidthConstraints(col_widths);
 }
 
 void ChatMessagesTextEdit::setIsChatTab(const bool &isChatTab)
@@ -356,19 +354,19 @@ void ChatMessagesTextEdit::insertMessage(std::shared_ptr<Chat::Data> msg)
    /* add text */
    QTextCursor cursor(textCursor());
    cursor.movePosition(QTextCursor::End);
-   table = cursor.insertTable(1, 4, tableFormat);
+   table_ = cursor.insertTable(1, 4, tableFormat_);
 
    QString time = data(rowIdx, Column::Time);
-   table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
+   table_->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
    QImage image = statusImage(rowIdx);
-   table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+   table_->cellAt(0, 1).firstCursorPosition().insertImage(image);
 
    QString user = data(rowIdx, Column::User);
-   table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
+   table_->cellAt(0, 2).firstCursorPosition().insertHtml(user);
 
    QString message = data(rowIdx, Column::Message);
-   table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+   table_->cellAt(0, 3).firstCursorPosition().insertHtml(message);
 }
 
 void ChatMessagesTextEdit::insertLoadMore()
@@ -395,19 +393,19 @@ void ChatMessagesTextEdit::loadMore()
 
       messages_[currentChatId_].insert(messages_[currentChatId_].begin() + i, msg);
 
-      table = cursor.insertTable(1, 4, tableFormat);
+      table_ = cursor.insertTable(1, 4, tableFormat_);
 
       QString time = data(i, Column::Time);
-      table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
+      table_->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
       QImage image = statusImage(i);
-      table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+      table_->cellAt(0, 1).firstCursorPosition().insertImage(image);
 
       QString user = data(i, Column::User);
-      table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
+      table_->cellAt(0, 2).firstCursorPosition().insertHtml(user);
 
       QString message = data(i, Column::Message);
-      table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+      table_->cellAt(0, 3).firstCursorPosition().insertHtml(message);
 
       i++;
    }
@@ -505,19 +503,19 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::Data> mess
          cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, 2);
          cursor.removeSelectedText();
 
-         table = cursor.insertTable(1, 4, tableFormat);
+         table_ = cursor.insertTable(1, 4, tableFormat_);
 
          QString time = data(distance, Column::Time);
-         table->cellAt(0, 0).firstCursorPosition().insertHtml(time);
+         table_->cellAt(0, 0).firstCursorPosition().insertHtml(time);
 
          QImage image = statusImage(distance);
-         table->cellAt(0, 1).firstCursorPosition().insertImage(image);
+         table_->cellAt(0, 1).firstCursorPosition().insertImage(image);
 
          QString user = data(distance, Column::User);
-         table->cellAt(0, 2).firstCursorPosition().insertHtml(user);
+         table_->cellAt(0, 2).firstCursorPosition().insertHtml(user);
 
          QString message = data(distance, Column::Message);
-         table->cellAt(0, 3).firstCursorPosition().insertHtml(message);
+         table_->cellAt(0, 3).firstCursorPosition().insertHtml(message);
 
          emit rowsInserted();
       }
@@ -547,6 +545,8 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
 
 void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_ptr<Chat::Data>>& messages, bool isFirstFetch)
 {
+   qDebug() << messages.size();
+
    for (const auto& message : messages) {
       insertMessage(message);
    }

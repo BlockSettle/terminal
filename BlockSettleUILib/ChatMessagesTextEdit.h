@@ -83,9 +83,9 @@ protected:
       last
    };
 
-   QString data(const int &row, const Column &column);
-   QString dataMessage(const int &row, const Column &column);
-   QImage statusImage(const int &row);
+   QString data(int row, const Column &column);
+   QString dataMessage(int row, const Column &column);
+   QImage statusImage(int row);
 
    void contextMenuEvent(QContextMenuEvent *e) override;
 
@@ -127,15 +127,15 @@ private:
    QString toHtmlUsername(const QString &username, const QString &userId = QString());
    QString toHtmlInvalid(const QString &text);
 
-   QTextTableFormat tableFormat;
-   QTextTable *table;
+   QTextTableFormat tableFormat_;
+   QTextTable *table_{};
    ChatMessagesTextEditStyle internalStyle_;
 
-   QMenu *userMenu_;
-   QAction *userAddContactAction_;
-   QAction *userRemoveContactAction_;
-   bool isGroupRoom_;
-   bool isChatTab_;
+   QMenu *userMenu_{};
+   QAction *userAddContactAction_{};
+   QAction *userRemoveContactAction_{};
+   bool isGroupRoom_{};
+   bool isChatTab_{};
 
    QImage statusImageOffline_;
    QImage statusImageConnecting_;
