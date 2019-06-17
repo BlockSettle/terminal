@@ -966,7 +966,7 @@ void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError erro
    lastSignerError_ = error;
 
    if (error != SignContainer::ConnectionTimeout || signContainer_->isLocal()) {
-      showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+      showError(tr("Signer Connection Error"), details);
    }
 }
 
