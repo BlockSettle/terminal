@@ -89,7 +89,6 @@ namespace bs {
             NetworkType    netType_ = NetworkType::MainNet;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
-            mutable std::mutex   mtxGroups_;
             BinaryData        userId_;
             SignContainer  *  signContainer_;
             std::shared_ptr<ArmoryConnection>   armory_;
