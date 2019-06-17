@@ -114,6 +114,7 @@ CustomDialog {
 
             CustomTextInput {
                 id: inputName
+                focus: true
                 Layout.preferredWidth: 250
                 placeholderText: qsTr("Name")
             }
@@ -133,7 +134,7 @@ CustomDialog {
                     onClicked: {
                         importKeyDialog.open()
                         importKeyDialog.accepted.connect(function(){
-                            var key = JsHelper.openTextFile(importKeyDialog.currentFile)
+                            var key = JsHelper.openTextFile(importKeyDialog.fileUrl)
                             inputKey.text = key
                         })
                     }
@@ -161,11 +162,11 @@ CustomDialog {
                 Layout.preferredHeight: inputName.implicitHeight
                 onClicked: {
                     signerSettings.trustedTerminals.unshift(inputName.text + ":" + inputKey.text)
+                    inputName.clear()
+                    inputKey.clear()
                 }
             }
         }
-
-
 
         Rectangle {
             Layout.fillHeight: true
@@ -175,7 +176,7 @@ CustomDialog {
     cFooterItem: RowLayout {
         CustomButtonBar {
             Layout.fillWidth: true
-            CustomButton {
+            CustomButtonPrimary {
                 id: btnCancel
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
