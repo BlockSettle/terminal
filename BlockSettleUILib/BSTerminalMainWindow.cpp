@@ -522,8 +522,7 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
 
       QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
          ImportKeyBox box(BSMessageBox::question
-            , tr("Signer ID Key has changed\n"
-                          "Import Signer ID Key?")
+            , tr("Import Signer ID Key?")
             , this);
 
          box.setNewKey(newKey);
@@ -1596,8 +1595,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
 
       if (server.armoryDBKey.isEmpty()) {
          ImportKeyBox box(BSMessageBox::question
-            , tr("Armory ID Key has changed\n"
-                          "Import Armory ID Key?")
+            , tr("Import ArmoryDB ID Key?")
             , this);
 
          box.setNewKeyFromBinary(srvPubKey);
@@ -1613,8 +1611,7 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       }
       else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
          ImportKeyBox box(BSMessageBox::question
-            , tr("Armory ID Key has changed\n"
-                          "Do you wish to proceed connection and save new key?")
+            , tr("Import ArmoryDB ID Key?")
             , this);
 
          box.setNewKeyFromBinary(srvPubKey);

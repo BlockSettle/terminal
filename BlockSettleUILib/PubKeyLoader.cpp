@@ -114,8 +114,7 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
          }
 
          ImportKeyBox box (BSMessageBox::question
-            , QObject::tr("Server identity key has changed\n"
-                          "Import %1 ID key?").arg(serverName(kt))
+            , QObject::tr("Import %1 ID key?").arg(serverName(kt))
             , parent);
 
          box.setNewKeyFromBinary(newKeyBin);
@@ -136,7 +135,7 @@ QString PubKeyLoader::serverName(const KeyType kt)
 {
    switch (kt) {
       case KeyType::PublicBridge:   return QObject::tr("PuB");
-      case KeyType::Chat:           return QObject::tr("Chat");
+      case KeyType::Chat:           return QObject::tr("Chat Server");
       default:    break;
    }
    return {};

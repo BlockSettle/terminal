@@ -116,8 +116,8 @@ void ImportKeyBox::setNewKey(const QString &newKey)
 
 void ImportKeyBox::setOldKey(const QString &oldKey)
 {
-   ui_->labelOldKey->setVisible(!oldKey.isEmpty());
-   ui_->labelOldKeyValue->setVisible(!oldKey.isEmpty());
+//   ui_->labelOldKey->setVisible(!oldKey.isEmpty());
+//   ui_->labelOldKeyValue->setVisible(!oldKey.isEmpty());
    ui_->labelOldKeyValue->setText(oldKey.isEmpty() ? tr("<none>") : oldKey);
 }
 
