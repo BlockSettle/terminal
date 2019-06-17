@@ -382,13 +382,14 @@ void BaseChatClient::OnModifyContactsDirectResponse(const Chat::Response_ModifyC
 
          addOrUpdateContact(senderId, Chat::CONTACT_STATUS_ACCEPTED);
 
-         Chat::Request requestS;
-         auto d = requestS.mutable_modify_contacts_server();
+         Chat::Request request;
+         auto d = request.mutable_modify_contacts_server();
          d->set_sender_id(currentUserId_);
          d->set_contact_id(senderId);
          d->set_action(Chat::CONTACTS_ACTION_SERVER_UPDATE);
+         d->set_status(Chat::CONTACT_STATUS_ACCEPTED);
          d->set_contact_pub_key(response.sender_public_key());
-         sendRequest(requestS);
+         sendRequest(request);
 
          // reprocess message again
          retrySendQueuedMessages(response.sender_id());
@@ -400,13 +401,14 @@ void BaseChatClient::OnModifyContactsDirectResponse(const Chat::Response_ModifyC
 
          onContactRejected(response.sender_id());
 
-         Chat::Request requestS;
-         auto d = requestS.mutable_modify_contacts_server();
+         Chat::Request request;
+         auto d = request.mutable_modify_contacts_server();
          d->set_sender_id(currentUserId_);
          d->set_contact_id(senderId);
          d->set_action(Chat::CONTACTS_ACTION_SERVER_UPDATE);
+         d->set_status(Chat::CONTACT_STATUS_REJECTED);
          d->set_contact_pub_key(response.sender_public_key());
-         sendRequest(requestS);
+         sendRequest(request);
 
          //removeContact(QString::fromStdString(response.senderId()));
          eraseQueuedMessages(response.sender_id());
@@ -433,6 +435,7 @@ void BaseChatClient::OnModifyContactsDirectResponse(const Chat::Response_ModifyC
          d->set_sender_id(currentUserId_);
          d->set_contact_id(senderId);
          d->set_action(Chat::CONTACTS_ACTION_SERVER_REMOVE);
+         d->set_status(Chat::CONTACT_STATUS_INCOMING);
          d->set_contact_pub_key(response.sender_public_key());
          sendRequest(request);
          break;

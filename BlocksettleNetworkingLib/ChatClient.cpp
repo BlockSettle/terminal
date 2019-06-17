@@ -563,13 +563,14 @@ void ChatClient::onFriendRequest(const std::string& userId, const std::string& c
       model_->insertContactRequestObject(contact, true);
       addOrUpdateContact(contactId, Chat::CONTACT_STATUS_INCOMING);
 
-      Chat::Request requestS;
-      auto d2 = requestS.mutable_modify_contacts_server();
+      Chat::Request request;
+      auto d2 = request.mutable_modify_contacts_server();
       d2->set_sender_id(currentUserId_);
       d2->set_contact_id(contactId);
       d2->set_action(Chat::CONTACTS_ACTION_SERVER_ADD);
+      d2->set_status(Chat::CONTACT_STATUS_INCOMING);
       d2->set_contact_pub_key(pk.toBinStr());
-      sendRequest(requestS);
+      sendRequest(request);
 
       emit NewContactRequest(contactId);
    }
