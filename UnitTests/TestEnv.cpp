@@ -137,15 +137,12 @@ void TestEnv::requireConnections()
 
 ///////////////////////////////////////////////////////////////////////////////
 ArmoryInstance::ArmoryInstance()
+   : blkdir_("./blkfiletest"), homedir_("./fakehomedir"), ldbdir_("./ldbtestdir")
 {
    //setup armory folders
-   blkdir_ = std::string("./blkfiletest");
-   homedir_ = std::string("./fakehomedir");
-   ldbdir_ = std::string("./ldbtestdir");
-
-   DBUtils::removeDirectory(blkdir_);
-   DBUtils::removeDirectory(homedir_);
-   DBUtils::removeDirectory(ldbdir_);
+   SystemFileUtils::rmDir(blkdir_);
+   SystemFileUtils::rmDir(homedir_);
+   SystemFileUtils::rmDir(ldbdir_);
 
    SystemFileUtils::mkPath(blkdir_);
    SystemFileUtils::mkPath(homedir_);
@@ -237,14 +234,9 @@ ArmoryInstance::~ArmoryInstance()
    theBDMt_ = nullptr;
 
    //clean up dirs
-   SystemFileUtils::rmFile("./fakehomedir/client.peers");
-   SystemFileUtils::rmFile("./fakehomedir/client.peers-lock");
-   SystemFileUtils::rmFile("./fakehomedir/server.peers");
-   SystemFileUtils::rmFile("./fakehomedir/server.peers-lock");
-
-   DBUtils::removeDirectory(blkdir_);
-   DBUtils::removeDirectory(homedir_);
-   DBUtils::removeDirectory(ldbdir_);
+   SystemFileUtils::rmDir(blkdir_);
+   SystemFileUtils::rmDir(homedir_);
+   SystemFileUtils::rmDir(ldbdir_);
 }
 
 std::map<unsigned, BinaryData> ArmoryInstance::mineNewBlock(

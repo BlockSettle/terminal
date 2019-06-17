@@ -63,9 +63,9 @@ struct ArmoryInstance
 {
    /*in process supernode db running off of spoofed unit test network node*/
 
-   std::string blkdir_;
-   std::string homedir_;
-   std::string ldbdir_;
+   const std::string blkdir_;
+   const std::string homedir_;
+   const std::string ldbdir_;
    int port_;
 
    std::shared_ptr<NodeUnitTest> nodePtr_;
