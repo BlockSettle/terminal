@@ -104,7 +104,7 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
    return [kt, parent, appSettings] (const std::string& oldKey
          , const std::string& newKeyHex, const std::string& srvAddrPort
          , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
-      QMetaObject::invokeMethod(parent, [kt, parent, appSettings, oldKey, newKeyHex, newKeyProm, srvAddrPort] {
+      QMetaObject::invokeMethod(parent, [kt, parent, appSettings, newKeyHex, newKeyProm, srvAddrPort] {
          PubKeyLoader loader(appSettings);
          const auto newKeyBin = BinaryData::CreateFromHex(newKeyHex);
          const auto oldKeyBin = loader.loadKey(kt);
