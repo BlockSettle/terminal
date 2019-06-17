@@ -42,10 +42,10 @@ bool ChatRoomElement::isChildSupported(const TreeItem *item) const
 Chat::Data_ContactRecord *ChatContactElement::getContactData() const
 {
    if (getDataObject()->has_contact_record()) {
-      return nullptr;
+      return getDataObject()->mutable_contact_record();
    }
 
-   return getDataObject()->mutable_contact_record();
+   return nullptr;
 }
 
 ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
