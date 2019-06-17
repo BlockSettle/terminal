@@ -576,7 +576,7 @@ void ChatClientDataModel::beginChatInsertRows(const ChatUIDefinitions::ChatTreeN
 void ChatClientDataModel::updateNewMessagesFlag()
 {
    bool flag = false;
-   CategoryElement *elem = NULL;
+   CategoryElement *elem = nullptr;
    std::map<std::string, std::shared_ptr<Chat::Data>> newMessages;
 
    for (auto category : root_->getChildren()) {

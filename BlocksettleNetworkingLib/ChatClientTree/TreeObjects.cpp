@@ -2,7 +2,10 @@
 
 Chat::Data_Room* ChatRoomElement::getRoomData() const
 {
-   return getDataObject()->mutable_room();
+   if (getDataObject()->has_room()) {
+      return getDataObject()->mutable_room();
+   }
+   return nullptr;
 }
 
 bool ChatRoomElement::isChildSupported(const TreeItem *item) const

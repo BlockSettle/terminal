@@ -628,7 +628,7 @@ void ChatMessagesTextEdit::onElementSelected(CategoryElement *element)
       auto item = dynamic_cast<DisplayableDataNode*>(msg_item);
       if (item) {
          if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode){
-            auto data = element->getDataObject();
+            auto data = item->getDataObject();
             if (data->has_message()) {
                displayData.push_back(data);
             }
