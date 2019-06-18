@@ -13,8 +13,8 @@ namespace Chat {
          const QString& contactId,
          ContactStatus status,
          BinaryData publicKey,
-         const QString& displayName = QString(),
-         QDateTime publicKeyTime = QDateTime());
+         QDateTime publicKeyTime = QDateTime(),
+         const QString& displayName = QString());
 
       QString getUserId();
       void setUserId(const QString& userId);

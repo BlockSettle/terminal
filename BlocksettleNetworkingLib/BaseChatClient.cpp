@@ -583,7 +583,7 @@ bool BaseChatClient::getContacts(ContactRecordDataList &contactList)
 
 bool BaseChatClient::addOrUpdateContact(const QString &userId, Chat::ContactStatus status, const QString &userName)
 {
-   Chat::ContactRecordData contact(userId, userId, status, BinaryData(), userName);
+   Chat::ContactRecordData contact(userId, userId, status, BinaryData(), QDateTime(), userName);
 
    if (chatDb_->isContactExist(userId))
    {

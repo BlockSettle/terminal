@@ -100,7 +100,7 @@ void ChatClient::readDatabase()
       auto contact =
             std::make_shared<Chat::ContactRecordData>(
                QString::fromStdString(model_->currentUser()),
-               c.getUserId(), status, pk, c.getDisplayName());
+               c.getUserId(), status, pk, QDateTime(), c.getDisplayName());
 
       model_->insertContactObject(contact);
       retrieveUserMessages(contact->getContactId());

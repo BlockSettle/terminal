@@ -3,14 +3,14 @@
 using namespace Chat;
 
 ContactRecordData::ContactRecordData(const QString &userId, const QString &contactId,
-   ContactStatus status, BinaryData publicKey, const QString& displayName, QDateTime publicKeyTime)
+   ContactStatus status, BinaryData publicKey, QDateTime publicKeyTime, const QString& displayName)
    : DataObject (DataObject::Type::ContactRecordData),
    userId_(userId),
    contactId_(contactId),
    status_(status),
    publicKey_(publicKey),
-   displayName_(displayName),
-   publicKeyTime_(publicKeyTime)
+   publicKeyTime_(publicKeyTime),
+   displayName_(displayName)
 {
 
 }
@@ -60,7 +60,7 @@ std::shared_ptr<ContactRecordData> ContactRecordData::fromJSON(const std::string
    QString displayName = data[DisplayNameKey].toString();
    QDateTime publicKeyTime = QDateTime::fromMSecsSinceEpoch(data[PublicKeyTimeKey].toDouble());
 
-   return std::make_shared<ContactRecordData>(userId, contactId, status, publicKey, displayName, publicKeyTime);
+   return std::make_shared<ContactRecordData>(userId, contactId, status, publicKey, publicKeyTime, displayName);
 }
 
 void ContactRecordData::setContactStatus(const ContactStatus &status)

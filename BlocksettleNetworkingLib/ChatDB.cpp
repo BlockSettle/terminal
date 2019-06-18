@@ -40,7 +40,8 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
          const QLatin1String query("CREATE TABLE IF NOT EXISTS contacts ("\
             "user_id CHAR(16) PRIMARY KEY,"\
             "user_name CHAR(64),"\
-            "status INTEGER);");
+            "status INTEGER,"
+            "public_key_timestamp DATETIME);");
            if (!QSqlQuery(db).exec(query)) {
                return false;
            }
@@ -435,10 +436,11 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
 
    while (query.next()) {
       Chat::ContactRecordData contact(query.value(0).toString(),
-                                      query.value(0).toString(),
-                                      static_cast<Chat::ContactStatus>(query.value(2).toInt()),
-                                      BinaryData(),
-                                      query.value(1).toString());
+         query.value(0).toString(),
+         static_cast<Chat::ContactStatus>(query.value(2).toInt()),
+         BinaryData(),
+         QDateTime(),
+         query.value(1).toString());
       contactList.emplace_back(contact);
    }
    return true;
