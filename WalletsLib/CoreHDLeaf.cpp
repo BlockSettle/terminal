@@ -631,9 +631,7 @@ bool hd::Leaf::deserialize(const BinaryData &ser, Nodes rootNodes)
          return false;
       }
       const auto index = brr.get_uint32_t();
-      //const auto addrType = static_cast<AddressEntryType>(brr.get_uint32_t());
-      brr.get_uint32_t();
-      const auto addrType = AddressEntryType_P2WPKH;
+      const auto addrType = static_cast<AddressEntryType>(brr.get_uint32_t());
 
       len = brr.get_var_int();
       strPath = brr.get_BinaryData(len).toBinStr();
