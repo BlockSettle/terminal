@@ -275,35 +275,30 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
       emit walletError(walletId, tr("Failed to backup private key: wallet not found"));
       return false;
    }
+#if defined (Q_OS_WIN)
+   if (fileName.startsWith(QLatin1Char('/'))) {
+      fileName.remove(0, 1);  // Workaround for bad QML handling of Windows absolute paths
+   }
+#endif
    const auto &cbResult = [this, fileName, walletId, name=wallet->name(), desc=wallet->description(), isPrintable, jsCallback]
       (const SecureBinaryData &privKey, const SecureBinaryData &chainCode) {
       QString fn = fileName;
-      if (privKey.isNull()) {
-         logger_->error("[WalletsProxy] failed to get root private key: {}", chainCode.toBinStr());
-         emit walletError(walletId, tr("Failed to decrypt private key for wallet %1").arg(walletId));
-         return;
-      }
 
       std::string privKeyString;
       EasyCoDec::Data seedData;
       try {
-         if (privKey.isNull()) {
-            seedData = bs::core::wallet::Seed(chainCode, NetworkType::Invalid).toEasyCodeChecksum();
+         const auto wallet = walletsMgr_->getHDWalletById(walletId.toStdString());
+         if (!wallet) {
+            throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
-         else {
-            privKeyString = privKey.toBinStr();
-         }
+         seedData = bs::core::wallet::Seed(chainCode, wallet->networkType()).toEasyCodeChecksum();
+         privKeyString = privKey.toBinStr();
       } catch (const std::exception &e) {
          logger_->error("[WalletsProxy] failed to encode private key: {}", e.what());
          emit walletError(walletId, tr("Failed to encode private key for wallet %1").arg(walletId));
          return;
       }
 
-#if !defined (Q_OS_WIN)
-      if (!fileName.startsWith(QLatin1Char('/'))) {
-         fn = QLatin1String("/") + fn;
-      }
-#endif
       if (isPrintable) {
          try {
             WalletBackupPdfWriter pdfWriter(walletId, QString::fromStdString(seedData.part1),
@@ -328,7 +323,7 @@ bool WalletsProxy::backupPrivateKey(const QString &walletId, QString fileName, b
             logger_->error("[WalletsProxy] failed to open file {} for writing", fn.toStdString());
             QMetaObject::invokeMethod(this, [this, jsCallback, walletId, fn] {
                QJSValueList args;
-               args << QJSValue(false) << tr("Failed to open digital wallet backup file {} for writing").arg(fn);
+               args << QJSValue(false) << tr("Failed to open digital wallet backup file %1 for writing").arg(fn);
                invokeJsCallBack(jsCallback, args);
             });
             return;
@@ -412,39 +407,6 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
       logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
    }
    return nullptr;
-}
-
-void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsCallback)
-{
-   auto cb = [this, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {
-      QMetaObject::invokeMethod(this, [this, wo, jsCallback] {
-         logger_->debug("imported WO wallet with id {}", wo.id);
-         walletsMgr_->adoptNewWallet(getWoSyncWallet(wo));
-         QJSValueList args;
-         args << QJSValue(wo.id.empty() ? false : true)
-            << QString::fromStdString(wo.id.empty() ? wo.description : wo.id);
-         invokeJsCallBack(jsCallback, args);
-      });
-   };
-
-   bs::sync::WatchingOnlyWallet errWallet;
-   QFile f(walletPath);
-   if (!f.exists()) {
-      errWallet.description = "file doesn't exist";
-      cb(errWallet);
-      return;
-   }
-   if (!f.open(QIODevice::ReadOnly)) {
-      errWallet.description = "failed to open file for reading";
-      cb(errWallet);
-      return;
-   }
-   const BinaryData content(f.readAll().toStdString());
-   f.close();
-
-   QFileInfo fi(walletPath);
-
-   adapter_->importWoWallet(fi.fileName().toStdString(), content, cb);
 }
 
 QStringList WalletsProxy::walletNames() const

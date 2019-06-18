@@ -458,9 +458,16 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
       return false;
    }
 
-   auto lock = hdWallet->lockForEncryption(request.password());
-   const auto seed = hdWallet->getDecryptedSeed();
-   if (seed.empty()) {
+   std::string seedStr, privKeyStr;
+
+   try {
+      const SecureBinaryData pwd(request.password());
+      const auto lock = hdWallet->lockForEncryption(pwd);
+      const auto &seed = hdWallet->getDecryptedSeed();
+      seedStr = seed.seed().toBinStr();
+      privKeyStr = seed.toXpriv().toBinStr();
+   }
+   catch (const WalletException &e) {
       logger_->error("[SignerAdapterListener::{}] failed to decrypt wallet with id {}"
          , __func__, request.wallet_id());
       return false;
@@ -468,8 +475,8 @@ bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::sign
 
    signer::DecryptedNodeResponse response;
    response.set_wallet_id(hdWallet->walletId());
-   response.set_private_key(seed.toXpriv().toBinStr());
-   response.set_chain_code(seed.seed().toBinStr());
+   response.set_private_key(privKeyStr);
+   response.set_chain_code(seedStr);
    return sendData(signer::GetDecryptedNodeType, response.SerializeAsString(), reqId);
 }
 
@@ -626,14 +633,13 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       return false;
    }
 
-   std::vector<bs::wallet::PasswordData> pwdData;
-   logger_->debug("[{}] {} password[s]", __func__, request.password_size());
+/*   std::vector<bs::wallet::PasswordData> pwdData;
    for (int i = 0; i < request.password_size(); ++i) {
       const auto pwd = request.password(i);
-      pwdData.push_back({BinaryData::CreateFromHex(pwd.password())
+      pwdData.push_back({ pwd.password()
          , static_cast<bs::wallet::EncryptionType>(pwd.enctype()), pwd.enckey()});
    }
-   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() };
+   bs::wallet::KeyRank keyRank = { request.rankm(), request.rankn() }; */
 
    std::shared_ptr<bs::core::hd::Wallet> wallet;
    try {
@@ -641,10 +647,11 @@ bool SignerAdapterListener::onCreateHDWallet(const std::string &data, bs::signer
       const auto netType = mapNetworkType(w.nettype());
       const auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
          : bs::core::wallet::Seed::fromXpriv(w.privatekey(), netType);
-/*      auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
+      const SecureBinaryData pwd(request.password(0).password());
+      /*      auto seed = w.privatekey().empty() ? bs::core::wallet::Seed(w.seed(), netType)
          : bs::core::wallet::Seed(netType, w.privatekey(), w.chaincode());*/
       wallet = walletsMgr_->createWallet(w.name(), w.description()
-         , seed, settings_->getWalletsDir(), request.password(0).password(), w.primary()
+         , seed, settings_->getWalletsDir(), pwd, w.primary()
       /*, pwdData, keyRank*/);
 
       walletsListUpdated();
