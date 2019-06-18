@@ -233,7 +233,7 @@ AddressEntryType bs::Address::guessAddressType(const BinaryData &addr)
          return AddressEntryType_P2PKH;
       }
       else if (prefix == NetworkConfig::getScriptHashPrefix()) {
-         return AddressEntryType_P2SH;
+         return static_cast<AddressEntryType>(AddressEntryType_P2SH + AddressEntryType_P2WPKH);
       }
       else if (prefix == SCRIPT_PREFIX_P2WPKH) {
          return AddressEntryType_P2WPKH;

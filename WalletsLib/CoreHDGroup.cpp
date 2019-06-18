@@ -75,22 +75,21 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(
    //leaves are always hardened
    elem |= 0x80000000;
    if (getLeafByPath(elem) != nullptr)
-      return nullptr;
+      throw std::runtime_error("leaf already exists");
 
    auto pathLeaf = path_;
    pathLeaf.append(elem);
-   try
-   {
+   try {
       auto result = newLeaf();
       initLeaf(result, pathLeaf, lookup);
       addLeaf(result);
       commit();
       return result;
    }
-   catch (std::exception&)
-   {
-      return nullptr;
+   catch (std::exception &e) {
+      throw e;
    }
+   return nullptr;
 }
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(
