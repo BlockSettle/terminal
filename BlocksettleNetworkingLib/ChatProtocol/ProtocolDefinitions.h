@@ -172,6 +172,7 @@ namespace Chat
    static const QString OTCUpperKey = QStringLiteral("upper");
    static const QString OTCResultKey = QStringLiteral("otc_result");
    static const QString OTCMessageKey = QStringLiteral("otc_message");
+   static const QString PublicKeyTimeKey = QStringLiteral("public_key_time");
 
    template <typename T>
    class Message
