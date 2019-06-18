@@ -553,24 +553,28 @@ void ChatClient::onFriendRequest(const std::string& userId, const std::string& c
                                     , contactNode->getOnlineStatus() == ChatContactElement::OnlineStatus::Online);
       }
    } else {
-      auto contact = std::make_shared<Chat::Data>();
-      auto d = contact->mutable_contact_record();
-      d->set_user_id(userId);
-      d->set_contact_id(contactId);
-      d->set_status(Chat::CONTACT_STATUS_INCOMING);
-      d->set_public_key(pk.toBinStr());
+      {
+         auto contact = std::make_shared<Chat::Data>();
+         auto d = contact->mutable_contact_record();
+         d->set_user_id(userId);
+         d->set_contact_id(contactId);
+         d->set_status(Chat::CONTACT_STATUS_INCOMING);
+         d->set_public_key(pk.toBinStr());
 
-      model_->insertContactRequestObject(contact, true);
-      addOrUpdateContact(contactId, Chat::CONTACT_STATUS_INCOMING);
+         model_->insertContactRequestObject(contact, true);
+         addOrUpdateContact(contactId, Chat::CONTACT_STATUS_INCOMING);
+      }
 
-      Chat::Request request;
-      auto d2 = request.mutable_modify_contacts_server();
-      d2->set_sender_id(currentUserId_);
-      d2->set_contact_id(contactId);
-      d2->set_action(Chat::CONTACTS_ACTION_SERVER_ADD);
-      d2->set_status(Chat::CONTACT_STATUS_INCOMING);
-      d2->set_contact_pub_key(pk.toBinStr());
-      sendRequest(request);
+      {
+         Chat::Request request;
+         auto d = request.mutable_modify_contacts_server();
+         d->set_sender_id(currentUserId_);
+         d->set_contact_id(contactId);
+         d->set_action(Chat::CONTACTS_ACTION_SERVER_ADD);
+         d->set_status(Chat::CONTACT_STATUS_INCOMING);
+         d->set_contact_pub_key(pk.toBinStr());
+         sendRequest(request);
+      }
 
       emit NewContactRequest(contactId);
    }
