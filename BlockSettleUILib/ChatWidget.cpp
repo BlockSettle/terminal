@@ -999,6 +999,7 @@ void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat
 
          bs::ui::NotifyMessage notifyMsg;
          notifyMsg.append(QString::fromStdString(messageTitle));
+         notifyMsg.append(QString::fromStdString(messageText));
          notifyMsg.append(QString::fromStdString(message->message().sender_id()));
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
       }
