@@ -82,7 +82,7 @@ protected:
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
    std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
 
-   void onFriendRequestReceived(const QString& contactId, BinaryData publicKey);
+   void onFriendRequestReceived(const QString& userId, const QString& contactId, BinaryData publicKey);
    void onFriendRequestAccepted(const QString& contactId, BinaryData publicKey);
    void onFriendRequestRejected(const QString& contactId);
    void onFriendRequestedRemove(const QString& userId);

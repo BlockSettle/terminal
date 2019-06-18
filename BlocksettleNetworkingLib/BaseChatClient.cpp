@@ -332,9 +332,9 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
       break;
       case Chat::ContactsAction::Request:
          actionString = "ContactsAction::Request";
-         onFriendRequestReceived(QString::fromStdString(response.senderId()),
+         onFriendRequestReceived(QString::fromStdString(response.receiverId()),
+                                 QString::fromStdString(response.senderId()),
                                  response.getSenderPublicKey());
-         //addOrUpdateContact(QString::fromStdString(response.senderId()), QStringLiteral(""), true);
       break;
       case Chat::ContactsAction::Remove:
          onFriendRequestedRemove(QString::fromStdString(response.senderId()));
@@ -829,11 +829,11 @@ std::shared_ptr<Chat::MessageData> BaseChatClient::decryptIESMessage(const std::
    }
 }
 
-void BaseChatClient::onFriendRequestReceived(const QString &contactId, BinaryData publicKey)
+void BaseChatClient::onFriendRequestReceived(const QString &userId, const QString &contactId, BinaryData publicKey)
 {
    contactPublicKeys_[contactId] = publicKey;
    chatDb_->addKey(contactId, publicKey);
-   onFriendRequest(QString::fromStdString(currentUserId_), contactId, publicKey);
+   onFriendRequest(userId, contactId, publicKey);
 }
 
 void BaseChatClient::onFriendRequestAccepted(const QString &contactId, BinaryData publicKey)
