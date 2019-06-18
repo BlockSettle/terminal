@@ -3,13 +3,14 @@
 using namespace Chat;
 
 ContactRecordData::ContactRecordData(const QString &userId, const QString &contactId,
-   ContactStatus status, BinaryData publicKey, const QString& displayName)
+   ContactStatus status, BinaryData publicKey, const QString& displayName, QDateTime publicKeyTime)
    : DataObject (DataObject::Type::ContactRecordData),
    userId_(userId),
    contactId_(contactId),
    status_(status),
    publicKey_(publicKey),
-   displayName_(displayName)
+   displayName_(displayName),
+   publicKeyTime_(publicKeyTime)
 {
 
 }
@@ -43,6 +44,7 @@ QJsonObject Chat::ContactRecordData::toJson() const
    data[ContactIdKey] = contactId_;
    data[ContactStatusKey] = static_cast<int>(status_);
    data[PublicKeyKey] = QString::fromStdString(publicKey_.toHexStr());
+   data[PublicKeyTimeKey] = publicKeyTime_.toMSecsSinceEpoch();
 
    return data;
 }
@@ -56,8 +58,9 @@ std::shared_ptr<ContactRecordData> ContactRecordData::fromJSON(const std::string
    ContactStatus status = static_cast<ContactStatus>(data[ContactStatusKey].toInt());
    BinaryData publicKey = BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString());
    QString displayName = data[DisplayNameKey].toString();
+   QDateTime publicKeyTime = QDateTime::fromMSecsSinceEpoch(data[PublicKeyTimeKey].toDouble());
 
-   return std::make_shared<ContactRecordData>(userId, contactId, status, publicKey, displayName);
+   return std::make_shared<ContactRecordData>(userId, contactId, status, publicKey, displayName, publicKeyTime);
 }
 
 void ContactRecordData::setContactStatus(const ContactStatus &status)
@@ -88,4 +91,14 @@ void ContactRecordData::setUserId(const QString &userId)
 bool ContactRecordData::isValid() const
 {
    return !userId_.isEmpty();
+}
+
+QDateTime ContactRecordData::getContactPublicKeyTime() const
+{
+   return publicKeyTime_;
+}
+
+void ContactRecordData::contactPublicKeyTime(const QDateTime& publicKeyTime)
+{
+   publicKeyTime_ = publicKeyTime;
 }

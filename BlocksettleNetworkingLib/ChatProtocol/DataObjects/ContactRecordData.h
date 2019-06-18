@@ -3,6 +3,7 @@
 
 #include "DataObject.h"
 #include "../ProtocolDefinitions.h"
+#include <QDateTime>
 
 namespace Chat {
    class ContactRecordData : public DataObject
@@ -12,7 +13,8 @@ namespace Chat {
          const QString& contactId,
          ContactStatus status,
          BinaryData publicKey,
-         const QString& displayName = QString());
+         const QString& displayName = QString(),
+         QDateTime publicKeyTime = QDateTime());
 
       QString getUserId();
       void setUserId(const QString& userId);
@@ -27,6 +29,9 @@ namespace Chat {
       void setDisplayName(const QString& displayName);
       bool hasDisplayName() const;
 
+      QDateTime getContactPublicKeyTime() const;
+      void contactPublicKeyTime(const QDateTime& publicKeyTime);
+
       QJsonObject toJson() const override;
       static std::shared_ptr<ContactRecordData> fromJSON(const std::string& jsonData);
 
@@ -38,6 +43,7 @@ namespace Chat {
       ContactStatus status_;
       BinaryData publicKey_;
       QString displayName_;
+      QDateTime publicKeyTime_;
 
    };
 }
