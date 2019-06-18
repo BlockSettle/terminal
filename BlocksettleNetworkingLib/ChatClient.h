@@ -95,6 +95,7 @@ protected:
    SecureBinaryData   getOwnAuthPrivateKey() const override;
    std::string getChatServerHost() const override;
    std::string getChatServerPort() const override;
+   Chat::MessageData::EncryptionType resolveMessageEncryption(std::shared_ptr<Chat::MessageData>) const override;
 
    void OnLoginCompleted() override;
    void OnLofingFailed() override;

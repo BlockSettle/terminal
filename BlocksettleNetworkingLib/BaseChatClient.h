@@ -104,6 +104,7 @@ protected:
    virtual SecureBinaryData   getOwnAuthPrivateKey() const = 0;
    virtual std::string        getChatServerHost() const = 0;
    virtual std::string        getChatServerPort() const = 0;
+   virtual Chat::MessageData::EncryptionType resolveMessageEncryption(std::shared_ptr<Chat::MessageData>) const = 0;
 
    void setSavedKeys(std::map<QString, BinaryData>&& loadedKeys);
 
