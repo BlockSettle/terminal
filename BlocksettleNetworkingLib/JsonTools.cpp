@@ -27,4 +27,17 @@ namespace JsonTools
 
       return QString{};
    }
+
+   double GetDoubleProperty(const QVariantMap& settingsMap, const QString& propertyName, bool *converted)
+   {
+      auto it = settingsMap.constFind(propertyName);
+      if (it == settingsMap.constEnd()) {
+         if (converted != nullptr) {
+            *converted = false;
+         }
+         return 0;
+      }
+
+      return it->toDouble(converted);
+   }
 }
