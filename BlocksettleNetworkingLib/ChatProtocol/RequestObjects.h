@@ -1,7 +1,6 @@
 #ifndef RequestObjects_h__
 #define RequestObjects_h__
 
-#include "RequestObjects/HeartbeatPingRequest.h"
 #include "RequestObjects/LoginRequest.h"
 #include "RequestObjects/SendMessageRequest.h"
 #include "RequestObjects/AskForPublicKeyRequest.h"

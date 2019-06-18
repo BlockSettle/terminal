@@ -101,7 +101,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
 
       if (HeadlessContainer::mapNetworkType(response.nettype()) != netType_) {
          logger_->error("[HeadlessListener] network type mismatch");
-         emit error(HeadlessContainer::NetworkTypeMismatch, tr("network type mismatch"));
+         emit error(HeadlessContainer::NetworkTypeMismatch, tr("Network type mismatch (Mainnet / Testnet)"));
          return;
       }
 
@@ -146,25 +146,25 @@ void HeadlessListener::OnError(DataConnectionListener::DataConnectionError error
 
    switch (errorCode) {
       case UndefinedSocketError:
-         emit error(HeadlessContainer::SocketFailed, tr("socket error"));
+         emit error(HeadlessContainer::SocketFailed, tr("Socket error"));
          break;
       case HostNotFoundError:
-         emit error(HeadlessContainer::HostNotFound, tr("host not found"));
+         emit error(HeadlessContainer::HostNotFound, tr("Host not found"));
          break;
       case HandshakeFailed:
-         emit error(HeadlessContainer::HandshakeFailed, tr("encryption handshake failed"));
+         emit error(HeadlessContainer::HandshakeFailed, tr("Handshake failed"));
          break;
       case SerializationFailed:
-         emit error(HeadlessContainer::SerializationFailed, tr("serialization failed"));
+         emit error(HeadlessContainer::SerializationFailed, tr("Serialization failed"));
          break;
       case HeartbeatWaitFailed:
-         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("connection lost"));
+         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("Connection lost"));
          break;
       case ConnectionTimeout:
-         emit error(HeadlessContainer::ConnectionTimeout, tr("connection timeout"));
+         emit error(HeadlessContainer::ConnectionTimeout, tr("Connection timeout"));
          break;
       default:
-         emit error(HeadlessContainer::UnknownError, tr("unknown error"));
+         emit error(HeadlessContainer::UnknownError, tr("Unknown error"));
          break;
    }
 }

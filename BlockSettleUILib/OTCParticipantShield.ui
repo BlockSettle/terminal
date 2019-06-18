@@ -32,7 +32,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>OTC available to Trading and Dealing Participants</string>
+      <string>Reserved for Trading Participants</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>

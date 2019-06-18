@@ -6,7 +6,6 @@
 #include "ContactActionRequestDirect.h"
 #include "ContactActionRequestServer.h"
 #include "ContactsListRequest.h"
-#include "HeartbeatPingRequest.h"
 #include "LoginRequest.h"
 #include "MessageChangeStatusRequest.h"
 #include "MessagesRequest.h"
@@ -22,7 +21,6 @@ using namespace Chat;
 
 static std::map<std::string, RequestType> RequestTypeFromString
 {
-   { "RequestHeartbeatPing"         ,   RequestType::RequestHeartbeatPing           },
    { "RequestLogin"                 ,   RequestType::RequestLogin                   },
    { "RequestLogout"                ,   RequestType::RequestLogout                  },
    { "RequestMessages"              ,   RequestType::RequestMessages                },
@@ -44,7 +42,6 @@ static std::map<std::string, RequestType> RequestTypeFromString
 
 static std::map<RequestType, std::string> RequestTypeToString
 {
-   { RequestType::RequestHeartbeatPing          ,   "RequestHeartbeatPing"             },
    { RequestType::RequestLogin                  ,   "RequestLogin"                     },
    { RequestType::RequestLogout                 ,   "RequestLogout"                    },
    { RequestType::RequestMessages               ,   "RequestMessages"                  },
@@ -88,9 +85,6 @@ std::shared_ptr<Request> Request::fromJSON(const std::string& clientId, const st
 
    switch (requestType)
    {
-      case RequestType::RequestHeartbeatPing:
-         return std::make_shared<HeartbeatPingRequest>(clientId);
-
       case RequestType::RequestLogin:
         return std::make_shared<LoginRequest>(
            clientId,

@@ -84,19 +84,4 @@ public:
    MessageBoxWalletCreateAbort(QWidget *parent = nullptr);
 };
 
-class MessageBoxIdKey : public BSMessageBox {
-public:
-   MessageBoxIdKey(Type mbType
-      , const QString& title, const QString& text
-      , const QString& description, const QString& details
-      , QWidget* parent = nullptr)
-      : BSMessageBox(mbType, title, text, description, details, parent) {
-      setProperty("messageBoxIdKey", true);
-   }
-
-   MessageBoxIdKey(Type mbType
-      , const QString& title, const QString& text, const QString& description
-      , QWidget* parent = nullptr)
-      : MessageBoxIdKey(mbType, title, text, description, QString(), parent) {}
-};
 #endif // __MESSAGE_BOX_H__

@@ -6,7 +6,6 @@
 #include "ResponseObjects/ContactsActionResponseDirect.h"
 #include "ResponseObjects/ContactsActionResponseServer.h"
 #include "ResponseObjects/ContactsListResponse.h"
-#include "ResponseObjects/HeartbeatPongResponse.h"
 #include "ResponseObjects/ListResponse.h"
 #include "ResponseObjects/LoginResponse.h"
 #include "ResponseObjects/LogoutResponse.h"

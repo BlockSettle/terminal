@@ -18,7 +18,7 @@ namespace bs {
       {
       public:
          CelerCancelRFQSequence(const QString &reqId, const std::shared_ptr<spdlog::logger>& logger);
-         ~CelerCancelRFQSequence() noexcept = default;
+         ~CelerCancelRFQSequence() noexcept override = default;
 
          CelerCancelRFQSequence(const CelerCancelRFQSequence&) = delete;
          CelerCancelRFQSequence& operator = (const CelerCancelRFQSequence&) = delete;
