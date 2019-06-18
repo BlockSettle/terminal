@@ -49,6 +49,7 @@ std::string WalletBackupFile::Serialize() const
    backup.set_seed2(seedData_.part2);
 
    backup.set_chaincode1(privKey_);
+   backup.set_chaincode2("");
 
    return backup.SerializeAsString();
 }

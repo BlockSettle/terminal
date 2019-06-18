@@ -132,7 +132,7 @@ void HeadlessContainer::makeCreateHDWalletRequest(const std::string &name, const
    }
    for (const auto &pwd : pwdData) {
       auto reqPwd = request.add_password();
-      reqPwd->set_password(pwd.password.toHexStr());
+      reqPwd->set_password(pwd.password.toBinStr());
       reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
       reqPwd->set_enckey(pwd.encKey.toBinStr());
    }
@@ -584,7 +584,7 @@ bs::signer::RequestId HeadlessContainer::createHDLeaf(const std::string &rootWal
    leaf->set_path(path.toString());
    for (const auto &pwd : pwdData) {
       auto reqPwd = request.add_password();
-      reqPwd->set_password(pwd.password.toHexStr());
+      reqPwd->set_password(pwd.password.toBinStr());
       reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
       reqPwd->set_enckey(pwd.encKey.toBinStr());
    }
