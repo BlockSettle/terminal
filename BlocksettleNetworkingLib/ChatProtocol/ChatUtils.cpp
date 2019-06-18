@@ -73,15 +73,15 @@ std::shared_ptr<Chat::Data> ChatUtils::encryptMessageIes(const std::shared_ptr<s
       cipher->setPublicKey(pubKey);
       cipher->setData(msg.message());
 
-      Botan::SecureVector<uint8_t> encodedData;
-      cipher->finish(encodedData);
+      Botan::SecureVector<uint8_t> output;
+      cipher->finish(output);
 
       auto result = std::make_shared<Chat::Data>();
 
       copyMsgPlainFields(msg, result.get());
 
       result->mutable_message()->set_encryption(Chat::Data_Message_Encryption_IES);
-      result->mutable_message()->set_message(Botan::base64_encode(encodedData));
+      result->mutable_message()->set_message(Botan::base64_encode(output));
 
       return result;
    }
@@ -101,9 +101,10 @@ std::shared_ptr<Chat::Data> ChatUtils::encryptMessageAead(const std::shared_ptr<
       cipher->setPrivateKey(privKey);
       cipher->setPublicKey(remotePubKey);
       cipher->setNonce(Botan::SecureVector<uint8_t>(nonce.getPtr(), nonce.getPtr() + nonce.getSize()));
+      cipher->setData(msg.message());
 
-      Botan::SecureVector<uint8_t> encodedData;
-      cipher->finish(encodedData);
+      Botan::SecureVector<uint8_t> output;
+      cipher->finish(output);
 
       auto result = std::make_shared<Chat::Data>();
 
@@ -111,7 +112,7 @@ std::shared_ptr<Chat::Data> ChatUtils::encryptMessageAead(const std::shared_ptr<
 
       result->mutable_message()->set_encryption(Chat::Data_Message_Encryption_AEAD);
       result->mutable_message()->set_nonce(nonce.getPtr(), nonce.getSize());
-      result->mutable_message()->set_message(Botan::base64_encode(encodedData));
+      result->mutable_message()->set_message(Botan::base64_encode(output));
 
       return result;
    }
@@ -129,9 +130,10 @@ std::shared_ptr<Chat::Data> ChatUtils::decryptMessageIes(const std::shared_ptr<s
 
       decipher->setPrivateKey(privKey);
 
-      Botan::SecureVector<uint8_t> output;
       auto data = Botan::base64_decode(msg.message());
       decipher->setData(std::string(data.begin(), data.end()));
+
+      Botan::SecureVector<uint8_t> output;
       decipher->finish(output);
 
       auto result = std::make_shared<Chat::Data>();
@@ -158,12 +160,12 @@ std::shared_ptr<Chat::Data> ChatUtils::decryptMessageAead(const std::shared_ptr<
       Botan::SecureVector<uint8_t> output;
       auto data = Botan::base64_decode(msg.message());
       decipher->setData(std::string(data.begin(), data.end()));
-      decipher->finish(output);
-
       decipher->setPrivateKey(privKey);
       decipher->setPublicKey(pubKey);
       const std::string &nonce = msg.nonce();
       decipher->setNonce(Botan::SecureVector<uint8_t>(nonce.begin(), nonce.end()));
+
+      decipher->finish(output);
 
       auto result = std::make_shared<Chat::Data>();
 
