@@ -341,7 +341,7 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
          break;
 
    }
-   logger_->debug("[ChatClient::OnContactsActionResponseDirect]: Incoming contact action from {}: {}",
+   logger_->debug("[BaseChatClient::OnContactsActionResponseDirect]: Incoming contact action from {}: {}",
                   response.senderId(),
                   actionString
                   );
@@ -383,7 +383,7 @@ void BaseChatClient::OnContactsActionResponseServer(const Chat::ContactsActionRe
       break;
    }
 
-   logger_->debug("[ChatClient::OnContactsActionResponseServer]: Reseived response for server contact action:\n"
+   logger_->debug("[BaseChatClient::OnContactsActionResponseServer]: Reseived response for server contact action:\n"
                   "userID: {}\n"
                   "contactID: {}\n"
                   "requested action: {}\n"
