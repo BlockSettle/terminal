@@ -60,7 +60,7 @@ public:
 
    void sendFriendRequest(const QString &friendUserId);
    void acceptFriendRequest(const QString &friendUserId);
-   void declineFriendRequest(const QString &friendUserId);
+   void rejectFriendRequest(const QString &friendUserId);
    void clearSearch();
    bool isFriend(const QString &userId);
 

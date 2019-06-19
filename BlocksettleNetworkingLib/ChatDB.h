@@ -68,7 +68,7 @@ public:
     * \param[in] key Public key of the user.
     * \returns false of failure, otherwise true.
     */
-   bool addKey(const QString& user, const BinaryData& key);
+   bool addKey(const QString& user, const BinaryData& key, const QDateTime& dt);
 
    std::map<QString, BinaryData> loadKeys(bool* loaded = nullptr);
 

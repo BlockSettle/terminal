@@ -28,7 +28,8 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
          const QLatin1String query("CREATE TABLE IF NOT EXISTS user_keys ("\
             "user_id CHAR(16) PRIMARY KEY,"\
             "user_name CHAR(64),"\
-            "key TEXT"\
+            "key TEXT," \
+            "key_timestamp DATETIME"\
             ");");
          if (!QSqlQuery(db).exec(query)) {
             return false;
@@ -40,8 +41,7 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
          const QLatin1String query("CREATE TABLE IF NOT EXISTS contacts ("\
             "user_id CHAR(16) PRIMARY KEY,"\
             "user_name CHAR(64),"\
-            "status INTEGER,"
-            "public_key_timestamp DATETIME);");
+            "status INTEGER);");
            if (!QSqlQuery(db).exec(query)) {
                return false;
            }
@@ -348,12 +348,13 @@ std::map<QString, BinaryData> ChatDB::loadKeys(bool* loaded)
    return keys_out;
 }
 
-bool ChatDB::addKey(const QString& user, const BinaryData& key)
+bool ChatDB::addKey(const QString& user, const BinaryData& key, const QDateTime& dt)
 {
    QSqlQuery qryAdd(QLatin1String(
-      "INSERT INTO user_keys(user_id, key) VALUES(?, ?);"), db_);
+      "INSERT INTO user_keys(user_id, key, key_timestamp) VALUES(?, ?, ?);"), db_);
    qryAdd.bindValue(0, user);
    qryAdd.bindValue(1, QString::fromStdString(key.toHexStr()));
+   qryAdd.bindValue(2, dt);
 
    if (!qryAdd.exec()) {
       logger_->error("[ChatDB::addKey] failed to insert new public key value to user_keys.");

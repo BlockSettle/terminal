@@ -1,12 +1,11 @@
 #include "ContactActionRequestDirect.h"
 
 namespace Chat {
-   ContactActionRequestDirect::ContactActionRequestDirect(const std::string& clientId, const std::string& senderId, const std::string& receiverId, ContactsAction action, BinaryData publicKey)
+   ContactActionRequestDirect::ContactActionRequestDirect(const std::string& clientId, const std::string& senderId, const std::string& receiverId, ContactsAction action)
       : Request (RequestType::RequestContactsActionDirect, clientId)
       , senderId_(senderId)
       , receiverId_(receiverId)
       , action_(action)
-      , senderPublicKey_(publicKey)
    {
       
    }
@@ -17,7 +16,6 @@ namespace Chat {
       data[SenderIdKey] = QString::fromStdString(senderId_);
       data[ReceiverIdKey] = QString::fromStdString(receiverId_);
       data[ContactActionKey] = static_cast<int>(action_);
-      data[PublicKeyKey] = QString::fromStdString(senderPublicKey_.toHexStr());
       return data;
    }
    
@@ -27,8 +25,7 @@ namespace Chat {
       std::string senderId = data[SenderIdKey].toString().toStdString();
       std::string receiverId = data[ReceiverIdKey].toString().toStdString();
       ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
-      BinaryData publicKey = BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString());
-      return std::make_shared<ContactActionRequestDirect>(clientId, senderId, receiverId, action, publicKey);
+      return std::make_shared<ContactActionRequestDirect>(clientId, senderId, receiverId, action);
    }
    
    void ContactActionRequestDirect::handle(RequestHandler& handler)

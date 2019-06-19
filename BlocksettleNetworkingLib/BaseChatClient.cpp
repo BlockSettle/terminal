@@ -14,11 +14,9 @@
 #include <botan/auto_rng.h>
 #include <enable_warnings.h>
 
-BaseChatClient::BaseChatClient(const std::shared_ptr<ConnectionManager>& connectionManager
-                               , const std::shared_ptr<spdlog::logger>& logger
-                               , const QString& dbFile)
-  : logger_{logger}
-  , connectionManager_{connectionManager}
+BaseChatClient::BaseChatClient(const std::shared_ptr<ConnectionManager>& connectionManager, const std::shared_ptr<spdlog::logger>& logger, const QString& dbFile)
+  : logger_{logger},
+  connectionManager_{connectionManager}
 {
    chatSessionKeyPtr_ = std::make_shared<Chat::ChatSessionKey>(logger);
    hasher_ = std::make_shared<UserHasher>();
@@ -157,8 +155,7 @@ bool BaseChatClient::sendFriendRequestToServer(const QString &friendUserId)
             "",
             currentUserId_,
             friendUserId.toStdString(),
-            Chat::ContactsAction::Request,
-            getOwnAuthPublicKey());
+            Chat::ContactsAction::Request);
    return sendRequest(request);
 }
 
@@ -166,43 +163,37 @@ bool BaseChatClient::sendAcceptFriendRequestToServer(const QString &friendUserId
 {
    auto requestDirect = std::make_shared<Chat::ContactActionRequestDirect>(
             "", currentUserId_, friendUserId.toStdString(),
-            Chat::ContactsAction::Accept,
-            getOwnAuthPublicKey());
+            Chat::ContactsAction::Accept);
 
    sendRequest(requestDirect);
 
-   BinaryData publicKey = contactPublicKeys_[friendUserId];
    auto requestRemote = std::make_shared<Chat::ContactActionRequestServer>(
             "",
             currentUserId_,
             friendUserId.toStdString(),
             Chat::ContactsActionServer::AddContactRecord,
-            Chat::ContactStatus::Accepted,
-            publicKey);
+            Chat::ContactStatus::Accepted);
    sendRequest(requestRemote);
 
    return true;
 }
 
-bool BaseChatClient::sendDeclientFriendRequestToServer(const QString &friendUserId)
+bool BaseChatClient::sendRejectFriendRequestToServer(const QString &friendUserId)
 {
    auto request = std::make_shared<Chat::ContactActionRequestDirect>(
             "",
             currentUserId_,
             friendUserId.toStdString(),
-            Chat::ContactsAction::Reject,
-            getOwnAuthPublicKey());
+            Chat::ContactsAction::Reject);
    sendRequest(request);
 
-   BinaryData publicKey = contactPublicKeys_[friendUserId];
    auto requestRemote =
          std::make_shared<Chat::ContactActionRequestServer>(
             "",
             currentUserId_,
             friendUserId.toStdString(),
             Chat::ContactsActionServer::AddContactRecord,
-            Chat::ContactStatus::Rejected,
-            publicKey);
+            Chat::ContactStatus::Rejected);
    sendRequest(requestRemote);
 
    return true;
@@ -311,7 +302,8 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
          actionString = "ContactsAction::Accept";
          QString senderId = QString::fromStdString(response.senderId());
          contactPublicKeys_[senderId] = response.getSenderPublicKey();
-         chatDb_->addKey(senderId, response.getSenderPublicKey());
+         // TODO: compare incoming key in db
+         //chatDb_->addKey(senderId, response.getSenderPublicKey());
 
          onContactAccepted(senderId);
 
@@ -320,7 +312,7 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
                   , currentUserId_
                   , senderId.toStdString()
                   , Chat::ContactsActionServer::UpdateContactRecord
-                  , Chat::ContactStatus::Accepted, response.getSenderPublicKey());
+                  , Chat::ContactStatus::Accepted);
          sendRequest(requestS);
          // reprocess message again
          retrySendQueuedMessages(response.senderId());
@@ -331,11 +323,12 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
          addOrUpdateContact(QString::fromStdString(response.senderId()), Chat::ContactStatus::Rejected);
          onContactRejected(QString::fromStdString(response.senderId()));
 
-         auto requestS = std::make_shared<Chat::ContactActionRequestServer>(""
-                  , currentUserId_
-                  , response.senderId()
-                  , Chat::ContactsActionServer::UpdateContactRecord
-                  , Chat::ContactStatus::Rejected, response.getSenderPublicKey());
+         auto requestS = std::make_shared<Chat::ContactActionRequestServer>(
+            "",
+            currentUserId_,
+            response.senderId(),
+            Chat::ContactsActionServer::UpdateContactRecord,
+            Chat::ContactStatus::Rejected);
          sendRequest(requestS);
          //removeContact(QString::fromStdString(response.senderId()));
          eraseQueuedMessages(response.senderId());
@@ -347,7 +340,8 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
          QString contactId = QString::fromStdString(response.senderId());
          BinaryData pk = response.getSenderPublicKey();
          contactPublicKeys_[contactId] = response.getSenderPublicKey();
-         chatDb_->addKey(contactId, response.getSenderPublicKey());
+         // TODO: compare incoming key in db
+         //chatDb_->addKey(contactId, response.getSenderPublicKey());
 
          onFriendRequest(userId, QString::fromStdString(response.senderId()), pk);
          //addOrUpdateContact(QString::fromStdString(response.senderId()), QStringLiteral(""), true);
@@ -355,15 +349,16 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
       break;
       case Chat::ContactsAction::Remove: {
          BinaryData pk = response.getSenderPublicKey();
-         auto requestS = std::make_shared<Chat::ContactActionRequestServer>(""
-                  , currentUserId_
-                  , response.senderId()
-                  , Chat::ContactsActionServer::RemoveContactRecord
-                  , Chat::ContactStatus::Incoming, pk);
+         auto requestS = std::make_shared<Chat::ContactActionRequestServer>(
+            "",
+            currentUserId_,
+            response.senderId(),
+            Chat::ContactsActionServer::RemoveContactRecord,
+            Chat::ContactStatus::Incoming);
 
          sendRequest(requestS);
       }
-         break;
+      break;
 
    }
    logger_->debug("[BaseChatClient::OnContactsActionResponseDirect]: Incoming contact action from {}: {}"
@@ -566,7 +561,8 @@ void BaseChatClient::OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &re
    // Save received public key of peer.
    const auto peerId = QString::fromStdString(response.getSendingNodeId());
    contactPublicKeys_[peerId] = response.getSendingNodePublicKey();
-   chatDb_->addKey(peerId, response.getSendingNodePublicKey());
+   // TODO: check what to do with incoming pk
+   //chatDb_->addKey(peerId, response.getSendingNodePublicKey());
 
    // Run over enqueued messages if any, and try to send them all now.
    messages_queue& messages = enqueued_messages_[QString::fromStdString(response.getSendingNodeId())];

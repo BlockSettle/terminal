@@ -127,7 +127,7 @@ protected:
 protected:
    bool sendFriendRequestToServer(const QString &friendUserId);
    bool sendAcceptFriendRequestToServer(const QString &friendUserId);
-   bool sendDeclientFriendRequestToServer(const QString &friendUserId);
+   bool sendRejectFriendRequestToServer(const QString &friendUserId);
    bool sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
 
    std::shared_ptr<Chat::MessageData> sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& message
