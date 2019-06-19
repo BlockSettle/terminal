@@ -143,6 +143,7 @@ namespace Chat
    static const QString Nonce = QStringLiteral("nonce");
    static const QString EncryptionTypeKey = QStringLiteral("encryption_type");
    static const QString GlobalRoomKey = QStringLiteral("global_chat");
+   static const QString SupportRoomKey = QStringLiteral("support_chat");
    static const QString SenderSessionPublicKeyKey = QStringLiteral("sender_session_public_key");
    static const QString OTCRoomKey = QStringLiteral("otc_chat");
    static const QString OTCDataObjectKey = QStringLiteral("otc_data");
