@@ -219,12 +219,12 @@ CustomTitleDialogWindow {
 
                         if (fullBackupMode) {
                             walletsProxy.backupPrivateKey(walletInfo.walletId
-                               , targetDir + "/" + backupFileName, isPrintable
+                               , targetDir, isPrintable
                                , passwordData, exportCallback)
                         }
                         else {
                             walletsProxy.exportWatchingOnly(walletInfo.walletId
-                               , targetDir + "/" + backupFileName, passwordData
+                               , targetDir, passwordData
                                , exportCallback)
                         }
                     }

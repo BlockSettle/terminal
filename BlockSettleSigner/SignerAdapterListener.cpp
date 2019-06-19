@@ -177,8 +177,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
       rc = onSyncWallet(packet.data(), packet.id());
       break;
    case signer::CreateWOType:
-      rc = onCreateWO(packet.data(), packet.id());
-      break;
    case signer::GetDecryptedNodeType:
       rc = onGetDecryptedNode(packet.data(), packet.id());
       break;
@@ -418,30 +416,6 @@ bool SignerAdapterListener::sendWoWallet(const std::shared_ptr<bs::core::hd::Wal
       }
    }
    return sendData(pt, response.SerializeAsString(), reqId);
-}
-
-bool SignerAdapterListener::onCreateWO(const std::string &data, bs::signer::RequestId reqId)
-{
-   signer::DecryptWalletRequest request;
-   if (!request.ParseFromString(data)) {
-      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
-   }
-   const auto hdWallet = walletsMgr_->getHDWalletById(request.wallet_id());
-   if (!hdWallet) {
-      logger_->error("[SignerAdapterListener::{}] failed to find HD wallet with id {}"
-         , __func__, request.wallet_id());
-      return false;
-   }
-   auto lock = hdWallet->lockForEncryption(request.password());
-   const auto woWallet = hdWallet->createWatchingOnly();
-   if (!woWallet) {
-      logger_->error("[SignerAdapterListener::{}] failed to create watching-only wallet for id {}"
-         , __func__, request.wallet_id());
-      return false;
-   }
-
-   return sendWoWallet(woWallet, signer::CreateWOType, reqId);
 }
 
 bool SignerAdapterListener::onGetDecryptedNode(const std::string &data, bs::signer::RequestId reqId)

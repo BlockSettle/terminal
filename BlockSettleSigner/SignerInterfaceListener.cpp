@@ -112,10 +112,10 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::SyncWalletType:
       onSyncWallet(packet.data(), packet.id());
       break;
-   case signer::CreateWOType:
    case signer::ImportWoWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
+   case signer::CreateWOType:
    case signer::GetDecryptedNodeType:
       onDecryptedKey(packet.data(), packet.id());
       break;

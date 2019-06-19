@@ -199,70 +199,64 @@ QString WalletsProxy::getWoWalletFile(const QString &walletId) const
    return (QString::fromStdString(bs::core::hd::Wallet::fileNamePrefix(true)) + walletId + QLatin1String("_wallet.lmdb"));
 }
 
-std::shared_ptr<bs::core::hd::Wallet> WalletsProxy::getWoWallet(const bs::sync::WatchingOnlyWallet &wo) const
-{
-   try {
-      auto result = std::make_shared<bs::core::hd::Wallet>(wo.name, wo.description, wo.netType
-         , SecureBinaryData{}, "", logger_);
-      for (const auto &groupEntry : wo.groups) {
-         auto group = result->createGroup(static_cast<bs::hd::CoinType>(groupEntry.type));
-         for (const auto &leafEntry : groupEntry.leaves) {
-/*            auto pubNode = std::make_shared<bs::core::hd::Node>(leafEntry.publicKey
-               , leafEntry.chainCode.isNull() ? BinaryData(BTC_BIP32_CHAINCODE_SIZE) : leafEntry.chainCode
-               , wo.netType);*/
-            auto leaf = group->createLeaf(leafEntry.index/*, pubNode*/);
-            if (!leaf) {
-               logger_->error("[WalletsProxy] failed to create WO leaf {} for {}"
-                  , leafEntry.index, wo.id);
-               continue;
-            }
-            leaf->extendAddressChain(leafEntry.addresses.size(), true);
-            leaf->extendAddressChain(leafEntry.addresses.size(), false);
-/*            for (const auto &addr : leafEntry.addresses) {
-               leaf->createAddressWithIndex(addr.index, true, addr.aet);
-            }*/
-         }
-      }
-      return result;
-   }
-   catch (const std::exception &e) {
-      logger_->error("[WalletsProxy] WO-wallet creation failed: {}", e.what());
-   }
-   return nullptr;
-}
-
 void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &path
    , bs::wallet::QPasswordData *passwordData, const QJSValue &jsCallback)
 {
-   const auto &cbResult = [this, walletId, path, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {
-      if (wo.id.empty()) {
-         logger_->error("[WalletsProxy] failed to create WO wallet for id {}", wo.id);
-         emit walletError(walletId, tr("Failed to create watching-only wallet for %1").arg(walletId));
-         return;
+   logger_->debug("[{}] path={}", __func__, path.toStdString());
+   const auto &cbResult = [this, walletId, path, jsCallback, passwordData]
+   (const SecureBinaryData &privKey, const SecureBinaryData &seedData) {
+      auto pathStr = path.toStdString();
+#if defined (Q_OS_WIN)
+      if (pathStr[0] == '/') {
+         pathStr = pathStr.substr(1);  // Workaround for bad QML handling of Windows absolute paths
       }
-      auto woWallet = getWoWallet(wo);
-      if (!woWallet) {
-         emit walletError(walletId, tr("Failed to create watching-only wallet for %1").arg(walletId));
-         return;
-      }
+#endif
       try {
-//         woWallet->saveToFile(path.toStdString());  // should be save automatically now
-         QMetaObject::invokeMethod(this, [this, jsCallback] {
-            QJSValueList args;
-            args << QJSValue(true) << QStringLiteral("");
-            invokeJsCallBack(jsCallback, args);
-         });
+         const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
+         if (!hdWallet) {
+            throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
+         }
+         const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
+         bs::core::hd::Wallet newWallet(hdWallet->name(), hdWallet->description(), seed
+            , passwordData->password, pathStr);
+         {
+            for (const auto &group : hdWallet->getGroups()) {
+               auto newGroup = newWallet.createGroup(static_cast<bs::hd::CoinType>(group->index()));
+               if (!newGroup) {
+                  throw std::runtime_error("failed to create group");
+               }
+               auto lock = newWallet.lockForEncryption(passwordData->password);
+               for (const auto &leaf : group->getLeaves()) {
+                  auto newLeaf = newGroup->createLeaf(leaf->index());
+                  for (const auto &addr : leaf->getExtAddressList()) {
+                     newLeaf->getNewExtAddress(addr.getType());
+                  }
+                  for (const auto &addr : leaf->getIntAddressList()) {
+                     newLeaf->getNewIntAddress(addr.getType());
+                  }
+                  logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
+                     , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
+               }
+            }
+         }
+         const auto woWallet = newWallet.createWatchingOnly();
+         newWallet.eraseFile();
       }
       catch (const std::exception &e) {
-         logger_->error("[WalletsProxy] failed to save WO wallet for {}: {}", wo.id, e.what());
-
+         logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
          QMetaObject::invokeMethod(this, [this, jsCallback, walletId, path, e] {
             QJSValueList args;
             args << QJSValue(false) << tr("Failed to save watching-only wallet for %1 to %2: %3")
-                    .arg(walletId).arg(path).arg(QLatin1String(e.what()));
+               .arg(walletId).arg(path).arg(QLatin1String(e.what()));
             invokeJsCallBack(jsCallback, args);
          });
+         return;
       }
+      QMetaObject::invokeMethod(this, [this, jsCallback] {
+         QJSValueList args;
+         args << QJSValue(true) << QStringLiteral("");
+         invokeJsCallBack(jsCallback, args);
+      });
    };
    adapter_->createWatchingOnlyWallet(walletId, passwordData->password, cbResult);
 }

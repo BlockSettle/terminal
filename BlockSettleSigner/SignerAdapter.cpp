@@ -8,7 +8,6 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 
-#include "bs_signer.pb.h"
 #include "SignerAdapterContainer.h"
 #include "SignerInterfaceListener.h"
 
@@ -81,22 +80,19 @@ void SignerAdapter::signTxRequest(const bs::core::wallet::TXSignRequest &txReq
 }
 
 void SignerAdapter::createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
-   , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &cb)
+   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
 {
-   signer::DecryptWalletRequest request;
-   request.set_wallet_id(walletId.toStdString());
-   request.set_password(password.toBinStr());
-   const auto reqId = listener_->send(signer::CreateWOType, request.SerializeAsString());
-   listener_->setWatchOnlyCb(reqId, cb);
+   getDecryptedRootNode(walletId.toStdString(), password, cb, signer::CreateWOType);
 }
 
 void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
-   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
+   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb
+   , signer::PacketType pt)
 {
    signer::DecryptWalletRequest request;
    request.set_wallet_id(walletId);
    request.set_password(password.toBinStr());
-   const auto reqId = listener_->send(signer::GetDecryptedNodeType, request.SerializeAsString());
+   const auto reqId = listener_->send(pt, request.SerializeAsString());
    listener_->setDecryptNodeCb(reqId, cb);
 }
 

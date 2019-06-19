@@ -8,6 +8,9 @@
 #include "QPasswordData.h"
 #include "BSErrorCode.h"
 
+#include "bs_signer.pb.h"
+
+
 namespace bs {
    namespace sync {
       class WalletsManager;
@@ -69,9 +72,10 @@ public:
    void signTxRequest(const bs::core::wallet::TXSignRequest &, const SecureBinaryData &password
       , const std::function<void(const BinaryData &)> &);
    void createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
-      , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &);
-   void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
+   void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
+      , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &
+      , Blocksettle::Communication::signer::PacketType pt = Blocksettle::Communication::signer::GetDecryptedNodeType);
    void getHeadlessPubKey(const std::function<void(const std::string &)> &);
 
    void activateAutoSign(const std::string &walletId
