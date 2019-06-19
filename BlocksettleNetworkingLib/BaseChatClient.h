@@ -80,12 +80,12 @@ protected:
                            const QString &userName = QStringLiteral(""));
 
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
-   std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
    std::shared_ptr<Chat::MessageData> encryptMessageToSendAEAD(const QString& receiver,
                                                                BinaryData& remotePublicKey,
                                                                std::shared_ptr<Chat::MessageData> messageData);
    std::shared_ptr<Chat::MessageData> encryptMessageToSendIES(BinaryData& remotePublicKey,
                                                               std::shared_ptr<Chat::MessageData> messageData);
+   std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
 
 public:
    bool sendSearchUsersRequest(const QString& userIdPattern);

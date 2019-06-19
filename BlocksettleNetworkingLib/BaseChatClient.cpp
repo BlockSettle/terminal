@@ -768,26 +768,6 @@ bool BaseChatClient::encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::
    return true;
 }
 
-std::shared_ptr<Chat::MessageData> BaseChatClient::decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message)
-{
-   std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
-   SecureBinaryData localPrivateKey(getOwnAuthPrivateKey());
-   dec->setPrivateKey(localPrivateKey);
-   dec->setData(QByteArray::fromBase64(message->messagePayload().toUtf8()).toStdString());
-
-   try {
-      Botan::SecureVector<uint8_t> decodedData;
-      dec->finish(decodedData);
-
-      return message->CreateDecryptedMessage(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()));
-   }
-   catch (std::exception &) {
-      logger_->error("[BaseChatClient::decryptIESMessage] Failed to decrypt msg from DB {}", message->id().toStdString());
-      message->setFlag(Chat::MessageData::State::Invalid);
-      return message;
-   }
-}
-
 std::shared_ptr<Chat::MessageData> BaseChatClient::encryptMessageToSendAEAD(const QString &receiver, BinaryData &rpk, std::shared_ptr<Chat::MessageData> messageData)
 {
    const auto& chatSessionKeyDataPtr = chatSessionKeyPtr_->findSessionForUser(receiver.toStdString());
@@ -884,4 +864,24 @@ std::shared_ptr<Chat::MessageData> BaseChatClient::encryptMessageToSendIES(Binar
       auto encryptedMessage = messageData->CreateEncryptedMessage(Chat::MessageData::EncryptionType::IES
       , QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encodedData.data()), int(encodedData.size())).toBase64()));
       return encryptedMessage;
+}
+
+std::shared_ptr<Chat::MessageData> BaseChatClient::decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message)
+{
+   std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
+   SecureBinaryData localPrivateKey(getOwnAuthPrivateKey());
+   dec->setPrivateKey(localPrivateKey);
+   dec->setData(QByteArray::fromBase64(message->messagePayload().toUtf8()).toStdString());
+
+   try {
+      Botan::SecureVector<uint8_t> decodedData;
+      dec->finish(decodedData);
+
+      return message->CreateDecryptedMessage(QString::fromUtf8((char*)decodedData.data(), (int)decodedData.size()));
+   }
+   catch (std::exception &) {
+      logger_->error("[BaseChatClient::decryptIESMessage] Failed to decrypt msg from DB {}", message->id().toStdString());
+      message->setFlag(Chat::MessageData::State::Invalid);
+      return message;
+   }
 }
