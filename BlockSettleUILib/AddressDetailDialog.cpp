@@ -142,7 +142,7 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    }
    else {
       const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
-         initModels(delegate);
+         QMetaObject::invokeMethod(this, [this, delegate]{ initModels(delegate); });
       };
       if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate)) {
          ui_->labelError->setText(tr("Error loading address info"));
