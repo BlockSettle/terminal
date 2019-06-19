@@ -1403,7 +1403,7 @@ bs::signer::RequestId RemoteSigner::signOffline(const bs::core::wallet::TXSignRe
    }
    f.close();
 
-   QMetaObject::invokeMethod(this, [this, reqId, fileName] {
+   QTimer::singleShot(1, [this, reqId, fileName] {    // requires some delay to avoid race condition on return
       emit TXSigned(reqId, fileName, bs::error::ErrorCode::NoError);
    });
    return reqId;
