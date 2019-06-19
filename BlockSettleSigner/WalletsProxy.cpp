@@ -211,38 +211,40 @@ void WalletsProxy::exportWatchingOnly(const QString &walletId, const QString &pa
          pathStr = pathStr.substr(1);  // Workaround for bad QML handling of Windows absolute paths
       }
 #endif
+      std::shared_ptr<bs::core::hd::Wallet> newWallet;
       try {
          const auto hdWallet = walletsMgr_->getHDWalletById(walletId.toStdString());
          if (!hdWallet) {
             throw std::runtime_error("failed to find wallet with id " + walletId.toStdString());
          }
          const bs::core::wallet::Seed seed(seedData, hdWallet->networkType());
-         bs::core::hd::Wallet newWallet(hdWallet->name(), hdWallet->description(), seed
-            , passwordData->password, pathStr);
-         {
-            for (const auto &group : hdWallet->getGroups()) {
-               auto newGroup = newWallet.createGroup(static_cast<bs::hd::CoinType>(group->index()));
-               if (!newGroup) {
-                  throw std::runtime_error("failed to create group");
+         newWallet = std::make_shared<bs::core::hd::Wallet>(hdWallet->name(), hdWallet->description()
+            , seed, passwordData->password, pathStr);
+         for (const auto &group : hdWallet->getGroups()) {
+            auto newGroup = newWallet->createGroup(static_cast<bs::hd::CoinType>(group->index()));
+            if (!newGroup) {
+               throw std::runtime_error("failed to create group");
+            }
+            auto lock = newWallet->lockForEncryption(passwordData->password);
+            for (const auto &leaf : group->getLeaves()) {
+               auto newLeaf = newGroup->createLeaf(leaf->index());
+               for (const auto &addr : leaf->getExtAddressList()) {
+                  newLeaf->getNewExtAddress(addr.getType());
                }
-               auto lock = newWallet.lockForEncryption(passwordData->password);
-               for (const auto &leaf : group->getLeaves()) {
-                  auto newLeaf = newGroup->createLeaf(leaf->index());
-                  for (const auto &addr : leaf->getExtAddressList()) {
-                     newLeaf->getNewExtAddress(addr.getType());
-                  }
-                  for (const auto &addr : leaf->getIntAddressList()) {
-                     newLeaf->getNewIntAddress(addr.getType());
-                  }
-                  logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
-                     , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
+               for (const auto &addr : leaf->getIntAddressList()) {
+                  newLeaf->getNewIntAddress(addr.getType());
                }
+               logger_->debug("[WalletsProxy::exportWatchingOnly] leaf {} has {} + {} addresses"
+                  , newLeaf->walletId(), newLeaf->getExtAddressCount(), newLeaf->getIntAddressCount());
             }
          }
-         const auto woWallet = newWallet.createWatchingOnly();
-         newWallet.eraseFile();
+         const auto woWallet = newWallet->createWatchingOnly();
+         newWallet->eraseFile();
       }
       catch (const std::exception &e) {
+         if (newWallet) {
+            newWallet->eraseFile();
+         }
          logger_->error("[WalletsProxy::exportWatchingOnly] {}", e.what());
          QMetaObject::invokeMethod(this, [this, jsCallback, walletId, path, e] {
             QJSValueList args;
