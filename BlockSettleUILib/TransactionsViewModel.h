@@ -155,13 +155,13 @@ private slots:
    void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
    void onDelRows(std::vector<int> rows);
 
-   void onNewTransactions(const std::vector<bs::TXEntry> &);
-   void onDelTransactions(const std::vector<bs::TXEntry> &);
    void onItemConfirmed(const TransactionPtr);
 
 private:
    void onNewBlock(unsigned int) override;
    void onStateChanged(ArmoryState) override;
+   void onZCReceived(const std::vector<bs::TXEntry> &) override;
+   void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
 
    void init();
    void clear();

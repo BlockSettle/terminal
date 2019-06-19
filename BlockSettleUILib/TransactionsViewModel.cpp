@@ -237,8 +237,6 @@ void TransactionsViewModel::init()
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::onWalletDeleted, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, this, &TransactionsViewModel::onDelTransactions, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
@@ -448,12 +446,12 @@ bool TransactionsViewModel::txKeyExists(const std::string &key)
    return (currentItems_.find(key) != currentItems_.end());
 }
 
-void TransactionsViewModel::onNewTransactions(const std::vector<bs::TXEntry> &entries)
+void TransactionsViewModel::onZCReceived(const std::vector<bs::TXEntry> &entries)
 {
-   updateTransactionsPage(entries);
+   QMetaObject::invokeMethod(this, [this, entries] { updateTransactionsPage(entries); });
 }
 
-void TransactionsViewModel::onDelTransactions(const std::vector<bs::TXEntry> &entries)
+void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entries)
 {
    std::vector<int> delRows;
    std::vector<bs::TXEntry> children;

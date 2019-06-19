@@ -481,8 +481,7 @@ BTCNumericTypes::balance_type WalletsManager::getBalanceSum(
 
 void WalletsManager::onNewBlock(unsigned int)
 {
-   logger_->debug("[WalletsManager::{}] new Block", __func__);
-   emit blockchainEvent();
+   QMetaObject::invokeMethod(this, [this] {emit blockchainEvent(); });
 }
 
 void WalletsManager::onRefresh(const std::vector<BinaryData> &ids, bool online)
@@ -493,14 +492,13 @@ void WalletsManager::onRefresh(const std::vector<BinaryData> &ids, bool online)
    if (settlementWallet_) {   //TODO: check for refresh id
       settlementWallet_->refreshWallets(ids);
    }
-   emit blockchainEvent();
+   QMetaObject::invokeMethod(this, [this] { emit blockchainEvent(); });
 }
 
 void WalletsManager::onStateChanged(ArmoryState state)
 {
    if (state == ArmoryState::Ready) {
       logger_->debug("[{}] DB ready", __func__);
-//      emit walletsReady();
    }
    else {
       logger_->debug("[WalletsManager::{}] -  Armory state changed: {}"
@@ -510,7 +508,7 @@ void WalletsManager::onStateChanged(ArmoryState state)
 
 void WalletsManager::onWalletReady(const QString &walletId)
 {
-   emit walletReady(walletId);
+   QMetaObject::invokeMethod(this, [this, walletId] { emit walletReady(walletId); });
    if (!armory_) {
       return;
    }
@@ -537,8 +535,7 @@ void WalletsManager::onWalletReady(const QString &walletId)
       }
       if (readyWallets_.size() >= nbWallets) {
          logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
-         emit walletsReady();
-//         armory_->goOnline();
+         QMetaObject::invokeMethod(this, [this] { emit walletsReady(); });
          readyWallets_.clear();
       }
    }
@@ -548,7 +545,6 @@ void WalletsManager::onWalletImported(const std::string &walletId)
 {
    logger_->debug("[WalletsManager::{}] - HD wallet {} imported", __func__
       , walletId);
-//   updateWallets(true);
    emit walletChanged();
    emit walletImportFinished(walletId);
 }
@@ -1101,17 +1097,16 @@ void WalletsManager::onZCReceived(const std::vector<bs::TXEntry> &entries)
    } // for
 
      // Emit signals for the wallet and TX view models.
-   emit blockchainEvent();
+   QMetaObject::invokeMethod(this, [this] {emit blockchainEvent(); });
    if (!ourZCentries.empty()) {
-      emit newTransactions(ourZCentries);
+      QMetaObject::invokeMethod(this, [this, ourZCentries] { emit newTransactions(ourZCentries); });
    }
-//   updateWallets(true);
 }
 
 void WalletsManager::onZCInvalidated(const std::vector<bs::TXEntry> &entries)
 {
    if (!entries.empty()) {
-      emit invalidatedZCs(entries);
+      QMetaObject::invokeMethod(this, [this, entries] {emit invalidatedZCs(entries); });
    }
 }
 
