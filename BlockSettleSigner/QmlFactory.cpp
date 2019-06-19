@@ -114,9 +114,11 @@ AuthSignWalletObject *QmlFactory::createRemoveEidObject(int index
 
 void QmlFactory::requestHeadlessPubKey()
 {
-   adapter_->getHeadlessPubKey([this](const std::string &key){
-      setHeadlessPubKey(QString::fromStdString(key));
-   });
+   if (adapter_) {
+      adapter_->getHeadlessPubKey([this](const std::string &key){
+         setHeadlessPubKey(QString::fromStdString(key));
+      });
+   }
 }
 
 void QmlFactory::setClipboard(const QString &text) const
