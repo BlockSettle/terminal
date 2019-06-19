@@ -2163,23 +2163,6 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
    }
 }
 
-TEST_F(TestWalletWithArmory, Auth)
-{
-   envPtr_->requireAssets();
-   ASSERT_NE(envPtr_->authAddrMgr(), nullptr);
-   EXPECT_TRUE(envPtr_->authAddrMgr()->IsReady());
-   QComboBox cb;
-   UiUtils::fillAuthAddressesComboBox(&cb, envPtr_->authAddrMgr());
-   const auto verifiedAddresses = envPtr_->authAddrMgr()->GetVerifiedAddressList();
-   EXPECT_EQ(cb.count(), verifiedAddresses.size());
-   EXPECT_EQ(cb.currentText().toStdString(), 
-      verifiedAddresses[envPtr_->authAddrMgr()->getDefaultIndex()].display());
-
-   for (const auto &addr : verifiedAddresses) {
-      EXPECT_EQ(envPtr_->authAddrMgr()->GetState(addr), AddressVerificationState::Verified);
-   }
-}
-
 TEST_F(TestWalletWithArmory, Comments)
 {
    const std::string addrComment("Test address comment");
