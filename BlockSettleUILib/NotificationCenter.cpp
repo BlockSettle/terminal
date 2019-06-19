@@ -292,6 +292,19 @@ void NotificationTrayIconResponder::messageClicked()
             }
             window->raise();
             window->activateWindow();
+            window->setFocus();
+#ifdef Q_OS_WIN
+            auto currentProcessId = ::GetCurrentProcessId();
+            ::AllowSetForegroundWindow(currentProcessId);
+            auto hwnd = reinterpret_cast<HWND>(window->winId());
+            ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            ::SetActiveWindow(hwnd);
+            ::SetFocus(hwnd);
+            ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            window->raise();
+            window->activateWindow();
+            window->setFocus();
+#endif // Q_OS_WIN
          }
       }
    }
