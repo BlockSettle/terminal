@@ -177,6 +177,7 @@ private:
 
 public slots:
    void onReactivate();
+   void raiseWindow();
 
 private:
    struct TxInfo;

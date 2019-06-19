@@ -285,26 +285,7 @@ void NotificationTrayIconResponder::messageClicked()
          mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
          auto window = mainWinUi_->tabWidget->window();
          if (window) {
-            if (window->isMinimized()) {
-               window->showNormal();
-            } else if (window->isHidden()) {
-               window->show();
-            }
-            window->raise();
-            window->activateWindow();
-            window->setFocus();
-#ifdef Q_OS_WIN
-            auto currentProcessId = ::GetCurrentProcessId();
-            ::AllowSetForegroundWindow(currentProcessId);
-            auto hwnd = reinterpret_cast<HWND>(window->winId());
-            ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-            ::SetActiveWindow(hwnd);
-            ::SetFocus(hwnd);
-            ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-            window->raise();
-            window->activateWindow();
-            window->setFocus();
-#endif // Q_OS_WIN
+            QMetaObject::invokeMethod(window, "raiseWindow", Qt::DirectConnection);
          }
       }
    }

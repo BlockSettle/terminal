@@ -812,6 +812,30 @@ void BSTerminalMainWindow::onReactivate()
    show();
 }
 
+void BSTerminalMainWindow::raiseWindow()
+{
+   if (isMinimized()) {
+      showNormal();
+   } else if (isHidden()) {
+      show();
+   }
+   raise();
+   activateWindow();
+   setFocus();
+#ifdef Q_OS_WIN
+   auto hwnd = reinterpret_cast<HWND>(winId());
+   auto flags = static_cast<UINT>(SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+   ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
+   ::SetActiveWindow(hwnd);
+   ::SetFocus(hwnd);
+   QCoreApplication::processEvents();
+   ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
+   raise();
+   activateWindow();
+   setFocus();
+#endif // Q_OS_WIN
+}
+
 void BSTerminalMainWindow::UpdateMainWindowAppearence()
 {
    if (!applicationSettings_->get<bool>(ApplicationSettings::closeToTray) && isHidden()) {
