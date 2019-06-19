@@ -29,6 +29,7 @@ e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0f
 112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000");
 
 std::shared_ptr<spdlog::logger> StaticLogger::loggerPtr = nullptr;
+BlockingQueue<std::shared_ptr<DBNotificationStruct>> UnitTestWalletACT::notifQueue_;
 
 TestEnv::TestEnv(const std::shared_ptr<spdlog::logger> &logger)
 {
@@ -173,7 +174,7 @@ ArmoryInstance::ArmoryInstance()
    config_.dataDir_ = homedir_;
    config_.ephemeralPeers_ = false;
 
-   port_ = 50000 + rand() % 10000;
+   port_ = UNITTEST_DB_PORT;
    std::stringstream port_ss;
    port_ss << port_;
    config_.listenPort_ = port_ss.str();

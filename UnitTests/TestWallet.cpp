@@ -1591,7 +1591,10 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
 
    auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    ASSERT_NE(syncHdWallet, nullptr);
-   syncHdWallet->registerWallet(envPtr_->armoryConnection());
+
+   syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
 
    auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
    auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
@@ -1621,7 +1624,12 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
 
    EXPECT_EQ(syncLeaf->getAddressPoolSize(), 348);
 
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncLeaf));
+   //ext address creation should result in ext address chain extention, 
+   //which will trigger the registration of the new addresses. There
+   //should be a refresh notification for this event in the queue
+   auto&& notif = UnitTestWalletACT::popNotif();
+   ASSERT_EQ(notif->type_, DBNS_Refresh);
+   ASSERT_EQ(notif->ids_.size(), 1);
 
    /***
    11th address is part of the newly computed assets, we need to
@@ -1635,7 +1643,8 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    auto curHeight = envPtr_->armoryConnection()->topBlock();
    auto recipient = addrVec[10].getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
 
    /***
    mine some coins to original address set to make sure they
@@ -1646,7 +1655,8 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    curHeight = envPtr_->armoryConnection()->topBlock();
    recipient = addrVec[0].getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+   newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
 
    //check the address balances
    //update balance
@@ -1698,7 +1708,7 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
       Tx txObj(txSigned);
       envPtr_->armoryInstance()->pushZC(txSigned);
 
-      auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+      auto&& zcVec = UnitTestWalletACT::waitOnZC();
       ASSERT_EQ(zcVec.size(), 2);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
 
@@ -1710,9 +1720,10 @@ TEST_F(TestWalletWithArmory, AddressChainExtension)
    fut1.wait();
 
    //mine 6 more blocks
-    curHeight = envPtr_->armoryConnection()->topBlock();
+   curHeight = envPtr_->armoryConnection()->topBlock();
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+   newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
 
    //update balance
    auto promPtr4 = std::make_shared<std::promise<bool>>();
@@ -1757,8 +1768,10 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
       auto syncLeaf = std::dynamic_pointer_cast<bs::sync::hd::Leaf>(syncWallet);
       ASSERT_TRUE(syncLeaf != nullptr);
-      syncLeaf->registerWallet(envPtr_->armoryConnection());
-      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncLeaf));
+
+      syncLeaf->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+      auto regIDs = syncLeaf->registerWallet(envPtr_->armoryConnection());
+      UnitTestWalletACT::waitOnRefresh(regIDs);
 
       //check wallet has 10 assets per account
       ASSERT_EQ(syncLeaf->getAddressPoolSize(), 60);
@@ -1784,9 +1797,25 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       extVec.push_back(lbdGetAddress(true,
          AddressEntryType(AddressEntryType_P2SH | AddressEntryType_P2WPKH)));
 
+      //ext address creation should result in ext address chain extention, 
+      //which will trigger the registration of the new addresses. There
+      //should be a refresh notification for this event in the queue
+      auto&& notif = UnitTestWalletACT::popNotif();
+      ASSERT_EQ(notif->type_, DBNS_Refresh);
+      ASSERT_EQ(notif->ids_.size(), 1);
+
       //pull 60 int addresses
       for (unsigned i = 0; i < 60; i++)
          intVec.push_back(lbdGetAddress(false));
+
+      //same deal with int address creation, but this time it will trigger 3 times
+      //(20 new addresses per extention call
+      for (unsigned y = 0; y < 3; y++)
+      {
+         notif = UnitTestWalletACT::popNotif();
+         ASSERT_EQ(notif->type_, DBNS_Refresh);
+         ASSERT_EQ(notif->ids_.size(), 1);
+      }
 
       //mine coins to ext[12]
       auto armoryInstance = envPtr_->armoryInstance();
@@ -1795,7 +1824,8 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       unsigned curHeight = envPtr_->armoryConnection()->topBlock();
       auto recipient = extVec[12].getRecipient((uint64_t)(50 * COIN));
       armoryInstance->mineNewBlock(recipient.get(), blockCount);
-      envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+      auto newTop = UnitTestWalletACT::waitOnNewBlock();
+      ASSERT_EQ(curHeight + blockCount, newTop);
 
       //update balance
       auto promPtr2 = std::make_shared<std::promise<bool>>();
@@ -1851,7 +1881,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          Tx txObj(txSigned);
          envPtr_->armoryInstance()->pushZC(txSigned);
 
-         auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+         auto&& zcVec = UnitTestWalletACT::waitOnZC();
          ASSERT_EQ(zcVec.size(), 1);
          EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
 
@@ -1865,7 +1895,8 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
       //mine 6 more blocks
       curHeight = envPtr_->armoryConnection()->topBlock();
       armoryInstance->mineNewBlock(recipient.get(), blockCount);
-      envPtr_->blockMonitor()->waitForNewBlocks(curHeight + 6);
+      newTop = UnitTestWalletACT::waitOnNewBlock();
+      ASSERT_EQ(curHeight + blockCount, newTop);
 
       //update balance
       auto promPtr4 = std::make_shared<std::promise<bool>>();
@@ -1936,8 +1967,10 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       const auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
       ASSERT_NE(syncHdWallet, nullptr);
-      syncHdWallet->registerWallet(envPtr_->armoryConnection());
-      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncHdWallet));
+
+      syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+      auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
+      UnitTestWalletACT::waitOnRefresh(regIDs);
 
       auto trackProm = std::make_shared<std::promise<bool>>();
       auto trackFut = trackProm->get_future();
@@ -2067,8 +2100,10 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
 
       const auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
       ASSERT_NE(syncHdWallet, nullptr);
-      syncHdWallet->registerWallet(envPtr_->armoryConnection());
-      ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncHdWallet));
+
+      syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+      auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
+      UnitTestWalletACT::waitOnRefresh(regIDs);
 
       auto trackProm = std::make_shared<std::promise<bool>>();
       auto trackFut = trackProm->get_future();
@@ -2164,8 +2199,9 @@ TEST_F(TestWalletWithArmory, Comments)
    auto syncHdWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    auto syncWallet = syncMgr->getWalletById(leafPtr_->walletId());
    
-   syncHdWallet->registerWallet(envPtr_->armoryConnection());
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncHdWallet));
+   syncHdWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncHdWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
 
    EXPECT_TRUE(syncWallet->setAddressComment(addr, addrComment));
    EXPECT_EQ(leafPtr_->getAddressComment(addr), addrComment);
@@ -2177,7 +2213,8 @@ TEST_F(TestWalletWithArmory, Comments)
    const auto &curHeight = envPtr_->armoryConnection()->topBlock();
    auto recipient = addr.getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
 
    //create tx from those fresh utxos, set a comment by tx hash and check it
    auto promPtr = std::make_shared<std::promise<bool>>();
@@ -2238,8 +2275,9 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
 
-   syncWallet->registerWallet(envPtr_->armoryConnection());
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
+   syncWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
 
    //mine some coins
    auto armoryInstance = envPtr_->armoryInstance();
@@ -2248,7 +2286,8 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    auto curHeight = envPtr_->armoryConnection()->topBlock();
    auto recipient = addr1.getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
 
    //grab balances and check
    auto balProm = std::make_shared<std::promise<bool>>();
@@ -2295,7 +2334,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
       Tx txObj(txSigned);
       envPtr_->armoryInstance()->pushZC(txSigned);
 
-      auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+      auto&& zcVec = UnitTestWalletACT::waitOnZC();
       ASSERT_EQ(zcVec.size(), 2);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
 
@@ -2370,8 +2409,9 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
 
-   syncWallet->registerWallet(envPtr_->armoryConnection());
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
+   syncWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
 
    //mine some coins
    auto armoryInstance = envPtr_->armoryInstance();
@@ -2380,7 +2420,8 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    auto curHeight = envPtr_->armoryConnection()->topBlock();
    auto recipient = addr1.getRecipient((uint64_t)(50 * COIN));
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+   auto newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
 
    const uint64_t amount1 = 0.05 * BTCNumericTypes::BalanceDivider;
    const uint64_t fee = 0.0001 * BTCNumericTypes::BalanceDivider;
@@ -2410,7 +2451,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       envPtr_->armoryInstance()->pushZC(txSigned1);
       Tx txObj(txSigned1);
 
-      auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+      auto&& zcVec = UnitTestWalletACT::waitOnZC();
       ASSERT_EQ(zcVec.size(), 2);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
       EXPECT_EQ(zcVec[1].txHash, txObj.getThisHash());
@@ -2423,7 +2464,8 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 
    curHeight = envPtr_->armoryConnection()->topBlock();
    armoryInstance->mineNewBlock(recipient.get(), blockCount);
-   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + blockCount);
+   newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
 
    auto promPtr2 = std::make_shared<std::promise<bool>>();
    auto fut2 = promPtr2->get_future();
@@ -2458,7 +2500,7 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
       envPtr_->armoryInstance()->pushZC(txSigned2);
       Tx txObj(txSigned2);
 
-      auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+      auto&& zcVec = UnitTestWalletACT::waitOnZC();
       ASSERT_EQ(zcVec.size(), 2);
       EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
       EXPECT_EQ(zcVec[1].txHash, txObj.getThisHash());

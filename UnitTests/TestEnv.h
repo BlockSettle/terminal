@@ -13,8 +13,12 @@
 #include "BDM_mainthread.h"
 #include <btc/ecc.h>
 
+#include "Wallets\SyncWallet.h"
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
+
+#define UNITTEST_DB_PORT 59055
 
 struct StaticLogger
 {
@@ -56,6 +60,120 @@ public:
    const SecureBinaryData& getPrivKeyForPubkey(const BinaryData& pubkey)
    {
       return privKey_;
+   }
+};
+
+enum DBNotificationStruct_Enum
+{
+   DBNS_Refresh,
+   DBNS_ZC,
+   DBNS_NewBlock
+};
+
+struct DBNotificationStruct
+{
+   const DBNotificationStruct_Enum type_;
+
+   std::vector<BinaryData> ids_;
+   bool online_;
+
+   std::vector<bs::TXEntry> zc_;
+
+   unsigned block_;
+
+   DBNotificationStruct(DBNotificationStruct_Enum type) : 
+      type_(type)
+   {}
+};
+
+class UnitTestWalletACT : public bs::sync::WalletACT
+{
+   static BlockingQueue<std::shared_ptr<DBNotificationStruct>> notifQueue_;
+
+public:
+   UnitTestWalletACT(ArmoryConnection *armory, bs::sync::Wallet *leaf) :
+      bs::sync::WalletACT(armory, leaf)
+   {}
+
+   void onRefresh(const std::vector<BinaryData> &ids, bool online) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_Refresh);
+      dbns->ids_ = ids;
+      dbns->online_ = online;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+
+   void onZCReceived(const std::vector<bs::TXEntry> &zcs) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_ZC);
+      dbns->zc_ = zcs;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+
+   void onNewBlock(unsigned int block) override
+   {
+      auto dbns = std::make_shared<DBNotificationStruct>(DBNS_NewBlock);
+      dbns->block_ = block;
+
+      notifQueue_.push_back(std::move(dbns));
+   }
+   
+   static std::shared_ptr<DBNotificationStruct> waitOnNotification(void)
+   {
+      return std::move(notifQueue_.pop_front());
+   }
+
+   static void waitOnRefresh(const std::vector<std::string>& ids)
+   {
+      if (ids.size() == 0)
+         throw std::runtime_error("empty registration id vector");
+
+      std::set<std::string> idSet;
+      idSet.insert(ids.begin(), ids.end());
+      
+      while (true)
+      {
+         auto&& notif = notifQueue_.pop_front();
+         if (notif->type_ != DBNS_Refresh)
+            throw std::runtime_error("expected refresh notification");
+
+         for (auto& refreshId : notif->ids_)
+         {
+            std::string idStr(refreshId.getCharPtr(), refreshId.getSize());
+            auto iter = idSet.find(idStr);
+            if (iter == idSet.end())
+               continue;
+
+            idSet.erase(iter);
+            if (idSet.size() == 0)
+               return;
+         }
+      }
+   }
+
+   static unsigned waitOnNewBlock()
+   {
+      auto&& notif = notifQueue_.pop_front();
+      if(notif->type_ != DBNS_NewBlock)
+         throw std::runtime_error("expected new block notification");
+      
+      return notif->block_;
+   }
+
+   static std::vector<bs::TXEntry> waitOnZC()
+   {
+      auto&& notif = notifQueue_.pop_front();
+      if (notif->type_ != DBNS_ZC)
+         throw std::runtime_error("expected zc notification");
+
+      return notif->zc_;
+   }
+
+   static std::shared_ptr<DBNotificationStruct> popNotif()
+   {
+      return notifQueue_.pop_front();
    }
 };
 
