@@ -1,7 +1,7 @@
 #include "PubKeyLoader.h"
 #include <QFile>
 #include "BSMessageBox.h"
-
+#include "ImportKeyBox.h"
 
 PubKeyLoader::PubKeyLoader(const std::shared_ptr<ApplicationSettings> &appSettings)
    : appSettings_(appSettings)
@@ -102,27 +102,26 @@ ZmqBIP15XDataConnection::cbNewKey PubKeyLoader::getApprovingCallback(const KeyTy
    // NB: This may need to be altered later. The PuB key should be hard-coded
    // and respected.
    return [kt, parent, appSettings] (const std::string& oldKey
-         , const std::string& newKey, const std::string& srvAddrPort
+         , const std::string& newKeyHex, const std::string& srvAddrPort
          , const std::shared_ptr<std::promise<bool>> &newKeyProm) {
-      QMetaObject::invokeMethod(parent, [kt, parent, appSettings, newKey, newKeyProm] {
+      QMetaObject::invokeMethod(parent, [kt, parent, appSettings, newKeyHex, newKeyProm, srvAddrPort] {
          PubKeyLoader loader(appSettings);
-         const auto newKeyBin = BinaryData::CreateFromHex(newKey);
+         const auto newKeyBin = BinaryData::CreateFromHex(newKeyHex);
          const auto oldKeyBin = loader.loadKey(kt);
          if (oldKeyBin == newKeyBin) {
             newKeyProm->set_value(true);
             return;
          }
-         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question
-            , QObject::tr("Server identity key has changed")
-            , QObject::tr("Import %1 ID key?")
-            .arg(serverName(kt))
-            , QObject::tr("Old Key: %1\nNew Key: %2")
-            .arg(oldKeyBin.isNull() ? QObject::tr("<none>") : QString::fromStdString(oldKeyBin.toHexStr()))
-            .arg(QString::fromStdString(newKey))
+
+         ImportKeyBox box (BSMessageBox::question
+            , QObject::tr("Import %1 ID key?").arg(serverName(kt))
             , parent);
 
-         const bool answer = (box->exec() == QDialog::Accepted);
-         box->deleteLater();
+         box.setNewKeyFromBinary(newKeyBin);
+         box.setOldKeyFromBinary(oldKeyBin);
+         box.setAddrPort(srvAddrPort);
+
+         const bool answer = (box.exec() == QDialog::Accepted);
          if (answer) {
             loader.saveKey(kt, newKeyBin);
          }
@@ -136,7 +135,7 @@ QString PubKeyLoader::serverName(const KeyType kt)
 {
    switch (kt) {
       case KeyType::PublicBridge:   return QObject::tr("PuB");
-      case KeyType::Chat:           return QObject::tr("Chat");
+      case KeyType::Chat:           return QObject::tr("Chat Server");
       default:    break;
    }
    return {};

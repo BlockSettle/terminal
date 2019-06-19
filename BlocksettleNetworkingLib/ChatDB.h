@@ -70,7 +70,7 @@ public:
     */
    bool addKey(const QString& user, const BinaryData& key);
 
-   bool loadKeys(std::map<QString, BinaryData>& peer_public_keys_out);
+   std::map<QString, BinaryData> loadKeys(bool* loaded = nullptr);
 
    bool isContactExist(const QString &userId);
    bool addContact(Chat::ContactRecordData &contact);

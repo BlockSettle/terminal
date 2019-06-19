@@ -56,6 +56,7 @@
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
+#include "ImportKeyBox.h"
 
 #include <spdlog/spdlog.h>
 
@@ -520,12 +521,13 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
       }
 
       QMetaObject::invokeMethod(this, [this, oldKeyHex, newKey, newKeyProm, srvAddrPort] {
-         MessageBoxIdKey box(BSMessageBox::question, tr("Signer Id Key has changed")
-            , tr("Import Signer ID Key (%1)?")
-            .arg(QString::fromStdString(srvAddrPort))
-            , tr("Old Key: %1\nNew Key: %2")
-            .arg(oldKeyHex.empty() ? tr("<none>") : QString::fromStdString(oldKeyHex))
-            .arg(QString::fromStdString(newKey)), this);
+         ImportKeyBox box(BSMessageBox::question
+            , tr("Import Signer ID Key?")
+            , this);
+
+         box.setNewKey(newKey);
+         box.setOldKey(QString::fromStdString(oldKeyHex));
+         box.setAddrPort(srvAddrPort);
 
          const bool answer = (box.exec() == QDialog::Accepted);
 
@@ -963,7 +965,7 @@ void BSTerminalMainWindow::onSignerConnError(SignContainer::ConnectionError erro
    lastSignerError_ = error;
 
    if (error != SignContainer::ConnectionTimeout || signContainer_->isLocal()) {
-      showError(tr("Signer connection error"), tr("Signer connection error details: %1").arg(details));
+      showError(tr("Signer Connection Error"), details);
    }
 }
 
@@ -1592,19 +1594,14 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
       ArmoryServer server = servers.at(serverIndex);
 
       if (server.armoryDBKey.isEmpty()) {
-         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::question
-                          , tr("ArmoryDB Key Import")
-                          , tr("Import ArmoryDB ID Key?")
-                          , tr("Address: %1\n"
-                               "Port: %2\n"
-                               "Key: %3")
-                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
-                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
-                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
-                          , this);
+         ImportKeyBox box(BSMessageBox::question
+            , tr("Import ArmoryDB ID Key?")
+            , this);
 
-         bool answer = (box->exec() == QDialog::Accepted);
-         box->deleteLater();
+         box.setNewKeyFromBinary(srvPubKey);
+         box.setAddrPort(srvIPPort);
+
+         bool answer = (box.exec() == QDialog::Accepted);
 
          if (answer) {
             armoryServersProvider_->addKey(srvIPPort, srvPubKey);
@@ -1613,23 +1610,16 @@ void BSTerminalMainWindow::showArmoryServerPrompt(const BinaryData &srvPubKey, c
          promiseObj->set_value(true);
       }
       else if (server.armoryDBKey != QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex())) {
-         MessageBoxIdKey *box = new MessageBoxIdKey(BSMessageBox::warning
-                          , tr("ArmoryDB Key")
-                          , tr("ArmoryDB Key was changed.\n"
-                               "Do you wish to proceed connection and save new key?")
-                          , tr("Address: %1\n"
-                               "Port: %2\n"
-                               "Old Key: %3\n"
-                               "New Key: %4")
-                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(0))
-                                    .arg(QString::fromStdString(srvIPPort).split(QStringLiteral(":")).at(1))
-                                    .arg(server.armoryDBKey)
-                                    .arg(QString::fromLatin1(QByteArray::fromStdString(srvPubKey.toBinStr()).toHex()))
-                          , this);
-         box->setCancelVisible(true);
+         ImportKeyBox box(BSMessageBox::question
+            , tr("Import ArmoryDB ID Key?")
+            , this);
 
-         bool answer = (box->exec() == QDialog::Accepted);
-         box->deleteLater();
+         box.setNewKeyFromBinary(srvPubKey);
+         box.setOldKey(server.armoryDBKey);
+         box.setAddrPort(srvIPPort);
+         box.setCancelVisible(true);
+
+         bool answer = (box.exec() == QDialog::Accepted);
 
          if (answer) {
             armoryServersProvider_->addKey(srvIPPort, srvPubKey);

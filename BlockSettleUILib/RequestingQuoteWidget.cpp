@@ -75,7 +75,7 @@ void RequestingQuoteWidget::onCancel()
       emit requestTimedOut();
    } else {
       utxoAdapter_->unreserve(rfq_.requestId);
-      emit cancelRFQ(QString::fromStdString(rfq_.requestId));
+      emit cancelRFQ();
    }
 }
 
@@ -115,94 +115,98 @@ void  RequestingQuoteWidget::onOrderFailed(const std::string& quoteId, const std
 
 bool RequestingQuoteWidget::onQuoteReceived(const bs::network::Quote& quote)
 {
-   if (quote.requestId == rfq_.requestId) {
-      quote_ = quote;
-      if (quote_.product.empty()) {
-         quote_.product = rfq_.product;
-      }
+   if (quote.requestId != rfq_.requestId) {
+      return false;
+   }
 
-      if (quote_.quotingType == bs::network::Quote::Tradeable) {
-         if (!balanceOk_) {
-            return false;
-         }
-         if (quote.assetType == bs::network::Asset::SpotFX) {
-            ui_->pushButtonAccept->show();
-            setupTimer(Tradeable, quote.expirationTime.addMSecs(quote.timeSkewMs));
-         }
-         else {
-            onAccept();
-         }
-         return true;
-      }
-      else if (transactionData_ && (rfq_.side == bs::network::Side::Buy) && (rfq_.assetType != bs::network::Asset::SpotFX)) {
-         double amount = 0;
-         if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
-            amount = rfq_.quantity * quote_.price;
-         }
-         else if (rfq_.product != bs::network::XbtCurrency) {
-            amount = rfq_.quantity / quote_.price;
-         }
-         if (!qFuzzyIsNull(amount)) {
-            transactionData_->ReserveUtxosFor(amount, rfq_.requestId);
-         }
-      }
+   quote_ = quote;
+   if (quote_.product.empty()) {
+      quote_.product = rfq_.product;
+   }
 
-      timeoutReply_ = quote.expirationTime.addMSecs(quote.timeSkewMs);
-
-      const auto assetType = assetManager_->GetAssetTypeForSecurity(quote.security);
-      ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price, assetType));
-      ui_->labelQuoteValue->show();
+   if (quote_.quotingType == bs::network::Quote::Tradeable) {
+      if (!balanceOk_) {
+         return false;
+      }
 
       if (quote.assetType == bs::network::Asset::SpotFX) {
-         ui_->labelHint->clear();
-         ui_->labelHint->hide();
-      }
-
-      double value = rfq_.quantity * quote.price;
-
-      QString productString = QString::fromStdString(rfq_.product);
-      QString productAmountString = UiUtils::displayAmountForProduct(rfq_.quantity, productString, rfq_.assetType);
-
-      QString contrProductString;
-      QString valueString;
-
-      CurrencyPair cp(rfq_.security);
-
-      if (cp.NumCurrency() != rfq_.product) {
-         value = rfq_.quantity / quote.price;
-         contrProductString = QString::fromStdString(cp.NumCurrency());
+         ui_->pushButtonAccept->show();
+         setupTimer(Tradeable, quote.expirationTime.addMSecs(quote.timeSkewMs));
       } else {
-         contrProductString = QString::fromStdString(cp.DenomCurrency());
+         onAccept();
       }
-
-      valueString = UiUtils::displayAmountForProduct(value, contrProductString, rfq_.assetType);
-
-      if (rfq_.side == bs::network::Side::Buy) {
-         const auto currency = contrProductString.toStdString();
-         const auto balance = assetManager_->getBalance(currency);
-         balanceOk_ = (value < balance);
-         ui_->pushButtonAccept->setEnabled(balanceOk_);
-         if (!balanceOk_) {
-            ui_->labelHint->setText(tr("Insufficient balance"));
-            ui_->labelHint->show();
-         }
-      }
-
-      if (rfq_.side == bs::network::Side::Buy && !balanceOk_)
-         return true;
-
-      ui_->labelDetails->setText(tr("%1 %2 %3\n%4 %5 %6")
-         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Receive") : tr("Deliver"))
-         .arg(productAmountString)
-         .arg(productString)
-         .arg((rfq_.side == bs::network::Side::Buy) ? tr("Deliver") : tr("Receive"))
-         .arg(valueString)
-         .arg(contrProductString));
-      ui_->labelDetails->show();
 
       return true;
    }
-   return false;
+
+   if (transactionData_ && (rfq_.side == bs::network::Side::Buy) && (rfq_.assetType != bs::network::Asset::SpotFX)) {
+      double amount = 0;
+      if (rfq_.assetType == bs::network::Asset::PrivateMarket) {
+         amount = rfq_.quantity * quote_.price;
+      }
+      else if (rfq_.product != bs::network::XbtCurrency) {
+         amount = rfq_.quantity / quote_.price;
+      }
+      if (!qFuzzyIsNull(amount)) {
+         transactionData_->ReserveUtxosFor(amount, rfq_.requestId);
+      }
+   }
+
+   timeoutReply_ = quote.expirationTime.addMSecs(quote.timeSkewMs);
+
+   const auto assetType = assetManager_->GetAssetTypeForSecurity(quote.security);
+   ui_->labelQuoteValue->setText(UiUtils::displayPriceForAssetType(quote.price, assetType));
+   ui_->labelQuoteValue->show();
+
+   if (quote.assetType == bs::network::Asset::SpotFX) {
+      ui_->labelHint->clear();
+      ui_->labelHint->hide();
+   }
+
+   double value = rfq_.quantity * quote.price;
+
+   QString productString = QString::fromStdString(rfq_.product);
+   QString productAmountString = UiUtils::displayAmountForProduct(rfq_.quantity, productString, rfq_.assetType);
+
+   QString contrProductString;
+   QString valueString;
+
+   CurrencyPair cp(rfq_.security);
+
+   if (cp.NumCurrency() != rfq_.product) {
+      value = rfq_.quantity / quote.price;
+      contrProductString = QString::fromStdString(cp.NumCurrency());
+   } else {
+      contrProductString = QString::fromStdString(cp.DenomCurrency());
+   }
+
+   valueString = UiUtils::displayAmountForProduct(value, contrProductString, rfq_.assetType);
+
+   if (rfq_.side == bs::network::Side::Buy) {
+      const auto currency = contrProductString.toStdString();
+      const auto balance = assetManager_->getBalance(currency);
+      balanceOk_ = (value < balance);
+      ui_->pushButtonAccept->setEnabled(balanceOk_);
+      if (!balanceOk_) {
+         ui_->labelHint->setText(tr("Insufficient balance"));
+         ui_->labelHint->show();
+      }
+   }
+
+   if (rfq_.side == bs::network::Side::Buy && !balanceOk_) {
+      return true;
+   }
+
+   ui_->labelDetails->setText(tr("%1 %2 %3\n%4 %5 %6")
+      .arg((rfq_.side == bs::network::Side::Buy) ? tr("Receive") : tr("Deliver"))
+      .arg(productAmountString)
+      .arg(productString)
+      .arg((rfq_.side == bs::network::Side::Buy) ? tr("Deliver") : tr("Receive"))
+      .arg(valueString)
+      .arg(contrProductString));
+   ui_->labelDetails->show();
+
+   return true;
 }
 
 void RequestingQuoteWidget::onQuoteCancelled(const QString &reqId, bool byUser)

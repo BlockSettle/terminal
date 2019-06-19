@@ -99,6 +99,24 @@
        </property>
        <item>
         <widget class="QFrame" name="usersFrame">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>270</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>250</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="headerPanel" stdset="0">
           <bool>false</bool>
          </property>
@@ -552,9 +570,15 @@
        </item>
        <item>
         <widget class="QFrame" name="roomsFrame">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="minimumSize">
           <size>
-           <width>250</width>
+           <width>270</width>
            <height>0</height>
           </size>
          </property>

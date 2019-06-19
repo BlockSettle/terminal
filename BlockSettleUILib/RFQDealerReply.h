@@ -120,6 +120,7 @@ namespace bs {
 
       protected:
          bool eventFilter(QObject *watched, QEvent *evt) override;
+         QString askForAQScript();
 
       private:
          std::unique_ptr<Ui::RFQDealerReply> ui_;
@@ -160,6 +161,7 @@ namespace bs {
 
          bool           aqLoaded_ = false;
          bool           celerConnected_ = false;
+         bool           newLoaded_ = false;
 
          std::unordered_map<std::string, double>   bestQPrices_;
 

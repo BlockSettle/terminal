@@ -266,15 +266,21 @@
    </item>
    <item>
     <widget class="QFrame" name="DealingFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="minimumSize">
       <size>
-       <width>250</width>
+       <width>270</width>
        <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>350</width>
+       <width>250</width>
        <height>16777215</height>
       </size>
      </property>

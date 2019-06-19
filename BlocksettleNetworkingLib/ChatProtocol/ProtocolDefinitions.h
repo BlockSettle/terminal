@@ -18,7 +18,6 @@ namespace Chat
 {
    enum class RequestType
    {
-      RequestHeartbeatPing,
       RequestLogin,
       RequestLogout,
       RequestSendMessage,
@@ -40,7 +39,6 @@ namespace Chat
 
    enum class ResponseType
    {
-      ResponseHeartbeatPong,
       ResponseLogin,
       ResponseMessages,
       ResponseSuccess,

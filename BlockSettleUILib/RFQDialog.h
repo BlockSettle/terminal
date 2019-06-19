@@ -54,11 +54,11 @@ public:
 
 protected:
    void reject() override;
-   bool close();
 
 private slots:
+   bool close();
+
    void onRFQResponseAccepted(const QString &reqId, const bs::network::Quote& quote);
-   void onRFQCancelled(const QString &reqId);
    void onQuoteReceived(const bs::network::Quote& quote);
    void onOrderFilled(const std::string &quoteId);
    void onOrderUpdated(const bs::network::Order& order);
