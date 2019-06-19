@@ -588,7 +588,7 @@ void ChatWidget::onSendFriendRequest(const QString &userId)
 
 void ChatWidget::onRemoveFriendRequest(const QString &userId)
 {
-   client_->removeContact(userId);
+   client_->removeContactFromDB(userId);
    ui_->searchWidget->setListVisible(false);
 }
 
