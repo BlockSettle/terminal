@@ -2352,6 +2352,136 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    fut3.wait();
 }
 
+TEST_F(TestWalletWithArmory, UnconfTarget_Balance)
+{
+   const auto addr1 = leafPtr_->getNewExtAddress();
+   const auto addr2 = leafPtr_->getNewExtAddress();
+   const auto addr3 = leafPtr_->getNewExtAddress();
+   const auto changeAddr = leafPtr_->getNewChangeAddress();
+   EXPECT_EQ(leafPtr_->getUsedAddressCount(), 4);
+
+   auto inprocSigner = std::make_shared<InprocSigner>(walletPtr_, envPtr_->logger());
+   inprocSigner->Start();
+   auto syncMgr = std::make_shared<bs::sync::WalletsManager>(envPtr_->logger()
+      , envPtr_->appSettings(), envPtr_->armoryConnection());
+   syncMgr->setSignContainer(inprocSigner);
+   syncMgr->syncWallets();
+
+   //register the wallet
+   auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
+   auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
+
+   syncWallet->registerWallet(envPtr_->armoryConnection());
+   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
+
+   //mine some coins
+   auto armoryInstance = envPtr_->armoryInstance();
+
+   auto curHeight = envPtr_->armoryConnection()->topBlock();
+   auto recipient = addr1.getRecipient((uint64_t)(50 * COIN));
+   armoryInstance->mineNewBlock(recipient.get(), 6);
+   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + 6);
+
+   //grab balances and check
+   auto balProm = std::make_shared<std::promise<bool>>();
+   auto balFut = balProm->get_future();
+   auto waitOnBalance = [balProm](void)->void
+   {
+      balProm->set_value(true);
+   };
+   syncLeaf->updateBalances(waitOnBalance);
+   balFut.wait();
+   EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 250);
+   EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance(), 0);
+
+   //spend these coins
+   const uint64_t amount = 0.05 * BTCNumericTypes::BalanceDivider;
+   const uint64_t fee = 0.0001 * BTCNumericTypes::BalanceDivider;
+   auto promPtr1 = std::make_shared<std::promise<bool>>();
+   auto fut1 = promPtr1->get_future();
+
+   auto leaf = leafPtr_;
+   auto pass = passphrase_;
+   const auto &cbTxOutList =
+      [this, leaf, syncLeaf, changeAddr, addr2, addr3,
+      amount, fee, pass, promPtr1]
+   (std::vector<UTXO> inputs)->void
+   {
+      ASSERT_EQ(inputs.size(), 5);
+
+      //pick a single input
+      std::vector<UTXO> utxos;
+      utxos.push_back(inputs[0]);
+
+      const auto recipient = addr2.getRecipient(amount);
+      const auto recipient2 = addr3.getRecipient(amount);
+      const auto txReq = syncLeaf->createTXRequest(
+         utxos, { recipient, recipient2 }, fee, false, changeAddr);
+      BinaryData txSigned;
+      {
+         auto lock = leaf->lockForEncryption(pass);
+         txSigned = leaf->signTXRequest(txReq);
+         ASSERT_FALSE(txSigned.isNull());
+      }
+
+      Tx txObj(txSigned);
+      envPtr_->armoryInstance()->pushZC(txSigned);
+
+      auto&& zcVec = envPtr_->blockMonitor()->waitForZC();
+      ASSERT_EQ(zcVec.size(), 2);
+      EXPECT_EQ(zcVec[0].txHash, txObj.getThisHash());
+
+      promPtr1->set_value(true);
+   };
+
+   //async, has to wait
+   syncLeaf->getSpendableTxOutList(cbTxOutList, UINT64_MAX);
+   fut1.wait();
+
+   //update balance
+   auto promPtr2 = std::make_shared<std::promise<bool>>();
+   auto fut2 = promPtr2->get_future();
+   const auto &cbBalance = [promPtr2](void)
+   {
+      promPtr2->set_value(true);
+   };
+
+   //async, has to wait
+   syncLeaf->updateBalances(cbBalance);
+   fut2.wait();
+
+   EXPECT_DOUBLE_EQ(syncLeaf->getTotalBalance(),
+      double(300 * COIN - fee) / BTCNumericTypes::BalanceDivider);
+   EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance()
+      , (2*amount + syncLeaf->getAddrBalance(changeAddr)[0]) / BTCNumericTypes::BalanceDivider);
+
+   auto bal = syncLeaf->getAddrBalance(addr1);
+   ASSERT_EQ(bal.size(), 3);
+   EXPECT_EQ(bal[0], 250 * COIN);
+
+   bal = syncLeaf->getAddrBalance(addr2);
+   ASSERT_EQ(bal.size(), 3);
+   EXPECT_EQ(bal[0], amount);
+
+   bal = syncLeaf->getAddrBalance(changeAddr);
+   ASSERT_EQ(bal.size(), 3);
+   EXPECT_EQ(bal[0], 50 * COIN - 2 * amount - fee);
+
+   armoryInstance->mineNewBlock(recipient.get(), 1);
+   envPtr_->blockMonitor()->waitForNewBlocks(curHeight + 1);
+
+   auto promPtr3 = std::make_shared<std::promise<bool>>();
+   auto fut3 = promPtr3->get_future();
+   const auto &cbBalance2 = [promPtr3](void)
+   {
+      promPtr3->set_value(true);
+   };
+   syncLeaf->updateBalances(cbBalance2);
+   fut3.wait();
+   EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance() // since ext chain unconf target is 6 blocks (we passed only 1)
+      , 2 * amount / BTCNumericTypes::BalanceDivider);   // it should be double amount without return balance
+}
+
 TEST_F(TestWalletWithArmory, SimpleTX_bech32)
 {
    const auto addr1 = leafPtr_->getNewExtAddress(AddressEntryType_P2WPKH);
