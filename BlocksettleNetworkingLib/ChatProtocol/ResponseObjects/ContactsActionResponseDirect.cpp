@@ -1,12 +1,18 @@
 #include "ContactsActionResponseDirect.h"
 
 namespace Chat {
-   ContactsActionResponseDirect::ContactsActionResponseDirect(const std::string& senderId, const std::string& receiverId, ContactsAction action, BinaryData publicKey)
-      : PendingResponse (ResponseType::ResponseContactsActionDirect)
-      , senderId_(senderId)
-      , receiverId_(receiverId)
-      , action_(action)
-      , senderPublicKey_(publicKey)
+   ContactsActionResponseDirect::ContactsActionResponseDirect(
+      const std::string& senderId, 
+      const std::string& receiverId, 
+      ContactsAction action, 
+      QString publicKey,
+      const QDateTime &dt)
+      : PendingResponse (ResponseType::ResponseContactsActionDirect), 
+      senderId_(senderId),
+      receiverId_(receiverId),
+      action_(action),
+      senderPublicKey_(publicKey),
+      senderPublicKeyTime_(dt)
    {
       
    }
@@ -17,7 +23,8 @@ namespace Chat {
       data[SenderIdKey] = QString::fromStdString(senderId_);
       data[ReceiverIdKey] = QString::fromStdString(receiverId_);
       data[ContactActionKey] = static_cast<int>(action_);
-      data[PublicKeyKey] = QString::fromStdString(senderPublicKey_.toHexStr());
+      data[PublicKeyKey] = senderPublicKey_;
+      data[PublicKeyTimeKey] = senderPublicKeyTime_.toMSecsSinceEpoch();
 
       return data;
    }
@@ -28,8 +35,9 @@ namespace Chat {
       QString senderId = data[SenderIdKey].toString();
       QString receiverId = data[ReceiverIdKey].toString();
       ContactsAction action = static_cast<ContactsAction>(data[ContactActionKey].toInt());
-      BinaryData publicKey = BinaryData::CreateFromHex(data[PublicKeyKey].toString().toStdString());
-      return std::make_shared<ContactsActionResponseDirect>(senderId.toStdString(), receiverId.toStdString(), action, publicKey);
+      QString publicKey = data[PublicKeyKey].toString();
+      QDateTime publicKeyTime = QDateTime::fromMSecsSinceEpoch(data[PublicKeyTimeKey].toDouble());
+      return std::make_shared<ContactsActionResponseDirect>(senderId.toStdString(), receiverId.toStdString(), action, publicKey, publicKeyTime);
    }
    
    void ContactsActionResponseDirect::handle(ResponseHandler& handler)

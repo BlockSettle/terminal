@@ -6,24 +6,26 @@
 #include <QDateTime>
 
 namespace Chat {
+
    class ContactRecordData : public DataObject
    {
    public:
       ContactRecordData(const QString& userId,
          const QString& contactId,
-         ContactStatus status,
-         BinaryData publicKey,
-         QDateTime publicKeyTime = QDateTime(),
+         const ContactStatus &status,
+         const QString &publicKey,
+         const QDateTime &publicKeyTime = QDateTime(),
          const QString& displayName = QString());
 
-      QString getUserId();
+      QString getUserId() const;
       void setUserId(const QString& userId);
 
-      QString getContactId();
-      ContactStatus getContactStatus();
+      QString getContactId() const;
+      ContactStatus getContactStatus() const;
       void setContactStatus(const ContactStatus& status);
 
-      BinaryData getContactPublicKey();
+      QString getContactPublicKey() const;
+      BinaryData getContactPublicKeyBinaryData() const;
 
       QString getDisplayName() const;
       void setDisplayName(const QString& displayName);
@@ -41,7 +43,7 @@ namespace Chat {
       QString userId_;
       QString contactId_;
       ContactStatus status_;
-      BinaryData publicKey_;
+      QString publicKey_;
       QString displayName_;
       QDateTime publicKeyTime_;
 

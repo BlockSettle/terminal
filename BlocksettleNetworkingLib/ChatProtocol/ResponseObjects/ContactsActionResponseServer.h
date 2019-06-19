@@ -8,7 +8,6 @@ namespace Chat {
    class ContactsActionResponseServer : public PendingResponse
    {
    public:
-      
       ContactsActionResponseServer(const std::string& userId, const std::string& contactId, ContactsActionServer requestedAction, ContactsActionServerResult actionResult, const std::string &message = std::string(""));
       QJsonObject toJson() const override;
       static std::shared_ptr<Response> fromJSON(const std::string& jsonData);
@@ -25,7 +24,6 @@ namespace Chat {
       std::string message_;
       ContactsActionServer requestedAction_;
       ContactsActionServerResult actionResult_;
-      
    };
    
 }

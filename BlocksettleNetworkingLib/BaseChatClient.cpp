@@ -301,7 +301,7 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
       case Chat::ContactsAction::Accept: {
          actionString = "ContactsAction::Accept";
          QString senderId = QString::fromStdString(response.senderId());
-         contactPublicKeys_[senderId] = response.getSenderPublicKey();
+         contactPublicKeys_[senderId] = response.getSenderPublicKeyBinaryData();
          // TODO: compare incoming key in db
          //chatDb_->addKey(senderId, response.getSenderPublicKey());
 
@@ -338,8 +338,8 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
          actionString = "ContactsAction::Request";
          QString userId = QString::fromStdString(response.receiverId());
          QString contactId = QString::fromStdString(response.senderId());
-         BinaryData pk = response.getSenderPublicKey();
-         contactPublicKeys_[contactId] = response.getSenderPublicKey();
+         BinaryData pk = response.getSenderPublicKeyBinaryData();
+         contactPublicKeys_[contactId] = pk;
          // TODO: compare incoming key in db
          //chatDb_->addKey(contactId, response.getSenderPublicKey());
 
@@ -348,7 +348,6 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
       }
       break;
       case Chat::ContactsAction::Remove: {
-         BinaryData pk = response.getSenderPublicKey();
          auto requestS = std::make_shared<Chat::ContactActionRequestServer>(
             "",
             currentUserId_,
@@ -408,7 +407,7 @@ void BaseChatClient::OnContactsActionResponseServer(const Chat::ContactsActionRe
 void BaseChatClient::OnContactsListResponse(const Chat::ContactsListResponse & response)
 {
    for (const auto& contact : response.getContactsList()) {
-      contactPublicKeys_[contact->getContactId()] = contact->getContactPublicKey();
+      contactPublicKeys_[contact->getContactId()] = contact->getContactPublicKeyBinaryData();
    }
 
    onContactListLoaded(response.getContactsList());
@@ -579,7 +578,7 @@ bool BaseChatClient::getContacts(ContactRecordDataList &contactList)
 
 bool BaseChatClient::addOrUpdateContact(const QString &userId, Chat::ContactStatus status, const QString &userName)
 {
-   Chat::ContactRecordData contact(userId, userId, status, BinaryData(), QDateTime(), userName);
+   Chat::ContactRecordData contact(userId, userId, status, QString(), QDateTime(), userName);
 
    if (chatDb_->isContactExist(userId))
    {
@@ -664,7 +663,7 @@ std::shared_ptr<Chat::MessageData> BaseChatClient::sendMessageDataRequest(const 
       Chat::ContactRecordData contact(QString(),
                                       QString(),
                                       Chat::ContactStatus::Accepted,
-                                      BinaryData());
+                                      QString());
       chatDb_->getContact(messageData->receiverId(), contact);
 
       if (contact.getContactStatus() == Chat::ContactStatus::Rejected)

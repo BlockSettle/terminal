@@ -96,14 +96,12 @@ void ChatClient::readDatabase()
    for (auto c : clist) {
       Chat::ContactStatus status = c.getContactStatus();
 
-      auto pk = BinaryData();
-
       auto contact = std::make_shared<Chat::ContactRecordData>(
          QString::fromStdString(model_->currentUser()),
          c.getUserId(), 
          status, 
-         pk, 
-         QDateTime(), 
+         c.getContactPublicKey(), 
+         c.getContactPublicKeyTime(), 
          c.getDisplayName());
 
       model_->insertContactObject(contact);
@@ -252,12 +250,25 @@ void ChatClient::sendFriendRequest(const QString &friendUserId)
       return;
    }
 
-   if (sendFriendRequestToServer(friendUserId)) {
+   if (sendFriendRequestToServer(friendUserId)) 
+   {
+      QString currentUserId = QString::fromStdString(model_->currentUser());
+
+      Chat::ContactRecordData contact(
+         QString(),
+         QString(),
+         Chat::ContactStatus::Accepted,
+         QString());
+
+      chatDb_->getContact(currentUserId, contact);
+
       auto record = std::make_shared<Chat::ContactRecordData>(
-            QString::fromStdString(model_->currentUser()),
-            friendUserId,
-            Chat::ContactStatus::Outgoing,
-            BinaryData());
+         currentUserId,
+         friendUserId,
+         Chat::ContactStatus::Outgoing,
+         contact.getContactPublicKey(),
+         contact.getContactPublicKeyTime());
+
       model_->insertContactObject(record);
       addOrUpdateContact(friendUserId, Chat::ContactStatus::Outgoing);
    } 
@@ -317,7 +328,7 @@ Chat::ContactRecordData ChatClient::getContact(const QString &userId) const
       QString(),
       QString(),
       Chat::ContactStatus::Accepted,
-      BinaryData());
+      QString());
 
    chatDb_->getContact(userId, contact);
    return contact;
@@ -332,11 +343,20 @@ void ChatClient::onActionAddToContacts(const QString& userId)
 
    qDebug() << __func__ << " " << userId;
 
+   Chat::ContactRecordData contactDb(
+      QString(),
+      QString(),
+      Chat::ContactStatus::Accepted,
+      QString());
+
+   chatDb_->getContact(QString::fromStdString(model_->currentUser()), contactDb);
+
    auto record = std::make_shared<Chat::ContactRecordData>(
       QString::fromStdString(model_->currentUser()),
       userId,
       Chat::ContactStatus::Outgoing,
-      BinaryData());
+      contactDb.getContactPublicKey(),
+      contactDb.getContactPublicKeyTime());
 
    model_->insertContactRequestObject(record);
    auto requestD = std::make_shared<Chat::ContactActionRequestDirect>(
@@ -625,7 +645,8 @@ void ChatClient::onFriendRequest(const QString& userId, const QString& contactId
    } 
    else 
    {
-      auto contact = std::make_shared<Chat::ContactRecordData>(userId , contactId, Chat::ContactStatus::Incoming, pk);
+      // TODO: fix public key
+      auto contact = std::make_shared<Chat::ContactRecordData>(userId , contactId, Chat::ContactStatus::Incoming, QString::fromStdString(pk.toHexStr()));
 
       model_->insertContactRequestObject(contact, true);
       addOrUpdateContact(contactId, Chat::ContactStatus::Incoming);

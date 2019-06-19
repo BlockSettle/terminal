@@ -27,7 +27,6 @@ ChatDB::ChatDB(const std::shared_ptr<spdlog::logger> &logger, const QString &dbF
       {QLatin1String("user_keys"), [db = db_] {
          const QLatin1String query("CREATE TABLE IF NOT EXISTS user_keys ("\
             "user_id CHAR(16) PRIMARY KEY,"\
-            "user_name CHAR(64),"\
             "key TEXT," \
             "key_timestamp DATETIME"\
             ");");
@@ -426,7 +425,9 @@ bool ChatDB::removeContact(const QString &userId)
 bool ChatDB::getContacts(ContactRecordDataList &contactList)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT user_id, user_name, status FROM contacts;"))) {
+   if (!query.prepare(QLatin1String(
+      "SELECT user_id, user_name, status, key, key_timestamp FROM contacts " \
+      "LEFT JOIN user_keys on contacts.user_id=user_key.user_id;"))) {
       logger_->error("[ChatDB::getContacts] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
@@ -436,11 +437,12 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
    }
 
    while (query.next()) {
-      Chat::ContactRecordData contact(query.value(0).toString(),
+      Chat::ContactRecordData contact(
+         query.value(0).toString(),
          query.value(0).toString(),
          static_cast<Chat::ContactStatus>(query.value(2).toInt()),
-         BinaryData(),
-         QDateTime(),
+         query.value(3).toString(),
+         query.value(4).toDateTime(),
          query.value(1).toString());
       contactList.emplace_back(contact);
    }
@@ -479,7 +481,10 @@ bool ChatDB::updateContact(Chat::ContactRecordData &contact)
 bool ChatDB::getContact(const QString& userId, Chat::ContactRecordData& contact)
 {
    QSqlQuery query(db_);
-   if (!query.prepare(QLatin1String("SELECT user_id, user_name, status FROM contacts WHERE user_id=?;"))) {
+   if (!query.prepare(QLatin1String(
+      "SELECT user_id, user_name, status, key, key_timestamp FROM contacts " \
+      "LEFT JOIN user_keys on contacts.user_id=user_keys.user_id " \
+      "WHERE user_id=?;"))) {
       logger_->error("[ChatDB::getContact] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
