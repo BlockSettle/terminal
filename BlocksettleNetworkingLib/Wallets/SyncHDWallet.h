@@ -71,6 +71,14 @@ namespace bs {
 
             void merge(const Wallet&);
 
+            template<class U> void setCustomACT(
+               const std::shared_ptr<ArmoryConnection> &armory)
+            {
+               auto& leaves = getLeaves();
+               for (auto& leaf : leaves)
+                  leaf->setCustomACT<U>(armory);
+            }
+
          signals:
             void synchronized() const;
             void leafAdded(QString id);

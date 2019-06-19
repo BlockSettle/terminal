@@ -170,7 +170,7 @@ uint64_t Wallet::getAddrTxN(const bs::Address &addr) const
 //// Combined DB fetch methods
 ////
 ////////////////////////////////////////////////////////////////////////////////
-void Wallet::WalletACT::onCombinedBalances(const std::map<std::string, CombinedBalances> &balanceMap)
+void WalletACT::onCombinedBalances(const std::map<std::string, CombinedBalances> &balanceMap)
 {
    bool ourUpdate = false;
    BTCNumericTypes::balance_type total = 0, spendable = 0, unconfirmed = 0;
@@ -374,7 +374,7 @@ bool Wallet::getRBFTxOutList(std::function<void(std::vector<UTXO>)> cb) const
    return true;
 }
 
-void Wallet::WalletACT::onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &countMap)
+void WalletACT::onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &countMap)
 {
    bool ourUpdate = false;
    for (const auto &count : countMap) {
@@ -517,7 +517,13 @@ void Wallet::setArmory(const std::shared_ptr<ArmoryConnection> &armory)
 {
    if (!armory_ && (armory != nullptr)) {
       armory_ = armory;
-      act_ = make_unique<WalletACT>(armory_.get(), this);
+      
+      /*
+      Do not set callback target if it is already initialized. This 
+      allows for unit tests to set a custom ACT.
+      */
+      if(act_ == nullptr)
+         act_ = make_unique<WalletACT>(armory_.get(), this);
    }
 
    if (!utxoAdapter_) {
@@ -819,7 +825,7 @@ bs::core::wallet::TXSignRequest Wallet::createPartialTXRequest(uint64_t spendVal
    return request;
 }
 
-void Wallet::WalletACT::onLedgerForAddress(const bs::Address &addr
+void WalletACT::onLedgerForAddress(const bs::Address &addr
    , const std::shared_ptr<AsyncClient::LedgerDelegate> &ld)
 {
    std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> cb = nullptr;

@@ -58,10 +58,12 @@ namespace bs {
 
       }  // namepsace wallet
 
+      class WalletACT;
 
       class Wallet : public QObject   // Abstract parent for terminal wallet classes
       {
-         Q_OBJECT
+         friend class WalletACT;
+         Q_OBJECT   
 
       public:
          Wallet(SignContainer *, const std::shared_ptr<spdlog::logger> &logger = nullptr);
@@ -184,6 +186,13 @@ namespace bs {
          virtual bool getRBFTxOutList(
             std::function<void(std::vector<UTXO>)>) const;
 
+         //custom ACT
+         template<class U> void setCustomACT(
+            const std::shared_ptr<ArmoryConnection> &armory)
+         {
+            act_ = std::make_unique<U>(armory.get(), this);
+         }
+
       signals:
          void addressAdded();
          void walletReset();
@@ -248,26 +257,6 @@ namespace bs {
          };
          std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
 
-         class WalletACT : public ArmoryCallbackTarget
-         {
-         public:
-            WalletACT(ArmoryConnection *armory, Wallet *leaf)
-               : ArmoryCallbackTarget(armory), parent_(leaf) {}
-            void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
-               parent_->onRefresh(ids, online);
-            }
-            void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {
-               parent_->onZeroConfReceived(zcs);
-            }
-            void onNewBlock(unsigned int block) override {
-               parent_->onNewBlock(block);
-            }
-            void onCombinedBalances(const std::map<std::string, CombinedBalances> &) override;
-            void onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &) override;
-            void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
-         protected:
-            Wallet *parent_;
-         };
          std::unique_ptr<WalletACT>   act_;
 
       private:
@@ -285,6 +274,26 @@ namespace bs {
          std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbLedgerByAddr_;
       };
 
+      class WalletACT : public ArmoryCallbackTarget
+      {
+      public:
+         WalletACT(ArmoryConnection *armory, Wallet *leaf)
+            : ArmoryCallbackTarget(armory), parent_(leaf) {}
+         virtual void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
+            parent_->onRefresh(ids, online);
+         }
+         virtual void onZCReceived(const std::vector<bs::TXEntry> &zcs) override {
+            parent_->onZeroConfReceived(zcs);
+         }
+         virtual void onNewBlock(unsigned int block) override {
+            parent_->onNewBlock(block);
+         }
+         void onCombinedBalances(const std::map<std::string, CombinedBalances> &) override;
+         void onCombinedTxnCounts(const std::map<std::string, CombinedCounts> &) override;
+         void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
+      protected:
+         Wallet *parent_;
+      };
 
       struct Transaction
       {
