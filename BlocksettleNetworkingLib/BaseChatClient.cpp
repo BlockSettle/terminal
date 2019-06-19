@@ -151,7 +151,7 @@ bool BaseChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 }
 
 
-bool BaseChatClient::sendFriendRequestToServer(const QString &friendUserId)
+bool BaseChatClient::sendFriendRequestToServer(const QString &friendUserId, const QString& message)
 {
    auto request = std::make_shared<Chat::ContactActionRequestDirect>(
             "",
@@ -159,6 +159,16 @@ bool BaseChatClient::sendFriendRequestToServer(const QString &friendUserId)
             friendUserId.toStdString(),
             Chat::ContactsAction::Request,
             getOwnAuthPublicKey());
+
+   if (!message.isNull() && !message.isEmpty()) {
+      auto messageData = std::make_shared<Chat::MessageData>(QString::fromStdString(currentUserId_), friendUserId
+         , QString::fromStdString(CryptoPRNG::generateRandom(8).toHexStr())
+         , QDateTime::currentDateTimeUtc()
+         , message);
+
+      request->setMessage(messageData);
+   }
+
    return sendRequest(request);
 }
 
@@ -345,6 +355,11 @@ void BaseChatClient::OnContactsActionResponseDirect(const Chat::ContactsActionRe
                   response.senderId(),
                   actionString
                   );
+
+   logger_->debug("[BaseChatClient::OnContactsActionResponseDirect]: Pinned Message: {}",
+                    response.getMessage()
+                  ? response.getMessage()->toJsonString()
+                  : std::string("{No Message}"));
 }
 
 void BaseChatClient::OnContactsActionResponseServer(const Chat::ContactsActionResponseServer & response)
@@ -899,7 +914,7 @@ void BaseChatClient::onFriendRequestAccepted(const QString &contactId, BinaryDat
             "",
             currentUserId_,
             contactId.toStdString(),
-            Chat::ContactsActionServer::AddContactRecord,
+            Chat::ContactsActionServer::UpdateContactRecord,
             Chat::ContactStatus::Accepted, publicKey);
    sendRequest(requestS);
 

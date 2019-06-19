@@ -140,6 +140,7 @@ protected:
 
 protected:
    bool sendFriendRequestToServer(const QString &friendUserId);
+   bool sendFriendRequestToServer(const QString &friendUserId, const QString& message);
    bool sendAcceptFriendRequestToServer(const QString &friendUserId);
    bool sendDeclientFriendRequestToServer(const QString &friendUserId);
    bool sendRemoveFriendToServer(const QString& contactId);
