@@ -138,6 +138,11 @@ void BaseChatClient::setSavedKeys(std::map<QString, BinaryData>&& loadedKeys)
    std::swap(contactPublicKeys_, loadedKeys);
 }
 
+bool BaseChatClient::sendFriendRequestToServer(const QString &friendUserId)
+{
+   return sendFriendRequestToServer(friendUserId, QString());
+}
+
 bool BaseChatClient::sendRequest(const std::shared_ptr<Chat::Request>& request)
 {
    const auto requestData = request->getData();

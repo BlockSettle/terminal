@@ -235,7 +235,7 @@ void ChatClient::sendFriendRequest(const QString &friendUserId)
       return;
    }
 
-   if (sendFriendRequestToServer(friendUserId)) {
+   if (sendFriendRequestToServer(friendUserId, QLatin1String("I would like to add you to friends!"))) {
       auto record = std::make_shared<Chat::ContactRecordData>(
             QString::fromStdString(model_->currentUser()),
             friendUserId,
