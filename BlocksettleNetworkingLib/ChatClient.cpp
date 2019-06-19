@@ -465,6 +465,23 @@ std::string ChatClient::getChatServerPort() const
    return appSettings_->get<std::string>(ApplicationSettings::chatServerPort);
 }
 
+Chat::MessageData::EncryptionType ChatClient::resolveMessageEncryption(std::shared_ptr<Chat::MessageData> message) const
+{
+   auto cNode = model_->findContactNode(message->receiverId().toStdString());
+
+   if (!cNode) {
+      return Chat::MessageData::EncryptionType::IES;
+   }
+
+   switch (cNode->getOnlineStatus()) {
+      case ChatContactElement::OnlineStatus::Online:
+         return Chat::MessageData::EncryptionType::AEAD;
+      case ChatContactElement::OnlineStatus::Offline:
+         return Chat::MessageData::EncryptionType::IES;
+   }
+
+}
+
 void ChatClient::onRoomsLoaded(const std::vector<std::shared_ptr<Chat::RoomData>>& roomsList)
 {
    for (const auto& room : roomsList) {

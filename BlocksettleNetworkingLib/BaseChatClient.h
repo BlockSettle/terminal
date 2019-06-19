@@ -80,6 +80,11 @@ protected:
                            const QString &userName = QStringLiteral(""));
 
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
+   std::shared_ptr<Chat::MessageData> encryptMessageToSendAEAD(const QString& receiver,
+                                                               BinaryData& remotePublicKey,
+                                                               std::shared_ptr<Chat::MessageData> messageData);
+   std::shared_ptr<Chat::MessageData> encryptMessageToSendIES(BinaryData& remotePublicKey,
+                                                              std::shared_ptr<Chat::MessageData> messageData);
    std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
 
    void onFriendRequestReceived(const QString& userId, const QString& contactId, BinaryData publicKey);
@@ -107,6 +112,7 @@ protected:
    virtual SecureBinaryData   getOwnAuthPrivateKey() const = 0;
    virtual std::string        getChatServerHost() const = 0;
    virtual std::string        getChatServerPort() const = 0;
+   virtual Chat::MessageData::EncryptionType resolveMessageEncryption(std::shared_ptr<Chat::MessageData>) const = 0;
 
    void setSavedKeys(std::map<QString, BinaryData>&& loadedKeys);
 
