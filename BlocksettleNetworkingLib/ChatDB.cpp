@@ -317,23 +317,34 @@ bool ChatDB::removeRoomMessages(const QString &roomId) {
    return true;
 }
 
-bool ChatDB::loadKeys(std::map<QString, BinaryData>& keys_out)
+std::map<QString, BinaryData> ChatDB::loadKeys(bool* loaded)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String("SELECT user_id, key FROM user_keys"))) {
       logger_->error("[ChatDB::loadKeys] failed to prepare query: {}", query.lastError().text().toStdString());
-      return false;
+      if (loaded != nullptr) {
+         *loaded = false;
+      }
+      return {};
    }
    if (!query.exec()) {
       logger_->error("[ChatDB::loadKeys] failed to exec query: {}", query.lastError().text().toStdString());
-      return false;
+      if (loaded != nullptr) {
+         *loaded = false;
+      }
+      return {};
    }
 
+   std::map<QString, BinaryData> keys_out;
+
    while (query.next()) {
-      keys_out[query.value(0).toString()] = BinaryData::CreateFromHex(
-         query.value(1).toString().toStdString());
+      keys_out.emplace(query.value(0).toString()
+         , BinaryData::CreateFromHex(query.value(1).toString().toStdString()));
    }
-   return true;
+   if (loaded != nullptr) {
+      *loaded = true;
+   }
+   return keys_out;
 }
 
 bool ChatDB::addKey(const QString& user, const BinaryData& key)

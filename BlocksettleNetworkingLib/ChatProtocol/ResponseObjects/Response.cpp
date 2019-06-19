@@ -9,7 +9,6 @@ using namespace Chat;
 #include "ContactsActionResponseDirect.h"
 #include "ContactsActionResponseServer.h"
 #include "ContactsListResponse.h"
-#include "HeartbeatPongResponse.h"
 #include "LoginResponse.h"
 #include "LogoutResponse.h"
 #include "MessageChangeStatusResponse.h"
@@ -26,7 +25,6 @@ using namespace Chat;
 static std::map<std::string, ResponseType> ResponseTypeFromString
 {
    { "ResponseError"                   ,   ResponseType::ResponseError                    },
-   { "ResponseHeartbeatPong"           ,   ResponseType::ResponseHeartbeatPong            },
    { "ResponseLogin"                   ,   ResponseType::ResponseLogin                    },
    { "ResponseMessages"                ,   ResponseType::ResponseMessages                 },
    { "ResponseSuccess"                 ,   ResponseType::ResponseSuccess                  },
@@ -51,7 +49,6 @@ static std::map<std::string, ResponseType> ResponseTypeFromString
 static std::map<ResponseType, std::string> ResponseTypeToString
 {
    { ResponseType::ResponseError                   ,  "ResponseError"                  },
-   { ResponseType::ResponseHeartbeatPong           ,  "ResponseHeartbeatPong"          },
    { ResponseType::ResponseLogin                   ,  "ResponseLogin"                  },
    { ResponseType::ResponseMessages                ,  "ResponseMessages"               },
    { ResponseType::ResponseSuccess                 ,  "ResponseSuccess"                },
@@ -103,9 +100,6 @@ std::shared_ptr<Response> Response::fromJSON(const std::string& jsonData)
 
    switch (responseType)
    {
-      case ResponseType::ResponseHeartbeatPong:
-         return std::make_shared<HeartbeatPongResponse>();
-
       case ResponseType::ResponseUsersList:
          return UsersListResponse::fromJSON(jsonData);
 
