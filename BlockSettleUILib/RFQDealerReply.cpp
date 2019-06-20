@@ -124,6 +124,20 @@ void RFQDealerReply::init(const std::shared_ptr<spdlog::logger> logger
 
    UtxoReservation::addAdapter(utxoAdapter_);
 
+   auto botFileInfo = QFileInfo(QCoreApplication::applicationDirPath() + QStringLiteral("/RFQBot.qml"));
+   if (botFileInfo.exists() && botFileInfo.isFile()) {
+      auto list = appSettings_->get<QStringList>(ApplicationSettings::aqScripts);
+      if (list.indexOf(botFileInfo.absoluteFilePath()) == -1) {
+         list << botFileInfo.absoluteFilePath();
+      }
+      appSettings_->set(ApplicationSettings::aqScripts, list);
+      const auto lastScript = appSettings_->get<QString>(ApplicationSettings::lastAqScript);
+      if (lastScript.isEmpty()) {
+         appSettings_->set(ApplicationSettings::lastAqScript, botFileInfo.absoluteFilePath());
+      }
+
+   }
+
    aqFillHistory();
 
    onSignerStateUpdated();

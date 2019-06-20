@@ -4,9 +4,8 @@
 #include <QWidget>
 #include <memory>
 
-#include "ChatProtocol/DataObjects/OTCUpdateData.h"
-#include "ChatProtocol/DataObjects/OTCResponseData.h"
 #include "CommonTypes.h"
+#include "chat.pb.h"
 
 namespace Ui {
    class OTCNegotiationCommonWidget;
@@ -26,9 +25,9 @@ public:
    OTCNegotiationRequestWidget(OTCNegotiationRequestWidget&&) = delete;
    OTCNegotiationRequestWidget& operator = (OTCNegotiationRequestWidget&&) = delete;
 
-   void SetUpdateData(const std::shared_ptr<Chat::OTCUpdateData>& update
-                      , const std::shared_ptr<Chat::OTCResponseData>& initialResponse);
-   void SetResponseData(const std::shared_ptr<Chat::OTCResponseData>& initialResponse);
+   void SetUpdateData(const std::shared_ptr<Chat::Data>& update
+                      , const std::shared_ptr<Chat::Data>& initialResponse);
+   void SetResponseData(const std::shared_ptr<Chat::Data>& initialResponse);
 
    bs::network::OTCUpdate GetUpdate() const;
 
@@ -42,7 +41,7 @@ signals:
    void TradeRejected();
 
 public:
-   void DisplayResponse(const std::shared_ptr<Chat::OTCResponseData>& initialResponse);
+   void DisplayResponse(const std::shared_ptr<Chat::Data>& initialResponse);
 
 private:
    std::unique_ptr<Ui::OTCNegotiationCommonWidget> ui_;

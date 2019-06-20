@@ -8,7 +8,7 @@
 #include <QStringList>
 #include <QtSql/QSqlDatabase>
 #include "BinaryData.h"
-#include "ChatProtocol/ChatProtocol.h"
+#include "chat.pb.h"
 
 namespace spdlog {
    class logger;
@@ -39,7 +39,7 @@ private:
 
 };
 
-using ContactRecordDataList = std::vector<Chat::ContactRecordData>;
+using ContactRecordDataList = std::vector<Chat::Data_ContactRecord>;
 
 
 class ChatDB : public QObject
@@ -54,35 +54,35 @@ public:
    ChatDB(ChatDB&&) = delete;
    ChatDB& operator = (ChatDB&&) = delete;
 
-   bool add(const std::shared_ptr<Chat::MessageData>&);
-   bool syncMessageId(const QString& localId, const QString& serverId);
-   bool updateMessageStatus(const QString& messageId, int ustatus);
+   bool add(const std::shared_ptr<Chat::Data>&);
+   bool syncMessageId(const std::string& localId, const std::string& serverId);
+   bool updateMessageStatus(const std::string& messageId, int ustatus);
 
-   std::vector<std::shared_ptr<Chat::MessageData>> getUserMessages(const QString &ownUserId, const QString &userId);
-   std::vector<std::shared_ptr<Chat::MessageData>> getRoomMessages(const QString &roomId);
-   bool removeRoomMessages(const QString &roomId);
-   bool isRoomMessagesExist(const QString &userId);
+   std::vector<std::shared_ptr<Chat::Data>> getUserMessages(const std::string &ownUserId, const std::string &userId);
+   std::vector<std::shared_ptr<Chat::Data>> getRoomMessages(const std::string &roomId);
+   bool removeRoomMessages(const std::string &roomId);
+   bool isRoomMessagesExist(const std::string &userId);
 
    /** Adds given username->publickey pair to DB.
     * \param[in] user Chat user name, currently a base64 encoded hash or PK.
     * \param[in] key Public key of the user.
     * \returns false of failure, otherwise true.
     */
-   bool addKey(const QString& user, const BinaryData& key);
+   bool addKey(const std::string& user, const BinaryData& key);
 
-   std::map<QString, BinaryData> loadKeys(bool* loaded = nullptr);
+   std::map<std::string, BinaryData> loadKeys(bool* loaded = nullptr);
 
-   bool isContactExist(const QString &userId);
-   bool addContact(Chat::ContactRecordData &contact);
-   bool removeContact(const QString &userId);
+   bool isContactExist(const std::string &userId);
+   bool addContact(Chat::Data &contact);
+   bool removeContact(const std::string &userId);
    bool getContacts(ContactRecordDataList &contactList);
-   bool updateContact(Chat::ContactRecordData &contact);
-   bool getContact(const QString& userId, Chat::ContactRecordData& contact);
+   bool updateContact(Chat::Data &contact);
+   bool getContact(const std::string &userId, Chat::Data_ContactRecord *contact);
 
-//   bool insertContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
-//   bool removeContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
-//   bool updateContactRecord(const std::shared_ptr<Chat::ContactRecordData> contact);
-//   std::vector<std::shared_ptr<Chat::ContactRecordData>> getContactRecordList(const QString userdId);
+//   bool insertContactRecord(const std::shared_ptr<Chat::Data_ContactRecord> contact);
+//   bool removeContactRecord(const std::shared_ptr<Chat::Data_ContactRecord> contact);
+//   bool updateContactRecord(const std::shared_ptr<Chat::Data_ContactRecord> contact);
+//   std::vector<std::shared_ptr<Chat::Data_ContactRecord>> getContactRecordList(const QString userdId);
 
 private:
    bool createMissingTables();
