@@ -125,6 +125,7 @@ NotificationTrayIconResponder::NotificationTrayIconResponder(const Ui::BSTermina
 }
 
 static const QString c_newVersionAction = QLatin1String("BlockSettleNewVersionAction");
+static const QString c_newOkAction = QLatin1String("BlockSettleNotificationActionOk");
 
 void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::NotifyMessage msg)
 {
@@ -247,6 +248,7 @@ void NotificationTrayIconResponder::respond(bs::ui::NotifyType nt, bs::ui::Notif
 void NotificationTrayIconResponder::messageClicked()
 {
    if (newVersionMessage_) {
+      qDebug() << "NEW VERSION";
       const auto url = appSettings_->get<std::string>(ApplicationSettings::Binaries_Dl_Url);
       const auto title = tr("New version download");
       const auto errDownload = tr("Failed to open download URL");
@@ -281,7 +283,10 @@ void NotificationTrayIconResponder::messageClicked()
          const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
          mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
-         mainWinUi_->tabWidget->activateWindow();
+         auto window = mainWinUi_->tabWidget->window();
+         if (window) {
+            QMetaObject::invokeMethod(window, "raiseWindow", Qt::DirectConnection);
+         }
       }
    }
 }
@@ -291,6 +296,9 @@ void NotificationTrayIconResponder::notificationAction(const QString &action)
 {
    if (action == c_newVersionAction) {
       newVersionMessage_ = true;
+      messageClicked();
+   } else if (action == c_newOkAction) {
+      newChatMessage_ = true;
       messageClicked();
    }
 }
