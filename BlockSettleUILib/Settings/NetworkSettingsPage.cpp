@@ -85,27 +85,6 @@ NetworkSettingsPage::NetworkSettingsPage(QWidget* parent)
       }
    });
 
-   connect(ui_->pushButtonArmoryTerminalKeyCopy, &QPushButton::clicked, this, [this](){
-      qApp->clipboard()->setText(ui_->labelArmoryTerminalKey->text());
-      ui_->pushButtonArmoryTerminalKeyCopy->setEnabled(false);
-      ui_->pushButtonArmoryTerminalKeyCopy->setText(tr("Copied"));
-      QTimer::singleShot(2000, [this](){
-         ui_->pushButtonArmoryTerminalKeyCopy->setEnabled(true);
-         ui_->pushButtonArmoryTerminalKeyCopy->setText(tr("Copy"));
-      });
-   });
-   connect(ui_->pushButtonArmoryTerminalKeySave, &QPushButton::clicked, this, [this](){
-      QString fileName = QFileDialog::getSaveFileName(this
-                                   , tr("Save Armory Public Key")
-                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + QStringLiteral("Terminal_Public_Key.pub")
-                                   , tr("Key files (*.pub)"));
-
-      QFile file(fileName);
-      if (file.open(QIODevice::WriteOnly)) {
-         file.write(ui_->labelArmoryTerminalKey->text().toLatin1());
-      }
-   });
-
    connect(armoryServersProvider_.get(), &ArmoryServersProvider::dataChanged, this, &NetworkSettingsPage::display);
 }
 
@@ -156,17 +135,6 @@ void NetworkSettingsPage::displayArmorySettings()
    }
    else {
       ui_->labelConfChanged->setVisible(false);
-   }
-
-   try {
-      RemoteSigner *remoteSigner = qobject_cast<RemoteSigner *>(signContainer_.get());
-      if (remoteSigner) {
-         SecureBinaryData ownKey = remoteSigner->getOwnPubKey();
-         ui_->labelArmoryTerminalKey->setText(QString::fromStdString(ownKey.toHexStr()));
-      }
-   }
-   catch (...) {
-      ui_->labelArmoryTerminalKey->setText(tr("Unknown"));
    }
 }
 
