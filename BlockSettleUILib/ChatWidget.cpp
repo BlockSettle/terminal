@@ -40,7 +40,8 @@ enum class OTCPages : int
    OTCNegotiateResponsePage,
    OTCParticipantShieldPage,
    OTCContactShieldPage,
-   OTCContactNetStatusShieldPage
+   OTCContactNetStatusShieldPage,
+   OTCSupportRoomShieldPage
 };
 
 const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
@@ -55,6 +56,12 @@ bool IsOTCChatRoom(const std::string& chatRoom)
 bool IsGlobalChatRoom(const std::string& chatRoom)
 {
    static const std::string targetRoomName = ChatUtils::GlobalRoomKey;
+   return chatRoom == targetRoomName;
+}
+
+bool IsSupportChatRoom(const std::string& chatRoom)
+{
+   static const std::string targetRoomName = ChatUtils::SupportRoomKey;
    return chatRoom == targetRoomName;
 }
 
@@ -805,6 +812,11 @@ void ChatWidget::OTCSwitchToGlobalRoom()
    ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCGeneralRoomShieldPage));
 }
 
+void ChatWidget::OTCSwitchToSupportRoom()
+{
+   ui_->stackedWidgetOTC->setCurrentIndex(static_cast<int>(OTCPages::OTCSupportRoomShieldPage));
+}
+
 void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::Data>& room)
 {
    assert(room->has_room());
@@ -814,7 +826,11 @@ void ChatWidget::OTCSwitchToRoom(std::shared_ptr<Chat::Data>& room)
       OTCSwitchToCommonRoom();
    } else {
       ui_->stackedWidgetMessages->setCurrentIndex(0);
-      OTCSwitchToGlobalRoom();
+      if (IsGlobalChatRoom(room->room().id())) {
+         OTCSwitchToGlobalRoom();
+      } else if (IsSupportChatRoom(room->room().id())) {
+         OTCSwitchToSupportRoom();
+      }
    }
 }
 
