@@ -15,6 +15,7 @@ BSMessageBox {
     property variant titles: [
           "Wallet"
         , "Wallet"
+        , "Wallet"
         , "Wallet encryption"
         , "Wallet encryption"
         , "Wallet encryption"
@@ -22,21 +23,23 @@ BSMessageBox {
     ]
 
     property variant textsSuccess: [
-          "Wallet successfully created."
-        , "Wallet successfully imported."
-        , "Password encryption successful."
-        , "Auth eID encryption successful."
-        , "Device successfully added."
-        , "Device successfully removed."
+          "Wallet successfully created"
+        , "Wallet successfully imported"
+        , "Watching-Only Wallet successfully imported"
+        , "Password encryption successful"
+        , "Auth eID encryption successful"
+        , "Device successfully added"
+        , "Device successfully removed"
     ]
 
     property variant textsFail: [
-          "Failed to create new Wallet."
-        , "Failed to import new Wallet."
-        , "Failed to set new password."
-        , "Failed to set Auth EId encryption."
-        , "Failed to add new device."
-        , "Failed to remove device."
+          "Failed to create new Wallet!"
+        , "Failed to import Wallet!"
+        , "Failed to import Watching-Only Wallet!"
+        , "Failed to set new password!"
+        , "Failed to set Auth eID encryption!"
+        , "Failed to add new device!"
+        , "Failed to remove device!"
     ]
 
     property variant colors: [BSStyle.dialogTitleWhiteColor, BSStyle.dialogTitleGreenColor, BSStyle.dialogTitleOrangeColor, BSStyle.dialogTitleOrangeColor,  BSStyle.dialogTitleRedColor]
@@ -45,10 +48,11 @@ BSMessageBox {
     enum ResultType {
         WalletCreate = 0,
         WalletImport = 1,
-        EncryptionChangeToPassword = 2,
-        EncryptionChangeToAuth = 3,
-        AddDevice = 4,
-        RemoveDevice = 5
+        WalletImportWo = 2,
+        EncryptionChangeToPassword = 3,
+        EncryptionChangeToAuth = 4,
+        AddDevice = 5,
+        RemoveDevice = 6
     }
 
     title: titles[resultType]

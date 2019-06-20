@@ -58,6 +58,7 @@ function requesteIdAuth (requestType, walletInfo, onSuccess) {
     authProgress.email = walletInfo.email()
     authProgress.walletId = walletInfo.rootId
     authProgress.walletName = walletInfo.name
+    authProgress.requestType = requestType
 
     authProgress.open()
     authProgress.bsRejected.connect(function() {
@@ -99,6 +100,7 @@ function removeEidDevice (index, walletInfo, onSuccess) {
     authProgress.email = walletInfo.email()
     authProgress.walletId = walletInfo.rootId
     authProgress.walletName = walletInfo.name
+    authProgress.requestType = AutheIDClient.DeactivateWallet
 
     authProgress.open()
     authProgress.bsRejected.connect(function() {
@@ -137,6 +139,7 @@ function activateeIdAuth (email, walletInfo, onSuccess) {
     authProgress.email = walletInfo.email()
     authProgress.walletId = walletInfo.rootId
     authProgress.walletName = walletInfo.name
+    authProgress.requestType = AutheIDClient.ActivateWallet
 
     authProgress.open()
     authProgress.bsRejected.connect(function() {

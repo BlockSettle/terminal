@@ -1,7 +1,45 @@
 {
-   "latest_version": "0.16.1",
-   "release_date": "11 Jun 2019",
+   "latest_version": "0.17.1",
+   "release_date": "20 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.17.1",
+         "previous_version": "0.16.2",
+         "release_date": "20 Jun 2019",
+         "release_type": "prod",
+         "improvements": [
+            "UI fixes",
+            "Add support Room",
+            "Switch to protobuf in chat protocol",
+            "Update dealing tab width",
+            "Fix chat contact selection"
+         ],
+         "bug_fixes": [
+            "Fix notification for Global chat room"
+         ],
+         "revision": "2edcb1f0",
+         "common_revision": "d622fedb"
+      },
+      {
+         "version_string": "0.16.2",
+         "previous_version": "0.16.1",
+         "release_date": "16 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "UI: Update column width",
+            "Cancel RFQ if dialog window is closed",
+            "Improve select AQ script",
+            "OTC related text fixes on UI",
+            "Display contact requests in a group",
+            "Fixed status update for Chat tab",
+            "Improve highlight selected contact",
+            "Extend dealing tab",
+            "UI fixes and improvements"
+         ],
+         "bug_fixes": [],
+         "revision": "8076c7e4",
+         "common_revision": "d3b395bf"
+      },
       {
          "version_string": "0.16.1",
          "previous_version": "0.16.0",

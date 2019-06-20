@@ -504,7 +504,7 @@ CustomTitleDialogWindow {
                         var importCallback = function(success, msg) {
                             if (success) {
                                 var walletInfo = qmlFactory.createWalletInfo(msg)
-                                var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImport, true, walletInfo)
+                                var mb = JsHelper.resultBox(BSResultBox.ResultType.WalletImportWo, true, walletInfo)
                                 mb.bsAccepted.connect(acceptAnimated)
                             } else {
                                 JsHelper.messageBox(BSMessageBox.Type.Critical
@@ -518,6 +518,8 @@ CustomTitleDialogWindow {
 
                     if (curPage === 1) {
                         curPage = 2
+                        tfName.forceActiveFocus()
+                        tfName.selectAll()
 
                         if (rbPaperBackup.checked) {
                             seed = qmlFactory.createSeedFromPaperBackupT(rootKeyInput.privateRootKey, signerSettings.testNet)
