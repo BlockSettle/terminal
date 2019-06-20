@@ -405,6 +405,39 @@ std::shared_ptr<bs::sync::hd::Wallet> WalletsProxy::getWoSyncWallet(const bs::sy
    return nullptr;
 }
 
+void WalletsProxy::importWoWallet(const QString &walletPath, const QJSValue &jsCallback)
+{
+   auto cb = [this, jsCallback](const bs::sync::WatchingOnlyWallet &wo) {
+      QMetaObject::invokeMethod(this, [this, wo, jsCallback] {
+         logger_->debug("imported WO wallet with id {}", wo.id);
+         walletsMgr_->adoptNewWallet(getWoSyncWallet(wo));
+         QJSValueList args;
+         args << QJSValue(wo.id.empty() ? false : true)
+            << QString::fromStdString(wo.id.empty() ? wo.description : wo.id);
+         invokeJsCallBack(jsCallback, args);
+      });
+   };
+
+   bs::sync::WatchingOnlyWallet errWallet;
+   QFile f(walletPath);
+   if (!f.exists()) {
+      errWallet.description = "file doesn't exist";
+      cb(errWallet);
+      return;
+   }
+   if (!f.open(QIODevice::ReadOnly)) {
+      errWallet.description = "failed to open file for reading";
+      cb(errWallet);
+      return;
+   }
+   const BinaryData content(f.readAll().toStdString());
+   f.close();
+
+   QFileInfo fi(walletPath);
+
+   adapter_->importWoWallet(fi.fileName().toStdString(), content, cb);
+}
+
 QStringList WalletsProxy::walletNames() const
 {
    QStringList result;
