@@ -252,7 +252,7 @@ TEST_F(TestWallet, BIP44_WatchingOnly)
 
    EXPECT_TRUE(woWallet->isWatchingOnly());
    EXPECT_NE(woWallet->createGroup(bs::hd::CoinType::BlockSettle_Auth), nullptr);
-   EXPECT_EQ(woGroup->createLeaf(2), nullptr);
+   EXPECT_THROW(woGroup->createLeaf(2), std::exception);
 
    EXPECT_TRUE(wallet->eraseFile());
    EXPECT_TRUE(woWallet->eraseFile());
