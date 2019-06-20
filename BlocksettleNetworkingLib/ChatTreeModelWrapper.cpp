@@ -1,6 +1,8 @@
 #include "ChatTreeModelWrapper.h"
 #include "ChatClientDataModel.h"
 
+#include "ChatProtocol/ChatUtils.h"
+
 using NodeType = ChatUIDefinitions::ChatTreeNodeType;
 using Role = ChatClientDataModel::Role;
 using OnlineStatus = ChatContactElement::OnlineStatus;
