@@ -446,6 +446,7 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
 
    while (query.next()) {
    // TODO: last head, change to protobuf
+/*
       Chat::ContactRecordData contact(
          query.value(0).toString(),
          query.value(0).toString(),
@@ -453,6 +454,7 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
          query.value(3).toString(),
          query.value(4).toDateTime(),
          query.value(1).toString());
+*/
 
       Chat::Data_ContactRecord contact;
       contact.set_user_id(query.value(0).toString().toStdString());

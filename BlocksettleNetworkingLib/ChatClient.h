@@ -61,7 +61,7 @@ public:
 
    void sendFriendRequest(const std::string &friendUserId);
    void acceptFriendRequest(const std::string &friendUserId);
-   void declineFriendRequest(const std::string &friendUserId);
+   void rejectFriendRequest(const std::string &friendUserId);
    void clearSearch();
    bool isFriend(const std::string &userId);
 

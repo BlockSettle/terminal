@@ -300,7 +300,7 @@ void ChatClient::acceptFriendRequest(const std::string &friendUserId)
    sendAcceptFriendRequestToServer(friendUserId);
 }
 
-void ChatClient::declineFriendRequest(const std::string &friendUserId)
+void ChatClient::rejectFriendRequest(const std::string &friendUserId)
 {
    auto contact = model_->findContactItem(friendUserId);
    if (!contact) {
@@ -355,8 +355,6 @@ void ChatClient::onActionAddToContacts(const std::string& userId)
       d->set_sender_id(currentUserId_);
       d->set_receiver_id(userId);
       d->set_action(Chat::CONTACTS_ACTION_REQUEST);
-      const auto &pubKey = appSettings_->GetAuthKeys().second;
-      d->set_sender_pub_key(pubKey.data(), pubKey.size());
       sendRequest(request);
    }
 
@@ -375,7 +373,7 @@ void ChatClient::onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord)
 {
    //qDebug() << __func__ << " " << QString::fromStdString(crecord->toJsonString());
 
-   declineFriendRequest(crecord->contact_record().contact_id());
+   rejectFriendRequest(crecord->contact_record().contact_id());
 }
 
 void ChatClient::onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord)
@@ -401,8 +399,6 @@ void ChatClient::onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecor
       d->set_sender_id(crecord->contact_record().user_id());
       d->set_receiver_id(crecord->contact_record().contact_id());
       d->set_action(Chat::CONTACTS_ACTION_REJECT);
-      const auto &pubKey = appSettings_->GetAuthKeys().second;
-      d->set_sender_pub_key(pubKey.data(), pubKey.size());
       sendRequest(request);
    }
 
@@ -610,7 +606,6 @@ void ChatClient::onFriendRequest(const std::string& userId, const std::string& c
          d->set_contact_id(contactId);
          d->set_action(Chat::CONTACTS_ACTION_SERVER_ADD);
          d->set_status(Chat::CONTACT_STATUS_INCOMING);
-         d->set_contact_pub_key(pk.toBinStr());
          sendRequest(request);
       }
 
