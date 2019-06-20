@@ -133,7 +133,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
       painter->save();
       switch (onlineStatus) {
          case OnlineStatus::Online:
-            painter->fillRect(itemOption.rect, itemStyle_.colorContactOnline());
+            painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
             break;
          case OnlineStatus::Offline:
             painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
