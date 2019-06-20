@@ -63,6 +63,8 @@ namespace bs {
 
             std::vector<std::string> registerWallet(
                const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
+            std::vector<std::string> setUnconfirmedTargets(void);
+
             void setArmory(const std::shared_ptr<ArmoryConnection> &);
             void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &);
             void startRescan();

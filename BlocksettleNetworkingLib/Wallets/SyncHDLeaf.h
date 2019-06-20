@@ -92,6 +92,8 @@ namespace bs {
 
             virtual void merge(const std::shared_ptr<Wallet>) override;
 
+            std::vector<std::string> setUnconfirmedTarget(void);
+
          signals:
             void scanComplete(const std::string &walletId);
 

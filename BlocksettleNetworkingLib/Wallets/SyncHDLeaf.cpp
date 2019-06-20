@@ -136,17 +136,26 @@ void hd::Leaf::onRefresh(std::vector<BinaryData> ids, bool online)
    }
 }
 
+std::vector<std::string> hd::Leaf::setUnconfirmedTarget()
+{
+   std::vector<std::string> regIDs;
+
+   if (btcWallet_) {
+      regIDs.push_back(btcWallet_->setUnconfirmedTarget(kExtConfCount));
+   }
+   if (btcWalletInt_) {
+      regIDs.push_back(btcWalletInt_->setUnconfirmedTarget(kIntConfCount));
+   }
+
+   return regIDs;
+}
+
 void hd::Leaf::postOnline()
 {
    if (firstInit_)
       return;
 
-   if (btcWallet_) {
-      btcWallet_->setUnconfirmedTarget(kExtConfCount);
-   }
-   if (btcWalletInt_) {
-      btcWalletInt_->setUnconfirmedTarget(kIntConfCount);
-   }
+   setUnconfirmedTarget();
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
       isReady_ = true;

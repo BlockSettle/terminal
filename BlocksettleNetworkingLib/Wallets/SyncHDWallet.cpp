@@ -249,6 +249,22 @@ std::vector<std::string> hd::Wallet::registerWallet(
    return result;
 }
 
+std::vector<std::string> hd::Wallet::setUnconfirmedTargets()
+{
+   std::vector<std::string> result;
+   for (const auto &leaf : getLeaves()) 
+   {
+      auto hdLeafPtr = std::dynamic_pointer_cast<hd::Leaf>(leaf);
+      if (hdLeafPtr == nullptr)
+         continue;
+
+      auto&& regIDs = hdLeafPtr->setUnconfirmedTarget();
+      result.insert(result.end(), regIDs.begin(), regIDs.end());
+   }
+
+   return result;
+}
+
 void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &cb)
 {
    auto stateMap = std::make_shared<std::map<std::string, bs::sync::SyncState>>();
