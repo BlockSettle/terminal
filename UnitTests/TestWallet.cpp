@@ -2262,6 +2262,10 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
    UnitTestWalletACT::waitOnRefresh(regIDs);
 
+   regIDs = syncWallet->setUnconfirmedTargets();
+   ASSERT_EQ(regIDs.size(), 2);
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
    //check balances are 0
    auto balProm = std::make_shared<std::promise<bool>>();
    auto balFut = balProm->get_future();
@@ -2388,6 +2392,30 @@ TEST_F(TestWalletWithArmory, ZCBalance)
 
    syncLeaf->getSpendableZCList(zcTxOutLbd);
    fut3.wait();
+
+   blockCount = 1;
+   curHeight = envPtr_->armoryConnection()->topBlock();
+   armoryInstance->mineNewBlock(recipient.get(), blockCount);
+   newTop = UnitTestWalletACT::waitOnNewBlock();
+   ASSERT_EQ(curHeight + blockCount, newTop);
+
+   auto promPtr4 = std::make_shared<std::promise<bool>>();
+   auto fut4 = promPtr4->get_future();
+   const auto &cbBalance4 = [promPtr4](void)
+   {
+      promPtr4->set_value(true);
+   };
+
+   //async, has to wait
+   syncLeaf->updateBalances(cbBalance4);
+   fut4.wait();
+
+   EXPECT_EQ(syncLeaf->getTotalBalance(),
+      double(350 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getSpendableBalance(),
+      double(350 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), 
+      double(5 * COIN) / BTCNumericTypes::BalanceDivider););
 }
 
 TEST_F(TestWalletWithArmory, SimpleTX_bech32)
