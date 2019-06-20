@@ -3,6 +3,7 @@
 binpath="../build_terminal/Release/bin"
 binary=$binpath/blocksettle
 scriptpath="../DealerScripts"
+RFQ_script_path="../Scripts"
 
 libprotobuf="${DEV_3RD_ROOT}/release/Protobuf/lib"
 if [ "${DEV_3RD_ROOT}X" = "X" ]; then
@@ -25,6 +26,7 @@ mkdir -p Ubuntu/lib/x86_64-linux-gnu
 
 cp -f $binpath/* Ubuntu/usr/bin
 cp -f $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle
+cp -f $RFQ_script_path/RFQBot.qml $binpath/
 cp -fP $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu
 cp -f $libprotobuf/libprotobuf.la Ubuntu/lib/x86_64-linux-gnu
 
