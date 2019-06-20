@@ -826,13 +826,11 @@ void BSTerminalMainWindow::raiseWindow()
    auto hwnd = reinterpret_cast<HWND>(winId());
    auto flags = static_cast<UINT>(SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
    ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
+   ::SetForegroundWindow(hwnd);
    ::SetActiveWindow(hwnd);
+   ::ShowWindow(hwnd, SW_SHOWNORMAL);
    ::SetFocus(hwnd);
-   QCoreApplication::processEvents();
    ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
-   raise();
-   activateWindow();
-   setFocus();
 #endif // Q_OS_WIN
 }
 
