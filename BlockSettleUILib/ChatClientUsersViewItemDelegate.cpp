@@ -70,12 +70,13 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
    }
 
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
-   bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
+   const bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
+   const bool isGlobalRoom = (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == Chat::GlobalRoomKey);
    itemOption.text = index.data(Role::RoomTitleRole).toString();
    QStyledItemDelegate::paint(painter, itemOption, index);
 
    // draw dot
-   if (newMessage) {
+   if (newMessage && !isGlobalRoom) {
       QFontMetrics fm(itemOption.font, painter->device());
       auto textRect = fm.boundingRect(itemOption.rect, 0, itemOption.text);
       const QPixmap pixmap(kDotPathname);
@@ -136,7 +137,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
       painter->save();
       switch (onlineStatus) {
          case OnlineStatus::Online:
-            painter->fillRect(itemOption.rect, itemStyle_.colorContactOnline());
+            painter->fillRect(itemOption.rect, itemStyle_.colorHighlightBackground());
             break;
          case OnlineStatus::Offline:
             painter->fillRect(itemOption.rect, itemStyle_.colorContactOffline());
