@@ -1,7 +1,25 @@
 {
-   "latest_version": "0.16.2",
-   "release_date": "16 Jun 2019",
+   "latest_version": "0.17.1",
+   "release_date": "20 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.17.1",
+         "previous_version": "0.16.2",
+         "release_date": "20 Jun 2019",
+         "release_type": "prod",
+         "improvements": [
+            "UI fixes",
+            "Add support Room",
+            "Switch to protobuf in chat protocol",
+            "Update dealing tab width",
+            "Fix chat contact selection"
+         ],
+         "bug_fixes": [
+            "Fix notification for Global chat room"
+         ],
+         "revision": "2edcb1f0",
+         "common_revision": "d622fedb"
+      },
       {
          "version_string": "0.16.2",
          "previous_version": "0.16.1",
