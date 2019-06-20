@@ -75,7 +75,6 @@ def make_package(sourcesRoot, packagePath):
    buildDir = os.path.abspath(os.path.join(sourcesRoot, 'build_terminal', 'Release'))
    binDir = os.path.join(buildDir, 'bin')
    packgeDir = os.path.join(buildDir, 'Blocksettle')
-   
 
    if os.path.isdir(packgeDir):
       shutil.rmtree(packgeDir)
@@ -98,9 +97,8 @@ def make_package(sourcesRoot, packagePath):
          { "x": 500, "y": 120, "type": "link", "path": "/Applications" }
       ]
    }
-   
-	shutil.copyfile(os.path.join(sourcesRoot, 'Scripts', 'RFQBot.qml'), packagePath + '/')
 
+   shutil.copyfile(os.path.join(sourcesRoot, 'Scripts', 'RFQBot.qml'), packagePath + '/')
 
    settingsFile = 'settings.json'
 
