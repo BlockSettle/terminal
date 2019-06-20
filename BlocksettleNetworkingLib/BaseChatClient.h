@@ -20,8 +20,8 @@ class ConnectionManager;
 class UserHasher;
 
 class BaseChatClient : public QObject
-                     , public DataConnectionListener
-                     , public Chat::ResponseHandler
+      , public DataConnectionListener
+      , public Chat::ResponseHandler
 {
    Q_OBJECT
 
@@ -81,10 +81,10 @@ protected:
 
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::Data>& message);
    std::shared_ptr<Chat::Data> encryptMessageToSendAEAD(const std::string& receiver,
-                                                               BinaryData& remotePublicKey,
-                                                               std::shared_ptr<Chat::Data> messageData);
+                                                        BinaryData& remotePublicKey,
+                                                        std::shared_ptr<Chat::Data> messageData);
    std::shared_ptr<Chat::Data> encryptMessageToSendIES(BinaryData& remotePublicKey,
-                                                              std::shared_ptr<Chat::Data> messageData);
+                                                       std::shared_ptr<Chat::Data> messageData);
    std::shared_ptr<Chat::Data> decryptIESMessage(const std::shared_ptr<Chat::Data>& message);
 
 public:
@@ -137,7 +137,7 @@ protected:
    bool sendUpdateMessageState(const std::shared_ptr<Chat::Data>& message);
 
    std::shared_ptr<Chat::Data> sendMessageDataRequest(const std::shared_ptr<Chat::Data>& message
-      , const std::string &receiver);
+                                                      , const std::string &receiver);
 
    bool sendRequest(const Chat::Request& request);
 

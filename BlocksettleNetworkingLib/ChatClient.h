@@ -15,7 +15,7 @@
 
 namespace Chat {
    class Request;
-}
+   }
 
 class ApplicationSettings;
 class ChatClientDataModel;
@@ -24,17 +24,17 @@ class UserSearchModel;
 class ChatTreeModelWrapper;
 
 class ChatClient : public BaseChatClient
-                 , public ChatItemActionsHandler
-                 , public ChatSearchActionsHandler
-                 , public ChatMessageReadHandler
-                 , public ModelChangesHandler
+      , public ChatItemActionsHandler
+      , public ChatSearchActionsHandler
+      , public ChatMessageReadHandler
+      , public ModelChangesHandler
 {
    Q_OBJECT
 
 public:
    ChatClient(const std::shared_ptr<ConnectionManager> &
-            , const std::shared_ptr<ApplicationSettings> &
-            , const std::shared_ptr<spdlog::logger> &);
+              , const std::shared_ptr<ApplicationSettings> &
+              , const std::shared_ptr<spdlog::logger> &);
    ~ChatClient() noexcept override;
 
    ChatClient(const ChatClient&) = delete;
@@ -49,12 +49,12 @@ public:
    std::shared_ptr<Chat::Data> sendOwnMessage(
          const std::string& message, const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
-                                                              , const std::string &receiver);
+                                                       , const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateOTCResponse(const bs::network::OTCResponse& otcResponse
-                                                              , const std::string &receiver);
+                                                        , const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateCancel(const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateUpdate(const bs::network::OTCUpdate& update
-                                                          , const std::string &receiver);
+                                                   , const std::string &receiver);
 
    std::shared_ptr<Chat::Data> sendRoomOwnMessage(
          const std::string& message, const std::string &receiver);
