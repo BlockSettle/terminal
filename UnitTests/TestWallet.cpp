@@ -1861,7 +1861,7 @@ TEST_F(TestWalletWithArmory, RestoreWallet_CheckChainLength)
          no fee
          */
 
-         ASSERT_EQ(inputs.size(), 5);
+         ASSERT_EQ(inputs.size(), 6);
          ASSERT_EQ(inputs[0].getValue(), 50 * COIN);
 
          std::vector<UTXO> utxos;
@@ -2262,6 +2262,19 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
    UnitTestWalletACT::waitOnRefresh(regIDs);
 
+   //check balances are 0
+   auto balProm = std::make_shared<std::promise<bool>>();
+   auto balFut = balProm->get_future();
+   auto waitOnBalance = [balProm](void)->void
+   {
+      balProm->set_value(true);
+   };
+   syncLeaf->updateBalances(waitOnBalance);
+   balFut.wait();
+   EXPECT_DOUBLE_EQ(syncLeaf->getTotalBalance(), 0);
+   EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 0);
+   EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance(), 0);
+
    //mine some coins
    auto armoryInstance = envPtr_->armoryInstance();
    unsigned blockCount = 6;
@@ -2273,19 +2286,20 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    ASSERT_EQ(curHeight + blockCount, newTop);
 
    //grab balances and check
-   auto balProm = std::make_shared<std::promise<bool>>();
-   auto balFut = balProm->get_future();
-   auto waitOnBalance = [balProm](void)->void 
+   auto balProm1 = std::make_shared<std::promise<bool>>();
+   auto balFut1 = balProm1->get_future();
+   auto waitOnBalance1 = [balProm1](void)->void 
    {
-      balProm->set_value(true);
+      balProm1->set_value(true);
    };
-   syncLeaf->updateBalances(waitOnBalance);
-   balFut.wait();
-   EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 250);
+   syncLeaf->updateBalances(waitOnBalance1);
+   balFut1.wait();
+   EXPECT_DOUBLE_EQ(syncLeaf->getTotalBalance(), 300);
+   EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 300);
    EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance(), 0);
 
    //spend these coins
-   const uint64_t amount = 0.05 * BTCNumericTypes::BalanceDivider;
+   const uint64_t amount = 5.0 * BTCNumericTypes::BalanceDivider;
    const uint64_t fee = 0.0001 * BTCNumericTypes::BalanceDivider;
    auto promPtr1 = std::make_shared<std::promise<bool>>();
    auto fut1 = promPtr1->get_future();
@@ -2297,7 +2311,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
        amount, fee, pass, promPtr1]
       (std::vector<UTXO> inputs)->void
    {
-      ASSERT_EQ(inputs.size(), 5);
+      ASSERT_EQ(inputs.size(), 6);
 
       //pick a single input
       std::vector<UTXO> utxos;
@@ -2342,8 +2356,10 @@ TEST_F(TestWalletWithArmory, ZCBalance)
 
    EXPECT_EQ(syncLeaf->getTotalBalance(),
       double(300 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
-   EXPECT_EQ(syncLeaf->getUnconfirmedBalance()  // not sure this is the correct calculation though
-      , double(250 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getSpendableBalance(), 
+      double(250 * COIN) / BTCNumericTypes::BalanceDivider);
+   EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), 
+      double(50 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
 
    auto bal = syncLeaf->getAddrBalance(addr1);
    ASSERT_EQ(bal.size(), 3);
@@ -2492,8 +2508,6 @@ TEST_F(TestWalletWithArmory, SimpleTX_bech32)
    };
    syncLeaf->getSpendableTxOutList(cbTxOutList2, UINT64_MAX);
    fut3.wait();
-
-   std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 
 /*
