@@ -1,7 +1,5 @@
 #include "UserSearchModel.h"
 
-#include "ChatProtocol/DataObjects/UserData.h"
-
 #include <QSize>
 #include <QtGui/QColor>
 

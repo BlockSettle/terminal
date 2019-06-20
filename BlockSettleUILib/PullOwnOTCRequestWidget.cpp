@@ -1,5 +1,7 @@
 #include "PullOwnOTCRequestWidget.h"
+
 #include "ui_PullOwnOTCRequestWidget.h"
+#include "ChatProtocol/ChatUtils.h"
 
 PullOwnOTCRequestWidget::PullOwnOTCRequestWidget(QWidget* parent)
    : QWidget(parent)
@@ -18,10 +20,13 @@ void PullOwnOTCRequestWidget::OnPullPressed()
    emit PullOTCRequested();
 }
 
-void PullOwnOTCRequestWidget::setRequestData(const std::shared_ptr<Chat::OTCRequestData>& otc)
+void PullOwnOTCRequestWidget::setRequestData(const std::shared_ptr<Chat::Data>& otc)
 {
-   ui_->labelSide->setText(QString::fromStdString(bs::network::ChatOTCSide::toString(otc->otcRequest().side)));
-   ui_->labelRange->setText(QString::fromStdString(bs::network::OTCRangeID::toString(otc->otcRequest().amountRange)));
+   assert(otc->has_message());
+   assert(otc->message().has_otc_request());
+
+   ui_->labelSide->setText(ChatUtils::toString(otc->message().otc_request().side()));
+   ui_->labelRange->setText(ChatUtils::toString(otc->message().otc_request().range_type()));
 
    ui_->pushButtonPull->setEnabled(true);
 }

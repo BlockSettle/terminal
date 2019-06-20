@@ -87,7 +87,7 @@ namespace Chat {
          throw std::runtime_error("ChatSessionData for give user is empty!");
       }
 
-      std::unique_ptr<Encryption::IES_Encryption> enc = Encryption::IES_Encryption::create(logger_);
+      auto enc = Encryption::IES_Encryption::create(logger_);
       enc->setPublicKey(remotePublicKey);
       enc->setData(chatSessionDataPtr->localPublicKey().toHexStr());
 
