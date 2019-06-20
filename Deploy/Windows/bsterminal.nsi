@@ -128,6 +128,7 @@ Section "install"
             File ..\..\build_terminal\Release\bin\Release\bs_signer_gui.exe
 #	${Endif}
         File ..\..\DealerScripts\DealerAutoQuote.qml
+		File ..\..\Scripts\RFQBot.qml
         CreateShortcut "$DESKTOP\BlockSettle Terminal.lnk" $INSTDIR\blocksettle.exe
         CreateShortcut "$DESKTOP\BlockSettle Signer.lnk" $INSTDIR\blocksettle_signer.exe
         !insertmacro CREATE_SMGROUP_SHORTCUT "BlockSettle Terminal" "$INSTDIR\blocksettle.exe" ""
