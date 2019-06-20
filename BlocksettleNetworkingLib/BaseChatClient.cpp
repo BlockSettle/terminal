@@ -219,7 +219,6 @@ bool BaseChatClient::sendRequest(const Chat::Request& request)
 
 bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId)
 {
-   // TODO: contacts_direct add pk timestamp
    Chat::Request request;
    auto d = request.mutable_modify_contacts_direct();
    d->set_sender_id(currentUserId_);
@@ -458,7 +457,7 @@ void BaseChatClient::OnModifyContactsServerResponse(const Chat::Response_ModifyC
          if (response.success()) {
             onContactRemove(response.contact_id());
             chatDb_->removeContact(response.contact_id());
-            //TODO: Remove pub key
+            //TODO: Remove pub key from db and clear session
          }
          eraseQueuedMessages(response.contact_id());
       break;
@@ -660,7 +659,6 @@ bool BaseChatClient::getContacts(ContactRecordDataList &contactList)
 
 bool BaseChatClient::addOrUpdateContact(const std::string &userId, Chat::ContactStatus status, const std::string &userName)
 {
-   // TODO: add pk and timestamp to contact_record
    Chat::Data contact;
    auto d = contact.mutable_contact_record();
    d->set_user_id(userId);

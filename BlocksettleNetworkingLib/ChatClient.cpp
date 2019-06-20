@@ -94,25 +94,14 @@ void ChatClient::readDatabase()
    ContactRecordDataList clist;
    chatDb_->getContacts(clist);
 
-/*
-   // TODO: original head, change to protobuf
-   for (auto c : clist) {
-      Chat::ContactStatus status = c.getContactStatus();
-
-      auto contact = std::make_shared<Chat::ContactRecordData>(
-         QString::fromStdString(model_->currentUser()),
-         c.getUserId(), 
-         status, 
-         c.getContactPublicKey(), 
-         c.getContactPublicKeyTime(), 
-         c.getDisplayName());
-*/
    for (const auto &c : clist) {
       auto contact = std::make_shared<Chat::Data>();
       auto d = contact->mutable_contact_record();
       d->set_user_id(model_->currentUser());
       d->set_status(c.status());
       d->set_display_name(c.display_name());
+      d->set_public_key(c.public_key());
+      d->set_public_key_timestamp(c.public_key_timestamp());
       model_->insertContactObject(contact);
 
       retrieveUserMessages(c.contact_id());
@@ -268,6 +257,8 @@ void ChatClient::sendFriendRequest(const std::string &friendUserId)
          contact.getContactPublicKey(),
          contact.getContactPublicKeyTime());
 */
+   Chat::Data_ContactRecord contact;
+   chatDb_->getContact(model_->currentUser(), &contact);
 
    if (sendFriendRequestToServer(friendUserId)) {
       auto record = std::make_shared<Chat::Data>();
@@ -275,6 +266,8 @@ void ChatClient::sendFriendRequest(const std::string &friendUserId)
       d->set_user_id(model_->currentUser());
       d->set_contact_id(friendUserId);
       d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+      d->set_public_key(contact.public_key());
+      d->set_public_key_timestamp(contact.public_key_timestamp());
       model_->insertContactObject(record);
       addOrUpdateContact(friendUserId, Chat::CONTACT_STATUS_OUTGOING);
    } else {
@@ -339,13 +332,17 @@ void ChatClient::onActionAddToContacts(const std::string& userId)
       return;
    }
 
-   // TODO: fix contact record for public key timestamp
+   Chat::Data_ContactRecord contactDb;
+   chatDb_->getContact(model_->currentUser(), &contactDb);
+
    {
       auto record = std::make_shared<Chat::Data>();
       auto d = record->mutable_contact_record();
       d->set_user_id(model_->currentUser());
       d->set_contact_id(userId);
       d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+      d->set_public_key(contactDb.public_key());
+      d->set_public_key_timestamp(contactDb.public_key_timestamp());
       model_->insertContactRequestObject(record);
    }
 
@@ -588,7 +585,6 @@ void ChatClient::onFriendRequest(const std::string& userId, const std::string& c
    } else {
       {
          auto contact = std::make_shared<Chat::Data>();
-         // TODO: contact_record add pk timestamp
          auto d = contact->mutable_contact_record();
          d->set_user_id(userId);
          d->set_contact_id(contactId);

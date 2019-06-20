@@ -434,7 +434,7 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String(
-      "SELECT user_id, user_name, status, key, key_timestamp FROM contacts " \
+      "SELECT contacts.user_id, contacts.user_name, contacts.status, user_keys.key, user_keys.key_timestamp FROM contacts " \
       "LEFT JOIN user_keys on contacts.user_id=user_key.user_id;"))) {
       logger_->error("[ChatDB::getContacts] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
@@ -502,9 +502,9 @@ bool ChatDB::getContact(const std::string &userId, Chat::Data_ContactRecord *con
 {
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String(
-      "SELECT user_id, user_name, status, key, key_timestamp FROM contacts " \
+      "SELECT contacts.user_id, contacts.user_name, contacts.status, user_keys.key, user_keys.key_timestamp FROM contacts " \
       "LEFT JOIN user_keys on contacts.user_id=user_keys.user_id " \
-      "WHERE user_id=?;"))) {
+      "WHERE contacts.user_id=?;"))) {
       logger_->error("[ChatDB::getContact] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
