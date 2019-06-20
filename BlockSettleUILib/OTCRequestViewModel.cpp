@@ -1,5 +1,7 @@
 #include "OTCRequestViewModel.h"
 
+#include "ChatProtocol/ChatUtils.h"
+
 OTCRequestViewModel::OTCRequestViewModel(QObject* parent)
    : QAbstractTableModel(parent)
 {
@@ -29,7 +31,7 @@ void OTCRequestViewModel::clear()
    endResetModel();
 }
 
-std::shared_ptr<Chat::OTCRequestData> OTCRequestViewModel::GetOTCRequest(const QModelIndex& index)
+std::shared_ptr<Chat::Data> OTCRequestViewModel::GetOTCRequest(const QModelIndex& index)
 {
    if (!index.isValid() || index.row() >= currentRequests_.size()) {
       return nullptr;
@@ -81,8 +83,10 @@ QVariant OTCRequestViewModel::headerData(int section, Qt::Orientation orientatio
    return QVariant{};
 }
 
-QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr<Chat::OTCRequestData>& otc) const
+QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr<Chat::Data>& otc) const
 {
+   assert(otc->message().has_otc_request());
+
    switch(column) {
    case ColumnSecurity:
       return QLatin1String("EUR/XBT");
@@ -94,10 +98,10 @@ QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr
       return QLatin1String("XBT");
 
    case ColumnSide:
-      return QString::fromStdString(bs::network::ChatOTCSide::toString(otc->otcRequest().side));
+      return ChatUtils::toString(otc->message().otc_request().side());
 
    case ColumnQuantity:
-      return QString::fromStdString(bs::network::OTCRangeID::toString(otc->otcRequest().amountRange));
+      return ChatUtils::toString(otc->message().otc_request().range_type());
 
    case ColumnDuration:
       {
@@ -115,8 +119,10 @@ QVariant OTCRequestViewModel::getRowData(const int column, const std::shared_ptr
    return QVariant{};
 }
 
-void OTCRequestViewModel::AddLiveOTCRequest(const std::shared_ptr<Chat::OTCRequestData>& otc)
+void OTCRequestViewModel::AddLiveOTCRequest(const std::shared_ptr<Chat::Data>& otc)
 {
+   assert(otc->message().has_otc_request());
+
    beginInsertRows(QModelIndex{}, currentRequests_.size(), currentRequests_.size());
 
    currentRequests_.emplace_back(otc);

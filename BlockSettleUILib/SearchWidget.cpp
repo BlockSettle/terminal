@@ -1,6 +1,5 @@
 #include "SearchWidget.h"
 #include "ui_SearchWidget.h"
-#include "ChatProtocol/DataObjects/UserData.h"
 #include "UserSearchModel.h"
 
 #include <QTimer>

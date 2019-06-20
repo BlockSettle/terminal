@@ -40,7 +40,7 @@ public:
       if (item && (item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
                 || item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)) {
          auto citem = static_cast<ChatContactElement*>(item);
-         currentContact_ = citem->getContactData();
+         currentContact_ = citem->getDataObject();
          prepareContactMenu();
          return exec(view_->viewport()->mapToGlobal(point));
       }
@@ -72,8 +72,13 @@ private slots:
          return;
       }
 
+      auto name = currentContact_->contact_record().display_name();
+      if (name.empty()) {
+         name = currentContact_->contact_record().contact_id();
+      }
+
       BSMessageBox confirmRemoveContact(BSMessageBox::question, tr("Remove contact")
-         , tr("Remove %1 as a contact?").arg(currentContact_->hasDisplayName() ? currentContact_->getDisplayName() : currentContact_->getContactId())
+         , tr("Remove %1 as a contact?").arg(QString::fromStdString(name))
          , tr("Are you sure you wish to remove this contact?"), view_->parentWidget());
 
       if (confirmRemoveContact.exec() != QDialog::Accepted) {
@@ -105,19 +110,19 @@ private slots:
          return;
       }
 
-      switch (currentContact_->getContactStatus()) {
+      switch (currentContact_->contact_record().status()) {
 //         case Chat::ContactStatus::
 //            addAction(tr("Add friend"), this, &ChatUsersContextMenu::onAddToContacts);
 //            break;
-         case Chat::ContactStatus::Accepted:
+         case Chat::ContactStatus::CONTACT_STATUS_ACCEPTED:
             addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
             break;
-         case Chat::ContactStatus::Incoming:
+         case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
             addAction(tr("Accept friend request"), this, &ChatUsersContextMenu::onAcceptFriendRequest);
             addAction(tr("Decline friend request"), this, &ChatUsersContextMenu::onDeclineFriendRequest);
             break;
-         case Chat::ContactStatus::Outgoing:
-         case Chat::ContactStatus::Rejected:
+         case Chat::ContactStatus::CONTACT_STATUS_OUTGOING:
+         case Chat::ContactStatus::CONTACT_STATUS_REJECTED:
             //addAction(tr("This request is not accepted"));
             addAction(tr("Remove this request"), this, &ChatUsersContextMenu::onRemoveFromContacts);
             break;
@@ -136,7 +141,7 @@ private:
    ChatItemActionsHandler* handler_;
    ChatClientUserView * view_;
    QModelIndex currentIndex_;
-   std::shared_ptr<Chat::ContactRecordData> currentContact_;
+   std::shared_ptr<Chat::Data> currentContact_;
 };
 
 
@@ -164,7 +169,7 @@ void ChatClientUserView::setActiveChatLabel(QLabel *label)
    label_ = label;
 }
 
-void ChatClientUserView::setCurrentUserChat(const QString &userId)
+void ChatClientUserView::setCurrentUserChat(const std::string &userId)
 {
    // find all indexes
    QModelIndexList indexes = model()->match(model()->index(0,0),
@@ -176,7 +181,7 @@ void ChatClientUserView::setCurrentUserChat(const QString &userId)
    // set required chat
    for (auto index : indexes) {
       if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
-         if (index.data(ChatClientDataModel::Role::ContactIdRole).toString() == userId) {
+         if (index.data(ChatClientDataModel::Role::ContactIdRole).toString().toStdString() == userId) {
             setCurrentIndex(index);
             break;
          }
@@ -237,21 +242,18 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
    auto data = static_cast<CategoryElement*>(element)->getDataObject();
    switch (element->getType()) {
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:{
-         std::shared_ptr<Chat::RoomData> room = std::dynamic_pointer_cast<Chat::RoomData>(data);
          if (label_){
-            label_->setText(QObject::tr("CHAT #") + room->getId());
+            label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->room().id()));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
-         std::shared_ptr<Chat::ContactRecordData> contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(data);
          if (label_){
-            label_->setText(QObject::tr("CHAT #") + contact->getContactId());
+            label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->contact_record().contact_id()));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
-         std::shared_ptr<Chat::UserData> room = std::dynamic_pointer_cast<Chat::UserData>(data);
          if (label_){
-            label_->setText(QObject::tr("CHAT #") + room->getUserId());
+            label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->user().user_id()));
          }
       } break;
       //XXXOTC
@@ -275,7 +277,7 @@ void ChatClientUserView::notifyCurrentChanged(CategoryElement *element)
 
 }
 
-void ChatClientUserView::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
+void ChatClientUserView::notifyMessageChanged(std::shared_ptr<Chat::Data> message)
 {
    for (auto watcher : watchers_) {
       watcher->onMessageChanged(message);
