@@ -800,7 +800,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
          break;
       }
       default:{
-         *d->mutable_message() = std::move(*messageData);
+         *d->mutable_message() = *messageData;
       }
    }
 
