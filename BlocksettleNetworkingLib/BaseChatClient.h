@@ -103,7 +103,7 @@ protected:
    void setSavedKeys(std::map<std::string, BinaryData>&& loadedKeys);
 
    virtual void OnLoginCompleted() = 0;
-   virtual void OnLofingFailed() = 0;
+   virtual void OnLogingFailed() = 0;
    virtual void OnLogoutCompleted() = 0;
 
    virtual void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& roomsList) = 0;

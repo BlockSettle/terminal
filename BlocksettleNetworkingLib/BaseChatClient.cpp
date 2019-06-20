@@ -188,7 +188,7 @@ void BaseChatClient::OnLoginReturned(const Chat::Response_Login &response)
       OnLoginCompleted();
    }
    else {
-      OnLofingFailed();
+      OnLogingFailed();
    }
 }
 
