@@ -16,6 +16,7 @@ class ChatUtils
 public:
    static const char *GlobalRoomKey;
    static const char *OtcRoomKey;
+   static const char *SupportRoomKey;
 
    static QString toString(Chat::OtcRangeType value);
    static QString toString(Chat::OtcSide value);

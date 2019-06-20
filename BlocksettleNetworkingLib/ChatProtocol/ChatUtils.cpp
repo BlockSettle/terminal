@@ -9,6 +9,7 @@
 
 const char *ChatUtils::GlobalRoomKey = "global_chat";
 const char *ChatUtils::OtcRoomKey = "otc_chat";
+const char *ChatUtils::SupportRoomKey = "support_chat";
 
 namespace {
 
