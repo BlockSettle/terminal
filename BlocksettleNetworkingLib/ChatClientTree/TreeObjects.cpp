@@ -1,8 +1,11 @@
 #include "TreeObjects.h"
 
-std::shared_ptr<Chat::RoomData> ChatRoomElement::getRoomData() const
+Chat::Data_Room* ChatRoomElement::getRoomData() const
 {
-   return std::dynamic_pointer_cast<Chat::RoomData>(getDataObject());
+   if (getDataObject()->has_room()) {
+      return getDataObject()->mutable_room();
+   }
+   return nullptr;
 }
 
 bool ChatRoomElement::isChildSupported(const TreeItem *item) const
@@ -17,14 +20,14 @@ bool ChatRoomElement::isChildSupported(const TreeItem *item) const
       }
       if (root) {
          std::string user = root->currentUser();
-         auto room = std::dynamic_pointer_cast<Chat::RoomData>(getDataObject());
-         if (room){
+         auto room = getDataObject();
+         if (room && room->has_room()) {
             auto mNode = dynamic_cast<const TreeMessageNode*>(item);
             if (mNode){
 //             bool forCurrentUser = (mNode->getMessage()->getSenderId().toStdString() == user
 //                             || mNode->getMessage()->getReceiverId().toStdString() == user);
                bool forThisElement =    /*mNode->getMessage()->getSenderId() == room->getId()
-                                     || */mNode->getMessage()->receiverId() == room->getId();
+                                     || */mNode->getMessage()->message().receiver_id() == room->room().id();
 
                byData = forThisElement;
             }
@@ -36,9 +39,13 @@ bool ChatRoomElement::isChildSupported(const TreeItem *item) const
    return byTypes && byData;
 }
 
-std::shared_ptr<Chat::ContactRecordData> ChatContactElement::getContactData() const
+Chat::Data_ContactRecord *ChatContactElement::getContactData() const
 {
-   return std::dynamic_pointer_cast<Chat::ContactRecordData>(getDataObject());
+   if (getDataObject()->has_contact_record()) {
+      return getDataObject()->mutable_contact_record();
+   }
+
+   return nullptr;
 }
 
 ChatContactElement::OnlineStatus ChatContactElement::getOnlineStatus() const
@@ -75,24 +82,20 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
    auto mNode = dynamic_cast<const DisplayableDataNode*>(item);
    if (contact && mNode) {
       auto data = mNode->getDataObject();
-      switch (data->getType()) {
-         case Chat::DataObject::Type::MessageData: {
-            auto message = std::dynamic_pointer_cast<Chat::MessageData>(data);
-            if (message) {
-               bool forCurrentUser = (message->senderId().toStdString() == user
-                                      || message->receiverId().toStdString() == user);
-               bool forThisElement = forCurrentUser &&
-                                     (  message->senderId() == contact->getContactId()
-                                      || message->receiverId() == contact->getContactId());
+      if (data->has_message()) {
+         const auto& message = data->message();
+         bool forCurrentUser = (message.sender_id() == user
+                                || message.receiver_id() == user);
+         bool forThisElement = forCurrentUser &&
+                               (  message.sender_id() == contact->contact_id()
+                                || message.receiver_id() == contact->contact_id());
 
-               byData = forThisElement;
-            }
-         }
-         break;
+         byData = forThisElement;
+      }
+
          // XXXOTC
-         // case Chat::DataObject::Type::OTCRequestData: {
-         //    auto otcRequest = std::dynamic_pointer_cast<Chat::OTCRequestData>(data);
-         //    if (otcRequest) {
+         // case Chat::Data::Type::OTCRequestData: {
+         //    if (data->message().has_request()) {
          //       bool forCurrentUser = (otcRequest->senderId() == user
          //                              || otcRequest->receiverId() == user);
 
@@ -103,9 +106,8 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
          //    }
          // }
          // break;
-         // case Chat::DataObject::Type::OTCResponseData: {
-         //    auto otcResponse = std::dynamic_pointer_cast<Chat::OTCResponseData>(data);
-         //    if (otcResponse) {
+         // case Chat::Data::Type::OTCResponseData: {
+         //    if (data->message().has_response()) {
          //       bool forCurrentUser = (otcResponse->responderId() == user
          //                              || otcResponse->requestorId() == user);
 
@@ -116,18 +118,14 @@ bool ChatContactElement::isChildSupported(const TreeItem *item) const
          //    }
          // }
          // break;
-         // case Chat::DataObject::Type::OTCUpdateData: {
-         //    auto otcUpdate = dynamic_cast<const Chat::OTCUpdateData*>(item);
-         //    if (otcUpdate && isOTCResponsePresented()) {
+         // case Chat::Data::Type::OTCUpdateData: {
+         //    if (data->message().has_update() && isOTCResponsePresented()) {
          //       bool forThisElement = getActiveOtcResponse()->serverResponseId() ==
          //                             otcUpdate->serverResponseId();
          //       byData = forThisElement;
          //    }
          // }
          // break;
-         default:
-            break;
-      }
    }
 
    return byTypes && byData;
@@ -140,12 +138,12 @@ bool ChatContactCompleteElement::OTCTradingStarted() const
 
 bool ChatContactCompleteElement::isOTCRequestor() const
 {
-   return otcRequest_->messageDirectoin() == Chat::MessageData::MessageDirection::Sent;
+   return otcRequest_->direction() == Chat::Data_Direction_SENT;
 }
 
 bool ChatContactCompleteElement::haveUpdates() const
 {
-   return lastUpdate_ != nullptr;
+   return otcLastUpdate_ != nullptr;
 }
 
 bool ChatContactCompleteElement::haveResponse() const
@@ -155,18 +153,26 @@ bool ChatContactCompleteElement::haveResponse() const
 
 
 
-std::shared_ptr<Chat::UserData> ChatUserElement::getUserData() const
+Chat::Data_User* ChatUserElement::getUserData() const
 {
-   return std::dynamic_pointer_cast<Chat::UserData>(getDataObject());;
+   auto data = getDataObject();
+   if (data->has_user()) {
+      return data->mutable_user();
+   }
+   return nullptr;
 }
 
-std::shared_ptr<Chat::UserData> ChatSearchElement::getUserData() const
+Chat::Data_User *ChatSearchElement::getUserData() const
 {
-   return std::dynamic_pointer_cast<Chat::UserData>(getDataObject());
+   auto data = getDataObject();
+   if (data->has_user()) {
+      return data->mutable_user();
+   }
+   return nullptr;
 }
 
 
-std::shared_ptr<Chat::DataObject> DisplayableDataNode::getDataObject() const
+std::shared_ptr<Chat::Data> DisplayableDataNode::getDataObject() const
 {
    return data_;
 }
@@ -176,59 +182,60 @@ void ChatContactCompleteElement::onChildAdded(TreeItem* item)
    if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode) {
       auto messageNode = dynamic_cast<TreeMessageNode*>(item);
       if (messageNode) {
-         auto messageData = messageNode->getMessage();
-         auto messagePayloadType = messageData->messageDataType();
-         auto messageDirection = messageData->messageDirectoin();
+         auto msg = messageNode->getMessage();
+         auto messageDirection = msg->direction();
 
-         if ((messageDirection != Chat::MessageData::MessageDirection::NotSet)
-             && (messagePayloadType != Chat::MessageData::RawMessageDataType::TextMessage)
-             && !messageData->loadedFromHistory()) {
-            processOTCMessage(messageData);
+         bool isOtc = msg->message().otc_case() != Chat::Data_Message::OTC_NOT_SET;
+         if (messageDirection != Chat::Data_Direction_NOT_SET && isOtc && !msg->message().loaded_from_history()) {
+            processOTCMessage(msg);
          }
       }
    }
 }
 
-void ChatContactCompleteElement::processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData)
+void ChatContactCompleteElement::processOTCMessage(const std::shared_ptr<Chat::Data>& messageData)
 {
-   auto messagePayloadType = messageData->messageDataType();
+   assert(messageData->has_message());
 
-   switch (messagePayloadType) {
-   case Chat::MessageData::RawMessageDataType::OTCReqeust:
-      otcRequest_ = std::dynamic_pointer_cast<Chat::OTCRequestData>(messageData);
-      break;
-   case Chat::MessageData::RawMessageDataType::OTCResponse:
-      otcResponse_ = std::dynamic_pointer_cast<Chat::OTCResponseData>(messageData);
-      break;
-   case Chat::MessageData::RawMessageDataType::OTCUpdate:
-      lastUpdate_ = std::dynamic_pointer_cast<Chat::OTCUpdateData>(messageData);
-      break;
-   case Chat::MessageData::RawMessageDataType::OTCCloseTrading:
+   if (messageData->message().has_otc_request()) {
+      otcRequest_ = messageData;
+      return;
+   }
+
+   if (messageData->message().has_otc_response()) {
+      otcResponse_ = messageData;
+      return;
+   }
+
+   if (messageData->message().has_otc_update()) {
+      otcLastUpdate_ = messageData;
+      return;
+   }
+
+   if (messageData->message().has_otc_close_trading()) {
       cleanupTrading();
-      break;
-   default:
-      break;
+      return;
    }
 }
 
-std::shared_ptr<Chat::OTCRequestData> ChatContactCompleteElement::getOTCRequest() const
+std::shared_ptr<Chat::Data> ChatContactCompleteElement::getOTCRequest() const
 {
    return otcRequest_;
 }
 
-std::shared_ptr<Chat::OTCResponseData> ChatContactCompleteElement::getOTCResponse() const
+std::shared_ptr<Chat::Data> ChatContactCompleteElement::getOTCResponse() const
 {
    return otcResponse_;
 }
 
-std::shared_ptr<Chat::OTCUpdateData> ChatContactCompleteElement::getLastOTCUpdate() const
+std::shared_ptr<Chat::Data> ChatContactCompleteElement::getLastOTCUpdate() const
 {
-   return lastUpdate_;
+   return otcLastUpdate_;
 }
 
 void ChatContactCompleteElement::cleanupTrading()
 {
    otcRequest_ = nullptr;
    otcResponse_ = nullptr;
-   lastUpdate_ = nullptr;
+   otcLastUpdate_ = nullptr;
 }

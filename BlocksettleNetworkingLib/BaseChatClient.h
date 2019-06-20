@@ -4,12 +4,12 @@
 #include "ZMQ_BIP15X_DataConnection.h"
 #include "DataConnectionListener.h"
 #include "ChatProtocol/ResponseHandler.h"
-#include "ChatProtocol/ChatProtocol.h"
 #include "Encryption/ChatSessionKey.h"
 #include "SecureBinaryData.h"
 #include "ChatCommonTypes.h"
 #include "ChatDB.h"
 
+#include <botan/secmem.h>
 #include <spdlog/spdlog.h>
 
 #include <queue>
@@ -41,7 +41,7 @@ public:
                              , const ZmqBIP15XDataConnection::cbNewKey &);
    void LogoutFromServer();
 
-   bool removeContact(const QString &userId);
+   bool removeContact(const std::string &userId);
 
 public:
    void OnDataReceived(const std::string& data) override;
@@ -50,43 +50,43 @@ public:
    void OnError(DataConnectionError errorCode) override;
 
 public:
-   void OnUsersList(const Chat::UsersListResponse &) override;
-   void OnMessages(const Chat::MessagesResponse &) override;
-   void OnLoginReturned(const Chat::LoginResponse &) override;
-   void OnLogoutResponse(const Chat::LogoutResponse &) override;
-   void OnSendMessageResponse(const Chat::SendMessageResponse& ) override;
-   void OnMessageChangeStatusResponse(const Chat::MessageChangeStatusResponse&) override;
-   void OnContactsActionResponseDirect(const Chat::ContactsActionResponseDirect&) override;
-   void OnContactsActionResponseServer(const Chat::ContactsActionResponseServer&) override;
-   void OnContactsListResponse(const Chat::ContactsListResponse&) override;
-   void OnChatroomsList(const Chat::ChatroomsListResponse&) override;
-   void OnRoomMessages(const Chat::RoomMessagesResponse&) override;
-   void OnSearchUsersResponse(const Chat::SearchUsersResponse&) override;
+   void OnUsersList(const Chat::Response_UsersList &) override;
+   void OnMessages(const Chat::Response_Messages &) override;
+   void OnLoginReturned(const Chat::Response_Login &) override;
+   void OnLogoutResponse(const Chat::Response_Logout &) override;
+   void OnSendMessageResponse(const Chat::Response_SendMessage& ) override;
+   void OnMessageChangeStatusResponse(const Chat::Response_MessageChangeStatus&) override;
+   void OnModifyContactsDirectResponse(const Chat::Response_ModifyContactsDirect&) override;
+   void OnModifyContactsServerResponse(const Chat::Response_ModifyContactsServer&) override;
+   void OnContactsListResponse(const Chat::Response_ContactsList&) override;
+   void OnChatroomsList(const Chat::Response_ChatroomsList&) override;
+   void OnRoomMessages(const Chat::Response_RoomMessages&) override;
+   void OnSearchUsersResponse(const Chat::Response_SearchUsers&) override;
 
 
-   void OnSessionPublicKeyResponse(const Chat::SessionPublicKeyResponse&) override;
-   void OnReplySessionPublicKeyResponse(const Chat::ReplySessionPublicKeyResponse&) override;
+   void OnSessionPublicKeyResponse(const Chat::Response_SessionPublicKey&) override;
+   void OnReplySessionPublicKeyResponse(const Chat::Response_ReplySessionPublicKey&) override;
    // Called when a peer asks for our public key.
-   void OnAskForPublicKey(const Chat::AskForPublicKeyResponse &response) override;
+   void OnAskForPublicKey(const Chat::Response_AskForPublicKey &response) override;
 
    // Called when we asked for a public key of peer, and got result.
-   void OnSendOwnPublicKey(const Chat::SendOwnPublicKeyResponse &response) override;
+   void OnSendOwnPublicKey(const Chat::Response_SendOwnPublicKey &response) override;
 
 protected:
 
    bool getContacts(ContactRecordDataList &contactList);
-   bool addOrUpdateContact(const QString &userId,
+   bool addOrUpdateContact(const std::string &userId,
                            Chat::ContactStatus status,
-                           const QString &userName = QStringLiteral(""));
+                           const std::string &userName = "");
 
-   bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::MessageData>& message);
-   std::shared_ptr<Chat::MessageData> decryptIESMessage(const std::shared_ptr<Chat::MessageData>& message);
+   bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::Data>& message);
+   std::shared_ptr<Chat::Data> decryptIESMessage(const std::shared_ptr<Chat::Data>& message);
 
 public:
-   bool sendSearchUsersRequest(const QString& userIdPattern);
-   QString deriveKey(const QString& email) const;
+   bool sendSearchUsersRequest(const std::string& userIdPattern);
+   std::string deriveKey(const std::string& email) const;
 
-   QString getUserId() const;
+   std::string getUserId() const;
 
 private slots:
    void onCleanupConnection();
@@ -100,42 +100,42 @@ protected:
    virtual std::string        getChatServerHost() const = 0;
    virtual std::string        getChatServerPort() const = 0;
 
-   void setSavedKeys(std::map<QString, BinaryData>&& loadedKeys);
+   void setSavedKeys(std::map<std::string, BinaryData>&& loadedKeys);
 
    virtual void OnLoginCompleted() = 0;
    virtual void OnLofingFailed() = 0;
    virtual void OnLogoutCompleted() = 0;
 
-   virtual void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::RoomData>>& roomsList) = 0;
-   virtual void onUserListChanged(Chat::UsersListResponse::Command command, const std::vector<std::string>& userList) = 0;
-   virtual void onContactListLoaded(const std::vector<std::shared_ptr<Chat::ContactRecordData>>& remoteContacts) = 0;
+   virtual void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& roomsList) = 0;
+   virtual void onUserListChanged(Chat::Command command, const std::vector<std::string>& userList) = 0;
+   virtual void onContactListLoaded(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts) = 0;
 
-   virtual void onSearchResult(const std::vector<std::shared_ptr<Chat::UserData>>& userData) = 0;
+   virtual void onSearchResult(const std::vector<std::shared_ptr<Chat::Data>>& userData) = 0;
 
    // either new message received or ours delivered
-   virtual void onDMMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) = 0;
-   virtual void onRoomMessageReceived(const std::shared_ptr<Chat::MessageData>& messageData) = 0;
+   virtual void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
+   virtual void onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
 
-   virtual void onMessageSent(const QString& receiverId, const QString& localId, const QString& serverId) = 0;
-   virtual void onMessageStatusChanged(const QString& chatId, const QString& messageId, int newStatus) = 0;
+   virtual void onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId) = 0;
+   virtual void onMessageStatusChanged(const std::string& chatId, const std::string& messageId, int newStatus) = 0;
 
-   virtual void onContactAccepted(const QString& contactId) = 0;
-   virtual void onContactRejected(const QString& contactId) = 0;
-   virtual void onFriendRequest(const QString& userId, const QString& contactId, const BinaryData& pk) = 0;
-   virtual void onContactRemove(const QString& contactId) = 0;
+   virtual void onContactAccepted(const std::string& contactId) = 0;
+   virtual void onContactRejected(const std::string& contactId) = 0;
+   virtual void onFriendRequest(const std::string& userId, const std::string& contactId, const BinaryData& pk) = 0;
+   virtual void onContactRemove(const std::string& contactId) = 0;
 
 protected:
-   bool sendFriendRequestToServer(const QString &friendUserId);
-   bool sendAcceptFriendRequestToServer(const QString &friendUserId);
-   bool sendDeclientFriendRequestToServer(const QString &friendUserId);
-   bool sendUpdateMessageState(const std::shared_ptr<Chat::MessageData>& message);
+   bool sendFriendRequestToServer(const std::string &friendUserId);
+   bool sendAcceptFriendRequestToServer(const std::string &friendUserId);
+   bool sendDeclientFriendRequestToServer(const std::string &friendUserId);
+   bool sendUpdateMessageState(const std::shared_ptr<Chat::Data>& message);
 
-   std::shared_ptr<Chat::MessageData> sendMessageDataRequest(const std::shared_ptr<Chat::MessageData>& message
-                                                             , const QString &receiver);
+   std::shared_ptr<Chat::Data> sendMessageDataRequest(const std::shared_ptr<Chat::Data>& message
+      , const std::string &receiver);
 
-   bool sendRequest(const std::shared_ptr<Chat::Request>& request);
+   bool sendRequest(const Chat::Request& request);
 
-   bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const std::string& encodedPublicKey);
+   bool decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const BinaryData& encodedPublicKey);
 
    void retrySendQueuedMessages(const std::string userId);
    void eraseQueuedMessages(const std::string userId);
@@ -148,14 +148,14 @@ protected:
 private:
    std::shared_ptr<ConnectionManager>     connectionManager_;
 
-   std::map<QString, BinaryData>                      contactPublicKeys_;
+   std::map<std::string, BinaryData>                  contactPublicKeys_;
    Chat::ChatSessionKeyPtr                            chatSessionKeyPtr_;
    std::shared_ptr<ZmqBIP15XDataConnection>           connection_;
    std::shared_ptr<UserHasher>                        hasher_;
-   std::map<QString, Botan::SecureVector<uint8_t>>    userNonces_;
+   std::map<std::string, Botan::SecureVector<uint8_t>>    userNonces_;
    // Queue of messages to be sent for each receiver, once we received the public key.
-   using messages_queue = std::queue<std::shared_ptr<Chat::MessageData> >;
-   std::map<QString, messages_queue>    enqueued_messages_;
+   using messages_queue = std::queue<std::shared_ptr<Chat::Data> >;
+   std::map<std::string, messages_queue>    enqueued_messages_;
 
    std::string       currentJwt_;
 };
