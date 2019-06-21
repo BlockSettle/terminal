@@ -49,20 +49,17 @@ const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)
 
 bool IsOTCChatRoom(const std::string& chatRoom)
 {
-   static const std::string targetRoomName = ChatUtils::OtcRoomKey;
-   return chatRoom == targetRoomName;
+   return chatRoom == ChatUtils::OtcRoomKey;
 }
 
 bool IsGlobalChatRoom(const std::string& chatRoom)
 {
-   static const std::string targetRoomName = ChatUtils::GlobalRoomKey;
-   return chatRoom == targetRoomName;
+   return chatRoom == ChatUtils::GlobalRoomKey;
 }
 
 bool IsSupportChatRoom(const std::string& chatRoom)
 {
-   static const std::string targetRoomName = ChatUtils::SupportRoomKey;
-   return chatRoom == targetRoomName;
+   return chatRoom == ChatUtils::SupportRoomKey;
 }
 
 
