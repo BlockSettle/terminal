@@ -234,6 +234,9 @@ bool HeadlessContainerListener::onRequestPacket(const std::string &clientId, hea
    case headless::ExtendAddressChainType:
       return onExtAddrChain(clientId, packet);
 
+   case headless::SyncNewAddressType:
+      return onSyncNewAddr(clientId, packet);
+
    case headless::ExecCustomDialogRequestType:
       return onExecCustomDialog(clientId, packet);
 
@@ -1401,7 +1404,6 @@ bool HeadlessContainerListener::onExtAddrChain(const std::string &clientId, head
          auto addrData = response.add_addresses();
          addrData->set_address(addr.display());
          addrData->set_index(index);
-         logger_->debug("[{}] {} = {}", __func__, index, addr.display());
       }
 
       headless::RequestPacket packet;
@@ -1409,9 +1411,37 @@ bool HeadlessContainerListener::onExtAddrChain(const std::string &clientId, head
       packet.set_data(response.SerializeAsString());
       packet.set_type(headless::ExtendAddressChainType);
       sendData(packet.SerializeAsString(), clientId);
-      logger_->debug("[{}] data sent", __func__);
    };
-   std::thread(lbdSend).detach();
+   lbdSend();
+   return true;
+}
+
+bool HeadlessContainerListener::onSyncNewAddr(const std::string &clientId, headless::RequestPacket packet)
+{
+   headless::SyncNewAddressRequest request;
+   if (!request.ParseFromString(packet.data())) {
+      logger_->error("[{}] failed to parse request", __func__);
+      return false;
+   }
+   const auto wallet = walletsMgr_->getWalletById(request.wallet_id());
+   if (wallet == nullptr) {
+      logger_->error("[{}] wallet with ID {} not found", __func__, request.wallet_id());
+      return false;
+   }
+
+   headless::ExtendAddressChainResponse response;
+   response.set_wallet_id(wallet->walletId());
+
+   for (int i = 0; i < request.addresses_size(); ++i) {
+      const auto inData = request.addresses(i);
+      auto outData = response.add_addresses();
+      outData->set_address(wallet->synchronizeUsedAddressChain(inData.index()
+         , static_cast<AddressEntryType>(inData.aet())).first.display());
+      outData->set_index(inData.index());
+   }
+
+   packet.set_data(response.SerializeAsString());
+   sendData(packet.SerializeAsString(), clientId);
    return true;
 }
 

@@ -113,15 +113,9 @@ public:
       const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) = 0;
 
    virtual void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &)
-   {
-      throw std::runtime_error("needs implemented, look for example in InprocSigner");
-   }
+      , const std::function<void(const bs::Address &)> &);
    virtual void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
-      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true)
-   {
-      throw std::runtime_error("needs implemented, look for example in InprocSigner");
-   }
+      , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) = 0;
 
    const OpMode &opMode() const { return mode_; }
    virtual bool hasUI() const { return false; }

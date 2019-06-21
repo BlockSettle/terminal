@@ -71,8 +71,6 @@ public:
    void syncAddressBatch(const std::string &walletId, const std::set<BinaryData>& addrSet,
       std::function<void(bs::sync::SyncState)> cb) override;
 
-   void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &) override;
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;

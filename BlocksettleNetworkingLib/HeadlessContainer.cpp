@@ -796,6 +796,32 @@ void HeadlessContainer::extendAddressChain(
    cbExtAddrsMap_[reqId] = cb;
 }
 
+void HeadlessContainer::syncNewAddresses(const std::string &walletId
+   , const std::vector<std::pair<std::string, AddressEntryType>> &inData
+   , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &cb
+   , bool persistent)
+{
+   headless::SyncNewAddressRequest request;
+   request.set_wallet_id(walletId);
+   for (const auto &in : inData) {
+      auto addrData = request.add_addresses();
+      addrData->set_index(in.first);
+      addrData->set_aet(in.second);
+   }
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::SyncNewAddressType);
+   packet.set_data(request.SerializeAsString());
+   const auto reqId = Send(packet);
+   if (!reqId) {
+      if (cb) {
+         cb({});
+      }
+      return;
+   }
+   cbExtAddrsMap_[reqId] = cb;
+}
+
 void HeadlessContainer::syncAddressBatch(
    const std::string &walletId, const std::set<BinaryData>& addrSet,
    std::function<void(bs::sync::SyncState)> cb)
@@ -1024,7 +1050,6 @@ void HeadlessContainer::ProcessExtAddrChain(unsigned int id, const std::string &
       emit Error(id, "no callback found for id " + std::to_string(id));
       return;
    }
-   logger_->debug("[{}]", __func__);
    std::vector<std::pair<bs::Address, std::string>> result;
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto &addr = response.addresses(i);
@@ -1297,6 +1322,7 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
       break;
 
    case headless::ExtendAddressChainType:
+   case headless::SyncNewAddressType:
       ProcessExtAddrChain(packet.id(), packet.data());
       break;
 

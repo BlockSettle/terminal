@@ -106,8 +106,8 @@ private:
    bool onSyncComment(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onSyncAddresses(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onExtAddrChain(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
+   bool onSyncNewAddr(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    bool onExecCustomDialog(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
-   bool onChangePassword(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
 
    bool AuthResponse(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
    void SignTXResponse(const std::string &clientId, unsigned int id, Blocksettle::Communication::headless::RequestType reqType
@@ -117,8 +117,6 @@ private:
       , const std::shared_ptr<bs::core::hd::Wallet> &wallet = nullptr);
    void GetHDWalletInfoResponse(const std::string &clientId, unsigned int id, const std::string &walletId
       , const std::shared_ptr<bs::core::hd::Wallet> &, const std::string &error = {});
-   void ChangePasswordResponse(const std::string &clientId, unsigned int id, 
-      const std::string &walletId, bool ok);
    void SyncAddrsResponse(const std::string &clientId, unsigned int id, const std::string &walletId, bs::sync::SyncState);
    void AutoSignActivatedEvent(const std::string &walletId, bool active);
 

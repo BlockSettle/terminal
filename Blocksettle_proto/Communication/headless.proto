@@ -30,6 +30,7 @@ enum RequestType
    // Sent from headless signer when wallet added, removed or changed somehow (request body is empty)
    WalletsListUpdatedType      = 22;
    ExtendAddressChainType      = 23;
+   SyncNewAddressType	       = 24;
 }
 
 message RequestPacket
@@ -395,4 +396,16 @@ message CustomDialogRequest
 {
    string dialogName = 1;
    bytes  variantData = 2;
+}
+
+
+message SyncNewAddressRequest
+{
+   message Address {
+      string index = 1;
+      uint32 aet = 2;
+   }
+   string wallet_id = 1;
+   repeated Address addresses = 2;
+   
 }
