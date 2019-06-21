@@ -3,7 +3,8 @@
 
 #include "ChatSessionKeyData.h"
 
-#include <list>
+#include <atomic>
+#include <unordered_map>
 #include <memory>
 
 namespace spdlog
@@ -12,13 +13,11 @@ namespace spdlog
 }
 
 namespace Chat {
-
-   typedef std::list<ChatSessionKeyDataPtr> ChatSessionDataPtrList;
-
    class ChatSessionKey
    {
    public:
-      ChatSessionKey(const std::shared_ptr<spdlog::logger> &logger);
+      explicit ChatSessionKey(const std::shared_ptr<spdlog::logger> &logger);
+
       ChatSessionKeyDataPtr findSessionForUser(const std::string &receiverId) const;
       ChatSessionKeyDataPtr generateLocalKeysForUser(const std::string &receiverId);
       bool updateRemotePublicKeyForUser(const std::string &receiverId, const BinaryData &remotePublicKey) const;
@@ -29,7 +28,8 @@ namespace Chat {
       void clearAll();
 
    private:
-      ChatSessionDataPtrList _chatSessionKeyDataList;
+      mutable std::atomic_flag                                 lock_ = ATOMIC_FLAG_INIT;
+      std::unordered_map<std::string, ChatSessionKeyDataPtr>   chatSessionKeyDataList_;
       std::shared_ptr<spdlog::logger> logger_ = nullptr;
    };
 
