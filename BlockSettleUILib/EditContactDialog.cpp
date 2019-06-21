@@ -19,10 +19,13 @@ EditContactDialog::EditContactDialog(const QString &contactId
 
    refillFields();
 
+   connect(ui_->saveButton, &QPushButton::clicked, this, &EditContactDialog::accept);
+   connect(ui_->cancelButton, &QPushButton::clicked, this, &EditContactDialog::reject);
+
    if (displayName_.isEmpty()) {
       ui_->nameOptionalLineEdit->setFocus();
    } else {
-      ui_->buttonBox->setFocus();
+      ui_->saveButton->setFocus();
    }
 }
 
