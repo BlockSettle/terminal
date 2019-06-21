@@ -244,7 +244,7 @@ bool BaseChatClient::sendAcceptFriendRequestToServer(const std::string &friendUs
       auto d = request.mutable_modify_contacts_server();
       d->set_sender_id(currentUserId_);
       d->set_contact_id(friendUserId);
-      d->set_action(Chat::CONTACTS_ACTION_SERVER_UPDATE);
+      d->set_action(Chat::CONTACTS_ACTION_SERVER_ADD);
       d->set_status(Chat::CONTACT_STATUS_ACCEPTED);
       d->set_contact_pub_key(publicKey.toBinStr());
       sendRequest(request);
