@@ -923,8 +923,7 @@ void BaseChatClient::onFriendRequestAccepted(const std::string &contactId, Binar
    d->set_contact_id(contactId);
    d->set_action(Chat::CONTACTS_ACTION_SERVER_UPDATE);
    d->set_status(Chat::CONTACT_STATUS_ACCEPTED);
-   //TODO: Check if it is correct
-   d->set_contact_pub_key(publicKey.toCharPtr(), publicKey.getSize());
+   d->set_contact_pub_key(publicKey.toBinStr());
    sendRequest(request);
 
    // reprocess message again
