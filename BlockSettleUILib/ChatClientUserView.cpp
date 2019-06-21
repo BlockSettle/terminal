@@ -157,6 +157,7 @@ ChatClientUserView::ChatClientUserView(QWidget *parent)
    // expand/collapse categories only on single click
    setExpandsOnDoubleClick(false);
    connect(this, &QTreeView::clicked, this, &ChatClientUserView::onClicked);
+   connect(this, &QTreeView::doubleClicked, this, &ChatClientUserView::onDoubleClicked);
 }
 
 void ChatClientUserView::addWatcher(ViewItemWatcher * watcher)
@@ -233,6 +234,19 @@ void ChatClientUserView::onClicked(const QModelIndex &index)
          else {
             expand(index);
          }
+      }
+   }
+}
+
+void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
+{
+   if (index.isValid()) {
+      auto proxyModel = qobject_cast<const QAbstractProxyModel*>(index.model());
+      QModelIndex i = proxyModel ? proxyModel->mapToSource(index) : index;
+      TreeItem *item = static_cast<TreeItem*>(i.internalPointer());
+      if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+         // TODO: Edit contact
+         qDebug() << "Edit item:" << i;
       }
    }
 }

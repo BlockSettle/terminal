@@ -537,9 +537,9 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
          break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
          //Only contact record could be edited
-         if (!current_flags.testFlag(Qt::ItemIsEditable)){
+         /*if (!current_flags.testFlag(Qt::ItemIsEditable)){
             current_flags.setFlag(Qt::ItemIsEditable);
-         }
+         }*/
          //no break needed
          [[clang::fallthrough]];
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
