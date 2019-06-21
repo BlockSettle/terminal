@@ -30,31 +30,34 @@ QString AddressListModel::AddressRow::getAddress() const
 AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , QObject* parent, AddressType addrType)
    : QAbstractTableModel(parent)
+   , walletsMgr_(walletsMgr)
    , addrType_(addrType)
    , processing_(false)
 {
-   connect(walletsMgr.get(), &bs::sync::WalletsManager::walletsReady, this
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this
            , &AddressListModel::updateData);
-   connect(walletsMgr.get(), &bs::sync::WalletsManager::blockchainEvent, this
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::blockchainEvent, this
            , &AddressListModel::updateData);
-   connect(walletsMgr.get(), &bs::sync::WalletsManager::walletBalanceUpdated
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated
       , this, &AddressListModel::updateData);
 }
 
-bool AddressListModel::setWallets(const Wallets &wallets)
+bool AddressListModel::setWallets(const Wallets &wallets, bool force)
 {
-   for (const auto &wallet : wallets_) {
-      disconnect(wallet.get(), &bs::sync::Wallet::addressAdded, this, &AddressListModel::updateData);
+   if ((wallets != wallets_) || force) {
+      for (const auto &wallet : wallets_) {
+         disconnect(wallet.get(), &bs::sync::Wallet::addressAdded, this, &AddressListModel::updateData);
+      }
+
+      wallets_ = wallets;
+      for (const auto &wallet : wallets_) {
+         connect(wallet.get(), &bs::sync::Wallet::addressAdded, this
+            , &AddressListModel::updateData, Qt::QueuedConnection);
+      }
+
+      updateData();
    }
 
-   wallets_ = wallets;
-   for (const auto &wallet : wallets_) {
-      connect(wallet.get(), &bs::sync::Wallet::addressAdded, this
-              , &AddressListModel::updateData
-              , static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
-   }
-
-   updateData();
    return true;
 }
 

@@ -253,6 +253,9 @@ void TransactionsViewModel::onNewBlock(unsigned int)
 void TransactionsViewModel::loadAllWallets()
 {
    const auto &cbWalletsLD = [this](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
+      if (!initialLoadCompleted_) {
+         return;
+      }
       ledgerDelegate_ = delegate;
       QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
    };

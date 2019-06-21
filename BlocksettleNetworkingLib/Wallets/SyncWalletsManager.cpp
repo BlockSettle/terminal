@@ -516,15 +516,15 @@ void WalletsManager::onWalletReady(const QString &walletId)
    if (rootWallet) {
       const auto &itWallet = newWallets_.find(rootWallet->walletId());
       if (itWallet != newWallets_.end()) {
+         newWallets_.erase(itWallet);
          rootWallet->synchronize([this, walletId] {
             const auto wallet = getWalletById(walletId.toStdString());
             if (wallet) {
-               QMetaObject::invokeMethod(this, [wallet] {
+               QMetaObject::invokeMethod(wallet.get(), [wallet] {
                   emit wallet->addressAdded();
                });
             }
          });
-         newWallets_.erase(itWallet);
       }
    }
    if (armory_->state() != ArmoryState::Ready) {

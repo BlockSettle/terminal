@@ -84,7 +84,7 @@ namespace bs {
             std::shared_ptr<ResolverFeed> getResolver(void) const;
 
             const bs::hd::Path &path() const { return path_; }
-            bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
+            bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1) & ~0x80000000); }
             virtual BinaryData serialize() const;
 
             static std::pair<std::shared_ptr<hd::Leaf>, BinaryData> deserialize(

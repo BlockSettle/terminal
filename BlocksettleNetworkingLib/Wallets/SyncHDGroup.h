@@ -51,7 +51,7 @@ namespace bs {
 
             virtual bs::core::wallet::Type type() const { return bs::core::wallet::Type::Bitcoin; }
             const bs::hd::Path &path() const { return path_; }
-            bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1)); }
+            bs::hd::Path::Elem index() const { return static_cast<bs::hd::Path::Elem>(path_.get(-1) & ~0x80000000); }
             std::string name() const { return name_; }
             std::string description() const { return desc_; }
 

@@ -34,14 +34,20 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
    const auto &cbProcess = [this, cbDone](HDWalletData data)
    {
       for (const auto &grpData : data.groups) {
-         auto group = createGroup(grpData.type, grpData.extOnly);
+         auto group = getGroup(grpData.type);
+         if (!group) {
+            group = createGroup(grpData.type, grpData.extOnly);
+         }
          if (!group) {
             LOG(logger_, error, "[hd::Wallet::synchronize] failed to create group {}", (uint32_t)grpData.type);
             continue;
          }
 
          for (const auto &leafData : grpData.leaves) {
-            auto leaf = group->createLeaf(leafData.index, leafData.id);
+            auto leaf = group->getLeaf(leafData.index);
+            if (!leaf) {
+               leaf = group->createLeaf(leafData.index, leafData.id);
+            }
             if (!leaf) {
                LOG(logger_, error, "[hd::Wallet::synchronize] failed to create leaf {}/{} with id {}"
                   , (uint32_t)grpData.type, leafData.index, leafData.id);
