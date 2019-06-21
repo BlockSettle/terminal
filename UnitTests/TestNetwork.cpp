@@ -463,7 +463,7 @@ TEST(TestNetwork, ZMQ_BIP15X_Rekey)
 }
 
 
-static bool await(std::atomic<int>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 10000 }) {
+static bool await(std::atomic<int>& what, std::chrono::milliseconds deadline = std::chrono::milliseconds{ 1000 }) {
     const auto napTime = 1ms;
     for (auto elapsed = 0ms; elapsed < deadline; elapsed += napTime) {
         if (what.load()) {
