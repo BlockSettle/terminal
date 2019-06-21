@@ -72,11 +72,12 @@ void ChatClientUsersViewItemDelegate::paintRoomsElement(QPainter *painter, const
    itemOption.palette.setColor(QPalette::Text, itemStyle_.colorRoom());
    const bool newMessage = index.data(Role::ChatNewMessageRole).toBool();
    const bool isGlobalRoom = (index.data(ChatClientDataModel::Role::RoomIdRole).toString().toStdString() == ChatUtils::GlobalRoomKey);
+   const bool isSupportRoom = (index.data(ChatClientDataModel::Role::RoomIdRole).toString().toStdString() == ChatUtils::SupportRoomKey);
    itemOption.text = index.data(Role::RoomTitleRole).toString();
    QStyledItemDelegate::paint(painter, itemOption, index);
 
    // draw dot
-   if (newMessage && !isGlobalRoom) {
+   if (newMessage && !isGlobalRoom && !isSupportRoom) {
       QFontMetrics fm(itemOption.font, painter->device());
       auto textRect = fm.boundingRect(itemOption.rect, 0, itemOption.text);
       const QPixmap pixmap(kDotPathname);
