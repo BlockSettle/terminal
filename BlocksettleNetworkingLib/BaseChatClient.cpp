@@ -633,7 +633,12 @@ bool BaseChatClient::addOrUpdateContact(const std::string &userId, Chat::Contact
    d->set_user_id(userId);
    d->set_contact_id(userId);
    d->set_status(status);
-   d->set_display_name(userName);
+
+   if (!userName.empty()) {
+      d->set_display_name(userName);
+   } else {
+      d->set_display_name(d->contact_id());
+   }
 
    if (chatDb_->isContactExist(userId))
    {
