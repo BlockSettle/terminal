@@ -96,8 +96,10 @@ void ChatClient::readDatabase()
       auto contact = std::make_shared<Chat::Data>();
       auto d = contact->mutable_contact_record();
       d->set_user_id(model_->currentUser());
+      d->set_contact_id(c.contact_id());
       d->set_status(c.status());
       d->set_display_name(c.display_name());
+      d->set_public_key(c.public_key());
       model_->insertContactObject(contact);
 
       retrieveUserMessages(c.contact_id());
