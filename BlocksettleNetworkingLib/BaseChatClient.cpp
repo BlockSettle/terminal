@@ -837,7 +837,6 @@ std::shared_ptr<Chat::Data> BaseChatClient::encryptMessageToSendAEAD(const std::
          d->set_sender_session_pub_key(encryptedLocalPublicKey.toBinStr());
          sendRequest(request);
 
-         sendRequest(request);
          return messageData;
       } catch (std::exception& e) {
          logger_->error("[ChatClient::sendMessageDataRequest] Failed to encrypt msg by ies {}", e.what());
