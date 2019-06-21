@@ -91,8 +91,10 @@ public:
 
    void disconnected() override;
 
+   void resetConnection() { connection_ = nullptr; };
+
 private:
-   ArmoryConnection * connection_;
+   ArmoryConnection * connection_ = nullptr;
    std::shared_ptr<spdlog::logger>  logger_;
 };
 

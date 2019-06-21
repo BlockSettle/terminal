@@ -49,6 +49,7 @@ ArmoryConnection::~ArmoryConnection() noexcept
       actCV_.notify_one();
    }
    stopServiceThreads();
+   cbRemote_->resetConnection();
 
    if (maintThread_.joinable()) {
       maintThread_.join();
@@ -932,14 +933,19 @@ void ArmoryCallback::progress(BDMPhase phase,
    logger_->debug("[{}] {}, {} wallets, {} ({}), {} seconds remain", __func__
                   , (int)phase, walletIdVec.size(), progress, progressNumeric
                   , secondsRem);
-   connection_->addToMaintQueue([phase, progress, secondsRem, progressNumeric]
-   (ArmoryCallbackTarget *tgt) {
-      tgt->onLoadProgress(phase, progress, secondsRem, progressNumeric);
-   });
+   if (connection_) {
+      connection_->addToMaintQueue([phase, progress, secondsRem, progressNumeric]
+      (ArmoryCallbackTarget *tgt) {
+         tgt->onLoadProgress(phase, progress, secondsRem, progressNumeric);
+      });
+   }
 }
 
 void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 {
+   if (!connection_) {
+      return;
+   }
    if (block > 0) {
       connection_->setTopBlock(static_cast<unsigned int>(block));
    }
@@ -1010,9 +1016,11 @@ void ArmoryCallback::run(BDMAction action, void* ptr, int block)
 void ArmoryCallback::disconnected()
 {
    logger_->debug("[{}]", __func__);
-   connection_->regThreadRunning_ = false;
-   if (connection_->state() != ArmoryState::Cancelled) {
-      connection_->setState(ArmoryState::Offline);
+   if (connection_) {
+      connection_->regThreadRunning_ = false;
+      if (connection_->state() != ArmoryState::Cancelled) {
+         connection_->setState(ArmoryState::Offline);
+      }
    }
 }
 
