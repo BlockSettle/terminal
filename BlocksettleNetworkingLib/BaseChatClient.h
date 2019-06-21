@@ -146,7 +146,7 @@ protected:
    bool sendUpdateMessageState(const std::shared_ptr<Chat::Data>& message);
 
    std::shared_ptr<Chat::Data> sendMessageDataRequest(const std::shared_ptr<Chat::Data>& message
-                                                      , const std::string &receiver);
+                                                      , const std::string &receiver, bool isFromQueue = false);
 
    bool sendRequest(const Chat::Request& request);
 

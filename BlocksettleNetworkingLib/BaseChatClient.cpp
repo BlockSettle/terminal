@@ -618,12 +618,7 @@ void BaseChatClient::OnSendOwnPublicKey(const Chat::Response_SendOwnPublicKey &r
    contactPublicKeys_[peerId] = BinaryData(response.sending_node_pub_key());
    chatDb_->addKey(peerId, BinaryData(response.sending_node_pub_key()));
 
-   // Run over enqueued messages if any, and try to send them all now.
-   messages_queue& messages = enqueued_messages_[response.sending_node_id()];
-   while (!messages.empty()) {
-      sendMessageDataRequest(messages.front(), response.sending_node_id());
-      messages.pop();
-   }
+   retrySendQueuedMessages(response.sending_node_id());
 }
 
 bool BaseChatClient::getContacts(ContactRecordDataList &contactList)
@@ -695,19 +690,24 @@ void BaseChatClient::OnReplySessionPublicKeyResponse(const Chat::Response_ReplyS
       return;
    }
 
-   // Run over enqueued messages if any, and try to send them all now.
-   messages_queue &messages = enqueued_messages_[response.sender_id()];
-
-   while (!messages.empty()) {
-      sendMessageDataRequest(messages.front(), response.sender_id());
-      messages.pop();
-   }
+   retrySendQueuedMessages(response.sender_id());
 }
 
 std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::shared_ptr<Chat::Data>& messageData
-                                                                   , const std::string &receiver)
+                                                                   , const std::string &receiver, bool isFromQueue)
 {
    messageData->set_direction(Chat::Data_Direction_SENT);
+
+   if (!isFromQueue) {
+      if (!encryptByIESAndSaveMessageInDb(messageData))
+      {
+         logger_->error("[BaseChatClient::sendMessageDataRequest] failed to encrypt. discarding message");
+         ChatUtils::messageFlagSet(messageData->mutable_message(), Chat::Data_Message_State_INVALID);
+         return messageData;
+      }
+
+      onDMMessageReceived(messageData);
+   }
 
    if (!chatDb_->isContactExist(receiver)) {
       //make friend request before sending direct message.
@@ -746,35 +746,38 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
       return messageData;
    }
 
-   if (!encryptByIESAndSaveMessageInDb(messageData))
-   {
-      logger_->error("[BaseChatClient::sendMessageDataRequest] failed to encrypt. discarding message");
-      ChatUtils::messageFlagSet(messageData->mutable_message(), Chat::Data_Message_State_INVALID);
-      return messageData;
-   }
-
-   onDMMessageReceived(messageData);
-
-   Chat::Request request;
-   auto d = request.mutable_send_message();
-
    switch (resolveMessageEncryption(messageData)) {
       case Chat::Data_Message_Encryption_AEAD: {
          auto msgEncrypted = encryptMessageToSendAEAD(receiver, contactPublicKeyIterator->second, messageData);
-         *d->mutable_message() = std::move(*msgEncrypted);
+         if (msgEncrypted) {
+            Chat::Request request;
+            auto d = request.mutable_send_message();
+            *d->mutable_message() = std::move(*msgEncrypted);
+            sendRequest(request);
+         } else {
+            return messageData;
+         }
          break;
       }
       case Chat::Data_Message_Encryption_IES:{
          auto msgEncrypted = encryptMessageToSendIES(contactPublicKeyIterator->second, messageData);
-         *d->mutable_message() = std::move(*msgEncrypted);
+         if (msgEncrypted) {
+            Chat::Request request;
+            auto d = request.mutable_send_message();
+            *d->mutable_message() = std::move(*msgEncrypted);
+            sendRequest(request);
+         } else {
+            return messageData;
+         }
          break;
       }
       default:{
+         Chat::Request request;
+         auto d = request.mutable_send_message();
          *d->mutable_message() = *messageData;
+         sendRequest(request);
       }
    }
-
-   sendRequest(request);
 
    return messageData;
 }
@@ -785,7 +788,7 @@ void BaseChatClient::retrySendQueuedMessages(const std::string userId)
    messages_queue& messages = enqueued_messages_[userId];
 
    while (!messages.empty()) {
-      sendMessageDataRequest(messages.front(), userId);
+      sendMessageDataRequest(messages.front(), userId, true);
       messages.pop();
    }
 }
@@ -827,8 +830,8 @@ std::shared_ptr<Chat::Data> BaseChatClient::encryptMessageToSendAEAD(const std::
       try {
          BinaryData encryptedLocalPublicKey = chatSessionKeyPtr_->iesEncryptLocalPublicKey(receiver, remotePublicKey);
 
-         std::string encryptedString = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encryptedLocalPublicKey.getPtr()),
-                                                                      int(encryptedLocalPublicKey.getSize())).toBase64()).toStdString();
+//         std::string encryptedString = QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(encryptedLocalPublicKey.getPtr()),
+//                                                                      int(encryptedLocalPublicKey.getSize())).toBase64()).toStdString();
 
          Chat::Request request;
          auto d = request.mutable_session_public_key();
@@ -837,10 +840,10 @@ std::shared_ptr<Chat::Data> BaseChatClient::encryptMessageToSendAEAD(const std::
          d->set_sender_session_pub_key(encryptedLocalPublicKey.toBinStr());
          sendRequest(request);
 
-         return messageData;
+         return nullptr;
       } catch (std::exception& e) {
          logger_->error("[ChatClient::sendMessageDataRequest] Failed to encrypt msg by ies {}", e.what());
-         return messageData;
+         return nullptr;
       }
    }
 
@@ -869,7 +872,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::encryptMessageToSendAEAD(const std::
    if (!msgEncrypted) {
       logger_->error("[BaseChatClient::{}] can't encode data", __func__);
       ChatUtils::messageFlagSet(messageData->mutable_message(), Chat::Data_Message_State_INVALID);
-      return messageData;
+      return nullptr;
    }
 
    return msgEncrypted;
@@ -882,7 +885,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::encryptMessageToSendIES(BinaryData &
    if (!msgEncrypted) {
       logger_->error("[BaseChatClient::{}] failed to encrypt msg by ies", __func__);
       ChatUtils::messageFlagSet(messageData->mutable_message(), Chat::Data_Message_State_INVALID);
-      return messageData;
+      return nullptr;
    }
 
    return msgEncrypted;
