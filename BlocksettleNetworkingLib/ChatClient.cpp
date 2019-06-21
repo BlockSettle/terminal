@@ -385,7 +385,15 @@ void ChatClient::onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecor
 
 void ChatClient::onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord)
 {
-   //TODO: Edit contact
+   if (!crecord) {
+      return;
+   }
+
+   auto contactRecord = crecord->mutable_contact_record();
+   addOrUpdateContact(contactRecord->contact_id()
+                      , contactRecord->status()
+                      , contactRecord->display_name());
+   model_->notifyContactChanged(crecord);
 }
 
 bool ChatClient::onActionIsFriend(const std::string& userId)

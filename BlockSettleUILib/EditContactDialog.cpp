@@ -3,14 +3,14 @@
 
 const QString kDateTimeStringFormat = QStringLiteral("yyyy-MM-dd");
 
-EditContactDialog::EditContactDialog(const QString &userId
+EditContactDialog::EditContactDialog(const QString &contactId
                                      , const QString &displayName
                                      , const QDateTime &joinDate
                                      , const QString &idKey
                                      , QWidget *parent) :
    QDialog(parent)
  , ui_(new Ui::EditContactDialog())
- , userId_(userId)
+ , contactId_(contactId)
  , displayName_(displayName)
  , joinDate_(joinDate)
  , idKey_(idKey)
@@ -28,9 +28,9 @@ EditContactDialog::EditContactDialog(const QString &userId
 
 EditContactDialog::~EditContactDialog() noexcept = default;
 
-QString EditContactDialog::userId() const
+QString EditContactDialog::contactId() const
 {
-   return userId_;
+   return contactId_;
 }
 
 QString EditContactDialog::displayName() const
@@ -51,7 +51,7 @@ QString EditContactDialog::idKey() const
 void EditContactDialog::accept()
 {
    displayName_ = ui_->nameOptionalLineEdit->text();
-   userId_ = ui_->userIDLineEdit->text();
+   contactId_ = ui_->userIDLineEdit->text();
    if (!ui_->contactDateLineEdit->text().isEmpty()) {
       joinDate_ = QDateTime::fromString(ui_->contactDateLineEdit->text(), kDateTimeStringFormat);
    }
@@ -68,7 +68,7 @@ void EditContactDialog::reject()
 void EditContactDialog::refillFields()
 {
    ui_->nameOptionalLineEdit->setText(displayName_);
-   ui_->userIDLineEdit->setText(userId_);
+   ui_->userIDLineEdit->setText(contactId_);
    if (joinDate_.isValid()) {
       ui_->contactDateLineEdit->setText(joinDate_.toString(kDateTimeStringFormat));
    }
