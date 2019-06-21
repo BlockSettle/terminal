@@ -88,13 +88,9 @@ public:
 
    std::string getUserId() const;
 
-private slots:
-   void onCleanupConnection();
-
-signals:
-   void CleanupConnection();
-
 protected:
+   void cleanupConnection();
+
    virtual BinaryData         getOwnAuthPublicKey() const = 0;
    virtual SecureBinaryData   getOwnAuthPrivateKey() const = 0;
    virtual std::string        getChatServerHost() const = 0;
