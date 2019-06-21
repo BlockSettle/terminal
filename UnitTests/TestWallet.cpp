@@ -2437,8 +2437,13 @@ TEST_F(TestWalletWithArmory, UnconfTarget_Balance)
    auto syncWallet = syncMgr->getHDWalletById(walletPtr_->walletId());
    auto syncLeaf = syncMgr->getWalletById(leafPtr_->walletId());
 
-   syncWallet->registerWallet(envPtr_->armoryConnection());
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
+   syncWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
+   regIDs = syncWallet->setUnconfirmedTargets();
+   ASSERT_EQ(regIDs.size(), 2);
+   UnitTestWalletACT::waitOnRefresh(regIDs);
 
    //mine some coins
    auto armoryInstance = envPtr_->armoryInstance();
@@ -2457,7 +2462,7 @@ TEST_F(TestWalletWithArmory, UnconfTarget_Balance)
    };
    syncLeaf->updateBalances(waitOnBalance);
    balFut.wait();
-   EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 250);
+   EXPECT_DOUBLE_EQ(syncLeaf->getSpendableBalance(), 300);
    EXPECT_DOUBLE_EQ(syncLeaf->getUnconfirmedBalance(), 0);
 
    //spend these coins
@@ -2473,7 +2478,7 @@ TEST_F(TestWalletWithArmory, UnconfTarget_Balance)
       amount, fee, pass, promPtr1]
    (std::vector<UTXO> inputs)->void
    {
-      ASSERT_EQ(inputs.size(), 5);
+      ASSERT_EQ(inputs.size(), 6);
 
       //pick a single input
       std::vector<UTXO> utxos;
