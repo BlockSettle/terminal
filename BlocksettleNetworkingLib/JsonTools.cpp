@@ -27,4 +27,97 @@ namespace JsonTools
 
       return QString{};
    }
+
+   double GetDoubleProperty(const QVariantMap& settingsMap, const QString& propertyName, bool *converted)
+   {
+      auto it = settingsMap.constFind(propertyName);
+      if (it == settingsMap.constEnd()) {
+         if (converted != nullptr) {
+            *converted = false;
+         }
+         return 0;
+      }
+
+      return it->toDouble(converted);
+   }
+
+   bool LoadStringFields(const QVariantMap& data, std::vector<std::pair<QString, std::string*>>& fields
+                         , std::string &errorMessage, const FieldsLoadingRule loadingRule)
+   {
+      for (auto& fieldInfo : fields) {
+         const auto it = data.constFind(fieldInfo.first);
+         if ((it == data.constEnd()) || (!it->isValid())) {
+            if (loadingRule == FieldsLoadingRule::NonEmptyOnly) {
+               errorMessage = "Field not found: " + fieldInfo.first.toStdString();
+               return false;
+            }
+
+            // set empty string
+            *fieldInfo.second = std::string();
+         } else {
+            *fieldInfo.second = it->toString().toStdString();
+            if (fieldInfo.second->empty() && (loadingRule == FieldsLoadingRule::NonEmptyOnly)) {
+               errorMessage = "Field empty: " + fieldInfo.first.toStdString();
+               return false;
+            }
+         }
+      }
+
+      return true;
+   }
+
+   bool LoadIntFields(const QVariantMap& data, std::vector<std::pair<QString, int64_t*>>& fields
+                      , std::string &errorMessage, const FieldsLoadingRule loadingRule)
+   {
+      for (auto& fieldInfo : fields) {
+         const auto it = data.constFind(fieldInfo.first);
+         if ((it == data.constEnd()) || (!it->isValid())) {
+            if (loadingRule == FieldsLoadingRule::NonEmptyOnly) {
+               errorMessage = "Field not found: " + fieldInfo.first.toStdString();
+               return false;
+            }
+
+            // set empty string
+            *fieldInfo.second = 0;
+         } else {
+            bool converted = false;
+            *fieldInfo.second = it->toInt(&converted);
+
+            if (!converted) {
+               errorMessage = "Invalid value for field: " + fieldInfo.first.toStdString();
+               return false;
+            }
+         }
+      }
+
+      return true;
+   }
+
+   bool LoadDoubleFields(const QVariantMap& data, std::vector<std::pair<QString, double*>>& fields
+                         , std::string &errorMessage, const FieldsLoadingRule loadingRule)
+   {
+      for (auto& fieldInfo : fields) {
+         const auto it = data.constFind(fieldInfo.first);
+         if ((it == data.constEnd()) || (!it->isValid())) {
+            if (loadingRule == FieldsLoadingRule::NonEmptyOnly) {
+               errorMessage = "Field not found: " + fieldInfo.first.toStdString();
+               return false;
+            }
+
+            // set empty string
+            *fieldInfo.second = 0;
+         } else {
+            bool converted = false;
+            *fieldInfo.second = it->toDouble(&converted);
+
+            if (!converted) {
+               errorMessage = "Invalid value for field: " + fieldInfo.first.toStdString();
+               return false;
+            }
+         }
+      }
+
+      return true;
+   }
+
 }
