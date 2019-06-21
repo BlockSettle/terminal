@@ -283,7 +283,6 @@ void ChatClient::rejectFriendRequest(const std::string &friendUserId)
 
    model_->notifyContactChanged(contact);
 
-   model_->notifyContactChanged(contact);
    sendDeclientFriendRequestToServer(friendUserId);
 }
 
@@ -585,16 +584,16 @@ void ChatClient::onFriendRequest(const std::string& userId, const std::string& c
          addOrUpdateContact(contactId, Chat::CONTACT_STATUS_INCOMING);
       }
 
-      {
-         Chat::Request request;
-         auto d = request.mutable_modify_contacts_server();
-         d->set_sender_id(currentUserId_);
-         d->set_contact_id(contactId);
-         d->set_action(Chat::CONTACTS_ACTION_SERVER_ADD);
-         d->set_status(Chat::CONTACT_STATUS_INCOMING);
-         d->set_contact_pub_key(pk.toBinStr());
-         sendRequest(request);
-      }
+//      {
+//         Chat::Request request;
+//         auto d = request.mutable_modify_contacts_server();
+//         d->set_sender_id(currentUserId_);
+//         d->set_contact_id(contactId);
+//         d->set_action(Chat::CONTACTS_ACTION_SERVER_ADD);
+//         d->set_status(Chat::CONTACT_STATUS_INCOMING);
+//         d->set_contact_pub_key(pk.toBinStr());
+//         sendRequest(request);
+//      }
 
       emit NewContactRequest(contactId);
    }
