@@ -3,6 +3,7 @@
 #include "ChatClientUsersViewItemDelegate.h"
 #include "ChatClientDataModel.h"
 #include "BSMessageBox.h"
+#include "EditContactDialog.h"
 
 #include <QMenu>
 #include <QAbstractProxyModel>
@@ -247,6 +248,10 @@ void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
       if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
          // TODO: Edit contact
          qDebug() << "Edit item:" << i;
+         EditContactDialog dialog;
+         if (dialog.exec() == QDialog::Accepted) {
+            qDebug() << "Update contact";
+         }
       }
    }
 }
