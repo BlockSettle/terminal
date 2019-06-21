@@ -124,6 +124,7 @@ public:
    void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
    void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
    void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) override;
    bool onActionIsFriend(const std::string& userId) override;
 
    // ChatSearchActionsHandler interface

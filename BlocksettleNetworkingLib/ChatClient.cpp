@@ -383,6 +383,11 @@ void ChatClient::onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecor
    }
 }
 
+void ChatClient::onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord)
+{
+   //TODO: Edit contact
+}
+
 bool ChatClient::onActionIsFriend(const std::string& userId)
 {
    return isFriend(userId);

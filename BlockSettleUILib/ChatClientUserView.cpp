@@ -246,11 +246,27 @@ void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
       QModelIndex i = proxyModel ? proxyModel->mapToSource(index) : index;
       TreeItem *item = static_cast<TreeItem*>(i.internalPointer());
       if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
-         // TODO: Edit contact
-         qDebug() << "Edit item:" << i;
-         EditContactDialog dialog;
+         auto dataObject = static_cast<ChatContactElement*>(item)->getDataObject();
+         auto contactRecord = dataObject->mutable_contact_record();
+         QString userId = QString::fromStdString(contactRecord->user_id());
+         QString displayName = QString::fromStdString(contactRecord->display_name());
+         QDateTime joinDate;  // TODO: implement when will be ready
+         QString info;        // TODO: implement when will be ready
+         EditContactDialog dialog(userId, displayName, joinDate, info);
+         qDebug() << "Edit contact:" << userId << displayName << joinDate << info;
          if (dialog.exec() == QDialog::Accepted) {
-            qDebug() << "Update contact";
+            userId = dialog.userId();
+            displayName = dialog.displayName();
+            joinDate = dialog.joinDate();
+            info = dialog.info();
+            qDebug() << "Update contact" << userId << displayName << joinDate << info;
+            contactRecord->set_user_id(userId.toStdString());
+            contactRecord->set_display_name(displayName.toStdString());
+            // TODO: joinDate
+            // TODO: info
+            if (handler_) {
+               handler_->onActionEditContactRequest(dataObject);
+            }
          }
       }
    }

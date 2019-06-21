@@ -2,6 +2,7 @@
 #define EDITCONTACTDIALOG_H
 
 #include <QDialog>
+#include <QDateTime>
 
 #include <memory>
 
@@ -14,11 +15,25 @@ class EditContactDialog : public QDialog
    Q_OBJECT
 
 public:
-   explicit EditContactDialog(QWidget *parent = nullptr);
+   explicit EditContactDialog(
+         const QString &userId
+         , const QString &displayName = QString()
+         , const QDateTime &joinDate = QDateTime()
+         , const QString &info = QString()
+         , QWidget *parent = nullptr);
    ~EditContactDialog() noexcept override;
+
+   QString userId() const;
+   QString displayName() const;
+   QDateTime joinDate() const;
+   QString info() const;
 
 private:
    std::unique_ptr<Ui::EditContactDialog> ui_;
+   QString userId_;
+   QString displayName_;
+   QDateTime joinDate_;
+   QString info_;
 };
 
 #endif // EDITCONTACTDIALOG_H
