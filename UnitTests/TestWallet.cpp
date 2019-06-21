@@ -111,7 +111,7 @@ TEST_F(TestWallet, BIP44_primary)
 
    const bs::core::wallet::Seed seed{ SecureBinaryData("Sample test seed")
       , NetworkType::TestNet };
-   envPtr_->walletsMgr()->createWallet("primary", "test"
+   auto coreWallet = envPtr_->walletsMgr()->createWallet("primary", "test"
       , seed, walletFolder_, passphrase, true);
    EXPECT_NE(envPtr_->walletsMgr()->getPrimaryWallet(), nullptr);
 
@@ -132,7 +132,7 @@ TEST_F(TestWallet, BIP44_primary)
    EXPECT_EQ(leafXbt->name(), "m/44'/1'/0'");
    EXPECT_EQ(leafXbt->getRootId().toHexStr(), "64134dca");
 
-   EXPECT_EQ(grpXbt->createLeaf(0), nullptr);
+   EXPECT_THROW(grpXbt->createLeaf(0), std::exception);
 
    {
       auto lock = wallet->lockForEncryption(passphrase);
@@ -2415,7 +2415,7 @@ TEST_F(TestWalletWithArmory, ZCBalance)
    EXPECT_EQ(syncLeaf->getSpendableBalance(),
       double(350 * COIN - amount - fee) / BTCNumericTypes::BalanceDivider);
    EXPECT_EQ(syncLeaf->getUnconfirmedBalance(), 
-      double(5 * COIN) / BTCNumericTypes::BalanceDivider););
+      double(5 * COIN) / BTCNumericTypes::BalanceDivider);
 }
 
 TEST_F(TestWalletWithArmory, UnconfTarget_Balance)
