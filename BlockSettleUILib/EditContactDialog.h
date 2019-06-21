@@ -19,21 +19,28 @@ public:
          const QString &userId
          , const QString &displayName = QString()
          , const QDateTime &joinDate = QDateTime()
-         , const QString &info = QString()
+         , const QString &idKey = QString()
          , QWidget *parent = nullptr);
    ~EditContactDialog() noexcept override;
 
    QString userId() const;
    QString displayName() const;
    QDateTime joinDate() const;
-   QString info() const;
+   QString idKey() const;
+
+public slots:
+   void accept() override;
+   void reject() override;
+
+private:
+   void refillFields();
 
 private:
    std::unique_ptr<Ui::EditContactDialog> ui_;
    QString userId_;
    QString displayName_;
    QDateTime joinDate_;
-   QString info_;
+   QString idKey_;
 };
 
 #endif // EDITCONTACTDIALOG_H

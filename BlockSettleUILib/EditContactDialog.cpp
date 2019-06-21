@@ -1,19 +1,29 @@
 #include "EditContactDialog.h"
 #include "ui_EditContactDialog.h"
 
+const QString kDateTimeStringFormat = QStringLiteral("yyyy-MM-dd");
+
 EditContactDialog::EditContactDialog(const QString &userId
-      , const QString &displayName
-      , const QDateTime &joinDate
-      , const QString &info
-      , QWidget *parent) :
+                                     , const QString &displayName
+                                     , const QDateTime &joinDate
+                                     , const QString &idKey
+                                     , QWidget *parent) :
    QDialog(parent)
  , ui_(new Ui::EditContactDialog())
  , userId_(userId)
  , displayName_(displayName)
  , joinDate_(joinDate)
- , info_(info)
+ , idKey_(idKey)
 {
    ui_->setupUi(this);
+
+   refillFields();
+
+   if (displayName_.isEmpty()) {
+      ui_->nameOptionalLineEdit->setFocus();
+   } else {
+      ui_->buttonBox->setFocus();
+   }
 }
 
 EditContactDialog::~EditContactDialog() noexcept = default;
@@ -33,7 +43,34 @@ QDateTime EditContactDialog::joinDate() const
    return joinDate_;
 }
 
-QString EditContactDialog::info() const
+QString EditContactDialog::idKey() const
 {
-   return info_;
+   return idKey_;
+}
+
+void EditContactDialog::accept()
+{
+   displayName_ = ui_->nameOptionalLineEdit->text();
+   userId_ = ui_->userIDLineEdit->text();
+   if (!ui_->contactDateLineEdit->text().isEmpty()) {
+      joinDate_ = QDateTime::fromString(ui_->contactDateLineEdit->text(), kDateTimeStringFormat);
+   }
+   idKey_ = ui_->iDKeyLineEdit->text();
+   QDialog::accept();
+}
+
+void EditContactDialog::reject()
+{
+   refillFields();
+   QDialog::reject();
+}
+
+void EditContactDialog::refillFields()
+{
+   ui_->nameOptionalLineEdit->setText(displayName_);
+   ui_->userIDLineEdit->setText(userId_);
+   if (joinDate_.isValid()) {
+      ui_->contactDateLineEdit->setText(joinDate_.toString(kDateTimeStringFormat));
+   }
+   ui_->iDKeyLineEdit->setText(idKey_);
 }

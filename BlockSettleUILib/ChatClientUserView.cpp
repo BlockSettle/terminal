@@ -251,18 +251,19 @@ void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
          QString userId = QString::fromStdString(contactRecord->user_id());
          QString displayName = QString::fromStdString(contactRecord->display_name());
          QDateTime joinDate;  // TODO: implement when will be ready
-         QString info;        // TODO: implement when will be ready
-         EditContactDialog dialog(userId, displayName, joinDate, info);
-         qDebug() << "Edit contact:" << userId << displayName << joinDate << info;
+         QString idKey;       // TODO: implement when will be ready
+         EditContactDialog dialog(userId, displayName, joinDate, idKey);
+         qDebug() << "Edit contact:" << userId << displayName << joinDate << idKey;
          if (dialog.exec() == QDialog::Accepted) {
             userId = dialog.userId();
             displayName = dialog.displayName();
             joinDate = dialog.joinDate();
-            info = dialog.info();
-            qDebug() << "Update contact" << userId << displayName << joinDate << info;
+            idKey = dialog.idKey();
+            qDebug() << "Update contact" << userId << displayName << joinDate << idKey;
             contactRecord->set_user_id(userId.toStdString());
             contactRecord->set_display_name(displayName.toStdString());
             // TODO: joinDate
+            // TODO: idKey
             // TODO: info
             if (handler_) {
                handler_->onActionEditContactRequest(dataObject);
