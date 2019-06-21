@@ -927,6 +927,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
          wltIDs.push_back(idRef);
       }
       
+      uint32_t height = getTopBlockHeader()->getBlockHeight();
       auto response = make_shared<::Codec_AddressData::ManyCombinedData>();
 
       for (auto& id : wltIDs)
@@ -941,8 +942,6 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
 
          if (wltPtr == nullptr)
             throw runtime_error("unknown wallet/lockbox ID");
-
-         uint32_t height = command->height();
 
          auto combinedData = response->add_packedbalance();
          

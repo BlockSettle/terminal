@@ -63,6 +63,8 @@ namespace bs {
 
             std::vector<std::string> registerWallet(
                const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
+            std::vector<std::string> setUnconfirmedTargets(void);
+
             void setArmory(const std::shared_ptr<ArmoryConnection> &);
             void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &);
             void startRescan();
@@ -70,6 +72,14 @@ namespace bs {
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
 
             void merge(const Wallet&);
+
+            template<class U> void setCustomACT(
+               const std::shared_ptr<ArmoryConnection> &armory)
+            {
+               auto& leaves = getLeaves();
+               for (auto& leaf : leaves)
+                  leaf->setCustomACT<U>(armory);
+            }
 
          signals:
             void synchronized() const;

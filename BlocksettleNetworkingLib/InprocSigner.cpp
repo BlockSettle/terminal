@@ -36,7 +36,7 @@ InprocSigner::InprocSigner(const std::shared_ptr<bs::core::SettlementWallet> &wa
 bool InprocSigner::Start()
 {
    if (!walletsPath_.empty() && !walletsMgr_->walletsLoaded()) {
-      const auto &cbLoadProgress = [this](int cur, int total) {
+      const auto &cbLoadProgress = [this](size_t cur, size_t total) {
          logger_->debug("[InprocSigner::Start] loading wallets: {} of {}", cur, total);
       };
       walletsMgr_->loadWallets(netType_, walletsPath_, cbLoadProgress);
@@ -168,7 +168,7 @@ bs::signer::RequestId InprocSigner::createHDLeaf(const std::string &rootWalletId
          return 0;
       }
    }
-   catch (const std::exception &e) {
+   catch (const std::exception &) {
       logger_->error("[{}] failed to decrypt root node {}", __func__, rootWalletId);
       return 0;
    }
