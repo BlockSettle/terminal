@@ -105,6 +105,10 @@ private slots:
       handler_->onActionRejectContactRequest(currentContact_);
    }
 
+   void onEditContact() {
+      view_->editContact(currentContact_);
+   }
+
    void prepareContactMenu()
    {
       if (!currentContact_){
@@ -117,6 +121,7 @@ private slots:
 //            break;
          case Chat::ContactStatus::CONTACT_STATUS_ACCEPTED:
             addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+            addAction(tr("Edit contact"), this, &ChatUsersContextMenu::onEditContact);
             break;
          case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
             addAction(tr("Accept friend request"), this, &ChatUsersContextMenu::onAcceptFriendRequest);
@@ -211,6 +216,31 @@ void ChatClientUserView::updateCurrentChat()
    }
 }
 
+void ChatClientUserView::editContact(std::shared_ptr<Chat::Data> crecord)
+{
+   if (handler_) {
+      auto contactRecord = crecord->mutable_contact_record();
+      QString userId = QString::fromStdString(contactRecord->user_id());
+      QString displayName = QString::fromStdString(contactRecord->display_name());
+      QDateTime joinDate;  // TODO: implement when will be ready
+      QString idKey;       // TODO: implement when will be ready
+      EditContactDialog dialog(userId, displayName, joinDate, idKey);
+      qDebug() << "Edit contact:" << userId << displayName << joinDate << idKey;
+      if (dialog.exec() == QDialog::Accepted) {
+         userId = dialog.userId();
+         displayName = dialog.displayName();
+         joinDate = dialog.joinDate();
+         idKey = dialog.idKey();
+         qDebug() << "Update contact" << userId << displayName << joinDate << idKey;
+         contactRecord->set_user_id(userId.toStdString());
+         contactRecord->set_display_name(displayName.toStdString());
+         // TODO: joinDate implement when will be ready
+         // TODO: idKey    implement when will be ready
+         handler_->onActionEditContactRequest(crecord);
+      }
+   }
+}
+
 void ChatClientUserView::onCustomContextMenu(const QPoint & point)
 {
    if (!contextMenu_) {
@@ -246,29 +276,7 @@ void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
       QModelIndex i = proxyModel ? proxyModel->mapToSource(index) : index;
       TreeItem *item = static_cast<TreeItem*>(i.internalPointer());
       if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
-         auto dataObject = static_cast<ChatContactElement*>(item)->getDataObject();
-         auto contactRecord = dataObject->mutable_contact_record();
-         QString userId = QString::fromStdString(contactRecord->user_id());
-         QString displayName = QString::fromStdString(contactRecord->display_name());
-         QDateTime joinDate;  // TODO: implement when will be ready
-         QString idKey;       // TODO: implement when will be ready
-         EditContactDialog dialog(userId, displayName, joinDate, idKey);
-         qDebug() << "Edit contact:" << userId << displayName << joinDate << idKey;
-         if (dialog.exec() == QDialog::Accepted) {
-            userId = dialog.userId();
-            displayName = dialog.displayName();
-            joinDate = dialog.joinDate();
-            idKey = dialog.idKey();
-            qDebug() << "Update contact" << userId << displayName << joinDate << idKey;
-            contactRecord->set_user_id(userId.toStdString());
-            contactRecord->set_display_name(displayName.toStdString());
-            // TODO: joinDate
-            // TODO: idKey
-            // TODO: info
-            if (handler_) {
-               handler_->onActionEditContactRequest(dataObject);
-            }
-         }
+         editContact(static_cast<ChatContactElement*>(item)->getDataObject());
       }
    }
 }

@@ -34,7 +34,9 @@ private:
    void notifyCurrentChanged(CategoryElement *element);
    void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
    void notifyElementUpdated(CategoryElement *element);
+   void editContact(std::shared_ptr<Chat::Data> crecord);
 private:
+   friend ChatUsersContextMenu;
    std::list<ViewItemWatcher* > watchers_;
    std::shared_ptr<ChatItemActionsHandler> handler_;
    QLabel * label_;
