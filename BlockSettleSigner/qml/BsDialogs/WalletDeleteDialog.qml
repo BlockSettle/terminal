@@ -119,6 +119,11 @@ CustomTitleDialogWindow {
                             walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)
                         })
                         dlgBkp.open()
+
+                        sizeChanged(dlgBkp.width, dlgBkp.height)
+                        dlgBkp.closed.connect(function(){
+                            sizeChanged(root.width, root.height)
+                        })
                     }
                     else {
                         walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)

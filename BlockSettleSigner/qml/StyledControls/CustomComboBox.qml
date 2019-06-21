@@ -12,7 +12,7 @@ ComboBox {
         id: input
         text: control.displayText
         font: control.font
-        color: BSStyle.comboBoxItemTextHighlightedColor
+        color: { control.enabled ? BSStyle.comboBoxItemTextHighlightedColor : BSStyle.disabledTextColor }
         leftPadding: 7
         rightPadding: control.indicator.width + control.spacing
         verticalAlignment: Text.AlignVCenter
@@ -50,9 +50,9 @@ ComboBox {
 
     background: Rectangle {
         implicitWidth: 120
-        color: BSStyle.comboBoxBgColor
+        color: { control.enabled ?  BSStyle.comboBoxBgColor :  BSStyle.disabledBgColor }
         implicitHeight: 25
-        border.color: BSStyle.inputsBorderColor
+        border.color: { control.enabled ? BSStyle.inputsBorderColor : BSStyle.disabledColor }
         border.width: control.visualFocus ? 2 : 1
         radius: 2
     }

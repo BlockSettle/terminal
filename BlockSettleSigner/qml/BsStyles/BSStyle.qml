@@ -11,9 +11,11 @@ QtObject {
 
     property color disabledColor: "#41484f"
     property color disabledTextColor: "#71787f"
+    property color disabledBgColor: "#31383f"
 
     property color textColor: "white"
     property color textPressedColor: "#3a8ab4"
+    property color disabledHeaderColor: "#909090"
 
     property color labelsTextColor: "#757E83"
     property color labelsTextDisabledColor: "#454E53"

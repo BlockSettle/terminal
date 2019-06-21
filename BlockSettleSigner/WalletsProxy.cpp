@@ -347,6 +347,11 @@ bool WalletsProxy::walletNameExists(const QString &name) const
    return walletNames().contains(name);
 }
 
+bool WalletsProxy::isWatchingOnlyWallet(const QString &walletId) const
+{
+   return walletsMgr_->isWatchingOnly(walletId.toStdString());
+}
+
 QString WalletsProxy::defaultBackupLocation() const
 {
    return QString::fromLatin1("file://") +
