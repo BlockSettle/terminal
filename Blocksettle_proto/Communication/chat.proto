@@ -201,7 +201,7 @@ message Request
     {
         string auth_id = 1;
         string jwt = 2;
-        bytes pub_key = 3;
+        bytes public_key = 3;
     }
 
     message Logout
@@ -235,7 +235,7 @@ message Request
     {
         string receiving_node_id = 1;
         string sending_node_id = 2;
-        bytes sending_node_pub_key = 3;
+        bytes sending_node_public_key = 3;
     }
 
     message MessageChangeStatus
@@ -286,14 +286,14 @@ message Request
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     message ReplySessionPublicKey
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     oneof data
@@ -346,7 +346,7 @@ message Response
     {
         string receiving_node_id = 1;
         string sending_node_id = 2;
-        bytes sending_node_pub_key = 3;
+        bytes sending_node_public_key = 3;
     }
 
     message PendingMessage
@@ -416,14 +416,14 @@ message Response
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     message ReplySessionPublicKey
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     // Used only with pending responses
