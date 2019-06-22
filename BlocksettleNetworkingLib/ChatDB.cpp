@@ -5,6 +5,7 @@
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
 #include <QVariant>
+#include <QDateTime>
 #include "ChatProtocol/ChatUtils.h"
 #include "ProtobufUtils.h"
 
@@ -435,7 +436,7 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
    QSqlQuery query(db_);
    if (!query.prepare(QLatin1String(
       "SELECT contacts.user_id, contacts.user_name, contacts.status, user_keys.key, user_keys.key_timestamp FROM contacts " \
-      "LEFT JOIN user_keys on contacts.user_id=user_key.user_id;"))) {
+      "LEFT JOIN user_keys on contacts.user_id=user_keys.user_id;"))) {
       logger_->error("[ChatDB::getContacts] failed to prepare query: {}", query.lastError().text().toStdString());
       return false;
    }
@@ -523,4 +524,67 @@ bool ChatDB::getContact(const std::string &userId, Chat::Data_ContactRecord *con
    }
 
    return false;
+}
+
+bool ChatDB::compareLocalData(const std::string& userId, const BinaryData& key, const QDateTime& dt)
+{
+   QSqlQuery query(db_);
+   if (!query.prepare(QLatin1String("SELECT key, key_timestamp from user_keys WHERE user_id=:user_id;"))) {
+      logger_->error("[ChatDB::{}] failed to prepare query: {}", __func__, query.lastError().text().toStdString());
+      return false;
+   }
+
+   query.bindValue(QLatin1String(":user_id"), QString::fromStdString(userId));
+
+   if (!query.exec()) {
+      logger_->error("[ChatDB::{}] failed to exec query: {}", __func__, query.lastError().text().toStdString());
+      return false;
+   }
+
+   if (query.next()) {
+      BinaryData localKey = BinaryData::CreateFromHex(query.value(0).toString().toStdString());
+      QDateTime localDt = query.value(1).toDateTime();
+
+      if (localKey == key && localDt == dt) {
+         return true;
+      }
+
+      return false;
+   }
+
+   logger_->error("[ChatDB::{}] contact: {} does not exist in db!", __func__, userId);
+   return false;
+}
+
+bool ChatDB::updateContactKey(const Chat::Data& contact)
+{
+   const QString cmd = QStringLiteral("UPDATE user_keys SET"
+      " key = :key"
+      " key_timestamp = :key_timestamp"
+      " WHERE (user_id = :user_id);");
+
+   const auto userId = QString::fromStdString(contact.contact_record().contact_id());
+   const auto publicKey = QString::fromStdString(BinaryData(contact.contact_record().public_key()).toHexStr());
+   const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact.contact_record().public_key_timestamp());
+
+   QSqlQuery query(db_);
+
+   if (!query.prepare(cmd)) {
+      logger_->error("[ChatDB::{}] failed to prepare query: {}", __func__, query.lastError().text().toStdString());
+      return false;
+   }
+
+   query.bindValue(QStringLiteral(":key"), publicKey);
+   query.bindValue(QStringLiteral(":key_timestamp"), publicKeyTimestamp);
+   query.bindValue(QStringLiteral(":user_id"), userId);
+
+   if (!query.exec()) {
+      logger_->error("[ChatDB::{}] failed to update user_keys; Error: {}\nQuery: {}",
+         __func__,
+         query.lastError().text().toStdString(),
+         query.executedQuery().toStdString()
+      );
+      return false;
+   }
+   return true;
 }

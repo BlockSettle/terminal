@@ -121,7 +121,7 @@ void BaseChatClient::OnConnected()
    auto d = request.mutable_login();
    d->set_auth_id(currentUserId_);
    d->set_jwt(currentJwt_);
-   d->set_pub_key(getOwnAuthPublicKey().toBinStr());
+   d->set_public_key(getOwnAuthPublicKey().toBinStr());
    sendRequest(request);
 }
 
@@ -437,17 +437,48 @@ void BaseChatClient::OnModifyContactsServerResponse(const Chat::Response_ModifyC
 void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & response)
 {
    std::vector<std::shared_ptr<Chat::Data>> newList;
+   std::vector<std::shared_ptr<Chat::Data>> toConfirmList;
    for (const auto& contact : response.contacts()) {
       if (!contact.has_contact_record()) {
          logger_->error("[BaseChatClient::{}] invalid response detected", __func__);
          continue;
       }
 
-      contactPublicKeys_[contact.contact_record().contact_id()] = BinaryData(contact.contact_record().public_key());
+      const auto userId = contact.contact_record().contact_id();
+      const auto publicKey = BinaryData(contact.contact_record().public_key());
+      const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact.contact_record().public_key_timestamp());
+
+      if (!chatDb_->compareLocalData(userId, publicKey, publicKeyTimestamp)) {
+         toConfirmList.push_back(std::make_shared<Chat::Data>(contact));
+         continue;
+      }
+
       newList.push_back(std::make_shared<Chat::Data>(contact));
    }
 
-   onContactListLoaded(newList);
+   if (!newList.empty()) {
+      // false - we don't need update contact in db since it was already fine in compareLocalData
+      OnContactListConfirmed(newList, false);
+   }
+
+   if (!toConfirmList.empty()) {
+      // TODO: if confirmed in GUI execute OnContactListConfirmed and remove this comment
+      emit ConfirmContactNewKeyData(toConfirmList);
+   }
+}
+
+void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts, const bool& updateContactDb)
+{
+   for (const auto& contact : remoteContacts) {
+      const auto userId = contact->contact_record().contact_id();
+      const auto publicKey = BinaryData(contact->contact_record().public_key());
+      const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact->contact_record().public_key_timestamp());
+
+      contactPublicKeys_[userId] = publicKey;
+      chatDb_->updateContactKey(*contact);
+   }
+
+   onContactListLoaded(remoteContacts);
 }
 
 void BaseChatClient::OnChatroomsList(const Chat::Response_ChatroomsList &response)
@@ -595,7 +626,7 @@ void BaseChatClient::OnAskForPublicKey(const Chat::Response_AskForPublicKey &res
    d->set_receiving_node_id(response.asking_node_id());
    d->set_sending_node_id(response.peer_id());
    // TODO: check is this right place to sending public key
-   d->set_sending_node_pub_key(getOwnAuthPublicKey().toBinStr());
+   d->set_sending_node_public_key(getOwnAuthPublicKey().toBinStr());
    sendRequest(request);
 }
 
@@ -608,7 +639,7 @@ void BaseChatClient::OnSendOwnPublicKey(const Chat::Response_SendOwnPublicKey &r
 
    // Save received public key of peer.
    const auto &peerId = response.sending_node_id();
-   contactPublicKeys_[peerId] = BinaryData(response.sending_node_pub_key());
+   contactPublicKeys_[peerId] = BinaryData(response.sending_node_public_key());
    // TODO: check what to do with incoming pk
    //chatDb_->addKey(peerId, BinaryData(response.sending_node_pub_key()));
 
@@ -646,7 +677,7 @@ bool BaseChatClient::removeContactFromDB(const std::string &userId)
 void BaseChatClient::OnSessionPublicKeyResponse(const Chat::Response_SessionPublicKey& response)
 {
    // Do not use base64 after protobuf switch and send binary data as-is
-   if (!decodeAndUpdateIncomingSessionPublicKey(response.sender_id(), response.sender_session_pub_key())) {
+   if (!decodeAndUpdateIncomingSessionPublicKey(response.sender_id(), response.sender_session_public_key())) {
       logger_->error("[BaseChatClient::OnSessionPublicKeyResponse] Failed updating remote public key!");
       return;
    }
@@ -668,7 +699,7 @@ void BaseChatClient::OnSessionPublicKeyResponse(const Chat::Response_SessionPubl
       auto d = request.mutable_reply_session_public_key();
       d->set_sender_id(currentUserId_);
       d->set_receiver_id(response.sender_id());
-      d->set_sender_session_pub_key(encryptedLocalPublicKey.toBinStr());
+      d->set_sender_session_public_key(encryptedLocalPublicKey.toBinStr());
       sendRequest(request);
    }
    catch (std::exception& e) {
@@ -679,7 +710,7 @@ void BaseChatClient::OnSessionPublicKeyResponse(const Chat::Response_SessionPubl
 
 void BaseChatClient::OnReplySessionPublicKeyResponse(const Chat::Response_ReplySessionPublicKey& response)
 {
-   if (!decodeAndUpdateIncomingSessionPublicKey(response.sender_id(), BinaryData(response.sender_session_pub_key()))) {
+   if (!decodeAndUpdateIncomingSessionPublicKey(response.sender_id(), BinaryData(response.sender_session_public_key()))) {
       logger_->error("[BaseChatClient::OnReplySessionPublicKeyResponse] Failed updating remote public key!");
       return;
    }
@@ -829,7 +860,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::encryptMessageToSendAEAD(const std::
          auto d = request.mutable_session_public_key();
          d->set_sender_id(currentUserId_);
          d->set_receiver_id(receiver);
-         d->set_sender_session_pub_key(encryptedLocalPublicKey.toBinStr());
+         d->set_sender_session_public_key(encryptedLocalPublicKey.toBinStr());
          sendRequest(request);
 
          return nullptr;

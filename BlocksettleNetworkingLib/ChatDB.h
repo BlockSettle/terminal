@@ -78,6 +78,8 @@ public:
    bool getContacts(ContactRecordDataList &contactList);
    bool updateContact(Chat::Data &contact);
    bool getContact(const std::string &userId, Chat::Data_ContactRecord *contact);
+   bool compareLocalData(const std::string& userId, const BinaryData& key, const QDateTime& dt);
+   bool updateContactKey(const Chat::Data& contact);
 
 //   bool insertContactRecord(const std::shared_ptr<Chat::Data_ContactRecord> contact);
 //   bool removeContactRecord(const std::shared_ptr<Chat::Data_ContactRecord> contact);
