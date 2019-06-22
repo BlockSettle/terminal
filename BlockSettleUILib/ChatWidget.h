@@ -109,6 +109,7 @@ private:
 
    void OTCSwitchToCommonRoom();
    void OTCSwitchToGlobalRoom();
+   void OTCSwitchToSupportRoom();
    void OTCSwitchToRoom(std::shared_ptr<Chat::Data>& room);
    void OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact, bool onlineStatus);
    void OTCSwitchToResponse(std::shared_ptr<Chat::Data>& response);
