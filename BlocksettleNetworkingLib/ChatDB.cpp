@@ -446,7 +446,14 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
       contact.set_user_id(query.value(0).toString().toStdString());
       contact.set_contact_id(query.value(0).toString().toStdString());
       contact.set_status(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
-      contact.set_display_name(query.value(1).toString().toStdString());
+
+      auto name = query.value(1).toString().toStdString();
+      if (!name.empty()) {
+         contact.set_display_name(name);
+      } else {
+         contact.set_display_name(contact.contact_id());
+      }
+
       contactList.emplace_back(contact);
    }
    return true;

@@ -15,7 +15,7 @@
 
 namespace Chat {
    class Request;
-}
+   }
 
 class ApplicationSettings;
 class ChatClientDataModel;
@@ -24,17 +24,17 @@ class UserSearchModel;
 class ChatTreeModelWrapper;
 
 class ChatClient : public BaseChatClient
-                 , public ChatItemActionsHandler
-                 , public ChatSearchActionsHandler
-                 , public ChatMessageReadHandler
-                 , public ModelChangesHandler
+      , public ChatItemActionsHandler
+      , public ChatSearchActionsHandler
+      , public ChatMessageReadHandler
+      , public ModelChangesHandler
 {
    Q_OBJECT
 
 public:
    ChatClient(const std::shared_ptr<ConnectionManager> &
-            , const std::shared_ptr<ApplicationSettings> &
-            , const std::shared_ptr<spdlog::logger> &);
+              , const std::shared_ptr<ApplicationSettings> &
+              , const std::shared_ptr<spdlog::logger> &);
    ~ChatClient() noexcept override;
 
    ChatClient(const ChatClient&) = delete;
@@ -49,19 +49,21 @@ public:
    std::shared_ptr<Chat::Data> sendOwnMessage(
          const std::string& message, const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateOTCRequest(const bs::network::OTCRequest& otcRequest
-                                                              , const std::string &receiver);
+                                                       , const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateOTCResponse(const bs::network::OTCResponse& otcResponse
-                                                              , const std::string &receiver);
+                                                        , const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateCancel(const std::string &receiver);
    std::shared_ptr<Chat::Data> SubmitPrivateUpdate(const bs::network::OTCUpdate& update
-                                                          , const std::string &receiver);
+                                                   , const std::string &receiver);
 
    std::shared_ptr<Chat::Data> sendRoomOwnMessage(
          const std::string& message, const std::string &receiver);
 
    void sendFriendRequest(const std::string &friendUserId);
    void acceptFriendRequest(const std::string &friendUserId);
-   void declineFriendRequest(const std::string &friendUserId);
+   void rejectFriendRequest(const std::string &friendUserId);
+   void removeFriendOrRequest(const std::string& userId);
+
    void clearSearch();
    bool isFriend(const std::string &userId);
 
@@ -96,6 +98,7 @@ protected:
    SecureBinaryData   getOwnAuthPrivateKey() const override;
    std::string getChatServerHost() const override;
    std::string getChatServerPort() const override;
+   Chat::Data_Message_Encryption resolveMessageEncryption(std::shared_ptr<Chat::Data> message) const override;
 
    void OnLoginCompleted() override;
    void OnLofingFailed() override;

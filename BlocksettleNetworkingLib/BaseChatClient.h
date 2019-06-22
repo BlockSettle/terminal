@@ -20,8 +20,8 @@ class ConnectionManager;
 class UserHasher;
 
 class BaseChatClient : public QObject
-                     , public DataConnectionListener
-                     , public Chat::ResponseHandler
+      , public DataConnectionListener
+      , public Chat::ResponseHandler
 {
    Q_OBJECT
 
@@ -41,7 +41,7 @@ public:
                              , const ZmqBIP15XDataConnection::cbNewKey &);
    void LogoutFromServer();
 
-   bool removeContact(const std::string &userId);
+   bool removeContactFromDB(const std::string &userId);
 
 public:
    void OnDataReceived(const std::string& data) override;
@@ -80,7 +80,20 @@ protected:
                            const std::string &userName = "");
 
    bool encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::Data>& message);
+   std::shared_ptr<Chat::Data> encryptMessageToSendAEAD(const std::string& receiver,
+                                                        BinaryData& remotePublicKey,
+                                                        std::shared_ptr<Chat::Data> messageData);
+   std::shared_ptr<Chat::Data> encryptMessageToSendIES(BinaryData& remotePublicKey,
+                                                       std::shared_ptr<Chat::Data> messageData);
    std::shared_ptr<Chat::Data> decryptIESMessage(const std::shared_ptr<Chat::Data>& message);
+
+   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey);
+   void onFriendRequestAccepted(const std::string& contactId, BinaryData publicKey);
+   void onFriendRequestRejected(const std::string& contactId);
+   void onFriendRequestedRemove(const std::string& userId);
+
+   void onServerApprovedFriendRemoving(const std::string& contactId);
+
 
 public:
    bool sendSearchUsersRequest(const std::string& userIdPattern);
@@ -99,6 +112,7 @@ protected:
    virtual SecureBinaryData   getOwnAuthPrivateKey() const = 0;
    virtual std::string        getChatServerHost() const = 0;
    virtual std::string        getChatServerPort() const = 0;
+   virtual Chat::Data_Message_Encryption resolveMessageEncryption(std::shared_ptr<Chat::Data> message) const = 0;
 
    void setSavedKeys(std::map<std::string, BinaryData>&& loadedKeys);
 
@@ -128,10 +142,11 @@ protected:
    bool sendFriendRequestToServer(const std::string &friendUserId);
    bool sendAcceptFriendRequestToServer(const std::string &friendUserId);
    bool sendDeclientFriendRequestToServer(const std::string &friendUserId);
+   bool sendRemoveFriendToServer(const std::string& contactId);
    bool sendUpdateMessageState(const std::shared_ptr<Chat::Data>& message);
 
    std::shared_ptr<Chat::Data> sendMessageDataRequest(const std::shared_ptr<Chat::Data>& message
-      , const std::string &receiver);
+                                                      , const std::string &receiver, bool isFromQueue = false);
 
    bool sendRequest(const Chat::Request& request);
 
