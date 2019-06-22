@@ -590,7 +590,7 @@ void BaseChatClient::OnMessages(const Chat::Response_Messages &response)
 
 void BaseChatClient::OnAskForPublicKey(const Chat::Response_AskForPublicKey &response)
 {
-   logger_->debug("Received request to send own public key from server: {}", ProtobufUtils::toJson(response));
+   logger_->debug("Received request to send own public key from server");
 
    // Make sure we are the node for which a public key was expected, if not, ignore this call.
    if (currentUserId_ != response.peer_id()) {

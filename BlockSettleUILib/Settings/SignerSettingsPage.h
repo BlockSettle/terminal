@@ -48,7 +48,7 @@ private:
 private:
    std::unique_ptr<Ui::SignerSettingsPage> ui_;
    SignersModel *signersModel_;
-   bool reset_;
+   bool reset_{};
 };
 
 #endif // __SIGNER_SETTINGS_PAGE_H__

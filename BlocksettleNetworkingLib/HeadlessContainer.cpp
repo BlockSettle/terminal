@@ -1086,7 +1086,6 @@ void RemoteSigner::RecreateConnection()
 {
    logger_->info("[{}] Restart connection...", __func__);
 
-
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = ephemeralDataConnKeys_;
    params.ownKeyFileDir = ownKeyFileDir_;
@@ -1107,7 +1106,7 @@ void RemoteSigner::RecreateConnection()
    }
    catch (const std::exception &e) {
       logger_->error("[{}] connection creation failed: {}", __func__, e.what());
-      QTimer::singleShot(10, [this] {  // slight delay is required on start-up init
+      QTimer::singleShot(10, this, [this] {  // slight delay is required on start-up init
          emit connectionError(ConnectionError::SocketFailed, tr("Connection creation failed"));
       });
    }
@@ -1139,6 +1138,11 @@ bool RemoteSigner::hasUI() const
    std::lock_guard<std::mutex> lock(mutex_);
 
    return listener_ ? listener_->hasUI() : false;
+}
+
+void RemoteSigner::updatePeerKeys(const ZmqBIP15XPeers &peers)
+{
+   connection_->updatePeerKeys(peers);
 }
 
 void RemoteSigner::onConnected()

@@ -442,6 +442,25 @@ bool ZmqBIP15XDataConnection::SetZMQTransport(ZMQTransport transport)
    return false;
 }
 
+// static
+BinaryData ZmqBIP15XDataConnection::getOwnPubKey(const string &ownKeyFileDir, const string &ownKeyFileName)
+{
+   AuthorizedPeers authPeers(ownKeyFileDir, ownKeyFileName);
+   return getOwnPubKey(authPeers);
+}
+
+// static
+BinaryData ZmqBIP15XDataConnection::getOwnPubKey(const AuthorizedPeers &authPeers)
+{
+   try {
+      const auto &pubKey = authPeers.getOwnPublicKey();
+      return BinaryData(pubKey.pubkey, pubKey.compressed
+         ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
+   } catch (...) {
+      return {};
+   }
+}
+
 // Kick off the BIP 151 handshake. This is the first function to call once the
 // unencrypted connection is established.
 //
@@ -1182,9 +1201,7 @@ bool ZmqBIP15XDataConnection::genBIPIDCookie()
 BinaryData ZmqBIP15XDataConnection::getOwnPubKey() const
 {
    std::lock_guard<std::mutex> lock(authPeersMutex_);
-   const auto pubKey = authPeers_->getOwnPublicKey();
-   return BinaryData(pubKey.pubkey, pubKey.compressed
-      ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH);
+   return getOwnPubKey(*authPeers_);
 }
 
 
