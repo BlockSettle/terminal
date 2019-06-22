@@ -166,6 +166,11 @@ static int QMLApp(int argc, char **argv)
    // Go ahead and build the headless connection encryption files, even if we
    // don't use them. If they already exist, we'll leave them alone.
    logger->info("Starting BS Signer UI with args: {}", app.arguments().join(QLatin1Char(' ')).toStdString());
+   QQmlApplicationEngine engine;
+   QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
+   const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+   engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
+
    try {
       BinaryData srvIDKey(BIP151PUBKEYSIZE);
       if (!(settings->getSrvIDKeyBin(srvIDKey))) {
@@ -175,11 +180,6 @@ static int QMLApp(int argc, char **argv)
 
       SignerAdapter adapter(logger, settings->netType(), &srvIDKey);
       adapter.setCloseHeadless(settings->closeHeadless());
-
-      QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
-      QQmlApplicationEngine engine;
-      const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-      engine.rootContext()->setContextProperty(QStringLiteral("fixedFont"), fixedFont);
 
       QMLAppObj qmlAppObj(&adapter, logger, settings, splashScreen, engine.rootContext());
       QTimer::singleShot(0, &qmlAppObj, &QMLAppObj::Start);
@@ -204,7 +204,14 @@ static int QMLApp(int argc, char **argv)
    catch (const std::exception &e) {
       logger->critical("Failed to start signer: {}", e.what());
       std::cerr << "Failed to start signer:" << e.what() << std::endl;
+#ifdef NDEBUG
       return -1;
+#else
+      // Launch simple gui in debug mode (for development purposes)
+      QMLAppObj qmlAppObj(nullptr, logger, settings, splashScreen, engine.rootContext());
+      engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
+      return app.exec();
+#endif
    }
 }
 

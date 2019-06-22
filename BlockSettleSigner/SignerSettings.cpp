@@ -148,7 +148,7 @@ double SignerSettings::limitAutoSignXbt() const
 
 bool SignerSettings::autoSignUnlimited() const
 {
-   return (limitManualXbt() == 0.0);
+   return (limitAutoSignXbt() == 0.0);
 }
 
 bool SignerSettings::manualSignUnlimited() const
@@ -195,8 +195,12 @@ bool SignerSettings::loadSettings(const QStringList &args)
       }
    }
    else {
+#ifdef NDEBUG
       QMessageBox::critical(nullptr, tr("Error"), tr("Please start blocksettle_signer instead"));
       return false;
+#else
+      return true;
+#endif
    }
 
    if (parser.isSet(srvIDKeyName)) {

@@ -119,6 +119,9 @@ CustomDialogWindow {
                 dialogsChainFinished()
                 reject()
             }
+            else {
+                reject()
+            }
         }
     }
 

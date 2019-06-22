@@ -7,6 +7,7 @@ import com.blocksettle.AuthSignWalletObject 1.0
 import com.blocksettle.WalletInfo 1.0
 import com.blocksettle.QSeed 1.0
 import com.blocksettle.QPasswordData 1.0
+import com.blocksettle.WalletsProxy 1.0
 
 import "../StyledControls"
 import "../BsControls"
@@ -39,6 +40,11 @@ CustomTitleDialogWindow {
     onWalletInfoChanged: {
         // need to update object since bindings working only for basic types
         walletDetailsFrame.walletInfo = walletInfo
+        if (walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)) {
+            fullBackupTabButton.enabled = false
+            tabBar.currentIndex = 1
+            walletDetailsFrame.visible = false
+        }
     }
 
     cContentItem: ColumnLayout {
@@ -65,6 +71,7 @@ CustomTitleDialogWindow {
                 text: "Full"
                 cText.font.capitalization: Font.MixedCase
                 implicitHeight: 35
+                enabled: !walletsProxy.isWatchingOnlyWallet(walletInfo.rootId)
             }
             CustomTabButton {
                 id: woBackupTabButton
