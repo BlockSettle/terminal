@@ -445,6 +445,8 @@ Chat::Data_Message_Encryption ChatClient::resolveMessageEncryption(std::shared_p
          return Chat::Data_Message_Encryption_IES;
    }
 
+   // TODO: What the default returned value should be here? I have no idea.
+   return Chat::Data_Message_Encryption_UNENCRYPTED;
 }
 
 void ChatClient::onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& roomsList)

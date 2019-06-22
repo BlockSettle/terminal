@@ -39,7 +39,7 @@ public:
    static std::shared_ptr<Chat::Data> decryptMessageAead(const std::shared_ptr<spdlog::logger> &logger
       , const Chat::Data_Message &msg, const BinaryData &remotePubKey, const SecureBinaryData &privKey);
 
-  static std::string jsonAssociatedData(const Chat::Data_Message& msg);
+  static std::string jsonAssociatedData(const Chat::Data_Message& msg, const BinaryData& nonce);
 };
 
 Q_DECLARE_METATYPE(std::shared_ptr<Chat::Data>)

@@ -861,7 +861,8 @@ std::shared_ptr<Chat::Data> BaseChatClient::encryptMessageToSendAEAD(const std::
       logger_, messageData->message(), 
       chatSessionKeyDataPtr->remotePublicKey(), 
       chatSessionKeyDataPtr->localPrivateKey(), 
-      BinaryData(nonce.data(), nonce.size()));
+      BinaryData(nonce.data(), nonce.size())
+      );
 
    if (!msgEncrypted) {
       logger_->error("[BaseChatClient::{}] can't encode data", __func__);
