@@ -57,7 +57,7 @@ void ZmqStreamServerConnection::onZeroFrame(const std::string& clientId)
 
       auto connectionIt = activeConnections_.find(clientId);
       if (connectionIt == activeConnections_.end()) {
-         SPDLOG_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] have new client connection on {}", connectionName_);
+         SPDLOG_LOGGER_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] have new client connection on {}", connectionName_);
 
          auto newConnection = CreateActiveConnection();
          newConnection->InitConnection(clientId, this);
@@ -66,7 +66,7 @@ void ZmqStreamServerConnection::onZeroFrame(const std::string& clientId)
 
          clientConnected = true;
       } else {
-         SPDLOG_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] client disconnected on {}", connectionName_);
+         SPDLOG_LOGGER_DEBUG(logger_, "[ZmqStreamServerConnection::onZeroFrame] client disconnected on {}", connectionName_);
          activeConnections_.erase(connectionIt);
 
          clientConnected = false;

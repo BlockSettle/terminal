@@ -171,7 +171,7 @@ void ZmqBIP15XDataConnection::listenFunction()
    poll_items[MonitorSocketIndex].socket = monSocket_.get();
    poll_items[MonitorSocketIndex].events = ZMQ_POLLIN;
 
-   SPDLOG_DEBUG(logger_, "[{}] poll thread started for {}", __func__
+   SPDLOG_LOGGER_DEBUG(logger_, "[{}] poll thread started for {}", __func__
       , connectionName_);
 
    bool tcpConnected = false;
@@ -620,7 +620,7 @@ bool ZmqBIP15XDataConnection::openConnection(const std::string &host
    // and start thread
    listenThread_ = std::thread(&ZmqBIP15XDataConnection::listenFunction, this);
 
-   SPDLOG_DEBUG(logger_, "[{}] starting connection for {}", __func__
+   SPDLOG_LOGGER_DEBUG(logger_, "[{}] starting connection for {}", __func__
       , connectionName_);
    return true;
 }
@@ -636,7 +636,7 @@ bool ZmqBIP15XDataConnection::closeConnection()
    assert(std::this_thread::get_id() != listenThread_.get_id());
 
    if (!isActive()) {
-      SPDLOG_DEBUG(logger_, "[{}] connection already stopped {}", __func__
+      SPDLOG_LOGGER_DEBUG(logger_, "[{}] connection already stopped {}", __func__
          , connectionName_);
       return true;
    }
@@ -648,7 +648,7 @@ bool ZmqBIP15XDataConnection::closeConnection()
       serverPubkeySignalled_ = true;
    }
 
-   SPDLOG_DEBUG(logger_, "[{}] stopping {}", __func__, connectionName_);
+   SPDLOG_LOGGER_DEBUG(logger_, "[{}] stopping {}", __func__, connectionName_);
 
    sendCommand(InternalCommandCode::Stop);
    listenThread_.join();
