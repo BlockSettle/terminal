@@ -625,6 +625,7 @@
             <widget class="OTCParticipantShield" name="widgetParticipantShield"/>
             <widget class="OTCContactShield" name="widgetContactShield"/>
             <widget class="OTCContactNetStatusShield" name="widgetContactNetStatusShield"/>
+            <widget class="OTCSupportRoomShield" name="widgetSupportShield"/>
            </widget>
           </item>
          </layout>
@@ -720,6 +721,12 @@
    <class>OTCContactNetStatusShield</class>
    <extends>QWidget</extends>
    <header>OTCContactNetStatusShield.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OTCSupportRoomShield</class>
+   <extends>QWidget</extends>
+   <header>OTCSupportRoomShield.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

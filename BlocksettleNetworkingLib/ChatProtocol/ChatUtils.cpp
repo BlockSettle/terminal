@@ -7,6 +7,9 @@
 #include "Encryption/IES_Decryption.h"
 #include "botan/base64.h"
 
+#include <QJsonObject>
+#include <QJsonDocument>
+
 const char *ChatUtils::GlobalRoomKey = "global_chat";
 const char *ChatUtils::OtcRoomKey = "otc_chat";
 const char *ChatUtils::SupportRoomKey = "support_chat";
@@ -103,6 +106,7 @@ std::shared_ptr<Chat::Data> ChatUtils::encryptMessageAead(const std::shared_ptr<
       cipher->setPublicKey(remotePubKey);
       cipher->setNonce(Botan::SecureVector<uint8_t>(nonce.getPtr(), nonce.getPtr() + nonce.getSize()));
       cipher->setData(msg.message());
+      cipher->setAssociatedData(jsonAssociatedData(msg));
 
       Botan::SecureVector<uint8_t> output;
       cipher->finish(output);
@@ -165,6 +169,7 @@ std::shared_ptr<Chat::Data> ChatUtils::decryptMessageAead(const std::shared_ptr<
       decipher->setPublicKey(pubKey);
       const std::string &nonce = msg.nonce();
       decipher->setNonce(Botan::SecureVector<uint8_t>(nonce.begin(), nonce.end()));
+      decipher->setAssociatedData(jsonAssociatedData(msg));
 
       decipher->finish(output);
 
@@ -181,4 +186,14 @@ std::shared_ptr<Chat::Data> ChatUtils::decryptMessageAead(const std::shared_ptr<
       logger->error("[ChatUtils::{}] failed: {}", __func__, e.what());
       return nullptr;
    }
+}
+
+std::string ChatUtils::jsonAssociatedData(const Chat::Data_Message& msg)
+{
+   QJsonObject data;
+   data[QLatin1String("senderId")] = QString::fromStdString(msg.sender_id());
+   data[QLatin1String("receiverId")] = QString::fromStdString(msg.receiver_id());
+   data[QLatin1String("nonce")] = QString::fromStdString(msg.nonce());
+   QJsonDocument jsonDocument(data);
+   return jsonDocument.toJson(QJsonDocument::Compact).toStdString();
 }

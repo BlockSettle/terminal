@@ -3,6 +3,7 @@
 #include "ChatClientUsersViewItemDelegate.h"
 #include "ChatClientDataModel.h"
 #include "BSMessageBox.h"
+#include "EditContactDialog.h"
 
 #include <QMenu>
 #include <QAbstractProxyModel>
@@ -104,6 +105,10 @@ private slots:
       handler_->onActionRejectContactRequest(currentContact_);
    }
 
+   void onEditContact() {
+      view_->editContact(currentContact_);
+   }
+
    void prepareContactMenu()
    {
       if (!currentContact_){
@@ -116,6 +121,7 @@ private slots:
 //            break;
          case Chat::ContactStatus::CONTACT_STATUS_ACCEPTED:
             addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+            addAction(tr("Edit contact"), this, &ChatUsersContextMenu::onEditContact);
             break;
          case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
             addAction(tr("Accept friend request"), this, &ChatUsersContextMenu::onAcceptFriendRequest);
@@ -157,6 +163,7 @@ ChatClientUserView::ChatClientUserView(QWidget *parent)
    // expand/collapse categories only on single click
    setExpandsOnDoubleClick(false);
    connect(this, &QTreeView::clicked, this, &ChatClientUserView::onClicked);
+   connect(this, &QTreeView::doubleClicked, this, &ChatClientUserView::onDoubleClicked);
 }
 
 void ChatClientUserView::addWatcher(ViewItemWatcher * watcher)
@@ -209,6 +216,29 @@ void ChatClientUserView::updateCurrentChat()
    }
 }
 
+void ChatClientUserView::editContact(std::shared_ptr<Chat::Data> crecord)
+{
+   if (handler_) {
+      auto contactRecord = crecord->mutable_contact_record();
+      QString contactId = QString::fromStdString(contactRecord->contact_id());
+      QString displayName = QString::fromStdString(contactRecord->display_name());
+      QDateTime joinDate;  // TODO: implement when will be ready
+      QString idKey;       // TODO: implement when will be ready
+      EditContactDialog dialog(contactId, displayName, joinDate, idKey);
+      if (dialog.exec() == QDialog::Accepted) {
+         contactId = dialog.contactId();
+         displayName = dialog.displayName();
+         joinDate = dialog.joinDate();
+         idKey = dialog.idKey();
+         contactRecord->set_contact_id(contactId.toStdString());
+         contactRecord->set_display_name(displayName.toStdString());
+         // TODO: joinDate implement when will be ready
+         // TODO: idKey    implement when will be ready
+         handler_->onActionEditContactRequest(crecord);
+      }
+   }
+}
+
 void ChatClientUserView::onCustomContextMenu(const QPoint & point)
 {
    if (!contextMenu_) {
@@ -233,6 +263,18 @@ void ChatClientUserView::onClicked(const QModelIndex &index)
          else {
             expand(index);
          }
+      }
+   }
+}
+
+void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
+{
+   if (index.isValid()) {
+      auto proxyModel = qobject_cast<const QAbstractProxyModel*>(index.model());
+      QModelIndex i = proxyModel ? proxyModel->mapToSource(index) : index;
+      TreeItem *item = static_cast<TreeItem*>(i.internalPointer());
+      if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+         editContact(static_cast<ChatContactElement*>(item)->getDataObject());
       }
    }
 }

@@ -445,22 +445,19 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
    }
 
    while (query.next()) {
-   // TODO: last head, change to protobuf
-/*
-      Chat::ContactRecordData contact(
-         query.value(0).toString(),
-         query.value(0).toString(),
-         static_cast<Chat::ContactStatus>(query.value(2).toInt()),
-         query.value(3).toString(),
-         query.value(4).toDateTime(),
-         query.value(1).toString());
-*/
-
       Chat::Data_ContactRecord contact;
       contact.set_user_id(query.value(0).toString().toStdString());
       contact.set_contact_id(query.value(0).toString().toStdString());
       contact.set_status(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
-      contact.set_display_name(query.value(1).toString().toStdString());
+      contact.set_public_key(query.value(3).toString().toStdString());
+      contact.set_public_key_timestamp(query.value(4).toInt());
+
+      auto name = query.value(1).toString().toStdString();
+      if (!name.empty()) {
+         contact.set_display_name(name);
+      } else {
+         contact.set_display_name(contact.contact_id());
+      }
 
       contactList.emplace_back(contact);
    }
@@ -520,6 +517,8 @@ bool ChatDB::getContact(const std::string &userId, Chat::Data_ContactRecord *con
       contact->set_user_id(query.value(0).toString().toStdString());
       contact->set_display_name(query.value(1).toString().toStdString());
       contact->set_status(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
+      contact->set_public_key(query.value(3).toString().toStdString());
+      contact->set_public_key_timestamp(query.value(4).toInt());
       return true;
    }
 
