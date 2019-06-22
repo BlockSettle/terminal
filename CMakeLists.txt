@@ -15,6 +15,7 @@ endif()
 option(BSTERMINAL_SHARED_LIBS "Build shared libraries" OFF)
 
 add_definitions(-DSTATIC_BUILD)
+add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    IF(BSTERMINAL_SHARED_LIBS)
