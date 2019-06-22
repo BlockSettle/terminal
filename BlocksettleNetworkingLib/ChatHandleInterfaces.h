@@ -25,6 +25,7 @@ public:
    virtual void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) = 0;
    virtual void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) = 0;
    virtual void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) = 0;
+   virtual void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) = 0;
    virtual bool onActionIsFriend(const std::string& userId) = 0;
 };
 
