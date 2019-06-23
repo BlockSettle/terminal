@@ -11,6 +11,7 @@
 #include "ArmoryObject.h"
 #include "CelerClient.h"
 #include "CircleProgressBar.h"
+#include "SignContainer.h"
 
 namespace bs {
    namespace sync {
@@ -43,10 +44,8 @@ private slots:
    void onConnectedToServer();
    void onConnectionClosed();
    void onConnectionError(int errorCode);
-   void onContainerConnected();
-   void onContainerDisconnected();
    void onContainerAuthorized();
-   void onContainerError();
+   void onContainerError(SignContainer::ConnectionError error, const QString &details);
    void updateBalances();
    void onWalletImportStarted(const std::string &walletId);
    void onWalletImportFinished(const std::string &walletId);
@@ -95,7 +94,6 @@ private:
    QPixmap     iconCelerConnecting_;
    QPixmap     iconContainerOffline_;
    QPixmap     iconContainerError_;
-   QPixmap     iconContainerConnecting_;
    QPixmap     iconContainerOnline_;
 
    std::shared_ptr<ArmoryObject>   armory_;

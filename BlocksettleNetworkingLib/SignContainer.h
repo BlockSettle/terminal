@@ -61,6 +61,7 @@ public:
       InvalidProtocol,
       NetworkTypeMismatch,
       ConnectionTimeout,
+      SignerGoesOffline,
    };
    Q_ENUM(ConnectionError)
 
