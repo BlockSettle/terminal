@@ -204,10 +204,10 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryObject>
                          , const std::shared_ptr<bs::sync::Wallet> &defWlt)
    : QAbstractItemModel(parent)
    , armory_(armory)
+   , logger_(logger)
    , ledgerDelegate_(ledgerDelegate)
    , walletsManager_(walletsManager)
    , defaultWallet_(defWlt)
-   , logger_(logger)
    , allWallets_(false)
 {
    init();
@@ -220,8 +220,8 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryObject>
                                              , QObject* parent)
    : QAbstractItemModel(parent)
    , armory_(armory)
-   , walletsManager_(walletsManager)
    , logger_(logger)
+   , walletsManager_(walletsManager)
    , allWallets_(true)
 {
    init();

@@ -5,11 +5,13 @@
 
 class ChatRoomElement : public CategoryElement {
 public:
-   ChatRoomElement(std::shared_ptr<Chat::RoomData> data)
+   ChatRoomElement(const std::shared_ptr<Chat::Data> &data)
       : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::RoomsElement, std::vector<ChatUIDefinitions::ChatTreeNodeType>{ChatUIDefinitions::ChatTreeNodeType::MessageDataNode}, data)
-   {}
+   {
+      assert(data->has_room());
+   }
 
-   std::shared_ptr<Chat::RoomData> getRoomData() const;
+   Chat::Data_Room* getRoomData() const;
 
    bool isChildSupported(const TreeItem *item) const override;
 };
@@ -24,14 +26,16 @@ public:
 
    Q_ENUM(OnlineStatus)
 
-   ChatContactElement(ChatUIDefinitions::ChatTreeNodeType contactNodeType, std::shared_ptr<Chat::ContactRecordData> data)
+   ChatContactElement(ChatUIDefinitions::ChatTreeNodeType contactNodeType, const std::shared_ptr<Chat::Data> &data)
       : CategoryElement(contactNodeType,
                         std::vector<ChatUIDefinitions::ChatTreeNodeType>{
                         ChatUIDefinitions::ChatTreeNodeType::MessageDataNode},
                         data)
-   {}
+   {
+      assert(data->has_contact_record());
+   }
 
-   std::shared_ptr<Chat::ContactRecordData> getContactData() const;
+   Chat::Data_ContactRecord *getContactData() const;
 
    OnlineStatus getOnlineStatus() const;
    void setOnlineStatus(const OnlineStatus &onlineStatus);
@@ -44,10 +48,10 @@ protected:
 
 class ChatContactCompleteElement : public ChatContactElement {
 public:
-   ChatContactCompleteElement(std::shared_ptr<Chat::ContactRecordData> data)
+   ChatContactCompleteElement(std::shared_ptr<Chat::Data> data)
    : ChatContactElement(ChatUIDefinitions::ChatTreeNodeType::ContactsElement, data)
    {
-
+      assert(data->has_contact_record());
    }
 
    bool OTCTradingStarted() const;
@@ -55,90 +59,99 @@ public:
    bool haveUpdates() const;
    bool haveResponse() const;
 
-   std::shared_ptr<Chat::OTCRequestData>  getOTCRequest() const;
-   std::shared_ptr<Chat::OTCResponseData> getOTCResponse() const;
-   std::shared_ptr<Chat::OTCUpdateData>   getLastOTCUpdate() const;
+   std::shared_ptr<Chat::Data> getOTCRequest() const;
+   std::shared_ptr<Chat::Data> getOTCResponse() const;
+   std::shared_ptr<Chat::Data> getLastOTCUpdate() const;
 
    void cleanupTrading();
 
 protected:
    void onChildAdded(TreeItem* item) override;
 private:
-   void processOTCMessage(const std::shared_ptr<Chat::MessageData>& messageData);
+   void processOTCMessage(const std::shared_ptr<Chat::Data>& messageData);
 protected:
-   std::shared_ptr<Chat::OTCRequestData>  otcRequest_ = nullptr;
-   std::shared_ptr<Chat::OTCResponseData> otcResponse_ = nullptr;
-   std::shared_ptr<Chat::OTCUpdateData>       lastUpdate_ = nullptr;
+   std::shared_ptr<Chat::Data>  otcRequest_ = nullptr;
+   std::shared_ptr<Chat::Data>  otcResponse_ = nullptr;
+   std::shared_ptr<Chat::Data>  otcLastUpdate_ = nullptr;
 };
 
 class ChatContactRequestElement : public ChatContactElement {
 public:
-   ChatContactRequestElement(std::shared_ptr<Chat::ContactRecordData> data)
+   ChatContactRequestElement(std::shared_ptr<Chat::Data> data)
    : ChatContactElement(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement, data)
    {
-
+      assert(data->has_contact_record());
    }
 };
 
 class ChatSearchElement : public CategoryElement {
 public:
-   ChatSearchElement(std::shared_ptr<Chat::UserData> data)
+   ChatSearchElement(std::shared_ptr<Chat::Data> data)
       : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::SearchElement, std::vector<ChatUIDefinitions::ChatTreeNodeType>{ChatUIDefinitions::ChatTreeNodeType::NoDataNode}, data)
-   {}
+   {
+      assert(data->has_user());
+   }
 
-   std::shared_ptr<Chat::UserData> getUserData() const;
+   Chat::Data_User *getUserData() const;
 };
 
 class ChatUserElement : public CategoryElement
 {
 public:
-   ChatUserElement(std::shared_ptr<Chat::UserData> data)
+   ChatUserElement(std::shared_ptr<Chat::Data> data)
       : CategoryElement(ChatUIDefinitions::ChatTreeNodeType::AllUsersElement, std::vector<ChatUIDefinitions::ChatTreeNodeType>{ChatUIDefinitions::ChatTreeNodeType::MessageDataNode}, data)
-   {}
+   {
+      assert(data->has_user());
+   }
 
-   std::shared_ptr<Chat::UserData> getUserData() const;
+   Chat::Data_User *getUserData() const;
 };
 
 class DisplayableDataNode : public TreeItem {
 public:
    DisplayableDataNode(ChatUIDefinitions::ChatTreeNodeType messageParent,
                        ChatUIDefinitions::ChatTreeNodeType dataNodeType,
-                       std::shared_ptr<Chat::DataObject> data)
+                       std::shared_ptr<Chat::Data> data)
       : TreeItem(dataNodeType, std::vector<ChatUIDefinitions::ChatTreeNodeType>{
                  ChatUIDefinitions::ChatTreeNodeType::NoDataNode}, messageParent)
       , data_(data)
    {}
 
-   std::shared_ptr<Chat::DataObject> getDataObject() const;
+   std::shared_ptr<Chat::Data> getDataObject() const;
 
 protected:
-   std::shared_ptr<Chat::DataObject> data_;
+   std::shared_ptr<Chat::Data> data_;
 };
 
 class TreeMessageNode : public DisplayableDataNode {
 public:
-   TreeMessageNode(ChatUIDefinitions::ChatTreeNodeType messageParent, std::shared_ptr<Chat::MessageData> message)
+   TreeMessageNode(ChatUIDefinitions::ChatTreeNodeType messageParent, std::shared_ptr<Chat::Data> data)
       : DisplayableDataNode(messageParent,
-                            ChatUIDefinitions::ChatTreeNodeType::MessageDataNode, message)
-   {}
+                            ChatUIDefinitions::ChatTreeNodeType::MessageDataNode, data)
+   {
+      assert(data->has_message());
+   }
 
-   std::shared_ptr<Chat::MessageData> getMessage() const {
-      return std::dynamic_pointer_cast<Chat::MessageData>(data_);
+   std::shared_ptr<Chat::Data> getMessage() const {
+      if (!data_->has_message()) {
+         return nullptr;
+      }
+      return data_;
    }
 };
 
 /*
 class ChatUserMessageNode : public TreeItem {
 public:
-   ChatUserMessageNode(std::shared_ptr<Chat::MessageData> message)
+   ChatUserMessageNode(std::shared_ptr<Chat::Data_Message> message)
       : TreeItem(NodeType::MessageDataNode, NodeType::NoDataNode, ChatUIDefinitions::ChatTreeNodeType::ContactsElement)
       , message_(message)
    {
 
    }
-   std::shared_ptr<Chat::MessageData> getMessage() const {return message_;}
+   std::shared_ptr<Chat::Data_Message> getMessage() const {return message_;}
 private:
-   std::shared_ptr<Chat::MessageData> message_;
+   std::shared_ptr<Chat::Data_Message> message_;
 };*/
 
 #endif // TREENODESIMPL_H

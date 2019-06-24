@@ -126,7 +126,6 @@ public:
       armoryServers,
       defaultArmoryServersKeys,
       twoWaySignerAuth,
-      dontLoadCCList,
       ChartProduct,
       ChartTimeframe,
       ChartCandleCount,

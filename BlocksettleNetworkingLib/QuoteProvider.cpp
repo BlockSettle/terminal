@@ -633,7 +633,9 @@ bool QuoteProvider::onFxOrderSnapshot(const std::string& data, bool resync) cons
    order.status = mapFxOrderStatus(response.orderstatus());
 
    if (!resync && (order.status == Order::Failed)) {
-      emit orderFailed(response.quoteid(), response.info());
+      if (response.updatedtimestamputcinmillis() > celerLoggedInTimestampUtcInMillis_) {
+         emit orderFailed(response.quoteid(), response.info());
+      }
    }
 
    emit orderUpdated(order);

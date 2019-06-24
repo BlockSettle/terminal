@@ -1,5 +1,6 @@
 #include "ChatClientDataModel.h"
 #include <algorithm>
+#include "ChatProtocol/ChatUtils.h"
 
 ChatClientDataModel::ChatClientDataModel(QObject * parent)
     : QAbstractItemModel(parent)
@@ -47,55 +48,61 @@ void ChatClientDataModel::clearSearch()
    endRemoveRows();
 }
 
-bool ChatClientDataModel::insertRoomObject(std::shared_ptr<Chat::RoomData> data)
+bool ChatClientDataModel::insertRoomObject(std::shared_ptr<Chat::Data> data)
 {
+   assert(data->has_room());
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::RoomsElement);
    bool res = root_->insertRoomObject(data);
    endInsertRows();
    return res;
 }
 
-bool ChatClientDataModel::insertContactObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
+bool ChatClientDataModel::insertContactObject(std::shared_ptr<Chat::Data> data, bool isOnline)
 {
-   if (data->getContactStatus() == Chat::ContactStatus::Accepted) {
+   assert(data->has_contact_record());
+   if (data->contact_record().status() == Chat::CONTACT_STATUS_ACCEPTED) {
       return insertContactCompleteObject(data, isOnline);
    }
    return insertContactRequestObject(data, isOnline);
 }
 
-bool ChatClientDataModel::insertContactRequestObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
+bool ChatClientDataModel::insertContactRequestObject(std::shared_ptr<Chat::Data> data, bool isOnline)
 {
+   assert(data->has_contact_record());
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement);
    bool res = root_->insertContactRequestObject(data, isOnline);
    endInsertRows();
    return res;
 }
 
-bool ChatClientDataModel::insertContactCompleteObject(std::shared_ptr<Chat::ContactRecordData> data, bool isOnline)
+bool ChatClientDataModel::insertContactCompleteObject(std::shared_ptr<Chat::Data> data, bool isOnline)
 {
+   assert(data->has_contact_record());
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::ContactsElement);
    bool res = root_->insertContactObject(data, isOnline);
    endInsertRows();
    return res;
 }
 
-bool ChatClientDataModel::insertGeneralUserObject(std::shared_ptr<Chat::UserData> data)
+bool ChatClientDataModel::insertGeneralUserObject(std::shared_ptr<Chat::Data> data)
 {
+   assert(data->has_user());
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::AllUsersElement);
    bool res = root_->insertGeneralUserObject(data);
    endInsertRows();
    return res;
 }
 
-bool ChatClientDataModel::insertSearchUserObject(std::shared_ptr<Chat::UserData> data)
+bool ChatClientDataModel::insertSearchUserObject(std::shared_ptr<Chat::Data> data)
 {
+   assert(data->has_user());
    beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType::SearchElement);
    bool res = root_->insertSearchUserObject(data);
    endInsertRows();
    return res;
 }
 
-bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat::UserData> > userList)
+bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat::Data> > userList)
 {
    if (userList.empty()) {
       return false;
@@ -153,7 +160,7 @@ bool ChatClientDataModel::insertDisplayableDataNode(DisplayableDataNode *display
    return res;
 }
 
-bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> message)
+bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::Data> message)
 {
    lastMessage_ = message;
 
@@ -168,7 +175,7 @@ bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::MessageData> m
    return res;
 }
 
-bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::MessageData> message)
+bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::Data> message)
 {
    lastMessage_ = message;
 
@@ -188,7 +195,7 @@ TreeItem *ChatClientDataModel::findChatNode(const std::string &chatId)
    return root_->findChatNode(chatId);
 }
 
-std::vector<std::shared_ptr<Chat::ContactRecordData> > ChatClientDataModel::getAllContacts()
+std::vector<std::shared_ptr<Chat::Data> > ChatClientDataModel::getAllContacts()
 {
  return root_->getAllContacts();
 }
@@ -257,7 +264,7 @@ bool ChatClientDataModel::removeContactRequestNode(const std::string &contactId)
    return res;
 }
 
-std::shared_ptr<Chat::ContactRecordData> ChatClientDataModel::findContactItem(const std::string &contactId)
+std::shared_ptr<Chat::Data> ChatClientDataModel::findContactItem(const std::string &contactId)
 {
    return root_->findContactItem(contactId);
 }
@@ -267,7 +274,7 @@ ChatContactElement *ChatClientDataModel::findContactNode(const std::string &cont
    return root_->findContactNode(contactId);
 }
 
-std::shared_ptr<Chat::MessageData> ChatClientDataModel::findMessageItem(const std::string &chatId, const std::string &messgeId)
+std::shared_ptr<Chat::Data> ChatClientDataModel::findMessageItem(const std::string &chatId, const std::string &messgeId)
 {
    return root_->findMessageItem(chatId, messgeId);
 }
@@ -282,13 +289,15 @@ void ChatClientDataModel::setCurrentUser(const std::string &currentUser)
    return root_->setCurrentUser(currentUser);
 }
 
-void ChatClientDataModel::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
+void ChatClientDataModel::notifyMessageChanged(std::shared_ptr<Chat::Data> message)
 {
+   assert(message->has_message());
    return root_->notifyMessageChanged(message);
 }
 
-void ChatClientDataModel::notifyContactChanged(std::shared_ptr<Chat::ContactRecordData> contact)
+void ChatClientDataModel::notifyContactChanged(std::shared_ptr<Chat::Data> contact)
 {
+   assert(contact->has_contact_record());
    return root_->notifyContactChanged(contact);
 }
 
@@ -420,12 +429,12 @@ QVariant ChatClientDataModel::roomData(const TreeItem *item, int role) const
 
       switch (role) {
          case RoomTitleRole:
-            if (room->getTitle().isEmpty()) {
-               return room->getId();
+            if (room->title().empty()) {
+               return QString::fromStdString(room->id());
             }
-            return room->getTitle();
+            return QString::fromStdString(room->title());
          case RoomIdRole:
-            return room->getId();
+            return QString::fromStdString(room->id());
          default:
             return QVariant();
       }
@@ -446,18 +455,18 @@ QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
 
       switch (role) {
          case ContactTitleRole:
-            if (contact->getDisplayName().isEmpty()) {
-               return contact->getContactId();
+            if (contact->display_name().empty()) {
+               return QString::fromStdString(contact->contact_id());
             }
-            return contact->getDisplayName();
+            return QString::fromStdString(contact->display_name());
          case ContactIdRole:
-            return contact->getContactId();
+            return QString::fromStdString(contact->contact_id());
          case ContactStatusRole:
-            return QVariant::fromValue(contact->getContactStatus());
+            return QVariant::fromValue(contact->status());
          case ContactOnlineStatusRole:
             return QVariant::fromValue(contact_element->getOnlineStatus());
          case Qt::EditRole:
-            return contact->getDisplayName();
+            return QString::fromStdString(contact->display_name());
          default:
             return QVariant();
       }
@@ -467,7 +476,7 @@ QVariant ChatClientDataModel::contactData(const TreeItem *item, int role) const
 
 QVariant ChatClientDataModel::userData(const TreeItem *item, int role) const
 {
-   std::shared_ptr<Chat::UserData> user = nullptr;
+   Chat::Data_User *user = nullptr;
    if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::AllUsersElement) {
       const ChatUserElement * user_element = static_cast<const ChatUserElement*>(item);
       user = user_element->getUserData();
@@ -482,9 +491,9 @@ QVariant ChatClientDataModel::userData(const TreeItem *item, int role) const
 
    switch (role) {
       case UserIdRole:
-         return user->getUserId();
+         return QString::fromStdString(user->user_id());
       case UserOnlineStatusRole:
-         return QVariant::fromValue(user->getUserStatus());
+         return QVariant::fromValue(user->status());
       default:
          return QVariant();
    }
@@ -513,7 +522,7 @@ QVariant ChatClientDataModel::chatNewMessageData(const TreeItem *item, int role)
 Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
 {
    if (!index.isValid()) {
-      return 0;
+      return Qt::NoItemFlags;
    }
 
    Qt::ItemFlags current_flags = QAbstractItemModel::flags(index);
@@ -528,10 +537,11 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
          break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
          //Only contact record could be edited
-         if (!current_flags.testFlag(Qt::ItemIsEditable)){
+         /*if (!current_flags.testFlag(Qt::ItemIsEditable)){
             current_flags.setFlag(Qt::ItemIsEditable);
-         }
+         }*/
          //no break needed
+         [[clang::fallthrough]];
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
       case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
@@ -566,8 +576,8 @@ void ChatClientDataModel::beginChatInsertRows(const ChatUIDefinitions::ChatTreeN
 void ChatClientDataModel::updateNewMessagesFlag()
 {
    bool flag = false;
-   CategoryElement *elem = NULL;
-   std::map<QString, std::shared_ptr<Chat::MessageData>> newMessages;
+   CategoryElement *elem = nullptr;
+   std::map<std::string, std::shared_ptr<Chat::Data>> newMessages;
 
    for (auto category : root_->getChildren()) {
       for ( auto categoryElement : category->getChildren()) {
@@ -577,7 +587,7 @@ void ChatClientDataModel::updateNewMessagesFlag()
                flag = true;
 
                bool displayTrayNotification = true;
-               auto roomItem = findChatNode(lastMessage_->receiverId().toStdString());
+               auto roomItem = findChatNode(lastMessage_->message().receiver_id());
          
                // get display tray notification flag for room
                if (roomItem && roomItem->getType() == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
@@ -585,17 +595,17 @@ void ChatClientDataModel::updateNewMessagesFlag()
                   if (roomElement) {
                      auto roomData = roomElement->getRoomData();
                      if (roomData) {
-                        displayTrayNotification = roomData->displayTrayNotification();
+                        displayTrayNotification = roomData->display_tray_notification();
                      }
                   }
                }
 
                if (displayTrayNotification) {
                   // get contact name if exist
-                  QString contactName;
-                  auto contactItem = findContactItem(lastMessage_->senderId().toStdString());
-                  if (contactItem && contactItem->hasDisplayName()) {
-                     contactName = contactItem->getDisplayName();
+                  std::string contactName;
+                  auto contactItem = findContactItem(lastMessage_->message().sender_id());
+                  if (contactItem && contactItem->has_contact_record()) {
+                     contactName = contactItem->contact_record().display_name();
                   }
                   newMessages.emplace(contactName, lastMessage_);
                }
@@ -628,10 +638,10 @@ bool ChatClientDataModel::setData(const QModelIndex &index, const QVariant &valu
          auto citem = static_cast<ChatContactElement*>(item);
          auto cdata = citem->getContactData();
          if (citem && cdata) {
-            cdata->setDisplayName(value.toString());
-            root_->notifyContactChanged(cdata);
+            cdata->set_display_name(value.toString().toStdString());
+            root_->notifyContactChanged(citem->getDataObject());
             if (modelChangesHandler_) {
-               modelChangesHandler_->onContactUpdatedByInput(cdata);
+               modelChangesHandler_->onContactUpdatedByInput(citem->getDataObject());
             }
             return true;
          }

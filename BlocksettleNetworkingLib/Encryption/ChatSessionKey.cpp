@@ -12,27 +12,26 @@
 
 #include <Encryption/IES_Encryption.h>
 
+#include "FastLock.h"
+
 namespace Chat {
 
    constexpr size_t kPrivateKeySize = 32;
    const Botan::EC_Group kDomain("secp256k1");
-   
-   ChatSessionKey::ChatSessionKey(const std::shared_ptr<spdlog::logger>& logger) : logger_(logger)
+
+   ChatSessionKey::ChatSessionKey(const std::shared_ptr<spdlog::logger>& logger)
+     : logger_(logger)
    {}
 
    ChatSessionKeyDataPtr ChatSessionKey::findSessionForUser(const std::string &receiverId) const
    {
-      ChatSessionDataPtrList::const_iterator chatSessionKeyDataIt =
-         std::find_if(_chatSessionKeyDataList.begin(), _chatSessionKeyDataList.end(), [receiverId](const ChatSessionKeyDataPtr& chatSessionDataPtr)
-            {
-               return chatSessionDataPtr->receiverId() == receiverId;
-            });
-
-      if (chatSessionKeyDataIt == _chatSessionKeyDataList.end()) {
+      FastLock locker{lock_};
+      const auto it = chatSessionKeyDataList_.find(receiverId);
+      if (it == chatSessionKeyDataList_.end()) {
          return nullptr;
       }
 
-      return (*chatSessionKeyDataIt);
+      return (it->second);
    }
 
    ChatSessionKeyDataPtr ChatSessionKey::generateLocalKeysForUser(const std::string &receiverId)
@@ -61,7 +60,10 @@ namespace Chat {
       chatSessionKeyDataPtr->setLocalPublicKey(localPublicKey);
       chatSessionKeyDataPtr->setReceiverId(receiverId);
 
-      _chatSessionKeyDataList.emplace_back(chatSessionKeyDataPtr);
+      {
+         FastLock locker{lock_};
+         chatSessionKeyDataList_.emplace(receiverId, chatSessionKeyDataPtr);
+      }
 
       return chatSessionKeyDataPtr;
    }
@@ -87,7 +89,7 @@ namespace Chat {
          throw std::runtime_error("ChatSessionData for give user is empty!");
       }
 
-      std::unique_ptr<Encryption::IES_Encryption> enc = Encryption::IES_Encryption::create(logger_);
+      auto enc = Encryption::IES_Encryption::create(logger_);
       enc->setPublicKey(remotePublicKey);
       enc->setData(chatSessionDataPtr->localPublicKey().toHexStr());
 
@@ -121,22 +123,17 @@ namespace Chat {
 
    void ChatSessionKey::clearSessionForUser(const std::string& receiverId)
    {
-
-      auto chatSessionDataPtrIterator = std::remove_if(_chatSessionKeyDataList.begin(), _chatSessionKeyDataList.end(), [receiverId](const ChatSessionKeyDataPtr& chatSessionDataPtr)
-      {
-         return chatSessionDataPtr->receiverId().compare(receiverId) == 0;
-      });
-
-      if (chatSessionDataPtrIterator == _chatSessionKeyDataList.end()) {
-         return;
+      FastLock locker{lock_};
+      const auto it = chatSessionKeyDataList_.find(receiverId);
+      if (it != chatSessionKeyDataList_.end()) {
+         chatSessionKeyDataList_.erase(it);
       }
-
-      _chatSessionKeyDataList.erase(chatSessionDataPtrIterator);
    }
 
    void ChatSessionKey::clearAll()
    {
-      _chatSessionKeyDataList.clear();
+      FastLock locker{lock_};
+      chatSessionKeyDataList_.clear();
    }
 
 }

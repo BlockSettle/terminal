@@ -1,5 +1,6 @@
 #include "CreateOTCResponseWidget.h"
 
+#include "ChatProtocol/ChatUtils.h"
 #include "ui_CreateOTCResponseWidget.h"
 
 CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)
@@ -16,32 +17,38 @@ CreateOTCResponseWidget::CreateOTCResponseWidget(QWidget* parent)
 
 CreateOTCResponseWidget::~CreateOTCResponseWidget() = default;
 
-void CreateOTCResponseWidget::SetRequestToRespond(const std::shared_ptr<Chat::OTCRequestData>& otc)
+void CreateOTCResponseWidget::SetRequestToRespond(const std::shared_ptr<Chat::Data>& otcRequest)
 {
+   assert(otcRequest->has_message());
+   assert(otcRequest->message().has_otc_request());
+
    ui_->pushButtonSubmit->setVisible(true);
    ui_->pushButtonPull->setText(tr("Reject"));
 
-   InitUIFromRequest(otc);
+   InitUIFromRequest(otcRequest);
 }
 
-void CreateOTCResponseWidget::InitUIFromRequest(const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
+void CreateOTCResponseWidget::InitUIFromRequest(const std::shared_ptr<Chat::Data>& otcRequest)
 {
    ui_->widgetPriceRange->setEnabled(true);
 
-   SetSide(otcRequest->otcRequest().side);
-   SetRange(otcRequest->otcRequest().amountRange);
+   SetSide(bs::network::ChatOTCSide::Type(otcRequest->message().otc_request().side()));
+   SetRange(bs::network::OTCRangeID::Type(otcRequest->message().otc_request().range_type()));
 }
 
-void CreateOTCResponseWidget::SetSubmittedResponse(const std::shared_ptr<Chat::OTCResponseData>& otcResponse, const std::shared_ptr<Chat::OTCRequestData>& otcRequest)
+void CreateOTCResponseWidget::SetSubmittedResponse(const std::shared_ptr<Chat::Data>& otcResponse, const std::shared_ptr<Chat::Data>& otcRequest)
 {
+   assert(otcRequest->has_message() && otcRequest->message().has_otc_request());
+   assert(otcResponse->has_message() && otcResponse->message().has_otc_response());
+
    InitUIFromRequest(otcRequest);
 
-   ui_->widgetPriceRange->SetLowerValue(otcResponse->otcResponse().priceRange.lower);
-   ui_->widgetPriceRange->SetUpperValue(otcResponse->otcResponse().priceRange.upper);
+   ui_->widgetPriceRange->SetLowerValue(otcResponse->message().otc_response().price().lower());
+   ui_->widgetPriceRange->SetUpperValue(otcResponse->message().otc_response().price().upper());
    ui_->widgetPriceRange->setEnabled(false);
 
-   ui_->widgetAmountRange->SetLowerValue(otcResponse->otcResponse().quantityRange.lower);
-   ui_->widgetAmountRange->SetUpperValue(otcResponse->otcResponse().quantityRange.upper);
+   ui_->widgetAmountRange->SetLowerValue(otcResponse->message().otc_response().quantity().lower());
+   ui_->widgetAmountRange->SetUpperValue(otcResponse->message().otc_response().quantity().upper());
    ui_->widgetAmountRange->setEnabled(false);
 
    ui_->pushButtonSubmit->setVisible(false);

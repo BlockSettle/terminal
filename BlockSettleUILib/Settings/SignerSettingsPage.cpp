@@ -1,5 +1,8 @@
 #include <QFileDialog>
 #include <QStandardPaths>
+#include <QTimer>
+#include <QClipboard>
+
 #include "SignerSettingsPage.h"
 #include "ui_SignerSettingsPage.h"
 #include "ApplicationSettings.h"
@@ -7,6 +10,7 @@
 #include "BSMessageBox.h"
 #include "SignContainer.h"
 #include "SignersManageWidget.h"
+#include "HeadlessContainer.h"
 
 SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    : SettingsPage{parent}
@@ -20,6 +24,27 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    connect(ui_->comboBoxRunMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SignerSettingsPage::runModeChanged);
    connect(ui_->spinBoxAsSpendLimit, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &SignerSettingsPage::onAsSpendLimitChanged);
    connect(ui_->pushButtonManageSignerKeys, &QPushButton::clicked, this, &SignerSettingsPage::onManageSignerKeys);
+
+   connect(ui_->pushButtonTerminalKeyCopy, &QPushButton::clicked, this, [this](){
+      qApp->clipboard()->setText(ui_->labelTerminalKey->text());
+      ui_->pushButtonTerminalKeyCopy->setEnabled(false);
+      ui_->pushButtonTerminalKeyCopy->setText(tr("Copied"));
+      QTimer::singleShot(2000, this, [this](){
+         ui_->pushButtonTerminalKeyCopy->setEnabled(true);
+         ui_->pushButtonTerminalKeyCopy->setText(tr("Copy"));
+      });
+   });
+   connect(ui_->pushButtonTerminalKeySave, &QPushButton::clicked, this, [this](){
+      QString fileName = QFileDialog::getSaveFileName(this
+                                   , tr("Save Armory Public Key")
+                                   , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + QStringLiteral("Terminal_Public_Key.pub")
+                                   , tr("Key files (*.pub)"));
+
+      QFile file(fileName);
+      if (file.open(QIODevice::WriteOnly)) {
+         file.write(ui_->labelTerminalKey->text().toLatin1());
+      }
+   });
 }
 
 SignerSettingsPage::~SignerSettingsPage() = default;
@@ -58,6 +83,7 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
       showSignerKeySettings(true);
+      ui_->labelTerminalKey->setText(QString::fromStdString(signersProvider_->remoteSignerOwnKey().toHexStr()));
       break;
    }
 
@@ -115,6 +141,7 @@ void SignerSettingsPage::showSignerKeySettings(bool show)
    //ui_->widgetTwoWayAuth->setVisible(show);
    //ui_->checkBoxTwoWayAuth->setVisible(show);
    ui_->widgetSignerKeyComboBox->setVisible(show);
+   ui_->SignerDetailsGroupBox->setVisible(show);
 }
 
 void SignerSettingsPage::onAsSpendLimitChanged(double value)
