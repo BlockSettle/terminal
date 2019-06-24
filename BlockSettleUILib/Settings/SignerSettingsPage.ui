@@ -456,7 +456,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="labelArmoryTerminalKey">
+         <widget class="QLabel" name="labelTerminalKey">
           <property name="text">
            <string/>
           </property>
@@ -498,7 +498,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButtonArmoryTerminalKeyCopy">
+         <widget class="QPushButton" name="pushButtonTerminalKeyCopy">
           <property name="minimumSize">
            <size>
             <width>150</width>
@@ -559,7 +559,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButtonArmoryTerminalKeySave">
+         <widget class="QPushButton" name="pushButtonTerminalKeySave">
           <property name="minimumSize">
            <size>
             <width>150</width>

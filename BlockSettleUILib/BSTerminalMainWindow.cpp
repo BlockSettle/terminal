@@ -501,8 +501,6 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createSigner()
 std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
 {
    SignerHost signerHost = signersProvider_->getCurrentSigner();
-   const auto keyFileDir = SystemFilePaths::appDataLocation();
-   const auto keyFileName = "client.peers";
    QString resultPort = QString::number(signerHost.port);
    NetworkType netType = applicationSettings_->get<NetworkType>(ApplicationSettings::netType);
 
@@ -541,7 +539,8 @@ std::shared_ptr<SignContainer> BSTerminalMainWindow::createRemoteSigner()
    QString resultHost = signerHost.address;
    const auto remoteSigner = std::make_shared<RemoteSigner>(logMgr_->logger()
       , resultHost, resultPort, netType, connectionManager_, applicationSettings_
-      , SignContainer::OpMode::Remote, false, keyFileDir, keyFileName, ourNewKeyCB);
+      , SignContainer::OpMode::Remote, false
+      , signersProvider_->remoteSignerKeysDir(), signersProvider_->remoteSignerKeysFile(), ourNewKeyCB);
 
    ZmqBIP15XPeers peers;
    for (const auto &signer : signersProvider_->signers()) {
