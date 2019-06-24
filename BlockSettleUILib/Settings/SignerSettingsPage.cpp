@@ -25,16 +25,16 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
    connect(ui_->spinBoxAsSpendLimit, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &SignerSettingsPage::onAsSpendLimitChanged);
    connect(ui_->pushButtonManageSignerKeys, &QPushButton::clicked, this, &SignerSettingsPage::onManageSignerKeys);
 
-   connect(ui_->pushButtonArmoryTerminalKeyCopy, &QPushButton::clicked, this, [this](){
-      qApp->clipboard()->setText(ui_->labelArmoryTerminalKey->text());
-      ui_->pushButtonArmoryTerminalKeyCopy->setEnabled(false);
-      ui_->pushButtonArmoryTerminalKeyCopy->setText(tr("Copied"));
-      QTimer::singleShot(2000, [this](){
-         ui_->pushButtonArmoryTerminalKeyCopy->setEnabled(true);
-         ui_->pushButtonArmoryTerminalKeyCopy->setText(tr("Copy"));
+   connect(ui_->pushButtonTerminalKeyCopy, &QPushButton::clicked, this, [this](){
+      qApp->clipboard()->setText(ui_->labelTerminalKey->text());
+      ui_->pushButtonTerminalKeyCopy->setEnabled(false);
+      ui_->pushButtonTerminalKeyCopy->setText(tr("Copied"));
+      QTimer::singleShot(2000, this, [this](){
+         ui_->pushButtonTerminalKeyCopy->setEnabled(true);
+         ui_->pushButtonTerminalKeyCopy->setText(tr("Copy"));
       });
    });
-   connect(ui_->pushButtonArmoryTerminalKeySave, &QPushButton::clicked, this, [this](){
+   connect(ui_->pushButtonTerminalKeySave, &QPushButton::clicked, this, [this](){
       QString fileName = QFileDialog::getSaveFileName(this
                                    , tr("Save Armory Public Key")
                                    , QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + QStringLiteral("Terminal_Public_Key.pub")
@@ -42,7 +42,7 @@ SignerSettingsPage::SignerSettingsPage(QWidget* parent)
 
       QFile file(fileName);
       if (file.open(QIODevice::WriteOnly)) {
-         file.write(ui_->labelArmoryTerminalKey->text().toLatin1());
+         file.write(ui_->labelTerminalKey->text().toLatin1());
       }
    });
 }
@@ -83,6 +83,7 @@ void SignerSettingsPage::onModeChanged(SignContainer::OpMode mode)
       ui_->spinBoxPort->setValue(appSettings_->get<int>(ApplicationSettings::localSignerPort));
       showLimits(false);
       showSignerKeySettings(true);
+      ui_->labelTerminalKey->setText(QString::fromStdString(signersProvider_->remoteSignerOwnKey().toHexStr()));
       break;
    }
 
@@ -99,17 +100,6 @@ void SignerSettingsPage::display()
    onModeChanged(opMode);
    ui_->comboBoxRunMode->setCurrentIndex(modeIndex - 1);
    ui_->checkBoxTwoWayAuth->setChecked(appSettings_->get<bool>(ApplicationSettings::twoWaySignerAuth));
-
-   try {
-      RemoteSigner *remoteSigner = qobject_cast<RemoteSigner *>(signContainer_.get());
-      if (remoteSigner) {
-         SecureBinaryData ownKey = remoteSigner->getOwnPubKey();
-         ui_->labelArmoryTerminalKey->setText(QString::fromStdString(ownKey.toHexStr()));
-      }
-   }
-   catch (...) {
-      ui_->labelArmoryTerminalKey->setText(tr("Unknown"));
-   }
 }
 
 void SignerSettingsPage::reset()
@@ -151,6 +141,7 @@ void SignerSettingsPage::showSignerKeySettings(bool show)
    //ui_->widgetTwoWayAuth->setVisible(show);
    //ui_->checkBoxTwoWayAuth->setVisible(show);
    ui_->widgetSignerKeyComboBox->setVisible(show);
+   ui_->SignerDetailsGroupBox->setVisible(show);
 }
 
 void SignerSettingsPage::onAsSpendLimitChanged(double value)

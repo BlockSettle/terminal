@@ -116,6 +116,8 @@ public:
    bool isActive() const;
    bool SetZMQTransport(ZMQTransport transport);
 
+   static BinaryData getOwnPubKey(const std::string &ownKeyFileDir, const std::string &ownKeyFileName);
+   static BinaryData getOwnPubKey(const AuthorizedPeers &authPeers);
 private:
    enum class InternalCommandCode
    {
