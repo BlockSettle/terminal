@@ -77,7 +77,7 @@ void ChatClient::OnLoginCompleted()
 //      sendRequest(request2);
 }
 
-void ChatClient::OnLofingFailed()
+void ChatClient::OnLogingFailed()
 {
    emit LoginFailed();
 }

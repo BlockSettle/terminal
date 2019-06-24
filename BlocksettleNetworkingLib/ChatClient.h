@@ -101,7 +101,7 @@ protected:
    Chat::Data_Message_Encryption resolveMessageEncryption(std::shared_ptr<Chat::Data> message) const override;
 
    void OnLoginCompleted() override;
-   void OnLofingFailed() override;
+   void OnLogingFailed() override;
    void OnLogoutCompleted() override;
 
    void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& roomsList) override;

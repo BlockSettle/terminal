@@ -101,13 +101,9 @@ public:
 
    std::string getUserId() const;
 
-private slots:
-   void onCleanupConnection();
-
-signals:
-   void CleanupConnection();
-
 protected:
+   void cleanupConnection();
+
    virtual BinaryData         getOwnAuthPublicKey() const = 0;
    virtual SecureBinaryData   getOwnAuthPrivateKey() const = 0;
    virtual std::string        getChatServerHost() const = 0;
@@ -117,7 +113,7 @@ protected:
    void setSavedKeys(std::map<std::string, BinaryData>&& loadedKeys);
 
    virtual void OnLoginCompleted() = 0;
-   virtual void OnLofingFailed() = 0;
+   virtual void OnLogingFailed() = 0;
    virtual void OnLogoutCompleted() = 0;
 
    virtual void onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& roomsList) = 0;
