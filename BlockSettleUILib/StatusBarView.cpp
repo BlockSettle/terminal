@@ -87,6 +87,8 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryObject> &armory
    connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
    connect(celerClient.get(), &CelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
 
+   // connected are not used here because we wait for authenticated signal instead
+   // disconnected are not used here because onContainerError should be always called
    connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
    connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
 
