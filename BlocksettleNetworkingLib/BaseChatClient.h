@@ -87,7 +87,7 @@ protected:
                                                        std::shared_ptr<Chat::Data> messageData);
    std::shared_ptr<Chat::Data> decryptIESMessage(const std::shared_ptr<Chat::Data>& message);
 
-   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey);
+   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp);
    void onFriendRequestAccepted(const std::string& contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp);
    void onFriendRequestRejected(const std::string& contactId);
    void onFriendRequestedRemove(const std::string& userId);

@@ -236,8 +236,6 @@ std::shared_ptr<Chat::Data> ChatClient::sendRoomOwnMessage(const std::string& me
 
 void ChatClient::sendFriendRequest(const std::string &friendUserId)
 {
-   // TODO
-
    if (model_->findContactItem(friendUserId)) {
       return;
    }
@@ -445,7 +443,7 @@ Chat::Data_Message_Encryption ChatClient::resolveMessageEncryption(std::shared_p
          return Chat::Data_Message_Encryption_IES;
    }
 
-   // TODO: What the default returned value should be here? I have no idea.
+   // TODO: What default value we should return here? I have no idea.
    return Chat::Data_Message_Encryption_UNENCRYPTED;
 }
 

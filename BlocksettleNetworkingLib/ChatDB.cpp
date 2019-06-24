@@ -356,11 +356,11 @@ std::map<std::string, BinaryData> ChatDB::loadKeys(bool* loaded)
    return keys_out;
 }
 
-bool ChatDB::addKey(const std::string& user, const BinaryData& key, const QDateTime& dt)
+bool ChatDB::addKey(const std::string& userId, const BinaryData& key, const QDateTime& dt)
 {
    QSqlQuery qryAdd(QLatin1String(
       "INSERT INTO user_keys(user_id, key, key_timestamp) VALUES(?, ?, ?);"), db_);
-   qryAdd.bindValue(0, QString::fromStdString(user));
+   qryAdd.bindValue(0, QString::fromStdString(userId));
    qryAdd.bindValue(1, QString::fromStdString(key.toHexStr()));
    qryAdd.bindValue(2, dt);
 
@@ -368,6 +368,25 @@ bool ChatDB::addKey(const std::string& user, const BinaryData& key, const QDateT
       logger_->error("[ChatDB::addKey] failed to insert new public key value to user_keys.");
       return false;
    }
+   return true;
+}
+
+bool ChatDB::removeKey(const std::string& userId)
+{
+   QSqlQuery query(db_);
+
+   if (!query.prepare(QLatin1String("DELETE FROM user_keys WHERE user_id=:user_id;"))) {
+      logger_->error("[ChatDB::{}] failed to prepare query: {}", __func__, query.lastError().text().toStdString());
+      return false;
+   }
+
+   query.bindValue(QStringLiteral(":user_id"), QString::fromStdString(userId));
+
+   if (!query.exec()) {
+      logger_->error("[ChatDB::{}] failed to exec query: {}", __func__, query.lastError().text().toStdString());
+      return false;
+   }
+
    return true;
 }
 
@@ -428,6 +447,9 @@ bool ChatDB::removeContact(const std::string &userId)
       return false;
    }
 
+   // remove also user public key
+   removeKey(userId);
+
    return true;
 }
 
@@ -450,7 +472,7 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
       contact.set_user_id(query.value(0).toString().toStdString());
       contact.set_contact_id(query.value(0).toString().toStdString());
       contact.set_status(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
-      contact.set_public_key(query.value(3).toString().toStdString());
+      contact.set_public_key(BinaryData::CreateFromHex(query.value(3).toString().toStdString()).toBinStr());
       contact.set_public_key_timestamp(query.value(4).toInt());
 
       auto name = query.value(1).toString().toStdString();
@@ -518,7 +540,7 @@ bool ChatDB::getContact(const std::string &userId, Chat::Data_ContactRecord *con
       contact->set_user_id(query.value(0).toString().toStdString());
       contact->set_display_name(query.value(1).toString().toStdString());
       contact->set_status(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
-      contact->set_public_key(query.value(3).toString().toStdString());
+      contact->set_public_key(BinaryData::CreateFromHex(query.value(3).toString().toStdString()).toBinStr());
       contact->set_public_key_timestamp(query.value(4).toInt());
       return true;
    }
@@ -556,16 +578,12 @@ bool ChatDB::compareLocalData(const std::string& userId, const BinaryData& key, 
    return false;
 }
 
-bool ChatDB::updateContactKey(const Chat::Data& contact)
+bool ChatDB::updateContactKey(const std::string& userId, const BinaryData& publicKey, const QDateTime& publicKeyTimestamp)
 {
    const QString cmd = QStringLiteral("UPDATE user_keys SET"
       " key = :key"
       " key_timestamp = :key_timestamp"
       " WHERE (user_id = :user_id);");
-
-   const auto userId = QString::fromStdString(contact.contact_record().contact_id());
-   const auto publicKey = QString::fromStdString(BinaryData(contact.contact_record().public_key()).toHexStr());
-   const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact.contact_record().public_key_timestamp());
 
    QSqlQuery query(db_);
 
@@ -574,9 +592,9 @@ bool ChatDB::updateContactKey(const Chat::Data& contact)
       return false;
    }
 
-   query.bindValue(QStringLiteral(":key"), publicKey);
+   query.bindValue(QStringLiteral(":key"), QString::fromStdString(publicKey.toHexStr()));
    query.bindValue(QStringLiteral(":key_timestamp"), publicKeyTimestamp);
-   query.bindValue(QStringLiteral(":user_id"), userId);
+   query.bindValue(QStringLiteral(":user_id"), QString::fromStdString(userId));
 
    if (!query.exec()) {
       logger_->error("[ChatDB::{}] failed to update user_keys; Error: {}\nQuery: {}",

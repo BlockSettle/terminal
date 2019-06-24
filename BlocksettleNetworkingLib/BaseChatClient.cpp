@@ -240,7 +240,6 @@ bool BaseChatClient::sendAcceptFriendRequestToServer(const std::string &friendUs
    }
 
    {
-      const BinaryData &publicKey = contactPublicKeys_[friendUserId];
       Chat::Request request;
       auto d = request.mutable_modify_contacts_server();
       d->set_sender_id(currentUserId_);
@@ -265,7 +264,6 @@ bool BaseChatClient::sendRejectFriendRequestToServer(const std::string &friendUs
    }
 
    {
-      const BinaryData &publicKey = contactPublicKeys_[friendUserId];
       Chat::Request request;
       auto d = request.mutable_modify_contacts_server();
       d->set_sender_id(currentUserId_);
@@ -280,8 +278,6 @@ bool BaseChatClient::sendRejectFriendRequestToServer(const std::string &friendUs
 
 bool BaseChatClient::sendRemoveFriendToServer(const std::string &contactId)
 {
-   const BinaryData &publicKey = contactPublicKeys_[contactId];
-
    Chat::Request request;
    auto d = request.mutable_modify_contacts_server();
    d->set_sender_id(currentUserId_);
@@ -324,8 +320,6 @@ std::string BaseChatClient::getUserId() const
 
 bool BaseChatClient::decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const BinaryData& encodedPublicKey)
 {
-   BinaryData test(getOwnAuthPublicKey());
-
    // decrypt by ies received public key
    std::unique_ptr<Encryption::IES_Decryption> dec = Encryption::IES_Decryption::create(logger_);
    dec->setPrivateKey(getOwnAuthPrivateKey());
@@ -383,11 +377,11 @@ void BaseChatClient::OnModifyContactsDirectResponse(const Chat::Response_ModifyC
    std::string actionString = "<unknown>";
    const std::string& senderId = response.sender_id();
    const auto publicKey = BinaryData(response.sender_public_key());
+   const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(response.sender_public_key_timestamp());
 
    switch (response.action()) {
       case Chat::CONTACTS_ACTION_ACCEPT: {
          actionString = "ContactsAction::Accept";
-         const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(response.sender_public_key_timestamp());
          onFriendRequestAccepted(senderId, publicKey, publicKeyTimestamp);
          break;
       }
@@ -399,7 +393,7 @@ void BaseChatClient::OnModifyContactsDirectResponse(const Chat::Response_ModifyC
       case Chat::CONTACTS_ACTION_REQUEST: {
          actionString = "ContactsAction::Request";
          const std::string &receiverId = response.receiver_id();
-         onFriendRequestReceived(receiverId, senderId, publicKey);
+         onFriendRequestReceived(receiverId, senderId, publicKey, publicKeyTimestamp);
          break;
       }
       case Chat::CONTACTS_ACTION_REMOVE: {
@@ -457,7 +451,7 @@ void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & 
    }
 
    if (!newList.empty()) {
-      // false - we don't need update contact in db since it was already fine in compareLocalData
+      // false - we don't need update contact in db since it is already fine in compareLocalData
       OnContactListConfirmed(newList, false);
    }
 
@@ -470,12 +464,15 @@ void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & 
 void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts, const bool& updateContactDb)
 {
    for (const auto& contact : remoteContacts) {
-      const auto userId = contact->contact_record().contact_id();
-      const auto publicKey = BinaryData(contact->contact_record().public_key());
-      const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact->contact_record().public_key_timestamp());
+      const auto& userId = contact->contact_record().contact_id();
+      const auto& publicKey = BinaryData(contact->contact_record().public_key());
+      const auto& publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact->contact_record().public_key_timestamp());
 
       contactPublicKeys_[userId] = publicKey;
-      chatDb_->updateContactKey(*contact);
+
+      if (updateContactDb) {
+         chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp);
+      }
    }
 
    onContactListLoaded(remoteContacts);
@@ -625,8 +622,6 @@ void BaseChatClient::OnAskForPublicKey(const Chat::Response_AskForPublicKey &res
    auto d = request.mutable_send_own_public_key();
    d->set_receiving_node_id(response.asking_node_id());
    d->set_sending_node_id(response.peer_id());
-   // TODO: check is this right place to sending public key
-   d->set_sending_node_public_key(getOwnAuthPublicKey().toBinStr());
    sendRequest(request);
 }
 
@@ -638,10 +633,11 @@ void BaseChatClient::OnSendOwnPublicKey(const Chat::Response_SendOwnPublicKey &r
    }
 
    // Save received public key of peer.
-   const auto &peerId = response.sending_node_id();
-   contactPublicKeys_[peerId] = BinaryData(response.sending_node_public_key());
-   // TODO: check what to do with incoming pk
-   //chatDb_->addKey(peerId, BinaryData(response.sending_node_pub_key()));
+   const auto& peerId = response.sending_node_id();
+   const auto& publicKey = BinaryData(response.sending_node_public_key());
+   const auto& publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(response.sending_node_public_key_timestamp());
+   contactPublicKeys_[peerId] = publicKey;
+   chatDb_->updateContactKey(peerId, publicKey, publicKeyTimestamp);
 
    retrySendQueuedMessages(response.sending_node_id());
 }
@@ -677,7 +673,7 @@ bool BaseChatClient::removeContactFromDB(const std::string &userId)
 void BaseChatClient::OnSessionPublicKeyResponse(const Chat::Response_SessionPublicKey& response)
 {
    // Do not use base64 after protobuf switch and send binary data as-is
-   if (!decodeAndUpdateIncomingSessionPublicKey(response.sender_id(), response.sender_session_public_key())) {
+   if (!decodeAndUpdateIncomingSessionPublicKey(response.sender_id(), BinaryData(response.sender_session_public_key()))) {
       logger_->error("[BaseChatClient::OnSessionPublicKeyResponse] Failed updating remote public key!");
       return;
    }
@@ -930,16 +926,18 @@ std::shared_ptr<Chat::Data> BaseChatClient::decryptIESMessage(const std::shared_
    return msgDecrypted;
 }
 
-void BaseChatClient::onFriendRequestReceived(const std::string &userId, const std::string &contactId, BinaryData publicKey)
+void BaseChatClient::onFriendRequestReceived(const std::string &userId, const std::string &contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp)
 {
+   // incoming public key was replaced by server, it's not directly sent by client
    contactPublicKeys_[contactId] = publicKey;
-   // TODO: compare incoming key in db
-   //chatDb_->addKey(contactId, publicKey);
+   chatDb_->addKey(contactId, publicKey, publicKeyTimestamp);
+
    onFriendRequest(userId, contactId, publicKey);
 }
 
 void BaseChatClient::onFriendRequestAccepted(const std::string &contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp)
 {
+   // incoming public key was replaced by server, it's not directly sent by client
    contactPublicKeys_[contactId] = publicKey;
    chatDb_->addKey(contactId, publicKey, publicKeyTimestamp);
 
@@ -985,7 +983,9 @@ void BaseChatClient::onFriendRequestedRemove(const std::string &contactId)
 
 void BaseChatClient::onServerApprovedFriendRemoving(const std::string &contactId)
 {
+   // remove contact from db and clear session for him
    chatDb_->removeContact(contactId);
-   //TODO: Remove pub key from db and clear session
+   chatSessionKeyPtr_->clearSessionForUser(contactId);
+
    onContactRemove(contactId);
 }

@@ -236,6 +236,7 @@ message Request
         string receiving_node_id = 1;
         string sending_node_id = 2;
         bytes sending_node_public_key = 3;
+        int64 sending_node_public_key_timestamp = 4;
     }
 
     message MessageChangeStatus
@@ -347,6 +348,7 @@ message Response
         string receiving_node_id = 1;
         string sending_node_id = 2;
         bytes sending_node_public_key = 3;
+        int64 sending_node_public_key_timestamp = 4;
     }
 
     message PendingMessage
