@@ -246,13 +246,7 @@ void ChatClient::sendFriendRequest(const std::string &friendUserId)
 
 
    if (sendFriendRequestToServer(friendUserId, messageData)) {
-      auto record = std::make_shared<Chat::Data>();
-      auto d = record->mutable_contact_record();
-      d->set_user_id(model_->currentUser());
-      d->set_contact_id(friendUserId);
-      d->set_status(Chat::CONTACT_STATUS_OUTGOING);
-      model_->insertContactObject(record);
-      addOrUpdateContact(friendUserId, Chat::CONTACT_STATUS_OUTGOING);
+
    } else {
       logger_->error("[ChatClient::sendFriendRequest] failed to send friend request for {}"
                      , friendUserId);
@@ -569,6 +563,19 @@ void ChatClient::onContactRemove(const std::string& contactId)
    } else {
       model_->removeContactRequestNode(contactId);
    }
+}
+
+void ChatClient::onCreateOutgoingContact(const std::string &contactId)
+{
+   //In base class this method calls addOrUpdateContact with Outgoing State
+   BaseChatClient::onCreateOutgoingContact(contactId);
+
+   auto record = std::make_shared<Chat::Data>();
+   auto d = record->mutable_contact_record();
+   d->set_user_id(model_->currentUser());
+   d->set_contact_id(contactId);
+   d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+   model_->insertContactObject(record);
 }
 
 void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData)

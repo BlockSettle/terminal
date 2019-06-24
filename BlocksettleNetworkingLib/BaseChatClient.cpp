@@ -194,6 +194,11 @@ void BaseChatClient::setSavedKeys(std::map<std::string, BinaryData>&& loadedKeys
    std::swap(contactPublicKeys_, loadedKeys);
 }
 
+void BaseChatClient::onCreateOutgoingContact(const std::string &contactId)
+{
+   addOrUpdateContact(contactId, Chat::CONTACT_STATUS_OUTGOING);
+}
+
 bool BaseChatClient::sendRequest(const Chat::Request& request)
 {
    logger_->debug("[BaseChatClient::{}] send: \n{}", __func__, ProtobufUtils::toJson(request));
@@ -211,8 +216,43 @@ bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId)
    return sendFriendRequestToServer(friendUserId, nullptr);
 }
 
-bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, std::shared_ptr<Chat::Data> message)
+bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, std::shared_ptr<Chat::Data> message, bool isFromPendings)
 {
+   if (message) {
+
+      message->set_direction(Chat::Data_Direction_SENT);
+
+      const auto &contactPublicKeyIterator = contactPublicKeys_.find(friendUserId);
+      if (contactPublicKeyIterator == contactPublicKeys_.end()) {
+         // Ask for public key from peer. Enqueue the message to be sent, once we receive the
+         // necessary public key.
+         pending_contact_requests_.insert({friendUserId, message});
+
+         // Send our key to the peer.
+         Chat::Request request;
+         auto d = request.mutable_ask_for_public_key();
+         d->set_asking_node_id(currentUserId_);
+         d->set_peer_id(friendUserId);
+         return sendRequest(request);
+      }
+
+      auto msgEncrypted = encryptMessageToSendIES(contactPublicKeyIterator->second, message);
+      Chat::Request request;
+      auto d = request.mutable_modify_contacts_direct();
+      d->set_sender_id(currentUserId_);
+      d->set_receiver_id(friendUserId);
+      d->set_action(Chat::CONTACTS_ACTION_REQUEST);
+      d->set_sender_pub_key(getOwnAuthPublicKey().toBinStr());
+      *d->mutable_message() = std::move(*msgEncrypted);
+      if (sendRequest(request) && !isFromPendings) {
+         onCreateOutgoingContact(friendUserId);
+         encryptByIESAndSaveMessageInDb(message);
+         onCRMessageReceived(message);
+         return true;
+      }
+      return false;
+   }
+
    Chat::Request request;
    auto d = request.mutable_modify_contacts_direct();
    d->set_sender_id(currentUserId_);
@@ -220,12 +260,11 @@ bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, 
    d->set_action(Chat::CONTACTS_ACTION_REQUEST);
    d->set_sender_pub_key(getOwnAuthPublicKey().toBinStr());
 
-   if (message) {
-      message->set_direction(Chat::Data_Direction_SENT);
-      *d->mutable_message() = *message;
+   if (sendRequest(request)) {
+      onCreateOutgoingContact(friendUserId);
+      return true;
    }
-
-   return sendRequest(request);
+   return false;
 }
 
 bool BaseChatClient::sendAcceptFriendRequestToServer(const std::string &friendUserId)
@@ -638,6 +677,7 @@ void BaseChatClient::OnSendOwnPublicKey(const Chat::Response_SendOwnPublicKey &r
    contactPublicKeys_[peerId] = BinaryData(response.sending_node_pub_key());
    chatDb_->addKey(peerId, BinaryData(response.sending_node_pub_key()));
 
+   retrySendQueuedContactRequests(response.sending_node_id());
    retrySendQueuedMessages(response.sending_node_id());
 }
 
@@ -816,6 +856,24 @@ void BaseChatClient::retrySendQueuedMessages(const std::string userId)
 void BaseChatClient::eraseQueuedMessages(const std::string userId)
 {
    enqueued_messages_.erase(userId);
+}
+
+void BaseChatClient::retrySendQueuedContactRequests(const std::string& userId)
+{
+   auto crMessage = pending_contact_requests_.find(userId);
+   if (crMessage != pending_contact_requests_.end()) {
+      auto message = crMessage->second;
+      pending_contact_requests_.erase(crMessage);
+      sendFriendRequestToServer(userId, message, true);
+   }
+}
+
+void BaseChatClient::eraseQueuedContactRequests(const std::string& userId)
+{
+   auto crMessage = pending_contact_requests_.find(userId);
+   if (crMessage != pending_contact_requests_.end()) {
+      pending_contact_requests_.erase(crMessage);
+   }
 }
 
 bool BaseChatClient::encryptByIESAndSaveMessageInDb(const std::shared_ptr<Chat::Data>& message)

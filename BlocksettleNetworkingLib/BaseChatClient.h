@@ -134,10 +134,11 @@ protected:
    virtual void onContactRejected(const std::string& contactId) = 0;
    virtual void onFriendRequest(const std::string& userId, const std::string& contactId, const BinaryData& pk) = 0;
    virtual void onContactRemove(const std::string& contactId) = 0;
+   virtual void onCreateOutgoingContact(const std::string& contactId);
 
 protected:
    bool sendFriendRequestToServer(const std::string &friendUserId);
-   bool sendFriendRequestToServer(const std::string &friendUserId, std::shared_ptr<Chat::Data> message);
+   bool sendFriendRequestToServer(const std::string &friendUserId, std::shared_ptr<Chat::Data> message, bool isFromPendings = false);
    bool sendAcceptFriendRequestToServer(const std::string &friendUserId);
    bool sendDeclientFriendRequestToServer(const std::string &friendUserId);
    bool sendRemoveFriendToServer(const std::string& contactId);
@@ -152,6 +153,9 @@ protected:
 
    void retrySendQueuedMessages(const std::string userId);
    void eraseQueuedMessages(const std::string userId);
+
+   void retrySendQueuedContactRequests(const std::string &userId);
+   void eraseQueuedContactRequests(const std::string& userId);
 
 protected:
    std::shared_ptr<spdlog::logger>        logger_;
@@ -169,6 +173,7 @@ private:
    // Queue of messages to be sent for each receiver, once we received the public key.
    using messages_queue = std::queue<std::shared_ptr<Chat::Data> >;
    std::map<std::string, messages_queue>    enqueued_messages_;
+   std::map<std::string, std::shared_ptr<Chat::Data>>    pending_contact_requests_;
 
    std::string       currentJwt_;
 };

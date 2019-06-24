@@ -121,6 +121,7 @@ protected:
    void onContactRejected(const std::string& contactId) override;
    void onFriendRequest(const std::string& userId, const std::string& contactId, const BinaryData& pk) override;
    void onContactRemove(const std::string& contactId) override;
+   void onCreateOutgoingContact(const std::string& contactId) override;
 
    // ChatItemActionsHandler interface
 public:
