@@ -1143,10 +1143,14 @@ void RFQDealerReply::onBestQuotePrice(const QString reqId, double price, bool ow
 
 void RFQDealerReply::onAQReply(const bs::network::QuoteReqNotification &qrn, double price)
 {
-   const auto &cbSubmit = [this, qrn](bs::network::QuoteNotification qn) {
+   const auto &cbSubmit = [this, qrn, price](const bs::network::QuoteNotification &qn) {
       if (!qn.quoteRequestId.empty()) {
          logger_->debug("Submitted AQ reply on {}: {}/{}", qrn.quoteRequestId, qn.bidPx, qn.offerPx);
-         QMetaObject::invokeMethod(this, [this, qn] { emit submitQuoteNotif(qn); });
+         QMetaObject::invokeMethod(this, [this, qn, price] {
+            // Store AQ too so it's possible to pull it later (and to disable submit button)
+            sentNotifs_[qn.quoteRequestId] = price;
+            emit submitQuoteNotif(qn);
+         });
       }
    };
 
