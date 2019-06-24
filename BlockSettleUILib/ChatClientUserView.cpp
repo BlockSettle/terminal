@@ -300,10 +300,15 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
                                .arg(QString::fromStdString(data->contact_record().contact_id()))
                                .arg(QLatin1String("OUTGOING"))
                               );
-            } else if (data->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING) {
+            } else if (data->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
                label_->setText(QObject::tr("Contact request  #%1-%2")
                                .arg(QString::fromStdString(data->contact_record().contact_id()))
                                .arg(QLatin1String("INCOMING"))
+                              );
+            } else {
+               label_->setText(QObject::tr("Contact request  #%1-%2")
+                               .arg(QString::fromStdString(data->contact_record().contact_id()))
+                               .arg(data->contact_record().status())
                               );
             }
          }
