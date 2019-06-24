@@ -59,7 +59,7 @@ public:
    std::shared_ptr<Chat::Data> sendRoomOwnMessage(
          const std::string& message, const std::string &receiver);
 
-   void sendFriendRequest(const std::string &friendUserId);
+   void sendFriendRequest(const std::string &friendUserId, const std::string& message = std::string());
    void acceptFriendRequest(const std::string &friendUserId);
    void rejectFriendRequest(const std::string &friendUserId);
    void removeFriendOrRequest(const std::string& userId);

@@ -230,7 +230,7 @@ std::shared_ptr<Chat::Data> ChatClient::sendRoomOwnMessage(const std::string& me
    return roomMessage;
 }
 
-void ChatClient::sendFriendRequest(const std::string &friendUserId)
+void ChatClient::sendFriendRequest(const std::string &friendUserId, const std::string& message)
 {
    // TODO
 
@@ -238,15 +238,19 @@ void ChatClient::sendFriendRequest(const std::string &friendUserId)
       return;
    }
 
-   auto messageData = std::make_shared<Chat::Data>();
-   initMessage(messageData.get(), friendUserId);
+   std::shared_ptr<Chat::Data> messageData = nullptr;
+   if (!message.empty()) {
+      messageData = std::make_shared<Chat::Data>();
+      initMessage(messageData.get(), friendUserId);
 
-   auto d = messageData->mutable_message();
-   d->set_message(std::string("I would like to add to friends!"));
+      auto d = messageData->mutable_message();
+      d->set_message(message);
+   }
 
 
    if (sendFriendRequestToServer(friendUserId, messageData)) {
-
+      logger_->error("[ChatClient::sendFriendRequest] Friend request sent to {}"
+                     , friendUserId);
    } else {
       logger_->error("[ChatClient::sendFriendRequest] failed to send friend request for {}"
                      , friendUserId);
@@ -314,7 +318,11 @@ Chat::Data_ContactRecord ChatClient::getContact(const std::string &userId) const
 void ChatClient::onActionAddToContacts(const std::string& userId)
 {
    qDebug() << __func__ << " " << QString::fromStdString(userId);
-   return sendFriendRequest(userId);
+   //This will be called after UI with contact request message generation will finish work.
+   //So message will be entered by user at this moment.
+   //Meanwhile - dummy message.
+   //Also it could be called without the message.
+   return sendFriendRequest(userId, std::string("I would like to add you to friends!"));
 }
 
 void ChatClient::onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord)
@@ -506,6 +514,7 @@ void ChatClient::onContactAccepted(const std::string& contactId)
          model_->removeContactRequestNode(holdData->contact_id());
          model_->insertContactObject(contactNode->getDataObject()
                                      , contactNode->getOnlineStatus() == ChatContactElement::OnlineStatus::Online);
+         retrieveUserMessages(holdData->contact_id());
       }
    }
 }
