@@ -639,6 +639,15 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             }
          }
          break;
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:{
+            auto contact = element->getDataObject();
+            if (contact && contact->has_contact_record()) {
+               setIsRoom(false);
+               currentChat_ = contact->contact_record().contact_id();
+               ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
+            }
+         }
+         break;
          // XXXOTC
          // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
          //    ui_->stackedWidgetMessages->setCurrentIndex(0);

@@ -293,6 +293,21 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->contact_record().contact_id()));
          }
       } break;
+      case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:{
+         if (label_){
+            if (data->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING) {
+               label_->setText(QObject::tr("Contact request  #%1-%2")
+                               .arg(QString::fromStdString(data->contact_record().contact_id()))
+                               .arg(QLatin1String("OUTGOING"))
+                              );
+            } else if (data->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING) {
+               label_->setText(QObject::tr("Contact request  #%1-%2")
+                               .arg(QString::fromStdString(data->contact_record().contact_id()))
+                               .arg(QLatin1String("INCOMING"))
+                              );
+            }
+         }
+      } break;
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
          if (label_){
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->user().user_id()));
@@ -348,6 +363,7 @@ void ChatClientUserView::currentChanged(const QModelIndex &current, const QModel
       switch (item->getType()) {
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
          case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
             auto element = static_cast<CategoryElement*>(item);
             updateDependUI(element);
