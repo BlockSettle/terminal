@@ -239,6 +239,11 @@ signals:
    void PacketReceived(Blocksettle::Communication::headless::RequestPacket);
 
 private:
+   friend class RemoteSigner;
+
+   void processDisconnectNotification();
+   void tryEmitError(SignContainer::ConnectionError errorCode, const QString &msg);
+
    std::shared_ptr<spdlog::logger>  logger_;
    std::shared_ptr<DataConnection>  connection_;
    const NetworkType                netType_;
@@ -247,6 +252,7 @@ private:
    std::atomic<bool>                hasUI_{false};
    std::atomic<bool>                isReady_{false};
    bool                             isConnected_{false};
+   bool                             wasErrorReported_{false};
 };
 
 #endif // __HEADLESS_CONTAINER_H__

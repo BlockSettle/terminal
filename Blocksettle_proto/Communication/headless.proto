@@ -5,7 +5,7 @@ package Blocksettle.Communication.headless;
 
 enum RequestType
 {
-   HeartbeatType               = 0;
+   InvalidRequestType          = 0;
    AuthenticationRequestType   = 1;
    SignTXRequestType           = 2;
    SignPartialTXRequestType    = 3;
