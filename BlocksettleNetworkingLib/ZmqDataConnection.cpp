@@ -188,10 +188,6 @@ bool ZmqDataConnection::openConnection(const std::string& host
    *continueExecution_ = true;
    listenThread_ = std::thread(&ZmqDataConnection::listenFunction, this);
 
-   if (logger_) {
-      SPDLOG_LOGGER_DEBUG(logger_, "[{}] starting connection for {}", __func__
-         , connectionName_);
-   }
    return true;
 }
 
