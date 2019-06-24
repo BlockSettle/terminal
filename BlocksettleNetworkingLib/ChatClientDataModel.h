@@ -41,6 +41,7 @@ public:
    bool insertDisplayableDataNode(DisplayableDataNode * displayableNode);
    bool insertRoomMessage(std::shared_ptr<Chat::Data> message);
    bool insertContactsMessage(std::shared_ptr<Chat::Data> message);
+   bool insertContactRequestMessage(std::shared_ptr<Chat::Data> message);
    TreeItem* findChatNode(const std::string& chatId);
    std::vector<std::shared_ptr<Chat::Data>> getAllContacts();
    bool removeContactNode(const std::string& contactId);

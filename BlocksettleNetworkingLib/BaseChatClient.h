@@ -87,7 +87,7 @@ protected:
                                                        std::shared_ptr<Chat::Data> messageData);
    std::shared_ptr<Chat::Data> decryptIESMessage(const std::shared_ptr<Chat::Data>& message);
 
-   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey);
+   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey, const std::shared_ptr<Chat::Data>& message = nullptr);
    void onFriendRequestAccepted(const std::string& contactId, BinaryData publicKey);
    void onFriendRequestRejected(const std::string& contactId);
    void onFriendRequestedRemove(const std::string& userId);
@@ -124,6 +124,7 @@ protected:
 
    // either new message received or ours delivered
    virtual void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
+   virtual void onCRMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
    virtual void onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData) = 0;
 
    virtual void onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId) = 0;

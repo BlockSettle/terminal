@@ -111,6 +111,7 @@ protected:
    void onSearchResult(const std::vector<std::shared_ptr<Chat::Data>>& userData) override;
 
    void onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
+   void onCRMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
    void onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData) override;
 
    void onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId) override;

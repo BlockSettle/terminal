@@ -221,6 +221,7 @@ bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, 
    d->set_sender_pub_key(getOwnAuthPublicKey().toBinStr());
 
    if (message) {
+      message->set_direction(Chat::Data_Direction_SENT);
       *d->mutable_message() = *message;
    }
 
@@ -414,9 +415,18 @@ void BaseChatClient::OnModifyContactsDirectResponse(const Chat::Response_ModifyC
          const std::string &senderId = response.sender_id();
          const std::string &receiverId = response.receiver_id();
          const auto pubKey = BinaryData(response.sender_public_key());
-         onFriendRequestReceived(receiverId,
+         if (response.has_message()) {
+            auto message = std::make_shared<Chat::Data>(response.message());
+            onFriendRequestReceived(receiverId,
                                  senderId,
-                                 pubKey);
+                                 pubKey,
+                                 message);
+         } else {
+            onFriendRequestReceived(receiverId,
+                                 senderId,
+                                 pubKey,
+                                 nullptr);
+         }
          break;
       }
       case Chat::CONTACTS_ACTION_REMOVE: {
@@ -914,11 +924,33 @@ std::shared_ptr<Chat::Data> BaseChatClient::decryptIESMessage(const std::shared_
    return msgDecrypted;
 }
 
-void BaseChatClient::onFriendRequestReceived(const std::string &userId, const std::string &contactId, BinaryData publicKey)
+void BaseChatClient::onFriendRequestReceived(const std::string &userId, const std::string &contactId, BinaryData publicKey, const std::shared_ptr<Chat::Data>& message)
 {
    contactPublicKeys_[contactId] = publicKey;
    chatDb_->addKey(contactId, publicKey);
    onFriendRequest(userId, contactId, publicKey);
+
+   if (message) {
+      message->set_direction(Chat::Data_Direction_RECEIVED);
+
+      switch (message->message().encryption()) {
+         case Chat::Data_Message_Encryption_IES: {
+            chatDb_->add(message);
+            auto decMsg = decryptIESMessage(message);
+            onCRMessageReceived(decMsg);
+            break;
+         }
+         case Chat::Data_Message_Encryption_UNENCRYPTED: {
+            encryptByIESAndSaveMessageInDb(message);
+            onCRMessageReceived(message);
+            break;
+         }
+         default:
+            ChatUtils::messageFlagSet(message->mutable_message(), Chat::Data_Message_State_INVALID);
+            onCRMessageReceived(message);
+            break;
+      }
+   }
 }
 
 void BaseChatClient::onFriendRequestAccepted(const std::string &contactId, BinaryData publicKey)

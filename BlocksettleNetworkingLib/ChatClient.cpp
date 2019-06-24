@@ -576,6 +576,11 @@ void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageD
    model_->insertContactsMessage(messageData);
 }
 
+void ChatClient::onCRMessageReceived(const std::shared_ptr<Chat::Data> &messageData)
+{
+   model_->insertContactRequestMessage(messageData);
+}
+
 void ChatClient::onRoomMessageReceived(const std::shared_ptr<Chat::Data>& messageData)
 {
    model_->insertRoomMessage(messageData);
