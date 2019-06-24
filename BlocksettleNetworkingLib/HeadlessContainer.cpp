@@ -81,27 +81,30 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       logger_->error("[HeadlessListener] failed to parse request packet");
       return;
    }
+
    if (packet.id() > id_) {
       logger_->error("[HeadlessListener] reply id inconsistency: {} > {}", packet.id(), id_);
-      emit error(HeadlessContainer::InvalidProtocol, tr("reply id inconsistency"));
+      tryEmitError(HeadlessContainer::InvalidProtocol, tr("reply id inconsistency"));
       return;
    }
 
    if (packet.type() == headless::DisconnectionRequestType) {
-      OnDisconnected();
+      processDisconnectNotification();
       return;
    }
-   else if (packet.type() == headless::AuthenticationRequestType) {
+
+   if (packet.type() == headless::AuthenticationRequestType) {
       headless::AuthenticationReply response;
       if (!response.ParseFromString(packet.data())) {
          logger_->error("[HeadlessListener] failed to parse auth reply");
-         emit error(HeadlessContainer::SerializationFailed, tr("failed to parse auth reply"));
+
+         tryEmitError(HeadlessContainer::SerializationFailed, tr("failed to parse auth reply"));
          return;
       }
 
       if (HeadlessContainer::mapNetworkType(response.nettype()) != netType_) {
          logger_->error("[HeadlessListener] network type mismatch");
-         emit error(HeadlessContainer::NetworkTypeMismatch, tr("Network type mismatch (Mainnet / Testnet)"));
+         tryEmitError(HeadlessContainer::NetworkTypeMismatch, tr("Network type mismatch (Mainnet / Testnet)"));
          return;
       }
 
@@ -109,8 +112,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       hasUI_ = response.hasui();
       isReady_ = true;
       emit authenticated();
-   }
-   else {
+   } else {
       emit PacketReceived(packet);
    }
 }
@@ -129,42 +131,39 @@ void HeadlessListener::OnConnected()
 
 void HeadlessListener::OnDisconnected()
 {
-   if (!isConnected_) {
-      return;
-   }
-
-   logger_->debug("[HeadlessListener] Disconnected");
-   isReady_ = false;
+   SPDLOG_LOGGER_ERROR(logger_, "remote signer disconnected unexpectedly");
    isConnected_ = false;
-   emit disconnected();
+   isReady_ = false;
+   tryEmitError(HeadlessContainer::SocketFailed, tr("TCP connection was closed unexpectedly"));
 }
 
 void HeadlessListener::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
    logger_->debug("[HeadlessListener] error {}", errorCode);
+   isConnected_ = false;
    isReady_ = false;
 
    switch (errorCode) {
+      case NoError:
+         assert(false);
+         break;
       case UndefinedSocketError:
-         emit error(HeadlessContainer::SocketFailed, tr("Socket error"));
+         tryEmitError(HeadlessContainer::SocketFailed, tr("Socket error"));
          break;
       case HostNotFoundError:
-         emit error(HeadlessContainer::HostNotFound, tr("Host not found"));
+         tryEmitError(HeadlessContainer::HostNotFound, tr("Host not found"));
          break;
       case HandshakeFailed:
-         emit error(HeadlessContainer::HandshakeFailed, tr("Handshake failed"));
+         tryEmitError(HeadlessContainer::HandshakeFailed, tr("Handshake failed"));
          break;
       case SerializationFailed:
-         emit error(HeadlessContainer::SerializationFailed, tr("Serialization failed"));
+         tryEmitError(HeadlessContainer::SerializationFailed, tr("Serialization failed"));
          break;
       case HeartbeatWaitFailed:
-         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("Connection lost"));
+         tryEmitError(HeadlessContainer::HeartbeatWaitFailed, tr("Connection lost"));
          break;
       case ConnectionTimeout:
-         emit error(HeadlessContainer::ConnectionTimeout, tr("Connection timeout"));
-         break;
-      default:
-         emit error(HeadlessContainer::UnknownError, tr("Unknown error"));
+         tryEmitError(HeadlessContainer::ConnectionTimeout, tr("Connection timeout"));
          break;
    }
 }
@@ -242,7 +241,6 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
       case bs::hd::CoinType::BlockSettle_CC:
          leafType = bs::core::wallet::Type::ColorCoin;
          break;
-      default:    break;
       }
       const auto leaf = std::make_shared<bs::sync::hd::Leaf>(response.leaf().walletid()
          , response.leaf().name(), response.leaf().desc(), this, logger_
@@ -606,7 +604,7 @@ bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::Dia
 
    headless::CustomDialogRequest request;
    request.set_dialogname(bs::signer::ui::getSignerDialogPath(signerDialog).toStdString());
-   request.set_variantdata(ba.data(), ba.size());
+   request.set_variantdata(ba.data(), size_t(ba.size()));
 
    headless::RequestPacket packet;
    packet.set_type(headless::ExecCustomDialogRequestType);
@@ -1042,6 +1040,8 @@ bool RemoteSigner::Connect()
       return true;
    }
 
+   listener_->wasErrorReported_ = false;
+
    bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
    if (!result) {
       logger_->error("[HeadlessContainer] Failed to open connection to "
@@ -1086,7 +1086,6 @@ void RemoteSigner::RecreateConnection()
 {
    logger_->info("[{}] Restart connection...", __func__);
 
-
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = ephemeralDataConnKeys_;
    params.ownKeyFileDir = ownKeyFileDir_;
@@ -1107,7 +1106,7 @@ void RemoteSigner::RecreateConnection()
    }
    catch (const std::exception &e) {
       logger_->error("[{}] connection creation failed: {}", __func__, e.what());
-      QTimer::singleShot(10, [this] {  // slight delay is required on start-up init
+      QTimer::singleShot(10, this, [this] {  // slight delay is required on start-up init
          emit connectionError(ConnectionError::SocketFailed, tr("Connection creation failed"));
       });
    }
@@ -1139,6 +1138,11 @@ bool RemoteSigner::hasUI() const
    std::lock_guard<std::mutex> lock(mutex_);
 
    return listener_ ? listener_->hasUI() : false;
+}
+
+void RemoteSigner::updatePeerKeys(const ZmqBIP15XPeers &peers)
+{
+   connection_->updatePeerKeys(peers);
 }
 
 void RemoteSigner::onConnected()
@@ -1182,9 +1186,6 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
    signRequests_.erase(packet.id());
 
    switch (packet.type()) {
-   case headless::HeartbeatType:
-      break;
-
    case headless::SignTXRequestType:
    case headless::SignPartialTXRequestType:
    case headless::SignPayoutTXRequestType:
@@ -1471,4 +1472,19 @@ bool LocalSigner::Stop()
    return true;
 }
 
-//#include "HeadlessContainer.moc"
+void HeadlessListener::processDisconnectNotification()
+{
+   SPDLOG_LOGGER_INFO(logger_, "remote signer has been disconnected");
+   isConnected_ = false;
+   isReady_ = false;
+   tryEmitError(HeadlessContainer::SignerGoesOffline, tr("remote signer has been disconnected"));
+}
+
+void HeadlessListener::tryEmitError(SignContainer::ConnectionError errorCode, const QString &msg)
+{
+   // Try to send error only once because only first error should be relevant.
+   if (!wasErrorReported_) {
+      wasErrorReported_ = true;
+      emit error(errorCode, msg);
+   }
+}

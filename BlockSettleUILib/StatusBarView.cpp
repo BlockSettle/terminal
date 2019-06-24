@@ -1,6 +1,5 @@
 #include "StatusBarView.h"
 #include "AssetManager.h"
-#include "SignContainer.h"
 #include "UiUtils.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncWalletsManager.h"
@@ -38,7 +37,6 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryObject> &armory
    iconContainerOffline_ = contIconGray.pixmap(iconSize_);
    iconContainerError_ = contIconRed.pixmap(iconSize_);
    iconContainerOnline_ = contIconGreen.pixmap(iconSize_);
-   iconContainerConnecting_ = contIconYellow.pixmap(iconSize_);
 
    balanceLabel_ = new QLabel(statusBar_);
 
@@ -89,15 +87,16 @@ StatusBarView::StatusBarView(const std::shared_ptr<ArmoryObject> &armory
    connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &StatusBarView::onConnectionClosed);
    connect(celerClient.get(), &CelerClient::OnConnectionError, this, &StatusBarView::onConnectionError);
 
-   connect(container.get(), &SignContainer::connected, this, &StatusBarView::onContainerConnected);
-   connect(container.get(), &SignContainer::disconnected, this, &StatusBarView::onContainerDisconnected);
+   // connected are not used here because we wait for authenticated signal instead
+   // disconnected are not used here because onContainerError should be always called
    connect(container.get(), &SignContainer::authenticated, this, &StatusBarView::onContainerAuthorized);
    connect(container.get(), &SignContainer::connectionError, this, &StatusBarView::onContainerError);
 
    onArmoryStateChanged(armory_->state());
    onConnectionClosed();
-   onContainerConnected();
    setBalances();
+
+   containerStatusLabel_->setPixmap(iconContainerOffline_);
 }
 
 StatusBarView::~StatusBarView() noexcept
@@ -346,24 +345,36 @@ void StatusBarView::onConnectionError(int errorCode)
    }
 }
 
-void StatusBarView::onContainerConnected()
-{
-   containerStatusLabel_->setPixmap(iconContainerConnecting_);
-}
-
-void StatusBarView::onContainerDisconnected()
-{
-   containerStatusLabel_->setPixmap(iconContainerOffline_);
-}
-
 void StatusBarView::onContainerAuthorized()
 {
    containerStatusLabel_->setPixmap(iconContainerOnline_);
 }
 
-void StatusBarView::onContainerError()
+void StatusBarView::onContainerError(SignContainer::ConnectionError error, const QString &details)
 {
-   containerStatusLabel_->setPixmap(iconContainerError_);
+   Q_UNUSED(details);
+
+   switch (error) {
+      case SignContainer::NoError:
+         assert(false);
+         break;
+
+      case SignContainer::UnknownError:
+      case SignContainer::SocketFailed:
+      case SignContainer::HostNotFound:
+      case SignContainer::HandshakeFailed:
+      case SignContainer::SerializationFailed:
+      case SignContainer::HeartbeatWaitFailed:
+      case SignContainer::InvalidProtocol:
+      case SignContainer::NetworkTypeMismatch:
+         containerStatusLabel_->setPixmap(iconContainerError_);
+         break;
+
+      case SignContainer::ConnectionTimeout:
+      case SignContainer::SignerGoesOffline:
+         containerStatusLabel_->setPixmap(iconContainerOffline_);
+         break;
+   }
 }
 
 void StatusBarView::onWalletImportStarted(const std::string &walletId)

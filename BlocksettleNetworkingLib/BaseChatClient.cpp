@@ -36,9 +36,6 @@ BaseChatClient::BaseChatClient(const std::shared_ptr<ConnectionManager>& connect
    if (!loaded) {
       logger_->error("[BaseChatClient::BaseChatClient] failed to load saved keys");
    }
-
-   //This is required (with Qt::QueuedConnection), because of ZmqBIP15XDataConnection crashes when delete it from this (callback) thread
-   connect(this, &BaseChatClient::CleanupConnection, this, &BaseChatClient::onCleanupConnection, Qt::QueuedConnection);
 }
 
 BaseChatClient::~BaseChatClient() noexcept
@@ -165,23 +162,15 @@ void BaseChatClient::LogoutFromServer()
    d->set_auth_id(currentUserId_);
    sendRequest(request);
 
-   emit CleanupConnection();
-}
-
-void BaseChatClient::onCleanupConnection()
-{
-   chatSessionKeyPtr_->clearAll();
-   currentUserId_.clear();
-   currentJwt_.clear();
-   connection_.reset();
-
-   OnLogoutCompleted();
+   cleanupConnection();
 }
 
 void BaseChatClient::OnDisconnected()
 {
    logger_->debug("[BaseChatClient::OnDisconnected]");
-   emit CleanupConnection();
+   QMetaObject::invokeMethod(this, [this] {
+      cleanupConnection();
+   });
 }
 
 void BaseChatClient::OnLoginReturned(const Chat::Response_Login &response)
@@ -190,14 +179,16 @@ void BaseChatClient::OnLoginReturned(const Chat::Response_Login &response)
       OnLoginCompleted();
    }
    else {
-      OnLofingFailed();
+      OnLogingFailed();
    }
 }
 
 void BaseChatClient::OnLogoutResponse(const Chat::Response_Logout & response)
 {
    logger_->debug("[BaseChatClient::OnLogoutResponse]");
-   emit CleanupConnection();
+   QMetaObject::invokeMethod(this, [this] {
+      cleanupConnection();
+   });
 }
 
 void BaseChatClient::setSavedKeys(std::map<std::string, BinaryData>&& loadedKeys)
@@ -316,6 +307,16 @@ std::string BaseChatClient::deriveKey(const std::string &email) const
 std::string BaseChatClient::getUserId() const
 {
    return currentUserId_;
+}
+
+void BaseChatClient::cleanupConnection()
+{
+   chatSessionKeyPtr_->clearAll();
+   currentUserId_.clear();
+   currentJwt_.clear();
+   connection_.reset();
+
+   OnLogoutCompleted();
 }
 
 bool BaseChatClient::decodeAndUpdateIncomingSessionPublicKey(const std::string& senderId, const BinaryData& encodedPublicKey)
@@ -610,7 +611,7 @@ void BaseChatClient::OnMessages(const Chat::Response_Messages &response)
 
 void BaseChatClient::OnAskForPublicKey(const Chat::Response_AskForPublicKey &response)
 {
-   logger_->debug("Received request to send own public key from server: {}", ProtobufUtils::toJson(response));
+   logger_->debug("Received request to send own public key from server");
 
    // Make sure we are the node for which a public key was expected, if not, ignore this call.
    if (currentUserId_ != response.peer_id()) {
