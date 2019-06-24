@@ -254,6 +254,7 @@ ChatWidget::ChatWidget(QWidget *parent)
    : QWidget(parent)
    , ui_(new Ui::ChatWidget)
    , needsToStartFirstRoom_(false)
+   , chatLoggedInTimestampUtcInMillis_(0)
 {
    ui_->setupUi(this);
 
@@ -551,6 +552,8 @@ void ChatWidget::onSearchUserTextEdited(const QString& /*text*/)
 
 void ChatWidget::onConnectedToServer()
 {
+   const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+   chatLoggedInTimestampUtcInMillis_ =  timestamp.count();
    changeState(State::LoggedIn);
 }
 
@@ -990,30 +993,41 @@ bool ChatWidget::IsOTCChatSelected() const
 void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages)
 {
    // show notification of new message in tray icon
+   std::vector<bs::ui::NotifyMessage> oldMessages;
+   const int maxMessageLength = 20;
    for (auto i : newMessages) {
 
       auto userName = i.first;
       auto message = i.second;
 
       if (message) {
-         const int maxMessageLength = 20;
-
-         auto messageTitle = message->message().sender_id();
-         auto messageText = (message->message().encryption() == Chat::Data_Message_Encryption_UNENCRYPTED) ?
-               message->message().message() : "";
-
-         if (!userName.empty()) {
-            messageTitle = userName;
-         }
+         auto messageTitle = userName.empty() ? message->message().sender_id() : userName;
+         auto messageText = (message->message().encryption() == Chat::Data_Message_Encryption_UNENCRYPTED)
+               ? message->message().message() : "";
 
          if (messageText.length() > maxMessageLength) {
-            messageText = (QString::fromStdString(messageText).mid(0, maxMessageLength) + QLatin1String("...")).toStdString();
+            messageText = messageText.substr(0, maxMessageLength) + "...";
          }
 
          bs::ui::NotifyMessage notifyMsg;
          notifyMsg.append(QString::fromStdString(messageTitle));
          notifyMsg.append(QString::fromStdString(messageText));
          notifyMsg.append(QString::fromStdString(message->message().sender_id()));
+         if (message->message().timestamp_ms() < chatLoggedInTimestampUtcInMillis_) {
+            oldMessages.push_back(notifyMsg);
+         } else {
+            NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
+         }
+      }
+   }
+   if (oldMessages.size() == newMessages.size()) {
+      if (oldMessages.size() == 1) {
+         NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, oldMessages.at(0));
+      } else if (oldMessages.size() > 1) {
+         bs::ui::NotifyMessage notifyMsg;
+         notifyMsg.append(tr("OTC Chat"));
+         notifyMsg.append(tr("You have unread messages"));
+         notifyMsg.append(QString());
          NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
       }
    }

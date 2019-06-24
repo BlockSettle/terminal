@@ -152,6 +152,8 @@ private:
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
+   int64_t chatLoggedInTimestampUtcInMillis_;
+
 private:
    bool isRoom();
    void setIsRoom(bool);
