@@ -42,7 +42,7 @@ std::shared_ptr<KeyDerivationFunction> UserHasher::getKDF()
 
 std::string UserHasher::deriveKey(const std::string& rawData)
 {
-   SecureBinaryData key =getKDF()->deriveKey(SecureBinaryData(rawData));
+   SecureBinaryData key = getKDF()->deriveKey(SecureBinaryData(rawData));
    std::vector<uint8_t> keyData(key.getPtr(), key.getPtr() + key.getSize());
    return bs::zbase32Encode(keyData).substr(0, KeyLength);
 }
