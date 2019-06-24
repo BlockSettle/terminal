@@ -78,13 +78,12 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    ctxt_->setContextProperty(QStringLiteral("signerSettings"), settings_.get());
 
-   settingsConnections();
-
    qmlFactory_ = std::make_shared<QmlFactory>(settings, connectionManager, logger_);
    adapter_->setQmlFactory(qmlFactory_);
 
    qmlFactory_->setHeadlessPubKey(adapter_->headlessPubKey());
    connect(adapter_, &SignerAdapter::headlessPubKeyChanged, qmlFactory_.get(), &QmlFactory::setHeadlessPubKey);
+
    ctxt_->setContextProperty(QStringLiteral("qmlFactory"), qmlFactory_.get());
    connect(qmlFactory_.get(), &QmlFactory::closeEventReceived, this, [this](){
       hideQmlWindow();
@@ -119,6 +118,10 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
          connect(dbus_, &DBusNotification::messageClicked, this, &QMLAppObj::onSysTrayMsgClicked);
       }
 #endif // BS_USE_DBUS
+   }
+
+   if (adapter) {
+      settingsConnections();
    }
 }
 

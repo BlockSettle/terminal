@@ -13,9 +13,8 @@ Button {
     contentItem: Text {
         text: parent.text
         font.capitalization: Font.AllUppercase
-        color: textColor
+        color: { parent.enabled ? textColor : BSStyle.disabledHeaderColor }
         font.pixelSize: 12
-
     }
 
     Rectangle {

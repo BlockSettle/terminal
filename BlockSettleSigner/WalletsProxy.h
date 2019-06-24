@@ -7,6 +7,7 @@
 #include "QWalletInfo.h"
 #include "QSeed.h"
 #include "QPasswordData.h"
+#include "SignerDefs.h"
 
 namespace spdlog {
    class logger;
@@ -71,6 +72,7 @@ public:
    Q_INVOKABLE QString walletIdForIndex(int) const;
 
    Q_INVOKABLE bool walletNameExists(const QString& name) const;
+   Q_INVOKABLE bool isWatchingOnlyWallet(const QString& walletId) const;
 
    bool walletsLoaded() const { return walletsSynchronized_; }
 

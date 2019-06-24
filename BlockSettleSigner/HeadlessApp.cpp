@@ -93,6 +93,8 @@ void HeadlessAppObj::stop()
    guiConnection_.reset();
    guiListener_->resetConnection();
 
+   // Send message that server has stopped
+   terminalListener_->disconnect();
    terminalConnection_.reset();
    terminalListener_->resetConnection(nullptr);
 }
@@ -357,6 +359,8 @@ void HeadlessAppObj::setOnline(bool value)
       onlineProcessing();
    }
    else {
+      // Send message that server has stopped
+      terminalListener_->disconnect();
       terminalConnection_.reset();
       terminalListener_->resetConnection(nullptr);
    }
