@@ -1224,16 +1224,7 @@ void BSTerminalMainWindow::onUserLoggedIn()
    ui_->actionWithdrawalRequest->setEnabled(true);
    ui_->actionLinkAdditionalBankAccount->setEnabled(true);
 
-   if (!applicationSettings_->get<bool>(ApplicationSettings::dontLoadCCList)) {
-      BSMessageBox ccQuestion(BSMessageBox::question, tr("Load Private Market Securities")
-         , tr("Would you like to load PM securities from Public Bridge now?"), this);
-      const bool loadCCs = (ccQuestion.exec() == QDialog::Accepted);
-      applicationSettings_->set(ApplicationSettings::dontLoadCCList, !loadCCs);
-      if (loadCCs) {
-         ccFileManager_->LoadCCDefinitionsFromPub();
-      }
-   }
-
+   ccFileManager_->LoadCCDefinitionsFromPub();
    ccFileManager_->ConnectToCelerClient(celerConnection_);
 
    const auto userId = BinaryData::CreateFromHex(celerConnection_->userId());
