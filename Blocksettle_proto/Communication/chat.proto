@@ -248,6 +248,7 @@ message Request
         string receiver_id = 2;
         ContactsAction action = 3;
         bytes sender_pub_key = 4;
+		Data message = 5;
     }
 
     message ModifyContactsServer
@@ -376,6 +377,7 @@ message Response
         string receiver_id = 2;
           ContactsAction action = 3;
           bytes sender_public_key = 4;
+		Data message = 5;
     }
 
     message ModifyContactsServer
