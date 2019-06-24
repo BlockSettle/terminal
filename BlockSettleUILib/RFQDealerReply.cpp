@@ -38,13 +38,6 @@ constexpr int kSelectAQFileItemIndex = 1;
 RFQDealerReply::RFQDealerReply(QWidget* parent)
    : QWidget(parent)
    , ui_(new Ui::RFQDealerReply())
-   , walletsManager_(nullptr)
-   , authAddressManager_(nullptr)
-   , assetManager_(nullptr)
-   , dealerSellXBT_(false)
-   , autoUpdatePrices_(true)
-   , aq_(nullptr)
-   , aqLoaded_(false)
 {
    ui_->setupUi(this);
    initUi();
