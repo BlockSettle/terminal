@@ -219,6 +219,11 @@ bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, 
    d->set_receiver_id(friendUserId);
    d->set_action(Chat::CONTACTS_ACTION_REQUEST);
    d->set_sender_pub_key(getOwnAuthPublicKey().toBinStr());
+
+   if (message) {
+      *d->mutable_message() = *message;
+   }
+
    return sendRequest(request);
 }
 

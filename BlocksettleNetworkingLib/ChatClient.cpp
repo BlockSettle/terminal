@@ -238,7 +238,14 @@ void ChatClient::sendFriendRequest(const std::string &friendUserId)
       return;
    }
 
-   if (sendFriendRequestToServer(friendUserId)) {
+   auto messageData = std::make_shared<Chat::Data>();
+   initMessage(messageData.get(), friendUserId);
+
+   auto d = messageData->mutable_message();
+   d->set_message(std::string("I would like to add to friends!"));
+
+
+   if (sendFriendRequestToServer(friendUserId, messageData)) {
       auto record = std::make_shared<Chat::Data>();
       auto d = record->mutable_contact_record();
       d->set_user_id(model_->currentUser());
