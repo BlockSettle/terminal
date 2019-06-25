@@ -304,9 +304,9 @@ void WalletsManager::walletCreated(const std::string &walletId)
 
          leaf->setUserId(userId_);
          addWallet(leaf);
-         if (armory_) {
+/*         if (armory_) {
             leaf->registerWallet(armoryPtr_);
-         }
+         }*/
 
          if (setAuthWalletFrom(hdWallet.second)) {
             logger_->debug("[WalletsManager::{}] - Auth wallet updated", __func__);
