@@ -74,7 +74,7 @@ namespace bs {
             template<class U> void setCustomACT(
                const std::shared_ptr<ArmoryConnection> &armory)
             {
-               auto& leaves = getLeaves();
+               const auto &leaves = getLeaves();
                for (auto& leaf : leaves)
                   leaf->setCustomACT<U>(armory);
             }
