@@ -13,7 +13,7 @@
 #include "BDM_mainthread.h"
 #include <btc/ecc.h>
 
-#include "Wallets\SyncWallet.h"
+#include "Wallets/SyncWallet.h"
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
