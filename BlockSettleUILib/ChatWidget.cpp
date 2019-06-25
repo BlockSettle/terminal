@@ -46,6 +46,7 @@ enum class OTCPages : int
 
 const QRegularExpression kRxEmail(QStringLiteral(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"),
                                   QRegularExpression::CaseInsensitiveOption);
+const int kShowOldMessagesNotificationTimeout = 1000;
 
 bool IsOTCChatRoom(const std::string& chatRoom)
 {
@@ -297,6 +298,10 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
                  , const std::shared_ptr<spdlog::logger>& logger)
 {
    logger_ = logger;
+   oldNotificationsTimer_ = std::make_unique<QTimer>();
+   oldNotificationsTimer_->setSingleShot(true);
+   oldNotificationsTimer_->setInterval(kShowOldMessagesNotificationTimeout);
+   connect(oldNotificationsTimer_.get(), &QTimer::timeout, this, &ChatWidget::showOldMessagesNotification);
    client_ = std::make_shared<ChatClient>(connectionManager, appSettings, logger);
    auto model = client_->getDataModel();
    model->setNewMessageMonitor(this);
@@ -993,7 +998,6 @@ bool ChatWidget::IsOTCChatSelected() const
 void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages)
 {
    // show notification of new message in tray icon
-   std::vector<bs::ui::NotifyMessage> oldMessages;
    const int maxMessageLength = 20;
    for (auto i : newMessages) {
 
@@ -1001,6 +1005,7 @@ void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat
       auto message = i.second;
 
       if (message) {
+         oldNotificationsTimer_->stop();
          auto messageTitle = userName.empty() ? message->message().sender_id() : userName;
          auto messageText = (message->message().encryption() == Chat::Data_Message_Encryption_UNENCRYPTED)
                ? message->message().message() : "";
@@ -1014,21 +1019,11 @@ void ChatWidget::onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat
          notifyMsg.append(QString::fromStdString(messageText));
          notifyMsg.append(QString::fromStdString(message->message().sender_id()));
          if (message->message().timestamp_ms() < chatLoggedInTimestampUtcInMillis_) {
-            oldMessages.push_back(notifyMsg);
+            oldMessages_.push_back(notifyMsg);
+            oldNotificationsTimer_->start();
          } else {
             NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
          }
-      }
-   }
-   if (oldMessages.size() == newMessages.size()) {
-      if (oldMessages.size() == 1) {
-         NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, oldMessages.at(0));
-      } else if (oldMessages.size() > 1) {
-         bs::ui::NotifyMessage notifyMsg;
-         notifyMsg.append(tr("OTC Chat"));
-         notifyMsg.append(tr("You have unread messages"));
-         notifyMsg.append(QString());
-         NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
       }
    }
 }
@@ -1063,4 +1058,34 @@ void ChatWidget::onBSChatInputSelectionChanged()
 void ChatWidget::onChatMessagesSelectionChanged()
 {
    isChatMessagesSelected_ = true;
+}
+
+void ChatWidget::showOldMessagesNotification()
+{
+   if (oldMessages_.size() > 0) {
+      bs::ui::NotifyMessage notifyMsg;
+      if (oldMessages_.size() == 1) {
+         notifyMsg = oldMessages_.at(0);
+      } else {
+         QString chatId;
+         for (const auto &message : qAsConst(oldMessages_)) {
+            if (message.size() != 3) {
+               continue;
+            }
+            if (chatId.isEmpty()) {
+               chatId = message.at(2).toString();
+            } else {
+               if (chatId != message.at(2).toString()) {
+                  chatId = QStringLiteral(" ");
+                  break;
+               }
+            }
+         }
+         notifyMsg.append(tr("OTC Chat"));
+         notifyMsg.append(tr("You have unread messages"));
+         notifyMsg.append(chatId);
+      }
+      oldMessages_.clear();
+      NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
+   }
 }

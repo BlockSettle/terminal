@@ -189,7 +189,7 @@ void ChatClientUserView::setCurrentUserChat(const std::string &userId)
    // set required chat
    for (auto index : indexes) {
       auto type = index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
-      if (userId.empty() && type == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
+      if (userId == " " && type == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
          if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == QString::fromLatin1(ChatUtils::GlobalRoomKey)) {
             setCurrentIndex(index);
             break;
