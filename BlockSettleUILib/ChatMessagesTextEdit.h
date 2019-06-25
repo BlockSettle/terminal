@@ -61,7 +61,7 @@ public:
 public:
    void setOwnUserId(const std::string &userId) { ownUserId_ = userId; }
    void switchToChat(const std::string& chatId, bool isGroupRoom = false);
-   void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
+   void setHandler(ChatItemActionsHandler* handler);
    void setMessageReadHandler(std::shared_ptr<ChatMessageReadHandler> handler);
    void setClient(std::shared_ptr<ChatClient> client);
    void setColumnsWidth(const int &time, const int &icon, const int &user, const int &message);
@@ -111,7 +111,7 @@ private:
    std::string currentChatId_;
    std::string ownUserId_;
    std::string username_;
-   std::shared_ptr<ChatItemActionsHandler> handler_;
+   ChatItemActionsHandler * handler_;
    std::shared_ptr<ChatMessageReadHandler> messageReadHandler_;
    std::shared_ptr<ChatClient> client_;
 

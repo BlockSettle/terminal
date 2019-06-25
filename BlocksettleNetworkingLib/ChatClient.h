@@ -59,6 +59,9 @@ public:
    std::shared_ptr<Chat::Data> sendRoomOwnMessage(
          const std::string& message, const std::string &receiver);
 
+   void createPendingFriendRequest(const std::string& userId);
+   void onContactRequestPositiveAction(const std::string& contactId, const std::string &message);
+   void onContactRequestNegativeAction(const std::string& contactId);
    void sendFriendRequest(const std::string &friendUserId, const std::string& message = std::string());
    void acceptFriendRequest(const std::string &friendUserId);
    void rejectFriendRequest(const std::string &friendUserId);
@@ -66,6 +69,7 @@ public:
 
    void clearSearch();
    bool isFriend(const std::string &userId);
+   void onEditContactRequest(std::shared_ptr<Chat::Data> crecord);
 
    Chat::Data_ContactRecord getContact(const std::string &userId) const;
 
@@ -125,7 +129,7 @@ protected:
 
    // ChatItemActionsHandler interface
 public:
-   void onActionAddToContacts(const std::string& userId) override;
+   void onActionCreatePendingOutgoing(const std::string& userId) override;
    void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
    void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
    void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;

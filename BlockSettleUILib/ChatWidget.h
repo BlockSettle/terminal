@@ -38,6 +38,7 @@ class CelerClient;
 class ChatWidget : public QWidget
                  , public ViewItemWatcher
                  , public NewMessageMonitor
+                 , public ChatItemActionsHandler
 {
    Q_OBJECT
 
@@ -86,6 +87,8 @@ private slots:
    void onContactRequestAccepted(const std::string &userId);
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
+   void onContactRequestAcceptSendClicked();
+   void onContactRequestRejectCancelClicked();
 
    // OTC UI slots
    void OnOTCRequestCreated();
@@ -141,6 +144,7 @@ private:
    std::string serverPublicKey_;
    std::string  currentChat_;
    bool isRoom_;
+   bool isContactRequest_;
    QSpacerItem *chatUsersVerticalSpacer_;
    bool isChatMessagesSelected_;
    bool isChatTab_;
@@ -154,6 +158,8 @@ private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
 private:
    bool isRoom();
+   bool isContactRequest();
+   void setIsContactRequest(bool);
    void setIsRoom(bool);
    void changeState(ChatWidget::State state);
    void initSearchWidget();
@@ -169,6 +175,14 @@ public:
    // NewMessageMonitor interface
 public:
    void onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages) override;
-};
 
+   // ChatItemActionsHandler interface
+public:
+   void onActionCreatePendingOutgoing(const std::string &userId) override;
+   void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) override;
+   bool onActionIsFriend(const std::string &userId) override;
+};
 #endif // CHAT_WIDGET_H

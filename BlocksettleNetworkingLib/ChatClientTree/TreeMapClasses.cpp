@@ -305,7 +305,9 @@ void RootItem::notifyContactChanged(std::shared_ptr<Chat::Data> contact)
    assert(contact->has_contact_record());
 
    TreeItem* chatNode = findChatNode(contact->contact_record().contact_id());
-   if (chatNode && chatNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement){
+   if (chatNode && (chatNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+                 || chatNode->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)
+       ){
       emit itemChanged(chatNode);
    }
 }

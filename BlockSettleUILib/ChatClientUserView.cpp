@@ -397,6 +397,7 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
          }
          case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
          case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
          {
             auto node = static_cast<CategoryElement*>(item);
             notifyElementUpdated(node);

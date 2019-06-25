@@ -275,7 +275,7 @@ void ChatMessagesTextEdit::switchToChat(const std::string& chatId, bool isGroupR
    emit userHaveNewMessageChanged(chatId, false, false);
 }
 
-void ChatMessagesTextEdit::setHandler(std::shared_ptr<ChatItemActionsHandler> handler)
+void ChatMessagesTextEdit::setHandler(ChatItemActionsHandler* handler)
 {
    handler_ = handler;
 }
@@ -428,7 +428,7 @@ void ChatMessagesTextEdit::initUserContextMenu()
    userAddContactAction_ = new QAction(tr("Add to contacts"));
    userAddContactAction_->setStatusTip(tr("Click to add user to contact list"));
    connect(userAddContactAction_, &QAction::triggered, [this](bool) {
-      handler_->onActionAddToContacts(username_);
+      handler_->onActionCreatePendingOutgoing(username_);
    });
 
    userRemoveContactAction_ = new QAction(tr("Remove from contacts"));
@@ -648,6 +648,7 @@ void ChatMessagesTextEdit::onElementSelected(CategoryElement *element)
 
    if (data->has_contact_record()) {
       switchToChat(data->contact_record().contact_id(), false);
+
       onMessagesUpdate(displayData, true);
    }
 }

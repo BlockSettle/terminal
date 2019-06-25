@@ -428,6 +428,7 @@ void ChatClientDataModel::onItemChanged(TreeItem *item)
          break;
 
    }
+
    QModelIndex index = createIndex(item->selfIndex(), 0, item);
    emit dataChanged(index, index);
 }

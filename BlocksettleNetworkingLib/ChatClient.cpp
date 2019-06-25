@@ -230,11 +230,66 @@ std::shared_ptr<Chat::Data> ChatClient::sendRoomOwnMessage(const std::string& me
    return roomMessage;
 }
 
+void ChatClient::createPendingFriendRequest(const std::string &userId)
+{
+   addOrUpdateContact(userId, Chat::CONTACT_STATUS_OUTGOING_PENDING);
+   auto record = std::make_shared<Chat::Data>();
+   auto d = record->mutable_contact_record();
+   d->set_user_id(model_->currentUser());
+   d->set_contact_id(userId);
+   d->set_status(Chat::CONTACT_STATUS_OUTGOING_PENDING);
+   model_->insertContactObject(record);
+}
+
+void ChatClient::onContactRequestPositiveAction(const std::string &contactId, const std::string& message)
+{
+   auto citem = model_->findContactItem(contactId);
+
+   if (!citem) {
+      return;
+   }
+
+   switch (citem->contact_record().status()) {
+      case Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING:
+         sendFriendRequest(contactId, message);
+         break;
+      case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
+         acceptFriendRequest(contactId);
+         break;
+      default:
+         break;
+   }
+}
+
+void ChatClient::onContactRequestNegativeAction(const std::string &contactId)
+{
+   auto citem = model_->findContactItem(contactId);
+
+   if (!citem) {
+      return;
+   }
+
+   switch (citem->contact_record().status()) {
+      case Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING:
+         chatDb_->removeContact(contactId);
+         model_->removeContactRequestNode(contactId);
+         break;
+      case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
+         rejectFriendRequest(contactId);
+         break;
+      default:
+         break;
+   }
+
+}
+
 void ChatClient::sendFriendRequest(const std::string &friendUserId, const std::string& message)
 {
    // TODO
 
-   if (model_->findContactItem(friendUserId)) {
+   auto citem = model_->findContactItem(friendUserId);
+
+   if (citem && citem->contact_record().status() != Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
       return;
    }
 
@@ -308,6 +363,19 @@ bool ChatClient::isFriend(const std::string &userId)
    return chatDb_->isContactExist(userId);
 }
 
+void ChatClient::onEditContactRequest(std::shared_ptr<Chat::Data> crecord)
+{
+   if (!crecord) {
+      return;
+   }
+
+   auto contactRecord = crecord->mutable_contact_record();
+   addOrUpdateContact(contactRecord->contact_id()
+                      , contactRecord->status()
+                      , contactRecord->display_name());
+   getDataModel()->notifyContactChanged(crecord);
+}
+
 Chat::Data_ContactRecord ChatClient::getContact(const std::string &userId) const
 {
    Chat::Data_ContactRecord contact;
@@ -315,14 +383,9 @@ Chat::Data_ContactRecord ChatClient::getContact(const std::string &userId) const
    return contact;
 }
 
-void ChatClient::onActionAddToContacts(const std::string& userId)
+void ChatClient::onActionCreatePendingOutgoing(const std::string& userId)
 {
-   qDebug() << __func__ << " " << QString::fromStdString(userId);
-   //This will be called after UI with contact request message generation will finish work.
-   //So message will be entered by user at this moment.
-   //Meanwhile - dummy message.
-   //Also it could be called without the message.
-   return sendFriendRequest(userId, std::string("I would like to add you to friends!"));
+
 }
 
 void ChatClient::onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord)
@@ -579,12 +642,21 @@ void ChatClient::onCreateOutgoingContact(const std::string &contactId)
    //In base class this method calls addOrUpdateContact with Outgoing State
    BaseChatClient::onCreateOutgoingContact(contactId);
 
-   auto record = std::make_shared<Chat::Data>();
-   auto d = record->mutable_contact_record();
-   d->set_user_id(model_->currentUser());
-   d->set_contact_id(contactId);
-   d->set_status(Chat::CONTACT_STATUS_OUTGOING);
-   model_->insertContactObject(record);
+   auto citem = model_->findContactItem(contactId);
+
+   if (citem && citem->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
+       auto d = citem->mutable_contact_record();
+       d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+       model_->notifyContactChanged(citem);
+   } else if (!citem) {
+      auto record = std::make_shared<Chat::Data>();
+      auto d = record->mutable_contact_record();
+      d->set_user_id(model_->currentUser());
+      d->set_contact_id(contactId);
+      d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+      model_->insertContactObject(record);
+   }
+
 }
 
 void ChatClient::onDMMessageReceived(const std::shared_ptr<Chat::Data>& messageData)
