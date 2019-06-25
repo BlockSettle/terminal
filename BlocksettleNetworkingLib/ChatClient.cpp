@@ -21,6 +21,7 @@
 
 
 namespace {
+   // FIXME: regular expression for email address does not exist. How can we do that better?
    const QRegularExpression rx_email(QLatin1String(R"(^[a-z0-9._-]+@([a-z0-9-]+\.)+[a-z]+$)"), QRegularExpression::CaseInsensitiveOption);
 }
 
@@ -92,6 +93,7 @@ void ChatClient::readDatabase()
 {
    ContactRecordDataList clist;
    chatDb_->getContacts(clist);
+
    for (const auto &c : clist) {
       auto contact = std::make_shared<Chat::Data>();
       auto d = contact->mutable_contact_record();
@@ -100,6 +102,8 @@ void ChatClient::readDatabase()
       d->set_status(c.status());
       d->set_display_name(c.display_name());
       d->set_public_key(c.public_key());
+      d->set_public_key_timestamp(c.public_key_timestamp());
+
       model_->insertContactObject(contact);
 
       retrieveUserMessages(c.contact_id());
@@ -232,11 +236,12 @@ std::shared_ptr<Chat::Data> ChatClient::sendRoomOwnMessage(const std::string& me
 
 void ChatClient::sendFriendRequest(const std::string &friendUserId)
 {
-   // TODO
-
    if (model_->findContactItem(friendUserId)) {
       return;
    }
+
+   Chat::Data_ContactRecord contact;
+   chatDb_->getContact(model_->currentUser(), &contact);
 
    if (sendFriendRequestToServer(friendUserId)) {
       auto record = std::make_shared<Chat::Data>();
@@ -244,11 +249,12 @@ void ChatClient::sendFriendRequest(const std::string &friendUserId)
       d->set_user_id(model_->currentUser());
       d->set_contact_id(friendUserId);
       d->set_status(Chat::CONTACT_STATUS_OUTGOING);
+      d->set_public_key(contact.public_key());
+      d->set_public_key_timestamp(contact.public_key_timestamp());
       model_->insertContactObject(record);
       addOrUpdateContact(friendUserId, Chat::CONTACT_STATUS_OUTGOING);
    } else {
-      logger_->error("[ChatClient::sendFriendRequest] failed to send friend request for {}"
-                     , friendUserId);
+      logger_->error("[ChatClient::sendFriendRequest] failed to send friend request for {}", friendUserId);
    }
 }
 
@@ -285,7 +291,7 @@ void ChatClient::rejectFriendRequest(const std::string &friendUserId)
 
    model_->notifyContactChanged(contact);
 
-   sendDeclientFriendRequestToServer(friendUserId);
+   sendRejectFriendRequestToServer(friendUserId);
 }
 
 void ChatClient::removeFriendOrRequest(const std::string &userId)
@@ -307,6 +313,7 @@ Chat::Data_ContactRecord ChatClient::getContact(const std::string &userId) const
 {
    Chat::Data_ContactRecord contact;
    chatDb_->getContact(userId, &contact);
+
    return contact;
 }
 
@@ -318,7 +325,6 @@ void ChatClient::onActionAddToContacts(const std::string& userId)
 
 void ChatClient::onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord)
 {
-
    return removeFriendOrRequest(crecord->contact_record().contact_id());
 }
 
@@ -437,6 +443,8 @@ Chat::Data_Message_Encryption ChatClient::resolveMessageEncryption(std::shared_p
          return Chat::Data_Message_Encryption_IES;
    }
 
+   // TODO: What default value we should return here? I have no idea.
+   return Chat::Data_Message_Encryption_UNENCRYPTED;
 }
 
 void ChatClient::onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& roomsList)
@@ -450,8 +458,10 @@ void ChatClient::onRoomsLoaded(const std::vector<std::shared_ptr<Chat::Data>>& r
 
 void ChatClient::onUserListChanged(Chat::Command command, const std::vector<std::string>& userList)
 {
-   for (const auto& user : userList) {
+   for (const auto& user : userList) 
+   {
       auto contact = model_->findContactNode(user);
+
       if (contact) {
          auto status = ChatContactElement::OnlineStatus::Offline;
          switch (command) {
@@ -512,7 +522,8 @@ void ChatClient::onContactAccepted(const std::string& contactId)
 void ChatClient::onContactRejected(const std::string& contactId)
 {
    auto contactNode = model_->findContactNode(contactId);
-   if (contactNode){
+   if (contactNode)
+   {
       auto data = contactNode->getContactData();
       data->set_status(Chat::CONTACT_STATUS_REJECTED);
       contactNode->setOnlineStatus(ChatContactElement::OnlineStatus::Online);
@@ -582,6 +593,7 @@ void ChatClient::retrieveUserMessages(const std::string &userId)
          if (msg->message().encryption() == Chat::Data_Message_Encryption_IES) {
             msg = decryptIESMessage(msg);
          }
+
          model_->insertContactsMessage(msg);
       }
    }
@@ -590,11 +602,13 @@ void ChatClient::retrieveUserMessages(const std::string &userId)
 void ChatClient::loadRoomMessagesFromDB(const std::string& roomId)
 {
    auto messages = chatDb_->getRoomMessages(roomId);
+
    if (!messages.empty()) {
       for (auto &msg : messages) {
          if (msg->message().encryption() == Chat::Data_Message_Encryption_IES) {
             msg = decryptIESMessage(msg);
          }
+
          model_->insertRoomMessage(msg);
       }
    }

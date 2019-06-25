@@ -106,6 +106,7 @@ message Data
         string contact_id = 3;
         ContactStatus status = 4;
         bytes public_key = 5;
+        int64 public_key_timestamp = 6;
     }
 
     message User
@@ -125,7 +126,8 @@ message Data
             SENT                      = 0x0008;
         };
 
-        enum Encryption {
+        enum Encryption 
+        {
             UNENCRYPTED = 0;
             IES = 1;
             AEAD = 2;
@@ -199,7 +201,7 @@ message Request
     {
         string auth_id = 1;
         string jwt = 2;
-        bytes pub_key = 3;
+        bytes public_key = 3;
     }
 
     message Logout
@@ -225,15 +227,16 @@ message Request
 
     message AskForPublicKey
     {
-      string asking_node_id = 1;
-      string peer_id = 2;
+        string asking_node_id = 1;
+        string peer_id = 2;
     }
 
     message SendOwnPublicKey
     {
-      string receiving_node_id = 1;
-      string sending_node_id = 2;
-      bytes sending_node_pub_key = 3;
+        string receiving_node_id = 1;
+        string sending_node_id = 2;
+        bytes sending_node_public_key = 3;
+        int64 sending_node_public_key_timestamp = 4;
     }
 
     message MessageChangeStatus
@@ -247,7 +250,6 @@ message Request
         string sender_id = 1;
         string receiver_id = 2;
         ContactsAction action = 3;
-        bytes sender_pub_key = 4;
     }
 
     message ModifyContactsServer
@@ -256,7 +258,6 @@ message Request
         string contact_id = 2;
         ContactsActionServer action = 3;
         ContactStatus status = 4;
-        bytes contact_pub_key = 5;
     }
 
     message ChatroomsList
@@ -286,14 +287,14 @@ message Request
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     message ReplySessionPublicKey
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     oneof data
@@ -338,15 +339,16 @@ message Response
 
     message AskForPublicKey
     {
-      string asking_node_id = 1;
-      string peer_id = 2;
+        string asking_node_id = 1;
+        string peer_id = 2;
     }
 
     message SendOwnPublicKey
     {
-      string receiving_node_id = 1;
-      string sending_node_id = 2;
-      bytes sending_node_pub_key = 3;
+        string receiving_node_id = 1;
+        string sending_node_id = 2;
+        bytes sending_node_public_key = 3;
+        int64 sending_node_public_key_timestamp = 4;
     }
 
     message PendingMessage
@@ -374,17 +376,18 @@ message Response
     {
         string sender_id = 1;
         string receiver_id = 2;
-          ContactsAction action = 3;
-          bytes sender_public_key = 4;
+        ContactsAction action = 3;
+        bytes sender_public_key = 4;
+        int64 sender_public_key_timestamp = 5;
     }
 
     message ModifyContactsServer
     {
         string user_id = 1;
-          string contact_id = 2;
-          string message = 3;
-          ContactsActionServer requested_action = 4;
-          bool success = 5;
+        string contact_id = 2;
+        string message = 3;
+        ContactsActionServer requested_action = 4;
+        bool success = 5;
     }
 
     message ChatroomsList
@@ -415,14 +418,14 @@ message Response
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     message ReplySessionPublicKey
     {
         string sender_id = 1;
         string receiver_id = 2;
-        bytes sender_session_pub_key = 3;
+        bytes sender_session_public_key = 3;
     }
 
     // Used only with pending responses

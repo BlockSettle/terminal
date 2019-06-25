@@ -87,19 +87,22 @@ protected:
                                                        std::shared_ptr<Chat::Data> messageData);
    std::shared_ptr<Chat::Data> decryptIESMessage(const std::shared_ptr<Chat::Data>& message);
 
-   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey);
-   void onFriendRequestAccepted(const std::string& contactId, BinaryData publicKey);
+   void onFriendRequestReceived(const std::string& userId, const std::string& contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp);
+   void onFriendRequestAccepted(const std::string& contactId, BinaryData publicKey, const QDateTime& publicKeyTimestamp);
    void onFriendRequestRejected(const std::string& contactId);
    void onFriendRequestedRemove(const std::string& userId);
 
    void onServerApprovedFriendRemoving(const std::string& contactId);
-
+   void OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts, const bool& updateContactDb = true);
 
 public:
    bool sendSearchUsersRequest(const std::string& userIdPattern);
    std::string deriveKey(const std::string& email) const;
 
    std::string getUserId() const;
+
+signals:
+   void ConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts);
 
 protected:
    void cleanupConnection();
@@ -137,7 +140,7 @@ protected:
 protected:
    bool sendFriendRequestToServer(const std::string &friendUserId);
    bool sendAcceptFriendRequestToServer(const std::string &friendUserId);
-   bool sendDeclientFriendRequestToServer(const std::string &friendUserId);
+   bool sendRejectFriendRequestToServer(const std::string &friendUserId);
    bool sendRemoveFriendToServer(const std::string& contactId);
    bool sendUpdateMessageState(const std::shared_ptr<Chat::Data>& message);
 
