@@ -179,6 +179,28 @@ void UserScriptHandler::deinitAQ(bool deleteAq)
       aq_->deleteLater();
       aq_ = nullptr;
    }
+
+   std::vector<std::string> requests;
+   for (const auto &aq : aqQuoteReqs_) {
+      switch (aq.second.status) {
+         case bs::network::QuoteReqNotification::PendingAck:
+         case bs::network::QuoteReqNotification::Replied:
+            requests.push_back(aq.first);
+            break;
+         case bs::network::QuoteReqNotification::Withdrawn:
+         case bs::network::QuoteReqNotification::Rejected:
+         case bs::network::QuoteReqNotification::TimedOut:
+            break;
+         case bs::network::QuoteReqNotification::StatusUndefined:
+            assert(false);
+            break;
+      }
+   }
+
+   for (const std::string &reqId : requests) {
+      SPDLOG_LOGGER_INFO(logger_, "pull AQ request {}", reqId);
+      onAQPull(QString::fromStdString(reqId));
+   }
 }
 
 void UserScriptHandler::onMDUpdate(bs::network::Asset::Type, const QString &security,

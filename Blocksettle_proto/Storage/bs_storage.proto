@@ -68,15 +68,14 @@ message CCTokenEntry {
 message AuthAddressSubmitMixIn {
    required float    fee = 1;
    required uint64   txValue = 2;
-   required string   reserveId = 3;
+   required string   auth_address = 3;
 }
 
 message AuthAddressReservationInfo
 {
    required string address = 1;
    required string user_name = 2;
-   required string reservation_id = 3;
-   required string request_id = 4;
+   required string request_id = 3;
 }
 
 message AuthAddressVerificationTransaction {
@@ -103,7 +102,7 @@ message CCDistributionTransaction
 message AuthVerificationRejectedMessage
 {
    required string user_name = 1;
-   required string reservation_id = 2;
+   required string auth_address = 2;
    required string request_id = 3;
 }
 

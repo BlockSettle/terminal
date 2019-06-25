@@ -143,32 +143,32 @@ namespace bs {
          std::unordered_map<std::string, double>   sentNotifs_;
          network::QuoteReqNotification    currentQRN_;
          std::shared_ptr<TransactionData> transactionData_;
-         unsigned int   payInRecipId_ = UINT_MAX;
-         bool dealerSellXBT_;
+         unsigned int   payInRecipId_{UINT_MAX};
+         bool dealerSellXBT_{false};
          std::shared_ptr<SelectedTransactionInputs>   ccCoinSel_;
 
-         double   indicBid_;
-         double   indicAsk_;
-         std::atomic_bool     autoUpdatePrices_;
+         double   indicBid_{};
+         double   indicAsk_{};
+         std::atomic_bool     autoUpdatePrices_{true};
 
-         unsigned int         leafCreateReqId_ = 0;
+         unsigned int         leafCreateReqId_{};
          std::string          autoSignWalletId_;
 
          std::string product_;
          std::string baseProduct_;
 
-         UserScriptRunner *aq_;
+         UserScriptRunner *aq_{};
 
-         bool           aqLoaded_ = false;
-         bool           celerConnected_ = false;
-         bool           newLoaded_ = false;
+         bool           aqLoaded_{false};
+         bool           celerConnected_{false};
+         bool           newLoaded_{false};
 
          std::unordered_map<std::string, double>   bestQPrices_;
 
          struct MDInfo {
-            double   bidPrice;
-            double   askPrice;
-            double   lastPrice;
+            double   bidPrice{};
+            double   askPrice{};
+            double   lastPrice{};
          };
          std::unordered_map<std::string, MDInfo>  mdInfo_;
 
