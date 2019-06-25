@@ -64,14 +64,10 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(const std::string &key, const st
 
 bool hd::Group::addLeaf(const std::shared_ptr<hd::Leaf> &leaf, bool signal)
 {
-   connect(leaf.get(), &hd::Leaf::addressAdded, this, &hd::Group::onLeafChanged);
    leaves_[leaf->index()] = leaf;
-   if (signal) {
-      const auto id = QString::fromStdString(leaf->walletId());
-      if (!id.isEmpty()) {
-         emit leafAdded(id);
-      }
-      onLeafChanged();
+   const auto id = leaf->walletId();
+   if (!id.empty()) {
+      wct_->walletCreated(id);
    }
    return true;
 }
@@ -82,11 +78,9 @@ bool hd::Group::deleteLeaf(const bs::hd::Path::Elem &elem)
    if (leaf == nullptr) {
       return false;
    }
-   disconnect(leaf.get(), &hd::Leaf::addressAdded, this, &hd::Group::onLeafChanged);
    const auto walletId = leaf->walletId();
    leaves_.erase(elem);
-   onLeafChanged();
-   emit leafDeleted(QString::fromStdString(walletId));
+   wct_->walletDestroyed(walletId);
    return true;
 }
 
@@ -112,27 +106,22 @@ bool hd::Group::deleteLeaf(const std::string &key)
    return deleteLeaf(bs::hd::Path::keyToElem(key));
 }
 
-void hd::Group::onLeafChanged()
-{
-   emit changed();
-}
-
 std::string hd::Group::nameForType(bs::hd::CoinType ct)
 {
    switch (ct) {
    case bs::hd::CoinType::Bitcoin_main:
-      return hd::Group::tr("XBT").toStdString();
+      return QObject::tr("XBT").toStdString();
 
    case bs::hd::CoinType::Bitcoin_test:
-      return hd::Group::tr("XBT [TESTNET]").toStdString();
+      return QObject::tr("XBT [TESTNET]").toStdString();
 
    case bs::hd::CoinType::BlockSettle_CC:
-      return hd::Group::tr("Private Market Shares").toStdString();
+      return QObject::tr("Private Market Shares").toStdString();
 
    case bs::hd::CoinType::BlockSettle_Auth:
-      return hd::Group::tr("Authentication").toStdString();
+      return QObject::tr("Authentication").toStdString();
 
-   default: return hd::Group::tr("Unknown").toStdString();
+   default: return QObject::tr("Unknown").toStdString();
    }
 }
 
@@ -144,6 +133,7 @@ std::shared_ptr<hd::Leaf> hd::Group::newLeaf(const std::string &walletId) const
 
 void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &path) const
 {
+   leaf->setWCT(wct_);
    if (!path.length()) {
       return;
    }
@@ -165,10 +155,10 @@ void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &pa
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(const bs::hd::Path &path, const std::string &name
-   , const std::string &desc, SignContainer *container
+   , const std::string &desc, SignContainer *container, WalletCallbackTarget *wct
    , const std::shared_ptr<spdlog::logger>& logger, bool extOnlyAddresses)
    : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Auth), desc
-           , container, logger, extOnlyAddresses)
+           , container, wct, logger, extOnlyAddresses)
 {
    scanPortion_ = 5;
 }

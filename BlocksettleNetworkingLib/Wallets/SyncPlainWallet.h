@@ -22,8 +22,6 @@ namespace bs {
       // to access the wallet DB.
       class PlainWallet : public Wallet
       {
-         Q_OBJECT
-
       public:
          PlainWallet(const std::string &walletId, const std::string &name, const std::string &desc
             , SignContainer *, const std::shared_ptr<spdlog::logger> &logger);

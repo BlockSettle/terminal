@@ -38,6 +38,7 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &AuthAddressManager::VerifyWalletAddresses);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &AuthAddressManager::onWalletChanged);
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &AuthAddressManager::onTXSigned);
    connect(signingContainer_.get(), &SignContainer::Error, this, &AuthAddressManager::onWalletFailed);
@@ -57,13 +58,7 @@ void AuthAddressManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionM
 
 void AuthAddressManager::SetAuthWallet()
 {
-   if (authWallet_) {
-      disconnect(authWallet_.get(), SIGNAL(addressesAdded()), 0, 0);
-   }
    authWallet_ = walletsManager_->getAuthWallet();
-   if (authWallet_) {
-      connect(authWallet_.get(), &bs::sync::Wallet::addressAdded, this, &AuthAddressManager::authAddressAdded);
-   }
 }
 
 bool AuthAddressManager::setup()
@@ -168,7 +163,7 @@ bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
 bool AuthAddressManager::CreateNewAuthAddress()
 {
    const auto &cbAddr = [this](const bs::Address &) {
-      emit authWallet_->addressAdded();
+      emit walletsManager_->walletChanged(authWallet_->walletId());
    };
    authWallet_->getNewExtAddress(cbAddr);
    return true;
@@ -689,10 +684,10 @@ void AuthAddressManager::ClearAddressList()
    }
 }
 
-void AuthAddressManager::authAddressAdded()
+void AuthAddressManager::onWalletChanged(const std::string &walletId)
 {
    bool listUpdated = false;
-   if (authWallet_ != nullptr) {
+   if ((authWallet_ != nullptr) && (walletId == authWallet_->walletId())) {
       const auto &newAddresses = authWallet_->getUsedAddressList();
       const auto count = newAddresses.size();
       listUpdated = (count > addresses_.size());
@@ -972,7 +967,7 @@ void AuthAddressManager::onWalletCreated(unsigned int id, const std::shared_ptr<
    if (createWalletReqId_.second) {
       emit AuthWalletCreated(QString::fromStdString(leaf->walletId()));
    }
-   emit walletsManager_->walletChanged();
+   emit walletsManager_->walletChanged(leaf->walletId());
 }
 
 void AuthAddressManager::onWalletFailed(unsigned int id, std::string errMsg)

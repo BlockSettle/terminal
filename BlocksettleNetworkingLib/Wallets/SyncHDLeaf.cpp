@@ -32,7 +32,9 @@ void hd::Leaf::synchronize(const std::function<void()> &cbDone)
       encryptionKeys_ = data.encryptionKeys;
       encryptionRank_ = data.encryptionRank;
       netType_ = data.netType;
-      emit metaDataChanged();
+      if (wct_) {
+         wct_->metadataChanged(walletId());
+      }
 
       if (data.highestExtIndex == UINT32_MAX ||
          data.highestIntIndex == UINT32_MAX)
@@ -158,9 +160,9 @@ void hd::Leaf::postOnline()
    setUnconfirmedTarget();
 
    const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
-      isReady_ = true;
-      QMetaObject::invokeMethod(this, [this] { emit walletReady(
-         QString::fromStdString(walletId())); });
+      if (wct_) {
+         wct_->walletReady(walletId());
+      }
    };
    bs::sync::Wallet::init();
    const bool rc = getAddressTxnCounts([this, cbTrackAddrChain] {
@@ -199,7 +201,9 @@ void hd::Leaf::reset()
    addrPrefixedHashes_.clear();
    addressPool_.clear();
    poolByAddr_.clear();
-   emit walletReset();
+   if (wct_) {
+      wct_->walletReset(walletId());
+   }
 }
 
 const std::string& hd::Leaf::walletId() const
@@ -385,6 +389,9 @@ void hd::Leaf::createAddress(const CbAddress &cb, const AddrPoolKey &key)
       addAddress(addr, keyCopy.path.toString(), keyCopy.aet);
       if (cb) {
          cb(addr);
+      }
+      if (wct_) {
+         wct_->addressAdded(walletId());
       }
    };
 
@@ -661,7 +668,7 @@ void hd::Leaf::merge(const std::shared_ptr<Wallet> walletPtr)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthLeaf::AuthLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-   , SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
+   , SignContainer *container,const std::shared_ptr<spdlog::logger> &logger)
    : Leaf(walletId, name, desc, container, logger, bs::core::wallet::Type::Authentication, true)
 {
    intAddressPoolSize_ = 0;
@@ -836,8 +843,8 @@ void hd::CCLeaf::validationProc()
                }
             }
 
-            if (empty) {
-               emit walletReset();
+            if (empty && wct_) {
+               wct_->walletReset(walletId());
             }
          };
 

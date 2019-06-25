@@ -1,7 +1,5 @@
 #include "SyncWallet.h"
-
 #include <QLocale>
-#include <QMutexLocker>
 #include <bech32/ref/c++/segwit_addr.h>
 #include <spdlog/spdlog.h>
 #include "CheckRecipSigner.h"
@@ -11,8 +9,7 @@
 using namespace bs::sync;
 
 Wallet::Wallet(SignContainer *container, const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr)
-   , signContainer_(container), logger_(logger)
+   : signContainer_(container), logger_(logger)
 {}
 
 Wallet::~Wallet()
@@ -70,7 +67,9 @@ bool Wallet::setAddressComment(const bs::Address &address, const std::string &co
    if (sync && signContainer_) {
       signContainer_->syncAddressComment(walletId(), address, comment);
    }
-   emit addressAdded();
+   if (wct_) {
+      wct_->addressAdded(walletId());
+   }
    return true;
 }
 
@@ -554,9 +553,9 @@ void Wallet::onRefresh(std::vector<BinaryData> ids, bool online)
          init();
 
          const auto &cbTrackAddrChain = [this](bs::sync::SyncState st) {
-            isReady_ = true;
-            QMetaObject::invokeMethod(this, [this] { emit walletReady(
-               QString::fromStdString(walletId())); });
+            if (wct_) {
+               wct_->walletReady(walletId());
+            }
          };
          bs::sync::Wallet::init();
          const bool rc = getAddressTxnCounts([this, cbTrackAddrChain] {
@@ -601,10 +600,9 @@ void Wallet::init(bool force)
       const auto &cbBalTxN = [this, cbCounter] {
          (*cbCounter)--;
          if ((*cbCounter <= 0)) {
-            QMetaObject::invokeMethod(this, [this] {
-               emit balanceUpdated(walletId());
-               emit balanceChanged(walletId());
-            });
+            if (wct_) {
+               wct_->balanceUpdated(walletId());
+            }
          }
       };
       updateBalances(cbBalTxN);

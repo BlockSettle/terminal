@@ -34,7 +34,7 @@ namespace bs {
       class Wallet;
       class SettlementWallet;
 
-      class WalletsManager : public QObject, public ArmoryCallbackTarget
+      class WalletsManager : public QObject, public ArmoryCallbackTarget, public WalletCallbackTarget
       {
          Q_OBJECT
       public:
@@ -44,7 +44,7 @@ namespace bs {
 
          WalletsManager(const std::shared_ptr<spdlog::logger> &, const std::shared_ptr<ApplicationSettings>& appSettings
             , const std::shared_ptr<ArmoryConnection> &);
-         ~WalletsManager() noexcept;
+         ~WalletsManager() noexcept override;
 
          WalletsManager(const WalletsManager&) = delete;
          WalletsManager& operator = (const WalletsManager&) = delete;
@@ -62,7 +62,7 @@ namespace bs {
          bool hasPrimaryWallet() const;
          bool hasSettlementWallet() const { return (settlementWallet_ != nullptr); }
          HDWalletPtr getPrimaryWallet() const;
-         std::shared_ptr<hd::DummyWallet> getDummyWallet() const { return hdDummyWallet_; }
+//         std::shared_ptr<hd::DummyWallet> getDummyWallet() const { return hdDummyWallet_; }
          std::vector<WalletPtr> getAllWallets() const;
          WalletPtr getWalletById(const std::string& walletId) const;
          WalletPtr getWalletByAddress(const bs::Address &addr) const;
@@ -112,14 +112,14 @@ namespace bs {
          void trackAddressChainUse(std::function<void(bool)>);
 
       signals:
-         void walletChanged();
-         void walletDeleted(std::string walletId);
-         void walletCreated(HDWalletPtr);
+         void walletChanged(const std::string &walletId);
+         void walletDeleted(const std::string &walletId);
+         void walletAdded(const std::string &walletId);
          void walletsReady();
          void walletsSynchronized();
-         void walletBalanceUpdated(std::string walletId);
-         void walletBalanceChanged(std::string walletId);
-         void walletReady(const QString &walletId);
+         void walletBalanceUpdated(const std::string &walletId);
+         void walletMetaChanged(const std::string &walletId);
+         void walletIsReady(const std::string &walletId);
          void newWalletAdded(const std::string &walletId);
          void authWalletChanged();
          void blockchainEvent();
@@ -143,14 +143,19 @@ namespace bs {
          void onStateChanged(ArmoryState) override;
 
       private slots:
-         void onWalletReady(const QString &walletId);
-         void onHDLeafAdded(QString id);
-         void onHDLeafDeleted(QString id);
-         void onWalletImported(const std::string &walletId);
          void onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync::hd::Wallet>);
          void onWalletsListUpdated();
 
       private:
+         void addressAdded(const std::string &) override;
+         void balanceUpdated(const std::string &) override;
+         void walletReady(const std::string &) override;
+         void walletCreated(const std::string &) override;
+         void walletDestroyed(const std::string &) override;
+         void walletReset(const std::string &) override;
+         void scanComplete(const std::string &walletId) override;
+         void metadataChanged(const std::string &walletId) override;
+
          bool empty() const { return (wallets_.empty() && !settlementWallet_); }
 
          void registerSettlementWallet();
@@ -176,6 +181,10 @@ namespace bs {
 
          void startWalletRescan(const HDWalletPtr &);
 
+         using MaintQueueCb = std::function<void()>;
+         void addToMaintQueue(const MaintQueueCb &);
+         void maintenanceThreadFunc();
+
       private:
          std::shared_ptr<SignContainer>         signContainer_;
          std::shared_ptr<spdlog::logger>        logger_;
@@ -186,11 +195,12 @@ namespace bs {
          using hd_wallet_container_type = std::unordered_map<std::string, HDWalletPtr>;
 
          hd_wallet_container_type            hdWallets_;
-         std::shared_ptr<hd::DummyWallet>    hdDummyWallet_;
+//         std::shared_ptr<hd::DummyWallet>    hdDummyWallet_;
          std::unordered_set<std::string>     walletNames_;
          wallet_container_type               wallets_;
          mutable QMutex                      mtxWallets_;
-         std::set<QString>                   readyWallets_;
+         std::set<std::string>               readyWallets_;
+         bool     isReady_ = false;
          std::set<BinaryData>                walletsId_;
          std::set<std::string>               hdWalletsId_;
          WalletPtr                           authAddressWallet_;
@@ -218,6 +228,13 @@ namespace bs {
          unsigned int createHdReqId_ = 0;
 
          std::atomic_bool  synchronized_{ false };
+
+         std::atomic_bool  maintThreadRunning_{ false };
+         std::deque<MaintQueueCb>   maintQueue_;
+         std::thread             maintThread_;
+         std::condition_variable maintCV_;
+         std::mutex              maintMutex_;
+
       };
 
    }  //namespace sync

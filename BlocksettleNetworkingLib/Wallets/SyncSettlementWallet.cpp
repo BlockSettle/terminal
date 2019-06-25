@@ -155,7 +155,9 @@ void SettlementWallet::newAddress(const CbAddress &cb, const BinaryData &settlem
       }
 
       cb(addr);
-      emit addressAdded();
+      if (wct_) {
+         wct_->addressAdded(walletId());
+      }
    };
    const auto index = settlementId.toHexStr() + "." + buyAuthPubKey.toHexStr() + "."
       + sellAuthPubKey.toHexStr();

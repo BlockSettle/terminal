@@ -28,7 +28,6 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
    const auto &cbAddr = [this, copyButton, closeButton](const bs::Address &addr) {
       if (addr.isValid()) {
          address_ = addr;
-         emit wallet_->addressAdded();
          QMetaObject::invokeMethod(this, [this, copyButton, closeButton] {
             closeButton->setEnabled(true);
             displayAddress();

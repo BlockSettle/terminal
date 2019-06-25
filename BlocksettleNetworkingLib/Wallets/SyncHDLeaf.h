@@ -24,8 +24,7 @@ namespace bs {
 
          class Leaf : public bs::sync::Wallet
          {
-            Q_OBJECT
-               friend class Group;
+            friend class Group;
 
          public:
             using cb_complete_notify = std::function<void(bs::hd::Path::Elem wallet, bool isValid)>;
@@ -94,12 +93,6 @@ namespace bs {
 
             std::vector<std::string> setUnconfirmedTarget(void);
 
-         signals:
-            void scanComplete(const std::string &walletId);
-
-         protected slots:
-            void onRefresh(std::vector<BinaryData> ids, bool online) override;
-
          protected:
             struct AddrPoolKey {
                bs::hd::Path  path;
@@ -125,6 +118,7 @@ namespace bs {
             using PooledAddress = std::pair<AddrPoolKey, bs::Address>;
 
          protected:
+            void onRefresh(std::vector<BinaryData> ids, bool online) override;
             virtual void createAddress(const CbAddress &cb, const AddrPoolKey &);
             void reset();
             bs::hd::Path getPathForAddress(const bs::Address &) const;
@@ -216,11 +210,9 @@ namespace bs {
 
          class CCLeaf : public Leaf
          {
-            Q_OBJECT
-
          public:
             CCLeaf(const std::string &walletId, const std::string &name, const std::string &desc
-               , SignContainer *, const std::shared_ptr<spdlog::logger> &
+               , SignContainer *,const std::shared_ptr<spdlog::logger> &
                , bool extOnlyAddresses = false);
             ~CCLeaf() override;
 
@@ -245,7 +237,7 @@ namespace bs {
 
             void setArmory(const std::shared_ptr<ArmoryConnection> &) override;
 
-         private slots:
+         protected:
             void onZeroConfReceived(const std::vector<bs::TXEntry>) override;
 
          private:

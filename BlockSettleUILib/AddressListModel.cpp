@@ -35,9 +35,11 @@ AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManage
    , processing_(false)
 {
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this
-           , &AddressListModel::updateData);
+           , &AddressListModel::updateWallets);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
+      , &AddressListModel::updateData);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::blockchainEvent, this
-           , &AddressListModel::updateData);
+           , &AddressListModel::updateWallets);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated
       , this, &AddressListModel::updateData);
 }
@@ -45,17 +47,8 @@ AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManage
 bool AddressListModel::setWallets(const Wallets &wallets, bool force)
 {
    if ((wallets != wallets_) || force) {
-      for (const auto &wallet : wallets_) {
-         disconnect(wallet.get(), &bs::sync::Wallet::addressAdded, this, &AddressListModel::updateData);
-      }
-
       wallets_ = wallets;
-      for (const auto &wallet : wallets_) {
-         connect(wallet.get(), &bs::sync::Wallet::addressAdded, this
-            , &AddressListModel::updateData, Qt::QueuedConnection);
-      }
-
-      updateData();
+      updateWallets();
    }
 
    return true;
@@ -88,7 +81,12 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
    return row;
 }
 
-void AddressListModel::updateData()
+void AddressListModel::updateWallets()
+{
+   updateData("");
+}
+
+void AddressListModel::updateData(const std::string &walletId)
 {
    bool expected = false;
    bool desired = true;

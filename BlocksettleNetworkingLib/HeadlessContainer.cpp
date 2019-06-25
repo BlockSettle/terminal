@@ -330,8 +330,7 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
       emit HDLeafCreated(id, leaf);
    }
    else if (response.has_wallet()) {
-      const auto netType = (response.wallet().nettype() == headless::TestNetType) ? NetworkType::TestNet : NetworkType::MainNet;
-      auto wallet = std::make_shared<bs::sync::hd::Wallet>(netType, response.wallet().walletid()
+      auto wallet = std::make_shared<bs::sync::hd::Wallet>(response.wallet().walletid()
          , response.wallet().name(), response.wallet().description(), this, logger_);
 
       for (int i = 0; i < response.wallet().groups_size(); i++) {

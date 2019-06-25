@@ -1,5 +1,6 @@
 #include "SyncHDWallet.h"
 #include <QtConcurrent/QtConcurrentRun>
+#include "CheckRecipSigner.h"
 #include "SignContainer.h"
 #include "SyncWallet.h"
 
@@ -11,18 +12,22 @@ if ((logger)) { \
 
 using namespace bs::sync;
 
-hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
+hd::Wallet::Wallet(const std::string &walletId, const std::string &name
    , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
+   : walletId_(walletId), name_(name), desc_(desc)
    , logger_(logger)
-{}
+{
+   netType_ = getNetworkType();
+}
 
-hd::Wallet::Wallet(NetworkType netType, const std::string &walletId, const std::string &name
+hd::Wallet::Wallet(const std::string &walletId, const std::string &name
    , const std::string &desc, SignContainer *container
    , const std::shared_ptr<spdlog::logger> &logger)
-   : QObject(nullptr), walletId_(walletId), name_(name), desc_(desc), netType_(netType)
+   : walletId_(walletId), name_(name), desc_(desc)
    , signContainer_(container), logger_(logger)
-{}
+{
+   netType_ = getNetworkType();
+}
 
 hd::Wallet::~Wallet() = default;
 
@@ -73,15 +78,6 @@ void hd::Wallet::synchronize(const std::function<void()> &cbDone)
    };
 
    signContainer_->syncHDWallet(walletId(), cbProcess);
-}
-
-bool hd::Wallet::isReady() const
-{
-   bool result = true;
-   for (const auto &leaf : getLeaves()) {
-      result &= leaf->isReady();
-   }
-   return result;
 }
 
 std::string hd::Wallet::walletId() const
@@ -154,17 +150,17 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct, bool isE
    switch (ct) {
    case bs::hd::CoinType::BlockSettle_Auth:
       result = std::make_shared<hd::AuthGroup>(path, name_, desc_, signContainer_
-         , logger_, isExtOnly);
+         , this, logger_, isExtOnly);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
       result = std::make_shared<hd::CCGroup>(path, name_, desc_,signContainer_
-         , logger_, isExtOnly);
+         , this, logger_, isExtOnly);
       break;
 
    default:
       result = std::make_shared<hd::Group>(path, name_, hd::Group::nameForType(ct)
-         , desc_, signContainer_, logger_, isExtOnly);
+         , desc_, signContainer_, this, logger_, isExtOnly);
       break;
    }
    addGroup(result);
@@ -173,9 +169,6 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct, bool isE
 
 void hd::Wallet::addGroup(const std::shared_ptr<hd::Group> &group)
 {
-   connect(group.get(), &hd::Group::changed, this, &hd::Wallet::onGroupChanged);
-   connect(group.get(), &hd::Group::leafAdded, this, &hd::Wallet::onLeafAdded);
-   connect(group.get(), &hd::Group::leafDeleted, this, &hd::Wallet::onLeafDeleted);
    if (!userId_.isNull()) {
       group->setUserId(userId_);
    }
@@ -192,25 +185,25 @@ std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
    return itGroup->second;
 }
 
-void hd::Wallet::onGroupChanged()
-{
-//   updatePersistence();
-}
-
-void hd::Wallet::onLeafAdded(QString id)
+void hd::Wallet::walletCreated(const std::string &walletId)
 {
    for (const auto &leaf : getLeaves()) {
-      if ((leaf->walletId() == id.toStdString()) && armory_) {
+      if ((leaf->walletId() == walletId) && armory_) {
          leaf->setArmory(armory_);
       }
    }
-   emit leafAdded(id);
+
+   if (wct_) {
+      wct_->walletCreated(walletId);
+   }
 }
 
-void hd::Wallet::onLeafDeleted(QString id)
+void hd::Wallet::walletDestroyed(const std::string &walletId)
 {
    getLeaves();
-   emit leafDeleted(id);
+   if (wct_) {
+      wct_->walletDestroyed(walletId);
+   }
 }
 
 void hd::Wallet::setUserId(const BinaryData &userId)
@@ -281,7 +274,9 @@ void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncSta
                }
             }
             leaf->synchronize([this, leaf, cb, hdState] {
-               emit leaf->addressAdded();
+               if (wct_) {
+                  wct_->addressAdded(leaf->walletId());
+               }
                if (cb) {
                   cb(hdState);
                }
@@ -297,7 +292,9 @@ void hd::Wallet::trackChainAddressUse(const std::function<void(bs::sync::SyncSta
 void hd::Wallet::startRescan()
 {
    const auto &cbScanned = [this](bs::sync::SyncState state) {
-      emit scanComplete(walletId());
+      if (wct_) {
+         wct_->scanComplete(walletId());
+      }
    };
    trackChainAddressUse(cbScanned);
 }

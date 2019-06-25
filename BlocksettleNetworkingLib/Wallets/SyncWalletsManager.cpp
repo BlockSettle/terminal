@@ -21,7 +21,22 @@ WalletsManager::WalletsManager(const std::shared_ptr<spdlog::logger>& logger
    , logger_(logger)
    , appSettings_(appSettings)
    , armoryPtr_(armory)
-{}
+{
+   maintThreadRunning_ = true;
+   maintThread_ = std::thread(&WalletsManager::maintenanceThreadFunc, this);
+}
+
+WalletsManager::~WalletsManager() noexcept
+{
+   {
+      std::unique_lock<std::mutex> lock(maintMutex_);
+      maintThreadRunning_ = false;
+      maintCV_.notify_one();
+   }
+   if (maintThread_.joinable()) {
+      maintThread_.join();
+   }
+}
 
 void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &container)
 {
@@ -31,21 +46,20 @@ void WalletsManager::setSignContainer(const std::shared_ptr<SignContainer> &cont
    connect(signContainer_.get(), &SignContainer::walletsListUpdated, this, &WalletsManager::onWalletsListUpdated);
 }
 
-WalletsManager::~WalletsManager() noexcept = default;
-
 void WalletsManager::reset()
 {
    wallets_.clear();
    hdWallets_.clear();
-   hdDummyWallet_.reset();
+//   hdDummyWallet_.reset();
    walletNames_.clear();
    readyWallets_.clear();
+   isReady_ = false;
    walletsId_.clear();
    hdWalletsId_.clear();
    settlementWallet_.reset();
    authAddressWallet_.reset();
 
-   emit walletChanged();
+   emit walletChanged("");
 }
 
 void WalletsManager::syncWallets(const CbProgress &cb)
@@ -65,7 +79,7 @@ void WalletsManager::syncWallets(const CbProgress &cb)
             if (walletIds->empty()) {
                logger_->debug("[WalletsManager::syncWallets] all wallets synchronized");
                emit walletsSynchronized();
-               emit walletChanged();
+               emit walletChanged("");
                synchronized_ = true;
             }
          };
@@ -77,8 +91,9 @@ void WalletsManager::syncWallets(const CbProgress &cb)
          case bs::sync::WalletFormat::HD:
          {
             try {
-               const auto hdWallet = std::make_shared<hd::Wallet>(info.netType, info.id, info.name,
+               const auto hdWallet = std::make_shared<hd::Wallet>(info.id, info.name,
                   info.description, signContainer_.get(), logger_);
+               hdWallet->setWCT(this);
 
                if (hdWallet) {
                   const auto &cbHDWalletDone = [this, hdWallet, cbDone] {
@@ -108,6 +123,7 @@ void WalletsManager::syncWallets(const CbProgress &cb)
             else {
                const auto settlWallet = std::make_shared<SettlementWallet>(
                   info.id, info.name, info.description, signContainer_.get(), logger_);
+               settlWallet->setWCT(this);
                
                const auto &cbSettlementDone = [this, settlWallet, cbDone] 
                {
@@ -150,14 +166,10 @@ void WalletsManager::syncWallets(const CbProgress &cb)
 
 bool WalletsManager::isWalletsReady() const
 {
-   bool result = true;
    if (synchronized_ && hdWallets_.empty()) {
-      return result;
+      return true;
    }
-   for (const auto &wallet : hdWallets_) {
-      result &= wallet.second->isReady();
-   }
-   return result;
+   return isReady_;
 }
 
 bool WalletsManager::isReadyForTrading() const
@@ -170,7 +182,6 @@ void WalletsManager::registerSettlementWallet()
    if (!settlementWallet_) {
       return;
    }
-   connect(settlementWallet_.get(), &SettlementWallet::walletReady, this, &WalletsManager::onWalletReady);
    if (armory_) {
       settlementWallet_->registerWallet(armoryPtr_);
    }
@@ -178,39 +189,57 @@ void WalletsManager::registerSettlementWallet()
 
 void WalletsManager::saveWallet(const WalletPtr &newWallet)
 {
-   if (hdDummyWallet_ == nullptr) {
+/*   if (hdDummyWallet_ == nullptr) {
       hdDummyWallet_ = std::make_shared<hd::DummyWallet>(logger_);
       hdWalletsId_.insert(hdDummyWallet_->walletId());
       hdWallets_[hdDummyWallet_->walletId()] = hdDummyWallet_;
-   }
+   }*/
    addWallet(newWallet);
 }
 
 void WalletsManager::addWallet(const WalletPtr &wallet, bool isHDLeaf)
 {
-   if (!isHDLeaf && hdDummyWallet_)
+/*   if (!isHDLeaf && hdDummyWallet_)
       hdDummyWallet_->add(wallet);
-
+*/
+   QMutexLocker lock(&mtxWallets_);
+   auto insertIter = walletsId_.insert(wallet->walletId());
+   if (!insertIter.second)
    {
-      QMutexLocker lock(&mtxWallets_);
-      auto insertIter = walletsId_.insert(wallet->walletId());
-      if (!insertIter.second)
-      {
-         auto wltIter = wallets_.find(wallet->walletId());
-         if (wltIter == wallets_.end())
-            throw std::runtime_error("have id but lack leaf ptr");
-      }
-      else
-         wallets_[wallet->walletId()] = wallet;
+      auto wltIter = wallets_.find(wallet->walletId());
+      if (wltIter == wallets_.end())
+         throw std::runtime_error("have id but lack leaf ptr");
    }
+   else
+      wallets_[wallet->walletId()] = wallet;
+}
 
-   connect(wallet.get(), &Wallet::walletReady, this, &WalletsManager::onWalletReady);
-   connect(wallet.get(), &Wallet::addressAdded, [this] { emit walletChanged(); });
-   connect(wallet.get(), &Wallet::walletReset, [this] { emit walletChanged(); });
-   connect(wallet.get(), &Wallet::balanceUpdated, [this](std::string walletId) {
-      emit walletBalanceUpdated(walletId); });
-   connect(wallet.get(), &Wallet::balanceChanged, [this](std::string walletId) {
-      emit walletBalanceChanged(walletId); });
+void WalletsManager::balanceUpdated(const std::string &walletId)
+{
+   addToMaintQueue([this, walletId] {
+      QMetaObject::invokeMethod(this, [this, walletId] { emit walletBalanceUpdated(walletId); });
+   });
+}
+
+void WalletsManager::addressAdded(const std::string &walletId)
+{
+   addToMaintQueue([this, walletId] {
+      QMetaObject::invokeMethod(this, [this, walletId] { emit walletChanged(walletId); });
+   });
+}
+
+void WalletsManager::metadataChanged(const std::string &walletId)
+{
+   addToMaintQueue([this, walletId] {
+      QMetaObject::invokeMethod(this, [this, walletId] { emit walletMetaChanged(walletId); });
+   });
+}
+
+void WalletsManager::walletReset(const std::string &walletId)
+{
+   addToMaintQueue([this, walletId] {
+      QMetaObject::invokeMethod(this, [this, walletId] { emit walletChanged(walletId); });
+   });
 }
 
 void WalletsManager::saveWallet(const HDWalletPtr &wallet)
@@ -238,22 +267,11 @@ void WalletsManager::saveWallet(const HDWalletPtr &wallet)
 
    for (const auto &leaf : wallet->getLeaves())
       addWallet(leaf, true);
-
-   connect(wallet.get(), &hd::Wallet::leafAdded, this, &WalletsManager::onHDLeafAdded);
-   connect(wallet.get(), &hd::Wallet::leafDeleted, this, &WalletsManager::onHDLeafDeleted);
-   connect(wallet.get(), &hd::Wallet::scanComplete, this, &WalletsManager::onWalletImported, Qt::QueuedConnection);
 }
 
 void WalletsManager::setSettlementWallet(const std::shared_ptr<bs::sync::SettlementWallet> &wallet)
 {
    settlementWallet_ = wallet;
-   connect(wallet.get(), &Wallet::walletReady, this, &WalletsManager::onWalletReady);
-   connect(wallet.get(), &Wallet::addressAdded, [this] { emit walletChanged(); });
-   connect(wallet.get(), &Wallet::walletReset, [this] { emit walletChanged(); });
-   connect(wallet.get(), &Wallet::balanceUpdated, [this](std::string walletId) {
-      emit walletBalanceUpdated(walletId); });
-   connect(wallet.get(), &Wallet::balanceChanged, [this](std::string walletId) {
-      emit walletBalanceChanged(walletId); });
 }
 
 bool WalletsManager::setAuthWalletFrom(const HDWalletPtr &wallet)
@@ -266,43 +284,48 @@ bool WalletsManager::setAuthWalletFrom(const HDWalletPtr &wallet)
    return false;
 }
 
-void WalletsManager::onHDLeafAdded(QString id)
+void WalletsManager::walletCreated(const std::string &walletId)
 {
-   for (const auto &hdWallet : hdWallets_) {
-      const auto &leaf = hdWallet.second->getLeaf(id.toStdString());
-      if (leaf == nullptr) {
-         continue;
-      }
-      logger_->debug("[WalletsManager::{}] HD leaf {} ({}) added", __func__
-         , id.toStdString(), leaf->name());
+   const auto &lbdMaint = [this, walletId] {
+      for (const auto &hdWallet : hdWallets_) {
+         const auto &leaf = hdWallet.second->getLeaf(walletId);
+         if (leaf == nullptr) {
+            continue;
+         }
+         logger_->debug("[WalletsManager::{}] HD leaf {} ({}) added", __func__
+            , walletId, leaf->name());
 
-      const auto &ccIt = ccSecurities_.find(leaf->shortName());
-      if (ccIt != ccSecurities_.end()) {
-         leaf->setDescription(ccIt->second.desc);
-         leaf->setData(ccIt->second.genesisAddr);
-         leaf->setData(ccIt->second.lotSize);
-      }
+         const auto &ccIt = ccSecurities_.find(leaf->shortName());
+         if (ccIt != ccSecurities_.end()) {
+            leaf->setDescription(ccIt->second.desc);
+            leaf->setData(ccIt->second.genesisAddr);
+            leaf->setData(ccIt->second.lotSize);
+         }
 
-      leaf->setUserId(userId_);
-      addWallet(leaf);
-      if (armory_) {
-         leaf->registerWallet(armoryPtr_);
-      }
+         leaf->setUserId(userId_);
+         addWallet(leaf);
+         if (armory_) {
+            leaf->registerWallet(armoryPtr_);
+         }
 
-      if (setAuthWalletFrom(hdWallet.second)) {
-         logger_->debug("[WalletsManager::{}] - Auth wallet updated", __func__);
-         emit authWalletChanged();
+         if (setAuthWalletFrom(hdWallet.second)) {
+            logger_->debug("[WalletsManager::{}] - Auth wallet updated", __func__);
+            emit authWalletChanged();
+         }
+         QMetaObject::invokeMethod(this, [this, walletId] { emit walletChanged(walletId); });
+         break;
       }
-      emit walletChanged();
-      break;
-   }
+   };
+   addToMaintQueue(lbdMaint);
 }
 
-void WalletsManager::onHDLeafDeleted(QString id)
+void WalletsManager::walletDestroyed(const std::string &walletId)
 {
-   const auto &wallet = getWalletById(id.toStdString());
-   eraseWallet(wallet);
-   emit walletChanged();
+   addToMaintQueue([this, walletId] {
+      const auto &wallet = getWalletById(walletId);
+      eraseWallet(wallet);
+      QMetaObject::invokeMethod(this, [this, walletId] { emit walletChanged(walletId); });
+   });
 }
 
 WalletsManager::HDWalletPtr WalletsManager::getPrimaryWallet() const
@@ -506,24 +529,21 @@ void WalletsManager::onStateChanged(ArmoryState state)
    }
 }
 
-void WalletsManager::onWalletReady(const QString &walletId)
+void WalletsManager::walletReady(const std::string &walletId)
 {
-   QMetaObject::invokeMethod(this, [this, walletId] { emit walletReady(walletId); });
+   QMetaObject::invokeMethod(this, [this, walletId] { emit walletIsReady(walletId); });
    if (!armory_) {
       return;
    }
-   const auto rootWallet = getHDRootForLeaf(walletId.toStdString());
+   const auto rootWallet = getHDRootForLeaf(walletId);
    if (rootWallet) {
       const auto &itWallet = newWallets_.find(rootWallet->walletId());
       if (itWallet != newWallets_.end()) {
          newWallets_.erase(itWallet);
          rootWallet->synchronize([this, walletId] {
-            const auto wallet = getWalletById(walletId.toStdString());
-            if (wallet) {
-               QMetaObject::invokeMethod(wallet.get(), [wallet] {
-                  emit wallet->addressAdded();
-               });
-            }
+            QMetaObject::invokeMethod(this, [this, walletId] {
+               emit walletChanged(walletId);
+            });
          });
       }
    }
@@ -534,6 +554,7 @@ void WalletsManager::onWalletReady(const QString &walletId)
          nbWallets++;
       }
       if (readyWallets_.size() >= nbWallets) {
+         isReady_ = true;
          logger_->debug("[WalletsManager::{}] - All wallets are ready", __func__);
          QMetaObject::invokeMethod(this, [this] { emit walletsReady(); });
          readyWallets_.clear();
@@ -541,12 +562,14 @@ void WalletsManager::onWalletReady(const QString &walletId)
    }
 }
 
-void WalletsManager::onWalletImported(const std::string &walletId)
+void WalletsManager::scanComplete(const std::string &walletId)
 {
    logger_->debug("[WalletsManager::{}] - HD wallet {} imported", __func__
       , walletId);
-   emit walletChanged();
-   emit walletImportFinished(walletId);
+   QMetaObject::invokeMethod(this, [this, walletId] {
+      emit walletChanged(walletId);
+      emit walletImportFinished(walletId);
+   });
 }
 
 bool WalletsManager::isArmoryReady() const
@@ -961,7 +984,7 @@ void WalletsManager::onHDWalletCreated(unsigned int id, std::shared_ptr<bs::sync
    createHdReqId_ = 0;
    newWallet->synchronize([] {});
    adoptNewWallet(newWallet);
-   emit walletCreated(newWallet);
+   emit walletAdded(newWallet->walletId());
 }
 
 void WalletsManager::startWalletRescan(const HDWalletPtr &hdWallet)
@@ -985,7 +1008,7 @@ void WalletsManager::onWalletsListUpdated()
       for (const auto &hdWalletId : hdWalletsId_) {
          if (hdWalletIds.find(hdWalletId) == hdWalletIds.end()) {
             const auto hdWallet = hdWallets_[hdWalletId];
-            QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletCreated(hdWallet); });
+            QMetaObject::invokeMethod(this, [this, hdWallet] { emit walletAdded(hdWallet->walletId()); });
             logger_->debug("[WalletsManager::onWalletsListUpdated] found new wallet {} "
                "- starting address scan for it", hdWalletId);
             newWallets_.insert(hdWalletId);
@@ -1304,6 +1327,43 @@ void WalletsManager::trackAddressChainUse(
 
       if (!leafPtr->getAddressTxnCounts(countLbd)) {
          cb(false);
+      }
+   }
+}
+
+void WalletsManager::addToMaintQueue(const MaintQueueCb &cb)
+{
+   std::unique_lock<std::mutex> lock(maintMutex_);
+   maintQueue_.push_back(cb);
+   maintCV_.notify_one();
+}
+
+void WalletsManager::maintenanceThreadFunc()
+{
+   while (maintThreadRunning_) {
+      {
+         std::unique_lock<std::mutex> lock(maintMutex_);
+         if (maintQueue_.empty()) {
+            maintCV_.wait_for(lock, std::chrono::milliseconds{ 500 });
+         }
+      }
+      if (!maintThreadRunning_) {
+         break;
+      }
+      decltype(maintQueue_) tempQueue;
+      {
+         std::unique_lock<std::mutex> lock(maintMutex_);
+         tempQueue.swap(maintQueue_);
+      }
+      if (tempQueue.empty()) {
+         continue;
+      }
+
+      for (const auto &cb : tempQueue) {
+         if (!maintThreadRunning_) {
+            break;
+         }
+         cb();
       }
    }
 }

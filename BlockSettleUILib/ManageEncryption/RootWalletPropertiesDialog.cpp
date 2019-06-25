@@ -56,15 +56,16 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AssetManager> &assetMgr
    , QWidget* parent)
-  : QDialog(parent)
-  , ui_(new Ui::WalletPropertiesDialog())
-  , wallet_(wallet)
-  , walletsManager_(walletsManager)
-  , signingContainer_(container)
-  , appSettings_(appSettings)
-  , connectionManager_(connectionManager)
-  , assetMgr_(assetMgr)
-  , logger_(logger)
+   : QDialog(parent)
+   , ui_(new Ui::WalletPropertiesDialog())
+   , wallet_(wallet)
+   , walletsManager_(walletsManager)
+   , walletInfo_(walletsManager_, wallet_)
+   , signingContainer_(container)
+   , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
+   , assetMgr_(assetMgr)
+   , logger_(logger)
 {
    ui_->setupUi(this);
 
@@ -95,7 +96,6 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 
    ui_->rescanButton->setEnabled(armory->state() == ArmoryState::Ready);
    ui_->manageEncryptionButton->setEnabled(false);
-   walletInfo_ = bs::hd::WalletInfo(wallet_);
 
    if (signingContainer_) {
       if (signingContainer_->isOffline() || signingContainer_->isWalletOffline(wallet->walletId())) {

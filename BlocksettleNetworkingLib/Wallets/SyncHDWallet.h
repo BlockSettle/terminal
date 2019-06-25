@@ -16,17 +16,16 @@ namespace bs {
 
       namespace hd {
 
-         class Wallet : public QObject
+         class Wallet : public WalletCallbackTarget
          {
-            Q_OBJECT
          public:
             using cb_scan_notify = std::function<void(Group *, bs::hd::Path::Elem wallet, bool isValid)>;
             using cb_scan_read_last = std::function<unsigned int(const std::string &walletId)>;
             using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
-            Wallet(NetworkType, const std::string &walletId, const std::string &name
+            Wallet(const std::string &walletId, const std::string &name
                , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger = nullptr);
-            Wallet(NetworkType, const std::string &walletId, const std::string &name
+            Wallet(const std::string &walletId, const std::string &name
                , const std::string &desc, SignContainer *
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
             ~Wallet() override;
@@ -37,7 +36,6 @@ namespace bs {
             Wallet& operator = (Wallet&&) = delete;
 
             void synchronize(const std::function<void()> &cbDone);
-            bool isReady() const;
 
             std::vector<bs::wallet::EncryptionType> encryptionTypes() const;
             std::vector<SecureBinaryData> encryptionKeys() const;
@@ -81,19 +79,18 @@ namespace bs {
                   leaf->setCustomACT<U>(armory);
             }
 
-         signals:
-            void synchronized() const;
-            void leafAdded(QString id);
-            void leafDeleted(QString id);
-            void scanComplete(const std::string &walletId);
-            void metaDataChanged();
-
-         private slots:
-            void onGroupChanged();
-            void onLeafAdded(QString id);
-            void onLeafDeleted(QString id);
+            void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
 
          protected:
+            void addressAdded(const std::string &walletId) override { wct_->addressAdded(walletId); }
+            void walletReady(const std::string &walletId) override { wct_->walletReady(walletId); }
+            void balanceUpdated(const std::string &walletId) override { wct_->balanceUpdated(walletId); }
+            void metadataChanged(const std::string &) override { wct_->metadataChanged(walletId()); }
+            void walletCreated(const std::string &walletId) override;
+            void walletDestroyed(const std::string &walletId) override;
+
+         protected:
+            WalletCallbackTarget *wct_;
             const std::string walletId_;
             const std::string name_, desc_;
             NetworkType    netType_ = NetworkType::MainNet;
@@ -115,7 +112,7 @@ namespace bs {
          };
 
 
-         class DummyWallet : public Wallet    // Just a container for old-style wallets
+/*!         class DummyWallet : public Wallet    // Just a container for old-style wallets
          {
          public:
             DummyWallet(const std::shared_ptr<spdlog::logger> &logger)
@@ -127,7 +124,7 @@ namespace bs {
             void add(const std::shared_ptr<bs::sync::Wallet> wallet) {
                leaves_[wallet->walletId()] = wallet;
             }
-         };
+         };*/
       }  //namespace hd
    }  //namespace sync
 }  //namespace bs

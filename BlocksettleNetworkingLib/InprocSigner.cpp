@@ -202,7 +202,7 @@ bs::signer::RequestId InprocSigner::createHDWallet(const std::string &name, cons
    try {
       const auto wallet = walletsMgr_->createWallet(name, desc, seed, walletsPath_, pwdData.begin()->password, primary);
       const bs::signer::RequestId reqId = seqId_++;
-      const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->networkType(), wallet->walletId()
+      const auto hdWallet = std::make_shared<bs::sync::hd::Wallet>(wallet->walletId()
          , wallet->name(), wallet->description(), this, logger_);
       QTimer::singleShot(1, [this, reqId, hdWallet] { emit HDWalletCreated(reqId, hdWallet); });
       return reqId;

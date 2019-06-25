@@ -37,7 +37,7 @@ ReqCCSettlementContainer::ReqCCSettlementContainer(const std::shared_ptr<spdlog:
    const auto &signingWallet = transactionData_->getSigningWallet();
    if (signingWallet) {
       const auto &rootWallet = walletsMgr_->getHDRootForLeaf(signingWallet->walletId());
-      walletInfo_ = bs::hd::WalletInfo(rootWallet);
+      walletInfo_ = bs::hd::WalletInfo(walletsMgr_, rootWallet);
       infoReqId_ = signingContainer_->GetInfo(walletInfo_.rootId().toStdString());
    }
    else {

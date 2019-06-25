@@ -3,6 +3,7 @@
 
 #include "Address.h"
 #include "BinaryData.h"
+#include "BtcDefinitions.h"
 #include "Signer.h"
 #include "TxClasses.h"
 
@@ -94,5 +95,7 @@ namespace bs {
    };
 
 }  //namespace bs
+
+NetworkType getNetworkType();
 
 #endif //__CHECK_RECIP_SIGNER_H__

@@ -21,8 +21,6 @@ namespace bs {
 
       class SettlementWallet : public PlainWallet
       {
-         Q_OBJECT
-
       public:
          SettlementWallet(const std::string &walletId, const std::string &name, const std::string &desc
             , SignContainer *, const std::shared_ptr<spdlog::logger> &logger);

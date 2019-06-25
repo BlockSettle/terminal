@@ -7,8 +7,6 @@
 #include <vector>
 #include <unordered_map>
 #include <QObject>
-#include <QMutex>
-#include <QPointer>
 #include "Address.h"
 #include "ArmoryConnection.h"
 #include "AsyncClient.h"
@@ -59,15 +57,15 @@ namespace bs {
       }  // namepsace wallet
 
       class WalletACT;
+      class WalletCallbackTarget;
 
-      class Wallet : public QObject   // Abstract parent for terminal wallet classes
+      class Wallet
       {
          friend class WalletACT;
-         Q_OBJECT   
 
       public:
          Wallet(SignContainer *, const std::shared_ptr<spdlog::logger> &logger = nullptr);
-         ~Wallet() override;
+         virtual ~Wallet();
 
          using CbAddress = std::function<void(const bs::Address &)>;
          using CbAddresses = std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>;
@@ -193,21 +191,13 @@ namespace bs {
             act_ = std::make_unique<U>(armory.get(), this);
          }
 
-      signals:
-         void addressAdded();
-         void walletReset();
-         void walletReady(const QString &id);
+         void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
 
-         void balanceUpdated(std::string walletId) const;
-         void balanceChanged(std::string walletId) const;
-         void metaDataChanged();
-
-      protected slots:
+      protected:
          virtual void onZeroConfReceived(const std::vector<bs::TXEntry>);
          virtual void onNewBlock(unsigned int);
          virtual void onRefresh(std::vector<BinaryData> ids, bool online);
 
-      protected:
          virtual std::vector<BinaryData> getAddrHashes() const = 0;
 
          virtual bool isOwnId(const std::string &wId) const { return (wId == walletId()); }
@@ -226,7 +216,6 @@ namespace bs {
 
       public:
          bool isRegistered(void) const { return isRegistered_; }
-         bool isReady() const { return isReady_; }
 
       protected:
          std::string       walletName_;
@@ -258,6 +247,7 @@ namespace bs {
          std::shared_ptr<UtxoFilterAdapter>  utxoAdapter_;
 
          std::unique_ptr<WalletACT>   act_;
+         WalletCallbackTarget       * wct_ = nullptr;
 
       private:
          std::string regId_;
@@ -268,7 +258,6 @@ namespace bs {
       protected:
          bool firstInit_ = false;
          bool isRegistered_ = false;
-         std::atomic_bool  isReady_{ false };
 
          mutable std::mutex   cbMutex_;
          std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>>   cbLedgerByAddr_;
@@ -293,6 +282,21 @@ namespace bs {
          void onLedgerForAddress(const bs::Address &, const std::shared_ptr<AsyncClient::LedgerDelegate> &) override;
       protected:
          Wallet *parent_;
+      };
+
+      class WalletCallbackTarget
+      {
+      public:  // all virtual methods have empty implementation by default
+         virtual ~WalletCallbackTarget() = default;
+
+         virtual void addressAdded(const std::string &walletId) {}
+         virtual void walletReady(const std::string &walletId) {}
+         virtual void balanceUpdated(const std::string &walletId) {}
+         virtual void metadataChanged(const std::string &walletId) {}
+         virtual void walletCreated(const std::string &walletId) {}
+         virtual void walletDestroyed(const std::string &walletId) {}
+         virtual void walletReset(const std::string &walletId) {}
+         virtual void scanComplete(const std::string &walletId) {}
       };
 
       struct Transaction

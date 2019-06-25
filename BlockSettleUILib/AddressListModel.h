@@ -81,7 +81,8 @@ public:
    bool setWallets(const Wallets &, bool force = false);
 
 private slots:
-   void updateData();
+   void updateWallets();
+   void updateData(const std::string &walletId);
    void removeEmptyIntAddresses();
 
 private:
