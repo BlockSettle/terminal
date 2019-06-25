@@ -110,6 +110,11 @@ void TestCC::SetUp()
    syncMgr_->syncWallets();
 
    auto syncWallet = syncMgr_->getHDWalletById(priWallet->walletId());
+
+   syncWallet->setCustomACT<UnitTestWalletACT>(envPtr_->armoryConnection());
+   auto regIDs = syncWallet->registerWallet(envPtr_->armoryConnection());
+   UnitTestWalletACT::waitOnRefresh(regIDs);
+
    ccWallet_ = syncMgr_->getWalletById(ccSignWallet_->walletId());
    ccWallet_->setData(envPtr_->assetMgr()->getCCLotSize("BLK"));
 
@@ -136,8 +141,6 @@ void TestCC::SetUp()
    };
    xbtWallet_->getNewExtAddress(cbRecvAddr);
    recvAddr_ = futRecvAddr.get();
-   syncWallet->registerWallet(envPtr_->armoryConnection());
-   ASSERT_TRUE(envPtr_->blockMonitor()->waitForWalletReady(syncWallet));
 
    auto promAddr = std::make_shared<std::promise<bs::Address>>();
    auto futAddr = promAddr->get_future();

@@ -29,34 +29,6 @@ bool BlockchainMonitor::waitForFlag(std::atomic_bool &flag, const std::chrono::m
    return false;
 }
 
-bool BlockchainMonitor::waitForWalletReady(const std::shared_ptr<bs::sync::Wallet> &wallet
-   , const std::chrono::milliseconds timeout)
-{
-   using namespace std::chrono_literals;
-   const auto napTime = 10ms;
-   for (auto elapsed = 0ms; elapsed < timeout; elapsed += napTime) {
-      if (wallet->isReady()) {
-         return true;
-      }
-      std::this_thread::sleep_for(napTime);
-   }
-   return false;
-}
-
-bool BlockchainMonitor::waitForWalletReady(const std::shared_ptr<bs::sync::hd::Wallet> &wallet
-   , const std::chrono::milliseconds timeout)
-{
-   using namespace std::chrono_literals;
-   const auto napTime = 30ms;
-   for (auto elapsed = 0ms; elapsed < timeout; elapsed += napTime) {
-      if (wallet->isReady()) {
-         return true;
-      }
-      std::this_thread::sleep_for(napTime);
-   }
-   return false;
-}
-
 std::vector<bs::TXEntry> BlockchainMonitor::waitForZC()
 {
    while (true) {

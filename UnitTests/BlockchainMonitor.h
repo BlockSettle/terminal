@@ -26,10 +26,6 @@ public:
 
    uint32_t waitForNewBlocks(uint32_t targetHeight = 0);
    std::vector<bs::TXEntry> waitForZC(void);
-   bool waitForWalletReady(const std::shared_ptr<bs::sync::Wallet> &
-      , const std::chrono::milliseconds timeout = std::chrono::milliseconds{ 10000 });
-   bool waitForWalletReady(const std::shared_ptr<bs::sync::hd::Wallet> &
-      , const std::chrono::milliseconds timeout = std::chrono::milliseconds{ 10000 });
 
    static bool waitForFlag(std::atomic_bool &
       , const std::chrono::milliseconds timeout = std::chrono::milliseconds{10000});
