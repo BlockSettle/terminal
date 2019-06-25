@@ -808,7 +808,8 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
 void BaseChatClient::retrySendQueuedMessages(const std::string userId)
 {
    // Run over enqueued messages if any, and try to send them all now.
-   messages_queue& messages = enqueued_messages_[userId];
+   messages_queue messages;
+   std::swap(messages, enqueued_messages_[userId]);
 
    while (!messages.empty()) {
       sendMessageDataRequest(messages.front(), userId, true);
