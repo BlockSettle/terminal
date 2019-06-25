@@ -515,6 +515,8 @@ void ChatClient::onContactAccepted(const std::string& contactId)
          model_->removeContactRequestNode(holdData->contact_id());
          model_->insertContactObject(contactNode->getDataObject()
                                      , contactNode->getOnlineStatus() == ChatContactElement::OnlineStatus::Online);
+
+         retrieveUserMessages(contactId);
       }
    }
 }
