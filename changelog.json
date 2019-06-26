@@ -1,7 +1,48 @@
 {
-   "latest_version": "0.17.1",
-   "release_date": "20 Jun 2019",
+   "latest_version": "0.17.3",
+   "release_date": "26 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.17.3",
+         "previous_version": "0.17.2",
+         "release_date": "26 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update chat selection on old message notification clicked",
+            "Add Chat public key timestamp"
+         ],
+         "bug_fixes": [
+            "Fix retrieve user messages after accepting again friend request"
+         ],
+         "revision": "151f4950",
+         "common_revision": "ad3805db"
+      },
+      {
+         "version_string": "0.17.2",
+         "previous_version": "0.17.1",
+         "release_date": "24 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Send offline signer message",
+            "UI fixes",
+            "Add rfq bot to rep",
+            "Allow pull AQ requests",
+            "Do not prompt for downloading PM list",
+            "Fixes for the terminal's own key",
+            "Update staging and UAT chat server public keys",
+            "Added offline messages",
+            "Removing contact requests will allow making a secont request again",
+            "Contact request could be canceled/removed only by requestor",
+            "Fixed displaying not completed contact requests after re-login",
+            "Fixed loading not completed (not approved) contact requests after logout and the login",
+            "Disabled draw blue dot for Support chat room",
+            "Filter old failed trade notifications",
+            "Improve click at new message notifications"
+         ],
+         "bug_fixes": [],
+         "revision": "33d9adeb",
+         "common_revision": "5fee88f3"
+      },
       {
          "version_string": "0.17.1",
          "previous_version": "0.16.2",
