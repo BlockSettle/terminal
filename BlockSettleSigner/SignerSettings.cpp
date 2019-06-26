@@ -97,6 +97,7 @@ void SignerSettings::settingChanged(int setting)
    default:
       break;
    }
+
    emit changed(setting);
 
    HeadlessSettings::saveSettings(*d_, fileName_);

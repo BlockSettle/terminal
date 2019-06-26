@@ -156,8 +156,6 @@ void QMLAppObj::onWalletsSynced()
 
 void QMLAppObj::settingsConnections()
 {
-   connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
-   connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLAppObj::onListenSocketChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
@@ -203,20 +201,6 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-}
-
-void QMLAppObj::onOfflineChanged()
-{
-   adapter_->setOnline(!settings_->offline());
-}
-
-void QMLAppObj::onListenSocketChanged()
-{
-   if (settings_->offline()) {
-      return;
-   }
-   logger_->info("Restarting listening socket");
-   adapter_->reconnect(settings_->listenAddress(), settings_->port());
 }
 
 void QMLAppObj::onLimitsChanged()
