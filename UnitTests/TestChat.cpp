@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <QString>
-#include "ChatProtocol/ChatProtocol.h"
 #include "TestEnv.h"
 
 /*
