@@ -382,7 +382,7 @@ message Response
         ContactsAction action = 3;
         bytes sender_public_key = 4;
         int64 sender_public_key_timestamp = 5;
-		Data message = 6;
+        Data message = 6;
     }
 
     message ModifyContactsServer

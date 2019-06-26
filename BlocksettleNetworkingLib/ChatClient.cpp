@@ -92,7 +92,7 @@ void ChatClient::OnLogoutCompleted()
 void ChatClient::readDatabase()
 {
    ContactRecordDataList clist;
-   chatDb_->getContacts(clist);
+   chatDb_->getContacts(clist, false);
 
    for (const auto &c : clist) {
       auto contact = std::make_shared<Chat::Data>();
