@@ -5,6 +5,7 @@ import QtQuick.Dialogs 1.2
 import com.blocksettle.QmlFactory 1.0
 
 import "StyledControls"
+import "BsControls"
 import "BsStyles"
 import "BsDialogs"
 import "js/helper.js" as JsHelper
@@ -375,7 +376,22 @@ Item {
                     Layout.alignment: Qt.AlignRight
                     checked: signerSettings.twoWaySignerAuth
                     onClicked: {
-                        signerSettings.twoWaySignerAuth = checked
+                        // Allow enable two way without additional prompts
+                        if (checked) {
+                            signerSettings.twoWaySignerAuth = true
+                            return
+                        }
+
+                        var dlg = JsHelper.messageBox(BSMessageBox.Type.Question, "Two-way Authentication"
+                           , "Disable two-way authentication?"
+                           , "BlockSettle strongly discourages disabling signer side authentication of incoming connections. Do you wish to continue?")
+                        dlg.labelText.color = BSStyle.dialogTitleOrangeColor
+                        dlg.bsAccepted.connect(function() {
+                            signerSettings.twoWaySignerAuth = false
+                        })
+                        dlg.bsRejected.connect(function() {
+                            checked = true
+                        })
                     }
                 }
             }

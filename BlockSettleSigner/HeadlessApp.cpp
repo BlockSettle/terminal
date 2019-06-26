@@ -32,8 +32,7 @@ HeadlessAppObj::HeadlessAppObj(const std::shared_ptr<spdlog::logger> &logger
    // Only the SignerListener's cookie will be trusted. Supply an empty set of
    // non-cookie trusted clients.
    const auto &cbTrustedClientsSL = [] {
-      std::vector<std::string> emptyTrustedClients;
-      return emptyTrustedClients;
+      return ZmqBIP15XPeers();
    };
 
    const bool readClientCookie = true;
@@ -93,6 +92,8 @@ void HeadlessAppObj::stop()
    guiConnection_.reset();
    guiListener_->resetConnection();
 
+   // Send message that server has stopped
+   terminalListener_->disconnect();
    terminalConnection_.reset();
    terminalListener_->resetConnection(nullptr);
 }
@@ -199,8 +200,8 @@ void HeadlessAppObj::onlineProcessing()
    // The whitelisted key set depends on whether or not the signer is meant to
    // be local (signer invoked with --terminal_id_key) or remote (use a set of
    // trusted terminals).
-   auto getClientIDKeys = [this]() -> std::vector<std::string> {
-      std::vector<std::string> retKeys;
+   auto getClientIDKeys = [this]() -> ZmqBIP15XPeers {
+      ZmqBIP15XPeers retKeys;
 
       if (settings_->getTermIDKeyStr().empty()) {
          // We're using a user-defined, whitelisted key set. Make sure the keys are
@@ -214,27 +215,19 @@ void HeadlessAppObj::onlineProcessing()
             }
 
             SecureBinaryData inKey;
+            std::string name = i.substr(0, colonIndex);
             std::string hexValue = i.substr(colonIndex + 1);
             try {
                inKey = READHEX(hexValue);
+
+               if (inKey.isNull()) {
+                  throw std::runtime_error(fmt::format("trusted client list key entry {} has no key", i));
+               }
+
+               retKeys.push_back(ZmqBIP15XPeer(name, inKey));
             } catch (const std::exception &e) {
                logger_->error("invalid trusted terminal key found: {}: {}", hexValue, e.what());
                continue;
-            }
-
-            if (inKey.isNull()) {
-               logger_->error("[{}] Trusted client list key entry {} has no key."
-                  , __func__, i);
-               continue;
-            }
-
-            if (!(CryptoECDSA().VerifyPublicKeyValid(inKey))) {
-               logger_->error("[{}] Trusted client list key entry ({}) has an "
-                  "invalid ECDSA key ({}).", __func__, i, inKey.toHexStr());
-               continue;
-            }
-            else {
-               retKeys.push_back(i);
             }
          }
       }
@@ -247,22 +240,14 @@ void HeadlessAppObj::onlineProcessing()
          }
 
          // We're using a cookie. Only the one key in the cookie will be trusted.
-         BinaryData termIDKey;
          try {
-            termIDKey = READHEX(termIDKeyStr);
+            BinaryData termIDKey = READHEX(termIDKeyStr);
+            retKeys.push_back(ZmqBIP15XPeer("127.0.0.1", termIDKey));
          } catch (const std::exception &e) {
             logger_->error("[{}] Local connection requested but key is invalid: {}: {}"
                , __func__, termIDKeyStr, e.what());
             return retKeys;
          }
-
-         if (!(CryptoECDSA().VerifyPublicKeyValid(termIDKey))) {
-            logger_->error("[{}] Signer unable to get the local terminal BIP 150 "
-               "ID key", __func__);
-         }
-
-         std::string trustedTermStr = "127.0.0.1:" + termIDKeyStr;
-         retKeys.push_back(trustedTermStr);
       }
 
       return retKeys;
@@ -373,6 +358,8 @@ void HeadlessAppObj::setOnline(bool value)
       onlineProcessing();
    }
    else {
+      // Send message that server has stopped
+      terminalListener_->disconnect();
       terminalConnection_.reset();
       terminalListener_->resetConnection(nullptr);
    }
@@ -427,29 +414,33 @@ void HeadlessAppObj::updateSettings(const std::unique_ptr<Blocksettle::Communica
       logger_->error("[{}] failed to update settings", __func__);
       return;
    }
+
    const auto trustedTerminals = settings_->trustedTerminals();
    if (terminalConnection_ && (trustedTerminals != prevTrustedTerminals)) {
-      std::vector<std::pair<std::string, BinaryData>> updatedKeys;
-      for (const auto &key : trustedTerminals) {
-         const auto colonIndex = key.find(':');
+      ZmqBIP15XPeers updatedKeys;
+      for (const auto &line : trustedTerminals) {
+         const auto colonIndex = line.find(':');
          if (colonIndex == std::string::npos) {
             logger_->error("[{}] Trusted client list key entry ({}) is malformed"
-               , __func__, key);
+               , __func__, line);
             continue;
          }
 
          try {
-            const SecureBinaryData inKey = READHEX(key.substr(colonIndex + 1));
+            std::string name = line.substr(0, colonIndex);
+            const SecureBinaryData inKey = READHEX(line.substr(colonIndex + 1));
             if (inKey.isNull()) {
                throw std::invalid_argument("no or malformed key data");
             }
-            updatedKeys.push_back({ key.substr(0, colonIndex), inKey });
+
+            updatedKeys.push_back(ZmqBIP15XPeer(name, inKey));
          }
          catch (const std::exception &e) {
             logger_->error("[{}] Trusted client list key entry ({}) has invalid key: {}"
-               , __func__, key, e.what());
+               , __func__, line, e.what());
          }
       }
+
       logger_->info("[{}] Updating {} trusted keys", __func__, updatedKeys.size());
       terminalConnection_->updatePeerKeys(updatedKeys);
    }

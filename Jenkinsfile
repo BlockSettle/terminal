@@ -27,7 +27,7 @@ pipeline {
                     steps {
                         sh 'ssh admin@10.1.60.206 "rm -rf ~/Workspace/terminal"'
                         sh 'ssh admin@10.1.60.206 "cd ~/Workspace ; git clone --single-branch --branch ${TAG} git@github.com:BlockSettle/terminal.git ; cd terminal ; git submodule init ; git submodule update"'
-                        sh 'ssh admin@10.1.60.206 "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; ccache -s ; cd /Users/admin/Workspace/terminal/Deploy/MacOSX ; ./package.sh -production"'
+                        sh 'ssh admin@10.1.60.206 "export PATH=/usr/local/opt/ccache/libexec:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin ; ccache -s ; cd /Users/admin/Workspace/terminal/Deploy/MacOSX ; security unlock-keychain -p ${MAC_CHAIN_PAS} login.keychain ; ./package.sh -production"'
                         sh "scp admin@10.1.60.206:~/Workspace/terminal/Deploy/MacOSX/BlockSettle.dmg ${WORKSPACE}/terminal/Deploy/BlockSettle.dmg"
                     }
                 }
@@ -57,7 +57,7 @@ pipeline {
         }
         stage('Upload changelog') {
             steps {
-                sh "scp ${WORKSPACE}/terminal/changlelog.json genoa@10.0.1.36:/var/www/Changelog/changelog.json"
+                sh "scp ${WORKSPACE}/terminal/changelog.json genoa@10.0.1.36:/var/www/Changelog/changelog.json"
             }
         }
     }

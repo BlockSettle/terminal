@@ -33,7 +33,6 @@ def make_project(sourcesRoot):
    return result == 0
 
 def sign_single_app(appPath):
-   return True
 
    command = []
 
@@ -47,7 +46,6 @@ def sign_single_app(appPath):
    return subprocess.call(command) == 0
 
 def check_signature(appPath):
-   return True
 
    command = 'codesign -v -R="anchor trusted" "{}"'.format(appPath)
 
@@ -99,6 +97,8 @@ def make_package(sourcesRoot, packagePath):
          { "x": 500, "y": 120, "type": "link", "path": "/Applications" }
       ]
    }
+
+   shutil.copyfile(os.path.join(sourcesRoot, 'Scripts', 'RFQBot.qml'), os.path.join(packgeDir, 'RFQBot.qml'))
 
    settingsFile = 'settings.json'
 

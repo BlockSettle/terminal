@@ -100,7 +100,9 @@ CustomTitleDialogWindow {
                         if (success) {
                             var mb = JsHelper.messageBox(BSMessageBox.Type.Info
                                 , qsTr("Wallet deleted")
-                                , qsTr("Wallet <%1> successfully deleted").arg(rootId))
+                                , qsTr("Wallet successfully deleted")
+                                , qsTr("Wallet ID: <%1>").arg(rootId))
+
                             mb.bsAccepted.connect(acceptAnimated)
                         } else {
                             JsHelper.messageBox(BSMessageBox.Type.Critical
@@ -117,6 +119,11 @@ CustomTitleDialogWindow {
                             walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)
                         })
                         dlgBkp.open()
+
+                        sizeChanged(dlgBkp.width, dlgBkp.height)
+                        dlgBkp.closed.connect(function(){
+                            sizeChanged(root.width, root.height)
+                        })
                     }
                     else {
                         walletsProxy.deleteWallet(walletInfo.rootId, deleteCallback)

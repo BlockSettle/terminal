@@ -24,17 +24,68 @@ Switch {
         x: control.width - width - control.rightPadding
         y: parent.height / 2 - height / 2
         radius: 10
-        color: control.checked ? BSStyle.switchCheckedColor : "transparent"
-        border.color: control.checked ? BSStyle.switchCheckedColor : (signerStatus.socketOk ? BSStyle.switchUncheckedColor : BSStyle.switchOrangeColor)
+        color: {
+            if (control.enabled) {
+                if (control.checked) {
+                    return BSStyle.switchCheckedColor
+                }
+                else {
+                    return BSStyle.switchBgColor
+                }
+            }
+            else {
+                return BSStyle.switchDisabledBgColor
 
+            }
+        }
+        border.color: {
+            if (control.enabled) {
+                if (control.checked) {
+                    return BSStyle.switchCheckedColor
+                }
+                else {
+                    return BSStyle.switchUncheckedColor
+                }
+            }
+            else {
+                return BSStyle.switchDisabledBgColor
+            }
+        }
         Rectangle {
             id: circle_
             x: control.checked ? parent.width - width : 0
             width: 20
             height: 20
             radius: 10
-            color: control.checked ? BSStyle.textColor : (signerStatus.socketOk ? BSStyle.switchUncheckedColor : BSStyle.switchOrangeColor)
-            border.color: control.checked ? (control.down ? BSStyle.switchCheckedColor : BSStyle.switchCheckedColor) : BSStyle.backgroundColor
+
+            color: {
+                if (control.enabled) {
+                    if (control.checked) {
+                        return BSStyle.textColor
+                    }
+                    else {
+                        return BSStyle.switchUncheckedColor
+                    }
+                }
+                else {
+                    return "#71787f"
+
+                }
+            }
+
+            border.color: {
+                if (control.enabled) {
+                    if (control.checked) {
+                        return BSStyle.switchCheckedColor
+                    }
+                    else {
+                        return BSStyle.backgroundColor
+                    }
+                }
+                else {
+                    return BSStyle.switchDisabledBgColor
+                }
+            }
         }
     }
 

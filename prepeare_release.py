@@ -174,7 +174,7 @@ def UpdateToRevision(revisionString, releaseType):
    commonRepo = os.path.join(currentDir, 'common')
 
    cmakeFilePath = os.path.join(currentDir, 'CMakeLists.txt')
-   changelogFilePath = os.path.join(currentDir, 'changlelog.json')
+   changelogFilePath = os.path.join(currentDir, 'changelog.json')
    winInstallerFilePath = os.path.join(currentDir, 'Deploy', 'Windows', 'bsterminal.nsi')
    linuxInstallerFilePath = os.path.join(currentDir, 'Deploy', 'Ubuntu', 'DEBIAN', 'control')
 
