@@ -59,7 +59,7 @@ signals:
 private slots:
    void onReady();
    void onConnectionError();
-   void onHeadlessBindFailed();
+   void onHeadlessBindUpdated(bool success);
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
