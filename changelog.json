@@ -1,7 +1,22 @@
 {
-   "latest_version": "0.17.2",
-   "release_date": "24 Jun 2019",
+   "latest_version": "0.17.3",
+   "release_date": "26 Jun 2019",
    "changes": [
+      {
+         "version_string": "0.17.3",
+         "previous_version": "0.17.2",
+         "release_date": "26 Jun 2019",
+         "release_type": "dev",
+         "improvements": [
+            "Update chat selection on old message notification clicked",
+            "Add Chat public key timestamp"
+         ],
+         "bug_fixes": [
+            "Fix retrieve user messages after accepting again friend request"
+         ],
+         "revision": "151f4950",
+         "common_revision": "ad3805db"
+      },
       {
          "version_string": "0.17.2",
          "previous_version": "0.17.1",
