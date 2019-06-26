@@ -297,7 +297,7 @@ message Request
         bytes sender_session_public_key = 3;
     }
     
-    message NewPublicKeyConfirmation
+    message UploadNewPublicKey
     {
         enum Confirmation 
         {
@@ -329,7 +329,7 @@ message Request
         SearchUsers search_users                                = 23;
         SessionPublicKey session_public_key                     = 24;
         ReplySessionPublicKey reply_session_public_key          = 25;
-        NewPublicKeyConfirmation new_public_key_confirmation    = 26;
+        UploadNewPublicKey upload_new_public_key                = 26;
     }
 }
 
