@@ -680,6 +680,7 @@ void AddressVerificator::RegisterAddresses()
 
    if (armory_ && (armory_->state() == ArmoryState::Ready)) {
       pendingRegAddresses_.clear();
+      internalWallet_ = armory_->instantiateWallet(walletId_);
       regId_ = armory_->registerWallet(internalWallet_->walletID(), addresses, [](const std::string &) {}, true);
       logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses in {} with {}", addresses.size(), walletId_, regId_);
    }
