@@ -1,7 +1,6 @@
 #include "RFQDialog.h"
 #include "ui_RFQDialog.h"
 
-#include <QtConcurrent/QtConcurrentRun>
 #include <spdlog/logger.h>
 
 #include "AssetManager.h"
@@ -52,11 +51,8 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
    ui_->pageRequestingQuote->SetAssetManager(assetMgr_);
    ui_->pageRequestingQuote->SetCelerClient(celerClient_);
 
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this, &RFQDialog::onRFQCancelled);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestCancelled, this, &RFQDialog::reject);
-   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, [this] {
-      QMetaObject::invokeMethod(this, "close");
-   });
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::cancelRFQ, this, &RFQDialog::reject);
+   connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::requestTimedOut, this, &RFQDialog::close);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteAccepted, this, &RFQDialog::onRFQResponseAccepted, Qt::QueuedConnection);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFinished, this, &RFQDialog::close);
    connect(ui_->pageRequestingQuote, &RequestingQuoteWidget::quoteFailed, this, &RFQDialog::close);
@@ -76,7 +72,7 @@ RFQDialog::RFQDialog(const std::shared_ptr<spdlog::logger> &logger
 
    ui_->pageRequestingQuote->populateDetails(rfq_, transactionData_);
 
-   QtConcurrent::run([this] { quoteProvider_->SubmitRFQ(rfq_); });
+   quoteProvider_->SubmitRFQ(rfq_);
 
    ui_->stackedWidgetRFQ->setCurrentIndex(RequestingQuoteId);
 }
@@ -164,6 +160,11 @@ void RFQDialog::reject()
          logger_->warn("[RFQDialog::reject] settlement container failed to cancel");
       }
    }
+
+   if (cancelOnClose_) {
+      quoteProvider_->CancelQuote(QString::fromStdString(rfq_.requestId));
+   }
+
    QDialog::reject();
 }
 
@@ -171,12 +172,6 @@ bool RFQDialog::close()
 {
    cancelOnClose_ = false;
    return QDialog::close();
-}
-
-void RFQDialog::onRFQCancelled(const QString &reqId)
-{
-   quoteProvider_->CancelQuote(reqId);
-   reject();
 }
 
 void RFQDialog::onQuoteReceived(const bs::network::Quote& quote)

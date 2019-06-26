@@ -1,6 +1,8 @@
 #include "ChatTreeModelWrapper.h"
 #include "ChatClientDataModel.h"
 
+#include "ChatProtocol/ChatUtils.h"
+
 using NodeType = ChatUIDefinitions::ChatTreeNodeType;
 using Role = ChatClientDataModel::Role;
 using OnlineStatus = ChatContactElement::OnlineStatus;
@@ -64,6 +66,7 @@ bool ChatTreeModelWrapper::filterAcceptsRow(int source_row, const QModelIndex &s
       return true;
    case NodeType::RoomsElement:
    case NodeType::ContactsElement:
+   case NodeType::ContactsRequestElement:
    case NodeType::AllUsersElement:
       return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
    default:

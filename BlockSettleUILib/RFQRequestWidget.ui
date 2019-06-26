@@ -240,7 +240,7 @@
           <item>
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>Login to submit RFQ</string>
+             <string>Login to submit RFQs</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
@@ -283,6 +283,11 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>OrdersView</class>
+   <extends>QTreeView</extends>
+   <header>OrdersView.h</header>
+  </customwidget>
+  <customwidget>
    <class>MarketDataWidget</class>
    <extends>QWidget</extends>
    <header>MarketDataWidget.h</header>
@@ -293,11 +298,6 @@
    <extends>QWidget</extends>
    <header>RFQTicketXBT.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>OrdersView</class>
-   <extends>QTreeView</extends>
-   <header>OrdersView.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

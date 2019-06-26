@@ -98,7 +98,7 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    ui_->manageEncryptionButton->setEnabled(false);
 
    if (signingContainer_) {
-      if (signingContainer_->isOffline() || signingContainer_->isWalletOffline(wallet->walletId())) {
+      if (signingContainer_->isOffline()) {
          ui_->backupButton->setEnabled(false);
          ui_->manageEncryptionButton->setEnabled(false);
       }
@@ -173,14 +173,18 @@ void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::W
 
    ui_->manageEncryptionButton->setEnabled(true);
 
-   if (walletInfo.keyRank().first == 1 && walletInfo.keyRank().second == 1) {
-      if (!walletInfo.encTypes().empty()) {
-         ui_->labelEncRank->setText(encTypeToString(walletInfo.encTypes().front()));
-      } else {
-         ui_->labelEncRank->setText(tr("Unknown"));
-      }
+   if (walletsManager_->isWatchingOnly(walletInfo_.rootId().toStdString())) {
+      ui_->labelEncRank->setText(tr("Watching-Only"));
    } else {
-      ui_->labelEncRank->setText(tr("Auth eID %1 of %2").arg(walletInfo.keyRank().first).arg(walletInfo.keyRank().second));
+      if (walletInfo.keyRank().first == 1 && walletInfo.keyRank().second == 1) {
+         if (!walletInfo.encTypes().empty()) {
+            ui_->labelEncRank->setText(encTypeToString(walletInfo.encTypes().front()));
+         } else {
+            ui_->labelEncRank->setText(tr("Unknown"));
+         }
+      } else {
+         ui_->labelEncRank->setText(tr("Auth eID %1 of %2").arg(walletInfo.keyRank().first).arg(walletInfo.keyRank().second));
+      }
    }
 }
 

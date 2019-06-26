@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>350</width>
+    <width>300</width>
     <height>596</height>
    </rect>
   </property>
@@ -108,7 +108,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>348</width>
+           <width>290</width>
            <height>420</height>
           </rect>
          </property>
@@ -120,13 +120,13 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>0</width>
+           <width>290</width>
            <height>350</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>280</width>
            <height>420</height>
           </size>
          </property>
@@ -1477,7 +1477,7 @@
                         </widget>
                        </item>
                        <item alignment="Qt::AlignVCenter">
-                        <widget class="QComboBox" name="comboBoxAQScript"/>
+                        <widget class="CustomComboBox" name="comboBoxAQScript"/>
                        </item>
                       </layout>
                      </widget>
@@ -1930,6 +1930,11 @@
    <class>ToggleSwitch</class>
    <extends>QSlider</extends>
    <header>ToggleSwitch.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomComboBox</class>
+   <extends>QComboBox</extends>
+   <header>CustomComboBox.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

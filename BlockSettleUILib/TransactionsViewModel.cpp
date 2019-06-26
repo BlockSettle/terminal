@@ -202,11 +202,12 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                          , const std::shared_ptr<spdlog::logger> &logger
                          , QObject* parent
                          , const std::shared_ptr<bs::sync::Wallet> &defWlt)
-   : QAbstractItemModel(parent), ArmoryCallbackTarget(armory.get())
+   : QAbstractItemModel(parent)
+   , ArmoryCallbackTarget(armory.get())
+   , logger_(logger)
    , ledgerDelegate_(ledgerDelegate)
    , walletsManager_(walletsManager)
    , defaultWallet_(defWlt)
-   , logger_(logger)
    , allWallets_(false)
 {
    init();
@@ -217,7 +218,8 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnect
                          , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
                                  , const std::shared_ptr<spdlog::logger> &logger
                                              , QObject* parent)
-   : QAbstractItemModel(parent), ArmoryCallbackTarget(armory.get())
+   : QAbstractItemModel(parent)
+   , ArmoryCallbackTarget(armory.get())
    , walletsManager_(walletsManager)
    , logger_(logger)
    , allWallets_(true)

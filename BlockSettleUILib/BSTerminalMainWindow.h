@@ -57,6 +57,8 @@ public:
 
    void postSplashscreenActions();
 
+   bool event(QEvent *event) override;
+
 private:
    void setupToolbar();
    void setupMenu();
@@ -174,6 +176,7 @@ private:
 
 public slots:
    void onReactivate();
+   void raiseWindow();
 
 private:
    struct TxInfo;
@@ -231,10 +234,13 @@ private:
    QString           loginButtonText_;
    NetworkSettings   networkSettings_;
    bool readyToRegisterWallets_ = false;
+   bool wasWalletsRegistered_ = false;
    bool initialWalletCreateDialogShown_ = false;
    bool armoryKeyDialogShown_ = false;
    bool armoryBDVRegistered_ = false;
    bool walletsSynched_ = false;
+
+   SignContainer::ConnectionError lastSignerError_{};
 
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;

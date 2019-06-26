@@ -63,7 +63,7 @@ void CCTokenEntryDialog::tokenChanged()
 
       ccWallet_ = walletsMgr_->getCCWallet(ccProduct_);
       if (!ccWallet_) {
-         ui_->labelTokenHint->setText(tr("The Terminal will prompt you to create the relevant subwallet,"
+         ui_->labelTokenHint->setText(tr("The Terminal will prompt you to create the relevant subwallet (%1),"
             " if required").arg(QString::fromStdString(ccProduct_)));
 
          MessageBoxCCWalletQuestion qry(QString::fromStdString(ccProduct_), this);

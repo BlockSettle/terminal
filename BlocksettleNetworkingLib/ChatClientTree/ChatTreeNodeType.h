@@ -19,11 +19,12 @@ enum class ChatTreeNodeType : uint32_t
    SearchElement = 4,
    RoomsElement = 8,
    ContactsElement = 16,
-   AllUsersElement = 32,
+   ContactsRequestElement = 32,
+   AllUsersElement = 64,
 
    //Subcategory accept types
-   NoDataNode = 64,
-   MessageDataNode = 128
+   NoDataNode = 128,
+   MessageDataNode = 256
 };
 
 Q_ENUM_NS(ChatUIDefinitions::ChatTreeNodeType)

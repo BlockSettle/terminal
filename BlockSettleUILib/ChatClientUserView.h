@@ -21,19 +21,22 @@ public:
    void addWatcher(ViewItemWatcher* watcher);
    void setActiveChatLabel(QLabel * label);
    void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
-   void setCurrentUserChat(const QString &userId);
+   void setCurrentUserChat(const std::string &userId);
    void updateCurrentChat();
 
 public slots:
    void onCustomContextMenu(const QPoint &);
 private slots:
    void onClicked(const QModelIndex &);
+   void onDoubleClicked(const QModelIndex &);
 private:
    void updateDependUI(CategoryElement * element);
    void notifyCurrentChanged(CategoryElement *element);
-   void notifyMessageChanged(std::shared_ptr<Chat::MessageData> message);
+   void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
    void notifyElementUpdated(CategoryElement *element);
+   void editContact(std::shared_ptr<Chat::Data> crecord);
 private:
+   friend ChatUsersContextMenu;
    std::list<ViewItemWatcher* > watchers_;
    std::shared_ptr<ChatItemActionsHandler> handler_;
    QLabel * label_;

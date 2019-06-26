@@ -85,12 +85,17 @@ public:
    void setConnectedSignerHost(const SignerHost &connectedSignerHost);
 
    void setupSigner(int index, bool needUpdate = true);
+
+   std::string remoteSignerKeysDir() const;
+   std::string remoteSignerKeysFile() const;
+   BinaryData remoteSignerOwnKey() const;
 signals:
    void dataChanged();
 private:
    std::shared_ptr<ApplicationSettings> appSettings_;
 
    SignerHost connectedSignerHost_;  // latest connected signer
+   mutable BinaryData remoteSignerOwnKey_;
 };
 
 #endif // SIGNERS_PROVIDER_H

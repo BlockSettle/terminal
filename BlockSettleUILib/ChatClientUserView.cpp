@@ -2,6 +2,9 @@
 #include "ChatClientTree/TreeObjects.h"
 #include "ChatClientUsersViewItemDelegate.h"
 #include "ChatClientDataModel.h"
+#include "BSMessageBox.h"
+#include "EditContactDialog.h"
+#include "ChatProtocol/ChatUtils.h"
 
 #include <QMenu>
 #include <QAbstractProxyModel>
@@ -36,9 +39,10 @@ public:
       //ItemType type = static_cast<ItemType>(currentIndex_.data(Role::ItemTypeRole).toInt());
       TreeItem * item = static_cast<TreeItem*>(currentIndex_.internalPointer());
 
-      if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+      if (item && (item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement
+                || item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement)) {
          auto citem = static_cast<ChatContactElement*>(item);
-         currentContact_ = citem->getContactData();
+         currentContact_ = citem->getDataObject();
          prepareContactMenu();
          return exec(view_->viewport()->mapToGlobal(point));
       }
@@ -69,6 +73,20 @@ private slots:
       if (!handler_){
          return;
       }
+
+      auto name = currentContact_->contact_record().display_name();
+      if (name.empty()) {
+         name = currentContact_->contact_record().contact_id();
+      }
+
+      BSMessageBox confirmRemoveContact(BSMessageBox::question, tr("Remove contact")
+         , tr("Remove %1 as a contact?").arg(QString::fromStdString(name))
+         , tr("Are you sure you wish to remove this contact?"), view_->parentWidget());
+
+      if (confirmRemoveContact.exec() != QDialog::Accepted) {
+         return;
+      }
+
       handler_->onActionRemoveFromContacts(currentContact_);
    }
 
@@ -88,26 +106,32 @@ private slots:
       handler_->onActionRejectContactRequest(currentContact_);
    }
 
+   void onEditContact() {
+      view_->editContact(currentContact_);
+   }
+
    void prepareContactMenu()
    {
       if (!currentContact_){
          return;
       }
 
-      switch (currentContact_->getContactStatus()) {
+      switch (currentContact_->contact_record().status()) {
 //         case Chat::ContactStatus::
 //            addAction(tr("Add friend"), this, &ChatUsersContextMenu::onAddToContacts);
 //            break;
-         case Chat::ContactStatus::Accepted:
+         case Chat::ContactStatus::CONTACT_STATUS_ACCEPTED:
             addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+            addAction(tr("Edit contact"), this, &ChatUsersContextMenu::onEditContact);
             break;
-         case Chat::ContactStatus::Incoming:
+         case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
             addAction(tr("Accept friend request"), this, &ChatUsersContextMenu::onAcceptFriendRequest);
             addAction(tr("Decline friend request"), this, &ChatUsersContextMenu::onDeclineFriendRequest);
             break;
-         case Chat::ContactStatus::Outgoing:
-            addAction(tr("This request is not accepted"));
-            addAction(tr("Remove from contacts"), this, &ChatUsersContextMenu::onRemoveFromContacts);
+         case Chat::ContactStatus::CONTACT_STATUS_OUTGOING:
+         case Chat::ContactStatus::CONTACT_STATUS_REJECTED:
+            //addAction(tr("This request is not accepted"));
+            addAction(tr("Remove this request"), this, &ChatUsersContextMenu::onRemoveFromContacts);
             break;
          default:
             break;
@@ -124,7 +148,7 @@ private:
    ChatItemActionsHandler* handler_;
    ChatClientUserView * view_;
    QModelIndex currentIndex_;
-   std::shared_ptr<Chat::ContactRecordData> currentContact_;
+   std::shared_ptr<Chat::Data> currentContact_;
 };
 
 
@@ -140,6 +164,7 @@ ChatClientUserView::ChatClientUserView(QWidget *parent)
    // expand/collapse categories only on single click
    setExpandsOnDoubleClick(false);
    connect(this, &QTreeView::clicked, this, &ChatClientUserView::onClicked);
+   connect(this, &QTreeView::doubleClicked, this, &ChatClientUserView::onDoubleClicked);
 }
 
 void ChatClientUserView::addWatcher(ViewItemWatcher * watcher)
@@ -152,7 +177,7 @@ void ChatClientUserView::setActiveChatLabel(QLabel *label)
    label_ = label;
 }
 
-void ChatClientUserView::setCurrentUserChat(const QString &userId)
+void ChatClientUserView::setCurrentUserChat(const std::string &userId)
 {
    // find all indexes
    QModelIndexList indexes = model()->match(model()->index(0,0),
@@ -163,8 +188,15 @@ void ChatClientUserView::setCurrentUserChat(const QString &userId)
 
    // set required chat
    for (auto index : indexes) {
-      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
-         if (index.data(ChatClientDataModel::Role::ContactIdRole).toString() == userId) {
+      auto type = index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
+      if (userId == " " && type == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
+         if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == QString::fromLatin1(ChatUtils::GlobalRoomKey)) {
+            setCurrentIndex(index);
+            break;
+         }
+      }
+      if (type == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+         if (index.data(ChatClientDataModel::Role::ContactIdRole).toString().toStdString() == userId) {
             setCurrentIndex(index);
             break;
          }
@@ -188,6 +220,29 @@ void ChatClientUserView::updateCurrentChat()
          break;
          default:
             break;
+      }
+   }
+}
+
+void ChatClientUserView::editContact(std::shared_ptr<Chat::Data> crecord)
+{
+   if (handler_) {
+      auto contactRecord = crecord->mutable_contact_record();
+      QString contactId = QString::fromStdString(contactRecord->contact_id());
+      QString displayName = QString::fromStdString(contactRecord->display_name());
+      QDateTime joinDate;  // TODO: implement when will be ready
+      QString idKey;       // TODO: implement when will be ready
+      EditContactDialog dialog(contactId, displayName, joinDate, idKey);
+      if (dialog.exec() == QDialog::Accepted) {
+         contactId = dialog.contactId();
+         displayName = dialog.displayName();
+         joinDate = dialog.joinDate();
+         idKey = dialog.idKey();
+         contactRecord->set_contact_id(contactId.toStdString());
+         contactRecord->set_display_name(displayName.toStdString());
+         // TODO: joinDate implement when will be ready
+         // TODO: idKey    implement when will be ready
+         handler_->onActionEditContactRequest(crecord);
       }
    }
 }
@@ -220,26 +275,35 @@ void ChatClientUserView::onClicked(const QModelIndex &index)
    }
 }
 
+void ChatClientUserView::onDoubleClicked(const QModelIndex &index)
+{
+   if (index.isValid()) {
+      auto proxyModel = qobject_cast<const QAbstractProxyModel*>(index.model());
+      QModelIndex i = proxyModel ? proxyModel->mapToSource(index) : index;
+      TreeItem *item = static_cast<TreeItem*>(i.internalPointer());
+      if (item && item->getType() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+         editContact(static_cast<ChatContactElement*>(item)->getDataObject());
+      }
+   }
+}
+
 void ChatClientUserView::updateDependUI(CategoryElement *element)
 {
    auto data = static_cast<CategoryElement*>(element)->getDataObject();
    switch (element->getType()) {
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:{
-         std::shared_ptr<Chat::RoomData> room = std::dynamic_pointer_cast<Chat::RoomData>(data);
          if (label_){
-            label_->setText(QObject::tr("CHAT #") + room->getId());
+            label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->room().id()));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
-         std::shared_ptr<Chat::ContactRecordData> contact = std::dynamic_pointer_cast<Chat::ContactRecordData>(data);
          if (label_){
-            label_->setText(QObject::tr("CHAT #") + contact->getContactId());
+            label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->contact_record().contact_id()));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
-         std::shared_ptr<Chat::UserData> room = std::dynamic_pointer_cast<Chat::UserData>(data);
          if (label_){
-            label_->setText(QObject::tr("CHAT #") + room->getUserId());
+            label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->user().user_id()));
          }
       } break;
       //XXXOTC
@@ -263,7 +327,7 @@ void ChatClientUserView::notifyCurrentChanged(CategoryElement *element)
 
 }
 
-void ChatClientUserView::notifyMessageChanged(std::shared_ptr<Chat::MessageData> message)
+void ChatClientUserView::notifyMessageChanged(std::shared_ptr<Chat::Data> message)
 {
    for (auto watcher : watchers_) {
       watcher->onMessageChanged(message);

@@ -26,88 +26,9 @@ namespace {
 
    // When remote signer will try to reconnect
    constexpr auto kLocalReconnectPeriod = std::chrono::seconds(10);
-   constexpr auto kRemoteReconnectPeriod = std::chrono::milliseconds(100);
+   constexpr auto kRemoteReconnectPeriod = std::chrono::seconds(1);
 
 } // namespace
-
-#ifdef Q_OS_WIN
-#include <windows.h>
-#include <tlhelp32.h>
-#define TERM_SUCCESS_CLEAN 0
-#define TERM_SUCCESS_KILL 1
-#define TERM_FAILED 2
-
-#ifndef MAKEULONGLONG
-#define MAKEULONGLONG(ldw, hdw) ((ULONGLONG(hdw) << 32) | ((ldw) & 0xFFFFFFFF))
-#endif
-
-#ifndef MAXULONGLONG
-#define MAXULONGLONG ((ULONGLONG)~((ULONGLONG)0))
-#endif
-
-static DWORD WINAPI GetWinMainThreadId(DWORD dwProcID)
-{
-   DWORD dwMainThreadID = 0;
-   ULONGLONG ullMinCreateTime = MAXULONGLONG;
-
-   HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-   if (hThreadSnap != INVALID_HANDLE_VALUE) {
-      THREADENTRY32 th32;
-      th32.dwSize = sizeof(THREADENTRY32);
-      BOOL bOK = TRUE;
-      for (bOK = Thread32First(hThreadSnap, &th32); bOK;
-           bOK = Thread32Next(hThreadSnap, &th32)) {
-         if (th32.th32OwnerProcessID == dwProcID) {
-            HANDLE hThread = OpenThread(THREAD_QUERY_INFORMATION, TRUE, th32.th32ThreadID);
-            if (hThread) {
-               FILETIME afTimes[4] = {0};
-               if (GetThreadTimes(hThread,
-                                  &afTimes[0], &afTimes[1], &afTimes[2], &afTimes[3])) {
-                  ULONGLONG ullTest = MAKEULONGLONG(afTimes[0].dwLowDateTime,
-                        afTimes[0].dwHighDateTime);
-                  if (ullTest && ullTest < ullMinCreateTime) {
-                     ullMinCreateTime = ullTest;
-                     dwMainThreadID = th32.th32ThreadID; // let it be main... :)
-                  }
-               }
-               CloseHandle(hThread);
-            }
-         }
-      }
-      CloseHandle(hThreadSnap);
-   }
-
-   return dwMainThreadID;
-}
-
-static DWORD WINAPI TerminateWinApp(DWORD dwPID, DWORD dwTimeout)
-{
-   HANDLE   hProc ;
-   DWORD   dwRet ;
-
-   hProc = OpenProcess(SYNCHRONIZE|PROCESS_TERMINATE, FALSE, dwPID);
-   if (hProc == NULL) {
-      return TERM_FAILED ;
-   }
-
-   PostThreadMessage(GetWinMainThreadId(dwPID), WM_QUIT, 0, 0);
-
-
-   // Wait on the handle. If it signals, great. If it times out,
-   // then you kill it.
-   if(WaitForSingleObject(hProc, dwTimeout) != WAIT_OBJECT_0) {
-      dwRet = (TerminateProcess(hProc, 0) ? TERM_SUCCESS_KILL : TERM_FAILED);
-   }
-   else {
-      dwRet = TERM_SUCCESS_CLEAN ;
-   }
-
-   CloseHandle(hProc) ;
-
-   return dwRet;
-}
-
-#endif // Q_OS_WIN
 
 using namespace Blocksettle::Communication;
 Q_DECLARE_METATYPE(headless::RequestPacket)
@@ -160,27 +81,30 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       logger_->error("[HeadlessListener] failed to parse request packet");
       return;
    }
+
    if (packet.id() > id_) {
       logger_->error("[HeadlessListener] reply id inconsistency: {} > {}", packet.id(), id_);
-      emit error(HeadlessContainer::InvalidProtocol, tr("reply id inconsistency"));
+      tryEmitError(HeadlessContainer::InvalidProtocol, tr("reply id inconsistency"));
       return;
    }
 
    if (packet.type() == headless::DisconnectionRequestType) {
-      OnDisconnected();
+      processDisconnectNotification();
       return;
    }
-   else if (packet.type() == headless::AuthenticationRequestType) {
+
+   if (packet.type() == headless::AuthenticationRequestType) {
       headless::AuthenticationReply response;
       if (!response.ParseFromString(packet.data())) {
          logger_->error("[HeadlessListener] failed to parse auth reply");
-         emit error(HeadlessContainer::SerializationFailed, tr("failed to parse auth reply"));
+
+         tryEmitError(HeadlessContainer::SerializationFailed, tr("failed to parse auth reply"));
          return;
       }
 
       if (HeadlessContainer::mapNetworkType(response.nettype()) != netType_) {
          logger_->error("[HeadlessListener] network type mismatch");
-         emit error(HeadlessContainer::NetworkTypeMismatch, tr("network type mismatch"));
+         tryEmitError(HeadlessContainer::NetworkTypeMismatch, tr("Network type mismatch (Mainnet / Testnet)"));
          return;
       }
 
@@ -188,8 +112,7 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       hasUI_ = response.hasui();
       isReady_ = true;
       emit authenticated();
-   }
-   else {
+   } else {
       emit PacketReceived(packet);
    }
 }
@@ -208,42 +131,39 @@ void HeadlessListener::OnConnected()
 
 void HeadlessListener::OnDisconnected()
 {
-   if (!isConnected_) {
-      return;
-   }
-
-   logger_->debug("[HeadlessListener] Disconnected");
-   isReady_ = false;
+   SPDLOG_LOGGER_ERROR(logger_, "remote signer disconnected unexpectedly");
    isConnected_ = false;
-   emit disconnected();
+   isReady_ = false;
+   tryEmitError(HeadlessContainer::SocketFailed, tr("TCP connection was closed unexpectedly"));
 }
 
 void HeadlessListener::OnError(DataConnectionListener::DataConnectionError errorCode)
 {
    logger_->debug("[HeadlessListener] error {}", errorCode);
+   isConnected_ = false;
    isReady_ = false;
 
    switch (errorCode) {
+      case NoError:
+         assert(false);
+         break;
       case UndefinedSocketError:
-         emit error(HeadlessContainer::SocketFailed, tr("socket error"));
+         tryEmitError(HeadlessContainer::SocketFailed, tr("Socket error"));
          break;
       case HostNotFoundError:
-         emit error(HeadlessContainer::HostNotFound, tr("host not found"));
+         tryEmitError(HeadlessContainer::HostNotFound, tr("Host not found"));
          break;
       case HandshakeFailed:
-         emit error(HeadlessContainer::HandshakeFailed, tr("encryption handshake failed"));
+         tryEmitError(HeadlessContainer::HandshakeFailed, tr("Handshake failed"));
          break;
       case SerializationFailed:
-         emit error(HeadlessContainer::SerializationFailed, tr("serialization failed"));
+         tryEmitError(HeadlessContainer::SerializationFailed, tr("Serialization failed"));
          break;
       case HeartbeatWaitFailed:
-         emit error(HeadlessContainer::HeartbeatWaitFailed, tr("connection lost"));
+         tryEmitError(HeadlessContainer::HeartbeatWaitFailed, tr("Connection lost"));
          break;
       case ConnectionTimeout:
-         emit error(HeadlessContainer::ConnectionTimeout, tr("connection timeout"));
-         break;
-      default:
-         emit error(HeadlessContainer::UnknownError, tr("unknown error"));
+         tryEmitError(HeadlessContainer::ConnectionTimeout, tr("Connection timeout"));
          break;
    }
 }
@@ -321,7 +241,6 @@ void HeadlessContainer::ProcessCreateHDWalletResponse(unsigned int id, const std
       case bs::hd::CoinType::BlockSettle_CC:
          leafType = bs::core::wallet::Type::ColorCoin;
          break;
-      default:    break;
       }
       const auto leaf = std::make_shared<bs::sync::hd::Leaf>(response.leaf().walletid()
          , response.leaf().name(), response.leaf().desc(), this, logger_
@@ -451,8 +370,6 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
    case TXSignMode::Partial:
       packet.set_type(headless::SignPartialTXRequestType);
       break;
-
-   default:    break;
    }
    packet.set_data(request.SerializeAsString());
    const auto id = Send(packet);
@@ -672,7 +589,7 @@ bs::signer::RequestId HeadlessContainer::customDialogRequest(bs::signer::ui::Dia
 
    headless::CustomDialogRequest request;
    request.set_dialogname(bs::signer::ui::getSignerDialogPath(signerDialog).toStdString());
-   request.set_variantdata(ba.data(), ba.size());
+   request.set_variantdata(ba.data(), size_t(ba.size()));
 
    headless::RequestPacket packet;
    packet.set_type(headless::ExecCustomDialogRequestType);
@@ -1127,6 +1044,8 @@ bool RemoteSigner::Connect()
       return true;
    }
 
+   listener_->wasErrorReported_ = false;
+
    bool result = connection_->openConnection(host_.toStdString(), port_.toStdString(), listener_.get());
    if (!result) {
       logger_->error("[HeadlessContainer] Failed to open connection to "
@@ -1171,7 +1090,6 @@ void RemoteSigner::RecreateConnection()
 {
    logger_->info("[{}] Restart connection...", __func__);
 
-
    ZmqBIP15XDataConnectionParams params;
    params.ephemeralPeers = ephemeralDataConnKeys_;
    params.ownKeyFileDir = ownKeyFileDir_;
@@ -1192,7 +1110,7 @@ void RemoteSigner::RecreateConnection()
    }
    catch (const std::exception &e) {
       logger_->error("[{}] connection creation failed: {}", __func__, e.what());
-      QTimer::singleShot(10, [this] {  // slight delay is required on start-up init
+      QTimer::singleShot(10, this, [this] {  // slight delay is required on start-up init
          emit connectionError(ConnectionError::SocketFailed, tr("Connection creation failed"));
       });
    }
@@ -1224,6 +1142,11 @@ bool RemoteSigner::hasUI() const
    std::lock_guard<std::mutex> lock(mutex_);
 
    return listener_ ? listener_->hasUI() : false;
+}
+
+void RemoteSigner::updatePeerKeys(const ZmqBIP15XPeers &peers)
+{
+   connection_->updatePeerKeys(peers);
 }
 
 void RemoteSigner::onConnected()
@@ -1267,9 +1190,6 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
    signRequests_.erase(packet.id());
 
    switch (packet.type()) {
-   case headless::HeartbeatType:
-      break;
-
    case headless::SignTXRequestType:
    case headless::SignPartialTXRequestType:
    case headless::SignPayoutTXRequestType:
@@ -1557,4 +1477,19 @@ bool LocalSigner::Stop()
    return true;
 }
 
-//#include "HeadlessContainer.moc"
+void HeadlessListener::processDisconnectNotification()
+{
+   SPDLOG_LOGGER_INFO(logger_, "remote signer has been disconnected");
+   isConnected_ = false;
+   isReady_ = false;
+   tryEmitError(HeadlessContainer::SignerGoesOffline, tr("remote signer has been disconnected"));
+}
+
+void HeadlessListener::tryEmitError(SignContainer::ConnectionError errorCode, const QString &msg)
+{
+   // Try to send error only once because only first error should be relevant.
+   if (!wasErrorReported_) {
+      wasErrorReported_ = true;
+      emit error(errorCode, msg);
+   }
+}

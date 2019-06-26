@@ -115,7 +115,7 @@ ApplicationSettings::ApplicationSettings(const QString &appName
       { chatServerPubKey,        SettingDef(QLatin1String("ChatServerPubKey"), QString()) },
       { chatPrivKey,             SettingDef(QString()) },
       { chatPubKey,              SettingDef(QString()) },
-      { chatDbFile,              SettingDef(QString(), AppendToWritableDir(QLatin1String("chat.db"))) },
+      { chatDbFile,              SettingDef(QString(), AppendToWritableDir(QLatin1String("chat2.db"))) },
       { celerUsername,           SettingDef(QLatin1String("MatchSystemUsername")) },
       { localSignerPort,         SettingDef(QLatin1String("SignerPort"), 23456) },
       { signerRunMode,           SettingDef(QLatin1String("SignerRunMode"), 1) },
@@ -171,7 +171,6 @@ ApplicationSettings::ApplicationSettings(const QString &appName
          << QLatin1String("03b53d2d32c11968de5f48b4617a639810cbb161769913adef74effa692c87dbcc")       // mainnet Armory cluster key
          << QLatin1String("02ed6116a7844cae8a1dc4d5fb27922594b79cc41df081d84d2f36983757904de5")) },   // testnet Armory cluster key
       { twoWaySignerAuth,        SettingDef(QLatin1String("TwoWaySignerAuth"), true) },
-      { dontLoadCCList,          SettingDef(QLatin1String("DontLoadCCList"), false) }
    };
 }
 

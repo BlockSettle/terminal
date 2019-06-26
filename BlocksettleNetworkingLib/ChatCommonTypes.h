@@ -10,6 +10,7 @@ namespace bs {
    namespace network {
 
       struct ChatOTCSide {
+         // Keep in sync with Chat.OtcSide
          enum Type {
             Undefined,
             Buy,
@@ -40,6 +41,7 @@ namespace bs {
 
       struct OTCRangeID
       {
+         // Keep in sync with Chat.OtcRangeType
          enum class Type : int
          {
             Range1_5,

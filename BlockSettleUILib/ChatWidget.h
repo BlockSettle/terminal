@@ -61,7 +61,7 @@ public:
       , const ZmqBIP15XDataConnection::cbNewKey &);
    void logout();
    bool hasUnreadMessages();
-   void switchToChat(const QString& chatId);
+   void switchToChat(const std::string& chatId);
    void setCelerClient(std::shared_ptr<CelerClient> celerClient);
    void updateChat(const bool &isChatTab);
 
@@ -71,21 +71,22 @@ public slots:
 
 private slots:
    void onSendButtonClicked();
-   void onUserClicked(const QString& index);
-   void onRoomClicked(const QString& roomId);
+   void onUserClicked(const std::string& index);
+   void onRoomClicked(const std::string& roomId);
    void onMessagesUpdated();
    void onLoginFailed();
    void onUsersDeleted(const std::vector<std::string> &);
    void onSendFriendRequest(const QString &userId);
    void onRemoveFriendRequest(const QString &userId);
-   void onAddChatRooms(const std::vector<std::shared_ptr<Chat::RoomData> >& roomList);
-   void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::UserData>>& users);
-   void onSearchUserTextEdited(const QString& text);
+   void onAddChatRooms(const std::vector<std::shared_ptr<Chat::Data> >& roomList);
+   void onSearchUserListReceived(const std::vector<std::shared_ptr<Chat::Data>>& users, bool emailEntered);
+   void onSearchUserTextEdited(const QString &text);
    void onConnectedToServer();
    void selectGlobalRoom();
-   void onContactRequestAccepted(const QString &userId);
+   void onContactRequestAccepted(const std::string &userId);
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
+   void showOldMessagesNotification();
 
    // OTC UI slots
    void OnOTCRequestCreated();
@@ -109,9 +110,10 @@ private:
 
    void OTCSwitchToCommonRoom();
    void OTCSwitchToGlobalRoom();
-   void OTCSwitchToRoom(std::shared_ptr<Chat::RoomData>& room);
-   void OTCSwitchToContact(std::shared_ptr<Chat::ContactRecordData>& contact, bool onlineStatus);
-   void OTCSwitchToResponse(std::shared_ptr<Chat::OTCResponseData>& response);
+   void OTCSwitchToSupportRoom();
+   void OTCSwitchToRoom(std::shared_ptr<Chat::Data>& room);
+   void OTCSwitchToContact(std::shared_ptr<Chat::Data>& contact, bool onlineStatus);
+   void OTCSwitchToResponse(std::shared_ptr<Chat::Data>& response);
 
 
    // used to display proper widget if OTC room selected.
@@ -138,7 +140,7 @@ private:
    std::shared_ptr<CelerClient>     celerClient_;
 
    std::string serverPublicKey_;
-   QString  currentChat_;
+   std::string  currentChat_;
    bool isRoom_;
    QSpacerItem *chatUsersVerticalSpacer_;
    bool isChatMessagesSelected_;
@@ -146,11 +148,15 @@ private:
 
 private:
    std::shared_ptr<ChatWidgetState> stateCurrent_;
-   QMap<QString, QString> draftMessages_;
+   QMap<std::string, std::string> draftMessages_;
    bool needsToStartFirstRoom_;
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
+   int64_t chatLoggedInTimestampUtcInMillis_;
+   std::unique_ptr<QTimer> oldNotificationsTimer_;
+   std::vector<QVariantList> oldMessages_;
+
 private:
    bool isRoom();
    void setIsRoom(bool);
@@ -162,12 +168,12 @@ private:
    // ViewItemWatcher interface
 public:
    void onElementSelected(CategoryElement *element) override;
-   void onMessageChanged(std::shared_ptr<Chat::MessageData> message) override;
+   void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
    void onElementUpdated(CategoryElement *element) override;
 
    // NewMessageMonitor interface
 public:
-   void onNewMessagesPresent(std::map<QString, std::shared_ptr<Chat::MessageData>> newMessages) override;
+   void onNewMessagesPresent(std::map<std::string, std::shared_ptr<Chat::Data>> newMessages) override;
 };
 
 #endif // CHAT_WIDGET_H

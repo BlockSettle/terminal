@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include "SignContainer.h"
+#include "SystemFileUtils.h"
 
 SignersProvider::SignersProvider(const std::shared_ptr<ApplicationSettings> &appSettings, QObject *parent)
    : QObject(parent)
@@ -234,4 +235,20 @@ void SignersProvider::setupSigner(int index, bool needUpdate)
    }
 }
 
+std::string SignersProvider::remoteSignerKeysDir() const
+{
+   return SystemFilePaths::appDataLocation();
+}
 
+std::string SignersProvider::remoteSignerKeysFile() const
+{
+   return "client.peers";
+}
+
+BinaryData SignersProvider::remoteSignerOwnKey() const
+{
+   if (remoteSignerOwnKey_.isNull()) {
+      remoteSignerOwnKey_ = ZmqBIP15XDataConnection::getOwnPubKey(remoteSignerKeysDir(), remoteSignerKeysFile());
+   }
+   return remoteSignerOwnKey_;
+}
