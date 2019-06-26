@@ -289,8 +289,6 @@ void ChatClient::onContactRequestNegativeAction(const std::string &contactId)
 
 void ChatClient::sendFriendRequest(const std::string &friendUserId, const std::string& message)
 {
-   // TODO
-
    auto citem = model_->findContactItem(friendUserId);
 
    if (citem && citem->contact_record().status() != Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING) {
