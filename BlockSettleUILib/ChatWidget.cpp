@@ -324,6 +324,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    //ui_->chatSearchLineEdit->setActionsHandler(client_);
 
    connect(client_.get(), &ChatClient::LoginFailed, this, &ChatWidget::onLoginFailed);
+   connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onContactListConfirmationRequested);
    connect(client_.get(), &ChatClient::LoggedOut, this, &ChatWidget::onLoggedOut);
    connect(client_.get(), &ChatClient::SearchUserListReceived, this, &ChatWidget::onSearchUserListReceived);
    connect(client_.get(), &ChatClient::ConnectedToServer, this, &ChatWidget::onConnectedToServer);
@@ -1150,4 +1151,22 @@ void ChatWidget::onContactRequestRejectCancelClicked()
 {
    ui_->input_textEdit->clear();
    client_->onContactRequestNegativeAction(currentChat_);
+}
+#include "BSMessageBox.h"
+void ChatWidget::onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed,
+                                                    const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate,
+                                                    const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutleyNew)
+{
+   //Auto confirmation for update keys and for absolutley new conatacts
+
+   QString detailsPattern = QLatin1String("Confirmed contacts: %1\n"
+                                          "Require key update: %2\n"
+                                          "New contacts: %3");
+
+   QString  detailsString = detailsPattern.arg(remoteConfirmed.size()).arg(remoteKeysUpdate.size()).arg(remoteAbsolutleyNew.size());
+
+   if (BSMessageBox(BSMessageBox::question, tr("Contacts Information Update"), tr("Some contacts information require update.")
+                    , tr("Do you want to continue?"), detailsString).exec() == QDialog::Accepted) {
+      client_->OnContactListConfirmed(remoteConfirmed, remoteKeysUpdate, remoteAbsolutleyNew);
+   }
 }

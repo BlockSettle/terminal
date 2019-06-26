@@ -495,8 +495,9 @@ void BaseChatClient::OnModifyContactsServerResponse(const Chat::Response_ModifyC
 
 void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & response)
 {
-   std::vector<std::shared_ptr<Chat::Data>> newList;
-   std::vector<std::shared_ptr<Chat::Data>> toConfirmList;
+   std::vector<std::shared_ptr<Chat::Data>> checkedList;
+   std::vector<std::shared_ptr<Chat::Data>> absolutleyNewList;
+   std::vector<std::shared_ptr<Chat::Data>> toConfirmKeysList;
    for (const auto& contact : response.contacts()) {
       if (!contact.has_contact_record()) {
          logger_->error("[BaseChatClient::{}] invalid response detected", __func__);
@@ -508,39 +509,81 @@ void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & 
       const auto publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact.contact_record().public_key_timestamp());
 
       if (!chatDb_->compareLocalData(userId, publicKey, publicKeyTimestamp)) {
-         toConfirmList.push_back(std::make_shared<Chat::Data>(contact));
+         if (chatDb_->isContactExist(userId)) {
+            toConfirmKeysList.push_back(std::make_shared<Chat::Data>(contact));
+         } else {
+            absolutleyNewList.push_back(std::make_shared<Chat::Data>(contact));
+         }
          continue;
       }
 
-      newList.push_back(std::make_shared<Chat::Data>(contact));
+      checkedList.push_back(std::make_shared<Chat::Data>(contact));
    }
 
-   if (!newList.empty()) {
-      // false - we don't need update contact in db since it is already fine in compareLocalData
-      OnContactListConfirmed(newList, false);
-   }
+//   if (!checkedList.empty()) {
+//      // false - we don't need update contact in db since it is already fine in compareLocalData
+//      OnContactListConfirmed(checkedList, false);
+//   }
 
-   if (!toConfirmList.empty()) {
-      // TODO: if confirmed in GUI execute OnContactListConfirmed and remove this comment
-      emit ConfirmContactNewKeyData(toConfirmList);
+//   if (!toConfirmKeysList.empty()) {
+//      // TODO: if confirmed in GUI execute OnContactListConfirmed and remove this comment
+//      emit ConfirmContactsNewData(toConfirmKeysList);
+//   }
+
+   if (toConfirmKeysList.empty() && absolutleyNewList.empty()) {
+      OnContactListConfirmed(checkedList, {}, {});
+   } else {
+      emit ConfirmContactsNewData(checkedList,
+                                  toConfirmKeysList,
+                                  absolutleyNewList);
    }
 }
 
-void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts, const bool& updateContactDb)
+void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& checked,
+                                            const std::vector<std::shared_ptr<Chat::Data>>& keyUpdate,
+                                            const std::vector<std::shared_ptr<Chat::Data>>& absolutleyNew)
 {
-   for (const auto& contact : remoteContacts) {
-      const auto& userId = contact->contact_record().contact_id();
-      const auto& publicKey = BinaryData(contact->contact_record().public_key());
-      const auto& publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact->contact_record().public_key_timestamp());
+   enum ContactListKeyAction {
+      Leave,
+      Update,
+      Add
+   };
 
-      contactPublicKeys_[userId] = publicKey;
+   std::vector<std::pair<std::vector<std::shared_ptr<Chat::Data>>, ContactListKeyAction>> updateLists;
 
-      if (updateContactDb) {
-         chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp);
+   updateLists.push_back({checked, Leave});
+   updateLists.push_back({keyUpdate, Update});
+   updateLists.push_back({absolutleyNew, Add});
+
+   std::vector<std::shared_ptr<Chat::Data>> resultContactsCollection;
+
+   for (auto updateInfo : updateLists) {
+      for (const auto& contact : updateInfo.first) {
+         const auto& userId = contact->contact_record().contact_id();
+         const auto& publicKey = BinaryData(contact->contact_record().public_key());
+         const auto& publicKeyTimestamp = QDateTime::fromMSecsSinceEpoch(contact->contact_record().public_key_timestamp());
+
+         contactPublicKeys_[userId] = publicKey;
+
+         switch (updateInfo.second) {
+            case Update:
+               if (!chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp)){
+                  chatDb_->addKey(userId, publicKey, publicKeyTimestamp);
+               }
+               break;
+            case Add:
+               if (!chatDb_->addKey(userId, publicKey, publicKeyTimestamp)){
+                  chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp);
+               }
+               break;
+            default:
+               break;
+         }
       }
+      resultContactsCollection.insert(resultContactsCollection.end(), updateInfo.first.begin(), updateInfo.first.end());
    }
 
-   onContactListLoaded(remoteContacts);
+   onContactListLoaded(resultContactsCollection);
 }
 
 void BaseChatClient::OnChatroomsList(const Chat::Response_ChatroomsList &response)

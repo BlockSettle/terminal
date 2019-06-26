@@ -93,7 +93,11 @@ protected:
    void onFriendRequestedRemove(const std::string& userId);
 
    void onServerApprovedFriendRemoving(const std::string& contactId);
-   void OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts, const bool& updateContactDb = true);
+
+public:
+   void OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& checked,
+                               const std::vector<std::shared_ptr<Chat::Data>>& keyUpdate,
+                               const std::vector<std::shared_ptr<Chat::Data>>& absolutleyNew);
 
 public:
    bool sendSearchUsersRequest(const std::string& userIdPattern);
@@ -102,7 +106,9 @@ public:
    std::string getUserId() const;
 
 signals:
-   void ConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts);
+   void ConfirmContactsNewData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
+                               const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
+                               const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutleyNew);
 
 protected:
    void cleanupConnection();
