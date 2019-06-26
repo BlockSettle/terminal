@@ -824,12 +824,15 @@ void BSTerminalMainWindow::raiseWindow()
 #ifdef Q_OS_WIN
    auto hwnd = reinterpret_cast<HWND>(winId());
    auto flags = static_cast<UINT>(SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+   auto currentThreadId = ::GetCurrentThreadId();
+   auto windowThreadId = ::GetWindowThreadProcessId(hwnd, nullptr);
+   ::AttachThreadInput(windowThreadId, currentThreadId, TRUE);
    ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
-   ::SetForegroundWindow(hwnd);
-   ::SetActiveWindow(hwnd);
-   ::ShowWindow(hwnd, SW_SHOWNORMAL);
-   ::SetFocus(hwnd);
    ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
+   ::SetForegroundWindow(hwnd);
+   ::AttachThreadInput(windowThreadId, currentThreadId, FALSE);
+   ::SetFocus(hwnd);
+   ::SetActiveWindow(hwnd);
 #endif // Q_OS_WIN
 }
 
