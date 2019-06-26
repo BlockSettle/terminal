@@ -192,7 +192,13 @@ void ZmqBIP15XDataConnection::listenFunction()
       }
 
       if (!isConnected_ && std::chrono::steady_clock::now() - connectionStarted > 2 * heartbeatInterval_) {
-         onError(DataConnectionListener::ConnectionTimeout);
+         if (bip151HandshakeCompleted_ && !bip150HandshakeCompleted_) {
+            SPDLOG_LOGGER_ERROR(logger_, "ZMQ BIP connection is timed out (bip151 was completed, probaly client credential is not valid)");
+            onError(DataConnectionListener::HandshakeFailed);
+         } else {
+            SPDLOG_LOGGER_ERROR(logger_, "ZMQ BIP connection is timed out");
+            onError(DataConnectionListener::ConnectionTimeout);
+         }
       }
 
       triggerHeartbeatCheck();
