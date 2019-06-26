@@ -50,6 +50,9 @@ enum PacketType
    UpdateStatusType = 26;
 
    ImportWoWalletType = 27;
+
+   // Sent from headless signer when unknown terminal is trying to connect
+   TerminalHandshakeFailedType = 28;
 }
 
 message Packet
@@ -348,4 +351,9 @@ message ImportWoWalletRequest
 {
    string filename = 1;
    bytes  content = 2;
+}
+
+message TerminalHandshakeFailed
+{
+   string peerAddress = 1;
 }
