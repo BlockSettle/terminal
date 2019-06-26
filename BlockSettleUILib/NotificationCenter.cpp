@@ -277,9 +277,7 @@ void NotificationTrayIconResponder::messageClicked()
 #endif
    }
    else if (newChatMessage_) {
-      if (!newChatId_.isNull() && globalInstance != NULL) {
-         emit globalInstance->newChatMessageClick(newChatId_);
-
+      if (!newChatId_.isNull() && globalInstance != nullptr) {
          const int chatIndex = mainWinUi_->tabWidget->indexOf(mainWinUi_->widgetChat);
          mainWinUi_->tabWidget->setTabIcon(chatIndex, QIcon());
          mainWinUi_->tabWidget->setCurrentWidget(mainWinUi_->widgetChat);
@@ -287,6 +285,8 @@ void NotificationTrayIconResponder::messageClicked()
          if (window) {
             QMetaObject::invokeMethod(window, "raiseWindow", Qt::DirectConnection);
          }
+         auto signal = QMetaMethod::fromSignal(&NotificationCenter::newChatMessageClick);
+         signal.invoke(globalInstance.get(), Q_ARG(QString, newChatId_));
       }
    }
 }

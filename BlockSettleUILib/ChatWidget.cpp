@@ -535,6 +535,7 @@ void ChatWidget::onLoggedOut()
 void ChatWidget::onNewChatMessageTrayNotificationClicked(const QString &userId)
 {
    ui_->treeViewUsers->setCurrentUserChat(userId.toStdString());
+   ui_->input_textEdit->setFocus(Qt::FocusReason::MouseFocusReason);
 }
 
 void ChatWidget::onSearchUserTextEdited(const QString& /*text*/)
