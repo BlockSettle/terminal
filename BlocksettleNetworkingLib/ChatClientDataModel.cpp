@@ -198,7 +198,7 @@ bool ChatClientDataModel::insertContactRequestMessage(std::shared_ptr<Chat::Data
 
    bool res = insertMessageNode(item);
 
-   if (!res){
+   if (!res) {
       delete  item;
    }
 

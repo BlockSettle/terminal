@@ -313,30 +313,6 @@ void ChatClient::sendFriendRequest(const std::string &friendUserId, const std::s
    } else {
       logger_->error("[ChatClient::sendFriendRequest] failed to send friend request for {}", friendUserId);
    }
-   /*
-=======
-   if (model_->findContactItem(friendUserId)) {
-      return;
-   }
-
-   Chat::Data_ContactRecord contact;
-   chatDb_->getContact(model_->currentUser(), &contact);
-
-   if (sendFriendRequestToServer(friendUserId)) {
-      auto record = std::make_shared<Chat::Data>();
-      auto d = record->mutable_contact_record();
-      d->set_user_id(model_->currentUser());
-      d->set_contact_id(friendUserId);
-      d->set_status(Chat::CONTACT_STATUS_OUTGOING);
-      d->set_public_key(contact.public_key());
-      d->set_public_key_timestamp(contact.public_key_timestamp());
-      model_->insertContactObject(record);
-      addOrUpdateContact(friendUserId, Chat::CONTACT_STATUS_OUTGOING);
->>>>>>> bs_dev
-   } else {
-      logger_->error("[ChatClient::sendFriendRequest] failed to send friend request for {}", friendUserId);
-   }
-*/
 }
 
 void ChatClient::acceptFriendRequest(const std::string &friendUserId)

@@ -174,14 +174,12 @@ public:
       if (!messageText.empty() && !chat_->currentChat_.empty()) {
          if (chat_->isContactRequest()) {
             chat_->client_->sendFriendRequest(chat_->currentChat_, messageText);
-            chat_->ui_->input_textEdit->clear();
-         } else if (!chat_->isRoom()){
+         } else if (!chat_->isRoom()) {
             auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
-            chat_->ui_->input_textEdit->clear();
          } else {
             auto msg = chat_->client_->sendRoomOwnMessage(messageText, chat_->currentChat_);
-            chat_->ui_->input_textEdit->clear();
          }
+         chat_->ui_->input_textEdit->clear();
       }
    }
 
@@ -1112,7 +1110,6 @@ void ChatWidget::onChatMessagesSelectionChanged()
 
 void ChatWidget::onActionCreatePendingOutgoing(const std::string &userId)
 {
-   qDebug() << __func__ << " " << QString::fromStdString(userId);
    return client_->createPendingFriendRequest(userId);
    //return client_->sendFriendRequest(userId, std::string("I would like to add you to friends!"));
 }
