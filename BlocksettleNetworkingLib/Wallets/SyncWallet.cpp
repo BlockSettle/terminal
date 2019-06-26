@@ -912,6 +912,10 @@ void Wallet::newAddresses(
 
 void Wallet::trackChainAddressUse(std::function<void(bs::sync::SyncState)> cb)
 {
+   if (!signContainer_) {
+      cb(bs::sync::SyncState::NothingToDo);
+      return;
+   }
    //1) round up all addresses that have a tx count
    std::set<BinaryData> usedAddrSet;
    for (auto& addrPair : addressTxNMap_) {
