@@ -98,7 +98,7 @@ public:
    bool hasChildren(const QModelIndex& parent = QModelIndex()) const override;
 
 public slots:
-   void loadWallets();
+   void loadWallets(const std::string &);
 
 public:
    enum class WalletColumns : int
