@@ -13,6 +13,7 @@
 #include "CelerClient.h"
 #include "ChatProtocol/ChatUtils.h"
 #include "ChatSearchListViewItemStyle.h"
+#include "BSMessageBox.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -1161,7 +1162,7 @@ void ChatWidget::onContactRequestRejectCancelClicked()
    ui_->input_textEdit->clear();
    client_->onContactRequestNegativeAction(currentChat_);
 }
-#include "BSMessageBox.h"
+
 void ChatWidget::onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed,
                                                     const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate,
                                                     const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutleyNew)
