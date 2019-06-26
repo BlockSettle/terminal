@@ -143,6 +143,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::UpdateStatusType:
       onUpdateStatus(packet.data());
       break;
+   case signer::TerminalHandshakeFailedType:
+      onTerminalHandshakeFailed(packet.data());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -526,8 +529,19 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
    }
 
    if (evt.signer_bind_status() == signer::BindFailed) {
-      QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
+      emit parent_->headlessBindFailed();
    }
+}
+
+void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)
+{
+   signer::TerminalHandshakeFailed evt;
+   if (!evt.ParseFromString(data)) {
+      SPDLOG_LOGGER_ERROR(logger_, "failed to parse");
+      return;
+   }
+
+   emit parent_->terminalHandshakeFailed(evt.peeraddress());
 }
 
 void SignerInterfaceListener::shutdown()
