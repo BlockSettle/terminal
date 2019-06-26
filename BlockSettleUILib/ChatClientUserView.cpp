@@ -4,6 +4,7 @@
 #include "ChatClientDataModel.h"
 #include "BSMessageBox.h"
 #include "EditContactDialog.h"
+#include "ChatProtocol/ChatUtils.h"
 
 #include <QMenu>
 #include <QAbstractProxyModel>
@@ -187,7 +188,14 @@ void ChatClientUserView::setCurrentUserChat(const std::string &userId)
 
    // set required chat
    for (auto index : indexes) {
-      if (index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
+      auto type = index.data(ChatClientDataModel::Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>();
+      if (userId == " " && type == ChatUIDefinitions::ChatTreeNodeType::RoomsElement) {
+         if (index.data(ChatClientDataModel::Role::RoomIdRole).toString() == QString::fromLatin1(ChatUtils::GlobalRoomKey)) {
+            setCurrentIndex(index);
+            break;
+         }
+      }
+      if (type == ChatUIDefinitions::ChatTreeNodeType::ContactsElement) {
          if (index.data(ChatClientDataModel::Role::ContactIdRole).toString().toStdString() == userId) {
             setCurrentIndex(index);
             break;

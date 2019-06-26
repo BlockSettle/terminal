@@ -86,6 +86,7 @@ private slots:
    void onContactRequestAccepted(const std::string &userId);
    void onBSChatInputSelectionChanged();
    void onChatMessagesSelectionChanged();
+   void showOldMessagesNotification();
 
    // OTC UI slots
    void OnOTCRequestCreated();
@@ -152,6 +153,10 @@ private:
 
 private:
    OTCRequestViewModel *otcRequestViewModel_ = nullptr;
+   int64_t chatLoggedInTimestampUtcInMillis_;
+   std::unique_ptr<QTimer> oldNotificationsTimer_;
+   std::vector<QVariantList> oldMessages_;
+
 private:
    bool isRoom();
    void setIsRoom(bool);
