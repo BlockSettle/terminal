@@ -314,7 +314,7 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
 //   ui_->treeViewUsers->expandAll();
    ui_->treeViewUsers->addWatcher(ui_->textEditMessages);
    ui_->treeViewUsers->addWatcher(this);
-   ui_->treeViewUsers->setHandler(client_);
+   ui_->treeViewUsers->setHandler(this);
    ui_->textEditMessages->setHandler(this);
    ui_->textEditMessages->setMessageReadHandler(client_);
    ui_->textEditMessages->setClient(client_);

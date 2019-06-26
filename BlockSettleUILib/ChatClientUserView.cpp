@@ -243,7 +243,7 @@ void ChatClientUserView::onCustomContextMenu(const QPoint & point)
 {
    if (!contextMenu_) {
       if (handler_){
-         contextMenu_ = new ChatUsersContextMenu(handler_.get(), this);
+         contextMenu_ = new ChatUsersContextMenu(handler_, this);
       }
    }
    if (contextMenu_){
@@ -353,7 +353,7 @@ void ChatClientUserView::notifyElementUpdated(CategoryElement *element)
    }
 }
 
-void ChatClientUserView::setHandler(std::shared_ptr<ChatItemActionsHandler> handler)
+void ChatClientUserView::setHandler(ChatItemActionsHandler * handler)
 {
    handler_ = handler;
 }

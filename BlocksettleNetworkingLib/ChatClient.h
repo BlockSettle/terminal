@@ -24,7 +24,6 @@ class UserSearchModel;
 class ChatTreeModelWrapper;
 
 class ChatClient : public BaseChatClient
-      , public ChatItemActionsHandler
       , public ChatSearchActionsHandler
       , public ChatMessageReadHandler
       , public ModelChangesHandler
@@ -126,15 +125,6 @@ protected:
    void onFriendRequest(const std::string& userId, const std::string& contactId, const BinaryData& pk) override;
    void onContactRemove(const std::string& contactId) override;
    void onCreateOutgoingContact(const std::string& contactId) override;
-
-   // ChatItemActionsHandler interface
-public:
-   void onActionCreatePendingOutgoing(const std::string& userId) override;
-   void onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   void onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord) override;
-   bool onActionIsFriend(const std::string& userId) override;
 
    // ChatSearchActionsHandler interface
 public:

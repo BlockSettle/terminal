@@ -20,7 +20,7 @@ public:
    ChatClientUserView(QWidget * parent = nullptr);
    void addWatcher(ViewItemWatcher* watcher);
    void setActiveChatLabel(QLabel * label);
-   void setHandler(std::shared_ptr<ChatItemActionsHandler> handler);
+   void setHandler(ChatItemActionsHandler * handler);
    void setCurrentUserChat(const std::string &userId);
    void updateCurrentChat();
 
@@ -38,7 +38,7 @@ private:
 private:
    friend ChatUsersContextMenu;
    std::list<ViewItemWatcher* > watchers_;
-   std::shared_ptr<ChatItemActionsHandler> handler_;
+   ChatItemActionsHandler * handler_;
    QLabel * label_;
    ChatUsersContextMenu* contextMenu_;
 

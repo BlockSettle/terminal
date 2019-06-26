@@ -387,45 +387,6 @@ Chat::Data_ContactRecord ChatClient::getContact(const std::string &userId) const
    return contact;
 }
 
-void ChatClient::onActionCreatePendingOutgoing(const std::string& userId)
-{
-
-}
-
-void ChatClient::onActionRemoveFromContacts(std::shared_ptr<Chat::Data> crecord)
-{
-   return removeFriendOrRequest(crecord->contact_record().contact_id());
-}
-
-void ChatClient::onActionAcceptContactRequest(std::shared_ptr<Chat::Data> crecord)
-{
-
-   return acceptFriendRequest(crecord->contact_record().contact_id());
-}
-
-void ChatClient::onActionRejectContactRequest(std::shared_ptr<Chat::Data> crecord)
-{
-   return rejectFriendRequest(crecord->contact_record().contact_id());
-}
-
-void ChatClient::onActionEditContactRequest(std::shared_ptr<Chat::Data> crecord)
-{
-   if (!crecord) {
-      return;
-   }
-
-   auto contactRecord = crecord->mutable_contact_record();
-   addOrUpdateContact(contactRecord->contact_id()
-                      , contactRecord->status()
-                      , contactRecord->display_name());
-   model_->notifyContactChanged(crecord);
-}
-
-bool ChatClient::onActionIsFriend(const std::string& userId)
-{
-   return isFriend(userId);
-}
-
 void ChatClient::onActionSearchUsers(const std::string &text)
 {
    std::string pattern = text;
