@@ -232,7 +232,7 @@ void ChatClientUserView::editContact(std::shared_ptr<Chat::Data> crecord)
       QString displayName = QString::fromStdString(contactRecord->display_name());
       QDateTime joinDate;  // TODO: implement when will be ready
       QString idKey;       // TODO: implement when will be ready
-      EditContactDialog dialog(contactId, displayName, joinDate, idKey);
+      EditContactDialog dialog(contactId, displayName, joinDate, idKey, parentWidget()->window());
       if (dialog.exec() == QDialog::Accepted) {
          contactId = dialog.contactId();
          displayName = dialog.displayName();
