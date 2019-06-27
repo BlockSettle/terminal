@@ -328,7 +328,7 @@ void ChatClient::acceptFriendRequest(const std::string &friendUserId)
    model_->removeContactRequestNode(contact->contact_record().contact_id());
    model_->insertContactObject(contact, true);
    retrieveUserMessages(contact->contact_record().contact_id());
-   sendAcceptFriendRequestToServer(friendUserId);
+   sendAcceptFriendRequestToServer(contact->contact_record().contact_id());
 }
 
 void ChatClient::rejectFriendRequest(const std::string &friendUserId)
