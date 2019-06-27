@@ -91,7 +91,7 @@ private slots:
    void onContactRequestRejectCancelClicked();
    void onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                            const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
-                                           const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutleyNew);
+                                           const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
    void showOldMessagesNotification();
 
    // OTC UI slots

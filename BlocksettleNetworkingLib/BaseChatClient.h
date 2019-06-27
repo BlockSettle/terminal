@@ -97,7 +97,7 @@ protected:
 public:
    void OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& checked,
                                const std::vector<std::shared_ptr<Chat::Data>>& keyUpdate,
-                               const std::vector<std::shared_ptr<Chat::Data>>& absolutleyNew);
+                               const std::vector<std::shared_ptr<Chat::Data>>& absolutelyNew);
 
 public:
    bool sendSearchUsersRequest(const std::string& userIdPattern);
@@ -108,7 +108,7 @@ public:
 signals:
    void ConfirmContactsNewData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
-                               const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutleyNew);
+                               const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
 
 protected:
    void cleanupConnection();
