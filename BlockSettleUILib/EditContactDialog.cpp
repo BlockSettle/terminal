@@ -68,6 +68,15 @@ void EditContactDialog::reject()
    QDialog::reject();
 }
 
+void EditContactDialog::showEvent(QShowEvent *event)
+{
+   Q_UNUSED(event)
+   auto dialogCenter = window()->mapToGlobal(window()->rect().center());
+   auto parentWindow = parentWidget()->window();
+   auto parentWindowCenter = parentWindow->mapToGlobal(parentWindow->rect().center());
+   move(parentWindowCenter - dialogCenter);
+}
+
 void EditContactDialog::refillFields()
 {
    ui_->nameOptionalLineEdit->setText(displayName_);

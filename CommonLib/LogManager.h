@@ -14,7 +14,6 @@ namespace spdlog {
    }
 }
 
-
 namespace bs {
    enum class LogLevel
    {
@@ -35,12 +34,9 @@ namespace bs {
       LogLevel    level;
       bool        truncate;
 
-      LogConfig()
-         : pattern("%C/%m/%d %H:%M:%S.%e [%L](%t)%n: %v"), level(LogLevel::debug), truncate(false)
-      {}
+      LogConfig();
       LogConfig(const std::string &fn, const std::string &ptn, const std::string &cat
-         , const LogLevel lvl = LogLevel::debug, bool trunc = false)
-         : fileName(fn), pattern(ptn), category(cat), level(lvl), truncate(trunc) {}
+         , const LogLevel lvl = LogLevel::debug, bool trunc = false);
    };
 
    class LogManager
@@ -55,6 +51,9 @@ namespace bs {
       bool add(const std::shared_ptr<spdlog::logger> &, const std::string &category = {});
 
       std::shared_ptr<spdlog::logger> logger(const std::string &category = {});
+
+      // Returns spdlog format (uses BS_LOG_FORMAT env variable if set, defaultValue otherwise)
+      static std::string detectFormatOverride(const std::string &defaultValue = {});
 
    private:
       std::shared_ptr<spdlog::logger> create(const LogConfig &);

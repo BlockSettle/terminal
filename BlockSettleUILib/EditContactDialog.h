@@ -32,6 +32,9 @@ public slots:
    void accept() override;
    void reject() override;
 
+protected:
+   void showEvent(QShowEvent *event) override;
+
 private:
    void refillFields();
 

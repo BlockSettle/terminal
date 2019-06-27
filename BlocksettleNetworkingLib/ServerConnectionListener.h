@@ -7,6 +7,14 @@
 class ServerConnectionListener
 {
 public:
+   enum ClientError
+   {
+      NoError = 0,
+
+      // Reported when client do not have valid credentials (unknown public key)
+      HandshakeFailed = 1,
+   };
+
    ServerConnectionListener() = default;
    virtual ~ServerConnectionListener() noexcept = default;
 
@@ -26,6 +34,7 @@ public:
    virtual void OnPeerDisconnected(const std::string &) {}
 
    virtual void onClientError(const std::string &clientId, const std::string &error) {}
+   virtual void onClientError(const std::string &clientId, ClientError errorCode, int socket) {}
 };
 
 #endif // __SERVER_CONNECTION_LISTENER_H__

@@ -42,6 +42,7 @@ public:
    virtual void cancelTxSign(const BinaryData &) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
+   virtual void terminalHandshakeFailed(const std::string &peerAddress) = 0;
 };
 
 class HeadlessContainerListener : public ServerConnectionListener
@@ -81,6 +82,7 @@ protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnPeerConnected(const std::string &ip) override;
    void OnPeerDisconnected(const std::string &ip) override;
+   void onClientError(const std::string &clientId, ServerConnectionListener::ClientError errorCode, int socket) override;
 
 private:
    using PasswordReceivedCb = std::function<void(const SecureBinaryData &password, bool cancelledByUser)>;
