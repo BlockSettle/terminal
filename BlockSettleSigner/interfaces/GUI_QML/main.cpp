@@ -21,6 +21,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include "SignerAdapter.h"
 #include "SignerSettings.h"
+#include "LogManager.h"
 #include "QMLApp.h"
 #include "QmlBridge.h"
 #include "ZMQ_BIP15X_ServerConnection.h"
@@ -142,14 +143,14 @@ static int QMLApp(int argc, char **argv)
    try {
       logger = spdlog::basic_logger_mt("", settings->logFileName().toStdString());
       // [date time.miliseconds] [level](thread id): text
-      logger->set_pattern("%D %H:%M:%S.%e [%L](%t): %v");
+      logger->set_pattern(bs::LogManager::detectFormatOverride("%D %H:%M:%S.%e [%L](%t): %v"));
    }
    catch (const spdlog::spdlog_ex &e) {
       std::cerr << "Failed to create logger in "
          << settings->logFileName().toStdString() << ": " << e.what()
          << " - logging to console" << std::endl;
       logger = spdlog::stdout_logger_mt("");
-      logger->set_pattern("[%L](%t): %v");
+      logger->set_pattern(bs::LogManager::detectFormatOverride("[%L](%t): %v"));
    }
    logger->set_level(spdlog::level::debug);
    logger->flush_on(spdlog::level::debug);

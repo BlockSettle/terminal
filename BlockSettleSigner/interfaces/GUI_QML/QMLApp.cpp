@@ -61,11 +61,11 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
    connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
-   connect(adapter_, &SignerAdapter::headlessBindFailed, this, &QMLAppObj::onHeadlessBindFailed);
+   connect(adapter_, &SignerAdapter::headlessBindUpdated, this, &QMLAppObj::onHeadlessBindUpdated);
    connect(adapter_, &SignerAdapter::requestPasswordAndSignTx, this, &QMLAppObj::onPasswordRequested);
-   // connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
    connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
+   connect(adapter_, &SignerAdapter::terminalHandshakeFailed, this, &QMLAppObj::onTerminalHandshakeFailed);
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -123,6 +123,16 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    if (adapter) {
       settingsConnections();
    }
+
+   connect(params.get(), &SignerSettings::trustedTerminalsChanged, this, [this] {
+      // Show error one more time if needed
+      lastFailedTerminals_.clear();
+   });
+
+   connect(params.get(), &SignerSettings::offlineChanged, this, [this] {
+      // Show error one more time if needed
+      lastFailedTerminals_.clear();
+   });
 }
 
 void QMLAppObj::onReady()
@@ -145,11 +155,14 @@ void QMLAppObj::onConnectionError()
                              , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
 }
 
-void QMLAppObj::onHeadlessBindFailed()
+void QMLAppObj::onHeadlessBindUpdated(bool success)
 {
-   QMetaObject::invokeMethod(rootObj_, "showError"
-                             , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
-   statusUpdater_->setSocketOk(false);
+   if (!success) {
+      QMetaObject::invokeMethod(rootObj_, "showError"
+         , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
+   }
+
+   statusUpdater_->setSocketOk(success);
 }
 
 void QMLAppObj::onWalletsSynced()
@@ -164,8 +177,6 @@ void QMLAppObj::onWalletsSynced()
 
 void QMLAppObj::settingsConnections()
 {
-   connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
-   connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLAppObj::onListenSocketChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
@@ -212,20 +223,6 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-}
-
-void QMLAppObj::onOfflineChanged()
-{
-   adapter_->setOnline(!settings_->offline());
-}
-
-void QMLAppObj::onListenSocketChanged()
-{
-   if (settings_->offline()) {
-      return;
-   }
-   logger_->info("Restarting listening socket");
-   adapter_->reconnect(settings_->listenAddress(), settings_->port());
 }
 
 void QMLAppObj::onLimitsChanged()
@@ -300,22 +297,6 @@ void QMLAppObj::onPasswordRequested(const bs::core::wallet::TXSignRequest &txReq
    requestPasswordForSigningTx(txReq, prompt);
 }
 
-//void QMLAppObj::onAutoSignPwdRequested(const std::string &walletId)
-//{
-//   bs::core::wallet::TXSignRequest txReq;
-//   QString walletName;
-//   txReq.walletId = walletId;
-//   if (txReq.walletId.empty()) {
-//      const auto wallet = walletsMgr_->getPrimaryWallet();
-//      if (wallet) {
-//         txReq.walletId = wallet->walletId();
-//         walletName = QString::fromStdString(wallet->name());
-//      }
-//   }
-//   requestPassword(txReq, walletName.isEmpty() ? tr("Activate Auto-Signing") :
-//      tr("Activate Auto-Signing for %1").arg(walletName));
-//}
-
 void QMLAppObj::requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &txReq, const QString &prompt, bool alert)
 {
    bs::wallet::TXInfo *txInfo = new bs::wallet::TXInfo(txReq);
@@ -384,9 +365,21 @@ void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantM
    }
 
    if (!isDialogCorrect) {
-      throw(std::logic_error("Unknown signer dialog"));
-      return;
+      throw std::logic_error("Unknown signer dialog");
    }
    QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
                              , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
+}
+
+void QMLAppObj::onTerminalHandshakeFailed(const std::string &peerAddress)
+{
+   // Show error only once (because terminal will try reconnect)
+   if (lastFailedTerminals_.find(peerAddress) != lastFailedTerminals_.end()) {
+      return;
+   }
+
+   lastFailedTerminals_.insert(peerAddress);
+
+   QMetaObject::invokeMethod(rootObj_, "terminalHandshakeFailed"
+      , Q_ARG(QVariant, QString::fromStdString(peerAddress)));
 }

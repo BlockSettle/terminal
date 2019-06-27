@@ -111,6 +111,13 @@ public:
       owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
    }
 
+   void terminalHandshakeFailed(const std::string &peerAddress) override
+   {
+      signer::TerminalHandshakeFailed evt;
+      evt.set_peeraddress(peerAddress);
+      owner_->sendData(signer::TerminalHandshakeFailedType, evt.SerializeAsString());
+   }
+
    SignerAdapterListener *owner_{};
 };
 
@@ -205,9 +212,6 @@ void SignerAdapterListener::processData(const std::string &clientId, const std::
       break;
    case signer::ReloadWalletsType:
       rc = onReloadWallets(packet.data(), packet.id());
-      break;
-   case signer::ReconnectTerminalType:
-      rc = onReconnect(packet.data());
       break;
    case signer::AutoSignActType:
       rc = onAutoSignRequest(packet.data(), packet.id());
@@ -503,12 +507,12 @@ bool SignerAdapterListener::onSetLimits(const std::string &data)
 
 bool SignerAdapterListener::onSyncSettings(const std::string &data)
 {
-   auto request = make_unique<signer::Settings>();
-   if (!request->ParseFromString(data)) {
+   signer::Settings settings;
+   if (!settings.ParseFromString(data)) {
       logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
       return false;
    }
-   app_->updateSettings(request);
+   app_->updateSettings(settings);
    return true;
 }
 
@@ -540,22 +544,6 @@ bool SignerAdapterListener::onReloadWallets(const std::string &data, bs::signer:
    app_->reloadWallets(request.path(), [this, reqId] {
       sendData(signer::ReloadWalletsType, "", reqId);
    });
-   return true;
-}
-
-bool SignerAdapterListener::onReconnect(const std::string &data)
-{
-   signer::ReconnectRequest request;
-   if (!request.ParseFromString(data)) {
-      logger_->error("[SignerAdapterListener::{}] failed to parse request", __func__);
-      return false;
-   }
-   if (request.listen_address().empty() || request.listen_port().empty()) {
-      app_->setOnline(request.online());
-   }
-   else {
-      app_->reconnect(request.listen_address(), request.listen_port());
-   }
    return true;
 }
 

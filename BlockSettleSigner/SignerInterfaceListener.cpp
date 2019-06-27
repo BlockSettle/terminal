@@ -154,6 +154,9 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::UpdateStatusType:
       onUpdateStatus(packet.data());
       break;
+   case signer::TerminalHandshakeFailedType:
+      onTerminalHandshakeFailed(packet.data());
+      break;
    default:
       logger_->warn("[SignerInterfaceListener::{}] unknown response type {}", __func__, packet.type());
       break;
@@ -163,9 +166,7 @@ void SignerInterfaceListener::processData(const std::string &data)
 void SignerInterfaceListener::onReady(const std::string &data)
 {
    logger_->info("received ready signal");
-   QMetaObject::invokeMethod(parent_, [this] { emit parent_->ready(); });
-
-   parent_->getWalletsManager();
+   emit parent_->ready();
 }
 
 void SignerInterfaceListener::onPeerConnected(const std::string &data, bool connected)
@@ -177,10 +178,10 @@ void SignerInterfaceListener::onPeerConnected(const std::string &data, bool conn
    }
    const auto ip = QString::fromStdString(evt.ip_address());
    if (connected) {
-      QMetaObject::invokeMethod(parent_, [this, ip] { emit parent_->peerConnected(ip); });
+      emit parent_->peerConnected(ip);;
    }
    else {
-      QMetaObject::invokeMethod(parent_, [this, ip] { emit parent_->peerDisconnected(ip); });
+      emit parent_->peerDisconnected(ip);;
    }
 }
 
@@ -258,7 +259,7 @@ void SignerInterfaceListener::onTxSigned(const std::string &data, bs::signer::Re
             , __func__, reqId);
       }
    }
-   QMetaObject::invokeMethod(parent_, [this, tx] { emit parent_->txSigned(tx); });
+   emit parent_->txSigned(tx);
 }
 
 void SignerInterfaceListener::onCancelTx(const std::string &data, bs::signer::RequestId)
@@ -281,9 +282,7 @@ void SignerInterfaceListener::onXbtSpent(const std::string &data)
       logger_->error("[SignerInterfaceListener::{}] failed to parse", __func__);
       return;
    }
-   QMetaObject::invokeMethod(parent_, [this, evt] {
-      emit parent_->xbtSpent(evt.value(), evt.auto_sign());
-   });
+   emit parent_->xbtSpent(evt.value(), evt.auto_sign());
 }
 
 void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::signer::RequestId reqId)
@@ -304,10 +303,10 @@ void SignerInterfaceListener::onAutoSignActivated(const std::string &data, bs::s
    bs::error::ErrorCode result = static_cast<bs::error::ErrorCode>(response.errorcode());
    if (result == bs::error::ErrorCode::NoError) {
       if (response.autosignactive()) {
-         QMetaObject::invokeMethod(parent_, [this, response] { emit parent_->autoSignActivated(response.rootwalletid()); });
+         emit parent_->autoSignActivated(response.rootwalletid());
       }
       else {
-         QMetaObject::invokeMethod(parent_, [this, response] { emit parent_->autoSignDeactivated(response.rootwalletid()); });
+         emit parent_->autoSignDeactivated(response.rootwalletid());
       }
    }
 
@@ -479,9 +478,7 @@ void SignerInterfaceListener::onExecCustomDialog(const std::string &data, bs::si
    stream >> variantData;
 
 
-   QMetaObject::invokeMethod(parent_, [this, evt, variantData] {
-      emit parent_->customDialogRequest(QString::fromStdString(evt.dialogname()), variantData);
-   });
+   emit parent_->customDialogRequest(QString::fromStdString(evt.dialogname()), variantData);
 }
 
 void SignerInterfaceListener::onChangePassword(const std::string &data, bs::signer::RequestId reqId)
@@ -562,8 +559,23 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
    }
 
    if (evt.signer_bind_status() == signer::BindFailed) {
-      QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
+      emit parent_->headlessBindUpdated(false);
    }
+
+   if (evt.signer_bind_status() == signer::BindSucceed) {
+      emit parent_->headlessBindUpdated(true);
+   }
+}
+
+void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)
+{
+   signer::TerminalHandshakeFailed evt;
+   if (!evt.ParseFromString(data)) {
+      SPDLOG_LOGGER_ERROR(logger_, "failed to parse");
+      return;
+   }
+
+   emit parent_->terminalHandshakeFailed(evt.peeraddress());
 }
 
 void SignerInterfaceListener::shutdown()

@@ -108,6 +108,7 @@ private:
    void onDeleteHDWallet(const std::string &data, bs::signer::RequestId);
    void onHeadlessPubKey(const std::string &data, bs::signer::RequestId);
    void onUpdateStatus(const std::string &data);
+   void onTerminalHandshakeFailed(const std::string &data);
 
    void shutdown();
 

@@ -121,22 +121,6 @@ void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function
    listener_->setReloadWalletsCb(reqId, cb);
 }
 
-void SignerAdapter::setOnline(bool value)
-{
-   signer::ReconnectRequest request;
-   request.set_online(value);
-   listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
-}
-
-void SignerAdapter::reconnect(const QString &address, const QString &port)
-{
-   signer::ReconnectRequest request;
-   request.set_online(true);
-   request.set_listen_address(address.toStdString());
-   request.set_listen_port(port.toStdString());
-   listener_->send(signer::ReconnectTerminalType, request.SerializeAsString());
-}
-
 void SignerAdapter::setLimits(bs::signer::Limits limits)
 {
    signer::SetLimitsRequest request;
@@ -262,8 +246,8 @@ void SignerAdapter::activateAutoSign(const std::string &walletId
 void SignerAdapter::walletsListUpdated()
 {
    logger_->debug("[{}]", __func__);
-   walletsMgr_->reset();
-   walletsMgr_->syncWallets();
+   getWalletsManager()->reset();
+   getWalletsManager()->syncWallets();
 }
 
 QString SignerAdapter::headlessPubKey() const

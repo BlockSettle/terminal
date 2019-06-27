@@ -47,8 +47,6 @@ public:
    std::shared_ptr<bs::sync::WalletsManager> getWalletsManager();
    void reloadWallets(const QString &, const std::function<void()> &);
 
-   void setOnline(bool);
-   void reconnect(const QString &address, const QString &port);
    void setLimits(bs::signer::Limits);
    void passwordReceived(const std::string &walletId, bs::error::ErrorCode result, const SecureBinaryData &);
 
@@ -99,7 +97,7 @@ public:
 signals:
    void ready() const;
    void connectionError() const;
-   void headlessBindFailed() const;
+   void headlessBindUpdated(bool success) const;
    void peerConnected(const QString &ip);
    void peerDisconnected(const QString &ip);
    void requestPasswordAndSignTx(const bs::core::wallet::TXSignRequest &, const QString &prompt);
@@ -111,6 +109,7 @@ signals:
    void customDialogRequest(const QString &dialogName, const QVariantMap &data);
    void bindFailed() const;
    void headlessPubKeyChanged(const QString &headlessPubKey) const;
+   void terminalHandshakeFailed(const std::string &peerAddress);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

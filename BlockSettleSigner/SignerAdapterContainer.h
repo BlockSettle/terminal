@@ -40,7 +40,16 @@ public:
       , const bs::sync::SettlementInfo &
       , TXSignMode
       , bool
-      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &) override {return 0;}
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &) override {return 0; }
+
+   bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> & ) override { return 0; }
+
+   bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &
+      , const bs::sync::SettlementInfo &
+      , const bs::Address &, const std::string &
+      , const std::function<void(bs::error::ErrorCode , const BinaryData &signedTX)> &)  override { return 0; }
 
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override { return 0; }
 
