@@ -303,22 +303,31 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:{
          if (label_) {
-            if (data->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING) {
-               label_->setText(QObject::tr("Contact request  #%1-%2")
-                               .arg(QString::fromStdString(data->contact_record().contact_id()))
-                               .arg(QLatin1String("OUTGOING"))
-                              );
-            } else if (data->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_INCOMING) {
-               label_->setText(QObject::tr("Contact request  #%1-%2")
-                               .arg(QString::fromStdString(data->contact_record().contact_id()))
-                               .arg(QLatin1String("INCOMING"))
-                              );
-            } else {
-               label_->setText(QObject::tr("Contact request  #%1-%2")
-                               .arg(QString::fromStdString(data->contact_record().contact_id()))
-                               .arg(data->contact_record().status())
-                              );
+            QString labelPattern = QObject::tr("Contact request  #%1%2")
+                                           .arg(QString::fromStdString(data->contact_record().contact_id()));
+            QString stringStatus = QLatin1String("");
+
+            switch (data->contact_record().status()) {
+               case Chat::ContactStatus::CONTACT_STATUS_INCOMING:
+                  stringStatus = QLatin1String("-INCOMING");
+                  break;
+               case Chat::ContactStatus::CONTACT_STATUS_OUTGOING:
+                  stringStatus = QLatin1String("-OUTGOING SEND");
+                  break;
+               case Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING:
+                  stringStatus = QLatin1String("-OUTGOING PENDING");
+                  break;
+               case Chat::ContactStatus::CONTACT_STATUS_REJECTED:
+                  stringStatus = QLatin1String("-REJECTED");
+                  break;
+               default:
+                  stringStatus =
+                        QString::fromStdString(Chat::ContactStatus_Name(data->contact_record().status()))
+                        .prepend (QLatin1Char('-'));
+                  break;
             }
+
+            label_->setText(labelPattern.arg(stringStatus));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
