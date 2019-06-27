@@ -18,14 +18,12 @@ EditContactDialog::EditContactDialog(const QString &contactId
    ui_->setupUi(this);
 
    refillFields();
-
-   connect(ui_->saveButton, &QPushButton::clicked, this, &EditContactDialog::accept);
-   connect(ui_->cancelButton, &QPushButton::clicked, this, &EditContactDialog::reject);
+   connect(ui_->buttonBox, &QDialogButtonBox::accepted, this, &EditContactDialog::accept);
 
    if (displayName_.isEmpty()) {
       ui_->nameOptionalLineEdit->setFocus();
    } else {
-      ui_->saveButton->setFocus();
+      ui_->buttonBox->setFocus();
    }
 }
 
