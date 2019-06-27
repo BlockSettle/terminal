@@ -171,4 +171,8 @@ ApplicationWindow {
     function customDialogRequest(dialogName, data) {
         QmlDialogs.customDialogRequest(dialogName, data)
     }
+
+    function terminalHandshakeFailed(peerAddress) {
+        JsHelper.messageBoxCritical("Authentication failure", "An incoming connection from address " + peerAddress + " has failed to authenticate themselves. Please ensure that you have imported the Terminal ID Key from those Terminals you wish to have access to your wallets.")
+    }
 }

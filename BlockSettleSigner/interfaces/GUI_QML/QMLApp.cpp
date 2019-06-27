@@ -64,6 +64,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
    connect(adapter_, &SignerAdapter::customDialogRequest, this, &QMLAppObj::onCustomDialogRequest);
+   connect(adapter_, &SignerAdapter::terminalHandshakeFailed, this, &QMLAppObj::onTerminalHandshakeFailed);
 
    walletsModel_ = new QmlWalletsViewModel(ctxt_->engine());
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
@@ -116,6 +117,16 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    if (adapter) {
       settingsConnections();
    }
+
+   connect(params.get(), &SignerSettings::trustedTerminalsChanged, this, [this] {
+      // Show error one more time if needed
+      lastFailedTerminals_.clear();
+   });
+
+   connect(params.get(), &SignerSettings::offlineChanged, this, [this] {
+      // Show error one more time if needed
+      lastFailedTerminals_.clear();
+   });
 }
 
 void QMLAppObj::onReady()
@@ -361,9 +372,21 @@ void QMLAppObj::onCustomDialogRequest(const QString &dialogName, const QVariantM
    }
 
    if (!isDialogCorrect) {
-      throw(std::logic_error("Unknown signer dialog"));
-      return;
+      throw std::logic_error("Unknown signer dialog");
    }
    QMetaObject::invokeMethod(rootObj_, "customDialogRequest"
                              , Q_ARG(QVariant, dialogName), Q_ARG(QVariant, data));
+}
+
+void QMLAppObj::onTerminalHandshakeFailed(const std::string &peerAddress)
+{
+   // Show error only once (because terminal will try reconnect)
+   if (lastFailedTerminals_.find(peerAddress) != lastFailedTerminals_.end()) {
+      return;
+   }
+
+   lastFailedTerminals_.insert(peerAddress);
+
+   QMetaObject::invokeMethod(rootObj_, "terminalHandshakeFailed"
+      , Q_ARG(QVariant, QString::fromStdString(peerAddress)));
 }

@@ -98,6 +98,7 @@ signals:
    void autoSignDeactivated(const std::string &walletId);
    void customDialogRequest(const QString &dialogName, const QVariantMap &data);
    void bindFailed() const;
+   void terminalHandshakeFailed(const std::string &peerAddress);
 
 private:
    std::shared_ptr<spdlog::logger>  logger_;

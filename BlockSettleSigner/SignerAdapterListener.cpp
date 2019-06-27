@@ -99,6 +99,13 @@ public:
       owner_->sendData(signer::ExecCustomDialogRequestType, evt.SerializeAsString());
    }
 
+   void terminalHandshakeFailed(const std::string &peerAddress) override
+   {
+      signer::TerminalHandshakeFailed evt;
+      evt.set_peeraddress(peerAddress);
+      owner_->sendData(signer::TerminalHandshakeFailedType, evt.SerializeAsString());
+   }
+
    SignerAdapterListener *owner_{};
 };
 

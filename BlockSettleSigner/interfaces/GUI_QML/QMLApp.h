@@ -73,6 +73,7 @@ private slots:
    void onSysTrayActivated(QSystemTrayIcon::ActivationReason reason);
    void onCancelSignTx(const BinaryData &txId);
    void onCustomDialogRequest(const QString &dialogName, const QVariantMap &data);
+   void onTerminalHandshakeFailed(const std::string &peerAddress);
 
 private:
    void settingsConnections();
@@ -107,6 +108,8 @@ private:
 #endif // BS_USE_DBUS
 
    std::unordered_set<std::string>  offlinePasswordRequests_;
+
+   std::unordered_set<std::string> lastFailedTerminals_;
 };
 
 #endif // __QML_APP_H__
