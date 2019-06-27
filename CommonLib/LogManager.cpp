@@ -6,12 +6,40 @@
 
 using namespace bs;
 
-static const std::string catDefault = "_default_";
-static const std::string tearline = "--------------------------------------------------------------";
+namespace {
+   const std::string catDefault = "_default_";
+   const std::string tearline = "--------------------------------------------------------------";
+
+   const std::string DefaultFormatEnv = "BS_LOG_FORMAT";
+   const std::string DefaultFormat = "%C/%m/%d %H:%M:%S.%e [%L](%t)%n: %v";
+
+} // namespace
+
+
+LogConfig::LogConfig()
+   : pattern(LogManager::detectFormatOverride(DefaultFormat))
+   , level(LogLevel::debug)
+   , truncate(false)
+{
+}
+
+LogConfig::LogConfig(const std::string &fn, const std::string &ptn, const std::string &cat, const LogLevel lvl, bool trunc)
+   : fileName(fn)
+   , pattern(ptn)
+   , category(cat)
+   , level(lvl)
+   , truncate(trunc)
+{
+}
 
 LogManager::LogManager(const OnErrorCallback &cb)
    : cb_(cb)
-{}
+{
+   std::string override = detectFormatOverride();
+   if (!override.empty()) {
+      spdlog::set_pattern(detectFormatOverride(DefaultFormat));
+   }
+}
 
 bool LogManager::add(const std::shared_ptr<spdlog::logger> &logger, const std::string &category)
 {
@@ -67,9 +95,10 @@ static spdlog::level::level_enum convertLevel(LogLevel level)
    case LogLevel::warn:    return spdlog::level::warn;
    case LogLevel::err:     return spdlog::level::err;
    case LogLevel::crit:    return spdlog::level::critical;
-   case LogLevel::off:
-   default:                return spdlog::level::off;
+   case LogLevel::off:     return spdlog::level::off;
    }
+
+   return spdlog::level::off;
 }
 
 std::shared_ptr<spdlog::logger> LogManager::create(const LogConfig &config)
@@ -94,7 +123,7 @@ std::shared_ptr<spdlog::logger> LogManager::create(const LogConfig &config)
       return nullptr;
    }
    if (!config.pattern.empty()) {
-      result->set_pattern(config.pattern);
+      result->set_pattern(detectFormatOverride(config.pattern));
       patterns_[config.category.empty() ? catDefault : config.category] = config.pattern;
    }
    const auto level = convertLevel(config.level);
@@ -154,7 +183,7 @@ std::shared_ptr<spdlog::logger> LogManager::copy(const std::shared_ptr<spdlog::l
 
    const auto &itPattern = patterns_.find(srcCat);
    if ((itPattern != patterns_.end()) && !itPattern->second.empty()) {
-      result->set_pattern(itPattern->second);
+      result->set_pattern(detectFormatOverride(itPattern->second));
       patterns_[category.empty() ? catDefault : category] = itPattern->second;
    }
 
@@ -184,4 +213,11 @@ std::shared_ptr<spdlog::logger> LogManager::logger(const std::string &category)
       stdoutLogger_ = spdlog::stdout_logger_mt("stdout");
    }
    return stdoutLogger_;
+}
+
+// static
+std::string LogManager::detectFormatOverride(const std::string &defaultValue)
+{
+   const char *override = std::getenv(DefaultFormatEnv.c_str());
+   return override ? override : defaultValue;
 }
