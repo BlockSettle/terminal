@@ -34,6 +34,7 @@ private:
    void notifyCurrentChanged(CategoryElement *element);
    void notifyMessageChanged(std::shared_ptr<Chat::Data> message);
    void notifyElementUpdated(CategoryElement *element);
+   void notifyCurrentAboutToBeRemoved();
    void editContact(std::shared_ptr<Chat::Data> crecord);
 private:
    friend ChatUsersContextMenu;
@@ -46,20 +47,8 @@ private:
    // QAbstractItemView interface
 protected slots:
    void currentChanged(const QModelIndex &current, const QModelIndex &previous) override;
-
-   // QAbstractItemView interface
-protected slots:
    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles) override;
-
-   // QAbstractItemView interface
-protected slots:
    void rowsInserted(const QModelIndex &parent, int start, int end) override;
+   void rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end) override;
 };
-
-
-
-
-
-
-
 #endif // CHATCLIENTUSERVIEW_H

@@ -15,6 +15,7 @@ public:
    virtual void onElementSelected(CategoryElement* element) = 0;
    virtual void onElementUpdated(CategoryElement* element) = 0;
    virtual void onMessageChanged(std::shared_ptr<Chat::Data> message) = 0;
+   virtual void onCurrentElementAboutToBeRemoved() = 0;
    virtual ~ViewItemWatcher() = default;
 };
 

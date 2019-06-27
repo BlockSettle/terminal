@@ -370,6 +370,13 @@ void ChatClientUserView::notifyElementUpdated(CategoryElement *element)
    }
 }
 
+void ChatClientUserView::notifyCurrentAboutToBeRemoved()
+{
+   for (auto watcher : watchers_) {
+      watcher->onCurrentElementAboutToBeRemoved();
+   }
+}
+
 void ChatClientUserView::setHandler(ChatItemActionsHandler * handler)
 {
    handler_ = handler;
@@ -417,6 +424,7 @@ void ChatClientUserView::dataChanged(const QModelIndex &topLeft, const QModelInd
          case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:
          {
             auto node = static_cast<CategoryElement*>(item);
+            updateDependUI(node);
             notifyElementUpdated(node);
             break;
          }
@@ -439,4 +447,22 @@ void ChatClientUserView::rowsInserted(const QModelIndex &parent, int start, int 
    // }
 
    QTreeView::rowsInserted(parent, start, end);
+}
+
+void ChatClientUserView::rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
+{
+   bool callDefaultSelection = false;
+
+   for (int i = start; i <= end; i++) {
+      if (model()->index(i, 0, parent) == currentIndex()) {
+         callDefaultSelection = true;
+         break;
+      }
+   }
+
+   //I'm using callDefaultSelection flag in case if
+   //default element that will be selected will be in start to end range
+   if (callDefaultSelection && handler_) {
+      notifyCurrentAboutToBeRemoved();
+   }
 }

@@ -108,6 +108,7 @@ public:
       chat_->ui_->labelUserName->setText(QLatin1String("offline"));
 
       chat_->SetLoggedOutOTCState();
+      chat_->ui_->frameContactActions->setVisible(false);
 
       NotificationCenter::notify(bs::ui::NotifyType::LogOut, {});
    }
@@ -154,6 +155,7 @@ public:
 
    void onStateExit() override {
       chat_->onUserClicked({});
+      chat_->ui_->frameContactActions->setVisible(false);
    }
 
    std::string login(const std::string& /*email*/, const std::string& /*jwt*/
@@ -175,7 +177,7 @@ public:
 
       if (!messageText.empty() && !chat_->currentChat_.empty()) {
          if (chat_->isContactRequest()) {
-            chat_->client_->sendFriendRequest(chat_->currentChat_, messageText);
+            chat_->onContactRequestAcceptSendClicked();
          } else if (!chat_->isRoom()) {
             auto msg = chat_->client_->sendOwnMessage(messageText, chat_->currentChat_);
          } else {
@@ -604,13 +606,14 @@ bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
 
 void ChatWidget::onSendFriendRequest(const QString &userId)
 {
-   client_->sendFriendRequest(userId.toStdString());
+   //client_->sendFriendRequest(userId.toStdString());
+   onActionCreatePendingOutgoing (userId.toStdString());
    ui_->searchWidget->setListVisible(false);
 }
 
 void ChatWidget::onRemoveFriendRequest(const QString &userId)
 {
-   client_->removeContactFromDB(userId.toStdString());
+   client_->removeFriendOrRequest(userId.toStdString());
    ui_->searchWidget->setListVisible(false);
 }
 
@@ -752,13 +755,14 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
                ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);
 
                //Hide buttons if this current chat, but thme shouldn't be visible
+               bool isButtonsVisible = false;
                if (currentChat_ == contact->contact_record().contact_id()) {
-                  bool isButtonsVisible =
+                  isButtonsVisible =
                   (cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING_PENDING)
                   || (cElement->getContactData()->status() == Chat::ContactStatus::CONTACT_STATUS_INCOMING);
 
-                  ui_->frameContactActions->setVisible(isButtonsVisible);
                }
+               ui_->frameContactActions->setVisible(isButtonsVisible);
             }
          }
          break;
@@ -1154,7 +1158,7 @@ void ChatWidget::onContactRequestAcceptSendClicked()
 {
    std::string messageText = ui_->input_textEdit->toPlainText().toStdString();
    ui_->input_textEdit->clear();
-   client_->onContactRequestPositiveAction(currentChat_,messageText);
+   client_->onContactRequestPositiveAction(currentChat_, messageText);
 }
 
 void ChatWidget::onContactRequestRejectCancelClicked()
@@ -1207,4 +1211,12 @@ void ChatWidget::showOldMessagesNotification()
       oldMessages_.clear();
       NotificationCenter::notify(bs::ui::NotifyType::UpdateUnreadMessage, notifyMsg);
    }
+}
+
+void ChatWidget::onCurrentElementAboutToBeRemoved()
+{
+   // To make selectGlobalRoom(); workable
+   currentChat_.clear();
+
+   selectGlobalRoom();
 }

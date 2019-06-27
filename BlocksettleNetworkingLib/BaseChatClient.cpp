@@ -224,6 +224,12 @@ bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, 
 
       message->set_direction(Chat::Data_Direction_SENT);
 
+      if (!isFromPendings) {
+         onCreateOutgoingContact(friendUserId);
+         encryptByIESAndSaveMessageInDb(message);
+         onCRMessageReceived(message);
+      }
+
       const auto &contactPublicKeyIterator = contactPublicKeys_.find(friendUserId);
       if (contactPublicKeyIterator == contactPublicKeys_.end()) {
          // Ask for public key from peer. Enqueue the message to be sent, once we receive the
@@ -246,13 +252,7 @@ bool BaseChatClient::sendFriendRequestToServer(const std::string &friendUserId, 
       d->set_action(Chat::CONTACTS_ACTION_REQUEST);
       d->set_sender_pub_key(getOwnAuthPublicKey().toBinStr());
       *d->mutable_message() = std::move(*msgEncrypted);
-      if (sendRequest(request) && !isFromPendings) {
-         onCreateOutgoingContact(friendUserId);
-         encryptByIESAndSaveMessageInDb(message);
-         onCRMessageReceived(message);
-         return true;
-      }
-      return false;
+      return sendRequest(request);
    }
 
    Chat::Request request;

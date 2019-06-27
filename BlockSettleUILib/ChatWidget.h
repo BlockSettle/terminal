@@ -179,6 +179,7 @@ public:
    void onElementSelected(CategoryElement *element) override;
    void onMessageChanged(std::shared_ptr<Chat::Data> message) override;
    void onElementUpdated(CategoryElement *element) override;
+   void onCurrentElementAboutToBeRemoved() override;
 
    // NewMessageMonitor interface
 public:

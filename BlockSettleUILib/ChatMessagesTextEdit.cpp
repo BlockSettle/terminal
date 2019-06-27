@@ -695,3 +695,12 @@ void ChatMessagesTextEdit::onElementUpdated(CategoryElement *element)
       onMessagesUpdate(displayData, true);
    }
 }
+
+void ChatMessagesTextEdit::onCurrentElementAboutToBeRemoved()
+{
+   messages_.clear();
+   messagesToLoadMore_.clear();
+
+   clear();
+   table_ = nullptr;
+}

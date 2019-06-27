@@ -247,7 +247,7 @@ bool ChatClientDataModel::removeContactNode(const std::string &contactId)
    return res;
 }
 
-bool ChatClientDataModel::removeContactRequestNode(const std::string &contactId)
+bool ChatClientDataModel::removeContactRequestNode(const std::string contactId)
 {
    TreeItem * item = root_->findCategoryNodeWith(ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement);
 
@@ -273,6 +273,8 @@ bool ChatClientDataModel::removeContactRequestNode(const std::string &contactId)
    //We removing only one item, so should be first==last
    const int last = first;
 
+   //std::string contactId copy required because of call beginRemoveRows
+   //will initiate switching to another item, and currentChatValue will be changed
    beginRemoveRows(index, first, last);
    bool res = root_->removeContactRequestNode(contactId);
    endRemoveRows();

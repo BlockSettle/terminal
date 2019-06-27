@@ -45,7 +45,10 @@ public:
    TreeItem* findChatNode(const std::string& chatId);
    std::vector<std::shared_ptr<Chat::Data>> getAllContacts();
    bool removeContactNode(const std::string& contactId);
-   bool removeContactRequestNode(const std::string& contactId);
+
+   //std::string contactId copy required here
+   bool removeContactRequestNode(const std::string contactId);
+
    std::shared_ptr<Chat::Data> findContactItem(const std::string& contactId);
    ChatContactElement *findContactNode(const std::string& contactId);
    std::shared_ptr<Chat::Data> findMessageItem(const std::string& chatId, const std::string& messgeId);
