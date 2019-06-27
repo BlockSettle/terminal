@@ -827,7 +827,6 @@ void BSTerminalMainWindow::raiseWindow()
    auto currentProcessId = ::GetCurrentProcessId();
    auto currentThreadId = ::GetCurrentThreadId();
    auto windowThreadId = ::GetWindowThreadProcessId(hwnd, nullptr);
-   qDebug() << "same thread:" << (currentThreadId == windowThreadId);
    if (currentThreadId != windowThreadId) {
       ::AttachThreadInput(windowThreadId, currentThreadId, TRUE);
    }
