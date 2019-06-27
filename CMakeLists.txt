@@ -15,6 +15,7 @@ endif()
 option(BSTERMINAL_SHARED_LIBS "Build shared libraries" OFF)
 
 add_definitions(-DSTATIC_BUILD)
+add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
    IF(BSTERMINAL_SHARED_LIBS)
@@ -72,7 +73,7 @@ set(QML2_IMPORT_PATH "${BLOCK_SETTLE_ROOT}/BlockSettleSigner/qml" CACHE STRING "
 # Terminal, PB, PuB and offline tools share same version for consistency
 SET(BS_VERSION_MAJOR 0 )
 SET(BS_VERSION_MINOR 17 )
-SET(BS_VERSION_PATCH 2 )
+SET(BS_VERSION_PATCH 3 )
 SET(BS_VERSION_STRING "${BS_VERSION_MAJOR}.${BS_VERSION_MINOR}.${BS_VERSION_PATCH}")
 
 include(GetGitRevisionDescription)
