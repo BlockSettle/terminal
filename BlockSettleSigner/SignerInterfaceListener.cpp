@@ -534,7 +534,7 @@ void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)
    if (!evt.ParseFromString(data)) {
       SPDLOG_LOGGER_ERROR(logger_, "failed to parse");
       return;
-
+   }
 
    emit parent_->terminalHandshakeFailed(evt.peeraddress());
 }

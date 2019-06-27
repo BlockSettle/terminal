@@ -122,6 +122,11 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
       // Show error one more time if needed
       lastFailedTerminals_.clear();
    });
+
+   connect(params.get(), &SignerSettings::offlineChanged, this, [this] {
+      // Show error one more time if needed
+      lastFailedTerminals_.clear();
+   });
 }
 
 void QMLAppObj::onReady()
