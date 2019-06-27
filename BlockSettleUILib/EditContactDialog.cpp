@@ -1,8 +1,6 @@
 #include "EditContactDialog.h"
 #include "ui_EditContactDialog.h"
 
-const QString kDateTimeStringFormat = QStringLiteral("yyyy-MM-dd HH:mm:ss UTC");
-
 EditContactDialog::EditContactDialog(const QString &contactId
                                      , const QString &displayName
                                      , const QDateTime &timestamp
@@ -39,7 +37,7 @@ QString EditContactDialog::displayName() const
    return displayName_;
 }
 
-QDateTime EditContactDialog::joinDate() const
+QDateTime EditContactDialog::timestamp() const
 {
    return timestamp_;
 }
@@ -52,11 +50,6 @@ QString EditContactDialog::idKey() const
 void EditContactDialog::accept()
 {
    displayName_ = ui_->nameOptionalLineEdit->text();
-   contactId_ = ui_->userIDLineEdit->text();
-   if (!ui_->contactDateLineEdit->text().isEmpty()) {
-      timestamp_ = QDateTime::fromString(ui_->contactDateLineEdit->text(), kDateTimeStringFormat);
-   }
-   idKey_ = ui_->iDKeyLineEdit->text();
    QDialog::accept();
 }
 
@@ -80,7 +73,7 @@ void EditContactDialog::refillFields()
    ui_->nameOptionalLineEdit->setText(displayName_);
    ui_->userIDLineEdit->setText(contactId_);
    if (timestamp_.isValid()) {
-      ui_->contactDateLineEdit->setText(timestamp_.toString(kDateTimeStringFormat));
+      ui_->contactDateLineEdit->setText(timestamp_.toString(Qt::SystemLocaleShortDate));
    }
    ui_->iDKeyLineEdit->setText(idKey_);
 }

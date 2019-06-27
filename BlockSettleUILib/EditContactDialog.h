@@ -25,7 +25,7 @@ public:
 
    QString contactId() const;
    QString displayName() const;
-   QDateTime joinDate() const;
+   QDateTime timestamp() const;
    QString idKey() const;
 
 public slots:
