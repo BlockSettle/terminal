@@ -513,7 +513,7 @@ void ChatClient::onUserListChanged(Chat::Command command, const std::vector<std:
 void ChatClient::onMessageSent(const std::string& receiverId, const std::string& localId, const std::string& serverId)
 {
    auto message = model_->findMessageItem(receiverId, localId);
-   if (message){
+   if (message) {
       message->mutable_message()->set_id(serverId);
       ChatUtils::messageFlagSet(message->mutable_message(), Chat::Data_Message_State_SENT);
       model_->notifyMessageChanged(message);

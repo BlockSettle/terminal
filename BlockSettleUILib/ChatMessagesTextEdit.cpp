@@ -95,7 +95,7 @@ QString ChatMessagesTextEdit::dataMessage(int row, const ChatMessagesTextEdit::C
          return QString::fromStdString(message.sender_id());
       }
       case Column::Status:{
-         if (message.sender_id() != ownUserId_){
+         if (message.sender_id() != ownUserId_) {
             if (!ChatUtils::messageFlagRead(message, Chat::Data_Message_State_READ)) {
                emit MessageRead(data);
             }
@@ -147,7 +147,7 @@ QImage ChatMessagesTextEdit::statusImage(int row)
 
 
    std::shared_ptr<Chat::Data> message = messages_[currentChatId_][row];
-   if (message->message().sender_id() != ownUserId_){
+   if (message->message().sender_id() != ownUserId_) {
       return QImage();
    }
 
@@ -461,7 +461,7 @@ void ChatMessagesTextEdit::onMessageStatusChanged(const std::string& messageId, 
 {
    std::shared_ptr<Chat::Data> message = findMessage(chatId, messageId);
 
-   if (message){
+   if (message) {
       message->mutable_message()->set_state(newStatus);
       notifyMessageChanged(message);
    }
@@ -471,7 +471,7 @@ std::shared_ptr<Chat::Data> ChatMessagesTextEdit::findMessage(const std::string&
 {
    std::shared_ptr<Chat::Data> found = nullptr;
    if (messages_.contains(chatId)) {
-      auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [messageId](std::shared_ptr<Chat::Data> data){
+      auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [messageId](std::shared_ptr<Chat::Data> data) {
          return data->has_message() && data->message().id() == messageId;
       });
 
@@ -490,7 +490,7 @@ void ChatMessagesTextEdit::notifyMessageChanged(std::shared_ptr<Chat::Data> mess
 
    if (messages_.contains(chatId)) {
       const std::string &id = message->message().id();
-      auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [id](std::shared_ptr<Chat::Data> data){
+      auto it = std::find_if(messages_[chatId].begin(), messages_[chatId].end(), [id](std::shared_ptr<Chat::Data> data) {
          return data->has_message() && data->message().id() == id;
       });
 
@@ -532,7 +532,7 @@ void ChatMessagesTextEdit::onMessagesUpdate(const std::vector<std::shared_ptr<Ch
    }
    if (isChatTab_ && QApplication::activeWindow()) {
       for (const auto& data : messages) {
-         if (data->has_message()){
+         if (data->has_message()) {
             if (messageReadHandler_
                 && !ChatUtils::messageFlagRead(data->message(), Chat::Data_Message_State_READ))
             {
@@ -550,7 +550,7 @@ void ChatMessagesTextEdit::onRoomMessagesUpdate(const std::vector<std::shared_pt
    }
    if (isChatTab_ && QApplication::activeWindow()) {
       for (const auto& data : messages) {
-         if (data->has_message()){
+         if (data->has_message()) {
             if (messageReadHandler_
                 && !(ChatUtils::messageFlagRead(data->message(), Chat::Data_Message_State_READ)))
             {
@@ -616,16 +616,16 @@ QString ChatMessagesTextEdit::toHtmlText(const QString &text)
 
 void ChatMessagesTextEdit::onElementSelected(CategoryElement *element)
 {
-   if (!element || !element->getDataObject()){
+   if (!element || !element->getDataObject()) {
       return;
    }
 
    std::vector<std::shared_ptr<Chat::Data>> displayData;
    bool messageOnly = true;
-   for (auto msg_item : element->getChildren()){
+   for (auto msg_item : element->getChildren()) {
       auto item = dynamic_cast<DisplayableDataNode*>(msg_item);
       if (item) {
-         if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode){
+         if (item->getType() == ChatUIDefinitions::ChatTreeNodeType::MessageDataNode) {
             auto data = item->getDataObject();
             if (data->has_message()) {
                displayData.push_back(data);
@@ -667,7 +667,7 @@ void ChatMessagesTextEdit::onElementUpdated(CategoryElement *element)
    //TODO: Important! optimize messages reload
    auto data = element->getDataObject();
 
-   if (!data){
+   if (!data) {
       return;
    }
 
@@ -675,7 +675,7 @@ void ChatMessagesTextEdit::onElementUpdated(CategoryElement *element)
       messages_.clear();
       clear();
       std::vector<std::shared_ptr<Chat::Data>> displayData;
-      for (auto msg_item : element->getChildren()){
+      for (auto msg_item : element->getChildren()) {
          auto item = dynamic_cast<DisplayableDataNode*>(msg_item);
          auto msg = item->getDataObject();
          displayData.push_back(msg);
@@ -687,7 +687,7 @@ void ChatMessagesTextEdit::onElementUpdated(CategoryElement *element)
       messages_.clear();
       clear();
       std::vector<std::shared_ptr<Chat::Data>> displayData;
-      for (auto msg_item : element->getChildren()){
+      for (auto msg_item : element->getChildren()) {
          auto item = dynamic_cast<DisplayableDataNode*>(msg_item);
          auto msg = item->getDataObject();
          displayData.push_back(msg);

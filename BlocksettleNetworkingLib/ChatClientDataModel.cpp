@@ -122,7 +122,7 @@ bool ChatClientDataModel::insertSearchUserList(std::vector<std::shared_ptr<Chat:
    const int last = first + static_cast<int>(userList.size()) - 1;
 
    beginInsertRows(index, first, last);
-   for (auto user : userList){
+   for (auto user : userList) {
       root_->insertSearchUserObject(user);
    }
    endInsertRows();
@@ -142,7 +142,7 @@ bool ChatClientDataModel::insertDisplayableDataNode(DisplayableDataNode *display
    //And make first and last indices calculation for beginInsertRows
    TreeItem * target = root_->resolveMessageTargetNode(displayableNode);
 
-   if (!target){
+   if (!target) {
       return false;
    }
 
@@ -168,7 +168,7 @@ bool ChatClientDataModel::insertRoomMessage(std::shared_ptr<Chat::Data> message)
 
    bool res = insertMessageNode(item);
 
-   if (!res){
+   if (!res) {
       delete  item;
    }
 
@@ -183,7 +183,7 @@ bool ChatClientDataModel::insertContactsMessage(std::shared_ptr<Chat::Data> mess
 
    bool res = insertMessageNode(item);
 
-   if (!res){
+   if (!res) {
       delete  item;
    }
 
@@ -231,7 +231,7 @@ bool ChatClientDataModel::removeContactNode(const std::string &contactId)
    //Trying to find contact node that contains ContactRecordData with contactId
    ChatContactElement * contactNode = root_->findContactNode(contactId);
 
-   if (!contactNode){
+   if (!contactNode) {
       //If not found, then nothing to remove, and returning false
       return false;
    }
@@ -263,7 +263,7 @@ bool ChatClientDataModel::removeContactRequestNode(const std::string &contactId)
    //Trying to find contact node that contains ContactRecordData with contactId
    ChatContactElement * contactNode = root_->findContactNode(contactId);
 
-   if (!contactNode){
+   if (!contactNode) {
       //If not found, then nothing to remove, and returning false
       return false;
    }
@@ -323,13 +323,13 @@ void ChatClientDataModel::setNewMessageMonitor(NewMessageMonitor *monitor)
 
 QModelIndex ChatClientDataModel::index(int row, int column, const QModelIndex &parent) const
 {
-   if (!hasIndex(row, column, parent)){
+   if (!hasIndex(row, column, parent)) {
       return QModelIndex();
    }
 
    TreeItem* parentItem;
 
-   if (!parent.isValid()){
+   if (!parent.isValid()) {
       parentItem = root_.get();
    } else {
       parentItem = static_cast<TreeItem*>(parent.internalPointer());
@@ -338,7 +338,7 @@ QModelIndex ChatClientDataModel::index(int row, int column, const QModelIndex &p
 
    TreeItem * childItem = parentItem->getChildren().at(row);
 
-   if (childItem){
+   if (childItem) {
       return createIndex(row, column, childItem);
    }
 
@@ -547,13 +547,13 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
 
    switch (item->getType()) {
       case ChatUIDefinitions::ChatTreeNodeType::CategoryGroupNode:
-         if (current_flags.testFlag(Qt::ItemIsSelectable)){
+         if (current_flags.testFlag(Qt::ItemIsSelectable)) {
             current_flags.setFlag(Qt::ItemIsSelectable, false);
          }
          break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:
          //Only contact record could be edited
-         /*if (!current_flags.testFlag(Qt::ItemIsEditable)){
+         /*if (!current_flags.testFlag(Qt::ItemIsEditable)) {
             current_flags.setFlag(Qt::ItemIsEditable);
          }*/
          //no break needed
@@ -561,7 +561,7 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:
       case ChatUIDefinitions::ChatTreeNodeType::SearchElement:
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:
-         if (!current_flags.testFlag(Qt::ItemIsEnabled)){
+         if (!current_flags.testFlag(Qt::ItemIsEnabled)) {
             current_flags.setFlag(Qt::ItemIsEnabled);
          }
 

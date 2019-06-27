@@ -655,7 +655,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
             //TODO: Change cast
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record()) {
@@ -667,7 +667,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record()) {
                setIsRoom(false);
@@ -691,7 +691,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
          }
          break;
          // XXXOTC
-         // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
+         // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement: {
          //    ui_->stackedWidgetMessages->setCurrentIndex(0);
          //    auto response = element->getDataObject();
          //    if (response) {
@@ -700,7 +700,7 @@ void ChatWidget::onElementSelected(CategoryElement *element)
          //    }
          // }
          // break;
-         // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:{
+         // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement: {
          //    ui_->stackedWidgetMessages->setCurrentIndex(0);
          //    auto response = element->getDataObject();
          //    if (response) {
@@ -736,7 +736,7 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsElement: {
             //TODO: Change cast
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record() && currentChat_ == contact->contact_record().contact_id()) {
@@ -746,7 +746,7 @@ void ChatWidget::onElementUpdated(CategoryElement *element)
             }
          }
          break;
-         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:{
+         case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement: {
             auto contact = element->getDataObject();
             if (contact && contact->has_contact_record()) {
                ChatContactElement * cElement = dynamic_cast<ChatContactElement*>(element);

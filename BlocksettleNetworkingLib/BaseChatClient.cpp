@@ -567,12 +567,12 @@ void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Ch
 
          switch (updateInfo.second) {
             case Update:
-               if (!chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp)){
+               if (!chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp)) {
                   chatDb_->addKey(userId, publicKey, publicKeyTimestamp);
                }
                break;
             case Add:
-               if (!chatDb_->addKey(userId, publicKey, publicKeyTimestamp)){
+               if (!chatDb_->addKey(userId, publicKey, publicKeyTimestamp)) {
                   chatDb_->updateContactKey(userId, publicKey, publicKeyTimestamp);
                }
                break;
@@ -890,7 +890,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
          }
          break;
       }
-      case Chat::Data_Message_Encryption_IES:{
+      case Chat::Data_Message_Encryption_IES: {
          auto msgEncrypted = encryptMessageToSendIES(contactPublicKeyIterator->second, messageData);
          if (msgEncrypted) {
             Chat::Request request;
@@ -902,7 +902,7 @@ std::shared_ptr<Chat::Data> BaseChatClient::sendMessageDataRequest(const std::sh
          }
          break;
       }
-      default:{
+      default: {
          Chat::Request request;
          auto d = request.mutable_send_message();
          *d->mutable_message() = *messageData;

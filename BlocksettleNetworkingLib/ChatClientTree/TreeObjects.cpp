@@ -23,7 +23,7 @@ bool ChatRoomElement::isChildSupported(const TreeItem *item) const
          auto room = getDataObject();
          if (room && room->has_room()) {
             auto mNode = dynamic_cast<const TreeMessageNode*>(item);
-            if (mNode){
+            if (mNode) {
 //             bool forCurrentUser = (mNode->getMessage()->getSenderId().toStdString() == user
 //                             || mNode->getMessage()->getReceiverId().toStdString() == user);
                bool forThisElement =    /*mNode->getMessage()->getSenderId() == room->getId()

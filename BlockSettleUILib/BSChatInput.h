@@ -4,7 +4,7 @@
 #include <QTextEdit>
 
 class BSChatInput : public QTextEdit {
-	Q_OBJECT
+   Q_OBJECT
 public:
    BSChatInput(QWidget *parent = nullptr);
    BSChatInput(const QString &text, QWidget *parent = nullptr);

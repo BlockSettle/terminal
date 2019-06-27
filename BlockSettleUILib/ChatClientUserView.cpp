@@ -61,7 +61,7 @@ private slots:
    void onAddToContacts(bool)
    {
       qDebug() << __func__;
-      if (!handler_){
+      if (!handler_) {
          return;
       }
       //handler_->onActionAddToContacts(currentContact_);
@@ -70,7 +70,7 @@ private slots:
    void onRemoveFromContacts(bool)
    {
       qDebug() << __func__;
-      if (!handler_){
+      if (!handler_) {
          return;
       }
 
@@ -92,7 +92,7 @@ private slots:
 
    void onAcceptFriendRequest(bool)
    {
-      if (!handler_){
+      if (!handler_) {
          return;
       }
       handler_->onActionAcceptContactRequest(currentContact_);
@@ -100,7 +100,7 @@ private slots:
 
    void onDeclineFriendRequest(bool)
    {
-      if (!handler_){
+      if (!handler_) {
          return;
       }
       handler_->onActionRejectContactRequest(currentContact_);
@@ -112,7 +112,7 @@ private slots:
 
    void prepareContactMenu()
    {
-      if (!currentContact_){
+      if (!currentContact_) {
          return;
       }
 
@@ -250,11 +250,11 @@ void ChatClientUserView::editContact(std::shared_ptr<Chat::Data> crecord)
 void ChatClientUserView::onCustomContextMenu(const QPoint & point)
 {
    if (!contextMenu_) {
-      if (handler_){
+      if (handler_) {
          contextMenu_ = new ChatUsersContextMenu(handler_, this);
       }
    }
-   if (contextMenu_){
+   if (contextMenu_) {
       contextMenu_->execMenu(point);
    }
 }
@@ -292,17 +292,17 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
    auto data = static_cast<CategoryElement*>(element)->getDataObject();
    switch (element->getType()) {
       case ChatUIDefinitions::ChatTreeNodeType::RoomsElement:{
-         if (label_){
+         if (label_) {
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->room().id()));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsElement:{
-         if (label_){
+         if (label_) {
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->contact_record().contact_id()));
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement:{
-         if (label_){
+         if (label_) {
             if (data->contact_record().status() == Chat::ContactStatus::CONTACT_STATUS_OUTGOING) {
                label_->setText(QObject::tr("Contact request  #%1-%2")
                                .arg(QString::fromStdString(data->contact_record().contact_id()))
@@ -322,14 +322,14 @@ void ChatClientUserView::updateDependUI(CategoryElement *element)
          }
       } break;
       case ChatUIDefinitions::ChatTreeNodeType::AllUsersElement:{
-         if (label_){
+         if (label_) {
             label_->setText(QObject::tr("CHAT #") + QString::fromStdString(data->user().user_id()));
          }
       } break;
       //XXXOTC
       // case ChatUIDefinitions::ChatTreeNodeType::OTCReceivedResponsesElement:
       // case ChatUIDefinitions::ChatTreeNodeType::OTCSentResponsesElement:{
-      //    if (label_){
+      //    if (label_) {
       //       label_->setText(QObject::tr("Trading with ..."));
       //    }
       // } break;

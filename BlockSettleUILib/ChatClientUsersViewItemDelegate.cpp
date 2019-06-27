@@ -92,7 +92,7 @@ void ChatClientUsersViewItemDelegate::paintContactsElement(QPainter *painter, co
 {
    QStyleOptionViewItem itemOption(option);
    if (index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsElement
-       && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement){
+       && index.data(Role::ItemTypeRole).value<ChatUIDefinitions::ChatTreeNodeType>() != ChatUIDefinitions::ChatTreeNodeType::ContactsRequestElement) {
       itemOption.text = QLatin1String("<unknown>");
       return QStyledItemDelegate::paint(painter, itemOption, index);
    }
