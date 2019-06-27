@@ -365,6 +365,13 @@ void ZmqServerConnection::notifyListenerOnClientError(const std::string& clientI
    }
 }
 
+void ZmqServerConnection::notifyListenerOnClientError(const std::string &clientId, ServerConnectionListener::ClientError errorCode, int socket)
+{
+   if (listener_) {
+      listener_->onClientError(clientId, errorCode, socket);
+   }
+}
+
 std::string ZmqServerConnection::GetClientInfo(const std::string &clientId) const
 {
    const auto &it = clientInfo_.find(clientId);

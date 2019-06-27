@@ -192,7 +192,13 @@ void ZmqBIP15XDataConnection::listenFunction()
       }
 
       if (!isConnected_ && std::chrono::steady_clock::now() - connectionStarted > 2 * heartbeatInterval_) {
-         onError(DataConnectionListener::ConnectionTimeout);
+         if (bip151HandshakeCompleted_ && !bip150HandshakeCompleted_) {
+            SPDLOG_LOGGER_ERROR(logger_, "ZMQ BIP connection is timed out (bip151 was completed, probaly client credential is not valid)");
+            onError(DataConnectionListener::HandshakeFailed);
+         } else {
+            SPDLOG_LOGGER_ERROR(logger_, "ZMQ BIP connection is timed out");
+            onError(DataConnectionListener::ConnectionTimeout);
+         }
       }
 
       triggerHeartbeatCheck();
@@ -484,14 +490,6 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
 {
    BinaryData payload(rawData);
 
-   // If decryption "failed" due to fragmentation, put the pieces together.
-   // (Unlikely but we need to plan for it.)
-   if (leftOverData_.getSize() != 0) {
-      leftOverData_.append(payload);
-      payload = move(leftOverData_);
-      leftOverData_.clear();
-   }
-
    if (!bip151Connection_) {
       logger_->error("[{}] received {} bytes of data in disconnected state"
          , __func__, rawData.size());
@@ -504,22 +502,12 @@ void ZmqBIP15XDataConnection::onRawDataReceived(const string& rawData)
          payload.getPtr(), payload.getSize(),
          payload.getPtr(), payload.getSize());
 
-      // Failure isn't necessarily a problem if we're dealing with fragments.
       if (result != 0) {
-         // If decryption "fails" but the result indicates fragmentation, save
-         // the fragment and wait before doing anything, otherwise treat it as a
-         // legit error.
-         if (result > -1) {
-            leftOverData_ = move(payload);
-            return;
-         }
-         else {
-            logger_->error("[ZmqBIP15XDataConnection::{}] Packet [{} bytes] "
-               "from {} decryption failed - Error {}"
-               , __func__, payload.getSize(), connectionName_, result);
-            onError(DataConnectionListener::SerializationFailed);
-            return;
-         }
+         logger_->error("[ZmqBIP15XDataConnection::{}] Packet [{} bytes] "
+            "from {} decryption failed - Error {}"
+            , __func__, payload.getSize(), connectionName_, result);
+         onError(DataConnectionListener::SerializationFailed);
+         return;
       }
 
       payload.resize(payload.getSize() - POLY1305MACLEN);

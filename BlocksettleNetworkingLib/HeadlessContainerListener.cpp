@@ -7,7 +7,7 @@
 #include "DispatchQueue.h"
 #include "ServerConnection.h"
 #include "WalletEncryption.h"
-
+#include "ZmqHelperFunctions.h"
 
 using namespace Blocksettle::Communication;
 
@@ -138,6 +138,25 @@ void HeadlessContainerListener::OnPeerDisconnected(const std::string &ip)
          callbacks_->peerDisconn(ip);
       }
    });
+}
+
+void HeadlessContainerListener::onClientError(const std::string &clientId, ServerConnectionListener::ClientError errorCode, int socket)
+{
+
+   switch (errorCode) {
+      case ServerConnectionListener::HandshakeFailed: {
+         // Not 100% correct because socket's FD might be already closed or even reused, but should be good enough
+         std::string peerAddress = bs::network::peerAddressString(socket);
+         queue_->dispatch([this, peerAddress] {
+            if (callbacks_) {
+               callbacks_->terminalHandshakeFailed(peerAddress);
+            }
+         });
+         break;
+      }
+      default:
+         break;
+   }
 }
 
 bool HeadlessContainerListener::isRequestAllowed(Blocksettle::Communication::headless::RequestType reqType) const
