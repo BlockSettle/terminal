@@ -496,7 +496,7 @@ void BaseChatClient::OnModifyContactsServerResponse(const Chat::Response_ModifyC
 void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & response)
 {
    std::vector<std::shared_ptr<Chat::Data>> checkedList;
-   std::vector<std::shared_ptr<Chat::Data>> absolutleyNewList;
+   std::vector<std::shared_ptr<Chat::Data>> absolutelyNewList;
    std::vector<std::shared_ptr<Chat::Data>> toConfirmKeysList;
    for (const auto& contact : response.contacts()) {
       if (!contact.has_contact_record()) {
@@ -512,7 +512,7 @@ void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & 
          if (chatDb_->isContactExist(userId)) {
             toConfirmKeysList.push_back(std::make_shared<Chat::Data>(contact));
          } else {
-            absolutleyNewList.push_back(std::make_shared<Chat::Data>(contact));
+            absolutelyNewList.push_back(std::make_shared<Chat::Data>(contact));
          }
          continue;
       }
@@ -530,18 +530,18 @@ void BaseChatClient::OnContactsListResponse(const Chat::Response_ContactsList & 
 //      emit ConfirmContactsNewData(toConfirmKeysList);
 //   }
 
-   if (toConfirmKeysList.empty() && absolutleyNewList.empty()) {
+   if (toConfirmKeysList.empty() && absolutelyNewList.empty()) {
       OnContactListConfirmed(checkedList, {}, {});
    } else {
       emit ConfirmContactsNewData(checkedList,
                                   toConfirmKeysList,
-                                  absolutleyNewList);
+                                  absolutelyNewList);
    }
 }
 
 void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Chat::Data>>& checked,
                                             const std::vector<std::shared_ptr<Chat::Data>>& keyUpdate,
-                                            const std::vector<std::shared_ptr<Chat::Data>>& absolutleyNew)
+                                            const std::vector<std::shared_ptr<Chat::Data>>& absolutelyNew)
 {
    enum ContactListKeyAction {
       Leave,
@@ -553,7 +553,7 @@ void BaseChatClient::OnContactListConfirmed(const std::vector<std::shared_ptr<Ch
 
    updateLists.push_back({checked, Leave});
    updateLists.push_back({keyUpdate, Update});
-   updateLists.push_back({absolutleyNew, Add});
+   updateLists.push_back({absolutelyNew, Add});
 
    std::vector<std::shared_ptr<Chat::Data>> resultContactsCollection;
 

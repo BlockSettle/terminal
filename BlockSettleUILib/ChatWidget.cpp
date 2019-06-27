@@ -1165,19 +1165,17 @@ void ChatWidget::onContactRequestRejectCancelClicked()
 
 void ChatWidget::onContactListConfirmationRequested(const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed,
                                                     const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate,
-                                                    const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutleyNew)
+                                                    const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew)
 {
-   //Auto confirmation for update keys and for absolutley new conatacts
-
    QString detailsPattern = QLatin1String("Confirmed contacts: %1\n"
                                           "Require key update: %2\n"
                                           "New contacts: %3");
 
-   QString  detailsString = detailsPattern.arg(remoteConfirmed.size()).arg(remoteKeysUpdate.size()).arg(remoteAbsolutleyNew.size());
+   QString  detailsString = detailsPattern.arg(remoteConfirmed.size()).arg(remoteKeysUpdate.size()).arg(remoteAbsolutelyNew.size());
 
    if (BSMessageBox(BSMessageBox::question, tr("Contacts Information Update"), tr("Some contacts information require update.")
                     , tr("Do you want to continue?"), detailsString).exec() == QDialog::Accepted) {
-      client_->OnContactListConfirmed(remoteConfirmed, remoteKeysUpdate, remoteAbsolutleyNew);
+      client_->OnContactListConfirmed(remoteConfirmed, remoteKeysUpdate, remoteAbsolutelyNew);
    }
 }
 
