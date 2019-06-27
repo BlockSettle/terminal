@@ -13,6 +13,7 @@
 #include "CelerClient.h"
 #include "ChatProtocol/ChatUtils.h"
 #include "ChatSearchListViewItemStyle.h"
+#include "ImportKeyBox.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -578,8 +579,37 @@ void ChatWidget::onConfirmUploadNewPublicKey()
 
 void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data> > &toConfirmList)
 {
-   //TODO: check each user to confirm or decline updated keys
-//      client_->OnContactListConfirmed(toConfirmList);
+   std::vector<std::shared_ptr<Chat::Data> > confirmedList;
+   for (const auto &contact : toConfirmList) {
+      if (!contact || !contact->has_contact_record()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
+
+      auto contactRecord = contact->mutable_contact_record();
+      auto oldContact = client_->getContact(contactRecord->contact_id());
+      auto name = QString::fromStdString(contactRecord->display_name());
+      if (name.isEmpty()) {
+         name = QString::fromStdString(contactRecord->contact_id());
+      }
+      ImportKeyBox box(BSMessageBox::question
+                       , tr("Import Contact '%1' public Key?").arg(name)
+                       , this);
+
+      box.setAddrPort("");
+      box.setNewKeyFromBinary(contactRecord->public_key());
+      box.setOldKeyFromBinary(oldContact.public_key());
+      box.setCancelVisible(true);
+
+      if (box.exec() == QDialog::Accepted) {
+         confirmedList.push_back(contact);
+      } else {
+         //TODO: remove contact
+      }
+   }
+   if (!confirmedList.empty()) {
+      client_->confirmContactList(confirmedList);
+   }
 }
 
 bool ChatWidget::eventFilter(QObject *sender, QEvent *event)

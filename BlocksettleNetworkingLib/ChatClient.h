@@ -72,6 +72,8 @@ public:
    void retrieveUserMessages(const std::string &userId);
    void loadRoomMessagesFromDB(const std::string& roomId);
 
+   void confirmContactList(const std::vector<std::shared_ptr<Chat::Data> > &confirmedList);
+
 private:
    void initMessage(Chat::Data *msg, const std::string& receiver);
 

@@ -616,6 +616,11 @@ void ChatClient::loadRoomMessagesFromDB(const std::string& roomId)
    }
 }
 
+void ChatClient::confirmContactList(const std::vector<std::shared_ptr<Chat::Data> > &confirmedList)
+{
+   OnContactListConfirmed(confirmedList);
+}
+
 void ChatClient::initMessage(Chat::Data *msg, const std::string &receiver)
 {
    auto d = msg->mutable_message();
