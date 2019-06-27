@@ -18,7 +18,7 @@ public:
    explicit EditContactDialog(
          const QString &contactId
          , const QString &displayName = QString()
-         , const QDateTime &joinDate = QDateTime()
+         , const QDateTime &timestamp = QDateTime()
          , const QString &idKey = QString()
          , QWidget *parent = nullptr);
    ~EditContactDialog() noexcept override;
@@ -42,7 +42,7 @@ private:
    std::unique_ptr<Ui::EditContactDialog> ui_;
    QString contactId_;
    QString displayName_;
-   QDateTime joinDate_;
+   QDateTime timestamp_;
    QString idKey_;
 };
 
