@@ -73,7 +73,7 @@ public:
       , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &);
    void getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
       , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &);
-   void requesttHeadlessPubKey(const std::function<void(const std::string &)> &);
+   void requestHeadlessPubKey(const std::function<void(const std::string &)> &);
 
    void activateAutoSign(const std::string &walletId
       , bs::wallet::QPasswordData *passwordData

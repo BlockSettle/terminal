@@ -35,6 +35,7 @@ public:
    Q_INVOKABLE void exec(const QVariantList &jsValues){
       setJsValues(jsValues);
       execImpl();
+      deleteLater();
    }
    virtual void execImpl() = 0;
    virtual void setJsValues(const QVariantList &jsValues) = 0;
@@ -85,15 +86,6 @@ private:
       args_ = std::make_tuple(std::forward<Args>(args)...);
    }
 
-   // iterate tuple from end to begin and set values from QJSValueList
-//   template <int N>
-//   void setJsValuesImpl(const QJSValueList &jsValues)
-//   {
-//      if (N > 0) {
-//         setJsValuesGen<N-1>(jsValues);
-//      }
-//   }
-
    template <int N>
    std::enable_if_t<N == 0> setJsValuesGen(const QVariantList &jsValues) {
       setJsValue<N>(jsValues);
@@ -105,20 +97,18 @@ private:
       setJsValuesGen<N-1>(jsValues);
    }
 
-   template <int Is>
+   template <int N>
    void setJsValue(const QVariantList &jsValues)
    {
-      using tuple_element_t = typename std::tuple_element<Is, decltype(args_)>::type;
-      if (jsValues.size() > Is) {
-         std::get<Is>(args_) = qvariant_cast<tuple_element_t>(jsValues.at(Is));
+      using tuple_element_t = typename std::tuple_element<N, decltype(args_)>::type;
+      if (jsValues.size() > N) {
+         std::get<N>(args_) = qvariant_cast<tuple_element_t>(jsValues.at(N));
       }
    }
 };
 
 } // namespace signer
 } // namespace bs
-
-
 
 
 #endif // QML_CALLBACK_IMPL_H

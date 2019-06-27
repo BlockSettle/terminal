@@ -71,7 +71,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
    ctxt_->setContextProperty(QStringLiteral("walletsModel"), walletsModel_);
 
    statusUpdater_ = std::make_shared<QMLStatusUpdater>(settings_, adapter_, logger_);
-   //connect(statusUpdater_.get(), &QMLStatusUpdater::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
+
    ctxt_->setContextProperty(QStringLiteral("signerStatus"), statusUpdater_.get());
 
    ctxt_->setContextProperty(QStringLiteral("qmlAppObj"), this);

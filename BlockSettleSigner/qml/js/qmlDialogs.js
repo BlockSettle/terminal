@@ -144,6 +144,7 @@ function createCCSettlementTransactionDialog(jsCallback, prompt, txInfo, settlem
     dlg.txInfo = txInfo
     dlg.settlementInfo = settlementInfo
 
+    // FIXME: use bs error codes enum in qml
     dlg.bsAccepted.connect(function() {
         jsCallback(0, walletInfo.walletId, dlg.passwordData)
     })

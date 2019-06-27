@@ -54,7 +54,7 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("adapter connection failed");
    }
 
-   requesttHeadlessPubKey([this](const std::string &key){
+   requestHeadlessPubKey([this](const std::string &key){
       headlessPubKey_ = QString::fromStdString(key);
       emit headlessPubKeyChanged(headlessPubKey_);
    });
@@ -106,7 +106,7 @@ void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const Secu
    listener_->setDecryptNodeCb(reqId, cb);
 }
 
-void SignerAdapter::requesttHeadlessPubKey(const std::function<void (const std::string &)> &cb)
+void SignerAdapter::requestHeadlessPubKey(const std::function<void (const std::string &)> &cb)
 {
    signer::HeadlessPubKeyRequest request;
    const auto reqId = listener_->send(signer::HeadlessPubKeyRequestType, request.SerializeAsString());
