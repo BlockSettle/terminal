@@ -332,6 +332,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const std::string &userId) {
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {QString::fromStdString(userId)});
    });
+   connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
+   connect(client_.get(), &ChatClient::ConfirmContactNewKeyData, this, &ChatWidget::onConfirmContactNewKeyData);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
@@ -566,6 +568,18 @@ void ChatWidget::onConnectedToServer()
 void ChatWidget::onContactRequestAccepted(const std::string &userId)
 {
    ui_->treeViewUsers->setCurrentUserChat(userId);
+}
+
+void ChatWidget::onConfirmUploadNewPublicKey()
+{
+   //TODO: ask user on confirm upload new key to server
+   //      client_->uploadNewPublicKeyToServer(confirmed);
+}
+
+void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data> > &toConfirmList)
+{
+   //TODO: check each user to confirm or decline updated keys
+//      client_->OnContactListConfirmed(toConfirmList);
 }
 
 bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
