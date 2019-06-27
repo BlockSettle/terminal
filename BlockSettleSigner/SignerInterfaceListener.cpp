@@ -526,7 +526,11 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
    }
 
    if (evt.signer_bind_status() == signer::BindFailed) {
-      QMetaObject::invokeMethod(parent_, [this] { emit parent_->headlessBindFailed(); });
+      emit parent_->headlessBindUpdated(false);
+   }
+
+   if (evt.signer_bind_status() == signer::BindSucceed) {
+      emit parent_->headlessBindUpdated(true);
    }
 }
 

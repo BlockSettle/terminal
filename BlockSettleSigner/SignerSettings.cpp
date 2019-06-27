@@ -97,6 +97,7 @@ void SignerSettings::settingChanged(int setting)
    default:
       break;
    }
+
    emit changed(setting);
 
    HeadlessSettings::saveSettings(*d_, fileName_);
@@ -292,75 +293,94 @@ QString SignerSettings::dirDocuments() const
 
 void SignerSettings::setOffline(bool val)
 {
-   d_->set_offline(val);
-   settingChanged(signer::Setting::OfflineMode);
+   if (d_->offline() != val) {
+      d_->set_offline(val);
+      settingChanged(signer::Setting::OfflineMode);
+   }
 }
 
 void SignerSettings::setTestNet(bool val)
 {
-   qDebug() << "test net" << val;
-   d_->set_test_net(val);
-   settingChanged(signer::Setting::TestNet);
+   if (d_->test_net() != val) {
+      d_->set_test_net(val);
+      settingChanged(signer::Setting::TestNet);
+   }
 }
 
 void SignerSettings::setWatchingOnly(const bool val)
 {
-   d_->set_watching_only(val);
-   settingChanged(signer::Setting::WatchingOnly);
+   if (d_->watching_only() != val) {
+      d_->set_watching_only(val);
+      settingChanged(signer::Setting::WatchingOnly);
+   }
 }
 
 void SignerSettings::setExportWalletsDir(const QString &val)
 {
-   d_->set_export_wallets_dir(val.toStdString());
-   settingChanged(signer::Setting::ExportWalletsDir);
+   setStringSetting(val, d_->mutable_export_wallets_dir(), signer::Setting::ExportWalletsDir);
 }
 
 void SignerSettings::setAutoSignWallet(const QString &val)
 {
-   d_->set_auto_sign_wallet(val.toStdString());
-   settingChanged(signer::Setting::AutoSignWallet);
+   setStringSetting(val, d_->mutable_auto_sign_wallet(), signer::Setting::AutoSignWallet);
 }
 
 void SignerSettings::setListenAddress(const QString &val)
 {
-   d_->set_listen_address(val.toStdString());
-   settingChanged(signer::Setting::ListenAddress);
+   setStringSetting(val, d_->mutable_listen_address(), signer::Setting::ListenAddress);
 }
 
 void SignerSettings::setPort(const QString &val)
 {
-   d_->set_listen_port(val.toInt());
-   settingChanged(signer::Setting::ListenPort);
+   int valCopy = val.toInt();
+   if (valCopy != d_->listen_port()) {
+      d_->set_listen_port(valCopy);
+      settingChanged(signer::Setting::ListenPort);
+   }
 }
 
 void SignerSettings::setLimitManualXbt(const double val)
 {
-   d_->set_limit_manual_xbt(convertToSatoshi(val));
-   settingChanged(signer::Setting::LimitManualXBT);
+   auto valCopy = convertToSatoshi(val);
+   if (valCopy != d_->limit_manual_xbt()) {
+      d_->set_limit_manual_xbt(valCopy);
+      settingChanged(signer::Setting::LimitManualXBT);
+   }
 }
 
 void SignerSettings::setLimitAutoSignXbt(const double val)
 {
-   d_->set_limit_auto_sign_xbt(convertToSatoshi(val));
-   settingChanged(signer::Setting::LimitAutoSignXBT);
+   auto valCopy = convertToSatoshi(val);
+   if (d_->limit_auto_sign_xbt() != valCopy) {
+      d_->set_limit_auto_sign_xbt(valCopy);
+      settingChanged(signer::Setting::LimitAutoSignXBT);
+   }
 }
 
 void SignerSettings::setLimitAutoSignTimeStr(const QString &val)
 {
-   d_->set_limit_auto_sign_time(intervalStrToSeconds(val));
-   settingChanged(signer::Setting::LimitAutoSignTime);
+   int valueCopy = intervalStrToSeconds(val);
+   if (valueCopy != d_->limit_auto_sign_time()) {
+      d_->set_limit_auto_sign_time(valueCopy);
+      settingChanged(signer::Setting::LimitAutoSignTime);
+   }
 }
 
 void SignerSettings::setLimitManualPwKeepStr(const QString &val)
 {
-   d_->set_limit_pass_keep_time(intervalStrToSeconds(val));
-   settingChanged(signer::Setting::LimitManualPwKeep);
+   int valueCopy = intervalStrToSeconds(val);
+   if (d_->limit_pass_keep_time() != valueCopy) {
+      d_->set_limit_pass_keep_time(valueCopy);
+      settingChanged(signer::Setting::LimitManualPwKeep);
+   }
 }
 
 void SignerSettings::setHideEidInfoBox(bool val)
 {
-   d_->set_hide_eid_info_box(val);
-   settingChanged(signer::Setting::HideEidInfoBox);
+   if (val != d_->hide_eid_info_box()) {
+      d_->set_hide_eid_info_box(val);
+      settingChanged(signer::Setting::HideEidInfoBox);
+   }
 }
 
 void SignerSettings::setTrustedTerminals(const QStringList &val)
@@ -385,8 +405,10 @@ void SignerSettings::setTrustedTerminals(const QStringList &val)
 
 void SignerSettings::setTwoWaySignerAuth(bool val)
 {
-   d_->set_two_way_signer_auth(val);
-   settingChanged(signer::Setting::TwoWaySignerAuth);
+   if (val != d_->two_way_signer_auth()) {
+      d_->set_two_way_signer_auth(val);
+      settingChanged(signer::Setting::TwoWaySignerAuth);
+   }
 }
 
 QString SignerSettings::secondsToIntervalStr(int s)
@@ -474,4 +496,13 @@ bool SignerSettings::verifyServerIDKey()
    }
 
    return true;
+}
+
+void SignerSettings::setStringSetting(const QString &val, std::string *oldValue, int setting)
+{
+   std::string valueCopy = val.toStdString();
+   if (valueCopy != *oldValue) {
+      *oldValue = std::move(valueCopy);
+      settingChanged(setting);
+   }
 }

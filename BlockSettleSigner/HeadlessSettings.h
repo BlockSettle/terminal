@@ -36,10 +36,11 @@ public:
    std::vector<std::string> trustedTerminals() const;
    std::vector<std::string> trustedInterfaces() const;
    bool twoWaySignerAuth() const;
+   bool offline() const;
 
    bs::signer::RunMode runMode() const { return runMode_; }
 
-   bool update(const std::unique_ptr<Settings> &);
+   void update(const Settings&);
 
    static bool loadSettings(Settings *settings, const std::string &fileName);
    static bool saveSettings(const Settings &settings, const std::string &fileName);
