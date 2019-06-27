@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>285</width>
-    <height>191</height>
+    <width>327</width>
+    <height>156</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -36,7 +36,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget_2" native="true">
+    <widget class="QWidget" name="dataWidget" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <property name="spacing">
        <number>15</number>
@@ -72,13 +72,10 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QGroupBox" name="groupBox">
-           <property name="title">
-            <string>Contact</string>
-           </property>
+          <widget class="QWidget" name="widget" native="true">
            <layout class="QVBoxLayout" name="verticalLayout_3">
             <property name="spacing">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>0</number>
@@ -93,7 +90,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QWidget" name="widget_4" native="true">
+             <widget class="QWidget" name="nameWidget" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_3">
                <property name="spacing">
                 <number>5</number>
@@ -140,7 +137,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWidget" name="widget_5" native="true">
+             <widget class="QWidget" name="userIdWidget" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_4">
                <property name="spacing">
                 <number>5</number>
@@ -177,9 +174,12 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLineEdit" name="userIDLineEdit">
-                 <property name="enabled">
-                  <bool>false</bool>
+                <widget class="QLabel" name="userIDLineEdit">
+                 <property name="text">
+                  <string>--</string>
+                 </property>
+                 <property name="whiteLabel" stdset="0">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -187,7 +187,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWidget" name="widget_6" native="true">
+             <widget class="QWidget" name="dateWidget" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_5">
                <property name="spacing">
                 <number>5</number>
@@ -224,9 +224,12 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLineEdit" name="contactDateLineEdit">
-                 <property name="enabled">
-                  <bool>false</bool>
+                <widget class="QLabel" name="contactDateLineEdit">
+                 <property name="text">
+                  <string>--</string>
+                 </property>
+                 <property name="whiteLabel" stdset="0">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -234,7 +237,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QWidget" name="widget_7" native="true">
+             <widget class="QWidget" name="idKeyWidget" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_6">
                <property name="spacing">
                 <number>5</number>
@@ -271,9 +274,12 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLineEdit" name="iDKeyLineEdit">
-                 <property name="enabled">
-                  <bool>false</bool>
+                <widget class="QLabel" name="iDKeyLineEdit">
+                 <property name="text">
+                  <string>--</string>
+                 </property>
+                 <property name="whiteLabel" stdset="0">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -290,7 +296,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="buttonsWidget" native="true">
      <property name="buttonBar" stdset="0">
       <bool>true</bool>
      </property>
