@@ -59,7 +59,7 @@ signals:
 private slots:
    void onReady();
    void onConnectionError();
-   void onHeadlessBindFailed();
+   void onHeadlessBindUpdated(bool success);
    void onWalletsSynced();
    void onPasswordAccepted(const QString &walletId
                            , bs::wallet::QPasswordData *passwordData
@@ -67,8 +67,6 @@ private slots:
    void onOfflinePassword(const bs::core::wallet::TXSignRequest &);
    void onPasswordRequested(const bs::core::wallet::TXSignRequest &, const QString &prompt);
    void onAutoSignPwdRequested(const std::string &walletId);
-   void onOfflineChanged();
-   void onListenSocketChanged();
    void onLimitsChanged();
    void onSettingChanged(int);
    void onSysTrayMsgClicked();

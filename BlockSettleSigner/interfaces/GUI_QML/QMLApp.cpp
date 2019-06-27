@@ -59,7 +59,7 @@ QMLAppObj::QMLAppObj(SignerAdapter *adapter, const std::shared_ptr<spdlog::logge
 
    connect(adapter_, &SignerAdapter::ready, this, &QMLAppObj::onReady);
    connect(adapter_, &SignerAdapter::connectionError, this, &QMLAppObj::onConnectionError);
-   connect(adapter_, &SignerAdapter::headlessBindFailed, this, &QMLAppObj::onHeadlessBindFailed);
+   connect(adapter_, &SignerAdapter::headlessBindUpdated, this, &QMLAppObj::onHeadlessBindUpdated);
    connect(adapter_, &SignerAdapter::requestPassword, this, &QMLAppObj::onPasswordRequested);
    connect(adapter_, &SignerAdapter::autoSignRequiresPwd, this, &QMLAppObj::onAutoSignPwdRequested);
    connect(adapter_, &SignerAdapter::cancelTxSign, this, &QMLAppObj::onCancelSignTx);
@@ -142,11 +142,14 @@ void QMLAppObj::onConnectionError()
                              , Q_ARG(QVariant, tr("Error connecting to headless signer process")));
 }
 
-void QMLAppObj::onHeadlessBindFailed()
+void QMLAppObj::onHeadlessBindUpdated(bool success)
 {
-   QMetaObject::invokeMethod(rootObj_, "showError"
-                             , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
-   statusUpdater_->setSocketOk(false);
+   if (!success) {
+      QMetaObject::invokeMethod(rootObj_, "showError"
+         , Q_ARG(QVariant, tr("Server start failed. Please check listen address and port")));
+   }
+
+   statusUpdater_->setSocketOk(success);
 }
 
 void QMLAppObj::onWalletsSynced()
@@ -162,8 +165,6 @@ void QMLAppObj::onWalletsSynced()
 
 void QMLAppObj::settingsConnections()
 {
-   connect(settings_.get(), &SignerSettings::offlineChanged, this, &QMLAppObj::onOfflineChanged);
-   connect(settings_.get(), &SignerSettings::listenSocketChanged, this, &QMLAppObj::onListenSocketChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignTimeChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitAutoSignXbtChanged, this, &QMLAppObj::onLimitsChanged);
    connect(settings_.get(), &SignerSettings::limitManualXbtChanged, this, &QMLAppObj::onLimitsChanged);
@@ -209,23 +210,6 @@ void QMLAppObj::registerQtTypes()
 
    qmlRegisterUncreatableType<QmlFactory>("com.blocksettle.QmlFactory", 1, 0,
       "QmlFactory", QStringLiteral("Cannot create a QmlFactory instance"));
-}
-
-void QMLAppObj::onOfflineChanged()
-{
-   // Show error(s) one more time if needed
-   lastFailedTerminals_.clear();
-
-   adapter_->setOnline(!settings_->offline());
-}
-
-void QMLAppObj::onListenSocketChanged()
-{
-   if (settings_->offline()) {
-      return;
-   }
-   logger_->info("Restarting listening socket");
-   adapter_->reconnect(settings_->listenAddress(), settings_->port());
 }
 
 void QMLAppObj::onLimitsChanged()

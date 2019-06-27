@@ -520,7 +520,11 @@ void SignerInterfaceListener::onUpdateStatus(const std::string &data)
    }
 
    if (evt.signer_bind_status() == signer::BindFailed) {
-      emit parent_->headlessBindFailed();
+      emit parent_->headlessBindUpdated(false);
+   }
+
+   if (evt.signer_bind_status() == signer::BindSucceed) {
+      emit parent_->headlessBindUpdated(true);
    }
 }
 
@@ -530,7 +534,7 @@ void SignerInterfaceListener::onTerminalHandshakeFailed(const std::string &data)
    if (!evt.ParseFromString(data)) {
       SPDLOG_LOGGER_ERROR(logger_, "failed to parse");
       return;
-   }
+
 
    emit parent_->terminalHandshakeFailed(evt.peeraddress());
 }
