@@ -462,6 +462,25 @@ void ChatWidget::initSearchWidget()
            this, &ChatWidget::onRemoveFriendRequest);
 }
 
+bool ChatWidget::isLoggedIn() const
+{
+   if (!stateCurrent_) {
+      return false;
+   }
+   return stateCurrent_->type() == State::LoggedIn;
+}
+
+void ChatWidget::tryBecomeContactWithPb()
+{
+   // ChatClient::isFriend is used to prevent sending contact request if PB is already our contact
+   // ChatClient::sendFriendRequest checks this too but using model_ and it's downloaded later
+   if (!isLoggedIn() || pbUserId_.empty() || client_->isFriend(pbUserId_)) {
+      return;
+   }
+
+   client_->sendFriendRequest(pbUserId_);
+}
+
 void ChatWidget::onSendButtonClicked()
 {
    return stateCurrent_->onSendButtonClicked();
@@ -526,6 +545,12 @@ void ChatWidget::updateChat(const bool &isChatTab)
    }
 }
 
+void ChatWidget::connectToPb(const std::string &pbUserId)
+{
+   pbUserId_ = pbUserId;
+   tryBecomeContactWithPb();
+}
+
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
@@ -561,6 +586,8 @@ void ChatWidget::onConnectedToServer()
    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    chatLoggedInTimestampUtcInMillis_ =  timestamp.count();
    changeState(State::LoggedIn);
+
+   tryBecomeContactWithPb();
 }
 
 void ChatWidget::onContactRequestAccepted(const std::string &userId)

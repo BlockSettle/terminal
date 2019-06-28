@@ -2,8 +2,9 @@
 #include <algorithm>
 #include "ChatProtocol/ChatUtils.h"
 
-ChatClientDataModel::ChatClientDataModel(QObject * parent)
+ChatClientDataModel::ChatClientDataModel(const std::shared_ptr<spdlog::logger> &logger, QObject * parent)
     : QAbstractItemModel(parent)
+    , logger_(logger)
     , root_(std::make_shared<RootItem>())
     , newMessageMonitor_(nullptr)
     , modelChangesHandler_(nullptr)
