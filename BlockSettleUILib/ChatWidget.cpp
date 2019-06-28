@@ -571,10 +571,19 @@ void ChatWidget::onContactRequestAccepted(const std::string &userId)
    ui_->treeViewUsers->setCurrentUserChat(userId);
 }
 
-void ChatWidget::onConfirmUploadNewPublicKey()
+void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey)
 {
-   //TODO: ask user on confirm upload new key to server
-   //      client_->uploadNewPublicKeyToServer(confirmed);
+   ImportKeyBox box(BSMessageBox::question
+                    , tr("Replace OTC Chat Public Key?")
+                    , this);
+
+   box.setAddrPort("");
+   box.setNewKeyFromBinary(newKey);
+   box.setOldKeyFromBinary(oldKey);
+   box.setCancelVisible(true);
+
+   bool confirmed = box.exec() == QDialog::Accepted;
+   client_->uploadNewPublicKeyToServer(confirmed);
 }
 
 void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data> > &toConfirmList)

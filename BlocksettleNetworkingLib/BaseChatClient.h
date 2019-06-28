@@ -108,7 +108,7 @@ public:
 
 signals:
    void ConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data>>& remoteContacts);
-   void ConfirmUploadNewPublicKey();
+   void ConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
 
 protected:
    void cleanupConnection();

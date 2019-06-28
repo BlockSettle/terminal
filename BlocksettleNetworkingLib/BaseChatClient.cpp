@@ -995,9 +995,9 @@ void BaseChatClient::onServerApprovedFriendRemoving(const std::string &contactId
    onContactRemove(contactId);
 }
 
-void BaseChatClient::OnConfirmReplacePublicKey(const Chat::Response_ConfirmReplacePublicKey&)
+void BaseChatClient::OnConfirmReplacePublicKey(const Chat::Response_ConfirmReplacePublicKey& response)
 {
-   emit ConfirmUploadNewPublicKey();
+   emit ConfirmUploadNewPublicKey(response.original_public_key(), response.public_key_to_replace());
 }
 
 void BaseChatClient::uploadNewPublicKeyToServer(const bool& confirmed)
