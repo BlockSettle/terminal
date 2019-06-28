@@ -589,22 +589,26 @@ void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const st
 void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Chat::Data> > &toConfirmList)
 {
    std::vector<std::shared_ptr<Chat::Data> > confirmedList;
+   std::vector<std::shared_ptr<Chat::Data> > declinedList;
    for (const auto &contact : toConfirmList) {
       if (!contact || !contact->has_contact_record()) {
          logger_->error("[ChatWidget::{}] invalid contact", __func__);
          continue;
       }
-
       auto contactRecord = contact->mutable_contact_record();
       auto oldContact = client_->getContact(contactRecord->contact_id());
+      if (oldContact.contact_id().empty()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
       auto name = QString::fromStdString(contactRecord->display_name());
       if (name.isEmpty()) {
          name = QString::fromStdString(contactRecord->contact_id());
       }
+
       ImportKeyBox box(BSMessageBox::question
                        , tr("Import Contact '%1' Public Key?").arg(name)
                        , this);
-
       box.setAddrPort("");
       box.setNewKeyFromBinary(contactRecord->public_key());
       box.setOldKeyFromBinary(oldContact.public_key());
@@ -613,13 +617,10 @@ void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Ch
       if (box.exec() == QDialog::Accepted) {
          confirmedList.push_back(contact);
       } else {
-         //TODO: uncomment before finish task
-//         client_->removeFriendOrRequest(contactRecord->contact_id());
+         declinedList.push_back(contact);
       }
    }
-   if (!confirmedList.empty()) {
-      client_->confirmContactList(confirmedList);
-   }
+   client_->confirmContactList(confirmedList, declinedList);
 }
 
 bool ChatWidget::eventFilter(QObject *sender, QEvent *event)
