@@ -593,7 +593,7 @@ void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Ch
          name = QString::fromStdString(contactRecord->contact_id());
       }
       ImportKeyBox box(BSMessageBox::question
-                       , tr("Import Contact '%1' public Key?").arg(name)
+                       , tr("Import Contact '%1' Public Key?").arg(name)
                        , this);
 
       box.setAddrPort("");
@@ -604,7 +604,8 @@ void ChatWidget::onConfirmContactNewKeyData(const std::vector<std::shared_ptr<Ch
       if (box.exec() == QDialog::Accepted) {
          confirmedList.push_back(contact);
       } else {
-         //TODO: remove contact
+         //TODO: uncomment before finish task
+//         client_->removeFriendOrRequest(contactRecord->contact_id());
       }
    }
    if (!confirmedList.empty()) {
