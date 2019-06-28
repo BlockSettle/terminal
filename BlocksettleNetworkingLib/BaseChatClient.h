@@ -72,6 +72,8 @@ public:
    // Called when we asked for a public key of peer, and got result.
    void OnSendOwnPublicKey(const Chat::Response_SendOwnPublicKey &response) override;
 
+   void OnConfirmReplacePublicKey(const Chat::Response_ConfirmReplacePublicKey& response) override;
+
 protected:
 
    bool getContacts(ContactRecordDataList &contactList);
@@ -105,10 +107,13 @@ public:
 
    std::string getUserId() const;
 
+   void uploadNewPublicKeyToServer(const bool& confirmed);
+
 signals:
    void ConfirmContactsNewData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
                                const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
+   void ConfirmUploadNewPublicKey();
 
 protected:
    void cleanupConnection();

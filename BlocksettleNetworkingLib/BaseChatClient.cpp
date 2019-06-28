@@ -103,6 +103,9 @@ void BaseChatClient::OnDataReceived(const std::string& data)
          case Chat::Response::kReplySessionPublicKey:
             OnReplySessionPublicKeyResponse(response->reply_session_public_key());
             break;
+         case Chat::Response::kConfirmReplacePublicKey:
+            OnConfirmReplacePublicKey(response->confirm_replace_public_key());
+            break;
          case Chat::Response::DATA_NOT_SET:
             logger_->error("Invalid empty or unknown response detected");
             break;
@@ -1138,4 +1141,21 @@ void BaseChatClient::onServerApprovedFriendRemoving(const std::string &contactId
    chatSessionKeyPtr_->clearSessionForUser(contactId);
 
    onContactRemove(contactId);
+}
+
+void BaseChatClient::OnConfirmReplacePublicKey(const Chat::Response_ConfirmReplacePublicKey&)
+{
+   emit ConfirmUploadNewPublicKey();
+}
+
+void BaseChatClient::uploadNewPublicKeyToServer(const bool& confirmed)
+{
+   Chat::Request request;
+   auto uploadNewPublicKey = request.mutable_upload_new_public_key();
+
+   uploadNewPublicKey->set_confirmation(
+      confirmed ? Chat::Request_UploadNewPublicKey_Confirmation_CONFIRMED : Chat::Request_UploadNewPublicKey_Confirmation_DECLINED);
+   uploadNewPublicKey->set_auth_id(currentUserId_);
+   uploadNewPublicKey->set_public_key_to_replace(getOwnAuthPublicKey().toBinStr());
+   sendRequest(request);
 }
