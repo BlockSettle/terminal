@@ -22,10 +22,11 @@ fi
 mkdir -p Ubuntu/usr/bin
 mkdir -p Ubuntu/usr/share/blocksettle
 mkdir -p Ubuntu/lib/x86_64-linux-gnu
+mkdir -p $binpath/scripts
 
 cp -f $binpath/* Ubuntu/usr/bin
 cp -f $scriptpath/DealerAutoQuote.qml Ubuntu/usr/share/blocksettle
-cp -f $scriptpath/RFQBot.qml $binpath/
+cp -f $scriptpath/RFQBot.qml $binpath/scripts
 cp -fP $libprotobuf/libprotobuf.so* Ubuntu/lib/x86_64-linux-gnu
 cp -f $libprotobuf/libprotobuf.la Ubuntu/lib/x86_64-linux-gnu
 
