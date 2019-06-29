@@ -78,7 +78,12 @@ void CreateTransactionDialog::init()
          transactionData_->RemoveRecipient(recipId);
       }
       onTransactionUpdated();
-      transactionData_->SetCallback([this] { onTransactionUpdated(); });
+      transactionData_->SetCallback([this] {
+         QMetaObject::invokeMethod(this, [this] {
+            // Call on main thread because GUI is updated here
+            onTransactionUpdated();
+         });
+      });
    }
 
    xbtValidator_ = new XbtAmountValidator(this);
