@@ -34,7 +34,8 @@ function backupWalletDialog(data) {
     var rootId = data["rootId"]
     var dlg = Qt.createComponent("../BsDialogs/WalletBackupDialog.qml").createObject(mainWindow)
     dlg.walletInfo = qmlFactory.createWalletInfo(rootId)
-    dlg.targetDir = signerSettings.dirDocuments
+    // FIXME: save backups dir
+    //dlg.targetDir = signerSettings.dirDocuments
     dlg.open()
     return dlg
 }

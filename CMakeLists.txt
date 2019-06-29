@@ -437,13 +437,12 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugind.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugind.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugind.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugind.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugind.lib
             ${QT5_QML_ROOT}/Qt/Labs/folderlistmodel/qmlfolderlistmodelplugind.lib
             ${QT5_QML_ROOT}/Qt/Labs/settings/qmlsettingsplugind.lib
+            ${QT5_QML_ROOT}/Qt/Labs/platform/qtlabsplatformplugind.lib
          )
       ELSE(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS
@@ -488,13 +487,12 @@ IF(WIN32)
             ${QT5_QML_ROOT}/QtQuick.2/qtquick2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls/qtquickcontrolsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Controls.2/qtquickcontrols2plugin.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/dialogplugin.lib
-            ${QT5_QML_ROOT}/QtQuick/Dialogs/Private/dialogsprivateplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Layouts/qquicklayoutsplugin.lib
             ${QT5_QML_ROOT}/QtQuick/Templates.2/qtquicktemplates2plugin.lib
             ${QT5_QML_ROOT}/QtQuick/Window.2/windowplugin.lib
             ${QT5_QML_ROOT}/Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.lib
             ${QT5_QML_ROOT}/Qt/labs/settings/qmlsettingsplugin.lib
+            ${QT5_QML_ROOT}/Qt/Labs/platform/qtlabsplatformplugin.lib
          )
       ELSE(NOT BSTERMINAL_SHARED_LIBS)
          LIST(APPEND OS_SPECIFIC_LIBS

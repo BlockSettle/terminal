@@ -65,15 +65,6 @@ ApplicationWindow {
         bgColor: "darkred"
     }
 
-    DirSelectionDialog {
-        id: ldrWoWalletDirDlg
-        title: qsTr("Select watching only wallet target directory")
-    }
-    DirSelectionDialog {
-        id: ldrDirDlg
-        title: qsTr("Select directory")
-    }
-
     SwipeView {
         id: swipeView
         anchors.fill: parent
