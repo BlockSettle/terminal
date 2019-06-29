@@ -270,7 +270,7 @@ void AutheIDClient::processCreateReply(const QByteArray &payload, int expiration
 
 void AutheIDClient::processResultReply(const QByteArray &payload)
 {
-   /*rp::GetResultResponse reply;
+   rp::GetResultResponse reply;
    if (!reply.ParseFromArray(payload.data(), payload.size())) {
       logger_->error("Can't decode ResultReply packet");
       emit failed(QNetworkReply::NoError, ErrorType::DecodeError);
@@ -337,7 +337,7 @@ void AutheIDClient::processResultReply(const QByteArray &payload)
       + kSeparatorSymbol + reply.device_id()
       + kSeparatorSymbol + reply.device_name();
 
-   emit succeeded(encKey, SecureBinaryData(deviceKey));*/
+   emit succeeded(encKey, SecureBinaryData(deviceKey));
 }
 
 void AutheIDClient::processNetworkReply(QNetworkReply *reply, int timeoutSeconds, const AutheIDClient::ResultCallback &callback)
