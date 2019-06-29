@@ -29,11 +29,38 @@ class AutheIDClient : public QObject
    Q_OBJECT
 
 public:
+   // Keep in sync with autheid::rp::Serialization
+   enum class Serialization
+   {
+      Json,
+      Protobuf,
+   };
+
    struct DeviceInfo
    {
       std::string userId;
       std::string deviceId;
       std::string deviceName;
+   };
+
+   struct SignRequest
+   {
+      std::string title;
+      std::string description;
+      std::string email;
+      Serialization serialization{Serialization::Protobuf};
+      BinaryData invisibleData;
+      int expiration{30};
+   };
+
+   struct SignResult
+   {
+      Serialization serialization{};
+      BinaryData data;
+      BinaryData sign;
+      BinaryData certificateClient;
+      BinaryData certificateIssuer;
+      BinaryData ocspResponse;
    };
 
    enum RequestType
@@ -84,14 +111,13 @@ public:
 
    void start(RequestType requestType, const std::string &email, const std::string &walletId
       , const std::vector<std::string> &knownDeviceIds, int expiration = 120);
-   void sign(const BinaryData &data, const std::string &email
-      , const QString &title, const QString &description, int expiration = 30);
+   void sign(const SignRequest &request);
    void authenticate(const std::string &email, int expiration = 120);
    void cancel();
 
 signals:
    void succeeded(const std::string& encKey, const SecureBinaryData &password);
-   void signSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
+   void signSuccess(const SignResult &result);
    void authSuccess(const std::string &jwt);
    void failed(QNetworkReply::NetworkError networkError, ErrorType error);
    void userCancelled();
@@ -131,9 +157,12 @@ private:
 
    std::vector<std::string> knownDeviceIds_;
 
+   SignRequest signRequest_;
+
    const char *baseUrl_;
    const char *apiKey_;
 };
+
 Q_DECLARE_METATYPE(AutheIDClient::RequestType)
 
 #endif // __AUTH_EID_CLIENT_H__

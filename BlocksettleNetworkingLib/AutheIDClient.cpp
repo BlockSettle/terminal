@@ -2,6 +2,7 @@
 
 #include "ApplicationSettings.h"
 #include "ConnectionManager.h"
+#include <google/protobuf/util/json_util.h>
 #include <spdlog/spdlog.h>
 #include <QTimer>
 #include <QNetworkAccessManager>
@@ -14,8 +15,11 @@ using namespace autheid;
 
 namespace
 {
-const int kNetworkTimeoutSeconds = 10;
-const int kReplyTimeoutSeconds = 3;
+   static_assert(int(AutheIDClient::Serialization::Json) == int(rp::SERIALIZATION_JSON), "please fix AutheIDClient::Serialization");
+   static_assert(int(AutheIDClient::Serialization::Protobuf) == int(rp::SERIALIZATION_PROTOBUF), "please fix AutheIDClient::Serialization");
+
+   const int kNetworkTimeoutSeconds = 10;
+   const int kReplyTimeoutSeconds = 3;
 
    const int kKeySize = 32;
 
@@ -213,26 +217,31 @@ void AutheIDClient::requestAuth(const std::string &email, int expiration)
    createCreateRequest(request.SerializeAsString(), expiration);
 }
 
-void AutheIDClient::sign(const BinaryData &data, const std::string &email
-   , const QString &title, const QString &description, int expiration)
+void AutheIDClient::sign(const SignRequest &request)
 {
+   assert(!request.email.empty());
+   assert(!request.title.empty());
+
    cancel();
-   email_ = email;
+   email_ = request.email;
 
-   rp::CreateRequest request;
-   auto signRequest = request.mutable_signature();
-   signRequest->set_serialization(rp::SERIALIZATION_PROTOBUF);
-   signRequest->set_invisible_data(data.toBinStr());
+   rp::CreateRequest createRequest;
+   auto d = createRequest.mutable_signature();
+   d->set_serialization(rp::Serialization(request.serialization));
+   d->set_invisible_data(request.invisibleData.toBinStr());
 
-   request.set_type(rp::SIGNATURE);
-   request.set_timeout_seconds(expiration);
-   request.set_ra_pub_key(authKeys_.second.data(), authKeys_.second.size());
+   createRequest.set_type(rp::SIGNATURE);
+   createRequest.set_timeout_seconds(request.expiration);
+   createRequest.set_ra_pub_key(authKeys_.second.data(), authKeys_.second.size());
 
-   request.set_title(title.toStdString());
-   request.set_description(description.toStdString());
-   request.set_email(email);
+   createRequest.set_title(request.title);
+   createRequest.set_description(request.description);
+   createRequest.set_email(request.email);
 
-   createCreateRequest(request.SerializeAsString(), expiration);
+   createCreateRequest(createRequest.SerializeAsString(), request.expiration);
+
+   // Make a copy to check sign result later
+   signRequest_ = request;
 }
 
 void AutheIDClient::cancel()
@@ -430,18 +439,57 @@ void AutheIDClient::processSignatureReply(const autheid::rp::GetResultResponse_S
       emit failed(QNetworkReply::NoError, ErrorType::MissingSignatuteError);
       return;
    }
-   if (reply.serialization() != rp::SERIALIZATION_PROTOBUF) {
-      emit failed(QNetworkReply::NoError, ErrorType::SerializationSignatureError);
-      return;
-   }
+
    rp::GetResultResponse::SignatureResult::SignatureData sigData;
-   if (!sigData.ParseFromString(reply.signature_data())) {
-      emit failed(QNetworkReply::NoError, ErrorType::ParseSignatureError);
+
+   switch (reply.serialization()) {
+      case rp::SERIALIZATION_PROTOBUF: {
+         bool result = sigData.ParseFromString(reply.signature_data());
+         if (!result) {
+            SPDLOG_LOGGER_ERROR(logger_, "parsing signature protobuf from AuthEid failed");
+            emit failed(QNetworkReply::NoError, ErrorType::ParseSignatureError);
+            return;
+         }
+         break;
+      }
+
+      case rp::SERIALIZATION_JSON: {
+         auto status = google::protobuf::util::JsonStringToMessage(reply.signature_data(), &sigData);
+         if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(logger_, "parsing signature json from AuthEid failed");
+            emit failed(QNetworkReply::NoError, ErrorType::ParseSignatureError);
+            return;
+         }
+         break;
+      }
+
+      default:
+         SPDLOG_LOGGER_ERROR(logger_, "unknown serialization from AuthEid");
+         emit failed(QNetworkReply::NoError, ErrorType::SerializationSignatureError);
+         return;
+   }
+
+   // Make sure we got in the response what was requested (for security reasons)
+   if (signRequest_.title != sigData.title()
+       || signRequest_.email != sigData.email()
+       || signRequest_.description != sigData.description()
+       || signRequest_.invisibleData.toBinStr() != sigData.invisible_data())
+   {
+      SPDLOG_LOGGER_ERROR(logger_, "invalid response from AuthEid detected");
+      emit failed(QNetworkReply::NoError, ErrorType::SerializationSignatureError);
       return;
    }
 
    // We could verify certificate and signature here if that is needed
-   // Example: https://github.com/autheid/AuthSamples/blob/master/Java/src/main/java/com/autheid/examples/simple/SimpleClient.java
+   // Example: https://github.com/autheid/AuthSamples/blob/master/cpp/main.cpp#L116
 
-   emit signSuccess(reply.signature_data(), sigData.invisible_data(), reply.sign());
+   SignResult result;
+   result.serialization = Serialization(reply.serialization());
+   result.data = reply.signature_data();
+   result.sign = reply.sign();
+   result.certificateClient = reply.certificate_client();
+   result.certificateIssuer = reply.certificate_issuer();
+   result.ocspResponse = reply.ocsp_response();
+
+   emit signSuccess(result);
 }

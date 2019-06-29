@@ -32,19 +32,20 @@ public:
    AuthSignManager(AuthSignManager&&) = delete;
    AuthSignManager& operator = (AuthSignManager&&) = delete;
 
-   using SignedCb = std::function<void (const std::string &data, const BinaryData &invisibleData, const std::string &signature)>;
+   using SignedCb = std::function<void (const AutheIDClient::SignResult &result)>;
    using SignFailedCb = std::function<void(const QString &)>;
    bool Sign(const BinaryData &dataToSign, const QString &title, const QString &desc
       , const SignedCb &, const SignFailedCb &cbF = nullptr, int expiration = 30);
 
 private slots:
-   void onSignSuccess(const std::string &data, const BinaryData &invisibleData, const std::string &signature);
+   void onSignSuccess(const AutheIDClient::SignResult &result);
    void onFailed(QNetworkReply::NetworkError error, AutheIDClient::ErrorType authError);
 
 private:
    std::shared_ptr<spdlog::logger>        logger_;
    std::shared_ptr<ApplicationSettings>   appSettings_;
    std::shared_ptr<CelerClient>           celerClient_;
+   std::shared_ptr<ConnectionManager>     connectionManager_;
    std::unique_ptr<AutheIDClient>         autheIDClient_;
    SignedCb                               onSignedCB_;
    SignFailedCb                           onSignFailedCB_;

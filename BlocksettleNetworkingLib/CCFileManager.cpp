@@ -149,26 +149,33 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       return false;
    }
 
-   const auto cbSigned = [this, address](const std::string &data, const BinaryData &invisibleData, const std::string &signature) {
-      SubmitAddrForInitialDistributionRequest addressRequest;
-      if (!addressRequest.ParseFromString(invisibleData.toBinStr())) {
-         logger_->error("[CCFileManager::SubmitAddressToPuB] failed to parse original request");
-         emit CCSubmitFailed(QString::fromStdString(address.display()), tr("Failed to parse original request"));
-         return;
-      }
-      if (addressRequest.prefixedaddress() != address.display()) {
-         logger_->error("[CCFileManager::SubmitAddressToPuB] CC address mismatch");
-         emit CCSubmitFailed(QString::fromStdString(address.display()), tr("CC address mismatch"));
-         return;
-      }
+   SubmitAddrForInitialDistributionRequest request;
+   request.set_username(celerClient_->userName());
+   request.set_networktype(networkType(appSettings_));
+   request.set_prefixedaddress(address.display());
+   request.set_bsseed(seed);
 
-      RequestPacket  request;
-      request.set_datasignature(signature);
-      request.set_requesttype(SubmitCCAddrInitialDistribType);
-      request.set_requestdata(data);
+   std::string requestData = request.SerializeAsString();
+   BinaryData requestDataHash = BtcUtils::getSha256(requestData);
+
+   const auto cbSigned = [this, address, requestData](const AutheIDClient::SignResult &result) {
+      // No need to check result.data (AutheIDClient will check that invisible data is the same)
+
+      RequestPacket packet;
+      packet.set_requesttype(SubmitCCAddrInitialDistribType);
+      packet.set_requestdata(requestData);
+
+      // Copy AuthEid signature
+      auto autheidSign = packet.mutable_autheidsign();
+      autheidSign->set_serialization(AuthEidSign::Serialization(result.serialization));
+      autheidSign->set_signature_data(result.data.toBinStr());
+      autheidSign->set_sign(result.sign.toBinStr());
+      autheidSign->set_certificate_client(result.certificateClient.toBinStr());
+      autheidSign->set_certificate_issuer(result.certificateIssuer.toBinStr());
+      autheidSign->set_ocsp_response(result.ocspResponse.toBinStr());
 
       logger_->debug("[CCFileManager::SubmitAddressToPuB] submitting addr {}", address.display());
-      if (SubmitRequestToPB("submit_cc_addr", request.SerializeAsString())) {
+      if (SubmitRequestToPB("submit_cc_addr", packet.SerializeAsString())) {
          emit CCInitialSubmitted(QString::fromStdString(address.display()));
       }
       else {
@@ -181,13 +188,7 @@ bool CCFileManager::SubmitAddressToPuB(const bs::Address &address, uint32_t seed
       emit CCSubmitFailed(QString::fromStdString(address.display()), text);
    };
 
-   SubmitAddrForInitialDistributionRequest addressRequest;
-   addressRequest.set_username(celerClient_->userName());
-   addressRequest.set_networktype(networkType(appSettings_));
-   addressRequest.set_prefixedaddress(address.display());
-   addressRequest.set_bsseed(seed);
-
-   return authSignManager_->Sign(addressRequest.SerializeAsString(), tr("Private Market token")
+   return authSignManager_->Sign(requestDataHash, tr("Private Market token")
       , tr("Submitting CC wallet address to receive PM token")
       , cbSigned, cbSignFailed, 90);
 }
