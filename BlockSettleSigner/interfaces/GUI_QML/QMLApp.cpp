@@ -261,7 +261,13 @@ void QMLAppObj::hideQmlWindow()
 
 QString QMLAppObj::getUrlPath(const QUrl &url)
 {
-   return url.path();
+   QString path = url.path();
+#ifdef Q_OS_WIN
+      if (path.startsWith(QLatin1Char('/'))) {
+         path.remove(0, 1);
+      }
+#endif
+   return path;
 }
 
 void QMLAppObj::onPasswordAccepted(const QString &walletId

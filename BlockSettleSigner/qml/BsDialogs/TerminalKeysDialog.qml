@@ -1,7 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
-import QtQuick.Dialogs 1.2
+import Qt.labs.platform 1.1
 
 import com.blocksettle.PasswordConfirmValidator 1.0
 import com.blocksettle.AuthSignWalletObject 1.0
@@ -131,23 +131,20 @@ CustomDialog {
                     Layout.preferredWidth: 150
                     text: qsTr("Import")
                     Layout.preferredHeight: inputName.implicitHeight
-                    onClicked: {
-                        importKeyDialog.open()
-                        importKeyDialog.accepted.connect(function(){
-                            var key = JsHelper.openTextFile(importKeyDialog.fileUrl)
-                            inputKey.text = key
-                        })
-                    }
+                    onClicked: importKeyDialog.open()
 
                     FileDialog {
                         id: importKeyDialog
                         visible: false
-                        title: "Import Terminal ID Key"
-                        selectFolder: false
-                        selectExisting: true
+                        title: qsTr("Import Terminal ID Key")
+
                         nameFilters: [ "Key files (*.pub)", "All files (*)" ]
-                        selectedNameFilter: "*.pub"
-                        folder: shortcuts.documents
+                        folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+
+                        onAccepted: {
+                            let key = JsHelper.openTextFile(importKeyDialog.file)
+                            inputKey.text = key
+                        }
                     }
                 }
             }

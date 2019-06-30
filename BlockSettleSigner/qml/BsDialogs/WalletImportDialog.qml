@@ -1,8 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
-import QtQuick.Dialogs 1.2
-
+import Qt.labs.platform 1.1
 
 import com.blocksettle.PasswordConfirmValidator 1.0
 import com.blocksettle.QSeed 1.0
@@ -183,12 +182,7 @@ CustomTitleDialogWindow {
                             }
                         }
                     }
-        //            CustomLabel {
-        //                Layout.fillWidth: true
-        //                Layout.leftMargin: 10
-        //                text: qsTr("File Location to Restore")
-        //                visible: !rbPaperBackup.checked
-        //            }
+
                     RowLayout {
                         spacing: 5
                         Layout.fillWidth: true
@@ -217,11 +211,30 @@ CustomTitleDialogWindow {
                         CustomButton {
                             text: qsTr("Select")
                             Layout.alignment: Qt.AlignTop
-                            onClicked: {
-                                if (!ldrDBFileDlg.item) {
-                                    ldrDBFileDlg.active = true;
+                            onClicked: dlgDBFile.open()
+
+                            FileDialog {
+                                id: dlgDBFile
+                                title: qsTr("Select Digital Backup file")
+                                nameFilters: ["Digital Backup files (*.wdb)", "All files (*)"]
+                                folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+
+                                onAccepted: {
+                                    let filePath = qmlAppObj.getUrlPath(file)
+                                    lblDBFile.text = decodeURIComponent(filePath)
+
+                                    // seed will be stored to Seed::privKey_
+                                    seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)
+                                    walletInfo = qmlFactory.createWalletInfoFromDigitalBackup(lblDBFile.text)
+
+                                    if (seed.networkType === WalletInfo.Invalid) {
+                                        digitalBackupAcceptable = false
+                                        JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse digital backup."), qsTr("Path: '%1'").arg(lblDBFile.text))
+                                    }
+                                    else {
+                                        digitalBackupAcceptable = true
+                                    }
                                 }
-                                ldrDBFileDlg.item.open();
                             }
                         }
                     }
@@ -464,19 +477,26 @@ CustomTitleDialogWindow {
                     CustomButton {
                         text: qsTr("Select")
                         Layout.alignment: Qt.AlignTop
-                        onClicked: {
-                            if (!ldrWoDBFileDlg.item) {
-                                ldrWoDBFileDlg.active = true;
+                        onClicked: dlgWoDBFile.open()
+
+                        FileDialog {
+                            id: dlgWoDBFile
+                            title: qsTr("Select Watching-Only Wallet Backup file")
+                            nameFilters: ["Watching-Only Backup files (*.lmdb)", "All files (*)"]
+                            folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+
+                            onAccepted: {
+                                let filePath = qmlAppObj.getUrlPath(file)
+                                lblWoDBFile.text = decodeURIComponent(filePath)
+
+                                digitalWoBackupAcceptable = true
                             }
-                            ldrWoDBFileDlg.item.open();
                         }
                     }
                 }
 
             }
         }
-
-
     }
 
     cFooterItem: RowLayout {
@@ -567,66 +587,6 @@ CustomTitleDialogWindow {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    Loader {
-        id: ldrDBFileDlg
-        active: false
-        sourceComponent: FileDialog {
-            id: dlgDBFile
-            visible: false
-            title: qsTr("Select Digital Backup file")
-            nameFilters: ["Digital Backup files (*.wdb)", "All files (*)"]
-            folder: shortcuts.documents
-
-            onAccepted: {
-                var filePath = fileUrl.toString()
-                if (Qt.platform.os === "windows") {
-                    filePath = filePath.replace(/(^file:\/{3})/, "")
-                }
-                else {
-                    filePath = filePath.replace(/(^file:\/{2})/, "") // this might be done like this to work in ubuntu? not sure...
-                }
-
-                lblDBFile.text = decodeURIComponent(filePath)
-
-                // seed will be stored to Seed::privKey_
-                seed = qmlFactory.createSeedFromDigitalBackupT(lblDBFile.text, signerSettings.testNet)
-                walletInfo = qmlFactory.createWalletInfoFromDigitalBackup(lblDBFile.text)
-
-                if (seed.networkType === WalletInfo.Invalid) {
-                    digitalBackupAcceptable = false
-                    JsHelper.messageBoxCritical(qsTr("Error"), qsTr("Failed to parse digital backup."), qsTr("Path: '%1'").arg(lblDBFile.text))
-                }
-                else {
-                    digitalBackupAcceptable = true
-                }
-            }
-        }
-    }
-
-    Loader {
-        id: ldrWoDBFileDlg
-        active: false
-        sourceComponent: FileDialog {
-            id: dlgWoDBFile
-            visible: false
-            title: qsTr("Select Watching-Only Wallet Backup file")
-            nameFilters: ["Watching-Only Backup files (*.lmdb)", "All files (*)"]
-            folder: shortcuts.documents
-
-            onAccepted: {
-                var filePath = fileUrl.toString()
-                if (Qt.platform.os === "windows") {
-                    filePath = filePath.replace(/(^file:\/{3})/, "")
-                }
-                else {
-                    filePath = filePath.replace(/(^file:\/{2})/, "") // this might be done like this to work in ubuntu? not sure...
-                }
-                lblWoDBFile.text = decodeURIComponent(filePath)
-                digitalWoBackupAcceptable = true
             }
         }
     }

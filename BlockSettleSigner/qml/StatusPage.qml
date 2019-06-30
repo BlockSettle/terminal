@@ -1,7 +1,7 @@
 import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
-import QtQuick.Dialogs 1.2
+import Qt.labs.platform 1.1
 import com.blocksettle.OfflineProc 1.0
 
 import "StyledControls"
@@ -34,11 +34,22 @@ Item {
                         id: btnSignOfflineTx
                         text: qsTr("Sign Offline From File")
                         width: 200
-                        onClicked: {
-                            if (!ldrOfflineFileDlg.item) {
-                                ldrOfflineFileDlg.active = true
+                        onClicked: dlgOfflineFile.open()
+                        FileDialog {
+                            id: dlgOfflineFile
+                            title: qsTr("Select TX request file")
+
+                            nameFilters: ["Offline TX requests (*.bin)", "All files (*)"]
+                            folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+                            fileMode: FileDialog.OpenFile
+
+                            onAccepted: {
+                                let filePath = qmlAppObj.getUrlPath(file)
+
+                                // FIXME: rewrite OfflineProcessor.cpp
+                                let reqId = offlineProc.parseFile(filePath)
+                                offlineProc.processRequest(reqId)
                             }
-                            ldrOfflineFileDlg.item.open();
                         }
                     }
                 }
@@ -247,27 +258,6 @@ Item {
         }
         onSignFailure: {
             ibFailure.displayMessage(qsTr("Failed to sign offline request - check log for details"))
-        }
-    }
-
-    Loader {
-        id: ldrOfflineFileDlg
-        active: false
-        sourceComponent: FileDialog {
-            id: dlgOfflineFile
-            visible: false
-            title: qsTr("Select TX request file")
-            nameFilters: ["Offline TX requests (*.bin)", "All files (*)"]
-            folder: shortcuts.documents
-
-            onAccepted: {
-                var filePath = fileUrl.toString()
-                filePath = filePath.replace(/(^file:\/{3})/, "")
-                filePath = decodeURIComponent(filePath)
-
-                var reqId = offlineProc.parseFile(filePath)
-                offlineProc.processRequest(reqId)
-            }
         }
     }
 }
