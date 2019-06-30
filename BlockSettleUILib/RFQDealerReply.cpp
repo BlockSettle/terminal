@@ -895,7 +895,7 @@ bool RFQDealerReply::eventFilter(QObject *watched, QEvent *evt)
 
 QString RFQDealerReply::askForAQScript()
 {
-   return QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QString()
+   return QFileDialog::getOpenFileName(this, tr("Open Auto-quoting script file"), QCoreApplication::applicationDirPath() + QStringLiteral("/scripts/")
                                        , tr("QML files (*.qml)"));
 }
 
