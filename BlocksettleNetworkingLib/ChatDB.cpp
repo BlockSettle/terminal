@@ -473,7 +473,7 @@ bool ChatDB::getContacts(ContactRecordDataList &contactList)
       contact.set_contact_id(query.value(0).toString().toStdString());
       contact.set_status(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
       contact.set_public_key(BinaryData::CreateFromHex(query.value(3).toString().toStdString()).toBinStr());
-      contact.set_public_key_timestamp(query.value(4).toInt());
+      contact.set_public_key_timestamp(query.value(4).toDateTime().toMSecsSinceEpoch());
 
       auto name = query.value(1).toString().toStdString();
       if (!name.empty()) {
@@ -541,7 +541,7 @@ bool ChatDB::getContact(const std::string &userId, Chat::Data_ContactRecord *con
       contact->set_display_name(query.value(1).toString().toStdString());
       contact->set_status(static_cast<Chat::ContactStatus>(query.value(2).toInt()));
       contact->set_public_key(BinaryData::CreateFromHex(query.value(3).toString().toStdString()).toBinStr());
-      contact->set_public_key_timestamp(query.value(4).toInt());
+      contact->set_public_key_timestamp(query.value(4).toDateTime().toMSecsSinceEpoch());
       return true;
    }
 
