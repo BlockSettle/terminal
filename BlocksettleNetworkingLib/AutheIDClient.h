@@ -119,7 +119,7 @@ public:
       std::string rpName;
       std::string title;
       std::string description;
-      std::chrono::system_clock::time_point finished;
+      std::chrono::system_clock::time_point finished{};
       BinaryData invisibleData;
 
       static SignVerifyStatus failed(const std::string &errorMsg)
