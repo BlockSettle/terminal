@@ -113,7 +113,7 @@ signals:
    void ConfirmContactsNewData(const std::vector<std::shared_ptr<Chat::Data>>& remoteConfirmed,
                                const std::vector<std::shared_ptr<Chat::Data>>& remoteKeysUpdate,
                                const std::vector<std::shared_ptr<Chat::Data>>& remoteAbsolutelyNew);
-   void ConfirmUploadNewPublicKey();
+   void ConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey);
 
 protected:
    void cleanupConnection();

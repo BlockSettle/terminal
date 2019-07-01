@@ -84,13 +84,13 @@ DealerCCSettlementDialog::DealerCCSettlementDialog(const std::shared_ptr<spdlog:
 DealerCCSettlementDialog::~DealerCCSettlementDialog() = default;
 
 QWidget *DealerCCSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
-WalletKeysSubmitWidget *DealerCCSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
+//WalletKeysSubmitWidget *DealerCCSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
 QLabel *DealerCCSettlementDialog::labelHint() const { return ui_->labelHint; }
 QLabel *DealerCCSettlementDialog::labelPassword() const { return ui_->labelPasswordHint; }
 
 void DealerCCSettlementDialog::validateGUI()
 {
-   ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable() && widgetWalletKeys()->isValid());
+   //ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable() && widgetWalletKeys()->isValid());
 }
 
 void DealerCCSettlementDialog::onGenAddressVerified(bool addressVerified)
@@ -100,14 +100,15 @@ void DealerCCSettlementDialog::onGenAddressVerified(bool addressVerified)
       readyToAccept();
    } else {
       ui_->labelGenesisAddress->setText(sInvalid);
-      widgetWalletKeys()->setEnabled(false);
+      //widgetWalletKeys()->setEnabled(false);
    }
    validateGUI();
 }
 
 void DealerCCSettlementDialog::onAccepted()
 {
-   if (settlContainer_->accept(widgetWalletKeys()->key())) {
-      ui_->pushButtonAccept->setEnabled(false);
-   }
+   // FIXME: this widget needs to be reimplemented to move signing to signer
+//   if (settlContainer_->accept(widgetWalletKeys()->key())) {
+//      ui_->pushButtonAccept->setEnabled(false);
+//   }
 }

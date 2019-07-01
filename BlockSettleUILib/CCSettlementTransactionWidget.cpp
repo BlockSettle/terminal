@@ -47,7 +47,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
    connect(settlContainer_.get(), &ReqCCSettlementContainer::timerStarted, [this](int msDuration) { ui_->progressBar->setMaximum(msDuration); });
    connect(settlContainer_.get(), &ReqCCSettlementContainer::walletInfoReceived, this, &CCSettlementTransactionWidget::initSigning);
    connect(celerClient.get(), &CelerClient::OnConnectionClosed, this, &CCSettlementTransactionWidget::onCancel);
-   connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &CCSettlementTransactionWidget::onKeyChanged);
+   //connect(ui_->widgetSubmitKeys, &WalletKeysSubmitWidget::keyChanged, this, &CCSettlementTransactionWidget::onKeyChanged);
 
    settlContainer_->activate();
 
@@ -58,7 +58,7 @@ CCSettlementTransactionWidget::CCSettlementTransactionWidget(
 void CCSettlementTransactionWidget::onCancel()
 {
    settlContainer_->cancel();
-   ui_->widgetSubmitKeys->cancel();
+   //ui_->widgetSubmitKeys->cancel();
 }
 
 void CCSettlementTransactionWidget::onTimerTick(int msCurrent, int)
@@ -125,11 +125,11 @@ void CCSettlementTransactionWidget::initSigning()
       return;
    }
 
-   ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
-      , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
+//   ui_->widgetSubmitKeys->init(AutheIDClient::SettlementTransaction, settlContainer_->walletInfo()
+//      , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
 
-   ui_->widgetSubmitKeys->setFocus();
-   ui_->widgetSubmitKeys->resume();
+//   ui_->widgetSubmitKeys->setFocus();
+//   ui_->widgetSubmitKeys->resume();
 }
 
 void CCSettlementTransactionWidget::onPaymentVerified(bool result, QString error)
@@ -154,10 +154,10 @@ void CCSettlementTransactionWidget::onInfo(QString text)
 
 void CCSettlementTransactionWidget::onKeyChanged()
 {
-   updateAcceptButton();
-   if (ui_->widgetSubmitKeys->isKeyFinal()) {
-      onAccept();
-   }
+//   updateAcceptButton();
+//   if (ui_->widgetSubmitKeys->isKeyFinal()) {
+//      onAccept();
+//   }
 }
 
 void CCSettlementTransactionWidget::onAccept()
@@ -165,15 +165,16 @@ void CCSettlementTransactionWidget::onAccept()
    ui_->progressBar->setValue(0);
    ui_->labelHint->clear();
    ui_->pushButtonAccept->setEnabled(false);
-   ui_->widgetSubmitKeys->setEnabled(false);
+   //ui_->widgetSubmitKeys->setEnabled(false);
 
    ui_->pushButtonCancel->setEnabled(false);
 
-   settlContainer_->accept(ui_->widgetSubmitKeys->key());
+   // FIXME: this widget needs to be reimplemented to move signing to signer
+   //settlContainer_->accept(ui_->widgetSubmitKeys->key());
 }
 
 void CCSettlementTransactionWidget::updateAcceptButton()
 {
-   ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable()
-      && ui_->widgetSubmitKeys->isValid());
+//   ui_->pushButtonAccept->setEnabled(settlContainer_->isAcceptable()
+//      && ui_->widgetSubmitKeys->isValid());
 }

@@ -889,11 +889,6 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
-           <layout class="QHBoxLayout" name="horizontalLayout_11"/>
-          </widget>
-         </item>
         </layout>
        </widget>
       </item>
@@ -983,14 +978,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>WalletKeysSubmitWidget</class>
-   <extends>QWidget</extends>
-   <header>ManageEncryption/WalletKeysSubmitWidget.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

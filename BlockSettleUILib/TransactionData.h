@@ -102,7 +102,7 @@ public:
    bool IsMaxAmount(unsigned int recipientId) const;
 
    bs::core::wallet::TXSignRequest createUnsignedTransaction(bool isRBF = false, const bs::Address &changeAddr = {});
-   bs::core::wallet::TXSignRequest getSignTXRequest() const;
+   bs::core::wallet::TXSignRequest getSignTxRequest() const;
 
    bs::core::wallet::TXSignRequest createTXRequest(bool isRBF = false
                                              , const bs::Address &changeAddr = {}

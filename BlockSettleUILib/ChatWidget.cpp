@@ -14,6 +14,7 @@
 #include "ChatProtocol/ChatUtils.h"
 #include "ChatSearchListViewItemStyle.h"
 #include "BSMessageBox.h"
+#include "ImportKeyBox.h"
 
 #include <QApplication>
 #include <QMouseEvent>
@@ -342,6 +343,8 @@ void ChatWidget::init(const std::shared_ptr<ConnectionManager>& connectionManage
    connect(client_.get(), &ChatClient::NewContactRequest, this, [=] (const std::string &userId) {
             NotificationCenter::notify(bs::ui::NotifyType::FriendRequest, {QString::fromStdString(userId)});
    });
+   connect(client_.get(), &ChatClient::ConfirmUploadNewPublicKey, this, &ChatWidget::onConfirmUploadNewPublicKey);
+   connect(client_.get(), &ChatClient::ConfirmContactsNewData, this, &ChatWidget::onConfirmContactNewKeyData);
    connect(ui_->input_textEdit, &BSChatInput::sendMessage, this, &ChatWidget::onSendButtonClicked);
    connect(ui_->input_textEdit, &BSChatInput::selectionChanged, this, &ChatWidget::onBSChatInputSelectionChanged);
    connect(ui_->searchWidget, &SearchWidget::searchUserTextEdited, this, &ChatWidget::onSearchUserTextEdited);
@@ -472,6 +475,25 @@ void ChatWidget::initSearchWidget()
            this, &ChatWidget::onRemoveFriendRequest);
 }
 
+bool ChatWidget::isLoggedIn() const
+{
+   if (!stateCurrent_) {
+      return false;
+   }
+   return stateCurrent_->type() == State::LoggedIn;
+}
+
+void ChatWidget::tryBecomeContactWithPb()
+{
+   // ChatClient::isFriend is used to prevent sending contact request if PB is already our contact
+   // ChatClient::sendFriendRequest checks this too but using model_ and it's downloaded later
+   if (!isLoggedIn() || pbUserId_.empty() || client_->isFriend(pbUserId_)) {
+      return;
+   }
+
+   client_->sendFriendRequest(pbUserId_);
+}
+
 void ChatWidget::onSendButtonClicked()
 {
    return stateCurrent_->onSendButtonClicked();
@@ -536,6 +558,12 @@ void ChatWidget::updateChat(const bool &isChatTab)
    }
 }
 
+void ChatWidget::connectToPb(const std::string &pbUserId)
+{
+   pbUserId_ = pbUserId;
+   tryBecomeContactWithPb();
+}
+
 void ChatWidget::onLoggedOut()
 {
    stateCurrent_->onLoggedOut();
@@ -571,11 +599,106 @@ void ChatWidget::onConnectedToServer()
    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
    chatLoggedInTimestampUtcInMillis_ =  timestamp.count();
    changeState(State::LoggedIn);
+
+   tryBecomeContactWithPb();
 }
 
 void ChatWidget::onContactRequestAccepted(const std::string &userId)
 {
    ui_->treeViewUsers->setCurrentUserChat(userId);
+}
+
+void ChatWidget::onConfirmUploadNewPublicKey(const std::string &oldKey, const std::string &newKey)
+{
+   ImportKeyBox box(BSMessageBox::question
+                    , tr("Replace OTC Chat Public Key?")
+                    , this);
+
+   box.setAddrPort("");
+   box.setNewKeyFromBinary(newKey);
+   box.setOldKeyFromBinary(oldKey);
+   box.setCancelVisible(true);
+
+   bool confirmed = box.exec() == QDialog::Accepted;
+   client_->uploadNewPublicKeyToServer(confirmed);
+}
+
+void ChatWidget::onConfirmContactNewKeyData(
+      const std::vector<std::shared_ptr<Chat::Data> > &remoteConfirmed
+      , const std::vector<std::shared_ptr<Chat::Data> > &remoteKeysUpdate
+      , const std::vector<std::shared_ptr<Chat::Data> > &remoteAbsolutelyNew)
+{
+   Q_UNUSED(remoteConfirmed)
+
+   const auto localContacts = client_->getDataModel()->getAllContacts();
+   std::map<std::string, std::shared_ptr<Chat::Data> > dict;
+   for (const auto &contact : localContacts) {
+      dict[contact->mutable_contact_record()->contact_id()] = contact;
+   }
+
+   std::vector<std::shared_ptr<Chat::Data> > updateList;
+   for (const auto &contact : remoteKeysUpdate) {
+      if (!contact || !contact->has_contact_record()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
+      auto contactRecord = contact->mutable_contact_record();
+      auto oldContact = client_->getContact(contactRecord->contact_id());
+      if (oldContact.contact_id().empty()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
+      auto name = QString::fromStdString(contactRecord->display_name());
+      if (name.isEmpty()) {
+         name = QString::fromStdString(contactRecord->contact_id());
+      }
+
+      ImportKeyBox box(BSMessageBox::question
+                       , tr("Import Contact '%1' Public Key?").arg(name)
+                       , this);
+      box.setAddrPort(std::string());
+      box.setNewKeyFromBinary(contactRecord->public_key());
+      box.setOldKeyFromBinary(oldContact.public_key());
+      box.setCancelVisible(true);
+
+      if (box.exec() == QDialog::Accepted) {
+         updateList.push_back(contact);
+      } else {
+         auto it = dict.find(contact->mutable_contact_record()->contact_id());
+         if (it != dict.end()) {
+            dict.erase(it);
+         }
+      }
+   }
+
+   std::vector<std::shared_ptr<Chat::Data> > leaveList;
+   for (const auto &item : dict) {
+      leaveList.push_back(item.second);
+   }
+
+   std::vector<std::shared_ptr<Chat::Data> > newList;
+   for (const auto &contact : remoteAbsolutelyNew) {
+      if (!contact || !contact->has_contact_record()) {
+         logger_->error("[ChatWidget::{}] invalid contact", __func__);
+         continue;
+      }
+      auto contactRecord = contact->mutable_contact_record();
+      auto name = QString::fromStdString(contactRecord->contact_id());
+
+      ImportKeyBox box(BSMessageBox::question
+                       , tr("Import new Contact '%1' Public Key?").arg(name)
+                       , this);
+      box.setAddrPort(std::string());
+      box.setNewKeyFromBinary(contactRecord->public_key());
+      box.setOldKey(std::string());
+      box.setCancelVisible(true);
+
+      if (box.exec() == QDialog::Accepted) {
+         newList.push_back(contact);
+      }
+   }
+
+   client_->OnContactListConfirmed(leaveList, updateList, newList);
 }
 
 bool ChatWidget::eventFilter(QObject *sender, QEvent *event)

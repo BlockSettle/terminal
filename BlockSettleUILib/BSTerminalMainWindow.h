@@ -107,7 +107,6 @@ private slots:
    void InitTransactionsView();
    void ArmoryIsOffline();
    void SignerReady();
-   void onPasswordRequested(const bs::hd::WalletInfo &walletInfo, std::string prompt);
    void showInfo(const QString &title, const QString &text);
    void showError(const QString &title, const QString &text);
    void onSignerConnError(SignContainer::ConnectionError error, const QString &details);

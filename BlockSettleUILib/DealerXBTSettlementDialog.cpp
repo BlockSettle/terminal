@@ -80,7 +80,7 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 
    if (!settlContainer_->weSell()) {
       // we should wait for payin from customer before accept
-      widgetWalletKeys()->setEnabled(false);
+      //widgetWalletKeys()->setEnabled(false);
    }
 
    activate();
@@ -89,7 +89,7 @@ DealerXBTSettlementDialog::DealerXBTSettlementDialog(const std::shared_ptr<spdlo
 DealerXBTSettlementDialog::~DealerXBTSettlementDialog() = default;
 
 QWidget *DealerXBTSettlementDialog::widgetPassword() const { return ui_->horizontalWidgetPassword; }
-WalletKeysSubmitWidget *DealerXBTSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
+//WalletKeysSubmitWidget *DealerXBTSettlementDialog::widgetWalletKeys() const { return ui_->widgetSubmitKeys; }
 QLabel *DealerXBTSettlementDialog::labelHint() const { return ui_->labelHint; }
 QLabel *DealerXBTSettlementDialog::labelPassword() const { return ui_->labelError; }
 
@@ -153,7 +153,7 @@ void DealerXBTSettlementDialog::validateGUI()
       acceptable_ = true;
       readyToAccept();
    }
-   ui_->pushButtonAccept->setEnabled(acceptable_ && widgetWalletKeys()->isValid());
+//   ui_->pushButtonAccept->setEnabled(acceptable_ && widgetWalletKeys()->isValid());
 }
 
 void DealerXBTSettlementDialog::onTimerExpired()
@@ -180,7 +180,7 @@ void DealerXBTSettlementDialog::payInDetected(int confirmationsNumber, const Bin
    ui_->labelTransactioAmount->setText(UiUtils::displayQuantity(settlContainer_->amount() - UiUtils::amountToBtc(settlContainer_->fee())
       , UiUtils::XbtCurrency));
 
-   widgetWalletKeys()->setEnabled(!settlContainer_->weSell());
+//   widgetWalletKeys()->setEnabled(!settlContainer_->weSell());
 
    validateGUI();
 }
@@ -208,8 +208,10 @@ void DealerXBTSettlementDialog::onAccepted()
    disableCancelOnOrder();
    setHintText(tr("Waiting for transactions signing..."));
 
-   widgetWalletKeys()->setEnabled(false);
-   settlContainer_->accept(widgetWalletKeys()->key());
+//   widgetWalletKeys()->setEnabled(false);
+
+   // FIXME: this widget needs to be reimplemented to move signing to signer
+   //settlContainer_->accept(widgetWalletKeys()->key());
 
    validateGUI();
 }

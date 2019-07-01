@@ -756,7 +756,7 @@ bs::core::wallet::TXSignRequest TransactionData::createUnsignedTransaction(bool 
    return unsignedTxReq_;
 }
 
-bs::core::wallet::TXSignRequest TransactionData::getSignTXRequest() const
+bs::core::wallet::TXSignRequest TransactionData::getSignTxRequest() const
 {
    if (!unsignedTxReq_.isValid()) {
       throw std::runtime_error("missing unsigned TX");

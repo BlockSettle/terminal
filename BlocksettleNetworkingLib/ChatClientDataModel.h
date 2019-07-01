@@ -6,6 +6,7 @@
 
 #include "ChatClientTree/TreeObjects.h"
 #include "ChatHandleInterfaces.h"
+#include <spdlog/spdlog.h>
 
 class ChatClientDataModel : public QAbstractItemModel
 {
@@ -24,7 +25,7 @@ public:
       ChatNewMessageRole
    };
 
-   ChatClientDataModel(QObject * parent = nullptr);
+   ChatClientDataModel(const std::shared_ptr<spdlog::logger> &logger, QObject * parent = nullptr);
 
 public:
    void initTreeCategoryGroup();
@@ -75,11 +76,12 @@ private:
    QVariant chatNewMessageData(const TreeItem * item, int role) const;
 
 private:
+   std::shared_ptr<spdlog::logger> logger_;
+
    std::shared_ptr<RootItem> root_;
-   void beginChatInsertRows(const ChatUIDefinitions::ChatTreeNodeType &type);
+   void beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType type);
    void updateNewMessagesFlag();
 
-private:
    NewMessageMonitor * newMessageMonitor_;
    ModelChangesHandler * modelChangesHandler_;
    bool newMesagesFlag_;

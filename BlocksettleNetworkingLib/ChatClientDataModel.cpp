@@ -2,8 +2,9 @@
 #include <algorithm>
 #include "ChatProtocol/ChatUtils.h"
 
-ChatClientDataModel::ChatClientDataModel(QObject * parent)
+ChatClientDataModel::ChatClientDataModel(const std::shared_ptr<spdlog::logger> &logger, QObject * parent)
     : QAbstractItemModel(parent)
+    , logger_(logger)
     , root_(std::make_shared<RootItem>())
     , newMessageMonitor_(nullptr)
     , modelChangesHandler_(nullptr)
@@ -576,13 +577,10 @@ Qt::ItemFlags ChatClientDataModel::flags(const QModelIndex &index) const
    return current_flags;
 }
 
-void ChatClientDataModel::beginChatInsertRows(const ChatUIDefinitions::ChatTreeNodeType &type)
+void ChatClientDataModel::beginChatInsertRows(ChatUIDefinitions::ChatTreeNodeType type)
 {
-   TreeItem * item = root_->findCategoryNodeWith(type);
-
-   if (!item) {
-      return;
-   }
+   TreeItem *item = root_->findCategoryNodeWith(type);
+   assert(item);
 
    const QModelIndex index = createIndex(item->selfIndex(), 0, item);
    const int first = item->getChildren().empty() ? 0 : item->getChildren().back()->selfIndex();

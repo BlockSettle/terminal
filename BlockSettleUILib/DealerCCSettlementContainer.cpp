@@ -4,6 +4,7 @@
 #include "SignContainer.h"
 #include "TransactionData.h"
 #include "Wallets/SyncWallet.h"
+#include "BSErrorCodeStrings.h"
 
 
 DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
@@ -27,8 +28,6 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
    , orderId_(QString::fromStdString(order.clOrderId))
    , signer_(armory)
 {
-   // FIXME: Settlement containers will be reimplemented to use another function
-   // connect(signingContainer_.get(), &SignContainer::TXSigned, this, &DealerCCSettlementContainer::onTXSigned);
    connect(this, &DealerCCSettlementContainer::genAddressVerified, this
       , &DealerCCSettlementContainer::onGenAddressVerified, Qt::QueuedConnection);
 
@@ -41,6 +40,44 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
 DealerCCSettlementContainer::~DealerCCSettlementContainer()
 {
    bs::UtxoReservation::delAdapter(utxoAdapter_);
+}
+
+bool DealerCCSettlementContainer::startSigning()
+{
+   if (!wallet_) {
+      logger_->error("[DealerCCSettlementContainer::accept] failed to validate counterparty's TX - aborting");
+      emit failed();
+      return false;
+   }
+
+   const auto &cbTx = [this](bs::error::ErrorCode result, const BinaryData &signedTX) {
+      if (result == bs::error::ErrorCode::NoError) {
+         emit signTxRequest(orderId_, signedTX.toHexStr());
+         emit completed();
+      }
+      else if (result == bs::error::ErrorCode::TxCanceled) {
+         // FIXME
+         emit failed();
+      }
+      else {
+         logger_->warn("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", bs::error::ErrorCodeToString(result).toStdString());
+         emit error(tr("TX half signing failed\n: %1").arg(bs::error::ErrorCodeToString(result)));
+         emit failed();
+      }
+   };
+
+   bs::core::wallet::TXSignRequest txReq;
+   txReq.walletId = wallet_->walletId();
+   txReq.prevStates = { txReqData_ };
+   txReq.populateUTXOs = true;
+   txReq.inputs = utxoAdapter_->get(id());
+   logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
+      , wallet_->name(), txReq.inputs.size());
+
+   emit info(tr("Waiting for TX half signing..."));
+
+   bs::signer::RequestId signId = signingContainer_->signSettlementPartialTXRequest(txReq, toSettlementInfo(), cbTx);
+   return (signId > 0);
 }
 
 void DealerCCSettlementContainer::activate()
@@ -105,50 +142,11 @@ bool DealerCCSettlementContainer::isAcceptable() const
    return (foundRecipAddr_ && amountValid_ && genAddrVerified_ && wallet_);
 }
 
-bool DealerCCSettlementContainer::accept(const SecureBinaryData &password)
-{
-   if (cancelled_) {
-      return false;
-   }
-   if (!wallet_) {
-      logger_->error("[DealerCCSettlementContainer::accept] failed to validate counterparty's TX - aborting");
-      emit failed();
-      return false;
-   }
-
-   bs::core::wallet::TXSignRequest txReq;
-   txReq.walletId = wallet_->walletId();
-   txReq.prevStates = { txReqData_ };
-   txReq.populateUTXOs = true;
-   txReq.inputs = utxoAdapter_->get(id());
-   logger_->debug("[DealerCCSettlementContainer::accept] signing with wallet {}, {} inputs"
-      , wallet_->name(), txReq.inputs.size());
-   //signId_ = signingContainer_->signPartialTXRequest(txReq, autoSign_, password);
-   emit info(tr("Waiting for TX half signing..."));
-   return true;
-}
-
 bool DealerCCSettlementContainer::cancel()
 {
    utxoAdapter_->unreserve(id());
    cancelled_ = true;
    return true;
-}
-
-void DealerCCSettlementContainer::onTXSigned(unsigned int id, BinaryData signedTX,
-   std::string errMsg, bool cancelledByUser)
-{
-   if (signId_ && (signId_ == id)) {
-      signId_ = 0;
-      if (!errMsg.empty()) {
-         logger_->error("[DealerCCSettlementContainer::onTXSigned] failed to sign TX half: {}", errMsg);
-         emit error(tr("Create transaction error"));
-         emit failed();
-         return;
-      }
-      emit signTxRequest(orderId_, signedTX.toHexStr());
-      emit completed();
-   }
 }
 
 QString DealerCCSettlementContainer::GetSigningWalletName() const

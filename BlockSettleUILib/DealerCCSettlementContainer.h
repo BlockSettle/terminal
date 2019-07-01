@@ -30,7 +30,7 @@ public:
       , const std::shared_ptr<ArmoryObject> &, bool autoSign);
    ~DealerCCSettlementContainer() override;
 
-   bool accept(const SecureBinaryData &password = {}) override;
+   bool startSigning();
    bool cancel() override;
 
    bool isAcceptable() const override;
@@ -61,7 +61,6 @@ signals:
    void genAddressVerified(bool result);
 
 private slots:
-   void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
    void onGenAddressVerified(bool result);
 
 private:

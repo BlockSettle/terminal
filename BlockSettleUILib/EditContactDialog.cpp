@@ -1,31 +1,27 @@
 #include "EditContactDialog.h"
 #include "ui_EditContactDialog.h"
 
-const QString kDateTimeStringFormat = QStringLiteral("yyyy-MM-dd");
-
 EditContactDialog::EditContactDialog(const QString &contactId
                                      , const QString &displayName
-                                     , const QDateTime &joinDate
+                                     , const QDateTime &timestamp
                                      , const QString &idKey
                                      , QWidget *parent) :
    QDialog(parent)
  , ui_(new Ui::EditContactDialog())
  , contactId_(contactId)
  , displayName_(displayName)
- , joinDate_(joinDate)
+ , timestamp_(timestamp)
  , idKey_(idKey)
 {
    ui_->setupUi(this);
 
    refillFields();
-
-   connect(ui_->saveButton, &QPushButton::clicked, this, &EditContactDialog::accept);
-   connect(ui_->cancelButton, &QPushButton::clicked, this, &EditContactDialog::reject);
+   connect(ui_->buttonBox, &QDialogButtonBox::accepted, this, &EditContactDialog::accept);
 
    if (displayName_.isEmpty()) {
       ui_->nameOptionalLineEdit->setFocus();
    } else {
-      ui_->saveButton->setFocus();
+      ui_->buttonBox->setFocus();
    }
 }
 
@@ -41,9 +37,9 @@ QString EditContactDialog::displayName() const
    return displayName_;
 }
 
-QDateTime EditContactDialog::joinDate() const
+QDateTime EditContactDialog::timestamp() const
 {
-   return joinDate_;
+   return timestamp_;
 }
 
 QString EditContactDialog::idKey() const
@@ -54,11 +50,6 @@ QString EditContactDialog::idKey() const
 void EditContactDialog::accept()
 {
    displayName_ = ui_->nameOptionalLineEdit->text();
-   contactId_ = ui_->userIDLineEdit->text();
-   if (!ui_->contactDateLineEdit->text().isEmpty()) {
-      joinDate_ = QDateTime::fromString(ui_->contactDateLineEdit->text(), kDateTimeStringFormat);
-   }
-   idKey_ = ui_->iDKeyLineEdit->text();
    QDialog::accept();
 }
 
@@ -81,8 +72,8 @@ void EditContactDialog::refillFields()
 {
    ui_->nameOptionalLineEdit->setText(displayName_);
    ui_->userIDLineEdit->setText(contactId_);
-   if (joinDate_.isValid()) {
-      ui_->contactDateLineEdit->setText(joinDate_.toString(kDateTimeStringFormat));
+   if (timestamp_.isValid()) {
+      ui_->contactDateLineEdit->setText(timestamp_.toString(Qt::SystemLocaleShortDate));
    }
    ui_->iDKeyLineEdit->setText(idKey_);
 }

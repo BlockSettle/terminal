@@ -36,7 +36,6 @@
 #include "DialogManager.h"
 #include "HeadlessContainer.h"
 #include "LoginWindow.h"
-#include "ManageEncryption/EnterWalletPassword.h"
 #include "MarketDataProvider.h"
 #include "MDAgreementDialog.h"
 #include "NewAddressDialog.h"
@@ -608,13 +607,6 @@ bool BSTerminalMainWindow::InitSigningContainer()
 void BSTerminalMainWindow::SignerReady()
 {
    updateControlEnabledState();
-
-   if (signContainer_->hasUI()) {
-      disconnect(signContainer_.get(), &SignContainer::PasswordRequested, this, &BSTerminalMainWindow::onPasswordRequested);
-   }
-   else {
-      connect(signContainer_.get(), &SignContainer::PasswordRequested, this, &BSTerminalMainWindow::onPasswordRequested);
-   }
 
    LoadWallets();
    //InitWidgets();
@@ -1273,6 +1265,9 @@ void BSTerminalMainWindow::onCelerConnected()
    action_logout_->setVisible(true);
 
    onUserLoggedIn();
+
+   // TODO: Use PB contact name from downloaded settings or something
+   ui_->widgetChat->connectToPb("m8ifjy99bpom");
 }
 
 void BSTerminalMainWindow::onCelerDisconnected()
@@ -1449,53 +1444,6 @@ void BSTerminalMainWindow::setLoginButtonText(const QString& text)
 #ifndef Q_OS_MAC
    ui_->menubar->adjustSize();
 #endif
-}
-
-void BSTerminalMainWindow::onPasswordRequested(const bs::hd::WalletInfo &walletInfo, std::string prompt)
-{
-   SignContainer::PasswordType password;
-   bool cancelledByUser = true;
-
-   if (walletInfo.rootId().isEmpty()) {
-      logMgr_->logger("ui")->error("[onPasswordRequested] can\'t ask password for empty wallet id");
-   } else {
-      QString walletName;
-      const auto wallet = walletsMgr_->getWalletById(walletInfo.rootId().toStdString());
-      if (wallet != nullptr) {
-         // do we need to get name of root wallet?
-         walletName = QString::fromStdString(wallet->name());
-      } else {
-         const auto hdWallet = walletsMgr_->getHDWalletById(walletInfo.rootId().toStdString());
-         walletName = QString::fromStdString(hdWallet->name());
-      }
-
-      // pass to dialog root wallet id and root name
-      bs::hd::WalletInfo walletInfoCopy = walletInfo;
-      if (!walletName.isEmpty()) {
-         const auto &rootWallet = walletsMgr_->getHDRootForLeaf(walletInfo.rootId().toStdString());
-         if (rootWallet) {
-            walletInfoCopy.setRootId(rootWallet->walletId());
-            walletInfoCopy.setName(rootWallet->name());
-         }
-
-         EnterWalletPassword passwordDialog(AutheIDClient::SignWallet, this);
-         passwordDialog.init(walletInfoCopy, applicationSettings_, connectionManager_, WalletKeyWidget::UseType::RequestAuthAsDialog
-                             , QString::fromStdString(prompt), logMgr_->logger("ui"));
-
-         if (passwordDialog.exec() == QDialog::Accepted) {
-            password = passwordDialog.resultingKey();
-            cancelledByUser = false;
-         }
-         else {
-            logMgr_->logger("ui")->debug("[onPasswordRequested] user rejected to enter password for wallet {} ( {} )"
-               , walletInfo.rootId().toStdString(), walletName.toStdString());
-         }
-      } else {
-         logMgr_->logger("ui")->error("[onPasswordRequested] can\'t find wallet with id {}", walletInfo.rootId().toStdString());
-      }
-   }
-
-   signContainer_->SendPassword(walletInfo.rootId().toStdString(), password, cancelledByUser);
 }
 
 void BSTerminalMainWindow::onCCInfoMissing()

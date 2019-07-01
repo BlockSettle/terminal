@@ -3,7 +3,6 @@
 #include "Wallets/SyncHDWallet.h"
 #include "SettlementContainer.h"
 #include "SignContainer.h"
-#include "ManageEncryption/WalletKeysSubmitWidget.h"
 #include <spdlog/spdlog.h>
 
 
@@ -96,7 +95,7 @@ void BaseDealerSettlementDialog::onTimerTick(int msCurrent, int msDuration)
 
 void BaseDealerSettlementDialog::reject()
 {
-   widgetWalletKeys()->cancel();
+   //widgetWalletKeys()->cancel();
    settlContainer_->cancel();
    QDialog::reject();
 }
@@ -122,7 +121,7 @@ void BaseDealerSettlementDialog::onWalletInfo(unsigned int reqId, const bs::hd::
 void BaseDealerSettlementDialog::setWallet(const std::shared_ptr<bs::sync::hd::Wallet> &wallet)
 {
    widgetPassword()->hide();
-   connect(widgetWalletKeys(), &WalletKeysSubmitWidget::keyChanged, [this] { validateGUI(); });
+   //connect(widgetWalletKeys(), &WalletKeysSubmitWidget::keyChanged, [this] { validateGUI(); });
 
    rootWallet_ = wallet;
    if (signContainer_ && !signContainer_->isOffline()) {
@@ -145,10 +144,10 @@ void BaseDealerSettlementDialog::startAccepting()
       logger_->error("[BaseDealerSettlementDialog::startAccepting] no root wallet");
       return;
    }
-   widgetWalletKeys()->init(AutheIDClient::SettlementTransaction, walletInfo_
-                            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
-   widgetPassword()->show();
-   widgetWalletKeys()->setFocus();
+//   widgetWalletKeys()->init(AutheIDClient::SettlementTransaction, walletInfo_
+//                            , WalletKeyWidget::UseType::RequestAuthInParent, logger_, appSettings_, connectionManager_);
+//   widgetPassword()->show();
+//   widgetWalletKeys()->setFocus();
    QCoreApplication::processEvents();
    adjustSize();
 }
