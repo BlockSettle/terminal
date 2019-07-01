@@ -85,9 +85,6 @@ message SubmitAuthAddressForVerificationRequest
    required AddressScriptType    scriptType = 4;
    required bytes                address160hex = 5;
    required string               userName = 8;
-
-   // remove later
-   optional bytes                publicKey = 7;
 }
 
 message GetBSFundingAddressListRequest
@@ -109,7 +106,6 @@ message SubmitAuthAddressForVerificationResponse
    optional AddressNetworkType   networkType = 2;
    optional AddressScriptType    scriptType = 3;
    required bytes                address160hex = 4;
-   optional bytes                publicKey = 5;
    optional string               errorMessage = 6;
    optional bool                 requestConfirmation = 7;
    optional float 		         validationAmount = 8;

@@ -435,7 +435,6 @@ bool AuthAddressManager::SubmitAddressToPublicBridge(const bs::Address &address)
    addressRequest.set_networktype((settings_->get<NetworkType>(ApplicationSettings::netType) != NetworkType::MainNet)
       ? AddressNetworkType::TestNetType : AddressNetworkType::MainNetType);
    addressRequest.set_scripttype(mapToScriptType(address.getType()));
-   addressRequest.set_publickey("");
 
    addressRequest.set_address160hex(address.prefixed().toHexStr());
 
