@@ -19,6 +19,7 @@ namespace Chat {
    class Response_SendRoomMessage;
    class Response_SessionPublicKey;
    class Response_UsersList;
+   class Response_ConfirmReplacePublicKey;
 
    class ResponseHandler
    {
@@ -50,6 +51,8 @@ namespace Chat {
 
       virtual void OnSessionPublicKeyResponse(const Response_SessionPublicKey&) = 0;
       virtual void OnReplySessionPublicKeyResponse(const Response_ReplySessionPublicKey&) = 0;
+
+      virtual void OnConfirmReplacePublicKey(const Response_ConfirmReplacePublicKey&) = 0;
    };
 }
 

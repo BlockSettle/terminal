@@ -188,10 +188,6 @@ bool ZmqDataConnection::openConnection(const std::string& host
    *continueExecution_ = true;
    listenThread_ = std::thread(&ZmqDataConnection::listenFunction, this);
 
-   if (logger_) {
-      SPDLOG_DEBUG(logger_, "[{}] starting connection for {}", __func__
-         , connectionName_);
-   }
    return true;
 }
 
@@ -226,7 +222,7 @@ void ZmqDataConnection::listenFunction()
    }
 
    if (logger_) {
-      SPDLOG_DEBUG(logger_, "[{}] poll thread started for {}", __func__
+      SPDLOG_LOGGER_DEBUG(logger_, "[{}] poll thread started for {}", __func__
          , connectionName_);
    }
    int result;
@@ -365,14 +361,14 @@ void ZmqDataConnection::zeroFrameReceived()
 {
    if (isConnected_) {
       if (logger_) {
-         SPDLOG_DEBUG(logger_, "[{}] {} received 0 frame. Disconnected."
+         SPDLOG_LOGGER_DEBUG(logger_, "[{}] {} received 0 frame. Disconnected."
             , __func__, connectionName_);
       }
       isConnected_ = false;
       notifyOnDisconnected();
    } else {
       if (logger_) {
-         SPDLOG_DEBUG(logger_, "[{}] {} received 0 frame. Connected.", __func__
+         SPDLOG_LOGGER_DEBUG(logger_, "[{}] {} received 0 frame. Connected.", __func__
             , connectionName_);
       }
       isConnected_ = true;
@@ -384,14 +380,14 @@ bool ZmqDataConnection::closeConnection()
 {
    if (!isActive()) {
       if (logger_) {
-         SPDLOG_DEBUG(logger_, "[{}] connection already stopped {}", __func__
+         SPDLOG_LOGGER_DEBUG(logger_, "[{}] connection already stopped {}", __func__
             , connectionName_);
       }
       return true;
    }
 
    if (logger_) {
-      SPDLOG_DEBUG(logger_, "[{}] stopping {}", __func__, connectionName_);
+      SPDLOG_LOGGER_DEBUG(logger_, "[{}] stopping {}", __func__, connectionName_);
    }
    if (std::this_thread::get_id() == listenThread_.get_id()) {
       //connectino is closed in callback

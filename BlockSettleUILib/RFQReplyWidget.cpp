@@ -266,10 +266,10 @@ void RFQReplyWidget::onReadyToAutoSign()
       logger_->error("[RFQReplyWidget::onReadyToAutoSign] failed to cast sender");
       return;
    }
-   if (!settlContainer->accept()) {
-      logger_->warn("[RFQReplyWidget::onReadyToAutoSign] failed to accept");
-      return;
-   }
+//   if (!settlContainer->accept()) {
+//      logger_->warn("[RFQReplyWidget::onReadyToAutoSign] failed to accept");
+//      return;
+//   }
 }
 
 void RFQReplyWidget::onAutoSignActivated(const QString &hdWalletId, bool active)

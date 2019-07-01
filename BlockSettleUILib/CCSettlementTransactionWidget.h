@@ -11,6 +11,8 @@
 #include "CommonTypes.h"
 #include "UtxoReservation.h"
 
+// TODO: Obsoleted, delete file after Sign Settlement moved to Signer
+
 namespace Ui {
     class CCSettlementTransactionWidget;
 }

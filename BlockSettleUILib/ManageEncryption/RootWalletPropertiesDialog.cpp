@@ -117,12 +117,6 @@ void RootWalletPropertiesDialog::onDeleteWallet()
    signingContainer_->customDialogRequest(bs::signer::ui::DialogType::DeleteWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
-
-//   WalletDeleteDialog delDlg(wallet_, walletsManager_, signingContainer_
-//                             , appSettings_, connectionManager_, logger_, this);
-//   if (delDlg.exec() == QDialog::Accepted) {
-//      close();
-//   }
 }
 
 void RootWalletPropertiesDialog::onBackupWallet()
@@ -130,9 +124,6 @@ void RootWalletPropertiesDialog::onBackupWallet()
    signingContainer_->customDialogRequest(bs::signer::ui::DialogType::BackupWallet
                                                              , {{ QLatin1String("rootId"), walletInfo_.rootId() }});
    close();
-
-//   WalletBackupAndVerify(wallet_, signingContainer_, appSettings_, connectionManager_, logger_
-//                         , this);
 }
 
 void RootWalletPropertiesDialog::onChangePassword()

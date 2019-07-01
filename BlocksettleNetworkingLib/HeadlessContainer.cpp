@@ -109,7 +109,6 @@ void HeadlessListener::OnDataReceived(const std::string& data)
       }
 
       // BIP 150/151 should be be complete by this point.
-      hasUI_ = response.hasui();
       isReady_ = true;
       emit authenticated();
    } else {
@@ -200,13 +199,33 @@ bs::signer::RequestId HeadlessContainer::Send(headless::RequestPacket packet, bo
 
 void HeadlessContainer::ProcessSignTXResponse(unsigned int id, const std::string &data)
 {
-   headless::SignTXReply response;
+   headless::SignTxReply response;
    if (!response.ParseFromString(data)) {
-      logger_->error("[HeadlessContainer] Failed to parse SignTXReply");
+      logger_->error("[HeadlessContainer] Failed to parse SignTxReply");
       emit TXSigned(id, {}, bs::error::ErrorCode::FailedToParse);
       return;
    }
    emit TXSigned(id, response.signedtx(), static_cast<bs::error::ErrorCode>(response.errorcode()));
+}
+
+void HeadlessContainer::ProcessSettlementSignTXResponse(unsigned int id, const std::string &data)
+{
+   headless::SignTxReply response;
+   if (!response.ParseFromString(data)) {
+      logger_->error("[{}] Failed to parse reply", __func__);
+      emit Error(id, "failed to parse");
+      return;
+   }
+   const auto itCb = cbSettlementSignTxMap_.find(id);
+   if (itCb == cbSettlementSignTxMap_.end()) {
+      emit Error(id, "no callback found for id " + std::to_string(id));
+      return;
+   }
+
+   if (itCb->second) {
+      itCb->second(static_cast<bs::error::ErrorCode>(response.errorcode()), BinaryData(response.signedtx()));
+   }
+   cbSettlementSignTxMap_.erase(itCb);
 }
 
 void HeadlessContainer::ProcessPasswordRequest(const std::string &data)
@@ -313,20 +332,13 @@ void HeadlessContainer::ProcessAutoSignActEvent(unsigned int id, const std::stri
    emit AutoSignStateChanged(event.rootwalletid(), event.autosignactive());
 }
 
-bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
-   , SignContainer::TXSignMode mode, const PasswordType& password
-   , bool keepDuplicatedRecipients)
+headless::SignTxRequest HeadlessContainer::createSignTxRequest(const bs::core::wallet::TXSignRequest &txSignReq
+   , const SignContainer::PasswordType &password, bool keepDuplicatedRecipients)
 {
-   if (!txSignReq.isValid()) {
-      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
-      return 0;
-   }
-   headless::SignTXRequest request;
+   headless::SignTxRequest request;
    request.set_walletid(txSignReq.walletId);
    request.set_keepduplicatedrecipients(keepDuplicatedRecipients);
-//   if (autoSign) {
-//      request.set_applyautosignrules(true);
-//   }
+
    if (txSignReq.populateUTXOs) {
       request.set_populateutxos(true);
    }
@@ -361,10 +373,24 @@ bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::T
       change->set_value(txSignReq.change.value);
    }
 
+   return  request;
+}
+
+bs::signer::RequestId HeadlessContainer::signTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+   , SignContainer::TXSignMode mode, const PasswordType& password
+   , bool keepDuplicatedRecipients)
+{
+   if (!txSignReq.isValid()) {
+      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      return 0;
+   }
+
+   headless::SignTxRequest request = createSignTxRequest(txSignReq, password, keepDuplicatedRecipients);
+
    headless::RequestPacket packet;
    switch (mode) {
    case TXSignMode::Full:
-      packet.set_type(headless::SignTXRequestType);
+      packet.set_type(headless::SignTxRequestType);
       break;
 
    case TXSignMode::Partial:
@@ -412,6 +438,85 @@ bs::signer::RequestId HeadlessContainer::signPayoutTXRequest(const bs::core::wal
    return id;
 }
 
+bs::signer::RequestId HeadlessContainer::signSettlementTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+   , const bs::sync::SettlementInfo &settlementInfo, SignContainer::TXSignMode mode
+   , bool keepDuplicatedRecipients
+   , const std::function<void (bs::error::ErrorCode result, const BinaryData &signedTX)> &cb)
+{
+   if (!txSignReq.isValid()) {
+      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      return 0;
+   }
+
+   headless::SignTxRequest signTxRequest = createSignTxRequest(txSignReq, {}, keepDuplicatedRecipients);
+
+   headless::SignSettlementTxRequest settlementRequest;
+   *(settlementRequest.mutable_signtxrequest()) = signTxRequest;
+   *(settlementRequest.mutable_settlementinfo()) = settlementInfo.toProtobufMessage();
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::SignSettlementTxRequestType);
+
+   packet.set_data(settlementRequest.SerializeAsString());
+   const auto reqId = Send(packet);
+   cbSettlementSignTxMap_[reqId] = cb;
+   return reqId;
+}
+
+bs::signer::RequestId HeadlessContainer::signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+   , const bs::sync::SettlementInfo &settlementInfo
+   , const std::function<void (bs::error::ErrorCode, const BinaryData &)> &cb)
+{
+   if (!txSignReq.isValid()) {
+      logger_->error("[HeadlessContainer] Invalid TXSignRequest");
+      return 0;
+   }
+
+   headless::SignTxRequest signTxRequest = createSignTxRequest(txSignReq, {});
+
+   headless::SignSettlementTxRequest settlementRequest;
+   *(settlementRequest.mutable_signtxrequest()) = signTxRequest;
+   *(settlementRequest.mutable_settlementinfo()) = settlementInfo.toProtobufMessage();
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::SignSettlementPartialTxRequestType);
+   packet.set_data(settlementRequest.SerializeAsString());
+
+   const auto reqId = Send(packet);
+   cbSettlementSignTxMap_[reqId] = cb;
+   return reqId;
+}
+
+bs::signer::RequestId HeadlessContainer::signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+   , const bs::sync::SettlementInfo &settlementInfo, const bs::Address &authAddr, const std::string &settlementId
+   , const std::function<void (bs::error::ErrorCode, const BinaryData &)> &cb)
+{
+   if ((txSignReq.inputs.size() != 1) || (txSignReq.recipients.size() != 1) || settlementId.empty()) {
+      logger_->error("[HeadlessContainer] Invalid PayoutTXSignRequest");
+      return 0;
+   }
+   headless::SignPayoutTXRequest request;
+   request.set_input(txSignReq.inputs[0].serialize().toBinStr());
+   request.set_recipient(txSignReq.recipients[0]->getSerializedScript().toBinStr());
+   request.set_authaddress(authAddr.display());
+   request.set_settlementid(settlementId);
+//   if (autoSign) {
+//      request.set_applyautosignrules(autoSign);
+//   }
+
+   headless::SignSettlementPayoutTxRequest settlementRequest;
+   *(settlementRequest.mutable_signpayouttxrequest()) = request;
+   *(settlementRequest.mutable_settlementinfo()) = settlementInfo.toProtobufMessage();
+
+   headless::RequestPacket packet;
+   packet.set_type(headless::SignPayoutTXRequestType);
+   packet.set_data(request.SerializeAsString());
+
+   const auto reqId = Send(packet);
+   cbSettlementSignTxMap_[reqId] = cb;
+   return reqId;
+}
+
 bs::signer::RequestId HeadlessContainer::signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &txMultiReq)
 {
    if (!txMultiReq.isValid()) {
@@ -451,8 +556,7 @@ bs::signer::RequestId HeadlessContainer::CancelSignTx(const BinaryData &txId)
    return Send(packet);
 }
 
-void HeadlessContainer::SendPassword(const std::string &walletId, const PasswordType &password,
-   bool cancelledByUser)
+void HeadlessContainer::SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password)
 {
    headless::RequestPacket packet;
    packet.set_type(headless::PasswordRequestType);
@@ -464,7 +568,7 @@ void HeadlessContainer::SendPassword(const std::string &walletId, const Password
    if (!password.isNull()) {
       response.set_password(password.toHexStr());
    }
-   response.set_cancelledbyuser(cancelledByUser);
+   response.set_errorcode(static_cast<uint32_t>(result));
    packet.set_data(response.SerializeAsString());
    Send(packet, false);
 }
@@ -1137,13 +1241,6 @@ bool RemoteSigner::isOffline() const
    return (listener_ == nullptr);
 }
 
-bool RemoteSigner::hasUI() const
-{
-   std::lock_guard<std::mutex> lock(mutex_);
-
-   return listener_ ? listener_->hasUI() : false;
-}
-
 void RemoteSigner::updatePeerKeys(const ZmqBIP15XPeers &peers)
 {
    connection_->updatePeerKeys(peers);
@@ -1190,11 +1287,15 @@ void RemoteSigner::onPacketReceived(headless::RequestPacket packet)
    signRequests_.erase(packet.id());
 
    switch (packet.type()) {
-   case headless::SignTXRequestType:
+   case headless::SignTxRequestType:
    case headless::SignPartialTXRequestType:
    case headless::SignPayoutTXRequestType:
    case headless::SignTXMultiRequestType:
       ProcessSignTXResponse(packet.id(), packet.data());
+      break;
+
+   case headless::SignSettlementTxRequestType:
+      ProcessSettlementSignTXResponse(packet.id(), packet.data());
       break;
 
    case headless::PasswordRequestType:

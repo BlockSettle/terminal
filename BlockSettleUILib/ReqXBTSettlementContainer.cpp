@@ -111,14 +111,15 @@ void ReqXBTSettlementContainer::acceptSpotXBT(const SecureBinaryData &password)
    }
 }
 
-bool ReqXBTSettlementContainer::accept(const SecureBinaryData &password)
+bool ReqXBTSettlementContainer::startSigning()
 {
-   if (!payinReceived()) {
-      acceptSpotXBT(password);
-   }
-   else {
-      payoutSignId_ = createPayoutTx(Tx(payinData_).getThisHash(), amount_, recvAddr_, password);
-   }
+   // FIXME: reimlement
+//   if (!payinReceived()) {
+//      acceptSpotXBT(password);
+//   }
+//   else {
+//      payoutSignId_ = createPayoutTx(Tx(payinData_).getThisHash(), amount_, recvAddr_, password);
+//   }
    return true;
 }
 

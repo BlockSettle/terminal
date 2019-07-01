@@ -41,7 +41,7 @@ public:
 
    void OrderReceived();
 
-   bool accept(const SecureBinaryData &password = {}) override;
+   bool startSigning();
    bool cancel() override;
 
    bool isAcceptable() const override;

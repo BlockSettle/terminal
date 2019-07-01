@@ -1286,17 +1286,6 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeys" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_16"/>
-          </widget>
-         </item>
-         <item>
           <widget class="QProgressBar" name="progressBar">
            <property name="minimumSize">
             <size>
@@ -1352,17 +1341,6 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="WalletKeysSubmitWidget" name="widgetSubmitKeysAuth" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_17"/>
-          </widget>
-         </item>
         </layout>
        </widget>
       </item>
@@ -1455,14 +1433,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>WalletKeysSubmitWidget</class>
-   <extends>QWidget</extends>
-   <header>ManageEncryption/WalletKeysSubmitWidget.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -79,7 +79,6 @@ public:
       celerUsername,
       localSignerPort,
       signerIndex,
-      signerRunMode,
       signerOfflineDir,
       autoSignSpendLimit,
       launchToTray,

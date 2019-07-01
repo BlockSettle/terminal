@@ -32,9 +32,9 @@ QVariant SignersModel::data(const QModelIndex &index, int role) const
    int currentServerIndex = signersProvider_->indexOfCurrent();
 
    if (role == Qt::FontRole && index.row() == currentServerIndex) {
-       QFont font;
-       font.setBold(true);
-       return font;
+//       QFont font;
+//       font.setBold(true);
+//       return font;
    } else if (role == Qt::TextColorRole && index.row() == currentServerIndex && highLightSelectedServer_) {
        return QColor(Qt::white);
    } else if (role == Qt::DisplayRole) {
@@ -44,7 +44,7 @@ QVariant SignersModel::data(const QModelIndex &index, int role) const
       case ColumnAddress:
          return signerHost.address;
       case ColumnPort:
-         return signerHost.port;
+         return signerHost.port != 0 ? QString::number(signerHost.port) : tr("Auto");
       case ColumnKey:
          return signerHost.key;
       default:

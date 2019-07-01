@@ -16,6 +16,16 @@ QList<SignerHost> SignersProvider::signers() const
    QStringList signersStrings = appSettings_->get<QStringList>(ApplicationSettings::remoteSigners);
 
    QList<SignerHost> signers;
+
+   // #1 add Headless signer
+   SignerHost headlessSigner;
+   headlessSigner.name = tr("Local Headless");
+   headlessSigner.address = tr("-");
+   headlessSigner.port = 0;
+   headlessSigner.key = tr("Auto");
+
+   signers.append(headlessSigner);
+
    for (const QString &s : signersStrings) {
       signers.append(SignerHost::fromTextSettings(s));
    }
@@ -51,7 +61,6 @@ void SignersProvider::switchToLocalFullGUI(const QString &host, const QString &p
       }
    }
 
-   appSettings_->set(ApplicationSettings::signerRunMode, int(SignContainer::OpMode::Remote));
    setupSigner(localIndex, true);
 }
 
@@ -103,6 +112,11 @@ int SignersProvider::indexOfIpPort(const std::string &srvIPPort) const
    return -1;
 }
 
+bool SignersProvider::currentSignerIsLocal()
+{
+   return indexOfCurrent() == 0;
+}
+
 bool SignersProvider::add(const SignerHost &signer)
 {
    if (!signer.isValid()) {
@@ -130,7 +144,7 @@ bool SignersProvider::add(const SignerHost &signer)
 
 bool SignersProvider::replace(int index, const SignerHost &signer)
 {
-   if (!signer.isValid()) {
+   if (index == 0 || !signer.isValid()) {
       return false;
    }
 
@@ -153,8 +167,9 @@ bool SignersProvider::replace(int index, const SignerHost &signer)
    }
 
    QStringList signersTxt = appSettings_->get<QStringList>(ApplicationSettings::remoteSigners);
+   int settingsIndex = index - 1;
 
-   signersTxt.replace(index, signer.toTextSettings());
+   signersTxt.replace(settingsIndex, signer.toTextSettings());
    appSettings_->set(ApplicationSettings::remoteSigners, signersTxt);
 
    emit dataChanged();
@@ -164,8 +179,8 @@ bool SignersProvider::replace(int index, const SignerHost &signer)
 bool SignersProvider::remove(int index)
 {
    QStringList signers = appSettings_->get<QStringList>(ApplicationSettings::remoteSigners);
-   if (index >= 0 && index < signers.size()){
-      signers.removeAt(index);
+   if (index - 1 >= 0 && index - 1 < signers.size()){
+      signers.removeAt(index - 1);
       appSettings_->set(ApplicationSettings::remoteSigners, signers);
       emit dataChanged();
       return true;
@@ -189,11 +204,13 @@ void SignersProvider::addKey(const QString &address, int port, const QString &ke
       return;
    }
 
+   int settingsIndex = index - 1;
+
    QStringList signers = appSettings_->get<QStringList>(ApplicationSettings::remoteSigners);
-   QString signerTxt = signers.at(index);
+   QString signerTxt = signers.at(settingsIndex);
    SignerHost signer = SignerHost::fromTextSettings(signerTxt);
    signer.key = key;
-   signers[index] = signer.toTextSettings();
+   signers[settingsIndex] = signer.toTextSettings();
 
    appSettings_->set(ApplicationSettings::remoteSigners, signers);
 

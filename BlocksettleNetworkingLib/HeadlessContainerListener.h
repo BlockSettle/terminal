@@ -12,6 +12,7 @@
 #include "BSErrorCode.h"
 
 #include "headless.pb.h"
+#include "Blocksettle_Communication_Internal.pb.h"
 
 namespace spdlog {
    class logger;
@@ -37,11 +38,14 @@ public:
    virtual void peerConn(const std::string &) = 0;
    virtual void peerDisconn(const std::string &) = 0;
    virtual void clientDisconn(const std::string &) = 0;
-   virtual void pwd(const bs::core::wallet::TXSignRequest &, const std::string &) = 0;
+   virtual void requestPasswordForSigningTx(const bs::core::wallet::TXSignRequest &, const std::string &) = 0;
+   virtual void requestPasswordForSigningSettlementTx(const bs::core::wallet::TXSignRequest &
+      , const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo, const std::string &) = 0;
    virtual void txSigned(const BinaryData &) = 0;
    virtual void cancelTxSign(const BinaryData &) = 0;
    virtual void xbtSpent(int64_t, bool) = 0;
    virtual void customDialog(const std::string &, const std::string &) = 0;
+   virtual void terminalHandshakeFailed(const std::string &peerAddress) = 0;
 };
 
 class HeadlessContainerListener : public ServerConnectionListener
@@ -63,7 +67,7 @@ public:
    void setCallbacks(HeadlessContainerCallbacks *callbacks);
 
    void passwordReceived(const std::string &walletId
-      , const SecureBinaryData &password, bool cancelledByUser);
+      , bs::error::ErrorCode result, const SecureBinaryData &password);
    bs::error::ErrorCode activateAutoSign(const std::string &walletId, const SecureBinaryData &password);
    bs::error::ErrorCode deactivateAutoSign(const std::string &walletId = {}, bs::error::ErrorCode reason = bs::error::ErrorCode::NoError);
    //void addPendingAutoSignReq(const std::string &walletId);
@@ -81,17 +85,19 @@ protected:
    void OnDataFromClient(const std::string &clientId, const std::string &data) override;
    void OnPeerConnected(const std::string &ip) override;
    void OnPeerDisconnected(const std::string &ip) override;
+   void onClientError(const std::string &clientId, ServerConnectionListener::ClientError errorCode, int socket) override;
 
 private:
-   using PasswordReceivedCb = std::function<void(const SecureBinaryData &password, bool cancelledByUser)>;
+   using PasswordReceivedCb = std::function<void(bs::error::ErrorCode result, const SecureBinaryData &password)>;
    using PasswordsReceivedCb = std::function<void(const std::unordered_map<std::string, SecureBinaryData> &)>;
    void passwordReceived(const std::string &clientId, const std::string &walletId
-      , const SecureBinaryData &password, bool cancelledByUser);
+      , bs::error::ErrorCode result, const SecureBinaryData &password);
 
    bool sendData(const std::string &data, const std::string &clientId = {});
    bool onRequestPacket(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket packet);
-   bool onSignTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet
-      , bool partial = false);
+
+   bool onSignTxRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet
+      , Blocksettle::Communication::headless::RequestType requestType);
    bool onSignPayoutTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onSignMultiTXRequest(const std::string &clientId, const Blocksettle::Communication::headless::RequestPacket &packet);
    bool onPasswordReceived(const std::string &clientId, Blocksettle::Communication::headless::RequestPacket &packet);
@@ -125,14 +131,16 @@ private:
    bool CreateHDWallet(const std::string &clientId, unsigned int id, const Blocksettle::Communication::headless::NewHDWallet &request
       , NetworkType, const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 });
    bool RequestPasswordIfNeeded(const std::string &clientId, const bs::core::wallet::TXSignRequest &
+      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo
       , const std::string &prompt, const PasswordReceivedCb &cb);
    bool RequestPasswordsIfNeeded(int reqId, const std::string &clientId
       , const bs::core::wallet::TXMultiSignRequest &, const bs::core::WalletMap &
       , const std::string &prompt, const PasswordsReceivedCb &cb);
-   bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &, const std::string &prompt
-      , const PasswordReceivedCb &cb);
+   bool RequestPassword(const std::string &clientId, const bs::core::wallet::TXSignRequest &
+      , Blocksettle::Communication::headless::RequestType reqType, const Blocksettle::Communication::Internal::SettlementInfo &settlementInfo
+      , const std::string &prompt, const PasswordReceivedCb &cb);
 
-   bool CheckSpendLimit(uint64_t value, bool autoSign, const std::string &walletId);
+   bool CheckSpendLimit(uint64_t value, const std::string &walletId);
 
    bool isRequestAllowed(Blocksettle::Communication::headless::RequestType) const;
 
@@ -148,7 +156,7 @@ private:
    const bool                          watchingOnly_;
    std::unordered_set<std::string>     connectedClients_;
 
-   std::unordered_map<std::string, std::vector<PasswordReceivedCb>>  passwordCallbacks_;
+   std::unordered_map<std::string, std::vector<PasswordReceivedCb>>  passwordCallbacks_; // map<wallet_id, std::vector<PasswordReceivedCb>>
    std::unordered_map<std::string, SecureBinaryData>                 passwords_;
    //std::unordered_set<std::string>  autoSignPwdReqs_;
 

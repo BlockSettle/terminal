@@ -43,6 +43,11 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
 
    connect(ui_->tableViewArmory->selectionModel(), &QItemSelectionModel::selectionChanged, this,
            [this](const QItemSelection &selected, const QItemSelection &deselected){
+      // this check will prevent loop selectionChanged -> setupServerFromSelected -> select -> selectionChanged
+      if (deselected.isEmpty()) {
+         return;
+      }
+
       ui_->pushButtonDeleteServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
       ui_->pushButtonEditServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
 
@@ -54,9 +59,9 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
       ui_->pushButtonSelectServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
 
       resetForm();
-      
+
       // save to settings right after row highlight
-      setupServerFromSelected(false);
+      setupServerFromSelected(true);
    });
 
    connect(ui_->comboBoxNetworkType, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -72,6 +77,15 @@ ArmoryServersWidget::ArmoryServersWidget(const std::shared_ptr<ArmoryServersProv
    resetForm();
 
    setRowSelected(armoryServersProvider_->indexOfCurrent());
+
+   ui_->pushButtonDeleteServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
+   ui_->pushButtonEditServer->setDisabled(ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty());
+   if (armoryServersProvider_->indexOfCurrent() < ArmoryServersProvider::kDefaultServersCount) {
+      ui_->pushButtonDeleteServer->setDisabled(true);
+      ui_->pushButtonEditServer->setDisabled(true);
+   }
+   // TODO: remove select server button if it's not required anymore
+   ui_->pushButtonSelectServer->hide();
 }
 
 void ArmoryServersWidget::adaptForStartupDialog()
@@ -118,6 +132,7 @@ void ArmoryServersWidget::onAddServer()
    if (ok) {
       resetForm();
       setRowSelected(armoryServersProvider_->servers().size() - 1);
+      setupServerFromSelected(true);
    }
 }
 
@@ -133,7 +148,8 @@ void ArmoryServersWidget::onDeleteServer()
       return;
    }
    armoryServersProvider_->remove(selectedRow);
-   setRowSelected(selectedRow);
+   setRowSelected(0);
+   setupServerFromSelected(true);
 }
 
 void ArmoryServersWidget::onEdit()
@@ -188,6 +204,7 @@ void ArmoryServersWidget::onSave()
    bool ok = armoryServersProvider_->replace(index, server);
    if (ok) {
       resetForm();
+      setRowSelected(armoryServersProvider_->indexOfCurrent());
    }
 }
 
@@ -196,7 +213,7 @@ void ArmoryServersWidget::onConnect()
 //   emit reconnectArmory();
 }
 
-void ArmoryServersWidget::setupServerFromSelected(bool save)
+void ArmoryServersWidget::setupServerFromSelected(bool needUpdate)
 {
    if (ui_->tableViewArmory->selectionModel()->selectedIndexes().isEmpty()) {
       return;
@@ -207,7 +224,8 @@ void ArmoryServersWidget::setupServerFromSelected(bool save)
       return;
    }
 
-   armoryServersProvider_->setupServer(index, save);
+   armoryServersProvider_->setupServer(index, needUpdate);
+   setRowSelected(armoryServersProvider_->indexOfCurrent());
 }
 
 void ArmoryServersWidget::resetForm()
