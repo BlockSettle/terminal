@@ -90,14 +90,14 @@ namespace bs {
             void walletDestroyed(const std::string &walletId) override;
 
          protected:
-            WalletCallbackTarget *wct_;
+            WalletCallbackTarget *wct_{};
             const std::string walletId_;
             const std::string name_, desc_;
             NetworkType    netType_ = NetworkType::MainNet;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
             BinaryData        userId_;
-            SignContainer  *  signContainer_;
+            SignContainer  *  signContainer_{};
             std::shared_ptr<ArmoryConnection>   armory_;
             std::shared_ptr<spdlog::logger>     logger_;
             std::vector<bs::wallet::EncryptionType>   encryptionTypes_{bs::wallet::EncryptionType::Password};
