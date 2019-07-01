@@ -46,6 +46,10 @@ public:
    HeadlessContainer(const std::shared_ptr<spdlog::logger> &, OpMode);
    ~HeadlessContainer() noexcept override = default;
 
+   Blocksettle::Communication::headless::SignTxRequest createSignTxRequest(const bs::core::wallet::TXSignRequest &
+      , const PasswordType& password = {}
+      , bool keepDuplicatedRecipients = false);
+
    bs::signer::RequestId signTXRequest(const bs::core::wallet::TXSignRequest &
       , TXSignMode mode = TXSignMode::Full, const PasswordType& password = {}
       , bool keepDuplicatedRecipients = false) override;
@@ -54,12 +58,24 @@ public:
    bs::signer::RequestId signPayoutTXRequest(const bs::core::wallet::TXSignRequest &, const bs::Address &authAddr
       , const std::string &settlementId, const PasswordType& password = {}) override;
 
+   bs::signer::RequestId signSettlementTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+      , const bs::sync::SettlementInfo &settlementInfo
+      , TXSignMode mode = TXSignMode::Full, bool keepDuplicatedRecipients = false
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
+
+   bs::signer::RequestId signSettlementPartialTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+      , const bs::sync::SettlementInfo &settlementInfo
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
+
+   bs::signer::RequestId signSettlementPayoutTXRequest(const bs::core::wallet::TXSignRequest &txSignReq
+      , const bs::sync::SettlementInfo &settlementInfo
+      , const bs::Address &authAddr, const std::string &settlementId
+      , const std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)> &cb = nullptr) override;
+
    bs::signer::RequestId signMultiTXRequest(const bs::core::wallet::TXMultiSignRequest &) override;
 
-   void SendPassword(const std::string &walletId, const PasswordType &password,
-      bool cancelledByUser) override;
-
    bs::signer::RequestId CancelSignTx(const BinaryData &txId) override;
+   void SendPassword(const std::string &walletId, bs::error::ErrorCode result, const PasswordType &password) override;
 
    bs::signer::RequestId SetUserId(const BinaryData &) override;
    bs::signer::RequestId createHDLeaf(const std::string &rootWalletId, const bs::hd::Path &
@@ -93,6 +109,7 @@ public:
 protected:
    bs::signer::RequestId Send(Blocksettle::Communication::headless::RequestPacket, bool incSeqNo = true);
    void ProcessSignTXResponse(unsigned int id, const std::string &data);
+   void ProcessSettlementSignTXResponse(unsigned int id, const std::string &data);
    void ProcessPasswordRequest(const std::string &data);
    void ProcessCreateHDWalletResponse(unsigned int id, const std::string &data);
    bs::signer::RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
@@ -115,6 +132,7 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
+   std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)>>  cbSettlementSignTxMap_;
 };
 
 
@@ -138,7 +156,6 @@ public:
    bool Connect() override;
    bool Disconnect() override;
    bool isOffline() const override;
-   bool hasUI() const override;
    void updatePeerKeys(const ZmqBIP15XPeers &peers);
 
    void setTargetDir(const QString& targetDir) override;
@@ -226,7 +243,6 @@ public:
    bs::signer::RequestId Send(Blocksettle::Communication::headless::RequestPacket
       , bool updateId = true);
    bs::signer::RequestId newRequestId() { return ++id_; }
-   bool hasUI() const { return hasUI_; }
    bool isReady() const { return isReady_; }
 
 signals:
@@ -248,7 +264,6 @@ private:
    const NetworkType                netType_;
    bs::signer::RequestId            id_ = 0;
    // This will be updated from background thread
-   std::atomic<bool>                hasUI_{false};
    std::atomic<bool>                isReady_{false};
    bool                             isConnected_{false};
    bool                             wasErrorReported_{false};

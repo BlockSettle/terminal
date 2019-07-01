@@ -25,7 +25,6 @@
 #include "UiUtils.h"
 #include "UtxoReserveAdapters.h"
 #include "CustomComboBox.h"
-#include "ManageEncryption/WalletKeysSubmitWidget.h"
 #include "UserScriptRunner.h"
 #include "Wallets/SyncHDWallet.h"
 #include "Wallets/SyncSettlementWallet.h"

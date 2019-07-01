@@ -9,6 +9,8 @@
 
 #include <string>
 
+// TODO: Obsoleted, delete file after Sign Settlement moved to Signer
+
 namespace Ui {
    class DealerXBTSettlementDialog;
 }
@@ -46,7 +48,7 @@ public:
 
 protected:
    QWidget *widgetPassword() const override;
-   WalletKeysSubmitWidget *widgetWalletKeys() const override;
+   //WalletKeysSubmitWidget *widgetWalletKeys() const override;
    QLabel *labelHint() const override;
    QLabel *labelPassword() const override;
 

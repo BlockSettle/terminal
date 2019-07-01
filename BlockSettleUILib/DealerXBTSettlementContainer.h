@@ -35,7 +35,7 @@ public:
       , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryObject> &, bool autoSign);
    ~DealerXBTSettlementContainer() override = default;
 
-   bool accept(const SecureBinaryData &password = {}) override;
+   bool startSigning();
    bool cancel() override;
 
    bool isAcceptable() const override;
