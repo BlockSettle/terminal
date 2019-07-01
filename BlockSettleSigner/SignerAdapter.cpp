@@ -8,7 +8,6 @@
 #include "ZmqContext.h"
 #include "ZMQ_BIP15X_DataConnection.h"
 
-#include "bs_signer.pb.h"
 #include "SignerAdapterContainer.h"
 #include "SignerInterfaceListener.h"
 
@@ -54,11 +53,11 @@ SignerAdapter::SignerAdapter(const std::shared_ptr<spdlog::logger> &logger
       throw std::runtime_error("adapter connection failed");
    }
 
-   requestHeadlessPubKey([this](const std::string &key){
+/*   requestHeadlessPubKey([this](const std::string &key){
       headlessPubKey_ = QString::fromStdString(key);
       emit headlessPubKeyChanged(headlessPubKey_);
-   });
-
+   });   // TODO: decide whether this code is really required
+*/
    signContainer_ = std::make_shared<SignAdapterContainer>(logger_, listener_);
 }
 
@@ -87,30 +86,20 @@ void SignerAdapter::signOfflineTxRequest(const bs::core::wallet::TXSignRequest &
 }
 
 void SignerAdapter::createWatchingOnlyWallet(const QString &walletId, const SecureBinaryData &password
-   , const std::function<void(const bs::sync::WatchingOnlyWallet &)> &cb)
+   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
 {
-   signer::DecryptWalletEvent request;
-   request.set_wallet_id(walletId.toStdString());
-   request.set_password(password.toBinStr());
-   const auto reqId = listener_->send(signer::CreateWOType, request.SerializeAsString());
-   listener_->setWatchOnlyCb(reqId, cb);
+   getDecryptedRootNode(walletId.toStdString(), password, cb, signer::CreateWOType);
 }
 
 void SignerAdapter::getDecryptedRootNode(const std::string &walletId, const SecureBinaryData &password
-   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb)
+   , const std::function<void(const SecureBinaryData &privKey, const SecureBinaryData &chainCode)> &cb
+   , signer::PacketType pt)
 {
    signer::DecryptWalletEvent request;
    request.set_wallet_id(walletId);
    request.set_password(password.toBinStr());
-   const auto reqId = listener_->send(signer::GetDecryptedNodeType, request.SerializeAsString());
+   const auto reqId = listener_->send(pt, request.SerializeAsString());
    listener_->setDecryptNodeCb(reqId, cb);
-}
-
-void SignerAdapter::requestHeadlessPubKey(const std::function<void (const std::string &)> &cb)
-{
-   signer::HeadlessPubKeyRequest request;
-   const auto reqId = listener_->send(signer::HeadlessPubKeyRequestType, request.SerializeAsString());
-   listener_->setHeadlessPubKeyCb(reqId, cb);
 }
 
 void SignerAdapter::reloadWallets(const QString &walletsDir, const std::function<void()> &cb)
@@ -158,7 +147,7 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
    }
    for (const auto &pwd : pwdData) {
       auto reqPwd = request.add_password();
-      reqPwd->set_password(pwd.password.toHexStr());
+      reqPwd->set_password(pwd.password.toBinStr());
       reqPwd->set_enctype(static_cast<uint32_t>(pwd.encType));
       reqPwd->set_enckey(pwd.encKey.toBinStr());
    }
@@ -170,11 +159,11 @@ void SignerAdapter::createWallet(const std::string &name, const std::string &des
       wallet->set_primary(true);
    }
    if (!seed.empty()) {
-      if (seed.hasPrivateKey()) {
-         wallet->set_privatekey(seed.privateKey().toBinStr());
-         wallet->set_chaincode(seed.chainCode().toBinStr());
-      } else if (!seed.seed().isNull()) {
+      if (!seed.seed().isNull()) {
          wallet->set_seed(seed.seed().toBinStr());
+      }
+      else if (seed.hasPrivateKey()) {
+         wallet->set_privatekey(seed.toXpriv().toBinStr());
       }
    }
    const auto reqId = listener_->send(signer::CreateHDWalletType, request.SerializeAsString());

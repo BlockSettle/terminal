@@ -123,10 +123,10 @@ void SignerInterfaceListener::processData(const std::string &data)
    case signer::SyncWalletType:
       onSyncWallet(packet.data(), packet.id());
       break;
-   case signer::CreateWOType:
    case signer::ImportWoWalletType:
       onCreateWO(packet.data(), packet.id());
       break;
+   case signer::CreateWOType:
    case signer::GetDecryptedNodeType:
       onDecryptedKey(packet.data(), packet.id());
       break;
@@ -388,6 +388,11 @@ void SignerInterfaceListener::onSyncWallet(const std::string &data, bs::signer::
       result.encryptionKeys.push_back(response.encryption_keys(i));
    }
    result.encryptionRank = { response.key_rank_m(), response.key_rank_n() };
+
+   result.netType = static_cast<NetworkType>(response.net_type());
+   result.highestExtIndex = response.highest_ext_index();
+   result.highestIntIndex = response.highest_int_index();
+
    for (int i = 0; i < response.addresses_size(); ++i) {
       const auto addr = response.addresses(i);
       result.addresses.push_back({ addr.index(), addr.address(), {} });

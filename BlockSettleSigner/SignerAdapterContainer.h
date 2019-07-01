@@ -64,7 +64,6 @@ public:
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override { return 0; }
-   bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override { return 0; }
    //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override  { return 0; }
@@ -74,8 +73,10 @@ public:
    void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) override;
    void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) override {}
    void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) override {}
-   void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &) override {}
+   void syncAddressBatch(const std::string &walletId,
+      const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>) override {}
+   void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
+      const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override {}
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &, bool persistent = true) override {}
 

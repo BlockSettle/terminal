@@ -63,7 +63,6 @@ protected:
    bool onSyncWalletInfo(bs::signer::RequestId);
    bool onSyncHDWallet(const std::string &data, bs::signer::RequestId);
    bool onSyncWallet(const std::string &data, bs::signer::RequestId);
-   bool onCreateWO(const std::string &data, bs::signer::RequestId);
    bool onGetDecryptedNode(const std::string &data, bs::signer::RequestId);
    bool onSetLimits(const std::string &data);
    bool onPasswordReceived(const std::string &data);
