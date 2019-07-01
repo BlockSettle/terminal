@@ -1,11 +1,9 @@
 module BlockSettleDialogs
 
-DirSelectionDialog 1.0 DirSelectionDialog.qml
 WalletBackupDialog 1.0 WalletBackupDialog.qml
 WalletManageEncryptionDialog 1.0 WalletManageEncryptionDialog.qml
 WalletCreateDialog 1.0 WalletCreateDialog.qml
 WalletDeleteDialog 1.0 WalletDeleteDialog.qml
-WalletExportWoDialog 1.0 WalletExportWoDialog.qml
 WalletImportDialog 1.0 WalletImportDialog.qml
 WalletNewDialog 1.0 WalletNewDialog.qml
 WalletNewSeedDialog 1.0 WalletNewSeedDialog.qml

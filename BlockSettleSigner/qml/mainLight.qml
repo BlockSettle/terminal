@@ -62,15 +62,6 @@ ApplicationWindow {
         bgColor: "darkred"
     }
 
-    DirSelectionDialog {
-        id: ldrWoWalletDirDlg
-        title: qsTr("Select watching only wallet target directory")
-    }
-    DirSelectionDialog {
-        id: ldrDirDlg
-        title: qsTr("Select directory")
-    }
-
     signal passwordEntered(string walletId, QPasswordData passwordData, bool cancelledByUser)
 
     function createTxSignDialog(prompt, txInfo, walletInfo) {
