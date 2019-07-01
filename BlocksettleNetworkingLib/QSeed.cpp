@@ -14,24 +14,22 @@ NetworkType QSeed::fromQNetworkType(QNetworkType netType) { return static_cast<N
 QSeed QSeed::fromPaperKey(const QString &key, QNetworkType netType)
 {
    QSeed seed;
-   try {
+   try 
+   {
       const auto seedLines = key.split(QLatin1String("\n"), QString::SkipEmptyParts);
-      if (seedLines.count() == 2) {
+      if (seedLines.count() == 2) 
+      {
          EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
          seed = bs::core::wallet::Seed::fromEasyCodeChecksum(easyData, fromQNetworkType(netType));
       }
-      else if (seedLines.count() == 4) {
-         EasyCoDec::Data easyData = { seedLines[0].toStdString(), seedLines[1].toStdString() };
-         EasyCoDec::Data edChainCode = { seedLines[2].toStdString(), seedLines[3].toStdString() };
-         seed = bs::core::wallet::Seed::fromEasyCodeChecksum(easyData, edChainCode, fromQNetworkType(netType));
-      }
-      else {
-         seed.setSeed(key.toStdString());
+      else 
+      {
+         throw std::runtime_error("invalid seed string line count");
       }
    }
    catch (const std::exception &e) {
       seed.lastError_ = tr("Failed to parse wallet key: %1").arg(QLatin1String(e.what()));
-      return seed;
+      throw std::runtime_error("unexpected seed string");
    }
 
    return seed;
@@ -53,7 +51,7 @@ QSeed QSeed::fromDigitalBackup(const QString &filename, QNetworkType netType)
          seed.lastError_ = tr("Digital Backup file %1 corrupted").arg(filename);
       }
       else {
-         seed = bs::core::wallet::Seed::fromEasyCodeChecksum(wdb.seed, wdb.chainCode, fromQNetworkType(netType));
+         seed = bs::core::wallet::Seed::fromEasyCodeChecksum(wdb.seed, fromQNetworkType(netType));
       }
    }
    else {

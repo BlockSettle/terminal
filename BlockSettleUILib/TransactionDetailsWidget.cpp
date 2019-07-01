@@ -86,18 +86,16 @@ TransactionDetailsWidget::~TransactionDetailsWidget() = default;
 
 // Initialize the widget and related widgets (block, address, Tx)
 void TransactionDetailsWidget::init(
-   const std::shared_ptr<ArmoryObject> &armory
+   const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<spdlog::logger> &inLogger
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const CCFileManager::CCSecurities &ccSecurities)
 {
-   armory_ = armory;
+   armoryPtr_ = armory;
    logger_ = inLogger;
    walletsMgr_ = walletsMgr;
    ccSecurities_ = ccSecurities;
-
-   connect(armory_.get(), &ArmoryObject::newBlock, this
-      , &TransactionDetailsWidget::onNewBlock, Qt::QueuedConnection);
+   act_ = make_unique<TxDetailsACT>(armoryPtr_.get(), this);
 }
 
 // This function uses getTxByHash() to retrieve info about transaction. The
@@ -105,7 +103,7 @@ void TransactionDetailsWidget::init(
 void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
                                                          const bool& firstPass)
 {
-   if (!armory_) {
+   if (!armoryPtr_) {
       if (logger_) {
          logger_->error("[{}] Armory is not initialized.", __func__);
       }
@@ -132,7 +130,7 @@ void TransactionDetailsWidget::populateTransactionWidget(BinaryTXID rpcTXID,
    };
 
    // The TXID passed to Armory *must* be in internal order!
-   if (!armory_->getTxByHash(rpcTXID.getInternalTXID(), cbTX)) {
+   if (!armoryPtr_->getTxByHash(rpcTXID.getInternalTXID(), cbTX)) {
       if (logger_) {
          logger_->error("[{}] - Failed to get TXID {}.", __func__, txidStr);
       }
@@ -176,7 +174,7 @@ void TransactionDetailsWidget::processTxData(Tx tx)
       setTxGUIValues();
    }
    else {
-      armory_->getTXsByHash(prevTxHashSet, cbProcessTX);
+      armoryPtr_->getTXsByHash(prevTxHashSet, cbProcessTX);
    }
 }
 
@@ -296,7 +294,7 @@ void TransactionDetailsWidget::updateCCInputs()
       const OutPoint op = curTx_.getTxInCopy(i).getOutPoint();
       const auto &prevTx = prevTxMap_[op.getTxHash()];
       for (const auto &ccSec : ccSecurities_) {
-         auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armory_);
+         auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armoryPtr_);
          const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
             if (!found) {
                return;
@@ -393,7 +391,7 @@ void TransactionDetailsWidget::loadTreeOut(CustomTreeWidget *tree)
    tree->resizeColumns();
 
    for (const auto &ccSec : ccSecurities_) {
-      auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armory_);
+      auto txChecker = std::make_shared<bs::TxAddressChecker>(ccSec.genesisAddr, armoryPtr_);
       const auto &cbHasGA = [this, txChecker, ccSec](bool found) {
          if (!found) {
             return;

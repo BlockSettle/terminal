@@ -227,12 +227,15 @@ message SyncWalletResponse
    repeated bytes encryption_keys = 3;
    uint32 key_rank_m = 4;
    uint32 key_rank_n = 5;
+   uint32 net_type = 6;
+   uint32 highest_ext_index = 7;
+   uint32 highest_int_index = 8;
 
    message Address {
       string index = 1;
       string address = 2;
    }
-   repeated Address   addresses = 6;
+   repeated Address   addresses = 9;
 }
 
 

@@ -217,12 +217,18 @@ bs::Address RFQDealerReply::getRecvAddress() const
    const auto index = ui_->comboBoxRecvAddr->currentIndex();
    logger_->debug("[RFQDealerReply::getRecvAddress] obtaining addr #{} from wallet {}", index, curWallet_->name());
    if (index <= 0) {
-      const auto recvAddr = curWallet_->getNewIntAddress();
-      if (curWallet_->type() != bs::core::wallet::Type::ColorCoin) {
-         curWallet_->setAddressComment(recvAddr, bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
-      }
+      auto promAddr = std::make_shared<std::promise<bs::Address>>();
+      auto futAddr = promAddr->get_future();
+      const auto &cbAddr = [this, promAddr](const bs::Address &addr) {
+         promAddr->set_value(addr);
+         if (curWallet_->type() != bs::core::wallet::Type::ColorCoin) {
+            curWallet_->setAddressComment(addr
+               , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::SettlementPayOut));
+         }
+      };
+      curWallet_->getNewIntAddress(cbAddr);
 //      curWallet_->RegisterWallet();  //TODO: invoke at address callback
-      return recvAddr;
+      return futAddr.get();
    }
    return curWallet_->getExtAddressList()[index - 1];
 }
@@ -425,7 +431,7 @@ std::shared_ptr<bs::sync::Wallet> RFQDealerReply::getXbtWallet()
 
 void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &qrn)
 {
-   if (armory_->state() != ArmoryConnection::State::Ready) {
+   if (armory_->state() != ArmoryState::Ready) {
       return;
    }
    if (qrn.assetType == bs::network::Asset::PrivateMarket) {
@@ -441,9 +447,9 @@ void RFQDealerReply::updateUiWalletFor(const bs::network::QuoteReqNotification &
 
                if (qryCCWallet.exec() == QDialog::Accepted) {
                   bs::hd::Path path;
-                  path.append(bs::hd::purpose, true);
-                  path.append(bs::hd::BlockSettle_CC, true);
-                  path.append(qrn.product, true);
+                  path.append(bs::hd::purpose | 0x80000000);
+                  path.append(bs::hd::BlockSettle_CC | 0x80000000);
+                  path.append(qrn.product);
                   leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
                }
             } else {
@@ -653,7 +659,7 @@ double RFQDealerReply::getAmount() const
 bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transData
    , const bs::network::QuoteReqNotification &qrn, double price
    , std::function<void(bs::network::QuoteNotification)> cb)
-{
+{  //TODO: refactor to properly support asynchronicity of getChangeAddress
    if (qFuzzyIsNull(price)) {
       return false;
    }
@@ -702,10 +708,15 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
             if (transData->IsTransactionValid()) {
                bs::core::wallet::TXSignRequest unsignedTxReq;
                if (transData->GetTransactionSummary().hasChange) {
-                  const auto changeAddr = transData->getWallet()->getNewChangeAddress();
-                  unsignedTxReq = transData->createUnsignedTransaction(false, changeAddr);
-                  transData->getWallet()->setAddressComment(changeAddr, bs::sync::wallet::Comment::toString(
-                     bs::sync::wallet::Comment::ChangeAddress));
+                  auto promAddr = std::make_shared<std::promise<bs::Address>>();
+                  auto futAddr = promAddr->get_future();
+                  const auto &cbAddr = [promAddr, transData](const bs::Address &addr) {
+                     promAddr->set_value(addr);
+                     transData->getWallet()->setAddressComment(addr, bs::sync::wallet::Comment::toString(
+                        bs::sync::wallet::Comment::ChangeAddress));
+                  };
+                  transData->getWallet()->getNewChangeAddress(cbAddr);
+                  unsignedTxReq = transData->createUnsignedTransaction(false, futAddr.get());
                }
                else {
                   unsignedTxReq = transData->createUnsignedTransaction();
@@ -752,8 +763,13 @@ bool RFQDealerReply::submitReply(const std::shared_ptr<TransactionData> transDat
             }
          }
          try {
-            const auto changeAddr = wallet->getNewChangeAddress();
-            const auto txReq = wallet->createPartialTXRequest(*spendVal, inputs, changeAddr, feePerByte
+            auto promAddr = std::make_shared<std::promise<bs::Address>>();
+            auto futAddr = promAddr->get_future();
+            const auto &cbAddr = [promAddr](const bs::Address &addr) {
+               promAddr->set_value(addr);
+            };
+            wallet->getNewChangeAddress(cbAddr);
+            const auto txReq = wallet->createPartialTXRequest(*spendVal, inputs, futAddr.get(), feePerByte
                , { recipient }, BinaryData::CreateFromHex(qrn.requestorAuthPublicKey));
             qn->transactionData = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, qn->quoteRequestId);
@@ -1228,7 +1244,8 @@ void RFQDealerReply::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::
    const auto &priWallet = walletsManager_->getPrimaryWallet();
    auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    if (!group) {
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC);
+      //CC wallets always are ext only
+      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    group->addLeaf(leaf, true);
 

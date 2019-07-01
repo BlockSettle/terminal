@@ -64,9 +64,8 @@ void SelectedTransactionInputs::resetSelection()
 void SelectedTransactionInputs::onCPFPReceived(std::vector<UTXO> inputs)
 {
    cpfpInputs_ = inputs;
-   wallet_->getSpendableTxOutList([this](std::vector<UTXO> utxos) {
-      onUTXOsReceived(utxos);
-   }, this);
+   wallet_->getSpendableTxOutList(
+      [this](std::vector<UTXO> utxos) { onUTXOsReceived(utxos); }, UINT64_MAX);
 }
 
 void SelectedTransactionInputs::onUTXOsReceived(std::vector<UTXO> inputs)
@@ -93,12 +92,12 @@ void SelectedTransactionInputs::ResetInputs(std::function<void()> cb)
    if (confirmedOnly_) {
       wallet_->getSpendableTxOutList([this](std::vector<UTXO> inputs) {
          onUTXOsReceived(inputs);
-      }, this);
+      }, UINT64_MAX);
    }
    else {
       wallet_->getSpendableZCList([this](std::vector<UTXO> inputs) {
          onCPFPReceived(inputs);
-      }, this);
+      });
    }
 }
 

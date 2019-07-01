@@ -318,6 +318,17 @@ public:
    static SecureBinaryData CompressPoint(SecureBinaryData const & pubKey65);
    static SecureBinaryData UncompressPoint(SecureBinaryData const & pubKey33);
 
+   ////////////////////////////////////////////////////////////////////////////////
+   // for ECDH
+   static SecureBinaryData PrivKeyScalarMultiply(
+      const SecureBinaryData& privKey,
+      const SecureBinaryData& scalar);
+
+   ////////////////////////////////////////////////////////////////////////////////
+   static SecureBinaryData PubKeyScalarMultiply(
+      const SecureBinaryData& pubKey,
+      const SecureBinaryData& scalar);
+
 #ifndef LIBBTC_ONLY
    /////////////////////////////////////////////////////////////////////////////
    static BTC_PRIVKEY ParsePrivateKey(SecureBinaryData const & privKeyData);

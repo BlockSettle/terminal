@@ -19,7 +19,7 @@ namespace bs {
       class WalletsManager;
    }
 }
-class ArmoryObject;
+class ArmoryConnection;
 class SignContainer;
 class QuoteProvider;
 class TransactionData;
@@ -32,7 +32,7 @@ public:
    DealerXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &, const bs::network::Order &
       , const std::shared_ptr<bs::sync::WalletsManager> &, const std::shared_ptr<QuoteProvider> &
       , const std::shared_ptr<TransactionData> &, const std::unordered_set<std::string> &bsAddresses
-      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryObject> &, bool autoSign);
+      , const std::shared_ptr<SignContainer> &, const std::shared_ptr<ArmoryConnection> &, bool autoSign);
    ~DealerXBTSettlementContainer() override = default;
 
    bool startSigning();
@@ -70,7 +70,7 @@ private slots:
    void onTXSigned(unsigned int id, BinaryData signedTX, std::string errMsg, bool cancelledByUser);
 
 protected:
-   void zcReceived(const std::vector<bs::TXEntry>) override;
+   void onZCReceived(const std::vector<bs::TXEntry> &) override;
 
 private:
    void onCptyVerified();

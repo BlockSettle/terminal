@@ -16,11 +16,14 @@
 #include "BinaryData.h"
 #include "EncryptionUtils.h"
 #include "Assets.h"
+#include "lmdbpp.h"
 
 class DecryptedDataContainer;
 
-#define DERIVATIONSCHEME_LEGACY     0xA0
-#define DERIVATIONSCHEME_BIP32      0xA1
+#define DERIVATIONSCHEME_LEGACY        0xA0
+#define DERIVATIONSCHEME_BIP32         0xA1
+#define DERIVATIONSCHEME_BIP32_SALTED  0xA2
+#define DERIVATIONSCHEME_BIP32_ECDH    0xA3
 
 #define DERIVATIONSCHEME_KEY  0x00000004
 
@@ -29,7 +32,8 @@ class DecryptedDataContainer;
 enum DerivationSchemeType
 {
    DerSchemeType_ArmoryLegacy,
-   DerSchemeType_BIP32
+   DerSchemeType_BIP32,
+   DerSchemeType_ECDH
 };
 
 
@@ -70,7 +74,8 @@ public:
    virtual const SecureBinaryData& getChaincode(void) const = 0;
 
    //static
-   static std::shared_ptr<DerivationScheme> deserialize(BinaryDataRef);
+   static std::shared_ptr<DerivationScheme> deserialize(
+      BinaryDataRef, LMDB*);
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,12 +135,12 @@ public:
    {}
 
    //locals
-   std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
+   virtual std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
       std::shared_ptr<DecryptedDataContainer>,
       const SecureBinaryData& privKey, std::unique_ptr<Cipher>,
       const BinaryData& full_id, unsigned index);
 
-   std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
+   virtual std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
       const SecureBinaryData& pubKey,
       const BinaryData& full_id, unsigned index);
 
@@ -146,16 +151,20 @@ public:
       std::shared_ptr<DecryptedDataContainer>,
       std::shared_ptr<AssetEntry>, unsigned start, unsigned end);
 
-   BinaryData serialize(void) const;
+   virtual BinaryData serialize(void) const;
 
-   const SecureBinaryData& getChaincode(void) const { return chainCode_; }
+   const SecureBinaryData& getChaincode(void) const 
+   { return chainCode_; }
+
+   unsigned getDepth(void) const { return depth_; }
+   unsigned getLeafId(void) const { return leafId_; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 class DerivationScheme_BIP32_Salted : public DerivationScheme_BIP32
 {
 private:
-   const SecureBinaryData& salt_;
+   const SecureBinaryData salt_;
 
 public:
    DerivationScheme_BIP32_Salted(
@@ -165,12 +174,64 @@ public:
    DerivationScheme_BIP32(chainCode, depth, leafId),
       salt_(std::move(salt))
    {}
+
+   //virtuals
+   std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
+      std::shared_ptr<DecryptedDataContainer>,
+      const SecureBinaryData& privKey, std::unique_ptr<Cipher>,
+      const BinaryData& full_id, unsigned index) override;
+
+   std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
+      const SecureBinaryData& pubKey,
+      const BinaryData& full_id, unsigned index) override;
+
+   BinaryData serialize(void) const override;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 class DerivationScheme_ECDH : public DerivationScheme
 {
+private:
+   const BinaryData id_;
+   std::map<unsigned, SecureBinaryData> saltMap_;
 
+private:
+   std::shared_ptr<AssetEntry_Single> computeNextPublicEntry(
+      const SecureBinaryData& pubKey,
+      const BinaryData& full_id, unsigned index);
+
+   std::shared_ptr<AssetEntry_Single> computeNextPrivateEntry(
+      std::shared_ptr<DecryptedDataContainer>,
+      const SecureBinaryData& privKey, std::unique_ptr<Cipher>,
+      const BinaryData& full_id, unsigned index);
+
+   void putSalt(unsigned, const SecureBinaryData&, LMDB*);
+
+public:
+   DerivationScheme_ECDH(void) :
+      DerivationScheme(DerSchemeType_ECDH),
+      id_(CryptoPRNG::generateRandom(8))
+   {}
+
+   DerivationScheme_ECDH(const BinaryData& id,
+      std::map<unsigned, SecureBinaryData> saltMap) :
+      DerivationScheme(DerSchemeType_ECDH), 
+      id_(id), saltMap_(move(saltMap))
+   {}
+
+   //virtuals
+   std::vector<std::shared_ptr<AssetEntry>> extendPublicChain(
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end) override;
+   std::vector<std::shared_ptr<AssetEntry>> extendPrivateChain(
+      std::shared_ptr<DecryptedDataContainer>,
+      std::shared_ptr<AssetEntry>, unsigned start, unsigned end) override;
+   BinaryData serialize(void) const override;
+
+   const SecureBinaryData& getChaincode(void) const override;
+
+   //locals
+   unsigned addSalt(const SecureBinaryData&, LMDB*);
+   void putAllSalts(LMDB*);
 };
 
 #endif

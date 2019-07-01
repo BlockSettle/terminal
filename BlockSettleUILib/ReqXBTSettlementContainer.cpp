@@ -19,7 +19,7 @@ Q_DECLARE_METATYPE(AddressVerificationState)
 
 ReqXBTSettlementContainer::ReqXBTSettlementContainer(const std::shared_ptr<spdlog::logger> &logger
    , const std::shared_ptr<AuthAddressManager> &authAddrMgr, const std::shared_ptr<AssetManager> &assetMgr
-   , const std::shared_ptr<SignContainer> &signContainer, const std::shared_ptr<ArmoryObject> &armory
+   , const std::shared_ptr<SignContainer> &signContainer, const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr, const bs::network::RFQ &rfq
    , const bs::network::Quote &quote, const std::shared_ptr<TransactionData> &txData)
    : bs::SettlementContainer(armory)
@@ -85,13 +85,13 @@ unsigned int ReqXBTSettlementContainer::createPayoutTx(const BinaryData& payinHa
 void ReqXBTSettlementContainer::acceptSpotXBT(const SecureBinaryData &password)
 {
    emit info(tr("Waiting for transactions signing..."));
-   if (clientSells_) {
-      const auto hasChange = transactionData_->GetTransactionSummary().hasChange;
+   if (clientSells_) {  //FIXME: send new type of message to signer here
+/*      const auto hasChange = transactionData_->GetTransactionSummary().hasChange;
       const auto changeAddr = hasChange ? transactionData_->getWallet()->getNewChangeAddress() : bs::Address();
       const auto payinTxReq = transactionData_->createTXRequest(false, changeAddr);
-//      payinSignId_ = signContainer_->signTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
-//         , password);
-      payoutPassword_ = password;
+      payinSignId_ = signContainer_->signTXRequest(payinTxReq, false, SignContainer::TXSignMode::Full
+         , password);
+      payoutPassword_ = password;*/
    }
    else {
       try {    // create payout based on dealer TX
@@ -252,7 +252,7 @@ void ReqXBTSettlementContainer::deactivate()
    }
 }
 
-void ReqXBTSettlementContainer::zcReceived(const std::vector<bs::TXEntry>)
+void ReqXBTSettlementContainer::onZCReceived(const std::vector<bs::TXEntry> &)
 {
    if (monitor_) {
       monitor_->checkNewEntries();

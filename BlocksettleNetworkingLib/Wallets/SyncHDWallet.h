@@ -16,17 +16,16 @@ namespace bs {
 
       namespace hd {
 
-         class Wallet : public QObject
+         class Wallet : public WalletCallbackTarget
          {
-            Q_OBJECT
          public:
             using cb_scan_notify = std::function<void(Group *, bs::hd::Path::Elem wallet, bool isValid)>;
             using cb_scan_read_last = std::function<unsigned int(const std::string &walletId)>;
             using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
-            Wallet(NetworkType, const std::string &walletId, const std::string &name
+            Wallet(const std::string &walletId, const std::string &name
                , const std::string &desc, const std::shared_ptr<spdlog::logger> &logger = nullptr);
-            Wallet(NetworkType, const std::string &walletId, const std::string &name
+            Wallet(const std::string &walletId, const std::string &name
                , const std::string &desc, SignContainer *
                , const std::shared_ptr<spdlog::logger> &logger = nullptr);
             ~Wallet() override;
@@ -45,7 +44,7 @@ namespace bs {
             NetworkType networkType() const { return netType_; }
 
             std::shared_ptr<Group> getGroup(bs::hd::CoinType ct) const;
-            std::shared_ptr<Group> createGroup(bs::hd::CoinType ct);
+            std::shared_ptr<Group> createGroup(bs::hd::CoinType ct, bool isExtOnly);
             void addGroup(const std::shared_ptr<Group> &group);
             size_t getNumGroups() const { return groups_.size(); }
             std::vector<std::shared_ptr<Group>> getGroups() const;
@@ -60,50 +59,60 @@ namespace bs {
             void setUserId(const BinaryData &usedId);
             bool deleteRemotely();
 
-            void registerWallet(const std::shared_ptr<ArmoryObject> &, bool asNew = false);
-            void setArmory(const std::shared_ptr<ArmoryObject> &);
+            std::vector<std::string> registerWallet(
+               const std::shared_ptr<ArmoryConnection> &, bool asNew = false);
+            std::vector<std::string> setUnconfirmedTargets(void);
 
-            bool startRescan(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr, const cb_scan_write_last &cbw = nullptr);
+            void setArmory(const std::shared_ptr<ArmoryConnection> &);
+            void trackChainAddressUse(const std::function<void(bs::sync::SyncState)> &);
+            void startRescan();
             bs::hd::CoinType getXBTGroupType() const { return ((netType_ == NetworkType::MainNet)
                ? bs::hd::CoinType::Bitcoin_main : bs::hd::CoinType::Bitcoin_test); }
 
-         signals:
-            void synchronized() const;
-            void leafAdded(QString id);
-            void leafDeleted(QString id);
-            void scanComplete(const std::string &walletId);
-            void metaDataChanged();
+            void merge(const Wallet&);
 
-         private slots:
-            void onGroupChanged();
-            void onLeafAdded(QString id);
-            void onLeafDeleted(QString id);
-            void onScanComplete(const std::string &leafId);
+            template<class U> void setCustomACT(
+               const std::shared_ptr<ArmoryConnection> &armory)
+            {
+               const auto &leaves = getLeaves();
+               for (auto& leaf : leaves)
+                  leaf->setCustomACT<U>(armory);
+            }
+
+            void setWCT(WalletCallbackTarget *wct) { wct_ = wct; }
 
          protected:
+            void addressAdded(const std::string &walletId) override { wct_->addressAdded(walletId); }
+            void walletReady(const std::string &walletId) override { wct_->walletReady(walletId); }
+            void balanceUpdated(const std::string &walletId) override { wct_->balanceUpdated(walletId); }
+            void metadataChanged(const std::string &) override { wct_->metadataChanged(walletId()); }
+            void walletCreated(const std::string &walletId) override;
+            void walletDestroyed(const std::string &walletId) override;
+
+         protected:
+            WalletCallbackTarget *wct_{};
             const std::string walletId_;
             const std::string name_, desc_;
             NetworkType    netType_ = NetworkType::MainNet;
-            bool           extOnlyAddresses_ = false;
             std::map<bs::hd::Path::Elem, std::shared_ptr<Group>>        groups_;
             mutable std::map<std::string, std::shared_ptr<bs::sync::Wallet>>  leaves_;
-            mutable QMutex    mtxGroups_;
             BinaryData        userId_;
-            SignContainer  *  signContainer_;
-            std::shared_ptr<ArmoryObject>       armory_;
+            SignContainer  *  signContainer_{};
+            std::shared_ptr<ArmoryConnection>   armory_;
             std::shared_ptr<spdlog::logger>     logger_;
-            std::vector<bs::wallet::EncryptionType>   encryptionTypes_;
+            std::vector<bs::wallet::EncryptionType>   encryptionTypes_{bs::wallet::EncryptionType::Password};
             std::vector<SecureBinaryData>          encryptionKeys_;
-            std::pair<unsigned int, unsigned int>  encryptionRank_{ 0,0 };
-
-            void rescanBlockchain(const cb_scan_notify &, const cb_scan_read_last &, const cb_scan_write_last &);
+            std::pair<unsigned int, unsigned int>  encryptionRank_{ 1, 1 };
 
          private:
             std::unordered_set<std::string>  scannedLeaves_;
+
+         public:
+            unsigned containerId_ = UINT32_MAX;
          };
 
 
-         class DummyWallet : public Wallet    // Just a container for old-style wallets
+/*!         class DummyWallet : public Wallet    // Just a container for old-style wallets
          {
          public:
             DummyWallet(const std::shared_ptr<spdlog::logger> &logger)
@@ -115,8 +124,7 @@ namespace bs {
             void add(const std::shared_ptr<bs::sync::Wallet> wallet) {
                leaves_[wallet->walletId()] = wallet;
             }
-         };
-
+         };*/
       }  //namespace hd
    }  //namespace sync
 }  //namespace bs

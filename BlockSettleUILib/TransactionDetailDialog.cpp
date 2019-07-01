@@ -144,7 +144,7 @@ TransactionDetailDialog::TransactionDetailDialog(TransactionsViewItem tvi
 
       ui_->labelConfirmations->setText(QString::number(item->confirmations));
    };
-   tvi.initialize(armory, walletsManager, cbInit);
+   tvi.initialize(armory.get(), walletsManager, cbInit);
 
    bool bigEndianHash = true;
    ui_->labelHash->setText(QString::fromStdString(tvi.txEntry.txHash.toHexStr(bigEndianHash)));

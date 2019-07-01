@@ -54,6 +54,8 @@ enum Methods
 	getUTXOsForAddrList = 64;
 
 	getCombinedSpendableTxOutListForValue = 65;
+	getCombinedSpendableZcOutputs = 66;
+	getCombinedRBFTxOuts = 67;
 
 	broadcastZC = 70;
 	broadcastThroughRPC = 71;

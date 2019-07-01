@@ -234,6 +234,8 @@ SecureBinaryData SerializePublicKey(BTC_PUBKEY const & pubKey)
 SecureBinaryData CryptoECDSA::ComputePublicKey(
    SecureBinaryData const & cppPrivKey, bool compressed) const
 {
+   if (cppPrivKey.getSize() != 32)
+      throw runtime_error("invalid priv key size");
    BTC_PRIVKEY pk = ParsePrivateKey(cppPrivKey);
    BTC_PUBKEY  pub;
    pk.MakePublicKey(pub);
@@ -602,6 +604,62 @@ BinaryData CryptoECDSA::computeLowS(BinaryDataRef s)
    sInteger.Encode(lowS.getPtr(), len, UNSIGNED);
 
    return lowS;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData CryptoECDSA::PrivKeyScalarMultiply(
+   const SecureBinaryData& privKey,
+   const SecureBinaryData& scalar)
+{
+   static SecureBinaryData SECP256K1_ORDER_BE = SecureBinaryData().CreateFromHex(
+      "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+
+   CryptoPP::Integer mult, origPrivExp, ecOrder;
+   mult.Decode(scalar.getPtr(), scalar.getSize(), UNSIGNED);
+   origPrivExp.Decode(privKey.getPtr(), privKey.getSize(), UNSIGNED);
+   ecOrder.Decode(
+      SECP256K1_ORDER_BE.getPtr(), SECP256K1_ORDER_BE.getSize(), UNSIGNED);
+
+   // Let Crypto++ do the EC math for us, serialize the new public key
+   CryptoPP::Integer newPrivExponent =
+      a_times_b_mod_c(mult, origPrivExp, ecOrder);
+
+   SecureBinaryData newPrivData(32);
+   newPrivExponent.Encode(newPrivData.getPtr(), newPrivData.getSize(), UNSIGNED);
+
+   return newPrivData;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData CryptoECDSA::PubKeyScalarMultiply(
+   const SecureBinaryData& pubKey,
+   const SecureBinaryData& scalar)
+{
+   // Parse the chaincode as a big-endian integer
+   CryptoPP::Integer mult;
+   mult.Decode(scalar.getPtr(), scalar.getSize(), UNSIGNED);
+
+   // "new" init as "old", to make sure it's initialized on the correct curve
+   BTC_PUBKEY oldPubKey;
+   if (pubKey.getSize() == 33)
+   {
+       auto&& uncompressedKey = UncompressPoint(pubKey);
+       oldPubKey = ParsePublicKey(uncompressedKey);
+   }
+   else
+   {
+      oldPubKey = ParsePublicKey(pubKey);
+   }
+
+   // Let Crypto++ do the EC math for us, serialize the new public key
+   BTC_PUBKEY newPubKey;
+   newPubKey.SetPublicElement(oldPubKey.ExponentiatePublicElement(mult));
+   auto&& newPubKeySbd = SerializePublicKey(newPubKey);
+   
+   if (pubKey.getSize() == 33)
+      return CompressPoint(newPubKeySbd);
+
+   return newPubKeySbd;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

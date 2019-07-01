@@ -22,51 +22,12 @@ const int DefaultArmoryDBStartTimeoutMsec = 500;
 
 } // namesapce
 
-Q_DECLARE_METATYPE(ArmoryConnection::State)
-Q_DECLARE_METATYPE(BDMPhase)
-Q_DECLARE_METATYPE(NetworkType)
-Q_DECLARE_METATYPE(NodeStatus)
-Q_DECLARE_METATYPE(bs::TXEntry)
-Q_DECLARE_METATYPE(std::vector<bs::TXEntry>)
-
 
 ArmoryObject::ArmoryObject(const std::shared_ptr<spdlog::logger> &logger
    , const std::string &txCacheFN, bool cbInMainThread)
-   : QObject(nullptr), ArmoryConnection(logger)
+   : ArmoryConnection(logger)
    , cbInMainThread_(cbInMainThread), txCache_(txCacheFN)
-{
-   qRegisterMetaType<ArmoryConnection::State>();
-   qRegisterMetaType<BDMPhase>();
-   qRegisterMetaType<NetworkType>();
-   qRegisterMetaType<NodeStatus>();
-   qRegisterMetaType<bs::TXEntry>();
-   qRegisterMetaType<std::vector<bs::TXEntry>>();
-
-   cbStateChanged_ = [this](State state) {
-      emit stateChanged(state);
-   };
-   setRefreshCb([this](std::vector<BinaryData> ids, bool online) {
-      emit refresh(ids, online);
-   });
-   cbNewBlock_ = [this](unsigned int blockNo) {
-      emit newBlock(blockNo);
-   };
-   cbZCReceived_ = [this](std::vector<bs::TXEntry> zcEntries) {
-      emit zeroConfReceived(zcEntries);
-   };
-   cbZCInvalidated_ = [this](std::vector<bs::TXEntry> zcEntries) {
-      emit zeroConfInvalidated(zcEntries);
-   };
-   cbProgress_ = [this](BDMPhase phase, float prog, unsigned int secondsRem, unsigned int numProgress) {
-      emit progress(phase, prog, secondsRem, numProgress);
-   };
-   cbError_ = [this](const std::string &errStr, const std::string &extraMsg) {
-      emit error(QString::fromStdString(errStr), QString::fromStdString(extraMsg));
-   };
-   cbTxBcError_ = [this](const std::string &txHash, const std::string &errStr) {
-      emit txBroadcastError(QString::fromStdString(txHash), QString::fromStdString(errStr));
-   };
-}
+{}
 
 bool ArmoryObject::startLocalArmoryProcess(const ArmorySettings &settings)
 {
@@ -110,13 +71,11 @@ bool ArmoryObject::startLocalArmoryProcess(const ArmorySettings &settings)
 
 void ArmoryObject::setupConnection(const ArmorySettings &settings, const BIP151Cb &bip150PromptUserCb)
 {
-   emit prepareConnection(settings);
-
    if (settings.runLocally) {
       if (!startLocalArmoryProcess(settings)) {
          logger_->error("[{}] failed to start Armory from {}", __func__
                         , settings.armoryExecutablePath.toStdString());
-         setState(State::Offline);
+         setState(ArmoryState::Offline);
          return;
       }
    }
@@ -131,30 +90,22 @@ void ArmoryObject::setupConnection(const ArmorySettings &settings, const BIP151C
       }
    }
 
-   const auto &cbError = [this](const std::string &errDesc) {
-      emit connectionError(QString::fromStdString(errDesc));
-   };
-
    ArmoryConnection::setupConnection(settings.netType, settings.armoryDBIp.toStdString()
       , std::to_string(settings.armoryDBPort), settings.dataDir.toStdString(), serverBIP15xKey
-      , cbError, bip150PromptUserCb);
+      , bip150PromptUserCb);
 }
 
-std::string ArmoryObject::registerWallet(std::shared_ptr<AsyncClient::BtcWallet> &wallet
-   , const std::string &walletId, const std::vector<BinaryData> &addrVec
-   , const RegisterWalletCb &cb
+std::string ArmoryObject::registerWallet(const std::string &walletId
+   , const std::vector<BinaryData> &addrVec, const RegisterWalletCb &cb
    , bool asNew)
 {
-   const auto &cbWrap = [this, cb](const std::string &regId) {
-      if (cb) {
-         if (cbInMainThread_) {
-            QMetaObject::invokeMethod(this, [cb, regId] { cb(regId); });
-         } else {
-            cb(regId);
-         }
-      }
+   const auto &cbWrap = [this, cb](const std::string &regId) 
+   {
+      if (cb) 
+         cb(regId);
    };
-   return ArmoryConnection::registerWallet(wallet, walletId, addrVec, cbWrap, asNew);
+
+   return ArmoryConnection::registerWallet(walletId, addrVec, cbWrap, asNew);
 }
 
 bool ArmoryObject::getWalletsHistory(const std::vector<std::string> &walletIDs, const WalletsHistoryCb &cb)
@@ -193,7 +144,7 @@ bool ArmoryObject::getLedgerDelegateForAddress(const std::string &walletId, cons
          cb(ld);
       }
    };
-   return ArmoryConnection::getLedgerDelegateForAddress(walletId, addr, cbWrap);
+   return ArmoryConnection::getLedgerDelegateForAddress(walletId, addr/*, cbWrap*/);   //FIXME!
 }
 
 bool ArmoryObject::getWalletsLedgerDelegate(const LedgerDelegateCb &cb)

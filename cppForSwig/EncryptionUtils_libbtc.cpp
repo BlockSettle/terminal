@@ -133,6 +133,9 @@ SecureBinaryData CryptoAES::DecryptCBC(const SecureBinaryData & data,
 SecureBinaryData CryptoECDSA::ComputePublicKey(
    SecureBinaryData const & cppPrivKey, bool compressed) const
 {
+   if (cppPrivKey.getSize() != 32)
+      throw runtime_error("invalid priv key size");
+
    btc_key pkey;
    btc_privkey_init(&pkey);
    memcpy(pkey.privkey, cppPrivKey.getPtr(), 32);
@@ -357,6 +360,51 @@ SecureBinaryData CryptoECDSA::UncompressPoint(SecureBinaryData const & pubKey33)
       ptUncompressed = pubKey33;
 
    return ptUncompressed; 
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData CryptoECDSA::PrivKeyScalarMultiply(
+   const SecureBinaryData& privKey,
+   const SecureBinaryData& scalar)
+{
+   SecureBinaryData newPrivData(privKey);
+   if (!btc_ecc_private_key_tweak_mul(
+      (uint8_t*)newPrivData.getPtr(), scalar.getPtr()))
+      throw runtime_error("failed to multiply priv key");
+
+   return newPrivData;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SecureBinaryData CryptoECDSA::PubKeyScalarMultiply(
+   const SecureBinaryData& pubKey,
+   const SecureBinaryData& scalar)
+{
+   SecureBinaryData newPubData;
+   if (pubKey.getSize() == 33)
+   {
+      newPubData.resize(65);
+      if (!btc_ecc_public_key_uncompress(
+         (uint8_t*)pubKey.getPtr(), (uint8_t*)newPubData.getPtr()))
+         throw runtime_error("failed to uncompress point");
+   }
+   else
+   {
+      newPubData = pubKey;
+   }
+   
+   if (!btc_ecc_public_key_tweak_mul(
+      (uint8_t*)newPubData.getPtr(), scalar.getPtr()))
+      throw runtime_error("failed to multiply pub key");
+
+   if (pubKey.getSize() == 65)
+      return newPubData;
+
+   SecureBinaryData result(33);
+   if (!btc_ecc_public_key_compress(newPubData.getPtr(), (uint8_t*)result.getPtr()))
+      throw runtime_error("failed to compress point");
+
+   return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -302,9 +302,8 @@ void CreateTransactionDialogAdvanced::setRBFinputs(const Tx &tx, const std::shar
       SetInputs(transactionData_->GetSelectedInputs()->GetSelectedTransactions());
    };
 
-   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](ReturnMessage<std::vector<UTXO>> utxos) {
+   const auto &cbRBFInputs = [this, wallet, txHashSet, cbTXs](std::vector<UTXO> inUTXOs) {
       try {
-         auto inUTXOs = utxos.get();
          QMetaObject::invokeMethod(this, [this, wallet, txHashSet, inUTXOs, cbTXs] {
             setFixedWalletAndInputs(wallet, inUTXOs);
 
@@ -836,6 +835,9 @@ void CreateTransactionDialogAdvanced::onFeeSuggestionsLoaded(const std::map<unsi
       ui_->comboBoxFeeSuggestions->setCurrentIndex(index);
       feeSelectionChanged(index);
    }
+   if (feeValues.empty()) {
+      feeSelectionChanged(0);
+   }
 }
 
 void CreateTransactionDialogAdvanced::SetMinimumFee(float totalFee, float feePerByte)
@@ -858,21 +860,28 @@ void CreateTransactionDialogAdvanced::feeSelectionChanged(int currentIndex)
 
 bs::Address CreateTransactionDialogAdvanced::getChangeAddress() const
 {
-   bs::Address result;
    if (transactionData_->GetTransactionSummary().hasChange) {
       if (changeAddressFixed_) {
-         result = selectedChangeAddress_;
+         return selectedChangeAddress_;
       }
       else if (ui_->radioButtonNewAddrNative->isChecked() || ui_->radioButtonNewAddrNested->isChecked()) {
-         result = transactionData_->getWallet()->getNewChangeAddress(
-            ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
-         transactionData_->getWallet()->setAddressComment(result, bs::sync::wallet::Comment::toString(
-            bs::sync::wallet::Comment::ChangeAddress));
+         auto promAddr = std::make_shared<std::promise<bs::Address>>();
+         auto futAddr = promAddr->get_future();
+         const auto &cbAddr = [this, promAddr](const bs::Address &addr) {
+            transactionData_->getWallet()->setAddressComment(addr
+               , bs::sync::wallet::Comment::toString(bs::sync::wallet::Comment::ChangeAddress));
+            promAddr->set_value(addr);
+         };
+         transactionData_->getWallet()->getNewChangeAddress(cbAddr
+            , ui_->radioButtonNewAddrNative->isChecked() ? AddressEntryType_P2WPKH : AddressEntryType_P2SH);
+         const auto changeAddr = futAddr.get();
+         transactionData_->getWallet()->syncAddresses();
+         return changeAddr;
       } else {
-         result = selectedChangeAddress_;
+         return selectedChangeAddress_;
       }
    }
-   return result;
+   return {};
 }
 
 void CreateTransactionDialogAdvanced::onCreatePressed()
@@ -1133,9 +1142,9 @@ void CreateTransactionDialogAdvanced::updateManualFeeControls()
    int itemIndex = ui_->comboBoxFeeSuggestions->currentIndex();
    int itemCount = ui_->comboBoxFeeSuggestions->count();
 
-   ui_->doubleSpinBoxFeesManualPerByte->setVisible(itemCount > 2 && itemIndex == itemCount - 2);
+   ui_->doubleSpinBoxFeesManualPerByte->setVisible(itemCount >= 2 && itemIndex == itemCount - 2);
 
-   const bool totalFeeSelected = (itemCount > 2) && (itemIndex == itemCount - 1);
+   const bool totalFeeSelected = (itemCount >= 2) && (itemIndex == itemCount - 1);
    ui_->spinBoxFeesManualTotal->setVisible(totalFeeSelected);
    if (totalFeeSelected) {
       ui_->spinBoxFeesManualTotal->setValue((int)transactionData_->totalFee());

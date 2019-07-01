@@ -15,64 +15,96 @@ using namespace bs::core;
 
 hd::Wallet::Wallet(const std::string &name, const std::string &desc
                    , const wallet::Seed &seed
-                   , const std::shared_ptr<spdlog::logger> &logger
-                   , bool extOnlyAddresses)
+                   , const SecureBinaryData& passphrase
+                   , const std::string& folder
+                   , const std::shared_ptr<spdlog::logger> &logger)
    : name_(name), desc_(desc)
    , netType_(seed.networkType())
-   , extOnlyAddresses_(extOnlyAddresses)
    , logger_(logger)
 {
-   initNew(seed);
+   initNew(seed, passphrase, folder);
 }
 
-hd::Wallet::Wallet(const std::string &filename
-                   , const std::shared_ptr<spdlog::logger> &logger
-                   , bool extOnlyAddresses)
-   : extOnlyAddresses_(extOnlyAddresses)
-   , logger_(logger)
+hd::Wallet::Wallet(const std::string &filename, NetworkType netType,
+   const std::string& folder, const std::shared_ptr<spdlog::logger> &logger)
+   : netType_(netType), logger_(logger)
 {
-   loadFromFile(filename);
+   loadFromFile(filename, folder);
 }
 
-hd::Wallet::Wallet(const std::string &walletId, NetworkType netType
-                   , bool extOnlyAddresses, const std::string &name
-                   , const std::shared_ptr<spdlog::logger> &logger
-                   , const std::string &desc)
-   : walletId_(walletId), name_(name), desc_(desc)
+hd::Wallet::Wallet(const std::string &name, const std::string &desc
+   , NetworkType netType, const SecureBinaryData& passphrase
+   , const std::string& folder
+   , const std::shared_ptr<spdlog::logger> &logger)
+   : name_(name), desc_(desc)
    , netType_(netType)
-   , extOnlyAddresses_(extOnlyAddresses)
    , logger_(logger)
-{}
-
-void hd::Wallet::initNew(const wallet::Seed &seed)
 {
-   const auto &rootNode = std::make_shared<hd::Node>(seed);
-   walletId_ = rootNode->getId();
-   rootNodes_ = hd::Nodes({ rootNode }, {0, 0}, walletId_);
-}
-
-void hd::Wallet::loadFromFile(const std::string &filename)
-{
-   if (!SystemFileUtils::isValidFilePath(filename)) {
-      throw std::invalid_argument(std::string("Invalid file path: ") + filename);
-   }
-   if (!SystemFileUtils::fileExist(filename)) {
-      throw std::runtime_error("Wallet file does not exist");
-   }
-
-   openDBEnv(filename);
-   openDB();
-   setDBforDependants();
-   readFromDB();
+   wallet::Seed seed(CryptoPRNG::generateRandom(32), netType);
+   initNew(seed, passphrase, folder);
 }
 
 hd::Wallet::~Wallet()
 {
-   if (db_) {
-      db_->close();
-      dbEnv_->close();
-      delete db_;
+   shutdown();
+}
+
+void hd::Wallet::initNew(const wallet::Seed &seed, 
+   const SecureBinaryData& passphrase, const std::string& folder)
+{
+   try
+   {
+      walletPtr_ = AssetWallet_Single::createFromSeed_BIP32_Blank(
+         folder, seed.seed(), passphrase);
    }
+   catch(WalletException&)
+   {
+      //empty account structure, will be set at group creation
+      std::set<std::shared_ptr<AccountType>> accountTypes;
+      
+      auto& node = seed.getNode();
+      if (node.getPrivateKey().getSize() != 32 &&
+         node.getPublicKey().getSize() != 33)
+         throw WalletException("invalid seed node");
+
+      walletPtr_ = AssetWallet_Single::createFromBIP32Node(
+         seed.getNode(),
+         accountTypes,
+         passphrase,
+         folder,
+         0); //no lookup, as there are no accounts
+   }
+
+   dbEnv_ = walletPtr_->getDbEnv();
+   db_ = new LMDB(dbEnv_.get(), BS_WALLET_DBNAME);
+   initializeDB();
+}
+
+void hd::Wallet::loadFromFile(
+   const std::string &filename, 
+   const std::string& folder)
+{
+   auto fullname = folder;
+   DBUtils::appendPath(fullname, filename);
+   if (!SystemFileUtils::isValidFilePath(fullname)) {
+      throw std::invalid_argument(std::string("Invalid file path: ") + fullname);
+   }
+   if (!SystemFileUtils::fileExist(fullname)) {
+      throw std::runtime_error("Wallet file " + fullname + " does not exist");
+   }
+
+   //load armory wallet
+   auto walletPtr = AssetWallet::loadMainWalletFromFile(fullname);
+   walletPtr_ = std::dynamic_pointer_cast<AssetWallet_Single>(walletPtr);
+   if (walletPtr_ == nullptr)
+      throw WalletException("failed to load wallet");
+
+   //setup bs wallet db object. the bs wallet custom data exists in its own
+   //db name, isolated from the armory content.
+   dbEnv_ = walletPtr_->getDbEnv();
+   db_ = new LMDB(dbEnv_.get(), BS_WALLET_DBNAME);
+
+   readFromDB();
 }
 
 std::vector<std::shared_ptr<hd::Group>> hd::Wallet::getGroups() const
@@ -94,34 +126,27 @@ size_t hd::Wallet::getNumLeaves() const
    return result;
 }
 
-std::vector<std::shared_ptr<bs::core::Wallet>> hd::Wallet::getLeaves() const
+std::vector<std::shared_ptr<hd::Leaf>> hd::Wallet::getLeaves() const
 {
-   const auto nbLeaves = getNumLeaves();
-   if (leaves_.size() != nbLeaves) {
-      leaves_.clear();
-      for (const auto &group : groups_) {
-         const auto &groupLeaves = group.second->getAllLeaves();
-         for (const auto &leaf : groupLeaves) {
-            leaves_[leaf->walletId()] = leaf;
-         }
-      }
+   std::vector<std::shared_ptr<hd::Leaf>> leaves;
+   for (const auto &group : groups_) {
+      const auto &groupLeaves = group.second->getAllLeaves();
+      for (const auto &leaf : groupLeaves) 
+         leaves.push_back(leaf);
    }
 
-   std::vector<std::shared_ptr<bs::core::Wallet>> result;
-   result.reserve(leaves_.size());
-   for (const auto &leaf : leaves_) {
-      result.emplace_back(leaf.second);
-   }
-   return result;
+   return leaves;
 }
 
-std::shared_ptr<bs::core::Wallet> hd::Wallet::getLeaf(const std::string &id) const
+std::shared_ptr<hd::Leaf> hd::Wallet::getLeaf(const std::string &id) const
 {
-   const auto &itLeaf = leaves_.find(id);
-   if (itLeaf == leaves_.end()) {
-      return nullptr;
+   for (const auto &group : groups_) {
+      auto leafPtr = group.second->getLeafById(id);
+      if (leafPtr != nullptr)
+         return leafPtr;
    }
-   return itLeaf->second;
+
+   return nullptr;
 }
 
 std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
@@ -135,30 +160,27 @@ std::shared_ptr<hd::Group> hd::Wallet::createGroup(bs::hd::CoinType ct)
    const bs::hd::Path path({ bs::hd::purpose, ct });
    switch (ct) {
    case bs::hd::CoinType::BlockSettle_Auth:
-      result = std::make_shared<AuthGroup>(rootNodes_, path, name_, desc_
-                                           , logger_, extOnlyAddresses_);
+      result = std::make_shared<AuthGroup>(
+         walletPtr_, path, netType_, logger_);
       break;
 
    case bs::hd::CoinType::BlockSettle_CC:
-      result = std::make_shared<CCGroup>(rootNodes_, path, name_, desc_, logger_
-                                         , extOnlyAddresses_);
+      result = std::make_shared<CCGroup>(
+         walletPtr_, path, netType_, logger_);
       break;
 
    default:
-      result = std::make_shared<Group>(rootNodes_, path, name_, desc_, logger_
-         , extOnlyAddresses_);
+      result = std::make_shared<Group>(
+         walletPtr_, path, netType_, extOnlyFlag_, logger_);
       break;
    }
    addGroup(result);
+   writeGroupsToDB();
    return result;
 }
 
 void hd::Wallet::addGroup(const std::shared_ptr<hd::Group> &group)
 {
-   group->setDB(dbEnv_, db_);
-   if (!chainCode_.isNull()) {
-      group->setChainCode(chainCode_);
-   }
    groups_[group->index()] = group;
 }
 
@@ -171,130 +193,64 @@ std::shared_ptr<hd::Group> hd::Wallet::getGroup(bs::hd::CoinType ct) const
    return itGroup->second;
 }
 
-void hd::Wallet::createStructure()
+void hd::Wallet::createStructure(unsigned lookup)
 {
    const auto groupXBT = createGroup(getXBTGroupType());
-   groupXBT->createLeaf(0u);
+   groupXBT->createLeaf(0u, lookup);
+   writeGroupsToDB();
 }
 
-void hd::Wallet::setChainCode(const BinaryData &chainCode)
+void hd::Wallet::shutdown()
 {
-   chainCode_ = chainCode;
+   for (auto& group : groups_)
+      group.second->shutdown();
+   groups_.clear();
 
-   for (const auto &group : groups_) {
-      group.second->setChainCode(chainCode);
+   if (db_ != nullptr) {
+      delete db_;
+      db_ = nullptr;
    }
-}
+   dbEnv_.reset();
 
-std::string hd::Wallet::getFileName(const std::string &dir) const
-{
-   return (dir + "/" + fileNamePrefix(isWatchingOnly()) + walletId() + "_wallet.lmdb");
-}
-
-void hd::Wallet::saveToDir(const std::string &targetDir)
-{
-   const auto masterID = BinaryData(walletId());
-   saveToFile(getFileName(targetDir));
+   if (walletPtr_ != nullptr)
+   {
+      walletPtr_->shutdown();
+      walletPtr_.reset();
+   }
 }
 
 bool hd::Wallet::eraseFile()
 {
-   if (dbFilename_.empty()) {
+   auto fname = getFileName();
+   shutdown();
+
+   if (fname.size() == 0)
       return true;
-   }
-   if (dbEnv_) {
-      db_->close();
-      dbEnv_->close();
-      delete db_;
-      db_ = nullptr;
-   }
+
    bool rc = true;
-   if (SystemFileUtils::fileExist(dbFilename_)) {
-      rc &= SystemFileUtils::rmFile(dbFilename_);
-      rc &= SystemFileUtils::rmFile(dbFilename_ + "-lock");
-   }
+   if (std::remove(fname.c_str()) != 0)
+      rc = false;
+
+   fname.append("-lock");
+   if (std::remove(fname.c_str()) != 0)
+      rc = false;
+
    return rc;
 }
 
-void hd::Wallet::saveToFile(const std::string &filename, bool force)
+const std::string& hd::Wallet::getFileName() const
 {
-   openDBEnv(filename);
-   initDB();
-   setDBforDependants();
-   writeToDB(force);
+   if (walletPtr_ == nullptr)
+      throw WalletException("wallet is not initialized, cannot return filename");
+   return walletPtr_->getDbFilename();
 }
 
-void hd::Wallet::copyToFile(const std::string &filename)
+void hd::Wallet::initializeDB()
 {
-   const auto prevDbFilename = dbFilename_;
-   const auto prevDbEnv = dbEnv_;
-   const auto prevDb = db_;
-   saveToFile(filename, true);
-   dbEnv_ = prevDbEnv;
-   db_ = prevDb;
-   dbFilename_ = prevDbFilename;
-   setDBforDependants();
-}
+   //commit bs header data
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
-void hd::Wallet::openDBEnv(const std::string &filename)
-{
-   dbEnv_ = std::make_shared<LMDBEnv>(2);
-   dbEnv_->open(filename);
-   dbFilename_ = filename;
-}
-
-void hd::Wallet::initDB()
-{
-   BinaryData masterID(walletId());
-   if (masterID.isNull()) {
-      throw std::invalid_argument("master ID is empty");
-   }
-
-   LMDB dbMeta;
-   dbMeta.open(dbEnv_.get(), WALLETMETA_DBNAME);
-   {
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(MASTERID_KEY);
-      BinaryWriter bwData;
-      bwData.put_var_int(masterID.getSize());
-
-      BinaryDataRef idRef;
-      idRef.setRef(masterID);
-      bwData.put_BinaryDataRef(idRef);
-
-      putDataToDB(&dbMeta, bwKey.getData(), bwData.getData());
-   }
-
-   const auto groupXBT = getGroup(getXBTGroupType());
-   if (groupXBT != nullptr) {
-      const auto leafMain = groupXBT->getLeaf(0);
-      if (leafMain != nullptr) {
-         BinaryWriter bwKey;
-         bwKey.put_uint32_t(MAINWALLET_KEY);
-
-         const auto mainWalletId = leafMain->walletId();
-         BinaryWriter bwData;
-         bwData.put_var_int(mainWalletId.size());
-         bwData.put_BinaryData(mainWalletId);
-         putDataToDB(&dbMeta, bwKey.getData(), bwData.getData());
-      }
-   }
-
-   {
-      BinaryWriter bwKey;
-      bwKey.put_uint8_t(WALLETMETA_PREFIX);
-      bwKey.put_BinaryData(masterID);
-
-      BinaryWriter bw;
-      bw.put_var_int(sizeof(uint32_t));
-      bw.put_uint32_t(bs::hd::purpose);
-      putDataToDB(&dbMeta, bwKey.getData(), bw.getData());
-   }
-   dbMeta.close();
-
-   db_ = new LMDB(dbEnv_.get(), masterID.toBinStr());
-
-   {  //wallet type
+   {  //network type
       BinaryWriter bwKey;
       bwKey.put_uint32_t(WALLETTYPE_KEY);
 
@@ -302,34 +258,10 @@ void hd::Wallet::initDB()
       bwData.put_var_int(1);
       bwData.put_uint8_t(static_cast<uint8_t>(netType_));
 
-      putDataToDB(db_, bwKey.getData(), bwData.getData());
+      putDataToDB(bwKey.getData(), bwData.getData());
    }
 
-   if (!rootNodes_.empty()) {
-      BinaryWriter bwKey, bwData;
-      bwKey.put_uint32_t(MAIN_ACCOUNT_KEY);
-      bwData.put_var_int(sizeof(uint32_t) * 2);
-      bwData.put_uint32_t(rootNodes_.rank().first);
-      bwData.put_uint32_t(rootNodes_.rank().second);
-      putDataToDB(db_, bwKey.getData(), bwData.getData());
-   }
-
-   uint16_t nodeCounter = 0;
-   const auto &cbNode = [this, &nodeCounter](const std::shared_ptr<hd::Node> &node) {
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(ROOTASSET_KEY);
-      bwKey.put_uint16_t(nodeCounter++);
-
-      BinaryWriter bwData;
-      const auto &nodeSer = node->serialize();
-      bwData.put_var_int(nodeSer.getSize());
-      bwData.put_BinaryData(nodeSer);
-
-      putDataToDB(db_, bwKey.getData(), bwData.getData());
-   };
-   rootNodes_.forEach(cbNode);
-
-   {
+   {  //name
       BinaryWriter bwKey;
       bwKey.put_uint32_t(WALLETNAME_KEY);
 
@@ -337,9 +269,9 @@ void hd::Wallet::initDB()
       BinaryWriter bwName;
       bwName.put_var_int(walletNameData.getSize());
       bwName.put_BinaryData(walletNameData);
-      putDataToDB(db_, bwKey.getData(), bwName.getData());
+      putDataToDB(bwKey.getData(), bwName.getData());
    }
-   {
+   {  //description
       BinaryWriter bwKey;
       bwKey.put_uint32_t(WALLETDESCRIPTION_KEY);
 
@@ -347,241 +279,84 @@ void hd::Wallet::initDB()
       BinaryWriter bwDesc;
       bwDesc.put_var_int(walletDescriptionData.getSize());
       bwDesc.put_BinaryData(walletDescriptionData);
-      putDataToDB(db_, bwKey.getData(), bwDesc.getData());
+      putDataToDB(bwKey.getData(), bwDesc.getData());
    }
-}
 
-void hd::Wallet::openDB()
-{
-   BinaryData masterID, mainWalletID, walletID;
-   unsigned int dbCount = 0;
-
-   LMDB dbMeta;
-   dbMeta.open(dbEnv_.get(), WALLETMETA_DBNAME);
-   {
-      LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadOnly);
-      {  //masterID
-         BinaryWriter bwKey;
-         bwKey.put_uint32_t(MASTERID_KEY);
-
-         try {
-            masterID = getDataRefForKey(&dbMeta, bwKey.getData());
-            walletId_ = masterID.toBinStr();
-         }
-         catch (NoEntryInWalletException&) {
-            throw std::runtime_error("missing masterID entry");
-         }
-      }
-      {  //mainWalletID
-         BinaryWriter bwKey;
-         bwKey.put_uint32_t(MAINWALLET_KEY);
-
-         try {
-            mainWalletID = getDataRefForKey(&dbMeta, bwKey.getData());
-         }
-         catch (NoEntryInWalletException&) {}
-      }
-
-      auto dbIter = dbMeta.begin();
-
+   {  //ext only flag
       BinaryWriter bwKey;
-      bwKey.put_uint8_t(WALLETMETA_PREFIX);
-      CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
+      bwKey.put_uint32_t(WALLET_EXTONLY_KEY);
 
-      dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
-
-      while (dbIter.isValid()) {
-         auto iterkey = dbIter.key();
-         auto itervalue = dbIter.value();
-
-         BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
-         BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
-
-         //check value's advertized size is packet size and strip it
-         BinaryRefReader brrVal(valueBDR);
-         auto valsize = brrVal.get_var_int();
-         if (valsize != brrVal.getSizeRemaining()) {
-            throw WalletException("entry val size mismatch");
-         }
-         try {
-            if (keyBDR.getSize() < 2) {
-               throw WalletException("invalid meta key");
-            }
-            auto val = brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining());
-            BinaryRefReader brrKey(keyBDR);
-            auto prefix = brrKey.get_uint8_t();
-            if (prefix != WALLETMETA_PREFIX) {
-               throw WalletException("invalid wallet meta prefix");
-            }
-            std::string dbname((char*)brrKey.getCurrPtr(), brrKey.getSizeRemaining());
-            {
-               BinaryRefReader brrVal(val);
-               auto wltType = (WalletMetaType)brrVal.get_uint32_t();
-               if (wltType != bs::hd::purpose) {
-                  throw WalletException("invalid BIP44 wallet meta type");
-               }
-            }
-            walletID = brrKey.get_BinaryData((uint32_t)brrKey.getSizeRemaining());
-
-            dbCount++;
-         }
-         catch (const std::exception&) {
-            throw WalletException("metadata reading error");
-         }
-
-         dbIter.advance();
-      }
+      BinaryWriter bwDesc;
+      bwDesc.put_uint8_t(1); //flag size
+      bwDesc.put_uint8_t(extOnlyFlag_);
+      putDataToDB(bwKey.getData(), bwDesc.getData());
    }
-   dbMeta.close();
-
-   db_ = new LMDB(dbEnv_.get(), masterID.toBinStr());
 }
 
 void hd::Wallet::readFromDB()
 {
-   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadOnly);
+   //this needs to be a readwrite because initializing a leaf results 
+   //in opening a db name
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
 
-   {  // netType
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(WALLETTYPE_KEY);
-      auto netTypeRef = getDataRefForKey(db_, bwKey.getData());
-
-      if (netTypeRef.getSize() != 1) {
+   {  //header data
+      auto typeBdr = getDataRefForKey(WALLETTYPE_KEY);
+      if (typeBdr.getSize() != 1) 
          throw WalletException("invalid netType length");
-      }
-      BinaryRefReader brr(netTypeRef);
-      netType_ = static_cast<NetworkType>(brr.get_uint8_t());
-   }
+      netType_ = static_cast<NetworkType>(typeBdr.getPtr()[0]);
 
-   try {
       name_ = getDataRefForKey(WALLETNAME_KEY).toBinStr();
-   }
-   catch (const NoEntryInWalletException &) {
-      throw WalletException("wallet name not set");
-   }
-   try {
       desc_ = getDataRefForKey(WALLETDESCRIPTION_KEY).toBinStr();
-   }
-   catch (const NoEntryInWalletException&) {}
-
-   bs::wallet::KeyRank keyRank = { 0, 0 };
-   {
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(MAIN_ACCOUNT_KEY);
-      try {
-         auto assetRef = getDataRefForKey(db_, bwKey.getData());
-         if (!assetRef.isNull()) {
-            BinaryRefReader brr(assetRef);
-            keyRank.first = brr.get_uint32_t();
-            keyRank.second = brr.get_uint32_t();
-         }
-      }
-      catch (const NoEntryInWalletException &) {}
-   }
-
-   {  // root nodes
-      auto dbIter = db_->begin();
-      BinaryWriter bwKey;
-      bwKey.put_uint32_t(ROOTASSET_KEY);
-      CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
-      dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
-      std::vector<std::shared_ptr<hd::Node>> rootNodes;
-
-      while (dbIter.isValid()) {
-         auto iterkey = dbIter.key();
-         auto itervalue = dbIter.value();
-
-         BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
-         BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
-         BinaryRefReader brrVal(valueBDR);
-
-         try {
-            const auto &len = static_cast<uint32_t>(brrVal.get_var_int());
-            if (len == 0) {
-               break;
-            }
-            if (len != brrVal.getSizeRemaining()) {
-               break;
-            }
-            if (len < 65) {
-               dbIter.advance();
-               continue;
-            }
-            const auto assetRef = brrVal.get_BinaryDataRef(len);
-            if (*assetRef.getPtr() != bs::hd::purpose) {
-               dbIter.advance();
-               continue;
-            }
-            const auto &node = hd::Node::deserialize(assetRef);
-            rootNodes.emplace_back(node);
-         }
-         catch (const std::exception &e) {
-            throw WalletException(std::string("failed to deser root node: ") + e.what());
-         }
-         dbIter.advance();
-      }
-      if ((keyRank == bs::wallet::KeyRank{ 0, 0 }) && (rootNodes.size() == 1) && !rootNodes[0]->encTypes().empty()) {
-         keyRank = { 1, 1 };
-      }
-      rootNodes_ = hd::Nodes(rootNodes, keyRank, walletId_);
+      extOnlyFlag_ = (bool)*getDataRefForKey(WALLET_EXTONLY_KEY).getPtr();
    }
 
    {  // groups
       auto dbIter = db_->begin();
 
       BinaryWriter bwKey;
-      bwKey.put_uint8_t(ASSETENTRY_PREFIX);
+      bwKey.put_uint8_t(BS_GROUP_PREFIX);
       CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
 
       dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
       while (dbIter.isValid()) {
+         
          auto iterkey = dbIter.key();
          auto itervalue = dbIter.value();
 
          BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
          BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
 
+         //sanity check on the key
+         if (keyBDR.getSize() == 0 || keyBDR.getPtr()[0] != BS_GROUP_PREFIX)
+            break;
+
          BinaryRefReader brrVal(valueBDR);
          auto valsize = brrVal.get_var_int();
-         if (valsize != brrVal.getSizeRemaining()) {
+         if (valsize != brrVal.getSizeRemaining())
             throw WalletException("entry val size mismatch");
-         }
+         
          try {
-            const auto group = hd::Group::deserialize(keyBDR
-                 , brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
-                                                      , rootNodes_, name_
-                                                      , desc_, logger_
-                                                      , extOnlyAddresses_);
-            if (group != nullptr) {
+            const auto group = hd::Group::deserialize(walletPtr_,
+               keyBDR, brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining())
+                 , name_, desc_, netType_, logger_);
+            if (group != nullptr)
                addGroup(group);
-            }
          }
-         catch (const std::exception &) { }
+         catch (const std::exception&) 
+         {}
 
          dbIter.advance();
       }
    }
-}
-
-void hd::Wallet::setDBforDependants()
-{
-   for (auto group : groups_) {
-      group.second->setDB(dbEnv_, db_);
+   for (const auto &leaf : getLeaves()) {
+      leaf->readMetaData();
    }
 }
 
-void hd::Wallet::writeToDB(bool force)
+void hd::Wallet::writeGroupsToDB(bool force)
 {
-   for (const auto &group : groups_) {
-      if (!force && !group.second->needsCommit()) {
-         continue;
-      }
-      BinaryWriter bwKey;
-      bwKey.put_uint8_t(ASSETENTRY_PREFIX);
-      bwKey.put_uint32_t(group.second->index());
-      putDataToDB(db_, bwKey.getData(), group.second->serialize());
-      group.second->committed();
-   }
+   for (const auto &group : groups_)
+      group.second->commit(force);
 }
 
 BinaryDataRef hd::Wallet::getDataRefForKey(LMDB* db, const BinaryData& key) const
@@ -609,12 +384,12 @@ BinaryDataRef hd::Wallet::getDataRefForKey(uint32_t key) const
    return getDataRefForKey(db_, bwKey.getData());
 }
 
-void hd::Wallet::putDataToDB(LMDB* db, const BinaryData& key, const BinaryData& data)
+void hd::Wallet::putDataToDB(const BinaryData& key, const BinaryData& data)
 {
    CharacterArrayRef keyRef(key.getSize(), key.getPtr());
    CharacterArrayRef dataRef(data.getSize(), data.getPtr());
    LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
-   db->insert(keyRef, dataRef);
+   db_->insert(keyRef, dataRef);
 }
 
 std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
@@ -622,25 +397,45 @@ std::string hd::Wallet::fileNamePrefix(bool watchingOnly)
    return watchingOnly ? "bip44wo_" : "bip44_";
 }
 
-std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly(const SecureBinaryData &password) const
+std::shared_ptr<hd::Wallet> hd::Wallet::createWatchingOnly() const
 {
-   if (rootNodes_.empty()) {
-      LOG(logger_, info, "[Wallet::CreateWatchingOnly] {} already watching-only", walletId());
-      return nullptr;
-   }
-   auto woWallet = std::make_shared<hd::Wallet>(walletId(), netType_
-                                                , extOnlyAddresses_, name_
-                                                , logger_, desc_);
+   //fork WO copy of armory wallet
+   auto woFilename = AssetWallet::forkWathcingOnly(walletPtr_->getDbFilename());
 
-   const auto &extNode = rootNodes_.decrypt(password);
-   if (!extNode) {
-      LOG(logger_, warn, "[Wallet::CreateWatchingOnly] failed to decrypt root node[s]");
-      return nullptr;
+   //instantiate empty core::hd::Wallet
+   std::shared_ptr<hd::Wallet> woCopy(new hd::Wallet());
+
+   //populate with this wallet's meta data
+   woCopy->name_ = name_;
+   woCopy->desc_ = desc_;
+   woCopy->netType_ = netType_;
+   woCopy->logger_ = logger_;
+
+   //setup the armory wallet ptr and dbs
+   woCopy->walletPtr_ = std::dynamic_pointer_cast<AssetWallet_Single>(
+      AssetWallet::loadMainWalletFromFile(woFilename));
+   woCopy->dbEnv_ = woCopy->walletPtr_->getDbEnv();
+   woCopy->db_ = new LMDB(woCopy->dbEnv_.get(), BS_WALLET_DBNAME);
+
+   //init wo blocksettle meta data db
+   woCopy->initializeDB();
+
+   //copy group and leaf structure
+   for (auto& groupPair : groups_)
+   {
+      auto newGroup = groupPair.second->getCopy(woCopy->walletPtr_);
+      woCopy->addGroup(newGroup);
    }
-   for (const auto &group : groups_) {
-      woWallet->addGroup(group.second->createWatchingOnly(extNode));
-   }
-   return woWallet;
+
+   //commit to disk
+   woCopy->writeGroupsToDB();
+
+   return woCopy;
+}
+
+bool hd::Wallet::isWatchingOnly() const
+{
+   return walletPtr_->isWatchingOnly();
 }
 
 static bool nextCombi(std::vector<int> &a , const int n, const int m)
@@ -657,157 +452,120 @@ static bool nextCombi(std::vector<int> &a , const int n, const int m)
    return false;
 }
 
-bool hd::Wallet::changePassword(const std::vector<bs::wallet::PasswordData> &newPass
-   , bs::wallet::KeyRank keyRank, const SecureBinaryData &oldPass
-   , bool addNew, bool removeOld, bool dryRun)
+bool hd::Wallet::changePassword(const SecureBinaryData& newPass)
 {
-   unsigned int newPassSize = (unsigned int)newPass.size();
-   if (addNew) {
-      newPassSize += rootNodes_.rank().second;
-
-      if (keyRank.first != 1) {
-         LOG(logger_, error, "Wallet::changePassword: adding new keys is supported only for 1-of-N scheme");
-         return false;
-      }
-   }
-
-   if (removeOld) {
-      if (keyRank.first != 1) {
-         LOG(logger_, error, "Wallet::changePassword: removing old keys is supported only for 1-of-N scheme");
-         return false;
-      }
-   }
-
-   if (keyRank.second != newPassSize) {
-      LOG(logger_, error, "Wallet::changePassword: keyRank.second != newPassSize ({} != {}), rootNodes_: {} items, newPass: {} items"
-         , keyRank.second, newPassSize, rootNodes_.rank().second, newPass.size());
+   if (newPass.getSize() == 0)
       return false;
-   }
 
-   if ((keyRank.first < 1) || (keyRank.first > keyRank.second)) {
-      LOG(logger_, error, "Wallet::changePassword: keyRank.first > keyRank.second ({} > {})"
-         , keyRank.first, keyRank.second);
-      return false;
-   }
-
-   const auto &decrypted = rootNodes_.decrypt(oldPass);
-   if (!decrypted) {
-      LOG(logger_, error, "Wallet::changePassword: decrypt failed");
-      return false;
-   }
-
-   if (dryRun) {
+   //we assume the wallet passphrase prompt lambda has been set
+   auto lock = walletPtr_->lockDecryptedContainer();
+   try
+   {
+      walletPtr_->changeMasterPassphrase(newPass);
       return true;
    }
-
-   std::vector<std::shared_ptr<hd::Node>> rootNodes;
-
-   if (addNew) {
-      rootNodes_.forEach([&rootNodes](const std::shared_ptr<Node> node) {
-         // Copy old encrypted nodes
-         rootNodes.push_back(node);
-      });
-
-      for (const auto &passData : newPass) {
-         rootNodes.push_back(decrypted->encrypt(passData.password, { passData.encType }
-            , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
-      }
-
-      if (keyRank.second != rootNodes.size()) {
-         LOG(logger_, error, "[Wallet::changePassword] keyRank.second ({}) != rootNodes.size ({}) after adding keys"
-            , keyRank.second, rootNodes.size());
-         return false;
-      }
-   } else if (removeOld) {
-      rootNodes_.forEach([&rootNodes, &newPass](const std::shared_ptr<Node> node) {
-         // Copy old encrypted nodes
-         for (const auto &oldKey : node->encKeys()) {
-            for (const auto &newKey : newPass) {
-               if (oldKey == newKey.encKey) {
-                  rootNodes.push_back(node);
-                  return;
-               }
-            }
-         }
-      });
-   } else {
-      const auto &addNode = [this, &rootNodes, decrypted, newPass, keyRank](const std::vector<int> &combi) {
-         if (keyRank.first == 1) {
-            const auto &passData = newPass[combi[0]];
-            rootNodes.emplace_back(decrypted->encrypt(passData.password, { passData.encType }
-               , passData.encKey.isNull() ? std::vector<SecureBinaryData>{} : std::vector<SecureBinaryData>{ passData.encKey }));
-         }
-         else {
-            SecureBinaryData xorPass;
-            std::set<bs::wallet::EncryptionType> encTypes;
-            std::set<SecureBinaryData> encKeys;
-            for (int i = 0; i < int(keyRank.first); ++i) {
-               const auto &idx = combi[i];
-               const auto &passData = newPass[idx];
-               xorPass = mergeKeys(xorPass, passData.password);
-               encTypes.insert(passData.encType);
-               if (!passData.encKey.isNull()) {
-                  encKeys.insert(passData.encKey);
-               }
-            }
-            std::vector<bs::wallet::EncryptionType> mergedEncTypes;
-            for (const auto &encType : encTypes) {
-               mergedEncTypes.emplace_back(encType);
-            }
-            std::vector<SecureBinaryData> mergedEncKeys;
-            for (const auto &encKey : encKeys) {
-               mergedEncKeys.emplace_back(encKey);
-            }
-            const auto &encrypted = decrypted->encrypt(xorPass, mergedEncTypes, mergedEncKeys);
-            if (!encrypted) {
-               LOG(logger_, error, "Wallet::changePassword: failed to encrypt node");
-               return false;
-            }
-            rootNodes.emplace_back(encrypted);
-         }
-         return true;
-      };
-
-      std::vector<int> combiIndices;
-      combiIndices.reserve(keyRank.second);
-      for (unsigned int i = 0; i < keyRank.second; ++i) {
-         combiIndices.push_back(i);
-      }
-      if (!addNode(combiIndices)) {
-         return false;
-      }
-      while (nextCombi(combiIndices, keyRank.second, keyRank.first)) {
-         if (!addNode(combiIndices)) {
-            return false;
-         }
-      }
-   }
-
-   rootNodes_ = hd::Nodes(rootNodes, keyRank, walletId_);
-
-   for (const auto &group : groups_) {
-      group.second->updateRootNodes(rootNodes_, decrypted);
-   }
-
-   updatePersistence();
-   LOG(logger_, info, "Wallet::changePassword: success");
-   return true;
-}
-
-void hd::Wallet::updatePersistence()
-{
-   if (db_) {
-      initDB();
-      // Force update because otherwise removed nodes would be still in the file
-      writeToDB(true);
+   catch (std::exception&)
+   {
+      return false;
    }
 }
 
 bool hd::Wallet::isPrimary() const
 {
+   logger_->debug("auth group: {}, XBT group: {}", (getGroup(bs::hd::CoinType::BlockSettle_Auth) != nullptr), (getGroup(getXBTGroupType()) != nullptr));
    if ((getGroup(bs::hd::CoinType::BlockSettle_Auth) != nullptr)
       && (getGroup(getXBTGroupType()) != nullptr)) {
       return true;
    }
    return false;
+}
+
+void hd::Wallet::copyToFile(const std::string& filename)
+{
+   std::ifstream source(dbEnv_->getFilename(), std::ios::binary);
+   std::ofstream dest(filename, std::ios::binary);
+
+   std::istreambuf_iterator<char> begin_source(source);
+   std::istreambuf_iterator<char> end_source;
+   std::ostreambuf_iterator<char> begin_dest(dest);
+   std::copy(begin_source, end_source, begin_dest);
+
+   source.close();
+   dest.close();
+}
+
+WalletEncryptionLock hd::Wallet::lockForEncryption(const SecureBinaryData& passphrase)
+{
+   return WalletEncryptionLock(walletPtr_, passphrase);
+}
+
+void hd::Wallet::setExtOnly()
+{
+   //no point going further if the flag is already set
+   if (extOnlyFlag_)
+      return;
+
+   //cannot flag for ext only if the wallet already has a structure
+   if (getNumLeaves() > 0)
+      throw WalletException("cannot flag initialized wallet for ext only");
+   
+   extOnlyFlag_ = true;
+   
+   //update flag on disk
+   LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadWrite);
+
+   BinaryWriter bwKey;
+   bwKey.put_uint32_t(WALLET_EXTONLY_KEY);
+
+   BinaryWriter bwDesc;
+   bwDesc.put_uint8_t(1); //flag size
+   bwDesc.put_uint8_t(extOnlyFlag_);
+   putDataToDB(bwKey.getData(), bwDesc.getData());
+}
+
+bs::core::wallet::Seed hd::Wallet::getDecryptedSeed(void) const
+{
+   /***
+   Expects wallet to be locked and passphrase lambda set
+   ***/
+
+   if (walletPtr_ == nullptr)
+      throw WalletException("uninitialized armory wallet");
+
+   auto seedPtr = walletPtr_->getEncryptedSeed();
+   if(seedPtr == nullptr)
+      throw WalletException("wallet has no seed");
+
+   auto clearSeed = walletPtr_->getDecryptedValue(seedPtr);
+   bs::core::wallet::Seed rootObj(clearSeed, netType_);
+   return rootObj;
+}
+
+SecureBinaryData hd::Wallet::getDecryptedRootXpriv(void) const
+{
+   /***
+   Expects wallet to be locked and passphrase lambda set
+   ***/
+
+   if (walletPtr_ == nullptr)
+      throw WalletException("uninitialized armory wallet");
+
+   if(walletPtr_->isWatchingOnly())
+      throw WalletException("wallet is watching only");
+
+   auto root = walletPtr_->getRoot();
+   if(!root->hasPrivateKey())
+      throw WalletException("wallet is missing root private key, this shouldnt happen");
+
+   auto rootBip32 = std::dynamic_pointer_cast<AssetEntry_BIP32Root>(root);
+   if (rootBip32 == nullptr)
+      throw WalletException("unexpected wallet root type");
+
+   auto decryptedRootPrivKey = walletPtr_->getDecryptedPrivateKeyForAsset(root);
+   
+   BIP32_Node node;
+   node.initFromPrivateKey(
+      rootBip32->getDepth(), rootBip32->getLeafID(), rootBip32->getFingerPrint(),
+      decryptedRootPrivKey, rootBip32->getChaincode());
+   return node.getBase58();
 }

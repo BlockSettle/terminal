@@ -927,6 +927,7 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
          wltIDs.push_back(idRef);
       }
       
+      uint32_t height = getTopBlockHeader()->getBlockHeight();
       auto response = make_shared<::Codec_AddressData::ManyCombinedData>();
 
       for (auto& id : wltIDs)
@@ -941,8 +942,6 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
 
          if (wltPtr == nullptr)
             throw runtime_error("unknown wallet/lockbox ID");
-
-         uint32_t height = command->height();
 
          auto combinedData = response->add_packedbalance();
          
@@ -1001,10 +1000,12 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
          if (wltPtr == nullptr)
             throw runtime_error("unknown wallet or lockbox ID");
 
+         auto&& countMap = wltPtr->getAddrTxnCounts(updateID_);
+         if (countMap.size() == 0)
+            continue;
+
          auto packedBal = response->add_packedbalance();
          packedBal->set_id(id.getPtr(), id.getSize());
-
-         auto&& countMap = wltPtr->getAddrTxnCounts(updateID_);
 
          for (auto count : countMap)
          {
@@ -1078,8 +1079,116 @@ shared_ptr<Message> BDV_Server_Object::processCommand(
             utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
          }
 
-         if (totalValue >= command->value() *2)
+         if (totalValue >= command->value() * 2)
             break;
+      }
+
+      return response;
+   }
+
+   case Methods::getCombinedSpendableZcOutputs:
+   {
+      /*
+      in:
+         value
+         wallet ids as bindata[]
+      out:
+         enough UTXOs to cover value twice, as Codec_Utxo::ManyUtxo
+
+      The order in which wallets are presented will be the order by
+      which utxo fetching will be prioritize, i.e. if the first wallet
+      has enough UTXOs to cover value twice over, there will not be any
+      UTXOs returned for the other wallets.
+      */
+
+      vector<BinaryData> wltIDs;
+      for (int i = 0; i < command->bindata_size(); i++)
+      {
+         auto& id = command->bindata(i);
+         BinaryData idRef((uint8_t*)id.data(), id.size());
+         wltIDs.push_back(idRef);
+      }
+
+      auto response = make_shared<::Codec_Utxo::ManyUtxo>();
+
+      for (auto id : wltIDs)
+      {
+         shared_ptr<BtcWallet> wltPtr = nullptr;
+         for (auto& group : this->groups_)
+         {
+            auto wltIter = group.wallets_.find(id);
+            if (wltIter != group.wallets_.end())
+               wltPtr = wltIter->second;
+         }
+
+         if (wltPtr == nullptr)
+            throw runtime_error("unknown wallet or lockbox ID");
+
+         auto&& utxoVec = wltPtr->getSpendableTxOutListZC();
+         for (auto& utxo : utxoVec)
+         {
+            auto utxoPtr = response->add_value();
+            utxoPtr->set_value(utxo.value_);
+            utxoPtr->set_script(utxo.script_.getPtr(), utxo.script_.getSize());
+            utxoPtr->set_txheight(utxo.txHeight_);
+            utxoPtr->set_txindex(utxo.txIndex_);
+            utxoPtr->set_txoutindex(utxo.txOutIndex_);
+            utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
+         }
+      }
+
+      return response;
+   }
+
+   case Methods::getCombinedRBFTxOuts:
+   {
+      /*
+      in:
+         value
+         wallet ids as bindata[]
+      out:
+         enough UTXOs to cover value twice, as Codec_Utxo::ManyUtxo
+
+      The order in which wallets are presented will be the order by
+      which utxo fetching will be prioritize, i.e. if the first wallet
+      has enough UTXOs to cover value twice over, there will not be any
+      UTXOs returned for the other wallets.
+      */
+
+      vector<BinaryData> wltIDs;
+      for (int i = 0; i < command->bindata_size(); i++)
+      {
+         auto& id = command->bindata(i);
+         BinaryData idRef((uint8_t*)id.data(), id.size());
+         wltIDs.push_back(idRef);
+      }
+
+      auto response = make_shared<::Codec_Utxo::ManyUtxo>();
+
+      for (auto id : wltIDs)
+      {
+         shared_ptr<BtcWallet> wltPtr = nullptr;
+         for (auto& group : this->groups_)
+         {
+            auto wltIter = group.wallets_.find(id);
+            if (wltIter != group.wallets_.end())
+               wltPtr = wltIter->second;
+         }
+
+         if (wltPtr == nullptr)
+            throw runtime_error("unknown wallet or lockbox ID");
+
+         auto&& utxoVec = wltPtr->getRBFTxOutList();
+         for (auto& utxo : utxoVec)
+         {
+            auto utxoPtr = response->add_value();
+            utxoPtr->set_value(utxo.value_);
+            utxoPtr->set_script(utxo.script_.getPtr(), utxo.script_.getSize());
+            utxoPtr->set_txheight(utxo.txHeight_);
+            utxoPtr->set_txindex(utxo.txIndex_);
+            utxoPtr->set_txoutindex(utxo.txOutIndex_);
+            utxoPtr->set_txhash(utxo.txHash_.getPtr(), utxo.txHash_.getSize());
+         }
       }
 
       return response;

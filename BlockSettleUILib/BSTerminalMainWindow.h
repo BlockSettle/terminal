@@ -190,9 +190,8 @@ private slots:
    void openConfigDialog();
    void openAccountInfoDialog();
    void openCCTokenDialog();
-   void onZCreceived(const std::vector<bs::TXEntry>);
-   void onArmoryStateChanged(ArmoryConnection::State);
 
+   void onZCreceived(const std::vector<bs::TXEntry> &);
    void showZcNotification(const TxInfo *);
 
    void onLogin();
@@ -246,6 +245,20 @@ private:
    ZmqBIP15XDataConnection::cbNewKey   cbApprovePuB_ = nullptr;
    ZmqBIP15XDataConnection::cbNewKey   cbApproveChat_ = nullptr;
 
+   class MainWinACT : public ArmoryCallbackTarget
+   {
+   public:
+      MainWinACT(ArmoryConnection *armory, BSTerminalMainWindow *wnd)
+         : ArmoryCallbackTarget(armory), parent_(wnd) {}
+      void onZCReceived(const std::vector<bs::TXEntry> &) override;
+      void onStateChanged(ArmoryState) override;
+      void onTxBroadcastError(const std::string &hash, const std::string &error) override;
+      void onRefresh(const std::vector<BinaryData> &, bool) override;
+
+   private:
+      BSTerminalMainWindow *parent_;
+   };
+   std::unique_ptr<MainWinACT>   act_;
 };
 
 #endif // __BS_TERMINAL_MAIN_WINDOW_H__

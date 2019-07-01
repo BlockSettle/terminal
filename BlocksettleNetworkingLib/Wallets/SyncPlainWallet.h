@@ -22,8 +22,6 @@ namespace bs {
       // to access the wallet DB.
       class PlainWallet : public Wallet
       {
-         Q_OBJECT
-
       public:
          PlainWallet(const std::string &walletId, const std::string &name, const std::string &desc
             , SignContainer *, const std::shared_ptr<spdlog::logger> &logger);
@@ -38,20 +36,25 @@ namespace bs {
             , bool sync = true) override;
          bool containsAddress(const bs::Address &addr) override;
 
-         std::string walletId() const override { return walletId_; }
+         const std::string& walletId() const override { return walletId_; }
          std::string description() const override { return desc_; }
          void setDescription(const std::string &desc) override { desc_ = desc; }
          bs::core::wallet::Type type() const override { return bs::core::wallet::Type::Bitcoin; }
 
-         bs::Address getNewExtAddress(AddressEntryType, const CbAddress &cb = nullptr) override;
-         bs::Address getNewIntAddress(AddressEntryType aet, const CbAddress &cb) override {
-            return getNewExtAddress(aet, cb);
+         void getNewExtAddress(const CbAddress &, AddressEntryType aet) override;
+         void getNewIntAddress(const CbAddress &cb, AddressEntryType aet) override {
+            getNewExtAddress(cb, aet);
          }
          size_t getUsedAddressCount() const override { return usedAddresses_.size(); }
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;
 
          bool deleteRemotely() override;
+
+         virtual void merge(const std::shared_ptr<Wallet>)
+         {
+            throw std::runtime_error("not implemented yet. not sure is necessary");
+         }
 
       protected:
          std::vector<BinaryData> getAddrHashes() const override;

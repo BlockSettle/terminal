@@ -1937,7 +1937,7 @@ public:
    static BinaryData getP2PKHScript(const BinaryData& scriptHash)
    {
       if (scriptHash.getSize() != 20)
-         throw std::runtime_error("invalid P2WPKH hash size");
+         throw std::runtime_error("invalid P2PKH hash size");
 
       BinaryWriter bw;
       bw.put_uint8_t(OP_DUP);
@@ -1966,7 +1966,7 @@ public:
    static BinaryData getP2SHScript(const BinaryData& scriptHash)
    {
       if (scriptHash.getSize() != 20)
-         throw std::runtime_error("invalid P2WPKH hash size");
+         throw std::runtime_error("invalid P2SH hash size");
 
       BinaryWriter bw;
       bw.put_uint8_t(OP_HASH160);
@@ -2009,7 +2009,7 @@ public:
    static BinaryData getP2WSHOutputScript(const BinaryData& scriptHash)
    {
       if (scriptHash.getSize() != 32)
-         throw std::runtime_error("invalid P2WPKH hash size");
+         throw std::runtime_error("invalid P2WSH hash size");
 
       BinaryWriter bw;
       bw.put_uint8_t(0);
@@ -2022,7 +2022,7 @@ public:
    static BinaryData getP2WSHWitnessScript(const BinaryData& scriptHash)
    {
       if (scriptHash.getSize() != 32)
-         throw std::runtime_error("invalid P2WPKH hash size");
+         throw std::runtime_error("invalid P2WSH hash size");
 
       BinaryWriter bw;
       bw.put_uint8_t(OP_SHA256);

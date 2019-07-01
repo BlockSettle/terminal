@@ -13,7 +13,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
    , const bs::network::Order &order, const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , const std::shared_ptr<QuoteProvider> &quoteProvider, const std::shared_ptr<TransactionData> &txData
    , const std::unordered_set<std::string> &bsAddresses, const std::shared_ptr<SignContainer> &container
-   , const std::shared_ptr<ArmoryObject> &armory, bool autoSign)
+   , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
    : bs::SettlementContainer(armory), order_(order)
    , weSell_((order.side == bs::network::Side::Buy) ^ (order.product == bs::network::XbtCurrency))
    , amount_((order.product != bs::network::XbtCurrency) ? order.quantity / order.price : order.quantity)
@@ -62,7 +62,7 @@ DealerXBTSettlementContainer::DealerXBTSettlementContainer(const std::shared_ptr
          , BinaryData::CreateFromHex(settlIdStr_), buyAuthKey, sellAuthKey, comment_);
    }
 
-   addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory_, settlIdStr_
+   addrVerificator_ = std::make_shared<AddressVerificator>(logger, armory, settlIdStr_
       , [this, logger](const std::shared_ptr<AuthAddress>& address, AddressVerificationState state)
    {
       logger->info("Counterparty's address verification {} for {}"
@@ -174,7 +174,7 @@ void DealerXBTSettlementContainer::deactivate()
    }
 }
 
-void DealerXBTSettlementContainer::zcReceived(const std::vector<bs::TXEntry>)
+void DealerXBTSettlementContainer::onZCReceived(const std::vector<bs::TXEntry> &)
 {
    if (settlMonitor_) {
       settlMonitor_->checkNewEntries();

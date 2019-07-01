@@ -132,7 +132,8 @@ void BIP32_Node::initFromBase58(const SecureBinaryData& b58)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BIP32_Node::initFromPrivateKey(uint8_t depth, unsigned leaf_id,
+void BIP32_Node::initFromPrivateKey(
+   uint8_t depth, unsigned leaf_id, unsigned fingerPrint,
    const SecureBinaryData& privKey, const SecureBinaryData& chaincode)
 {
    if (privKey.getSize() != BTC_ECKEY_PKEY_LENGTH)
@@ -147,6 +148,7 @@ void BIP32_Node::initFromPrivateKey(uint8_t depth, unsigned leaf_id,
 
    node.depth = depth;
    node.child_num = leaf_id;
+   node.fingerprint = fingerPrint;
 
    btc_hdnode_fill_public_key(&node);
 
@@ -154,7 +156,8 @@ void BIP32_Node::initFromPrivateKey(uint8_t depth, unsigned leaf_id,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void BIP32_Node::initFromPublicKey(uint8_t depth, unsigned leaf_id,
+void BIP32_Node::initFromPublicKey(
+   uint8_t depth, unsigned leaf_id, unsigned fingerPrint,
    const SecureBinaryData& pubKey, const SecureBinaryData& chaincode)
 {
    if (pubKey.getSize() != BTC_ECKEY_COMPRESSED_LENGTH)
@@ -169,6 +172,7 @@ void BIP32_Node::initFromPublicKey(uint8_t depth, unsigned leaf_id,
 
    depth_ = depth;
    child_num_ = leaf_id;
+   fingerprint_ = fingerPrint;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -200,7 +204,7 @@ BIP32_Node BIP32_Node::getPublicCopy() const
 {
    BIP32_Node copy;
    copy.initFromPublicKey(
-      getDepth(), getLeafID(), getPublicKey(), getChaincode());
+      getDepth(), getLeafID(), getFingerPrint(), getPublicKey(), getChaincode());
 
    copy.fingerprint_ = fingerprint_;
    return copy;

@@ -21,8 +21,6 @@ namespace bs {
 
       class SettlementWallet : public PlainWallet
       {
-         Q_OBJECT
-
       public:
          SettlementWallet(const std::string &walletId, const std::string &name, const std::string &desc
             , SignContainer *, const std::shared_ptr<spdlog::logger> &logger);
@@ -47,8 +45,8 @@ namespace bs {
          bs::core::wallet::TXSignRequest createPayoutTXRequest(const UTXO &, const bs::Address &recvAddr, float feePerByte);
          UTXO getInputFromTX(const bs::Address &, const BinaryData &payinHash, const double amount) const;
 
-         bs::Address getNewExtAddress(AddressEntryType, const CbAddress &) override { return {}; }  // can't generate address without input data
-         bs::Address getNewIntAddress(AddressEntryType, const CbAddress &) override { return {}; }  // can't generate address without input data
+         void getNewExtAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
+         void getNewIntAddress(const CbAddress &, AddressEntryType) override {}  // can't generate address without input data
 
          std::string getAddressIndex(const bs::Address &) override;
          bool addressIndexExists(const std::string &index) const override;

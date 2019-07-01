@@ -25,16 +25,15 @@ namespace bs {
          }
          bool operator < (const Path &other) const;
 
-         void append(Elem elem, bool hardened = false);
-         void append(const std::string &key, bool hardened = false);
+         void append(Elem elem);
+         void append(const std::string &key);
          size_t length() const { return path_.size(); }
          Elem get(int index) const;   // negative index is an offset from end
          void clear();
          bool isAbolute() const { return isAbsolute_; }
 
-         std::string toString(bool alwaysAbsolute = true) const;
+         std::string toString() const;
 
-         void setHardened(size_t index);
          bool isHardened(size_t index) const;
 
          static Path fromString(const std::string &);
@@ -43,7 +42,6 @@ namespace bs {
 
       private:
          std::vector<Elem> path_;
-         std::set<size_t>  hardenedIdx_;
          bool isAbsolute_ = false;
       };
 
@@ -51,10 +49,10 @@ namespace bs {
       static const Path::Elem purpose = 44;  // BIP44-compatible
 
       enum CoinType : Path::Elem {
-         Bitcoin_main = 0,
-         Bitcoin_test = 1,
-         BlockSettle_CC = 0x4253,            // "BS" in hex
-         BlockSettle_Auth = 0x41757468       // "Auth" in hex
+         Bitcoin_main = 0x80000000,
+         Bitcoin_test = 0x80000001,
+         BlockSettle_CC = 0x80004253,            // 0x80000000 | "BS" in hex
+         BlockSettle_Auth = 0xc1757468       // 0x80000000 | "Auth" in hex 
       };
 
    }  //namespace hd

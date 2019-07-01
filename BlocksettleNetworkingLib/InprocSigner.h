@@ -73,13 +73,7 @@ public:
       , bs::wallet::KeyRank keyRank = { 0, 0 }) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &) override;
-   bs::signer::RequestId getDecryptedRootKey(const std::string &walletId
-      , const SecureBinaryData &password = {}) override { return 0; }
    bs::signer::RequestId GetInfo(const std::string &) override;
-//   void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override {}
-//   bs::signer::RequestId changePassword(const std::string &walletId, const std::vector<bs::wallet::PasswordData> &newPass
-//      , bs::wallet::KeyRank, const SecureBinaryData &oldPass
-//      , bool addNew, bool removeOld, bool dryRun);
    void createSettlementWallet(const std::function<void(const std::shared_ptr<bs::sync::SettlementWallet> &)> &) override;
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
 
@@ -88,8 +82,11 @@ public:
    void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) override;
    void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) override;
    void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) override;
-   void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &) override;
+   void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
+      const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
+   void syncAddressBatch(const std::string &walletId, const std::set<BinaryData>& addrSet,
+      std::function<void(bs::sync::SyncState)> cb) override;
+
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;

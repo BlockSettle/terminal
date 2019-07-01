@@ -14,9 +14,10 @@ namespace SystemFileUtils {
 
    std::string absolutePath(const std::string &);
    bool mkPath(const std::string &);
+   bool rmDir(const std::string &);
 
    std::vector<std::string> readDir(const std::string &path
-      , const std::string &filter, bool onlyFiles = true);
+      , const std::string &filter = "", bool onlyFiles = true);
 }
 
 namespace SystemFilePaths {

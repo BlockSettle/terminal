@@ -10,7 +10,7 @@ using namespace bs::core;
 
 PlainWallet::PlainWallet(NetworkType netType, const std::string &name, const std::string &desc
                          , const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(netType, logger), desc_(desc)
+   : Wallet(logger), desc_(desc), netType_(netType)
 {
    walletName_ = name;
    walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
@@ -18,13 +18,13 @@ PlainWallet::PlainWallet(NetworkType netType, const std::string &name, const std
 
 PlainWallet::PlainWallet(NetworkType netType, const std::string &filename
                          , const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(netType, logger)
+   : Wallet(logger), netType_(netType)
 {
    loadFromFile(filename);
 }
 
 PlainWallet::PlainWallet(NetworkType netType, const std::shared_ptr<spdlog::logger> &logger)
-   : Wallet(netType, logger)
+   : Wallet(logger), netType_(netType)
 {
    walletId_ = wallet::computeID(CryptoPRNG::generateRandom(32)).toBinStr();
 }
@@ -115,7 +115,7 @@ void PlainWallet::writeDB()
       }
       dbMeta->close();
 
-      db_ = std::make_shared<LMDB>(dbEnv_.get(), masterID.toBinStr());
+      db_ = std::make_shared<LMDB>(dbEnv_.get(), BS_WALLET_DBNAME);
 
       {
          BinaryWriter bwKey;
@@ -170,77 +170,7 @@ void PlainWallet::writeDB()
 
 void PlainWallet::openDB()
 {
-   BinaryData masterID;
-   unsigned int dbCount = 0;
-
-   auto dbMeta = std::make_shared<LMDB>();
-   dbMeta->open(dbEnv_.get(), WALLETMETA_DBNAME);
-   {
-      LMDBEnv::Transaction tx(dbEnv_.get(), LMDB::ReadOnly);
-      {  //masterID
-         BinaryWriter bwKey;
-         bwKey.put_uint32_t(MASTERID_KEY);
-
-         try {
-            masterID = getDataRefForKey(dbMeta, bwKey.getData());
-            walletId_ = masterID.toBinStr();
-         }
-         catch (NoEntryInWalletException&) {
-            throw std::runtime_error("missing masterID entry");
-         }
-      }
-
-      auto dbIter = dbMeta->begin();
-
-      BinaryWriter bwKey;
-      bwKey.put_uint8_t(WALLETMETA_PREFIX);
-      CharacterArrayRef keyRef(bwKey.getSize(), bwKey.getData().getPtr());
-
-      dbIter.seek(keyRef, LMDB::Iterator::Seek_GE);
-
-      while (dbIter.isValid()) {
-         auto iterkey = dbIter.key();
-         auto itervalue = dbIter.value();
-
-         BinaryDataRef keyBDR((uint8_t*)iterkey.mv_data, iterkey.mv_size);
-         BinaryDataRef valueBDR((uint8_t*)itervalue.mv_data, itervalue.mv_size);
-
-         //check value's advertized size is packet size and strip it
-         BinaryRefReader brrVal(valueBDR);
-         const auto valSize = brrVal.get_var_int();
-         const auto remSize = brrVal.getSizeRemaining();
-         if (valSize != remSize) {
-            throw WalletException("entry val size mismatch: " + std::to_string(valSize) + " vs " + std::to_string(remSize));
-         }
-         try {
-            auto val = brrVal.get_BinaryDataRef((uint32_t)brrVal.getSizeRemaining());
-            BinaryRefReader brrKey(keyBDR);
-            auto prefix = brrKey.get_uint8_t();
-            if (prefix != WALLETMETA_PREFIX) {
-               throw WalletException("invalid wallet meta prefix");
-            }
-            std::string dbname((char*)brrKey.getCurrPtr(), brrKey.getSizeRemaining());
-            {
-               BinaryRefReader brrVal(val);
-               auto wltType = (WalletMetaType)brrVal.get_uint8_t();
-               if (wltType != WALLET_PREFIX_BYTE) {
-                  throw WalletException("invalid plain wallet meta type");
-               }
-            }
-            walletId_ = brrKey.get_BinaryData((uint32_t)brrKey.getSizeRemaining()).toBinStr();
-
-            dbCount++;
-         }
-         catch (const std::exception &e) {
-            throw WalletException(std::string("metadata reading error: ") + e.what());
-         }
-
-         dbIter.advance();
-      }
-   }
-   dbMeta->close();
-
-   db_ = std::make_shared<LMDB>(dbEnv_.get(), masterID.toBinStr());
+   db_ = std::make_shared<LMDB>(dbEnv_.get(), BS_WALLET_DBNAME);
 }
 
 void PlainWallet::readFromDB()
@@ -395,7 +325,7 @@ std::shared_ptr<AddressEntry> PlainWallet::getAddressEntryForAddr(const BinaryDa
    }
    SecureBinaryData privKeyBin = plainAsset->privKey().copy();
    const auto privKey = std::make_shared<Asset_PrivateKey>(BinaryData{}, privKeyBin
-      , make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
+      , std::make_unique<Cipher_AES>(BinaryData{}, BinaryData{}));
    SecureBinaryData pubKey = plainAsset->publicKey();
    const auto assetEntry = std::make_shared<AssetEntry_Single>(plainAsset->id(), BinaryData{}, pubKey, privKey);
 
@@ -483,23 +413,22 @@ KeyPair PlainWallet::getKeyPairFor(const bs::Address &addr, const SecureBinaryDa
    return { plainAsset->privKey(), plainAsset->publicKey() };
 }
 
-bool PlainWallet::eraseFile()
+void PlainWallet::shutdown()
 {
-   if (dbFilename_.empty()) {
-      return true;
-   }
-   if (dbEnv_) {
+   if (db_ != nullptr)
+   {
       db_->close();
+      db_ = nullptr;
+   }
+
+   if (dbEnv_ != nullptr)
+   {
       dbEnv_->close();
-      db_.reset();
+      dbEnv_ = nullptr;
    }
-   bool rc = true;
-   if (SystemFileUtils::fileExist(dbFilename_)) {
-      rc &= SystemFileUtils::rmFile(dbFilename_);
-      rc &= SystemFileUtils::rmFile(dbFilename_ + "-lock");
-   }
-   return rc;
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 class PlainResolver : public ResolverFeed
 {
@@ -557,7 +486,7 @@ private:
    std::map<SecureBinaryData, SecureBinaryData>   pubToPriv_;
 };
 
-std::shared_ptr<ResolverFeed> PlainWallet::getResolver(const SecureBinaryData &)
+std::shared_ptr<ResolverFeed> PlainWallet::getResolver() const
 {
    if (isWatchingOnly()) {
       return nullptr;
@@ -565,11 +494,7 @@ std::shared_ptr<ResolverFeed> PlainWallet::getResolver(const SecureBinaryData &)
    return std::make_shared<PlainSigningResolver>(assetByAddr_);
 }
 
-std::shared_ptr<ResolverFeed> PlainWallet::getPublicKeyResolver()
-{
-   return std::make_shared<PlainResolver>(assetByAddr_);
-}
-
+////////////////////////////////////////////////////////////////////////////////
 
 std::pair<bs::Address, std::shared_ptr<PlainAsset>> PlainAsset::deserialize(BinaryDataRef value)
 {

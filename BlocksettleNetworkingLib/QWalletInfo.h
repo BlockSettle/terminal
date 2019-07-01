@@ -16,6 +16,7 @@ namespace bs {
          class Wallet;
       }
       class Wallet;
+      class WalletsManager;
    }
 
 namespace hd {
@@ -45,9 +46,10 @@ public:
 
    // used in signer
    WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *parent = nullptr);
-   WalletInfo(const std::shared_ptr<bs::sync::hd::Wallet> &, QObject *parent = nullptr);
-   WalletInfo(const std::shared_ptr<bs::sync::Wallet> &wallet
+   WalletInfo(const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<bs::sync::hd::Wallet> &, QObject *parent = nullptr);
+   WalletInfo(const std::shared_ptr<bs::sync::WalletsManager> &
+      , const std::shared_ptr<bs::sync::Wallet> &, QObject *parent = nullptr);
 
    WalletInfo(const WalletInfo &other);
    WalletInfo& operator= (const WalletInfo &other);
@@ -101,6 +103,7 @@ signals:
    void walletChanged();
 
 private:
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    QString    walletId_;
    QString    rootId_;
    QString    name_, desc_;

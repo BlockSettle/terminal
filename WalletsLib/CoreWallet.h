@@ -13,16 +13,30 @@
 #include "Script.h"
 #include "Signer.h"
 #include "WalletEncryption.h"
-
+#include "Wallets.h"
+#include "BIP32_Node.h"
+#include "HDPath.h"
 
 #define WALLETNAME_KEY          0x00000020
 #define WALLETDESCRIPTION_KEY   0x00000021
+#define WALLET_EXTONLY_KEY      0x00000030
+
+#define BS_WALLET_DBNAME "bs_wallet_name"
 
 namespace spdlog {
    class logger;
 }
 
 namespace bs {
+   namespace sync {
+      enum class SyncState
+      {
+         Success,
+         NothingToDo,
+         Failure
+      };
+   }
+
    namespace core {
       namespace wallet {
          class AssetEntryMeta : public AssetEntry
@@ -85,7 +99,7 @@ namespace bs {
                return nullptr;
             }
             void set(const std::shared_ptr<AssetEntryMeta> &value);
-            void write(const std::shared_ptr<LMDBEnv> env, LMDB *db);
+            bool write(const std::shared_ptr<LMDBEnv> env, LMDB *db);
             void readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db);
             std::map<BinaryData, std::shared_ptr<AssetEntryMeta>> fetchAll() const { return data_; }
          };
@@ -112,18 +126,16 @@ namespace bs {
          class Seed
          {
          public:
-            Seed(NetworkType netType) : netType_(netType) {}
-            Seed(const std::string &seed, NetworkType netType);
-            Seed(NetworkType netType, const SecureBinaryData &privKey, const BinaryData &chainCode = {})
-               : privKey_(privKey), chainCode_(chainCode), netType_(netType) {}
+            Seed(NetworkType netType) :
+               seed_(SecureBinaryData()), netType_(netType)
+            {}
 
-            bool empty() const { return (privKey_.isNull() && seed_.isNull()); }
-            bool hasPrivateKey() const { return (!privKey_.isNull()); }
-            const SecureBinaryData &privateKey() const { return privKey_; }
-            void setPrivateKey(const SecureBinaryData &privKey) { privKey_ = privKey; walletId_.clear(); }
-            const BinaryData &chainCode() const { return chainCode_; walletId_.clear(); }
-            const BinaryData &seed() const { return seed_; }
-            void setSeed(const BinaryData &seed) { seed_ = seed; walletId_.clear(); }
+            Seed(const SecureBinaryData &seed, NetworkType netType);
+
+            bool empty() const { return seed_.isNull(); }
+            bool hasPrivateKey() const { return node_.getPrivateKey().getSize() == 32; }
+            const SecureBinaryData &privateKey() const { return node_.getPrivateKey(); }
+            const SecureBinaryData &seed() const { return seed_; }
             NetworkType networkType() const { return netType_; }
             void setNetworkType(NetworkType netType) { netType_ = netType; walletId_.clear(); }
             std::string getWalletId() const;
@@ -132,13 +144,14 @@ namespace bs {
             static SecureBinaryData decodeEasyCodeChecksum(const EasyCoDec::Data &, size_t ckSumSize = 2);
             static BinaryData decodeEasyCodeLineChecksum(const std::string&easyCodeHalf, size_t ckSumSize = 2, size_t keyValueSize = 16);
             static Seed fromEasyCodeChecksum(const EasyCoDec::Data &, NetworkType, size_t ckSumSize = 2);
-            static Seed fromEasyCodeChecksum(const EasyCoDec::Data &privKey, const EasyCoDec::Data &chainCode
-               , NetworkType, size_t ckSumSize = 2);
+
+            SecureBinaryData toXpriv(void) const;
+            static Seed fromXpriv(const SecureBinaryData&, NetworkType);
+            const BIP32_Node& getNode(void) const { return node_; }
 
          private:
-            SecureBinaryData  privKey_;
-            BinaryData        chainCode_;
-            BinaryData        seed_;
+            BIP32_Node node_;
+            SecureBinaryData seed_;
             NetworkType       netType_ = NetworkType::Invalid;
             mutable std::string  walletId_;
          };
@@ -223,18 +236,18 @@ namespace bs {
       class Wallet : protected wallet::MetaData   // Abstract parent for generic wallet classes
       {
       public:
-         Wallet(NetworkType, const std::shared_ptr<spdlog::logger> &logger = nullptr);
+         Wallet(std::shared_ptr<spdlog::logger> logger);
          virtual ~Wallet();
 
          virtual std::string walletId() const { return "defaultWalletID"; }
          virtual std::string name() const { return walletName_; }
          virtual std::string shortName() const { return name(); }
-         virtual std::string description() const = 0;
-         virtual void setDescription(const std::string &) = 0;
          virtual wallet::Type type() const { return wallet::Type::Bitcoin; }
-         NetworkType networkType() const { return netType_; }
 
-         virtual void setChainCode(const BinaryData &) {}
+         //stand in for the botched bs encryption code. too expensive to clean up after this mess
+         virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return { bs::wallet::EncryptionType::Password }; }
+         virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
+         virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 1, 1 }; }
 
          bool operator ==(const Wallet &w) const { return (w.walletId() == walletId()); }
          bool operator !=(const Wallet &w) const { return (w.walletId() != walletId()); }
@@ -242,12 +255,9 @@ namespace bs {
          virtual bool containsAddress(const bs::Address &addr) = 0;
          virtual bool containsHiddenAddress(const bs::Address &) const { return false; }
          virtual BinaryData getRootId() const = 0;
+         virtual NetworkType networkType(void) const = 0;
 
-         //         virtual bool isInitialized() const { return inited_; }
-         virtual bool isWatchingOnly() const { return false; }
-         virtual std::vector<bs::wallet::EncryptionType> encryptionTypes() const { return {}; }
-         virtual std::vector<SecureBinaryData> encryptionKeys() const { return {}; }
-         virtual std::pair<unsigned int, unsigned int> encryptionRank() const { return { 0, 0 }; }
+         virtual bool isWatchingOnly() const = 0;
          virtual bool hasExtOnlyAddresses() const { return false; }
 
          virtual std::string getAddressComment(const bs::Address& address) const;
@@ -256,55 +266,86 @@ namespace bs {
          virtual bool setTransactionComment(const BinaryData &txHash, const std::string &comment);
          virtual std::vector<std::pair<BinaryData, std::string>> getAllTxComments() const;
 
-         virtual std::vector<bs::Address> getUsedAddressList() const { return usedAddresses_; }
+         virtual std::vector<bs::Address> getUsedAddressList() const { 
+            return usedAddresses_; 
+         }
          virtual std::vector<bs::Address> getPooledAddressList() const { return {}; }
          virtual std::vector<bs::Address> getExtAddressList() const { return usedAddresses_; }
          virtual std::vector<bs::Address> getIntAddressList() const { return usedAddresses_; }
          virtual bool isExternalAddress(const Address &) const { return true; }
-         virtual size_t getUsedAddressCount() const { return usedAddresses_.size(); }
-         virtual size_t getExtAddressCount() const { return usedAddresses_.size(); }
-         virtual size_t getIntAddressCount() const { return usedAddresses_.size(); }
+         virtual unsigned getUsedAddressCount() const { return usedAddresses_.size(); }
+         virtual unsigned getExtAddressCount() const { return usedAddresses_.size(); }
+         virtual unsigned getIntAddressCount() const { return usedAddresses_.size(); }
          virtual size_t getWalletAddressCount() const { return addrCount_; }
 
          virtual bs::Address getNewExtAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewIntAddress(AddressEntryType aet = AddressEntryType_Default) = 0;
          virtual bs::Address getNewChangeAddress(AddressEntryType aet = AddressEntryType_Default) { return getNewExtAddress(aet); }
-         virtual bs::Address getRandomChangeAddress(AddressEntryType aet = AddressEntryType_Default);
          virtual std::shared_ptr<AddressEntry> getAddressEntryForAddr(const BinaryData &addr) = 0;
          virtual std::string getAddressIndex(const bs::Address &) = 0;
          virtual bool addressIndexExists(const std::string &index) const = 0;
-         virtual bs::Address createAddressWithIndex(const std::string &index, bool persistent = true
-            , AddressEntryType aet = AddressEntryType_Default) = 0;
+         
+         virtual bs::hd::Path::Elem getExtPath(void) const
+         {
+            throw std::runtime_error("not implemented 5");
+         }
+         virtual bs::hd::Path::Elem getIntPath(void) const
+         {
+            throw std::runtime_error("not implemented 6");
+         }
 
-         virtual std::shared_ptr<ResolverFeed> getResolver(const SecureBinaryData &password) = 0;
-         virtual std::shared_ptr<ResolverFeed> getPublicKeyResolver() = 0;
+         /***
+         Used to keep track of sync wallet used address index increments on the 
+         Armory wallet side
+         ***/
+         virtual std::pair<bs::Address, bool> synchronizeUsedAddressChain(
+            const std::string&, AddressEntryType)
+         {
+            throw WalletException("illegal method");
+         }
+
+         /***
+         Called by the sign container in reponse to sync wallet's topUpAddressPool
+         Will result in public address chain extention on the relevant Armory address account
+         ***/
+         virtual std::vector<bs::Address> extendAddressChain(unsigned count, bool extInt)
+         {
+            throw WalletException("illegal method");
+         }
+
+         virtual std::shared_ptr<ResolverFeed> getResolver(void) const = 0;
 
          virtual BinaryData signTXRequest(const wallet::TXSignRequest &
-            , const SecureBinaryData &password = {}
-         , bool keepDuplicatedRecipients = false);
-         virtual BinaryData signPartialTXRequest(const wallet::TXSignRequest &
-            , const SecureBinaryData &password = {});
+            , bool keepDuplicatedRecipients = false);
+         virtual BinaryData signPartialTXRequest(const wallet::TXSignRequest &);
 
          //         virtual bool isSegWitInput(const UTXO& input);
 
          virtual SecureBinaryData getPublicKeyFor(const bs::Address &) = 0;
          virtual SecureBinaryData getPubChainedKeyFor(const bs::Address &addr) { return getPublicKeyFor(addr); }
-         virtual KeyPair getKeyPairFor(const bs::Address &, const SecureBinaryData &password) = 0;
 
-         virtual bool eraseFile() { return false; }
+         //shutdown db containers, typically prior to deleting the wallet file
+         virtual void shutdown(void) = 0;
+         virtual std::string getFilename(void) const = 0;
+
+         //find the path and address type for a set of prefixed scrAddr
+         virtual std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>> indexPathAndTypes(
+            const std::set<BinaryData>&)
+         {
+            throw std::runtime_error("not implemented 7");
+            return std::map<BinaryData, std::pair<bs::hd::Path, AddressEntryType>>();
+         }
 
       protected:
          virtual std::shared_ptr<LMDBEnv> getDBEnv() = 0;
          virtual LMDB *getDB() = 0;
 
       private:
-         bool isSegWitScript(const BinaryData &script);
-         Signer getSigner(const wallet::TXSignRequest &, const SecureBinaryData &password,
+         Signer getSigner(const wallet::TXSignRequest &,
             bool keepDuplicatedRecipients = false);
 
       protected:
          std::string       walletName_;
-         NetworkType       netType_ = NetworkType::Invalid;
          std::shared_ptr<spdlog::logger>   logger_; // May need to be set manually.
          mutable std::vector<bs::Address>       usedAddresses_;
          mutable std::set<BinaryData>           addressHashes_;
@@ -315,6 +356,47 @@ namespace bs {
       using KeyMap = std::unordered_map<std::string, SecureBinaryData>; // key is wallet id
       using WalletMap = std::unordered_map<std::string, std::shared_ptr<Wallet>>;   // key is wallet id
       BinaryData SignMultiInputTX(const wallet::TXMultiSignRequest &, const KeyMap &, const WalletMap &);
+
+      struct WalletEncryptionLock
+      {
+      private:
+         std::shared_ptr<AssetWallet_Single> walletPtr_;
+         ReentrantLock walletLock_;
+
+      private:
+         WalletEncryptionLock(const WalletEncryptionLock&) = delete;
+         WalletEncryptionLock& operator=(const WalletEncryptionLock&) = delete;
+         WalletEncryptionLock& operator=(WalletEncryptionLock&&) = delete;
+
+      public:
+
+         WalletEncryptionLock(
+            std::shared_ptr<AssetWallet_Single> wallet,
+            const SecureBinaryData& passphrase) :
+            walletLock_(std::move(wallet->lockDecryptedContainer())),
+            walletPtr_(wallet)
+         {
+            //std::function<SecureBinaryData(const BinaryData&)>
+            auto lbd = [&passphrase](const BinaryData&)->SecureBinaryData
+            {
+               return passphrase;
+            };
+
+            wallet->setPassphrasePromptLambda(lbd);
+         }
+         
+         WalletEncryptionLock(WalletEncryptionLock&& lock) :
+            walletLock_(std::move(lock.walletLock_))
+         {
+            walletPtr_ = lock.walletPtr_;
+         }
+
+         ~WalletEncryptionLock(void)
+         {
+            walletPtr_->resetPassphrasePromptLambda();
+         }
+
+      };
 
    }  //namespace core
 }  //namespace bs

@@ -2,6 +2,7 @@
 
 #include "ArmoryConnection.h"
 #include "FastLock.h"
+#include "NetworkConfig.h"
 
 using namespace bs;
 
@@ -347,4 +348,16 @@ bool TxChecker::hasInput(const BinaryData &txHash) const
       }
    }
    return false;
+}
+
+
+NetworkType getNetworkType()
+{
+   NetworkConfig config;
+   switch (config.getMode()) {
+   case NETWORK_MODE_MAINNET: return NetworkType::MainNet;
+   case NETWORK_MODE_TESTNET: return NetworkType::TestNet;
+   case NETWORK_MODE_REGTEST: return NetworkType::RegTest;
+   default:       return NetworkType::RegTest;
+   }
 }

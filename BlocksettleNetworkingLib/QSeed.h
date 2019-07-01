@@ -40,8 +40,10 @@ public:
 
    // for qml
    QSeed(bool isTestNet)
-      : Seed(isTestNet ? NetworkType::TestNet : NetworkType::MainNet
-                         , CryptoPRNG::generateRandom(32)) {}
+      : Seed(
+         CryptoPRNG::generateRandom(32),
+         isTestNet ? NetworkType::TestNet : NetworkType::MainNet)
+   {}
 
    QSeed(const QString &seed, QNetworkType netType)
       : Seed(seed.toStdString(), fromQNetworkType(netType)) {}

@@ -43,20 +43,17 @@ struct AddressVerificationData
 
 AddressVerificator::AddressVerificator(const std::shared_ptr<spdlog::logger>& logger, const std::shared_ptr<ArmoryConnection> &armory
    , const std::string& walletId, verification_callback callback)
-   : logger_(logger)
-   , armory_(armory)
+   : ArmoryCallbackTarget(armory.get())
+   , logger_(logger)
    , walletId_(walletId)
    , userCallback_(callback)
    , stopExecution_(false)
 {
-   reqId_ = armory_->setRefreshCb([this](std::vector<BinaryData> ids, bool) { onRefresh(ids); });
-
    startCommandQueue();
 }
 
 AddressVerificator::~AddressVerificator() noexcept
 {
-   armory_->unsetRefreshCb(reqId_);
    stopCommandQueue();
 }
 
@@ -239,7 +236,7 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
    state->value = 0;
    state->entries.clear();
 
-   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
       logger_->error("[AddressVerificator::ValidateAddress] invalid Armory state {}", (int)armory_->state());
       state->currentState = AddressVerificationState::VerificationFailed;
       ReturnValidationResult(state);
@@ -317,7 +314,12 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
       state->nbTransactions = 0;
       delegate->getHistoryPage(0, cbLedger);
    };
-   if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
+   const auto addr = state->address->GetChainedAddress();
+   {
+      std::unique_lock<std::mutex>  lock(cbMutex_);
+      cbValidate_[addr] = cbLedgerDelegate;
+   }
+   if (!armory_->getLedgerDelegateForAddress(walletId_, addr)) {
       const auto &prefixedAddress = state->address->GetChainedAddress().id();
       if ((state->currentState == AddressVerificationState::InProgress) && (addressRetries_[prefixedAddress] < MaxAadressValidationErrorCount)) {
          logger_->debug("[AddressVerificator::ValidateAddress] Failed to get ledger for {} - retrying command", walletId_);
@@ -332,6 +334,29 @@ void AddressVerificator::ValidateAddress(const std::shared_ptr<AddressVerificati
       }
       return;
    }
+}
+
+void AddressVerificator::onLedgerForAddress(const bs::Address &addr, const std::shared_ptr<AsyncClient::LedgerDelegate> &ledger)
+{
+   const auto lbdInvokeCb = [this, addr, ledger]
+   (std::map<bs::Address, std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)>> &map) -> bool
+   {
+      std::function<void(const std::shared_ptr<AsyncClient::LedgerDelegate> &)> cb = nullptr;
+      {
+         std::unique_lock<std::mutex> lock(cbMutex_);
+         const auto &itCb = map.find(addr);
+         if (itCb == map.end()) {
+            return false;
+         }
+         cb = itCb->second;
+         map.erase(itCb);
+      }
+      if (cb) {
+         cb(ledger);
+      }
+      return true;
+   };
+   lbdInvokeCb(cbValidate_) || lbdInvokeCb(cbBSstate_) || lbdInvokeCb(cbBSaddrs_);
 }
 
 AddressVerificator::ExecutionCommand AddressVerificator::CreateBSAddressValidationCommand(const std::shared_ptr<AddressVerificationData>& state)
@@ -391,7 +416,12 @@ void AddressVerificator::CheckBSAddressState(const std::shared_ptr<AddressVerifi
       state->entries.clear();
       delegate->getHistoryPage(0, cbLedger);  //? should we use more than 0 pageId?
    };
-   if (!armory_->getLedgerDelegateForAddress(walletId_, state->address->GetChainedAddress(), cbLedgerDelegate)) {
+   const auto addr = state->address->GetChainedAddress();
+   {
+      std::unique_lock<std::mutex> lock(cbMutex_);
+      cbBSstate_[addr] = cbLedgerDelegate;
+   }
+   if (!armory_->getLedgerDelegateForAddress(walletId_, addr)) {
       logger_->error("[AddressVerificator::CheckBSAddressState] Could not validate address. Looks like armory is offline.");
       if (state->bsAddressValidationErrorCount >= MaxBSAddressValidationErrorCount) {
          logger_->error("[AddressVerificator::CheckBSAddressState] marking address as failed to validate {}", state->bsFundingAddress.display());
@@ -648,9 +678,10 @@ void AddressVerificator::RegisterAddresses()
       authAddressSet_.swap(pendingRegAddresses_);
    }
 
-   if (armory_ && (armory_->state() == ArmoryConnection::State::Ready)) {
+   if (armory_ && (armory_->state() == ArmoryState::Ready)) {
       pendingRegAddresses_.clear();
-      regId_ = armory_->registerWallet(internalWallet_, walletId_, addresses, [](const std::string &) {}, true);
+      internalWallet_ = armory_->instantiateWallet(walletId_);
+      regId_ = armory_->registerWallet(internalWallet_->walletID(), addresses, [](const std::string &) {}, true);
       logger_->debug("[AddressVerificator::RegisterAddresses] registered {} addresses in {} with {}", addresses.size(), walletId_, regId_);
    }
    else {
@@ -658,7 +689,7 @@ void AddressVerificator::RegisterAddresses()
    }
 }
 
-void AddressVerificator::onRefresh(std::vector<BinaryData> ids)
+void AddressVerificator::onRefresh(const std::vector<BinaryData> &ids, bool)
 {
    const auto &it = std::find(ids.begin(), ids.end(), regId_);
    if (it == ids.end()) {
@@ -733,7 +764,11 @@ void AddressVerificator::onRefresh(std::vector<BinaryData> ids)
          };
          delegate->getPageCount(cbPageCnt);
       };
-      armory_->getLedgerDelegateForAddress(walletId_, bsAddr, cbDelegate);
+      {
+         std::unique_lock<std::mutex>  lock(cbMutex_);
+         cbBSaddrs_[bsAddr] = cbDelegate;
+      }
+      armory_->getLedgerDelegateForAddress(walletId_, bsAddr);
    }
 }
 

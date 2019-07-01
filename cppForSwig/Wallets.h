@@ -250,8 +250,6 @@ protected:
    static void putData(LMDB* db, const BinaryData& key, const BinaryData& data);
    static void initWalletMetaDB(std::shared_ptr<LMDBEnv>, const std::string&);
 
-   std::shared_ptr<AddressAccount> createAccount(std::shared_ptr<AccountType>);
-
 public:
    //tors
    virtual ~AssetWallet() = 0;
@@ -277,9 +275,11 @@ public:
    void extendPrivateChainToIndex(const BinaryData&, unsigned);
 
    bool hasScrAddr(const BinaryData& scrAddr);
-   const std::pair<BinaryData, AddressEntryType>& getAssetIDForAddr(const BinaryData& scrAddr);
+   const std::pair<BinaryData, AddressEntryType>& 
+      getAssetIDForAddr(const BinaryData& scrAddr);
    AddressEntryType getAddrTypeForID(const BinaryData& ID);
-   std::shared_ptr<AddressEntry> getAddressEntryForID(const BinaryData&) const;
+   std::shared_ptr<AddressEntry> 
+      getAddressEntryForID(const BinaryData&) const;
    void shutdown(void);
 
    void setPassphrasePromptLambda(
@@ -301,7 +301,11 @@ public:
    std::shared_ptr<LMDBEnv> getDbEnv(void) const { return dbEnv_; }
 
    std::set<BinaryData> getAccountIDs(void) const;
-   std::map<BinaryData, std::shared_ptr<AddressEntry>> getUsedAddressMap(void) const;
+   std::map<BinaryData, std::shared_ptr<AddressEntry>> 
+      getUsedAddressMap(void) const;
+
+   std::shared_ptr<AddressAccount> 
+      createAccount(std::shared_ptr<AccountType>);
 
    //virtual
    virtual std::set<BinaryData> getAddrHashSet();
@@ -366,6 +370,7 @@ public:
 
    //locals
    void changeMasterPassphrase(const SecureBinaryData&);
+   std::shared_ptr<AssetEntry_Single> getRoot(void) const { return root_; }
    const SecureBinaryData& getPublicRoot(void) const;
    std::shared_ptr<AssetEntry> getAccountRoot(const BinaryData& accountID) const;
    const SecureBinaryData& getArmory135Chaincode(void) const;

@@ -85,7 +85,6 @@ public:
       , const std::vector<bs::wallet::PasswordData> &pwdData = {}, bs::wallet::KeyRank keyRank = { 0, 0 }) override;
    bs::signer::RequestId DeleteHDRoot(const std::string &rootWalletId) override;
    bs::signer::RequestId DeleteHDLeaf(const std::string &leafWalletId) override;
-   bs::signer::RequestId getDecryptedRootKey(const std::string &walletId, const SecureBinaryData &password = {}) override;
    bs::signer::RequestId GetInfo(const std::string &rootWalletId) override;
    //void setLimits(const std::string &walletId, const SecureBinaryData &password, bool autoSign) override;
    bs::signer::RequestId customDialogRequest(bs::signer::ui::DialogType signerDialog, const QVariantMap &data = QVariantMap()) override;
@@ -97,11 +96,14 @@ public:
    void syncWallet(const std::string &id, const std::function<void(bs::sync::WalletData)> &) override;
    void syncAddressComment(const std::string &walletId, const bs::Address &, const std::string &) override;
    void syncTxComment(const std::string &walletId, const BinaryData &, const std::string &) override;
-   void syncNewAddress(const std::string &walletId, const std::string &index, AddressEntryType
-      , const std::function<void(const bs::Address &)> &) override;
+
    void syncNewAddresses(const std::string &walletId, const std::vector<std::pair<std::string, AddressEntryType>> &
       , const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &
       , bool persistent = true) override;
+   void syncAddressBatch(const std::string &walletId,
+      const std::set<BinaryData>& addrSet, std::function<void(bs::sync::SyncState)>) override;
+   void extendAddressChain(const std::string &walletId, unsigned count, bool extInt,
+      const std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)> &) override;
 
    bool isReady() const override;
    bool isWalletOffline(const std::string &walletId) const override;
@@ -113,13 +115,13 @@ protected:
    void ProcessPasswordRequest(const std::string &data);
    void ProcessCreateHDWalletResponse(unsigned int id, const std::string &data);
    bs::signer::RequestId SendDeleteHDRequest(const std::string &rootWalletId, const std::string &leafId);
-   void ProcessGetRootKeyResponse(unsigned int id, const std::string &data);
    void ProcessGetHDWalletInfoResponse(unsigned int id, const std::string &data);
    void ProcessAutoSignActEvent(unsigned int id, const std::string &data);
    void ProcessSyncWalletInfo(unsigned int id, const std::string &data);
    void ProcessSyncHDWallet(unsigned int id, const std::string &data);
    void ProcessSyncWallet(unsigned int id, const std::string &data);
    void ProcessSyncAddresses(unsigned int id, const std::string &data);
+   void ProcessExtAddrChain(unsigned int id, const std::string &data);
    void ProcessSettlWalletCreate(unsigned int id, const std::string &data);
 
 protected:
@@ -131,6 +133,8 @@ protected:
    std::map<bs::signer::RequestId, std::function<void(std::vector<bs::sync::WalletInfo>)>>  cbWalletInfoMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::HDWalletData)>>  cbHDWalletMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::sync::WalletData)>>    cbWalletMap_;
+   std::map<bs::signer::RequestId, std::function<void(bs::sync::SyncState)>>     cbSyncAddrsMap_;
+   std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbExtAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(const std::vector<std::pair<bs::Address, std::string>> &)>> cbNewAddrsMap_;
    std::map<bs::signer::RequestId, std::function<void(bs::error::ErrorCode result, const BinaryData &signedTX)>>  cbSettlementSignTxMap_;
 };

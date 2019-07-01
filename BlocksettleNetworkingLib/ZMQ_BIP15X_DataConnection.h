@@ -1,7 +1,6 @@
 #ifndef __ZMQ_BIP15X_DATACONNECTION_H__
 #define __ZMQ_BIP15X_DATACONNECTION_H__
 
-#include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <thread>

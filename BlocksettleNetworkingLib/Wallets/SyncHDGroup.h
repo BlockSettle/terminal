@@ -2,7 +2,6 @@
 #define BS_SYNC_HD_GROUP_H__
 
 #include <unordered_map>
-#include <QObject>
 #include "CoreWallet.h"
 #include "HDPath.h"
 #include "SyncHDLeaf.h"
@@ -19,18 +18,17 @@ namespace bs {
       namespace hd {
          class Wallet;
 
-         class Group : public QObject
+         class Group
          {
-            Q_OBJECT
-               friend class bs::sync::hd::Wallet;
+            friend class bs::sync::hd::Wallet;
 
          public:
             Group(const bs::hd::Path &path, const std::string &walletName
                , const std::string &name, const std::string &desc
-               , SignContainer *container
+               , SignContainer *container, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
-               : QObject(nullptr), signContainer_(container)
+               : signContainer_(container), wct_(wct)
                , logger_(logger), path_(path)
                , walletName_(walletName), name_(name), desc_(desc)
                , extOnlyAddresses_(extOnlyAddresses) {}
@@ -57,24 +55,12 @@ namespace bs {
 
             virtual void setUserId(const BinaryData &) {}
 
-         signals:
-            void changed();
-            void leafAdded(QString id);
-            void leafDeleted(QString id);
-
-         private slots:
-            void onLeafChanged();
-
          protected:
             using cb_scan_notify = std::function<void(Group *, bs::hd::Path::Elem wallet, bool isValid)>;
             using cb_scan_read_last = std::function<unsigned int(const std::string &walletId)>;
             using cb_scan_write_last = std::function<void(const std::string &walletId, unsigned int idx)>;
 
-            virtual void rescanBlockchain(const cb_scan_notify &, const cb_scan_read_last &cbr = nullptr
-               , const cb_scan_write_last &cbw = nullptr);
             virtual void initLeaf(std::shared_ptr<hd::Leaf> &, const bs::hd::Path &) const;
-//            void copyLeaf(std::shared_ptr<hd::Group> &target, bs::hd::Path::Elem leafIndex
-//               , const std::shared_ptr<hd::Leaf> &) const;
 
          protected:
             SignContainer  *  signContainer_;
@@ -84,16 +70,15 @@ namespace bs {
             bool        extOnlyAddresses_;
             std::unordered_map<bs::hd::Path::Elem, std::shared_ptr<hd::Leaf>> leaves_;
             unsigned int   scanPortion_ = 200;
+            WalletCallbackTarget *wct_;
          };
 
 
          class AuthGroup : public Group
          {
-            Q_OBJECT
-
          public:
             AuthGroup(const bs::hd::Path &path, const std::string &name
-               , const std::string &desc, SignContainer *
+               , const std::string &desc, SignContainer *, WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger>& logger
                , bool extOnlyAddresses = false);
 
@@ -113,15 +98,14 @@ namespace bs {
 
          class CCGroup : public Group
          {
-            Q_OBJECT
-
          public:
             CCGroup(const bs::hd::Path &path, const std::string &name
                , const std::string &desc, SignContainer *container
+               , WalletCallbackTarget *wct
                , const std::shared_ptr<spdlog::logger> &logger
                , bool extOnlyAddresses = false)
                : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_CC),
-                  desc, container, logger, extOnlyAddresses) {}
+                  desc, container, wct, logger, extOnlyAddresses) {}
 
             bs::core::wallet::Type type() const override { return bs::core::wallet::Type::ColorCoin; }
 

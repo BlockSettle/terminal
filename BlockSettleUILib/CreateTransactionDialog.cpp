@@ -197,7 +197,7 @@ void CreateTransactionDialog::loadFees()
       std::map<unsigned int, float> values;
       std::set<unsigned int>  levels;
    };
-   auto result = new Result;
+   auto result = std::make_shared<Result>();
 
    for (const auto &feeLevel : feeLevels) {
       result->levels.insert(feeLevel.first);
@@ -205,14 +205,19 @@ void CreateTransactionDialog::loadFees()
    for (const auto &feeLevel : feeLevels) {
       const auto &cbFee = [this, result, level=feeLevel.first](float fee) {
          result->levels.erase(level);
-         result->values[level] = fee;
+         if (fee < std::numeric_limits<float>::infinity()) {
+            result->values[level] = fee;
+         }
          if (result->levels.empty()) {
             emit feeLoadingCompleted(result->values);
-            delete result;
          }
       };
       walletsManager_->estimatedFeePerByte(feeLevel.first, cbFee, this);
    }
+/*   const auto &cbFees = [this](const std::map<unsigned int, float> &feeMap) {
+      emit feeLoadingCompleted(feeMap);
+   };
+   walletsManager_->getFeeSchedule(cbFees);*/
 }
 
 void CreateTransactionDialog::onFeeSuggestionsLoaded(const std::map<unsigned int, float> &feeValues)
@@ -331,6 +336,12 @@ void CreateTransactionDialog::onTXSigned(unsigned int id, BinaryData signedTX, b
    }
 
    try {
+      if (result != bs::error::ErrorCode::NoError) {
+         throw std::runtime_error("error " + std::to_string(static_cast<int>(result)));
+      }
+      if (signedTX.isNull()) {
+         throw std::runtime_error("Empty signed TX data received");
+      }
       const Tx tx(signedTX);
       if (tx.isInitialized() && (tx.getTxWeight() >= kTransactionWeightLimit)) {
          BSMessageBox mBox(BSMessageBox::question, tr("Oversized Transaction")

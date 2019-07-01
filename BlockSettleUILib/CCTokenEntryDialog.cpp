@@ -70,12 +70,13 @@ void CCTokenEntryDialog::tokenChanged()
          if (qry.exec() == QDialog::Accepted) {
             const auto priWallet = walletsMgr_->getPrimaryWallet();
             if (!priWallet->getGroup(bs::hd::CoinType::BlockSettle_CC)) {
-               priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC);
+               //cc wallet is always ext only
+               priWallet->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
             }
             bs::hd::Path path;
-            path.append(bs::hd::purpose, true);
-            path.append(bs::hd::BlockSettle_CC, true);
-            path.append(ccProduct_, true);
+            path.append(bs::hd::purpose | 0x80000000);
+            path.append(bs::hd::BlockSettle_CC | 0x80000000);
+            path.append(ccProduct_);
             createWalletReqId_ = signingContainer_->createHDLeaf(priWallet->walletId(), path);
          }
          else {
@@ -134,15 +135,15 @@ void CCTokenEntryDialog::accept()
       reject();
       return;
    }
-   const auto address = ccWallet_->getNewExtAddress();
-
-   if (ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
-      ui_->pushButtonOk->setEnabled(false);
-   }
-   else {
-      onCCSubmitFailed(QString::fromStdString(address.display())
-         , tr("Submission to PB failed"));
-   }
+   const auto &cbAddr = [this](const bs::Address &address) {
+      if (ccFileMgr_->SubmitAddressToPuB(address, seed_)) {
+         ui_->pushButtonOk->setEnabled(false);
+      } else {
+         onCCSubmitFailed(QString::fromStdString(address.display())
+            , tr("Submission to PB failed"));
+      }
+   };
+   ccWallet_->getNewExtAddress(cbAddr);
 }
 
 void CCTokenEntryDialog::onCCAddrSubmitted(const QString)

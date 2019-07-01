@@ -57,7 +57,6 @@ private slots:
 private:
    void updateWalletDetails(const std::shared_ptr<bs::sync::hd::Wallet> &);
    void updateWalletDetails(const std::shared_ptr<bs::sync::Wallet> &);
-   void startWalletScan();
 
 private:
    std::unique_ptr<Ui::WalletPropertiesDialog>  ui_;

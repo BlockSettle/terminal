@@ -8,7 +8,7 @@
 #include <QIcon>
 
 #include <memory>
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "CelerClient.h"
 #include "CircleProgressBar.h"
 #include "SignContainer.h"
@@ -21,11 +21,11 @@ namespace bs {
 class AssetManager;
 class SignContainer;
 
-class StatusBarView  : public QObject
+class StatusBarView  : public QObject, public ArmoryCallbackTarget
 {
    Q_OBJECT
 public:
-   StatusBarView(const std::shared_ptr<ArmoryObject> &
+   StatusBarView(const std::shared_ptr<ArmoryConnection> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , std::shared_ptr<AssetManager> assetManager, const std::shared_ptr<CelerClient> &
       , const std::shared_ptr<SignContainer> &, QStatusBar *parent);
@@ -37,9 +37,9 @@ public:
    StatusBarView& operator = (StatusBarView&&) = delete;
 
 private slots:
-   void onPrepareArmoryConnection(const ArmorySettings &server);
-   void onArmoryStateChanged(ArmoryConnection::State);
-   void onArmoryProgress(BDMPhase, float progress, unsigned int secondsRem, unsigned int numProgress);
+   void onPrepareArmoryConnection(NetworkType);
+   void onArmoryStateChanged(ArmoryState);
+   void onArmoryProgress(BDMPhase, float progress, unsigned int secondsRem);
    void onArmoryError(QString);
    void onConnectedToServer();
    void onConnectionClosed();
@@ -49,6 +49,13 @@ private slots:
    void updateBalances();
    void onWalletImportStarted(const std::string &walletId);
    void onWalletImportFinished(const std::string &walletId);
+
+private:
+   void onStateChanged(ArmoryState) override;
+   void onError(const std::string &, const std::string &) override;
+   void onLoadProgress(BDMPhase, float, unsigned int, unsigned int) override;
+   void onPrepareConnection(NetworkType, const std::string &host
+      , const std::string &port) override;
 
 public:
    void updateDBHeadersProgress(float progress, unsigned secondsRem);
@@ -82,7 +89,7 @@ private:
    QVector<QWidget *> separators_;
 
    const QSize iconSize_;
-   ArmoryConnection::State armoryConnState_;
+   ArmoryState armoryConnState_;
    QIcon       iconCeler_;
    QPixmap     iconOffline_;
    QPixmap     iconError_;
@@ -96,7 +103,6 @@ private:
    QPixmap     iconContainerError_;
    QPixmap     iconContainerOnline_;
 
-   std::shared_ptr<ArmoryObject>   armory_;
    std::shared_ptr<bs::sync::WalletsManager> walletsManager_;
    std::shared_ptr<AssetManager>       assetManager_;
    std::unordered_set<std::string>     importingWallets_;

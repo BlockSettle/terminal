@@ -2,7 +2,7 @@
 #define __EXPLORERWIDGET_H__
 
 #include "TabWithShortcut.h"
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 
 #include <QWidget>
 #include <memory>
@@ -26,7 +26,7 @@ public:
     ExplorerWidget(QWidget *parent = nullptr);
     ~ExplorerWidget() override;
 
-   void init(const std::shared_ptr<ArmoryObject> &armory
+   void init(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<spdlog::logger> &
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , const std::shared_ptr<CCFileManager> &
@@ -60,7 +60,6 @@ private:
 
 private:
    std::unique_ptr<Ui::ExplorerWidget> ui_;
-   std::shared_ptr<ArmoryObject>       armory_;
    std::unique_ptr<QTimer>             expTimer_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AuthAddressManager> authMgr_;

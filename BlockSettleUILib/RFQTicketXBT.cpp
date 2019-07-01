@@ -242,7 +242,8 @@ void RFQTicketXBT::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sy
    const auto &priWallet = walletsManager_->getPrimaryWallet();
    auto group = priWallet->getGroup(bs::hd::BlockSettle_CC);
    if (!group) {
-      group = priWallet->createGroup(bs::hd::BlockSettle_CC);
+      //cc wallets are always ext only
+      group = priWallet->createGroup(bs::hd::BlockSettle_CC, true);
    }
    const auto &ccProduct = getProduct().toStdString();
    group->addLeaf(leaf);
@@ -525,8 +526,13 @@ bs::Address RFQTicketXBT::recvAddress() const
    }
 
    if (index == 0) {
-      const auto &addr = recvWallet_->getNewIntAddress();
-      return addr;
+      auto promAddr = std::make_shared<std::promise<bs::Address>>();
+      auto futAddr = promAddr->get_future();
+      const auto &cbAddr = [promAddr](const bs::Address &addr) {
+         promAddr->set_value(addr);
+      };
+      recvWallet_->getNewIntAddress(cbAddr);
+      return futAddr.get();
    }
    return recvWallet_->getExtAddressList()[index - 1];
 }
@@ -704,8 +710,13 @@ void RFQTicketXBT::submitButtonClicked()
                throw std::runtime_error("CC coin selection is missing");
             }
             const auto &inputs = ccCoinSel_->GetSelectedTransactions();
-            const auto &changeAddr = wallet->getNewChangeAddress();
-            const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, changeAddr);
+            auto promAddr = std::make_shared<std::promise<bs::Address>>();
+            auto futAddr = promAddr->get_future();
+            const auto &cbAddr = [promAddr](const bs::Address &addr) {
+               promAddr->set_value(addr);
+            }; //TODO: refactor this
+            wallet->getNewChangeAddress(cbAddr);
+            const auto txReq = wallet->createPartialTXRequest(spendVal, inputs, futAddr.get());
             rfq.coinTxInput = txReq.serializeState().toHexStr();
             utxoAdapter_->reserve(txReq, rfq.requestId);
          } catch (const std::exception &e) {
@@ -959,7 +970,7 @@ void RFQTicketXBT::productSelectionChanged()
       ui_->lineEditAmount->setValidator(fxAmountValidator_);
       ui_->lineEditAmount->setEnabled(true);
    } else {
-      bool canTradeXBT = (armory_->state() == ArmoryConnection::State::Ready)
+      bool canTradeXBT = (armory_->state() == ArmoryState::Ready)
          && signingContainer_
          && !signingContainer_->isOffline();
 
@@ -1021,9 +1032,9 @@ void RFQTicketXBT::onCreateWalletClicked()
 {
    ui_->pushButtonCreateWallet->setEnabled(false);
    bs::hd::Path path;
-   path.append(bs::hd::purpose, true);
-   path.append(bs::hd::BlockSettle_CC, true);
-   path.append(getProduct().toStdString(), true);
+   path.append(bs::hd::purpose | 0x80000000);
+   path.append(bs::hd::BlockSettle_CC | 0x80000000);
+   path.append(getProduct().toStdString());
    leafCreateReqId_ = signingContainer_->createHDLeaf(walletsManager_->getPrimaryWallet()->walletId(), path);
    if (leafCreateReqId_ == 0) {
       showHelp(tr("Create CC wallet request failed"));

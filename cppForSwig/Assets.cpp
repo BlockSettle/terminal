@@ -222,6 +222,7 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(
    {
       auto depth = brrVal.get_uint8_t();
       auto leafid = brrVal.get_uint32_t();
+      auto fingerprint = brrVal.get_uint32_t();
       auto cclen = brrVal.get_var_int();
       auto&& chaincode = brrVal.get_BinaryData(cclen);
 
@@ -234,7 +235,7 @@ shared_ptr<AssetEntry> AssetEntry::deserDBValue(
       auto rootEntry = make_shared<AssetEntry_BIP32Root>(
          index, account_id,
          pubKeyUncompressed, pubKeyCompressed, privKeyPtr,
-         chaincode, depth, leafid);
+         chaincode, depth, leafid, fingerprint);
 
       rootEntry->doNotCommit();
       return rootEntry;
@@ -276,6 +277,7 @@ BinaryData AssetEntry_BIP32Root::serialize() const
 
    bw.put_uint8_t(depth_);
    bw.put_uint32_t(leafID_);
+   bw.put_uint32_t(fingerPrint_);
    
    bw.put_var_int(chaincode_.getSize());
    bw.put_BinaryData(chaincode_);
@@ -382,7 +384,7 @@ shared_ptr<AssetEntry_Single> AssetEntry_BIP32Root::getPublicCopy()
    auto pubkey = getPubKey();
    auto woCopy = make_shared<AssetEntry_BIP32Root>(
       index_, getAccountID(), pubkey, nullptr,
-      chaincode_, depth_, leafID_);
+      chaincode_, depth_, leafID_, fingerPrint_);
 
    return woCopy;
 }

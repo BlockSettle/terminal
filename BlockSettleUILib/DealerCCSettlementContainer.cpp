@@ -11,7 +11,7 @@ DealerCCSettlementContainer::DealerCCSettlementContainer(const std::shared_ptr<s
       , const bs::network::Order &order, const std::string &quoteReqId, uint64_t lotSize
       , const bs::Address &genAddr, const std::string &ownRecvAddr
       , const std::shared_ptr<TransactionData> &txData, const std::shared_ptr<SignContainer> &container
-      , const std::shared_ptr<ArmoryObject> &armory, bool autoSign)
+      , const std::shared_ptr<ArmoryConnection> &armory, bool autoSign)
    : bs::SettlementContainer(armory)
    , logger_(logger)
    , order_(order)

@@ -455,9 +455,9 @@ static WalletNode::Type getHDWalletType(const std::shared_ptr<bs::sync::hd::Wall
    if (walletsMgr->getPrimaryWallet() == hdWallet) {
       return WalletNode::Type::WalletPrimary;
    }
-   if (walletsMgr->getDummyWallet() == hdWallet) {
+/*   if (walletsMgr->getDummyWallet() == hdWallet) {
       return WalletNode::Type::WalletDummy;
-   }
+   }*/
    return WalletNode::Type::WalletRegular;
 }
 

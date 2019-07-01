@@ -3,7 +3,7 @@
 
 #include "Address.h"
 #include "AuthAddress.h"
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "CCFileManager.h"
 
 #include <QWidget>
@@ -29,7 +29,7 @@ public:
    explicit AddressDetailsWidget(QWidget *parent = nullptr);
    ~AddressDetailsWidget() override;
 
-   void init(const std::shared_ptr<ArmoryObject> &armory
+   void init(const std::shared_ptr<ArmoryConnection> &armory
       , const std::shared_ptr<spdlog::logger> &inLogger
       , const CCFileManager::CCSecurities &);
    void setQueryAddr(const bs::Address& inAddrVal);
@@ -92,13 +92,28 @@ private:
    std::map<BinaryData, Tx> txMap_; // A wallet's Tx hash / Tx map.
    std::map<BinaryData, bs::TXEntry> txEntryHashSet_; // A wallet's Tx hash / Tx entry map.
 
-   std::shared_ptr<ArmoryObject>    armory_;
-   std::shared_ptr<spdlog::logger>  logger_;
-   CCFileManager::CCSecurities      ccSecurities_;
-   std::pair<std::string, uint64_t> ccFound_;
+   std::shared_ptr<ArmoryConnection>   armory_;
+   std::shared_ptr<spdlog::logger>     logger_;
+   CCFileManager::CCSecurities         ccSecurities_;
+   std::pair<std::string, uint64_t>    ccFound_;
    std::shared_ptr<AddressVerificator> addrVerify_;
    std::map<bs::Address, AddressVerificationState> authAddrStates_;
    std::unordered_set<std::string>     bsAuthAddrs_;
+
+   class AddrDetailsACT : public ArmoryCallbackTarget
+   {
+   public:
+      AddrDetailsACT(ArmoryConnection *armory, AddressDetailsWidget *parent)
+         : ArmoryCallbackTarget(armory), parent_(parent) {}
+      void onRefresh(const std::vector<BinaryData> &ids, bool online) override {
+         QMetaObject::invokeMethod(parent_, [this, ids, online] {
+            parent_->OnRefresh(ids, online);
+         });
+      }
+   private:
+      AddressDetailsWidget *parent_;
+   };
+   std::unique_ptr<AddrDetailsACT>  act_;
 };
 
 #endif // ADDRESSDETAILSWIDGET_H

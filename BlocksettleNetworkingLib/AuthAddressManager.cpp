@@ -38,6 +38,7 @@ void AuthAddressManager::init(const std::shared_ptr<ApplicationSettings>& appSet
 
    connect(walletsManager_.get(), &bs::sync::WalletsManager::blockchainEvent, this, &AuthAddressManager::VerifyWalletAddresses);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::authWalletChanged, this, &AuthAddressManager::onAuthWalletChanged);
+   connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &AuthAddressManager::onWalletChanged);
 
    connect(signingContainer_.get(), &SignContainer::TXSigned, this, &AuthAddressManager::onTXSigned);
    connect(signingContainer_.get(), &SignContainer::Error, this, &AuthAddressManager::onWalletFailed);
@@ -57,13 +58,7 @@ void AuthAddressManager::ConnectToPublicBridge(const std::shared_ptr<ConnectionM
 
 void AuthAddressManager::SetAuthWallet()
 {
-   if (authWallet_) {
-      disconnect(authWallet_.get(), SIGNAL(addressesAdded()), 0, 0);
-   }
    authWallet_ = walletsManager_->getAuthWallet();
-   if (authWallet_) {
-      connect(authWallet_.get(), &bs::sync::Wallet::addressAdded, this, &AuthAddressManager::authAddressAdded);
-   }
 }
 
 bool AuthAddressManager::setup()
@@ -167,7 +162,10 @@ bool AuthAddressManager::SubmitForVerification(const bs::Address &address)
 
 bool AuthAddressManager::CreateNewAuthAddress()
 {
-   authWallet_->getNewExtAddress();
+   const auto &cbAddr = [this](const bs::Address &) {
+      emit walletsManager_->walletChanged(authWallet_->walletId());
+   };
+   authWallet_->getNewExtAddress(cbAddr);
    return true;
 }
 
@@ -241,7 +239,7 @@ bool AuthAddressManager::Verify(const bs::Address &address)
       return false;
    }
 
-   if (!armory_ || (armory_->state() != ArmoryConnection::State::Ready)) {
+   if (!armory_ || (armory_->state() != ArmoryState::Ready)) {
       logger_->error("[AuthAddressManager::Verify] can't verify without Armory connection");
       emit Error(tr("Missing Armory connection"));
       return false;
@@ -342,26 +340,28 @@ bool AuthAddressManager::RevokeAddress(const bs::Address &address)
             }
             changeVal -= fee;
 
-            const auto recipAddress = wallet->getNewChangeAddress();
-            const auto &recip = recipAddress.getRecipient(txMultiReq->inputs.cbegin()->first.getValue() + changeVal);
-            if (!recip) {
-               logger_->error("[AuthAddressManager::RevokeAddress] failed to create recipient");
-               emit Error(tr("Failed to construct revoke transaction"));
-               return;
-            }
-            txMultiReq->recipients.push_back(recip);
+            const auto &cbRecipAddr = [this, txMultiReq, changeVal, utxos](const bs::Address &recipAddress) {
+               const auto &recip = recipAddress.getRecipient(txMultiReq->inputs.cbegin()->first.getValue() + changeVal);
+               if (!recip) {
+                  logger_->error("[AuthAddressManager::RevokeAddress] failed to create recipient");
+                  emit Error(tr("Failed to construct revoke transaction"));
+                  return;
+               }
+               txMultiReq->recipients.push_back(recip);
 
-            if (utxos.size() > 1) {
-               logger_->warn("[AuthAddressManager::RevokeAddress] TX size is greater than expected ({} more inputs)", utxos.size() - 1);
-               emit Info(tr("Revoke transaction size is greater than expected"));
-            }
+               if (utxos.size() > 1) {
+                  logger_->warn("[AuthAddressManager::RevokeAddress] TX size is greater than expected ({} more inputs)", utxos.size() - 1);
+                  emit Info(tr("Revoke transaction size is greater than expected"));
+               }
 
-            const auto id = signingContainer_->signMultiTXRequest(*txMultiReq);
-            if (id) {
-               signIdsRevoke_.insert(id);
-            }
+               const auto id = signingContainer_->signMultiTXRequest(*txMultiReq);
+               if (id) {
+                  signIdsRevoke_.insert(id);
+               }
+            };
+            wallet->getNewChangeAddress(cbRecipAddr);
          };
-         wallet->getUTXOsToSpend(fee, cbFeeUTXOs);
+         wallet->getSpendableTxOutList(cbFeeUTXOs, fee);
       };
       walletsManager_->estimatedFeePerByte(3, cbFee, this);
    };
@@ -696,10 +696,10 @@ void AuthAddressManager::ClearAddressList()
    }
 }
 
-void AuthAddressManager::authAddressAdded()
+void AuthAddressManager::onWalletChanged(const std::string &walletId)
 {
    bool listUpdated = false;
-   if (authWallet_ != nullptr) {
+   if ((authWallet_ != nullptr) && (walletId == authWallet_->walletId())) {
       const auto &newAddresses = authWallet_->getUsedAddressList();
       const auto count = newAddresses.size();
       listUpdated = (count > addresses_.size());
@@ -959,9 +959,9 @@ void AuthAddressManager::CreateAuthWallet(const std::vector<bs::wallet::Password
       return;
    }
    bs::hd::Path path;
-   path.append(bs::hd::purpose, true);
-   path.append(bs::hd::CoinType::BlockSettle_Auth, true);
-   path.append(0u, true);
+   path.append(bs::hd::purpose | 0x80000000);
+   path.append(bs::hd::CoinType::BlockSettle_Auth | 0x80000000);
+   path.append(0x80000000);
    createWalletReqId_ = { signingContainer_->createHDLeaf(priWallet->walletId(), path, pwdData), signal };
 }
 
@@ -979,7 +979,7 @@ void AuthAddressManager::onWalletCreated(unsigned int id, const std::shared_ptr<
    if (createWalletReqId_.second) {
       emit AuthWalletCreated(QString::fromStdString(leaf->walletId()));
    }
-   emit walletsManager_->walletChanged();
+   emit walletsManager_->walletChanged(leaf->walletId());
 }
 
 void AuthAddressManager::onWalletFailed(unsigned int id, std::string errMsg)

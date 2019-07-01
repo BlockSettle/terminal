@@ -584,10 +584,13 @@ void DBUtils::appendPath(string& base, const string& add)
       return;
 
    auto firstChar = add.c_str()[0];
-   auto lastChar = base.c_str()[base.size() - 1];
-   if (firstChar != '\\' && firstChar != '/')
-      if (lastChar != '\\' && lastChar != '/')
-         base.append("/");
+   if (base.size() > 0)
+   {
+      auto lastChar = base.c_str()[base.size() - 1];
+      if (firstChar != '\\' && firstChar != '/')
+         if (lastChar != '\\' && lastChar != '/')
+            base.append("/");
+   }
 
    base.append(add);
 }

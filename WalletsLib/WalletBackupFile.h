@@ -26,8 +26,8 @@ public:
    };
 
    WalletBackupFile(const std::string &id, const std::string &name
-      , const std::string &description, const EasyCoDec::Data& data
-      , const EasyCoDec::Data& chainCode);
+      , const std::string &description, const EasyCoDec::Data& seedData
+      , const std::string& privKey);
    ~WalletBackupFile() noexcept  = default;
 
    static WalletData Deserialize(const std::string& rawData);
@@ -37,8 +37,8 @@ private:
    std::string id_;
    std::string name_;
    std::string description_;
-   EasyCoDec::Data data_;
-   EasyCoDec::Data chainCode_;
+   EasyCoDec::Data seedData_;
+   std::string privKey_;
 };
 
 #endif // __WALLET_BACKUP_FILE_H__

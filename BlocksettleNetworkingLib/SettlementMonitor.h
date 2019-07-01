@@ -1,7 +1,7 @@
 #ifndef __SETTLEMENT_MONITOR_H__
 #define __SETTLEMENT_MONITOR_H__
 
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "SettlementAddressEntry.h"
 
 #include <spdlog/spdlog.h>
@@ -113,7 +113,7 @@ namespace bs {
       PayoutSigner::Type payoutSignedBy_ = PayoutSigner::Type::SignatureUndefined;
 
    protected:
-      std::shared_ptr<ArmoryConnection>         armory_;
+      std::shared_ptr<ArmoryConnection>         armoryPtr_;
       std::shared_ptr<spdlog::logger>           logger_;
       std::string                               addressString_;
 
@@ -127,12 +127,12 @@ namespace bs {
       void SendPayOutNotification(const ClientClasses::LedgerEntry &);
    };
 
-   class SettlementMonitorQtSignals : public QObject, public SettlementMonitor
+   class SettlementMonitorQtSignals : public QObject, public SettlementMonitor, public ArmoryCallbackTarget
    {
    Q_OBJECT;
    public:
       SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-         , const std::shared_ptr<ArmoryObject> &
+         , const std::shared_ptr<ArmoryConnection> &
          , const std::shared_ptr<core::SettlementAddressEntry> &
          , const std::shared_ptr<spdlog::logger> &);
       SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -150,9 +150,9 @@ namespace bs {
       void start();
       void stop();
 
-   protected slots:
-      void onBlockchainEvent(unsigned int);
-      void onZCEvent(const std::vector<bs::TXEntry>);
+   protected:
+      void onNewBlock(unsigned int) override;
+      void onZCReceived(const std::vector<bs::TXEntry> &) override;
 
    signals:
       void payInDetected(int confirmationsNumber, const BinaryData &txHash);
@@ -163,9 +163,6 @@ namespace bs {
       void onPayInDetected(int confirmationsNumber, const BinaryData &txHash) override;
       void onPayOutDetected(int confirmationsNumber, PayoutSigner::Type signedBy) override;
       void onPayOutConfirmed(PayoutSigner::Type signedBy) override;
-
-   private:
-      std::shared_ptr<ArmoryObject> armoryObj_;
    };
 
    class SettlementMonitorCb : public SettlementMonitor

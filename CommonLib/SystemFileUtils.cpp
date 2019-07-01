@@ -9,6 +9,7 @@
 #  include <stdlib.h>
 #  include <dirent.h>
 #  include <glob.h>
+#  include <unistd.h>
 #endif
 #include <algorithm>
 #include <string.h>
@@ -146,7 +147,7 @@ std::vector<std::string> SystemFileUtils::readDir(const std::string &path
       if (onlyFiles && pathExist(path + "/" + entry)) {
          continue;
       }
-      if (!::PathMatchSpec(entry.c_str(), filter.c_str())) {
+      if (!filter.empty() && !::PathMatchSpec(entry.c_str(), filter.c_str())) {
          continue;
       }
       result.emplace_back(std::move(entry));
@@ -155,7 +156,8 @@ std::vector<std::string> SystemFileUtils::readDir(const std::string &path
 #else
    glob_t globResult;
    memset(&globResult, 0, sizeof(globResult));
-   if (glob((path + "/" + filter).c_str(), 0, NULL, &globResult) != 0) {
+   const auto fltCopy = filter.empty() ? std::string("*") : filter;
+   if (glob((path + "/" + fltCopy).c_str(), 0, NULL, &globResult) != 0) {
       globfree(&globResult);
       return {};
    }
@@ -172,6 +174,19 @@ std::vector<std::string> SystemFileUtils::readDir(const std::string &path
    }
    globfree(&globResult);
 #endif
+   return result;
+}
+
+bool SystemFileUtils::rmDir(const std::string &path)
+{
+   const auto files = readDir(path);
+   bool result = true;
+   for (const auto &file : files) {
+      result &= rmFile(path + "/" + file);
+   }
+   if (result) {
+      result &= (rmdir(path.c_str()) == 0);
+   }
    return result;
 }
 

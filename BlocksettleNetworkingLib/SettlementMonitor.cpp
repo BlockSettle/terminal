@@ -8,7 +8,7 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    , const std::shared_ptr<spdlog::logger>& logger)
    : rtWallet_(rtWallet)
    , addressEntry_(entryToAddress(addr))
-   , armory_(armory)
+   , armoryPtr_(armory)
    , logger_(logger)
 {
    const auto &addrHashes = addr->getAsset()->supportedAddrHashes();
@@ -22,7 +22,7 @@ bs::SettlementMonitor::SettlementMonitor(const std::shared_ptr<AsyncClient::BtcW
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : rtWallet_(rtWallet)
-   , armory_(armory)
+   , armoryPtr_(armory)
    , logger_(logger)
    , addressString_(addr.display())
 {
@@ -60,7 +60,7 @@ void bs::SettlementMonitor::checkNewEntries()
             };
             const auto &cbPayIn = [this, entry, cbPayOut](bool ack) {
                if (ack) {
-                  SendPayInNotification(armory_->getConfirmationsNumber(entry),
+                  SendPayInNotification(armoryPtr_->getConfirmationsNumber(entry),
                                         entry.getTxHash());
                }
                else {
@@ -114,7 +114,7 @@ void bs::SettlementMonitor::IsPayInTransaction(const ClientClasses::LedgerEntry 
       }
       cb(false);
    };
-   armory_->getTxByHash(entry.getTxHash(), cbTX);
+   armoryPtr_->getTxByHash(entry.getTxHash(), cbTX);
 }
 
 void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry &entry
@@ -155,9 +155,9 @@ void bs::SettlementMonitor::IsPayOutTransaction(const ClientClasses::LedgerEntry
          }
          cb(false);
       };
-      armory_->getTXsByHash(txHashSet, cbTXs);
+      armoryPtr_->getTXsByHash(txHashSet, cbTXs);
    };
-   armory_->getTxByHash(entry.getTxHash(), cbTX);
+   armoryPtr_->getTxByHash(entry.getTxHash(), cbTX);
 }
 
 void bs::SettlementMonitor::SendPayInNotification(const int confirmationsNumber, const BinaryData &txHash)
@@ -176,7 +176,7 @@ void bs::SettlementMonitor::SendPayInNotification(const int confirmationsNumber,
 
 void bs::SettlementMonitor::SendPayOutNotification(const ClientClasses::LedgerEntry &entry)
 {
-   auto confirmationsNumber = armory_->getConfirmationsNumber(entry);
+   auto confirmationsNumber = armoryPtr_->getConfirmationsNumber(entry);
    if (payoutConfirmations_ != confirmationsNumber) {
       payoutConfirmations_ = confirmationsNumber;
 
@@ -303,10 +303,10 @@ void bs::SettlementMonitor::CheckPayoutSignature(const ClientClasses::LedgerEntr
    const uint64_t value = amount < 0 ? -amount : amount;
 
    const auto &cbTX = [this, value, cb](const Tx &tx) {
-      bs::PayoutSigner::WhichSignature(tx, value, addressEntry_, logger_, armory_, cb);
+      bs::PayoutSigner::WhichSignature(tx, value, addressEntry_, logger_, armoryPtr_, cb);
    };
 
-   if (!armory_->getTxByHash(entry.getTxHash(), cbTX)) {
+   if (!armoryPtr_->getTxByHash(entry.getTxHash(), cbTX)) {
       logger_->error("[SettlementMonitor::CheckPayoutSignature] failed to get TX by hash");
    }
 }
@@ -319,11 +319,11 @@ bs::SettlementMonitor::~SettlementMonitor() noexcept
 
 
 bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
-   , const std::shared_ptr<ArmoryObject> &armory
+   , const std::shared_ptr<ArmoryConnection> &armory
    , const std::shared_ptr<bs::core::SettlementAddressEntry> &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : SettlementMonitor(rtWallet, armory, addr, logger)
-   , armoryObj_(armory)
+   , ArmoryCallbackTarget(armory.get())
 {}
 
 bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr<AsyncClient::BtcWallet> rtWallet
@@ -331,6 +331,7 @@ bs::SettlementMonitorQtSignals::SettlementMonitorQtSignals(const std::shared_ptr
    , const std::shared_ptr<SettlementAddress> &addrEntry, const bs::Address &addr
    , const std::shared_ptr<spdlog::logger>& logger)
    : SettlementMonitor(rtWallet, armory, addrEntry, addr, logger)
+   , ArmoryCallbackTarget(armory.get())
 {}
 
 bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
@@ -340,28 +341,21 @@ bs::SettlementMonitorQtSignals::~SettlementMonitorQtSignals() noexcept
 
 void bs::SettlementMonitorQtSignals::start()
 {
-   connect(armoryObj_.get(), &ArmoryObject::zeroConfReceived, this
-      , &bs::SettlementMonitorQtSignals::onZCEvent, Qt::QueuedConnection);
-   connect(armoryObj_.get(), &ArmoryObject::newBlock, this
-      , &bs::SettlementMonitorQtSignals::onBlockchainEvent, Qt::QueuedConnection);
-
+   //armory_->addTarget(this);   // auto-added in constructor
    checkNewEntries();
 }
 
 void bs::SettlementMonitorQtSignals::stop()
 {
-   disconnect(armoryObj_.get(), &ArmoryObject::zeroConfReceived, this
-      , &bs::SettlementMonitorQtSignals::onZCEvent);
-   disconnect(armoryObj_.get(), &ArmoryObject::newBlock, this
-      , &bs::SettlementMonitorQtSignals::onBlockchainEvent);
+   armory_->removeTarget(this);
 }
 
-void bs::SettlementMonitorQtSignals::onBlockchainEvent(unsigned int)
+void bs::SettlementMonitorQtSignals::onNewBlock(unsigned int)
 {
    checkNewEntries();
 }
 
-void bs::SettlementMonitorQtSignals::onZCEvent(const std::vector<bs::TXEntry>)
+void bs::SettlementMonitorQtSignals::onZCReceived(const std::vector<bs::TXEntry> &)
 {
    checkNewEntries();
 }

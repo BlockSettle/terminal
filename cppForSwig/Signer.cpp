@@ -906,6 +906,27 @@ unsigned Signer::getTxInSequence(unsigned index) const
 ////////////////////////////////////////////////////////////////////////////////
 void Signer::sign(void)
 { 
+   /***
+   About the SegWit perma flagging:
+   Armory SegWit support was implemented prior to the soft fork activation 
+   (April 2016). At the time it was uncertain whether SegWit would be activated. 
+   
+   The chain was also getting hardforked to a ruleset specifically blocking 
+   SegWit (Bcash).
+
+   As a result, Armory had a responsibility to allow users to spend the 
+   airdropped coins. Since Bcash does not support SegWit and such scripts are 
+   otherwise anyone-can-spend, there had to be a toggle for this feature, 
+   which applies to script resolution rules as well.
+
+   Since SegWit is a done deal and Armory has no pretention to support Bcash, 
+   SW can now be on by default, which reduces potential client side or unit 
+   test snafus.
+   ***/
+
+   //perma flag for segwit verification
+   flags_ |= SCRIPT_VERIFY_SEGWIT;
+
    //run through each spenders
    for (unsigned i = 0; i < spenders_.size(); i++)
    {
@@ -933,6 +954,7 @@ void Signer::sign(void)
          spender->getFeed(),
          proxy);
 
+      //check Script.h for signer flags
       resolver.setFlags(flags_);
 
       try

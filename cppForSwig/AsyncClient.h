@@ -127,6 +127,11 @@ struct CombinedBalances
    {
       return walletId_ < rhs.walletId_;
    }
+
+   bool operator<(const BinaryData& rhs) const
+   {
+      return walletId_ < rhs;
+   }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -420,14 +425,22 @@ namespace AsyncClient
       //combined methods
       void getCombinedBalances(
          const std::vector<std::string>&,
-         std::function<void(ReturnMessage<std::set<CombinedBalances>>)>);
+         std::function<void(
+            ReturnMessage<std::map<std::string, CombinedBalances>>)>);
       
       void getCombinedAddrTxnCounts(
          const std::vector<std::string>&,
-         std::function<void(ReturnMessage<std::set<CombinedCounts>>)>);
+         std::function<void(
+            ReturnMessage<std::map<std::string, CombinedCounts>>)>);
 
       void getCombinedSpendableTxOutListForValue(
          const std::vector<std::string>&, uint64_t value,
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
+   
+      void getCombinedSpendableZcOutputs(const std::vector<std::string>&, 
+         std::function<void(ReturnMessage<std::vector<UTXO>>)>);
+
+      void getCombinedRBFTxOuts(const std::vector<std::string>&, 
          std::function<void(ReturnMessage<std::vector<UTXO>>)>);
    };
 
@@ -765,12 +778,13 @@ public:
 struct CallbackReturn_CombinedBalances : public CallbackReturn_WebSocket
 {
 private:
-   std::function<void(ReturnMessage<std::set<CombinedBalances>>)> 
+   std::function<void(ReturnMessage<std::map<std::string, CombinedBalances>>)> 
       userCallbackLambda_;
 
 public:
    CallbackReturn_CombinedBalances(
-      std::function<void(ReturnMessage<std::set<CombinedBalances>>)> lbd) :
+      std::function<void(
+         ReturnMessage<std::map<std::string, CombinedBalances>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
    
@@ -782,12 +796,13 @@ public:
 struct CallbackReturn_CombinedCounts : public CallbackReturn_WebSocket
 {
 private:
-   std::function<void(ReturnMessage<std::set<CombinedCounts>>)> 
+   std::function<void(ReturnMessage<std::map<std::string, CombinedCounts>>)> 
       userCallbackLambda_;
 
 public:
    CallbackReturn_CombinedCounts(
-      std::function<void(ReturnMessage<std::set<CombinedCounts>>)> lbd) :
+      std::function<void(
+         ReturnMessage<std::map<std::string, CombinedCounts>>)> lbd) :
       userCallbackLambda_(lbd)
    {}
    

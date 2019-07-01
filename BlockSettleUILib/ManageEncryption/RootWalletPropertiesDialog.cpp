@@ -56,15 +56,16 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
    , const std::shared_ptr<ConnectionManager> &connectionManager
    , const std::shared_ptr<AssetManager> &assetMgr
    , QWidget* parent)
-  : QDialog(parent)
-  , ui_(new Ui::WalletPropertiesDialog())
-  , wallet_(wallet)
-  , walletsManager_(walletsManager)
-  , signingContainer_(container)
-  , appSettings_(appSettings)
-  , connectionManager_(connectionManager)
-  , assetMgr_(assetMgr)
-  , logger_(logger)
+   : QDialog(parent)
+   , ui_(new Ui::WalletPropertiesDialog())
+   , wallet_(wallet)
+   , walletsManager_(walletsManager)
+   , walletInfo_(walletsManager_, wallet_)
+   , signingContainer_(container)
+   , appSettings_(appSettings)
+   , connectionManager_(connectionManager)
+   , assetMgr_(assetMgr)
+   , logger_(logger)
 {
    ui_->setupUi(this);
 
@@ -93,9 +94,8 @@ RootWalletPropertiesDialog::RootWalletPropertiesDialog(const std::shared_ptr<spd
 
    updateWalletDetails(wallet_);
 
-   ui_->rescanButton->setEnabled(armory->state() == ArmoryConnection::State::Ready);
+   ui_->rescanButton->setEnabled(armory->state() == ArmoryState::Ready);
    ui_->manageEncryptionButton->setEnabled(false);
-   walletInfo_ = bs::hd::WalletInfo(wallet_);
 
    if (signingContainer_) {
       if (signingContainer_->isOffline()) {
@@ -145,6 +145,8 @@ static inline QString encTypeToString(bs::wallet::EncryptionType enc)
       case bs::wallet::EncryptionType::Auth :
          return QObject::tr("Auth eID");
    };
+
+   //no default entry in switch statment nor default return value
 }
 
 void RootWalletPropertiesDialog::onHDWalletInfo(unsigned int id, const bs::hd::WalletInfo &walletInfo)
@@ -212,7 +214,6 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
 
    unsigned int nbTotalAddresses = 0;
    auto nbUTXOs = std::make_shared<std::atomic_uint>(0);
-   auto nbActAddrs = std::make_shared<std::atomic_uint>(0);
 
    const auto &cbUTXOs = [this, nbUTXOs](std::vector<UTXO> utxos) {
       *nbUTXOs += utxos.size();
@@ -220,19 +221,19 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
          ui_->labelUTXOs->setText(QString::number(*nbUTXOs));
       });
    };
-   const auto &cbActiveAddrs = [this, nbActAddrs](size_t count) {
-      *nbActAddrs += count;
-      QMetaObject::invokeMethod(this, [this, nbActAddrs] {
-         ui_->labelAddressesActive->setText(QString::number(*nbActAddrs));
-      });
-   };
 
-   for (const auto &leaf : wallet->getLeaves()) {
-      leaf->getSpendableTxOutList(cbUTXOs, this);
-      leaf->getActiveAddressCount(cbActiveAddrs);
+   for (const auto &leaf : wallet->getLeaves()) 
+   {
+      leaf->getSpendableTxOutList(cbUTXOs, UINT64_MAX);
+
+      auto addrCnt = leaf->getActiveAddressCount();
+      QMetaObject::invokeMethod(this, [this, addrCnt] {
+         ui_->labelAddressesActive->setText(QString::number(addrCnt));
+      });
 
       nbTotalAddresses += leaf->getUsedAddressCount();
    }
+
    ui_->labelAddressesUsed->setText(QString::number(nbTotalAddresses));
 }
 
@@ -251,12 +252,13 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
          QMetaObject::invokeMethod(this, [this, size = utxos.size()] {
             ui_->labelUTXOs->setText(QString::number(size));
          });
-      }, this);
-      wallet->getActiveAddressCount([this](size_t count) {
-         QMetaObject::invokeMethod(this, [this, count]{
-            ui_->labelAddressesActive->setText(QString::number(count));
+      }, UINT64_MAX);
+      
+      auto addrCnt = wallet->getActiveAddressCount();
+      QMetaObject::invokeMethod(this, [this, addrCnt] {
+            ui_->labelAddressesActive->setText(QString::number(addrCnt));
          });
-      });
+
       ui_->labelSpendable->setText(UiUtils::displayAmount(wallet->getSpendableBalance()));
       ui_->labelUnconfirmed->setText(UiUtils::displayAmount(wallet->getUnconfirmedBalance()));
       ui_->labelTotal->setText(UiUtils::displayAmount(wallet->getTotalBalance()));
@@ -268,39 +270,16 @@ void RootWalletPropertiesDialog::updateWalletDetails(const std::shared_ptr<bs::s
    }
 }
 
-void RootWalletPropertiesDialog::startWalletScan()
-{
-   const auto walletsMgr = walletsManager_;
-   const auto &settings = appSettings_;
-
-   const auto &cbr = [walletsMgr](const std::string &walletId) -> unsigned int {
-      const auto &wallet = walletsMgr->getWalletById(walletId);
-      return wallet ? wallet->getUsedAddressCount() : 0;
-   };
-   const auto &cbw = [settings](const std::string &walletId, unsigned int idx) {
-      settings->SetWalletScanIndex(walletId, idx);
-   };
-
-   if (wallet_->startRescan(nullptr, cbr, cbw)) {
-      emit walletsManager_->walletImportStarted(wallet_->walletId());
-   }
-   else {
-      BSMessageBox(BSMessageBox::warning, tr("Wallet rescan")
-         , tr("Wallet blockchain rescan is already in progress"), this).exec();
-   }
-   accept();
-}
-
 void RootWalletPropertiesDialog::onRescanBlockchain()
 {
    ui_->buttonBar->setEnabled(false);
 
-   if (wallet_->isPrimary()) {
+/*   if (wallet_->isPrimary()) {
       for (const auto &cc : assetMgr_->privateShares(true)) {
          bs::hd::Path path;
-         path.append(bs::hd::purpose, true);
-         path.append(bs::hd::CoinType::BlockSettle_CC, true);
-         path.append(cc, true);
+         path.append(bs::hd::purpose | 0x80000000);
+         path.append(bs::hd::CoinType::BlockSettle_CC | 0x80000000);
+         path.append(cc);
          const auto reqId = signingContainer_->createHDLeaf(wallet_->walletId(), path);
          if (reqId) {
             createCCWalletReqs_[reqId] = cc;
@@ -309,7 +288,9 @@ void RootWalletPropertiesDialog::onRescanBlockchain()
    }
    else {
       startWalletScan();
-   }
+   }*/
+   wallet_->startRescan();
+   accept();
 }
 
 void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, const std::shared_ptr<bs::sync::hd::Leaf> &leaf)
@@ -318,11 +299,13 @@ void RootWalletPropertiesDialog::onHDLeafCreated(unsigned int id, const std::sha
       const auto cc = createCCWalletReqs_[id];
       createCCWalletReqs_.erase(id);
 
-      const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC);
+      //cc wallets are always ext only
+      const auto group = wallet_->createGroup(bs::hd::CoinType::BlockSettle_CC, true);
       group->addLeaf(leaf);
 
       if (createCCWalletReqs_.empty()) {
-         startWalletScan();
+         wallet_->startRescan();
+         accept();
       }
    }
 }

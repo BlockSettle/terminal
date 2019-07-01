@@ -1,10 +1,11 @@
-#include <QFile>
-#include "CoreHDWallet.h"
-#include "Wallets/SyncHDWallet.h"
-#include "WalletEncryption.h"
 #include "QWalletInfo.h"
+#include <QFile>
 #include "AutheIDClient.h"
+#include "CoreHDWallet.h"
+#include "WalletEncryption.h"
 #include "WalletBackupFile.h"
+#include "Wallets/SyncHDWallet.h"
+#include "Wallets/SyncWalletsManager.h"
 
 using namespace bs::hd;
 using namespace bs::wallet;
@@ -49,35 +50,48 @@ WalletInfo::WalletInfo(std::shared_ptr<bs::core::hd::Wallet> hdWallet, QObject *
    initEncKeys(hdWallet);
 }
 
-WalletInfo::WalletInfo(const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet, QObject *parent)
+WalletInfo::WalletInfo(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<bs::sync::hd::Wallet> &hdWallet, QObject *parent)
+   : walletsMgr_(walletsMgr)
 {
    initFromRootWallet(hdWallet);
    initEncKeys(hdWallet);
 
-   connect(hdWallet.get(), &bs::sync::hd::Wallet::metaDataChanged, this, [this, hdWallet](){
-      initFromRootWallet(hdWallet);
-      initEncKeys(hdWallet);
-   });
+   if (walletsMgr_) {
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletMetaChanged, this, [this, hdWallet]
+      (const std::string &walletId) {
+         if (walletId == hdWallet->walletId()) {
+            initFromRootWallet(hdWallet);
+            initEncKeys(hdWallet);
+         }
+      });
+   }
 }
 
-WalletInfo::WalletInfo(const std::shared_ptr<bs::sync::Wallet> &wallet
-   , const std::shared_ptr<bs::sync::hd::Wallet> &rootHdWallet, QObject *parent)
+WalletInfo::WalletInfo(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
+   , const std::shared_ptr<bs::sync::Wallet> &wallet, QObject *parent)
+   : walletsMgr_(walletsMgr)
 {
+   const auto rootHdWallet = walletsMgr_->getHDRootForLeaf(wallet->walletId());
    initFromWallet(wallet.get(), rootHdWallet->walletId());
    initEncKeys(rootHdWallet);
 
-   connect(rootHdWallet.get(), &bs::sync::hd::Wallet::metaDataChanged, this, [this, rootHdWallet](){
-      initFromRootWallet(rootHdWallet);
-      initEncKeys(rootHdWallet);
-   });
+   if (walletsMgr_) {
+      connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletMetaChanged, this, [this, rootHdWallet]
+      (const std::string &walletId) {
+         if (walletId == rootHdWallet->walletId()) {
+            initFromRootWallet(rootHdWallet);
+            initEncKeys(rootHdWallet);
+         }
+      });
+   }
 }
 
 WalletInfo::WalletInfo(const WalletInfo &other)
    : walletId_(other.walletId_), rootId_(other.rootId_)
    , name_(other.name_), desc_(other.desc_)
    , encKeys_(other.encKeys_), encTypes_(other.encTypes_), keyRank_(other.keyRank_)
-{
-}
+{}
 
 WalletInfo &bs::hd::WalletInfo::WalletInfo::operator =(const WalletInfo &other)
 {

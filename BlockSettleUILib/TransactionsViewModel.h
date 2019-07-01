@@ -26,7 +26,6 @@ namespace bs {
 }
 class SafeLedgerDelegate;
 
-
 struct TransactionsViewItem
 {
    bs::TXEntry txEntry;
@@ -51,7 +50,7 @@ struct TransactionsViewItem
    BinaryData  groupId;
 
    bool isSet() const { return (!txEntry.txHash.isNull() && !walletID.isEmpty()); }
-   void initialize(const std::shared_ptr<ArmoryConnection> &
+   void initialize(ArmoryConnection *
       , const std::shared_ptr<bs::sync::WalletsManager> &
       , std::function<void(const TransactionsViewItem *)>);
    void calcAmount(const std::shared_ptr<bs::sync::WalletsManager> &);
@@ -111,17 +110,17 @@ Q_DECLARE_METATYPE(TransactionsViewItem)
 Q_DECLARE_METATYPE(TransactionItems)
 
 
-class TransactionsViewModel : public QAbstractItemModel
+class TransactionsViewModel : public QAbstractItemModel, public ArmoryCallbackTarget
 {
 Q_OBJECT
 public:
-    TransactionsViewModel(const std::shared_ptr<ArmoryObject> &
+    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<AsyncClient::LedgerDelegate> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent
                           , const std::shared_ptr<bs::sync::Wallet> &defWlt);
-    TransactionsViewModel(const std::shared_ptr<ArmoryObject> &
+    TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &
                           , const std::shared_ptr<bs::sync::WalletsManager> &
                           , const std::shared_ptr<spdlog::logger> &
                           , QObject* parent = nullptr);
@@ -156,12 +155,14 @@ private slots:
    void onNewItems(const std::unordered_map<std::string, std::pair<TransactionPtr, TXNode *>> &);
    void onDelRows(std::vector<int> rows);
 
-   void onArmoryStateChanged(ArmoryConnection::State);
-   void onNewTransactions(const std::vector<bs::TXEntry> &);
-   void onDelTransactions(const std::vector<bs::TXEntry> &);
    void onItemConfirmed(const TransactionPtr);
 
 private:
+   void onNewBlock(unsigned int) override;
+   void onStateChanged(ArmoryState) override;
+   void onZCReceived(const std::vector<bs::TXEntry> &) override;
+   void onZCInvalidated(const std::vector<bs::TXEntry> &) override;
+
    void init();
    void clear();
    void loadLedgerEntries();
@@ -206,7 +207,6 @@ private:
    TransactionsViewItem oldestItem_;
    std::map<uint32_t, std::vector<bs::TXEntry>> rawData_;
    std::unordered_map<std::string, std::shared_ptr<TransactionsViewItem>>  currentItems_;
-   std::shared_ptr<ArmoryObject>       armory_;
    std::shared_ptr<spdlog::logger>     logger_;
    std::shared_ptr<AsyncClient::LedgerDelegate> ledgerDelegate_;
    std::shared_ptr<bs::sync::WalletsManager>    walletsManager_;

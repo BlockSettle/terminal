@@ -80,9 +80,9 @@ BSTerminalMainWindow::BSTerminalMainWindow(const std::shared_ptr<ApplicationSett
 
    bool licenseAccepted = showStartupDialog();
    if (!licenseAccepted) {
-      QTimer::singleShot(0, this, []() {
+      QMetaObject::invokeMethod(this, []() {
          qApp->exit(EXIT_FAILURE);
-      });
+      }, Qt::QueuedConnection);
       return;
    }
 
@@ -432,21 +432,11 @@ void BSTerminalMainWindow::LoadWallets()
       goOnlineArmory();
       updateControlEnabledState();
 
-      connect(armory_.get(), &ArmoryObject::stateChanged, this, [this](ArmoryConnection::State state) {
-         if (!initialWalletCreateDialogShown_) {
-            if (state == ArmoryConnection::State::Connected && walletsMgr_ && walletsMgr_->hdWalletsCount() == 0) {
-               initialWalletCreateDialogShown_ = true;
-               QMetaObject::invokeMethod(this, [this] {
-                  createWallet(true);
-               });
-            }
-         }
-      });
-
       if (readyToRegisterWallets_ && !wasWalletsRegistered_) {
          wasWalletsRegistered_ = true;
          walletsMgr_->registerWallets();
       }
+      act_->onRefresh({}, true);
    });
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::info, this, &BSTerminalMainWindow::showInfo);
    connect(walletsMgr_.get(), &bs::sync::WalletsManager::error, this, &BSTerminalMainWindow::showError);
@@ -682,6 +672,11 @@ bool BSTerminalMainWindow::showStartupDialog()
       hide();
       return false;
    }
+
+   // Ueed update armory settings if case user selects TestNet
+   // (MainNet selected by default at startup)
+   applicationSettings_->selectNetwork();
+
    return true;
 }
 
@@ -752,23 +747,34 @@ void BSTerminalMainWindow::InitTransactionsView()
    ui_->widgetPortfolio->SetTransactionsModel(transactionsModel_);
 }
 
-void BSTerminalMainWindow::onArmoryStateChanged(ArmoryConnection::State newState)
+void BSTerminalMainWindow::MainWinACT::onStateChanged(ArmoryState state)
 {
-   switch(newState)
-   {
-   case ArmoryConnection::State::Ready:
-      QMetaObject::invokeMethod(this, &BSTerminalMainWindow::CompleteUIOnlineView);
+   switch (state) {
+   case ArmoryState::Ready:
+      QMetaObject::invokeMethod(parent_, &BSTerminalMainWindow::CompleteUIOnlineView);
       break;
-   case ArmoryConnection::State::Connected:
-      armoryBDVRegistered_ = true;
-      goOnlineArmory();
-      QMetaObject::invokeMethod(this, &BSTerminalMainWindow::CompleteDBConnection);
+   case ArmoryState::Connected:
+      parent_->armoryBDVRegistered_ = true;
+      parent_->goOnlineArmory();
+      QMetaObject::invokeMethod(parent_, &BSTerminalMainWindow::CompleteDBConnection);
       break;
-   case ArmoryConnection::State::Offline:
-      QMetaObject::invokeMethod(this, &BSTerminalMainWindow::ArmoryIsOffline);
+   case ArmoryState::Offline:
+      QMetaObject::invokeMethod(parent_, &BSTerminalMainWindow::ArmoryIsOffline);
       break;
    default:
       break;
+   }
+}
+
+void BSTerminalMainWindow::MainWinACT::onRefresh(const std::vector<BinaryData> &, bool)
+{
+   if (!parent_->initialWalletCreateDialogShown_ && parent_->walletsMgr_
+      && parent_->walletsMgr_->isWalletsReady()
+      && (parent_->walletsMgr_->hdWalletsCount() == 0)) {
+      parent_->initialWalletCreateDialogShown_ = true;
+      QMetaObject::invokeMethod(parent_, [this] {
+         parent_->createWallet(true);
+      });
    }
 }
 
@@ -786,7 +792,7 @@ void BSTerminalMainWindow::CompleteUIOnlineView()
 
 void BSTerminalMainWindow::CompleteDBConnection()
 {
-   logMgr_->logger("ui")->debug("BSTerminalMainWindow::CompleteDBConnection");
+   logMgr_->logger("ui")->debug("BSTerminalMainWindow::CompleteDBConnection {}", walletsMgr_->hdWalletsCount());
    if (walletsMgr_ && walletsMgr_->hdWalletsCount()) {
       walletsMgr_->registerWallets();
    }
@@ -863,7 +869,7 @@ bool BSTerminalMainWindow::isUserLoggedIn() const
 
 bool BSTerminalMainWindow::isArmoryConnected() const
 {
-   return armory_->state() == ArmoryConnection::State::Ready;
+   return armory_->state() == ArmoryState::Ready;
 }
 
 void BSTerminalMainWindow::ArmoryIsOffline()
@@ -882,11 +888,18 @@ void BSTerminalMainWindow::initArmory()
 {
    armory_ = std::make_shared<ArmoryObject>(logMgr_->logger()
       , applicationSettings_->get<std::string>(ApplicationSettings::txCacheFileName), true);
-   connect(armory_.get(), &ArmoryObject::txBroadcastError, [](const QString &txHash, const QString &error) {
-      NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { txHash, error });
-   });
-   connect(armory_.get(), &ArmoryObject::zeroConfReceived, this, &BSTerminalMainWindow::onZCreceived, Qt::QueuedConnection);
-   connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
+   act_ = make_unique<MainWinACT>(armory_.get(), this);
+}
+
+void BSTerminalMainWindow::MainWinACT::onTxBroadcastError(const std::string &hash, const std::string &err)
+{
+   NotificationCenter::notify(bs::ui::NotifyType::BroadcastError, { QString::fromStdString(hash)
+      , QString::fromStdString(err) });
+}
+
+void BSTerminalMainWindow::MainWinACT::onZCReceived(const std::vector<bs::TXEntry> &zcs)
+{
+   QMetaObject::invokeMethod(parent_, [this, zcs] { parent_->onZCreceived(zcs); });
 }
 
 void BSTerminalMainWindow::connectArmory()
@@ -904,7 +917,7 @@ void BSTerminalMainWindow::connectArmory()
       // stop armory connection loop if server key was rejected
       if (!result) {
          armory_->needsBreakConnectionLoop_.store(true);
-         armory_->setState(ArmoryConnection::State::Cancelled);
+         armory_->setState(ArmoryState::Cancelled);
       }
       return result;
    });
@@ -934,7 +947,8 @@ bool BSTerminalMainWindow::createWallet(bool primary, bool reportSuccess)
             " have a Primary Wallet which supports the sub-wallets required to interact with the system.")
          .arg(QString::fromStdString(wallet->name())), this);
       if (qry.exec() == QDialog::Accepted) {
-         wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth);
+         //auth wallets are always ext only
+         wallet->createGroup(bs::hd::CoinType::BlockSettle_Auth, true);
          return true;
       }
       return false;
@@ -1345,7 +1359,7 @@ struct BSTerminalMainWindow::TxInfo {
    QString  mainAddress;
 };
 
-void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> entries)
+void BSTerminalMainWindow::onZCreceived(const std::vector<bs::TXEntry> &entries)
 {
    if (entries.empty()) {
       return;

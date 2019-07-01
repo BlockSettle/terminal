@@ -116,7 +116,7 @@ std::shared_ptr<SettlementAddressEntry> SettlementWallet::getAddressBySettlement
 }
 
 std::shared_ptr<SettlementAddressEntry> SettlementWallet::newAddress(const BinaryData &settlementId, const BinaryData &buyAuthPubKey
-   , const BinaryData &sellAuthPubKey, bool persistent, const std::string &comment)
+   , const BinaryData &sellAuthPubKey, const std::string &comment, bool persistent)
 {
    auto asset = std::make_shared<SettlementAssetEntry>(settlementId, buyAuthPubKey, sellAuthPubKey);
    auto aePtr = SettlementAssetEntry::getAddressEntry(asset);
@@ -180,7 +180,7 @@ bs::Address SettlementWallet::createAddressWithIndex(const std::string &index, b
    const auto buyAuthKey = index.substr(pos1 + 1, pos2 - pos1);
    const auto sellAuthKey = index.substr(pos2 + 1);
    return newAddress(binSettlementId, BinaryData::CreateFromHex(buyAuthKey)
-      , BinaryData::CreateFromHex(sellAuthKey), persistent)->getPrefixedHash();
+      , BinaryData::CreateFromHex(sellAuthKey), "", persistent)->getPrefixedHash();
 }
 
 bool SettlementWallet::containsAddress(const bs::Address &addr)

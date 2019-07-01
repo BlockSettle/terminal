@@ -127,7 +127,7 @@ void BaseDealerSettlementDialog::setWallet(const std::shared_ptr<bs::sync::hd::W
    if (signContainer_ && !signContainer_->isOffline()) {
       infoReqId_ = signContainer_->GetInfo(rootWallet_->walletId());
    }
-   walletInfo_ = bs::hd::WalletInfo(rootWallet_);
+   walletInfo_ = bs::hd::WalletInfo(nullptr, rootWallet_);
 }
 
 void BaseDealerSettlementDialog::readyToAccept()

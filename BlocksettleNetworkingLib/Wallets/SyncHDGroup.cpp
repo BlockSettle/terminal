@@ -40,6 +40,7 @@ std::vector<std::shared_ptr<bs::sync::Wallet>> hd::Group::getAllLeaves() const
 
 std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const std::string &walletId)
 {
+   elem |= 0x80000000;
    const auto prevLeaf = getLeaf(elem);
    if (prevLeaf != nullptr) {
       if (walletId != prevLeaf->walletId()) {
@@ -49,7 +50,7 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(bs::hd::Path::Elem elem, const s
       return prevLeaf;
    }
    auto pathLeaf = path_;
-   pathLeaf.append(elem, true);
+   pathLeaf.append(elem);
    auto result = newLeaf(walletId);
    initLeaf(result, pathLeaf);
    addLeaf(result, true);
@@ -63,14 +64,10 @@ std::shared_ptr<hd::Leaf> hd::Group::createLeaf(const std::string &key, const st
 
 bool hd::Group::addLeaf(const std::shared_ptr<hd::Leaf> &leaf, bool signal)
 {
-   connect(leaf.get(), &hd::Leaf::addressAdded, this, &hd::Group::onLeafChanged);
    leaves_[leaf->index()] = leaf;
-   if (signal) {
-      const auto id = QString::fromStdString(leaf->walletId());
-      if (!id.isEmpty()) {
-         emit leafAdded(id);
-      }
-      onLeafChanged();
+   const auto id = leaf->walletId();
+   if (!id.empty()) {
+      wct_->walletCreated(id);
    }
    return true;
 }
@@ -81,11 +78,9 @@ bool hd::Group::deleteLeaf(const bs::hd::Path::Elem &elem)
    if (leaf == nullptr) {
       return false;
    }
-   disconnect(leaf.get(), &hd::Leaf::addressAdded, this, &hd::Group::onLeafChanged);
    const auto walletId = leaf->walletId();
    leaves_.erase(elem);
-   onLeafChanged();
-   emit leafDeleted(QString::fromStdString(walletId));
+   wct_->walletDestroyed(walletId);
    return true;
 }
 
@@ -111,27 +106,22 @@ bool hd::Group::deleteLeaf(const std::string &key)
    return deleteLeaf(bs::hd::Path::keyToElem(key));
 }
 
-void hd::Group::onLeafChanged()
-{
-   emit changed();
-}
-
 std::string hd::Group::nameForType(bs::hd::CoinType ct)
 {
    switch (ct) {
    case bs::hd::CoinType::Bitcoin_main:
-      return hd::Group::tr("XBT").toStdString();
+      return QObject::tr("XBT").toStdString();
 
    case bs::hd::CoinType::Bitcoin_test:
-      return hd::Group::tr("XBT [TESTNET]").toStdString();
+      return QObject::tr("XBT [TESTNET]").toStdString();
 
    case bs::hd::CoinType::BlockSettle_CC:
-      return hd::Group::tr("Private Market Shares").toStdString();
+      return QObject::tr("Private Market Shares").toStdString();
 
    case bs::hd::CoinType::BlockSettle_Auth:
-      return hd::Group::tr("Authentication").toStdString();
+      return QObject::tr("Authentication").toStdString();
 
-   default: return hd::Group::tr("Unknown").toStdString();
+   default: return QObject::tr("Unknown").toStdString();
    }
 }
 
@@ -143,24 +133,11 @@ std::shared_ptr<hd::Leaf> hd::Group::newLeaf(const std::string &walletId) const
 
 void hd::Group::initLeaf(std::shared_ptr<hd::Leaf> &leaf, const bs::hd::Path &path) const
 {
+   leaf->setWCT(wct_);
    if (!path.length()) {
       return;
    }
-   leaf->init(path);
-}
-
-void hd::Group::rescanBlockchain(const hd::Group::cb_scan_notify &cb, const hd::Group::cb_scan_read_last &cbr
-   , const hd::Group::cb_scan_write_last &cbw)
-{
-   bs::hd::Path::Elem wallet;
-   for (const auto &leaf : leaves_) {
-      const unsigned int startIdx = cbr ? cbr(leaf.second->walletId()) : 0;
-      leaf.second->scanAddresses(startIdx, scanPortion_, cbw);
-      wallet = leaf.second->index();
-   }
-   if (cb) {
-      cb(this, leaves_.empty() ? UINT32_MAX : wallet, true);
-   }
+   leaf->setPath(path);
 }
 
 /*void hd::Group::copyLeaf(std::shared_ptr<hd::Group> &target, bs::hd::Path::Elem leafIndex
@@ -178,10 +155,10 @@ void hd::Group::rescanBlockchain(const hd::Group::cb_scan_notify &cb, const hd::
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 hd::AuthGroup::AuthGroup(const bs::hd::Path &path, const std::string &name
-   , const std::string &desc, SignContainer *container
+   , const std::string &desc, SignContainer *container, WalletCallbackTarget *wct
    , const std::shared_ptr<spdlog::logger>& logger, bool extOnlyAddresses)
    : Group(path, name, nameForType(bs::hd::CoinType::BlockSettle_Auth), desc
-           , container, logger, extOnlyAddresses)
+           , container, wct, logger, extOnlyAddresses)
 {
    scanPortion_ = 5;
 }

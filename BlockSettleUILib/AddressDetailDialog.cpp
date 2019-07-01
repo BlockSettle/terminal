@@ -77,11 +77,10 @@ public:
 
 
 AddressDetailDialog::AddressDetailDialog(const bs::Address& address
-                                     , const std::shared_ptr<bs::sync::Wallet> &wallet
-                         , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
-                               , const std::shared_ptr<ArmoryObject> &armory
-                                 , const std::shared_ptr<spdlog::logger> &logger
-                                         , QWidget* parent)
+   , const std::shared_ptr<bs::sync::Wallet> &wallet
+   , const std::shared_ptr<bs::sync::WalletsManager>& walletsManager
+   , const std::shared_ptr<ArmoryConnection> &armory
+   , const std::shared_ptr<spdlog::logger> &logger, QWidget* parent)
    : QDialog(parent)
    , ui_(new Ui::AddressDetailDialog())
    , address_(address)
@@ -94,12 +93,10 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    ui_->setupUi(this);
    ui_->labelError->hide();
 
-   wallet_->getAddrBalance(address, [this](std::vector<uint64_t> balanceVec) {
-      QMetaObject::invokeMethod(this, [this, balanceVec] { onAddrBalanceReceived(balanceVec); });
-   });
-   wallet_->getAddrTxN(address, [this](uint32_t txn) {
-      QMetaObject::invokeMethod(this, [this, txn] { onAddrTxNReceived(txn); });
-   });
+   auto balanceVec = wallet_->getAddrBalance(address);
+   QMetaObject::invokeMethod(this, [this, balanceVec] { onAddrBalanceReceived(balanceVec); });
+
+   onAddrTxNReceived(wallet_->getAddrTxN(address));
 
    auto copyButton = ui_->buttonBox->addButton(tr("Copy to clipboard"), QDialogButtonBox::ActionRole);
    connect(copyButton, &QPushButton::clicked, this, &AddressDetailDialog::onCopyClicked);
@@ -139,15 +136,15 @@ AddressDetailDialog::AddressDetailDialog(const bs::Address& address
    ui_->inputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
    ui_->outputAddressesWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-   if (armory_->state() != ArmoryConnection::State::Ready) {
+   if (armory_->state() != ArmoryState::Ready) {
       ui_->labelError->setText(tr("Armory is not connected"));
       onError();
    }
    else {
       const auto &cbLedgerDelegate = [this, armory](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
-         initModels(delegate);
+         QMetaObject::invokeMethod(this, [this, delegate]{ initModels(delegate); });
       };
-      if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate, this)) {
+      if (!wallet_->getLedgerDelegateForAddress(address_, cbLedgerDelegate)) {
          ui_->labelError->setText(tr("Error loading address info"));
          onError();
       }
@@ -193,6 +190,10 @@ void AddressDetailDialog::initModels(const std::shared_ptr<AsyncClient::LedgerDe
 
 void AddressDetailDialog::onAddrBalanceReceived(std::vector<uint64_t> balance)
 {
+   if (balance.empty()) {
+      ui_->labelBalance->setText(QString::number(0));
+      return;
+   }
    ui_->labelBalance->setText((wallet_->type() == bs::core::wallet::Type::ColorCoin)
       ? UiUtils::displayCCAmount(balance[0]) : UiUtils::displayAmount(balance[0]));
 }

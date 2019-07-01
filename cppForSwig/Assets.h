@@ -32,6 +32,7 @@ public:
 #define PRIVKEY_BYTE             0x82
 #define ENCRYPTIONKEY_BYTE       0x83
 #define WALLET_SEED_BYTE         0x84
+#define ECDH_SALT_PREFIX         0x85
 
 #define METADATA_COMMENTS_PREFIX 0x90
 #define METADATA_AUTHPEER_PREFIX 0x91
@@ -426,6 +427,7 @@ class AssetEntry_BIP32Root : public AssetEntry_Single
 private:
    const uint8_t depth_;
    const unsigned leafID_;
+   const unsigned fingerPrint_;
    const SecureBinaryData chaincode_;
 
 public:
@@ -434,10 +436,10 @@ public:
       SecureBinaryData& pubkey,
       std::shared_ptr<Asset_PrivateKey> privkey,
       const SecureBinaryData& chaincode,
-      uint8_t depth, unsigned leafID) :
+      uint8_t depth, unsigned leafID, unsigned fingerPrint) :
       AssetEntry_Single(id, accountID, pubkey, privkey),
       chaincode_(chaincode),
-      depth_(depth), leafID_(leafID)
+      depth_(depth), leafID_(leafID), fingerPrint_(fingerPrint)
    {}
 
    AssetEntry_BIP32Root(int id, const BinaryData& accountID,
@@ -445,26 +447,27 @@ public:
       SecureBinaryData& pubkeyCompressed,
       std::shared_ptr<Asset_PrivateKey> privkey,
       const SecureBinaryData& chaincode,
-      uint8_t depth, unsigned leafID) :
+      uint8_t depth, unsigned leafID, unsigned fingerPrint) :
       AssetEntry_Single(id, accountID,
          pubkeyUncompressed, pubkeyCompressed, privkey),
       chaincode_(chaincode),
-      depth_(depth), leafID_(leafID)
+      depth_(depth), leafID_(leafID), fingerPrint_(fingerPrint)
    {}
 
    AssetEntry_BIP32Root(int id, const BinaryData& accountID,
       std::shared_ptr<Asset_PublicKey> pubkey,
       std::shared_ptr<Asset_PrivateKey> privkey,
       const SecureBinaryData& chaincode,
-      uint8_t depth, unsigned leafID) :
+      uint8_t depth, unsigned leafID, unsigned fingerPrint) :
       AssetEntry_Single(id, accountID, pubkey, privkey),
       chaincode_(chaincode),
-      depth_(depth), leafID_(leafID)
+      depth_(depth), leafID_(leafID), fingerPrint_(fingerPrint)
    {}
 
    //local
    uint8_t getDepth(void) const { return depth_; }
    unsigned getLeafID(void) const { return leafID_; }
+   unsigned getFingerPrint(void) const { return fingerPrint_; }
    const SecureBinaryData& getChaincode(void) const { return chaincode_; }
 
    //virtual

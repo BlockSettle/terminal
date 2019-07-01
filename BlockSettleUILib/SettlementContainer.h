@@ -5,18 +5,18 @@
 #include <string>
 #include <QObject>
 #include <QTimer>
-#include "ArmoryObject.h"
+#include "ArmoryConnection.h"
 #include "CommonTypes.h"
 #include "EncryptionUtils.h"
 #include "SettlementInfo.h"
 
 namespace bs {
 
-   class SettlementContainer : public QObject
+   class SettlementContainer : public QObject, public ArmoryCallbackTarget
    {
       Q_OBJECT
    public:
-      explicit SettlementContainer(const std::shared_ptr<ArmoryObject> &);
+      explicit SettlementContainer(const std::shared_ptr<ArmoryConnection> &);
       ~SettlementContainer() override = default;
 
       virtual bool cancel() = 0;
@@ -55,11 +55,6 @@ namespace bs {
    protected slots:
       void startTimer(const unsigned int durationSeconds);
       void stopTimer();
-
-      virtual void zcReceived(const std::vector<bs::TXEntry>) {}
-
-   protected:
-      std::shared_ptr<ArmoryObject>   armory_;
 
    private:
       QTimer   timer_;

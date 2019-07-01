@@ -5,9 +5,9 @@
 
 WalletBackupFile::WalletBackupFile(const std::string &id, const std::string &name
    , const std::string &description, const EasyCoDec::Data& data
-   , const EasyCoDec::Data& chainCode)
+   , const std::string &privKey)
   : id_(id), name_(name), description_(description)
-  , data_(data), chainCode_(chainCode)
+  , seedData_(data), privKey_(privKey)
 {}
 
 WalletBackupFile::WalletData WalletBackupFile::Deserialize(const std::string& rawData)
@@ -45,11 +45,11 @@ std::string WalletBackupFile::Serialize() const
    if (!description_.empty()) {
       backup.set_description(description_);
    }
-   backup.set_seed1(data_.part1);
-   backup.set_seed2(data_.part2);
+   backup.set_seed1(seedData_.part1);
+   backup.set_seed2(seedData_.part2);
 
-   backup.set_chaincode1(chainCode_.part1);
-   backup.set_chaincode2(chainCode_.part2);
+   backup.set_chaincode1(privKey_);
+   backup.set_chaincode2("");
 
    return backup.SerializeAsString();
 }

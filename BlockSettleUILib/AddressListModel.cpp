@@ -30,29 +30,27 @@ QString AddressListModel::AddressRow::getAddress() const
 AddressListModel::AddressListModel(const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , QObject* parent, AddressType addrType)
    : QAbstractTableModel(parent)
+   , walletsMgr_(walletsMgr)
    , addrType_(addrType)
    , processing_(false)
 {
-   connect(walletsMgr.get(), &bs::sync::WalletsManager::walletsReady, this
-           , &AddressListModel::updateData);
-   connect(walletsMgr.get(), &bs::sync::WalletsManager::blockchainEvent, this
-           , &AddressListModel::updateData);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletsReady, this
+           , &AddressListModel::updateWallets);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletChanged, this
+      , &AddressListModel::updateData);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::blockchainEvent, this
+           , &AddressListModel::updateWallets);
+   connect(walletsMgr_.get(), &bs::sync::WalletsManager::walletBalanceUpdated
+      , this, &AddressListModel::updateData);
 }
 
-bool AddressListModel::setWallets(const Wallets &wallets)
+bool AddressListModel::setWallets(const Wallets &wallets, bool force)
 {
-   for (const auto &wallet : wallets_) {
-      disconnect(wallet.get(), &bs::sync::Wallet::addressAdded, this, &AddressListModel::updateData);
+   if ((wallets != wallets_) || force) {
+      wallets_ = wallets;
+      updateWallets();
    }
 
-   wallets_ = wallets;
-   for (const auto &wallet : wallets_) {
-      connect(wallet.get(), &bs::sync::Wallet::addressAdded, this
-              , &AddressListModel::updateData
-              , static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
-   }
-
-   updateData();
    return true;
 }
 
@@ -83,7 +81,12 @@ AddressListModel::AddressRow AddressListModel::createRow(const bs::Address &addr
    return row;
 }
 
-void AddressListModel::updateData()
+void AddressListModel::updateWallets()
+{
+   updateData("");
+}
+
+void AddressListModel::updateData(const std::string &walletId)
 {
    bool expected = false;
    bool desired = true;
@@ -204,15 +207,9 @@ void AddressListModel::updateWalletData()
       // Get an address's balance & # of TXs from Armory via the wallet.
       const auto &wallet = addressRows_[i].wallet;
       const auto &address = addressRows_[i].address;
-      if (wallet) {
-         if (!wallet->getAddrTxN(address, cbTxN)) {
-            cbTxN(0);
-            continue;
-         }
-         if (!wallet->getAddrBalance(address, cbBalance)) {
-            cbBalance({});
-            continue;
-         }
+      if (wallet && wallet->isBalanceAvailable()) {
+         cbTxN(wallet->getAddrTxN(address));
+         cbBalance(wallet->getAddrBalance(address));
       }
    }
 }

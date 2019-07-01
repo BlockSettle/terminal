@@ -2,7 +2,6 @@
 #include "CheckRecipSigner.h"
 #include "CoinSelection.h"
 #include "Wallets.h"
-#include "CoreHDNode.h"    // only for calculating walletId in Seed
 #include "CoreWallet.h"
 
 #define SAFE_NUM_CONFS        6
@@ -57,10 +56,10 @@ void wallet::MetaData::set(const std::shared_ptr<AssetEntryMeta> &value)
    data_[value->key()] = value;
 }
 
-void wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
+bool wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
 {
    if (!env || !db) {
-      return;
+      return false;
    }
    for (const auto value : data_) {
       if (!value.second->needsCommit()) {
@@ -88,6 +87,7 @@ void wallet::MetaData::write(const std::shared_ptr<LMDBEnv> env, LMDB *db)
       }
       value.second->doNotCommit();
    }
+   return true;
 }
 
 void wallet::MetaData::readFromDB(const std::shared_ptr<LMDBEnv> env, LMDB *db)
@@ -272,41 +272,34 @@ bool wallet::TXMultiSignRequest::isValid() const noexcept
 }
 
 
-wallet::Seed::Seed(const std::string &seed, NetworkType netType)
-   : netType_(netType)
+wallet::Seed::Seed(const SecureBinaryData &seed, NetworkType netType)
+   : netType_(netType), seed_(seed)
 {
-   try {
-      BinaryData base58In(seed);
-      base58In.append('\0'); // Remove once base58toScrAddr() is fixed.
-      seed_ = BtcUtils::base58toScrAddr(base58In);
-   }
-   catch (const std::exception &) {
-      const auto result = segwit_addr::decode("seed", seed);
-      if (result.first >= 0) {
-         seed_ = BinaryData(&result.second[0], result.second.size());
-      }
-      if (seed_.isNull()) {
-         seed_ = seed;
-      }
-   }
+   node_.initFromSeed(seed_);
 }
 
 std::string wallet::Seed::getWalletId() const
 {
    if (walletId_.empty()) {
-      walletId_ = bs::core::hd::Node(*this).getId();
+      const SecureBinaryData hmacMasterMsg("MetaEntry");
+      const auto &pubkey = node_.getPublicKey();
+      auto &&masterID = BtcUtils::getHMAC256(pubkey, hmacMasterMsg);
+      walletId_ = BtcUtils::computeID(masterID).toBinStr();
+      if (*(walletId_.rbegin()) == 0) {
+         walletId_.resize(walletId_.size() - 1);
+      }
    }
    return walletId_;
 }
 
 EasyCoDec::Data wallet::Seed::toEasyCodeChecksum(size_t ckSumSize) const
 {
-   if (!hasPrivateKey()) {
-      return {};
-   }
-   const size_t halfSize = privKey_.getSize() / 2;
-   auto privKeyHalf1 = privKey_.getSliceCopy(0, (uint32_t)halfSize);
-   auto privKeyHalf2 = privKey_.getSliceCopy(halfSize, (uint32_t)halfSize);
+   if (seed_.getSize() == 0)
+      throw AssetException("empty seed, cannot generate ez16");
+
+   const size_t halfSize = seed_.getSize() / 2;
+   auto privKeyHalf1 = seed_.getSliceCopy(0, (uint32_t)halfSize);
+   auto privKeyHalf2 = seed_.getSliceCopy(halfSize, seed_.getSize() - halfSize);
    const auto hash1 = BtcUtils::getHash256(privKeyHalf1);
    const auto hash2 = BtcUtils::getHash256(privKeyHalf2);
    privKeyHalf1.append(hash1.getSliceCopy(0, (uint32_t)ckSumSize));
@@ -348,23 +341,31 @@ BinaryData wallet::Seed::decodeEasyCodeLineChecksum(
 wallet::Seed wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &easyData, NetworkType netType
    , size_t ckSumSize)
 {
-   return wallet::Seed(netType, decodeEasyCodeChecksum(easyData, ckSumSize));
+   return wallet::Seed(decodeEasyCodeChecksum(easyData, ckSumSize), netType);
 }
 
-wallet::Seed wallet::Seed::fromEasyCodeChecksum(const EasyCoDec::Data &privKey, const EasyCoDec::Data &chainCode
-   , NetworkType netType, size_t ckSumSize)
+SecureBinaryData wallet::Seed::toXpriv() const
 {
-   if (chainCode.part1.empty() || chainCode.part2.empty()) {
-      return wallet::Seed(netType, decodeEasyCodeChecksum(privKey, ckSumSize));
-   }
-
-   return wallet::Seed(netType, decodeEasyCodeChecksum(privKey, ckSumSize)
-      , decodeEasyCodeChecksum(chainCode, ckSumSize));
+   return node_.getBase58();
 }
 
+wallet::Seed wallet::Seed::fromXpriv(const SecureBinaryData& xpriv, NetworkType netType)
+{
+   wallet::Seed seed(netType);
+   seed.node_.initFromBase58(xpriv);
+   
+   //check network
 
-Wallet::Wallet(NetworkType netType, const std::shared_ptr<spdlog::logger> &logger)
-   : wallet::MetaData(), netType_(netType), logger_(logger)
+   //check base
+   if (seed.node_.getDepth() > 0 || seed.node_.getFingerPrint() != 0)
+      throw WalletException("xpriv is not for wallet root");
+   
+   return seed;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+Wallet::Wallet(std::shared_ptr<spdlog::logger> logger)
+   : wallet::MetaData(), logger_(logger)
 {}
 
 Wallet::~Wallet() = default;
@@ -388,8 +389,7 @@ bool Wallet::setAddressComment(const bs::Address &address, const std::string &co
       return false;
    }
    set(std::make_shared<wallet::AssetEntryComment>(nbMetaData_++, address.id(), comment));
-   write(getDBEnv(), getDB());
-   return true;
+   return write(getDBEnv(), getDB());
 }
 
 std::string Wallet::getTransactionComment(const BinaryData &txHash)
@@ -408,8 +408,7 @@ bool Wallet::setTransactionComment(const BinaryData &txHash, const std::string &
       return false;
    }
    set(std::make_shared<wallet::AssetEntryComment>(nbMetaData_++, txHash, comment));
-   write(getDBEnv(), getDB());
-   return true;
+   return write(getDBEnv(), getDB());
 }
 
 std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const
@@ -426,16 +425,7 @@ std::vector<std::pair<BinaryData, std::string>> Wallet::getAllTxComments() const
    return result;
 }
 
-bs::Address Wallet::getRandomChangeAddress(AddressEntryType aet)
-{
-   if (getUsedAddressCount() < 3) {
-      return getNewChangeAddress(aet);
-   }
-   const auto &addresses = getUsedAddressList();
-   return addresses[rand() % addresses.size()];
-}
-
-Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinaryData &password,
+Signer Wallet::getSigner(const wallet::TXSignRequest &request,
                              bool keepDuplicatedRecipients)
 {
    bs::CheckRecipSigner signer;
@@ -457,7 +447,7 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinar
    }
    else {
       for (const auto &utxo : request.inputs) {
-         auto spender = std::make_shared<ScriptSpender>(utxo, getResolver(password));
+         auto spender = std::make_shared<ScriptSpender>(utxo, getResolver());
          if (request.RBF) {
             spender->setSequence(UINT32_MAX - 2);
          }
@@ -470,10 +460,12 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinar
    }
 
    if (request.change.value && !request.populateUTXOs) {
-      auto changeAddress = createAddressWithIndex(request.change.index);
-      if (changeAddress.isNull() || (changeAddress.prefixed() != request.change.address.prefixed())) {
-         changeAddress = request.change.address;   // pub and priv wallets are not synchronized for some reason
-      }
+      
+      //check change address belongs to wallet
+      auto changeAddress = request.change.address;
+      if (!containsAddress(changeAddress))
+         throw WalletException("invalid change address");
+
       setAddressComment(changeAddress, wallet::Comment::toString(wallet::Comment::ChangeAddress));
       const auto addr = getAddressEntryForAddr(changeAddress);
       const auto changeRecip = (addr != nullptr) ? addr->getRecipient(request.change.value)
@@ -488,14 +480,13 @@ Signer Wallet::getSigner(const wallet::TXSignRequest &request, const SecureBinar
       signer.removeDupRecipients();
    }
 
-   signer.setFeed(getResolver(password));
+   signer.setFeed(getResolver());
    return signer;
 }
 
-BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request,
-   const SecureBinaryData &password, bool keepDuplicatedRecipients)
+BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request, bool keepDuplicatedRecipients)
 {
-   auto signer = getSigner(request, password, keepDuplicatedRecipients);
+   auto signer = getSigner(request, keepDuplicatedRecipients);
    signer.sign();
    if (!signer.verify()) {
       throw std::logic_error("signer failed to verify");
@@ -503,9 +494,9 @@ BinaryData Wallet::signTXRequest(const wallet::TXSignRequest &request,
    return signer.serialize();
 }
 
-BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request, const SecureBinaryData &password)
+BinaryData Wallet::signPartialTXRequest(const wallet::TXSignRequest &request)
 {
-   auto signer = getSigner(request, password);
+   auto signer = getSigner(request);
    signer.sign();
    return signer.serializeState();
 }
@@ -524,9 +515,7 @@ BinaryData bs::core::SignMultiInputTX(const bs::core::wallet::TXMultiSignRequest
       if (wallet.second->isWatchingOnly()) {
          throw std::logic_error("Won't sign with watching-only wallet");
       }
-      const auto &itKey = keys.find(wallet.first);
-      const auto password = (itKey == keys.end()) ? SecureBinaryData{} : itKey->second;
-      signer.setFeed(wallet.second->getResolver(password));
+      signer.setFeed(wallet.second->getResolver());
       signer.sign();
       signer.resetFeeds();
    }

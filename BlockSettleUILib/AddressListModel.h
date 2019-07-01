@@ -78,13 +78,15 @@ public:
    QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const override;
    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
-   bool setWallets(const Wallets &);
+   bool setWallets(const Wallets &, bool force = false);
 
 private slots:
-   void updateData();
+   void updateWallets();
+   void updateData(const std::string &walletId);
    void removeEmptyIntAddresses();
 
 private:
+   std::shared_ptr<bs::sync::WalletsManager> walletsMgr_;
    Wallets                    wallets_;
    std::vector<AddressRow>    addressRows_;
    const AddressType          addrType_;

@@ -196,14 +196,14 @@ unsigned int TXNode::level() const
 }
 
 
-TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryObject> &armory
+TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
                          , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
                          , const std::shared_ptr<AsyncClient::LedgerDelegate> &ledgerDelegate
                          , const std::shared_ptr<spdlog::logger> &logger
                          , QObject* parent
                          , const std::shared_ptr<bs::sync::Wallet> &defWlt)
    : QAbstractItemModel(parent)
-   , armory_(armory)
+   , ArmoryCallbackTarget(armory.get())
    , logger_(logger)
    , ledgerDelegate_(ledgerDelegate)
    , walletsManager_(walletsManager)
@@ -214,14 +214,14 @@ TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryObject>
    QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
 }
 
-TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryObject> &armory
+TransactionsViewModel::TransactionsViewModel(const std::shared_ptr<ArmoryConnection> &armory
                          , const std::shared_ptr<bs::sync::WalletsManager> &walletsManager
                                  , const std::shared_ptr<spdlog::logger> &logger
                                              , QObject* parent)
    : QAbstractItemModel(parent)
-   , armory_(armory)
-   , logger_(logger)
+   , ArmoryCallbackTarget(armory.get())
    , walletsManager_(walletsManager)
+   , logger_(logger)
    , allWallets_(true)
 {
    init();
@@ -235,16 +235,10 @@ void TransactionsViewModel::init()
 
    rootNode_ = new TXNode;
 
-   if (armory_) {
-      connect(armory_.get(), SIGNAL(stateChanged(ArmoryConnection::State)), this, SLOT(onArmoryStateChanged(ArmoryConnection::State)), Qt::QueuedConnection);
-      connect(armory_.get(), &ArmoryObject::newBlock, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
-   }
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletChanged, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletDeleted, this, &TransactionsViewModel::onWalletDeleted, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletImportFinished, this, &TransactionsViewModel::refresh, Qt::QueuedConnection);
    connect(walletsManager_.get(), &bs::sync::WalletsManager::walletsReady, this, &TransactionsViewModel::updatePage, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::newTransactions, this, &TransactionsViewModel::onNewTransactions, Qt::QueuedConnection);
-   connect(walletsManager_.get(), &bs::sync::WalletsManager::invalidatedZCs, this, &TransactionsViewModel::onDelTransactions, Qt::QueuedConnection);
 }
 
 TransactionsViewModel::~TransactionsViewModel() noexcept
@@ -253,9 +247,17 @@ TransactionsViewModel::~TransactionsViewModel() noexcept
    delete rootNode_;
 }
 
+void TransactionsViewModel::onNewBlock(unsigned int)
+{
+   QMetaObject::invokeMethod(this, [this] { updatePage(); });
+}
+
 void TransactionsViewModel::loadAllWallets()
 {
    const auto &cbWalletsLD = [this](const std::shared_ptr<AsyncClient::LedgerDelegate> &delegate) {
+      if (!initialLoadCompleted_) {
+         return;
+      }
       ledgerDelegate_ = delegate;
       QtConcurrent::run(this, &TransactionsViewModel::loadLedgerEntries);
    };
@@ -397,15 +399,16 @@ void TransactionsViewModel::clear()
    stopped_ = false;
 }
 
-void TransactionsViewModel::onArmoryStateChanged(ArmoryConnection::State state)
+void TransactionsViewModel::onStateChanged(ArmoryState state)
 {
-   if (state == ArmoryConnection::State::Offline) {
-      ledgerDelegate_.reset();
-      clear();
-   }
-   else if ((state == ArmoryConnection::State::Ready) && !rootNode_->hasChildren()) {
-      loadAllWallets();
-   }
+   QMetaObject::invokeMethod(this, [this, state] {
+      if (state == ArmoryState::Offline) {
+         ledgerDelegate_.reset();
+         clear();
+      } else if ((state == ArmoryState::Ready) && !rootNode_->hasChildren()) {
+         loadAllWallets();
+      }
+   });
 }
 
 std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction(const bs::TXEntry &entry)
@@ -448,12 +451,12 @@ bool TransactionsViewModel::txKeyExists(const std::string &key)
    return (currentItems_.find(key) != currentItems_.end());
 }
 
-void TransactionsViewModel::onNewTransactions(const std::vector<bs::TXEntry> &entries)
+void TransactionsViewModel::onZCReceived(const std::vector<bs::TXEntry> &entries)
 {
-   updateTransactionsPage(entries);
+   QMetaObject::invokeMethod(this, [this, entries] { updateTransactionsPage(entries); });
 }
 
-void TransactionsViewModel::onDelTransactions(const std::vector<bs::TXEntry> &entries)
+void TransactionsViewModel::onZCInvalidated(const std::vector<bs::TXEntry> &entries)
 {
    std::vector<int> delRows;
    std::vector<bs::TXEntry> children;
@@ -790,7 +793,7 @@ void TransactionsViewModel::updateTransactionDetails(const std::shared_ptr<Trans
 }
 
 
-void TransactionsViewItem::initialize(const std::shared_ptr<ArmoryConnection> &armory
+void TransactionsViewItem::initialize(ArmoryConnection *armory
    , const std::shared_ptr<bs::sync::WalletsManager> &walletsMgr
    , std::function<void(const TransactionsViewItem *)> userCB)
 {

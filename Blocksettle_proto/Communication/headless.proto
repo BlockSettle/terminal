@@ -29,10 +29,11 @@ enum RequestType
    ExecCustomDialogRequestType = 21;
    // Sent from headless signer when wallet added, removed or changed somehow (request body is empty)
    WalletsListUpdatedType      = 22;
-
-   SignSettlementTxRequestType = 23;
-   SignSettlementPartialTxRequestType = 24;
-   SignSettlementPayoutTxRequestType = 25;
+   ExtendAddressChainType      = 23;
+   SyncNewAddressType	       = 24;
+   SignSettlementTxRequestType = 25;
+   SignSettlementPartialTxRequestType = 26;
+   SignSettlementPayoutTxRequestType = 27;
 }
 
 message RequestPacket
@@ -237,19 +238,6 @@ message DeleteHDWalletResponse
    string   error = 2;
 }
 
-message GetRootKeyRequest
-{
-   string   rootWalletId = 1;
-   string   password = 2;
-}
-
-message GetRootKeyResponse
-{
-   string   walletId = 1;
-   bytes decryptedPrivKey = 2;
-   bytes chainCode = 3;
-}
-
 
 message AutoSignActEvent
 {
@@ -317,6 +305,7 @@ message SyncHDWalletResponse
    message Group {
       uint32 type = 1;
       repeated Leaf leaves = 2;
+      bool ext_only = 3;
    }
 
    string walletId = 1;
@@ -351,6 +340,8 @@ message SyncWalletResponse
    repeated bytes encryptionKeys = 3;
    WalletKeyRank keyRank = 4;
    NetworkType netType = 5;
+   uint32 highest_ext_index = 9;
+   uint32 highest_int_index = 10;
 
    repeated Address   addresses = 6;
    repeated Address   addrPool = 7;
@@ -368,40 +359,41 @@ message SyncCommentRequest
 }
 
 
-enum AddressType
+enum SyncState
 {
-   AddressType_Default = 0;
-   AddressType_P2PKH = 1;
-   AddressType_P2PK = 2;
-   AddressType_P2WPKH = 3;
-   AddressType_Multisig = 4;
-   AddressType_P2SH = 5;
-   AddressType_P2WSH = 6;
+   SyncState_Success = 0;
+   SyncState_NothingToDo = 1;
+   SyncState_Failure = 2;
 }
 
 message SyncAddressesRequest
 {
-   message AddressIndex {
-      string index = 1;
-      AddressType addrType = 2;
-   }
-
-   string walletId = 1;
-   repeated AddressIndex indices = 2;
-   bool   persistent = 3;
+   string wallet_id = 1;
+   repeated bytes addresses = 2;
 }
 
 message SyncAddressesResponse
 {
-   message Address {
+   string wallet_id = 1;
+   SyncState state = 2;
+}
+
+message ExtendAddressChainRequest
+{
+   string wallet_id = 1;
+   uint32 count = 2;
+   bool   ext_int = 3;
+}
+
+message ExtendAddressChainResponse
+{
+   message AddressPair {
       string address = 1;
       string index = 2;
    }
-
-   string walletId = 1;
-   repeated Address addresses = 2;
+   string wallet_id = 1;
+   repeated AddressPair addresses = 2;
 }
-
 
 message SettlWalletResponse
 {
@@ -415,4 +407,16 @@ message CustomDialogRequest
 {
    string dialogName = 1;
    bytes  variantData = 2;
+}
+
+
+message SyncNewAddressRequest
+{
+   message Address {
+      string index = 1;
+      uint32 aet = 2;
+   }
+   string wallet_id = 1;
+   repeated Address addresses = 2;
+   
 }
