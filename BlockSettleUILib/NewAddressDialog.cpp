@@ -41,7 +41,9 @@ NewAddressDialog::NewAddressDialog(const std::shared_ptr<bs::sync::Wallet> &wall
          });
       }
    };
-   wallet_->getNewExtAddress(cbAddr, isNested ? AddressEntryType_P2SH : AddressEntryType_P2WPKH);
+   wallet_->getNewExtAddress(cbAddr, isNested ?
+      static_cast<AddressEntryType>(AddressEntryType_P2SH|AddressEntryType_P2WPKH)
+      : AddressEntryType_P2WPKH);
 
    if (address_.isNull()) {
       copyButton->setEnabled(false);

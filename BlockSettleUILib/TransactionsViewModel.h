@@ -172,7 +172,7 @@ private:
    void updateTransactionDetails(const std::shared_ptr<TransactionsViewItem> &item
       , const std::function<void(const TransactionsViewItem *itemPtr)> &cb);
    std::shared_ptr<TransactionsViewItem> itemFromTransaction(const bs::TXEntry &);
-   bool txKeyExists(const std::string &key);
+   std::shared_ptr<TransactionsViewItem> getTxEntry(const std::string &key);
 
 signals:
    void dataLoaded(int count);

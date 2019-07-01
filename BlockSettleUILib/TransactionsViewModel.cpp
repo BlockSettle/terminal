@@ -416,11 +416,15 @@ std::shared_ptr<TransactionsViewItem> TransactionsViewModel::itemFromTransaction
    auto item = std::make_shared<TransactionsViewItem>();
    item->txEntry = entry;
    item->displayDateTime = UiUtils::displayDateTime(entry.txTime);
-   item->walletID = QString::fromStdString(entry.id);
    item->wallet = walletsManager_->getWalletById(entry.id);
    if (!item->wallet && defaultWallet_) {
       item->wallet = defaultWallet_;
-      item->walletID = QString::fromStdString(defaultWallet_->walletId());
+   }
+   if (item->wallet) {
+      item->walletID = QString::fromStdString(item->wallet->walletId());
+   }
+   else {
+      item->walletID = QString::fromStdString(entry.id);
    }
 
    item->confirmations = armory_->getConfirmationsNumber(entry.blockNum);
@@ -446,9 +450,13 @@ static std::string mkTxKey(const bs::TXEntry &item)
    return mkTxKey(item.txHash, id);
 }
 
-bool TransactionsViewModel::txKeyExists(const std::string &key)
+std::shared_ptr<TransactionsViewItem> TransactionsViewModel::getTxEntry(const std::string &key)
 {
-   return (currentItems_.find(key) != currentItems_.end());
+   const auto itEntry = currentItems_.find(key);
+   if (itEntry == currentItems_.end()) {
+      return nullptr;
+   }
+   return itEntry->second;
 }
 
 void TransactionsViewModel::onZCReceived(const std::vector<bs::TXEntry> &entries)
@@ -527,8 +535,10 @@ std::pair<size_t, size_t> TransactionsViewModel::updateTransactionsPage(const st
          if (!item->wallet) {
             continue;
          }
-         if (txKeyExists(item->id())) {
-            updatedItems->push_back(item);
+         auto txEntry = getTxEntry(item->id());
+         if (txEntry) {
+            txEntry->txEntry.merge(item->txEntry);
+            updatedItems->push_back(txEntry);
             continue;
          }
          currentItems_[item->id()] = item;
@@ -972,12 +982,16 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
 {
    if (wallet && tx.isInitialized()) {
       bool hasSpecialAddr = false;
-      int64_t outputVal = 0;
+      uint64_t outputVal = 0, ownOutputVal = 0;
       for (size_t i = 0; i < tx.getNumTxOut(); ++i) {
-         TxOut out = tx.getTxOutCopy(i);
-         if (txEntry.isChainedZC && !hasSpecialAddr) {
-            const auto addr = bs::Address::fromTxOut(out);
-            hasSpecialAddr = isSpecialWallet(walletsManager->getWalletByAddress(addr.id()));
+         const TxOut out = tx.getTxOutCopy(i);
+         const auto addr = bs::Address::fromTxOut(out);
+         const auto addrWallet = walletsManager->getWalletByAddress(addr.id());
+         if (txEntry.isChainedZC && !hasSpecialAddr && addrWallet) {
+            hasSpecialAddr = isSpecialWallet(addrWallet);
+         }
+         if (addrWallet) {
+            ownOutputVal += out.getValue();
          }
          outputVal += out.getValue();
       }
@@ -996,9 +1010,10 @@ void TransactionsViewItem::calcAmount(const std::shared_ptr<bs::sync::WalletsMan
             }
          }
       }
-      auto value = txEntry.value;
-      const auto fee = (wallet->type() == bs::core::wallet::Type::ColorCoin) || (value > 0) ? 0 : (outputVal - inputVal);
-      value -= fee;
+      const uint64_t fee = (wallet->type() == bs::core::wallet::Type::ColorCoin) || (txEntry.value > 0)
+         ? 0 : (inputVal - outputVal);
+      const auto value = (txEntry.value < -fee) ? -(outputVal - ownOutputVal + fee)
+         : (ownOutputVal > 0) ? ownOutputVal : outputVal;
       amount = wallet->getTxBalance(value);
       amountStr = wallet->displayTxValue(value);
 
